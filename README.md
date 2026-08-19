@@ -25,10 +25,10 @@ Clang must be **arm64**. An x86 emulator cannot run this module.
 
 Android Studio: open this folder and run the `app` debug configuration.
 
-Command line (needs Gradle 9 + JDK 17, matching AGP 9.1.1):
+Command line (needs JDK 17; the checked-in Gradle wrapper downloads the AGP-compatible Gradle 9.3.1):
 
 ```bash
-gradle :app:assembleDebug
+./gradlew :app:assembleDebug
 ```
 
 The APK is written to `app/build/outputs/apk/debug/`.

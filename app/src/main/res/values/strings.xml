@@ -54,7 +54,7 @@
     <string name="checking_update">Checking GitHub for the latest APK…</string>
     <string name="update_found">Found %1$s. Downloading…</string>
     <string name="update_none">No APK on GitHub yet. Open Releases after Actions finishes a build.</string>
-    <string name="update_download_failed">Couldn't download the APK. Open the Releases page instead.</string>
+    <string name="update_download_failed">Couldn\'t download the APK. Open the Releases page instead.</string>
     <string name="allow_unknown_sources">Allow CodeC IDE to install updates, then try again.</string>
     <string name="licenses">Licenses</string>
     <string name="open_source_licenses">Open source licenses</string>

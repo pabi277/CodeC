@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -103,7 +104,7 @@ fun ModulesScreen(
 
 @Composable
 fun activityModuleViewModel(): ModuleViewModel {
-    val activity = LocalContext.current as ComponentActivity
+    val activity = requireNotNull(LocalActivity.current) as ComponentActivity
     return viewModel(viewModelStoreOwner = activity)
 }
 
