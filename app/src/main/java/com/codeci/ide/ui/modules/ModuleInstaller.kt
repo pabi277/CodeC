@@ -149,8 +149,13 @@ object ModuleInstaller {
         try {
             link.delete()
             Os.symlink(relative, link.absolutePath)
-            AppLogger.i("Installer", "Restored symlink ${link.name} -> $relative")
-            return
+            // Verify the link actually exists: some environments report success
+            // without creating the file, and the placeholder is already deleted.
+            if (link.exists() && link.isFile) {
+                AppLogger.i("Installer", "Restored symlink ${link.name} -> $relative")
+                return
+            }
+            AppLogger.i("Installer", "Os.symlink reported success but ${link.name} is missing; using ln")
         } catch (e: Exception) {
             AppLogger.e("Installer", "Os.symlink failed for ${link.name}", e)
         }
@@ -161,7 +166,7 @@ object ModuleInstaller {
             if (!finished) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) process.destroyForcibly() else process.destroy()
             }
-            if (finished && process.exitValue() == 0) {
+            if (finished && process.exitValue() == 0 && link.exists() && link.isFile) {
                 AppLogger.i("Installer", "Restored symlink (ln) ${link.name} -> $relative")
                 return
             }
