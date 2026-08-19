@@ -60,6 +60,52 @@ class CompilerService(private val context: Context) {
         const val EXECUTE_TIMEOUT_SECONDS = 10L
         private val DIAGNOSTIC_REGEX =
             Regex("""^(.+?):(\d+):(\d+):\s*(fatal error|error|warning|note):\s*(.+)$""")
+
+        const val DEVICE_EXEC_BLOCKED =
+            "This device is blocking execution of the downloaded compiler (app storage is not " +
+                "executable here — common on emulators and cloud phones). Please use a real " +
+                "ARM64 Android phone. On a real device, uninstall the module in Modules and " +
+                "download it again."
+        const val ARCH_MISMATCH =
+            "The compiler can't run on this device's CPU (binary format not supported). CodeC " +
+                "ships an ARM64 compiler, so x86 emulators and 32-bit devices can't run it. On a " +
+                "real ARM64 phone, uninstall the module and download it again."
+        const val TOOLCHAIN_INCOMPLETE =
+            "The compiler's runtime libraries are missing or corrupted. Open Modules, uninstall " +
+                "the compiler and download it again."
+
+        /**
+         * Maps low-level toolchain launch failures to a user-facing explanation.
+         * Returns null when the output is a normal compiler diagnostic.
+         */
+        fun detectEnvironmentError(raw: String?): String? {
+            if (raw.isNullOrBlank()) return null
+            val lower = raw.lowercase()
+            return when {
+                lower.contains("exec format error") || lower.contains("cannot execute binary file") ->
+                    ARCH_MISMATCH
+                lower.contains("cannot open shared object file") ||
+                    (lower.contains(".so") && lower.contains("not found")) ->
+                    TOOLCHAIN_INCOMPLETE
+                lower.contains("permission denied") -> DEVICE_EXEC_BLOCKED
+                else -> null
+            }
+        }
+
+        fun parseDiagnostics(raw: String): List<CompilerError> {
+            if (raw.isBlank()) return emptyList()
+            return raw.lineSequence().mapNotNull { line ->
+                val match = DIAGNOSTIC_REGEX.find(line.trim()) ?: return@mapNotNull null
+                val kind = match.groupValues[4].lowercase()
+                val type = if (kind.contains("warning") || kind == "note") ErrorType.WARNING else ErrorType.ERROR
+                CompilerError(
+                    line = match.groupValues[2].toIntOrNull() ?: 0,
+                    column = match.groupValues[3].toIntOrNull() ?: 0,
+                    message = match.groupValues[5].trim(),
+                    type = type
+                )
+            }.toList()
+        }
     }
 
     private val store = InstalledModulesStore(context)
@@ -88,6 +134,29 @@ class CompilerService(private val context: Context) {
         }
 
         clang.setExecutable(true, false)
+        // The binary that must actually run: the compiler itself, or (when the
+        // manifest declares a wrapper script) the clang it invokes next to it.
+        val targetBinary = if (clang.name.endsWith(".sh")) {
+            clang.parentFile?.let { File(it, "clang") } ?: clang
+        } else clang
+        var needsRepair = !targetBinary.exists() || !targetBinary.canExecute() ||
+            ModuleInstaller.flattenedSymlinkTarget(targetBinary) != null
+        if (needsRepair) {
+            // Recover old installs without a re-download: restore flattened symlinks
+            // and re-apply executable bits (with chmod fallback).
+            ModuleInstaller.repairToolchain(store.getModulesRoot())
+            clang.setExecutable(true, false)
+            needsRepair = !targetBinary.canExecute() && !ModuleInstaller.chmodExecutable(targetBinary)
+        }
+        if (needsRepair) {
+            return@withContext CompilationResult(
+                success = false,
+                errors = listOf(
+                    CompilerError(0, 0, DEVICE_EXEC_BLOCKED, ErrorType.ERROR)
+                ),
+                output = "Compiler binary is not executable: ${targetBinary.absolutePath}"
+            )
+        }
         val tempDir = getTempDir()
         val stamp = System.currentTimeMillis()
         val sourceFile = File(tempDir, "source_$stamp.c")
@@ -123,7 +192,6 @@ class CompilerService(private val context: Context) {
             val stderr = stderrReader.text
             val stdout = stdoutReader.text
             val combined = listOf(stdout, stderr).filter { it.isNotBlank() }.joinToString("\n")
-            val errors = parseDiagnostics(stderr.ifBlank { stdout })
             val success = process.exitValue() == 0 && outputBinary.exists()
             if (success) {
                 outputBinary.setExecutable(true, false)
@@ -131,13 +199,23 @@ class CompilerService(private val context: Context) {
                 sourceFile.delete()
                 outputBinary.delete()
             }
+            val parsedErrors = parseDiagnostics(stderr.ifBlank { stdout })
+            val environmentError = if (!success) detectEnvironmentError(combined) else null
+            val errors = when {
+                environmentError != null ->
+                    listOf(CompilerError(0, 0, environmentError, ErrorType.ERROR))
+                success -> parsedErrors.filter { it.type == ErrorType.WARNING }
+                else -> {
+                    if (parsedErrors.none { it.type == ErrorType.ERROR }) {
+                        parsedErrors + CompilerError(
+                            0, 0, combined.ifBlank { "Compilation failed." }, ErrorType.ERROR
+                        )
+                    } else parsedErrors
+                }
+            }
             CompilationResult(
                 success = success,
-                errors = if (success) errors.filter { it.type == ErrorType.WARNING } else {
-                    if (errors.none { it.type == ErrorType.ERROR }) {
-                        errors + CompilerError(0, 0, combined.ifBlank { "Compilation failed." }, ErrorType.ERROR)
-                    } else errors
-                },
+                errors = errors,
                 output = combined,
                 binaryPath = if (success) outputBinary.absolutePath else null
             )
@@ -145,10 +223,12 @@ class CompilerService(private val context: Context) {
             AppLogger.e("CompilerService", "Compilation failed", e)
             sourceFile.delete()
             outputBinary.delete()
+            val message = detectEnvironmentError(e.message)
+                ?: (e.message ?: "Couldn't start Clang")
             CompilationResult(
                 success = false,
                 errors = listOf(
-                    CompilerError(0, 0, e.message ?: "Couldn't start Clang", ErrorType.ERROR)
+                    CompilerError(0, 0, message, ErrorType.ERROR)
                 ),
                 output = e.message.orEmpty()
             )
@@ -247,21 +327,6 @@ class CompilerService(private val context: Context) {
             readerThread?.interrupt()
         }
     }.flowOn(Dispatchers.IO)
-
-    fun parseDiagnostics(raw: String): List<CompilerError> {
-        if (raw.isBlank()) return emptyList()
-        return raw.lineSequence().mapNotNull { line ->
-            val match = DIAGNOSTIC_REGEX.find(line.trim()) ?: return@mapNotNull null
-            val kind = match.groupValues[4].lowercase()
-            val type = if (kind.contains("warning") || kind == "note") ErrorType.WARNING else ErrorType.ERROR
-            CompilerError(
-                line = match.groupValues[2].toIntOrNull() ?: 0,
-                column = match.groupValues[3].toIntOrNull() ?: 0,
-                message = match.groupValues[5].trim(),
-                type = type
-            )
-        }.toList()
-    }
 
     private fun waitForProcess(process: Process, timeoutSeconds: Long): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
