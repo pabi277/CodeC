@@ -1,22 +1,34 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# CodeC IDE
 
-# Run and deploy your AI Studio app
+A C programming IDE for Android. Download Clang from the in-app Module Store, then tap **RUN**.
 
-This contains everything you need to run your app locally.
+## Install the APK from GitHub
 
-View your app in AI Studio: https://ai.studio/apps/f3f9582e-9b41-45fd-95f1-779e17077145
+1. Push this branch (or merge to `main`). GitHub Actions builds `app-debug.apk`.
+2. Open **Actions** → latest **Build APK** run → **Artifacts** → `CodeC-IDE`.
+3. Or create a GitHub **Release** (any tag). The workflow attaches the APK to that release.
+4. On your phone: download the APK → allow **Install unknown apps** → install.
 
-## Run Locally
+In the app: **Settings → Install APK from GitHub** downloads the latest release APK and opens the installer.
 
-**Prerequisites:**  [Android Studio](https://developer.android.com/studio)
+Direct releases page: https://github.com/pabi277/CodeC/releases
 
+## Run C on the phone
 
-1. Open Android Studio
-2. Select **Open** and choose the directory containing this project
-3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
-5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
-6. Run the app on an emulator or physical device
-7. If you have already published your app in AI Studio, please [request upload key reset](https://support.google.com/googleplay/android-developer/answer/9842756#zippy=%2Crequest-an-upload-key-reset) in Google Play Console.
+1. Open **Modules** and download **Clang/LLVM Compiler** (ARM64).
+2. Wait until status is **Installed** (extracts into app-private storage so Android can execute it).
+3. Open the editor and tap **RUN**.
+
+Clang must be **arm64**. An x86 emulator cannot run this module.
+
+## Build locally
+
+Android Studio: open this folder and run the `app` debug configuration.
+
+Command line (needs Gradle 9 + JDK 17, matching AGP 9.1.1):
+
+```bash
+gradle :app:assembleDebug
+```
+
+The APK is written to `app/build/outputs/apk/debug/`.
