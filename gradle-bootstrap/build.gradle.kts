@@ -15,7 +15,6 @@ tasks.register<Exec>("assembleDebug") {
           :app:testDebugUnitTest \
           :app:lintDebug \
           --no-daemon \
-          --stacktrace \
           --project-cache-dir "${rootProject.file(".gradle/nested").absolutePath}" \
           2>&1 | tee "${'$'}log_file"; then
         exit 0
@@ -26,9 +25,23 @@ import pathlib
 import sys
 
 text = pathlib.Path(sys.argv[1]).read_text(errors="replace")
-tail = "\n".join(text.splitlines()[-180:])
-escaped = tail.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-print(f"::error title=Gradle verification failed::{escaped}")
+lines = text.splitlines()
+needles = (
+    "e: file:",
+    "error:",
+    "FAILURE:",
+    "* What went wrong:",
+    "Execution failed for task",
+    "There were failing tests",
+    "Lint found",
+)
+diagnostics = [line for line in lines if any(needle in line for needle in needles)]
+if not diagnostics:
+    diagnostics = lines[-80:]
+
+for index, diagnostic in enumerate(diagnostics[:40], 1):
+    escaped = diagnostic.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    print(f"::error title=Gradle failure {index}::{escaped}")
 PY
       exit 1
     """.trimIndent()
