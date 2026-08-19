@@ -1,0 +1,224 @@
+package com.codeci.ide
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.codeci.ide.ui.navigation.Screen
+import com.codeci.ide.ui.screens.EditorScreen
+import com.codeci.ide.ui.screens.FileManagerScreen
+import com.codeci.ide.ui.screens.HomeScreen
+import com.codeci.ide.ui.screens.LogsScreen
+import com.codeci.ide.ui.screens.ModulesScreen
+import com.codeci.ide.ui.screens.SettingsScreen
+import com.codeci.ide.ui.screens.TemplatesScreen
+import com.codeci.ide.ui.settings.SettingsManager
+import com.codeci.ide.ui.stats.StatsManager
+import com.codeci.ide.ui.theme.AppThemeMode
+import com.codeci.ide.ui.theme.MyApplicationTheme
+import com.codeci.ide.ui.theme.ThemeManager
+import com.codeci.ide.ui.utils.AppLogger
+import com.codeci.ide.ui.utils.FileManager
+import com.codeci.ide.ui.utils.FileNameUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            val context = LocalContext.current
+            val themeManager = remember { ThemeManager(context) }
+            val settingsManager = remember { SettingsManager(context) }
+            val appTheme by themeManager.appThemeFlow.collectAsState(initial = AppThemeMode.SYSTEM)
+            val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
+
+            val isDarkTheme = when (appTheme) {
+                AppThemeMode.LIGHT -> false
+                AppThemeMode.DARK -> true
+                AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+
+            MyApplicationTheme(darkTheme = isDarkTheme, accentHex = accentColor) {
+                MainApp()
+            }
+        }
+    }
+}
+
+@Composable
+fun MainApp() {
+    val navController = rememberNavController()
+    val screens = listOf(
+        Screen.Home,
+        Screen.Editor,
+        Screen.Modules,
+        Screen.Settings
+    )
+
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            AppLogger.i("Navigation", "Navigated to ${destination.route}")
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose {
+            navController.removeOnDestinationChangedListener(listener)
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            NavigationBar {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
+
+                screens.forEach { screen ->
+                    val selected = currentDestination?.hierarchy?.any {
+                        it.route?.startsWith(screen.route.substringBefore("?")) == true
+                    } == true
+                    NavigationBarItem(
+                        icon = { Icon(screen.icon, contentDescription = screen.title) },
+                        label = { Text(screen.title) },
+                        selected = selected,
+                        onClick = {
+                            navController.navigate(if (screen is Screen.Editor) Screen.Editor.createRoute(null) else screen.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Home.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Screen.Home.route) {
+                HomeScreen(
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToEditor = { fileName ->
+                        navController.navigate(Screen.Editor.createRoute(fileName)) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToFileManager = {
+                        navController.navigate(Screen.FileManager.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToTemplates = {
+                        navController.navigate(Screen.Templates.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToModules = {
+                        navController.navigate(Screen.Modules.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+            composable(
+                route = Screen.Editor.route,
+                arguments = listOf(navArgument("fileName") { nullable = true })
+            ) { backStackEntry ->
+                val fileName = backStackEntry.arguments?.getString("fileName")
+                EditorScreen(
+                    fileName = fileName,
+                    onNavigateBack = { navController.popBackStack() },
+                    onFileRenamed = { newName ->
+                        navController.navigate(Screen.Editor.createRoute(newName)) {
+                            popUpTo(Screen.Editor.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable(Screen.FileManager.route) {
+                FileManagerScreen(
+                    onFileSelected = { selectedFile ->
+                        navController.navigate(Screen.Editor.createRoute(selectedFile))
+                    }
+                )
+            }
+            composable(Screen.Templates.route) {
+                val context = LocalContext.current
+                TemplatesScreen(
+                    onUseTemplate = { fileName, code ->
+                        val safe = FileNameUtils.sanitizeFileName(fileName)
+                        if (safe != null) {
+                            val fm = FileManager(context)
+                            if (fm.saveFile(safe, code)) {
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    StatsManager(context).incrementFilesCreated()
+                                }
+                                navController.navigate(Screen.Editor.createRoute(safe)) {
+                                    popUpTo(Screen.Home.route) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+            composable(Screen.Modules.route) {
+                ModulesScreen()
+            }
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onNavigateToLogs = {
+                        navController.navigate(Screen.Logs.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+            composable(Screen.Logs.route) {
+                LogsScreen(onNavigateBack = { navController.popBackStack() })
+            }
+        }
+    }
+}
