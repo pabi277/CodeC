@@ -21,6 +21,37 @@ Direct releases page: https://github.com/pabi277/CodeC/releases
 
 Clang must be **arm64**. An x86 emulator cannot run this module.
 
+## Troubleshooting
+
+### "Permission denied" when compiling
+
+The device is blocking execution of the downloaded compiler. This happens on
+**emulators and cloud Android devices** that mount app storage without execute
+permission — the app extracts the compiler into its private storage, but the
+system refuses to run binaries from there. Install and run CodeC on a **real
+ARM64 phone** (Android 7+).
+
+If you see this on a real phone: open **Modules** → **Uninstall** → **Download**
+again so the toolchain is re-extracted with correct permissions.
+
+### "Exec format error" when compiling
+
+CPU mismatch. CodeC ships an ARM64 compiler, so **x86/x86_64 emulators and
+32-bit devices can't run it**. Use an ARM64 device. On an ARM64 phone, reinstall
+the module (Uninstall → Download) to rule out a corrupted download.
+
+### "Runtime libraries missing" when compiling
+
+The toolchain is incomplete or corrupted. Open **Modules** → **Uninstall** →
+**Download** again (the download is checksum-verified, so this usually means the
+install was interrupted).
+
+### Install or compile hangs
+
+Compilation is capped at 30s and program execution at 10s; both are killed
+automatically. A compile that "hangs" for exactly 30s usually means the
+toolchain can't start — check the error text above.
+
 ## Build locally
 
 Android Studio: open this folder and run the `app` debug configuration.

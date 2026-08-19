@@ -9,6 +9,7 @@ import com.codeci.ide.ui.modules.ManifestRepository
 import com.codeci.ide.ui.modules.Module
 import com.codeci.ide.ui.modules.ModuleInstaller
 import com.codeci.ide.ui.modules.ModuleState
+import com.codeci.ide.ui.services.CompilerService
 import com.codeci.ide.ui.services.DownloadManager
 import com.codeci.ide.ui.services.DownloadState
 import com.codeci.ide.ui.utils.AppLogger
@@ -142,15 +143,24 @@ class ModuleViewModel(application: Application) : AndroidViewModel(application) 
 
         updateStatus(module.id, InstallStatus.Extracting)
         try {
-            withContext(Dispatchers.IO) {
+            val executable = withContext(Dispatchers.IO) {
                 val dest = store.installDir(module)
                 ModuleInstaller.extractZip(zipFile, dest)
+                // Termux-style toolchains use symlinks; ZIP extraction flattens them
+                // into text placeholders, so restore them and force exec bits.
+                ModuleInstaller.materializeFlattenedSymlinks(dest)
                 ModuleInstaller.markBinariesExecutable(dest)
                 store.markInstalled(module, dest.absolutePath)
                 zipFile.delete()
                 tempDir.listFiles()?.forEach { if (it.name.startsWith(module.id)) it.delete() }
+                val binary = ModuleInstaller.compilerBinary(store.getModulesRoot(), module)
+                binary == null || binary.canExecute() || ModuleInstaller.chmodExecutable(binary)
             }
-            updateStatus(module.id, InstallStatus.Installed, updateAvailable = false)
+            if (executable) {
+                updateStatus(module.id, InstallStatus.Installed, updateAvailable = false)
+            } else {
+                updateStatus(module.id, InstallStatus.Failed(CompilerService.DEVICE_EXEC_BLOCKED))
+            }
             _isCompilerInstalled.value = store.isCompilerInstalled()
         } catch (e: Exception) {
             AppLogger.e("Modules", "Extraction failed", e)
