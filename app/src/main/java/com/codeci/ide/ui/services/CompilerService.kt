@@ -173,7 +173,12 @@ class CompilerService(private val context: Context) {
         try {
             binary.setExecutable(true, false)
             val clang = resolveClang()
-            process = startToolProcess(listOf(binary.absolutePath), binary.parentFile ?: getTempDir(), clang)
+            process = startToolProcess(
+                listOf(binary.absolutePath),
+                binary.parentFile ?: getTempDir(),
+                clang,
+                mergeStreams = true
+            )
 
             val localProcess = process
             readerThread = Thread {
