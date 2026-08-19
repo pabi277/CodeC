@@ -20,9 +20,10 @@ tasks.register<Exec>("assembleDebug") {
         exit 0
       fi
 
-      python3 - "${'$'}log_file" <<'PY'
+      python3 - "${'$'}log_file" "${rootProject.file("app/build/test-results/testDebugUnitTest").absolutePath}" <<'PY'
 import pathlib
 import sys
+import xml.etree.ElementTree as ET
 
 text = pathlib.Path(sys.argv[1]).read_text(errors="replace")
 lines = text.splitlines()
@@ -36,6 +37,20 @@ needles = (
     "Lint found",
 )
 diagnostics = [line for line in lines if any(needle in line for needle in needles)]
+
+results_dir = pathlib.Path(sys.argv[2])
+for result in results_dir.glob("*.xml"):
+    try:
+        suite = ET.parse(result).getroot()
+    except ET.ParseError:
+        continue
+    for case in suite.findall(".//testcase"):
+        failures = list(case.findall("failure")) + list(case.findall("error"))
+        for failure in failures:
+            name = f"{case.get('classname', '')}.{case.get('name', '')}".strip(".")
+            details = (failure.get("message") or failure.text or "Test failed").strip()
+            diagnostics.append(f"TEST FAILED: {name}: {details[:2500]}")
+
 if not diagnostics:
     diagnostics = lines[-80:]
 
