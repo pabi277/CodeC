@@ -20,7 +20,10 @@ tasks.register<Exec>("assembleDebug") {
         exit 0
       fi
 
-      python3 - "${'$'}log_file" "${rootProject.file("app/build/test-results/testDebugUnitTest").absolutePath}" <<'PY'
+      python3 - \
+          "${'$'}log_file" \
+          "${rootProject.file("app/build/test-results/testDebugUnitTest").absolutePath}" \
+          "${rootProject.file("app/build/reports/lint-results-debug.xml").absolutePath}" <<'PY'
 import pathlib
 import sys
 import xml.etree.ElementTree as ET
@@ -50,6 +53,23 @@ for result in results_dir.glob("*.xml"):
             name = f"{case.get('classname', '')}.{case.get('name', '')}".strip(".")
             details = (failure.get("message") or failure.text or "Test failed").strip()
             diagnostics.append(f"TEST FAILED: {name}: {details[:2500]}")
+
+lint_report = pathlib.Path(sys.argv[3])
+if lint_report.exists():
+    try:
+        lint_issues = ET.parse(lint_report).getroot().findall("issue")
+    except ET.ParseError:
+        lint_issues = []
+    for issue in lint_issues:
+        if issue.get("severity") not in {"Error", "Fatal"}:
+            continue
+        location = issue.find("location")
+        source = location.get("file", "") if location is not None else ""
+        line = location.get("line", "") if location is not None else ""
+        diagnostics.append(
+            f"LINT ERROR [{issue.get('id', 'unknown')}] {source}:{line}: "
+            f"{issue.get('message', 'Lint failed')}"
+        )
 
 if not diagnostics:
     diagnostics = lines[-80:]
