@@ -1,6 +1,5 @@
 package com.codeci.ide
 
-import androidx.test.core.app.ApplicationProvider
 import com.codeci.ide.ui.services.CompilerService
 import com.codeci.ide.ui.services.ErrorType
 import org.junit.Assert.assertEquals
@@ -15,8 +14,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class CompilerServiceTest {
 
-    private val service = CompilerService(ApplicationProvider.getApplicationContext())
-
     @Test
     fun `parseDiagnostics extracts clang errors and warnings`() {
         val raw = """
@@ -24,7 +21,7 @@ class CompilerServiceTest {
             /data/user/0/com.codeci.ide/files/CodeC/temp/source_1.c:8:3: warning: unused variable 'x' [-Wunused-variable]
         """.trimIndent()
 
-        val errors = service.parseDiagnostics(raw)
+        val errors = CompilerService.parseDiagnostics(raw)
 
         assertEquals(2, errors.size)
         assertEquals(5, errors[0].line)
@@ -37,8 +34,8 @@ class CompilerServiceTest {
 
     @Test
     fun `parseDiagnostics returns empty for unrelated output`() {
-        assertTrue(service.parseDiagnostics("Compilation succeeded\n").isEmpty())
-        assertTrue(service.parseDiagnostics("").isEmpty())
+        assertTrue(CompilerService.parseDiagnostics("Compilation succeeded\n").isEmpty())
+        assertTrue(CompilerService.parseDiagnostics("").isEmpty())
     }
 
     @Test
