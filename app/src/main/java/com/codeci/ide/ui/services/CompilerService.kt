@@ -1,6 +1,7 @@
 package com.codeci.ide.ui.services
 
 import android.content.Context
+import android.os.Build
 import com.codeci.ide.ui.modules.InstalledModulesStore
 import com.codeci.ide.ui.modules.ModuleInstaller
 import com.codeci.ide.ui.utils.AppLogger
@@ -102,9 +103,9 @@ class CompilerService(private val context: Context) {
             stdoutReader.start()
             stderrReader.start()
 
-            val finished = process.waitFor(COMPILE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            val finished = waitForProcess(process, COMPILE_TIMEOUT_SECONDS)
             if (!finished) {
-                process.destroyForcibly()
+                terminateProcess(process)
                 stdoutReader.joinQuietly()
                 stderrReader.joinQuietly()
                 sourceFile.delete()
@@ -195,10 +196,10 @@ class CompilerService(private val context: Context) {
                 }
             }.also { it.start() }
 
-            val finished = localProcess.waitFor(EXECUTE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            val finished = waitForProcess(localProcess, EXECUTE_TIMEOUT_SECONDS)
             val duration = System.currentTimeMillis() - start
             if (!finished) {
-                localProcess.destroyForcibly()
+                terminateProcess(localProcess)
                 readerThread.join(500)
                 val message = "Program exceeded time limit (possible infinite loop)"
                 trySend(ExecutionUpdate.OutputLine(message))
@@ -242,7 +243,7 @@ class CompilerService(private val context: Context) {
         }
         close()
         awaitClose {
-            process?.destroyForcibly()
+            process?.let(::terminateProcess)
             readerThread?.interrupt()
         }
     }.flowOn(Dispatchers.IO)
@@ -260,6 +261,31 @@ class CompilerService(private val context: Context) {
                 type = type
             )
         }.toList()
+    }
+
+    private fun waitForProcess(process: Process, timeoutSeconds: Long): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
+        }
+
+        val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
+        while (System.nanoTime() < deadlineNanos) {
+            try {
+                process.exitValue()
+                return true
+            } catch (_: IllegalThreadStateException) {
+                Thread.sleep(50)
+            }
+        }
+        return false
+    }
+
+    private fun terminateProcess(process: Process) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            process.destroyForcibly()
+        } else {
+            process.destroy()
+        }
     }
 
     private fun startToolProcess(
