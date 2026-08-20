@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.navigation
 
+import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesomeMosaic
 import androidx.compose.material.icons.filled.Code
@@ -7,6 +8,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
@@ -14,6 +16,16 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Editor : Screen("editor?fileName={fileName}", "Editor", Icons.Default.Code) {
         fun createRoute(fileName: String? = null): String {
             return if (fileName != null) "editor?fileName=$fileName" else "editor"
+        }
+    }
+    object Terminal : Screen("terminal?cmd={cmd}&nonce={nonce}", "Term", Icons.Default.Terminal) {
+        fun createRoute(cmd: String? = null): String {
+            val nonce = System.currentTimeMillis().toString()
+            return if (cmd.isNullOrEmpty()) {
+                "terminal?nonce=$nonce"
+            } else {
+                "terminal?cmd=${Uri.encode(cmd)}&nonce=$nonce"
+            }
         }
     }
     object FileManager : Screen("file_manager", "Files", Icons.Default.Folder)

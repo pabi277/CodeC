@@ -18,12 +18,15 @@ class EmbeddedCompilerTest {
 
         assertEquals(
             listOf(
-                "-static", "-std=c11", "-O2",
+                "-nostdlib", "-static", "-std=c11", "-O2",
                 "-Wall", "-Wextra",
                 "-I", "include-tcc",
                 "-I", "include",
+                "-B", ".",
                 "-L", ".",
+                "crt1.o", "crti.o", "codec_stdio.o",
                 source.absolutePath,
+                "libtcc1.a", "libc.a", "libtcc1.a", "libc.a", "crtn.o",
                 "-o", output.absolutePath
             ),
             cmd
@@ -37,8 +40,8 @@ class EmbeddedCompilerTest {
 
         val cmd = EmbeddedCompiler.buildCompileCommand("C17", warnings = false, optimization = 0, source, output)
 
-        assertEquals("-std=c17", cmd[1])
-        assertEquals("-O0", cmd[2])
+        assertEquals("-std=c17", cmd[2])
+        assertEquals("-O0", cmd[3])
         assertFalse(cmd.contains("-Wall"))
         assertFalse(cmd.contains("-Wextra"))
     }
@@ -58,5 +61,21 @@ class EmbeddedCompilerTest {
     @Test
     fun `abi dirs cover every ABI we ship a jniLibs binary for`() {
         assertEquals(listOf("arm64-v8a", "x86_64"), EmbeddedCompiler.ABI_DIRS)
+    }
+
+    @Test
+    fun `unix archive magic matches GNU ar`() {
+        val ar = File.createTempFile("libtcc1", ".a")
+        val elf = File.createTempFile("aout", ".out")
+        try {
+            ar.writeBytes("!<arch>\n/       ".toByteArray(Charsets.ISO_8859_1))
+            elf.writeBytes(byteArrayOf(0x7f, 'E'.code.toByte(), 'L'.code.toByte(), 'F'.code.toByte()))
+            assertTrue(EmbeddedCompiler.isUnixArchive(ar))
+            assertFalse(EmbeddedCompiler.isUnixArchive(elf))
+            assertFalse(EmbeddedCompiler.bundleArchivesValid(ar.parentFile!!))
+        } finally {
+            ar.delete()
+            elf.delete()
+        }
     }
 }

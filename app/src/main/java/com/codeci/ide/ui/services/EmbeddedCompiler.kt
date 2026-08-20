@@ -25,7 +25,7 @@ import java.io.File
  */
 object EmbeddedCompiler {
 
-    const val BUNDLE_VERSION = "1"
+    const val BUNDLE_VERSION = "3"
     const val TCC_LIB_NAME = "libtcc.so"
     private const val ASSET_ROOT = "tcc"
 
@@ -49,6 +49,23 @@ object EmbeddedCompiler {
 
     fun bundleDir(context: Context): File = File(context.filesDir, "CodeC/tcc")
 
+    /** GNU/SysV ar magic. TCC rejects anything else as "unrecognized file type". */
+    fun isUnixArchive(file: File): Boolean {
+        if (!file.isFile) return false
+        return try {
+            file.inputStream().use { ins ->
+                val magic = ByteArray(8)
+                if (ins.read(magic) != 8) return false
+                magic.contentEquals("!<arch>\n".toByteArray(Charsets.ISO_8859_1))
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun bundleArchivesValid(dir: File): Boolean =
+        isUnixArchive(File(dir, "libtcc1.a")) && isUnixArchive(File(dir, "libc.a"))
+
     /**
      * True when the tcc binary is packaged for this device's ABI. The support
      * files are extracted lazily by [ensureExtracted] on first compile.
@@ -65,8 +82,9 @@ object EmbeddedCompiler {
         val binary = tccBinary(context) ?: return false
         val dir = bundleDir(context)
         val marker = File(dir, ".bundle-v$BUNDLE_VERSION")
-        if (marker.exists()) {
+        if (marker.exists() && bundleArchivesValid(dir)) {
             binary.setExecutable(true, false)
+            compileStdioObject(binary, dir)
             return true
         }
         return try {
@@ -75,13 +93,18 @@ object EmbeddedCompiler {
             extractAssetDir(context, "$ASSET_ROOT/$abi", dir)
             val required = listOf(
                 "include/stdio.h", "include-tcc/stdarg.h",
-                "libc.a", "crt1.o", "crti.o", "crtn.o", "libtcc1.a"
+                "libc.a", "crt1.o", "crti.o", "crtn.o", "libtcc1.a", "codec_stdio.c"
             )
             val missing = required.filter { !File(dir, it).exists() }
             if (missing.isNotEmpty()) {
                 AppLogger.e("TCC", "Bundle incomplete, missing: $missing")
                 return false
             }
+            if (!bundleArchivesValid(dir)) {
+                AppLogger.e("TCC", "Bundle archives are not Unix ar files")
+                return false
+            }
+            compileStdioObject(binary, dir)
             marker.writeText(BUNDLE_VERSION)
             binary.setExecutable(true, false)
             if (!binary.canExecute()) {
@@ -93,6 +116,37 @@ object EmbeddedCompiler {
             true
         } catch (e: Exception) {
             AppLogger.e("TCC", "Bundle extraction failed", e)
+            false
+        }
+    }
+
+    /**
+     * Compiles [codec_stdio.c] to [codec_stdio.o] in the bundle. That object
+     * makes stdout unbuffered so textbook printf/scanf shows the prompt first.
+     */
+    fun compileStdioObject(tcc: File, dir: File): Boolean {
+        val src = File(dir, "codec_stdio.c")
+        val obj = File(dir, "codec_stdio.o")
+        if (!src.isFile) return false
+        if (obj.isFile && obj.length() > 0L && obj.lastModified() >= src.lastModified()) {
+            return true
+        }
+        return try {
+            val process = ProcessBuilder(
+                tcc.absolutePath,
+                "-c",
+                "-I", "include-tcc",
+                "-I", "include",
+                "-o", obj.absolutePath,
+                src.absolutePath
+            ).directory(dir).redirectErrorStream(true).start()
+            val ok = process.waitFor() == 0 && obj.isFile && obj.length() > 0L
+            if (!ok) {
+                AppLogger.e("TCC", "codec_stdio.o compile failed")
+            }
+            ok
+        } catch (e: Exception) {
+            AppLogger.e("TCC", "codec_stdio.o compile failed", e)
             false
         }
     }
@@ -130,7 +184,7 @@ object EmbeddedCompiler {
     ): List<String> {
         val std = standard.lowercase().removePrefix("c").let { "c$it" }
         val opt = optimization.coerceIn(0, 3)
-        val args = mutableListOf("-static", "-std=$std", "-O$opt")
+        val args = mutableListOf("-nostdlib", "-static", "-std=$std", "-O$opt")
         if (warnings) {
             args += "-Wall"
             args += "-Wextra"
@@ -139,9 +193,24 @@ object EmbeddedCompiler {
         args += "include-tcc"
         args += "-I"
         args += "include"
+        args += "-B"
+        args += "."
         args += "-L"
         args += "."
+        // Full musl link line. -nostdlib stops TCC appending libtcc1.a *after*
+        // libc (its linker does not rescan archives, which left memmove
+        // undefined). Order: crt startup, source, compiler runtime, libc, crt end.
+        args += "crt1.o"
+        args += "crti.o"
+        args += "codec_stdio.o"
         args += sourceFile.absolutePath
+        // TCC has no --start-group. libc (printf) needs libtcc1's *tf*
+        // helpers; libtcc1 needs memmove from libc. Scan each archive twice.
+        args += "libtcc1.a"
+        args += "libc.a"
+        args += "libtcc1.a"
+        args += "libc.a"
+        args += "crtn.o"
         args += "-o"
         args += outputFile.absolutePath
         return args

@@ -35,6 +35,7 @@ import com.codeci.ide.ui.screens.LogsScreen
 import com.codeci.ide.ui.screens.ModulesScreen
 import com.codeci.ide.ui.screens.SettingsScreen
 import com.codeci.ide.ui.screens.TemplatesScreen
+import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.theme.AppThemeMode
@@ -77,6 +78,7 @@ fun MainApp() {
     val screens = listOf(
         Screen.Home,
         Screen.Editor,
+        Screen.Terminal,
         Screen.Modules,
         Screen.Settings
     )
@@ -107,7 +109,13 @@ fun MainApp() {
                         label = { Text(screen.title) },
                         selected = selected,
                         onClick = {
-                            navController.navigate(if (screen is Screen.Editor) Screen.Editor.createRoute(null) else screen.route) {
+                            navController.navigate(
+                                when (screen) {
+                                    is Screen.Editor -> Screen.Editor.createRoute(null)
+                                    is Screen.Terminal -> Screen.Terminal.createRoute(null)
+                                    else -> screen.route
+                                }
+                            ) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
@@ -156,6 +164,12 @@ fun MainApp() {
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onNavigateToTerminal = {
+                        navController.navigate(Screen.Terminal.createRoute(null)) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }
@@ -172,7 +186,27 @@ fun MainApp() {
                             popUpTo(Screen.Editor.route) { inclusive = true }
                             launchSingleTop = true
                         }
+                    },
+                    onOpenInTerminal = { cmd ->
+                        navController.navigate(Screen.Terminal.createRoute(cmd)) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
+                )
+            }
+            composable(
+                route = Screen.Terminal.route,
+                arguments = listOf(
+                    navArgument("cmd") { nullable = true },
+                    navArgument("nonce") { nullable = true }
+                )
+            ) { backStackEntry ->
+                val cmd = backStackEntry.arguments?.getString("cmd")
+                    ?.takeIf { it.isNotBlank() && it != "{cmd}" }
+                TerminalScreen(
+                    initialCommand = cmd,
+                    commandNonce = backStackEntry.arguments?.getString("nonce")
                 )
             }
             composable(Screen.FileManager.route) {
