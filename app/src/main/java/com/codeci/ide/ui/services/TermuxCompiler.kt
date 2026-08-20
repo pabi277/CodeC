@@ -12,6 +12,7 @@ import com.codeci.ide.ui.utils.AppLogger
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Bridge to the Termux app (https://termux.dev) via its RUN_COMMAND intent.
