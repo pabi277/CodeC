@@ -21,7 +21,8 @@ jobs:
       ARCH: ${{ github.event.inputs.arch || 'aarch64' }}
       PREFIX: /data/data/com.codeci.ide/files/usr
       BUSYBOX_VERSION: "1.36.1"
-      BASH_VERSION: "5.2.21"
+      # GNU publishes bash-5.2.tar.gz; .21 is a patch level.
+      BASH_VERSION: "5.2"
       NDK_VERSION: "r27c"
 
     steps:
@@ -232,7 +233,7 @@ jobs:
       - name: Build bash (real ELF bash)
         run: |
           set -euo pipefail
-          wget -q "https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}.tar.gz"
+          wget --https-only --tries=3 --timeout=30             "https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}.tar.gz"
           tar -xf "bash-${BASH_VERSION}.tar.gz"
           cd "bash-${BASH_VERSION}"
 
