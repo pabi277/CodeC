@@ -174,7 +174,7 @@ jobs:
           print("Patched busybox .config")
           PY
 
-          make olddefconfig
+          yes "" | make oldconfig
 
           # Build with NDK clang (no CONFIG_CROSS_COMPILER_PREFIX — we pass CC fully)
           make -j"$(nproc)" \
