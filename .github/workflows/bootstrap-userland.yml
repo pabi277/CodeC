@@ -22,7 +22,8 @@ jobs:
       PREFIX: /data/data/com.codeci.ide/files/usr
       BUSYBOX_VERSION: "1.36.1"
       # GNU publishes bash-5.2.tar.gz; .21 is a patch level.
-      BASH_VERSION: "5.2"
+      # BASH_VERSION is reserved and overwritten by the running shell.
+      BASH_SOURCE_VERSION: "5.2"
       NDK_VERSION: "r27c"
 
     steps:
@@ -235,7 +236,7 @@ jobs:
           set -euo pipefail
           # Fetch the exact Bash tag from a read-only mirror of the official
           # Savannah repository. A shallow clone avoids unreliable archive URLs.
-          git clone --depth 1 --branch "bash-${BASH_VERSION}"             https://github.com/tianon/mirror-bash.git bash-source
+          git clone --depth 1 --branch "bash-${BASH_SOURCE_VERSION}"             https://github.com/tianon/mirror-bash.git bash-source
           cd bash-source
           test -x ./configure
 
