@@ -174,9 +174,10 @@ jobs:
           print("Patched busybox .config")
           PY
 
+          # `yes` receives SIGPIPE after oldconfig finishes.
           set +o pipefail
-yes "" | make oldconfig
-set -o pipefail
+          yes "" | make oldconfig
+          set -o pipefail
 
           # Build with NDK clang (no CONFIG_CROSS_COMPILER_PREFIX — we pass CC fully)
           make -j"$(nproc)" \
