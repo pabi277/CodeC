@@ -64,7 +64,7 @@ jobs:
             echo "AR=$TOOLCHAIN/bin/llvm-ar"
             echo "RANLIB=$TOOLCHAIN/bin/llvm-ranlib"
             echo "STRIP=$TOOLCHAIN/bin/llvm-strip"
-            echo "CFLAGS=-O2 -fPIC -DANDROID -D__ANDROID_API__=${API}"
+            echo "CFLAGS=-O2 -fPIC -DANDROID"
             echo "LDFLAGS="
           } >> "$GITHUB_ENV"
           "$TOOLCHAIN/bin/${TARGET}${API}-clang" --version
@@ -111,6 +111,22 @@ jobs:
               "CONFIG_TCPSVD",
               "CONFIG_UDPSVD",
               "CONFIG_INETD",
+
+              # Android has no Linux virtual-console API or sys/kd.h.
+              "CONFIG_CHVT",
+              "CONFIG_DEALLOCVT",
+              "CONFIG_DUMPKMAP",
+              "CONFIG_FGCONSOLE",
+              "CONFIG_KBD_MODE",
+              "CONFIG_LOADFONT",
+              "CONFIG_LOADKMAP",
+              "CONFIG_OPENVT",
+              "CONFIG_SETCONSOLE",
+              "CONFIG_SETKEYCODES",
+              "CONFIG_SHOWKEY",
+
+              # Android's Bionic libc does not expose gethostid().
+              "CONFIG_HOSTID",
           ]:
               cfg = set_opt(cfg, k, "n")
 
