@@ -66,7 +66,7 @@ class EmbeddedCompilerTest {
     @Test
     fun `unix archive magic matches GNU ar`() {
         val ar = File.createTempFile("libtcc1", ".a")
-        val elf = File.createTempFile("a", ".out")
+        val elf = File.createTempFile("aout", ".out")
         try {
             ar.writeBytes("!<arch>\n/       ".toByteArray(Charsets.ISO_8859_1))
             elf.writeBytes(byteArrayOf(0x7f, 'E'.code.toByte(), 'L'.code.toByte(), 'F'.code.toByte()))
