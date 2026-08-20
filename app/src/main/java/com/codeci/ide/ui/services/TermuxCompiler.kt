@@ -171,13 +171,13 @@ object TermuxCompiler {
         val requestCode = requestCounter.incrementAndGet()
         val action = "com.codeci.ide.termux.result.$requestCode"
         val latch = CountDownLatch(1)
-        // Plain var is safe: the latch creates the happens-before edge between
-        // onReceive (main thread) and the waiter (IO thread).
-        var received: Intent? = null
+        // AtomicReference: the receiver (main thread) writes, the waiter
+        // (IO thread) reads; the latch adds the happens-before edge.
+        val received = AtomicReference<Intent?>(null)
 
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                received = intent
+                received.set(intent)
                 latch.countDown()
             }
         }
@@ -234,7 +234,7 @@ object TermuxCompiler {
                     timedOut = true
                 )
             } else {
-                val bundle: Bundle? = received?.getBundleExtra(EXTRA_RESULT_BUNDLE)
+                val bundle: Bundle? = received.get()?.getBundleExtra(EXTRA_RESULT_BUNDLE)
                 if (bundle == null) {
                     TermuxResult(
                         stdout = "",
