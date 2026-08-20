@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -47,9 +49,10 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     val started: StateFlow<Boolean> = _started.asStateFlow()
 
     private var queuedCommand: String? = null
+    private val startMutex = Mutex()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) { ensureStarted() }
+        viewModelScope.launch(Dispatchers.IO) { startInternal() }
     }
 
     fun ensureStarted() {
@@ -59,14 +62,23 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     fun restart() {
         viewModelScope.launch(Dispatchers.IO) {
-            session.stop()
-            session.resetEmulator()
-            _started.value = false
-            startInternal()
+            startMutex.withLock {
+                session.stop()
+                session.resetEmulator()
+                _started.value = false
+                startLocked()
+            }
         }
     }
 
     private suspend fun startInternal() {
+        startMutex.withLock {
+            if (session.alive.value && _started.value) return
+            startLocked()
+        }
+    }
+
+    private suspend fun startLocked() {
         try {
             val prepared = prepareShell()
             session.start(prepared)
@@ -77,6 +89,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 session.sendCommand(pending)
             }
         } catch (e: Exception) {
+            _started.value = false
             AppLogger.e("TerminalViewModel", "start failed", e)
         }
     }

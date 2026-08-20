@@ -9,9 +9,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
@@ -23,9 +22,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -41,14 +37,11 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.R
 import com.codeci.ide.ui.terminal.CellFlags
 import com.codeci.ide.ui.terminal.StyleRun
@@ -92,9 +85,7 @@ fun TerminalEmulatorView(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    val focusRequester = remember { FocusRequester() }
-    var field by remember { mutableStateOf(TextFieldValue("")) }
+    var keyView by remember { mutableStateOf<TerminalKeyView?>(null) }
 
     val paint = remember(fontSizeSp, density) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
@@ -150,8 +141,7 @@ fun TerminalEmulatorView(
                             onTap = {
                                 selecting = false
                                 selection = null
-                                focusRequester.requestFocus()
-                                keyboard?.show()
+                                keyView?.showIme()
                             },
                             onLongPress = { pos ->
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
@@ -243,33 +233,26 @@ fun TerminalEmulatorView(
             }
         }
 
-        BasicTextField(
-            value = field,
-            onValueChange = { next ->
-                // Termux-style: send only the delta. Resetting to "" on every
-                // keystroke makes Gboard re-commit the whole line (cc … cc …).
-                val inserted = insertedText(field, next)
-                if (inserted.isNotEmpty()) {
-                    selecting = false
-                    selection = null
-                    topRow = 0
-                    onInput(inserted.replace("\n", "\r"))
-                }
-                field = if ('\n' in next.text || '\r' in next.text) {
-                    TextFieldValue("")
-                } else {
-                    next
+        AndroidView(
+            factory = { ctx -> TerminalKeyView(ctx) },
+            update = { view ->
+                if (keyView !== view) keyView = view
+                view.onInput = { text ->
+                    if (text.isNotEmpty()) {
+                        selecting = false
+                        selection = null
+                        topRow = 0
+                        onInput(text)
+                    }
                 }
             },
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.None,
-                keyboardType = KeyboardType.Ascii
-            ),
             modifier = Modifier
-                .size(1.dp)
-                .alpha(0.01f)
-                .focusRequester(focusRequester)
+                .fillMaxWidth()
+                .height(1.dp)
         )
+        LaunchedEffect(keyView) {
+            keyView?.post { keyView?.showIme() }
+        }
     }
 }
 
@@ -439,15 +422,6 @@ private suspend fun PointerInputScope.detectTwoFingerPinch(onZoom: (Float) -> Un
             }
         }
     }
-}
-
-private fun insertedText(old: TextFieldValue, next: TextFieldValue): String {
-    if (next.text.isEmpty()) {
-        return if (old.text.isNotEmpty()) "\u007f" else ""
-    }
-    if (next.composition != null && next.text == old.text) return ""
-    if (next.text.startsWith(old.text)) return next.text.substring(old.text.length)
-    return next.text
 }
 
 private fun handleHardwareKey(

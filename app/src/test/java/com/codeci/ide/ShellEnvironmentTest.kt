@@ -11,10 +11,12 @@ import org.junit.Test
 class ShellEnvironmentTest {
 
     @Test
-    fun `cc script execs TCC with static musl flags`() {
+    fun `cc script runs TCC with static musl flags then chmods the ELF`() {
         val script = ShellEnvironment.ccScript()
         assertTrue(script.startsWith("#!/system/bin/sh"))
-        assertTrue(script.contains("exec \"\$TCC_BIN\""))
+        assertTrue(script.contains("\"\$TCC_BIN\""))
+        assertFalse(script.contains("exec \"\$TCC_BIN\""))
+        assertTrue(script.contains("chmod 755"))
         assertTrue(script.contains("-static"))
         assertTrue(script.contains("-I include-tcc"))
         assertTrue(script.contains("-I include"))
@@ -25,10 +27,12 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("crtn.o"))
         assertTrue(script.contains("libtcc1.a"))
         assertTrue(script.contains("libc.a"))
-        assertFalse(script.contains("\\\\"))
+        assertFalse(script.contains("\\"))
         assertTrue(script.contains("cd \"\$TCC_BUNDLE\""))
         assertTrue(script.contains("CC_STD"))
         assertTrue(script.contains("CODEC_PROJECTS"))
+        assertTrue(script.contains("has_o"))
+        assertTrue(script.contains("outfile"))
     }
 
     @Test
@@ -56,7 +60,8 @@ class ShellEnvironmentTest {
         assertTrue(profile.contains("export CODEC_PROJECTS='${projects.absolutePath}'"))
         assertTrue(profile.contains("export PATH=\"\$PREFIX/bin:/system/bin:/system/xbin:\$PATH\""))
         assertTrue(profile.contains("cd \"\$CODEC_PROJECTS\""))
-        assertTrue(profile.contains("/system/bin/ls -la"))
+        assertTrue(profile.contains("/system/bin/ls"))
+        assertFalse(profile.contains("ls -la"))
         assertFalse(profile.contains("codec:\\w"))
         assertTrue(profile.contains("export PS1='codec $ '"))
     }

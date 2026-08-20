@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "9"
+    const val BOOTSTRAP_VERSION = "10"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -41,17 +41,20 @@ object ShellEnvironment {
         fi
         CWD=${'$'}(pwd)
         converted=""
+        outfile=""
         out_next=0
+        has_o=0
         for arg in "${'$'}@"; do
           if [ "${'$'}out_next" = 1 ]; then
             case "${'$'}arg" in
               /*) ;;
               *) arg="${'$'}CWD/${'$'}arg" ;;
             esac
+            outfile="${'$'}arg"
             out_next=0
           else
             case "${'$'}arg" in
-              -o) out_next=1 ;;
+              -o) out_next=1; has_o=1 ;;
               -*) ;;
               *)
                 case "${'$'}arg" in
@@ -66,11 +69,7 @@ object ShellEnvironment {
                     fi
                     if [ ! -e "${'$'}arg" ]; then
                       echo "cc: not found: ${'$'}arg" >&2
-                      echo "cc: save the file in the Editor, then:" >&2
-                      echo "    cd \"${'$'}CODEC_PROJECTS\"" >&2
-                      echo "    ls" >&2
-                      echo "    cc main.c -o a.out" >&2
-                      echo "    ./a.out" >&2
+                      echo "cc: save the file in the Editor, then run: cc main.c -o a.out" >&2
                       exit 1
                     fi
                     ;;
@@ -80,15 +79,25 @@ object ShellEnvironment {
           fi
           converted="${'$'}converted ${'$'}arg"
         done
+        if [ "${'$'}has_o" = 0 ]; then
+          outfile="${'$'}CWD/a.out"
+          converted="${'$'}converted -o ${'$'}outfile"
+        fi
         cd "${'$'}TCC_BUNDLE" || exit 1
         extra="-nostdlib -static"
         [ -n "${'$'}CC_STD" ] && extra="${'$'}extra -std=${'$'}CC_STD"
         [ -n "${'$'}CC_WARN" ] && extra="${'$'}extra ${'$'}CC_WARN"
         [ -n "${'$'}CC_OPT" ] && extra="${'$'}extra ${'$'}CC_OPT"
         extra="${'$'}extra -I include-tcc -I include -B . -L ."
-        # One line: a backslash here becomes a filename ('\' not found).
+        # One line: a line-continuation becomes a tcc filename.
+        # Do not exec: we must chmod +x the ELF afterwards or ./a.out is denied.
         # shellcheck disable=SC2086
-        exec "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o ${'$'}converted libtcc1.a libc.a libtcc1.a libc.a crtn.o
+        "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o ${'$'}converted libtcc1.a libc.a libtcc1.a libc.a crtn.o
+        status=${'$'}?
+        if [ "${'$'}status" -eq 0 ] && [ -n "${'$'}outfile" ] && [ -f "${'$'}outfile" ]; then
+          chmod 755 "${'$'}outfile" 2>/dev/null
+        fi
+        exit ${'$'}status
     """.trimIndent() + "\n"
 
     fun pkgScript(): String = """
@@ -127,8 +136,7 @@ object ShellEnvironment {
         if [ -z "${'$'}CODEC_MOTD_SHOWN" ]; then
           export CODEC_MOTD_SHOWN=1
           echo "CodeC terminal"
-          echo "pwd=$(pwd)"
-          /system/bin/ls -la
+          /system/bin/ls
           echo
           if ! /system/bin/ls *.c >/dev/null 2>&1; then
             echo "(no .c files here — Editor: Save, then: ls)"

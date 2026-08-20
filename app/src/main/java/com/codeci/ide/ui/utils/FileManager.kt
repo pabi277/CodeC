@@ -13,13 +13,28 @@ data class FileInfo(
 
 class FileManager(private val context: Context) {
 
+    /**
+     * Canonical project folder: app-private `filesDir/CodeC/projects`.
+     *
+     * Emulated storage (`/storage/emulated/0/…`, including getExternalFilesDir)
+     * is mounted `noexec`, so `./a.out` fails with "Permission denied" even
+     * after a successful `cc`. Termux keeps `$HOME` on `/data/data/<pkg>/files`
+     * for the same reason. Existing `.c` files on shared storage are copied in.
+     */
     fun getProjectDir(): File {
-        val candidates = projectDirCandidates()
-        val withSources = candidates.firstOrNull { dir ->
-            dir.isDirectory && dir.listFiles()?.any { it.isFile && it.name.endsWith(".c") } == true
+        val internal = File(context.filesDir, "CodeC/projects")
+        try {
+            if (!internal.exists()) internal.mkdirs()
+        } catch (e: Exception) {
+            AppLogger.e("FileManager", "Could not create ${internal.absolutePath}", e)
         }
-        if (withSources != null) return withSources
-        for (dir in candidates) {
+        try {
+            migrateCSources(projectDirCandidates(), internal)
+        } catch (e: Exception) {
+            AppLogger.e("FileManager", "Could not migrate sources into ${internal.absolutePath}", e)
+        }
+        if (internal.exists() && internal.canWrite()) return internal
+        for (dir in projectDirCandidates()) {
             try {
                 if (!dir.exists()) dir.mkdirs()
             } catch (e: Exception) {
@@ -27,10 +42,10 @@ class FileManager(private val context: Context) {
             }
             if (dir.exists() && dir.canWrite()) return dir
         }
-        return candidates.last()
+        return internal
     }
 
-    /** Public storage, app-external files, then internal filesDir. */
+    /** Shared-storage copies first (migration sources), then the executable dir. */
     fun projectDirCandidates(): List<File> = listOfNotNull(
         File(Environment.getExternalStorageDirectory(), "CodeC/projects"),
         context.getExternalFilesDir(null)?.let { File(it, "CodeC/projects") },
@@ -108,4 +123,39 @@ class FileManager(private val context: Context) {
             emptyList()
         }
     }
+}
+
+/**
+ * Copies `.c` files from [fromDirs] into [into], overwriting when the source
+ * is newer. Skips [into] itself. Returns how many files were copied.
+ */
+fun migrateCSources(fromDirs: List<File>, into: File): Int {
+    if (!into.exists()) into.mkdirs()
+    val destPath = try {
+        into.canonicalFile
+    } catch (_: Exception) {
+        into.absoluteFile
+    }
+    var copied = 0
+    for (dir in fromDirs) {
+        val srcDir = try {
+            dir.canonicalFile
+        } catch (_: Exception) {
+            dir.absoluteFile
+        }
+        if (srcDir == destPath || !srcDir.isDirectory) continue
+        val files = srcDir.listFiles() ?: continue
+        for (src in files) {
+            if (!src.isFile || !src.name.endsWith(".c")) continue
+            val dest = File(into, src.name)
+            if (!dest.exists() || src.lastModified() > dest.lastModified()) {
+                try {
+                    src.copyTo(dest, overwrite = true)
+                    copied++
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
+    return copied
 }

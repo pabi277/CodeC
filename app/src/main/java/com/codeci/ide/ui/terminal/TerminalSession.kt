@@ -132,16 +132,22 @@ class TerminalSession(
                 -1
             }
             if (exit >= 0) _exitCode.value = exit
-            val code = _exitCode.value
-            val notice = if (code != null) {
-                "\r\n[process exited with $code]\r\n"
-            } else {
-                "\r\n[process exited]\r\n"
+            // A newer start() already replaced [pty]. Do not paint
+            // "[process exited with 137]" (SIGKILL from the restart) onto
+            // the live shell, and do not flip alive=false under it.
+            val superseded = synchronized(this) { pty !== session }
+            if (!superseded) {
+                val code = _exitCode.value
+                val notice = if (code != null) {
+                    "\r\n[process exited with $code]\r\n"
+                } else {
+                    "\r\n[process exited]\r\n"
+                }
+                synchronized(emulator) { emulator.feed(notice) }
+                publish()
+                _alive.value = false
+                running.set(false)
             }
-            synchronized(emulator) { emulator.feed(notice) }
-            publish()
-            _alive.value = false
-            running.set(false)
         }
     }
 

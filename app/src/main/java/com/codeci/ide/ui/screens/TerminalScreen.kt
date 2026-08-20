@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
@@ -66,6 +67,7 @@ fun TerminalScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
             .background(Color(0xFF121212))
     ) {
         TopAppBar(
