@@ -34,7 +34,7 @@ run_build() {
 
 if [[ "${CODEC_USE_DOCKER:-1}" == "1" ]] && command -v docker >/dev/null 2>&1; then
   docker pull ghcr.io/termux/package-builder:latest || true
-  docker run --rm \
+  docker run --rm --privileged \
     -v "$SRC:/home/builder/termux-packages" \
     -v "$ROOT:/home/builder/codec-packages:ro" \
     ghcr.io/termux/package-builder:latest \
