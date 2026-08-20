@@ -68,6 +68,13 @@ android {
     buildConfig = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+  lint {
+    // CodeC is distributed from GitHub (not Google Play), and deliberately
+    // targets API 28 — Termux's compatibility mode — so that the downloaded
+    // compiler stays executable on Android 10+. The Google Play targetSdk
+    // policy check does not apply here.
+    disable += "ExpiredTargetSdkVersion"
+  }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
