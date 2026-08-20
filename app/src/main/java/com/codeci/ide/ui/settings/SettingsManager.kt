@@ -94,6 +94,9 @@ class SettingsManager(private val context: Context) {
     suspend fun setWarningLevel(level: String) { context.dataStore.edit { it[WARNING_LEVEL] = level } }
     suspend fun setOptimizationLevel(level: String) { context.dataStore.edit { it[OPTIMIZATION_LEVEL] = level } }
     suspend fun setCompilerBackend(backend: String) { context.dataStore.edit { it[COMPILER_BACKEND] = backend } }
+    suspend fun setTerminalFontSize(size: Float) {
+        context.dataStore.edit { it[TERMINAL_FONT_SIZE] = size.coerceIn(8f, 32f) }
+    }
 
     suspend fun setAccentColor(colorHex: String) { context.dataStore.edit { it[ACCENT_COLOR] = colorHex } }
 }

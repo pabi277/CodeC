@@ -1,22 +1,16 @@
 package com.codeci.ide.ui.terminal
 
-import android.system.Os
 import com.codeci.ide.ui.utils.AppLogger
 import java.io.Closeable
 import java.io.File
-import java.io.FileDescriptor
 
 /**
  * An open PTY master plus the child process whose stdio is the slave.
- *
- * Prefer the JNI path (`openpty` + `fork`/`exec` + `TIOCSWINSZ`). The
- * posix_openpt fallback is used in tests and when the .so did not load.
+ * Requires `libcodec-pty.so` (JNI openpty / fork / exec / TIOCSWINSZ).
  */
 class PtySession private constructor(
     private val masterFd: Int,
-    private val masterJavaFd: FileDescriptor?,
-    val pid: Int,
-    private val useNative: Boolean
+    val pid: Int
 ) : Closeable {
 
     @Volatile
@@ -25,16 +19,7 @@ class PtySession private constructor(
 
     fun write(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size): Int {
         if (closed) return -1
-        return if (useNative) {
-            PtyNative.write(masterFd, bytes, offset, length)
-        } else {
-            try {
-                Os.write(masterJavaFd, bytes, offset, length)
-            } catch (e: Exception) {
-                AppLogger.e("PtySession", "write failed", e)
-                -1
-            }
-        }
+        return PtyNative.write(masterFd, bytes, offset, length)
     }
 
     fun write(text: String): Int {
@@ -44,16 +29,7 @@ class PtySession private constructor(
 
     fun read(buffer: ByteArray, offset: Int = 0, length: Int = buffer.size): Int {
         if (closed) return -1
-        return if (useNative) {
-            PtyNative.read(masterFd, buffer, offset, length)
-        } else {
-            try {
-                Os.read(masterJavaFd, buffer, offset, length)
-            } catch (e: Exception) {
-                AppLogger.e("PtySession", "read failed", e)
-                -1
-            }
-        }
+        return PtyNative.read(masterFd, buffer, offset, length)
     }
 
     fun setWindowSize(rows: Int, cols: Int) {
@@ -71,15 +47,7 @@ class PtySession private constructor(
         } catch (_: Exception) {
         }
         try {
-            PtyNative.FallbackProcesses.destroy(pid)
-        } catch (_: Exception) {
-        }
-        try {
-            if (useNative) {
-                PtyNative.closeFd(masterFd)
-            } else if (masterJavaFd != null) {
-                Os.close(masterJavaFd)
-            }
+            PtyNative.closeFd(masterFd)
         } catch (_: Exception) {
         }
         try {
@@ -100,42 +68,27 @@ class PtySession private constructor(
             cwd: String?
         ): PtySession {
             val opened = PtyNative.openPty()
-            val useNative = PtyNative.nativeAvailable && opened.slavePath == null
-            val pid = PtyNative.spawn(
-                masterFd = opened.masterFd,
-                slaveFd = opened.slaveFd,
-                file = file,
-                args = args,
-                envp = env,
-                cwd = cwd
-            )
-            if (pid == 0 || (pid < 0 && useNative)) {
+            val pid = try {
+                PtyNative.spawn(
+                    masterFd = opened.masterFd,
+                    slaveFd = opened.slaveFd,
+                    file = file,
+                    args = args,
+                    envp = env,
+                    cwd = cwd
+                )
+            } catch (e: Exception) {
+                PtyNative.closeFd(opened.masterFd)
+                PtyNative.closeFd(opened.slaveFd)
+                throw e
+            }
+            if (pid <= 0) {
                 PtyNative.closeFd(opened.masterFd)
                 PtyNative.closeFd(opened.slaveFd)
                 throw IllegalStateException("Failed to spawn $file")
             }
-            // Parent no longer needs the slave (native spawn already closed it;
-            // the fallback still holds it — close so only the child uses it).
-            if (!useNative) {
-                PtyNative.closeFd(opened.slaveFd)
-            }
-            val javaFd = if (useNative) null else try {
-                val pfd = android.os.ParcelFileDescriptor.adoptFd(opened.masterFd)
-                // Keep the wrapper alive for the session lifetime via the fd object.
-                pfd.fileDescriptor
-            } catch (_: Exception) {
-                null
-            }
-            AppLogger.i(
-                "PtySession",
-                "started $file pid=$pid native=$useNative cwd=$cwd"
-            )
-            return PtySession(
-                masterFd = opened.masterFd,
-                masterJavaFd = javaFd,
-                pid = pid,
-                useNative = useNative
-            )
+            AppLogger.i("PtySession", "started $file pid=$pid cwd=$cwd")
+            return PtySession(masterFd = opened.masterFd, pid = pid)
         }
 
         fun startShell(prepared: PreparedShell): PtySession {
