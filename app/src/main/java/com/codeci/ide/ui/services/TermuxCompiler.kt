@@ -183,7 +183,7 @@ object TermuxCompiler {
             }
         }
 
-        val filter = IntentFilter(action)
+        val filter = IntentFilter(resultAction)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
@@ -197,7 +197,7 @@ object TermuxCompiler {
         }
 
         return try {
-            val resultIntent = Intent(action)
+            val resultIntent = Intent(resultAction)
             val pendingFlags = PendingIntent.FLAG_ONE_SHOT or
                 PendingIntent.FLAG_UPDATE_CURRENT or
                 (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
