@@ -130,7 +130,7 @@ object EmbeddedCompiler {
     ): List<String> {
         val std = standard.lowercase().removePrefix("c").let { "c$it" }
         val opt = optimization.coerceIn(0, 3)
-        val args = mutableListOf("-static", "-std=$std", "-O$opt")
+        val args = mutableListOf("-nostdlib", "-static", "-std=$std", "-O$opt")
         if (warnings) {
             args += "-Wall"
             args += "-Wextra"
@@ -143,14 +143,17 @@ object EmbeddedCompiler {
         args += "."
         args += "-L"
         args += "."
+        // Full musl link line. -nostdlib stops TCC appending libtcc1.a *after*
+        // libc (its linker does not rescan archives, which left memmove
+        // undefined). Order: crt startup, source, compiler runtime, libc, crt end.
+        args += "crt1.o"
+        args += "crti.o"
         args += sourceFile.absolutePath
-        args += "-o"
-        args += outputFile.absolutePath
-        // TCC's own libtcc1.a references memmove/memcpy/memset (U) which
-        // musl defines in libc.a. TCC's linker does not rescan archives, so
-        // pass both files explicitly after the source.
         args += "libtcc1.a"
         args += "libc.a"
+        args += "crtn.o"
+        args += "-o"
+        args += outputFile.absolutePath
         return args
     }
 }

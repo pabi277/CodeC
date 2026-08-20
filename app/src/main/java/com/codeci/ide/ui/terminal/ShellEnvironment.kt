@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "6"
+    const val BOOTSTRAP_VERSION = "7"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -81,15 +81,14 @@ object ShellEnvironment {
           converted="${'$'}converted ${'$'}arg"
         done
         cd "${'$'}TCC_BUNDLE" || exit 1
-        extra="-static"
+        extra="-nostdlib -static"
         [ -n "${'$'}CC_STD" ] && extra="${'$'}extra -std=${'$'}CC_STD"
         [ -n "${'$'}CC_WARN" ] && extra="${'$'}extra ${'$'}CC_WARN"
         [ -n "${'$'}CC_OPT" ] && extra="${'$'}extra ${'$'}CC_OPT"
         extra="${'$'}extra -I include-tcc -I include -B . -L ."
-        # libtcc1.a needs memmove from libc.a; pass both as files so TCC
-        # cannot drop them. cwd is TCC_BUNDLE.
+        # -nostdlib + explicit crt/libtcc1/libc so memmove from musl is seen.
         # shellcheck disable=SC2086
-        exec "${'$'}TCC_BIN" ${'$'}extra ${'$'}converted libtcc1.a libc.a
+        exec "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o ${'$'}converted libtcc1.a libc.a crtn.o
     """.trimIndent() + "\n"
 
     fun pkgScript(): String = """

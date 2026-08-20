@@ -18,16 +18,16 @@ class EmbeddedCompilerTest {
 
         assertEquals(
             listOf(
-                "-static", "-std=c11", "-O2",
+                "-nostdlib", "-static", "-std=c11", "-O2",
                 "-Wall", "-Wextra",
                 "-I", "include-tcc",
                 "-I", "include",
                 "-B", ".",
                 "-L", ".",
+                "crt1.o", "crti.o",
                 source.absolutePath,
-                "-o", output.absolutePath,
-                "libtcc1.a",
-                "libc.a"
+                "libtcc1.a", "libc.a", "crtn.o",
+                "-o", output.absolutePath
             ),
             cmd
         )
@@ -40,8 +40,8 @@ class EmbeddedCompilerTest {
 
         val cmd = EmbeddedCompiler.buildCompileCommand("C17", warnings = false, optimization = 0, source, output)
 
-        assertEquals("-std=c17", cmd[1])
-        assertEquals("-O0", cmd[2])
+        assertEquals("-std=c17", cmd[2])
+        assertEquals("-O0", cmd[3])
         assertFalse(cmd.contains("-Wall"))
         assertFalse(cmd.contains("-Wextra"))
     }
