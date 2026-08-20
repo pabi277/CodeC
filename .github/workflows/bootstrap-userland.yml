@@ -4,329 +4,110 @@ on:
   workflow_dispatch:
     inputs:
       arch:
-        description: 'Target arch'
+        description: Target architecture
         required: true
-        default: 'aarch64'
+        default: aarch64
         type: choice
         options:
           - aarch64
           - x86_64
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    name: Build bootstrap ${{ github.event.inputs.arch || 'aarch64' }}
+    name: Build official Termux-based bootstrap
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360
+
     env:
-      ARCH: ${{ github.event.inputs.arch || 'aarch64' }}
-      PREFIX: /data/data/com.codeci.ide/files/usr
-      BUSYBOX_VERSION: "1.36.1"
-      # GNU publishes bash-5.2.tar.gz; .21 is a patch level.
-      # BASH_VERSION is reserved and overwritten by the running shell.
-      BASH_SOURCE_VERSION: "5.2"
-      NDK_VERSION: "r27c"
+      ARCH: ${{ inputs.arch }}
 
     steps:
-      - name: Checkout
+      - name: Checkout CodeC
         uses: actions/checkout@v4
 
-      - name: Free disk space
+      - name: Free runner disk space
         run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/share/boost || true
+          sudo rm -rf \
+            /usr/local/lib/android \
+            /usr/share/dotnet \
+            /opt/ghc \
+            /usr/local/share/boost || true
+          docker system prune --all --force || true
           df -h
 
-      - name: Install host tools
+      - name: Install host requirements
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            wget curl tar bzip2 gzip xz-utils python3 file xxd \
-            make bison flex ca-certificates unzip
+            git curl ca-certificates python3 tar gzip xz-utils
+          docker --version
+          git --version
 
-      - name: Download Android NDK
-        run: |
-          wget -q "https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip" -O ndk.zip
-          unzip -q ndk.zip
-          echo "NDK=$PWD/android-ndk-${NDK_VERSION}" >> "$GITHUB_ENV"
-
-      - name: Configure toolchain for arch
-        run: |
-          TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64"
-          API=24
-          if [[ "$ARCH" == "aarch64" ]]; then
-            TARGET=aarch64-linux-android
-          else
-            TARGET=x86_64-linux-android
-          fi
-          {
-            echo "TOOLCHAIN=$TOOLCHAIN"
-            echo "TARGET=$TARGET"
-            echo "API=$API"
-            echo "CC=$TOOLCHAIN/bin/${TARGET}${API}-clang"
-            echo "CXX=$TOOLCHAIN/bin/${TARGET}${API}-clang++"
-            echo "AR=$TOOLCHAIN/bin/llvm-ar"
-            echo "RANLIB=$TOOLCHAIN/bin/llvm-ranlib"
-            echo "STRIP=$TOOLCHAIN/bin/llvm-strip"
-            echo "CFLAGS=-O2 -fPIC -DANDROID"
-            echo "LDFLAGS="
-          } >> "$GITHUB_ENV"
-          "$TOOLCHAIN/bin/${TARGET}${API}-clang" --version
-
-      - name: Build busybox (static-ish, no SELinux)
+      - name: Validate CodeC prefix
         run: |
           set -euo pipefail
-          wget -q "https://busybox.net/downloads/busybox-${BUSYBOX_VERSION}.tar.bz2"
-          tar -xf "busybox-${BUSYBOX_VERSION}.tar.bz2"
-          cd "busybox-${BUSYBOX_VERSION}"
 
-          make distclean >/dev/null 2>&1 || true
+          source codec-packages/properties.codec.sh
 
-          # BusyBox defconfig enables Linux-only console and user-account
-          # applets that cannot compile against Android's Bionic libc.
-          # Begin with everything disabled and enable only our curated applets.
-          make allnoconfig
+          test "$TERMUX_APP_PACKAGE" = "com.codeci.ide"
+          test "$TERMUX_PREFIX" = \
+            "/data/data/com.codeci.ide/files/usr"
 
-          # Patch .config with Python (reliable; no broken heredoc spaces)
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path(".config")
-          cfg = p.read_text()
-
-          def set_opt(text, key, value):
-              # value: "y", "n", or '"string"'
-              import re
-              pat = re.compile(rf"^(# )?{re.escape(key)}\b.*$", re.M)
-              if value == "n":
-                  repl = f"# {key} is not set"
-              else:
-                  repl = f"{key}={value}"
-              if pat.search(text):
-                  return pat.sub(repl, text, count=1)
-              return text + "\n" + repl + "\n"
-
-          # Disable things that break Android NDK builds
-          for k in [
-              "CONFIG_SELINUX",
-              "CONFIG_FEATURE_HAVE_RPC",
-              "CONFIG_FEATURE_INETD_RPC",
-              "CONFIG_FEATURE_UTMP",
-              "CONFIG_FEATURE_WTMP",
-              "CONFIG_PAM",
-              "CONFIG_STATIC",          # dynamic NDK libc is more reliable first
-              "CONFIG_FEATURE_MOUNT_NFS",
-              "CONFIG_FEATURE_INETD_SUPPORT",
-              "CONFIG_TCPSVD",
-              "CONFIG_UDPSVD",
-              "CONFIG_INETD",
-
-              # Android has no Linux virtual-console API or sys/kd.h.
-              "CONFIG_CHVT",
-              "CONFIG_DEALLOCVT",
-              "CONFIG_DUMPKMAP",
-              "CONFIG_FGCONSOLE",
-              "CONFIG_KBD_MODE",
-              "CONFIG_LOADFONT",
-              "CONFIG_LOADKMAP",
-              "CONFIG_OPENVT",
-              "CONFIG_SETCONSOLE",
-              "CONFIG_SETKEYCODES",
-              "CONFIG_SHOWKEY",
-
-              # Android's Bionic libc does not expose gethostid().
-              "CONFIG_HOSTID",
-          ]:
-              cfg = set_opt(cfg, k, "n")
-
-          # Shell: ash as sh; do NOT pretend ash is bash (we ship real bash)
-          cfg = set_opt(cfg, "CONFIG_ASH", "y")
-          cfg = set_opt(cfg, "CONFIG_SH_IS_ASH", "y")
-          cfg = set_opt(cfg, "CONFIG_SH_IS_HUSH", "n")
-          cfg = set_opt(cfg, "CONFIG_SH_IS_NONE", "n")
-          cfg = set_opt(cfg, "CONFIG_BASH_IS_ASH", "n")
-          cfg = set_opt(cfg, "CONFIG_BASH_IS_HUSH", "n")
-          cfg = set_opt(cfg, "CONFIG_BASH_IS_NONE", "y")
-          cfg = set_opt(cfg, "CONFIG_ASH_BASH_COMPAT", "y")
-          cfg = set_opt(cfg, "CONFIG_FEATURE_SH_STANDALONE", "y")
-          cfg = set_opt(cfg, "CONFIG_FEATURE_PREFER_APPLETS", "y")
-
-          # Extra useful applets
-          for k in [
-              "CONFIG_FEATURE_EDITING",
-              "CONFIG_FEATURE_TAB_COMPLETION",
-              "CONFIG_LS",
-              "CONFIG_CAT",
-              "CONFIG_CP",
-              "CONFIG_MV",
-              "CONFIG_RM",
-              "CONFIG_MKDIR",
-              "CONFIG_ECHO",
-              "CONFIG_PRINTF",
-              "CONFIG_TEST",
-              "CONFIG_TRUE",
-              "CONFIG_FALSE",
-              "CONFIG_PWD",
-              "CONFIG_WHICH",
-              "CONFIG_UNAME",
-              "CONFIG_TAR",
-              "CONFIG_GZIP",
-              "CONFIG_GUNZIP",
-              "CONFIG_GREP",
-              "CONFIG_SED",
-              "CONFIG_AWK",
-              "CONFIG_FIND",
-              "CONFIG_XARGS",
-              "CONFIG_HEAD",
-              "CONFIG_TAIL",
-              "CONFIG_WC",
-              "CONFIG_TR",
-              "CONFIG_CUT",
-              "CONFIG_SORT",
-              "CONFIG_UNIQ",
-              "CONFIG_CHMOD",
-              "CONFIG_CHOWN",
-              "CONFIG_LN",
-              "CONFIG_SLEEP",
-              "CONFIG_DATE",
-              "CONFIG_ID",
-              "CONFIG_WHOAMI",
-          ]:
-              cfg = set_opt(cfg, k, "y")
-
-          p.write_text(cfg)
-          print("Patched busybox .config")
-          PY
-
-          # `yes` receives SIGPIPE after oldconfig finishes.
-          set +o pipefail
-          yes "" | make oldconfig
-          set -o pipefail
-
-          echo "=== selected BusyBox configuration ==="
-          grep -E '^CONFIG_(ASH|SH_IS_ASH|LS|CAT|CP|MV|RM|MKDIR|TAR|GZIP|GREP|SED|AWK|FIND|WHICH|UNAME)=y$' .config || true
-
-          # Fail before compilation if a known Linux-only applet was enabled.
-          if grep -E '^CONFIG_(LOADFONT|LOADKMAP|LOGNAME|HOSTID|CHVT|OPENVT|SHOWKEY)=y$' .config; then
-            echo "ERROR: Linux-only BusyBox applet was unexpectedly enabled" >&2
+          if grep -R -n \
+            '/data/data/com\.termux/files/usr' \
+            codec-packages \
+            --exclude='*.md' \
+            --exclude='*.patch'; then
+            echo "Unexpected com.termux runtime prefix found" >&2
             exit 1
           fi
 
-          # Build with NDK clang (no CONFIG_CROSS_COMPILER_PREFIX — we pass CC fully)
-          make -j"$(nproc)" \
-            CC="$CC" \
-            AR="$AR" \
-            RANLIB="$RANLIB" \
-            CFLAGS="$CFLAGS" \
-            LDFLAGS="$LDFLAGS" \
-            SKIP_STRIP=y
-
-          test -f busybox
-          file busybox
-          "$STRIP" busybox || true
-          file busybox
-          # Must be ELF
-          magic=$(head -c 4 busybox | xxd -p)
-          echo "magic=$magic"
-          test "$magic" = "7f454c46"
-
-          # Install into staging via busybox --install later; keep binary
-          cp -f busybox "$GITHUB_WORKSPACE/busybox.built"
-          cd "$GITHUB_WORKSPACE"
-
-      - name: Build bash (real ELF bash)
+      - name: Build packages with official Termux builder
         run: |
           set -euo pipefail
-          # Fetch the exact Bash tag from a read-only mirror of the official
-          # Savannah repository. A shallow clone avoids unreliable archive URLs.
-          git clone --depth 1 --branch "bash-${BASH_SOURCE_VERSION}"             https://github.com/tianon/mirror-bash.git bash-source
-          cd bash-source
-          test -x ./configure
+          chmod +x codec-packages/scripts/*.sh
 
-          # bash does not love fully-static + bionic; build shared against NDK libc
-          export CC="$CC"
-          export AR="$AR"
-          export RANLIB="$RANLIB"
-          export STRIP="$STRIP"
-          export CFLAGS="$CFLAGS"
-          export LDFLAGS="$LDFLAGS"
+          CODEC_USE_DOCKER=1 \
+            codec-packages/scripts/build-bootstrap.sh "$ARCH"
 
-          ./configure \
-            --host="$TARGET" \
-            --prefix="$PREFIX" \
-            --without-bash-malloc \
-            --disable-nls \
-            --disable-rpath \
-            --enable-static-link=no \
-            bash_cv_job_control_missing=present \
-            bash_cv_unusable_rl_bind_keyseq=yes \
-            bash_cv_func_sigsetjmp=present \
-            ac_cv_func_working_mktime=yes \
-            ac_cv_func_getcwd=yes
+      - name: Validate bootstrap
+        run: |
+          set -euo pipefail
 
-          make -j"$(nproc)"
-          test -f bash
-          file bash
-          "$STRIP" bash || true
-          magic=$(head -c 4 bash | xxd -p)
-          echo "magic=$magic"
-          test "$magic" = "7f454c46"
-          # Refuse Termux contamination
-          if strings bash | grep -F "com.termux" >/dev/null; then
-            echo "bash contains com.termux" >&2
+          ARCHIVE="codec-packages/dist/bootstrap-${ARCH}.tar.gz"
+          CHECKSUM="${ARCHIVE}.sha256"
+
+          test -s "$ARCHIVE"
+          test -s "$CHECKSUM"
+
+          EXPECTED="$(awk '{print $1}' "$CHECKSUM")"
+          ACTUAL="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
+          test "$EXPECTED" = "$ACTUAL"
+
+          echo "Archive: $ARCHIVE"
+          echo "SHA-256: $ACTUAL"
+          ls -lh "$ARCHIVE" "$CHECKSUM"
+
+          tar -tzf "$ARCHIVE" > archive-contents.txt
+          head -100 archive-contents.txt
+
+          if tar -xOzf "$ARCHIVE" ./bin/bash 2>/dev/null |
+              strings |
+              grep -F 'com.termux'; then
+            echo "ERROR: Bash contains com.termux" >&2
             exit 1
           fi
-          cp -f bash "$GITHUB_WORKSPACE/bash.built"
-          cd "$GITHUB_WORKSPACE"
 
-      - name: Assemble bootstrap tarball
-        run: |
-          set -euo pipefail
-          STAGE=$(mktemp -d)
-          mkdir -p "$STAGE/bin" "$STAGE/usr/bin" "$STAGE/etc" "$STAGE/tmp" "$STAGE/var/tmp" "$STAGE/home" "$STAGE/lib"
-
-          install -m 755 busybox.built "$STAGE/bin/busybox"
-          install -m 755 bash.built "$STAGE/bin/bash"
-
-          # Install busybox applets as symlinks into bin/
-          # busybox --list works on the built binary when executed via qemu? 
-          # On x86 runner we cannot execute aarch64 busybox. Create common links manually.
-          APPLETS="sh ash ls cat cp mv rm mkdir echo printf test true false pwd which uname
-            tar gzip gunzip grep sed awk find xargs head tail wc tr cut sort uniq chmod chown ln
-            sleep date id whoami chmod touch basename dirname realpath readlink clear env
-            ps kill free df du mount umount wget nc vi less more cmp diff patch yes seq"
-          for a in $APPLETS; do
-            ln -sf busybox "$STAGE/bin/$a"
-          done
-          # Prefer real bash over any busybox bash alias
-          ln -sf bash "$STAGE/bin/bash"
-          # Keep sh -> busybox ash
-          ln -sf busybox "$STAGE/bin/sh"
-
-          # Sanity: no com.termux
-          for b in "$STAGE/bin/bash" "$STAGE/bin/busybox"; do
-            if strings "$b" | grep -F "com.termux" >/dev/null; then
-              echo "ERROR: $b contains com.termux" >&2
-              exit 1
-            fi
-            file "$b"
-          done
-
-          mkdir -p codec-packages/dist
-          OUT="codec-packages/dist/bootstrap-${ARCH}.tar.gz"
-          # Archive root = bin/, etc/ (app strips optional leading usr/)
-          tar -C "$STAGE" -czf "$OUT" .
-          sha256sum "$OUT" | awk '{print $1}' > "${OUT}.sha256"
-
-          echo "=== archive head ==="
-          tar -tzf "$OUT" | head -40
-          echo "=== sha256 ==="
-          cat "${OUT}.sha256"
-          ls -lh codec-packages/dist/
-
-      - name: Upload artifact
+      - name: Upload bootstrap artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bootstrap-${{ github.event.inputs.arch || 'aarch64' }}
+          name: bootstrap-${{ inputs.arch }}
           path: |
-            codec-packages/dist/bootstrap-*.tar.gz
-            codec-packages/dist/bootstrap-*.tar.gz.sha256
+            codec-packages/dist/bootstrap-${{ inputs.arch }}.tar.gz
+            codec-packages/dist/bootstrap-${{ inputs.arch }}.tar.gz.sha256
+            archive-contents.txt
           if-no-files-found: error
           retention-days: 14

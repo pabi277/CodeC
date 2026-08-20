@@ -16,15 +16,4 @@ TERMUX_PREFIX="${TERMUX_BASE_DIR}/usr"
 CODEC_BOOTSTRAP_PACKAGES="
 busybox
 bash
-coreutils
-grep
-sed
-gawk
-tar
-gzip
-nano
-less
-make
-file
-termux-exec
 "
