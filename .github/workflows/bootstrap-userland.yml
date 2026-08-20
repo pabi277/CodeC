@@ -150,7 +150,6 @@ jobs:
           for k in [
               "CONFIG_FEATURE_EDITING",
               "CONFIG_FEATURE_TAB_COMPLETION",
-              "CONFIG_FEATURE_USERNAME_COMPLETION",
               "CONFIG_LS",
               "CONFIG_CAT",
               "CONFIG_CP",
