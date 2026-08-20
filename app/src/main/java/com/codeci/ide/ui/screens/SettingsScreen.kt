@@ -90,6 +90,7 @@ fun SettingsScreen(
     val warningLevel by settingsManager.warningLevelFlow.collectAsState(initial = "Standard")
     val optimizationLevel by settingsManager.optimizationLevelFlow.collectAsState(initial = "O0")
     val compilerBackend by settingsManager.compilerBackendFlow.collectAsState(initial = "auto")
+    val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 14f)
     val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -245,6 +246,22 @@ fun SettingsScreen(
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
+            SettingsSectionHeader(stringResource(com.codeci.ide.R.string.terminal_settings))
+            SettingsSlider(
+                title = stringResource(com.codeci.ide.R.string.terminal_font_size),
+                value = terminalFontSize,
+                valueRange = 8f..28f,
+                steps = 19,
+                onValueChange = { scope.launch { settingsManager.setTerminalFontSize(it) } },
+                valueLabel = "${terminalFontSize.toInt()} sp"
+            )
+            SettingsItem(
+                title = stringResource(com.codeci.ide.R.string.nav_terminal),
+                subtitle = "In-app VT/ANSI terminal with a real PTY. cc is the built-in TCC; pkg arrives in Phase 3."
+            )
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
             // APPEARANCE
             SettingsSectionHeader("Appearance")
             
@@ -327,7 +344,7 @@ fun SettingsScreen(
 
             SettingsItem(
                 title = "App Version", 
-                subtitle = "1.2 (Beta)",
+                subtitle = "1.3 (Beta)",
                 onClick = {
                     if (com.codeci.ide.BuildConfig.DEBUG && !devModeUnlocked) {
                         versionTaps++

@@ -24,6 +24,7 @@ class SettingsManager(private val context: Context) {
         val WARNING_LEVEL = stringPreferencesKey("warning_level")
         val OPTIMIZATION_LEVEL = stringPreferencesKey("optimization_level")
         val COMPILER_BACKEND = stringPreferencesKey("compiler_backend")
+        val TERMINAL_FONT_SIZE = floatPreferencesKey("terminal_font_size")
 
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val RECENT_FILES_CSV = stringPreferencesKey("recent_files_csv")
@@ -44,6 +45,9 @@ class SettingsManager(private val context: Context) {
     val optimizationLevelFlow: Flow<String> = context.dataStore.data.map { it[OPTIMIZATION_LEVEL] ?: "O0" }
     val compilerBackendFlow: Flow<String> = context.dataStore.data.map {
         it[COMPILER_BACKEND] ?: "auto"
+    }
+    val terminalFontSizeFlow: Flow<Float> = context.dataStore.data.map {
+        it[TERMINAL_FONT_SIZE] ?: 14f
     }
 
     val accentColorFlow: Flow<String> = context.dataStore.data.map { it[ACCENT_COLOR] ?: "#FF6200EE" }

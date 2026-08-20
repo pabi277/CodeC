@@ -252,4 +252,15 @@ class EditorViewModel : ViewModel() {
         }
         return success
     }
+
+    /**
+     * Persists the buffer and returns the absolute path so the terminal
+     * handoff can `cc` the file. Null when the name is illegal or save fails.
+     */
+    fun saveAndAbsolutePath(context: Context): String? {
+        if (!saveFile(context)) return null
+        val safe = FileNameUtils.sanitizeFileName(_fileName.value) ?: return null
+        val file = java.io.File(FileManager(context).getProjectDir(), safe)
+        return file.absolutePath
+    }
 }

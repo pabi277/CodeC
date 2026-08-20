@@ -1,6 +1,6 @@
 # CodeC Terminal — Mini-Termux Plan
 
-> **Status:** planning · **Goal:** turn CodeC into a self-contained C IDE **with its own
+> **Status:** Phase 1 implemented · **Goal:** turn CodeC into a self-contained C IDE **with its own
 > Termux-style terminal and package manager** — install packages like `pkg install clang`
 > inside the app, no root, no Termux dependency.
 >
@@ -169,19 +169,25 @@ with `gcc`-free tooling and add clang right after.
 | Phase | Deliverable | Effort (1 dev, part-time) |
 |---|---|---|
 | **0** ✅ done | targetSdk 28 (executable storage), embedded TCC, module store, Termux bridge | — |
-| **1** | Terminal UI: VT parser + PTY + shell process, editor→terminal handoff | 1–3 weeks |
+| **1** ✅ done | Terminal UI: VT parser + PTY + shell process, editor→terminal handoff | 1–3 weeks |
 | **2** | Bootstrap pipeline: fork termux-packages, change PREFIX, CI builds busybox/bash/coreutils/…, bootstrap tarball + first-launch download | 1–2 weeks |
 | **3** | apt + dpkg + termux-exec + own repo + first `pkg install` working | 2–4 weeks |
 | **4** | Polish: storage access (`termux-setup-storage`-equivalent), env vars, themes, security confirmation prompt, package signing | ongoing |
 | **Total** | | **6–10 weeks part-time** (phases 1–2 already give a useful in-app terminal) |
 
-### Phase 1 detail (terminal UI)
+### Phase 1 detail (terminal UI) — shipped
 
-1. JNI shim: `openpty()`, `fork`/`exec bash`, `TIOCSWINSZ`.
-2. VT parser: libvterm port or hand-rolled; support xterm-256color subset (colors,
-   cursor, scrollback, bracketed paste).
-3. Compose terminal widget: monospace font, tap keyboard, long-press paste, pinch zoom.
-4. `cc` alias wired to the embedded TCC; `pkg` placeholder until Phase 3.
+1. JNI shim: `openpty()`, `fork`/`exec bash`, `TIOCSWINSZ` (`app/src/main/cpp/pty.c`,
+   `PtyNative` / `PtySession`). posix_openpt fallback when the .so is missing.
+2. VT parser: hand-rolled xterm-256color subset in Kotlin (`AnsiParser` +
+   `TerminalEmulator`) — colors (SGR 16/256/RGB), cursor, scrollback, alt screen,
+   bracketed paste. MIT, fully unit-tested.
+3. Compose terminal widget: monospace canvas, tap keyboard, long-press paste, pinch
+   zoom, Termux-style extra-keys row (`TerminalEmulatorView`).
+4. `cc` alias wired to the embedded TCC; `pkg` placeholder until Phase 3
+   (`ShellEnvironment` writes `$PREFIX/bin/{cc,pkg,bash}`).
+5. Editor → terminal handoff: toolbar terminal button runs
+   `cc file.c -o a.out && ./a.out` in the live PTY.
 
 ### Phase 2 detail (bootstrap)
 

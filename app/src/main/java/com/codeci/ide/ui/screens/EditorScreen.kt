@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -75,6 +76,7 @@ import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
+import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +86,7 @@ fun EditorScreen(
     fileName: String? = null,
     onNavigateBack: () -> Unit = {},
     onFileRenamed: (String) -> Unit = {},
+    onOpenInTerminal: (String?) -> Unit = {},
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -217,6 +220,19 @@ fun EditorScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        val path = viewModel.saveAndAbsolutePath(context)
+                        if (path != null) {
+                            onOpenInTerminal(TerminalHandoff.compileAndRunCommand(path))
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.Terminal,
+                            contentDescription = stringResource(R.string.run_in_terminal)
+                        )
+                    }
                     Button(
                         onClick = { viewModel.runCode(context) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),

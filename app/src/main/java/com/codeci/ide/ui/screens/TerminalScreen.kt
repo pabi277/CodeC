@@ -1,0 +1,129 @@
+package com.codeci.ide.ui.screens
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.R
+import com.codeci.ide.ui.components.TerminalEmulatorView
+import com.codeci.ide.ui.components.TerminalExtraKeys
+import com.codeci.ide.ui.viewmodels.TerminalViewModel
+
+@Composable
+fun activityTerminalViewModel(): TerminalViewModel {
+    val activity = requireNotNull(LocalActivity.current) as ComponentActivity
+    return viewModel(viewModelStoreOwner = activity)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TerminalScreen(
+    modifier: Modifier = Modifier,
+    initialCommand: String? = null,
+    commandNonce: String? = null,
+    viewModel: TerminalViewModel = activityTerminalViewModel()
+) {
+    val context = LocalContext.current
+    val snapshot by viewModel.snapshot.collectAsState()
+    val alive by viewModel.alive.collectAsState()
+    val fontSize by viewModel.fontSizeSp.collectAsState()
+    val ctrl by viewModel.ctrlLatched.collectAsState()
+    val alt by viewModel.altLatched.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.ensureStarted() }
+    LaunchedEffect(commandNonce, initialCommand) {
+        if (!initialCommand.isNullOrBlank()) {
+            viewModel.sendCommand(initialCommand)
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFF121212))
+    ) {
+        TopAppBar(
+            title = {
+                val suffix = if (alive) "" else " — exited"
+                Text(
+                    text = (snapshot.title.ifBlank { stringResource(R.string.nav_terminal) }) + suffix,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            actions = {
+                IconButton(onClick = { pasteFromClipboard(context, viewModel) }) {
+                    Icon(
+                        Icons.Default.ContentPaste,
+                        contentDescription = stringResource(R.string.terminal_paste)
+                    )
+                }
+                IconButton(onClick = { viewModel.restart() }) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = stringResource(R.string.terminal_restart)
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color(0xFF1E1E1E),
+                titleContentColor = Color.White,
+                actionIconContentColor = Color.White
+            )
+        )
+        TerminalEmulatorView(
+            snapshot = snapshot,
+            fontSizeSp = fontSize,
+            onInput = { viewModel.send(it) },
+            onResize = { cols, rows -> viewModel.resize(cols, rows) },
+            onFontScale = { viewModel.setFontSize(it) },
+            onPaste = { pasteFromClipboard(context, viewModel) },
+            cursorSequence = { viewModel.cursorKey(it) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        )
+        TerminalExtraKeys(
+            ctrlLatched = ctrl,
+            altLatched = alt,
+            onCtrl = { viewModel.toggleCtrl() },
+            onAlt = { viewModel.toggleAlt() },
+            onKey = { viewModel.sendKey(it) },
+            cursorSequence = { viewModel.cursorKey(it) }
+        )
+    }
+}
+
+private fun pasteFromClipboard(context: Context, viewModel: TerminalViewModel) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+    if (text.isNullOrEmpty()) {
+        Toast.makeText(context, context.getString(R.string.terminal_clipboard_empty), Toast.LENGTH_SHORT).show()
+        return
+    }
+    viewModel.send(viewModel.wrapPaste(text))
+}

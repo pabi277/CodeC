@@ -22,6 +22,10 @@ object AppLogger {
         log("INFO", tag, message)
     }
 
+    fun w(tag: String, message: String) {
+        log("WARN", tag, message)
+    }
+
     fun e(tag: String, message: String, throwable: Throwable? = null) {
         log("ERROR", tag, message + (throwable?.let { " - ${it.message}" } ?: ""))
     }

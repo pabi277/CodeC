@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.AutoAwesomeMosaic
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,7 +57,8 @@ fun HomeScreen(
     onNavigateToEditor: (String?) -> Unit = {},
     onNavigateToFileManager: () -> Unit = {},
     onNavigateToTemplates: () -> Unit = {},
-    onNavigateToModules: () -> Unit = {}
+    onNavigateToModules: () -> Unit = {},
+    onNavigateToTerminal: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
@@ -152,28 +154,41 @@ fun HomeScreen(
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ActionCard(
-                        title = stringResource(R.string.action_new_file),
-                        icon = Icons.Default.Add,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigateToEditor(null) }
-                    )
-                    ActionCard(
-                        title = stringResource(R.string.action_open_file),
-                        icon = Icons.Default.Folder,
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToFileManager
-                    )
-                    ActionCard(
-                        title = stringResource(R.string.action_templates),
-                        icon = Icons.Default.AutoAwesomeMosaic,
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToTemplates
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ActionCard(
+                            title = stringResource(R.string.action_new_file),
+                            icon = Icons.Default.Add,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onNavigateToEditor(null) }
+                        )
+                        ActionCard(
+                            title = stringResource(R.string.action_open_file),
+                            icon = Icons.Default.Folder,
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToFileManager
+                        )
+                        ActionCard(
+                            title = stringResource(R.string.action_templates),
+                            icon = Icons.Default.AutoAwesomeMosaic,
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToTemplates
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ActionCard(
+                            title = stringResource(R.string.action_terminal),
+                            icon = Icons.Default.Terminal,
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToTerminal
+                        )
+                    }
                 }
             }
 

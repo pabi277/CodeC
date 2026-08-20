@@ -20,10 +20,29 @@ android {
     // targetSdk 28 compatibility mode so that downloaded binaries keep
     // working. CodeC is distributed via GitHub (not Play), so this is safe.
     targetSdk = 28
-    versionCode = 3
-    versionName = "1.2"
+    versionCode = 4
+    versionName = "1.3"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    externalNativeBuild {
+      cmake {
+        arguments += "-DANDROID_STL=none"
+        cFlags += "-std=c11"
+        cFlags += "-fvisibility=hidden"
+      }
+    }
+    ndk {
+      abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+    }
+  }
+
+  ndkVersion = "27.2.12479018"
+  externalNativeBuild {
+    cmake {
+      path = file("src/main/cpp/CMakeLists.txt")
+      version = "3.22.1"
+    }
   }
 
   signingConfigs {

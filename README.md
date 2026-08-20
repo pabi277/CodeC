@@ -1,6 +1,6 @@
 # CodeC IDE
 
-A C programming IDE for Android. Download Clang from the in-app Module Store, then tap **RUN**.
+A C programming IDE for Android. Write C, tap **RUN**, or open the in-app terminal and type `cc file.c`.
 
 ## Install the APK from GitHub
 
@@ -33,6 +33,18 @@ downloads, no Termux and no setup**. Programs are compiled to fully static execu
 
 The bundled Clang module (optional) must be **arm64**; an x86 emulator can't run it — but
 the built-in TCC covers x86_64 emulators automatically.
+
+### In-app terminal (Phase 1 of Mini-Termux)
+
+CodeC now ships a real **VT/ANSI terminal** (Compose + PTY via JNI `openpty`):
+
+1. Open the **Term** tab, or tap the terminal icon in the editor toolbar.
+2. A login shell starts under `$PREFIX` (`/data/data/com.codeci.ide/files/usr`).
+3. `cc` is the built-in TCC compiler — `cc hello.c -o a.out && ./a.out`.
+4. `pkg` is a placeholder until Phase 3 (apt + our own package repo).
+5. Editor → terminal handoff: the toolbar terminal button saves the current file and runs `cc file.c -o a.out && ./a.out` in the shell.
+
+The extra-keys row (ESC, TAB, CTRL, ALT, arrows) is there so a phone keyboard can still drive the PTY. Pinch to zoom; long-press to paste.
 
 To rebuild the embedded TCC bundles (e.g. to add more ABIs), run `scripts/build-tcc.sh`
 with a musl cross toolchain — the script is self-contained and CI-ready.

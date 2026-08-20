@@ -7,6 +7,15 @@
     <string name="nav_files">Files</string>
     <string name="nav_logs">Logs</string>
     <string name="nav_modules">Modules</string>
+    <string name="nav_terminal">Terminal</string>
+    <string name="action_terminal">Terminal</string>
+    <string name="run_in_terminal">Run in Terminal</string>
+    <string name="open_shell_here">Open shell here</string>
+    <string name="terminal_settings">Terminal</string>
+    <string name="terminal_font_size">Terminal Font Size</string>
+    <string name="terminal_paste">Paste</string>
+    <string name="terminal_restart">Restart shell</string>
+    <string name="terminal_clipboard_empty">Clipboard is empty</string>
     <string name="home_ready">Ready to code today?</string>
     <string name="action_new_file">New File</string>
     <string name="action_open_file">Open File</string>
@@ -47,7 +56,7 @@
     <string name="cache_cleared">Cache cleared</string>
     <string name="about">About</string>
     <string name="app_version">App Version</string>
-    <string name="app_version_value">1.2 (Beta)</string>
+    <string name="app_version_value">1.3 (Beta)</string>
     <string name="github">GitHub</string>
     <string name="github_url">https://github.com/pabi277/CodeC</string>
     <string name="install_from_github">Install APK from GitHub</string>
