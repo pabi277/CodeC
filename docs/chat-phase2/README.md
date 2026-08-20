@@ -51,5 +51,7 @@ cc main.c -o a.out
 ## Next chat (Phase 2 finish or Phase 3)
 
 - Run **Bootstrap userland** workflow (needs Docker + ~hours). Attach `bootstrap-aarch64.tar.gz` + `.sha256` to release `userland-v1`.
-- If GitHub App cannot push `.github/workflows/*`, apply `bootstrap-userland.yml` from this tree manually.
+- GitHub App **lacks `workflows` permission**. Copy
+  [bootstrap-userland.yml.patch](bootstrap-userland.yml.patch) to
+  `.github/workflows/bootstrap-userland.yml` with a PAT that has `workflows`.
 - Then Phase 3: apt/dpkg + our repo. Do not copy Termux `.deb`s.
