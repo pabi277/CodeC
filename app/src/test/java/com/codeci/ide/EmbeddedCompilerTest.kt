@@ -44,7 +44,7 @@ class EmbeddedCompilerTest {
     }
 
     @Test
-    fun `optimization is clamped into 0..3`() {
+    fun `optimization is clamped into the 0 to 3 range`() {
         val source = File("s.c")
         val output = File("p")
 
