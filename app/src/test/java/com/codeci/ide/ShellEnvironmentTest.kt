@@ -34,6 +34,7 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("outfile"))
         assertTrue(script.contains("crtn.o -o"))
         assertTrue(script.contains("continue"))
+        assertTrue(script.contains("codec_stdio.o"))
     }
 
     @Test

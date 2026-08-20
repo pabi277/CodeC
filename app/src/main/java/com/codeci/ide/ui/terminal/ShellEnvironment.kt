@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "11"
+    const val BOOTSTRAP_VERSION = "12"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -87,10 +87,11 @@ object ShellEnvironment {
         [ -n "${'$'}CC_WARN" ] && extra="${'$'}extra ${'$'}CC_WARN"
         [ -n "${'$'}CC_OPT" ] && extra="${'$'}extra ${'$'}CC_OPT"
         extra="${'$'}extra -I include-tcc -I include -B . -L ."
+        [ ! -f codec_stdio.o ] && [ -f codec_stdio.c ] && "${'$'}TCC_BIN" -c -I include-tcc -I include -o codec_stdio.o codec_stdio.c
         # Same order as EmbeddedCompiler.buildCompileCommand: archives then -o last.
         # Do not exec: we must chmod +x the ELF afterwards or ./a.out is denied.
         # shellcheck disable=SC2086
-        "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o ${'$'}converted libtcc1.a libc.a libtcc1.a libc.a crtn.o -o "${'$'}outfile"
+        "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o codec_stdio.o ${'$'}converted libtcc1.a libc.a libtcc1.a libc.a crtn.o -o "${'$'}outfile"
         status=${'$'}?
         if [ "${'$'}status" -eq 0 ] && [ -n "${'$'}outfile" ] && [ -f "${'$'}outfile" ]; then
           chmod 755 "${'$'}outfile" 2>/dev/null

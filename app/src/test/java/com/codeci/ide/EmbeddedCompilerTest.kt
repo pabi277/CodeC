@@ -24,7 +24,7 @@ class EmbeddedCompilerTest {
                 "-I", "include",
                 "-B", ".",
                 "-L", ".",
-                "crt1.o", "crti.o",
+                "crt1.o", "crti.o", "codec_stdio.o",
                 source.absolutePath,
                 "libtcc1.a", "libc.a", "libtcc1.a", "libc.a", "crtn.o",
                 "-o", output.absolutePath
