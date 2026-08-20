@@ -36,15 +36,27 @@ the built-in TCC covers x86_64 emulators automatically.
 
 ### In-app terminal (Phase 1 of Mini-Termux)
 
-CodeC now ships a real **VT/ANSI terminal** (Compose + PTY via JNI `openpty`):
+CodeC now ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`):
 
 1. Open the **Term** tab, or tap the terminal icon in the editor toolbar.
 2. A login shell starts under `$PREFIX` (`/data/data/com.codeci.ide/files/usr`).
-3. `cc` is the built-in TCC compiler — `cc hello.c -o a.out && ./a.out`.
-4. `pkg` is a placeholder until Phase 3 (apt + our own package repo).
-5. Editor → terminal handoff: the toolbar terminal button saves the current file and runs `cc file.c -o a.out && ./a.out` in the shell.
+3. `cc` is the built-in TCC. Type **one command per line**, Enter each time:
 
-The extra-keys row (ESC, TAB, CTRL, ALT, arrows) is there so a phone keyboard can still drive the PTY. Pinch to zoom; long-press to paste.
+   ```
+   cc hello.c -o a.out
+   ```
+
+   ```
+   ./a.out
+   ```
+
+   The `./` is required (cwd is not on `PATH`). Projects live in app-private storage so `./a.out` is executable.
+4. Programs that use `scanf` / `getchar` must run in **Term**, not the editor RUN button (RUN has no keyboard into the process).
+5. `pkg` is a placeholder until Phase 3 (apt + our own package repo).
+
+The extra-keys row (ESC, TAB, CTRL, ALT, arrows) is there so a phone keyboard can still drive the PTY. Pinch to zoom; long-press to copy/paste.
+
+**Next-chat handoff** (bugs already fixed this session, what not to regress): [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 To rebuild the embedded TCC bundles (e.g. to add more ABIs), run `scripts/build-tcc.sh`
 with a musl cross toolchain — the script is self-contained and CI-ready.
@@ -66,8 +78,8 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 
 ## Troubleshooting
 
-> **Roadmap:** we're building a built-in terminal + package manager (Termux-style, no
-> Termux dependency) — see [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).
+> **Roadmap:** Mini-Termux plan — [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).  
+> **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"
 
@@ -128,6 +140,9 @@ interrupted), or switch to the Termux engine.
 Compilation is capped at 30s and program execution at 10s; both are killed
 automatically. A compile that "hangs" for exactly 30s usually means the
 toolchain can't start — check the error text above.
+
+Editor **RUN** on a program that calls `scanf` will hit the 10s cap (exit 124).
+That is waiting for input, not an infinite loop. Run it in **Term** with `./a.out`.
 
 ## Build locally
 

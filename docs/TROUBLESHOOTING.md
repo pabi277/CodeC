@@ -1,5 +1,9 @@
 # CodeC — "Compiler blocked / Permission denied" & the Termux way
 
+> In-app **Term** tab (`cc` / `./a.out` / scanf): see
+> [docs/chat-phase1/README.md](chat-phase1/README.md) for the Phase 1 problem list
+> and what a new chat must not regress.
+
 > Applies to the error:
 > `error: This device is blocking execution of the downloaded compiler … Compilation failed.`
 
@@ -184,7 +188,22 @@ clang -Wall -Wextra -std=c11 program.c -o program   # strict checks
 > Note: emulators and "cloud phones" that mount storage `noexec` break Termux the same
 > way they break CodeC — no local binary can run there at all. Use a real phone.
 
-## 5. Frequently asked questions
+## 5. In-app terminal (`cc` / `./a.out`)
+
+These are **not** the downloaded-Clang W^X error. Full table:
+[chat-phase1/PROBLEMS.md](chat-phase1/PROBLEMS.md).
+
+| You see | Do this |
+|---|---|
+| `./a.out: Permission denied` | Need **1.3.11+**. Uninstall + reinstall. CWD must be app-private `filesDir`, not `/storage/emulated/0`. |
+| `libtcc1.a: unrecognized file type` | Need **1.3.12+**. Term → refresh, compile again. |
+| Prompt appears *after* you type at `scanf` | Need **1.3.13+**. Recompile. Do not add `fflush` to user C. |
+| `input.out: inaccessible or not found` | Run `./input.out`, not `input.out`. |
+| RUN: `exit 124` / “infinite loop” on `scanf` | Not a loop. RUN has no stdin. Use **Term**. |
+| `[process exited with 137]` on refresh | Fixed in 1.3.11. |
+| Keyboard delayed ~a minute | Need **1.3.11+**. Tap the terminal once. |
+
+## 6. Frequently asked questions
 
 **Q: I reinstalled the module in Modules — why does it still fail?**
 A: Reinstalling the module only fixes file permissions. The W^X block is an OS policy on
@@ -209,7 +228,7 @@ A: Termux targets API 28 on purpose (see its [FAQ](https://github.com/termux/ter
 which keeps `exec()` of downloaded binaries legal. CodeC's new builds follow the same
 approach.
 
-## 6. Related resources
+## 7. Related resources
 
 - Android 10 "Removed execute permission for app home directory":
   https://developer.android.com/about/versions/10/behavior-changes-10#execute-permission
