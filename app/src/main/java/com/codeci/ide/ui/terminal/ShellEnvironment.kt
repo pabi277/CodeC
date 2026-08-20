@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "5"
+    const val BOOTSTRAP_VERSION = "6"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -86,9 +86,10 @@ object ShellEnvironment {
         [ -n "${'$'}CC_WARN" ] && extra="${'$'}extra ${'$'}CC_WARN"
         [ -n "${'$'}CC_OPT" ] && extra="${'$'}extra ${'$'}CC_OPT"
         extra="${'$'}extra -I include-tcc -I include -B . -L ."
-        # Word-splitting is intentional: CodeC source names are sanitised.
+        # libtcc1.a needs memmove from libc.a; pass both as files so TCC
+        # cannot drop them. cwd is TCC_BUNDLE.
         # shellcheck disable=SC2086
-        exec "${'$'}TCC_BIN" ${'$'}extra ${'$'}converted -lc
+        exec "${'$'}TCC_BIN" ${'$'}extra ${'$'}converted libtcc1.a libc.a
     """.trimIndent() + "\n"
 
     fun pkgScript(): String = """
@@ -250,17 +251,14 @@ class ShellBootstrap(private val context: Context) {
         if (!projects.exists()) projects.mkdirs()
 
         val marker = File(prefix, ".bootstrap-v${ShellEnvironment.BOOTSTRAP_VERSION}")
-        if (!marker.exists()) {
-            writeExecutable(File(bin, "cc"), ShellEnvironment.ccScript())
-            writeExecutable(File(bin, "pkg"), ShellEnvironment.pkgScript())
-            writeExecutable(File(bin, "bash"), ShellEnvironment.bashShim())
-            File(etc, "profile").writeText(
-                ShellEnvironment.profileScript(prefix, home, projects)
-            )
-            File(home, ".profile").writeText(". ${TerminalHandoff.shellEscape(File(etc, "profile").absolutePath)}\n")
-            marker.writeText(ShellEnvironment.BOOTSTRAP_VERSION)
-            AppLogger.i("ShellBootstrap", "Wrote Phase-1 userland to ${prefix.absolutePath}")
-        }
+        writeExecutable(File(bin, "cc"), ShellEnvironment.ccScript())
+        writeExecutable(File(bin, "pkg"), ShellEnvironment.pkgScript())
+        writeExecutable(File(bin, "bash"), ShellEnvironment.bashShim())
+        File(etc, "profile").writeText(
+            ShellEnvironment.profileScript(prefix, home, projects)
+        )
+        File(home, ".profile").writeText(". ${TerminalHandoff.shellEscape(File(etc, "profile").absolutePath)}\n")
+        marker.writeText(ShellEnvironment.BOOTSTRAP_VERSION)
 
         val tcc = EmbeddedCompiler.tccBinary(context)
         val bundle = EmbeddedCompiler.bundleDir(context)

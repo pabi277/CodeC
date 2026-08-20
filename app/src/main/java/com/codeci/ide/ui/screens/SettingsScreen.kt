@@ -344,7 +344,7 @@ fun SettingsScreen(
 
             SettingsItem(
                 title = "App Version", 
-                subtitle = "1.3.6 (Beta)",
+                subtitle = "1.3.7 (Beta)",
                 onClick = {
                     if (com.codeci.ide.BuildConfig.DEBUG && !devModeUnlocked) {
                         versionTaps++

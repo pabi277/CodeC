@@ -146,10 +146,11 @@ object EmbeddedCompiler {
         args += sourceFile.absolutePath
         args += "-o"
         args += outputFile.absolutePath
-        // TCC emits memmove/memcpy for struct copies; musl provides them in
-        // libc.a. Without an explicit -lc some TCC/musl builds leave them
-        // undefined even for hello-world.
-        args += "-lc"
+        // TCC's own libtcc1.a references memmove/memcpy/memset (U) which
+        // musl defines in libc.a. TCC's linker does not rescan archives, so
+        // pass both files explicitly after the source.
+        args += "libtcc1.a"
+        args += "libc.a"
         return args
     }
 }
