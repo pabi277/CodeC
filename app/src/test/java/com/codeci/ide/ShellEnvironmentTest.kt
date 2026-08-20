@@ -21,6 +21,7 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("-L ."))
         assertTrue(script.contains("cd \"\$TCC_BUNDLE\""))
         assertTrue(script.contains("CC_STD"))
+        assertTrue(script.contains("CODEC_PROJECTS"))
     }
 
     @Test
@@ -41,11 +42,16 @@ class ShellEnvironmentTest {
     fun `profile exports PREFIX HOME and PATH`() {
         val prefix = File("/data/data/com.codeci.ide/files/usr")
         val home = File("/data/data/com.codeci.ide/files/home")
-        val profile = ShellEnvironment.profileScript(prefix, home)
+        val projects = File("/data/user/0/com.codeci.ide/files/CodeC/projects")
+        val profile = ShellEnvironment.profileScript(prefix, home, projects)
         assertTrue(profile.contains("export PREFIX='${prefix.absolutePath}'"))
         assertTrue(profile.contains("export HOME='${home.absolutePath}'"))
+        assertTrue(profile.contains("export CODEC_PROJECTS='${projects.absolutePath}'"))
         assertTrue(profile.contains("export PATH=\"\$PREFIX/bin:\$PATH\""))
         assertTrue(profile.contains("cc  → built-in TCC"))
+        assertTrue(profile.contains("cd \"\$CODEC_PROJECTS\""))
+        assertFalse(profile.contains("codec:\\w"))
+        assertTrue(profile.contains("codec:\$PWD"))
     }
 
     @Test
@@ -73,6 +79,8 @@ class ShellEnvironmentTest {
         assertTrue(env["PATH"]!!.startsWith(File(files, "usr/bin").absolutePath))
         assertTrue(env["PATH"]!!.contains(native.absolutePath))
         assertEquals("xterm-256color", env["TERM"])
+        assertEquals("codec:\$PWD $ ", env["PS1"])
+        assertTrue(env.containsKey("CODEC_PROJECTS"))
     }
 
     @Test

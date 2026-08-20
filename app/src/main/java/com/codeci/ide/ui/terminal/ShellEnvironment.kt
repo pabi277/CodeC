@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "1"
+    const val BOOTSTRAP_VERSION = "2"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -56,7 +56,15 @@ object ShellEnvironment {
               *)
                 case "${'$'}arg" in
                   /*) ;;
-                  *) arg="${'$'}CWD/${'$'}arg" ;;
+                  *)
+                    if [ -e "${'$'}CWD/${'$'}arg" ]; then
+                      arg="${'$'}CWD/${'$'}arg"
+                    elif [ -n "${'$'}CODEC_PROJECTS" ] && [ -e "${'$'}CODEC_PROJECTS/${'$'}arg" ]; then
+                      arg="${'$'}CODEC_PROJECTS/${'$'}arg"
+                    else
+                      arg="${'$'}CWD/${'$'}arg"
+                    fi
+                    ;;
                 esac
                 ;;
             esac
@@ -90,25 +98,29 @@ object ShellEnvironment {
         exec /system/bin/sh "${'$'}@"
     """.trimIndent() + "\n"
 
-    fun profileScript(prefix: File, home: File): String = """
+    fun profileScript(prefix: File, home: File, projects: File): String = """
         # CodeC login profile (Phase 1)
         export PREFIX='${prefix.absolutePath}'
         export HOME='${home.absolutePath}'
+        export CODEC_PROJECTS='${projects.absolutePath}'
         export TMPDIR="${'$'}PREFIX/tmp"
         export PATH="${'$'}PREFIX/bin:${'$'}PATH"
         export TERM="${'$'}{TERM:-xterm-256color}"
         export COLORTERM="${'$'}{COLORTERM:-truecolor}"
         export LANG="${'$'}{LANG:-C.UTF-8}"
-        export PS1='codec:\w ${'$'} '
-        mkdir -p "${'$'}HOME" "${'$'}TMPDIR" 2>/dev/null
+        # Android /system/bin/sh is mksh — no bash \w. Re-expand ${'$'}PWD each prompt.
+        export PS1='codec:${'$'}PWD ${'$'} '
+        mkdir -p "${'$'}HOME" "${'$'}TMPDIR" "${'$'}CODEC_PROJECTS" 2>/dev/null
         if [ -z "${'$'}CODEC_MOTD_SHOWN" ]; then
           export CODEC_MOTD_SHOWN=1
           echo "CodeC terminal  (Phase 1 — Mini-Termux)"
-          echo "  PREFIX=${'$'}PREFIX"
+          echo "  Projects: ${'$'}CODEC_PROJECTS"
           echo "  cc  → built-in TCC     pkg → coming in Phase 3"
+          echo "  Example:  ls && cc main.c -o a.out && ./a.out"
+          echo "  (save the file in the Editor first)"
           echo
         fi
-        cd "${'$'}HOME" 2>/dev/null || true
+        cd "${'$'}CODEC_PROJECTS" 2>/dev/null || cd "${'$'}HOME" 2>/dev/null || true
     """.trimIndent() + "\n"
 
     fun normalizeStandard(standard: String): String =
@@ -127,10 +139,12 @@ object ShellEnvironment {
         standard: String,
         warnings: Boolean,
         optimization: Int,
-        extraPath: List<File> = emptyList()
+        extraPath: List<File> = emptyList(),
+        projectsDir: File? = null
     ): Map<String, String> {
         val prefix = prefixDir(filesDir)
         val home = homeDir(filesDir)
+        val projects = projectsDir ?: File(filesDir, "CodeC/projects")
         val pathParts = buildList {
             add(binDir(prefix).absolutePath)
             add(nativeLibDir.absolutePath)
@@ -152,8 +166,9 @@ object ShellEnvironment {
             put("CC_WARN", warningFlags(warnings))
             put("CC_OPT", optimizationFlag(optimization))
             put("ENV", File(etcDir(prefix), "profile").absolutePath)
-            put("PS1", "codec:\\w $ ")
+            put("PS1", "codec:\$PWD $ ")
             put("USER", "codec")
+            put("CODEC_PROJECTS", projects.absolutePath)
             if (tccBinary != null) put("TCC_BIN", tccBinary.absolutePath)
             put("TCC_BUNDLE", tccBundle.absolutePath)
         }
@@ -213,12 +228,21 @@ class ShellBootstrap(private val context: Context) {
             AppLogger.w("ShellBootstrap", "TCC bundle not extracted; cc will report unavailable")
         }
 
+        val projects = try {
+            FileManager(context).getProjectDir()
+        } catch (_: Exception) {
+            File(context.filesDir, "CodeC/projects")
+        }
+        if (!projects.exists()) projects.mkdirs()
+
         val marker = File(prefix, ".bootstrap-v${ShellEnvironment.BOOTSTRAP_VERSION}")
         if (!marker.exists()) {
             writeExecutable(File(bin, "cc"), ShellEnvironment.ccScript())
             writeExecutable(File(bin, "pkg"), ShellEnvironment.pkgScript())
             writeExecutable(File(bin, "bash"), ShellEnvironment.bashShim())
-            File(etc, "profile").writeText(ShellEnvironment.profileScript(prefix, home))
+            File(etc, "profile").writeText(
+                ShellEnvironment.profileScript(prefix, home, projects)
+            )
             File(home, ".profile").writeText(". ${TerminalHandoff.shellEscape(File(etc, "profile").absolutePath)}\n")
             marker.writeText(ShellEnvironment.BOOTSTRAP_VERSION)
             AppLogger.i("ShellBootstrap", "Wrote Phase-1 userland to ${prefix.absolutePath}")
@@ -227,12 +251,6 @@ class ShellBootstrap(private val context: Context) {
         val tcc = EmbeddedCompiler.tccBinary(context)
         val bundle = EmbeddedCompiler.bundleDir(context)
         val nativeLib = File(context.applicationInfo.nativeLibraryDir)
-        val cwd = try {
-            FileManager(context).getProjectDir()
-        } catch (_: Exception) {
-            home
-        }
-        if (!cwd.exists()) cwd.mkdirs()
 
         val env = ShellEnvironment.buildEnv(
             filesDir = context.filesDir,
@@ -241,13 +259,14 @@ class ShellBootstrap(private val context: Context) {
             tccBundle = bundle,
             standard = settings.cStandard,
             warnings = settings.warnings,
-            optimization = settings.optimization
+            optimization = settings.optimization,
+            projectsDir = projects
         )
         return PreparedShell(
             prefix = prefix,
             home = home,
             shell = ShellEnvironment.resolveShell(prefix),
-            cwd = cwd,
+            cwd = projects,
             env = env
         )
     }
