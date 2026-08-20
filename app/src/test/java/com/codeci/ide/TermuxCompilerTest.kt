@@ -14,10 +14,11 @@ class TermuxCompilerTest {
         val script = TermuxCompiler.buildCompileScript("c11", warnings = true, optimization = 2)
 
         assertTrue(script.startsWith("set -e; "))
-        assertTrue(script.contains("cat > \"\$HOME/.codec/source.c\""))
+        assertTrue(script.contains("D=\"\$HOME/.codec\"; mkdir -p \"\$D\"; "))
+        assertTrue(script.contains("cat > \"\$D/source.c\""))
         assertTrue(
             script.contains(
-                "clang \"\$HOME/.codec/source.c\" -o \"\$HOME/.codec/program\" -std=c11 -Wall -Wextra -O2"
+                "exec clang \"\$D/source.c\" -o \"\$D/program\" -std=c11 -Wall -Wextra -O2"
             )
         )
     }
@@ -40,7 +41,7 @@ class TermuxCompilerTest {
 
         assertTrue(
             script.contains(
-                "printf '%s' 'aW50IG1haW4oKSB7IHJldHVybiAwOyB9' | base64 -d > \"\$HOME/.codec/source.c\""
+                "printf '%s' 'aW50IG1haW4oKSB7IHJldHVybiAwOyB9' | base64 -d > \"\$D/source.c\""
             )
         )
         assertFalse(script.contains("cat >"))
