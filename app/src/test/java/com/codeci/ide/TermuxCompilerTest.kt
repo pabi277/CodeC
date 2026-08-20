@@ -47,7 +47,7 @@ class TermuxCompilerTest {
     }
 
     @Test
-    fun `optimization level is clamped into 0..3`() {
+    fun `optimization level is clamped into the 0 to 3 range`() {
         val high = TermuxCompiler.buildCompileScript("c11", warnings = false, optimization = 9)
         val low = TermuxCompiler.buildCompileScript("c11", warnings = false, optimization = -2)
 
