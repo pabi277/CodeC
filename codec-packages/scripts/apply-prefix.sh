@@ -21,11 +21,12 @@ path = pathlib.Path(sys.argv[1])
 pkg = sys.argv[2]
 text = path.read_text()
 text = re.sub(
-    r'TERMUX_APP_PACKAGE="[^"]*"',
+    r'TERMUX_APP_PACKAGE=["\'][^"\']*["\']',
     f'TERMUX_APP_PACKAGE="{pkg}"',
     text,
-    count=1,
 )
+text = text.replace("/data/data/com.termux/files/usr", f"/data/data/{pkg}/files/usr")
+text = text.replace("com.termux", pkg)
 path.write_text(text)
 print(f"apply-prefix: TERMUX_APP_PACKAGE={pkg} in {path}")
 PY
