@@ -41,14 +41,7 @@ object TarGzExtractor {
                         val target = safeFile(destDir, name)
                         target.parentFile?.mkdirs()
                         if (target.exists()) target.delete()
-                        try {
-                            java.nio.file.Files.createSymbolicLink(
-                                target.toPath(),
-                                java.nio.file.Paths.get(linkName)
-                            )
-                        } catch (_: Exception) {
-                            // If symlink is blocked, skip; busybox applets still work.
-                        }
+                        createSymlink(linkName, target)
                     }
                     '0', '\u0000' -> {
                         val out = safeFile(destDir, name)
@@ -61,6 +54,18 @@ object TarGzExtractor {
                     }
                 }
             }
+        }
+    }
+
+    /** minSdk 24 — avoid java.nio.file (API 26). */
+    private fun createSymlink(linkName: String, target: File) {
+        try {
+            val proc = ProcessBuilder("ln", "-s", linkName, target.absolutePath)
+                .redirectErrorStream(true)
+                .start()
+            proc.waitFor()
+        } catch (_: Exception) {
+            // If symlink is blocked, skip; busybox applets still work.
         }
     }
 
