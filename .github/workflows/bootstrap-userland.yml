@@ -233,9 +233,12 @@ jobs:
       - name: Build bash (real ELF bash)
         run: |
           set -euo pipefail
-          wget --https-only --tries=3 --timeout=30             "https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}.tar.gz"
-          tar -xf "bash-${BASH_VERSION}.tar.gz"
-          cd "bash-${BASH_VERSION}"
+          # ftp.gnu.org rejects some GitHub-hosted runner requests. Use the
+          # read-only GitHub mirror of the official Savannah Bash repository.
+          curl --fail --location --retry 3 --retry-all-errors             "https://github.com/tianon/mirror-bash/archive/refs/tags/bash-${BASH_VERSION}.tar.gz"             --output bash-source.tar.gz
+          mkdir bash-source
+          tar -xzf bash-source.tar.gz --strip-components=1 -C bash-source
+          cd bash-source
 
           # bash does not love fully-static + bionic; build shared against NDK libc
           export CC="$CC"
