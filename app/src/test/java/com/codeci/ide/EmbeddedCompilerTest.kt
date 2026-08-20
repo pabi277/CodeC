@@ -62,4 +62,20 @@ class EmbeddedCompilerTest {
     fun `abi dirs cover every ABI we ship a jniLibs binary for`() {
         assertEquals(listOf("arm64-v8a", "x86_64"), EmbeddedCompiler.ABI_DIRS)
     }
+
+    @Test
+    fun `unix archive magic matches GNU ar`() {
+        val ar = File.createTempFile("libtcc1", ".a")
+        val elf = File.createTempFile("a", ".out")
+        try {
+            ar.writeBytes("!<arch>\n/       ".toByteArray(Charsets.ISO_8859_1))
+            elf.writeBytes(byteArrayOf(0x7f, 'E'.code.toByte(), 'L'.code.toByte(), 'F'.code.toByte()))
+            assertTrue(EmbeddedCompiler.isUnixArchive(ar))
+            assertFalse(EmbeddedCompiler.isUnixArchive(elf))
+            assertFalse(EmbeddedCompiler.bundleArchivesValid(ar.parentFile!!))
+        } finally {
+            ar.delete()
+            elf.delete()
+        }
+    }
 }

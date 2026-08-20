@@ -31,8 +31,9 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("cd \"\$TCC_BUNDLE\""))
         assertTrue(script.contains("CC_STD"))
         assertTrue(script.contains("CODEC_PROJECTS"))
-        assertTrue(script.contains("has_o"))
         assertTrue(script.contains("outfile"))
+        assertTrue(script.contains("crtn.o -o"))
+        assertTrue(script.contains("continue"))
     }
 
     @Test

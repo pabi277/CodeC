@@ -25,7 +25,7 @@ import java.io.File
  */
 object EmbeddedCompiler {
 
-    const val BUNDLE_VERSION = "1"
+    const val BUNDLE_VERSION = "2"
     const val TCC_LIB_NAME = "libtcc.so"
     private const val ASSET_ROOT = "tcc"
 
@@ -49,6 +49,23 @@ object EmbeddedCompiler {
 
     fun bundleDir(context: Context): File = File(context.filesDir, "CodeC/tcc")
 
+    /** GNU/SysV ar magic. TCC rejects anything else as "unrecognized file type". */
+    fun isUnixArchive(file: File): Boolean {
+        if (!file.isFile) return false
+        return try {
+            file.inputStream().use { ins ->
+                val magic = ByteArray(8)
+                if (ins.read(magic) != 8) return false
+                magic.contentEquals("!<arch>\n".toByteArray(Charsets.ISO_8859_1))
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun bundleArchivesValid(dir: File): Boolean =
+        isUnixArchive(File(dir, "libtcc1.a")) && isUnixArchive(File(dir, "libc.a"))
+
     /**
      * True when the tcc binary is packaged for this device's ABI. The support
      * files are extracted lazily by [ensureExtracted] on first compile.
@@ -65,7 +82,7 @@ object EmbeddedCompiler {
         val binary = tccBinary(context) ?: return false
         val dir = bundleDir(context)
         val marker = File(dir, ".bundle-v$BUNDLE_VERSION")
-        if (marker.exists()) {
+        if (marker.exists() && bundleArchivesValid(dir)) {
             binary.setExecutable(true, false)
             return true
         }
@@ -80,6 +97,10 @@ object EmbeddedCompiler {
             val missing = required.filter { !File(dir, it).exists() }
             if (missing.isNotEmpty()) {
                 AppLogger.e("TCC", "Bundle incomplete, missing: $missing")
+                return false
+            }
+            if (!bundleArchivesValid(dir)) {
+                AppLogger.e("TCC", "Bundle archives are not Unix ar files")
                 return false
             }
             marker.writeText(BUNDLE_VERSION)

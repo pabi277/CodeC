@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "10"
+    const val BOOTSTRAP_VERSION = "11"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -43,7 +43,6 @@ object ShellEnvironment {
         converted=""
         outfile=""
         out_next=0
-        has_o=0
         for arg in "${'$'}@"; do
           if [ "${'$'}out_next" = 1 ]; then
             case "${'$'}arg" in
@@ -52,36 +51,35 @@ object ShellEnvironment {
             esac
             outfile="${'$'}arg"
             out_next=0
-          else
-            case "${'$'}arg" in
-              -o) out_next=1; has_o=1 ;;
-              -*) ;;
-              *)
-                case "${'$'}arg" in
-                  /*) ;;
-                  *)
-                    if [ -e "${'$'}CWD/${'$'}arg" ]; then
-                      arg="${'$'}CWD/${'$'}arg"
-                    elif [ -n "${'$'}CODEC_PROJECTS" ] && [ -e "${'$'}CODEC_PROJECTS/${'$'}arg" ]; then
-                      arg="${'$'}CODEC_PROJECTS/${'$'}arg"
-                    else
-                      arg="${'$'}CWD/${'$'}arg"
-                    fi
-                    if [ ! -e "${'$'}arg" ]; then
-                      echo "cc: not found: ${'$'}arg" >&2
-                      echo "cc: save the file in the Editor, then run: cc main.c -o a.out" >&2
-                      exit 1
-                    fi
-                    ;;
-                esac
-                ;;
-            esac
+            continue
           fi
+          case "${'$'}arg" in
+            -o) out_next=1; continue ;;
+            -*) ;;
+            *)
+              case "${'$'}arg" in
+                /*) ;;
+                *)
+                  if [ -e "${'$'}CWD/${'$'}arg" ]; then
+                    arg="${'$'}CWD/${'$'}arg"
+                  elif [ -n "${'$'}CODEC_PROJECTS" ] && [ -e "${'$'}CODEC_PROJECTS/${'$'}arg" ]; then
+                    arg="${'$'}CODEC_PROJECTS/${'$'}arg"
+                  else
+                    arg="${'$'}CWD/${'$'}arg"
+                  fi
+                  if [ ! -e "${'$'}arg" ]; then
+                    echo "cc: not found: ${'$'}arg" >&2
+                    echo "cc: save the file in the Editor, then run: cc main.c -o a.out" >&2
+                    exit 1
+                  fi
+                  ;;
+              esac
+              ;;
+          esac
           converted="${'$'}converted ${'$'}arg"
         done
-        if [ "${'$'}has_o" = 0 ]; then
+        if [ -z "${'$'}outfile" ]; then
           outfile="${'$'}CWD/a.out"
-          converted="${'$'}converted -o ${'$'}outfile"
         fi
         cd "${'$'}TCC_BUNDLE" || exit 1
         extra="-nostdlib -static"
@@ -89,10 +87,10 @@ object ShellEnvironment {
         [ -n "${'$'}CC_WARN" ] && extra="${'$'}extra ${'$'}CC_WARN"
         [ -n "${'$'}CC_OPT" ] && extra="${'$'}extra ${'$'}CC_OPT"
         extra="${'$'}extra -I include-tcc -I include -B . -L ."
-        # One line: a line-continuation becomes a tcc filename.
+        # Same order as EmbeddedCompiler.buildCompileCommand: archives then -o last.
         # Do not exec: we must chmod +x the ELF afterwards or ./a.out is denied.
         # shellcheck disable=SC2086
-        "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o ${'$'}converted libtcc1.a libc.a libtcc1.a libc.a crtn.o
+        "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o ${'$'}converted libtcc1.a libc.a libtcc1.a libc.a crtn.o -o "${'$'}outfile"
         status=${'$'}?
         if [ "${'$'}status" -eq 0 ] && [ -n "${'$'}outfile" ] && [ -f "${'$'}outfile" ]; then
           chmod 755 "${'$'}outfile" 2>/dev/null

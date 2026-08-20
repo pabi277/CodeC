@@ -20,8 +20,8 @@ android {
     // targetSdk 28 compatibility mode so that downloaded binaries keep
     // working. CodeC is distributed via GitHub (not Play), so this is safe.
     targetSdk = 28
-    versionCode = 15
-    versionName = "1.3.11"
+    versionCode = 16
+    versionName = "1.3.12"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
