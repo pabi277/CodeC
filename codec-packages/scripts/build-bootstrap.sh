@@ -19,6 +19,17 @@ fi
 
 "$ROOT/scripts/apply-prefix.sh" "$SRC"
 
+# CodeC does not use Termux's Android activity-manager wrappers.
+# Avoid the termux-tools -> termux-am Gradle/Android SDK dependency.
+BASH_RECIPE="$SRC/packages/bash/build.sh"
+sed -i 's/, termux-tools//' "$BASH_RECIPE"
+if grep '^TERMUX_PKG_DEPENDS=' "$BASH_RECIPE" | grep -q 'termux-tools'; then
+  echo "Failed to remove termux-tools from Bash dependencies" >&2
+  exit 1
+fi
+echo "CodeC Bash dependencies:"
+grep '^TERMUX_PKG_DEPENDS=' "$BASH_RECIPE"
+
 PACKAGES=$(echo "$CODEC_BOOTSTRAP_PACKAGES" | tr '\n' ' ')
 
 if [[ "${CODEC_USE_DOCKER:-1}" == "1" ]] && command -v docker >/dev/null 2>&1; then
@@ -27,7 +38,7 @@ if [[ "${CODEC_USE_DOCKER:-1}" == "1" ]] && command -v docker >/dev/null 2>&1; t
     (
       cd "$SRC"
       for p in $PACKAGES; do
-        ./scripts/run-docker.sh ./build-package.sh -a "$ARCH" -I "$p"
+        ./scripts/run-docker.sh ./build-package.sh -a "$ARCH" -f "$p"
       done
     )
   else
@@ -42,14 +53,14 @@ if [[ "${CODEC_USE_DOCKER:-1}" == "1" ]] && command -v docker >/dev/null 2>&1; t
         cd /home/builder/termux-packages
         /home/builder/codec-packages/scripts/apply-prefix.sh /home/builder/termux-packages
         for p in $PACKAGES; do
-          ./build-package.sh -a $ARCH -I \$p
+          ./build-package.sh -a $ARCH -f \$p
         done
       "
   fi
 else
   echo "CODEC_USE_DOCKER=0 or no docker — building on host"
   for p in $PACKAGES; do
-    (cd "$SRC" && ./build-package.sh -a "$ARCH" -I "$p")
+    (cd "$SRC" && ./build-package.sh -a "$ARCH" -f "$p")
   done
 fi
 

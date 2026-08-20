@@ -36,7 +36,7 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Attach APK to GitHub Release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'userland-')
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/debug/*.apk
