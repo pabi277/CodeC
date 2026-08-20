@@ -3,7 +3,7 @@
 
 # Pinned upstream (bump deliberately).
 TERMUX_PACKAGES_REPO="${TERMUX_PACKAGES_REPO:-https://github.com/termux/termux-packages.git}"
-TERMUX_PACKAGES_REF="${TERMUX_PACKAGES_REF:-v0.1240}"
+TERMUX_PACKAGES_REF="master"
 
 TERMUX_APP_PACKAGE="com.codeci.ide"
 TERMUX_BASE_DIR="/data/data/${TERMUX_APP_PACKAGE}/files"
