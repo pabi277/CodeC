@@ -170,7 +170,8 @@ object TermuxCompiler {
         timeoutSeconds: Long
     ): TermuxResult {
         val requestCode = requestCounter.incrementAndGet()
-        val action = "com.codeci.ide.termux.result.$requestCode"
+        // NB: not named "action" — it would shadow Intent.action in apply {}.
+        val resultAction = "com.codeci.ide.termux.result.$requestCode"
         val latch = CountDownLatch(1)
         // AtomicReference: the receiver (main thread) writes, the waiter
         // (IO thread) reads; the latch adds the happens-before edge.
