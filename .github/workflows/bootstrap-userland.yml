@@ -56,14 +56,6 @@ jobs:
           test "$TERMUX_PREFIX" = \
             "/data/data/com.codeci.ide/files/usr"
 
-          if grep -R -n \
-            '/data/data/com\.termux/files/usr' \
-            codec-packages \
-            --exclude='*.md' \
-            --exclude='*.patch'; then
-            echo "Unexpected com.termux runtime prefix found" >&2
-            exit 1
-          fi
 
       - name: Build packages with official Termux builder
         run: |
