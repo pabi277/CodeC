@@ -48,10 +48,11 @@ class ShellEnvironmentTest {
         assertTrue(profile.contains("export HOME='${home.absolutePath}'"))
         assertTrue(profile.contains("export CODEC_PROJECTS='${projects.absolutePath}'"))
         assertTrue(profile.contains("export PATH=\"\$PREFIX/bin:\$PATH\""))
-        assertTrue(profile.contains("cc  → built-in TCC"))
         assertTrue(profile.contains("cd \"\$CODEC_PROJECTS\""))
+        assertTrue(profile.contains("cc main.c -o a.out"))
         assertFalse(profile.contains("codec:\\w"))
-        assertTrue(profile.contains("codec:\$PWD"))
+        assertFalse(profile.contains("\$PWD"))
+        assertTrue(profile.contains("export PS1='codec $ '"))
     }
 
     @Test
@@ -79,7 +80,7 @@ class ShellEnvironmentTest {
         assertTrue(env["PATH"]!!.startsWith(File(files, "usr/bin").absolutePath))
         assertTrue(env["PATH"]!!.contains(native.absolutePath))
         assertEquals("xterm-256color", env["TERM"])
-        assertEquals("codec:\$PWD $ ", env["PS1"])
+        assertEquals("codec $ ", env["PS1"])
         assertTrue(env.containsKey("CODEC_PROJECTS"))
     }
 

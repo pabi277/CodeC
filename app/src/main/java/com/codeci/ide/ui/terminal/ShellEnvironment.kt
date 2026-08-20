@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "2"
+    const val BOOTSTRAP_VERSION = "3"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -64,6 +64,15 @@ object ShellEnvironment {
                     else
                       arg="${'$'}CWD/${'$'}arg"
                     fi
+                    if [ ! -e "${'$'}arg" ]; then
+                      echo "cc: not found: ${'$'}arg" >&2
+                      echo "cc: save the file in the Editor, then:" >&2
+                      echo "    cd \"${'$'}CODEC_PROJECTS\"" >&2
+                      echo "    ls" >&2
+                      echo "    cc main.c -o a.out" >&2
+                      echo "    ./a.out" >&2
+                      exit 1
+                    fi
                     ;;
                 esac
                 ;;
@@ -108,16 +117,18 @@ object ShellEnvironment {
         export TERM="${'$'}{TERM:-xterm-256color}"
         export COLORTERM="${'$'}{COLORTERM:-truecolor}"
         export LANG="${'$'}{LANG:-C.UTF-8}"
-        # Android /system/bin/sh is mksh — no bash \w. Re-expand ${'$'}PWD each prompt.
-        export PS1='codec:${'$'}PWD ${'$'} '
+        # Keep the prompt short so it fits a phone and does not wrap into
+        # the command the user is typing.
+        export PS1='codec ${'$'} '
         mkdir -p "${'$'}HOME" "${'$'}TMPDIR" "${'$'}CODEC_PROJECTS" 2>/dev/null
+        pj() { cd "${'$'}CODEC_PROJECTS" || return; }
         if [ -z "${'$'}CODEC_MOTD_SHOWN" ]; then
           export CODEC_MOTD_SHOWN=1
-          echo "CodeC terminal  (Phase 1 — Mini-Termux)"
-          echo "  Projects: ${'$'}CODEC_PROJECTS"
-          echo "  cc  → built-in TCC     pkg → coming in Phase 3"
-          echo "  Example:  ls && cc main.c -o a.out && ./a.out"
-          echo "  (save the file in the Editor first)"
+          echo "CodeC terminal  (Phase 1)"
+          echo "  type:  ls"
+          echo "         cc main.c -o a.out"
+          echo "         ./a.out"
+          echo "  (save main.c in the Editor first)"
           echo
         fi
         cd "${'$'}CODEC_PROJECTS" 2>/dev/null || cd "${'$'}HOME" 2>/dev/null || true
@@ -166,7 +177,7 @@ object ShellEnvironment {
             put("CC_WARN", warningFlags(warnings))
             put("CC_OPT", optimizationFlag(optimization))
             put("ENV", File(etcDir(prefix), "profile").absolutePath)
-            put("PS1", "codec:\$PWD $ ")
+            put("PS1", "codec $ ")
             put("USER", "codec")
             put("CODEC_PROJECTS", projects.absolutePath)
             if (tccBinary != null) put("TCC_BIN", tccBinary.absolutePath)
