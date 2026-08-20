@@ -19,6 +19,8 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("-I include-tcc"))
         assertTrue(script.contains("-I include"))
         assertTrue(script.contains("-L ."))
+        assertTrue(script.contains("-B ."))
+        assertTrue(script.contains(" -lc"))
         assertTrue(script.contains("cd \"\$TCC_BUNDLE\""))
         assertTrue(script.contains("CC_STD"))
         assertTrue(script.contains("CODEC_PROJECTS"))

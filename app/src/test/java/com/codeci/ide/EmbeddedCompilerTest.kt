@@ -22,9 +22,11 @@ class EmbeddedCompilerTest {
                 "-Wall", "-Wextra",
                 "-I", "include-tcc",
                 "-I", "include",
+                "-B", ".",
                 "-L", ".",
                 source.absolutePath,
-                "-o", output.absolutePath
+                "-o", output.absolutePath,
+                "-lc"
             ),
             cmd
         )
