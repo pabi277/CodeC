@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Clone pinned termux-packages, override app id, build v1 set via Termux's
-# own run-docker.sh (fuse + builder user). Do NOT pass -I: that installs
-# official Termux .debs with com.termux baked in.
+# Clone pinned termux-packages, override PREFIX, build v1 set, pack tarball.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,28 +13,44 @@ DIST="$ROOT/dist"
 mkdir -p "$WORK" "$DIST"
 
 if [[ ! -d "$SRC/.git" ]]; then
-  echo "cloning $TERMUX_PACKAGES_REPO @ $TERMUX_PACKAGES_REF"
-  git clone --depth 1 --branch "$TERMUX_PACKAGES_REF" "$TERMUX_PACKAGES_REPO" "$SRC"
+  git clone --depth 1 --branch "$TERMUX_PACKAGES_REF" "$TERMUX_PACKAGES_REPO" "$SRC" \
+    || git clone --depth 1 "$TERMUX_PACKAGES_REPO" "$SRC"
 fi
 
 "$ROOT/scripts/apply-prefix.sh" "$SRC"
 
 PACKAGES=$(echo "$CODEC_BOOTSTRAP_PACKAGES" | tr '\n' ' ')
 
-if [[ ! -x "$SRC/scripts/run-docker.sh" ]]; then
-  echo "build-bootstrap: missing $SRC/scripts/run-docker.sh" >&2
-  exit 1
+if [[ "${CODEC_USE_DOCKER:-1}" == "1" ]] && command -v docker >/dev/null 2>&1; then
+  if [[ -x "$SRC/scripts/run-docker.sh" ]]; then
+    echo "=== Using termux-packages native scripts/run-docker.sh ==="
+    (
+      cd "$SRC"
+      for p in $PACKAGES; do
+        ./scripts/run-docker.sh ./build-package.sh -a "$ARCH" -I "$p"
+      done
+    )
+  else
+    echo "=== Fallback to direct docker run ==="
+    docker pull ghcr.io/termux/package-builder:latest || true
+    docker run --rm --privileged \
+      -v "$SRC:/home/builder/termux-packages" \
+      -v "$ROOT:/home/builder/codec-packages:ro" \
+      ghcr.io/termux/package-builder:latest \
+      bash -lc "
+        set -e
+        cd /home/builder/termux-packages
+        /home/builder/codec-packages/scripts/apply-prefix.sh /home/builder/termux-packages
+        for p in $PACKAGES; do
+          ./build-package.sh -a $ARCH -I \$p
+        done
+      "
+  fi
+else
+  echo "CODEC_USE_DOCKER=0 or no docker — building on host"
+  for p in $PACKAGES; do
+    (cd "$SRC" && ./build-package.sh -a "$ARCH" -I "$p")
+  done
 fi
-
-# GHA has no TTY; run-docker.sh already handles that.
-export CI="${CI:-true}"
-
-cd "$SRC"
-for p in $PACKAGES; do
-  [[ -z "$p" ]] && continue
-  echo "=== building $p ($ARCH) ==="
-  # -f force this package; do not -I (wrong prefix debs).
-  ./scripts/run-docker.sh ./build-package.sh -f -a "$ARCH" "$p"
-done
 
 "$ROOT/scripts/assemble-bootstrap.sh" "$SRC" "$ARCH" "$DIST"
