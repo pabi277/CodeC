@@ -49,6 +49,7 @@ data class CompilationResult(
 )
 
 enum class CompilerEngine {
+    EMBEDDED,
     BUNDLED,
     TERMUX
 }
@@ -73,10 +74,14 @@ class CompilerService(private val context: Context) {
 
         // Compiler engine selection (see Settings -> Compiler Engine).
         const val BACKEND_AUTO = "auto"
+        const val BACKEND_EMBEDDED = "embedded"
         const val BACKEND_BUNDLED = "bundled"
         const val BACKEND_TERMUX = "termux"
         private val DIAGNOSTIC_REGEX =
             Regex("""^(.+?):(\d+):(\d+):\s*(fatal error|error|warning|note):\s*(.+)$""")
+        // TCC prints "file.c:3: error: ..." (line only, no column).
+        private val TCC_DIAGNOSTIC_REGEX =
+            Regex("""^(.+?):(\d+):\s*(fatal error|error|warning|note):\s*(.+)$""")
 
         const val DEVICE_EXEC_BLOCKED =
             "Android is blocking execution of the downloaded compiler. On Android 10+ the " +
@@ -105,6 +110,9 @@ class CompilerService(private val context: Context) {
         const val TERMUX_NOT_INSTALLED =
             "Termux is not installed. Install Termux 0.109+ from F-Droid or GitHub " +
                 "(https://termux.dev), open it once, then run: pkg update && pkg install clang"
+        const val TCC_UNAVAILABLE =
+            "The built-in compiler could not start on this device (unsupported CPU ABI or " +
+                "corrupted install). Reinstall the app, or pick another Compiler Engine in Settings."
         const val TERMUX_SETUP_REQUIRED =
             "CodeC tried to compile with Termux but Termux rejected the request. Open Termux and " +
                 "run: echo \"allow-external-apps=true\" >> ~/.termux/termux.properties && " +
@@ -132,13 +140,23 @@ class CompilerService(private val context: Context) {
         fun parseDiagnostics(raw: String): List<CompilerError> {
             if (raw.isBlank()) return emptyList()
             return raw.lineSequence().mapNotNull { line ->
-                val match = DIAGNOSTIC_REGEX.find(line.trim()) ?: return@mapNotNull null
-                val kind = match.groupValues[4].lowercase()
+                val trimmed = line.trim()
+                val match = DIAGNOSTIC_REGEX.find(trimmed) ?: TCC_DIAGNOSTIC_REGEX.find(trimmed)
+                    ?: return@mapNotNull null
+                // Clang: file:line:column: kind: message -> groups 1..5.
+                // TCC:   file:line: kind: message       -> groups 1..4.
+                val kindIndex = if (match.groupValues.size >= 6) 4 else 3
+                val messageIndex = if (match.groupValues.size >= 6) 5 else 4
+                val kind = match.groupValues[kindIndex].lowercase()
                 val type = if (kind.contains("warning") || kind == "note") ErrorType.WARNING else ErrorType.ERROR
                 CompilerError(
                     line = match.groupValues[2].toIntOrNull() ?: 0,
-                    column = match.groupValues[3].toIntOrNull() ?: 0,
-                    message = match.groupValues[5].trim(),
+                    column = if (match.groupValues.size >= 6) {
+                        match.groupValues[3].toIntOrNull() ?: 0
+                    } else {
+                        0
+                    },
+                    message = match.groupValues[messageIndex].trim(),
                     type = type
                 )
             }.toList()
@@ -157,11 +175,13 @@ class CompilerService(private val context: Context) {
 
     /**
      * Compiles [code] with the engine selected by [backend]:
-     *  - [BACKEND_BUNDLED]: the Clang downloaded in Modules (only).
-     *  - [BACKEND_TERMUX]:  Termux's Clang (only).
-     *  - [BACKEND_AUTO] (default): bundled Clang first; when Android blocks it
-     *    (W^X policy, noexec mounts, CPU mismatch or missing toolchain) and
-     *    Termux is installed, compile through Termux instead.
+     *  - [BACKEND_EMBEDDED]: the built-in TCC compiler shipped in the APK.
+     *  - [BACKEND_BUNDLED]: the Clang downloaded in Modules.
+     *  - [BACKEND_TERMUX]:  Termux's Clang.
+     *  - [BACKEND_AUTO] (default): built-in TCC first (works offline, no
+     *    download, on any ABI we ship); when it is unavailable, the bundled
+     *    Clang; when Android blocks that (W^X policy, noexec mounts, CPU
+     *    mismatch or broken toolchain) and Termux is installed, Termux.
      */
     suspend fun compile(
         code: String,
@@ -169,20 +189,37 @@ class CompilerService(private val context: Context) {
         backend: String = BACKEND_AUTO
     ): CompilationResult = withContext(Dispatchers.IO) {
         AppLogger.i("CompilerService", "Device: ${DeviceDiagnostics.summary(store.getModulesRoot())}")
-        if (backend == BACKEND_TERMUX) {
-            if (!TermuxCompiler.isTermuxInstalled(context)) {
-                return@withContext CompilationResult(
-                    success = false,
-                    errors = listOf(CompilerError(0, 0, TERMUX_NOT_INSTALLED, ErrorType.ERROR)),
-                    output = "Termux is not installed.",
-                    engine = CompilerEngine.TERMUX
-                )
+        when (backend) {
+            BACKEND_EMBEDDED -> return@withContext compileWithEmbedded(code, settings)
+            BACKEND_BUNDLED -> return@withContext compileWithBundled(code, settings)
+            BACKEND_TERMUX -> {
+                if (!TermuxCompiler.isTermuxInstalled(context)) {
+                    return@withContext CompilationResult(
+                        success = false,
+                        errors = listOf(CompilerError(0, 0, TERMUX_NOT_INSTALLED, ErrorType.ERROR)),
+                        output = "Termux is not installed.",
+                        engine = CompilerEngine.TERMUX
+                    )
+                }
+                return@withContext compileWithTermux(code, settings)
             }
-            return@withContext compileWithTermux(code, settings)
+        }
+
+        // AUTO: embedded -> bundled -> Termux.
+        if (EmbeddedCompiler.isAvailable(context)) {
+            val embedded = compileWithEmbedded(code, settings)
+            if (embedded.success) return@withContext embedded
+            // Only fall through when the built-in compiler itself failed to
+            // run (never on ordinary compile errors).
+            if (embedded.errors.any { it.message == TCC_UNAVAILABLE }) {
+                // fall through to bundled below
+            } else {
+                return@withContext embedded
+            }
         }
 
         val bundled = compileWithBundled(code, settings)
-        if (bundled.success || backend == BACKEND_BUNDLED) return@withContext bundled
+        if (bundled.success) return@withContext bundled
 
         val envFailure = isEnvironmentFailure(bundled)
         if (!envFailure) return@withContext bundled
@@ -195,6 +232,109 @@ class CompilerService(private val context: Context) {
         // Termux error so the user can fix the Termux setup (permission /
         // allow-external-apps / clang missing).
         bundled.copy(errors = bundled.errors + termux.errors)
+    }
+
+    /**
+     * Compiles [code] with the built-in TCC (static musl) shipped in the APK.
+     * Output is a fully static executable in the app temp dir.
+     */
+    private suspend fun compileWithEmbedded(
+        code: String,
+        settings: CompilerSettings
+    ): CompilationResult = withContext(Dispatchers.IO) {
+        if (!EmbeddedCompiler.ensureExtracted(context)) {
+            return@withContext CompilationResult(
+                success = false,
+                errors = listOf(CompilerError(0, 0, TCC_UNAVAILABLE, ErrorType.ERROR)),
+                output = "Built-in TCC is not available on this device (ABI: " +
+                    DeviceDiagnostics.abiSummary() + ").",
+                engine = CompilerEngine.EMBEDDED
+            )
+        }
+        val tcc = EmbeddedCompiler.tccBinary(context)
+        if (tcc == null) {
+            return@withContext CompilationResult(
+                success = false,
+                errors = listOf(CompilerError(0, 0, TCC_UNAVAILABLE, ErrorType.ERROR)),
+                output = "Built-in TCC binary missing.",
+                engine = CompilerEngine.EMBEDDED
+            )
+        }
+        val tempDir = getTempDir()
+        val stamp = System.currentTimeMillis()
+        val sourceFile = File(tempDir, "source_$stamp.c")
+        val outputBinary = File(tempDir, "program_$stamp")
+        try {
+            sourceFile.writeText(code)
+            val command = listOf(tcc.absolutePath) + EmbeddedCompiler.buildCompileCommand(
+                settings.cStandard, settings.warnings, settings.optimization, sourceFile, outputBinary
+            )
+            AppLogger.i("CompilerService", "Compile (TCC): ${command.joinToString(" ")}")
+            val process = ProcessBuilder(command)
+                .directory(EmbeddedCompiler.bundleDir(context))
+                .redirectErrorStream(false)
+                .start()
+            val stdoutReader = ThreadedReader(process.inputStream.bufferedReader())
+            val stderrReader = ThreadedReader(process.errorStream.bufferedReader())
+            stdoutReader.start()
+            stderrReader.start()
+
+            val finished = waitForProcess(process, COMPILE_TIMEOUT_SECONDS)
+            if (!finished) {
+                terminateProcess(process)
+                stdoutReader.joinQuietly()
+                stderrReader.joinQuietly()
+                sourceFile.delete()
+                return@withContext CompilationResult(
+                    success = false,
+                    errors = listOf(
+                        CompilerError(0, 0, "Compilation timed out after ${COMPILE_TIMEOUT_SECONDS}s", ErrorType.ERROR)
+                    ),
+                    output = stdoutReader.text,
+                    engine = CompilerEngine.EMBEDDED
+                )
+            }
+
+            stdoutReader.joinQuietly()
+            stderrReader.joinQuietly()
+            val stderr = stderrReader.text
+            val stdout = stdoutReader.text
+            val combined = listOf(stdout, stderr).filter { it.isNotBlank() }.joinToString("\n")
+            val success = process.exitValue() == 0 && outputBinary.exists()
+            if (success) {
+                outputBinary.setExecutable(true, false)
+            } else {
+                sourceFile.delete()
+                outputBinary.delete()
+            }
+            val parsed = parseDiagnostics(stderr.ifBlank { stdout })
+            val errors = when {
+                success -> parsed.filter { it.type == ErrorType.WARNING }
+                parsed.none { it.type == ErrorType.ERROR } ->
+                    parsed + CompilerError(0, 0, combined.ifBlank { "Compilation failed." }, ErrorType.ERROR)
+                else -> parsed
+            }
+            CompilationResult(
+                success = success,
+                errors = errors,
+                output = combined,
+                binaryPath = if (success) outputBinary.absolutePath else null,
+                engine = CompilerEngine.EMBEDDED,
+                engineNote = if (success) "Compiled with the built-in TCC compiler" else null
+            )
+        } catch (e: Exception) {
+            AppLogger.e("CompilerService", "TCC compile failed", e)
+            sourceFile.delete()
+            outputBinary.delete()
+            val message = detectEnvironmentError(e.message)
+                ?: (e.message ?: "Couldn't start the built-in compiler")
+            CompilationResult(
+                success = false,
+                errors = listOf(CompilerError(0, 0, message, ErrorType.ERROR)),
+                output = e.message.orEmpty(),
+                engine = CompilerEngine.EMBEDDED
+            )
+        }
     }
 
     private fun isEnvironmentFailure(result: CompilationResult): Boolean {

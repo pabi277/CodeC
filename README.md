@@ -15,23 +15,31 @@ Direct releases page: https://github.com/pabi277/CodeC/releases
 
 ## Run C on the phone
 
-1. Open **Modules** and download **Clang/LLVM Compiler** (ARM64).
-2. Wait until status is **Installed** (extracts into app-private storage so Android can execute it).
-3. Open the editor and tap **RUN**.
+1. Install the APK, open the editor, tap **RUN**. That's it.
 
-The bundled Clang must be **arm64**. An x86 emulator cannot run it directly — but you can
-still use emulators and any other device by switching the compiler engine (below).
+CodeC ships with a **built-in C compiler** (TCC, Tiny C Compiler — the same approach as
+apps like Coding C / C4droid): a static musl toolchain is embedded in the APK for
+**arm64-v8a** and **x86_64** devices, so compiling works **offline, instantly, with no
+downloads, no Termux and no setup**. Programs are compiled to fully static executables.
 
 ### Compiler engines (Settings → Compiler Engine)
 
 | Engine | What it does |
 |---|---|
-| **Auto** (default) | Uses the bundled Clang; if Android blocks it (Android 10+ W^X policy, noexec storage, CPU mismatch or broken toolchain), automatically compiles and runs through **Termux's Clang**. |
-| **Bundled** | Only the Clang downloaded in Modules. |
-| **Termux** | Always compiles with Termux's Clang. Works on any real phone and on x86_64/32-bit emulators, because Termux targets API 28 where downloaded binaries still run. |
+| **Auto** (default) | Built-in TCC first (offline, instant). If it's unavailable, the Clang module; if Android blocks that (Android 10+ W^X policy, noexec storage, CPU mismatch, broken toolchain), automatically compiles and runs through **Termux's Clang**. |
+| **Built-in (TCC)** | Only the compiler embedded in the APK. Covers ANSI C and most of C99; perfect for learning and everyday code. |
+| **Bundled Clang** | Only the Clang downloaded in **Modules** (full C11/C17, stricter warnings — for advanced code). |
+| **Termux** | Always compiles with Termux's Clang. |
 
-To use the Termux engine, install **Termux 0.109+** from [F-Droid](https://f-droid.org/packages/com.termux/)
-or [GitHub](https://github.com/termux/termux-app/releases) (the Play Store version is outdated
+The bundled Clang module (optional) must be **arm64**; an x86 emulator can't run it — but
+the built-in TCC covers x86_64 emulators automatically.
+
+To rebuild the embedded TCC bundles (e.g. to add more ABIs), run `scripts/build-tcc.sh`
+with a musl cross toolchain — the script is self-contained and CI-ready.
+
+To use the optional Termux engine, install **Termux 0.109+** from
+[F-Droid](https://f-droid.org/packages/com.termux/) or
+[GitHub](https://github.com/termux/termux-app/releases) (the Play Store version is outdated
 and does not support this), then in Termux run:
 
 ```bash
@@ -45,6 +53,12 @@ and grant CodeC the **"Run commands in Termux environment"** permission
 Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 
 ## Troubleshooting
+
+### "The built-in compiler could not start"
+
+Only possible when the APK's TCC binary doesn't match the device CPU (an exotic ABI, or a
+corrupted install). Reinstall the app; the Auto engine falls back to the Clang module /
+Termux in the meantime.
 
 ### "Permission denied" when compiling — Android blocks the downloaded compiler
 
@@ -63,12 +77,16 @@ This error has two real causes:
 
 **Fixes, in order:**
 
-1. **Update CodeC** to the latest APK (Settings → Install APK from GitHub). If the error
-   persists after updating, **uninstall and reinstall the app once** — Android labels the
-   sandbox at install time and an in-place update may keep the old restriction.
+1. **Update CodeC** to the latest APK (Settings → Install APK from GitHub). The new
+   builds don't use the downloaded Clang at all by default: **Auto** engine compiles with
+   the **built-in TCC compiler** that ships inside the APK and runs from the native
+   library directory, which Android allows at any targetSdk — no module, no Termux, no
+   network. If the error persists after updating, **uninstall and reinstall the app
+   once** — Android labels the sandbox at install time and an in-place update may keep the
+   old restriction.
 2. **Switch the engine to Termux** (Settings → Compiler Engine → Termux, setup above).
    Termux's own storage is exempt, so this works even when the bundled compiler is
-   blocked — and it is the only option on x86_64 emulators.
+   blocked.
 3. **Use Termux directly** — see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for a
    complete step-by-step C workflow in Termux.
 4. On a truly `noexec` device (cloud phones, some enterprise ROMs) no local compiler can

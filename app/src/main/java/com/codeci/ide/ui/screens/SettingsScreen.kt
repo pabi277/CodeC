@@ -52,8 +52,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.services.TermuxCompiler
 import com.codeci.ide.ui.settings.SettingsManager
+import com.codeci.ide.ui.utils.DeviceDiagnostics
 import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
@@ -158,16 +160,18 @@ fun SettingsScreen(
                 title = "Compiler Engine",
                 selectedOption = when (compilerBackend) {
                     "termux" -> "Termux"
-                    "bundled" -> "Bundled"
+                    "bundled" -> "Bundled Clang"
+                    "embedded" -> "Built-in (TCC)"
                     else -> "Auto"
                 },
-                options = listOf("Auto", "Bundled", "Termux"),
+                options = listOf("Auto", "Built-in (TCC)", "Bundled Clang", "Termux"),
                 onOptionSelected = { option ->
                     scope.launch {
                         settingsManager.setCompilerBackend(
                             when (option) {
+                                "Built-in (TCC)" -> "embedded"
+                                "Bundled Clang" -> "bundled"
                                 "Termux" -> "termux"
-                                "Bundled" -> "bundled"
                                 else -> "auto"
                             }
                         )
@@ -176,9 +180,18 @@ fun SettingsScreen(
             )
             SettingsItem(
                 title = "Engine notes",
-                subtitle = "Auto: bundled Clang first, falls back to Termux when Android blocks it. " +
-                    "Termux: always compile with Termux's Clang (works on any real phone and on " +
-                    "x86_64 emulators)."
+                subtitle = "Auto: built-in TCC first (offline, instant), then the downloaded " +
+                    "Clang, then Termux when Android blocks both. Built-in (TCC): a full C " +
+                    "compiler inside the APK — works offline like Coding C, no downloads, no " +
+                    "Termux. TCC targets C99; use Bundled Clang for advanced C11/C17 code."
+            )
+
+            // BUILT-IN COMPILER CARD
+            var tccState by remember { mutableStateOf(loadTccUiState(context)) }
+            SettingsSectionHeader("Built-in Compiler")
+            SettingsItem(
+                title = "TCC (Tiny C Compiler)",
+                subtitle = buildTccStatusText(tccState)
             )
 
             // TERMUX BRIDGE CARD
@@ -314,7 +327,7 @@ fun SettingsScreen(
 
             SettingsItem(
                 title = "App Version", 
-                subtitle = "1.1 (Beta)",
+                subtitle = "1.2 (Beta)",
                 onClick = {
                     if (com.codeci.ide.BuildConfig.DEBUG && !devModeUnlocked) {
                         versionTaps++
@@ -550,6 +563,25 @@ fun SettingsAction(title: String, actionText: String, onClick: () -> Unit) {
             Text(actionText)
         }
     }
+}
+
+private data class TccUiState(val abi: String?, val available: Boolean)
+
+private fun loadTccUiState(context: Context): TccUiState {
+    val abi = EmbeddedCompiler.abiDir()
+    val available = if (abi != null) EmbeddedCompiler.ensureExtracted(context) else false
+    return TccUiState(abi, available)
+}
+
+private fun buildTccStatusText(state: TccUiState): String = when {
+    state.abi == null ->
+        "No built-in compiler for this device's CPU (${DeviceDiagnostics.abiSummary()}). " +
+            "The app will use the Clang module or Termux instead."
+    state.available ->
+        "Ready ✓ — a full C compiler inside the APK (${state.abi}). Offline, instant, no " +
+            "downloads and no Termux needed for everyday C code."
+    else ->
+        "Present but could not start. Reinstall the app, or use another Compiler Engine."
 }
 
 private data class TermuxUiState(

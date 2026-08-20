@@ -6,10 +6,31 @@
 Short version: on **Android 10+** the OS refuses to run downloaded binaries that an app
 keeps in its own storage **if the app targets API 29 or higher** (the "W^X" security rule).
 The old CodeC builds targeted API 34, so Android blocked the downloaded Clang on *any*
-Android 10+ phone — not only emulators. New builds use **targetSdk 28** (the same
-compatibility mode Termux uses), which restores execution. If that is still not enough on
-your device, **Termux** is the guaranteed path, both as a fallback engine inside CodeC and
-as a standalone C environment.
+Android 10+ phone — not only emulators.
+
+**The current CodeC builds don't need any download at all.** They ship a complete C
+compiler (TCC, statically linked against musl) inside the APK — the same approach as
+offline IDE apps like **Coding C** and **C4droid**. You install the app, write C, tap RUN:
+it compiles offline and instantly, no Termux, no module download, no network. The
+downloaded Clang module and Termux are only optional fallbacks for advanced code.
+
+---
+
+## 0. Built-in compiler (TCC) — the "Coding C" way
+
+- Works out of the box on **arm64-v8a** (all modern phones) and **x86_64** (emulators,
+  cloud phones, Chromebooks).
+- The compiler binary ships in the APK's native library directory — the one place
+  Android always allows `exec()`, at any targetSdk — and the musl headers/libs are
+  extracted to app storage on first use.
+- Compiled programs are **fully static** (no libc dependency), so they run on any
+  Android version.
+- TCC covers ANSI C and most of C99 (a C99-focused subset of C11). If you need stricter
+  C11/C17 or more warnings, switch **Settings → Compiler Engine → Bundled Clang** (needs
+  the module download) or **→ Termux**.
+
+How the bundles are built: `scripts/build-tcc.sh` (tinycc "mob" branch at the same commit
+Termux ships, cross-compiled with musl-cross toolchains). The script is CI-ready.
 
 ---
 
