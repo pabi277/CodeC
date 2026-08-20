@@ -14,23 +14,28 @@ data class FileInfo(
 class FileManager(private val context: Context) {
 
     fun getProjectDir(): File {
-        var dir = File(Environment.getExternalStorageDirectory(), "CodeC/projects")
-        try {
-            if (!dir.exists()) {
-                dir.mkdirs()
-            }
-        } catch (e: Exception) {
-            AppLogger.e("FileManager", "Could not create public projects dir", e)
+        val candidates = projectDirCandidates()
+        val withSources = candidates.firstOrNull { dir ->
+            dir.isDirectory && dir.listFiles()?.any { it.isFile && it.name.endsWith(".c") } == true
         }
-
-        if (!dir.exists() || !dir.canWrite()) {
-            dir = File(context.getExternalFilesDir(null), "CodeC/projects")
-            if (!dir.exists()) {
-                dir.mkdirs()
+        if (withSources != null) return withSources
+        for (dir in candidates) {
+            try {
+                if (!dir.exists()) dir.mkdirs()
+            } catch (e: Exception) {
+                AppLogger.e("FileManager", "Could not create ${dir.absolutePath}", e)
             }
+            if (dir.exists() && dir.canWrite()) return dir
         }
-        return dir
+        return candidates.last()
     }
+
+    /** Public storage, app-external files, then internal filesDir. */
+    fun projectDirCandidates(): List<File> = listOfNotNull(
+        File(Environment.getExternalStorageDirectory(), "CodeC/projects"),
+        context.getExternalFilesDir(null)?.let { File(it, "CodeC/projects") },
+        File(context.filesDir, "CodeC/projects")
+    )
 
     fun createDirectory(): Boolean {
         val dir = getProjectDir()

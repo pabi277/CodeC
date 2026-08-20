@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "3"
+    const val BOOTSTRAP_VERSION = "4"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -111,27 +111,30 @@ object ShellEnvironment {
         # CodeC login profile (Phase 1)
         export PREFIX='${prefix.absolutePath}'
         export HOME='${home.absolutePath}'
-        export CODEC_PROJECTS='${projects.absolutePath}'
+        # Prefer the path the app exported (current editor folder).
+        if [ -z "${'$'}CODEC_PROJECTS" ]; then
+          export CODEC_PROJECTS='${projects.absolutePath}'
+        fi
         export TMPDIR="${'$'}PREFIX/tmp"
-        export PATH="${'$'}PREFIX/bin:${'$'}PATH"
+        export PATH="${'$'}PREFIX/bin:/system/bin:/system/xbin:${'$'}PATH"
         export TERM="${'$'}{TERM:-xterm-256color}"
         export COLORTERM="${'$'}{COLORTERM:-truecolor}"
         export LANG="${'$'}{LANG:-C.UTF-8}"
-        # Keep the prompt short so it fits a phone and does not wrap into
-        # the command the user is typing.
         export PS1='codec ${'$'} '
         mkdir -p "${'$'}HOME" "${'$'}TMPDIR" "${'$'}CODEC_PROJECTS" 2>/dev/null
         pj() { cd "${'$'}CODEC_PROJECTS" || return; }
+        cd "${'$'}CODEC_PROJECTS" 2>/dev/null || cd "${'$'}HOME" 2>/dev/null || true
         if [ -z "${'$'}CODEC_MOTD_SHOWN" ]; then
           export CODEC_MOTD_SHOWN=1
-          echo "CodeC terminal  (Phase 1)"
-          echo "  type:  ls"
-          echo "         cc main.c -o a.out"
-          echo "         ./a.out"
-          echo "  (save main.c in the Editor first)"
+          echo "CodeC terminal"
+          echo "pwd=$(pwd)"
+          /system/bin/ls -la
           echo
+          if ! /system/bin/ls *.c >/dev/null 2>&1; then
+            echo "(no .c files here — Editor: Save, then: ls)"
+            echo
+          fi
         fi
-        cd "${'$'}CODEC_PROJECTS" 2>/dev/null || cd "${'$'}HOME" 2>/dev/null || true
     """.trimIndent() + "\n"
 
     fun normalizeStandard(standard: String): String =

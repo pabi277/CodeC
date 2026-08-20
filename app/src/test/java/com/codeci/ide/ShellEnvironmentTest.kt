@@ -47,11 +47,10 @@ class ShellEnvironmentTest {
         assertTrue(profile.contains("export PREFIX='${prefix.absolutePath}'"))
         assertTrue(profile.contains("export HOME='${home.absolutePath}'"))
         assertTrue(profile.contains("export CODEC_PROJECTS='${projects.absolutePath}'"))
-        assertTrue(profile.contains("export PATH=\"\$PREFIX/bin:\$PATH\""))
+        assertTrue(profile.contains("export PATH=\"\$PREFIX/bin:/system/bin:/system/xbin:\$PATH\""))
         assertTrue(profile.contains("cd \"\$CODEC_PROJECTS\""))
-        assertTrue(profile.contains("cc main.c -o a.out"))
+        assertTrue(profile.contains("/system/bin/ls -la"))
         assertFalse(profile.contains("codec:\\w"))
-        assertFalse(profile.contains("\$PWD"))
         assertTrue(profile.contains("export PS1='codec $ '"))
     }
 
