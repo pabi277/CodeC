@@ -45,6 +45,16 @@ class TerminalEmulator(
 
     fun visibleText(): String = buffer.visibleText()
 
+    fun transcriptText(): String {
+        val history = buffer.scrollbackText().trimEnd()
+        val live = buffer.visibleText()
+        return when {
+            history.isEmpty() -> live
+            live.isEmpty() -> history
+            else -> "$history\n$live"
+        }
+    }
+
     fun wrapPaste(text: String): String =
         if (buffer.bracketedPaste) "\u001b[200~$text\u001b[201~" else text
 

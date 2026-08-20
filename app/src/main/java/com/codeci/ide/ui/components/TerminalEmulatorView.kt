@@ -1,15 +1,23 @@
 package com.codeci.ide.ui.components
 
-import android.graphics.Typeface
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,33 +28,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.R
 import com.codeci.ide.ui.terminal.CellFlags
+import com.codeci.ide.ui.terminal.TerminalLine
 import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.terminal.XtermColors
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import kotlin.math.max
 
 private val DefaultBg = Color(0xFF121212)
+private const val DefaultFgRgb = 0xE5E5E5
 private val CursorColor = Color(0xFF55FF55)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TerminalEmulatorView(
     snapshot: TerminalSnapshot,
@@ -55,6 +72,7 @@ fun TerminalEmulatorView(
     onResize: (cols: Int, rows: Int) -> Unit,
     onFontScale: (Float) -> Unit,
     onPaste: () -> Unit,
+    onCopy: () -> Unit,
     cursorSequence: (Char) -> String,
     modifier: Modifier = Modifier
 ) {
@@ -62,127 +80,232 @@ fun TerminalEmulatorView(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
     var field by remember { mutableStateOf(TextFieldValue("")) }
+    val listState = rememberLazyListState()
+    var followOutput by remember { mutableStateOf(true) }
 
-    val paint = remember(fontSizeSp, density) {
-        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.MONOSPACE
-            textSize = with(density) { fontSizeSp.sp.toPx() }
-            color = 0xFFE5E5E5.toInt()
-        }
+    val cellW = remember(fontSizeSp, density) {
+        with(density) { max(fontSizeSp.sp.toPx() * 0.6f, 1f) }
     }
-    val cellW = remember(paint) { max(paint.measureText("M"), 1f) }
-    val cellH = remember(paint) { max(paint.fontSpacing, paint.textSize * 1.2f) }
-    val ascent = remember(paint) { paint.fontMetrics.ascent }
+    val cellH = remember(fontSizeSp, density) {
+        with(density) { max(fontSizeSp.sp.toPx() * 1.25f, 1f) }
+    }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize().background(DefaultBg)) {
-        val widthPx = with(density) { maxWidth.toPx() }
-        val heightPx = with(density) { maxHeight.toPx() }
-        val cols = max(1, (widthPx / cellW).toInt())
-        val rows = max(1, (heightPx / cellH).toInt())
-        LaunchedEffect(cols, rows) { onResize(cols, rows) }
+    val displayLines = remember(snapshot) {
+        val lastContent = snapshot.lines.indexOfLast { line ->
+            line.text.any { !it.isWhitespace() }
+        }
+        val liveEnd = maxOf(snapshot.cursorY, lastContent).coerceAtLeast(0)
+        snapshot.scrollbackLines + snapshot.lines.take(liveEnd + 1)
+    }
+    val cursorRow = snapshot.scrollbackCount + snapshot.cursorY
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = {
-                            focusRequester.requestFocus()
-                            keyboard?.show()
-                        },
-                        onLongPress = { onPaste() }
-                    )
-                }
-                .pointerInput(fontSizeSp) {
-                    detectTransformGestures { _, _, zoom, _ ->
-                        if (zoom != 1f) onFontScale(fontSizeSp * zoom)
-                    }
-                }
-                .onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                    handleHardwareKey(event.key, event.isCtrlPressed, onInput, cursorSequence)
-                }
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawRect(DefaultBg)
-                val visibleRows = minOf(snapshot.rows, rows)
-                val visibleCols = minOf(snapshot.cols, cols)
-                for (y in 0 until visibleRows) {
-                    val line = snapshot.lines.getOrNull(y) ?: continue
-                    for (run in line.runs) {
-                        val start = run.start.coerceIn(0, visibleCols)
-                        val end = run.end.coerceIn(0, visibleCols)
-                        if (start >= end) continue
-                        val bold = run.flags and CellFlags.BOLD != 0
-                        val inverse = run.flags and CellFlags.INVERSE != 0
-                        val invisible = run.flags and CellFlags.INVISIBLE != 0
-                        val fgRgb = XtermColors.toRgb(
-                            run.fg,
-                            0xE5E5E5,
-                            bold
-                        )
-                        val bgRgb = XtermColors.toRgb(run.bg, 0x121212, false)
-                        val drawFg = if (inverse) bgRgb else fgRgb
-                        val drawBg = if (inverse) fgRgb else bgRgb
-                        if (drawBg != 0x121212) {
-                            drawRect(
-                                color = Color(
-                                    red = (drawBg shr 16) and 0xFF,
-                                    green = (drawBg shr 8) and 0xFF,
-                                    blue = drawBg and 0xFF
-                                ),
-                                topLeft = Offset(start * cellW, y * cellH),
-                                size = Size((end - start) * cellW, cellH)
-                            )
-                        }
-                        if (invisible) continue
-                        val slice = line.text.substring(
-                            start.coerceAtMost(line.text.length),
-                            end.coerceAtMost(line.text.length)
-                        )
-                        if (slice.isEmpty()) continue
-                        paint.color = (0xFF000000.toInt()) or drawFg
-                        paint.isFakeBoldText = bold
-                        paint.isUnderlineText = run.flags and CellFlags.UNDERLINE != 0
-                        paint.textSkewX = if (run.flags and CellFlags.ITALIC != 0) -0.25f else 0f
-                        drawIntoCanvas { canvas ->
-                            canvas.nativeCanvas.drawText(
-                                slice,
-                                start * cellW,
-                                y * cellH - ascent,
-                                paint
-                            )
-                        }
-                    }
-                }
-                if (snapshot.cursorVisible &&
-                    snapshot.cursorX in 0 until visibleCols &&
-                    snapshot.cursorY in 0 until visibleRows
-                ) {
-                    drawRect(
-                        color = CursorColor.copy(alpha = 0.7f),
-                        topLeft = Offset(snapshot.cursorX * cellW, snapshot.cursorY * cellH),
-                        size = Size(cellW, cellH)
-                    )
+    LaunchedEffect(snapshot.generation, displayLines.size, cursorRow) {
+        if (displayLines.isEmpty()) return@LaunchedEffect
+        followOutput = true
+        val target = cursorRow.coerceIn(0, displayLines.lastIndex)
+        listState.scrollToItem(target)
+    }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(DefaultBg)
+            .pointerInput(fontSizeSp) {
+                detectTwoFingerPinch { zoom ->
+                    if (zoom != 1f) onFontScale(fontSizeSp * zoom)
                 }
             }
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                handleHardwareKey(event.key, event.isCtrlPressed, onInput, cursorSequence)
+            }
+    ) {
+        val cols = max(1, (with(density) { maxWidth.toPx() } / cellW).toInt())
+        val rows = max(1, (with(density) { maxHeight.toPx() } / cellH).toInt())
+        LaunchedEffect(cols, rows) { onResize(cols, rows) }
 
-            BasicTextField(
-                value = field,
-                onValueChange = { next ->
-                    val inserted = insertedText(field, next)
-                    if (inserted.isNotEmpty()) onInput(inserted)
-                    field = TextFieldValue("")
-                },
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.None,
-                    keyboardType = KeyboardType.Ascii
-                ),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(0.01f)
-                    .focusRequester(focusRequester)
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            itemsIndexed(displayLines) { index, line ->
+                val showCursor = snapshot.cursorVisible && index == cursorRow
+                TextLine(
+                    line = line,
+                    fontSizeSp = fontSizeSp,
+                    cursorX = if (showCursor) snapshot.cursorX else -1,
+                    onTap = {
+                        followOutput = true
+                        focusRequester.requestFocus()
+                        keyboard?.show()
+                    },
+                    onCopy = onCopy,
+                    onPaste = onPaste
+                )
+            }
+        }
+
+        BasicTextField(
+            value = field,
+            onValueChange = { next ->
+                val inserted = insertedText(field, next)
+                if (inserted.isNotEmpty()) {
+                    followOutput = true
+                    onInput(inserted)
+                }
+                field = TextFieldValue("")
+            },
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.None,
+                keyboardType = KeyboardType.Ascii
+            ),
+            modifier = Modifier
+                .size(1.dp)
+                .alpha(0.01f)
+                .focusRequester(focusRequester)
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TextLine(
+    line: TerminalLine,
+    fontSizeSp: Float,
+    cursorX: Int,
+    onTap: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit
+) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        Text(
+            text = line.toAnnotatedString(cursorX),
+            fontFamily = FontFamily.Monospace,
+            fontSize = fontSizeSp.sp,
+            lineHeight = (fontSizeSp * 1.25f).sp,
+            color = packedColor(DefaultFgRgb),
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onTap,
+                    onLongClick = { menu = true }
+                )
+        )
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.terminal_copy)) },
+                onClick = {
+                    menu = false
+                    onCopy()
+                }
             )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.terminal_paste)) },
+                onClick = {
+                    menu = false
+                    onPaste()
+                }
+            )
+        }
+    }
+}
+
+private fun TerminalLine.toAnnotatedString(cursorX: Int) = buildAnnotatedString {
+    val padded = if (cursorX >= text.length) {
+        text + " ".repeat(cursorX - text.length + 1)
+    } else {
+        text
+    }
+    val effectiveRuns = if (runs.isEmpty()) {
+        listOf(com.codeci.ide.ui.terminal.StyleRun(0, padded.length, XtermColors.COLOR_DEFAULT_FG, XtermColors.COLOR_DEFAULT_BG, 0))
+    } else {
+        runs
+    }
+    for (run in effectiveRuns) {
+        val start = run.start.coerceIn(0, padded.length)
+        val end = run.end.coerceIn(start, padded.length)
+        if (start >= end) continue
+        appendStyledRange(padded, start, end, run.fg, run.bg, run.flags, cursorX)
+    }
+    if (cursorX >= 0 && cursorX >= (effectiveRuns.lastOrNull()?.end ?: 0) && cursorX < padded.length) {
+        appendStyledRange(
+            padded, cursorX, cursorX + 1,
+            XtermColors.COLOR_DEFAULT_FG, XtermColors.COLOR_DEFAULT_BG, 0, cursorX
+        )
+    }
+}
+
+private fun androidx.compose.ui.text.AnnotatedString.Builder.appendStyledRange(
+    text: String,
+    start: Int,
+    end: Int,
+    fg: Int,
+    bg: Int,
+    flags: Int,
+    cursorX: Int
+) {
+    var i = start
+    while (i < end) {
+        val inCursor = i == cursorX
+        val runEnd = if (inCursor) i + 1 else if (cursorX in (i + 1) until end) cursorX else end
+        val bold = flags and CellFlags.BOLD != 0
+        val inverse = flags and CellFlags.INVERSE != 0
+        val invisible = flags and CellFlags.INVISIBLE != 0
+        val fgRgb = XtermColors.toRgb(fg, DefaultFgRgb, bold)
+        val bgRgb = XtermColors.toRgb(bg, 0x121212, false)
+        val drawFg = if (inverse) bgRgb else fgRgb
+        val drawBg = if (inverse) fgRgb else bgRgb
+        withStyle(
+            SpanStyle(
+                color = when {
+                    inCursor -> Color(0xFF121212)
+                    invisible -> Color.Transparent
+                    else -> packedColor(drawFg)
+                },
+                background = when {
+                    inCursor -> CursorColor
+                    drawBg == 0x121212 -> Color.Unspecified
+                    else -> packedColor(drawBg)
+                },
+                fontWeight = if (bold) FontWeight.Bold else null,
+                textDecoration = if (flags and CellFlags.UNDERLINE != 0) {
+                    TextDecoration.Underline
+                } else {
+                    null
+                }
+            )
+        ) {
+            append(text.substring(i, runEnd))
+        }
+        i = runEnd
+    }
+}
+
+private fun packedColor(packed: Int): Color = Color(
+    red = (packed shr 16) and 0xFF,
+    green = (packed shr 8) and 0xFF,
+    blue = packed and 0xFF
+)
+
+private suspend fun PointerInputScope.detectTwoFingerPinch(onZoom: (Float) -> Unit) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false)
+        var lastDistance = 0f
+        while (true) {
+            val event = awaitPointerEvent()
+            val pressed = event.changes.filter { it.pressed }
+            if (pressed.isEmpty()) break
+            if (pressed.size >= 2) {
+                val distance = (pressed[0].position - pressed[1].position).getDistance()
+                if (lastDistance > 0f && lastDistance != distance) {
+                    onZoom(distance / lastDistance)
+                }
+                lastDistance = distance
+                pressed.forEach { it.consume() }
+            } else {
+                lastDistance = 0f
+            }
         }
     }
 }

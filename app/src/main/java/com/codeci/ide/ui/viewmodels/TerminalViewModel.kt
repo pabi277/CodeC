@@ -126,6 +126,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         if (_altLatched.value) _ctrlLatched.value = false
     }
 
+    fun transcriptText(): String = session.transcriptText()
+
     fun wrapPaste(text: String): String = session.wrapPaste(text)
 
     fun cursorKey(direction: Char): String = session.cursorKey(direction)

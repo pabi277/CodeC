@@ -76,12 +76,31 @@ data class TerminalSnapshot(
     val cols: Int,
     val rows: Int,
     val lines: List<TerminalLine>,
+    val scrollbackLines: List<TerminalLine> = emptyList(),
     val cursorX: Int,
     val cursorY: Int,
     val cursorVisible: Boolean,
     val title: String,
     val generation: Long
-)
+) {
+    val scrollbackCount: Int get() = scrollbackLines.size
+
+    /** Scrollback + live screen, trailing spaces stripped per line. */
+    fun transcriptText(): String = buildString {
+        fun appendLine(line: TerminalLine, last: Boolean) {
+            append(line.text.trimEnd())
+            if (!last) append('\n')
+        }
+        val history = scrollbackLines
+        val live = lines
+        history.forEachIndexed { i, line ->
+            appendLine(line, last = live.isEmpty() && i == history.lastIndex)
+        }
+        live.forEachIndexed { i, line ->
+            appendLine(line, last = i == live.lastIndex)
+        }
+    }.trimEnd()
+}
 
 class TerminalBuffer(
     cols: Int = 80,
@@ -426,6 +445,8 @@ class TerminalBuffer(
 
     fun snapshot(): TerminalSnapshot {
         generation++
+        val history = ArrayList<TerminalLine>(scrollback.size)
+        for (row in scrollback) history.add(rowToLine(row))
         val lines = ArrayList<TerminalLine>(rows)
         for (y in 0 until rows) {
             lines.add(rowToLine(screen[y]))
@@ -434,6 +455,7 @@ class TerminalBuffer(
             cols = cols,
             rows = rows,
             lines = lines,
+            scrollbackLines = history,
             cursorX = cursorX.coerceIn(0, cols - 1),
             cursorY = cursorY.coerceIn(0, rows - 1),
             cursorVisible = cursorVisible,

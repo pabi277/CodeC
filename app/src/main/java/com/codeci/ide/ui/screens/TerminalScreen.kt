@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -76,6 +77,12 @@ fun TerminalScreen(
                 )
             },
             actions = {
+                IconButton(onClick = { copyTranscript(context, viewModel) }) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = stringResource(R.string.terminal_copy)
+                    )
+                }
                 IconButton(onClick = { pasteFromClipboard(context, viewModel) }) {
                     Icon(
                         Icons.Default.ContentPaste,
@@ -102,6 +109,7 @@ fun TerminalScreen(
             onResize = { cols, rows -> viewModel.resize(cols, rows) },
             onFontScale = { viewModel.setFontSize(it) },
             onPaste = { pasteFromClipboard(context, viewModel) },
+            onCopy = { copyTranscript(context, viewModel) },
             cursorSequence = { viewModel.cursorKey(it) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -116,6 +124,17 @@ fun TerminalScreen(
             cursorSequence = { viewModel.cursorKey(it) }
         )
     }
+}
+
+private fun copyTranscript(context: Context, viewModel: TerminalViewModel) {
+    val text = viewModel.transcriptText()
+    if (text.isBlank()) {
+        Toast.makeText(context, context.getString(R.string.terminal_copy_empty), Toast.LENGTH_SHORT).show()
+        return
+    }
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("Terminal", text))
+    Toast.makeText(context, context.getString(R.string.terminal_copied), Toast.LENGTH_SHORT).show()
 }
 
 private fun pasteFromClipboard(context: Context, viewModel: TerminalViewModel) {

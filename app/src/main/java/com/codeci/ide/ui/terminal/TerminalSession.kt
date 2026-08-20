@@ -153,4 +153,6 @@ class TerminalSession(
         synchronized(emulator) { emulator.reset() }
         publish()
     }
+
+    fun transcriptText(): String = synchronized(emulator) { emulator.transcriptText() }
 }

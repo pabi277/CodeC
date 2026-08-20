@@ -166,6 +166,15 @@ class AnsiParserTest {
     }
 
     @Test
+    fun `transcript includes scrollback plus the live screen`() {
+        val emu = emu(cols = 8, rows = 3)
+        emu.feed("one\r\ntwo\r\nthree\r\nfour")
+        val text = emu.transcriptText()
+        assertTrue(text.contains("one"))
+        assertTrue(text.contains("four"))
+    }
+
+    @Test
     fun `application cursor keys flip the sequence`() {
         val emu = emu()
         assertEquals("\u001b[A", emu.cursorKey('A'))

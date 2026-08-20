@@ -54,6 +54,23 @@ class TerminalBufferTest {
     }
 
     @Test
+    fun `snapshot includes scrollback and transcript concatenates history`() {
+        val buf = TerminalBuffer(cols = 8, rows = 2)
+        buf.print('A'.code)
+        buf.lineFeed()
+        buf.carriageReturn()
+        buf.print('B'.code)
+        buf.lineFeed()
+        buf.carriageReturn()
+        buf.print('C'.code)
+        val snap = buf.snapshot()
+        assertTrue(snap.scrollbackCount >= 1)
+        val text = snap.transcriptText()
+        assertTrue(text.contains("A"))
+        assertTrue(text.contains("C"))
+    }
+
+    @Test
     fun `default colors encode as sentinels`() {
         val buf = TerminalBuffer(cols = 2, rows = 1)
         buf.print('x'.code)
