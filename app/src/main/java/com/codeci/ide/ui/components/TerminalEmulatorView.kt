@@ -1,18 +1,15 @@
 package com.codeci.ide.ui.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import android.graphics.Typeface
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenu
@@ -21,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,7 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -37,34 +39,46 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codeci.ide.R
 import com.codeci.ide.ui.terminal.CellFlags
+import com.codeci.ide.ui.terminal.StyleRun
 import com.codeci.ide.ui.terminal.TerminalLine
 import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.terminal.XtermColors
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
+import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.max
+import kotlin.math.roundToInt
 
+/**
+ * Termux-style terminal surface: a Canvas character grid whose cell size is
+ * [Paint.measureText("X")] / [Paint.getFontSpacing], matching the PTY
+ * cols/rows. Scrollback is [topRow] (0 = live screen, negative = history),
+ * the same model as Termux's TerminalView.mTopRow.
+ */
 private val DefaultBg = Color(0xFF121212)
 private const val DefaultFgRgb = 0xE5E5E5
 private val CursorColor = Color(0xFF55FF55)
+private val SelectionColor = Color(0x6680CBC4)
 
-@OptIn(ExperimentalFoundationApi::class)
+data class GridSelection(
+    val x1: Int,
+    val y1: Int,
+    val x2: Int,
+    val y2: Int
+)
+
 @Composable
 fun TerminalEmulatorView(
     snapshot: TerminalSnapshot,
@@ -73,7 +87,7 @@ fun TerminalEmulatorView(
     onResize: (cols: Int, rows: Int) -> Unit,
     onFontScale: (Float) -> Unit,
     onPaste: () -> Unit,
-    onCopy: () -> Unit,
+    onCopyText: (String) -> Unit,
     cursorSequence: (Char) -> String,
     modifier: Modifier = Modifier
 ) {
@@ -81,41 +95,38 @@ fun TerminalEmulatorView(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
     var field by remember { mutableStateOf(TextFieldValue("")) }
-    val listState = rememberLazyListState()
-    var followOutput by remember { mutableStateOf(true) }
 
-    val cellW = remember(fontSizeSp, density) {
-        with(density) { max(fontSizeSp.sp.toPx() * 0.6f, 1f) }
-    }
-    val cellH = remember(fontSizeSp, density) {
-        with(density) { max(fontSizeSp.sp.toPx() * 1.25f, 1f) }
-    }
-
-    val displayLines = remember(snapshot) {
-        val lastContent = snapshot.lines.indexOfLast { line ->
-            line.text.any { !it.isWhitespace() }
+    val paint = remember(fontSizeSp, density) {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = Typeface.MONOSPACE
+            textSize = with(density) { fontSizeSp.sp.toPx() }
         }
-        val liveEnd = maxOf(snapshot.cursorY, lastContent).coerceAtLeast(0)
-        snapshot.scrollbackLines + snapshot.lines.take(liveEnd + 1)
     }
-    val cursorRow = snapshot.scrollbackCount + snapshot.cursorY
+    // Termux TerminalRenderer: width = measureText("X"), height = fontSpacing.
+    val cellW = remember(paint) { max(paint.measureText("X"), 1f) }
+    val cellH = remember(paint) { max(paint.fontSpacing, 1f) }
+    val ascent = remember(paint) { paint.fontMetrics.ascent }
 
-    LaunchedEffect(snapshot.generation, displayLines.size, cursorRow) {
-        if (displayLines.isEmpty()) return@LaunchedEffect
-        followOutput = true
-        val target = cursorRow.coerceIn(0, displayLines.lastIndex)
-        listState.scrollToItem(target)
+    // Termux mTopRow: 0 = live screen, negative = scrolled into transcript.
+    var topRow by remember { mutableIntStateOf(0) }
+    var selection by remember { mutableStateOf<GridSelection?>(null) }
+    var menu by remember { mutableStateOf(false) }
+    var menuOffset by remember { mutableStateOf(IntOffset.Zero) }
+    var selecting by remember { mutableStateOf(false) }
+
+    val minTop = -snapshot.scrollbackCount
+    if (topRow < minTop) topRow = minTop
+    if (topRow > 0) topRow = 0
+
+    // Termux onScreenUpdated: jump to live screen unless a selection is active.
+    LaunchedEffect(snapshot.generation) {
+        if (selection == null) topRow = 0
     }
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(DefaultBg)
-            .pointerInput(fontSizeSp) {
-                detectTwoFingerPinch { zoom ->
-                    if (zoom != 1f) onFontScale(fontSizeSp * zoom)
-                }
-            }
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 handleHardwareKey(event.key, event.isCtrlPressed, onInput, cursorSequence)
@@ -125,23 +136,104 @@ fun TerminalEmulatorView(
         val rows = max(1, (with(density) { maxHeight.toPx() } / cellH).toInt())
         LaunchedEffect(cols, rows) { onResize(cols, rows) }
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            itemsIndexed(displayLines) { index, line ->
-                val showCursor = snapshot.cursorVisible && index == cursorRow
-                TextLine(
-                    line = line,
-                    fontSizeSp = fontSizeSp,
-                    cursorX = if (showCursor) snapshot.cursorX else -1,
-                    onTap = {
-                        followOutput = true
-                        focusRequester.requestFocus()
-                        keyboard?.show()
-                    },
-                    onCopy = onCopy,
-                    onPaste = onPaste
+        Box(modifier = Modifier.fillMaxSize()) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(cellW, cellH, snapshot.generation, snapshot.scrollbackCount) {
+                        detectTapGestures(
+                            onTap = {
+                                selecting = false
+                                selection = null
+                                focusRequester.requestFocus()
+                                keyboard?.show()
+                            },
+                            onLongPress = { pos ->
+                                val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
+                                val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
+                                val y = topRow + row
+                                selection = GridSelection(col, y, col, y)
+                                selecting = true
+                                menuOffset = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
+                                menu = true
+                            }
+                        )
+                    }
+                    .pointerInput(cellH, snapshot.scrollbackCount, selecting) {
+                        detectScrollOrSelect(
+                            cellW = cellW,
+                            cellH = cellH,
+                            cols = cols,
+                            rows = rows,
+                            selecting = { selecting },
+                            onScroll = { dy ->
+                                val deltaRows = (dy / cellH).toInt()
+                                if (deltaRows != 0) {
+                                    topRow = (topRow + deltaRows).coerceIn(-snapshot.scrollbackCount, 0)
+                                }
+                            },
+                            onSelectMove = { col, row ->
+                                val cur = selection ?: return@detectScrollOrSelect
+                                selection = cur.copy(
+                                    x2 = col.coerceIn(0, cols - 1),
+                                    y2 = (topRow + row).coerceIn(-snapshot.scrollbackCount, snapshot.rows - 1)
+                                )
+                            }
+                        )
+                    }
+                    .pointerInput(fontSizeSp) {
+                        detectTwoFingerPinch { zoom ->
+                            if (zoom != 1f && abs(zoom - 1f) > 0.01f) onFontScale(fontSizeSp * zoom)
+                        }
+                    }
+            ) {
+                drawRect(DefaultBg)
+                val transcript = snapshot.scrollbackLines + snapshot.lines
+                val origin = snapshot.scrollbackCount
+                for (screenY in 0 until rows) {
+                    val extY = topRow + screenY
+                    val lineIndex = origin + extY
+                    if (lineIndex !in transcript.indices) continue
+                    val line = transcript[lineIndex]
+                    val isCursorRow = snapshot.cursorVisible &&
+                        topRow == 0 &&
+                        extY == snapshot.cursorY
+                    drawLine(
+                        line = line,
+                        y = screenY,
+                        cellW = cellW,
+                        cellH = cellH,
+                        ascent = ascent,
+                        paint = paint,
+                        cursorX = if (isCursorRow) snapshot.cursorX else -1,
+                        selection = selection,
+                        extY = extY,
+                        cols = cols
+                    )
+                }
+            }
+
+            DropdownMenu(
+                expanded = menu,
+                onDismissRequest = { menu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.terminal_copy)) },
+                    onClick = {
+                        menu = false
+                        val text = selection?.let { snapshot.selectedText(it) }
+                            ?: snapshot.transcriptText()
+                        onCopyText(text)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.terminal_paste)) },
+                    onClick = {
+                        menu = false
+                        selecting = false
+                        selection = null
+                        onPaste()
+                    }
                 )
             }
         }
@@ -151,7 +243,9 @@ fun TerminalEmulatorView(
             onValueChange = { next ->
                 val inserted = insertedText(field, next)
                 if (inserted.isNotEmpty()) {
-                    followOutput = true
+                    selecting = false
+                    selection = null
+                    topRow = 0
                     onInput(inserted)
                 }
                 field = TextFieldValue("")
@@ -168,118 +262,86 @@ fun TerminalEmulatorView(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun TextLine(
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
     line: TerminalLine,
-    fontSizeSp: Float,
+    y: Int,
+    cellW: Float,
+    cellH: Float,
+    ascent: Float,
+    paint: android.graphics.Paint,
     cursorX: Int,
-    onTap: () -> Unit,
-    onCopy: () -> Unit,
-    onPaste: () -> Unit
+    selection: GridSelection?,
+    extY: Int,
+    cols: Int
 ) {
-    var menu by remember { mutableStateOf(false) }
-    Box {
-        Text(
-            text = line.toAnnotatedString(cursorX),
-            fontFamily = FontFamily.Monospace,
-            fontSize = fontSizeSp.sp,
-            lineHeight = (fontSizeSp * 1.25f).sp,
-            color = packedColor(DefaultFgRgb),
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = onTap,
-                    onLongClick = { menu = true }
-                )
-        )
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.terminal_copy)) },
-                onClick = {
-                    menu = false
-                    onCopy()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.terminal_paste)) },
-                onClick = {
-                    menu = false
-                    onPaste()
-                }
-            )
-        }
-    }
-}
-
-private fun TerminalLine.toAnnotatedString(cursorX: Int) = buildAnnotatedString {
-    val padded = if (cursorX >= text.length) {
-        text + " ".repeat(cursorX - text.length + 1)
+    val text = line.text
+    val runs = if (line.runs.isEmpty()) {
+        listOf(StyleRun(0, text.length, XtermColors.COLOR_DEFAULT_FG, XtermColors.COLOR_DEFAULT_BG, 0))
     } else {
-        text
+        line.runs
     }
-    val effectiveRuns = if (runs.isEmpty()) {
-        listOf(com.codeci.ide.ui.terminal.StyleRun(0, padded.length, XtermColors.COLOR_DEFAULT_FG, XtermColors.COLOR_DEFAULT_BG, 0))
-    } else {
-        runs
-    }
-    for (run in effectiveRuns) {
-        val start = run.start.coerceIn(0, padded.length)
-        val end = run.end.coerceIn(start, padded.length)
+    val sel = selection?.normalized()
+    for (run in runs) {
+        val start = run.start.coerceIn(0, cols)
+        val end = run.end.coerceIn(start, cols)
         if (start >= end) continue
-        appendStyledRange(padded, start, end, run.fg, run.bg, run.flags, cursorX)
-    }
-    if (cursorX >= 0 && cursorX >= (effectiveRuns.lastOrNull()?.end ?: 0) && cursorX < padded.length) {
-        appendStyledRange(
-            padded, cursorX, cursorX + 1,
-            XtermColors.COLOR_DEFAULT_FG, XtermColors.COLOR_DEFAULT_BG, 0, cursorX
-        )
-    }
-}
-
-private fun androidx.compose.ui.text.AnnotatedString.Builder.appendStyledRange(
-    text: String,
-    start: Int,
-    end: Int,
-    fg: Int,
-    bg: Int,
-    flags: Int,
-    cursorX: Int
-) {
-    var i = start
-    while (i < end) {
-        val inCursor = i == cursorX
-        val runEnd = if (inCursor) i + 1 else if (cursorX in (i + 1) until end) cursorX else end
-        val bold = flags and CellFlags.BOLD != 0
-        val inverse = flags and CellFlags.INVERSE != 0
-        val invisible = flags and CellFlags.INVISIBLE != 0
-        val fgRgb = XtermColors.toRgb(fg, DefaultFgRgb, bold)
-        val bgRgb = XtermColors.toRgb(bg, 0x121212, false)
+        val bold = run.flags and CellFlags.BOLD != 0
+        val inverse = run.flags and CellFlags.INVERSE != 0
+        val invisible = run.flags and CellFlags.INVISIBLE != 0
+        val fgRgb = XtermColors.toRgb(run.fg, DefaultFgRgb, bold)
+        val bgRgb = XtermColors.toRgb(run.bg, 0x121212, false)
         val drawFg = if (inverse) bgRgb else fgRgb
         val drawBg = if (inverse) fgRgb else bgRgb
-        withStyle(
-            SpanStyle(
-                color = when {
-                    inCursor -> Color(0xFF121212)
-                    invisible -> Color.Transparent
-                    else -> packedColor(drawFg)
-                },
-                background = when {
-                    inCursor -> CursorColor
-                    drawBg == 0x121212 -> Color.Unspecified
-                    else -> packedColor(drawBg)
-                },
-                fontWeight = if (bold) FontWeight.Bold else null,
-                textDecoration = if (flags and CellFlags.UNDERLINE != 0) {
-                    TextDecoration.Underline
-                } else {
-                    null
-                }
+        if (drawBg != 0x121212) {
+            drawRect(
+                color = packedColor(drawBg),
+                topLeft = Offset(start * cellW, y * cellH),
+                size = Size((end - start) * cellW, cellH)
             )
-        ) {
-            append(text.substring(i, runEnd))
         }
-        i = runEnd
+        if (invisible) continue
+        val sliceEnd = end.coerceAtMost(text.length)
+        val sliceStart = start.coerceAtMost(text.length)
+        if (sliceStart >= sliceEnd) continue
+        val slice = text.substring(sliceStart, sliceEnd)
+        paint.color = (0xFF000000.toInt()) or drawFg
+        paint.isFakeBoldText = bold
+        paint.isUnderlineText = run.flags and CellFlags.UNDERLINE != 0
+        drawIntoCanvas { canvas ->
+            canvas.nativeCanvas.drawText(slice, start * cellW, y * cellH - ascent, paint)
+        }
+    }
+    if (sel != null && extY in minOf(sel.y1, sel.y2)..maxOf(sel.y1, sel.y2)) {
+        val left = if (extY == sel.y1 && extY == sel.y2) {
+            minOf(sel.x1, sel.x2)
+        } else if (extY == minOf(sel.y1, sel.y2)) {
+            if (sel.y1 <= sel.y2) sel.x1 else sel.x2
+        } else if (extY == maxOf(sel.y1, sel.y2)) {
+            0
+        } else {
+            0
+        }
+        val right = if (extY == sel.y1 && extY == sel.y2) {
+            maxOf(sel.x1, sel.x2) + 1
+        } else if (extY == minOf(sel.y1, sel.y2)) {
+            cols
+        } else if (extY == maxOf(sel.y1, sel.y2)) {
+            (if (sel.y1 <= sel.y2) sel.x2 else sel.x1) + 1
+        } else {
+            cols
+        }
+        drawRect(
+            color = SelectionColor,
+            topLeft = Offset(left * cellW, y * cellH),
+            size = Size(((right - left).coerceAtLeast(0)) * cellW, cellH)
+        )
+    }
+    if (cursorX in 0 until cols) {
+        drawRect(
+            color = CursorColor.copy(alpha = 0.7f),
+            topLeft = Offset(cursorX * cellW, y * cellH),
+            size = Size(cellW, cellH)
+        )
     }
 }
 
@@ -288,6 +350,63 @@ private fun packedColor(packed: Int): Color = Color(
     green = (packed shr 8) and 0xFF,
     blue = packed and 0xFF
 )
+
+private fun GridSelection.normalized(): GridSelection {
+    val aFirst = y1 < y2 || (y1 == y2 && x1 <= x2)
+    return if (aFirst) this else GridSelection(x2, y2, x1, y1)
+}
+
+fun TerminalSnapshot.selectedText(sel: GridSelection): String {
+    val n = sel.normalized()
+    val transcript = scrollbackLines + lines
+    val origin = scrollbackCount
+    return buildString {
+        for (y in n.y1..n.y2) {
+            val idx = origin + y
+            if (idx !in transcript.indices) continue
+            val line = transcript[idx].text
+            val start = if (y == n.y1) n.x1.coerceAtLeast(0) else 0
+            val end = if (y == n.y2) (n.x2 + 1).coerceAtMost(line.length) else line.length
+            if (start < end && start < line.length) {
+                append(line.substring(start, end.coerceAtMost(line.length)).trimEnd())
+            }
+            if (y != n.y2) append('\n')
+        }
+    }.trimEnd()
+}
+
+private suspend fun PointerInputScope.detectScrollOrSelect(
+    cellW: Float,
+    cellH: Float,
+    cols: Int,
+    rows: Int,
+    selecting: () -> Boolean,
+    onScroll: (Float) -> Unit,
+    onSelectMove: (Int, Int) -> Unit
+) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        var lastY = down.position.y
+        var dragged = false
+        while (true) {
+            val event = awaitPointerEvent()
+            val change = event.changes.firstOrNull() ?: break
+            if (!change.pressed) break
+            val dy = change.position.y - lastY
+            if (abs(dy) > 1f || abs(change.positionChange().x) > 1f) dragged = true
+            if (selecting()) {
+                val col = floor(change.position.x / cellW).toInt().coerceIn(0, cols - 1)
+                val row = floor(change.position.y / cellH).toInt().coerceIn(0, rows - 1)
+                onSelectMove(col, row)
+                change.consume()
+            } else if (dragged) {
+                onScroll(-dy)
+                lastY = change.position.y
+                change.consume()
+            }
+        }
+    }
+}
 
 private suspend fun PointerInputScope.detectTwoFingerPinch(onZoom: (Float) -> Unit) {
     awaitEachGesture {

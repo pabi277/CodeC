@@ -1,5 +1,7 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.components.GridSelection
+import com.codeci.ide.ui.components.selectedText
 import com.codeci.ide.ui.terminal.TerminalBuffer
 import com.codeci.ide.ui.terminal.XtermColors
 import org.junit.Assert.assertEquals
@@ -68,6 +70,19 @@ class TerminalBufferTest {
         val text = snap.transcriptText()
         assertTrue(text.contains("A"))
         assertTrue(text.contains("C"))
+    }
+
+    @Test
+    fun `selectedText copies a rectangle of the transcript`() {
+        val buf = TerminalBuffer(cols = 8, rows = 2)
+        buf.print('A'.code)
+        buf.print('B'.code)
+        buf.print('C'.code)
+        val snap = buf.snapshot()
+        val text = snap.selectedText(
+            com.codeci.ide.ui.components.GridSelection(0, 0, 1, 0)
+        )
+        assertEquals("AB", text)
     }
 
     @Test
