@@ -26,7 +26,7 @@ class EmbeddedCompilerTest {
                 "-L", ".",
                 "crt1.o", "crti.o",
                 source.absolutePath,
-                "libtcc1.a", "libc.a", "crtn.o",
+                "libtcc1.a", "libc.a", "libtcc1.a", "libc.a", "crtn.o",
                 "-o", output.absolutePath
             ),
             cmd

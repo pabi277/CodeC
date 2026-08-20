@@ -149,6 +149,10 @@ object EmbeddedCompiler {
         args += "crt1.o"
         args += "crti.o"
         args += sourceFile.absolutePath
+        // TCC has no --start-group. libc (printf) needs libtcc1's *tf*
+        // helpers; libtcc1 needs memmove from libc. Scan each archive twice.
+        args += "libtcc1.a"
+        args += "libc.a"
         args += "libtcc1.a"
         args += "libc.a"
         args += "crtn.o"

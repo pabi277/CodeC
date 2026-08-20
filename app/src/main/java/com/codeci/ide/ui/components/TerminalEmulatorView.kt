@@ -129,6 +129,11 @@ fun TerminalEmulatorView(
             .background(DefaultBg)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                // Enter is delivered via the IME TextField as \n → \r. Handling
+                // it here as well duplicated the command (main defined twice).
+                if (event.key == Key.Enter || event.key == Key.NumPadEnter) {
+                    return@onPreviewKeyEvent false
+                }
                 handleHardwareKey(event.key, event.isCtrlPressed, onInput, cursorSequence)
             }
     ) {
@@ -241,14 +246,20 @@ fun TerminalEmulatorView(
         BasicTextField(
             value = field,
             onValueChange = { next ->
+                // Termux-style: send only the delta. Resetting to "" on every
+                // keystroke makes Gboard re-commit the whole line (cc … cc …).
                 val inserted = insertedText(field, next)
                 if (inserted.isNotEmpty()) {
                     selecting = false
                     selection = null
                     topRow = 0
-                    onInput(inserted)
+                    onInput(inserted.replace("\n", "\r"))
                 }
-                field = TextFieldValue("")
+                field = if ('\n' in next.text || '\r' in next.text) {
+                    TextFieldValue("")
+                } else {
+                    next
+                }
             },
             keyboardOptions = KeyboardOptions(
                 imeAction = ImeAction.None,
@@ -446,10 +457,6 @@ private fun handleHardwareKey(
     cursorSequence: (Char) -> String
 ): Boolean {
     when (key) {
-        Key.Enter, Key.NumPadEnter -> {
-            onInput("\r")
-            return true
-        }
         Key.Backspace -> {
             onInput("\u007f")
             return true
