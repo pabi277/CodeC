@@ -1,6 +1,6 @@
 # CodeC Terminal — Mini-Termux Plan
 
-> **Status:** Phase 1 **working on device** (app **1.3.13+**) · Phase 2 **in progress** (app **1.3.14**, overlay + download/extract). Phase 3 **not started**.  
+> **Status:** Phase 1 **working on device** (app **1.3.13+**) · Phase 2 **released** as `userland-v1` (clean-device acceptance pending) · Phase 3 **M1 in progress** (repository foundation and guarded `pkg` frontend).
 > **This-session bugs/fixes:** [docs/chat-phase1/README.md](chat-phase1/README.md).  
 > **Goal:** turn CodeC into a self-contained C IDE **with its own
 > Termux-style terminal and package manager** — install packages like `pkg install clang`
@@ -186,8 +186,9 @@ with `gcc`-free tooling and add clang right after.
    bracketed paste. MIT, fully unit-tested.
 3. Termux-style Canvas grid (`Paint.measureText("X")`, `mTopRow`) + `TerminalKeyView`
    IME (`onCreateInputConnection`). Extra-keys row, pinch zoom, long-press copy.
-4. `cc` frontend for embedded TCC; `pkg` placeholder until Phase 3
-   (`ShellEnvironment` writes `$PREFIX/bin/{cc,pkg,bash}`).
+4. `cc` frontend for embedded TCC; the Phase 3 `pkg` frontend is guarded to
+   CodeC's own apt/dpkg repository and fails clearly until a CodeC apt/dpkg
+   bootstrap is installed (`ShellEnvironment` writes `$PREFIX/bin/{cc,pkg,bash}`).
 5. Projects on **executable** `filesDir/CodeC/projects` (emulated storage is `noexec`).
 6. Link line: `-nostdlib` + crt + `codec_stdio.o` + `libtcc1.a libc.a` twice + `-o` last.
 7. Editor → terminal handoff: toolbar terminal button runs `cc` then `./a.out` in the PTY.

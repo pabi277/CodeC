@@ -18,3 +18,5 @@ local.properties
 debug.keystore
 codec-packages/.work
 codec-packages/dist
+__pycache__/
+*.pyc

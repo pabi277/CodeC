@@ -13,8 +13,9 @@ DIST="$ROOT/dist"
 mkdir -p "$WORK" "$DIST"
 
 if [[ ! -d "$SRC/.git" ]]; then
-  git clone --depth 1 --branch "$TERMUX_PACKAGES_REF" "$TERMUX_PACKAGES_REPO" "$SRC" \
-    || git clone --depth 1 "$TERMUX_PACKAGES_REPO" "$SRC"
+  git clone --filter=blob:none --no-checkout "$TERMUX_PACKAGES_REPO" "$SRC"
+  git -C "$SRC" fetch --depth 1 origin "$TERMUX_PACKAGES_REF"
+  git -C "$SRC" checkout --detach "$TERMUX_PACKAGES_REF"
 fi
 
 "$ROOT/scripts/apply-prefix.sh" "$SRC"
@@ -30,7 +31,8 @@ fi
 echo "CodeC Bash dependencies:"
 grep '^TERMUX_PKG_DEPENDS=' "$BASH_RECIPE"
 
-PACKAGES=$(echo "$CODEC_BOOTSTRAP_PACKAGES" | tr '\n' ' ')
+BOOTSTRAP_PACKAGES="${CODEC_BOOTSTRAP_PACKAGES_OVERRIDE:-$CODEC_BOOTSTRAP_PACKAGES}"
+PACKAGES=$(echo "$BOOTSTRAP_PACKAGES" | tr '\n' ' ')
 
 if [[ "${CODEC_USE_DOCKER:-1}" == "1" ]] && command -v docker >/dev/null 2>&1; then
   if [[ -x "$SRC/scripts/run-docker.sh" ]]; then

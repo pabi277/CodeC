@@ -39,11 +39,18 @@ class ShellEnvironmentTest {
     }
 
     @Test
-    fun `pkg script is a Phase 3 placeholder`() {
+    fun `pkg script is guarded to the CodeC repository`() {
         val script = ShellEnvironment.pkgScript()
-        assertTrue(script.contains("Phase 3"))
-        assertTrue(script.contains("cc file.c -o a.out"))
-        assertTrue(script.contains("exit 1"))
+        assertTrue(script.contains("apt-get"))
+        assertTrue(script.contains("dpkg"))
+        assertTrue(script.contains("pkg update"))
+        assertTrue(script.contains("pkg install"))
+        assertTrue(script.contains("pkg uninstall"))
+        assertTrue(script.contains("https://pabi277.github.io/CodeC/packages/dev"))
+        assertTrue(script.contains("sourceparts=-"))
+        assertTrue(script.contains("com.codeci.ide/files/usr"))
+        assertTrue(script.contains("maintainer script"))
+        assertFalse(script.contains("com.termux/files/usr"))
     }
 
     @Test
@@ -145,6 +152,11 @@ class ShellEnvironmentTest {
         try {
             TarGzExtractor.safeFile(dest, "../etc/passwd")
             throw AssertionError("expected escape to fail")
+        } catch (_: SecurityException) {
+        }
+        try {
+            TarGzExtractor.safeFile(dest, "/etc/passwd")
+            throw AssertionError("expected absolute path to fail")
         } catch (_: SecurityException) {
         }
         dest.deleteRecursively()
