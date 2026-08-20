@@ -12,9 +12,16 @@ android {
   defaultConfig {
     applicationId = "com.codeci.ide"
     minSdk = 24
-    targetSdk = 34
-    versionCode = 1
-    versionName = "1.0"
+    // targetSdk 28 on purpose: Android 10+ (API 29+) SELinux policy denies
+    // execve() of files in an app's own data directory for apps targeting
+    // API 29+ ("Removed execute permission for app home directory", W^X).
+    // That restriction is what made the downloaded Clang fail with
+    // "Permission denied" on real Android 10+ phones. Termux uses the same
+    // targetSdk 28 compatibility mode so that downloaded binaries keep
+    // working. CodeC is distributed via GitHub (not Play), so this is safe.
+    targetSdk = 28
+    versionCode = 3
+    versionName = "1.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -60,7 +67,21 @@ android {
     compose = true
     buildConfig = true
   }
+  packaging {
+    jniLibs {
+      // Extract the bundled TCC binary (libtcc.so) to nativeLibraryDir so it
+      // can be exec()'d — works at any targetSdk, unlike app-data exec.
+      useLegacyPackaging = true
+    }
+  }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+  lint {
+    // CodeC is distributed from GitHub (not Google Play), and deliberately
+    // targets API 28 — Termux's compatibility mode — so that the downloaded
+    // compiler stays executable on Android 10+. The Google Play targetSdk
+    // policy check does not apply here.
+    disable += "ExpiredTargetSdkVersion"
+  }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true

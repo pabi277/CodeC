@@ -30,7 +30,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.utils.FileManager
@@ -65,6 +68,8 @@ fun HomeScreen(
     val totalFiles = fileManager.listFiles().size
     val moduleViewModel = activityModuleViewModel()
     val compilerInstalled by moduleViewModel.isCompilerInstalled.collectAsState()
+    val builtInTcc by remember { mutableStateOf(EmbeddedCompiler.isAvailable(context)) }
+    val compilerAvailable = compilerInstalled || builtInTcc
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
@@ -91,7 +96,30 @@ fun HomeScreen(
                 )
             }
 
-            if (!compilerInstalled) {
+            if (builtInTcc && !compilerInstalled) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Built-in compiler ready",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "CodeC ships with its own offline C compiler (TCC) — " +
+                                    "just write code and tap RUN. No downloads needed.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (!compilerAvailable) {
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)

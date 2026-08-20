@@ -39,6 +39,26 @@ class CompilerServiceTest {
     }
 
     @Test
+    fun `parseDiagnostics handles TCC line-only format`() {
+        // TCC prints "file.c:3: error: ..." (no column).
+        val raw = """
+            bad.c:3: error: identifier expected
+            bad.c:7: warning: implicit declaration of function 'printf'
+        """.trimIndent()
+
+        val errors = CompilerService.parseDiagnostics(raw)
+
+        assertEquals(2, errors.size)
+        assertEquals(3, errors[0].line)
+        assertEquals(0, errors[0].column)
+        assertEquals(ErrorType.ERROR, errors[0].type)
+        assertEquals("identifier expected", errors[0].message)
+        assertEquals(7, errors[1].line)
+        assertEquals(ErrorType.WARNING, errors[1].type)
+        assertEquals("implicit declaration of function 'printf'", errors[1].message)
+    }
+
+    @Test
     fun `detectEnvironmentError maps permission denied to device-blocked message`() {
         val message = CompilerService.detectEnvironmentError(
             "/data/user/0/com.codeci.ide/files/CodeC/modules/clang-compiler/bin/" +
