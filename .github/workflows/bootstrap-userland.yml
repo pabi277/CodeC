@@ -77,7 +77,11 @@ jobs:
           cd "busybox-${BUSYBOX_VERSION}"
 
           make distclean >/dev/null 2>&1 || true
-          make defconfig
+
+          # BusyBox defconfig enables Linux-only console and user-account
+          # applets that cannot compile against Android's Bionic libc.
+          # Begin with everything disabled and enable only our curated applets.
+          make allnoconfig
 
           # Patch .config with Python (reliable; no broken heredoc spaces)
           python3 - <<'PY'
@@ -194,6 +198,15 @@ jobs:
           set +o pipefail
           yes "" | make oldconfig
           set -o pipefail
+
+          echo "=== selected BusyBox configuration ==="
+          grep -E '^CONFIG_(ASH|SH_IS_ASH|LS|CAT|CP|MV|RM|MKDIR|TAR|GZIP|GREP|SED|AWK|FIND|WHICH|UNAME)=y$' .config || true
+
+          # Fail before compilation if a known Linux-only applet was enabled.
+          if grep -E '^CONFIG_(LOADFONT|LOADKMAP|LOGNAME|HOSTID|CHVT|OPENVT|SHOWKEY)=y$' .config; then
+            echo "ERROR: Linux-only BusyBox applet was unexpectedly enabled" >&2
+            exit 1
+          fi
 
           # Build with NDK clang (no CONFIG_CROSS_COMPILER_PREFIX — we pass CC fully)
           make -j"$(nproc)" \
