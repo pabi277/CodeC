@@ -8,6 +8,8 @@ import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.terminal.PreparedShell
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.TerminalSession
+import com.codeci.ide.ui.terminal.UserlandInstaller
+import com.codeci.ide.ui.terminal.UserlandStatus
 import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +32,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     private val settings = SettingsManager(application)
     private val bootstrap = ShellBootstrap(application)
+    private val userland = UserlandInstaller(application)
     private val session = TerminalSession()
 
     val snapshot: StateFlow<TerminalSnapshot> = session.snapshot
@@ -80,6 +83,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     private suspend fun startLocked() {
         try {
+            installUserlandInternal(force = false)
             val prepared = prepareShell()
             session.start(prepared)
             _started.value = true
@@ -91,6 +95,28 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         } catch (e: Exception) {
             _started.value = false
             AppLogger.e("TerminalViewModel", "start failed", e)
+        }
+    }
+
+    fun installUserland() {
+        viewModelScope.launch(Dispatchers.IO) {
+            startMutex.withLock {
+                installUserlandInternal(force = true)
+                session.stop()
+                session.resetEmulator()
+                _started.value = false
+                startLocked()
+            }
+        }
+    }
+
+    private fun installUserlandInternal(force: Boolean) {
+        val status = userland.installIfNeeded(force = force) { msg ->
+            session.notice(msg)
+        }
+        when (status) {
+            is UserlandStatus.Failed -> session.notice("userland: failed — ${status.message}")
+            else -> { }
         }
     }
 

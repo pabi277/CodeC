@@ -12,11 +12,12 @@ import java.io.File
  * (`/data/data/com.codeci.ide/files/usr`).
  *
  * Writes the `cc` frontend (wired to the embedded TCC), a `pkg` placeholder
- * and a `bash` shim so the terminal can `exec bash` before Phase 2 ships a
- * real bootstrap. Script bodies are pure strings so they are unit-tested.
+ * and a `bash` shim so the terminal can `exec bash` before a real bootstrap
+ * lands. After Phase 2 extract, [resolveShell] prefers ELF bash/busybox.
+ * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "12"
+    const val BOOTSTRAP_VERSION = "13"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -195,13 +196,37 @@ object ShellEnvironment {
         }
     }
 
+    fun isElf(file: File): Boolean {
+        if (!file.isFile) return false
+        return try {
+            file.inputStream().use { input ->
+                val mag = ByteArray(4)
+                if (input.read(mag) != 4) return false
+                mag[0] == 0x7f.toByte() && mag[1] == 'E'.code.toByte() &&
+                    mag[2] == 'L'.code.toByte() && mag[3] == 'F'.code.toByte()
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** True when bootstrap extract dropped a native bash or busybox. */
+    fun hasRealUserland(prefix: File): Boolean {
+        val bin = binDir(prefix)
+        return isElf(File(bin, "bash")) || isElf(File(bin, "busybox"))
+    }
+
     /**
-     * Preferred shell: `$PREFIX/bin/bash` (shim or Phase-2 real bash), then
-     * `/system/bin/sh`.
+     * Preferred shell: real ELF `$PREFIX/bin/bash`, then busybox ash,
+     * then the Phase-1 shim, then `/system/bin/sh`.
      */
     fun resolveShell(prefix: File): File {
+        val bash = File(binDir(prefix), "bash")
+        val busybox = File(binDir(prefix), "busybox")
+        if (isElf(bash) && bash.canExecute()) return bash
+        if (isElf(busybox) && busybox.canExecute()) return busybox
         val candidates = listOf(
-            File(binDir(prefix), "bash"),
+            bash,
             File("/system/bin/bash"),
             File("/system/bin/sh")
         )
@@ -259,7 +284,10 @@ class ShellBootstrap(private val context: Context) {
         val marker = File(prefix, ".bootstrap-v${ShellEnvironment.BOOTSTRAP_VERSION}")
         writeExecutable(File(bin, "cc"), ShellEnvironment.ccScript())
         writeExecutable(File(bin, "pkg"), ShellEnvironment.pkgScript())
-        writeExecutable(File(bin, "bash"), ShellEnvironment.bashShim())
+        val bash = File(bin, "bash")
+        if (!ShellEnvironment.isElf(bash)) {
+            writeExecutable(bash, ShellEnvironment.bashShim())
+        }
         File(etc, "profile").writeText(
             ShellEnvironment.profileScript(prefix, home, projects)
         )

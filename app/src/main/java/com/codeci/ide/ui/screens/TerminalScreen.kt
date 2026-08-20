@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.GetApp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -89,6 +90,12 @@ fun TerminalScreen(
                     Icon(
                         Icons.Default.ContentPaste,
                         contentDescription = stringResource(R.string.terminal_paste)
+                    )
+                }
+                IconButton(onClick = { viewModel.installUserland() }) {
+                    Icon(
+                        Icons.Default.GetApp,
+                        contentDescription = stringResource(R.string.terminal_install_userland)
                     )
                 }
                 IconButton(onClick = { viewModel.restart() }) {

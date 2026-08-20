@@ -1,0 +1,15 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (C) 2026 CodeC contributors
+Copyright (C) Termux developers (termux-packages)
+
+This directory is a prefix overlay / bootstrap builder forked from the
+method of https://github.com/termux/termux-packages (GPL-3.0).
+
+You should have received a copy of the GNU General Public License
+along with this overlay. If not, see <https://www.gnu.org/licenses/>.
+
+The rest of the CodeC Android application is licensed separately;
+this GPL-3.0 grant applies to codec-packages/ (this tree) and to
+packages rebuilt from termux-packages with our TERMUX_PREFIX.

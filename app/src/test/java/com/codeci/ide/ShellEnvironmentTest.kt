@@ -1,6 +1,7 @@
 package com.codeci.ide
 
 import com.codeci.ide.ui.terminal.ShellEnvironment
+import com.codeci.ide.ui.terminal.TarGzExtractor
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -115,6 +116,38 @@ class ShellEnvironmentTest {
     fun `resolveShell prefers prefix bash then system sh`() {
         val prefix = File("/tmp/codec-no-such-prefix")
         assertEquals(File("/system/bin/sh"), ShellEnvironment.resolveShell(prefix))
+    }
+
+    @Test
+    fun `isElf detects ELF magic and not scripts`() {
+        val dir = File(System.getProperty("java.io.tmpdir"), "codec-elf-${System.nanoTime()}")
+        dir.mkdirs()
+        val prefix = File(dir, "usr")
+        val bin = File(prefix, "bin")
+        bin.mkdirs()
+        val elf = File(bin, "bash")
+        elf.writeBytes(byteArrayOf(0x7f, 'E'.code.toByte(), 'L'.code.toByte(), 'F'.code.toByte(), 1, 2, 3))
+        val shim = File(bin, "shim")
+        shim.writeText("#!/system/bin/sh\n")
+        assertTrue(ShellEnvironment.isElf(elf))
+        assertFalse(ShellEnvironment.isElf(shim))
+        assertTrue(ShellEnvironment.hasRealUserland(prefix))
+        dir.deleteRecursively()
+    }
+
+    @Test
+    fun `tar extractor refuses path escape and strips usr prefix`() {
+        val dest = File(System.getProperty("java.io.tmpdir"), "codec-tar-${System.nanoTime()}")
+        dest.mkdirs()
+        val ok = TarGzExtractor.safeFile(dest, "usr/bin/bash")
+        assertTrue(ok.absolutePath.startsWith(dest.canonicalPath))
+        assertTrue(ok.absolutePath.endsWith("bin/bash"))
+        try {
+            TarGzExtractor.safeFile(dest, "../etc/passwd")
+            throw AssertionError("expected escape to fail")
+        } catch (_: SecurityException) {
+        }
+        dest.deleteRecursively()
     }
 
     @Test

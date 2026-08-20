@@ -12,7 +12,7 @@ Read [README.md](README.md) then [PROBLEMS.md](PROBLEMS.md) before writing code.
 
 ## Do not
 
-- Do **not** start Phase 2 (bootstrap tarball) or Phase 3 (`pkg` / apt) unless the user says so. New chat for that.
+- Phase 2 overlay started in a later chat (1.3.14). Do **not** start Phase 3 (`pkg` / apt) unless asked.
 - Do **not** open a new PR unless asked. PR #5 already tracks this branch.
 - Do **not** add `.` to `PATH` (Termux does not).
 - Do **not** put `-o` in the middle of the TCC line.

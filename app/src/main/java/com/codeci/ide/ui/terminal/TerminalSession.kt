@@ -161,4 +161,10 @@ class TerminalSession(
     }
 
     fun transcriptText(): String = synchronized(emulator) { emulator.transcriptText() }
+
+    /** Paint a status line on the grid without going through the PTY. */
+    fun notice(text: String) {
+        synchronized(emulator) { emulator.feed("\r\n$text\r\n") }
+        publish()
+    }
 }

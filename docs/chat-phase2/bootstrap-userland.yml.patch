@@ -1,0 +1,63 @@
+name: Bootstrap userland
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: "Target arch (aarch64 or x86_64)"
+        default: "aarch64"
+        required: true
+  push:
+    paths:
+      - "codec-packages/**"
+      - ".github/workflows/bootstrap-userland.yml"
+  pull_request:
+    paths:
+      - "codec-packages/**"
+      - ".github/workflows/bootstrap-userland.yml"
+
+jobs:
+  overlay-check:
+    name: Prefix overlay
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify TERMUX_PREFIX override
+        run: |
+          set -euo pipefail
+          grep -q 'TERMUX_PREFIX=/data/data/com.codeci.ide/files/usr' codec-packages/properties.codec.sh \
+            || grep -q 'TERMUX_PREFIX="${TERMUX_BASE_DIR}/usr"' codec-packages/properties.codec.sh
+          grep -q 'com.codeci.ide' codec-packages/properties.codec.sh
+          test -x codec-packages/scripts/apply-prefix.sh || chmod +x codec-packages/scripts/*.sh
+          # Clone is heavy; syntax-check scripts only on PRs.
+          bash -n codec-packages/scripts/apply-prefix.sh
+          bash -n codec-packages/scripts/build-bootstrap.sh
+          bash -n codec-packages/scripts/assemble-bootstrap.sh
+
+  build-aarch64:
+    name: Build bootstrap aarch64
+    needs: overlay-check
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+      - name: Cache termux-packages workdir
+        uses: actions/cache@v4
+        with:
+          path: codec-packages/.work
+          key: codec-packages-${{ hashFiles('codec-packages/properties.codec.sh') }}-aarch64
+      - name: Build packages in Termux docker
+        run: |
+          chmod +x codec-packages/scripts/*.sh
+          codec-packages/scripts/build-bootstrap.sh aarch64
+      - name: Upload bootstrap
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-aarch64
+          path: |
+            codec-packages/dist/bootstrap-aarch64.tar.gz
+            codec-packages/dist/bootstrap-aarch64.tar.gz.sha256

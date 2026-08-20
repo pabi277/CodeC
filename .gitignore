@@ -16,3 +16,5 @@
 local.properties
 .env
 debug.keystore
+codec-packages/.work
+codec-packages/dist

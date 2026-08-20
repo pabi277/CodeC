@@ -18,6 +18,7 @@
     <string name="terminal_copied">Copied to clipboard</string>
     <string name="terminal_copy_empty">Nothing to copy</string>
     <string name="terminal_restart">Restart shell</string>
+    <string name="terminal_install_userland">Install userland</string>
     <string name="terminal_clipboard_empty">Clipboard is empty</string>
     <string name="home_ready">Ready to code today?</string>
     <string name="action_new_file">New File</string>
