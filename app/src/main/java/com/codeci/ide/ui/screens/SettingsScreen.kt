@@ -51,12 +51,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.ui.services.TermuxCompiler
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,6 +86,7 @@ fun SettingsScreen(
     val cStandard by settingsManager.cStandardFlow.collectAsState(initial = "C11")
     val warningLevel by settingsManager.warningLevelFlow.collectAsState(initial = "Standard")
     val optimizationLevel by settingsManager.optimizationLevelFlow.collectAsState(initial = "O0")
+    val compilerBackend by settingsManager.compilerBackendFlow.collectAsState(initial = "auto")
     val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -147,6 +151,82 @@ fun SettingsScreen(
                 selectedOption = optimizationLevel,
                 options = listOf("O0", "O1", "O2", "O3"),
                 onOptionSelected = { scope.launch { settingsManager.setOptimizationLevel(it) } }
+            )
+
+            SettingsDropdown(
+                title = "Compiler Engine",
+                selectedOption = when (compilerBackend) {
+                    "termux" -> "Termux"
+                    "bundled" -> "Bundled"
+                    else -> "Auto"
+                },
+                options = listOf("Auto", "Bundled", "Termux"),
+                onOptionSelected = { option ->
+                    scope.launch {
+                        settingsManager.setCompilerBackend(
+                            when (option) {
+                                "Termux" -> "termux"
+                                "Bundled" -> "bundled"
+                                else -> "auto"
+                            }
+                        )
+                    }
+                }
+            )
+            SettingsItem(
+                title = "Engine notes",
+                subtitle = "Auto: bundled Clang first, falls back to Termux when Android blocks it. " +
+                    "Termux: always compile with Termux's Clang (works on any real phone and on " +
+                    "x86_64 emulators)."
+            )
+
+            // TERMUX BRIDGE CARD
+            var termuxState by remember { mutableStateOf(loadTermuxState(context)) }
+            var probing by remember { mutableStateOf(false) }
+
+            SettingsSectionHeader("Termux Engine")
+            SettingsItem(
+                title = "Termux",
+                subtitle = buildTermuxStatusText(termuxState, probing)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = { TermuxCompiler.openTermux(context) }) {
+                    Text("OPEN TERMUX")
+                }
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            probing = true
+                            termuxState = termuxState.copy(probeResult = null)
+                            val probe = withContext(Dispatchers.IO) {
+                                TermuxCompiler.runCommand(
+                                    context = context,
+                                    arguments = listOf("-c", "echo codec-bridge-ok"),
+                                    label = "CodeC bridge check",
+                                    timeoutSeconds = 8
+                                )
+                            }
+                            termuxState = loadTermuxState(context).copy(probeResult = formatProbe(probe))
+                            probing = false
+                        }
+                    },
+                    enabled = termuxState.installed && !probing
+                ) {
+                    Text(if (probing) "CHECKING…" else "CHECK BRIDGE")
+                }
+            }
+            SettingsItem(
+                title = "How to enable",
+                subtitle = "1) Install Termux 0.109+ from F-Droid or GitHub (termux.dev). " +
+                    "2) In Termux run: echo \"allow-external-apps=true\" >> ~/.termux/termux.properties && " +
+                    "termux-reload-settings. 3) Grant CodeC the \"Run commands in Termux " +
+                    "environment\" permission (Android Settings → Apps → CodeC IDE → Permissions → " +
+                    "Additional permissions). 4) In Termux run: pkg update && pkg install clang"
             )
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -233,7 +313,7 @@ fun SettingsScreen(
 
             SettingsItem(
                 title = "App Version", 
-                subtitle = "1.0.0 (Beta)",
+                subtitle = "1.1 (Beta)",
                 onClick = {
                     if (com.codeci.ide.BuildConfig.DEBUG && !devModeUnlocked) {
                         versionTaps++
@@ -469,6 +549,44 @@ fun SettingsAction(title: String, actionText: String, onClick: () -> Unit) {
             Text(actionText)
         }
     }
+}
+
+private data class TermuxUiState(
+    val installed: Boolean,
+    val permissionGranted: Boolean,
+    val probeResult: String? = null
+)
+
+private fun loadTermuxState(context: Context): TermuxUiState = TermuxUiState(
+    installed = TermuxCompiler.isTermuxInstalled(context),
+    permissionGranted = TermuxCompiler.isRunCommandPermissionGranted(context)
+)
+
+private fun buildTermuxStatusText(state: TermuxUiState, probing: Boolean): String {
+    if (!state.installed) {
+        return "Not installed. Install Termux 0.109+ from F-Droid or GitHub (https://termux.dev), " +
+            "open it once, then run: pkg update && pkg install clang"
+    }
+    if (probing) return "Checking the Termux bridge…"
+    state.probeResult?.let { return it }
+    return if (state.permissionGranted) {
+        "Installed, permission granted. Tap CHECK BRIDGE to verify, then pick \"Termux\" as the " +
+            "Compiler Engine above."
+    } else {
+        "Installed, but CodeC is not allowed to run commands inside Termux yet. Grant the " +
+            "\"Run commands in Termux environment\" permission (App Info → Permissions → " +
+            "Additional permissions) and enable allow-external-apps in Termux (see \"How to " +
+            "enable\" below)."
+    }
+}
+
+private fun formatProbe(probe: TermuxCompiler.TermuxResult): String = when {
+    probe.timedOut ->
+        "No response from Termux. Enable allow-external-apps: in Termux run: echo " +
+            "\"allow-external-apps=true\" >> ~/.termux/termux.properties && termux-reload-settings"
+    probe.internalFailure != null -> "Not ready: ${probe.internalFailure}"
+    probe.exitCode == 0 -> "Ready ✓ — CodeC can compile and run through Termux."
+    else -> "Unexpected result (exit ${probe.exitCode})."
 }
 
 @Composable

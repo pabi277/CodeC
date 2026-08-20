@@ -5,6 +5,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codeci.ide.ui.services.CompilerEngine
 import com.codeci.ide.ui.services.CompilerError
 import com.codeci.ide.ui.services.CompilerService
 import com.codeci.ide.ui.services.CompilerSettings
@@ -149,9 +150,13 @@ class EditorViewModel : ViewModel() {
                 StatsManager(context).incrementRuns()
                 val settingsManager = SettingsManager(context)
                 val compilerSettings = compilerSettingsFrom(settingsManager)
+                val backend = settingsManager.compilerBackendFlow.first()
                 val compilerService = CompilerService(context)
-                val compileResult = compilerService.compile(_codeText.value.text, compilerSettings)
+                val compileResult = compilerService.compile(_codeText.value.text, compilerSettings, backend)
 
+                if (compileResult.engine == CompilerEngine.TERMUX && compileResult.engineNote != null) {
+                    currentSegments.add(TerminalSegment("(Note: ${compileResult.engineNote})\n", TerminalSegmentType.COMPILATION))
+                }
                 compileResult.errors.forEach { error ->
                     currentSegments.add(TerminalSegment(formatError(error) + "\n", errorTypeOf(error)))
                 }
@@ -160,7 +165,8 @@ class EditorViewModel : ViewModel() {
                 }
                 _terminalSegments.value = currentSegments.toList()
 
-                if (!compileResult.success || compileResult.binaryPath == null) {
+                val hasBinary = compileResult.binaryPath != null || compileResult.termuxProgramPath != null
+                if (!compileResult.success || !hasBinary) {
                     currentSegments.add(TerminalSegment("Compilation failed.\n", TerminalSegmentType.ERROR))
                     _terminalSegments.value = currentSegments.toList()
                     return@launch
@@ -169,7 +175,7 @@ class EditorViewModel : ViewModel() {
                 currentSegments.add(TerminalSegment("Compilation successful.\nRunning...\n$ ./program\n", TerminalSegmentType.COMPILATION))
                 _terminalSegments.value = currentSegments.toList()
 
-                compilerService.execute(compileResult.binaryPath).collect { update ->
+                compilerService.execute(compileResult).collect { update ->
                     when (update) {
                         is ExecutionUpdate.OutputLine -> {
                             currentSegments.add(TerminalSegment(update.line + "\n", TerminalSegmentType.OUTPUT))
