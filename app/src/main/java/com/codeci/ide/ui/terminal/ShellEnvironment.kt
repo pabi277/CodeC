@@ -16,7 +16,7 @@ import java.io.File
  * real bootstrap. Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "8"
+    const val BOOTSTRAP_VERSION = "9"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
 
@@ -86,11 +86,9 @@ object ShellEnvironment {
         [ -n "${'$'}CC_WARN" ] && extra="${'$'}extra ${'$'}CC_WARN"
         [ -n "${'$'}CC_OPT" ] && extra="${'$'}extra ${'$'}CC_OPT"
         extra="${'$'}extra -I include-tcc -I include -B . -L ."
-        # TCC has no --start-group: libc needs libtcc1 (*tf* helpers) and
-        # libtcc1 needs libc (memmove). Scan both twice.
+        # One line: a backslash here becomes a filename ('\' not found).
         # shellcheck disable=SC2086
-        exec "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o ${'$'}converted \\
-          libtcc1.a libc.a libtcc1.a libc.a crtn.o
+        exec "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o ${'$'}converted libtcc1.a libc.a libtcc1.a libc.a crtn.o
     """.trimIndent() + "\n"
 
     fun pkgScript(): String = """
