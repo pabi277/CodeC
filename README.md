@@ -54,6 +54,9 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 
 ## Troubleshooting
 
+> **Roadmap:** we're building a built-in terminal + package manager (Termux-style, no
+> Termux dependency) — see [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).
+
 ### "The built-in compiler could not start"
 
 Only possible when the APK's TCC binary doesn't match the device CPU (an exotic ABI, or a
