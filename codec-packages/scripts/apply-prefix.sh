@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# Apply CodeC TERMUX_PREFIX / package-id onto a cloned termux-packages tree.
+# Patch termux-packages so binaries are compiled for CodeC, not Termux.
+# Do not source properties.sh (it is huge, uses `exit`, and `set -u` will abort).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TREE="${1:?usage: apply-prefix.sh /path/to/termux-packages}"
 PROPS="$TREE/scripts/properties.sh"
-OVERLAY="$ROOT/properties.codec.sh"
-
-# shellcheck disable=SC1090
-source "$OVERLAY"
+# shellcheck disable=SC1091
+source "$ROOT/properties.codec.sh"
 
 if [[ ! -f "$PROPS" ]]; then
   echo "apply-prefix: missing $PROPS" >&2
@@ -20,22 +19,35 @@ import pathlib, re, sys
 path = pathlib.Path(sys.argv[1])
 pkg = sys.argv[2]
 text = path.read_text()
-text = re.sub(
-    r'TERMUX_APP_PACKAGE=["\'][^"\']*["\']',
-    f'TERMUX_APP_PACKAGE="{pkg}"',
+# Current termux-packages: TERMUX_APP__PACKAGE_NAME="com.termux"
+n = 0
+text, c = re.subn(
+    r'(TERMUX_APP__PACKAGE_NAME=)["\'][^"\']*["\']',
+    rf'\1"{pkg}"',
     text,
+    count=1,
 )
-text = text.replace("/data/data/com.termux/files/usr", f"/data/data/{pkg}/files/usr")
-text = text.replace("com.termux", pkg)
+n += c
+text, c = re.subn(
+    r'(TERMUX_APP_PACKAGE=)["\'][^"\']*["\']',
+    rf'\1"{pkg}"',
+    text,
+    count=1,
+)
+n += c
+if n == 0:
+    sys.exit("apply-prefix: no TERMUX_APP__PACKAGE_NAME / TERMUX_APP_PACKAGE assignment found")
 path.write_text(text)
-print(f"apply-prefix: TERMUX_APP_PACKAGE={pkg} in {path}")
+print(f"apply-prefix: wrote {pkg} ({n} assignment(s)) in {path}")
 PY
 
-# Confirm expansion.
-# shellcheck disable=SC1090
-source "$PROPS"
-echo "apply-prefix: TERMUX_PREFIX=${TERMUX_PREFIX}"
-if [[ "$TERMUX_PREFIX" != "/data/data/com.codeci.ide/files/usr" ]]; then
-  echo "apply-prefix: PREFIX mismatch — refusing to build Termux debs" >&2
+if ! grep -q "TERMUX_APP__PACKAGE_NAME=\"${TERMUX_APP_PACKAGE}\"" "$PROPS" \
+  && ! grep -q "TERMUX_APP_PACKAGE=\"${TERMUX_APP_PACKAGE}\"" "$PROPS"; then
+  echo "apply-prefix: package id not present after patch" >&2
   exit 1
 fi
+if grep -E 'TERMUX_APP__PACKAGE_NAME="com.termux"' "$PROPS" >/dev/null; then
+  echo "apply-prefix: still com.termux — refusing to build" >&2
+  exit 1
+fi
+echo "apply-prefix: ok (TERMUX_PREFIX will expand to /data/data/${TERMUX_APP_PACKAGE}/files/usr)"
