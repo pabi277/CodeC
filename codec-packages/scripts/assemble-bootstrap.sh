@@ -27,17 +27,55 @@ if [[ ${#DEBS[@]} -eq 0 ]]; then
   exit 1
 fi
 
-PREFIX_STAGE="$STAGE/usr"
-mkdir -p "$PREFIX_STAGE"
+# Termux packages contain their complete Android prefix path:
+# data/data/com.codeci.ide/files/usr/...
+# Extract into a neutral root, then archive only the contents of $PREFIX.
+EXTRACT_ROOT="$STAGE/root"
+mkdir -p "$EXTRACT_ROOT"
+
 for deb in "${DEBS[@]}"; do
   echo "extract $deb"
-  dpkg-deb -x "$deb" "$PREFIX_STAGE"
+  dpkg-deb -x "$deb" "$EXTRACT_ROOT"
 done
 
-# Tarball root is the contents of usr/ so the app extracts into $PREFIX.
+PREFIX_STAGE="$EXTRACT_ROOT/data/data/com.codeci.ide/files/usr"
+
+if [[ ! -x "$PREFIX_STAGE/bin/bash" ]]; then
+  echo "assemble: missing executable $PREFIX_STAGE/bin/bash" >&2
+  exit 1
+fi
+
+if [[ ! -x "$PREFIX_STAGE/bin/busybox" ]]; then
+  echo "assemble: missing executable $PREFIX_STAGE/bin/busybox" >&2
+  exit 1
+fi
+
+# The app extracts this archive directly into its $PREFIX. Therefore the
+# archive root must contain bin/, lib/, etc/, not data/data/.../files/usr/.
 OUT="$DIST/bootstrap-${ARCH}.tar.gz"
 mkdir -p "$DIST"
 tar -C "$PREFIX_STAGE" -czf "$OUT" .
+
+# List once so grep -q cannot cause tar to receive SIGPIPE under pipefail.
+ARCHIVE_CONTENTS="$STAGE/archive-contents.txt"
+tar -tzf "$OUT" > "$ARCHIVE_CONTENTS"
+
+# Refuse archives that would create a nested Android data path under $PREFIX.
+if grep -qE '^\./?data/data/' "$ARCHIVE_CONTENTS"; then
+  echo "assemble: invalid nested data/data archive layout" >&2
+  exit 1
+fi
+
+if ! grep -qE '^\./?bin/bash$' "$ARCHIVE_CONTENTS"; then
+  echo "assemble: archive does not contain bin/bash at its root" >&2
+  exit 1
+fi
+
+if ! grep -qE '^\./?bin/busybox$' "$ARCHIVE_CONTENTS"; then
+  echo "assemble: archive does not contain bin/busybox at its root" >&2
+  exit 1
+fi
+
 sha256sum "$OUT" | awk '{print $1}' > "${OUT}.sha256"
 echo "wrote $OUT"
 cat "${OUT}.sha256"
