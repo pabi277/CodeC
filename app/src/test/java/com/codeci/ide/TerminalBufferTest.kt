@@ -43,7 +43,8 @@ class TerminalBufferTest {
         buf.setScrollRegion(2, 4)
         assertEquals(1, buf.scrollTop)
         assertEquals(3, buf.scrollBottom)
-        assertEquals(1, buf.cursorY)
+        // Origin mode is off, so DECSTBM homes to (0, 0), not the region top.
+        assertEquals(0, buf.cursorY)
         buf.print('1'.code)
         buf.lineFeed()
         buf.carriageReturn()
