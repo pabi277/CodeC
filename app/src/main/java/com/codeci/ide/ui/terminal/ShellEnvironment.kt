@@ -20,7 +20,7 @@ object ShellEnvironment {
     const val BOOTSTRAP_VERSION = "14"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
-    const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/packages/dev"
+    const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
     const val PACKAGE_REPOSITORY_SUITE = "stable"
     const val PACKAGE_REPOSITORY_COMPONENT = "main"
 

@@ -46,7 +46,7 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("pkg update"))
         assertTrue(script.contains("pkg install"))
         assertTrue(script.contains("pkg uninstall"))
-        assertTrue(script.contains("https://pabi277.github.io/CodeC/packages/dev"))
+        assertTrue(script.contains("https://pabi277.github.io/CodeC/dev"))
         assertTrue(script.contains("sourceparts=-"))
         assertTrue(script.contains("com.codeci.ide/files/usr"))
         assertTrue(script.contains("maintainer script"))

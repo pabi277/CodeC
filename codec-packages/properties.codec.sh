@@ -48,6 +48,6 @@ libmagic
 
 # Development channel URL. CI/release automation may override this; the app
 # never falls back to an official Termux repository.
-CODEC_PACKAGE_REPOSITORY_URL="${CODEC_PACKAGE_REPOSITORY_URL:-https://pabi277.github.io/CodeC/packages/dev}"
+CODEC_PACKAGE_REPOSITORY_URL="${CODEC_PACKAGE_REPOSITORY_URL:-https://pabi277.github.io/CodeC/dev}"
 CODEC_PACKAGE_REPOSITORY_SUITE="stable"
 CODEC_PACKAGE_REPOSITORY_COMPONENT="main"
