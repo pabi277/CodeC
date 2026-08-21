@@ -127,6 +127,14 @@ object ShellEnvironment {
         require_backend() {
           [ -x "${'$'}PREFIX/bin/apt-get" ] || error "package manager is not present in this userland. Install a Phase 3 CodeC bootstrap; never add an official Termux repository."
           [ -x "${'$'}PREFIX/bin/dpkg" ] || error "dpkg is not present in this CodeC userland; refusing to use an external package manager."
+          # dpkg executes maintainer scripts (reviewed alternatives postinst/
+          # prerm only); the kernel can only run shebang scripts under $PREFIX
+          # with the termux-exec LD_PRELOAD library. Export it defensively so
+          # even a session started before the bootstrap update stays correct.
+          for _codec_preload in "${'$'}PREFIX/lib/libtermux-exec-ld-preload.so" "${'$'}PREFIX/lib/libtermux-exec.so"; do
+            if [ -f "${'$'}_codec_preload" ]; then export LD_PRELOAD="${'$'}_codec_preload"; break; fi
+          done
+          unset _codec_preload
           mkdir -p "${'$'}STATE" "${'$'}CACHE/partial" || error "cannot create package state under ${'$'}PREFIX"
           # Only this file is supplied to apt. sourceparts=- prevents a stale
           # sources.list.d from mixing another repository into the transaction.
@@ -448,6 +456,13 @@ HELP
         fi
         export TMPDIR="${'$'}PREFIX/tmp"
         export PATH="${'$'}PREFIX/bin:/system/bin:/system/xbin:${'$'}PATH"
+        # termux-exec (Phase 3 bootstrap): lets the kernel execute shebang
+        # scripts under the CodeC prefix. Only export when the library is
+        # present; a dangling LD_PRELOAD would break every process.
+        for _codec_preload in "${'$'}PREFIX/lib/libtermux-exec-ld-preload.so" "${'$'}PREFIX/lib/libtermux-exec.so"; do
+          if [ -f "${'$'}_codec_preload" ]; then export LD_PRELOAD="${'$'}_codec_preload"; break; fi
+        done
+        unset _codec_preload
         export TERM="${'$'}{TERM:-xterm-256color}"
         export COLORTERM="${'$'}{COLORTERM:-truecolor}"
         export LANG="${'$'}{LANG:-C.UTF-8}"
@@ -506,6 +521,11 @@ HELP
             put("LANG", "C.UTF-8")
             put("LC_ALL", "C.UTF-8")
             put("PATH", pathParts.joinToString(":"))
+            // termux-exec (Phase 3 bootstrap): intercepts exec() so the kernel
+            // can run shebang scripts under $PREFIX (dpkg maintainer scripts,
+            // user scripts). Only set when the library exists — a dangling
+            // LD_PRELOAD would break every process.
+            termuxExecPreload(prefix)?.let { put("LD_PRELOAD", it.absolutePath) }
             put("CC_STD", normalizeStandard(standard))
             put("CC_WARN", warningFlags(warnings))
             put("CC_OPT", optimizationFlag(optimization))
@@ -533,6 +553,20 @@ HELP
     }
 
     /**
+     * Result of a launch probe. [missingLibrary] is the shared library the
+     * dynamic loader reported as absent (e.g. `libandroid-support.so`), when
+     * the failure output contains one.
+     */
+    data class LaunchDiagnostic(val ok: Boolean, val missingLibrary: String? = null)
+
+    private val MISSING_LIBRARY =
+        Regex("""library\s*["']([^"']+)["']\s*not found""")
+
+    /** Extract the missing shared-library name from loader diagnostics. */
+    fun missingLibraryFromOutput(output: String): String? =
+        MISSING_LIBRARY.find(output)?.groupValues?.get(1)
+
+    /**
      * True only when a native shell can actually start. ELF magic alone is not
      * enough: a downloaded Bash may have an absent `libandroid-support.so` or
      * another missing shared library, in which case Android's PTY would die
@@ -546,8 +580,16 @@ HELP
     }
 
     /** Try a minimal non-interactive command so the dynamic loader is tested. */
-    fun canLaunch(file: File, prefix: File, bash: Boolean): Boolean {
-        if (!isElf(file) || !file.canExecute()) return false
+    fun canLaunch(file: File, prefix: File, bash: Boolean): Boolean =
+        launchDiagnostic(file, prefix, bash).ok
+
+    /**
+     * Launch probe with diagnostics. Runs the shell with a minimal command so
+     * the dynamic loader resolves every shared library; on failure the output
+     * is scanned for the missing library name.
+     */
+    fun launchDiagnostic(file: File, prefix: File, bash: Boolean): LaunchDiagnostic {
+        if (!isElf(file) || !file.canExecute()) return LaunchDiagnostic(false)
         return try {
             val command = if (bash) {
                 arrayOf(file.absolutePath, "-c", "exit 0")
@@ -563,10 +605,31 @@ HELP
                 }
                 .redirectErrorStream(true)
                 .start()
-            process.waitFor() == 0
+            val exitCode = process.waitFor()
+            if (exitCode == 0) {
+                LaunchDiagnostic(true)
+            } else {
+                // Output is bounded (linker diagnostics are a few lines);
+                // reading after waitFor is safe.
+                val output = process.inputStream.bufferedReader().readText()
+                LaunchDiagnostic(false, missingLibraryFromOutput(output))
+            }
         } catch (_: Exception) {
-            false
+            LaunchDiagnostic(false)
         }
+    }
+
+    /**
+     * The termux-exec LD_PRELOAD library that lets the kernel execute shebang
+     * scripts under the CodeC prefix (dpkg maintainer scripts, user scripts).
+     * `null` when the userland does not carry it (Phase 2 userland).
+     */
+    fun termuxExecPreload(prefix: File): File? {
+        val lib = File(prefix, "lib")
+        val primary = File(lib, "libtermux-exec-ld-preload.so")
+        if (primary.isFile) return primary
+        val compat = File(lib, "libtermux-exec.so")
+        return if (compat.isFile) compat else null
     }
 
     /**

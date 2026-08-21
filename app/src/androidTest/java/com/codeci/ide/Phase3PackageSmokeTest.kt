@@ -6,6 +6,7 @@ import com.codeci.ide.ui.terminal.ShellEnvironment
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,5 +38,46 @@ class Phase3PackageSmokeTest {
         assertTrue(output.contains("pkg install"))
         assertTrue(output.contains("CodeC apt/dpkg bootstrap"))
         assertFalse(output.contains("com.termux/files/usr"))
+    }
+
+    /**
+     * The shell environment contract for Phase 3: LD_PRELOAD may only point
+     * at an existing termux-exec library, and the profile stays POSIX sh.
+     */
+    @Test
+    fun ldPreloadContract() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prefix = File(context.filesDir, "usr")
+        val lib = File(prefix, "lib")
+
+        // No library -> no LD_PRELOAD.
+        assertNull(ShellEnvironment.termuxExecPreload(prefix))
+
+        // Primary variant wins.
+        lib.mkdirs()
+        val primary = File(lib, "libtermux-exec-ld-preload.so")
+        primary.writeBytes(byteArrayOf(1))
+        assertEquals(primary, ShellEnvironment.termuxExecPreload(prefix))
+        primary.delete()
+
+        // Compatibility name still works.
+        val compat = File(lib, "libtermux-exec.so")
+        compat.writeBytes(byteArrayOf(1))
+        assertEquals(compat, ShellEnvironment.termuxExecPreload(prefix))
+        compat.delete()
+
+        // The profile is POSIX sh (sourced by /system/bin/sh before exec).
+        val profile = File(context.cacheDir, "codec-profile-smoke.sh")
+        profile.writeText(ShellEnvironment.profileScript(prefix, File(context.filesDir, "home"), File(context.filesDir, "CodeC/projects")))
+        profile.setExecutable(true, false)
+        val run = ProcessBuilder("/system/bin/sh", profile.absolutePath)
+            .redirectErrorStream(true)
+            .start()
+        assertEquals(0, run.waitFor())
+
+        // The pkg frontend must stay free of official Termux repository URLs.
+        val pkg = ShellEnvironment.pkgScript()
+        assertFalse(pkg.contains("packages.termux.dev"))
+        assertFalse(pkg.contains("packages-cf.termux.dev"))
     }
 }

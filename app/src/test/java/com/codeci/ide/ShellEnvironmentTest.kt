@@ -6,6 +6,7 @@ import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -168,5 +169,122 @@ class ShellEnvironmentTest {
         assertEquals('\u0003', TerminalViewModel.ctrl('C'))
         assertEquals('\u001b', TerminalViewModel.ctrl('['))
         assertEquals('\u007f', TerminalViewModel.ctrl('?'))
+    }
+
+    @Test
+    fun `manifest maps device ABIs to bootstrap architectures`() {
+        val manifest = com.codeci.ide.ui.terminal.UserlandManifest
+        assertEquals("aarch64", manifest.archNameForAbis(arrayOf("arm64-v8a", "armeabi-v7a")))
+        assertEquals("x86_64", manifest.archNameForAbis(arrayOf("x86_64")))
+        assertNull(manifest.archNameForAbis(arrayOf("armeabi-v7a")))
+        // Phase 3 is selected first; userland-v1 stays the safe fallback.
+        assertEquals("userland-v2-dev", manifest.ORDER.first().releaseTag)
+        assertEquals("bootstrap-phase3", manifest.ORDER.first().assetPrefix)
+        assertEquals("userland-v1", manifest.ORDER.last().releaseTag)
+        assertEquals(
+            "https://github.com/pabi277/CodeC/releases/download/userland-v2-dev/bootstrap-phase3-aarch64.tar.gz",
+            manifest.PHASE3.tarballUrl("aarch64")
+        )
+        assertEquals(
+            "https://github.com/pabi277/CodeC/releases/download/userland-v2-dev/bootstrap-phase3-aarch64.tar.gz.sha256",
+            manifest.PHASE3.shaUrl("aarch64")
+        )
+    }
+
+    @Test
+    fun `missing library diagnostics parse dynamic loader output`() {
+        assertEquals(
+            "libandroid-support.so",
+            ShellEnvironment.missingLibraryFromOutput(
+                "error: library \"libandroid-support.so\" not found"
+            )
+        )
+        assertEquals(
+            "libfoo.so",
+            ShellEnvironment.missingLibraryFromOutput("bash: library 'libfoo.so' not found")
+        )
+        assertNull(ShellEnvironment.missingLibraryFromOutput("exit 1"))
+        assertNull(ShellEnvironment.missingLibraryFromOutput(""))
+    }
+
+    @Test
+    fun `buildEnv sets LD_PRELOAD only when termux-exec is present`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-preload-${System.nanoTime()}")
+        try {
+            val files = File(base, "files")
+            val prefix = File(files, "usr")
+            val lib = File(prefix, "lib")
+            val native = File(base, "native")
+            val bundle = File(files, "CodeC/tcc")
+            native.mkdirs()
+            bundle.mkdirs()
+
+            val without = ShellEnvironment.buildEnv(
+                filesDir = files, nativeLibDir = native, tccBinary = null, tccBundle = bundle,
+                standard = "c11", warnings = false, optimization = 0
+            )
+            assertNull(without["LD_PRELOAD"])
+
+            lib.mkdirs()
+            val primary = File(lib, "libtermux-exec-ld-preload.so")
+            primary.writeBytes(byteArrayOf(1))
+            val with = ShellEnvironment.buildEnv(
+                filesDir = files, nativeLibDir = native, tccBinary = null, tccBundle = bundle,
+                standard = "c11", warnings = false, optimization = 0
+            )
+            assertEquals(primary.absolutePath, with["LD_PRELOAD"])
+
+            primary.delete()
+            val compat = File(lib, "libtermux-exec.so")
+            compat.writeBytes(byteArrayOf(1))
+            val compatEnv = ShellEnvironment.buildEnv(
+                filesDir = files, nativeLibDir = native, tccBinary = null, tccBundle = bundle,
+                standard = "c11", warnings = false, optimization = 0
+            )
+            assertEquals(compat.absolutePath, compatEnv["LD_PRELOAD"])
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `termuxExecPreload prefers the primary variant`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-tre-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val lib = File(prefix, "lib")
+            lib.mkdirs()
+            assertNull(ShellEnvironment.termuxExecPreload(prefix))
+            val compat = File(lib, "libtermux-exec.so")
+            compat.writeBytes(byteArrayOf(1))
+            assertEquals(compat, ShellEnvironment.termuxExecPreload(prefix))
+            val primary = File(lib, "libtermux-exec-ld-preload.so")
+            primary.writeBytes(byteArrayOf(1))
+            assertEquals(primary, ShellEnvironment.termuxExecPreload(prefix))
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `profile exports LD_PRELOAD only when the library exists`() {
+        val prefix = File("/data/data/com.codeci.ide/files/usr")
+        val home = File("/data/data/com.codeci.ide/files/home")
+        val projects = File("/data/data/com.codeci.ide/files/CodeC/projects")
+        val profile = ShellEnvironment.profileScript(prefix, home, projects)
+        assertTrue(profile.contains("export LD_PRELOAD"))
+        assertTrue(profile.contains("libtermux-exec-ld-preload.so"))
+        assertTrue(profile.contains("if [ -f \"\$_codec_preload\" ]"))
+        assertTrue(profile.contains("unset _codec_preload"))
+    }
+
+    @Test
+    fun `pkg script exports termux-exec preload defensively`() {
+        val script = ShellEnvironment.pkgScript()
+        assertTrue(script.contains("libtermux-exec-ld-preload.so"))
+        assertTrue(script.contains("export LD_PRELOAD"))
+        // The repository must stay CodeC-only.
+        assertFalse(script.contains("packages.termux.dev"))
+        assertFalse(script.contains("packages-cf.termux.dev"))
     }
 }
