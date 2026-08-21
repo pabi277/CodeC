@@ -532,21 +532,52 @@ HELP
         }
     }
 
-    /** True when bootstrap extract dropped a native bash or busybox. */
+    /**
+     * True only when a native shell can actually start. ELF magic alone is not
+     * enough: a downloaded Bash may have an absent `libandroid-support.so` or
+     * another missing shared library, in which case Android's PTY would die
+     * immediately with "library ... not found".
+     */
     fun hasRealUserland(prefix: File): Boolean {
         val bin = binDir(prefix)
-        return isElf(File(bin, "bash")) || isElf(File(bin, "busybox"))
+        val bash = File(bin, "bash")
+        val busybox = File(bin, "busybox")
+        return canLaunch(bash, prefix, bash = true) || canLaunch(busybox, prefix, bash = false)
+    }
+
+    /** Try a minimal non-interactive command so the dynamic loader is tested. */
+    fun canLaunch(file: File, prefix: File, bash: Boolean): Boolean {
+        if (!isElf(file) || !file.canExecute()) return false
+        return try {
+            val command = if (bash) {
+                arrayOf(file.absolutePath, "-c", "exit 0")
+            } else {
+                arrayOf(file.absolutePath, "sh", "-c", "exit 0")
+            }
+            val process = ProcessBuilder(*command)
+                .directory(prefix)
+                .apply {
+                    environment()["PREFIX"] = prefix.absolutePath
+                    environment()["LD_LIBRARY_PATH"] = File(prefix, "lib").absolutePath
+                    environment()["PATH"] = File(prefix, "bin").absolutePath + ":/system/bin"
+                }
+                .redirectErrorStream(true)
+                .start()
+            process.waitFor() == 0
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /**
-     * Preferred shell: real ELF `$PREFIX/bin/bash`, then busybox ash,
+     * Preferred shell: runnable CodeC ELF Bash, then runnable BusyBox ash,
      * then the Phase-1 shim, then `/system/bin/sh`.
      */
     fun resolveShell(prefix: File): File {
         val bash = File(binDir(prefix), "bash")
         val busybox = File(binDir(prefix), "busybox")
-        if (isElf(bash) && bash.canExecute()) return bash
-        if (isElf(busybox) && busybox.canExecute()) return busybox
+        if (canLaunch(bash, prefix, bash = true)) return bash
+        if (canLaunch(busybox, prefix, bash = false)) return busybox
         val candidates = listOf(
             bash,
             File("/system/bin/bash"),

@@ -138,7 +138,7 @@ class ShellEnvironmentTest {
         shim.writeText("#!/system/bin/sh\n")
         assertTrue(ShellEnvironment.isElf(elf))
         assertFalse(ShellEnvironment.isElf(shim))
-        assertTrue(ShellEnvironment.hasRealUserland(prefix))
+        assertFalse(ShellEnvironment.hasRealUserland(prefix))
         dir.deleteRecursively()
     }
 
