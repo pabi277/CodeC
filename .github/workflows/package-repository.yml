@@ -95,9 +95,26 @@ jobs:
           archive="codec-packages/dist/bootstrap-phase3-${ARCH}.tar.gz"
           test -s "$archive"
           tar -tzf "$archive" > bootstrap-phase3-contents.txt
-          grep -qE '^\\./?bin/(apt-get|dpkg)$' bootstrap-phase3-contents.txt
-          grep -qE '^\\./?var/lib/dpkg/status$' bootstrap-phase3-contents.txt
-          if grep -qE '^\\./?data/data/' bootstrap-phase3-contents.txt; then
+          echo "archive entries: $(wc -l < bootstrap-phase3-contents.txt)"
+          # NOTE: single backslash on purpose — YAML block scalars do not
+          # process escapes, and in ERE '^\\.' would demand a literal
+          # backslash, which tar listings never contain (silent grep failure).
+          if ! grep -qE '^\./?bin/apt-get$' bootstrap-phase3-contents.txt; then
+            echo "ERROR: bootstrap archive is missing ./bin/apt-get" >&2
+            grep -E '^\./?bin/' bootstrap-phase3-contents.txt | head -25 >&2
+            exit 1
+          fi
+          if ! grep -qE '^\./?bin/dpkg$' bootstrap-phase3-contents.txt; then
+            echo "ERROR: bootstrap archive is missing ./bin/dpkg" >&2
+            grep -E '^\./?bin/' bootstrap-phase3-contents.txt | head -25 >&2
+            exit 1
+          fi
+          if ! grep -qE '^\./?var/lib/dpkg/status$' bootstrap-phase3-contents.txt; then
+            echo "ERROR: bootstrap archive is missing ./var/lib/dpkg/status" >&2
+            grep -E '^\./?var/' bootstrap-phase3-contents.txt | head -25 >&2
+            exit 1
+          fi
+          if grep -qE '^\./?data/data/' bootstrap-phase3-contents.txt; then
             echo "nested Android path in Phase 3 bootstrap" >&2
             exit 1
           fi
