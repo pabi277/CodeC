@@ -23,11 +23,19 @@ bash
 # Phase 3 package-manager bootstrap roots. These are built from source for the
 # CodeC prefix before a new bootstrap is published; they are not official
 # prebuilt packages and are intentionally separate from userland-v1.
+#
+# termux-exec is required at runtime: its libtermux-exec-ld-preload.so
+# (exported as LD_PRELOAD by the CodeC shell profile) lets the kernel execute
+# shebang scripts under the CodeC prefix. dpkg runs maintainer scripts
+# (e.g. the reviewed nano/coreutils/less alternatives postinst) by executing
+# the script file, so without it `pkg install` cannot configure packages.
+# The official Termux bootstrap ships the same package for this reason.
 CODEC_PACKAGE_MANAGER_BOOTSTRAP_PACKAGES="
 busybox
 bash
 apt
 dpkg
+termux-exec
 "
 
 # Curated Phase 3 repository roots. The generated repository also contains the
