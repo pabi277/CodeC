@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build a curated CodeC package closure from official Termux recipes.
-# This deliberately never passes build-package.sh -I: all dependencies are
-# rebuilt for com.codeci.ide and the CodeC prefix.
+# This deliberately never uses the dependency-download shortcut: all
+# dependencies are rebuilt for com.codeci.ide and the CodeC prefix.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
