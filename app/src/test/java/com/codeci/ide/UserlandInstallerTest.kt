@@ -39,8 +39,8 @@ class UserlandInstallerTest {
     private val routes = java.util.concurrent.ConcurrentHashMap<String, Route>()
 
     // POSIX modes (Kotlin has no octal literals).
-    private const val MODE_EXEC = 493 // 0755
-    private const val MODE_DATA = 420 // 0644
+    private val MODE_EXEC = 493 // 0755 (octal)
+    private val MODE_DATA = 420 // 0644 (octal)
 
     private data class Route(val code: Int, val body: ByteArray)
 
@@ -182,7 +182,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Installed, "expected Installed, got $status")
+        assertTrue("expected Installed, got $status", status is UserlandStatus.Installed)
         assertEquals("userland-v2-dev", (status as UserlandStatus.Installed).releaseTag)
         assertTrue(requested.any { it == "/userland-v2-dev/bootstrap-phase3-aarch64.tar.gz" })
         assertTrue(File(files, "usr/bin/bash").exists())
@@ -202,7 +202,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Installed, "expected Installed, got $status")
+        assertTrue("expected Installed, got $status", status is UserlandStatus.Installed)
         assertEquals("userland-v1", (status as UserlandStatus.Installed).releaseTag)
         assertTrue(requested.any { it == "/userland-v1/bootstrap-aarch64.tar.gz" })
         assertTrue(requested.none { it.endsWith("/bootstrap-phase3-aarch64.tar.gz") })
@@ -221,7 +221,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded { progress.add(it) }
 
-        assertTrue(status is UserlandStatus.Installed, "expected Installed fallback, got $status")
+        assertTrue("expected Installed fallback, got $status", status is UserlandStatus.Installed)
         assertEquals("userland-v1", (status as UserlandStatus.Installed).releaseTag)
         assertTrue(progress.any { it.contains("falling back to userland-v1") })
     }
@@ -235,7 +235,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Failed, "expected Failed, got $status")
+        assertTrue("expected Failed, got $status", status is UserlandStatus.Failed)
         assertTrue((status as UserlandStatus.Failed).message.contains("SHA-256 mismatch"))
         val cache = File(files, "cache")
         assertFalse(cache.listFiles()?.any { it.name.endsWith(".partial") } ?: true)
@@ -254,7 +254,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Installed, "expected Installed, got $status")
+        assertTrue("expected Installed, got $status", status is UserlandStatus.Installed)
         assertFalse(File(cache, "bootstrap-aarch64.tar.gz.partial").exists())
         assertEquals(sha256(tar), UserlandInstaller.sha256(File(cache, "bootstrap-aarch64.tar.gz")))
     }
@@ -268,7 +268,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Failed, "expected Failed, got $status")
+        assertTrue("expected Failed, got $status", status is UserlandStatus.Failed)
         assertTrue((status as UserlandStatus.Failed).message.contains("disk space"))
         assertTrue(requested.none { it.endsWith(".tar.gz") && !it.endsWith(".sha256") })
         assertFalse(File(files, "usr/bin/bash").exists())
@@ -287,7 +287,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Failed, "expected Failed, got $status")
+        assertTrue("expected Failed, got $status", status is UserlandStatus.Failed)
         assertTrue((status as UserlandStatus.Failed).message.contains("disk space"))
         assertFalse(File(files, "usr/bin/bash").exists())
         assertFalse(files.listFiles()?.any { it.name.startsWith(".userland-staging") } ?: true)
@@ -357,7 +357,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Failed, "expected Failed, got $status")
+        assertTrue("expected Failed, got $status", status is UserlandStatus.Failed)
         assertFalse(File(files, "evil").exists())
         assertFalse(files.listFiles()?.any { it.name.startsWith(".userland-staging") } ?: true)
         assertFalse(File(files, "usr/bin/bash").exists())
@@ -375,7 +375,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Failed, "expected Failed, got $status")
+        assertTrue("expected Failed, got $status", status is UserlandStatus.Failed)
     }
 
     @Test
@@ -399,7 +399,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded { progress.add(it) }
 
-        assertTrue(status is UserlandStatus.Installed, "expected fallback Installed, got $status")
+        assertTrue("expected fallback Installed, got $status", status is UserlandStatus.Installed)
         assertEquals("userland-v1", (status as UserlandStatus.Installed).releaseTag)
         assertTrue(progress.any { it.contains("missing library libandroid-support.so") })
         assertTrue(progress.any { it.contains("falling back to userland-v1") })
@@ -420,7 +420,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded { progress.add(it) }
 
-        assertTrue(status is UserlandStatus.Installed, "expected upgrade Installed, got $status")
+        assertTrue("expected upgrade Installed, got $status", status is UserlandStatus.Installed)
         assertEquals("userland-v2-dev", (status as UserlandStatus.Installed).releaseTag)
         assertEquals("userland-v2-dev", File(prefix, ".userland-release").readText())
         assertTrue(progress.any { it.contains("upgrading userland-v1 to userland-v2-dev") })
@@ -457,7 +457,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded(force = true)
 
-        assertTrue(status is UserlandStatus.Installed, "expected Installed, got $status")
+        assertTrue("expected Installed, got $status", status is UserlandStatus.Installed)
     }
 
     @Test
@@ -497,7 +497,7 @@ class UserlandInstallerTest {
 
         val status = installer.installIfNeeded()
 
-        assertTrue(status is UserlandStatus.Installed, "expected reinstall Installed, got $status")
+        assertTrue("expected reinstall Installed, got $status", status is UserlandStatus.Installed)
         assertEquals("userland-v1", File(prefix, ".userland-release").readText())
     }
 
