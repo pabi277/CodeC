@@ -38,6 +38,10 @@ class UserlandInstallerTest {
     private val requested = CopyOnWriteArrayList<String>()
     private val routes = java.util.concurrent.ConcurrentHashMap<String, Route>()
 
+    // POSIX modes (Kotlin has no octal literals).
+    private const val MODE_EXEC = 493 // 0755
+    private const val MODE_DATA = 420 // 0644
+
     private data class Route(val code: Int, val body: ByteArray)
 
     @Before
@@ -80,7 +84,7 @@ class UserlandInstallerTest {
 
     // --- Minimal ustar tar.gz writer (the extractor only needs headers). ---
 
-    private fun tarEntry(name: String, data: ByteArray, mode: Int = 0o755, type: Char = '0'): ByteArray {
+    private fun tarEntry(name: String, data: ByteArray, mode: Int = MODE_EXEC, type: Char = '0'): ByteArray {
         val header = ByteArray(512)
         val nameBytes = name.toByteArray(Charsets.UTF_8)
         nameBytes.copyOf(minOf(nameBytes.size, 100)).copyInto(header, 0)
@@ -128,12 +132,12 @@ class UserlandInstallerTest {
 
     private fun userlandTar(extra: List<Pair<String, ByteArray>> = emptyList()): ByteArray {
         val entries = mutableListOf(
-            "bin/bash" to Pair(elfBash, 0o755),
-            "bin/busybox" to Pair(elfBusybox, 0o755),
-            "lib/libandroid-support.so" to Pair("codec-lib".encodeToByteArray(), 0o644),
-            "var/lib/dpkg/status" to Pair("Package: apt\nStatus: install ok installed\n".encodeToByteArray(), 0o644)
+            "bin/bash" to Pair(elfBash, MODE_EXEC),
+            "bin/busybox" to Pair(elfBusybox, MODE_EXEC),
+            "lib/libandroid-support.so" to Pair("codec-lib".encodeToByteArray(), MODE_DATA),
+            "var/lib/dpkg/status" to Pair("Package: apt\nStatus: install ok installed\n".encodeToByteArray(), MODE_DATA)
         )
-        entries.addAll(extra.map { it.first to Pair(it.second, 0o644) })
+        entries.addAll(extra.map { it.first to Pair(it.second, MODE_DATA) })
         return tarGz(*entries.toTypedArray())
     }
 
@@ -345,8 +349,8 @@ class UserlandInstallerTest {
     fun `path traversal in archive is rejected and nothing escapes`() {
         val files = tmp.newFolder("files")
         val tar = tarGz(
-            "bin/bash" to Pair(elfBash, 0o755),
-            "../evil" to Pair("escape".encodeToByteArray(), 0o644)
+            "bin/bash" to Pair(elfBash, MODE_EXEC),
+            "../evil" to Pair("escape".encodeToByteArray(), MODE_DATA)
         )
         serveRelease("userland-v1", "bootstrap", "aarch64", tar, sha256(tar))
         val installer = makeInstaller(files)
@@ -363,8 +367,8 @@ class UserlandInstallerTest {
     fun `absolute paths in archive are rejected`() {
         val files = tmp.newFolder("files")
         val tar = tarGz(
-            "bin/bash" to Pair(elfBash, 0o755),
-            "/etc/evil" to Pair("escape".encodeToByteArray(), 0o644)
+            "bin/bash" to Pair(elfBash, MODE_EXEC),
+            "/etc/evil" to Pair("escape".encodeToByteArray(), MODE_DATA)
         )
         serveRelease("userland-v1", "bootstrap", "aarch64", tar, sha256(tar))
         val installer = makeInstaller(files)
