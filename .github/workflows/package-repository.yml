@@ -1,0 +1,180 @@
+name: CodeC package repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the validated repository to the CodeC Pages development channel
+        required: true
+        default: false
+        type: boolean
+      source_run_id:
+        description: Existing successful package-build run ID to publish without rebuilding
+        required: false
+        default: ""
+        type: string
+  push:
+    branches: ["**"]
+    paths:
+      - "codec-packages/**"
+      - ".github/workflows/package-repository.yml"
+      - "docs/PHASE3_PLAN.md"
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Repository security and metadata tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run repository tests
+        run: python3 -m unittest discover -s codec-packages/tests -p 'test_*.py' -v
+
+  build:
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.publish == false || inputs.source_run_id == '') }}
+    name: Build CodeC packages (${{ matrix.arch }})
+    needs: host-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, x86_64]
+    env:
+      ARCH: ${{ matrix.arch }}
+      CODEC_USE_DOCKER: "1"
+      SOURCE_DATE_EPOCH: "0"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf \
+            /usr/local/lib/android \
+            /usr/share/dotnet \
+            /opt/ghc \
+            /usr/local/share/boost || true
+          docker system prune --all --force || true
+          df -h
+
+      - name: Install host requirements
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates git python3 dpkg-dev file gzip tar xz-utils
+          docker --version
+          dpkg-deb --version
+
+      - name: Validate CodeC overlay
+        run: |
+          set -euo pipefail
+          source codec-packages/properties.codec.sh
+          test "$TERMUX_APP_PACKAGE" = "com.codeci.ide"
+          test "$TERMUX_PREFIX" = "/data/data/com.codeci.ide/files/usr"
+          ! grep -R -n --exclude='*.md' --exclude='LICENSE' \
+            'build-package.sh.*-[[:space:]]*I\|build-package.sh.*--install' \
+            codec-packages/scripts
+
+      - name: Build package closure and repository
+        run: |
+          set -euo pipefail
+          chmod +x codec-packages/scripts/*.sh codec-packages/scripts/*.py
+          codec-packages/scripts/build-package-repository.sh "$ARCH"
+
+      - name: Build Phase 3 package-manager bootstrap
+        run: |
+          set -euo pipefail
+          codec-packages/scripts/build-package-manager-bootstrap.sh "$ARCH"
+          archive="codec-packages/dist/bootstrap-phase3-${ARCH}.tar.gz"
+          test -s "$archive"
+          tar -tzf "$archive" > bootstrap-phase3-contents.txt
+          grep -qE '^\\./?bin/(apt-get|dpkg)$' bootstrap-phase3-contents.txt
+          grep -qE '^\\./?var/lib/dpkg/status$' bootstrap-phase3-contents.txt
+          if grep -qE '^\\./?data/data/' bootstrap-phase3-contents.txt; then
+            echo "nested Android path in Phase 3 bootstrap" >&2
+            exit 1
+          fi
+
+      - name: Upload repository artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codec-repository-${{ matrix.arch }}
+          path: |
+            codec-packages/dist/repository-${{ matrix.arch }}
+            codec-packages/dist/bootstrap-phase3-${{ matrix.arch }}.tar.gz
+            codec-packages/dist/bootstrap-phase3-${{ matrix.arch }}.tar.gz.sha256
+            bootstrap-phase3-contents.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-dev:
+    name: Publish development repository
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.publish == true && needs.host-tests.result == 'success' && (needs.build.result == 'success' || (inputs.source_run_id != '' && needs.build.result == 'skipped')) }}
+    needs: [host-tests, build]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download aarch64 repository
+        uses: actions/download-artifact@v4
+        with:
+          name: codec-repository-aarch64
+          path: input/aarch64
+          run-id: ${{ inputs.source_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download x86_64 repository
+        uses: actions/download-artifact@v4
+        with:
+          name: codec-repository-x86_64
+          path: input/x86_64
+          run-id: ${{ inputs.source_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge and revalidate repository
+        run: |
+          set -euo pipefail
+          mkdir -p input/debs
+          find input/aarch64 input/x86_64 -name '*.deb' \
+            -exec cp -n {} input/debs/ \;
+
+          rm -rf packages/dev
+          chmod +x codec-packages/scripts/*.py codec-packages/scripts/*.sh
+
+          codec-packages/scripts/generate-repository.sh \
+            input/debs packages/dev aarch64 x86_64
+
+          python3 codec-packages/scripts/validate-repository.py \
+            packages/dev --architectures aarch64 x86_64
+
+          test -f packages/dev/CODEC-REPOSITORY
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

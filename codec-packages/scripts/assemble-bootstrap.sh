@@ -18,7 +18,13 @@ if [[ ! -d "$DEB_DIR" ]]; then
   exit 1
 fi
 
-mapfile -t DEBS < <(find "$DEB_DIR" -name "*_${ARCH}.deb" -o -name "*_${ARCH}-*.deb" | sort)
+mapfile -t DEBS < <(
+  find "$DEB_DIR" \( \
+    -name "*_${ARCH}.deb" -o \
+    -name "*_${ARCH}-*.deb" -o \
+    -name "*_all.deb" \
+  \) -type f | sort
+)
 if [[ ${#DEBS[@]} -eq 0 ]]; then
   mapfile -t DEBS < <(find "$SRC" -name '*.deb' | sort)
 fi
@@ -52,7 +58,27 @@ fi
 
 # The app extracts this archive directly into its $PREFIX. Therefore the
 # archive root must contain bin/, lib/, etc/, not data/data/.../files/usr/.
-OUT="$DIST/bootstrap-${ARCH}.tar.gz"
+BOOTSTRAP_NAME="${CODEC_BOOTSTRAP_NAME:-bootstrap}"
+
+# A Phase 3 bootstrap needs a real dpkg database for packages that were seeded
+# before the first interactive apt transaction. Phase 2 keeps its original
+# minimal archive behavior and does not claim apt/dpkg support.
+if [[ "$BOOTSTRAP_NAME" == "bootstrap-phase3" ]]; then
+  DPKG_STATE="$PREFIX_STAGE/var/lib/dpkg"
+  mkdir -p "$DPKG_STATE/info"
+  : > "$DPKG_STATE/status"
+  printf '%s\n' "$ARCH" > "$DPKG_STATE/arch"
+  for deb in "${DEBS[@]}"; do
+    package_name="$(dpkg-deb -f "$deb" Package)"
+    dpkg-deb -f "$deb" >> "$DPKG_STATE/status"
+    printf 'Status: install ok installed\n\n' >> "$DPKG_STATE/status"
+    dpkg-deb --contents "$deb" \
+      | sed -E 's#.* (\./[^ ]+)( -> .*)?$#\1#; s#^\./#/#' \
+      > "$DPKG_STATE/info/${package_name}.list"
+  done
+fi
+
+OUT="$DIST/${BOOTSTRAP_NAME}-${ARCH}.tar.gz"
 mkdir -p "$DIST"
 tar -C "$PREFIX_STAGE" -czf "$OUT" .
 

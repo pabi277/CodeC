@@ -39,6 +39,10 @@ object TarGzExtractor {
                     }
                     '2' -> {
                         val target = safeFile(destDir, name)
+                        val linkTarget = target.parentFile?.let { File(it, linkName).canonicalFile }
+                        if (linkTarget == null || !isInside(destDir.canonicalFile, linkTarget)) {
+                            throw SecurityException("tar symlink escapes prefix: $name -> $linkName")
+                        }
                         target.parentFile?.mkdirs()
                         if (target.exists()) target.delete()
                         createSymlink(linkName, target)
@@ -70,16 +74,22 @@ object TarGzExtractor {
     }
 
     internal fun safeFile(destDir: File, name: String): File {
-        var rel = name.trimStart('/')
+        if (name.startsWith('/')) {
+            throw SecurityException("absolute tar path is not allowed: $name")
+        }
+        var rel = name
         if (rel.startsWith("./")) rel = rel.removePrefix("./")
         if (rel.startsWith("usr/")) rel = rel.removePrefix("usr/")
         val dest = destDir.canonicalFile
         val out = File(dest, rel).canonicalFile
-        if (!out.path.startsWith(dest.path)) {
+        if (!isInside(dest, out)) {
             throw SecurityException("tar path escapes prefix: $name")
         }
         return out
     }
+
+    private fun isInside(root: File, candidate: File): Boolean =
+        candidate.path == root.path || candidate.path.startsWith(root.path + File.separator)
 
     private fun readFully(input: java.io.InputStream, buf: ByteArray): Int {
         var off = 0

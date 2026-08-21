@@ -17,9 +17,12 @@ import java.io.File
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "13"
+    const val BOOTSTRAP_VERSION = "14"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
+    const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
+    const val PACKAGE_REPOSITORY_SUITE = "stable"
+    const val PACKAGE_REPOSITORY_COMPONENT = "main"
 
     fun prefixDir(filesDir: File): File = File(filesDir, PREFIX_NAME)
     fun homeDir(filesDir: File): File = File(filesDir, HOME_NAME)
@@ -102,11 +105,330 @@ object ShellEnvironment {
 
     fun pkgScript(): String = """
         #!/system/bin/sh
-        # CodeC pkg — placeholder until Phase 3 (apt + dpkg + our repo).
-        echo "pkg: CodeC's package manager ships in Phase 3 of the Mini-Termux plan."
-        echo "     For now the built-in compiler is available as:  cc file.c -o a.out"
-        echo "     See docs/TERMINAL_PLAN.md"
-        exit 1
+        # CodeC pkg — guarded frontend for the CodeC-only apt/dpkg backend.
+        # This script never reads an ambient Termux sources.list.
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        REPOSITORY="${PACKAGE_REPOSITORY_URL}"
+        SUITE="${PACKAGE_REPOSITORY_SUITE}"
+        COMPONENT="${PACKAGE_REPOSITORY_COMPONENT}"
+        STATE="${'$'}PREFIX/var/lib/codec-pkg"
+        SOURCES="${'$'}STATE/sources.list"
+        CACHE="${'$'}PREFIX/var/cache/apt/archives"
+        LOCK="${'$'}STATE/lock"
+        MIN_FREE_KB=32768
+
+        error() {
+          echo "pkg: ${'$'}*" >&2
+          exit 1
+        }
+
+        require_backend() {
+          [ -x "${'$'}PREFIX/bin/apt-get" ] || error "package manager is not present in this userland. Install a Phase 3 CodeC bootstrap; never add an official Termux repository."
+          [ -x "${'$'}PREFIX/bin/dpkg" ] || error "dpkg is not present in this CodeC userland; refusing to use an external package manager."
+          mkdir -p "${'$'}STATE" "${'$'}CACHE/partial" || error "cannot create package state under ${'$'}PREFIX"
+          # Only this file is supplied to apt. sourceparts=- prevents a stale
+          # sources.list.d from mixing another repository into the transaction.
+          printf '%s\n' "deb [trusted=yes] ${'$'}REPOSITORY ${'$'}SUITE ${'$'}COMPONENT" > "${'$'}SOURCES"
+        }
+
+        acquire_lock() {
+          i=0
+          while ! mkdir "${'$'}LOCK" 2>/dev/null; do
+            i=${'$'}((i + 1))
+            [ "${'$'}i" -lt 60 ] || error "another package operation is still running (lock: ${'$'}LOCK)"
+            sleep 1
+          done
+          printf '%s\n' "${'$'}${'$'}" > "${'$'}LOCK/pid"
+          trap 'rm -rf "${'$'}LOCK"' EXIT HUP INT TERM
+        }
+
+        free_kb() {
+          df -Pk "${'$'}PREFIX" 2>/dev/null | awk 'NR == 2 { print ${'$'}4 }'
+        }
+
+        apt_get() {
+          # Dir::Etc::sourceparts=- is intentional: only the CodeC source above
+          # is permitted. APT still keeps its lists/cache under this prefix.
+          "${'$'}PREFIX/bin/apt-get" \
+            -o "Dir::Etc::sourcelist=${'$'}SOURCES" \
+            -o "Dir::Etc::sourceparts=-" \
+            -o "Dir::State=${'$'}PREFIX/var/lib/apt" \
+            -o "Dir::State::status=${'$'}PREFIX/var/lib/dpkg/status" \
+            -o "Dir::Cache=${'$'}PREFIX/var/cache/apt" \
+            -o "Dir::Log=${'$'}PREFIX/var/log/apt" \
+            -o "Acquire::Retries=3" \
+            -o "Acquire::https::Verify-Peer=true" \
+            "${'$'}@"
+        }
+
+        apt_cache() {
+          "${'$'}PREFIX/bin/apt-cache" \
+            -o "Dir::Etc::sourcelist=${'$'}SOURCES" \
+            -o "Dir::Etc::sourceparts=-" \
+            -o "Dir::State=${'$'}PREFIX/var/lib/apt" \
+            -o "Dir::State::status=${'$'}PREFIX/var/lib/dpkg/status" \
+            -o "Dir::Cache=${'$'}PREFIX/var/cache/apt" \
+            "${'$'}@"
+        }
+
+        verify_release_checksum() {
+          # The development channel is HTTPS plus a separately published SHA-256
+          # sidecar. A signed Release key will be added before production
+          # promotion; never silently downgrade this check to HTTP or trusted
+          # official Termux metadata.
+          downloader=""
+          if [ -x "${'$'}PREFIX/bin/wget" ]; then
+            downloader="${'$'}PREFIX/bin/wget"
+          elif [ -x "${'$'}PREFIX/bin/busybox" ]; then
+            downloader="${'$'}PREFIX/bin/busybox wget"
+          else
+            error "cannot verify repository integrity: CodeC wget is not installed"
+          fi
+          release="${'$'}STATE/Release.partial"
+          checksum="${'$'}STATE/Release.sha256.partial"
+          rm -f "${'$'}release" "${'$'}checksum"
+          # shellcheck disable=SC2086
+          ${'$'}downloader -q -O "${'$'}release" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release" || error "offline or unable to download CodeC Release metadata"
+          # shellcheck disable=SC2086
+          ${'$'}downloader -q -O "${'$'}checksum" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release.sha256" || error "CodeC Release checksum is unavailable; refusing the repository"
+          expected="${'$'}(awk 'NF { print ${'$'}1; exit }' "${'$'}checksum")"
+          actual="${'$'}(sha256sum "${'$'}release" 2>/dev/null | awk '{ print ${'$'}1 }')"
+          if [ -z "${'$'}actual" ] || [ "${'$'}actual" != "${'$'}expected" ]; then
+            rm -f "${'$'}release" "${'$'}checksum"
+            error "repository Release SHA-256 mismatch; no package was installed"
+          fi
+          mv "${'$'}release" "${'$'}STATE/Release"
+          mv "${'$'}checksum" "${'$'}STATE/Release.sha256"
+        }
+
+        friendly_apt() {
+          output="${'$'}("${'$'}@" 2>&1)"
+          status="${'$'}?"
+          if [ "${'$'}status" -ne 0 ]; then
+            echo "${'$'}output" >&2
+            case "${'$'}output" in
+              *"Could not resolve"*|*"Temporary failure"*|*"Network is unreachable"*|*"Connection timed out"*)
+                echo "pkg: offline or repository unreachable; installed packages remain usable." >&2 ;;
+              *"Hash Sum mismatch"*|*"checksum"*|*"NO_PUBKEY"*|*"not signed"*)
+                echo "pkg: repository integrity check failed; no package was installed." >&2 ;;
+              *"No space left"*|*"not enough free space"*)
+                echo "pkg: insufficient disk space; free space under ${'$'}PREFIX and retry." >&2 ;;
+              *) echo "pkg: apt failed; check the command above and retry." >&2 ;;
+            esac
+          else
+            printf '%s\n' "${'$'}output"
+          fi
+          return "${'$'}status"
+        }
+
+        validate_control_scripts() {
+          package_name="${'$'}1"
+          control_dir="${'$'}2"
+          scripts=""
+          for script in preinst postinst prerm postrm; do
+            [ -e "${'$'}control_dir/${'$'}script" ] || continue
+            scripts="${'$'}scripts ${'$'}script"
+          done
+          [ -z "${'$'}scripts" ] && return 0
+          # The only reviewed maintainer-script policy in the first channel is
+          # Termux's generated coreutils cat.alternatives postinst/prerm. It
+          # only calls the CodeC update-alternatives binary.
+          case "${'$'}package_name" in
+            coreutils) alt_name=pager; alt_link=bin/pager; alt_target=libexec/coreutils/cat; priority=1; slave_link=share/man/man1/pager.1.gz; slave_name=pager.1.gz; slave_target=share/man/man1/cat.1.gz ;;
+            less) alt_name=pager; alt_link=bin/pager; alt_target=bin/less; priority=50; slave_link=share/man/man1/pager.1.gz; slave_name=pager.1.gz; slave_target=share/man/man1/less.1.gz ;;
+            nano) alt_name=editor; alt_link=bin/editor; alt_target=bin/nano; priority=50; slave_link=share/man/man1/editor.1.gz; slave_name=editor.1.gz; slave_target=share/man/man1/nano.1.gz ;;
+            *) error "maintainer scripts are forbidden for ${'$'}package_name: ${'$'}scripts" ;;
+          esac
+          [ ! -e "${'$'}control_dir/preinst" ] && [ ! -e "${'$'}control_dir/postrm" ] || error "${'$'}package_name has an unapproved maintainer script"
+          install_spec="--install \"${'$'}PREFIX/${'$'}alt_link\" \"${'$'}alt_name\" \"${'$'}PREFIX/${'$'}alt_target\" ${'$'}priority"
+          slave_spec="--slave \"${'$'}PREFIX/${'$'}slave_link\" \"${'$'}slave_name\" \"${'$'}PREFIX/${'$'}slave_target\""
+          remove_spec="--remove \"${'$'}alt_name\" \"${'$'}PREFIX/${'$'}alt_target\""
+          for script in postinst prerm; do
+            file="${'$'}control_dir/${'$'}script"
+            [ -e "${'$'}file" ] || continue
+            grep -q 'Automatically added by termux_step_create_alternatives' "${'$'}file" || error "${'$'}package_name ${'$'}script is not the reviewed alternatives script"
+            if [ "${'$'}script" = postinst ]; then
+              grep -F -q -- "${'$'}install_spec" "${'$'}file" || error "unexpected ${'$'}package_name install alternative"
+              grep -F -q -- "${'$'}slave_spec" "${'$'}file" || error "unexpected ${'$'}package_name slave alternative"
+            else
+              grep -F -q -- "${'$'}remove_spec" "${'$'}file" || error "unexpected ${'$'}package_name removal alternative"
+            fi
+            grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in coreutils ${'$'}script"
+            grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in coreutils ${'$'}script"
+            while IFS= read -r line; do
+              line="${'$'}{line#"${'$'}{line%%[![:space:]]*}"}"
+              case "${'$'}line" in
+                ""|\#*|fi|then) ;;
+                "if [ \"\${'$'}1\" = 'configure' ]"*|"if [ \"\${'$'}1\" = 'remove' ]"*|"if [ -x \"/data/data/com.codeci.ide/files/usr/bin/update-alternatives\" ]"*) ;;
+                update-alternatives*|--install*|--slave*|--remove*)
+                  case "${'$'}line" in
+                    *com.termux*|*"/system/"*|*".."*) error "unsafe path in coreutils ${'$'}script" ;;
+                  esac
+                  ;;
+                *) error "unapproved line in coreutils ${'$'}script: ${'$'}line" ;;
+              esac
+            done < "${'$'}file"
+          done
+        }
+
+        preflight_deb() {
+          deb="${'$'}1"
+          [ -f "${'$'}deb" ] || error "downloaded package is missing: ${'$'}deb"
+          arch="${'$'}(${'$'}PREFIX/bin/dpkg-deb -f "${'$'}deb" Architecture 2>/dev/null)" || error "cannot read package metadata: ${'$'}deb"
+          device_arch="${'$'}(${'$'}PREFIX/bin/dpkg --print-architecture 2>/dev/null)" || error "cannot determine CodeC architecture"
+          case "${'$'}arch" in
+            all|"${'$'}device_arch") ;;
+            *) error "package ${'$'}deb is for architecture ${'$'}arch, device is ${'$'}device_arch" ;;
+          esac
+          if grep -a -q 'com.termux' "${'$'}deb" 2>/dev/null; then
+            error "package ${'$'}deb contains the official com.termux identity"
+          fi
+          control="${'$'}STATE/control-${'$'}${'$'}"
+          rm -rf "${'$'}control"
+          mkdir -p "${'$'}control" || error "cannot create package preflight directory"
+          "${'$'}PREFIX/bin/dpkg-deb" --control "${'$'}deb" "${'$'}control" >/dev/null 2>&1 || error "invalid .deb control archive: ${'$'}deb"
+          package_name="${'$'}(${'$'}PREFIX/bin/dpkg-deb -f "${'$'}deb" Package 2>/dev/null)" || error "cannot read package name: ${'$'}deb"
+          validate_control_scripts "${'$'}package_name" "${'$'}control"
+          members="${'$'}STATE/members-${'$'}${'$'}"
+          "${'$'}PREFIX/bin/dpkg-deb" --contents "${'$'}deb" > "${'$'}members" 2>/dev/null || error "invalid .deb data archive: ${'$'}deb"
+          while IFS= read -r line; do
+            member="${'$'}{line##* ./}"
+            member="${'$'}{member%% -> *}"
+            case "${'$'}member" in
+              ""|data|data/|data/data|data/data/|data/data/com.codeci.ide|data/data/com.codeci.ide/|data/data/com.codeci.ide/files|data/data/com.codeci.ide/files/|data/data/com.codeci.ide/files/usr|data/data/com.codeci.ide/files/usr/*) ;;
+              *) error "package ${'$'}deb contains a path outside the CodeC prefix: ${'$'}member" ;;
+            esac
+            case "${'$'}member" in
+              /*|*"/../"*|../*|*"/..") error "unsafe package path: ${'$'}member" ;;
+            esac
+            if printf '%s\n' "${'$'}line" | grep -q ' -> '; then
+              target="${'$'}{line#* -> }"
+              case "${'$'}target" in
+                /*|*".."*) error "unsafe symlink target in ${'$'}deb: ${'$'}target" ;;
+              esac
+            fi
+          done < "${'$'}members"
+        }
+
+        preflight_cache() {
+          found=0
+          for deb in "${'$'}CACHE"/*.deb; do
+            [ -f "${'$'}deb" ] || continue
+            found=1
+            preflight_deb "${'$'}deb"
+          done
+          [ "${'$'}found" -eq 1 ] || error "apt downloaded no packages; run pkg update and retry"
+        }
+
+        install_specs() {
+          [ "${'$'}#" -gt 0 ] || error "usage: pkg install <name> [name ...]"
+          before="${'$'}(free_kb)"
+          if [ -n "${'$'}before" ] && [ "${'$'}before" -lt "${'$'}MIN_FREE_KB" ]; then
+            error "insufficient disk space under ${'$'}PREFIX (${'$'}before KB free; need at least ${'$'}MIN_FREE_KB KB)"
+          fi
+          marker="${'$'}STATE/transaction.pending"
+          printf '%s\n' "${'$'}*" > "${'$'}marker"
+          verify_release_checksum
+          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || return "${'$'}?"
+          preflight_cache
+          # The package set was validated before dpkg is allowed to run. The
+          # repository policy rejects maintainer scripts, so no untrusted code
+          # is executed as part of this first milestone.
+          friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || return "${'$'}?"
+          rm -f "${'$'}marker"
+          echo "pkg: installed ${'$'}*"
+        }
+
+        upgrade_packages() {
+          before="${'$'}(free_kb)"
+          if [ -n "${'$'}before" ] && [ "${'$'}before" -lt "${'$'}MIN_FREE_KB" ]; then
+            error "insufficient disk space under ${'$'}PREFIX (${'$'}before KB free; need at least ${'$'}MIN_FREE_KB KB)"
+          fi
+          marker="${'$'}STATE/transaction.pending"
+          printf '%s\n' upgrade > "${'$'}marker"
+          verify_release_checksum
+          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || return "${'$'}?"
+          preflight_cache
+          friendly_apt apt_get --yes --no-install-recommends upgrade || return "${'$'}?"
+          rm -f "${'$'}marker"
+          echo "pkg: upgraded CodeC packages"
+        }
+
+        repair() {
+          [ -e "${'$'}STATE/transaction.pending" ] || { echo "pkg: no interrupted transaction"; return 0; }
+          echo "pkg: repairing the recorded transaction: ${'$'}(cat "${'$'}STATE/transaction.pending")"
+          friendly_apt apt_get --yes --no-install-recommends -f install
+          rm -f "${'$'}STATE/transaction.pending"
+        }
+
+        command="${'$'}{1:-help}"
+        shift || true
+        if [ "${'$'}command" = help ] || [ "${'$'}command" = -h ] || [ "${'$'}command" = --help ]; then
+          cat <<'HELP'
+CodeC packages (CodeC repository only)
+  pkg update                 refresh CodeC package indexes
+  pkg search <name>          search the cached CodeC catalog
+  pkg install <name> ...     download, verify, and install packages
+  pkg upgrade                upgrade installed CodeC packages
+  pkg uninstall <name> ...   remove packages from this userland
+  pkg repair                 recover an interrupted transaction
+
+The Phase 3 development channel requires a CodeC apt/dpkg bootstrap. It never
+uses official com.termux packages or repositories.
+HELP
+          exit 0
+        fi
+        require_backend
+        case "${'$'}command" in
+          update)
+            acquire_lock
+            verify_release_checksum
+            friendly_apt apt_get update
+            ;;
+          search)
+            [ "${'$'}#" -gt 0 ] || error "usage: pkg search <name>"
+            apt_cache search "${'$'}@"
+            ;;
+          install|i)
+            acquire_lock
+            install_specs "${'$'}@"
+            ;;
+          upgrade)
+            acquire_lock
+            upgrade_packages
+            ;;
+          uninstall|remove|rm)
+            [ "${'$'}#" -gt 0 ] || error "usage: pkg uninstall <name>"
+            for name in "${'$'}@"; do
+              case "${'$'}name" in
+                bash|busybox|apt|dpkg|codec-pkg) error "refusing to remove CodeC base package ${'$'}name" ;;
+              esac
+            done
+            acquire_lock
+            friendly_apt apt_get --yes remove "${'$'}@"
+            ;;
+          repair)
+            acquire_lock
+            repair
+            ;;
+          help|-h|--help)
+            cat <<'HELP'
+CodeC packages (CodeC repository only)
+  pkg update                 refresh CodeC package indexes
+  pkg search <name>          search the cached CodeC catalog
+  pkg install <name> ...     download, verify, and install packages
+  pkg upgrade                upgrade installed CodeC packages
+  pkg uninstall <name> ...   remove packages from this userland
+  pkg repair                 recover an interrupted transaction
+
+The Phase 3 development channel requires a CodeC apt/dpkg bootstrap. It never
+uses official com.termux packages or repositories.
+HELP
+            ;;
+          *) error "unknown command '${'$'}command' (try: pkg help)" ;;
+        esac
     """.trimIndent() + "\n"
 
     fun bashShim(): String = """
@@ -210,21 +532,52 @@ object ShellEnvironment {
         }
     }
 
-    /** True when bootstrap extract dropped a native bash or busybox. */
+    /**
+     * True only when a native shell can actually start. ELF magic alone is not
+     * enough: a downloaded Bash may have an absent `libandroid-support.so` or
+     * another missing shared library, in which case Android's PTY would die
+     * immediately with "library ... not found".
+     */
     fun hasRealUserland(prefix: File): Boolean {
         val bin = binDir(prefix)
-        return isElf(File(bin, "bash")) || isElf(File(bin, "busybox"))
+        val bash = File(bin, "bash")
+        val busybox = File(bin, "busybox")
+        return canLaunch(bash, prefix, bash = true) || canLaunch(busybox, prefix, bash = false)
+    }
+
+    /** Try a minimal non-interactive command so the dynamic loader is tested. */
+    fun canLaunch(file: File, prefix: File, bash: Boolean): Boolean {
+        if (!isElf(file) || !file.canExecute()) return false
+        return try {
+            val command = if (bash) {
+                arrayOf(file.absolutePath, "-c", "exit 0")
+            } else {
+                arrayOf(file.absolutePath, "sh", "-c", "exit 0")
+            }
+            val process = ProcessBuilder(*command)
+                .directory(prefix)
+                .apply {
+                    environment()["PREFIX"] = prefix.absolutePath
+                    environment()["LD_LIBRARY_PATH"] = File(prefix, "lib").absolutePath
+                    environment()["PATH"] = File(prefix, "bin").absolutePath + ":/system/bin"
+                }
+                .redirectErrorStream(true)
+                .start()
+            process.waitFor() == 0
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /**
-     * Preferred shell: real ELF `$PREFIX/bin/bash`, then busybox ash,
+     * Preferred shell: runnable CodeC ELF Bash, then runnable BusyBox ash,
      * then the Phase-1 shim, then `/system/bin/sh`.
      */
     fun resolveShell(prefix: File): File {
         val bash = File(binDir(prefix), "bash")
         val busybox = File(binDir(prefix), "busybox")
-        if (isElf(bash) && bash.canExecute()) return bash
-        if (isElf(busybox) && busybox.canExecute()) return busybox
+        if (canLaunch(bash, prefix, bash = true)) return bash
+        if (canLaunch(busybox, prefix, bash = false)) return busybox
         val candidates = listOf(
             bash,
             File("/system/bin/bash"),

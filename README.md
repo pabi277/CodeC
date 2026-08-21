@@ -52,7 +52,10 @@ CodeC now ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`
 
    The `./` is required (cwd is not on `PATH`). Projects live in app-private storage so `./a.out` is executable.
 4. Programs that use `scanf` / `getchar` must run in **Term**, not the editor RUN button (RUN has no keyboard into the process).
-5. `pkg` is a placeholder until Phase 3 (apt + our own package repo).
+5. `pkg` is a guarded CodeC-only frontend for the Phase 3 apt/dpkg repository. The
+   current `userland-v1` bootstrap intentionally lacks apt/dpkg, so it reports a
+   clear setup error until a Phase 3 bootstrap is released; it never uses the
+   official Termux repository.
 
 The extra-keys row (ESC, TAB, CTRL, ALT, arrows) is there so a phone keyboard can still drive the PTY. Pinch to zoom; long-press to copy/paste.
 
@@ -79,6 +82,7 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 ## Troubleshooting
 
 > **Roadmap:** Mini-Termux plan — [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).  
+> **Phase 3 status/handoff:** [docs/PHASE3_STATUS.md](docs/PHASE3_STATUS.md).
 > **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"
