@@ -31,6 +31,10 @@ security policy, trade-offs, and rollback plan remain in
 
 - Successful package/bootstrap CI run: `32469769089`.
 - Development APT repository publication succeeded in run `32484160427`.
+- App CI is green: run `32497218472` (`e1ff4ef`) compiles the app and passes
+  all unit tests, including the 20 new `UserlandInstallerTest` and 6 new
+  `ShellEnvironmentTest` tests (the `assembleDebug` CI task also runs
+  `:app:testDebugUnitTest` via `gradle-bootstrap`).
 - Current published repository URL:
 
   ```text
@@ -103,18 +107,23 @@ security policy, trade-offs, and rollback plan remain in
 
 ## Remaining work
 
-1. **Publish the rebuilt Phase 3 bootstrap as the `userland-v2-dev` release.**
-   The publishing workflow (`.github/workflows/publish-bootstrap-release.yml`)
-   is written but **could not be pushed**: Arena's GitHub App lacks the
-   `workflows` permission. Either grant that permission and re-push, or push
-   the file manually (see [`ci-pending/`](ci-pending/README.md)). Then dispatch
-   it with the successful rebuilt run's ID as `source_run_id`.
-2. **Rebuild the Phase 3 bootstrap** with the completed closure
-   (`busybox`, `bash`, `apt`, `dpkg`, `termux-exec`) — dispatch the existing
-   `CodeC package repository` workflow on this branch. The previous artifacts
-   (run `32469769089`) are proven incomplete for acceptance: no termux-exec and
-   an official-Termux-repository `sources.list` (both fixed in the build
-   scripts, which is why a rebuild is required).
+The Arena GitHub App lacks both the `workflows` permission and
+`actions:write` (workflow dispatch is rejected with 403), so the two
+workflow-driven steps below must be done from the GitHub UI or by granting
+those permissions to the Arena App.
+
+1. **Rebuild the Phase 3 bootstrap** with the completed closure
+   (`busybox`, `bash`, `apt`, `dpkg`, `termux-exec`). GitHub UI: *CodeC* →
+   Actions → **CodeC package repository** → *Run workflow* → branch
+   `arena/01a0248f-codec`, `publish = false` (~80 min). The previous
+   artifacts (run `32469769089`) are proven incomplete for acceptance: no
+   termux-exec and an official-Termux-repository `sources.list` (both fixed in
+   the build scripts, which is why a rebuild is required).
+2. **Publish the rebuilt Phase 3 bootstrap as the `userland-v2-dev` release.**
+   The publishing workflow is written but **could not be pushed** (no
+   `workflows` permission): copy `ci-pending/publish-bootstrap-release.yml`
+   into `.github/workflows/` (see [`ci-pending/`](ci-pending/README.md)), then
+   dispatch it with the successful rebuilt run's ID as `source_run_id`.
 3. **Clean Android device tests** — see
    [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md).
 4. Production repository signing / key distribution (M3).
