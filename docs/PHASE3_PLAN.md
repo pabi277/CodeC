@@ -246,7 +246,9 @@ state before continuing.
 
 A release is promoted only when CI has uploaded the repository tree, manifest,
 checksums, package test report, and (for M2+) the matching bootstrap checksum. The
-host must serve files over HTTPS with stable paths.
+host must serve files over HTTPS with stable paths. The publishing workflow can
+promote a previously successful immutable build artifact by run ID, avoiding a
+second expensive source rebuild during publication.
 
 Rollback means first stopping publication of the bad manifest, restoring the prior
 manifest and package indexes atomically, and keeping the previous bootstrap asset

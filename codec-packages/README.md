@@ -80,8 +80,9 @@ The development publishing workflow is `.github/workflows/package-repository.yml
 It runs host security tests on pushes and performs the expensive source builds only
 when manually dispatched. The repository build and Phase 3 bootstrap use distinct
 Docker container names so `run-docker.sh` cannot reuse a container mounted with a
-different Termux checkout. Publishing is an explicit GitHub Pages development
-channel; it must not be confused with the official Termux repository.
+different Termux checkout. Publishing is an explicit GitHub Pages development channel; it must not be
+confused with the official Termux repository. A validated build can be published
+without rebuilding by passing its successful workflow run ID as `source_run_id`.
 
 The Android `pkg` command is now a guarded frontend, but the current Phase 2
 `userland-v1` bootstrap intentionally lacks apt/dpkg. On that release it reports
