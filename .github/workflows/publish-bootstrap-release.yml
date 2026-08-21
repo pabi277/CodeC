@@ -95,53 +95,53 @@ jobs:
           a64_sha="$(awk '{ print $1; exit }' "$a64.sha256")"
           x64_sha="$(awk '{ print $1; exit }' "$x64.sha256")"
           notes="$(mktemp)"
-          cat > "$notes" <<EOF
-# CodeC userland bootstrap — Phase 3 (development channel)
-
-Development release for CodeC IDE Phase 3 (package management).
-It is verified with **HTTPS + SHA-256 only**; production promotion
-still requires signed Release metadata and key distribution
-(see \`docs/PHASE3_PLAN.md\`, milestone M3).
-
-Built from the pinned official \`termux-packages\` revision through
-the CodeC overlay (\`com.codeci.ide\`, prefix
-\`/data/data/com.codeci.ide/files/usr\`). No official \`com.termux\`
-packages or repositories are used or referenced.
-
-## Contents
-
-Bootstrap roots: \`busybox\`, \`bash\`, \`apt\`, \`dpkg\`, \`termux-exec\`
-plus the full source-built dependency closure (never
-\`build-package.sh -I\`).
-
-Each archive contains the *contents* of the CodeC prefix
-(root-level \`bin/\`, \`lib/\`, \`etc/\`, \`var/\`) and is extracted
-into \`/data/data/com.codeci.ide/files/usr\` by the CodeC app
-automatically. Do not extract by hand.
-
-- Real CodeC-built \`apt\`, \`apt-get\`, \`dpkg\` + seeded dpkg status database
-- \`libtermux-exec-ld-preload.so\` (shebang script execution via LD_PRELOAD)
-- \`libandroid-support.so\` and all runtime shared libraries
-- \`etc/apt/sources.list\` pointing at the CodeC development channel only
-
-## Assets
-
-| Asset | SHA-256 |
-|---|---|
-| bootstrap-phase3-aarch64.tar.gz | \`${a64_sha}\` |
-| bootstrap-phase3-x86_64.tar.gz | \`${x64_sha}\` |
-
-Source build: run \`${{ inputs.source_run_id }}\` of "CodeC package repository".
-
-## Rollback
-
-- App side: \`userland-v1\` remains published and is used automatically
-  when this release is removed or unreachable
-  (see \`docs/PHASE3_STATUS.md\`).
-- Repository side: re-publish the previous Pages manifest by
-  dispatching "CodeC package repository" with \`publish=true\` and the
-  previous successful run ID.
-EOF
+          {
+            printf '%s\n' \
+              '# CodeC userland bootstrap — Phase 3 (development channel)' \
+              '' \
+              'Development release for CodeC IDE Phase 3 (package management).' \
+              'It is verified with **HTTPS + SHA-256 only**; production promotion' \
+              'still requires signed Release metadata and key distribution' \
+              '(see `docs/PHASE3_PLAN.md`, milestone M3).' \
+              '' \
+              'Built from the pinned official `termux-packages` revision through' \
+              'the CodeC overlay (`com.codeci.ide`, prefix' \
+              '`/data/data/com.codeci.ide/files/usr`). No official `com.termux`' \
+              'packages or repositories are used or referenced.' \
+              '' \
+              '## Contents' \
+              '' \
+              'Bootstrap roots: `busybox`, `bash`, `apt`, `dpkg`, `termux-exec`' \
+              'plus the full source-built dependency closure (never' \
+              '`build-package.sh -I`).' \
+              '' \
+              'Each archive contains the *contents* of the CodeC prefix' \
+              '(root-level `bin/`, `lib/`, `etc/`, `var/`) and is extracted' \
+              'into `/data/data/com.codeci.ide/files/usr` by the CodeC app' \
+              'automatically. Do not extract by hand.' \
+              '' \
+              '- Real CodeC-built `apt`, `apt-get`, `dpkg` + seeded dpkg status database' \
+              '- `libtermux-exec-ld-preload.so` (shebang script execution via LD_PRELOAD)' \
+              '- `libandroid-support.so` and all runtime shared libraries' \
+              '- `etc/apt/sources.list` pointing at the CodeC development channel only' \
+              '' \
+              '## Assets' \
+              '' \
+              '| Asset | SHA-256 |' \
+              '|---|---|'
+            printf '| bootstrap-phase3-aarch64.tar.gz | `%s` |\n' "$a64_sha"
+            printf '| bootstrap-phase3-x86_64.tar.gz | `%s` |\n' "$x64_sha"
+            printf '\nSource build: run `%s` of "CodeC package repository".\n\n' "${{ inputs.source_run_id }}"
+            printf '%s\n' \
+              '## Rollback' \
+              '' \
+              '- App side: `userland-v1` remains published and is used automatically' \
+              '  when this release is removed or unreachable' \
+              '  (see `docs/PHASE3_STATUS.md`).' \
+              '- Repository side: re-publish the previous Pages manifest by' \
+              '  dispatching "CodeC package repository" with `publish=true` and the' \
+              '  previous successful run ID.'
+          } > "$notes"
           # Re-publishing replaces the assets of the tag; the tag always
           # points at the most recent validated build.
           gh release delete "$tag" --yes >/dev/null 2>&1 || true
