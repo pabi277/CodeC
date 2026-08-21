@@ -19,6 +19,7 @@ if [[ ! -d "$SRC/.git" ]]; then
 fi
 
 "$ROOT/scripts/apply-prefix.sh" "$SRC"
+"$ROOT/scripts/apply-recipe-overrides.sh" "$SRC"
 
 # CodeC does not use Termux's Android activity-manager wrappers.
 # Avoid the termux-tools -> termux-am Gradle/Android SDK dependency.

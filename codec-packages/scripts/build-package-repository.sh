@@ -26,6 +26,7 @@ if [[ ! -d "$SRC/.git" ]]; then
 fi
 
 "$ROOT/scripts/apply-prefix.sh" "$SRC"
+"$ROOT/scripts/apply-recipe-overrides.sh" "$SRC"
 
 PACKAGES=$(printf '%s\n' "$CODEC_REPOSITORY_PACKAGES" | awk 'NF { print $1 }')
 if [[ -z "$PACKAGES" ]]; then

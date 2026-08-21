@@ -62,9 +62,12 @@ The separate Phase 3 bootstrap seeds CodeC-built `apt`/`dpkg` and a dpkg status
 database. It is a release artifact, not part of the APK and not a replacement for
 `userland-v1` until the clean-device gate passes.
 
-These scripts never use `build-package.sh -I`. They reject wrong architectures,
-wrong CodeC prefix paths, `com.termux` contamination, unsafe symlinks, and
-maintainer scripts. The generated static tree contains `Release`, `Packages`,
+These scripts never use `build-package.sh -I`. They apply only a narrow source
+transport override for the official `attr` recipe when Savannah's HTTP endpoint
+returns 502; the upstream version and SHA-256 remain unchanged. They reject wrong
+architectures, wrong CodeC prefix paths, `com.termux` contamination, unsafe
+symlinks, and maintainer scripts. The generated static tree contains `Release`,
+`Packages`,
 `Packages.gz`, package SHA-256 values, `repository.json`, and checksum sidecars.
 
 The development publishing workflow is `.github/workflows/package-repository.yml`.
