@@ -235,12 +235,26 @@ object ShellEnvironment {
           # The only reviewed maintainer-script policy in the first channel is
           # Termux's generated coreutils cat.alternatives postinst/prerm. It
           # only calls the CodeC update-alternatives binary.
-          [ "${'$'}package_name" = coreutils ] || error "maintainer scripts are forbidden for ${'$'}package_name: ${'$'}scripts"
-          [ ! -e "${'$'}control_dir/preinst" ] && [ ! -e "${'$'}control_dir/postrm" ] || error "coreutils has an unapproved maintainer script"
+          case "${'$'}package_name" in
+            coreutils) alt_name=pager; alt_link=bin/pager; alt_target=libexec/coreutils/cat; priority=1; slave_link=share/man/man1/pager.1.gz; slave_name=pager.1.gz; slave_target=share/man/man1/cat.1.gz ;;
+            less) alt_name=pager; alt_link=bin/pager; alt_target=bin/less; priority=50; slave_link=share/man/man1/pager.1.gz; slave_name=pager.1.gz; slave_target=share/man/man1/less.1.gz ;;
+            nano) alt_name=editor; alt_link=bin/editor; alt_target=bin/nano; priority=50; slave_link=share/man/man1/editor.1.gz; slave_name=editor.1.gz; slave_target=share/man/man1/nano.1.gz ;;
+            *) error "maintainer scripts are forbidden for ${'$'}package_name: ${'$'}scripts" ;;
+          esac
+          [ ! -e "${'$'}control_dir/preinst" ] && [ ! -e "${'$'}control_dir/postrm" ] || error "${'$'}package_name has an unapproved maintainer script"
+          install_spec="--install \"${'$'}PREFIX/${'$'}alt_link\" \"${'$'}alt_name\" \"${'$'}PREFIX/${'$'}alt_target\" ${'$'}priority"
+          slave_spec="--slave \"${'$'}PREFIX/${'$'}slave_link\" \"${'$'}slave_name\" \"${'$'}PREFIX/${'$'}slave_target\""
+          remove_spec="--remove \"${'$'}alt_name\" \"${'$'}PREFIX/${'$'}alt_target\""
           for script in postinst prerm; do
             file="${'$'}control_dir/${'$'}script"
             [ -e "${'$'}file" ] || continue
-            grep -q 'Automatically added by termux_step_create_alternatives' "${'$'}file" || error "coreutils ${'$'}script is not the reviewed alternatives script"
+            grep -q 'Automatically added by termux_step_create_alternatives' "${'$'}file" || error "${'$'}package_name ${'$'}script is not the reviewed alternatives script"
+            if [ "${'$'}script" = postinst ]; then
+              grep -F -q -- "${'$'}install_spec" "${'$'}file" || error "unexpected ${'$'}package_name install alternative"
+              grep -F -q -- "${'$'}slave_spec" "${'$'}file" || error "unexpected ${'$'}package_name slave alternative"
+            else
+              grep -F -q -- "${'$'}remove_spec" "${'$'}file" || error "unexpected ${'$'}package_name removal alternative"
+            fi
             grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in coreutils ${'$'}script"
             grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in coreutils ${'$'}script"
             while IFS= read -r line; do

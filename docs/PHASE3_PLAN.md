@@ -154,14 +154,17 @@ no package name is advertised merely because an upstream recipe exists.
 
 ### Maintainer-script policy
 
-The first installable channel rejects maintainer scripts by default. The sole
-exception is the pinned official `coreutils` package's generated `postinst` and
-`prerm` from `cat.alternatives`. This exception is an explicit security design:
+The first installable channel rejects maintainer scripts by default. The only
+exceptions are the pinned official `coreutils`, `less`, and `nano` packages'
+generated `postinst` and `prerm` files from their `.alternatives` definitions.
+This exception is an explicit security design:
 
-- only `coreutils` may contain scripts;
+- only `coreutils`, `less`, and `nano` may contain scripts;
 - only `postinst` and `prerm` are accepted;
 - the shebang must point to the CodeC prefix;
 - the generated alternative boilerplate must be present;
+- package-specific expected alternative names, paths, priorities, and slaves are
+  checked;
 - only the CodeC `update-alternatives` command, its `--install`, `--slave`, and
   `--remove` arguments are allowed;
 - command substitution, shell chaining, external commands, Termux paths,

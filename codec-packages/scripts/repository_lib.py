@@ -131,74 +131,85 @@ def validate_payload(path: Path) -> List[str]:
     return members
 
 
-def _validate_coreutils_alternative_script(script: Path) -> None:
-    """Allow only Termux's reviewed coreutils cat.alternatives output.
-
-    The official recipe generates postinst/prerm scripts that call only
-    update-alternatives for the pager -> coreutils/cat group. This parser is
-    deliberately restrictive: it rejects command substitution, shell command
-    chaining, external commands, paths outside the CodeC prefix, and any
-    script shape other than the generated alternative boilerplate.
-    """
+def _validate_alternatives_script(script: Path, package_name: str, script_name: str) -> None:
+    """Allow only reviewed Termux alternatives output for starter packages."""
+    expected = {
+        "coreutils": {
+            "name": "pager", "link": "bin/pager", "alternative": "libexec/coreutils/cat",
+            "priority": "1", "slave": ("share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/cat.1.gz"),
+        },
+        "less": {
+            "name": "pager", "link": "bin/pager", "alternative": "bin/less",
+            "priority": "50", "slave": ("share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/less.1.gz"),
+        },
+        "nano": {
+            "name": "editor", "link": "bin/editor", "alternative": "bin/nano",
+            "priority": "50", "slave": ("share/man/man1/editor.1.gz", "editor.1.gz", "share/man/man1/nano.1.gz"),
+        },
+    }.get(package_name)
+    if expected is None:
+        raise PackageError(f"{script.name}: maintainer scripts are not approved for {package_name}")
     try:
         lines = script.read_text().splitlines()
     except UnicodeDecodeError as exc:
         raise PackageError(f"{script.name}: maintainer script is not UTF-8") from exc
     if not lines or lines[0] != f"#!{CODEC_RUNTIME_PREFIX}/bin/sh":
         raise PackageError(f"{script.name}: unexpected CodeC maintainer-script shebang")
-    text = "\n".join(lines)
-    forbidden = re.compile(
-        r"(?:\$\(|`|;|&&|\|\||\b(?:rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)\b|com\.termux|/system/)"
-    )
     known_conditions = {
         "if [ \"$1\" = 'configure' ] || [ \"$1\" = 'abort-upgrade' ] || [ \"$1\" = 'abort-deconfigure' ] || [ \"$1\" = 'abort-remove' ]; then",
         "if [ \"$1\" = 'remove' ] || [ \"$1\" != 'upgrade' ]; then",
         f"if [ -x \"{CODEC_RUNTIME_PREFIX}/bin/update-alternatives\" ]; then",
     }
+    forbidden = re.compile(r"(?:\$\(|`|com\.termux|/system/|\b(?:rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)\b)")
     for raw_line in lines[1:]:
         stripped = raw_line.strip()
         if stripped in known_conditions:
             continue
         if forbidden.search(stripped):
-            raise PackageError(f"{script.name}: unsafe command in coreutils alternative script")
+            raise PackageError(f"{script.name}: unsafe command in alternatives script")
     continuation = False
+    saw_install = saw_slave = saw_remove = False
     for raw_line in lines[1:]:
         line = raw_line.strip()
-        if not line or line.startswith("#") or line in {"fi", "then"}:
-            continue
-        if line in known_conditions:
+        if not line or line.startswith("#") or line in {"fi", "then"} or line in known_conditions:
             continue
         line_without_continuation = line[:-1].rstrip() if line.endswith("\\") else line
         if line_without_continuation == "update-alternatives":
             continuation = True
             continue
         if line_without_continuation.startswith("--install "):
-            continuation = line.endswith("\\")
+            if not continuation:
+                raise PackageError(f"{script.name}: orphaned --install command")
             tokens = shlex.split(line_without_continuation)
-            if len(tokens) != 5 or tokens[0] != "--install" or tokens[-1] != "1":
-                raise PackageError(f"{script.name}: invalid coreutils --install command")
-            paths = (tokens[1], tokens[3])
-        elif line_without_continuation.startswith("--slave "):
+            if len(tokens) != 5 or tokens[0] != "--install":
+                raise PackageError(f"{script.name}: invalid alternatives --install command")
+            if tokens[1:] != [f"{CODEC_RUNTIME_PREFIX}/{expected['link']}", expected['name'], f"{CODEC_RUNTIME_PREFIX}/{expected['alternative']}", expected['priority']]:
+                raise PackageError(f"{script.name}: unexpected alternatives target")
+            saw_install = True
+            continuation = line.endswith("\\")
+            continue
+        if line_without_continuation.startswith("--slave "):
             if not continuation:
                 raise PackageError(f"{script.name}: orphaned --slave command")
             tokens = shlex.split(line_without_continuation)
             if len(tokens) != 4 or tokens[0] != "--slave":
-                raise PackageError(f"{script.name}: invalid coreutils --slave command")
+                raise PackageError(f"{script.name}: invalid alternatives --slave command")
+            slave = expected['slave']
+            if tokens[1:] != [f"{CODEC_RUNTIME_PREFIX}/{slave[0]}", slave[1], f"{CODEC_RUNTIME_PREFIX}/{slave[2]}"]:
+                raise PackageError(f"{script.name}: unexpected alternatives slave target")
+            saw_slave = True
             continuation = line.endswith("\\")
-            paths = (tokens[1], tokens[3])
-        elif line_without_continuation.startswith("update-alternatives --remove "):
-            continuation = False
+            continue
+        if line_without_continuation.startswith("update-alternatives --remove "):
             tokens = shlex.split(line_without_continuation)
-            if len(tokens) != 4 or tokens[0] != "update-alternatives":
-                raise PackageError(f"{script.name}: invalid coreutils --remove command")
-            paths = (tokens[3],)
-        else:
-            raise PackageError(f"{script.name}: unapproved maintainer-script line: {raw_line}")
-        for value in paths:
-            if value.startswith("/") and not value.startswith(CODEC_RUNTIME_PREFIX + "/"):
-                raise PackageError(f"{script.name}: path escapes CodeC prefix: {value}")
-            if ".." in Path(value).parts:
-                raise PackageError(f"{script.name}: path traversal in maintainer script")
+            if tokens != ["update-alternatives", "--remove", expected['name'], f"{CODEC_RUNTIME_PREFIX}/{expected['alternative']}"]:
+                raise PackageError(f"{script.name}: unexpected alternatives removal")
+            saw_remove = True
+            continuation = False
+            continue
+        raise PackageError(f"{script.name}: unapproved alternatives line: {raw_line}")
+    if script_name == "postinst" and not (saw_install and saw_slave) or script_name == "prerm" and not saw_remove:
+        raise PackageError(f"{script.name}: incomplete alternatives operation")
 
 
 def validate_control_scripts(path: Path, package_name: str) -> None:
@@ -206,20 +217,13 @@ def validate_control_scripts(path: Path, package_name: str) -> None:
         control_dir = Path(tmp) / "control"
         control_dir.mkdir()
         run("dpkg-deb", "--control", str(path), str(control_dir))
-        scripts = sorted(
-            item.name
-            for item in control_dir.iterdir()
-            if item.name in {"preinst", "postinst", "prerm", "postrm"}
-        )
+        scripts = sorted(item.name for item in control_dir.iterdir() if item.name in {"preinst", "postinst", "prerm", "postrm"})
         if not scripts:
             return
-        if package_name != "coreutils" or set(scripts) != {"postinst", "prerm"}:
-            raise PackageError(
-                f"{path.name}: maintainer scripts are not allowed: {', '.join(scripts)}"
-            )
+        if package_name not in {"coreutils", "less", "nano"} or set(scripts) != {"postinst", "prerm"}:
+            raise PackageError(f"{path.name}: maintainer scripts are not allowed: {', '.join(scripts)}")
         for script_name in scripts:
-            _validate_coreutils_alternative_script(control_dir / script_name)
-
+            _validate_alternatives_script(control_dir / script_name, package_name, script_name)
 
 def inspect_package(path: Path, allowed_arches: Iterable[str] = SUPPORTED_ARCHES) -> Dict:
     if not path.is_file() or path.suffix != ".deb":

@@ -26,18 +26,21 @@ def make_deb(root: Path, output: Path, *, name: str = "codec-demo", arch: str = 
         "Depends: busybox\nDescription: test CodeC package\n" % (name, arch)
     )
     if script:
-        if name == "coreutils":
+        if name in {"coreutils", "less", "nano"}:
             prefix = "/data/data/com.codeci.ide/files/usr"
+            values = {
+                "coreutils": ("pager", "bin/pager", "libexec/coreutils/cat", "1", "share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/cat.1.gz"),
+                "less": ("pager", "bin/pager", "bin/less", "50", "share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/less.1.gz"),
+                "nano": ("editor", "bin/editor", "bin/nano", "50", "share/man/man1/editor.1.gz", "editor.1.gz", "share/man/man1/nano.1.gz"),
+            }
+            alt_name, alt_link, alt_target, priority, slave_link, slave_name, slave_target = values[name]
             postinst = control / "postinst"
             postinst.write_text(
                 f"#!{prefix}/bin/sh\n"
                 "# Automatically added by termux_step_create_alternatives\n"
                 "if [ \"$1\" = 'configure' ] || [ \"$1\" = 'abort-upgrade' ] || [ \"$1\" = 'abort-deconfigure' ] || [ \"$1\" = 'abort-remove' ]; then\n"
                 f"  if [ -x \"{prefix}/bin/update-alternatives\" ]; then\n"
-                "    # pager\n"
-                "    update-alternatives \\\n"
-                f"      --install \"{prefix}/bin/pager\" \"pager\" \"{prefix}/libexec/coreutils/cat\" 1 \\\n"
-                f"      --slave \"{prefix}/share/man/man1/pager.1.gz\" \"pager.1.gz\" \"{prefix}/share/man/man1/cat.1.gz\"\n"
+                f"    update-alternatives \\\n      --install \"{prefix}/{alt_link}\" \"{alt_name}\" \"{prefix}/{alt_target}\" {priority} \\\n      --slave \"{prefix}/{slave_link}\" \"{slave_name}\" \"{prefix}/{slave_target}\"\n"
                 "  fi\nfi\n"
                 "# End automatically added section\n"
             )
@@ -48,7 +51,7 @@ def make_deb(root: Path, output: Path, *, name: str = "codec-demo", arch: str = 
                 "# Automatically added by termux_step_create_alternatives\n"
                 "if [ \"$1\" = 'remove' ] || [ \"$1\" != 'upgrade' ]; then\n"
                 f"  if [ -x \"{prefix}/bin/update-alternatives\" ]; then\n"
-                f"    update-alternatives --remove \"pager\" \"{prefix}/libexec/coreutils/cat\"\n"
+                f"    update-alternatives --remove \"{alt_name}\" \"{prefix}/{alt_target}\"\n"
                 "  fi\nfi\n"
                 "# End automatically added section\n"
             )
@@ -105,12 +108,13 @@ class RepositoryTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("maintainer scripts", result.stderr)
 
-    def test_allows_only_reviewed_coreutils_alternative_scripts(self) -> None:
+    def test_allows_only_reviewed_alternative_scripts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             debs = root / "debs"
             debs.mkdir()
-            make_deb(root, debs / "coreutils_1.0_aarch64.deb", name="coreutils", script=True)
+            for name in ("coreutils", "less", "nano"):
+                make_deb(root, debs / f"{name}_1.0_aarch64.deb", name=name, script=True)
             subprocess.run(
                 [sys.executable, str(GENERATE), str(debs), str(root / "repo"), "--architectures", "aarch64"],
                 check=True,
