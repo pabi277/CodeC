@@ -78,6 +78,13 @@ if [[ "$BOOTSTRAP_NAME" == "bootstrap-phase3" ]]; then
   done
 fi
 
+# Optional extra files merged into the prefix root (e.g. the standalone
+# built termux-exec LD_PRELOAD library, which lands under lib/).
+if [[ -n "${CODEC_EXTRA_PREFIX_FILES:-}" && -d "${CODEC_EXTRA_PREFIX_FILES:-}" ]]; then
+  cp -a "$CODEC_EXTRA_PREFIX_FILES/." "$PREFIX_STAGE/"
+  echo "assemble: merged extra prefix files from $CODEC_EXTRA_PREFIX_FILES"
+fi
+
 OUT="$DIST/${BOOTSTRAP_NAME}-${ARCH}.tar.gz"
 mkdir -p "$DIST"
 tar -C "$PREFIX_STAGE" -czf "$OUT" .

@@ -138,6 +138,30 @@ includes `libandroid-support.so`) is the durable fix. Do not claim Phase 2 or
 Phase 3 clean-device acceptance until the corrected bootstrap is installed and
 the Bash/BusyBox/runtime-library smoke tests pass.
 
+### The official `termux-exec` recipe cannot build in CodeC CI (run 32501170464)
+
+The pinned `termux-exec` recipe declares
+`TERMUX_PKG_BUILD_DEPENDS="termux-core-static"`. `termux-core-static` does not
+exist anywhere in the pinned `termux-packages` tree (checked `packages/`,
+`root-packages/`, `disabled-packages/`) — it is a prebuilt package that only
+exists on Termux's private build farm, and CodeC must not consume official
+`com.termux` prebuilts (the build system also ignores the official dependency
+repo because `TERMUX_APP_PACKAGE` is `com.codeci.ide`). The 2026-08-21
+rebuild therefore failed in the "Build Phase 3 package-manager bootstrap"
+step on both arches (the 14-minute package closure built fine).
+
+**Fix (committed):** `build-termux-exec-preload.sh` /
+`termux-exec-standalone.sh` build the `direct` LD_PRELOAD variant from the
+pinned public sources — `termux-core-package` v0.4.0
+(SHA-256 `af6299f3…`) for `libtermux-core_nos_c_tre.a` + headers, then
+`termux-exec-package` v2.5.0 (SHA-256 `5c5eeb15…`) — with the same
+standalone NDK toolchain and the CodeC identity constants the recipe build
+would bake in. It runs best-effort inside the builder container after the
+four bootstrap packages; the archive includes the library when the build
+succeeds (the validator warns instead of failing when it is absent), and the
+app exports `LD_PRELOAD` only when the library is present, so a bootstrap
+without it still installs and runs.
+
 ## Important release facts
 
 - The app now targets the Phase 3 release tag `userland-v2-dev` with assets

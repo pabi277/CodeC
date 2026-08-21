@@ -33,10 +33,6 @@ DPKG_STATUS = (
     "Status: install ok installed\n"
     "Architecture: aarch64\n"
     "Version: 1.36.1\n\n"
-    "Package: termux-exec\n"
-    "Status: install ok installed\n"
-    "Architecture: aarch64\n"
-    "Version: 1:2.5.0\n"
 )
 
 ELF = b"\x7fELF" + b"\x02\x01\x01\x00" * 8
@@ -163,7 +159,6 @@ class BootstrapValidationTest(unittest.TestCase):
             root = Path(tmp)
             for missing in (
                 "bin/dpkg",
-                "lib/libtermux-exec-ld-preload.so",
                 "lib/libandroid-support.so",
                 "var/lib/dpkg/status",
             ):
@@ -171,6 +166,17 @@ class BootstrapValidationTest(unittest.TestCase):
                 result = run_validator(archive)
                 self.assertNotEqual(result.returncode, 0, missing)
                 self.assertIn("missing", result.stderr)
+
+    def test_preload_absent_warns_but_passes(self) -> None:
+        # The standalone termux-exec preload build is best-effort in CI; a
+        # bootstrap without it must still validate (with a warning).
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            archive = self._archive(root, omit={"lib/libtermux-exec-ld-preload.so"})
+            result = run_validator(archive)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("WARNING", result.stderr)
+            self.assertIn("termux-exec", result.stderr)
 
     def test_rejects_non_elf_shell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -246,12 +252,13 @@ class BootstrapValidationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             status = DPKG_STATUS.replace(
-                "Package: termux-exec\nStatus: install ok installed\n", ""
+                "Package: dpkg\nStatus: install ok installed\n"
+                "Architecture: aarch64\nVersion: 1.22.6\n\n", ""
             )
             archive = self._archive(root, status=status)
             result = run_validator(archive)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("termux-exec", result.stderr)
+            self.assertIn("dpkg", result.stderr)
 
     def test_rejects_half_configured_dpkg_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
