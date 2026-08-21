@@ -76,7 +76,7 @@ class RepositoryTest(unittest.TestCase):
             root = Path(tmp)
             debs = root / "debs"
             debs.mkdir()
-            make_deb(root, debs / "codec-demo_1.0_aarch64.deb")
+            make_deb(root, debs / "codec-demo_1:0_aarch64.deb")
             repo = root / "repo"
             subprocess.run(
                 [sys.executable, str(GENERATE), str(debs), str(repo), "--architectures", "aarch64"],
@@ -90,6 +90,9 @@ class RepositoryTest(unittest.TestCase):
             self.assertEqual(manifest["package"], "com.codeci.ide")
             self.assertEqual(manifest["prefix"], "/data/data/com.codeci.ide/files/usr")
             self.assertTrue((repo / "dists/stable/Release").is_file())
+            published_debs = list((repo / "dists/stable/main/binary-aarch64").glob("*.deb"))
+            self.assertEqual(len(published_debs), 1)
+            self.assertNotIn(":", published_debs[0].name)
             packages = repo / "dists/stable/main/binary-aarch64/Packages"
             self.assertIn("SHA256:", packages.read_text())
             self.assertEqual(gzip.decompress((packages.parent / "Packages.gz").read_bytes()), packages.read_bytes())

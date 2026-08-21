@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import os
+import re
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -45,6 +46,14 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def safe_deb_filename(record: dict) -> str:
+    """Return a static-host/artifact-safe filename without changing Version."""
+    safe_version = re.sub(r"[^A-Za-z0-9.+~_-]", "_", record["version"])
+    safe_name = re.sub(r"[^A-Za-z0-9.+-]", "_", record["name"])
+    safe_arch = re.sub(r"[^A-Za-z0-9.+-]", "_", record["architecture"])
+    return f"{safe_name}_{safe_version}_{safe_arch}.deb"
+
+
 def build(args: argparse.Namespace) -> None:
     if not args.input.is_dir():
         raise PackageError(f"input directory does not exist: {args.input}")
@@ -71,10 +80,15 @@ def build(args: argparse.Namespace) -> None:
     release_dir = args.output / "dists" / args.suite
     component_dir = release_dir / args.component
     published = []
+    published_names = set()
     for record in sorted(records, key=lambda item: (item["architecture"], item["name"])):
         arch_dir = component_dir / f"binary-{record['architecture']}"
         arch_dir.mkdir(parents=True, exist_ok=True)
-        destination = arch_dir / record["path"].name
+        destination_name = safe_deb_filename(record)
+        if destination_name in published_names:
+            raise PackageError(f"filename collision after sanitizing package names: {destination_name}")
+        published_names.add(destination_name)
+        destination = arch_dir / destination_name
         shutil.copy2(record["path"], destination)
         record = dict(record)
         record["filename"] = str(destination.relative_to(args.output)).replace(os.sep, "/")

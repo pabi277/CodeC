@@ -73,6 +73,8 @@ allowed script exceptions are the explicitly validated `cat.alternatives`,
 static tree contains
 `Release`, `Packages`,
 `Packages.gz`, package SHA-256 values, `repository.json`, and checksum sidecars.
+Package filenames are sanitized for GitHub artifact/static-host compatibility;
+Debian Version fields, including epoch versions such as `1:3.6.3`, are unchanged.
 
 The development publishing workflow is `.github/workflows/package-repository.yml`.
 It runs host security tests on pushes and performs the expensive source builds only
