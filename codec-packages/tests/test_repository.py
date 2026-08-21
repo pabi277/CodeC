@@ -157,6 +157,23 @@ class RepositoryTest(unittest.TestCase):
             with self.assertRaises(PackageError):
                 _safe_relative("./data/data/com.codeci.ide/files/usr/../escape", package=Path("x.deb"))
 
+    def test_validation_accepts_relative_repository_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            debs = root / "debs"
+            debs.mkdir()
+            make_deb(root, debs / "relative_1.0_aarch64.deb", name="relative")
+            repo = root / "repo"
+            subprocess.run(
+                [sys.executable, str(GENERATE), str(debs), str(repo), "--architectures", "aarch64"],
+                check=True,
+            )
+            subprocess.run(
+                [sys.executable, str(VALIDATE), "repo", "--architectures", "aarch64"],
+                cwd=root,
+                check=True,
+            )
+
     def test_validation_detects_changed_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

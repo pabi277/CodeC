@@ -63,6 +63,7 @@ def safe_manifest_path(root: Path, value: str) -> Path:
 
 
 def validate(root: Path, requested_arches: list[str]) -> None:
+    root = root.resolve()
     if not root.is_dir():
         raise PackageError(f"repository does not exist: {root}")
     marker = root / "CODEC-REPOSITORY"
