@@ -1,6 +1,6 @@
 # CodeC Terminal — Mini-Termux Plan
 
-> **Status:** Phase 1 **working on device** (app **1.3.13+**) · Phase 2 **released** as `userland-v1` (clean-device acceptance pending) · Phase 3 **M1 in progress** (repository foundation and guarded `pkg` frontend).
+> **Status:** Phase 1 **working on device** · Phase 2 `userland-v1` **released but runtime acceptance pending** · Phase 3 M1 **complete**, package/bootstrap CI **green**, Android bootstrap integration and clean-device acceptance **pending**.
 > **This-session bugs/fixes:** [docs/chat-phase1/README.md](chat-phase1/README.md).  
 > **Goal:** turn CodeC into a self-contained C IDE **with its own
 > Termux-style terminal and package manager** — install packages like `pkg install clang`
@@ -172,8 +172,8 @@ with `gcc`-free tooling and add clang right after.
 |---|---|---|
 | **0** ✅ done | targetSdk 28 (executable storage), embedded TCC, module store, Termux bridge | — |
 | **1** ✅ done on device (1.3.13) | Terminal UI + `cc`/`./a.out` + scanf prompts. Remaining polish: RUN stdin. See [chat-phase1](chat-phase1/README.md) | 1–3 weeks |
-| **2** | In progress (1.3.14): `codec-packages` overlay + download/extract. Full docker bootstrap on workflow_dispatch. | 1–2 weeks |
-| **3** | apt + dpkg + termux-exec + own repo + first `pkg install` working | 2–4 weeks |
+| **2** | Bootstrap overlay and runtime download are released as `userland-v1`; clean-device/runtime-library acceptance remains pending. | done, acceptance pending |
+| **3** | M1 complete: CodeC-only APT repository, source-built starter closure, apt/dpkg bootstrap artifacts, guarded `pkg`, and green CI. Remaining: release bootstrap asset, app integration, device tests, signing. | ongoing |
 | **4** | Polish: storage access (`termux-setup-storage`-equivalent), env vars, themes, security confirmation prompt, package signing | ongoing |
 | **Total** | | **6–10 weeks part-time** (phases 1–2 already give a useful in-app terminal) |
 
@@ -204,7 +204,9 @@ Closed regressions and open polish: [chat-phase1/PROBLEMS.md](chat-phase1/PROBLE
    `workflow_dispatch` / `main`. Artifact `bootstrap-aarch64.tar.gz` + SHA-256.
    Host on Releases tag `userland-v1` — not in the APK.
 3. App downloads, verifies SHA-256, extracts into `$PREFIX`. Offline skip.
-   `resolveShell` prefers ELF bash. `cc` always rewritten after extract.
+   `resolveShell` verifies that the ELF loader can actually start Bash/BusyBox and
+   falls back to Android `sh` when a shared library is missing. `cc` is always
+   rewritten after extract.
 4. Smoke test: [docs/chat-phase2/README.md](chat-phase2/README.md).
 
 ---

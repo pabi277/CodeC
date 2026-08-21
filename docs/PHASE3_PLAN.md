@@ -1,7 +1,7 @@
 # CodeC IDE Phase 3 package-management plan
 
-**Status:** design accepted for the first implementation milestone
-**Date:** 2026-08-20
+**Status:** M1 complete; M2 build/repository CI complete; Android bootstrap integration and device acceptance remain
+**Date:** 2026-08-21
 **Scope:** CodeC's private Android userland only
 
 This plan follows the Phase 2 handoff and is intentionally narrower than a full
@@ -195,7 +195,7 @@ state before continuing.
 
 ## 5. Implementation milestones
 
-### M1 — repository foundation (this change)
+### M1 — repository foundation ✅
 
 - document this architecture and risks;
 - add deterministic repository metadata generation and validation;
@@ -206,16 +206,18 @@ state before continuing.
   installed;
 - add unit/host tests for metadata, prefix/ABI validation, path traversal,
   maintainer-script rejection, checksum failures, and recoverable downloads;
-- do not change the `userland-v1` asset or claim Android package installation has
-  passed before a Phase 3 bootstrap is released and tested.
+- publish the development APT repository at `https://pabi277.github.io/CodeC/dev`.
 
-### M2 — package-manager bootstrap
+### M2 — package-manager bootstrap 🟡
 
-- build and inspect CodeC-prefixed `apt` and `dpkg` plus dependencies from official
-  recipes;
-- assemble a new bootstrap without overwriting the real Bash or `cc` launcher;
-- publish a development bootstrap and repository pair;
-- clean-device test install, update/search/install/remove, compiler smoke tests,
+- [x] build and inspect CodeC-prefixed `apt` and `dpkg` plus dependencies from
+  official recipes;
+- [x] assemble a new bootstrap without overwriting the real Bash or `cc` launcher;
+- [x] publish and validate the development repository and bootstrap artifacts in
+  CI;
+- [ ] publish the Phase 3 bootstrap as a stable development release asset;
+- [ ] update the Android installer to select the Phase 3 bootstrap;
+- [ ] clean-device test install, update/search/install/remove, compiler smoke tests,
   and airplane-mode restart.
 
 ### M3 — signed development channel and promotion
