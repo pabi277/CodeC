@@ -162,6 +162,31 @@ succeeds (the validator warns instead of failing when it is absent), and the
 app exports `LD_PRELOAD` only when the library is present, so a bootstrap
 without it still installs and runs.
 
+### Workflow regex bug failed the bootstrap step after a full build (run 32509911413)
+
+Run `32509911413` (2026-08-21, both arches) failed at the end of the
+"Build Phase 3 package-manager bootstrap" step — *after* all four packages,
+the full closure, the prefix assembly, the `bootstrap-phase3-*.tar.gz`
+archive, and its SHA-256 had been produced. Root cause: the step's
+verification greps used a double backslash in the YAML `|` block scalar:
+
+```
+grep -qE '^\\./?bin/(apt-get|dpkg)$' bootstrap-phase3-contents.txt
+```
+
+YAML block scalars do not process escapes, so the shell received
+`'^\\./?bin/…'`; in ERE, `\\` matches a *literal backslash*, which no tar
+listing line contains. The grep therefore always failed silently under
+`set -e`, wasting the ~100-minute build. (The earlier green run
+`32469769089` was on branch `arena/01a01fef-codec`, whose workflow did not
+contain this step, so the bug was never exercised there.)
+
+**Fix (committed):** single-backslash patterns, each check wrapped in an
+explicit `if ! grep …` with an `ERROR:` message and a `head -25` dump of the
+candidate entries, so any future miss is visible in the log. Verified
+locally against a realistic listing (pass) and a truncated one
+(detects the missing entry).
+
 ## Important release facts
 
 - The app now targets the Phase 3 release tag `userland-v2-dev` with assets
