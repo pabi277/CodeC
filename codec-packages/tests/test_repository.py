@@ -26,9 +26,37 @@ def make_deb(root: Path, output: Path, *, name: str = "codec-demo", arch: str = 
         "Depends: busybox\nDescription: test CodeC package\n" % (name, arch)
     )
     if script:
-        postinst = control / "postinst"
-        postinst.write_text("#!/system/bin/sh\necho unsafe\n")
-        postinst.chmod(0o755)
+        if name == "coreutils":
+            prefix = "/data/data/com.codeci.ide/files/usr"
+            postinst = control / "postinst"
+            postinst.write_text(
+                f"#!{prefix}/bin/sh\n"
+                "# Automatically added by termux_step_create_alternatives\n"
+                "if [ \"$1\" = 'configure' ] || [ \"$1\" = 'abort-upgrade' ] || [ \"$1\" = 'abort-deconfigure' ] || [ \"$1\" = 'abort-remove' ]; then\n"
+                f"  if [ -x \"{prefix}/bin/update-alternatives\" ]; then\n"
+                "    # pager\n"
+                "    update-alternatives \\\n"
+                f"      --install \"{prefix}/bin/pager\" \"pager\" \"{prefix}/libexec/coreutils/cat\" 1 \\\n"
+                f"      --slave \"{prefix}/share/man/man1/pager.1.gz\" \"pager.1.gz\" \"{prefix}/share/man/man1/cat.1.gz\"\n"
+                "  fi\nfi\n"
+                "# End automatically added section\n"
+            )
+            postinst.chmod(0o755)
+            prerm = control / "prerm"
+            prerm.write_text(
+                f"#!{prefix}/bin/sh\n"
+                "# Automatically added by termux_step_create_alternatives\n"
+                "if [ \"$1\" = 'remove' ] || [ \"$1\" != 'upgrade' ]; then\n"
+                f"  if [ -x \"{prefix}/bin/update-alternatives\" ]; then\n"
+                f"    update-alternatives --remove \"pager\" \"{prefix}/libexec/coreutils/cat\"\n"
+                "  fi\nfi\n"
+                "# End automatically added section\n"
+            )
+            prerm.chmod(0o755)
+        else:
+            postinst = control / "postinst"
+            postinst.write_text("#!/system/bin/sh\necho unsafe\n")
+            postinst.chmod(0o755)
     result = subprocess.run(
         ["dpkg-deb", "--build", str(package_root), str(output)],
         text=True,
@@ -76,6 +104,17 @@ class RepositoryTest(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("maintainer scripts", result.stderr)
+
+    def test_allows_only_reviewed_coreutils_alternative_scripts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            debs = root / "debs"
+            debs.mkdir()
+            make_deb(root, debs / "coreutils_1.0_aarch64.deb", name="coreutils", script=True)
+            subprocess.run(
+                [sys.executable, str(GENERATE), str(debs), str(root / "repo"), "--architectures", "aarch64"],
+                check=True,
+            )
 
     def test_rejects_wrong_prefix_and_traversal_helper(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

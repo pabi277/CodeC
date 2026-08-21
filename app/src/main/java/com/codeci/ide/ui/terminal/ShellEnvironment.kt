@@ -223,6 +223,42 @@ object ShellEnvironment {
           return "${'$'}status"
         }
 
+        validate_control_scripts() {
+          package_name="${'$'}1"
+          control_dir="${'$'}2"
+          scripts=""
+          for script in preinst postinst prerm postrm; do
+            [ -e "${'$'}control_dir/${'$'}script" ] || continue
+            scripts="${'$'}scripts ${'$'}script"
+          done
+          [ -z "${'$'}scripts" ] && return 0
+          # The only reviewed maintainer-script policy in the first channel is
+          # Termux's generated coreutils cat.alternatives postinst/prerm. It
+          # only calls the CodeC update-alternatives binary.
+          [ "${'$'}package_name" = coreutils ] || error "maintainer scripts are forbidden for ${'$'}package_name: ${'$'}scripts"
+          [ ! -e "${'$'}control_dir/preinst" ] && [ ! -e "${'$'}control_dir/postrm" ] || error "coreutils has an unapproved maintainer script"
+          for script in postinst prerm; do
+            file="${'$'}control_dir/${'$'}script"
+            [ -e "${'$'}file" ] || continue
+            grep -q 'Automatically added by termux_step_create_alternatives' "${'$'}file" || error "coreutils ${'$'}script is not the reviewed alternatives script"
+            grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in coreutils ${'$'}script"
+            grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in coreutils ${'$'}script"
+            while IFS= read -r line; do
+              line="${'$'}{line#"${'$'}{line%%[![:space:]]*}"}"
+              case "${'$'}line" in
+                ""|\#*|fi|then) ;;
+                "if [ \"\${'$'}1\" = 'configure' ]"*|"if [ \"\${'$'}1\" = 'remove' ]"*|"if [ -x \"/data/data/com.codeci.ide/files/usr/bin/update-alternatives\" ]"*) ;;
+                update-alternatives*|--install*|--slave*|--remove*)
+                  case "${'$'}line" in
+                    *com.termux*|*"/system/"*|*".."*) error "unsafe path in coreutils ${'$'}script" ;;
+                  esac
+                  ;;
+                *) error "unapproved line in coreutils ${'$'}script: ${'$'}line" ;;
+              esac
+            done < "${'$'}file"
+          done
+        }
+
         preflight_deb() {
           deb="${'$'}1"
           [ -f "${'$'}deb" ] || error "downloaded package is missing: ${'$'}deb"
@@ -239,9 +275,8 @@ object ShellEnvironment {
           rm -rf "${'$'}control"
           mkdir -p "${'$'}control" || error "cannot create package preflight directory"
           "${'$'}PREFIX/bin/dpkg-deb" --control "${'$'}deb" "${'$'}control" >/dev/null 2>&1 || error "invalid .deb control archive: ${'$'}deb"
-          for script in preinst postinst prerm postrm; do
-            [ ! -e "${'$'}control/${'$'}script" ] || error "maintainer script ${'$'}script is forbidden in the CodeC development channel: ${'$'}deb"
-          done
+          package_name="${'$'}(${'$'}PREFIX/bin/dpkg-deb -f "${'$'}deb" Package 2>/dev/null)" || error "cannot read package name: ${'$'}deb"
+          validate_control_scripts "${'$'}package_name" "${'$'}control"
           members="${'$'}STATE/members-${'$'}${'$'}"
           "${'$'}PREFIX/bin/dpkg-deb" --contents "${'$'}deb" > "${'$'}members" 2>/dev/null || error "invalid .deb data archive: ${'$'}deb"
           while IFS= read -r line; do

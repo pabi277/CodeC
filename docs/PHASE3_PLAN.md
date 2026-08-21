@@ -154,11 +154,24 @@ no package name is advertised merely because an upstream recipe exists.
 
 ### Maintainer-script policy
 
-The first installable channel accepts only packages with no `preinst`, `postinst`,
-`prerm`, or `postrm` control scripts. This is an explicit security boundary, not an
-assumption that scripts are safe. CI and the client preflight reject packages that
-contain them. A later milestone may add a reviewed, signed allowlist and a sandboxed
-execution design; it must not silently widen this policy.
+The first installable channel rejects maintainer scripts by default. The sole
+exception is the pinned official `coreutils` package's generated `postinst` and
+`prerm` from `cat.alternatives`. This exception is an explicit security design:
+
+- only `coreutils` may contain scripts;
+- only `postinst` and `prerm` are accepted;
+- the shebang must point to the CodeC prefix;
+- the generated alternative boilerplate must be present;
+- only the CodeC `update-alternatives` command, its `--install`, `--slave`, and
+  `--remove` arguments are allowed;
+- command substitution, shell chaining, external commands, Termux paths,
+  absolute paths outside the prefix, and traversal are rejected;
+- the same allowlist is enforced by the host repository validator and the Android
+  client preflight before apt/dpkg is allowed to install the package.
+
+Every other package containing `preinst`, `postinst`, `prerm`, or `postrm` is
+rejected. A later milestone may add other reviewed, signed package-specific
+policies; it must not silently widen this one.
 
 ### Payload policy
 

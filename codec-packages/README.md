@@ -66,10 +66,11 @@ database. It is a release artifact, not part of the APK and not a replacement fo
 These scripts never use `build-package.sh -I`. They apply only narrow source
 transport overrides for the official `attr` and `libacl` recipes when Savannah's
 HTTP endpoint returns 502; upstream versions and SHA-256 values remain unchanged.
-They reject wrong
-architectures, wrong CodeC prefix paths, `com.termux` contamination, unsafe
-symlinks, and maintainer scripts. The generated static tree contains `Release`,
-`Packages`,
+They reject wrong architectures, wrong CodeC prefix paths, `com.termux`
+contamination, unsafe symlinks, and unreviewed maintainer scripts. The only
+allowed script exception is the explicitly validated official coreutils
+`cat.alternatives` postinst/prerm pair. The generated static tree contains
+`Release`, `Packages`,
 `Packages.gz`, package SHA-256 values, `repository.json`, and checksum sidecars.
 
 The development publishing workflow is `.github/workflows/package-repository.yml`.

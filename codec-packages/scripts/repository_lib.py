@@ -12,6 +12,7 @@ import os
 import posixpath
 import re
 import shutil
+import shlex
 import subprocess
 import tempfile
 from pathlib import Path
@@ -19,6 +20,7 @@ from typing import Dict, Iterable, List, Tuple
 
 CODEC_PACKAGE = "com.codeci.ide"
 CODEC_PREFIX = f"data/data/{CODEC_PACKAGE}/files/usr"
+CODEC_RUNTIME_PREFIX = f"/data/data/{CODEC_PACKAGE}/files/usr"
 SUPPORTED_ARCHES = {"all", "aarch64", "x86_64"}
 FORBIDDEN_BYTES = (
     b"/data/data/com.termux",
@@ -129,7 +131,77 @@ def validate_payload(path: Path) -> List[str]:
     return members
 
 
-def validate_control_scripts(path: Path) -> None:
+def _validate_coreutils_alternative_script(script: Path) -> None:
+    """Allow only Termux's reviewed coreutils cat.alternatives output.
+
+    The official recipe generates postinst/prerm scripts that call only
+    update-alternatives for the pager -> coreutils/cat group. This parser is
+    deliberately restrictive: it rejects command substitution, shell command
+    chaining, external commands, paths outside the CodeC prefix, and any
+    script shape other than the generated alternative boilerplate.
+    """
+    try:
+        lines = script.read_text().splitlines()
+    except UnicodeDecodeError as exc:
+        raise PackageError(f"{script.name}: maintainer script is not UTF-8") from exc
+    if not lines or lines[0] != f"#!{CODEC_RUNTIME_PREFIX}/bin/sh":
+        raise PackageError(f"{script.name}: unexpected CodeC maintainer-script shebang")
+    text = "\n".join(lines)
+    forbidden = re.compile(
+        r"(?:\$\(|`|;|&&|\|\||\b(?:rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)\b|com\.termux|/system/)"
+    )
+    known_conditions = {
+        "if [ \"$1\" = 'configure' ] || [ \"$1\" = 'abort-upgrade' ] || [ \"$1\" = 'abort-deconfigure' ] || [ \"$1\" = 'abort-remove' ]; then",
+        "if [ \"$1\" = 'remove' ] || [ \"$1\" != 'upgrade' ]; then",
+        f"if [ -x \"{CODEC_RUNTIME_PREFIX}/bin/update-alternatives\" ]; then",
+    }
+    for raw_line in lines[1:]:
+        stripped = raw_line.strip()
+        if stripped in known_conditions:
+            continue
+        if forbidden.search(stripped):
+            raise PackageError(f"{script.name}: unsafe command in coreutils alternative script")
+    continuation = False
+    for raw_line in lines[1:]:
+        line = raw_line.strip()
+        if not line or line.startswith("#") or line in {"fi", "then"}:
+            continue
+        if line in known_conditions:
+            continue
+        line_without_continuation = line[:-1].rstrip() if line.endswith("\\") else line
+        if line_without_continuation == "update-alternatives":
+            continuation = True
+            continue
+        if line_without_continuation.startswith("--install "):
+            continuation = line.endswith("\\")
+            tokens = shlex.split(line_without_continuation)
+            if len(tokens) != 5 or tokens[0] != "--install" or tokens[-1] != "1":
+                raise PackageError(f"{script.name}: invalid coreutils --install command")
+            paths = (tokens[1], tokens[3])
+        elif line_without_continuation.startswith("--slave "):
+            if not continuation:
+                raise PackageError(f"{script.name}: orphaned --slave command")
+            tokens = shlex.split(line_without_continuation)
+            if len(tokens) != 4 or tokens[0] != "--slave":
+                raise PackageError(f"{script.name}: invalid coreutils --slave command")
+            continuation = line.endswith("\\")
+            paths = (tokens[1], tokens[3])
+        elif line_without_continuation.startswith("update-alternatives --remove "):
+            continuation = False
+            tokens = shlex.split(line_without_continuation)
+            if len(tokens) != 4 or tokens[0] != "update-alternatives":
+                raise PackageError(f"{script.name}: invalid coreutils --remove command")
+            paths = (tokens[3],)
+        else:
+            raise PackageError(f"{script.name}: unapproved maintainer-script line: {raw_line}")
+        for value in paths:
+            if value.startswith("/") and not value.startswith(CODEC_RUNTIME_PREFIX + "/"):
+                raise PackageError(f"{script.name}: path escapes CodeC prefix: {value}")
+            if ".." in Path(value).parts:
+                raise PackageError(f"{script.name}: path traversal in maintainer script")
+
+
+def validate_control_scripts(path: Path, package_name: str) -> None:
     with tempfile.TemporaryDirectory(prefix="codec-control-") as tmp:
         control_dir = Path(tmp) / "control"
         control_dir.mkdir()
@@ -139,10 +211,14 @@ def validate_control_scripts(path: Path) -> None:
             for item in control_dir.iterdir()
             if item.name in {"preinst", "postinst", "prerm", "postrm"}
         )
-        if scripts:
+        if not scripts:
+            return
+        if package_name != "coreutils" or set(scripts) != {"postinst", "prerm"}:
             raise PackageError(
                 f"{path.name}: maintainer scripts are not allowed: {', '.join(scripts)}"
             )
+        for script_name in scripts:
+            _validate_coreutils_alternative_script(control_dir / script_name)
 
 
 def inspect_package(path: Path, allowed_arches: Iterable[str] = SUPPORTED_ARCHES) -> Dict:
@@ -164,7 +240,7 @@ def inspect_package(path: Path, allowed_arches: Iterable[str] = SUPPORTED_ARCHES
             f"{path.name}: architecture {architecture!r} is not one of {sorted(allowed)}"
         )
     validate_payload(path)
-    validate_control_scripts(path)
+    validate_control_scripts(path, fields["Package"].strip())
     return {
         "name": fields["Package"].strip(),
         "version": fields["Version"].strip(),
