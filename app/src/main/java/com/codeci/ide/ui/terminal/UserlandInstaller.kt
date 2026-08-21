@@ -207,7 +207,7 @@ class UserlandInstaller(
             } catch (e: Exception) {
                 // Probe failure (network, …). For a targeted fallback rethrow;
                 // otherwise prefer the next (older) published release.
-                AppLogger.w("UserlandInstaller", "release probe failed for ${candidate.releaseTag}", e)
+                AppLogger.w("UserlandInstaller", "release probe failed for ${candidate.releaseTag}: ${e.message}")
                 if (only != null) throw e
             }
         }

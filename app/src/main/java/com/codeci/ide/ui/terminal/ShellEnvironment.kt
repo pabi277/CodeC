@@ -128,7 +128,7 @@ object ShellEnvironment {
           [ -x "${'$'}PREFIX/bin/apt-get" ] || error "package manager is not present in this userland. Install a Phase 3 CodeC bootstrap; never add an official Termux repository."
           [ -x "${'$'}PREFIX/bin/dpkg" ] || error "dpkg is not present in this CodeC userland; refusing to use an external package manager."
           # dpkg executes maintainer scripts (reviewed alternatives postinst/
-          # prerm only); the kernel can only run shebang scripts under $PREFIX
+          # prerm only); the kernel can only run shebang scripts under ${'$'}PREFIX
           # with the termux-exec LD_PRELOAD library. Export it defensively so
           # even a session started before the bootstrap update stays correct.
           for _codec_preload in "${'$'}PREFIX/lib/libtermux-exec-ld-preload.so" "${'$'}PREFIX/lib/libtermux-exec.so"; do
