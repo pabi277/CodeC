@@ -8,6 +8,11 @@ on:
         required: true
         default: false
         type: boolean
+      source_run_id:
+        description: Existing successful package-build run ID to publish without rebuilding
+        required: false
+        default: ""
+        type: string
   push:
     branches: ["**"]
     paths:
@@ -25,11 +30,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Run repository tests
         run: python3 -m unittest discover -s codec-packages/tests -p 'test_*.py' -v
 
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.publish == false || inputs.source_run_id == '') }}
     name: Build CodeC packages (${{ matrix.arch }})
     needs: host-tests
     runs-on: ubuntu-latest
@@ -42,6 +48,7 @@ jobs:
       ARCH: ${{ matrix.arch }}
       CODEC_USE_DOCKER: "1"
       SOURCE_DATE_EPOCH: "0"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,9 +95,9 @@ jobs:
           archive="codec-packages/dist/bootstrap-phase3-${ARCH}.tar.gz"
           test -s "$archive"
           tar -tzf "$archive" > bootstrap-phase3-contents.txt
-          grep -qE '^\./?bin/(apt-get|dpkg)$' bootstrap-phase3-contents.txt
-          grep -qE '^\./?var/lib/dpkg/status$' bootstrap-phase3-contents.txt
-          if grep -qE '^\./?data/data/' bootstrap-phase3-contents.txt; then
+          grep -qE '^\\./?bin/(apt-get|dpkg)$' bootstrap-phase3-contents.txt
+          grep -qE '^\\./?var/lib/dpkg/status$' bootstrap-phase3-contents.txt
+          if grep -qE '^\\./?data/data/' bootstrap-phase3-contents.txt; then
             echo "nested Android path in Phase 3 bootstrap" >&2
             exit 1
           fi
@@ -109,47 +116,65 @@ jobs:
 
   publish-dev:
     name: Publish development repository
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == true }}
-    needs: build
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.publish == true && needs.host-tests.result == 'success' && (needs.build.result == 'success' || (inputs.source_run_id != '' && needs.build.result == 'skipped')) }}
+    needs: [host-tests, build]
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       pages: write
       id-token: write
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Download aarch64 repository
         uses: actions/download-artifact@v4
         with:
           name: codec-repository-aarch64
           path: input/aarch64
+          run-id: ${{ inputs.source_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download x86_64 repository
         uses: actions/download-artifact@v4
         with:
           name: codec-repository-x86_64
           path: input/x86_64
+          run-id: ${{ inputs.source_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Merge and revalidate repository
         run: |
           set -euo pipefail
           mkdir -p input/debs
-          find input/aarch64 input/x86_64 -name '*.deb' -exec cp -n {} input/debs/ \;
+          find input/aarch64 input/x86_64 -name '*.deb' \
+            -exec cp -n {} input/debs/ \;
+
           rm -rf packages/dev
           chmod +x codec-packages/scripts/*.py codec-packages/scripts/*.sh
+
           codec-packages/scripts/generate-repository.sh \
             input/debs packages/dev aarch64 x86_64
+
           python3 codec-packages/scripts/validate-repository.py \
             packages/dev --architectures aarch64 x86_64
+
           test -f packages/dev/CODEC-REPOSITORY
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: packages
+
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
