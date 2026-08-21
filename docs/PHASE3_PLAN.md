@@ -145,7 +145,7 @@ The package builder will:
 The first repository channel targets these requested roots:
 
 ```text
-nano less coreutils grep sed gawk gzip tar make file
+nano less coreutils grep sed gawk gzip tar make libmagic
 ```
 
 Only packages present in the generated manifest and passing CI are promised. The

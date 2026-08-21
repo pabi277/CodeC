@@ -43,7 +43,7 @@ gawk
 gzip
 tar
 make
-file
+libmagic
 "
 
 # Development channel URL. CI/release automation may override this; the app

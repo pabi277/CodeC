@@ -39,8 +39,9 @@ apt/dpkg bootstrap passes device acceptance.
 
 The selected format is an apt/dpkg-compatible repository with a guarded CodeC
 `pkg` frontend. The first curated roots are `nano`, `less`, `coreutils`, `grep`,
-`sed`, `gawk`, `gzip`, `tar`, `make`, and `file`. The published manifest is the
-only package promise; it includes the full source-built dependency closure.
+`sed`, `gawk`, `gzip`, `tar`, `make`, and `libmagic` (the official recipe for
+file-type identification). The published manifest is the only package promise;
+it includes the full source-built dependency closure.
 
 Generate and validate a repository from `.deb` files:
 
