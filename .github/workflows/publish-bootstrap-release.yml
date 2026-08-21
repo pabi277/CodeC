@@ -1,0 +1,154 @@
+name: Publish CodeC bootstrap release
+
+# Promotes the Phase 3 package-manager bootstrap artifacts of a previously
+# successful "CodeC package repository" build run to a stable GitHub release.
+# It never rebuilds packages: `source_run_id` selects the immutable artifact
+# build, which is revalidated with the same host checks before publication.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful "CodeC package repository" run ID with codec-repository-aarch64 and codec-repository-x86_64 artifacts
+        required: true
+        default: ""
+        type: string
+      release_tag:
+        description: GitHub release tag for the bootstrap assets
+        required: false
+        default: "userland-v2-dev"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Repository and bootstrap host tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run repository and bootstrap tests
+        run: python3 -m unittest discover -s codec-packages/tests -p 'test_*.py' -v
+
+  publish:
+    name: Publish release ${{ inputs.release_tag }}
+    needs: host-tests
+    if: github.event_name == 'workflow_dispatch' && inputs.source_run_id != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate release tag
+        run: |
+          set -euo pipefail
+          case "${{ inputs.release_tag }}" in
+            userland-*) ;;
+            *)
+              echo "release tag must start with userland- (APK attach is skipped for userland-* tags)" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Download aarch64 bootstrap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: codec-repository-aarch64
+          path: input/aarch64
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download x86_64 bootstrap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: codec-repository-x86_64
+          path: input/x86_64
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate bootstrap archives
+        run: |
+          set -euo pipefail
+          a64="input/aarch64/codec-packages/dist/bootstrap-phase3-aarch64.tar.gz"
+          x64="input/x86_64/codec-packages/dist/bootstrap-phase3-x86_64.tar.gz"
+          for path in "$a64" "$x64"; do
+            test -s "$path"
+            test -s "$path.sha256"
+          done
+          python3 codec-packages/scripts/validate-bootstrap.py "$a64" "$x64"
+
+      - name: Publish GitHub release
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.release_tag }}"
+          a64="input/aarch64/codec-packages/dist/bootstrap-phase3-aarch64.tar.gz"
+          x64="input/x86_64/codec-packages/dist/bootstrap-phase3-x86_64.tar.gz"
+          a64_sha="$(awk '{ print $1; exit }' "$a64.sha256")"
+          x64_sha="$(awk '{ print $1; exit }' "$x64.sha256")"
+          notes="$(mktemp)"
+          cat > "$notes" <<EOF
+# CodeC userland bootstrap — Phase 3 (development channel)
+
+Development release for CodeC IDE Phase 3 (package management).
+It is verified with **HTTPS + SHA-256 only**; production promotion
+still requires signed Release metadata and key distribution
+(see \`docs/PHASE3_PLAN.md\`, milestone M3).
+
+Built from the pinned official \`termux-packages\` revision through
+the CodeC overlay (\`com.codeci.ide\`, prefix
+\`/data/data/com.codeci.ide/files/usr\`). No official \`com.termux\`
+packages or repositories are used or referenced.
+
+## Contents
+
+Bootstrap roots: \`busybox\`, \`bash\`, \`apt\`, \`dpkg\`, \`termux-exec\`
+plus the full source-built dependency closure (never
+\`build-package.sh -I\`).
+
+Each archive contains the *contents* of the CodeC prefix
+(root-level \`bin/\`, \`lib/\`, \`etc/\`, \`var/\`) and is extracted
+into \`/data/data/com.codeci.ide/files/usr\` by the CodeC app
+automatically. Do not extract by hand.
+
+- Real CodeC-built \`apt\`, \`apt-get\`, \`dpkg\` + seeded dpkg status database
+- \`libtermux-exec-ld-preload.so\` (shebang script execution via LD_PRELOAD)
+- \`libandroid-support.so\` and all runtime shared libraries
+- \`etc/apt/sources.list\` pointing at the CodeC development channel only
+
+## Assets
+
+| Asset | SHA-256 |
+|---|---|
+| bootstrap-phase3-aarch64.tar.gz | \`${a64_sha}\` |
+| bootstrap-phase3-x86_64.tar.gz | \`${x64_sha}\` |
+
+Source build: run \`${{ inputs.source_run_id }}\` of "CodeC package repository".
+
+## Rollback
+
+- App side: \`userland-v1\` remains published and is used automatically
+  when this release is removed or unreachable
+  (see \`docs/PHASE3_STATUS.md\`).
+- Repository side: re-publish the previous Pages manifest by
+  dispatching "CodeC package repository" with \`publish=true\` and the
+  previous successful run ID.
+EOF
+          # Re-publishing replaces the assets of the tag; the tag always
+          # points at the most recent validated build.
+          gh release delete "$tag" --yes >/dev/null 2>&1 || true
+          gh release create "$tag" \
+            --title "CodeC userland bootstrap — Phase 3 development channel" \
+            --notes-file "$notes" \
+            --prerelease
+          gh release upload "$tag" --clobber "$a64" "$a64.sha256" "$x64" "$x64.sha256"
+          rm -f "$notes"
+          gh release view "$tag" --json tagName,assets --jq '.tagName as $t | "published \($t):", (.assets[].name)'
