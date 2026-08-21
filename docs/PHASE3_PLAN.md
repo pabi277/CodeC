@@ -230,7 +230,7 @@ state before continuing.
 
 | Risk/decision | Current treatment | Exit condition |
 |---|---|---|
-| apt/dpkg may pull Android-specific dependencies | Build full closure from source; inspect output | M2 clean-prefix install and shell test |
+| apt/dpkg may pull Android-specific dependencies | Build full closure from source; inspect output; isolate Docker container per checkout so Phase 2 and Phase 3 mounts cannot mix | M2 clean-prefix install and shell test |
 | apt/dpkg may be too large for the bootstrap | Keep package manager in the externally hosted bootstrap, not APK; measure CI artifact | M2 size report and device disk-space test |
 | official recipes may add maintainer scripts | Reject in M1; review candidates | Reviewed script design in M3 |
 | HTTPS-only development integrity is weaker than signatures | SHA-256 checksums plus HTTPS and explicit dev label | Signed Release verification on device |

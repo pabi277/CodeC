@@ -48,7 +48,9 @@ build_one() {
       echo "build-package-repository: official run-docker.sh is missing" >&2
       exit 2
     fi
-    (cd "$SRC" && ./scripts/run-docker.sh ./build-package.sh -a "$ARCH" -f "$package")
+    (cd "$SRC" && \
+      CONTAINER_NAME="${CODEC_CONTAINER_NAME:-codec-package-repository-${ARCH}}" \
+        ./scripts/run-docker.sh ./build-package.sh -a "$ARCH" -f "$package")
   else
     echo "build-package-repository: CODEC_USE_DOCKER=0 (host build)" >&2
     (cd "$SRC" && ./build-package.sh -a "$ARCH" -f "$package")

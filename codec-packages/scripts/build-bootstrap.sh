@@ -7,9 +7,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/properties.codec.sh"
 
 ARCH="${1:-aarch64}"
+BOOTSTRAP_NAME="${CODEC_BOOTSTRAP_NAME:-bootstrap}"
 WORK="${CODEC_WORK:-$ROOT/.work}"
 SRC="$WORK/termux-packages"
 DIST="$ROOT/dist"
+CONTAINER_NAME="${CODEC_CONTAINER_NAME:-codec-${BOOTSTRAP_NAME}-${ARCH}}"
 mkdir -p "$WORK" "$DIST"
 
 if [[ ! -d "$SRC/.git" ]]; then
@@ -41,7 +43,8 @@ if [[ "${CODEC_USE_DOCKER:-1}" == "1" ]] && command -v docker >/dev/null 2>&1; t
     (
       cd "$SRC"
       for p in $PACKAGES; do
-        ./scripts/run-docker.sh ./build-package.sh -a "$ARCH" -f "$p"
+        CONTAINER_NAME="$CONTAINER_NAME" \
+          ./scripts/run-docker.sh ./build-package.sh -a "$ARCH" -f "$p"
       done
     )
   else
@@ -55,6 +58,7 @@ if [[ "${CODEC_USE_DOCKER:-1}" == "1" ]] && command -v docker >/dev/null 2>&1; t
         set -e
         cd /home/builder/termux-packages
         /home/builder/codec-packages/scripts/apply-prefix.sh /home/builder/termux-packages
+        /home/builder/codec-packages/scripts/apply-recipe-overrides.sh /home/builder/termux-packages
         for p in $PACKAGES; do
           ./build-package.sh -a $ARCH -f \$p
         done
