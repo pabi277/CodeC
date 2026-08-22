@@ -31,6 +31,23 @@ for recipe in attr libacl; do
   echo "recipe-overrides: $recipe uses official HTTPS Savannah mirror"
 done
 
+# The official dpkg-perl subpackage lists clang (a build-time compiler) as a
+# *runtime* dependency: TERMUX_SUBPKG_DEPENDS="perl, clang, make". CodeC
+# userland never installs clang, and a runtime dependency on a compiler is
+# wrong in any case: once dpkg-perl is installed the userland is recorded as
+# broken for apt ("Depends: clang but it is not installable") and every
+# `pkg install` is refused. Drop the bogus dependency; perl and make remain.
+DPG_PERL_RECIPE="$TREE/packages/dpkg/dpkg-perl.subpackage.sh"
+if [[ -f "$DPG_PERL_RECIPE" ]]; then
+  sed -i 's/^TERMUX_SUBPKG_DEPENDS="perl, clang, make"$/TERMUX_SUBPKG_DEPENDS="perl, make"/' \
+    "$DPG_PERL_RECIPE"
+  if grep -q '^TERMUX_SUBPKG_DEPENDS=.*clang' "$DPG_PERL_RECIPE"; then
+    echo "recipe-overrides: failed to remove clang from dpkg-perl dependencies" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: dpkg-perl runtime dependencies: $(grep '^TERMUX_SUBPKG_DEPENDS=' "$DPG_PERL_RECIPE")"
+fi
+
 # The official apt recipe writes the official Termux repository URLs into
 # $PREFIX/etc/apt/sources.list (the apt conffile). CodeC must never point at
 # the official Termux repository: a bare `apt-get update` on the device would
