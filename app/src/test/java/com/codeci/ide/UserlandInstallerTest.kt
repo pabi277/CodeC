@@ -37,6 +37,8 @@ class UserlandInstallerTest {
     private lateinit var server: HttpServer
     private val requested = CopyOnWriteArrayList<String>()
     private val routes = java.util.concurrent.ConcurrentHashMap<String, Route>()
+    private val specialHandlers =
+        java.util.concurrent.ConcurrentHashMap<String, (com.sun.net.httpserver.HttpExchange) -> Unit>()
 
     // POSIX modes (Kotlin has no octal literals).
     private val MODE_EXEC = 493 // 0755 (octal)
@@ -50,6 +52,10 @@ class UserlandInstallerTest {
         server.createContext("/") { exchange ->
             val path = exchange.requestURI.path
             requested.add(path)
+            specialHandlers[path]?.let { handler ->
+                handler(exchange)
+                return@createContext
+            }
             val route = routes[path] ?: Route(404, ByteArray(0))
             if (route.code in 200..299 && route.body.isNotEmpty()) {
                 exchange.sendResponseHeaders(route.code, route.body.size.toLong())
@@ -255,6 +261,46 @@ class UserlandInstallerTest {
         val status = installer.installIfNeeded()
 
         assertTrue("expected Installed, got $status", status is UserlandStatus.Installed)
+        assertFalse(File(cache, "bootstrap-aarch64.tar.gz.partial").exists())
+        assertEquals(sha256(tar), UserlandInstaller.sha256(File(cache, "bootstrap-aarch64.tar.gz")))
+    }
+
+    @Test
+    fun `interrupted download resumes via range instead of restarting`() {
+        val files = tmp.newFolder("files")
+        val cache = File(files, "cache")
+        cache.mkdirs()
+        val tar = userlandTar()
+        val cut = tar.size / 2
+        val head = tar.copyOfRange(0, cut)
+        var fullRequests = 0
+        var rangeRequests = 0
+        specialHandlers["/userland-v1/bootstrap-aarch64.tar.gz"] = { ex ->
+            val range = ex.requestHeaders.getFirst("Range")
+            if (range == null) {
+                fullRequests++
+                // Declare the full size but close after half the bytes: the
+                // client sees a truncated transfer and must resume, not
+                // restart from zero.
+                ex.sendResponseHeaders(200, tar.size.toLong())
+                ex.responseBody.use { it.write(head) }
+            } else {
+                rangeRequests++
+                val start = range.removePrefix("bytes=").substringBefore('-').trim().toLong()
+                val rest = tar.copyOfRange(start.toInt(), tar.size)
+                ex.responseHeaders.add("Content-Range", "bytes $start-${tar.size - 1}/${tar.size}")
+                ex.sendResponseHeaders(206, rest.size.toLong())
+                ex.responseBody.use { it.write(rest) }
+            }
+        }
+        serveRelease("userland-v1", "bootstrap", "aarch64", tar, sha256(tar))
+        val installer = makeInstaller(files)
+
+        val status = installer.installIfNeeded()
+
+        assertTrue("expected Installed, got $status", status is UserlandStatus.Installed)
+        assertEquals("first attempt should be a full request", 1, fullRequests)
+        assertEquals("retry should resume with a Range request", 1, rangeRequests)
         assertFalse(File(cache, "bootstrap-aarch64.tar.gz.partial").exists())
         assertEquals(sha256(tar), UserlandInstaller.sha256(File(cache, "bootstrap-aarch64.tar.gz")))
     }

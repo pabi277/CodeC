@@ -40,6 +40,9 @@ data class UserlandManifest(
     companion object {
         const val DEFAULT_BASE_URL = "https://github.com/pabi277/CodeC/releases/download"
 
+        /** Bounded retry count for transient download failures (with resume). */
+        private const val MAX_DOWNLOAD_ATTEMPTS = 5
+
         /** Phase 3 package-manager bootstrap. */
         val PHASE3 = UserlandManifest("userland-v2-dev", "bootstrap-phase3")
 
@@ -71,7 +74,9 @@ class ReleaseNotPublished(message: String = "release not published") : Exception
  * - Phase 3 bootstrap is selected when published; Phase 2 (userland-v1) is a
  *   safe automatic fallback; the app never touches official Termux assets.
  * - Downloads land in `.partial` files and are renamed only after the SHA-256
- *   sidecar matches, so an interrupted download is always re-downloadable.
+ *   sidecar matches; interrupted downloads resume via HTTP Range requests
+ *   (with a bounded retry loop) instead of restarting from zero, so a flaky
+ *   connection cannot wedge the install.
  * - Extraction happens in a staging directory; the live prefix is replaced by
  *   an atomic rename on the same filesystem and rolled back on failure.
  * - Bash/BusyBox must actually start (ELF magic alone is not enough); a
@@ -408,40 +413,111 @@ class UserlandInstaller(
     private fun isValidSha(value: String): Boolean =
         value.length == 64 && value.all { it in '0'..'9' || it in 'a'..'f' }
 
+    /**
+     * Download [url] into [dest], resuming any existing partial content with
+     * a Range request. Transient network failures (the common case on flaky
+     * mobile links) keep the partial and retry with backoff; the SHA-256
+     * gate after this call is the final authority on correctness.
+     */
     private fun downloadFile(url: String, dest: File, progress: (Int, Long) -> Unit) {
-        val conn = open(url)
-        try {
-            when (val code = conn.responseCode) {
-                in 200..299 -> { /* fall through */ }
-                404 -> throw ReleaseNotPublished(url)
-                else -> throw IllegalStateException("HTTP $code")
-            }
-            val total = conn.contentLengthLong
-            // Always start the .partial fresh: an interrupted download is
-            // recovered by re-downloading, never by trusting stale bytes.
-            FileOutputStream(dest).use { out ->
-                val buf = ByteArray(16 * 1024)
-                var got = 0L
-                var n: Int
-                val input = conn.inputStream
-                while (input.read(buf).also { n = it } != -1) {
-                    out.write(buf, 0, n)
-                    got += n
-                    val pct = if (total > 0) ((got * 100) / total).toInt() else 0
-                    progress(pct, got)
+        var lastError: Exception? = null
+        for (attempt in 1..MAX_DOWNLOAD_ATTEMPTS) {
+            val existing = if (dest.exists()) dest.length() else 0L
+            try {
+                val conn = open(url, resumeFrom = existing)
+                try {
+                    when (val code = conn.responseCode) {
+                        206 -> writeBody(
+                            conn,
+                            dest,
+                            existing,
+                            contentRangeTotal(conn, existing + conn.contentLengthLong),
+                            progress
+                        )
+                        in 200..299 -> {
+                            // The server answered with the full body: any stale
+                            // partial bytes are untrusted, so rewrite from zero.
+                            if (dest.exists()) dest.delete()
+                            writeBody(conn, dest, 0L, conn.contentLengthLong, progress)
+                        }
+                        416 -> {
+                            // Range not satisfiable: the partial already covers
+                            // the resource (or the asset shrank). Let the
+                            // SHA-256 gate decide; it deletes on mismatch.
+                            return
+                        }
+                        404 -> throw ReleaseNotPublished(url)
+                        else -> throw IllegalStateException("HTTP $code")
+                    }
+                } finally {
+                    conn.disconnect()
+                }
+                return // Success.
+            } catch (e: ReleaseNotPublished) {
+                dest.delete()
+                throw e
+            } catch (e: Exception) {
+                // Keep the partial (it is resumable), back off, and retry.
+                lastError = e
+                if (attempt < MAX_DOWNLOAD_ATTEMPTS) {
+                    try {
+                        Thread.sleep(1000L * attempt)
+                    } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                    }
                 }
             }
-        } finally {
-            conn.disconnect()
+        }
+        throw lastError ?: IllegalStateException("download failed: $url")
+    }
+
+    private fun writeBody(
+        conn: HttpURLConnection,
+        dest: File,
+        baseOffset: Long,
+        total: Long,
+        progress: (Int, Long) -> Unit
+    ) {
+        FileOutputStream(dest, baseOffset > 0).use { out ->
+            val buf = ByteArray(16 * 1024)
+            var got = baseOffset
+            var n: Int
+            val input = conn.inputStream
+            while (input.read(buf).also { n = it } != -1) {
+                out.write(buf, 0, n)
+                got += n
+                val pct = if (total > 0) ((got * 100) / total).toInt() else 0
+                progress(pct, got)
+            }
+            // A stream that ends before the declared length is a truncated
+            // transfer, not a success: surface it as a retryable error so the
+            // partial is kept and resumed on the next attempt.
+            if (total > 0 && got < total) {
+                throw java.io.IOException("unexpected EOF: $got of $total bytes")
+            }
         }
     }
 
-    private fun open(url: String): HttpURLConnection {
+    /** Total resource size from `Content-Range: bytes <s>-<e>/<total>`. */
+    private fun contentRangeTotal(conn: HttpURLConnection, fallback: Long): Long {
+        conn.getHeaderField("Content-Range")?.let { header ->
+            val slash = header.lastIndexOf('/')
+            if (slash in 0 until header.length - 1) {
+                header.substring(slash + 1).trim().toLongOrNull()?.let {
+                    if (it > 0) return it
+                }
+            }
+        }
+        return fallback
+    }
+
+    private fun open(url: String, resumeFrom: Long = 0): HttpURLConnection {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.instanceFollowRedirects = true
         conn.connectTimeout = 20_000
         conn.readTimeout = 60_000
         conn.setRequestProperty("User-Agent", "CodeC-IDE")
+        if (resumeFrom > 0) conn.setRequestProperty("Range", "bytes=$resumeFrom-")
         conn.connect()
         return conn
     }
