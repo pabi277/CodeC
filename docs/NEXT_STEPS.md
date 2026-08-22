@@ -1,6 +1,8 @@
 # CodeC — remaining work, broken into clear parts
 
-**Last updated:** 2026-08-22 · **Branch:** `arena/01a028e2-codec`
+**Last updated:** 2026-08-22 (end of day) · **Branch:** work merged to
+`main` via PR #11 (`arena/01a02962-codec`) — **Part A ✅ device-verified;
+Part B code ✅ merged, ⏳ one rebuild left**
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -48,7 +50,20 @@ A part is **done** only when:
 
 ---
 
-## Part A — Republish a clean bootstrap (unblocks fresh devices)
+## Part A — Republish a clean bootstrap — ✅ DONE (device-verified)
+
+**Status: COMPLETE (2026-08-22) — and it shipped _without_ the ~104-minute
+rebuild.** The published `userland-v2-dev` assets were repaired **in place**
+by the owner in Termux (Path 2 of
+[`PART_A_ARTIFACT_REPAIR.md`](PART_A_ARTIFACT_REPAIR.md), which patches exactly
+one line of the seeded `var/lib/dpkg/status`), then triple-verified: the
+script's internal proofs, the GitHub asset-digest API (aarch64
+`074806ad9066d4642d4779a28abf7aeb442c76ae9cb115b12b796eac9a9643b1`, x86_64
+`9f93edd06129b04cb4652dae7353b41998aee6d0e04e3d9f59bf3a4e426835ce`), and a
+clean-device test — full uninstall → fresh APK → Install userland →
+`grep clang` on the status DB finds nothing, full nano install cycle clean.
+The exit condition below is **met**; the steps below are kept for history
+only — do not redo this part.
 
 **Why.** The published `userland-v2-dev` bootstrap predates the `dpkg-perl`
 clang fix, so a *fresh* device still hits `E: dpkg-perl : Depends: clang but it
@@ -73,15 +88,69 @@ status DB no longer references `clang`.
 
 ## Part B — Fix bootstrap correctness (seed the right thing)
 
-**Status (2026-08-22): prepared on `arena/01a02962-codec`, awaiting the
-rebuild.** `plan-bootstrap.py` (closure walk mirroring pinned upstream
-`pull_package` semantics, fail-loud on unresolved deps) + reworked
+**Status (2026-08-22, end of day): code COMPLETE, merged to `main` (PR #11),
+49/49 host tests green.** `plan-bootstrap.py` (closure walk mirroring pinned
+upstream `pull_package` semantics, fail-loud on unresolved deps) + reworked
 `assemble-bootstrap.sh` (closure-only extract/seed, upstream-format
 `md5sums`, assembly-time alternatives wiring incl. the dpkg admin DB,
-format measured against live dpkg) + 17 new host tests (48/48 green).
+format measured against live dpkg) + 24 new host tests.
 Seed set = `busybox bash apt dpkg coreutils less` (see
-`CODEC_BOOTSTRAP_SEED_PACKAGES`). Remaining: merge, one ~104-min rebuild,
-republish, re-verify on device.
+`CODEC_BOOTSTRAP_SEED_PACKAGES`).
+
+**The ~104-minute rebuild is the ONLY remaining step** — it has consumed 3
+dispatches and none has produced an artifact yet:
+
+| # | Run | Duration | Failed at | Cause |
+|---|---|---|---|---|
+| 1 | `32581293757` | ~2 min | `Validate CodeC overlay` | **Our bug — fixed:** the guardrail scanner matched the repair script's own invariant *comment*; wording fixed + `tests/test_ci_guardrails.py` tripwire added so it can't recur silently. |
+| 2 | `32582311088` | ~50 min | `Build Phase 3 package-manager bootstrap` | **Upstream network flake — log-proven, not our code:** `curl: (28)` downloading `util-macros-1.20.2.tar.xz` from `xorg.freedesktop.org` (3×30 s retries all timed out). The ~40-min compile step had already passed; the assembler never ran. |
+| 3 | `32585409356` | ~48 min | `Build Phase 3 package-manager bootstrap` (~33 min into the step, both arch jobs within 30 s of each other) | **Unknown until the log is read.** The agent sandbox cannot download CI logs — see below. |
+
+### Continue here (new chat) — in this order, BEFORE spending another ~104 minutes
+
+1. **Read dispatch 3's log tail** (in Termux, where `gh` is authenticated —
+   the agent sandbox has no egress to the log hosts):
+   ```sh
+   gh run view --job 97060936792 --log | tail -120   # aarch64 job
+   # x86_64 twin, if needed: --job 97060936787
+   ```
+2. **Diagnose by the evidence, not by guessing:**
+   - `curl: (28)` / `Failed to download <url>` → another upstream flake. Add
+     a recipe-level mirror override for that host in
+     `codec-packages/scripts/apply-recipe-overrides.sh` (the attr/libacl
+     Savannah-mirror pattern is already in that file), push, then redispatch.
+   - `assemble-bootstrap.sh:` / `plan-bootstrap.py:` / `update-alternatives`
+     errors → a real bug in the Part B code: first reproduce it in a host
+     fixture test under `codec-packages/tests/`, fix, push, then redispatch.
+3. **Redispatch — from `main`** (the code is merged now):
+   ```sh
+   gh workflow run "CodeC package repository" --ref main
+   gh run watch
+   ```
+4. **On success, republish the bootstrap** (this re-runs
+   `validate-bootstrap.py` and swaps the release assets):
+   ```sh
+   gh workflow run "Publish CodeC bootstrap release" --ref main \
+     -f source_run_id=<RUN_ID> -f release_tag=userland-v2-dev
+   ```
+5. **Device verification (Part B exit condition, ~10 min).** Full app
+   uninstall → install the latest successful `Build APK` artifact → "Install
+   userland", then in the CodeC terminal, one block at a time:
+   ```sh
+   grep -n clang $PREFIX/var/lib/dpkg/status; echo exit=$?   # expect: no output, exit=1
+   pager -V                    # expect: GNU less version banner
+   which pager editor vi       # expect: all resolve under $PREFIX/bin
+   dpkg --audit                # expect: empty output
+   dpkg -l | grep -E 'doxygen|swig|tcl|tor|fontconfig'; echo exit=$?   # expect: exit=1
+   pkg update                  # NOTE: 'W: No Hash entry in Release file' is EXPECTED until Part D — not a bug
+   pkg install nano && nano --version    # expect: GNU nano, version 9.2
+   which editor                # expect: $PREFIX/bin/editor
+   pkg uninstall nano
+   printf '#include <stdio.h>\nint main(){printf("ok\\n");return 0;}\n' > t.c
+   cc t.c -o a.out && ./a.out  # expect: ok
+   ```
+   When every line matches, Part B's exit condition is met — mark it ✅ here
+   and in [`JOURNEY.md`](JOURNEY.md), then move to Part C.
 
 **Why.** The current bootstrap has three content defects, all visible on device:
 
@@ -195,14 +264,14 @@ and can tell at a glance whether they are on the trusted channel.
 
 ## Ordering summary
 
-| Part | Depends on | Effort |
+| Part | Depends on | Effort / state (2026-08-22) |
 |---|---|---|
-| A — republish clean bootstrap | nothing (recipe fix committed) | ~1 rebuild run |
-| B — bootstrap correctness | A | medium (build script) |
-| C — clean-device acceptance | A (B ideally) | device time |
-| D — M3 signing | A/B | medium |
+| A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
+| B — bootstrap correctness | A | code ✅ merged; ⏳ **one rebuild run left** (see "Continue here") |
+| C — clean-device acceptance | A ✅ (B ideally) | device time |
+| D — M3 signing | A ✅ / B | medium |
 | E — storage access | none (parallel) | medium |
 | F — confirmation/signing UX | D | small–medium |
 
-**Shortest path to "Phase 3 complete":** A → C → D. (B improves correctness
-and should land with A, but is not strictly required to pass C.)
+**Shortest path to "Phase 3 complete":** B's rebuild → C → D. (A is done;
+B's code is merged — only its build/republish/device-verify remains.)

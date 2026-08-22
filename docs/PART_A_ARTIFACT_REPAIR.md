@@ -1,10 +1,21 @@
 # Part A — repair the published bootstrap *in place* (no ~100-minute rebuild)
 
-**Status: HELD by owner decision (2026-08-22). Do NOT execute either path,
-dispatch the workflow, or upload any release asset without the owner's
-explicit go-ahead.** Prepared work only (PR #11). The on-device self-heal
-(`ShellEnvironment.pkgScript`) keeps fresh devices unblocked meanwhile.
-**Branch:** `arena/01a02962-codec`
+**Status: ✅ EXECUTED AND DEVICE-VERIFIED (2026-08-22).** The owner ran
+**Path 2** in Termux on both published tarballs and re-uploaded them. This
+document is kept as the record of *how* it was done; there is nothing left
+to execute here.
+**Branch (preparation):** `arena/01a02962-codec`, merged to `main` via PR #11.
+
+**Completion evidence (triple-verified):**
+
+| Layer | Evidence |
+|---|---|
+| Script-internal proofs | Each repair run printed the `dpkg-perl` stanza before/after, the full-tree sha256 diff touched **only** `./var/lib/dpkg/status`, the archive member list was unchanged, and `validate-bootstrap.py` passed on the repacked archives. |
+| GitHub asset-digest API | After re-upload (assets `updated=2026-08-22T13:48Z`): aarch64 `sha256:074806ad9066d4642d4779a28abf7aeb442c76ae9cb115b12b796eac9a9643b1`, x86_64 `sha256:9f93edd06129b04cb4652dae7353b41998aee6d0e04e3d9f59bf3a4e426835ce` (pre-repair: `584c64ff…d5a703`, `6baa9846…51aa33`). The two-field sidecars were regenerated to match. |
+| Clean device | Full app uninstall → fresh APK → Install userland: `grep -n clang $PREFIX/var/lib/dpkg/status; echo exit=$?` → **`exit=1`** (no `clang` anywhere; pre-repair it matched line 203). Then `pkg update / install / uninstall / reinstall nano` all clean → `GNU nano, version 9.2`; `which editor` resolves to `$PREFIX/bin/editor`. **Zero manual fixes — the exit condition is met.** |
+
+The release notes were updated remotely with the new digests and repair
+provenance.
 
 **2026-08-22 update — device evidence corrected the repair.** The real
 seeded line is `Depends: perl, clang, make, dpkg (= 1.22.6-5)` (the recipe

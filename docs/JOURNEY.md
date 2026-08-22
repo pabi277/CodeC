@@ -1,6 +1,8 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-22 · **Branch:** `arena/01a028e2-codec`
+**Last updated:** 2026-08-22 (end of day) · **Branch:** PRs #10 and #11
+merged to `main` — **Part A ✅ device-verified; Part B code ✅ merged,
+⏳ one rebuild left**
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -202,17 +204,62 @@ update-alternatives — is proven end-to-end on a real device.**
 
 ---
 
-## 5. What is *not* done
+## 5. Part A shipped without a rebuild; Part B merged, one rebuild left (2026-08-22)
+
+**Part A — DONE, and the ~104-minute build turned out to be unnecessary.**
+The published `userland-v2-dev` bootstrap predated the `dpkg-perl` clang
+recipe fix, so a fresh device's seeded status DB contained
+`Depends: perl, clang, make, dpkg (= 1.22.6-5)`. Since the *entire* content
+delta between the published artifact and a full rebuild was that single
+line, the owner ran `codec-packages/scripts/repair-bootstrap-status.sh`
+(Path 2 of `docs/PART_A_ARTIFACT_REPAIR.md`) in Termux on both published
+tarballs and re-uploaded them. Triple-verified: the script's own
+before/after tree proofs (only `./var/lib/dpkg/status` changed inside the
+archive), the GitHub asset-digest API (aarch64 `074806ad…`, x86_64
+`9f93edd0…`), and a **clean-device test** — full uninstall, fresh install,
+no `clang` anywhere in the status DB (`grep … ; echo exit=$?` → `exit=1`),
+and a complete `pkg update / install / uninstall / reinstall nano` cycle on
+nano 9.2 with `editor` resolving to `$PREFIX/bin/editor`. Release notes
+updated remotely.
+
+**Part B — all code and tests merged (PR #11); the rebuild is the only step
+left.** `plan-bootstrap.py` seeds exactly the runtime `Depends` closure of
+the four roots (measured seed set
+`CODEC_BOOTSTRAP_SEED_PACKAGES="busybox bash apt dpkg coreutils less"`) and
+fails loudly on any unresolved dependency; the reworked
+`assemble-bootstrap.sh` additionally seeds upstream-format `md5sums`, wires
+every seeded package's update-alternatives **including the dpkg admin
+database** (prepend order; slave block from the last registration; format
+measured against a live dpkg 1.21), and relativizes paths last. A
+full-corpus preflight of all 40 upstream `.alternatives` files (74 groups)
+found zero problems. Host suite: **49/49 green**.
+
+The ~104-minute rebuild has consumed **3 dispatches, no artifact yet**:
+#1 (`32581293757`) died in 90 s on our own guardrail scanner matching a
+*comment* (fixed, plus a tripwire test so it cannot recur silently); #2
+(`32582311088`) died at ~50 min on `curl: (28)` downloading
+`util-macros-1.20.2.tar.xz` from `xorg.freedesktop.org` — an upstream
+network flake, log-proven, our assembly code never ran; #3 (`32585409356`)
+died ~33 min into the same step on both arches — cause **unknown**, because
+CI logs cannot be downloaded from the agent sandbox. Reading that log
+(`gh run view --job 97060936792 --log | tail -120` in Termux) is the
+mandatory first step of the next chat, before any new dispatch. The full
+decision table and commands are in
+[`docs/NEXT_STEPS.md`](NEXT_STEPS.md) → Part B → "Continue here".
+
+---
+
+## 6. What is *not* done
 
 `pkg` works, but **Phase 3 is not complete**. The remaining work is broken into
 clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 
-1. **Republish a clean bootstrap** (one rebuild with all recipe fixes) so a
-   *fresh* device never sees the `clang` bug.
-2. **Fix bootstrap correctness** — seed only the runtime closure, run the
-   seeded packages' postinst, and include `md5sums`.
-3. **Run clean-device acceptance** — airplane mode, interrupted-install
-   recovery, and the v1 → Phase 3 upgrade path.
-4. **M3 — sign the repository** (currently HTTPS + SHA-256 only).
-5. **Phase 4 — polish** (storage access, `termux-setup-storage`-equivalent,
-   security confirmation prompt, themes, signing UX).
+1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
+2. **Bootstrap correctness** — code merged; only the rebuild + republish +
+   re-verify remains (Part B "Continue here" checklist).
+3. **Run clean-device acceptance** (Part C) — airplane mode,
+   interrupted-install recovery, and the v1 → Phase 3 upgrade path.
+4. **M3 — sign the repository** (Part D; currently HTTPS + SHA-256 only).
+5. **Phase 4 — polish** (Parts E–F: storage access,
+   `termux-setup-storage`-equivalent, security confirmation prompt, themes,
+   signing UX).
