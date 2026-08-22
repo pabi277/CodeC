@@ -364,7 +364,24 @@ object ShellEnvironment {
             if printf '%s\n' "${'$'}line" | grep -q ' -> '; then
               target="${'$'}{line#* -> }"
               case "${'$'}target" in
-                /*|*".."*) error "unsafe symlink target in ${'$'}deb: ${'$'}target" ;;
+                /*) error "unsafe absolute symlink target in ${'$'}deb: ${'$'}target" ;;
+              esac
+              # Relative targets may climb with ../ as long as they stay
+              # inside the CodeC prefix (Termux license symlinks, e.g.
+              # share/licenses/nano -> ../../LICENSES/GPL-3.0.txt). Resolve
+              # the climb against the link's directory and reject escapes.
+              resolved_dir="${'$'}{member%/*}"
+              remaining="${'$'}target"
+              while :; do
+                case "${'$'}remaining" in
+                  ../*) remaining="${'$'}{remaining#../}"; resolved_dir="${'$'}{resolved_dir%/*}" ;;
+                  ./*) remaining="${'$'}{remaining#./}" ;;
+                  *) break ;;
+                esac
+              done
+              case "${'$'}resolved_dir" in
+                data/data/com.codeci.ide/files/usr|data/data/com.codeci.ide/files/usr/*) ;;
+                *) error "unsafe symlink target in ${'$'}deb: ${'$'}target" ;;
               esac
             fi
           done < "${'$'}members"
