@@ -109,6 +109,8 @@ if ! grep -qE '^\./?bin/busybox$' "$ARCHIVE_CONTENTS"; then
   exit 1
 fi
 
-sha256sum "$OUT" | awk '{print $1}' > "${OUT}.sha256"
+# Standard two-field sidecar (hash + basename): the validator verifies the
+# sidecar names the archive, and the publish workflow / app read token 1.
+( cd "$(dirname "$OUT")" && sha256sum "$(basename "$OUT")" > "$(basename "$OUT").sha256" )
 echo "wrote $OUT"
 cat "${OUT}.sha256"

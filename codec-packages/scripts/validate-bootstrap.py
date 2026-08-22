@@ -11,7 +11,8 @@ Usage:
 
 Each archive must be named `bootstrap-phase3-<arch>.tar.gz` with
 `<arch>` in `aarch64`/`x86_64`, and must be accompanied by a
-`<archive>.sha256` sidecar whose first token is the archive SHA-256.
+`<archive>.sha256` sidecar in the standard two-field form whose first
+token is the archive SHA-256 and which names the archive file.
 """
 from __future__ import annotations
 
