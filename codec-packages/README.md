@@ -43,6 +43,15 @@ The selected format is an apt/dpkg-compatible repository with a guarded CodeC
 file-type identification). The published manifest is the only package promise;
 it includes the full source-built dependency closure.
 
+Phase 3 bootstrap roots are `busybox`, `bash`, `apt`, `dpkg`, and
+`termux-exec` (see `properties.codec.sh`). `termux-exec` is required at
+runtime: dpkg executes maintainer scripts by executing the script file, and
+Android only executes shebang scripts under the app prefix through the
+termux-exec `LD_PRELOAD` library (the official Termux bootstrap ships the same
+package). The overlay also rewrites the apt recipe's generated
+`etc/apt/sources.list` from the official Termux repository URLs to the CodeC
+development channel, so a bare `apt-get update` never points at Termux.
+
 Generate and validate a repository from `.deb` files:
 
 ```sh
@@ -57,11 +66,27 @@ path):
 ./scripts/build-package-repository.sh aarch64
 ./scripts/build-package-repository.sh x86_64
 ./scripts/build-package-manager-bootstrap.sh aarch64
+./scripts/validate-bootstrap.py dist/bootstrap-phase3-aarch64.tar.gz
 ```
 
-The separate Phase 3 bootstrap seeds CodeC-built `apt`/`dpkg` and a dpkg status
-database. It is a release artifact, not part of the APK and not a replacement for
-`userland-v1` until the clean-device gate passes.
+`validate-bootstrap.py` is the pre-release gate for bootstrap archives: it
+checks the SHA-256 sidecar, the root-level prefix layout, real ELF
+`bin/bash`/`bin/busybox`/`bin/apt-get`/`bin/dpkg`, a seeded dpkg status
+database (apt/dpkg/bash/busybox/termux-exec installed), the termux-exec
+`LD_PRELOAD` library and `libandroid-support.so`, and rejects path traversal,
+unsafe symlinks, and `com.termux`/`termux-am`/official-Termux-repository
+contamination. Host tests live in `tests/test_bootstrap.py`.
+
+The `publish-bootstrap-release.yml` workflow promotes the validated artifacts
+of a previously successful `CodeC package repository` run to the stable
+development release `userland-v2-dev` (pre-release, `userland-*` tag, no APK)
+without rebuilding: dispatch it with `source_run_id` set to that run.
+
+The separate Phase 3 bootstrap seeds CodeC-built `apt`/`dpkg`, a dpkg status
+database, and `termux-exec` (its `LD_PRELOAD` library is what lets dpkg run the
+reviewed maintainer scripts on Android). It is a release artifact, not part of
+the APK and not a replacement for `userland-v1` until the clean-device gate
+passes.
 
 These scripts never use `build-package.sh -I`. They apply only narrow source
 transport overrides for the official `attr` and `libacl` recipes when Savannah's

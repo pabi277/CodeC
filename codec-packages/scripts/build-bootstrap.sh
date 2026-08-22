@@ -71,4 +71,20 @@ else
   done
 fi
 
-"$ROOT/scripts/assemble-bootstrap.sh" "$SRC" "$ARCH" "$DIST"
+# termux-exec LD_PRELOAD library (best effort). The official termux-exec
+# recipe cannot be built in CodeC CI: its build dependency
+# `termux-core-static` is a prebuilt package that only exists on Termux's
+# private build farm, and CodeC must not use official com.termux packages.
+# A standalone build from the pinned public sources is attempted instead;
+# the bootstrap archive includes the library when it succeeds. Without it
+# the app still works (LD_PRELOAD is only exported when the library is
+# present) but dpkg maintainer scripts may fail on real devices.
+EXTRA_PREFIX_FILES=""
+if "$ROOT/scripts/build-termux-exec-preload.sh" "$SRC" "$ARCH" "$DIST/tre-preload-$ARCH"; then
+  EXTRA_PREFIX_FILES="$DIST/tre-preload-$ARCH"
+else
+  echo "WARNING: termux-exec preload build failed; publishing bootstrap without it (see logs above)" >&2
+fi
+
+CODEC_EXTRA_PREFIX_FILES="$EXTRA_PREFIX_FILES" \
+  "$ROOT/scripts/assemble-bootstrap.sh" "$SRC" "$ARCH" "$DIST"

@@ -52,10 +52,14 @@ CodeC now ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`
 
    The `./` is required (cwd is not on `PATH`). Projects live in app-private storage so `./a.out` is executable.
 4. Programs that use `scanf` / `getchar` must run in **Term**, not the editor RUN button (RUN has no keyboard into the process).
-5. `pkg` is a guarded CodeC-only frontend for the Phase 3 apt/dpkg repository. The
-   current `userland-v1` bootstrap intentionally lacks apt/dpkg, so it reports a
-   clear setup error until a Phase 3 bootstrap is released; it never uses the
-   official Termux repository.
+5. `pkg` is a guarded CodeC-only frontend for the Phase 3 apt/dpkg repository
+   (`https://pabi277.github.io/CodeC/dev`). The app installs the Phase 3
+   bootstrap release `userland-v2-dev` (SHA-256 verified, staged, atomic) when
+   it is published and automatically falls back to the Phase 2 `userland-v1`
+   shell-only userland until then — which intentionally lacks apt/dpkg, in
+   which case `pkg` reports a clear setup error. CodeC never uses the official
+   Termux repository. Phase 3 package installation is not accepted on-device
+   yet; see [docs/PHASE3_DEVICE_ACCEPTANCE.md](docs/PHASE3_DEVICE_ACCEPTANCE.md).
 
 The extra-keys row (ESC, TAB, CTRL, ALT, arrows) is there so a phone keyboard can still drive the PTY. Pinch to zoom; long-press to copy/paste.
 
@@ -82,7 +86,10 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 ## Troubleshooting
 
 > **Roadmap:** Mini-Termux plan — [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).  
-> **Phase 3 status/handoff:** [docs/PHASE3_STATUS.md](docs/PHASE3_STATUS.md).
+> **Full journey (phases 0–3):** [docs/JOURNEY.md](docs/JOURNEY.md).  
+> **Remaining work (ordered parts):** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
+> **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
+> **Phase 3 status/handoff:** [docs/PHASE3_STATUS.md](docs/PHASE3_STATUS.md).  
 > **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"

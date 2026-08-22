@@ -1,0 +1,17 @@
+diff --git a/.github/workflows/package-repository.yml b/.github/workflows/package-repository.yml
+index 8e34d36..f6c746b 100644
+--- a/.github/workflows/package-repository.yml
++++ b/.github/workflows/package-repository.yml
+@@ -102,6 +102,12 @@ jobs:
+             exit 1
+           fi
+ 
++      - name: Validate Phase 3 bootstrap archive
++        run: |
++          set -euo pipefail
++          python3 codec-packages/scripts/validate-bootstrap.py \
++            "codec-packages/dist/bootstrap-phase3-${ARCH}.tar.gz" 
++
+       - name: Upload repository artifact
+         uses: actions/upload-artifact@v4
+         with:

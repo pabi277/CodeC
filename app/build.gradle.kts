@@ -20,8 +20,8 @@ android {
     // targetSdk 28 compatibility mode so that downloaded binaries keep
     // working. CodeC is distributed via GitHub (not Play), so this is safe.
     targetSdk = 28
-    versionCode = 18
-    versionName = "1.3.14"
+    versionCode = 19
+    versionName = "1.3.15"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -93,7 +93,10 @@ android {
       useLegacyPackaging = true
     }
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  // isReturnDefaultValues: unit tests exercise error paths that log through
+  // android.util.Log; on the JVM those stubs must return 0 instead of throwing
+  // "not mocked".
+  testOptions { unitTests { isIncludeAndroidResources = true; isReturnDefaultValues = true } }
   lint {
     // CodeC is distributed from GitHub (not Google Play), and deliberately
     // targets API 28 — Termux's compatibility mode — so that the downloaded

@@ -23,6 +23,17 @@ bash
 # Phase 3 package-manager bootstrap roots. These are built from source for the
 # CodeC prefix before a new bootstrap is published; they are not official
 # prebuilt packages and are intentionally separate from userland-v1.
+#
+# termux-exec is intentionally NOT in this list: the official recipe declares
+# TERMUX_PKG_BUILD_DEPENDS="termux-core-static", a prebuilt package that only
+# exists on Termux's private build farm, so the recipe can never build in
+# CodeC CI (and official com.termux .debs are forbidden). Instead
+# build-termux-exec-preload.sh builds the LD_PRELOAD library from the pinned
+# public sources (termux-core-package v0.4.0, termux-exec-package v2.5.0)
+# with the same toolchain and merges it into the bootstrap archive
+# best-effort. The library (lib/libtermux-exec-ld-preload.so, exported as
+# LD_PRELOAD by the CodeC shell profile) is what lets dpkg execute shebang
+# maintainer scripts under the CodeC prefix on real devices.
 CODEC_PACKAGE_MANAGER_BOOTSTRAP_PACKAGES="
 busybox
 bash

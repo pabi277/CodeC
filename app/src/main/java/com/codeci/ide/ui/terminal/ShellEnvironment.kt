@@ -110,6 +110,15 @@ object ShellEnvironment {
         set -u
 
         PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        # Maintainer scripts are generated at build time with the canonical
+        # /data/data/ prefix; on a running device Android exposes the same
+        # location as /data/user/0/ (a symlink alias). Build the expected
+        # alternative specs against the canonical form so the byte check
+        # matches the generated postinst/prerm.
+        case "${'$'}PREFIX" in
+          /data/user/0/*) CANON_PREFIX="/data/data/${'$'}{PREFIX#/data/user/0/}" ;;
+          *) CANON_PREFIX="${'$'}PREFIX" ;;
+        esac
         REPOSITORY="${PACKAGE_REPOSITORY_URL}"
         SUITE="${PACKAGE_REPOSITORY_SUITE}"
         COMPONENT="${PACKAGE_REPOSITORY_COMPONENT}"
@@ -127,7 +136,38 @@ object ShellEnvironment {
         require_backend() {
           [ -x "${'$'}PREFIX/bin/apt-get" ] || error "package manager is not present in this userland. Install a Phase 3 CodeC bootstrap; never add an official Termux repository."
           [ -x "${'$'}PREFIX/bin/dpkg" ] || error "dpkg is not present in this CodeC userland; refusing to use an external package manager."
+          # dpkg executes maintainer scripts (reviewed alternatives postinst/
+          # prerm only); the kernel can only run shebang scripts under ${'$'}PREFIX
+          # with the termux-exec LD_PRELOAD library. Export it defensively so
+          # even a session started before the bootstrap update stays correct.
+          for _codec_preload in "${'$'}PREFIX/lib/libtermux-exec-ld-preload.so" "${'$'}PREFIX/lib/libtermux-exec.so"; do
+            if [ -f "${'$'}_codec_preload" ]; then export LD_PRELOAD="${'$'}_codec_preload"; break; fi
+          done
+          unset _codec_preload
           mkdir -p "${'$'}STATE" "${'$'}CACHE/partial" || error "cannot create package state under ${'$'}PREFIX"
+          # The published userland-v2-dev bootstrap predates the dpkg-perl
+          # recipe fix and seeds "Depends: perl, clang, make" into the dpkg
+          # status DB. clang is a build tool, absent from the runtime repo, so
+          # apt treats dpkg-perl as broken and refuses every install. Heal the
+          # stale entry in place so a re-extracted stale bootstrap self-repairs
+          # on first pkg use (idempotent: no-op once clang is already gone).
+          status_db="${'$'}PREFIX/var/lib/dpkg/status"
+          if [ -f "${'$'}status_db" ]; then
+            sed -i '/^Package: dpkg-perl${'$'}/,/^${'$'}/ s/ clang,//' "${'$'}status_db"
+          fi
+          # dpkg runs every maintainer script through `sh`. Termux normally
+          # gets bin/sh from termux-tools, which CodeC intentionally drops
+          # (its termux-am Android wrapper chain is unwanted). Provide the
+          # missing bin/sh here so dpkg can run the reviewed postinst/prerm.
+          [ -e "${'$'}PREFIX/bin/sh" ] || ln -s bash "${'$'}PREFIX/bin/sh" 2>/dev/null || true
+          # apt writes its EIPP plan/log under Dir::Log during the install
+          # (non-download-only) phase; the dir must exist or apt aborts.
+          mkdir -p "${'$'}PREFIX/var/log/apt" 2>/dev/null || true
+          # The official apt recipe's RM_AFTER_INSTALL drops etc/apt/apt.conf.d
+          # and etc/apt/preferences.d, and the Phase 3 bootstrap does not
+          # recreate them. apt still tries to read both and warns
+          # "DirectoryExists"; create them so apt stays quiet.
+          mkdir -p "${'$'}PREFIX/etc/apt/apt.conf.d" "${'$'}PREFIX/etc/apt/preferences.d" 2>/dev/null || true
           # Only this file is supplied to apt. sourceparts=- prevents a stale
           # sources.list.d from mixing another repository into the transaction.
           printf '%s\n' "deb [trusted=yes] ${'$'}REPOSITORY ${'$'}SUITE ${'$'}COMPONENT" > "${'$'}SOURCES"
@@ -178,21 +218,31 @@ object ShellEnvironment {
           # sidecar. A signed Release key will be added before production
           # promotion; never silently downgrade this check to HTTP or trusted
           # official Termux metadata.
-          downloader=""
-          if [ -x "${'$'}PREFIX/bin/wget" ]; then
-            downloader="${'$'}PREFIX/bin/wget"
-          elif [ -x "${'$'}PREFIX/bin/busybox" ]; then
-            downloader="${'$'}PREFIX/bin/busybox wget"
-          else
-            error "cannot verify repository integrity: CodeC wget is not installed"
-          fi
+          #
+          # HTTPS fetcher selection: the bootstrap closure ships no curl and
+          # its BusyBox wget is http/ftp-only ("not an http or ftp url"), but
+          # python3 + OpenSSL are in the closure, so python urllib is the
+          # HTTPS downloader of last resort. apt itself downloads .deb files
+          # over its own TLS transport, so only this metadata preflight
+          # needs a fetcher here.
+          fetch_metadata() {
+            dest="${'$'}1"
+            url="${'$'}2"
+            if [ -x "${'$'}PREFIX/bin/curl" ]; then
+              "${'$'}PREFIX/bin/curl" -fsSL --max-time 120 -o "${'$'}dest" "${'$'}url"
+            elif [ -x "${'$'}PREFIX/bin/python3" ]; then
+              "${'$'}PREFIX/bin/python3" -c 'import sys, urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])' "${'$'}url" "${'$'}dest"
+            elif [ -x "${'$'}PREFIX/bin/wget" ]; then
+              "${'$'}PREFIX/bin/wget" -q -O "${'$'}dest" "${'$'}url"
+            else
+              return 1
+            fi
+          }
           release="${'$'}STATE/Release.partial"
           checksum="${'$'}STATE/Release.sha256.partial"
           rm -f "${'$'}release" "${'$'}checksum"
-          # shellcheck disable=SC2086
-          ${'$'}downloader -q -O "${'$'}release" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release" || error "offline or unable to download CodeC Release metadata"
-          # shellcheck disable=SC2086
-          ${'$'}downloader -q -O "${'$'}checksum" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release.sha256" || error "CodeC Release checksum is unavailable; refusing the repository"
+          fetch_metadata "${'$'}release" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release" || error "offline or unable to download CodeC Release metadata (HTTPS required)"
+          fetch_metadata "${'$'}checksum" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release.sha256" || error "CodeC Release checksum is unavailable; refusing the repository"
           expected="${'$'}(awk 'NF { print ${'$'}1; exit }' "${'$'}checksum")"
           actual="${'$'}(sha256sum "${'$'}release" 2>/dev/null | awk '{ print ${'$'}1 }')"
           if [ -z "${'$'}actual" ] || [ "${'$'}actual" != "${'$'}expected" ]; then
@@ -223,6 +273,14 @@ object ShellEnvironment {
           return "${'$'}status"
         }
 
+        spec_in_file() {
+          # Exact byte substring check. The userland grep (BusyBox 1.38)
+          # fails to match some -F patterns that are verifiably present in
+          # the file (e.g. the alternatives spec strings), so the reviewed-
+          # spec checks do not rely on grep at all.
+          python3 -c "import sys; sys.exit(0 if sys.argv[2].encode() in open(sys.argv[1], 'rb').read() else 1)" "${'$'}1" "${'$'}2"
+        }
+
         validate_control_scripts() {
           package_name="${'$'}1"
           control_dir="${'$'}2"
@@ -242,18 +300,18 @@ object ShellEnvironment {
             *) error "maintainer scripts are forbidden for ${'$'}package_name: ${'$'}scripts" ;;
           esac
           [ ! -e "${'$'}control_dir/preinst" ] && [ ! -e "${'$'}control_dir/postrm" ] || error "${'$'}package_name has an unapproved maintainer script"
-          install_spec="--install \"${'$'}PREFIX/${'$'}alt_link\" \"${'$'}alt_name\" \"${'$'}PREFIX/${'$'}alt_target\" ${'$'}priority"
-          slave_spec="--slave \"${'$'}PREFIX/${'$'}slave_link\" \"${'$'}slave_name\" \"${'$'}PREFIX/${'$'}slave_target\""
-          remove_spec="--remove \"${'$'}alt_name\" \"${'$'}PREFIX/${'$'}alt_target\""
+          install_spec="--install \"${'$'}CANON_PREFIX/${'$'}alt_link\" \"${'$'}alt_name\" \"${'$'}CANON_PREFIX/${'$'}alt_target\" ${'$'}priority"
+          slave_spec="--slave \"${'$'}CANON_PREFIX/${'$'}slave_link\" \"${'$'}slave_name\" \"${'$'}CANON_PREFIX/${'$'}slave_target\""
+          remove_spec="--remove \"${'$'}alt_name\" \"${'$'}CANON_PREFIX/${'$'}alt_target\""
           for script in postinst prerm; do
             file="${'$'}control_dir/${'$'}script"
             [ -e "${'$'}file" ] || continue
             grep -q 'Automatically added by termux_step_create_alternatives' "${'$'}file" || error "${'$'}package_name ${'$'}script is not the reviewed alternatives script"
             if [ "${'$'}script" = postinst ]; then
-              grep -F -q -- "${'$'}install_spec" "${'$'}file" || error "unexpected ${'$'}package_name install alternative"
-              grep -F -q -- "${'$'}slave_spec" "${'$'}file" || error "unexpected ${'$'}package_name slave alternative"
+              spec_in_file "${'$'}file" "${'$'}install_spec" || error "unexpected ${'$'}package_name install alternative"
+              spec_in_file "${'$'}file" "${'$'}slave_spec" || error "unexpected ${'$'}package_name slave alternative"
             else
-              grep -F -q -- "${'$'}remove_spec" "${'$'}file" || error "unexpected ${'$'}package_name removal alternative"
+              spec_in_file "${'$'}file" "${'$'}remove_spec" || error "unexpected ${'$'}package_name removal alternative"
             fi
             grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in coreutils ${'$'}script"
             grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in coreutils ${'$'}script"
@@ -306,7 +364,24 @@ object ShellEnvironment {
             if printf '%s\n' "${'$'}line" | grep -q ' -> '; then
               target="${'$'}{line#* -> }"
               case "${'$'}target" in
-                /*|*".."*) error "unsafe symlink target in ${'$'}deb: ${'$'}target" ;;
+                /*) error "unsafe absolute symlink target in ${'$'}deb: ${'$'}target" ;;
+              esac
+              # Relative targets may climb with ../ as long as they stay
+              # inside the CodeC prefix (Termux license symlinks, e.g.
+              # share/licenses/nano -> ../../LICENSES/GPL-3.0.txt). Resolve
+              # the climb against the link's directory and reject escapes.
+              resolved_dir="${'$'}{member%/*}"
+              remaining="${'$'}target"
+              while :; do
+                case "${'$'}remaining" in
+                  ../*) remaining="${'$'}{remaining#../}"; resolved_dir="${'$'}{resolved_dir%/*}" ;;
+                  ./*) remaining="${'$'}{remaining#./}" ;;
+                  *) break ;;
+                esac
+              done
+              case "${'$'}resolved_dir" in
+                data/data/com.codeci.ide/files/usr|data/data/com.codeci.ide/files/usr/*) ;;
+                *) error "unsafe symlink target in ${'$'}deb: ${'$'}target" ;;
               esac
             fi
           done < "${'$'}members"
@@ -331,12 +406,12 @@ object ShellEnvironment {
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' "${'$'}*" > "${'$'}marker"
           verify_release_checksum
-          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || return "${'$'}?"
+          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker"; return "${'$'}?"; }
           preflight_cache
           # The package set was validated before dpkg is allowed to run. The
           # repository policy rejects maintainer scripts, so no untrusted code
           # is executed as part of this first milestone.
-          friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || return "${'$'}?"
+          friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker"; return "${'$'}?"; }
           rm -f "${'$'}marker"
           echo "pkg: installed ${'$'}*"
         }
@@ -349,9 +424,9 @@ object ShellEnvironment {
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' upgrade > "${'$'}marker"
           verify_release_checksum
-          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || return "${'$'}?"
+          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
           preflight_cache
-          friendly_apt apt_get --yes --no-install-recommends upgrade || return "${'$'}?"
+          friendly_apt apt_get --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
           rm -f "${'$'}marker"
           echo "pkg: upgraded CodeC packages"
         }
@@ -448,6 +523,13 @@ HELP
         fi
         export TMPDIR="${'$'}PREFIX/tmp"
         export PATH="${'$'}PREFIX/bin:/system/bin:/system/xbin:${'$'}PATH"
+        # termux-exec (Phase 3 bootstrap): lets the kernel execute shebang
+        # scripts under the CodeC prefix. Only export when the library is
+        # present; a dangling LD_PRELOAD would break every process.
+        for _codec_preload in "${'$'}PREFIX/lib/libtermux-exec-ld-preload.so" "${'$'}PREFIX/lib/libtermux-exec.so"; do
+          if [ -f "${'$'}_codec_preload" ]; then export LD_PRELOAD="${'$'}_codec_preload"; break; fi
+        done
+        unset _codec_preload
         export TERM="${'$'}{TERM:-xterm-256color}"
         export COLORTERM="${'$'}{COLORTERM:-truecolor}"
         export LANG="${'$'}{LANG:-C.UTF-8}"
@@ -506,6 +588,11 @@ HELP
             put("LANG", "C.UTF-8")
             put("LC_ALL", "C.UTF-8")
             put("PATH", pathParts.joinToString(":"))
+            // termux-exec (Phase 3 bootstrap): intercepts exec() so the kernel
+            // can run shebang scripts under $PREFIX (dpkg maintainer scripts,
+            // user scripts). Only set when the library exists — a dangling
+            // LD_PRELOAD would break every process.
+            termuxExecPreload(prefix)?.let { put("LD_PRELOAD", it.absolutePath) }
             put("CC_STD", normalizeStandard(standard))
             put("CC_WARN", warningFlags(warnings))
             put("CC_OPT", optimizationFlag(optimization))
@@ -533,6 +620,20 @@ HELP
     }
 
     /**
+     * Result of a launch probe. [missingLibrary] is the shared library the
+     * dynamic loader reported as absent (e.g. `libandroid-support.so`), when
+     * the failure output contains one.
+     */
+    data class LaunchDiagnostic(val ok: Boolean, val missingLibrary: String? = null)
+
+    private val MISSING_LIBRARY =
+        Regex("""library\s*["']([^"']+)["']\s*not found""")
+
+    /** Extract the missing shared-library name from loader diagnostics. */
+    fun missingLibraryFromOutput(output: String): String? =
+        MISSING_LIBRARY.find(output)?.groupValues?.get(1)
+
+    /**
      * True only when a native shell can actually start. ELF magic alone is not
      * enough: a downloaded Bash may have an absent `libandroid-support.so` or
      * another missing shared library, in which case Android's PTY would die
@@ -546,8 +647,16 @@ HELP
     }
 
     /** Try a minimal non-interactive command so the dynamic loader is tested. */
-    fun canLaunch(file: File, prefix: File, bash: Boolean): Boolean {
-        if (!isElf(file) || !file.canExecute()) return false
+    fun canLaunch(file: File, prefix: File, bash: Boolean): Boolean =
+        launchDiagnostic(file, prefix, bash).ok
+
+    /**
+     * Launch probe with diagnostics. Runs the shell with a minimal command so
+     * the dynamic loader resolves every shared library; on failure the output
+     * is scanned for the missing library name.
+     */
+    fun launchDiagnostic(file: File, prefix: File, bash: Boolean): LaunchDiagnostic {
+        if (!isElf(file) || !file.canExecute()) return LaunchDiagnostic(false)
         return try {
             val command = if (bash) {
                 arrayOf(file.absolutePath, "-c", "exit 0")
@@ -563,10 +672,31 @@ HELP
                 }
                 .redirectErrorStream(true)
                 .start()
-            process.waitFor() == 0
+            val exitCode = process.waitFor()
+            if (exitCode == 0) {
+                LaunchDiagnostic(true)
+            } else {
+                // Output is bounded (linker diagnostics are a few lines);
+                // reading after waitFor is safe.
+                val output = process.inputStream.bufferedReader().readText()
+                LaunchDiagnostic(false, missingLibraryFromOutput(output))
+            }
         } catch (_: Exception) {
-            false
+            LaunchDiagnostic(false)
         }
+    }
+
+    /**
+     * The termux-exec LD_PRELOAD library that lets the kernel execute shebang
+     * scripts under the CodeC prefix (dpkg maintainer scripts, user scripts).
+     * `null` when the userland does not carry it (Phase 2 userland).
+     */
+    fun termuxExecPreload(prefix: File): File? {
+        val lib = File(prefix, "lib")
+        val primary = File(lib, "libtermux-exec-ld-preload.so")
+        if (primary.isFile) return primary
+        val compat = File(lib, "libtermux-exec.so")
+        return if (compat.isFile) compat else null
     }
 
     /**
