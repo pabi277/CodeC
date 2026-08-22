@@ -1,0 +1,201 @@
+name: Repair CodeC bootstrap release
+
+# NOT ACTIVE IN THIS LOCATION — this file lives under codec-packages/ci/
+# because the current automation token may not push changes to
+# .github/workflows/ (GitHub requires the `workflows` permission for that
+# path). To activate it, someone with workflows permission (or the repo
+# owner via the web UI) moves it verbatim to:
+#
+#     .github/workflows/repair-bootstrap-release.yml
+#
+# and it becomes dispatchable via:
+#
+#     gh workflow run "Repair CodeC bootstrap release" --ref main
+#
+# Applies the dpkg-perl clang status-DB repair (NEXT_STEPS Part A) to an
+# already-published bootstrap release WITHOUT rerunning the ~100-minute
+# package build. The recipe override on main changes only dependency
+# metadata, so the entire content delta of a rebuild is one line in
+# var/lib/dpkg/status; codec-packages/scripts/repair-bootstrap-status.sh
+# applies that one line and proves — with sha256 diffs, archive member
+# diffs, and the repository's own validate-bootstrap.py gate — that nothing
+# else changed. Safe to re-run: each archive that is already clean is left
+# untouched ("nothing to do"), and the release notes are edited only when at
+# least one archive was actually patched.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: GitHub release tag of the bootstrap assets to repair
+        required: false
+        default: "userland-v2-dev"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Repository, bootstrap and repair tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run repository tests
+        run: python3 -m unittest discover -s codec-packages/tests -p 'test_*.py' -v
+
+  repair:
+    name: Repair ${{ inputs.release_tag }} bootstrap status DBs
+    needs: host-tests
+    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ inputs.release_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate release tag
+        run: |
+          set -euo pipefail
+          case "$TAG" in
+            userland-*) ;;
+            *)
+              echo "release tag must start with userland- (same rule as the publish workflow)" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Download the published bootstrap assets
+        run: |
+          set -euo pipefail
+          mkdir -p downloaded
+          cd downloaded
+          for arch in aarch64 x86_64; do
+            for suffix in "" ".sha256"; do
+              gh release download "$TAG" \
+                --pattern "bootstrap-phase3-${arch}.tar.gz${suffix}" --clobber
+            done
+          done
+          ls -la
+          sha256sum -c bootstrap-phase3-aarch64.tar.gz.sha256
+          sha256sum -c bootstrap-phase3-x86_64.tar.gz.sha256
+
+      - name: Capture published sha256 (pre-repair, for release notes)
+        run: |
+          set -euo pipefail
+          {
+            echo "OLD_A64=$(awk '{ print $1; exit }' downloaded/bootstrap-phase3-aarch64.tar.gz.sha256)"
+            echo "OLD_X64=$(awk '{ print $1; exit }' downloaded/bootstrap-phase3-x86_64.tar.gz.sha256)"
+          } >> "$GITHUB_ENV"
+
+      - name: Repair the status DB in each archive
+        run: |
+          set -euo pipefail
+          mkdir -p patched
+          patched_any=0
+          for arch in aarch64 x86_64; do
+            if bash codec-packages/scripts/repair-bootstrap-status.sh \
+                patched "downloaded/bootstrap-phase3-${arch}.tar.gz"; then
+              echo "bootstrap-phase3-${arch}: repaired"
+              patched_any=1
+            else
+              code=$?
+              if [ "$code" -eq 3 ]; then
+                echo "bootstrap-phase3-${arch}: already clean — left untouched"
+                rm -f "patched/bootstrap-phase3-${arch}.tar.gz" \
+                      "patched/bootstrap-phase3-${arch}.tar.gz.sha256"
+              else
+                echo "bootstrap-phase3-${arch}: repair refused/failed (exit $code)" >&2
+                exit 1
+              fi
+            fi
+          done
+          echo "PATCHED_ANY=$patched_any" >> "$GITHUB_ENV"
+          ls -la patched/
+
+      - name: Republish the repaired assets
+        if: env.PATCHED_ANY == '1'
+        run: |
+          set -euo pipefail
+          assets=()
+          for f in patched/*; do
+            [ -f "$f" ] && assets+=("$f")
+          done
+          [ "${#assets[@]}" -gt 0 ]
+          gh release upload "$TAG" "${assets[@]}" --clobber
+          echo "uploaded: ${assets[*]}"
+
+      - name: Verify the freshly published assets
+        run: |
+          set -euo pipefail
+          rm -rf verify && mkdir -p verify
+          cd verify
+          for arch in aarch64 x86_64; do
+            for suffix in "" ".sha256"; do
+              gh release download "$TAG" \
+                --pattern "bootstrap-phase3-${arch}.tar.gz${suffix}" --clobber
+            done
+            sha256sum -c "bootstrap-phase3-${arch}.tar.gz.sha256"
+          done
+          python3 ../codec-packages/scripts/validate-bootstrap.py \
+            bootstrap-phase3-aarch64.tar.gz bootstrap-phase3-x86_64.tar.gz
+          for arch in aarch64 x86_64; do
+            echo "===== published bootstrap-phase3-${arch}: dpkg-perl stanza ====="
+            tar -xzOf "bootstrap-phase3-${arch}.tar.gz" ./var/lib/dpkg/status \
+              | awk 'BEGIN{RS=""; FS="\n"} /^Package: dpkg-perl\n/ { print }'
+            if tar -xzOf "bootstrap-phase3-${arch}.tar.gz" ./var/lib/dpkg/status \
+              | grep -q clang; then
+              echo "PUBLISHED ARCHIVE STILL REFERENCES clang — repair ineffective" >&2
+              exit 1
+            fi
+          done
+          echo "published artifacts are clean and pass the bootstrap validator"
+
+      - name: Record the repair in the release notes
+        if: env.PATCHED_ANY == '1'
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --json body --jq .body > notes.md
+          python3 - <<'PY'
+          import os, re, sys
+          from pathlib import Path
+
+          notes = Path("notes.md").read_text()
+
+          def refresh(arch: str, old: str) -> str:
+              sidecar = Path(f"patched/bootstrap-phase3-{arch}.tar.gz.sha256")
+              if not sidecar.exists():
+                  return notes
+              new = sidecar.read_text().split()[0]
+              pattern = r"(\| bootstrap-phase3-" + arch + r"\.tar\.gz \| `)" + re.escape(old) + r"(` \|)"
+              updated, count = re.subn(pattern, r"\g<1>" + new + r"\g<2>", notes)
+              if count != 1:
+                  print(f"notes: hash-table row for {arch} not found or ambiguous ({count}) — leaving row as-is", file=sys.stderr)
+                  return notes
+              return updated
+
+          notes = refresh("aarch64", os.environ["OLD_A64"])
+          notes = refresh("x86_64", os.environ["OLD_X64"])
+
+          run_id = os.environ["GITHUB_RUN_ID"]
+          notes += (
+              "\n## Repairs\n\n"
+              f"- Repair run `{run_id}` of *Repair CodeC bootstrap release*: fixed the\n"
+              "  seeded dpkg status DB — the stale `dpkg-perl` entry\n"
+              "  `Depends: perl, clang, make` became `Depends: perl, make`, matching\n"
+              "  the recipe override on `main`\n"
+              "  (`codec-packages/scripts/apply-recipe-overrides.sh`). No payload file\n"
+              "  changed; verified with `sha256sum` diffs, archive member diffs, and\n"
+              "  `codec-packages/scripts/validate-bootstrap.py` on the re-downloaded\n"
+              "  assets.\n"
+          )
+          Path("notes.md").write_text(notes)
+          print("notes: repair provenance appended")
+          PY
+          gh release edit "$TAG" --notes-file notes.md
