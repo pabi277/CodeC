@@ -241,6 +241,14 @@ object ShellEnvironment {
           return "${'$'}status"
         }
 
+        spec_in_file() {
+          # Exact byte substring check. The userland grep (BusyBox 1.38)
+          # fails to match some -F patterns that are verifiably present in
+          # the file (e.g. the alternatives spec strings), so the reviewed-
+          # spec checks do not rely on grep at all.
+          python3 -c "import sys; sys.exit(0 if sys.argv[2].encode() in open(sys.argv[1], 'rb').read() else 1)" "${'$'}1" "${'$'}2"
+        }
+
         validate_control_scripts() {
           package_name="${'$'}1"
           control_dir="${'$'}2"
@@ -268,13 +276,10 @@ object ShellEnvironment {
             [ -e "${'$'}file" ] || continue
             grep -q 'Automatically added by termux_step_create_alternatives' "${'$'}file" || error "${'$'}package_name ${'$'}script is not the reviewed alternatives script"
             if [ "${'$'}script" = postinst ]; then
-              # `-e` marks the pattern explicitly: the specs begin with `--`
-              # and BusyBox grep (1.38 in the userland) misparses a leading
-              # `--` pattern even after the `--` end-of-options terminator.
-              grep -F -q -e "${'$'}install_spec" "${'$'}file" || error "unexpected ${'$'}package_name install alternative"
-              grep -F -q -e "${'$'}slave_spec" "${'$'}file" || error "unexpected ${'$'}package_name slave alternative"
+              spec_in_file "${'$'}file" "${'$'}install_spec" || error "unexpected ${'$'}package_name install alternative"
+              spec_in_file "${'$'}file" "${'$'}slave_spec" || error "unexpected ${'$'}package_name slave alternative"
             else
-              grep -F -q -e "${'$'}remove_spec" "${'$'}file" || error "unexpected ${'$'}package_name removal alternative"
+              spec_in_file "${'$'}file" "${'$'}remove_spec" || error "unexpected ${'$'}package_name removal alternative"
             fi
             grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in coreutils ${'$'}script"
             grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in coreutils ${'$'}script"
