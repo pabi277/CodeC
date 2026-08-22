@@ -145,6 +145,14 @@ object ShellEnvironment {
           done
           unset _codec_preload
           mkdir -p "${'$'}STATE" "${'$'}CACHE/partial" || error "cannot create package state under ${'$'}PREFIX"
+          # dpkg runs every maintainer script through `sh`. Termux normally
+          # gets bin/sh from termux-tools, which CodeC intentionally drops
+          # (its termux-am Android wrapper chain is unwanted). Provide the
+          # missing bin/sh here so dpkg can run the reviewed postinst/prerm.
+          [ -e "${'$'}PREFIX/bin/sh" ] || ln -s bash "${'$'}PREFIX/bin/sh" 2>/dev/null || true
+          # apt writes its EIPP plan/log under Dir::Log during the install
+          # (non-download-only) phase; the dir must exist or apt aborts.
+          mkdir -p "${'$'}PREFIX/var/log/apt" 2>/dev/null || true
           # The official apt recipe's RM_AFTER_INSTALL drops etc/apt/apt.conf.d
           # and etc/apt/preferences.d, and the Phase 3 bootstrap does not
           # recreate them. apt still tries to read both and warns
