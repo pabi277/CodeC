@@ -1,6 +1,6 @@
 # CodeC Terminal — Mini-Termux Plan
 
-> **Status:** Phase 1 **working on device** · Phase 2 `userland-v1` **released but runtime acceptance pending** · Phase 3 M1 **complete**, package/bootstrap CI **green**, bootstrap closure **complete** (apt/dpkg/termux-exec, CodeC-only sources, pre-release validation) and Android installer integration **done**; bootstrap release publication and clean-device acceptance **pending**.
+> **Status:** Phase 1 **working on device** · Phase 2 `userland-v1` **released** · Phase 3 **`pkg` verified working on device** (install/search/remove/upgrade + alternatives postinst) with the bootstrap published as `userland-v2-dev`; clean-device acceptance, bootstrap correctness, and signing **remain**. See [`JOURNEY.md`](JOURNEY.md) and [`NEXT_STEPS.md`](NEXT_STEPS.md).
 > **This-session bugs/fixes:** [docs/chat-phase1/README.md](chat-phase1/README.md).  
 > **Goal:** turn CodeC into a self-contained C IDE **with its own
 > Termux-style terminal and package manager** — install packages like `pkg install clang`

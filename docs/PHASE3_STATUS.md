@@ -1,12 +1,14 @@
 # CodeC IDE Phase 3 status and handoff
 
 **Date:** 2026-08-22  
-**Branch:** `arena/01a0248f-codec`
+**Branch:** `arena/01a028e2-codec`
 
 This is the short handoff for the next Phase 3 chat. The detailed architecture,
 security policy, trade-offs, and rollback plan remain in
 [`PHASE3_PLAN.md`](PHASE3_PLAN.md). Clean-device acceptance steps are in
-[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md).
+[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md). The full
+chronology is in [`JOURNEY.md`](JOURNEY.md); the remaining task list is in
+[`NEXT_STEPS.md`](NEXT_STEPS.md).
 
 ## Completed
 
@@ -123,12 +125,48 @@ security policy, trade-offs, and rollback plan remain in
   of failing). The device acceptance run decides whether it is required;
   dpkg maintainer scripts that need it would be the symptom.
 
+## This session — on-device debugging (2026-08-22)
+
+Installing on a real aarch64 phone and driving `pkg` end-to-end surfaced five
+bugs and two plan-changing findings. Full trace/diagnosis in
+[`PHASE3_PKG_DEBUGGING.md`](PHASE3_PKG_DEBUGGING.md). Four are fixed in app
+code (`ShellEnvironment.pkgScript()`) — no bootstrap rebuild needed:
+
+1. **`dpkg-perl : Depends: clang`** — stale bootstrap seeded the pre-fix
+   dependency; `pkg` now self-heals the status line.
+2. **`/data/user/0/` vs `/data/data/` alias** — alternatives byte-check now
+   matches the canonical prefix.
+3. **Missing `bin/sh`** — `pkg` symlinks `bin/sh → bash` (dpkg needs `sh`).
+4. **Missing `var/log/apt`** — `pkg` creates it (plus apt.conf.d/preferences.d).
+5. **Over-strict symlink preflight** — in-prefix `../` (nano license link) is
+   now allowed; only true escapes are rejected.
+
+Findings:
+- **termux-exec was NOT required** — the nano postinst ran (and registered
+  `editor`) without `libtermux-exec-ld-preload.so`.
+- **Seeded packages never ran postinst** — so `pager` is missing and seeded
+  packages fail `dpkg --audit` (no `md5sums`). Bootstrap content gap, not a
+  `pkg` defect.
+
+Verified working on device: `pkg update / search / install / uninstall /
+upgrade`, `nano --version` (GNU nano 9.2), `editor` alternative, and `cc`
+compile/run.
+
 ## Remaining work
 
-1. **Clean Android device tests** — see
-   [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md). Phase 3
-   package installation must not be claimed complete until this passes.
-2. Production repository signing / key distribution (M3).
+Broken into ordered parts in [`NEXT_STEPS.md`](NEXT_STEPS.md):
+
+1. **Part A — republish a clean bootstrap** (the `clang` recipe fix predates
+   the published `userland-v2-dev`; a fresh device still hits it until `pkg`
+   self-heals).
+2. **Part B — bootstrap correctness** (seed only the runtime closure, run
+   seeded postinst, add `md5sums`).
+3. **Part C — clean-device acceptance** ([`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md)
+   — still NOT PASSED).
+4. **Part D — M3: repository signing / key distribution.**
+
+Phase 3 is **functionally working but not complete** — do not declare it done
+until Parts A–D pass.
 
 ## Known current issue
 
@@ -197,6 +235,6 @@ locally against a realistic listing (pass) and a truncated one
 - Until that release is published, devices keep installing `userland-v1`
   (unchanged behaviour).
 - The current published Pages tree is `/CodeC/dev`, not `/CodeC/packages/dev`.
-- Keep all work on `arena/01a0248f-codec`.
+- Keep all work on `arena/01a028e2-codec`.
 - Do not add `.` to `PATH`, use official Termux repositories, overwrite `cc`,
   or replace real ELF Bash with a shim.

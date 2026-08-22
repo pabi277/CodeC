@@ -86,7 +86,9 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 ## Troubleshooting
 
 > **Roadmap:** Mini-Termux plan — [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).  
-> **Phase 3 status/handoff:** [docs/PHASE3_STATUS.md](docs/PHASE3_STATUS.md).
+> **Full journey (phases 0–3):** [docs/JOURNEY.md](docs/JOURNEY.md).  
+> **Remaining work (ordered parts):** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
+> **Phase 3 status/handoff:** [docs/PHASE3_STATUS.md](docs/PHASE3_STATUS.md).  
 > **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"
