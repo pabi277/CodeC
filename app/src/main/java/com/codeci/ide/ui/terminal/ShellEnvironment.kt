@@ -110,6 +110,15 @@ object ShellEnvironment {
         set -u
 
         PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        # Maintainer scripts are generated at build time with the canonical
+        # /data/data/ prefix; on a running device Android exposes the same
+        # location as /data/user/0/ (a symlink alias). Build the expected
+        # alternative specs against the canonical form so the byte check
+        # matches the generated postinst/prerm.
+        case "${'$'}PREFIX" in
+          /data/user/0/*) CANON_PREFIX="/data/data/${'$'}{PREFIX#/data/user/0/}" ;;
+          *) CANON_PREFIX="${'$'}PREFIX" ;;
+        esac
         REPOSITORY="${PACKAGE_REPOSITORY_URL}"
         SUITE="${PACKAGE_REPOSITORY_SUITE}"
         COMPONENT="${PACKAGE_REPOSITORY_COMPONENT}"
@@ -273,9 +282,9 @@ object ShellEnvironment {
             *) error "maintainer scripts are forbidden for ${'$'}package_name: ${'$'}scripts" ;;
           esac
           [ ! -e "${'$'}control_dir/preinst" ] && [ ! -e "${'$'}control_dir/postrm" ] || error "${'$'}package_name has an unapproved maintainer script"
-          install_spec="--install \"${'$'}PREFIX/${'$'}alt_link\" \"${'$'}alt_name\" \"${'$'}PREFIX/${'$'}alt_target\" ${'$'}priority"
-          slave_spec="--slave \"${'$'}PREFIX/${'$'}slave_link\" \"${'$'}slave_name\" \"${'$'}PREFIX/${'$'}slave_target\""
-          remove_spec="--remove \"${'$'}alt_name\" \"${'$'}PREFIX/${'$'}alt_target\""
+          install_spec="--install \"${'$'}CANON_PREFIX/${'$'}alt_link\" \"${'$'}alt_name\" \"${'$'}CANON_PREFIX/${'$'}alt_target\" ${'$'}priority"
+          slave_spec="--slave \"${'$'}CANON_PREFIX/${'$'}slave_link\" \"${'$'}slave_name\" \"${'$'}CANON_PREFIX/${'$'}slave_target\""
+          remove_spec="--remove \"${'$'}alt_name\" \"${'$'}CANON_PREFIX/${'$'}alt_target\""
           for script in postinst prerm; do
             file="${'$'}control_dir/${'$'}script"
             [ -e "${'$'}file" ] || continue
