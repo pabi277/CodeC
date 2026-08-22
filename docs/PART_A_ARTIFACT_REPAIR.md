@@ -1,6 +1,9 @@
 # Part A — repair the published bootstrap *in place* (no ~100-minute rebuild)
 
-**Status:** prepared, awaiting artifact execution (see "Execute" below).
+**Status: HELD by owner decision (2026-08-22). Do NOT execute either path,
+dispatch the workflow, or upload any release asset without the owner's
+explicit go-ahead.** Prepared work only (PR #11). The on-device self-heal
+(`ShellEnvironment.pkgScript`) keeps fresh devices unblocked meanwhile.
 **Branch:** `arena/01a02962-codec`
 
 ## Why this exists (evidence, not memory)
