@@ -145,6 +145,16 @@ object ShellEnvironment {
           done
           unset _codec_preload
           mkdir -p "${'$'}STATE" "${'$'}CACHE/partial" || error "cannot create package state under ${'$'}PREFIX"
+          # The published userland-v2-dev bootstrap predates the dpkg-perl
+          # recipe fix and seeds "Depends: perl, clang, make" into the dpkg
+          # status DB. clang is a build tool, absent from the runtime repo, so
+          # apt treats dpkg-perl as broken and refuses every install. Heal the
+          # stale entry in place so a re-extracted stale bootstrap self-repairs
+          # on first pkg use (idempotent: no-op once clang is already gone).
+          status_db="${'$'}PREFIX/var/lib/dpkg/status"
+          if [ -f "${'$'}status_db" ]; then
+            sed -i '/^Package: dpkg-perl${'$'}/,/^${'$'}/ s/ clang,//' "${'$'}status_db"
+          fi
           # dpkg runs every maintainer script through `sh`. Termux normally
           # gets bin/sh from termux-tools, which CodeC intentionally drops
           # (its termux-am Android wrapper chain is unwanted). Provide the
