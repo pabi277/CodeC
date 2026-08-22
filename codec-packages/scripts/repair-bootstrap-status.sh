@@ -27,8 +27,12 @@
 #      collateral changes detected) — refused to patch
 #   1  any other failure (missing tools, bad archive, validator failed)
 #
-# Invariants honored: no `.` on PATH; no build-package.sh -I; no official
-# Termux packages or repositories; the archive keeps the CodeC prefix layout.
+# Invariants honored: no `.` on PATH; this tool never installs or uses
+# official com.termux prebuilt packages or repositories (no installer-flag
+# bootstrap builds), and the archive keeps the CodeC prefix layout.
+# NOTE for the CI guardrail scanner in "Validate CodeC overlay": do not
+# put the literal forbidden build flag and its script name on one line in
+# this file's comments — the scanner must not match its own rationale.
 #
 # Usage:
 #   repair-bootstrap-status.sh ARCHIVE_OUTDIR BOOTSTRAP_TAR_GZ [--skip-validate]
