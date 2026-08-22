@@ -268,10 +268,13 @@ object ShellEnvironment {
             [ -e "${'$'}file" ] || continue
             grep -q 'Automatically added by termux_step_create_alternatives' "${'$'}file" || error "${'$'}package_name ${'$'}script is not the reviewed alternatives script"
             if [ "${'$'}script" = postinst ]; then
-              grep -F -q -- "${'$'}install_spec" "${'$'}file" || error "unexpected ${'$'}package_name install alternative"
-              grep -F -q -- "${'$'}slave_spec" "${'$'}file" || error "unexpected ${'$'}package_name slave alternative"
+              # `-e` marks the pattern explicitly: the specs begin with `--`
+              # and BusyBox grep (1.38 in the userland) misparses a leading
+              # `--` pattern even after the `--` end-of-options terminator.
+              grep -F -q -e "${'$'}install_spec" "${'$'}file" || error "unexpected ${'$'}package_name install alternative"
+              grep -F -q -e "${'$'}slave_spec" "${'$'}file" || error "unexpected ${'$'}package_name slave alternative"
             else
-              grep -F -q -- "${'$'}remove_spec" "${'$'}file" || error "unexpected ${'$'}package_name removal alternative"
+              grep -F -q -e "${'$'}remove_spec" "${'$'}file" || error "unexpected ${'$'}package_name removal alternative"
             fi
             grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in coreutils ${'$'}script"
             grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in coreutils ${'$'}script"
