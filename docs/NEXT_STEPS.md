@@ -73,6 +73,16 @@ status DB no longer references `clang`.
 
 ## Part B — Fix bootstrap correctness (seed the right thing)
 
+**Status (2026-08-22): prepared on `arena/01a02962-codec`, awaiting the
+rebuild.** `plan-bootstrap.py` (closure walk mirroring pinned upstream
+`pull_package` semantics, fail-loud on unresolved deps) + reworked
+`assemble-bootstrap.sh` (closure-only extract/seed, upstream-format
+`md5sums`, assembly-time alternatives wiring incl. the dpkg admin DB,
+format measured against live dpkg) + 17 new host tests (48/48 green).
+Seed set = `busybox bash apt dpkg coreutils less` (see
+`CODEC_BOOTSTRAP_SEED_PACKAGES`). Remaining: merge, one ~104-min rebuild,
+republish, re-verify on device.
+
 **Why.** The current bootstrap has three content defects, all visible on device:
 
 1. **Build-dependency pollution.** `assemble-bootstrap.sh` seeds *every* built

@@ -41,6 +41,26 @@ apt
 dpkg
 "
 
+# Phase 3 bootstrap SEED set (Part B): only the transitive Depends closure
+# of these packages is extracted into the bootstrap and recorded in the
+# dpkg status DB. The first Phase 3 bootstrap extracted/seeded every built
+# .deb — including build tools (doxygen, swig, tcl, tor, …) — bloating the
+# archive (~174 MB) and polluting `dpkg -l`; see docs/NEXT_STEPS.md Part B.
+#
+# coreutils and less join the four manager roots because the terminal UX
+# expects their alternatives to exist on a fresh device: `pager` must be
+# the real GNU less (not only busybox's pager provider), and coreutils
+# arrives via apt's dependency chain regardless. nano is NOT seeded — its
+# `editor` alternative is wired by the real `pkg install nano` postinst.
+CODEC_BOOTSTRAP_SEED_PACKAGES="
+busybox
+bash
+apt
+dpkg
+coreutils
+less
+"
+
 # Curated Phase 3 repository roots. The generated repository also contains the
 # exact source-built dependency closure; only the generated manifest is a
 # promise to users.
