@@ -12,6 +12,42 @@ means the exit condition is verified, not just the code written.
 
 ---
 
+## How to use this file (verification-first — read before acting)
+
+1. **Start from `prompt.md`** (repo root). Paste it as the first message of a
+   new chat. It encodes the self-distrust protocol and the order of work below.
+2. **Verify state before acting.** Nothing in this file is true until confirmed
+   against the repo: `git status`, `git ls-remote origin`, `gh pr list`,
+   `gh run list`. CI state and published releases drift — check them.
+3. **Evidence before hypothesis.** If something fails, capture the actual
+   output (device Term, CI log, file contents) before diagnosing. Do not commit
+   a fix on a guess.
+4. **Do not redo completed work.** Anything marked COMPLETE / ✅ in
+   [`JOURNEY.md`](JOURNEY.md) and the handoffs is done. Only revisit it if the
+   same symptom reappears AND you have evidence it is a regression.
+
+## Guardrails — do not (violating any of these is a bug, not a shortcut)
+
+- Do **not** add `.` to `PATH`.
+- Do **not** use `build-package.sh -I` (installs official `com.termux` debs).
+- Do **not** use official Termux repositories or `com.termux` binaries.
+- Do **not** overwrite `cc` or replace real ELF `bash` with a shim.
+- Do **not** change the TCC link order or move `-o` from last place.
+- Do **not** bundle the bootstrap in the APK.
+- Do **not** start the ~100-minute package build without an explicit user
+  confirmation — and check `gh run list` for an existing run first.
+- Do **not** open a second PR in parallel; work from the current branch state.
+
+## Definition of done (applies to every part)
+
+A part is **done** only when:
+
+1. its **Exit condition** is met on the right target (device/CI/repo), and
+2. no **invariant** above was violated, and
+3. the change is committed and pushed with a message naming the part.
+
+---
+
 ## Part A — Republish a clean bootstrap (unblocks fresh devices)
 
 **Why.** The published `userland-v2-dev` bootstrap predates the `dpkg-perl`

@@ -10,6 +10,10 @@ remain in [`docs/chat-phase1/`](chat-phase1/README.md),
 [`docs/PHASE3_PKG_DEBUGGING.md`](PHASE3_PKG_DEBUGGING.md). Remaining work is
 broken into ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md).
 
+**Starting a new chat?** Paste [`prompt.md`](../prompt.md) as the first
+message — it encodes the self-distrust protocol and the order of work, so the
+next agent verifies state before acting and does not redo completed work.
+
 ---
 
 ## 0. The idea
