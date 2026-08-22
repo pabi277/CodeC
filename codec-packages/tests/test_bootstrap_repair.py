@@ -25,8 +25,13 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "codec-packages" / "scripts" / "repair-bootstrap-status.sh"
 ARCHIVE_NAME = "bootstrap-phase3-aarch64.tar.gz"
 
-STALE_DEPENDS = "Depends: perl, clang, make"
-FIXED_DEPENDS = "Depends: perl, make"
+# The real seeded shape, from device evidence on the published bootstrap:
+# the recipe appends a versioned cross-dependency after "make".
+STALE_DEPENDS = "Depends: perl, clang, make, dpkg (= 1.22.6-5)"
+FIXED_DEPENDS = "Depends: perl, make, dpkg (= 1.22.6-5)"
+# A shorter variant (no versioned tail) must be repaired identically.
+SHORT_STALE_DEPENDS = "Depends: perl, clang, make"
+SHORT_FIXED_DEPENDS = "Depends: perl, make"
 
 BASH_STANZA = (
     "Package: bash\n"
@@ -158,6 +163,16 @@ class RepairBootstrapStatusTest(unittest.TestCase):
         for name in original:
             self.assertEqual(original[name][0], patched[name][0],
                              f"mode drifted on {name}")
+
+    def test_short_form_repaired_identically(self) -> None:
+        short = self.work / "short"
+        short.mkdir()
+        archive = make_archive(short, dpkg_perl_depends=SHORT_STALE_DEPENDS)
+        result = run_repair(short, archive)
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        fixed_status = extract_status(short / "out" / ARCHIVE_NAME, short)
+        self.assertIn(SHORT_FIXED_DEPENDS, fixed_status)
+        self.assertNotIn("clang", fixed_status)
 
     def test_idempotent_refusal_when_already_clean(self) -> None:
         clean = self.work / "clean"

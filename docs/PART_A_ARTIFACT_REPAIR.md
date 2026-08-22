@@ -6,6 +6,16 @@ explicit go-ahead.** Prepared work only (PR #11). The on-device self-heal
 (`ShellEnvironment.pkgScript`) keeps fresh devices unblocked meanwhile.
 **Branch:** `arena/01a02962-codec`
 
+**2026-08-22 update — device evidence corrected the repair.** The real
+seeded line is `Depends: perl, clang, make, dpkg (= 1.22.6-5)` (the recipe
+appends a versioned cross-dependency), not the previously assumed exact
+`Depends: perl, clang, make`. The first exact-line guard would have
+*refused* the real artifact (by design) — the script now mirrors the app's
+self-heal (`s/ clang,//` inside the `dpkg-perl` paragraph) and the tests
+cover both shapes. First user's Stage-1 attempt only downloaded the
+assets; remote check confirmed the release objects were never modified
+(asset `updated_at` unchanged, 2026-08-22T03:57Z).
+
 ## Why this exists (evidence, not memory)
 
 - Release `userland-v2-dev` was published from build run `32546404876`

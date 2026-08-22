@@ -6,16 +6,19 @@
 # was built before the dpkg-perl recipe override dropped the bogus *runtime*
 # dependency on clang (codec-packages/scripts/apply-recipe-overrides.sh).
 # assemble-bootstrap.sh seeds each built package's control fields verbatim
-# into var/lib/dpkg/status, so the published archive contains the stale line
+# into var/lib/dpkg/status, so the published archive contains a stale
+# Depends line inside the `Package: dpkg-perl` stanza. Device evidence
+# (2026-08-22, grep on a freshly extracted prefix) shows its true shape:
 #
-#   Depends: perl, clang, make
+#   Depends: perl, clang, make, dpkg (= 1.22.6-5)
 #
-# inside the `Package: dpkg-perl` stanza. apt treats the userland as broken
-# ("clang ... is not installable") on every install until `pkg` self-heals it.
-# The recipe fix changes only dependency metadata (TERMUX_SUBPKG_DEPENDS), so
-# the complete content delta of a full rebuild is exactly this one line in the
-# status DB. This script applies that one-line repair to the published
-# artifact directly and proves, with evidence, that nothing else changed.
+# apt treats the userland as broken ("clang ... is not installable") on
+# every install until `pkg` self-heals it. The recipe fix changes only
+# dependency metadata (TERMUX_SUBPKG_DEPENDS), so the complete content
+# delta of a full rebuild is exactly that one line in the status DB. This
+# script applies the same one-line repair to the published artifact
+# directly (same transformation as the app's self-heal: remove the
+# ` clang,` element) and proves, with evidence, that nothing else changed.
 #
 # Exit codes:
 #   0  archive was repaired (patched/ output ready)
@@ -103,18 +106,38 @@ evidence_stanza() {
 echo "repair: evidence BEFORE patching:"
 evidence_stanza
 
-# Guards: exactly one stale line of the exact expected shape, and no other
-# clang reference anywhere in the status DB. Evidence mismatch => refuse.
-STALE_LINE='Depends: perl, clang, make'
-stale_count="$(grep -c "^$STALE_LINE\$" "$STAGE/$STATUS_REL" || true)"
+# The stale line's real shape, from device evidence (grep on the seeded
+# status DB of the published bootstrap):
+#
+#   Package: dpkg-perl
+#   ...
+#   Depends: perl, clang, make, dpkg (= 1.22.6-5)
+#
+# The recipe appends a versioned cross-dependency, so the exact-line guard
+# must NOT assume the line ends at "make". The repair therefore mirrors the
+# app's on-device self-heal exactly (ShellEnvironment.pkgScript): inside the
+# `Package: dpkg-perl` paragraph only, remove the single ` clang,` element
+# from the Depends line, leaving `Depends: perl, make, dpkg (= 1.22.6-5)`.
+
+# Guards: exactly one clang reference in the entire status DB, and it must
+# sit on the dpkg-perl Depends line as a separate ` clang,` element.
+# Evidence mismatch => refuse; already clean => nothing to do.
 clang_count="$(grep -c "clang" "$STAGE/$STATUS_REL" || true)"
 
-if [[ "$stale_count" == "0" && "$clang_count" == "0" ]]; then
+if [[ "$clang_count" == "0" ]]; then
   echo "repair: status DB is already clean (no clang reference) — nothing to do"
   exit 3
 fi
-if [[ "$stale_count" != "1" || "$clang_count" != "1" ]]; then
-  echo "repair: unexpected evidence: stale-line matches=$stale_count clang matches=$clang_count (expected exactly 1/1)" >&2
+if [[ "$clang_count" != "1" ]]; then
+  echo "repair: unexpected evidence: clang matches=$clang_count (expected exactly 1)" >&2
+  grep -n "clang" "$STAGE/$STATUS_REL" >&2 || true
+  echo "repair: refusing to patch by guesswork" >&2
+  exit 4
+fi
+if ! awk 'BEGIN{RS=""}
+          /^Package: dpkg-perl\n/ && /\nDepends: [^\n]* clang,/ { found=1 }
+          END{ exit !found }' "$STAGE/$STATUS_REL"; then
+  echo "repair: unexpected evidence: the single clang reference is not a ' clang,' element on the dpkg-perl Depends line:" >&2
   grep -n "clang" "$STAGE/$STATUS_REL" >&2 || true
   echo "repair: refusing to patch by guesswork" >&2
   exit 4
@@ -122,17 +145,15 @@ fi
 
 cp "$STAGE/$STATUS_REL" "$WORKDIR/status.before"
 
-# Patch only the dpkg-perl paragraph; replace is anchored to the full line
-# and must fire exactly once. awk paragraph mode rewrites the file with
-# canonical single-blank-line separators, which is byte-identical to the
-# assembler's format (dpkg-deb -f + 'Status: install ok installed\n\n').
+# Patch only the dpkg-perl paragraph: remove exactly one ` clang,` element.
+# The whole-file clang count is already proven to be 1 and located on that
+# Depends line, so sub() can only fire there. awk paragraph mode rewrites
+# the file with canonical single-blank-line separators, byte-identical to
+# the assembler's format (dpkg-deb -f + 'Status: install ok installed\n\n').
 awk '
   BEGIN { RS=""; ORS="\n\n"; total=0 }
   /^Package: dpkg-perl\n/ {
-    $0 = $0 "\n"
-    n = gsub(/\nDepends: perl, clang, make\n/, "\nDepends: perl, make\n")
-    sub(/\n$/, "")
-    total += n
+    total += sub(/ clang,/, "")
   }
   { print }
   END { if (total != 1) exit 20 }
