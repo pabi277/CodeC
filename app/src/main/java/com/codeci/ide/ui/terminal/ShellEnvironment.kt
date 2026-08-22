@@ -186,21 +186,31 @@ object ShellEnvironment {
           # sidecar. A signed Release key will be added before production
           # promotion; never silently downgrade this check to HTTP or trusted
           # official Termux metadata.
-          downloader=""
-          if [ -x "${'$'}PREFIX/bin/wget" ]; then
-            downloader="${'$'}PREFIX/bin/wget"
-          elif [ -x "${'$'}PREFIX/bin/busybox" ]; then
-            downloader="${'$'}PREFIX/bin/busybox wget"
-          else
-            error "cannot verify repository integrity: CodeC wget is not installed"
-          fi
+          #
+          # HTTPS fetcher selection: the bootstrap closure ships no curl and
+          # its BusyBox wget is http/ftp-only ("not an http or ftp url"), but
+          # python3 + OpenSSL are in the closure, so python urllib is the
+          # HTTPS downloader of last resort. apt itself downloads .deb files
+          # over its own TLS transport, so only this metadata preflight
+          # needs a fetcher here.
+          fetch_metadata() {
+            dest="${'$'}1"
+            url="${'$'}2"
+            if [ -x "${'$'}PREFIX/bin/curl" ]; then
+              "${'$'}PREFIX/bin/curl" -fsSL --max-time 120 -o "${'$'}dest" "${'$'}url"
+            elif [ -x "${'$'}PREFIX/bin/python3" ]; then
+              "${'$'}PREFIX/bin/python3" -c 'import sys, urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])' "${'$'}url" "${'$'}dest"
+            elif [ -x "${'$'}PREFIX/bin/wget" ]; then
+              "${'$'}PREFIX/bin/wget" -q -O "${'$'}dest" "${'$'}url"
+            else
+              return 1
+            fi
+          }
           release="${'$'}STATE/Release.partial"
           checksum="${'$'}STATE/Release.sha256.partial"
           rm -f "${'$'}release" "${'$'}checksum"
-          # shellcheck disable=SC2086
-          ${'$'}downloader -q -O "${'$'}release" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release" || error "offline or unable to download CodeC Release metadata"
-          # shellcheck disable=SC2086
-          ${'$'}downloader -q -O "${'$'}checksum" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release.sha256" || error "CodeC Release checksum is unavailable; refusing the repository"
+          fetch_metadata "${'$'}release" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release" || error "offline or unable to download CodeC Release metadata (HTTPS required)"
+          fetch_metadata "${'$'}checksum" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release.sha256" || error "CodeC Release checksum is unavailable; refusing the repository"
           expected="${'$'}(awk 'NF { print ${'$'}1; exit }' "${'$'}checksum")"
           actual="${'$'}(sha256sum "${'$'}release" 2>/dev/null | awk '{ print ${'$'}1 }')"
           if [ -z "${'$'}actual" ] || [ "${'$'}actual" != "${'$'}expected" ]; then
