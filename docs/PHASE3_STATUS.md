@@ -1,6 +1,6 @@
 # CodeC IDE Phase 3 status and handoff
 
-**Date:** 2026-08-21  
+**Date:** 2026-08-22  
 **Branch:** `arena/01a0248f-codec`
 
 This is the short handoff for the next Phase 3 chat. The detailed architecture,
@@ -105,28 +105,30 @@ security policy, trade-offs, and rollback plan remain in
   shim.
 - Phase 1 TCC `cc`, executable projects, and offline startup remain intact.
 
+### Phase 3 bootstrap rebuilt and published (2026-08-22)
+
+- The approved rebuild ran green on `arena/01a0248f-codec`
+  (run `32546404876`, commit `9d7be9d`): four bootstrap roots
+  (`busybox`, `bash`, `apt`, `dpkg`) plus the full source-built closure for
+  `aarch64` and `x86_64`, CodeC-only `sources.list`, seeded dpkg status
+  database, and in-prefix symlinks relativized at assembly time.
+- The artifacts were promoted to the pre-release
+  **`userland-v2-dev`** (release run `32550349154`) with
+  `bootstrap-phase3-{aarch64,x86_64}.tar.gz` and their two-field
+  SHA-256 sidecars; `userland-v1` remains "Latest", so the Phase 2
+  fallback is untouched.
+- The termux-exec LD_PRELOAD library is best-effort: the official recipe
+  needs a Termux-farm-only prebuilt, so this release may carry the archive
+  without `lib/libtermux-exec-ld-preload.so` (the validator warns instead
+  of failing). The device acceptance run decides whether it is required;
+  dpkg maintainer scripts that need it would be the symptom.
+
 ## Remaining work
 
-The Arena GitHub App lacks both the `workflows` permission and
-`actions:write` (workflow dispatch is rejected with 403), so the two
-workflow-driven steps below must be done from the GitHub UI or by granting
-those permissions to the Arena App.
-
-1. **Rebuild the Phase 3 bootstrap** with the completed closure
-   (`busybox`, `bash`, `apt`, `dpkg`, `termux-exec`). GitHub UI: *CodeC* →
-   Actions → **CodeC package repository** → *Run workflow* → branch
-   `arena/01a0248f-codec`, `publish = false` (~80 min). The previous
-   artifacts (run `32469769089`) are proven incomplete for acceptance: no
-   termux-exec and an official-Termux-repository `sources.list` (both fixed in
-   the build scripts, which is why a rebuild is required).
-2. **Publish the rebuilt Phase 3 bootstrap as the `userland-v2-dev` release.**
-   The publishing workflow is written but **could not be pushed** (no
-   `workflows` permission): copy `ci-pending/publish-bootstrap-release.yml`
-   into `.github/workflows/` (see [`ci-pending/`](ci-pending/README.md)), then
-   dispatch it with the successful rebuilt run's ID as `source_run_id`.
-3. **Clean Android device tests** — see
-   [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md).
-4. Production repository signing / key distribution (M3).
+1. **Clean Android device tests** — see
+   [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md). Phase 3
+   package installation must not be claimed complete until this passes.
+2. Production repository signing / key distribution (M3).
 
 ## Known current issue
 
