@@ -136,6 +136,11 @@ object ShellEnvironment {
           done
           unset _codec_preload
           mkdir -p "${'$'}STATE" "${'$'}CACHE/partial" || error "cannot create package state under ${'$'}PREFIX"
+          # The official apt recipe's RM_AFTER_INSTALL drops etc/apt/apt.conf.d
+          # and etc/apt/preferences.d, and the Phase 3 bootstrap does not
+          # recreate them. apt still tries to read both and warns
+          # "DirectoryExists"; create them so apt stays quiet.
+          mkdir -p "${'$'}PREFIX/etc/apt/apt.conf.d" "${'$'}PREFIX/etc/apt/preferences.d" 2>/dev/null || true
           # Only this file is supplied to apt. sourceparts=- prevents a stale
           # sources.list.d from mixing another repository into the transaction.
           printf '%s\n' "deb [trusted=yes] ${'$'}REPOSITORY ${'$'}SUITE ${'$'}COMPONENT" > "${'$'}SOURCES"
@@ -357,12 +362,12 @@ object ShellEnvironment {
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' "${'$'}*" > "${'$'}marker"
           verify_release_checksum
-          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || return "${'$'}?"
+          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker"; return "${'$'}?"; }
           preflight_cache
           # The package set was validated before dpkg is allowed to run. The
           # repository policy rejects maintainer scripts, so no untrusted code
           # is executed as part of this first milestone.
-          friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || return "${'$'}?"
+          friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker"; return "${'$'}?"; }
           rm -f "${'$'}marker"
           echo "pkg: installed ${'$'}*"
         }
@@ -375,9 +380,9 @@ object ShellEnvironment {
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' upgrade > "${'$'}marker"
           verify_release_checksum
-          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || return "${'$'}?"
+          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
           preflight_cache
-          friendly_apt apt_get --yes --no-install-recommends upgrade || return "${'$'}?"
+          friendly_apt apt_get --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
           rm -f "${'$'}marker"
           echo "pkg: upgraded CodeC packages"
         }
