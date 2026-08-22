@@ -40,9 +40,6 @@ data class UserlandManifest(
     companion object {
         const val DEFAULT_BASE_URL = "https://github.com/pabi277/CodeC/releases/download"
 
-        /** Bounded retry count for transient download failures (with resume). */
-        private const val MAX_DOWNLOAD_ATTEMPTS = 5
-
         /** Phase 3 package-manager bootstrap. */
         val PHASE3 = UserlandManifest("userland-v2-dev", "bootstrap-phase3")
 
@@ -528,6 +525,9 @@ class UserlandInstaller(
         private const val MARKER_ARCH = ".userland-arch"
         private const val LEGACY_MARKER = ".userland-v-userland-v1"
         private const val MIN_FREE_BYTES = 48L * 1024 * 1024
+
+        /** Bounded retry count for transient download failures (with resume). */
+        private const val MAX_DOWNLOAD_ATTEMPTS = 5
 
         /** Thrown by [installRelease] callers when Phase 3 must fall back to Phase 2. */
         internal class FallbackToPhase2(message: String) : Exception(message)
