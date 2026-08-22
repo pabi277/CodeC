@@ -56,6 +56,35 @@ if [[ ! -x "$PREFIX_STAGE/bin/busybox" ]]; then
   exit 1
 fi
 
+# Some packages (e.g. termux-keyring) ship symlinks whose targets are the
+# absolute device prefix path baked into the .deb. Relativize every target
+# that falls inside the extracted prefix so the archive carries no absolute
+# symlink targets and stays correct no matter where the prefix lives.
+PREFIX_ABS="/data/data/com.codeci.ide/files/usr"
+while IFS= read -r link; do
+  target="$(readlink "$link")"
+  case "$target" in
+    "$PREFIX_ABS"/*)
+      inner="${target#"$PREFIX_ABS"/}"
+      rel_dir="$(dirname "${link#"$PREFIX_STAGE"/}")"
+      if [[ "$rel_dir" == "." ]]; then
+        depth=0
+      else
+        IFS=/ read -r -a _segs <<< "$rel_dir"
+        depth=${#_segs[@]}
+      fi
+      climb=""
+      _i=0
+      while [ "$_i" -lt "$depth" ]; do
+        climb="../$climb"
+        _i=$((_i + 1))
+      done
+      ln -sfn "${climb}${inner}" "$link"
+      echo "assemble: relativized symlink $(basename "$link") -> ${climb}${inner}"
+      ;;
+  esac
+done < <(find "$PREFIX_STAGE" -type l)
+
 # The app extracts this archive directly into its $PREFIX. Therefore the
 # archive root must contain bin/, lib/, etc/, not data/data/.../files/usr/.
 BOOTSTRAP_NAME="${CODEC_BOOTSTRAP_NAME:-bootstrap}"

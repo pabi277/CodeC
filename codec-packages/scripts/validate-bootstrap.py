@@ -17,6 +17,7 @@ token is the archive SHA-256 and which names the archive file.
 from __future__ import annotations
 
 import hashlib
+import posixpath
 import re
 import sys
 import tarfile
@@ -133,12 +134,16 @@ def check_required(names: List[str]) -> None:
         raise BootstrapError("archive is missing apt (bin/apt or bin/apt-get)")
 
 
-def check_elf_members(tar: tarfile.TarFile, names: List[str]) -> None:
+def check_elf_members(
+    tar: tarfile.TarFile, by_name: Dict[str, tarfile.TarInfo], names: List[str]
+) -> None:
     name_set = set(names)
     for required in ("bin/bash", "bin/busybox", "bin/apt-get", "bin/dpkg"):
         if required not in name_set:
             continue
-        info = tar.getmember(required)
+        info = by_name.get(required)
+        if info is None:
+            raise BootstrapError(f"cannot read {required} from the archive")
         if not info.isreg():
             raise BootstrapError(f"{required} is not a regular file in the archive")
         stream = tar.extractfile(info)
@@ -154,7 +159,16 @@ def check_symlinks(members: Iterable[tarfile.TarInfo]) -> None:
         if not member.issym() and not member.islnk():
             continue
         linkname = member.linkname
-        if linkname.startswith("/") or ".." in linkname.split("/"):
+        if linkname.startswith("/"):
+            raise BootstrapError(
+                f"unsafe symlink target in archive: {member.name} -> {linkname}"
+            )
+        # Relative targets may climb with ".." as long as the resolved path
+        # stays inside the archive root (e.g. the termux-keyring
+        # trusted.gpg.d link, relativized to the prefix by the builder).
+        base = posixpath.dirname(_norm(member.name))
+        resolved = posixpath.normpath(posixpath.join(base, linkname))
+        if resolved.startswith(".."):
             raise BootstrapError(
                 f"unsafe symlink target in archive: {member.name} -> {linkname}"
             )
@@ -165,10 +179,13 @@ def check_symlinks(members: Iterable[tarfile.TarInfo]) -> None:
                 )
 
 
-def check_dpkg_status(tar: tarfile.TarFile, names: List[str]) -> None:
+def check_dpkg_status(
+    tar: tarfile.TarFile, by_name: Dict[str, tarfile.TarInfo], names: List[str]
+) -> None:
     if "var/lib/dpkg/status" not in set(names):
         raise BootstrapError("archive is missing var/lib/dpkg/status")
-    stream = tar.extractfile(tar.getmember("var/lib/dpkg/status"))
+    status_info = by_name.get("var/lib/dpkg/status")
+    stream = tar.extractfile(status_info) if status_info is not None else None
     if stream is None:
         raise BootstrapError("cannot read var/lib/dpkg/status from the archive")
     stanzas: Dict[str, str] = {}
@@ -198,22 +215,22 @@ def check_dpkg_status(tar: tarfile.TarFile, names: List[str]) -> None:
                 f"dpkg status database does not mark {package} as installed"
             )
     arch_line = None
-    stream = tar.extractfile(tar.getmember("var/lib/dpkg/arch"))
+    arch_info = by_name.get("var/lib/dpkg/arch")
+    stream = tar.extractfile(arch_info) if arch_info is not None else None
     if stream is not None:
         arch_line = stream.read().decode("utf-8", "replace").strip()
         if arch_line not in SUPPORTED_ARCHES:
             raise BootstrapError(f"unexpected dpkg architecture: {arch_line!r}")
 
 
-def check_contamination(tar: tarfile.TarFile, names: List[str]) -> None:
+def check_contamination(
+    tar: tarfile.TarFile, by_name: Dict[str, tarfile.TarInfo], names: List[str]
+) -> None:
     for name in names:
         if not name or name.endswith("/"):
             continue
-        try:
-            info = tar.getmember(name)
-        except KeyError:
-            continue
-        if not info.isreg():
+        info = by_name.get(name)
+        if info is None or not info.isreg():
             continue
         stream = tar.extractfile(info)
         if stream is None:
@@ -271,11 +288,21 @@ def validate(archive: Path) -> str:
     with tarfile.open(archive, "r:gz") as tar:
         members = tar.getmembers()
         names = check_listing(members)
+        # Member lookup keyed by normalized name: the archive may store
+        # entries with or without a leading "./" (tar -C dir . produces
+        # the latter), and raw TarFile.getmember only matches exact names.
+        by_name: Dict[str, tarfile.TarInfo] = {}
+        for member in members:
+            norm = _norm(member.name)
+            if norm:
+                # Last entry wins, matching tarfile.getmember() and tar
+                # extraction semantics for duplicate member names.
+                by_name[norm] = member
         check_required(names)
         check_symlinks(members)
-        check_elf_members(tar, names)
-        check_dpkg_status(tar, names)
-        check_contamination(tar, names)
+        check_elf_members(tar, by_name, names)
+        check_dpkg_status(tar, by_name, names)
+        check_contamination(tar, by_name, names)
 
     print(
         f"validated bootstrap: {archive.name} "

@@ -59,6 +59,25 @@ def _add_symlink(tar: tarfile.TarFile, name: str, target: str) -> None:
     tar.addfile(info)
 
 
+def _norm_name(name: str) -> str:
+    while name.startswith("./"):
+        name = name[2:]
+    return name.lstrip("/")
+
+
+def retar_dot_prefix(src: Path, dst: Path) -> None:
+    """Rewrite an archive so every member carries a leading "./" the way
+    `tar -C dir .` (used by assemble-bootstrap.sh) produces it."""
+    with tarfile.open(src, "r:gz") as fin, tarfile.open(dst, "w:gz") as fout:
+        for member in fin.getmembers():
+            member.name = "./" + _norm_name(member.name)
+            if member.isreg():
+                data = fin.extractfile(member)
+                fout.addfile(member, data)
+            else:
+                fout.addfile(member)
+
+
 def make_bootstrap(
     path: Path,
     *,
@@ -247,6 +266,70 @@ class BootstrapValidationTest(unittest.TestCase):
             result = run_validator(archive)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("symlink", result.stderr)
+
+    def test_rejects_symlink_escaping_archive_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def escaping_link(tar: tarfile.TarFile) -> None:
+                _add_symlink(tar, "etc/apt/trusted.gpg.d/evil", "../../../../etc/passwd")
+
+            archive = self._archive(root, extra_members=escaping_link)
+            result = run_validator(archive)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("symlink", result.stderr)
+
+    def test_accepts_relativized_keyring_symlink(self) -> None:
+        # termux-keyring's absolute trusted.gpg.d link is rewritten by
+        # assemble-bootstrap.sh to this in-root relative form.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def keyring_link(tar: tarfile.TarFile) -> None:
+                _add_dir(tar, "etc/apt/trusted.gpg.d")
+                _add_dir(tar, "share/termux-keyring")
+                _add_file(tar, "share/termux-keyring/thunder-coding.gpg", b"gpg-key", mode=0o644)
+                _add_symlink(
+                    tar,
+                    "etc/apt/trusted.gpg.d/thunder-coding.gpg",
+                    "../../share/termux-keyring/thunder-coding.gpg",
+                )
+
+            archive = self._archive(root, extra_members=keyring_link)
+            result = run_validator(archive)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def _dot_prefix_archive(self, root: Path, **kwargs) -> Path:
+        work = root / "work.tar.gz"
+        make_bootstrap(work, **kwargs)
+        final = root / "bootstrap-phase3-aarch64.tar.gz"
+        retar_dot_prefix(work, final)
+        work.unlink()
+        digest = hashlib.sha256(final.read_bytes()).hexdigest()
+        final.with_name(final.name + ".sha256").write_text(f"{digest}  {final.name}\n")
+        return final
+
+    def test_accepts_dot_prefixed_entries(self) -> None:
+        # assemble-bootstrap.sh tars with `tar -C prefix .`, so real
+        # archives carry "./bin/bash"-style names; every check (ELF, dpkg
+        # status, contamination scan) must find members under that form.
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = self._dot_prefix_archive(Path(tmp))
+            result = run_validator(archive)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_termux_contamination_in_dot_prefixed_archive(self) -> None:
+        # The contamination scan used to silently skip every file in
+        # dot-prefixed archives; it must detect the official Termux URL
+        # there.
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = self._dot_prefix_archive(
+                Path(tmp),
+                sources_list="deb https://packages.termux.dev/termux-main stable main\n",
+            )
+            result = run_validator(archive)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("forbidden", result.stderr)
 
     def test_rejects_incomplete_dpkg_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
