@@ -2,6 +2,7 @@ package com.codeci.ide.ui.terminal
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.StatFs
 import com.codeci.ide.ui.utils.AppLogger
@@ -526,8 +527,13 @@ class UserlandInstaller(
         private const val LEGACY_MARKER = ".userland-v-userland-v1"
         private const val MIN_FREE_BYTES = 48L * 1024 * 1024
 
-        /** Bounded retry count for transient download failures (with resume). */
-        private const val MAX_DOWNLOAD_ATTEMPTS = 5
+        /**
+         * Bounded retry count for transient download failures. Generous on
+         * purpose: with Range-resume, a 174MB bootstrap on a link that drops
+         every ~11MB needs 16+ resume events, and each attempt only costs the
+         backoff sleep (already-fetched bytes are never re-downloaded).
+         */
+        private const val MAX_DOWNLOAD_ATTEMPTS = 30
 
         /** Thrown by [installRelease] callers when Phase 3 must fall back to Phase 2. */
         internal class FallbackToPhase2(message: String) : Exception(message)
@@ -551,6 +557,16 @@ class UserlandInstaller(
         fun isOnline(context: Context): Boolean {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
                 ?: return false
+            // Modern API: the active network's capabilities. The deprecated
+            // activeNetworkInfo has been observed to report not-connected on
+            // devices that download fine, which made the installer skip the
+            // whole userland install as "offline".
+            val network = cm.activeNetwork
+            if (network != null) {
+                cm.getNetworkCapabilities(network)?.let { caps ->
+                    return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                }
+            }
             @Suppress("DEPRECATION")
             val info = cm.activeNetworkInfo
             return info != null && info.isConnected
