@@ -207,7 +207,6 @@ jobs:
           trap 'rm -rf "$GNUPGHOME"' EXIT
           printf '%s\n' "$CODEC_REPOSITORY_SIGNING_KEY" | gpg --batch --import
           unset CODEC_REPOSITORY_SIGNING_KEY
-          gpg --batch --list-secret-keys "$fingerprint!" >/dev/null
 
           mkdir -p input/debs
           find input/aarch64 input/x86_64 -name '*.deb' \

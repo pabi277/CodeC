@@ -78,56 +78,102 @@ def make_deb(root: Path, output: Path, *, name: str = "codec-demo", arch: str = 
 
 
 def make_signed_repository(root: Path, repo: Path) -> tuple[Path, str]:
-    """Create an ephemeral test key, sign repo, and return public keyring/fpr."""
-    home = root / "gnupg"
-    home.mkdir(mode=0o700)
-    env = dict(
-        os.environ,
-        GNUPGHOME=str(home),
-        CODEC_SIGNING_KEY_PASSPHRASE=TEST_PASSPHRASE,
-    )
+    """Sign through a protected CI-only subkey exported from an offline primary."""
+    offline_home = root / "gnupg-offline"
+    offline_home.mkdir(mode=0o700)
+    offline_env = dict(os.environ, GNUPGHOME=str(offline_home))
     identity = "CodeC Repository Test <repository-test@codeci.invalid>"
+    key_options = [
+        "gpg",
+        "--batch",
+        "--pinentry-mode",
+        "loopback",
+        "--passphrase",
+        TEST_PASSPHRASE,
+    ]
     subprocess.run(
+        [*key_options, "--quick-generate-key", identity, "rsa2048", "cert", "1d"],
+        env=offline_env,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    primary_listing = subprocess.run(
+        ["gpg", "--batch", "--with-colons", "--fingerprint", "--list-secret-keys", identity],
+        env=offline_env,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout
+    primary_fingerprint = next(
+        line.split(":")[9].upper()
+        for line in primary_listing.splitlines()
+        if line.startswith("fpr:")
+    )
+    subprocess.run(
+        [*key_options, "--quick-add-key", primary_fingerprint, "rsa2048", "sign", "1d"],
+        env=offline_env,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    complete_listing = subprocess.run(
         [
             "gpg",
             "--batch",
-            "--pinentry-mode",
-            "loopback",
-            "--passphrase",
-            TEST_PASSPHRASE,
-            "--quick-generate-key",
-            identity,
-            "rsa2048",
-            "sign",
-            "1d",
+            "--with-colons",
+            "--fingerprint",
+            "--fingerprint",
+            "--list-secret-keys",
+            primary_fingerprint,
         ],
-        env=env,
-        check=True,
-        text=True,
-        capture_output=True,
-    )
-    listing = subprocess.run(
-        ["gpg", "--batch", "--with-colons", "--fingerprint", "--list-secret-keys", identity],
-        env=env,
+        env=offline_env,
         check=True,
         text=True,
         capture_output=True,
     ).stdout
-    fingerprint = next(
+    fingerprints = [
         line.split(":")[9].upper()
-        for line in listing.splitlines()
+        for line in complete_listing.splitlines()
         if line.startswith("fpr:")
-    )
+    ]
+    if len(fingerprints) != 2:
+        raise AssertionError(f"expected primary + signing subkey fingerprints: {complete_listing}")
+    signing_fingerprint = fingerprints[1]
+
     keyring = root / "codec-test-keyring.gpg"
-    exported = subprocess.run(
-        ["gpg", "--batch", "--export", fingerprint],
-        env=env,
+    public_key = subprocess.run(
+        ["gpg", "--batch", "--export", primary_fingerprint],
+        env=offline_env,
         check=True,
         capture_output=True,
     ).stdout
-    keyring.write_bytes(exported)
-    subprocess.run([str(SIGN), str(repo), fingerprint], env=env, check=True)
-    return keyring, fingerprint
+    keyring.write_bytes(public_key)
+    protected_subkey = subprocess.run(
+        [*key_options, "--export-secret-subkeys", f"{signing_fingerprint}!"],
+        env=offline_env,
+        check=True,
+        capture_output=True,
+    ).stdout
+    if not protected_subkey:
+        raise AssertionError("CI signing-subkey export is empty")
+
+    ci_home = root / "gnupg-ci"
+    ci_home.mkdir(mode=0o700)
+    ci_env = dict(
+        os.environ,
+        GNUPGHOME=str(ci_home),
+        CODEC_SIGNING_KEY_PASSPHRASE=TEST_PASSPHRASE,
+    )
+    subprocess.run(
+        ["gpg", "--batch", "--import"],
+        env=ci_env,
+        input=protected_subkey,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run([str(SIGN), str(repo), signing_fingerprint], env=ci_env, check=True)
+    return keyring, signing_fingerprint
 
 
 def signed_validator(repo: Path, keyring: Path, fingerprint: str) -> list[str]:
@@ -160,6 +206,8 @@ class RepositoryTest(unittest.TestCase):
         workflow = PENDING_WORKFLOW.read_text()
         self.assertIn('grep -qx "signing=$fingerprint"', workflow)
         self.assertNotIn('grep -qx "signing_subkey=$fingerprint"', workflow)
+        self.assertNotIn('list-secret-keys "$fingerprint!"', workflow)
+        self.assertIn('sign-repository.sh packages/dev "$fingerprint"', workflow)
 
     @unittest.skipUnless(shutil.which("gpg"), "requires gpg")
     def test_committed_public_keyring_matches_pinned_fingerprints(self) -> None:
@@ -264,7 +312,7 @@ class RepositoryTest(unittest.TestCase):
                 [str(SIGN), str(repo), fingerprint],
                 env=dict(
                     os.environ,
-                    GNUPGHOME=str(root / "gnupg"),
+                    GNUPGHOME=str(root / "gnupg-ci"),
                     CODEC_SIGNING_KEY_PASSPHRASE=TEST_PASSPHRASE,
                 ),
                 check=True,
