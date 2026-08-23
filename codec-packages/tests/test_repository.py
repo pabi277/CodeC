@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -12,6 +15,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 GENERATE = SCRIPTS / "generate-repository.py"
 VALIDATE = SCRIPTS / "validate-repository.py"
+SIGN = SCRIPTS / "sign-repository.sh"
 
 
 def make_deb(root: Path, output: Path, *, name: str = "codec-demo", arch: str = "aarch64", script: bool = False) -> Path:
@@ -70,6 +74,69 @@ def make_deb(root: Path, output: Path, *, name: str = "codec-demo", arch: str = 
     return output
 
 
+def make_signed_repository(root: Path, repo: Path) -> tuple[Path, str]:
+    """Create an ephemeral test key, sign repo, and return public keyring/fpr."""
+    home = root / "gnupg"
+    home.mkdir(mode=0o700)
+    env = dict(os.environ, GNUPGHOME=str(home))
+    identity = "CodeC Repository Test <repository-test@codeci.invalid>"
+    subprocess.run(
+        [
+            "gpg",
+            "--batch",
+            "--pinentry-mode",
+            "loopback",
+            "--passphrase",
+            "",
+            "--quick-generate-key",
+            identity,
+            "rsa2048",
+            "sign",
+            "1d",
+        ],
+        env=env,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    listing = subprocess.run(
+        ["gpg", "--batch", "--with-colons", "--fingerprint", "--list-secret-keys", identity],
+        env=env,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout
+    fingerprint = next(
+        line.split(":")[9].upper()
+        for line in listing.splitlines()
+        if line.startswith("fpr:")
+    )
+    keyring = root / "codec-test-keyring.gpg"
+    exported = subprocess.run(
+        ["gpg", "--batch", "--export", fingerprint],
+        env=env,
+        check=True,
+        capture_output=True,
+    ).stdout
+    keyring.write_bytes(exported)
+    subprocess.run([str(SIGN), str(repo), fingerprint], env=env, check=True)
+    return keyring, fingerprint
+
+
+def signed_validator(repo: Path, keyring: Path, fingerprint: str) -> list[str]:
+    return [
+        sys.executable,
+        str(VALIDATE),
+        str(repo),
+        "--architectures",
+        "aarch64",
+        "--keyring",
+        str(keyring),
+        "--signing-fingerprint",
+        fingerprint,
+    ]
+
+
 class RepositoryTest(unittest.TestCase):
     def test_generates_and_validates_apt_tree(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -96,6 +163,86 @@ class RepositoryTest(unittest.TestCase):
             packages = repo / "dists/stable/main/binary-aarch64/Packages"
             self.assertIn("SHA256:", packages.read_text())
             self.assertEqual(gzip.decompress((packages.parent / "Packages.gz").read_bytes()), packages.read_bytes())
+
+    @unittest.skipUnless(shutil.which("gpg") and shutil.which("gpgv"), "requires gpg and gpgv")
+    def test_signed_repository_verifies_with_required_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            debs = root / "debs"
+            debs.mkdir()
+            make_deb(root, debs / "codec-demo_1.0_aarch64.deb")
+            repo = root / "repo"
+            subprocess.run(
+                [sys.executable, str(GENERATE), str(debs), str(repo), "--architectures", "aarch64"],
+                check=True,
+            )
+            keyring, fingerprint = make_signed_repository(root, repo)
+            result = subprocess.run(
+                signed_validator(repo, keyring, fingerprint), text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("signed", result.stdout)
+            self.assertTrue((repo / "dists/stable/InRelease").is_file())
+            self.assertTrue((repo / "dists/stable/Release.gpg").is_file())
+
+    @unittest.skipUnless(shutil.which("gpg") and shutil.which("gpgv"), "requires gpg and gpgv")
+    def test_signed_validation_rejects_missing_or_tampered_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            debs = root / "debs"
+            debs.mkdir()
+            make_deb(root, debs / "codec-demo_1.0_aarch64.deb")
+            repo = root / "repo"
+            subprocess.run(
+                [sys.executable, str(GENERATE), str(debs), str(repo), "--architectures", "aarch64"],
+                check=True,
+            )
+            keyring, fingerprint = make_signed_repository(root, repo)
+            inrelease = repo / "dists/stable/InRelease"
+            inrelease.unlink()
+            missing = subprocess.run(
+                signed_validator(repo, keyring, fingerprint), text=True, capture_output=True
+            )
+            self.assertNotEqual(missing.returncode, 0)
+            self.assertIn("missing signed repository metadata", missing.stderr)
+
+            # Re-sign, then alter Release and its unsigned sidecar. A sidecar
+            # from the same compromised host must never substitute for OpenPGP.
+            subprocess.run(
+                [str(SIGN), str(repo), fingerprint],
+                env=dict(os.environ, GNUPGHOME=str(root / "gnupg")),
+                check=True,
+            )
+            release = repo / "dists/stable/Release"
+            release.write_text(release.read_text() + "X-Tampered: yes\n")
+            sidecar = release.with_name("Release.sha256")
+            sidecar.write_text(f"{hashlib.sha256(release.read_bytes()).hexdigest()}  Release\n")
+            tampered = subprocess.run(
+                signed_validator(repo, keyring, fingerprint), text=True, capture_output=True
+            )
+            self.assertNotEqual(tampered.returncode, 0)
+            self.assertIn("signature verification failed", tampered.stderr)
+
+    @unittest.skipUnless(shutil.which("gpg") and shutil.which("gpgv"), "requires gpg and gpgv")
+    def test_signed_validation_rejects_changed_packages_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            debs = root / "debs"
+            debs.mkdir()
+            make_deb(root, debs / "codec-demo_1.0_aarch64.deb")
+            repo = root / "repo"
+            subprocess.run(
+                [sys.executable, str(GENERATE), str(debs), str(repo), "--architectures", "aarch64"],
+                check=True,
+            )
+            keyring, fingerprint = make_signed_repository(root, repo)
+            packages = repo / "dists/stable/main/binary-aarch64/Packages"
+            packages.write_text(packages.read_text() + "# changed\n")
+            result = subprocess.run(
+                signed_validator(repo, keyring, fingerprint), text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Release SHA256 mismatch", result.stderr)
 
     def test_rejects_maintainer_scripts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
