@@ -51,13 +51,25 @@ command -v "$GPG_BIN" >/dev/null 2>&1 || {
   exit 2
 }
 
+run_gpg() {
+  if [[ -n "${CODEC_SIGNING_KEY_PASSPHRASE:-}" ]]; then
+    # The passphrase travels on stdin, never as a process argument. GitHub
+    # supplies it from a masked secret; local interactive keys may instead
+    # rely on their normal pinentry agent by leaving this variable unset.
+    printf '%s\n' "$CODEC_SIGNING_KEY_PASSPHRASE" \
+      | "$GPG_BIN" --batch --yes --pinentry-mode loopback --passphrase-fd 0 "$@"
+  else
+    "$GPG_BIN" --batch --yes "$@"
+  fi
+}
+
 # A trailing ! forces GnuPG to use this exact signing subkey rather than
 # silently selecting another secret key. Remove old outputs first so failure
 # can never leave a stale signature beside a new Release file.
 rm -f "$RELEASE.gpg" "${RELEASE%/Release}/InRelease"
-"$GPG_BIN" --batch --yes --local-user "$FINGERPRINT!" --digest-algo SHA256 \
+run_gpg --local-user "$FINGERPRINT!" --digest-algo SHA256 \
   --output "$RELEASE.gpg" --detach-sign "$RELEASE"
-"$GPG_BIN" --batch --yes --local-user "$FINGERPRINT!" --digest-algo SHA256 \
+run_gpg --local-user "$FINGERPRINT!" --digest-algo SHA256 \
   --output "${RELEASE%/Release}/InRelease" --clearsign "$RELEASE"
 
 [[ -s "$RELEASE.gpg" && -s "${RELEASE%/Release}/InRelease" ]] || {

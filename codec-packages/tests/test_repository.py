@@ -138,6 +138,11 @@ def signed_validator(repo: Path, keyring: Path, fingerprint: str) -> list[str]:
 
 
 class RepositoryTest(unittest.TestCase):
+    def test_signer_keeps_ci_passphrase_out_of_process_arguments(self) -> None:
+        script = SIGN.read_text()
+        self.assertIn("--passphrase-fd 0", script)
+        self.assertNotIn('--passphrase "$CODEC_SIGNING_KEY_PASSPHRASE"', script)
+
     def test_generates_and_validates_apt_tree(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
