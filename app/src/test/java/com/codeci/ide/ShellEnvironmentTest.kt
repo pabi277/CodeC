@@ -4,6 +4,7 @@ import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TarGzExtractor
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import java.io.File
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -52,6 +53,54 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("com.codeci.ide/files/usr"))
         assertTrue(script.contains("maintainer script"))
         assertFalse(script.contains("com.termux/files/usr"))
+    }
+
+    @Test
+    fun `pkg repair reclaims a lock whose owner process is dead`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-lock-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            listOf("apt-get", "dpkg").forEach { name ->
+                File(bin, name).apply {
+                    writeText("#!/bin/sh\nexit 0\n")
+                    setExecutable(true)
+                }
+            }
+            val lock = File(prefix, "var/lib/codec-pkg/lock").apply { mkdirs() }
+            // Linux/Android pid_max is far below this, so kill -0 must report
+            // that the force-stopped lock owner no longer exists.
+            File(lock, "pid").writeText("99999999\n")
+            val pkg = File(bin, "pkg").apply {
+                writeText(ShellEnvironment.pkgScript())
+                setExecutable(true)
+            }
+
+            val process = ProcessBuilder("/bin/sh", pkg.absolutePath, "repair")
+                .redirectErrorStream(true)
+                .apply { environment()["PREFIX"] = prefix.absolutePath }
+                .start()
+            val completed = process.waitFor(10, TimeUnit.SECONDS)
+            if (!completed) process.destroyForcibly()
+            val output = process.inputStream.bufferedReader().readText()
+
+            assertTrue("pkg repair timed out: $output", completed)
+            assertEquals(output, 0, process.exitValue())
+            assertTrue(output.contains("recovered stale package-operation lock (dead pid 99999999)"))
+            assertTrue(output.contains("pkg: no interrupted transaction"))
+            assertFalse(lock.exists())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `pkg locking keeps a live owner and atomically claims stale locks`() {
+        val script = ShellEnvironment.pkgScript()
+        assertTrue(script.contains("kill -0 \"\$owner_pid\""))
+        assertTrue(script.contains("mkdir \"\$LOCK/reclaiming\""))
+        assertTrue(script.contains("mv \"\$LOCK\" \"\$stale_lock\""))
+        assertTrue(script.contains("another package operation is still running"))
     }
 
     @Test

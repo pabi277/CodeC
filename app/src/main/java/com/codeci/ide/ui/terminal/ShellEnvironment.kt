@@ -17,7 +17,7 @@ import java.io.File
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "14"
+    const val BOOTSTRAP_VERSION = "15"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -173,9 +173,38 @@ object ShellEnvironment {
           printf '%s\n' "deb [trusted=yes] ${'$'}REPOSITORY ${'$'}SUITE ${'$'}COMPONENT" > "${'$'}SOURCES"
         }
 
+        reclaim_stale_lock() {
+          # mkdir is the per-lock-instance claim: only one waiter may inspect
+          # and move this lock. The claim directory moves with a stale lock, so
+          # another waiter cannot accidentally reclaim a newly-created lock.
+          mkdir "${'$'}LOCK/reclaiming" 2>/dev/null || return 1
+          owner_pid="${'$'}(cat "${'$'}LOCK/pid" 2>/dev/null || true)"
+          case "${'$'}owner_pid" in
+            ''|*[!0-9]*)
+              rmdir "${'$'}LOCK/reclaiming" 2>/dev/null || true
+              return 1
+              ;;
+          esac
+          if kill -0 "${'$'}owner_pid" 2>/dev/null; then
+            rmdir "${'$'}LOCK/reclaiming" 2>/dev/null || true
+            return 1
+          fi
+          stale_lock="${'$'}LOCK.stale.${'$'}${'$'}"
+          if mv "${'$'}LOCK" "${'$'}stale_lock" 2>/dev/null; then
+            rm -rf "${'$'}stale_lock"
+            echo "pkg: recovered stale package-operation lock (dead pid ${'$'}owner_pid)" >&2
+            return 0
+          fi
+          rmdir "${'$'}LOCK/reclaiming" 2>/dev/null || true
+          return 1
+        }
+
         acquire_lock() {
           i=0
           while ! mkdir "${'$'}LOCK" 2>/dev/null; do
+            if reclaim_stale_lock; then
+              continue
+            fi
             i=${'$'}((i + 1))
             [ "${'$'}i" -lt 60 ] || error "another package operation is still running (lock: ${'$'}LOCK)"
             sleep 1
