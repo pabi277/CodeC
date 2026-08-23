@@ -219,12 +219,14 @@ object ShellEnvironment {
           # promotion; never silently downgrade this check to HTTP or trusted
           # official Termux metadata.
           #
-          # HTTPS fetcher selection: the bootstrap closure ships no curl and
-          # its BusyBox wget is http/ftp-only ("not an http or ftp url"), but
-          # python3 + OpenSSL are in the closure, so python urllib is the
-          # HTTPS downloader of last resort. apt itself downloads .deb files
-          # over its own TLS transport, so only this metadata preflight
-          # needs a fetcher here.
+          # HTTPS fetcher selection: the Phase 3 bootstrap closure seeds a
+          # source-built curl (the libcurl recipe's CLI subpackage) as its
+          # HTTPS metadata fetcher; busybox wget is http/ftp-only and neither
+          # python3 nor a real wget is in the closure (fresh-device evidence
+          # 2026-08-23: all three were absent). The python3/wget branches are
+          # defensive fallbacks for user-installed fetchers only. apt itself
+          # downloads .deb files over its own TLS transport, so only this
+          # metadata preflight needs a fetcher here.
           fetch_metadata() {
             dest="${'$'}1"
             url="${'$'}2"
@@ -277,8 +279,17 @@ object ShellEnvironment {
           # Exact byte substring check. The userland grep (BusyBox 1.38)
           # fails to match some -F patterns that are verifiably present in
           # the file (e.g. the alternatives spec strings), so the reviewed-
-          # spec checks do not rely on grep at all.
-          python3 -c "import sys; sys.exit(0 if sys.argv[2].encode() in open(sys.argv[1], 'rb').read() else 1)" "${'$'}1" "${'$'}2"
+          # spec checks do not rely on grep at all. This must not depend on
+          # python3 either: the fresh-device Phase 3 closure ships no
+          # python3 (verified 2026-08-23), so a python-based check would
+          # break `pkg install` preflight even with curl seeded. Command
+          # substitution strips only trailing newlines, so an exact byte
+          # substring mid-file still matches; the specs are single lines.
+          codec_spec_body="${'$'}(cat "${'$'}1" 2>/dev/null)" || return 1
+          case "${'$'}codec_spec_body" in
+            *"${'$'}2"*) return 0 ;;
+            *) return 1 ;;
+          esac
         }
 
         validate_control_scripts() {

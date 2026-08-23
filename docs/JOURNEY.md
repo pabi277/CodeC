@@ -1,8 +1,9 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-22 (end of day) · **Branch:** PRs #10 and #11
-merged to `main` — **Part A ✅ device-verified; Part B code ✅ merged,
-⏳ one rebuild left**
+**Last updated:** 2026-08-23 · **Branch:** post-PR-#12 fix branch
+(`arena/01a02d03-codec`) — **Part A ✅ device-verified; Part B code ✅ merged
++ rebuilt + republished, two fresh-device defects found and fixed here,
+⏳ PR → one more rebuild left**
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -246,6 +247,46 @@ CI logs cannot be downloaded from the agent sandbox. Reading that log
 mandatory first step of the next chat, before any new dispatch. The full
 decision table and commands are in
 [`docs/NEXT_STEPS.md`](NEXT_STEPS.md) → Part B → "Continue here".
+
+---
+
+## 5b. The rebuild succeeded — and the fresh device found two more Part B
+defects (2026-08-23)
+
+PR #12's util-macros mirror fallback ended the flake era: dispatch #4
+(`32594910882`) built both arches green (aarch64 1h14m, x86_64 1h26m),
+`32617929254` republished `userland-v2-dev`, and a truly fresh device
+(cleared CodeC storage) downloaded the new aarch64 archive
+(22,181,256 bytes), verified its SHA-256, and extracted it. That is when
+the real new-bootstrap evidence landed — and it convicted two assumptions:
+
+1. **No HTTPS fetcher in the closure.** `pkg update` died with
+   `pkg: offline or unable to download CodeC Release metadata (HTTPS
+   required)`: `$PREFIX/bin/{curl,python3,wget}` are all absent. The pkg
+   code's comment claiming "python3 + OpenSSL are in the closure" was a
+   disproven guess (dpkg's `dpkg-perl` needs *perl*, not python). Worse,
+   `pkg`'s maintainer-script byte checks called `python3` directly, so
+   `pkg install` would have failed the same way. **Fix:** build `libcurl`
+   (the `curl` CLI is its subpackage — upstream auto-generates
+   `Depends: libcurl (= …)` for it), seed `curl`, and make the byte check
+   pure shell (`$(cat)` + `case`). `ca-certificates` was already in the
+   closure via `apt → libgnutls → ca-certificates`, so curl's CA bundle
+   (`etc/tls/cert.pem`) comes for free. Python stays out of the bootstrap
+   on purpose.
+2. **`ii termux-keyring 3.13` in the seeded dpkg status.** The pinned apt
+   recipe lists the official Termux repositories' GPG keyring as a runtime
+   dependency, and the sources.list override never touched it — so the
+   bootstrap shipped Termux's repo signing keys inside
+   `etc/apt/trusted.gpg.d/`. **Fix:** a narrow fail-loud override removes
+   exactly `, termux-keyring` from apt's `TERMUX_PKG_DEPENDS`;
+   `termux-licenses` stays (it provides `share/LICENSES/*`, the target of
+   packaged license symlinks such as nano's).
+
+`validate-bootstrap.py` now enforces both invariants at publish time
+(`bin/curl` must exist as ELF; no `termux-keyring` stanza in status), and
+the host suite grew to **53/53 green** with fixture-level proofs. One more
+rebuild + republish + fresh-device run of the Part B acceptance block
+remains — see [`docs/NEXT_STEPS.md`](NEXT_STEPS.md) → Part B.
 
 ---
 

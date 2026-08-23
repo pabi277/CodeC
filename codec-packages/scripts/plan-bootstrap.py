@@ -6,11 +6,12 @@ Part B of docs/NEXT_STEPS.md fixes three bootstrap content defects:
 1. Build-dependency pollution: the old assembler extracted and seeded every
    built .deb (doxygen, swig, tcl, tor, ...). This tool computes the
    transitive Depends closure of the explicit seed set (default: busybox,
-   bash, apt, dpkg, coreutils, less) against the dpkg-deb control metadata
-   of the built .debs, matching the semantics of the pinned upstream
-   generate-bootstraps.sh pull_package(): one dependency spec per comma
-   group, first alternative taken, "(...)" version constraints stripped.
-   An unresolved dependency is a hard error (fail loudly, never guess).
+   bash, apt, dpkg, coreutils, less, curl) against the dpkg-deb control
+   metadata of the built .debs, matching the semantics of the pinned
+   upstream generate-bootstraps.sh pull_package(): one dependency spec per
+   comma group, first alternative taken, "(...)" version constraints
+   stripped. An unresolved dependency is a hard error (fail loudly, never
+   guess).
 
 2. Seeded packages never had their alternatives wired (postinst was never
    run), so `pager`/`editor`/`vi`/`nc` were missing until a real pkg

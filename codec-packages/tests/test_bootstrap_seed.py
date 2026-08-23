@@ -338,6 +338,20 @@ FIXTURE_DEBS = [
     ("apt", "2.7", "dpkg, coreutils", {"bin/apt": (X, b"aptbin")}),
     ("dpkg", "1.22.6", "make", {"bin/dpkg": (X, b"dpkgbin")}),
     ("make", "4.4", "", {"bin/make": (X, b"makebin")}),
+    # HTTPS metadata fetcher for the pkg frontend (Part B, 2026-08-23):
+    # the curl CLI is a subpackage of the libcurl recipe, and upstream
+    # auto-generates `Depends: libcurl (= <version>)` for it, so seeding
+    # `curl` pulls libcurl and its TLS stack through the closure walk.
+    ("curl", "8.21.0", "libcurl (= 8.21.0)", {"bin/curl": (X, b"curlbin")}),
+    ("libcurl", "8.21.0", "libfake", {
+        "lib/libcurl.so.4": (0o644, b"\x7fELFlibcurl"),
+    }),
+    # The official Termux repository keyring package may exist in the built
+    # set only if something still depends on it; the CodeC apt override
+    # removes that dependency, so it must never be seeded.
+    ("termux-keyring", "3.13", "", {
+        "share/termux-keyring/termux-autobuilds.gpg": (0o644, b"gpgkey"),
+    }),
     # Not referenced by any seed dependency: must NOT be extracted/seeded.
     ("doxygen", "1.10", "", {"bin/doxygen": (X, b"build-tool")}),
     ("tor", "0.4", "", {"bin/tor": (X, b"build-dep")}),
@@ -345,6 +359,7 @@ FIXTURE_DEBS = [
 
 CLOSURE_EXPECTED = {
     "apt", "bash", "busybox", "coreutils", "dpkg", "less", "libfake", "make",
+    "curl", "libcurl",
 }
 
 
@@ -400,8 +415,15 @@ class AssembleBootstrapSeedTest(unittest.TestCase):
             self.assertIn("./bin/bash", names)
             self.assertIn("./bin/busybox", names)
             self.assertIn("./bin/less", names)
+            # The HTTPS metadata fetcher is seeded (Part B, 2026-08-23:
+            # fresh devices had no curl/python3/wget and `pkg update`
+            # failed its Release preflight).
+            self.assertIn("./bin/curl", names)
             self.assertNotIn("./bin/doxygen", names)
             self.assertNotIn("./bin/tor", names)
+            # The official Termux repository keyring is never seeded.
+            self.assertNotIn(
+                "./share/termux-keyring/termux-autobuilds.gpg", names)
             for relink in ("./bin/doxygen", "./bin/tor"):
                 self.assertFalse(any(n.endswith(relink[1:]) for n in names))
 
@@ -412,6 +434,7 @@ class AssembleBootstrapSeedTest(unittest.TestCase):
                 if line.startswith("Package: ")
             )
             self.assertEqual(seeded, CLOSURE_EXPECTED)
+            self.assertNotIn("Package: termux-keyring", status)
             for pkg in CLOSURE_EXPECTED:
                 self.assertIn(f"./var/lib/dpkg/info/{pkg}.list", names)
                 self.assertIn(f"./var/lib/dpkg/info/{pkg}.md5sums", names)
@@ -450,7 +473,7 @@ class AssembleBootstrapSeedTest(unittest.TestCase):
             self.assertIn("./var/lib/dpkg/alternatives/vi", names)
             self.assertIn("./var/lib/dpkg/alternatives/nc", names)
 
-        self.assertIn("closure seeds 8 of 10 built package(s)", result.stdout)
+        self.assertIn("closure seeds 10 of 13 built package(s)", result.stdout)
 
     def test_unresolvable_seed_root_fails(self) -> None:
         result = self.run_assemble(

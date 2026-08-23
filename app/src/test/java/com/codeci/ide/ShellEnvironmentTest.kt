@@ -55,6 +55,19 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `pkg spec checks do not require python3 on the device`() {
+        // Part B (2026-08-23): the fresh-device Phase 3 closure ships no
+        // python3, so the maintainer-script byte checks must be pure shell.
+        val script = ShellEnvironment.pkgScript()
+        assertFalse(script.contains("python3 -c"))
+        assertTrue(script.contains("codec_spec_body"))
+        // Exact-byte semantics preserved via a quoted case pattern.
+        assertTrue(script.contains("*\"\$2\"*) return 0"))
+        // curl stays the preferred HTTPS metadata fetcher.
+        assertTrue(script.contains("\"\$PREFIX/bin/curl\""))
+    }
+
+    @Test
     fun `bash shim execs system sh`() {
         val shim = ShellEnvironment.bashShim()
         assertTrue(shim.contains("exec /system/bin/sh"))

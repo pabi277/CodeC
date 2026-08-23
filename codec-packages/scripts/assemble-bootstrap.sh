@@ -45,7 +45,7 @@ BOOTSTRAP_NAME="${CODEC_BOOTSTRAP_NAME:-bootstrap}"
 FILTERED_DEBS=("${DEBS[@]}")
 SEEDED_PACKAGE_NAMES=()
 if [[ "$BOOTSTRAP_NAME" == "bootstrap-phase3" ]]; then
-  SEED_PACKAGES="${CODEC_BOOTSTRAP_SEED_PACKAGES:-busybox bash apt dpkg coreutils less}"
+  SEED_PACKAGES="${CODEC_BOOTSTRAP_SEED_PACKAGES:-busybox bash apt dpkg coreutils less curl}"
   echo "assemble: Phase 3 seed set: $SEED_PACKAGES"
   CLOSURE_FILE="$STAGE/closure.txt"
   if ! python3 "$SCRIPT_DIR/plan-bootstrap.py" closure "$SEED_PACKAGES" \

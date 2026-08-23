@@ -11,30 +11,33 @@ Read `docs/JOURNEY.md` and `docs/NEXT_STEPS.md` first, **before doing anything
 else**, then report back what you found and the current git/PR/CI state before
 making any change.
 
-You are continuing **CodeC** (an Android C IDE) Phase 3 work. PRs #10 and #11
-are **merged to `main`** and device-verified. Each chat session gets its own
-`arena/*` session branch — verify the actual branch with `git status` instead
-of assuming one (previous sessions used `arena/01a028e2-codec`,
-`arena/01a02962-codec`).
+You are continuing **CodeC** (an Android C IDE) Phase 3 work. PRs #10, #11
+and #12 are **merged to `main`**. Each chat session gets its own `arena/*`
+session branch — verify the actual branch with `git status` instead of
+assuming one (previous sessions used `arena/01a02962-codec`,
+`arena/01a02afd-codec`, `arena/01a02d03-codec`).
 
-**WHERE THINGS STAND (2026-08-22):**
+**WHERE THINGS STAND (2026-08-23):**
 
 - **Part A (republish clean bootstrap): ✅ DONE** — the published
   `userland-v2-dev` assets were repaired in place (no rebuild) and verified on
   a clean device. See `docs/PART_A_ARTIFACT_REPAIR.md`. Do not redo this.
-- **Part B (bootstrap correctness): code + 49 host tests merged** (PR #11).
-  The ~104-minute "CodeC package repository" rebuild is the ONLY remaining
-  step. It has failed 3 times: run `32581293757` = our own guardrail scanner
-  bug (fixed + tripwire test); run `32582311088` = upstream
-  `xorg.freedesktop.org` download flake (log-proven, not our code); run
-  `32585409356` = **cause unknown — the log has never been read**, because the
-  agent sandbox cannot download CI logs.
-  **Do not redispatch blindly.** First read dispatch 3's log tail in Termux
-  (`gh run view --job 97060936792 --log | tail -120`), then follow the exact
-  decision table in `docs/NEXT_STEPS.md` → Part B → "Continue here" (diagnose
-  → fix or mirror-override → redispatch from `main` → republish → device
-  verification script).
-- **Parts C (clean-device acceptance) and D (M3 signing): not started.**
+- **Part B (bootstrap correctness): code merged; the full rebuild
+  (`32594910882`) and republish (`32617929254`) SUCCEEDED.** A truly fresh
+  device downloaded/verified/extracted the new aarch64 archive and then
+  exposed **two remaining defects, both fixed on the 2026-08-23 branch**:
+  (1) the closure shipped no HTTPS fetcher (no `curl`/`python3`/`wget`), so
+  `pkg update` failed its Release preflight — fixed by building `libcurl`,
+  seeding `curl`, and making `pkg`'s `spec_in_file` pure shell;
+  (2) the seeded dpkg status contained `ii termux-keyring 3.13` (official
+  Termux repo GPG keys) — fixed by a narrow apt-recipe override that removes
+  exactly that dependency. `validate-bootstrap.py` now enforces both.
+  Remaining: merge the fix PR → **one more** ~104-minute rebuild → republish
+  → fresh-device acceptance block (`docs/NEXT_STEPS.md` → Part B →
+  "Continue here"). **Never dispatch the rebuild without explicit user
+  confirmation and a check that no run is active.**
+- **Parts C (clean-device acceptance) and D (M3 signing): not started. Do not
+  start them before Part B's device acceptance passes.**
 
 **SELF-DISTRUST PROTOCOL — follow strictly:**
 
@@ -69,7 +72,8 @@ of assuming one (previous sessions used `arena/01a028e2-codec`,
 1. Verify merged state (`gh pr list --state merged --limit 5`,
    `git ls-remote origin main`, `gh run list`). Do not reopen completed parts.
 2. Finish **Part B** exactly per `docs/NEXT_STEPS.md` → "Continue here"
-   (log-first, then redispatch from `main`, republish, device verification).
+   (merge fix PR → redispatch from `main` with user confirmation →
+   republish → device verification).
 3. Then **Part C** (clean-device acceptance), then **Part D** (M3 signing).
 4. A part is complete only when its **"Exit condition"** is met, not merely
    when code is written.

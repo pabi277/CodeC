@@ -34,11 +34,20 @@ bash
 # best-effort. The library (lib/libtermux-exec-ld-preload.so, exported as
 # LD_PRELOAD by the CodeC shell profile) is what lets dpkg execute shebang
 # maintainer scripts under the CodeC prefix on real devices.
+#
+# libcurl is a build root because the `curl` CLI is its subpackage
+# (packages/libcurl/curl.subpackage.sh at the pinned revision): building
+# libcurl produces both the libcurl and the curl .debs. Nothing else in the
+# manager closure pulls it (apt uses GnuTLS, not OpenSSL), so it must be
+# built explicitly. Fresh-device Part B evidence (2026-08-23): the Phase 3
+# closure ships none of curl/python3/wget, so `pkg update` died at
+# "offline or unable to download CodeC Release metadata (HTTPS required)".
 CODEC_PACKAGE_MANAGER_BOOTSTRAP_PACKAGES="
 busybox
 bash
 apt
 dpkg
+libcurl
 "
 
 # Phase 3 bootstrap SEED set (Part B): only the transitive Depends closure
@@ -52,6 +61,17 @@ dpkg
 # the real GNU less (not only busybox's pager provider), and coreutils
 # arrives via apt's dependency chain regardless. nano is NOT seeded — its
 # `editor` alternative is wired by the real `pkg install nano` postinst.
+#
+# curl seeds the HTTPS metadata fetcher the `pkg` frontend needs to fetch
+# and SHA-256-verify the repository Release/Release.sha256 before apt runs
+# (ShellEnvironment.pkgScript prefers $PREFIX/bin/curl). The curl CLI is
+# source-built from the pinned libcurl recipe; its CA bundle
+# ($PREFIX/etc/tls/cert.pem from ca-certificates) is already in the
+# closure via apt -> libgnutls -> ca-certificates. Python is deliberately
+# NOT seeded: it is a far larger closure, and pkg only ever used it as a
+# downloader of last resort (fresh-device evidence 2026-08-23: the
+# published closure ships no python3 either, and pkg no longer depends on
+# it for maintainer-script checks).
 CODEC_BOOTSTRAP_SEED_PACKAGES="
 busybox
 bash
@@ -59,6 +79,7 @@ apt
 dpkg
 coreutils
 less
+curl
 "
 
 # Curated Phase 3 repository roots. The generated repository also contains the

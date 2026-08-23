@@ -103,6 +103,10 @@ def make_bootstrap(
             _add_file(tar, "bin/apt-get", ELF + b"apt-get-payload")
         if "bin/dpkg" not in omit:
             _add_file(tar, "bin/dpkg", ELF + b"dpkg-payload")
+        if "bin/curl" not in omit:
+            # HTTPS metadata fetcher required by the `pkg` frontend
+            # (Part B, 2026-08-23).
+            _add_file(tar, "bin/curl", ELF + b"curl-payload")
         if "bin/apt" not in omit:
             _add_symlink(tar, "bin/apt", "apt-get")
         if "lib/libtermux-exec-ld-preload.so" not in omit:
@@ -178,6 +182,7 @@ class BootstrapValidationTest(unittest.TestCase):
             root = Path(tmp)
             for missing in (
                 "bin/dpkg",
+                "bin/curl",
                 "lib/libandroid-support.so",
                 "var/lib/dpkg/status",
             ):
@@ -353,6 +358,37 @@ class BootstrapValidationTest(unittest.TestCase):
             result = run_validator(archive)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("does not mark apt as installed", result.stderr)
+
+    def test_rejects_seeded_termux_keyring(self) -> None:
+        # Part B (2026-08-23): the official Termux repository keyring
+        # package was seeded into the published bootstrap's dpkg status
+        # (`ii termux-keyring 3.13` on a fresh device). The release gate
+        # must reject any archive that ships it again.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            status = DPKG_STATUS + (
+                "Package: termux-keyring\n"
+                "Status: install ok installed\n"
+                "Architecture: all\n"
+                "Version: 3.13\n\n"
+            )
+            archive = self._archive(root, status=status)
+            result = run_validator(archive)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("termux-keyring", result.stderr)
+
+    def test_rejects_non_elf_fetcher(self) -> None:
+        # bin/curl must be the real ELF CLI, not a placeholder script.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def placeholder(tar: tarfile.TarFile) -> None:
+                _add_file(tar, "bin/curl", b"#!/system/bin/sh\necho no\n")
+
+            archive = self._archive(root, extra_members=placeholder)
+            result = run_validator(archive)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("ELF", result.stderr)
 
     def test_validates_multiple_archives(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
