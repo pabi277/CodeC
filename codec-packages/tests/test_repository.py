@@ -17,6 +17,7 @@ GENERATE = SCRIPTS / "generate-repository.py"
 VALIDATE = SCRIPTS / "validate-repository.py"
 SIGN = SCRIPTS / "sign-repository.sh"
 KEYS = SCRIPTS.parent / "keys"
+PENDING_WORKFLOW = SCRIPTS.parents[1] / "docs" / "ci-pending" / "package-repository.yml"
 TEST_PASSPHRASE = "codec-test-signing-passphrase"
 
 
@@ -148,6 +149,17 @@ class RepositoryTest(unittest.TestCase):
         script = SIGN.read_text()
         self.assertIn("--passphrase-fd 0", script)
         self.assertNotIn('--passphrase "$CODEC_SIGNING_KEY_PASSPHRASE"', script)
+
+    def test_pending_workflow_uses_committed_signing_fingerprint_field(self) -> None:
+        fields = dict(
+            line.split("=", 1)
+            for line in (KEYS / "codec-archive-keyring-v1.fingerprints").read_text().splitlines()
+            if "=" in line
+        )
+        self.assertEqual(set(fields), {"primary", "signing"})
+        workflow = PENDING_WORKFLOW.read_text()
+        self.assertIn('grep -qx "signing=$fingerprint"', workflow)
+        self.assertNotIn('grep -qx "signing_subkey=$fingerprint"', workflow)
 
     @unittest.skipUnless(shutil.which("gpg"), "requires gpg")
     def test_committed_public_keyring_matches_pinned_fingerprints(self) -> None:
