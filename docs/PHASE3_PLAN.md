@@ -1,8 +1,8 @@
 # CodeC IDE Phase 3 package-management plan
 
 **Status:** M1 and M2 complete/device-verified; M3 signing, public trust,
-signed Pages/client acceptance, and key-seeded bootstrap build complete in PR
-#14; bootstrap release publication and clean-device acceptance remain
+signed Pages/client acceptance and key-seeded bootstrap build/release complete
+in PR #14; only final clean-device acceptance remains
 **Date:** 2026-08-21
 **Scope:** CodeC's private Android userland only
 
@@ -262,8 +262,9 @@ state before continuing.
   signature, tamper rejection, package lifecycle, audit, and compiler smoke;
 - [x] rebuild both key-seeded bootstrap architectures after explicit approval
   (run `32643383952`; exact committed-keyring validation passed);
-- [ ] publish the revalidated assets as `userland-v2-dev` after separate
-  approval and pass the clean-device section 8 check (x86_64 where available).
+- [x] publish the revalidated assets as `userland-v2-dev` after separate
+  approval (run `32648783080`, live sidecars match both archive digests);
+- [ ] pass the final clean-device section 8 check (x86_64 where available).
 
 ## 6. Risks and unresolved decisions
 

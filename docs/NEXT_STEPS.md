@@ -2,8 +2,8 @@
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
 device-verified. Part D code, signed Pages, signed-client acceptance, and the
-key-seeded bootstrap build are ✅ in PR #14; release publication and its final
-clean-device gate remain.
+key-seeded bootstrap build and `userland-v2-dev` release publication are ✅ in
+PR #14; only the rebuilt-bootstrap clean-device gate remains.
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -271,7 +271,7 @@ negative checks and the recovery tests.
 ## Part D — M3: sign the repository and verify on device
 
 **Status: IMPLEMENTATION + SIGNED PUBLICATION + CLIENT ACCEPTANCE + BOOTSTRAP
-BUILD COMPLETE; release/clean-device acceptance pending.** PR #14 now
+BUILD/RELEASE COMPLETE; final clean-device acceptance pending.** PR #14 now
 contains key-agnostic signing/validation, protected-subkey CI support, the
 public-only production keyring, signed-only client/bootstrap integration, and
 tamper/missing-signature tests. Corrective signed publication run `32642631785`
@@ -281,7 +281,8 @@ then passed signed update, exact-key verification, tamper rejection, nano
 lifecycle, clean audit, and compiler checks. Build run `32643383952` then built
 both architectures successfully; each archive passed the validator's exact
 v3-keyring byte comparison and was uploaded as a non-expired artifact. Release
-publication and clean-device acceptance have not run.
+run `32648783080` revalidated both archives and replaced the four
+`userland-v2-dev` assets. Only clean-device acceptance has not run.
 
 **Why.** The development channel originally relied on HTTPS + SHA-256 only.
 Signing closes the integrity-vs-tampering gap. The Part D client removes `[trusted=yes]`, verifies
@@ -315,13 +316,10 @@ package hash chain verify, rejects tampered metadata, and uses no
    the public key files. Rotation, revocation, rollback, and overlap rules are
    documented.
 
-**Remaining ordered gates (require explicit owner approval).**
-1. Apply the reviewed release-note correction to the active bootstrap publishing
-   workflow; this does not publish anything.
-2. Publish run `32643383952` as `userland-v2-dev`; the release workflow must
-   download and revalidate both immutable archives before replacing assets.
-3. Perform the final clean-device keyring/signed-APT/package/audit/compiler gate.
-   Do not merge PR #14 until the owner accepts the remaining evidence.
+**Remaining gate.** Perform the final clean-device
+keyring/signed-APT/package/audit/compiler test against the rebuilt
+`userland-v2-dev` assets. Back up app-private projects before uninstalling, and
+do not merge PR #14 until the owner accepts the evidence.
 
 ---
 

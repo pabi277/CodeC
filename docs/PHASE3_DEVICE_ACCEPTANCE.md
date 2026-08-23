@@ -4,8 +4,8 @@
 Sections 0–6 passed on a clean Samsung SM-A356E (Android 16, aarch64); section 7
 passed on a separate arm64 device through an in-place v1 upgrade; and section 8
 passed live signature, tamper rejection, APT, package lifecycle, audit, and
-compiler checks. Both rebuilt archives now pass exact-keyring CI validation;
-release publication and the rebuilt-bootstrap clean-device item remain.
+compiler checks. Both rebuilt archives passed exact-keyring CI validation and
+were published by run `32648783080`; only the clean-device item remains.
 
 This checklist is the M2 gate from [`PHASE3_PLAN.md`](PHASE3_PLAN.md). Run it
 after the `userland-v2-dev` release is published and a fresh APK (versionName
@@ -247,8 +247,9 @@ fi
       compiler smoke still pass after signing is enabled;
 - [x] CI run `32643383952` built both bootstrap architectures and validated the
       embedded keyring byte-for-byte against the committed v3 public key;
-- [ ] publish those revalidated assets and pass on a clean device (requires
-      separate release-publication approval).
+- [x] publish those revalidated assets as `userland-v2-dev` (release run
+      `32648783080`);
+- [ ] pass the rebuilt key-seeded bootstrap on a clean device.
 
 **2026-08-23 CodeC-device evidence:** the installed keyring hash matched;
 `pkg update` returned 0 with no unsigned, weak-security, or missing-hash warning;
@@ -266,9 +267,9 @@ terminal output. Rotation, revocation, and rollback procedures are in
 ## Result
 
 Every Part C item and the Part D signed-client path passed on real arm64
-devices, and both key-seeded archives passed CI validation. Phase 3 completion
-remains pending release publication and the rebuilt-bootstrap clean-device item
-in section 8. The test-only APK key used
+devices; both key-seeded archives passed CI validation and are published. Phase
+3 completion remains pending only the rebuilt-bootstrap clean-device item in
+section 8. The test-only APK key used
 solely to align CI artifact signatures is not a production signing key and is
 unrelated to repository signing.
 

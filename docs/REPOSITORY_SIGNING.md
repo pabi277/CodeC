@@ -3,7 +3,8 @@
 **Status:** Corrective signed Pages run `32642631785` and the real arm64
 signed-client acceptance path passed against the exact v3 signing subkey.
 Key-seeded build run `32643383952` passed both architectures and exact-keyring
-validation; release publication and clean-device acceptance remain.
+validation; release run `32648783080` revalidated and published all four assets.
+Only rebuilt-bootstrap clean-device acceptance remains.
 
 ## Trust model
 

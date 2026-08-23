@@ -2,8 +2,8 @@
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
 device-verified. Part D implementation, signed Pages/client acceptance, and the
-key-seeded bootstrap build are ✅ in PR #14; release publication and its final
-clean-device gate remain.
+key-seeded bootstrap build/release are ✅ in PR #14; only the final clean-device
+gate remains.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -364,8 +364,14 @@ passed warning-free `pkg update`, exact `VALIDSIG`, tamper rejection, nano 9.2
 install/postinst/removal, clean `dpkg --audit`, and compiler smoke. Approved
 build run `32643383952` then completed both architectures; each archive passed
 assembly plus the validator's exact v3-keyring byte comparison and was uploaded.
-Only release publication and the rebuilt-bootstrap clean-device gate remain.
-Operational details and
+Release run `32648783080` downloaded and revalidated both immutable artifacts,
+then replaced the four `userland-v2-dev` assets. The new archive digests are
+`49cef1ccf82831e870d2d94537c5b9091cc71fa17c4eb0c27dc913d4e79248bf`
+(aarch64, 23,928,215 bytes) and
+`8e9fd6a973a4c56a957d952aa0ecc1d01ac4788f9cf61bd9162fa6d93e873b4a`
+(x86_64, 23,824,737 bytes), matching the live sidecars. Only the rebuilt-
+bootstrap clean-device gate remains. Operational
+details and
 rotation/revocation/rollback rules are in
 [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
 
@@ -379,9 +385,9 @@ clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
 2. ~~Fix bootstrap correctness~~ ✅ **DONE (Part B above; device-verified).**
 3. ~~Run clean-device acceptance~~ ✅ **DONE (Part C above; all sections passed).**
-4. **M3 final gate — publish/accept the key-seeded bootstrap** (signed Pages,
-   signed-client device path, and both CI bootstrap builds pass; release assets
-   and clean-device proof remain separately controlled).
+4. **M3 final gate — accept the released key-seeded bootstrap** (signed Pages,
+   signed-client device path, CI builds, and release publication pass; only the
+   backup-first clean-device proof remains).
 5. **Phase 4 — polish** (Parts E–F: storage access,
    `termux-setup-storage`-equivalent, security confirmation prompt, themes,
    signing UX).
