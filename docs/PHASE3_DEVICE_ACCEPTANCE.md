@@ -1,9 +1,10 @@
 # Phase 3 clean-device acceptance checklist
 
-**Status: PASSED (2026-08-23) — Part C ✅ complete.** Sections 0–6 passed
-on a clean Samsung SM-A356E (Android 16, aarch64). Section 7 then passed on a
-separate arm64 device by installing released v1.3.14/userland-v1 and updating
-in place to PR #14; every item below is complete.
+**Status: Part C PASSED (2026-08-23); Part D signed-channel acceptance is
+pending.** Sections 0–6 passed on a clean Samsung SM-A356E (Android 16,
+aarch64). Section 7 then passed on a separate arm64 device by installing
+released v1.3.14/userland-v1 and updating in place to PR #14. Section 8 is the
+remaining Part D gate and must run only after signed Pages publication.
 
 This checklist is the M2 gate from [`PHASE3_PLAN.md`](PHASE3_PLAN.md). Run it
 after the `userland-v2-dev` release is published and a fresh APK (versionName
@@ -98,10 +99,11 @@ pager -V
 | `pager -V` | reports less |
 | `cat`, `less` | real coreutils/less binaries under `$PREFIX` |
 
-**2026-08-23 evidence:** update/search/install/uninstall/upgrade all passed;
-nano 9.2 ran; `sed` upgraded; `cat`, `less`, `pager`, `editor`, and `vi`
+**2026-08-23 Part C evidence:** update/search/install/uninstall/upgrade all
+passed; nano 9.2 ran; `sed` upgraded; `cat`, `less`, `pager`, `editor`, and `vi`
 resolved under `$PREFIX`; `pager -V` reported less 704; and `dpkg --audit` was
-silent. The unsigned `Release` hash warning remains expected until Part D.
+silent. The then-published repository was unsigned; the warning observed in
+this historical run is not acceptable in the Part D signed-channel test.
 
 Negative checks:
 
@@ -177,11 +179,75 @@ worked; `dpkg --audit` was silent; update/search/nano 9.2 install passed; no
 `com.termux` contamination appeared; and embedded `cc` printed `upgrade-ok`
 with exit 0.
 
+## 8. Part D signed-channel acceptance (pending)
+
+**Do not install the signed-only APK until Pages serves valid signed metadata.**
+After signed publication, install the green APK containing Part D and open Term
+once so its bootstrap writer installs the public key. Then run:
+
+```sh
+set -eu
+KEY="$PREFIX/etc/apt/keyrings/codec-archive-keyring-v1.gpg"
+STATE="$PREFIX/var/lib/codec-pkg"
+test -s "$KEY"
+test "$(sha256sum "$KEY" | awk '{print $1}')" = \
+  e618cb48f616c66aae6e215667c0b3889432ebe4e82890e97ceff6f2a55c3693
+pkg update
+grep -F "signed-by=/data/data/com.codeci.ide/files/usr/etc/apt/keyrings/codec-archive-keyring-v1.gpg" \
+  "$STATE/sources.list"
+! grep -F 'trusted=yes' "$STATE/sources.list"
+grep -qx 'Origin: CodeC' "$STATE/Release"
+grep -qx 'Suite: stable' "$STATE/Release"
+```
+
+Required result: every command succeeds; APT reports a valid CodeC repository
+with no unsigned/weak-security or `No Hash entry in Release file` warning; and
+no official Termux source appears.
+
+Prove that the device's exact trust file accepts the deployed signature and
+rejects changed cleartext without changing the live repository:
+
+```sh
+set -eu
+D="$HOME/codec-signing-acceptance"
+rm -rf "$D" && mkdir -p "$D"
+curl -fsSLo "$D/InRelease" \
+  https://pabi277.github.io/CodeC/dev/dists/stable/InRelease
+gpgv --keyring "$PREFIX/etc/apt/keyrings/codec-archive-keyring-v1.gpg" \
+  --output "$D/Release" "$D/InRelease"
+grep -qx 'Origin: CodeC' "$D/Release"
+grep -qx 'Suite: stable' "$D/Release"
+sed 's/^Origin: CodeC$/Origin: Attacker/' \
+  "$D/InRelease" > "$D/InRelease.tampered"
+grep -qx 'Origin: Attacker' "$D/InRelease.tampered"
+if gpgv --keyring "$PREFIX/etc/apt/keyrings/codec-archive-keyring-v1.gpg" \
+  --output "$D/Release.tampered" "$D/InRelease.tampered"; then
+  echo 'FAIL: tampered InRelease was accepted' >&2
+  exit 1
+else
+  echo 'tamper-rejected'
+fi
+```
+
+- [ ] committed keyring hash matches on device;
+- [ ] `pkg update` succeeds through `signed-by=` with no unsigned/hash warning;
+- [ ] independent device `gpgv` verification succeeds;
+- [ ] modified `InRelease` is rejected;
+- [ ] `pkg install nano`, `nano --version`, uninstall, `dpkg --audit`, and the
+      compiler smoke still pass after signing is enabled;
+- [ ] a newly rebuilt bootstrap contains the same keyring bytes and passes on a
+      clean device (requires separate rebuild/publication approval).
+
+Record the APK workflow run, Pages workflow run, device/Android version, and
+terminal output. Rotation, revocation, and rollback procedures are in
+[`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
+
 ## Result
 
-Every item passed on real arm64 devices. Part C's exit condition is met. The
-test-only APK key used solely to align CI artifact signatures is not a
-production signing key and is unrelated to Part D repository signing.
+Every Part C item passed on real arm64 devices. Part C's exit condition is met;
+Part D and Phase 3 completion remain pending section 8. The test-only APK key
+used solely to align CI artifact signatures is not a production signing key and
+is unrelated to repository signing.
 
 If any item fails: keep the failure, the device model/Android version, and the
 Term output; do not merge as "Phase 3 complete". The safe fallback

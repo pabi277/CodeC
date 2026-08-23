@@ -1,7 +1,8 @@
 # CodeC — the full journey
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified in PR #14; **Part D repository signing is next.**
+device-verified. Part D signing/client implementation is in PR #14; signed
+publication, bootstrap rebuild, and device acceptance are pending.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -331,6 +332,30 @@ reported ready. The v2 marker, Bash/apt/dpkg/curl, clean audit, CodeC package
 operations, no-contamination check, nano 9.2, and embedded compiler all passed.
 **Part C's exit condition is met.**
 
+### 5e. Part D trust implementation staged (2026-08-23)
+
+PR #14 now has a fail-closed signing chain. Repository generation uses APT's
+required Release-relative index paths. A key-agnostic signer produces both
+`InRelease` and `Release.gpg`; validation requires both, extracts and compares
+the exact cleartext, checks the exact signing-subkey fingerprint, and retains
+the Release/index/package SHA-256 chain. Real-GPG tests cover protected signing,
+missing/tampered metadata, and changed indexes.
+
+The production design keeps primary fingerprint
+`46A371F74AF6D594CDD66C2893C9C5B5136C1ED4` offline and gives CI only protected
+signing subkey `787AFCCE525C45D4201E3AA3F896C6D8DF8BE456`. Git contains only the
+versioned public keyring/armor/fingerprint files. The APK installs that exact
+keyring; `pkg` requires `gpgv`, verifies the signed CodeC Origin/Suite before
+APT, and uses a keyring-scoped `signed-by=` source. APT verifies independently.
+The Phase 3 bootstrap assembler seeds the same public bytes and its validator
+rejects a missing or different keyring.
+
+The owner still must apply the pending workflow file, publish and independently
+verify signed Pages, then run signed-device acceptance. The expensive bootstrap
+rebuild/republish remains a separate approval gate. Operational details and
+rotation/revocation/rollback rules are in
+[`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
+
 ---
 
 ## 6. What is *not* done
@@ -341,7 +366,9 @@ clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
 2. ~~Fix bootstrap correctness~~ ✅ **DONE (Part B above; device-verified).**
 3. ~~Run clean-device acceptance~~ ✅ **DONE (Part C above; all sections passed).**
-4. **M3 — sign the repository** (Part D; currently HTTPS + SHA-256 only).
+4. **M3 rollout — publish and accept the signed repository** (Part D code and
+   public trust material exist; Pages is still unsigned and the bootstrap still
+   needs its approved rebuild).
 5. **Phase 4 — polish** (Parts E–F: storage access,
    `termux-setup-storage`-equivalent, security confirmation prompt, themes,
    signing UX).

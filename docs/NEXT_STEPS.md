@@ -1,7 +1,8 @@
 # CodeC — remaining work, broken into clear parts
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified in PR #14; **Part D repository signing is next.**
+device-verified. Part D code/trust material is implemented in PR #14; signed
+publication, bootstrap rebuild, and device acceptance remain pending.
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -268,23 +269,58 @@ negative checks and the recovery tests.
 
 ## Part D — M3: sign the repository and verify on device
 
-**Why.** The dev channel is HTTPS + SHA-256 only and is explicitly **not** a
-trusted production channel. Signing closes the integrity-vs-tampering gap
-(`[trusted=yes]` currently disables apt's own signature checks).
+**Status: IMPLEMENTATION COMPLETE; rollout/acceptance pending.** PR #14 now
+contains key-agnostic signing/validation, protected-subkey CI support, the
+public-only production keyring, signed-only client/bootstrap integration, and
+tamper/missing-signature tests. The active Pages publication workflow still
+must be updated by the owner from `docs/ci-pending/package-repository.yml`.
+No signed publication, expensive bootstrap rebuild, or Part D device test has
+run yet.
 
-**Exit condition.** A device with only the CodeC trust file installed accepts
-the repository *because* its `Release`/`InRelease` signature verifies — and
-rejects a tampered one — without `trusted=yes`.
+**Why.** The currently published dev channel is HTTPS + SHA-256 only and is
+explicitly **not** a trusted production channel. Signing closes the
+integrity-vs-tampering gap. The Part D client removes `[trusted=yes]`, verifies
+`InRelease` with `gpgv` before apt, and lets apt independently verify through an
+exact `signed-by=` keyring.
 
-**Steps.**
-1. Generate a CodeC signing key; sign `Release` → `Release.gpg` / `InRelease`.
-2. Publish the key in a CodeC-owned, versioned trust file, and install it
-   into `$PREFIX/etc/apt/trusted.gpg.d/` from the bootstrap.
-3. Remove `trusted=yes` from the `pkg` sources line; rely on apt signature
-   verification (`Verify-Peer` + signature).
-4. Add negative tests: a corrupted `Packages` or a missing signature must fail
-   before any package installs.
-5. Document key rotation and rollback.
+**Exit condition.** A device with only the CodeC versioned keyring installed
+accepts the repository because its `InRelease` signature and Release/index/
+package hash chain verify, rejects tampered metadata, and uses no
+`trusted=yes`. The rebuilt bootstrap contains byte-for-byte the same keyring.
+
+**Completed inexpensive implementation.**
+1. `sign-repository.sh` emits `InRelease` and `Release.gpg` with an exact
+   dedicated signing subkey; the protected passphrase travels through stdin,
+   never argv.
+2. `validate-repository.py` requires both signature forms, exact cleartext,
+   exact fingerprint, and the existing index/package hash chains. Real-GPG
+   tests cover valid, missing, tampered, and changed-index cases.
+3. Public keyring v1 and fingerprints are committed under
+   `codec-packages/keys/`; no private key material is committed. The offline
+   primary and CI signing subkey fingerprints are recorded in
+   [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
+4. The APK installs that keyring under `etc/apt/keyrings`; `pkg` requires
+   `gpgv`, verifies signed Origin/Suite, and writes a CodeC-only `signed-by=`
+   source. The Phase 3 bootstrap assembler seeds the same bytes and its
+   validator rejects missing/different keyrings.
+5. Release hash paths are now relative to `dists/stable/Release`, eliminating
+   the historical APT `No Hash entry in Release file` warning.
+6. The pending publication workflow imports the CI-only subkey, fails closed on
+   secret/fingerprint drift, signs before signed validation, and deploys only
+   the public key files. Rotation, revocation, rollback, and overlap rules are
+   documented.
+
+**Remaining ordered gates (require owner control/approval).**
+1. Apply the reviewed pending workflow to `.github/workflows/` (the agent token
+   cannot push workflow files). Applying it does not dispatch or publish.
+2. With explicit approval, publish a signed repository from an existing
+   successful package-build run; keep `Release.sha256` for old-client
+   compatibility and verify the deployed files independently.
+3. Only after signed Pages is live, install the signed-only APK and complete
+   section 8 of [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md).
+4. With separate explicit approval, run the expensive package/bootstrap build,
+   republish `userland-v2-dev`, and prove a clean bootstrap contains the pinned
+   keyring. Do not merge PR #14 until the owner accepts the remaining evidence.
 
 ---
 
@@ -323,7 +359,7 @@ and can tell at a glance whether they are on the trusted channel.
 | A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
 | B — bootstrap correctness | A | ✅ **DONE** — merged, rebuilt, republished, device-verified |
 | C — clean-device acceptance | A ✅, B ✅ | ✅ **DONE** — every checklist item passed on real arm64 devices |
-| D — M3 signing | A ✅, B ✅, C ✅ | **next** |
+| D — M3 signing | A ✅, B ✅, C ✅ | implementation ✅; signed publish/rebuild/device gate pending |
 | E — storage access | none (parallel) | medium |
 | F — confirmation/signing UX | D | small–medium |
 
