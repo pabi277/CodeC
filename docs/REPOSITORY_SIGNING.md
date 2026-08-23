@@ -1,8 +1,8 @@
 # CodeC repository signing operations
 
-**Status:** Part D implementation is staged on PR #14. Do not install a
-signed-only APK until the development repository has been published with valid
-`InRelease` and `Release.gpg` files.
+**Status:** Signed Pages publication passed in workflow run `32641097388` and
+was independently verified against the exact v3 signing subkey. Signed-channel
+device acceptance and the approved key-seeded bootstrap rebuild remain pending.
 
 ## Trust model
 
@@ -69,6 +69,18 @@ pinentry; it is never a process argument.
 
 Never publish an unsigned repository after signed-only clients are released.
 Never work around an incident with `[trusted=yes]` or a second ambient keyring.
+
+### First signed publication evidence
+
+Workflow run `32641097388` reused the successful immutable package artifacts
+from run `32620704350`; both expensive architecture build jobs were skipped.
+The workflow generated Release-relative indexes, signed both `InRelease` and
+`Release.gpg`, validated both against signing subkey
+`328500868CE9B0F74B62CEFC1D7D52F6F8135015`, and deployed Pages. A separate
+Termux fetch then verified both live signatures and their `VALIDSIG` records,
+matched the live public-key hash and fingerprints, compared extracted
+`InRelease` cleartext to `Release`, checked Origin/Suite and the checksum
+sidecar, and rejected a modified `Origin:` line.
 
 ## Routine signing and validation
 

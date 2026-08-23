@@ -1,8 +1,8 @@
 # CodeC — the full journey
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified. Part D signing/client implementation is in PR #14; signed
-publication, bootstrap rebuild, and device acceptance are pending.
+device-verified. Part D implementation and signed Pages publication are ✅ in
+PR #14; signed-device acceptance and the key-seeded bootstrap rebuild remain.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -353,9 +353,13 @@ before first signed publication or released-client use when its protected CI
 export proved unusable; the operations record preserves those retired
 fingerprints.
 
-The active publication workflow is applied; the owner still must publish and
-independently verify signed Pages, then run signed-device acceptance. The expensive bootstrap
-rebuild/republish remains a separate approval gate. Operational details and
+Signed Pages publication run `32641097388` reused existing package artifacts,
+skipped both expensive builds, passed exact-subkey signing/validation, and
+deployed successfully. An independent Termux fetch verified both live signature
+forms and exact `VALIDSIG` fingerprint, matched the public key and Release
+cleartext/checksum, and rejected tampered signed metadata. Signed-device
+acceptance remains; the expensive bootstrap rebuild/republish is still a
+separate approval gate. Operational details and
 rotation/revocation/rollback rules are in
 [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
 

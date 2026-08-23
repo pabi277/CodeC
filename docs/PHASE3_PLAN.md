@@ -1,8 +1,8 @@
 # CodeC IDE Phase 3 package-management plan
 
-**Status:** M1 and M2 complete/device-verified; M3 signing, public trust, and
-signed-only client/bootstrap code implemented in PR #14; signed Pages
-publication, rebuilt bootstrap, and signed-device acceptance remain
+**Status:** M1 and M2 complete/device-verified; M3 signing, public trust,
+signed-only client/bootstrap code, and signed Pages publication complete in PR
+#14; rebuilt bootstrap and signed-device acceptance remain
 **Date:** 2026-08-21
 **Scope:** CodeC's private Android userland only
 
@@ -256,7 +256,8 @@ state before continuing.
 - [x] document key rotation, revocation, rollback, and device acceptance in
   [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md);
 - [x] apply the reviewed signed-publication workflow;
-- [ ] publish signed Pages and independently verify the deployed trust chain;
+- [x] publish signed Pages and independently verify the deployed trust chain
+  (run `32641097388`, both expensive builds skipped);
 - [ ] rebuild/publish the key-seeded bootstrap after explicit approval;
 - [ ] pass section 8 signed-channel acceptance on arm64 (and x86_64 where
   available) before promotion.

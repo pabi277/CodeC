@@ -181,9 +181,14 @@ with exit 0.
 
 ## 8. Part D signed-channel acceptance (pending)
 
-**Do not install the signed-only APK until Pages serves valid signed metadata.**
-After signed publication, install the green APK containing Part D and open Term
-once so its bootstrap writer installs the public key. Then run:
+**Publication prerequisite passed (2026-08-23).** Workflow run `32641097388`
+reused existing package artifacts and skipped both expensive builds. A separate
+Termux fetch verified live `InRelease` and `Release.gpg` with exact signing
+subkey `328500868CE9B0F74B62CEFC1D7D52F6F8135015`, matched the committed keyring
+and Release cleartext/checksum, and rejected a tampered signed Origin.
+
+Install the green APK containing Part D and open Term once so its bootstrap
+writer installs the public key. Then run:
 
 ```sh
 set -eu

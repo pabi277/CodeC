@@ -1,8 +1,8 @@
 # CodeC — remaining work, broken into clear parts
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified. Part D code/trust material is implemented in PR #14; signed
-publication, bootstrap rebuild, and device acceptance remain pending.
+device-verified. Part D code and signed Pages publication are ✅ in PR #14;
+key-seeded bootstrap rebuild and signed-device acceptance remain pending.
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -269,13 +269,14 @@ negative checks and the recovery tests.
 
 ## Part D — M3: sign the repository and verify on device
 
-**Status: IMPLEMENTATION COMPLETE; rollout/acceptance pending.** PR #14 now
+**Status: IMPLEMENTATION + SIGNED PUBLICATION COMPLETE; device/bootstrap
+acceptance pending.** PR #14 now
 contains key-agnostic signing/validation, protected-subkey CI support, the
 public-only production keyring, signed-only client/bootstrap integration, and
-tamper/missing-signature tests. The reviewed Pages publication workflow is now
-active. Its pre-publication attempts failed closed before deployment while an
-unused candidate key was replaced; no signed publication, expensive bootstrap
-rebuild, or Part D device test has run yet.
+tamper/missing-signature tests. Signed publication run `32641097388` reused
+existing artifacts, skipped both expensive builds, deployed successfully, and
+passed independent live-signature/tamper verification. No expensive bootstrap
+rebuild or Part D CodeC-device test has run yet.
 
 **Why.** The currently published dev channel is HTTPS + SHA-256 only and is
 explicitly **not** a trusted production channel. Signing closes the
@@ -311,12 +312,9 @@ package hash chain verify, rejects tampered metadata, and uses no
    documented.
 
 **Remaining ordered gates (require owner control/approval).**
-1. With the existing explicit approval, publish a signed repository from the
-   existing successful package-build run; keep `Release.sha256` for old-client
-   compatibility and verify the deployed files independently.
-2. Only after signed Pages is live, install the signed-only APK and complete
-   section 8 of [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md).
-3. With separate explicit approval, run the expensive package/bootstrap build,
+1. Install the signed-only APK and complete section 8 of
+   [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md).
+2. With separate explicit approval, run the expensive package/bootstrap build,
    republish `userland-v2-dev`, and prove a clean bootstrap contains the pinned
    keyring. Do not merge PR #14 until the owner accepts the remaining evidence.
 
