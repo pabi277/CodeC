@@ -1,10 +1,10 @@
 # Phase 3 clean-device acceptance checklist
 
-**Status: Part C PASSED (2026-08-23); Part D signed-channel acceptance is
-pending.** Sections 0–6 passed on a clean Samsung SM-A356E (Android 16,
-aarch64). Section 7 then passed on a separate arm64 device by installing
-released v1.3.14/userland-v1 and updating in place to PR #14. Section 8 is the
-remaining Part D gate and must run only after signed Pages publication.
+**Status: Part C and the Part D signed-client path PASSED (2026-08-23).**
+Sections 0–6 passed on a clean Samsung SM-A356E (Android 16, aarch64); section 7
+passed on a separate arm64 device through an in-place v1 upgrade; and section 8
+passed live signature, tamper rejection, APT, package lifecycle, audit, and
+compiler checks. Only the approved rebuilt-bootstrap clean-device item remains.
 
 This checklist is the M2 gate from [`PHASE3_PLAN.md`](PHASE3_PLAN.md). Run it
 after the `userland-v2-dev` release is published and a fresh APK (versionName
@@ -179,13 +179,17 @@ worked; `dpkg --audit` was silent; update/search/nano 9.2 install passed; no
 `com.termux` contamination appeared; and embedded `cc` printed `upgrade-ok`
 with exit 0.
 
-## 8. Part D signed-channel acceptance (pending)
+## 8. Part D signed-channel acceptance — client path passed
 
-**Publication prerequisite passed (2026-08-23).** Workflow run `32641097388`
-reused existing package artifacts and skipped both expensive builds. A separate
-Termux fetch verified live `InRelease` and `Release.gpg` with exact signing
-subkey `328500868CE9B0F74B62CEFC1D7D52F6F8135015`, matched the committed keyring
-and Release cleartext/checksum, and rejected a tampered signed Origin.
+**Publication prerequisite passed (2026-08-23).** Initial signed workflow run
+`32641097388` established both valid signature forms. The first CodeC-device
+`pkg update` then exposed an APT grammar defect: blank lines terminated the
+Release stanza before its hashes. Commit `0fa9823` removed those separators and
+made validation reject them; corrective publication run `32642631785` reused
+existing artifacts, skipped both expensive builds, and deployed successfully.
+A separate Termux fetch verified the live exact signing subkey
+`328500868CE9B0F74B62CEFC1D7D52F6F8135015`, committed keyring, Release
+cleartext/checksum, and tamper rejection.
 
 Install the green APK containing Part D and open Term once so its bootstrap
 writer installs the public key. Then run:
@@ -234,14 +238,23 @@ else
 fi
 ```
 
-- [ ] committed keyring hash matches on device;
-- [ ] `pkg update` succeeds through `signed-by=` with no unsigned/hash warning;
-- [ ] independent device `gpgv` verification succeeds;
-- [ ] modified `InRelease` is rejected;
-- [ ] `pkg install nano`, `nano --version`, uninstall, `dpkg --audit`, and the
+- [x] committed keyring hash matches on device;
+- [x] `pkg update` succeeds through `signed-by=` with no unsigned/hash warning;
+- [x] independent device `gpgv` verification succeeds;
+- [x] modified `InRelease` is rejected;
+- [x] `pkg install nano`, `nano --version`, uninstall, `dpkg --audit`, and the
       compiler smoke still pass after signing is enabled;
 - [ ] a newly rebuilt bootstrap contains the same keyring bytes and passes on a
       clean device (requires separate rebuild/publication approval).
+
+**2026-08-23 CodeC-device evidence:** the installed keyring hash matched;
+`pkg update` returned 0 with no unsigned, weak-security, or missing-hash warning;
+Origin/Suite matched; device `gpgv` emitted `VALIDSIG` for the exact v3 subkey;
+a changed signed Origin was rejected; nano 9.2 plus libmagic downloaded and
+installed from the signed repository; the reviewed alternatives postinst/prerm
+ran; removal succeeded; `dpkg --audit` was empty; and embedded `cc` printed
+`partd-compiler-ok`. The dangling-editor repair and absent-mandoc messages were
+non-fatal alternatives warnings, followed by a clean audit.
 
 Record the APK workflow run, Pages workflow run, device/Android version, and
 terminal output. Rotation, revocation, and rollback procedures are in
@@ -249,10 +262,11 @@ terminal output. Rotation, revocation, and rollback procedures are in
 
 ## Result
 
-Every Part C item passed on real arm64 devices. Part C's exit condition is met;
-Part D and Phase 3 completion remain pending section 8. The test-only APK key
-used solely to align CI artifact signatures is not a production signing key and
-is unrelated to repository signing.
+Every Part C item and the Part D signed-client path passed on real arm64
+devices. Phase 3 completion remains pending only the newly rebuilt,
+key-seeded-bootstrap clean-device item in section 8. The test-only APK key used
+solely to align CI artifact signatures is not a production signing key and is
+unrelated to repository signing.
 
 If any item fails: keep the failure, the device model/Android version, and the
 Term output; do not merge as "Phase 3 complete". The safe fallback

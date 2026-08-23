@@ -1,8 +1,8 @@
 # CodeC — the full journey
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified. Part D implementation and signed Pages publication are ✅ in
-PR #14; signed-device acceptance and the key-seeded bootstrap rebuild remain.
+device-verified. Part D implementation, signed Pages, and signed-client
+acceptance are ✅ in PR #14; only the key-seeded bootstrap rebuild remains.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -353,13 +353,15 @@ before first signed publication or released-client use when its protected CI
 export proved unusable; the operations record preserves those retired
 fingerprints.
 
-Signed Pages publication run `32641097388` reused existing package artifacts,
-skipped both expensive builds, passed exact-subkey signing/validation, and
-deployed successfully. An independent Termux fetch verified both live signature
-forms and exact `VALIDSIG` fingerprint, matched the public key and Release
-cleartext/checksum, and rejected tampered signed metadata. Signed-device
-acceptance remains; the expensive bootstrap rebuild/republish is still a
-separate approval gate. Operational details and
+The first signed publication established valid OpenPGP metadata, then the real
+CodeC device exposed a Debian-control grammar defect: blank lines ended the
+Release stanza before its hash fields, so APT correctly rejected weak metadata.
+Commit `0fa9823` removed those separators and added a fail-closed regression
+test. Corrective run `32642631785` reused existing artifacts, skipped both
+expensive builds, signed/validated, and deployed successfully. The device then
+passed warning-free `pkg update`, exact `VALIDSIG`, tamper rejection, nano 9.2
+install/postinst/removal, clean `dpkg --audit`, and compiler smoke. Only the
+expensive key-seeded bootstrap rebuild/clean-device gate remains. Operational details and
 rotation/revocation/rollback rules are in
 [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
 
@@ -373,9 +375,9 @@ clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
 2. ~~Fix bootstrap correctness~~ ✅ **DONE (Part B above; device-verified).**
 3. ~~Run clean-device acceptance~~ ✅ **DONE (Part C above; all sections passed).**
-4. **M3 rollout — publish and accept the signed repository** (Part D code and
-   public trust material exist; Pages is still unsigned and the bootstrap still
-   needs its approved rebuild).
+4. **M3 final gate — rebuild/accept the key-seeded bootstrap** (signed Pages and
+   the signed-client device path pass; the expensive bootstrap artifact still
+   needs its separately approved rebuild and clean-device proof).
 5. **Phase 4 — polish** (Parts E–F: storage access,
    `termux-setup-storage`-equivalent, security confirmation prompt, themes,
    signing UX).

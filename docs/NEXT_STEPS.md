@@ -1,8 +1,8 @@
 # CodeC — remaining work, broken into clear parts
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified. Part D code and signed Pages publication are ✅ in PR #14;
-key-seeded bootstrap rebuild and signed-device acceptance remain pending.
+device-verified. Part D code, signed Pages, and signed-client acceptance are ✅
+in PR #14; only the key-seeded bootstrap rebuild/clean-device gate remains.
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -269,18 +269,19 @@ negative checks and the recovery tests.
 
 ## Part D — M3: sign the repository and verify on device
 
-**Status: IMPLEMENTATION + SIGNED PUBLICATION COMPLETE; device/bootstrap
-acceptance pending.** PR #14 now
+**Status: IMPLEMENTATION + SIGNED PUBLICATION + CLIENT ACCEPTANCE COMPLETE;
+rebuilt-bootstrap acceptance pending.** PR #14 now
 contains key-agnostic signing/validation, protected-subkey CI support, the
 public-only production keyring, signed-only client/bootstrap integration, and
-tamper/missing-signature tests. Signed publication run `32641097388` reused
-existing artifacts, skipped both expensive builds, deployed successfully, and
-passed independent live-signature/tamper verification. No expensive bootstrap
-rebuild or Part D CodeC-device test has run yet.
+tamper/missing-signature tests. Corrective signed publication run `32642631785`
+reused existing artifacts, skipped both expensive builds, and fixed the APT
+Release-stanza defect found by the first device attempt. The real CodeC device
+then passed signed update, exact-key verification, tamper rejection, nano
+lifecycle, clean audit, and compiler checks. No key-seeded bootstrap rebuild has
+run yet.
 
-**Why.** The currently published dev channel is HTTPS + SHA-256 only and is
-explicitly **not** a trusted production channel. Signing closes the
-integrity-vs-tampering gap. The Part D client removes `[trusted=yes]`, verifies
+**Why.** The development channel originally relied on HTTPS + SHA-256 only.
+Signing closes the integrity-vs-tampering gap. The Part D client removes `[trusted=yes]`, verifies
 `InRelease` with `gpgv` before apt, and lets apt independently verify through an
 exact `signed-by=` keyring.
 
@@ -311,12 +312,10 @@ package hash chain verify, rejects tampered metadata, and uses no
    the public key files. Rotation, revocation, rollback, and overlap rules are
    documented.
 
-**Remaining ordered gates (require owner control/approval).**
-1. Install the signed-only APK and complete section 8 of
-   [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md).
-2. With separate explicit approval, run the expensive package/bootstrap build,
-   republish `userland-v2-dev`, and prove a clean bootstrap contains the pinned
-   keyring. Do not merge PR #14 until the owner accepts the remaining evidence.
+**Remaining ordered gate (requires explicit owner approval).**
+1. Run the expensive package/bootstrap build, republish `userland-v2-dev`, and
+   prove a clean bootstrap contains the pinned keyring. Do not merge PR #14
+   until the owner accepts the remaining evidence.
 
 ---
 

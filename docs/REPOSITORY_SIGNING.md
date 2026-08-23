@@ -1,8 +1,8 @@
 # CodeC repository signing operations
 
-**Status:** Signed Pages publication passed in workflow run `32641097388` and
-was independently verified against the exact v3 signing subkey. Signed-channel
-device acceptance and the approved key-seeded bootstrap rebuild remain pending.
+**Status:** Corrective signed Pages run `32642631785` and the real arm64
+signed-client acceptance path passed against the exact v3 signing subkey. Only
+the separately approved key-seeded bootstrap rebuild/clean-device gate remains.
 
 ## Trust model
 
@@ -72,15 +72,17 @@ Never work around an incident with `[trusted=yes]` or a second ambient keyring.
 
 ### First signed publication evidence
 
-Workflow run `32641097388` reused the successful immutable package artifacts
-from run `32620704350`; both expensive architecture build jobs were skipped.
-The workflow generated Release-relative indexes, signed both `InRelease` and
-`Release.gpg`, validated both against signing subkey
-`328500868CE9B0F74B62CEFC1D7D52F6F8135015`, and deployed Pages. A separate
-Termux fetch then verified both live signatures and their `VALIDSIG` records,
-matched the live public-key hash and fingerprints, compared extracted
-`InRelease` cleartext to `Release`, checked Origin/Suite and the checksum
-sidecar, and rejected a modified `Origin:` line.
+Initial workflow run `32641097388` reused the successful immutable package
+artifacts from run `32620704350`, skipped both expensive architecture builds,
+and established both exact-key signature forms. The first CodeC-device APT run
+then correctly rejected hash fields placed after blank Release-stanza
+separators. Commit `0fa9823` fixed that Debian-control grammar and made the
+validator reject regressions. Corrective run `32642631785` again skipped both
+builds, signed, validated, and deployed. A separate Termux fetch verified both
+live `VALIDSIG` records, public key/fingerprints, exact Release cleartext,
+Origin/Suite, checksum sidecar, and tamper rejection. The CodeC device then
+passed warning-free APT update, exact-key/tamper checks, nano lifecycle, clean
+audit, and compiler smoke.
 
 ## Routine signing and validation
 
