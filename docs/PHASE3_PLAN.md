@@ -255,8 +255,8 @@ state before continuing.
 - [x] test valid, missing, tampered, and changed-index signature cases;
 - [x] document key rotation, revocation, rollback, and device acceptance in
   [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md);
-- [ ] apply the pending workflow, publish signed Pages, and independently verify
-  the deployed trust chain;
+- [x] apply the reviewed signed-publication workflow;
+- [ ] publish signed Pages and independently verify the deployed trust chain;
 - [ ] rebuild/publish the key-seeded bootstrap after explicit approval;
 - [ ] pass section 8 signed-channel acceptance on arm64 (and x86_64 where
   available) before promotion.

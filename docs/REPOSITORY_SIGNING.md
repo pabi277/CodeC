@@ -8,8 +8,8 @@ signed-only APK until the development repository has been published with valid
 
 CodeC uses an offline OpenPGP primary key and a dedicated signing subkey:
 
-- primary fingerprint: `46A371F74AF6D594CDD66C2893C9C5B5136C1ED4`;
-- repository signing subkey: `787AFCCE525C45D4201E3AA3F896C6D8DF8BE456`;
+- primary fingerprint: `3185B4D219C5EF30B263F5E50A458891ED0FB8D3`;
+- repository signing subkey: `328500868CE9B0F74B62CEFC1D7D52F6F8135015`;
 - versioned public keyring: `codec-archive-keyring-v1.gpg`;
 - installed path: `$PREFIX/etc/apt/keyrings/codec-archive-keyring-v1.gpg`.
 
@@ -17,6 +17,15 @@ The offline primary key and revocation certificate must remain offline. Only the
 protected signing-subkey export belongs in GitHub Actions. No private-key or
 passphrase material belongs in Git, an APK, a bootstrap, an Actions artifact,
 workflow output, or chat.
+
+**Pre-publication replacement record.** The initial candidate
+`46A371F74AF6D594CDD66C2893C9C5B5136C1ED4` / signing subkey
+`787AFCCE525C45D4201E3AA3F896C6D8DF8BE456` was retired when its protected CI
+export could not be recovered. A subsequent offline candidate was abandoned
+before export after its passphrase handling was invalidated. Neither candidate
+ever signed Pages or entered a released client/bootstrap. Therefore the current
+public key safely replaced the unreleased v1 trust file before first use; normal
+post-release overlap rules did not apply.
 
 The APK and Phase 3 bootstrap distribute the exact committed public keyring.
 CodeC's source uses `signed-by=` to restrict APT to that keyring. Before APT is
@@ -33,7 +42,7 @@ The publication workflow expects exactly these repository settings:
 |---|---|---|
 | Actions secret | `CODEC_REPOSITORY_SIGNING_KEY` | protected secret-key export containing the CI signing subkey |
 | Actions secret | `CODEC_REPOSITORY_SIGNING_PASSPHRASE` | passphrase for that export/subkey |
-| Actions variable | `CODEC_REPOSITORY_SIGNING_FINGERPRINT` | `787AFCCE525C45D4201E3AA3F896C6D8DF8BE456` |
+| Actions variable | `CODEC_REPOSITORY_SIGNING_FINGERPRINT` | `328500868CE9B0F74B62CEFC1D7D52F6F8135015` |
 
 Publication fails closed if any value is absent, the fingerprint is malformed or
 differs from the committed signing-subkey fingerprint, the secret key cannot be
@@ -69,11 +78,11 @@ be called with both trust arguments:
 
 ```sh
 codec-packages/scripts/sign-repository.sh packages/dev \
-  787AFCCE525C45D4201E3AA3F896C6D8DF8BE456
+  328500868CE9B0F74B62CEFC1D7D52F6F8135015
 python3 codec-packages/scripts/validate-repository.py packages/dev \
   --architectures aarch64 x86_64 \
   --keyring codec-packages/keys/codec-archive-keyring-v1.gpg \
-  --signing-fingerprint 787AFCCE525C45D4201E3AA3F896C6D8DF8BE456
+  --signing-fingerprint 328500868CE9B0F74B62CEFC1D7D52F6F8135015
 ```
 
 This example assumes an isolated `GNUPGHOME` already contains the protected CI

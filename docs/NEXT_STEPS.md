@@ -272,10 +272,10 @@ negative checks and the recovery tests.
 **Status: IMPLEMENTATION COMPLETE; rollout/acceptance pending.** PR #14 now
 contains key-agnostic signing/validation, protected-subkey CI support, the
 public-only production keyring, signed-only client/bootstrap integration, and
-tamper/missing-signature tests. The active Pages publication workflow still
-must be updated by the owner from `docs/ci-pending/package-repository.yml`.
-No signed publication, expensive bootstrap rebuild, or Part D device test has
-run yet.
+tamper/missing-signature tests. The reviewed Pages publication workflow is now
+active. Its pre-publication attempts failed closed before deployment while an
+unused candidate key was replaced; no signed publication, expensive bootstrap
+rebuild, or Part D device test has run yet.
 
 **Why.** The currently published dev channel is HTTPS + SHA-256 only and is
 explicitly **not** a trusted production channel. Signing closes the
@@ -305,20 +305,18 @@ package hash chain verify, rejects tampered metadata, and uses no
    validator rejects missing/different keyrings.
 5. Release hash paths are now relative to `dists/stable/Release`, eliminating
    the historical APT `No Hash entry in Release file` warning.
-6. The pending publication workflow imports the CI-only subkey, fails closed on
+6. The active publication workflow imports the CI-only subkey, fails closed on
    secret/fingerprint drift, signs before signed validation, and deploys only
    the public key files. Rotation, revocation, rollback, and overlap rules are
    documented.
 
 **Remaining ordered gates (require owner control/approval).**
-1. Apply the reviewed pending workflow to `.github/workflows/` (the agent token
-   cannot push workflow files). Applying it does not dispatch or publish.
-2. With explicit approval, publish a signed repository from an existing
-   successful package-build run; keep `Release.sha256` for old-client
+1. With the existing explicit approval, publish a signed repository from the
+   existing successful package-build run; keep `Release.sha256` for old-client
    compatibility and verify the deployed files independently.
-3. Only after signed Pages is live, install the signed-only APK and complete
+2. Only after signed Pages is live, install the signed-only APK and complete
    section 8 of [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md).
-4. With separate explicit approval, run the expensive package/bootstrap build,
+3. With separate explicit approval, run the expensive package/bootstrap build,
    republish `userland-v2-dev`, and prove a clean bootstrap contains the pinned
    keyring. Do not merge PR #14 until the owner accepts the remaining evidence.
 

@@ -342,16 +342,19 @@ the Release/index/package SHA-256 chain. Real-GPG tests cover protected signing,
 missing/tampered metadata, and changed indexes.
 
 The production design keeps primary fingerprint
-`46A371F74AF6D594CDD66C2893C9C5B5136C1ED4` offline and gives CI only protected
-signing subkey `787AFCCE525C45D4201E3AA3F896C6D8DF8BE456`. Git contains only the
+`3185B4D219C5EF30B263F5E50A458891ED0FB8D3` offline and gives CI only protected
+signing subkey `328500868CE9B0F74B62CEFC1D7D52F6F8135015`. Git contains only the
 versioned public keyring/armor/fingerprint files. The APK installs that exact
 keyring; `pkg` requires `gpgv`, verifies the signed CodeC Origin/Suite before
 APT, and uses a keyring-scoped `signed-by=` source. APT verifies independently.
 The Phase 3 bootstrap assembler seeds the same public bytes and its validator
-rejects a missing or different keyring.
+rejects a missing or different keyring. An earlier candidate key was replaced
+before first signed publication or released-client use when its protected CI
+export proved unusable; the operations record preserves those retired
+fingerprints.
 
-The owner still must apply the pending workflow file, publish and independently
-verify signed Pages, then run signed-device acceptance. The expensive bootstrap
+The active publication workflow is applied; the owner still must publish and
+independently verify signed Pages, then run signed-device acceptance. The expensive bootstrap
 rebuild/republish remains a separate approval gate. Operational details and
 rotation/revocation/rollback rules are in
 [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).

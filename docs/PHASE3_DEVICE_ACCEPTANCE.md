@@ -191,7 +191,7 @@ KEY="$PREFIX/etc/apt/keyrings/codec-archive-keyring-v1.gpg"
 STATE="$PREFIX/var/lib/codec-pkg"
 test -s "$KEY"
 test "$(sha256sum "$KEY" | awk '{print $1}')" = \
-  e618cb48f616c66aae6e215667c0b3889432ebe4e82890e97ceff6f2a55c3693
+  e9c36bb618d747bd303104f86869843b41239cfd1ab445dc2f9cf3e71e19a807
 pkg update
 grep -F "signed-by=/data/data/com.codeci.ide/files/usr/etc/apt/keyrings/codec-archive-keyring-v1.gpg" \
   "$STATE/sources.list"
