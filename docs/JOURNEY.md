@@ -1,7 +1,7 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-23 · **State:** Parts A and B ✅ device-verified;
-**Part C sections 0–6 ✅ on arm64 in PR #14, section 7 deferred.**
+**Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
+device-verified in PR #14; **Part D repository signing is next.**
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -301,7 +301,7 @@ compiler still printed `ok`. **Part B's exit condition is met. Do not rebuild,
 republish, or re-verify it unless Part C records evidence of a genuine new
 defect; even then, an expensive workflow requires explicit approval.**
 
-### 5d. Part C sections 0–6 passed; one recovery defect fixed (2026-08-23)
+### 5d. Part C completed; two evidence-found defects fixed (2026-08-23)
 
 A clean Samsung SM-A356E (Android 16, aarch64) passed the Phase 3 bootstrap and
 runtime smoke, package update/search/install/uninstall/upgrade, alternatives,
@@ -320,9 +320,16 @@ Repeating the test left dead PID `6549`; the new script reclaimed it, completed
 the partial download and install, left `dpkg --audit` silent, and cleared the
 pending marker without manual deletion.
 
-Part C is not fully complete: section 7, the `userland-v1` → Phase 3 upgrade
-path, is deferred until a second device is available. The only phone must not
-be downgraded to improvise that test.
+The second-device upgrade test then exposed the other genuine defect: released
+v1.3.14 writes `.userland-vuserland-v1`, while the upgrader's legacy constant
+and unit test had an extra hyphen. PR #14 commit `a4e5af6` corrected the marker.
+After green CI, a separate arm64 device performed a genuine in-place update
+(the two CI APK payloads were re-signed with one local test-only key solely to
+satisfy Android's update-signature rule). CodeC visibly reported the v1 → v2
+upgrade, downloaded all **23,926,127 bytes**, verified SHA-256, extracted, and
+reported ready. The v2 marker, Bash/apt/dpkg/curl, clean audit, CodeC package
+operations, no-contamination check, nano 9.2, and embedded compiler all passed.
+**Part C's exit condition is met.**
 
 ---
 
@@ -333,9 +340,7 @@ clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 
 1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
 2. ~~Fix bootstrap correctness~~ ✅ **DONE (Part B above; device-verified).**
-3. **Finish clean-device acceptance** (Part C) — sections 0–6 passed on arm64;
-   only the v1 → Phase 3 upgrade path remains. One current device is available,
-   so the second-device check is deferred rather than improvised.
+3. ~~Run clean-device acceptance~~ ✅ **DONE (Part C above; all sections passed).**
 4. **M3 — sign the repository** (Part D; currently HTTPS + SHA-256 only).
 5. **Phase 4 — polish** (Parts E–F: storage access,
    `termux-setup-storage`-equivalent, security confirmation prompt, themes,

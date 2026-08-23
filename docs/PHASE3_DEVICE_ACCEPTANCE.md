@@ -1,10 +1,9 @@
 # Phase 3 clean-device acceptance checklist
 
-**Status: PARTIALLY PASSED (2026-08-23).** Sections 0–6 passed on a clean
-Samsung SM-A356E (Android 16, aarch64) using PR #14 commit `8e95a16` for the
-interrupted-install fix. Section 7 is deferred because only one device is
-available; do not claim the full Part C exit condition until the v1 → Phase 3
-upgrade path passes on a second device.
+**Status: PASSED (2026-08-23) — Part C ✅ complete.** Sections 0–6 passed
+on a clean Samsung SM-A356E (Android 16, aarch64). Section 7 then passed on a
+separate arm64 device by installing released v1.3.14/userland-v1 and updating
+in place to PR #14; every item below is complete.
 
 This checklist is the M2 gate from [`PHASE3_PLAN.md`](PHASE3_PLAN.md). Run it
 after the `userland-v2-dev` release is published and a fresh APK (versionName
@@ -161,16 +160,28 @@ supported recovery path — `pkg repair` must do it.
 1. On a second device (or after uninstall), install an APK that predates this
    branch and install `userland-v1`.
 2. Install the new APK, open Term.
-- [ ] The app upgrades the userland to `userland-v2-dev` automatically
+- [x] The app upgrades the userland to `userland-v2-dev` automatically
       (progress shows `upgrading userland-v1 to userland-v2-dev`), real Bash
       keeps working, and `pkg update` then works.
 
+**2026-08-23 evidence and fix:** released v1.3.14 wrote the legacy marker
+`.userland-vuserland-v1`; the upgrader and its test had assumed the nonexistent
+`.userland-v-userland-v1`. PR #14 commit `a4e5af6` corrected the exact marker,
+and Build APK run `32632744434` passed. Because separate CI runs use different
+debug certificates, the unchanged v1.3.14 and PR #14 APK payloads were re-signed
+with one local test-only key so Android could perform a genuine in-place update.
+The app visibly reported `upgrading userland-v1 to userland-v2-dev`, downloaded
+the 23,926,127-byte archive, verified SHA-256, extracted it, and reported ready.
+The resulting device had the `userland-v2-dev` marker; Bash, apt, dpkg, and curl
+worked; `dpkg --audit` was silent; update/search/nano 9.2 install passed; no
+`com.termux` contamination appeared; and embedded `cc` printed `upgrade-ok`
+with exit 0.
+
 ## Result
 
-Sections 0–6 passed on the available arm64 device. Section 6 required the
-stale-lock fix in PR #14 and passed when repeated with that APK. Section 7
-remains unchecked and deferred until a second device with `userland-v1` is
-available; do not downgrade the only phone to simulate it.
+Every item passed on real arm64 devices. Part C's exit condition is met. The
+test-only APK key used solely to align CI artifact signatures is not a
+production signing key and is unrelated to Part D repository signing.
 
 If any item fails: keep the failure, the device model/Android version, and the
 Term output; do not merge as "Phase 3 complete". The safe fallback

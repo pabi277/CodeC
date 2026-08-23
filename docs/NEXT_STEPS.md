@@ -1,7 +1,7 @@
 # CodeC — remaining work, broken into clear parts
 
-**Last updated:** 2026-08-23 · **State:** Parts A and B ✅ device-verified;
-**Part C sections 0–6 ✅ on arm64 in PR #14, section 7 deferred.**
+**Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
+device-verified in PR #14; **Part D repository signing is next.**
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -228,20 +228,21 @@ runtime closure (no `doxygen`/`swig`/`tcl`/`tor`/…).
 
 ## Part C — Clean-device acceptance (the M2 gate)
 
-**Status: IN PROGRESS — sections 0–6 passed on device (2026-08-23).** A clean
-Samsung SM-A356E (Android 16, aarch64) passed bootstrap/runtime smoke, package
-operations, alternatives, negative checks, compiler checks, and airplane-mode
-restart. The first interrupted-download run exposed a stale `codec-pkg/lock`
-that blocked both retry and `pkg repair`; PR #14 commit `8e95a16` fixes dead-PID
-lock recovery, and the repeated force-stop test passed without manual lock or
-transaction-marker deletion. No second `userland-v1` device is available, so
-section 7 is deferred rather than simulated by downgrading the only phone.
-Until that test is eventually performed, Part C's full exit condition cannot
-be claimed.
+**Status: COMPLETE and device-verified (2026-08-23).** A clean Samsung
+SM-A356E (Android 16, aarch64) passed bootstrap/runtime smoke, package
+operations, alternatives, negative checks, compiler checks, airplane-mode
+restart, and interrupted-install recovery. That recovery test exposed a stale
+`codec-pkg/lock`; PR #14 commit `8e95a16` fixed dead-PID lock recovery and the
+repeated force-stop test passed without manual state deletion.
+
+The final second-device test exposed a wrong legacy-marker assumption:
+v1.3.14 actually writes `.userland-vuserland-v1`. PR #14 commit `a4e5af6`
+corrected it, CI passed, and an in-place v1 → `userland-v2-dev` update then
+passed the full package/compiler/contamination block. The exit condition below
+is met.
 
 **Why.** [`docs/PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) is
-the explicit clean-device acceptance gate. It now records sections 0–6 as
-passed; the second-device upgrade-path check has not yet run.
+the explicit clean-device acceptance gate. It now records every item as passed.
 
 **Exit condition.** Every unchecked item in `PHASE3_DEVICE_ACCEPTANCE.md`
 passes on a clean arm64 device (and x86_64 if available), including the
@@ -261,7 +262,7 @@ negative checks and the recovery tests.
 6. [x] Airplane-mode restart (section 5).
 7. [x] Interrupted-install recovery (section 6): force-stop mid-download,
    automatically reclaim the stale lock, retry, and confirm `pkg repair` clean.
-8. [ ] v1 → Phase 3 upgrade path (section 7) on a second device — deferred.
+8. [x] v1 → Phase 3 upgrade path (section 7) on a second arm64 device.
 
 ---
 
@@ -321,11 +322,9 @@ and can tell at a glance whether they are on the trusted channel.
 |---|---|---|
 | A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
 | B — bootstrap correctness | A | ✅ **DONE** — merged, rebuilt, republished, device-verified |
-| C — clean-device acceptance | A ✅, B ✅ | sections 0–6 ✅ on arm64; section 7 deferred until a second device is available |
-| D — M3 signing | A ✅ / B | medium |
+| C — clean-device acceptance | A ✅, B ✅ | ✅ **DONE** — every checklist item passed on real arm64 devices |
+| D — M3 signing | A ✅, B ✅, C ✅ | **next** |
 | E — storage access | none (parallel) | medium |
 | F — confirmation/signing UX | D | small–medium |
 
-**Shortest path to "Phase 3 complete":** finish C section 7 → D. Parts A and B
-are done, and Part C sections 0–6 pass on arm64; its upgrade-path exit check
-remains deferred until a second device is available.
+**Shortest path to "Phase 3 complete":** Part D. Parts A, B, and C are done.
