@@ -257,12 +257,39 @@ class RepositoryTest(unittest.TestCase):
             release_text = (repo / "dists/stable/Release").read_text()
             self.assertIn(" main/binary-aarch64/Packages", release_text)
             self.assertNotIn(" dists/stable/main/", release_text)
+            self.assertNotIn("\n\n", release_text)
+            self.assertIn("\nSHA256:\n", release_text)
+            self.assertIn("\nMD5Sum:\n", release_text)
             published_debs = list((repo / "dists/stable/main/binary-aarch64").glob("*.deb"))
             self.assertEqual(len(published_debs), 1)
             self.assertNotIn(":", published_debs[0].name)
             packages = repo / "dists/stable/main/binary-aarch64/Packages"
             self.assertIn("SHA256:", packages.read_text())
             self.assertEqual(gzip.decompress((packages.parent / "Packages.gz").read_bytes()), packages.read_bytes())
+
+    def test_rejects_hashes_after_blank_release_stanza(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            debs = root / "debs"
+            debs.mkdir()
+            make_deb(root, debs / "codec-demo_1.0_aarch64.deb")
+            repo = root / "repo"
+            subprocess.run(
+                [sys.executable, str(GENERATE), str(debs), str(repo), "--architectures", "aarch64"],
+                check=True,
+            )
+            release = repo / "dists/stable/Release"
+            release.write_text(release.read_text().replace("\nSHA256:\n", "\n\nSHA256:\n", 1))
+            release.with_name("Release.sha256").write_text(
+                f"{hashlib.sha256(release.read_bytes()).hexdigest()}  Release\n"
+            )
+            result = subprocess.run(
+                [sys.executable, str(VALIDATE), str(repo), "--architectures", "aarch64"],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("blank stanza separator", result.stderr)
 
     @unittest.skipUnless(shutil.which("gpg") and shutil.which("gpgv"), "requires gpg and gpgv")
     def test_signed_repository_verifies_with_required_key(self) -> None:

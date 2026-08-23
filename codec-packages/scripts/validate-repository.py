@@ -50,9 +50,14 @@ def check_sidecar(path: Path, expected_name: str) -> None:
 
 
 def parse_release_hashes(text: str) -> dict[str, str]:
+    lines = text.splitlines()
+    if any(line == "" for line in lines):
+        raise PackageError(
+            "Release metadata contains a blank stanza separator; apt would ignore following hashes"
+        )
     result: dict[str, str] = {}
     in_sha = False
-    for line in text.splitlines():
+    for line in lines:
         if line == "SHA256:":
             in_sha = True
             continue
