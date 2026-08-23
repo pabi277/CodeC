@@ -16,6 +16,8 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 GENERATE = SCRIPTS / "generate-repository.py"
 VALIDATE = SCRIPTS / "validate-repository.py"
 SIGN = SCRIPTS / "sign-repository.sh"
+KEYS = SCRIPTS.parent / "keys"
+TEST_PASSPHRASE = "codec-test-signing-passphrase"
 
 
 def make_deb(root: Path, output: Path, *, name: str = "codec-demo", arch: str = "aarch64", script: bool = False) -> Path:
@@ -78,7 +80,11 @@ def make_signed_repository(root: Path, repo: Path) -> tuple[Path, str]:
     """Create an ephemeral test key, sign repo, and return public keyring/fpr."""
     home = root / "gnupg"
     home.mkdir(mode=0o700)
-    env = dict(os.environ, GNUPGHOME=str(home))
+    env = dict(
+        os.environ,
+        GNUPGHOME=str(home),
+        CODEC_SIGNING_KEY_PASSPHRASE=TEST_PASSPHRASE,
+    )
     identity = "CodeC Repository Test <repository-test@codeci.invalid>"
     subprocess.run(
         [
@@ -87,7 +93,7 @@ def make_signed_repository(root: Path, repo: Path) -> tuple[Path, str]:
             "--pinentry-mode",
             "loopback",
             "--passphrase",
-            "",
+            TEST_PASSPHRASE,
             "--quick-generate-key",
             identity,
             "rsa2048",
@@ -143,6 +149,33 @@ class RepositoryTest(unittest.TestCase):
         self.assertIn("--passphrase-fd 0", script)
         self.assertNotIn('--passphrase "$CODEC_SIGNING_KEY_PASSPHRASE"', script)
 
+    @unittest.skipUnless(shutil.which("gpg"), "requires gpg")
+    def test_committed_public_keyring_matches_pinned_fingerprints(self) -> None:
+        expected = {
+            line.split("=", 1)[1].strip().upper()
+            for line in (KEYS / "codec-archive-keyring-v1.fingerprints").read_text().splitlines()
+            if "=" in line
+        }
+        self.assertEqual(len(expected), 2)
+        for key in (
+            KEYS / "codec-archive-keyring-v1.gpg",
+            KEYS / "codec-archive-keyring-v1.asc",
+        ):
+            result = subprocess.run(
+                ["gpg", "--batch", "--show-keys", "--with-colons", "--fingerprint", "--fingerprint", str(key)],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            records = result.stdout.splitlines()
+            self.assertFalse(any(line.startswith(("sec:", "ssb:")) for line in records))
+            actual = {
+                line.split(":")[9].upper()
+                for line in records
+                if line.startswith("fpr:")
+            }
+            self.assertEqual(actual, expected)
+
     def test_generates_and_validates_apt_tree(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -161,7 +194,9 @@ class RepositoryTest(unittest.TestCase):
             manifest = json.loads((repo / "repository.json").read_text())
             self.assertEqual(manifest["package"], "com.codeci.ide")
             self.assertEqual(manifest["prefix"], "/data/data/com.codeci.ide/files/usr")
-            self.assertTrue((repo / "dists/stable/Release").is_file())
+            release_text = (repo / "dists/stable/Release").read_text()
+            self.assertIn(" main/binary-aarch64/Packages", release_text)
+            self.assertNotIn(" dists/stable/main/", release_text)
             published_debs = list((repo / "dists/stable/main/binary-aarch64").glob("*.deb"))
             self.assertEqual(len(published_debs), 1)
             self.assertNotIn(":", published_debs[0].name)
@@ -215,7 +250,11 @@ class RepositoryTest(unittest.TestCase):
             # from the same compromised host must never substitute for OpenPGP.
             subprocess.run(
                 [str(SIGN), str(repo), fingerprint],
-                env=dict(os.environ, GNUPGHOME=str(root / "gnupg")),
+                env=dict(
+                    os.environ,
+                    GNUPGHOME=str(root / "gnupg"),
+                    CODEC_SIGNING_KEY_PASSPHRASE=TEST_PASSPHRASE,
+                ),
                 check=True,
             )
             release = repo / "dists/stable/Release"

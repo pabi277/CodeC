@@ -14,7 +14,12 @@ from typing import Callable, Optional
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 VALIDATE = SCRIPTS / "validate-bootstrap.py"
 
-CODEC_REPO_LINE = "deb https://pabi277.github.io/CodeC/dev stable main"
+CODEC_KEYRING_MEMBER = "etc/apt/keyrings/codec-archive-keyring-v1.gpg"
+CODEC_KEYRING = (SCRIPTS.parent / "keys" / "codec-archive-keyring-v1.gpg").read_bytes()
+CODEC_REPO_LINE = (
+    "deb [signed-by=/data/data/com.codeci.ide/files/usr/etc/apt/keyrings/"
+    "codec-archive-keyring-v1.gpg] https://pabi277.github.io/CodeC/dev stable main"
+)
 
 DPKG_STATUS = (
     "Package: apt\n"
@@ -115,6 +120,9 @@ def make_bootstrap(
             _add_file(tar, "lib/libandroid-support.so", b"ANDROIDLIB")
         if "etc/apt" not in omit:
             _add_dir(tar, "etc/apt")
+            _add_dir(tar, "etc/apt/keyrings")
+            if CODEC_KEYRING_MEMBER not in omit:
+                _add_file(tar, CODEC_KEYRING_MEMBER, CODEC_KEYRING, mode=0o644)
             if "etc/apt/sources.list" not in omit:
                 _add_file(tar, "etc/apt/sources.list", sources_list.encode(), mode=0o644)
         if "var/lib/dpkg/status" not in omit:
@@ -183,6 +191,7 @@ class BootstrapValidationTest(unittest.TestCase):
             for missing in (
                 "bin/dpkg",
                 "bin/curl",
+                CODEC_KEYRING_MEMBER,
                 "lib/libandroid-support.so",
                 "var/lib/dpkg/status",
             ):
@@ -190,6 +199,18 @@ class BootstrapValidationTest(unittest.TestCase):
                 result = run_validator(archive)
                 self.assertNotEqual(result.returncode, 0, missing)
                 self.assertIn("missing", result.stderr)
+
+    def test_rejects_wrong_repository_keyring(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def wrong_key(tar: tarfile.TarFile) -> None:
+                _add_file(tar, CODEC_KEYRING_MEMBER, b"not-the-codec-key", mode=0o644)
+
+            archive = self._archive(root, extra_members=wrong_key)
+            result = run_validator(archive)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("differs from pinned public key", result.stderr)
 
     def test_preload_absent_warns_but_passes(self) -> None:
         # The standalone termux-exec preload build is best-effort in CI; a

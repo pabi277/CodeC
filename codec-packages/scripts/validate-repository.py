@@ -215,10 +215,10 @@ def validate(
         compressed_path = package_path.with_name("Packages.gz")
         if not package_path.is_file() or not compressed_path.is_file():
             raise PackageError(f"missing package indexes for {arch}")
-        relative = package_path.relative_to(root).as_posix()
+        relative = package_path.relative_to(release_dir).as_posix()
         if release_hashes.get(relative) != sha256(package_path):
             raise PackageError(f"Release SHA256 mismatch: {relative}")
-        compressed_relative = compressed_path.relative_to(root).as_posix()
+        compressed_relative = compressed_path.relative_to(release_dir).as_posix()
         if release_hashes.get(compressed_relative) != sha256(compressed_path):
             raise PackageError(f"Release SHA256 mismatch: {compressed_relative}")
         if gzip.decompress(compressed_path.read_bytes()) != package_path.read_bytes():

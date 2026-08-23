@@ -11,6 +11,7 @@ TREE="${1:?usage: apply-recipe-overrides.sh /path/to/termux-packages}"
 CODEC_REPO_URL="${CODEC_PACKAGE_REPOSITORY_URL:-https://pabi277.github.io/CodeC/dev}"
 CODEC_REPO_SUITE="${CODEC_PACKAGE_REPOSITORY_SUITE:-stable}"
 CODEC_REPO_COMPONENT="${CODEC_PACKAGE_REPOSITORY_COMPONENT:-main}"
+CODEC_REPO_KEYRING="${CODEC_PACKAGE_REPOSITORY_KEYRING:-/data/data/com.codeci.ide/files/usr/etc/apt/keyrings/codec-archive-keyring-v1.gpg}"
 
 # Savannah's HTTP/primary HTTPS endpoint intermittently returns HTTP 502 from
 # GitHub Actions. Its official download mirror serves the same source archives.
@@ -76,13 +77,13 @@ fi
 # ambient apt configuration CodeC-only as well.
 APT_RECIPE="$TREE/packages/apt/build.sh"
 if [[ -f "$APT_RECIPE" ]]; then
-  python3 - "$APT_RECIPE" "$CODEC_REPO_URL" "$CODEC_REPO_SUITE" "$CODEC_REPO_COMPONENT" <<'PY'
+  python3 - "$APT_RECIPE" "$CODEC_REPO_URL" "$CODEC_REPO_SUITE" "$CODEC_REPO_COMPONENT" "$CODEC_REPO_KEYRING" <<'PY'
 import pathlib
 import re
 import sys
 
 path = pathlib.Path(sys.argv[1])
-url, suite, component = sys.argv[2], sys.argv[3], sys.argv[4]
+url, suite, component, keyring = sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
 text = path.read_text()
 pattern = re.compile(
     r'\t\techo "# The main termux repository, with cloudflare cache"\n'
@@ -93,7 +94,7 @@ pattern = re.compile(
 replacement = (
     '\t\techo "# CodeC development package repository (CodeC packages only)."\n'
     '\t\techo "# CodeC never uses the official Termux repository."\n'
-    f'\t\techo "deb {url} {suite} {component}"\n'
+    f'\t\techo "deb [signed-by={keyring}] {url} {suite} {component}"\n'
 )
 new_text, count = pattern.subn(replacement, text)
 if count != 1:
@@ -109,7 +110,11 @@ PY
     echo "recipe-overrides: official Termux repository URL remains in apt recipe" >&2
     exit 1
   fi
-  grep -qF "deb $CODEC_REPO_URL $CODEC_REPO_SUITE $CODEC_REPO_COMPONENT" "$APT_RECIPE"
+  grep -qF "deb [signed-by=$CODEC_REPO_KEYRING] $CODEC_REPO_URL $CODEC_REPO_SUITE $CODEC_REPO_COMPONENT" "$APT_RECIPE"
+  if grep -qF '[trusted=yes]' "$APT_RECIPE"; then
+    echo "recipe-overrides: apt sources.list still bypasses signature verification" >&2
+    exit 1
+  fi
 
   # The official apt recipe also lists termux-keyring — the GPG keyring of
   # the OFFICIAL Termux repositories, which installs those keys into

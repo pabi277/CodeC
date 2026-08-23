@@ -134,7 +134,7 @@ def build(args: argparse.Namespace) -> None:
         f"Date: {date_text}",
         "Description: CodeC packages rebuilt for com.codeci.ide",
     ]
-    hashes = release_hashes(args.output, release_dir)
+    hashes = release_hashes(release_dir)
     release_lines.extend(["", "SHA256:"])
     for digest, size, relative, _ in hashes:
         release_lines.append(f" {digest} {size:16d} {relative}")
@@ -148,7 +148,7 @@ def build(args: argparse.Namespace) -> None:
     ):
         digest = hashlib.md5(item.read_bytes()).hexdigest()
         release_lines.append(
-            f" {digest} {item.stat().st_size:16d} {item.relative_to(args.output).as_posix()}"
+            f" {digest} {item.stat().st_size:16d} {item.relative_to(release_dir).as_posix()}"
         )
     release_path = release_dir / "Release"
     release_path.write_text("\n".join(release_lines) + "\n")

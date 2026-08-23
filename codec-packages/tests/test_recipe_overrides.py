@@ -80,9 +80,11 @@ class RecipeOverrideTest(unittest.TestCase):
             )
             # The sources.list rewrite still applies to the same recipe.
             self.assertIn(
-                "deb https://pabi277.github.io/CodeC/dev stable main",
+                "deb [signed-by=/data/data/com.codeci.ide/files/usr/etc/apt/keyrings/"
+                "codec-archive-keyring-v1.gpg] https://pabi277.github.io/CodeC/dev stable main",
                 apt_text,
             )
+            self.assertNotIn("trusted=yes", apt_text)
 
     def test_apt_override_fails_loud_without_termux_keyring(self) -> None:
         """A pinned-recipe drift that drops the expected dependency line

@@ -17,12 +17,13 @@ import java.io.File
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "15"
+    const val BOOTSTRAP_VERSION = "16"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
     const val PACKAGE_REPOSITORY_SUITE = "stable"
     const val PACKAGE_REPOSITORY_COMPONENT = "main"
+    const val PACKAGE_REPOSITORY_KEYRING = "codec-archive-keyring-v1.gpg"
 
     fun prefixDir(filesDir: File): File = File(filesDir, PREFIX_NAME)
     fun homeDir(filesDir: File): File = File(filesDir, HOME_NAME)
@@ -126,6 +127,7 @@ object ShellEnvironment {
         SOURCES="${'$'}STATE/sources.list"
         CACHE="${'$'}PREFIX/var/cache/apt/archives"
         LOCK="${'$'}STATE/lock"
+        KEYRING="${'$'}PREFIX/etc/apt/keyrings/${PACKAGE_REPOSITORY_KEYRING}"
         MIN_FREE_KB=32768
 
         error() {
@@ -136,6 +138,8 @@ object ShellEnvironment {
         require_backend() {
           [ -x "${'$'}PREFIX/bin/apt-get" ] || error "package manager is not present in this userland. Install a Phase 3 CodeC bootstrap; never add an official Termux repository."
           [ -x "${'$'}PREFIX/bin/dpkg" ] || error "dpkg is not present in this CodeC userland; refusing to use an external package manager."
+          [ -x "${'$'}PREFIX/bin/gpgv" ] || error "gpgv is missing from this CodeC userland; signed repository verification is unavailable."
+          [ -s "${'$'}KEYRING" ] || error "CodeC repository keyring is missing; update CodeC or reinstall the signed userland."
           # dpkg executes maintainer scripts (reviewed alternatives postinst/
           # prerm only); the kernel can only run shebang scripts under ${'$'}PREFIX
           # with the termux-exec LD_PRELOAD library. Export it defensively so
@@ -170,7 +174,7 @@ object ShellEnvironment {
           mkdir -p "${'$'}PREFIX/etc/apt/apt.conf.d" "${'$'}PREFIX/etc/apt/preferences.d" 2>/dev/null || true
           # Only this file is supplied to apt. sourceparts=- prevents a stale
           # sources.list.d from mixing another repository into the transaction.
-          printf '%s\n' "deb [trusted=yes] ${'$'}REPOSITORY ${'$'}SUITE ${'$'}COMPONENT" > "${'$'}SOURCES"
+          printf '%s\n' "deb [signed-by=${'$'}CANON_PREFIX/etc/apt/keyrings/${PACKAGE_REPOSITORY_KEYRING}] ${'$'}REPOSITORY ${'$'}SUITE ${'$'}COMPONENT" > "${'$'}SOURCES"
         }
 
         reclaim_stale_lock() {
@@ -242,20 +246,11 @@ object ShellEnvironment {
             "${'$'}@"
         }
 
-        verify_release_checksum() {
-          # The development channel is HTTPS plus a separately published SHA-256
-          # sidecar. A signed Release key will be added before production
-          # promotion; never silently downgrade this check to HTTP or trusted
-          # official Termux metadata.
-          #
-          # HTTPS fetcher selection: the Phase 3 bootstrap closure seeds a
-          # source-built curl (the libcurl recipe's CLI subpackage) as its
-          # HTTPS metadata fetcher; busybox wget is http/ftp-only and neither
-          # python3 nor a real wget is in the closure (fresh-device evidence
-          # 2026-08-23: all three were absent). The python3/wget branches are
-          # defensive fallbacks for user-installed fetchers only. apt itself
-          # downloads .deb files over its own TLS transport, so only this
-          # metadata preflight needs a fetcher here.
+        verify_release_signature() {
+          # Fetch signed metadata independently and verify it before apt is
+          # allowed to read any repository index. apt repeats the same check
+          # through signed-by=; this preflight provides an early, clear failure
+          # and prevents an unsigned downgrade from reaching package handling.
           fetch_metadata() {
             dest="${'$'}1"
             url="${'$'}2"
@@ -269,19 +264,20 @@ object ShellEnvironment {
               return 1
             fi
           }
+          inrelease="${'$'}STATE/InRelease.partial"
           release="${'$'}STATE/Release.partial"
-          checksum="${'$'}STATE/Release.sha256.partial"
-          rm -f "${'$'}release" "${'$'}checksum"
-          fetch_metadata "${'$'}release" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release" || error "offline or unable to download CodeC Release metadata (HTTPS required)"
-          fetch_metadata "${'$'}checksum" "${'$'}REPOSITORY/dists/${'$'}SUITE/Release.sha256" || error "CodeC Release checksum is unavailable; refusing the repository"
-          expected="${'$'}(awk 'NF { print ${'$'}1; exit }' "${'$'}checksum")"
-          actual="${'$'}(sha256sum "${'$'}release" 2>/dev/null | awk '{ print ${'$'}1 }')"
-          if [ -z "${'$'}actual" ] || [ "${'$'}actual" != "${'$'}expected" ]; then
-            rm -f "${'$'}release" "${'$'}checksum"
-            error "repository Release SHA-256 mismatch; no package was installed"
+          verify_log="${'$'}STATE/gpgv.log"
+          rm -f "${'$'}inrelease" "${'$'}release" "${'$'}verify_log"
+          fetch_metadata "${'$'}inrelease" "${'$'}REPOSITORY/dists/${'$'}SUITE/InRelease" || error "offline or signed CodeC InRelease metadata is unavailable (HTTPS required)"
+          if ! "${'$'}PREFIX/bin/gpgv" --keyring "${'$'}KEYRING" --output "${'$'}release" "${'$'}inrelease" >"${'$'}verify_log" 2>&1; then
+            cat "${'$'}verify_log" >&2 2>/dev/null || true
+            rm -f "${'$'}inrelease" "${'$'}release"
+            error "CodeC InRelease signature verification failed; no package was installed"
           fi
+          grep -qx 'Origin: CodeC' "${'$'}release" || error "signed repository Origin is not CodeC"
+          grep -qx "Suite: ${'$'}SUITE" "${'$'}release" || error "signed repository suite is not ${'$'}SUITE"
+          mv "${'$'}inrelease" "${'$'}STATE/InRelease"
           mv "${'$'}release" "${'$'}STATE/Release"
-          mv "${'$'}checksum" "${'$'}STATE/Release.sha256"
         }
 
         friendly_apt() {
@@ -445,7 +441,7 @@ object ShellEnvironment {
           fi
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' "${'$'}*" > "${'$'}marker"
-          verify_release_checksum
+          verify_release_signature
           friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker"; return "${'$'}?"; }
           preflight_cache
           # The package set was validated before dpkg is allowed to run. The
@@ -463,7 +459,7 @@ object ShellEnvironment {
           fi
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' upgrade > "${'$'}marker"
-          verify_release_checksum
+          verify_release_signature
           friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
           preflight_cache
           friendly_apt apt_get --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
@@ -499,7 +495,7 @@ HELP
         case "${'$'}command" in
           update)
             acquire_lock
-            verify_release_checksum
+            verify_release_signature
             friendly_apt apt_get update
             ;;
           search)
@@ -791,6 +787,7 @@ class ShellBootstrap(private val context: Context) {
         etc.mkdirs()
         tmp.mkdirs()
         home.mkdirs()
+        installRepositoryKey(prefix)
 
         val extracted = EmbeddedCompiler.ensureExtracted(context)
         if (!extracted) {
@@ -838,6 +835,22 @@ class ShellBootstrap(private val context: Context) {
             cwd = projects,
             env = env
         )
+    }
+
+    private fun installRepositoryKey(prefix: File) {
+        val keyDir = File(prefix, "etc/apt/keyrings")
+        check(keyDir.mkdirs() || keyDir.isDirectory) { "cannot create CodeC apt keyring directory" }
+        val target = File(keyDir, ShellEnvironment.PACKAGE_REPOSITORY_KEYRING)
+        val publicKey = context.assets.open(ShellEnvironment.PACKAGE_REPOSITORY_KEYRING).use {
+            it.readBytes()
+        }
+        check(publicKey.isNotEmpty()) { "CodeC repository public key asset is empty" }
+        if (target.isFile && target.readBytes().contentEquals(publicKey)) return
+        val partial = File(keyDir, ".${ShellEnvironment.PACKAGE_REPOSITORY_KEYRING}.partial")
+        partial.writeBytes(publicKey)
+        partial.setReadable(true, false)
+        partial.setWritable(true, true)
+        check(partial.renameTo(target)) { "cannot install CodeC repository public key" }
     }
 
     private fun writeExecutable(file: File, body: String) {

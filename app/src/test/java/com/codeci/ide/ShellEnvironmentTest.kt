@@ -52,6 +52,12 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("sourceparts=-"))
         assertTrue(script.contains("com.codeci.ide/files/usr"))
         assertTrue(script.contains("maintainer script"))
+        assertTrue(script.contains("signed-by="))
+        assertTrue(script.contains("codec-archive-keyring-v1.gpg"))
+        assertTrue(script.contains("bin/gpgv"))
+        assertTrue(script.contains("/InRelease"))
+        assertFalse(script.contains("trusted=yes"))
+        assertFalse(script.contains("Release.sha256"))
         assertFalse(script.contains("com.termux/files/usr"))
     }
 
@@ -61,12 +67,15 @@ class ShellEnvironmentTest {
         try {
             val prefix = File(base, "usr")
             val bin = File(prefix, "bin").apply { mkdirs() }
-            listOf("apt-get", "dpkg").forEach { name ->
+            listOf("apt-get", "dpkg", "gpgv").forEach { name ->
                 File(bin, name).apply {
                     writeText("#!/bin/sh\nexit 0\n")
                     setExecutable(true)
                 }
             }
+            File(prefix, "etc/apt/keyrings").mkdirs()
+            File(prefix, "etc/apt/keyrings/${ShellEnvironment.PACKAGE_REPOSITORY_KEYRING}")
+                .writeText("public-test-key")
             val lock = File(prefix, "var/lib/codec-pkg/lock").apply { mkdirs() }
             // Linux/Android pid_max is far below this, so kill -0 must report
             // that the force-stopped lock owner no longer exists.
