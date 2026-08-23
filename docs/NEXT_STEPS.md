@@ -1,9 +1,7 @@
 # CodeC — remaining work, broken into clear parts
 
-**Last updated:** 2026-08-23 · **Branch:** post-PR-#12 fix branch
-(`arena/01a02d03-codec`) — **Part A ✅ device-verified; Part B code ✅
-merged, fresh-device defects 1+2 fixed here, ⏳ PR → rebuild → republish →
-re-verify**
+**Last updated:** 2026-08-23 · **State:** `main` through PR #13 —
+**Parts A and B ✅ device-verified; Part C clean-device acceptance is next.**
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -87,10 +85,22 @@ status DB no longer references `clang`.
 
 ---
 
-## Part B — Fix bootstrap correctness (seed the right thing)
+## Part B — Fix bootstrap correctness (seed the right thing) — ✅ DONE
 
-**Status (2026-08-22, end of day): code COMPLETE, merged to `main` (PR #11),
-49/49 host tests green.** `plan-bootstrap.py` (closure walk mirroring pinned
+**Status: COMPLETE and device-verified (2026-08-23).** PR #13 merged at
+`35c350f338be34303296b0168933622991258142`; package dispatch #5
+(`32620704350`) and publish run `32625580655` succeeded. The published
+aarch64 archive is **23,926,127 bytes** with GitHub asset digest
+`sha256:863f18528afa126d19481f7308a3f9b23997fda9ad9cae3bc7033d8fa60e60cd`.
+A fresh-device run passed curl/TLS, no-clang/no-build-pollution/no-keyring,
+alternatives, `dpkg --audit`, nano 9.2 lifecycle, and embedded-compiler checks.
+The exit condition below is met. **Do not rerun the expensive build or re-test
+Part B unless Part C first records a genuine new defect, and never dispatch a
+build without explicit approval.** The remaining material in this section is
+historical context.
+
+**Earlier status (2026-08-22, end of day): code COMPLETE, merged to `main`
+(PR #11), 49/49 host tests green.** `plan-bootstrap.py` (closure walk mirroring pinned
 upstream `pull_package` semantics, fail-loud on unresolved deps) + reworked
 `assemble-bootstrap.sh` (closure-only extract/seed, upstream-format
 `md5sums`, assembly-time alternatives wiring incl. the dpkg admin DB,
@@ -99,9 +109,9 @@ Seed set = `busybox bash apt dpkg coreutils less` at merge time (2026-08-23:
 `curl` joined the seed set and `libcurl` the build roots — see the next
 status block; see `CODEC_BOOTSTRAP_SEED_PACKAGES`).
 
-**Status (2026-08-23): the first rebuilt bootstrap exposed two fresh-device
-defects; both are fixed on the branch that follows PR #12, pending another
-rebuild + republish + device-verify.**
+**Historical status before PR #13 (2026-08-23):** the first rebuilt bootstrap
+exposed two fresh-device defects. Both were fixed on the branch that followed
+PR #12 and at that time still awaited rebuild, republish, and device verification.
 
 - **Defect 1 — no HTTPS metadata fetcher.** The Part B closure seeds none of
   `curl`/`python3`/`wget` (the in-code claim that python3 was in the closure
@@ -130,9 +140,10 @@ rebuild + republish + device-verify.**
   dpkg status. Host suite: 53/53 green (fixtures prove the fetcher is
   seeded and termux-keyring is excluded without any 100-minute build).
 
-**The ~104-minute rebuild is again the ONLY remaining step** — after the fix
-branch merges. Dispatch history (the first three predate PR #12; #4 is the
-successful rebuild whose bootstrap exposed the two defects above):
+**Historical rebuild record.** Dispatches 1–4 led to the final fixes; dispatch
+#5 and the subsequent publish/device verification completed the part. The
+first three runs below predate PR #12; #4 is the successful rebuild whose
+bootstrap exposed the two defects above:
 
 | # | Run | Duration | Result |
 |---|---|---|---|
@@ -140,12 +151,15 @@ successful rebuild whose bootstrap exposed the two defects above):
 | 2 | `32582311088` | ~50 min | **Upstream network flake — log-proven:** `curl: (28)` fetching `util-macros` from `xorg.freedesktop.org`; fixed by the PR #12 mirror override. |
 | 3 | `32585409356` | ~48 min | Same util-macros step; cause unreadable from the agent sandbox; same mirror override applied. |
 | 4 | `32594910882` | 1h14m (aarch64) / 1h26m (x86_64) | ✅ **Success** → published by `32617929254` → fresh-device download/verify/extract OK → defects 1+2 found → this fix. |
+| 5 | `32620704350` | ~1h20m | ✅ **Success** from PR #13 merge → published by `32625580655` → full Part B fresh-device acceptance passed. |
 
-### Continue here (after the fix PR merges) — in this order
+### Completed procedure (historical — do not rerun)
 
-1. **Redispatch from `main`** (expect the run to take ~15–25 min longer than
-   dispatch 4: the new `libcurl` root builds OpenSSL + libnghttp2/3 +
-   libtcp2-family + libssh2 first):
+The following was the final procedure and is retained only as an audit trail.
+It is **not** a current instruction.
+
+1. **Redispatch from `main`** (the new `libcurl` root builds OpenSSL +
+   libnghttp2/3 + libtcp2-family + libssh2 first):
    ```sh
    gh workflow run "CodeC package repository" --ref main
    gh run watch
@@ -178,10 +192,11 @@ successful rebuild whose bootstrap exposed the two defects above):
    printf '#include <stdio.h>\nint main(){printf("ok\\n");return 0;}\n' > t.c
    cc t.c -o a.out && ./a.out  # expect: ok
    ```
-   When every line matches, Part B's exit condition is met — mark it ✅ here
-   and in [`JOURNEY.md`](JOURNEY.md), then move to Part C.
+   Every line matched on the fresh aarch64 device; Part B's exit condition was
+   met and recorded here and in [`JOURNEY.md`](JOURNEY.md).
 
-**Why.** The current bootstrap has three content defects, all visible on device:
+**Original rationale (resolved).** The earlier bootstrap had three content
+defects, all visible on device:
 
 1. **Build-dependency pollution.** `assemble-bootstrap.sh` seeds *every* built
    `.deb` — including build-only packages (`doxygen`, `swig`, `tcl`,
@@ -200,24 +215,29 @@ successful rebuild whose bootstrap exposed the two defects above):
 `dpkg --audit` is clean for seeded packages, and `dpkg -l` lists only the
 runtime closure (no `doxygen`/`swig`/`tcl`/`tor`/…).
 
-**Steps.**
-1. In `assemble-bootstrap.sh`, replace the "seed every built `.deb`" loop with
-   a closure walk from the four roots: read each root's `Depends`, resolve
+**Completed implementation steps.**
+1. In `assemble-bootstrap.sh`, the "seed every built `.deb`" loop was replaced
+   with a closure walk from the roots: read each root's `Depends`, resolve
    against the built set, and seed only those.
-2. Generate `md5sums` control files for the seeded packages (or suppress the
-   audit noise by seeding an empty-but-valid `md5sums`).
-3. For the seeded `coreutils`/`less` roots, emit the alternatives (either run
-   their postinst in a chroot-free way at assembly, or ship the
-   `update-alternatives` links directly).
-4. Rebuild + republish (Part A steps), then re-verify.
+2. Upstream-format `md5sums` control files were generated for seeded packages.
+3. Seeded-package alternatives were emitted at assembly time, including the
+   dpkg admin database.
+4. The bootstrap was rebuilt, republished, and device-verified.
 
 ---
 
 ## Part C — Clean-device acceptance (the M2 gate)
 
+**Status:** NOT STARTED. One arm64 device running the latest fixed build is
+available; it must be fully uninstalled before the clean-device sequence. No
+second `userland-v1` device is available, so section 7 must be deferred rather
+than simulated by downgrading the only phone. Until that test is eventually
+performed, Part C's full exit condition cannot be claimed.
+
 **Why.** [`docs/PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md)
-still says **NOT PASSED**, and it is the explicit exit condition for M2. The
-work done so far was on a *patched* device, not a clean one.
+still says **NOT PASSED**, and it is the explicit clean-device acceptance gate.
+Part B's focused fresh-device block passed, but the broader recovery, offline,
+negative, and upgrade-path checks have not yet all run.
 
 **Exit condition.** Every unchecked item in `PHASE3_DEVICE_ACCEPTANCE.md`
 passes on a clean arm64 device (and x86_64 if available), including the
@@ -296,11 +316,12 @@ and can tell at a glance whether they are on the trusted channel.
 | Part | Depends on | Effort / state (2026-08-23) |
 |---|---|---|
 | A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
-| B — bootstrap correctness | A | closure/md5sums/alternatives ✅ merged + rebuilt; fresh-device defects (fetcher, termux-keyring) fixed on the post-#12 branch; ⏳ **PR → one rebuild → republish → device-verify** |
-| C — clean-device acceptance | A ✅ (B ideally) | device time |
+| B — bootstrap correctness | A | ✅ **DONE** — merged, rebuilt, republished, device-verified |
+| C — clean-device acceptance | A ✅, B ✅ | in progress next; section 7 deferred until a second device is available |
 | D — M3 signing | A ✅ / B | medium |
 | E — storage access | none (parallel) | medium |
 | F — confirmation/signing UX | D | small–medium |
 
-**Shortest path to "Phase 3 complete":** B's rebuild → C → D. (A is done;
-B's code is merged — only its build/republish/device-verify remains.)
+**Shortest path to "Phase 3 complete":** C → D. Parts A and B are done.
+Part C can begin on the available arm64 device, but its section 7 upgrade-path
+exit check remains deferred until a second device is available.

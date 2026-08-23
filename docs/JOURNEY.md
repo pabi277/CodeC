@@ -1,9 +1,7 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-23 · **Branch:** post-PR-#12 fix branch
-(`arena/01a02d03-codec`) — **Part A ✅ device-verified; Part B code ✅ merged
-+ rebuilt + republished, two fresh-device defects found and fixed here,
-⏳ PR → one more rebuild left**
+**Last updated:** 2026-08-23 · **State:** `main` through PR #13 —
+**Parts A and B ✅ device-verified; Part C clean-device acceptance is next.**
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -132,7 +130,7 @@ The big one. Broken into milestones in [`docs/PHASE3_PLAN.md`](PHASE3_PLAN.md).
 
 Published development channel: **`https://pabi277.github.io/CodeC/dev`**.
 
-### 4.2 M2 — the apt/dpkg bootstrap 🟡
+### 4.2 M2 — the apt/dpkg bootstrap ✅
 
 - Bootstrap roots expanded to **`busybox bash apt dpkg`** plus the full
   source-built dependency closure (aarch64 + x86_64), with a seeded dpkg
@@ -284,9 +282,24 @@ the real new-bootstrap evidence landed — and it convicted two assumptions:
 
 `validate-bootstrap.py` now enforces both invariants at publish time
 (`bin/curl` must exist as ELF; no `termux-keyring` stanza in status), and
-the host suite grew to **53/53 green** with fixture-level proofs. One more
-rebuild + republish + fresh-device run of the Part B acceptance block
-remains — see [`docs/NEXT_STEPS.md`](NEXT_STEPS.md) → Part B.
+the host suite grew to **53/53 green** with fixture-level proofs.
+
+### 5c. Part B completed and device-verified (2026-08-23)
+
+PR #13 merged to `main` at `35c350f338be34303296b0168933622991258142`.
+Dispatch #5 (`32620704350`) then rebuilt both architectures successfully, and
+publish run `32625580655` replaced the `userland-v2-dev` assets. The published
+aarch64 archive is **23,926,127 bytes** with GitHub asset digest
+`sha256:863f18528afa126d19481f7308a3f9b23997fda9ad9cae3bc7033d8fa60e60cd`.
+
+A full uninstall and fresh install on a real aarch64 device passed the complete
+Part B acceptance block: the source-built curl completed the HTTPS/TLS check;
+there was no `clang`, build-only package pollution, or `termux-keyring`;
+`pager`, `editor`, and `vi` resolved under `$PREFIX`; `dpkg --audit` was
+silent; the nano 9.2 install/uninstall cycle was clean; and the embedded `cc`
+compiler still printed `ok`. **Part B's exit condition is met. Do not rebuild,
+republish, or re-verify it unless Part C records evidence of a genuine new
+defect; even then, an expensive workflow requires explicit approval.**
 
 ---
 
@@ -296,10 +309,11 @@ remains — see [`docs/NEXT_STEPS.md`](NEXT_STEPS.md) → Part B.
 clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 
 1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
-2. **Bootstrap correctness** — code merged; only the rebuild + republish +
-   re-verify remains (Part B "Continue here" checklist).
-3. **Run clean-device acceptance** (Part C) — airplane mode,
-   interrupted-install recovery, and the v1 → Phase 3 upgrade path.
+2. ~~Fix bootstrap correctness~~ ✅ **DONE (Part B above; device-verified).**
+3. **Run clean-device acceptance** (Part C) — runtime and package smoke,
+   negative checks, airplane mode, interrupted-install recovery, and the
+   v1 → Phase 3 upgrade path. Only one current device is available, so the
+   second-device upgrade-path check must be deferred rather than improvised.
 4. **M3 — sign the repository** (Part D; currently HTTPS + SHA-256 only).
 5. **Phase 4 — polish** (Parts E–F: storage access,
    `termux-setup-storage`-equivalent, security confirmation prompt, themes,
