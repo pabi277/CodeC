@@ -1,8 +1,9 @@
 # CodeC — remaining work, broken into clear parts
 
 **Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified. Part D code, signed Pages, and signed-client acceptance are ✅
-in PR #14; only the key-seeded bootstrap rebuild/clean-device gate remains.
+device-verified. Part D code, signed Pages, signed-client acceptance, and the
+key-seeded bootstrap build are ✅ in PR #14; release publication and its final
+clean-device gate remain.
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -269,16 +270,18 @@ negative checks and the recovery tests.
 
 ## Part D — M3: sign the repository and verify on device
 
-**Status: IMPLEMENTATION + SIGNED PUBLICATION + CLIENT ACCEPTANCE COMPLETE;
-rebuilt-bootstrap acceptance pending.** PR #14 now
+**Status: IMPLEMENTATION + SIGNED PUBLICATION + CLIENT ACCEPTANCE + BOOTSTRAP
+BUILD COMPLETE; release/clean-device acceptance pending.** PR #14 now
 contains key-agnostic signing/validation, protected-subkey CI support, the
 public-only production keyring, signed-only client/bootstrap integration, and
 tamper/missing-signature tests. Corrective signed publication run `32642631785`
 reused existing artifacts, skipped both expensive builds, and fixed the APT
 Release-stanza defect found by the first device attempt. The real CodeC device
 then passed signed update, exact-key verification, tamper rejection, nano
-lifecycle, clean audit, and compiler checks. No key-seeded bootstrap rebuild has
-run yet.
+lifecycle, clean audit, and compiler checks. Build run `32643383952` then built
+both architectures successfully; each archive passed the validator's exact
+v3-keyring byte comparison and was uploaded as a non-expired artifact. Release
+publication and clean-device acceptance have not run.
 
 **Why.** The development channel originally relied on HTTPS + SHA-256 only.
 Signing closes the integrity-vs-tampering gap. The Part D client removes `[trusted=yes]`, verifies
@@ -312,10 +315,13 @@ package hash chain verify, rejects tampered metadata, and uses no
    the public key files. Rotation, revocation, rollback, and overlap rules are
    documented.
 
-**Remaining ordered gate (requires explicit owner approval).**
-1. Run the expensive package/bootstrap build, republish `userland-v2-dev`, and
-   prove a clean bootstrap contains the pinned keyring. Do not merge PR #14
-   until the owner accepts the remaining evidence.
+**Remaining ordered gates (require explicit owner approval).**
+1. Apply the reviewed release-note correction to the active bootstrap publishing
+   workflow; this does not publish anything.
+2. Publish run `32643383952` as `userland-v2-dev`; the release workflow must
+   download and revalidate both immutable archives before replacing assets.
+3. Perform the final clean-device keyring/signed-APT/package/audit/compiler gate.
+   Do not merge PR #14 until the owner accepts the remaining evidence.
 
 ---
 

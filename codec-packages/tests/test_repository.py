@@ -18,6 +18,9 @@ VALIDATE = SCRIPTS / "validate-repository.py"
 SIGN = SCRIPTS / "sign-repository.sh"
 KEYS = SCRIPTS.parent / "keys"
 PENDING_WORKFLOW = SCRIPTS.parents[1] / "docs" / "ci-pending" / "package-repository.yml"
+PENDING_RELEASE_WORKFLOW = (
+    SCRIPTS.parents[1] / "docs" / "ci-pending" / "publish-bootstrap-release.yml"
+)
 TEST_PASSPHRASE = "codec-test-signing-passphrase"
 
 
@@ -208,6 +211,13 @@ class RepositoryTest(unittest.TestCase):
         self.assertNotIn('grep -qx "signing_subkey=$fingerprint"', workflow)
         self.assertNotIn('list-secret-keys "$fingerprint!"', workflow)
         self.assertIn('sign-repository.sh packages/dev "$fingerprint"', workflow)
+
+    def test_pending_bootstrap_release_describes_signed_trust(self) -> None:
+        workflow = PENDING_RELEASE_WORKFLOW.read_text()
+        self.assertNotIn("HTTPS + SHA-256 only", workflow)
+        self.assertIn("signed `InRelease` and `Release.gpg`", workflow)
+        self.assertIn("etc/apt/keyrings/codec-archive-keyring-v1.gpg", workflow)
+        self.assertIn("no private material", workflow)
 
     @unittest.skipUnless(shutil.which("gpg"), "requires gpg")
     def test_committed_public_keyring_matches_pinned_fingerprints(self) -> None:

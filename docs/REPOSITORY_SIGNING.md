@@ -1,8 +1,9 @@
 # CodeC repository signing operations
 
 **Status:** Corrective signed Pages run `32642631785` and the real arm64
-signed-client acceptance path passed against the exact v3 signing subkey. Only
-the separately approved key-seeded bootstrap rebuild/clean-device gate remains.
+signed-client acceptance path passed against the exact v3 signing subkey.
+Key-seeded build run `32643383952` passed both architectures and exact-keyring
+validation; release publication and clean-device acceptance remain.
 
 ## Trust model
 
