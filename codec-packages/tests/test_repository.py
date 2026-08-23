@@ -221,7 +221,7 @@ class RepositoryTest(unittest.TestCase):
                 signed_validator(repo, keyring, fingerprint), text=True, capture_output=True
             )
             self.assertNotEqual(tampered.returncode, 0)
-            self.assertIn("signature verification failed", tampered.stderr)
+            self.assertIn("InRelease cleartext does not exactly match Release", tampered.stderr)
 
     @unittest.skipUnless(shutil.which("gpg") and shutil.which("gpgv"), "requires gpg and gpgv")
     def test_signed_validation_rejects_changed_packages_index(self) -> None:
