@@ -3,8 +3,10 @@
 
 The archive must contain the *contents* of the CodeC prefix (root-level
 `bin/`, `lib/`, `etc/`, `var/`), a real ELF shell, CodeC-built apt/dpkg, a
-seeded dpkg status database, the termux-exec LD_PRELOAD library, the runtime
-shared libraries, and no official Termux contamination.
+seeded dpkg status database (without official Termux packages such as
+termux-keyring), the termux-exec LD_PRELOAD library, the runtime shared
+libraries, an HTTPS metadata fetcher for the `pkg` frontend (bin/curl), and
+no official Termux contamination.
 
 Usage:
     validate-bootstrap.py ARCHIVE [ARCHIVE ...]
@@ -44,6 +46,10 @@ REQUIRED_FILES = (
     "bin/busybox",
     "bin/apt-get",
     "bin/dpkg",
+    # HTTPS metadata fetcher for the `pkg` frontend's Release/Release.sha256
+    # preflight (fresh-device Part B defect 2026-08-23: the closure shipped
+    # no curl/python3/wget and `pkg update` failed before apt ever ran).
+    "bin/curl",
     "var/lib/dpkg/status",
     "var/lib/dpkg/arch",
 )
@@ -138,7 +144,7 @@ def check_elf_members(
     tar: tarfile.TarFile, by_name: Dict[str, tarfile.TarInfo], names: List[str]
 ) -> None:
     name_set = set(names)
-    for required in ("bin/bash", "bin/busybox", "bin/apt-get", "bin/dpkg"):
+    for required in ("bin/bash", "bin/busybox", "bin/apt-get", "bin/dpkg", "bin/curl"):
         if required not in name_set:
             continue
         info = by_name.get(required)
@@ -214,6 +220,15 @@ def check_dpkg_status(
             raise BootstrapError(
                 f"dpkg status database does not mark {package} as installed"
             )
+    # The official Termux repository keyring package must never be seeded:
+    # its payload is the GPG keys of the official Termux repositories,
+    # installed into etc/apt/trusted.gpg.d/ (fresh-device Part B defect
+    # 2026-08-23: the seeded closure recorded `ii termux-keyring 3.13`).
+    if "termux-keyring" in stanzas:
+        raise BootstrapError(
+            "dpkg status database seeds termux-keyring (official Termux "
+            "repository signing keys)"
+        )
     arch_line = None
     arch_info = by_name.get("var/lib/dpkg/arch")
     stream = tar.extractfile(arch_info) if arch_info is not None else None

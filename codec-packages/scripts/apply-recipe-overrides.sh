@@ -110,6 +110,31 @@ PY
     exit 1
   fi
   grep -qF "deb $CODEC_REPO_URL $CODEC_REPO_SUITE $CODEC_REPO_COMPONENT" "$APT_RECIPE"
+
+  # The official apt recipe also lists termux-keyring — the GPG keyring of
+  # the OFFICIAL Termux repositories, which installs those keys into
+  # $PREFIX/etc/apt/trusted.gpg.d/ — as a runtime dependency. CodeC never
+  # uses official Termux repositories, so seeding their signing keys is
+  # contamination (fresh-device evidence 2026-08-23: the published Phase 3
+  # bootstrap recorded `ii termux-keyring 3.13` in dpkg status). Remove
+  # exactly that one dependency from the TERMUX_PKG_DEPENDS line; every
+  # other runtime dependency stays byte-identical (termux-licenses must
+  # stay: it provides $PREFIX/share/LICENSES/*, the target of packaged
+  # license symlinks like nano's share/licenses/nano).
+  if ! grep -q '^TERMUX_PKG_DEPENDS=' "$APT_RECIPE"; then
+    echo "recipe-overrides: apt recipe has no TERMUX_PKG_DEPENDS line to audit" >&2
+    exit 1
+  fi
+  if ! grep -qE '^TERMUX_PKG_DEPENDS=.*[, ]termux-keyring([, "]|$)' "$APT_RECIPE"; then
+    echo "recipe-overrides: apt TERMUX_PKG_DEPENDS no longer lists termux-keyring in the expected position — re-review the pinned recipe" >&2
+    exit 1
+  fi
+  sed -i '/^TERMUX_PKG_DEPENDS=/s/, termux-keyring//' "$APT_RECIPE"
+  if grep -q 'termux-keyring' "$APT_RECIPE"; then
+    echo "recipe-overrides: failed to remove termux-keyring from apt dependencies" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: apt runtime dependencies no longer include termux-keyring: $(grep '^TERMUX_PKG_DEPENDS=' "$APT_RECIPE")"
 else
   echo "recipe-overrides: apt recipe not found; skipping sources.list rewrite" >&2
   exit 1

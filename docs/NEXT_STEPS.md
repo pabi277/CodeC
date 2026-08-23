@@ -1,8 +1,9 @@
 # CodeC — remaining work, broken into clear parts
 
-**Last updated:** 2026-08-22 (end of day) · **Branch:** work merged to
-`main` via PR #11 (`arena/01a02962-codec`) — **Part A ✅ device-verified;
-Part B code ✅ merged, ⏳ one rebuild left**
+**Last updated:** 2026-08-23 · **Branch:** post-PR-#12 fix branch
+(`arena/01a02d03-codec`) — **Part A ✅ device-verified; Part B code ✅
+merged, fresh-device defects 1+2 fixed here, ⏳ PR → rebuild → republish →
+re-verify**
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -94,54 +95,82 @@ upstream `pull_package` semantics, fail-loud on unresolved deps) + reworked
 `assemble-bootstrap.sh` (closure-only extract/seed, upstream-format
 `md5sums`, assembly-time alternatives wiring incl. the dpkg admin DB,
 format measured against live dpkg) + 24 new host tests.
-Seed set = `busybox bash apt dpkg coreutils less` (see
-`CODEC_BOOTSTRAP_SEED_PACKAGES`).
+Seed set = `busybox bash apt dpkg coreutils less` at merge time (2026-08-23:
+`curl` joined the seed set and `libcurl` the build roots — see the next
+status block; see `CODEC_BOOTSTRAP_SEED_PACKAGES`).
 
-**The ~104-minute rebuild is the ONLY remaining step** — it has consumed 3
-dispatches and none has produced an artifact yet:
+**Status (2026-08-23): the first rebuilt bootstrap exposed two fresh-device
+defects; both are fixed on the branch that follows PR #12, pending another
+rebuild + republish + device-verify.**
 
-| # | Run | Duration | Failed at | Cause |
-|---|---|---|---|---|
-| 1 | `32581293757` | ~2 min | `Validate CodeC overlay` | **Our bug — fixed:** the guardrail scanner matched the repair script's own invariant *comment*; wording fixed + `tests/test_ci_guardrails.py` tripwire added so it can't recur silently. |
-| 2 | `32582311088` | ~50 min | `Build Phase 3 package-manager bootstrap` | **Upstream network flake — log-proven, not our code:** `curl: (28)` downloading `util-macros-1.20.2.tar.xz` from `xorg.freedesktop.org` (3×30 s retries all timed out). The ~40-min compile step had already passed; the assembler never ran. |
-| 3 | `32585409356` | ~48 min | `Build Phase 3 package-manager bootstrap` (~33 min into the step, both arch jobs within 30 s of each other) | **Unknown until the log is read.** The agent sandbox cannot download CI logs — see below. |
+- **Defect 1 — no HTTPS metadata fetcher.** The Part B closure seeds none of
+  `curl`/`python3`/`wget` (the in-code claim that python3 was in the closure
+  was wrong), so on a fresh device `pkg update` died at
+  `pkg: offline or unable to download CodeC Release metadata (HTTPS required)`.
+  Also, `pkg`'s maintainer-script byte checks (`spec_in_file`) called
+  `python3`, which would have broken `pkg install` preflight the same way.
+  **Fix:** `libcurl` joins the build roots (the `curl` CLI is its subpackage
+  at the pinned revision, auto-generating `Depends: libcurl (= …)` so the
+  closure walker resolves it), `curl` joins the seed set, and
+  `spec_in_file` is now pure shell (`$(cat)` + `case`). `ca-certificates`
+  (`etc/tls/cert.pem`, curl's CA bundle) was already in the closure via
+  `apt → libgnutls → ca-certificates`. Python stays out (much larger
+  closure).
+- **Defect 2 — official Termux keyring seeded.** Fresh-device
+  `dpkg-query` showed `ii termux-keyring 3.13`. The pinned apt recipe lists
+  `termux-keyring` (GPG keys of the *official* Termux repositories, installed
+  into `etc/apt/trusted.gpg.d/`) as a runtime dependency. **Fix:**
+  `apply-recipe-overrides.sh` now removes exactly `, termux-keyring` from
+  apt's `TERMUX_PKG_DEPENDS` (fail-loud on pinned-recipe drift).
+  `termux-licenses` deliberately stays: it ships `$PREFIX/share/LICENSES/*`,
+  the target of packaged license symlinks (e.g. nano's
+  `share/licenses/nano`).
+- **Release gate hardened:** `validate-bootstrap.py` now requires `bin/curl`
+  (ELF) in the archive and rejects any `termux-keyring` stanza in the seeded
+  dpkg status. Host suite: 53/53 green (fixtures prove the fetcher is
+  seeded and termux-keyring is excluded without any 100-minute build).
 
-### Continue here (new chat) — in this order, BEFORE spending another ~104 minutes
+**The ~104-minute rebuild is again the ONLY remaining step** — after the fix
+branch merges. Dispatch history (the first three predate PR #12; #4 is the
+successful rebuild whose bootstrap exposed the two defects above):
 
-1. **Read dispatch 3's log tail** (in Termux, where `gh` is authenticated —
-   the agent sandbox has no egress to the log hosts):
-   ```sh
-   gh run view --job 97060936792 --log | tail -120   # aarch64 job
-   # x86_64 twin, if needed: --job 97060936787
-   ```
-2. **Diagnose by the evidence, not by guessing:**
-   - `curl: (28)` / `Failed to download <url>` → another upstream flake. Add
-     a recipe-level mirror override for that host in
-     `codec-packages/scripts/apply-recipe-overrides.sh` (the attr/libacl
-     Savannah-mirror pattern is already in that file), push, then redispatch.
-   - `assemble-bootstrap.sh:` / `plan-bootstrap.py:` / `update-alternatives`
-     errors → a real bug in the Part B code: first reproduce it in a host
-     fixture test under `codec-packages/tests/`, fix, push, then redispatch.
-3. **Redispatch — from `main`** (the code is merged now):
+| # | Run | Duration | Result |
+|---|---|---|---|
+| 1 | `32581293757` | ~2 min | **Our bug — fixed:** the guardrail scanner matched the repair script's own invariant *comment*; wording fixed + `tests/test_ci_guardrails.py` tripwire added. |
+| 2 | `32582311088` | ~50 min | **Upstream network flake — log-proven:** `curl: (28)` fetching `util-macros` from `xorg.freedesktop.org`; fixed by the PR #12 mirror override. |
+| 3 | `32585409356` | ~48 min | Same util-macros step; cause unreadable from the agent sandbox; same mirror override applied. |
+| 4 | `32594910882` | 1h14m (aarch64) / 1h26m (x86_64) | ✅ **Success** → published by `32617929254` → fresh-device download/verify/extract OK → defects 1+2 found → this fix. |
+
+### Continue here (after the fix PR merges) — in this order
+
+1. **Redispatch from `main`** (expect the run to take ~15–25 min longer than
+   dispatch 4: the new `libcurl` root builds OpenSSL + libnghttp2/3 +
+   libtcp2-family + libssh2 first):
    ```sh
    gh workflow run "CodeC package repository" --ref main
    gh run watch
    ```
-4. **On success, republish the bootstrap** (this re-runs
-   `validate-bootstrap.py` and swaps the release assets):
+   If it fails on a source download, follow the established pattern: add a
+   narrow mirror override in `apply-recipe-overrides.sh` (attr/libacl and
+   util-macros precedents), with a host test, then redispatch.
+2. **On success, republish the bootstrap** (this re-runs
+   `validate-bootstrap.py` — which now enforces `bin/curl` and the absence
+   of `termux-keyring` — and swaps the release assets):
    ```sh
    gh workflow run "Publish CodeC bootstrap release" --ref main \
      -f source_run_id=<RUN_ID> -f release_tag=userland-v2-dev
    ```
-5. **Device verification (Part B exit condition, ~10 min).** Full app
+3. **Device verification (Part B exit condition, ~10 min).** Full app
    uninstall → install the latest successful `Build APK` artifact → "Install
    userland", then in the CodeC terminal, one block at a time:
    ```sh
    grep -n clang $PREFIX/var/lib/dpkg/status; echo exit=$?   # expect: no output, exit=1
+   command -v curl             # expect: $PREFIX/bin/curl (HTTPS metadata fetcher)
+   curl -fsSI --max-time 30 https://pabi277.github.io/CodeC/dev/dists/stable/Release >/dev/null && echo tls-ok
    pager -V                    # expect: GNU less version banner
    which pager editor vi       # expect: all resolve under $PREFIX/bin
    dpkg --audit                # expect: empty output
-   dpkg -l | grep -E 'doxygen|swig|tcl|tor|fontconfig'; echo exit=$?   # expect: exit=1
+   dpkg -l | grep -E 'doxygen|swig|tcl|tor|fontconfig|termux-keyring'; echo exit=$?   # expect: exit=1
    pkg update                  # NOTE: 'W: No Hash entry in Release file' is EXPECTED until Part D — not a bug
    pkg install nano && nano --version    # expect: GNU nano, version 9.2
    which editor                # expect: $PREFIX/bin/editor
@@ -264,10 +293,10 @@ and can tell at a glance whether they are on the trusted channel.
 
 ## Ordering summary
 
-| Part | Depends on | Effort / state (2026-08-22) |
+| Part | Depends on | Effort / state (2026-08-23) |
 |---|---|---|
 | A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
-| B — bootstrap correctness | A | code ✅ merged; ⏳ **one rebuild run left** (see "Continue here") |
+| B — bootstrap correctness | A | closure/md5sums/alternatives ✅ merged + rebuilt; fresh-device defects (fetcher, termux-keyring) fixed on the post-#12 branch; ⏳ **PR → one rebuild → republish → device-verify** |
 | C — clean-device acceptance | A ✅ (B ideally) | device time |
 | D — M3 signing | A ✅ / B | medium |
 | E — storage access | none (parallel) | medium |
