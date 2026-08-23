@@ -1,7 +1,7 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-23 · **State:** `main` through PR #13 —
-**Parts A and B ✅ device-verified; Part C clean-device acceptance is next.**
+**Last updated:** 2026-08-23 · **State:** Parts A and B ✅ device-verified;
+**Part C sections 0–6 ✅ on arm64 in PR #14, section 7 deferred.**
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -301,6 +301,29 @@ compiler still printed `ok`. **Part B's exit condition is met. Do not rebuild,
 republish, or re-verify it unless Part C records evidence of a genuine new
 defect; even then, an expensive workflow requires explicit approval.**
 
+### 5d. Part C sections 0–6 passed; one recovery defect fixed (2026-08-23)
+
+A clean Samsung SM-A356E (Android 16, aarch64) passed the Phase 3 bootstrap and
+runtime smoke, package update/search/install/uninstall/upgrade, alternatives,
+negative repository/base-package checks, compiler checks before and after
+package operations, and airplane-mode restart. The published bootstrap's
+best-effort termux-exec library was absent, but nano's postinst and
+`update-alternatives` ran successfully, confirming that the checklist's old
+hard requirement was stale.
+
+The interrupted-download test produced one genuine new defect: force-stop left
+a `codec-pkg/lock` owned by dead PID `18339`, causing both retry and
+`pkg repair` to reject the transaction. PR #14 commit `8e95a16` makes `pkg`
+reclaim only a lock whose recorded owner PID is dead and bumps the app bootstrap
+marker so the repaired script is installed on APK update. Build APK CI passed.
+Repeating the test left dead PID `6549`; the new script reclaimed it, completed
+the partial download and install, left `dpkg --audit` silent, and cleared the
+pending marker without manual deletion.
+
+Part C is not fully complete: section 7, the `userland-v1` → Phase 3 upgrade
+path, is deferred until a second device is available. The only phone must not
+be downgraded to improvise that test.
+
 ---
 
 ## 6. What is *not* done
@@ -310,10 +333,9 @@ clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 
 1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
 2. ~~Fix bootstrap correctness~~ ✅ **DONE (Part B above; device-verified).**
-3. **Run clean-device acceptance** (Part C) — runtime and package smoke,
-   negative checks, airplane mode, interrupted-install recovery, and the
-   v1 → Phase 3 upgrade path. Only one current device is available, so the
-   second-device upgrade-path check must be deferred rather than improvised.
+3. **Finish clean-device acceptance** (Part C) — sections 0–6 passed on arm64;
+   only the v1 → Phase 3 upgrade path remains. One current device is available,
+   so the second-device check is deferred rather than improvised.
 4. **M3 — sign the repository** (Part D; currently HTTPS + SHA-256 only).
 5. **Phase 4 — polish** (Parts E–F: storage access,
    `termux-setup-storage`-equivalent, security confirmation prompt, themes,
