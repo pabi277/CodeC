@@ -10,7 +10,8 @@ class TerminalEmulator(
     cols: Int = 80,
     rows: Int = 24,
     scrollbackLimit: Int = 2000,
-    var responder: ((String) -> Unit)? = null
+    var responder: ((String) -> Unit)? = null,
+    var onStoragePermissionRequested: (() -> Unit)? = null
 ) : AnsiParser.Host {
 
     val buffer = TerminalBuffer(cols, rows, scrollbackLimit)
@@ -98,6 +99,11 @@ class TerminalEmulator(
         val value = if (semi < 0) "" else payload.substring(semi + 1)
         when (code) {
             "0", "2" -> buffer.title = value
+            "1337" -> {
+                if (value == "CodeCRequestStorage") {
+                    onStoragePermissionRequested?.invoke()
+                }
+            }
         }
     }
 

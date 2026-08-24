@@ -612,10 +612,11 @@ HELP
           rm -f "${'$'}probe_file" 2>/dev/null || true
           echo "Storage setup complete — write access OK."
         else
+          # Signal terminal emulator via OSC 1337 in-band escape sequence to pop up permission screen
+          printf '\033]1337;CodeCRequestStorage\007'
           echo "Storage setup complete."
-          echo "Note: If writes fail with 'Operation not permitted', grant All Files Access in:"
-          echo "  1) CodeC Terminal Top Bar -> Folder icon (or Settings -> Storage -> SETUP STORAGE)"
-          echo "  2) Or Android Settings -> Apps -> CodeC IDE -> Permissions -> All files access"
+          echo "Requesting All Files Access permission from CodeC..."
+          echo "Please grant 'Allow access to manage all files' in the Android prompt."
         fi
     """.trimIndent() + "\n"
 

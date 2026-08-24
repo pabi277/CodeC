@@ -175,6 +175,15 @@ class AnsiParserTest {
     }
 
     @Test
+    fun `osc 1337 CodeCRequestStorage triggers storage callback`() {
+        var requested = false
+        val emu = emu()
+        emu.onStoragePermissionRequested = { requested = true }
+        emu.feed("\u001b]1337;CodeCRequestStorage\u0007")
+        assertTrue(requested)
+    }
+
+    @Test
     fun `application cursor keys flip the sequence`() {
         val emu = emu()
         assertEquals("\u001b[A", emu.cursorKey('A'))

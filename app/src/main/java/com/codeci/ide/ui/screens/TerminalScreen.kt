@@ -62,6 +62,11 @@ fun TerminalScreen(
     val alt by viewModel.altLatched.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.ensureStarted() }
+    LaunchedEffect(Unit) {
+        viewModel.storagePermissionRequests.collect {
+            (context as? MainActivity)?.requestStoragePermissions()
+        }
+    }
     LaunchedEffect(commandNonce, initialCommand) {
         if (!initialCommand.isNullOrBlank()) {
             viewModel.sendCommand(initialCommand)
