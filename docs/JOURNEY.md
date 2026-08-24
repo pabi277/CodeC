@@ -1,9 +1,9 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified. Part D implementation, signed Pages/client acceptance, and the
-key-seeded bootstrap build/release are ✅ in PR #14; only the final clean-device
-gate remains.
+**Last updated:** 2026-08-24 · **State:** Parts A, B, C, and D ✅
+device-verified — Phase 3's device-acceptance gate is complete. PR #14 has the
+signing implementation, signed Pages/client acceptance, the key-seeded
+bootstrap build/release, and now the final clean-device evidence.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -369,25 +369,57 @@ then replaced the four `userland-v2-dev` assets. The new archive digests are
 `49cef1ccf82831e870d2d94537c5b9091cc71fa17c4eb0c27dc913d4e79248bf`
 (aarch64, 23,928,215 bytes) and
 `8e9fd6a973a4c56a957d952aa0ecc1d01ac4788f9cf61bd9162fa6d93e873b4a`
-(x86_64, 23,824,737 bytes), matching the live sidecars. Only the rebuilt-
-bootstrap clean-device gate remains. Operational
-details and
+(x86_64, 23,824,737 bytes), matching the live sidecars. Operational details and
 rotation/revocation/rollback rules are in
 [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
+
+### 5f. Part D's final clean-device gate passed — Phase 3 acceptance complete (2026-08-24)
+
+The last open item — a full uninstall/reinstall clean-device pass against the
+published, key-seeded `userland-v2-dev` bootstrap (run `32648783080`) — was
+run and passed. The pre-uninstall backup was verified first (checksum,
+`gzip -t`, archive listing, independent-copy `cmp`); the app was fully
+uninstalled, reinstalled from a test-only re-signed sideload APK, and opened
+online. The automatic installer downloaded the aarch64 archive end to end
+(23,928,215 bytes, matching the digest above), verified its SHA-256,
+extracted it, and reached a real `codec $` prompt without a manual
+"Install userland" tap.
+
+On that clean device: `$PREFIX`, real ELF Bash (`5.3.15(1)-release`), busybox,
+and `dpkg --print-architecture aarch64` all matched expectations; the seeded
+dpkg status contained no `clang` and no build-only/`termux-keyring` package by
+exact name (an earlier unanchored `grep` had matched `sed`'s description text,
+not a real package — the exact-name recheck was clean); `sources.list`
+referenced only the CodeC channel; `pkg update` succeeded with no
+unsigned/weak-security/hash warning and the installed keyring's SHA-256
+(`e9c36bb6…e19a807`) matched the pinned value exactly; an independent `gpgv`
+run confirmed `Good signature` from the exact v3 subkey
+(`328500868CE9B0F74B62CEFC1D7D52F6F8135015`) and rejected a tampered
+`InRelease`; `pkg install nano` (+`libmagic`) ran its reviewed alternatives
+postinst, `nano --version` reported 9.2, `editor`/`pager`/`vi` resolved,
+`dpkg --audit` was silent, and uninstall cleanly fell back to busybox `vi`;
+and embedded `cc` compiled and ran a test program successfully. Full evidence
+and commands are recorded in
+[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8.
+
+**This closes Part D and Phase 3's device-acceptance gate. No section in
+`PHASE3_DEVICE_ACCEPTANCE.md` remains open.** PR #14 has the code, docs, and
+now the recorded evidence for all of Parts B, C, and D and is ready to merge.
 
 ---
 
 ## 6. What is *not* done
 
-`pkg` works, but **Phase 3 is not complete**. The remaining work is broken into
-clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
+`pkg` works, and as of 2026-08-24 **Phase 3's device-acceptance gate is
+complete**. The remaining work is Phase 4 polish, broken into ordered parts in
+[`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 
 1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
 2. ~~Fix bootstrap correctness~~ ✅ **DONE (Part B above; device-verified).**
 3. ~~Run clean-device acceptance~~ ✅ **DONE (Part C above; all sections passed).**
-4. **M3 final gate — accept the released key-seeded bootstrap** (signed Pages,
-   signed-client device path, CI builds, and release publication pass; only the
-   backup-first clean-device proof remains).
+4. ~~M3 final gate — accept the released key-seeded bootstrap~~ ✅ **DONE**
+   (signed Pages, signed-client device path, CI builds, release publication,
+   and the backup-first clean-device proof all passed — see §5f above).
 5. **Phase 4 — polish** (Parts E–F: storage access,
    `termux-setup-storage`-equivalent, security confirmation prompt, themes,
    signing UX).

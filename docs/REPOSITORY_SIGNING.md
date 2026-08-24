@@ -4,7 +4,12 @@
 signed-client acceptance path passed against the exact v3 signing subkey.
 Key-seeded build run `32643383952` passed both architectures and exact-keyring
 validation; release run `32648783080` revalidated and published all four assets.
-Only rebuilt-bootstrap clean-device acceptance remains.
+The rebuilt-bootstrap clean-device acceptance test then passed on a real
+aarch64 device on 2026-08-24 (full uninstall/reinstall, exact keyring hash,
+warning-free signed `pkg update`, independent `gpgv` tamper rejection, package
+lifecycle, clean audit, compiler smoke — see
+[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8). Signing is
+fully device-verified end to end.
 
 ## Trust model
 

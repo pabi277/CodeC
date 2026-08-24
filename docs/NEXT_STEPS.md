@@ -1,9 +1,10 @@
 # CodeC — remaining work, broken into clear parts
 
-**Last updated:** 2026-08-23 · **State:** Parts A, B, and C ✅
-device-verified. Part D code, signed Pages, signed-client acceptance, and the
-key-seeded bootstrap build and `userland-v2-dev` release publication are ✅ in
-PR #14; only the rebuilt-bootstrap clean-device gate remains.
+**Last updated:** 2026-08-24 · **State:** Parts A, B, C, and D ✅ ALL
+device-verified. Phase 3's device-acceptance gate is complete: Part D code,
+signed Pages, signed-client acceptance, the key-seeded bootstrap build/release,
+and the final rebuilt-bootstrap clean-device pass are all done in PR #14.
+Remaining work is Phase 4 polish (Parts E–F).
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 **task list**: everything still open, split into self-contained, ordered parts
@@ -268,21 +269,37 @@ negative checks and the recovery tests.
 
 ---
 
-## Part D — M3: sign the repository and verify on device
+## Part D — M3: sign the repository and verify on device — ✅ DONE (device-verified)
 
-**Status: IMPLEMENTATION + SIGNED PUBLICATION + CLIENT ACCEPTANCE + BOOTSTRAP
-BUILD/RELEASE COMPLETE; final clean-device acceptance pending.** PR #14 now
-contains key-agnostic signing/validation, protected-subkey CI support, the
-public-only production keyring, signed-only client/bootstrap integration, and
-tamper/missing-signature tests. Corrective signed publication run `32642631785`
-reused existing artifacts, skipped both expensive builds, and fixed the APT
-Release-stanza defect found by the first device attempt. The real CodeC device
-then passed signed update, exact-key verification, tamper rejection, nano
-lifecycle, clean audit, and compiler checks. Build run `32643383952` then built
-both architectures successfully; each archive passed the validator's exact
-v3-keyring byte comparison and was uploaded as a non-expired artifact. Release
-run `32648783080` revalidated both archives and replaced the four
-`userland-v2-dev` assets. Only clean-device acceptance has not run.
+**Status: COMPLETE (2026-08-24) — implementation, signed publication, client
+acceptance, bootstrap build/release, and the final clean-device gate have all
+passed.** PR #14 contains key-agnostic signing/validation, protected-subkey CI
+support, the public-only production keyring, signed-only client/bootstrap
+integration, and tamper/missing-signature tests. Corrective signed publication
+run `32642631785` reused existing artifacts, skipped both expensive builds, and
+fixed the APT Release-stanza defect found by the first device attempt. The
+real CodeC device then passed signed update, exact-key verification, tamper
+rejection, nano lifecycle, clean audit, and compiler checks. Build run
+`32643383952` then built both architectures successfully; each archive passed
+the validator's exact v3-keyring byte comparison and was uploaded as a
+non-expired artifact. Release run `32648783080` revalidated both archives and
+replaced the four `userland-v2-dev` assets.
+
+**Final clean-device gate — passed 2026-08-24.** After a verified pre-uninstall
+backup (checksum, `gzip -t`, listing, independent `cmp`), a full uninstall and
+fresh reinstall against the exact published `userland-v2-dev` archive
+(aarch64, 23,928,215 bytes) reached `userland: ready` automatically and passed
+every remaining section-8 check on a real device: no `clang`/build-pollution/
+`termux-keyring` (verified with an exact package-name match after an
+unanchored `grep` gave a `sed`-description false positive), CodeC-only
+`sources.list`, warning-free signed `pkg update` with an exact keyring-hash
+match, independent `gpgv` acceptance of the live signature and rejection of a
+tampered copy, a full nano install/uninstall cycle with working alternatives,
+a silent `dpkg --audit`, and a working embedded compiler. Full commands and
+output are recorded in
+[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8. **Do not
+re-run this expensive/destructive test unless a genuine new defect is found;
+this Part is done.**
 
 **Why.** The development channel originally relied on HTTPS + SHA-256 only.
 Signing closes the integrity-vs-tampering gap. The Part D client removes `[trusted=yes]`, verifies
@@ -316,10 +333,11 @@ package hash chain verify, rejects tampered metadata, and uses no
    the public key files. Rotation, revocation, rollback, and overlap rules are
    documented.
 
-**Remaining gate.** Perform the final clean-device
+**Exit condition met.** The final clean-device
 keyring/signed-APT/package/audit/compiler test against the rebuilt
-`userland-v2-dev` assets. Back up app-private projects before uninstalling, and
-do not merge PR #14 until the owner accepts the evidence.
+`userland-v2-dev` assets passed (see above and
+[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8). PR #14 is
+ready to merge as "Phase 3 complete" pending final owner review.
 
 ---
 
@@ -353,13 +371,15 @@ and can tell at a glance whether they are on the trusted channel.
 
 ## Ordering summary
 
-| Part | Depends on | Effort / state (2026-08-23) |
+| Part | Depends on | Effort / state (2026-08-24) |
 |---|---|---|
 | A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
 | B — bootstrap correctness | A | ✅ **DONE** — merged, rebuilt, republished, device-verified |
 | C — clean-device acceptance | A ✅, B ✅ | ✅ **DONE** — every checklist item passed on real arm64 devices |
-| D — M3 signing | A ✅, B ✅, C ✅ | implementation ✅; signed publish/rebuild/device gate pending |
+| D — M3 signing | A ✅, B ✅, C ✅ | ✅ **DONE** — implementation, signed publish, rebuild, and final clean-device gate all passed |
 | E — storage access | none (parallel) | medium |
-| F — confirmation/signing UX | D | small–medium |
+| F — confirmation/signing UX | D ✅ | small–medium |
 
-**Shortest path to "Phase 3 complete":** Part D. Parts A, B, and C are done.
+**Phase 3 is complete.** Parts A, B, C, and D have all met their exit
+conditions and are device-verified. PR #14 is ready for final review/merge.
+The next work is Phase 4 polish: Parts E and F.

@@ -1,11 +1,15 @@
 # Phase 3 clean-device acceptance checklist
 
-**Status: Part C and the Part D signed-client path PASSED (2026-08-23).**
+**Status: ALL SECTIONS PASSED, INCLUDING THE FINAL CLEAN-DEVICE GATE
+(2026-08-24). Phase 3 acceptance is complete.**
 Sections 0–6 passed on a clean Samsung SM-A356E (Android 16, aarch64); section 7
 passed on a separate arm64 device through an in-place v1 upgrade; and section 8
 passed live signature, tamper rejection, APT, package lifecycle, audit, and
 compiler checks. Both rebuilt archives passed exact-keyring CI validation and
-were published by run `32648783080`; only the clean-device item remains.
+were published by run `32648783080`. On 2026-08-24 a full uninstall + fresh
+install of that exact published bootstrap on a real aarch64 device (Android 16)
+passed every remaining section-8 item — see the "Final clean-device evidence"
+block at the end of section 8. No item in this checklist is open.
 
 This checklist is the M2 gate from [`PHASE3_PLAN.md`](PHASE3_PLAN.md). Run it
 after the `userland-v2-dev` release is published and a fresh APK (versionName
@@ -249,7 +253,7 @@ fi
       embedded keyring byte-for-byte against the committed v3 public key;
 - [x] publish those revalidated assets as `userland-v2-dev` (release run
       `32648783080`);
-- [ ] pass the rebuilt key-seeded bootstrap on a clean device.
+- [x] pass the rebuilt key-seeded bootstrap on a clean device.
 
 **2026-08-23 CodeC-device evidence:** the installed keyring hash matched;
 `pkg update` returned 0 with no unsigned, weak-security, or missing-hash warning;
@@ -260,19 +264,80 @@ ran; removal succeeded; `dpkg --audit` was empty; and embedded `cc` printed
 `partd-compiler-ok`. The dangling-editor repair and absent-mandoc messages were
 non-fatal alternatives warnings, followed by a clean audit.
 
-Record the APK workflow run, Pages workflow run, device/Android version, and
-terminal output. Rotation, revocation, and rollback procedures are in
+### Final clean-device evidence (2026-08-24) — the last open item, now closed
+
+A verified pre-uninstall backup (checksum, `gzip -t`, archive listing, and an
+independent-copy `cmp`) was confirmed before the destructive step. CodeC IDE
+was then fully uninstalled (Settings → Apps → Uninstall) and reinstalled from
+`app-debug-partd-test-signed.apk` (a test-only re-signed CI artifact used only
+so Android would accept the sideload; it carries no repository-trust weight).
+On first launch, Term opened online and the automatic installer downloaded the
+already-published `userland-v2-dev` aarch64 archive end to end
+(**23,928,215 bytes**, matching the digest recorded above for release run
+`32648783080`), printed `userland: verifying SHA-256…`, then
+`userland: extracting into /data/user/0/com.codeci.ide/files/usr`, then
+`userland: ready`, reaching a real `codec $` prompt with no manual
+"Install userland" tap required.
+
+The device (`SM-A356E`-class aarch64 phone, Android 16, kernel
+`5.15.189-android13-3-33470412`) then passed, in order:
+
+1. **Runtime smoke:** `$PREFIX` = `/data/user/0/com.codeci.ide/files/usr`;
+   `which bash` → real ELF `$PREFIX/bin/bash`; `$BASH_VERSION` = `5.3.15(1)-release`;
+   `busybox` banner printed; `apt-get`/`dpkg` resolve under `$PREFIX`; `dpkg
+   --print-architecture` → `aarch64`; `grep clang $PREFIX/var/lib/dpkg/status`
+   found nothing (`exit=1`) — the Part B fix held on the rebuilt archive.
+2. **No-contamination check:** an unanchored `dpkg -l | grep -E
+   'doxygen|swig|tcl|tor|fontconfig|termux-keyring'` initially matched `sed`
+   (substring hit on "edi**tor**"/"transf**or**ming" in its description, not a
+   real package). Re-run with exact package-name matching —
+   `dpkg -l | awk '$1=="ii"{print $2}' | grep -Ex
+   'doxygen|swig|tcl|tor|fontconfig|termux-keyring'` — printed no lines,
+   confirming zero build-dependency or Termux-keyring contamination on the
+   rebuilt bootstrap. The checklist's own pattern above should be read as
+   requiring an exact-name match, not a bare substring search; a future edit
+   may tighten the sample command.
+3. **`sources.list`:** contains only
+   `deb [signed-by=.../codec-archive-keyring-v1.gpg]
+   https://pabi277.github.io/CodeC/dev stable main` — no `termux.dev`.
+4. **Signed `pkg update` (the specific section-8 gate):** installed keyring
+   SHA-256 is `e9c36bb618d747bd303104f86869843b41239cfd1ab445dc2f9cf3e71e19a807`
+   — an exact match to the value pinned above. `pkg update` printed
+   `Hit:1 https://pabi277.github.io/CodeC/dev stable InRelease` with no
+   unsigned/weak-security/missing-hash warning. `$STATE/sources.list` contains
+   `signed-by=` and no `trusted=yes`; `$STATE/Release` contains
+   `Origin: CodeC` and `Suite: stable`.
+5. **Independent tamper check:** a separate `curl` fetch of the live
+   `InRelease` plus `gpgv --keyring codec-archive-keyring-v1.gpg` reported
+   `Good signature from "CodeC Repository Signing (2026 v3)"` using RSA key
+   `328500868CE9B0F74B62CEFC1D7D52F6F8135015`; after flipping the `Origin:`
+   line, the same `gpgv` call reported `BAD signature` and the script printed
+   `tamper-rejected`.
+6. **curl/package lifecycle:** `curl` resolved under `$PREFIX/bin` and
+   `curl -fsSI` against the Release URL printed `tls-ok`; `pkg install nano`
+   pulled `libmagic` + `nano` from the signed repository, ran the reviewed
+   alternatives `postinst` (`update-alternatives: using .../bin/nano to
+   provide .../bin/editor`), `nano --version` reported GNU nano 9.2, `editor`/
+   `pager`/`vi` all resolved under `$PREFIX`, `pager -V` reported `less 704`,
+   and `dpkg --audit` was silent. `pkg uninstall nano` cleanly fell the
+   `editor` alternative back to busybox `vi`.
+7. **Compiler smoke:** `cc t.c -o a.out && ./a.out` printed `clean-device-ok`.
+
+Every command in this final pass succeeded with the expected result. This
+closes the only remaining unchecked item in this document. Rotation,
+revocation, and rollback procedures are in
 [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
 
 ## Result
 
-Every Part C item and the Part D signed-client path passed on real arm64
-devices; both key-seeded archives passed CI validation and are published. Phase
-3 completion remains pending only the rebuilt-bootstrap clean-device item in
-section 8. The test-only APK key used
-solely to align CI artifact signatures is not a production signing key and is
-unrelated to repository signing.
+Every item in this checklist — Parts A, B, C, and the Part D signed-client and
+final clean-device paths — has passed on real arm64 devices; both key-seeded
+archives passed CI validation and are published as `userland-v2-dev`. No
+section-8 item remains open. Phase 3's device-acceptance gate is complete. The
+test-only APK key used solely to align CI artifact signatures is not a
+production signing key and is unrelated to repository signing.
 
-If any item fails: keep the failure, the device model/Android version, and the
-Term output; do not merge as "Phase 3 complete". The safe fallback
+If any item fails in the future (e.g. against a new bootstrap rebuild): keep
+the failure, the device model/Android version, and the Term output; do not
+claim "Phase 3 complete" without re-verifying. The safe fallback
 (`userland-v1`) keeps the app functional in the meantime.

@@ -1,9 +1,12 @@
 # CodeC IDE Phase 3 package-management plan
 
-**Status:** M1 and M2 complete/device-verified; M3 signing, public trust,
-signed Pages/client acceptance and key-seeded bootstrap build/release complete
-in PR #14; only final clean-device acceptance remains
-**Date:** 2026-08-21
+**Status:** M1, M2, and M3 all complete/device-verified in PR #14 — signing,
+public trust, signed Pages/client acceptance, key-seeded bootstrap
+build/release, and the final clean-device acceptance (aarch64) have all
+passed. Phase 3's device-acceptance gate is complete; only an optional
+x86_64 repeat of the same clean-device check remains unrun (no x86_64 device
+was available).
+**Date:** 2026-08-21 (updated 2026-08-24)
 **Scope:** CodeC's private Android userland only
 
 This plan follows the Phase 2 handoff and is intentionally narrower than a full
@@ -221,7 +224,7 @@ state before continuing.
   maintainer-script rejection, checksum failures, and recoverable downloads;
 - publish the development APT repository at `https://pabi277.github.io/CodeC/dev`.
 
-### M2 — package-manager bootstrap 🟡
+### M2 — package-manager bootstrap ✅
 
 - [x] build and inspect CodeC-prefixed `apt` and `dpkg` plus dependencies from
   official recipes;
@@ -244,7 +247,7 @@ state before continuing.
   airplane-mode restart, interrupted recovery, and v1 upgrade
   ([PHASE3_DEVICE_ACCEPTANCE.md](PHASE3_DEVICE_ACCEPTANCE.md)).
 
-### M3 — signed development channel and promotion 🟡
+### M3 — signed development channel and promotion ✅
 
 - [x] generate and validate `InRelease` + `Release.gpg` with an exact dedicated
   signing subkey;
@@ -264,7 +267,13 @@ state before continuing.
   (run `32643383952`; exact committed-keyring validation passed);
 - [x] publish the revalidated assets as `userland-v2-dev` after separate
   approval (run `32648783080`, live sidecars match both archive digests);
-- [ ] pass the final clean-device section 8 check (x86_64 where available).
+- [x] pass the final clean-device section 8 check on aarch64 (2026-08-24: full
+  uninstall/reinstall against the published `userland-v2-dev` archive passed
+  every remaining check — see
+  [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8 and
+  `JOURNEY.md` §5f for the complete evidence). An x86_64 repeat is optional
+  and was not run because no x86_64 device was available; the exit condition
+  is met on the tested architecture.
 
 ## 6. Risks and unresolved decisions
 
