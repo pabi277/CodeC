@@ -59,10 +59,11 @@ class RecipeOverrideTest(unittest.TestCase):
 
             text = recipe.read_text()
             self.assertIn(
-                "https://www.x.org/releases/individual/util/util-macros-",
+                "https://ftp.x.org/pub/individual/util/util-macros-",
                 text,
             )
             self.assertNotIn("https://xorg.freedesktop.org/releases/", text)
+            self.assertNotIn("https://www.x.org/releases/", text)
 
             # Part B (2026-08-23): exactly `termux-keyring` is removed from
             # apt's runtime dependencies; every other dependency stays

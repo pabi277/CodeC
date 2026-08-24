@@ -32,21 +32,20 @@ for recipe in attr libacl; do
   echo "recipe-overrides: $recipe uses official HTTPS Savannah mirror"
 done
 
-# xorg.freedesktop.org repeatedly timed out from both GitHub Actions package
-# builds (run 32585409356) while fetching util-macros-1.20.2. X.Org's official
-# download host serves the identical, hash-verified source archive. Limit this
-# transport fallback to the one observed recipe and URL prefix.
+# xorg.freedesktop.org and www.x.org/releases repeatedly timed out from GitHub Actions
+# package builds (runs 32585409356 and 32768209859) while fetching util-macros-1.20.2.
+# ftp.x.org serves the official, hash-verified source archive directly via HTTPS without timeouts.
 UTIL_MACROS_RECIPE="$TREE/packages/xorg-util-macros/build.sh"
 if [[ -f "$UTIL_MACROS_RECIPE" ]]; then
   sed -i \
-    's#https://xorg\.freedesktop\.org/releases/individual/util/#https://www.x.org/releases/individual/util/#' \
+    's#https://\(xorg\.freedesktop\.org\|www\.x\.org\)/releases/individual/util/#https://ftp.x.org/pub/individual/util/#' \
     "$UTIL_MACROS_RECIPE"
-  if grep -qF 'https://xorg.freedesktop.org/releases/individual/util/' "$UTIL_MACROS_RECIPE"; then
+  if grep -qE 'https://(xorg\.freedesktop\.org|www\.x\.org)/releases/individual/util/' "$UTIL_MACROS_RECIPE"; then
     echo "recipe-overrides: failed to update util-macros source URL" >&2
     exit 1
   fi
-  grep -qF 'https://www.x.org/releases/individual/util/' "$UTIL_MACROS_RECIPE"
-  echo "recipe-overrides: util-macros uses official X.Org download mirror"
+  grep -qF 'https://ftp.x.org/pub/individual/util/' "$UTIL_MACROS_RECIPE"
+  echo "recipe-overrides: util-macros uses official HTTPS ftp.x.org mirror"
 else
   echo "recipe-overrides: util-macros recipe not found; skipping" >&2
 fi
