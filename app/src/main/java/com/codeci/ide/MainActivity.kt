@@ -115,12 +115,15 @@ class MainActivity : ComponentActivity() {
             if (!Environment.isExternalStorageManager()) {
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
                     data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 try {
                     startActivity(intent)
                 } catch (_: Exception) {
                     try {
-                        val fallback = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                        val fallback = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         startActivity(fallback)
                     } catch (e: Exception) {
                         AppLogger.e("MainActivity", "Cannot open all files access settings", e)

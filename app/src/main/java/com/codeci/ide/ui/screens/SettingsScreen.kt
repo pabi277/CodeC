@@ -361,12 +361,15 @@ fun SettingsScreen(
                         if (!android.os.Environment.isExternalStorageManager()) {
                             val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
                                 data = android.net.Uri.parse("package:${context.packageName}")
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             try {
                                 context.startActivity(intent)
                             } catch (_: Exception) {
                                 try {
-                                    val fallback = android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    val fallback = android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
                                     context.startActivity(fallback)
                                 } catch (e: Exception) {
                                     Toast.makeText(context, "Cannot open storage settings", Toast.LENGTH_SHORT).show()

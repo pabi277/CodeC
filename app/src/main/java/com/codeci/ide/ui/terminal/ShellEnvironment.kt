@@ -21,7 +21,7 @@ import java.io.File
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "17"
+    const val BOOTSTRAP_VERSION = "18"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -585,14 +585,13 @@ HELP
         fi
 
         if [ "${'$'}needs_permission" -eq 1 ]; then
-          echo "Requesting storage permission from CodeC..."
-          if command -v am >/dev/null 2>&1; then
-            am start --user 0 -a com.codeci.ide.action.REQUEST_STORAGE_PERMISSION -n com.codeci.ide/.MainActivity >/dev/null 2>&1 || \
-              am start -a com.codeci.ide.action.REQUEST_STORAGE_PERMISSION >/dev/null 2>&1 || true
-            echo "Please grant 'All files access' / storage permission in the Android prompt if shown."
-          else
-            echo "Note: Grant storage permissions in Android Settings -> Apps -> CodeC IDE -> Permissions."
-          fi
+          echo "Storage write access is required to access /storage/emulated/0."
+          echo "Attempting to open permission settings..."
+          am start --user 0 -a com.codeci.ide.action.REQUEST_STORAGE_PERMISSION -n com.codeci.ide/.MainActivity 2>/dev/null || \
+            am start -a com.codeci.ide.action.REQUEST_STORAGE_PERMISSION 2>/dev/null || true
+          echo "If the Android permission screen did not open automatically, grant All Files Access in:"
+          echo "  CodeC App -> Settings -> Storage -> SETUP STORAGE"
+          echo "  or: Android Settings -> Apps -> CodeC IDE -> Permissions -> All files access"
         fi
 
         setup_link() {
