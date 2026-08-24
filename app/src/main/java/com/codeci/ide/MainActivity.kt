@@ -2,7 +2,11 @@ package com.codeci.ide
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -93,12 +97,38 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (ShellEnvironment.hasStoragePermission(this)) {
+            val home = ShellEnvironment.homeDir(filesDir)
+            ShellEnvironment.setupStorageDirectory(home)
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleStoragePermissionIntent(intent)
     }
 
     fun requestStoragePermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                try {
+                    startActivity(intent)
+                } catch (_: Exception) {
+                    try {
+                        val fallback = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                        startActivity(fallback)
+                    } catch (e: Exception) {
+                        AppLogger.e("MainActivity", "Cannot open all files access settings", e)
+                    }
+                }
+                return
+            }
+        }
         val permissions = arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE

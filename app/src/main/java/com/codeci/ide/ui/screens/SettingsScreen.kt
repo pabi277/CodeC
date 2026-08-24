@@ -325,16 +325,14 @@ fun SettingsScreen(
             SettingsSectionHeader(stringResource(com.codeci.ide.R.string.storage))
             
             var storageGranted by remember {
-                mutableStateOf(
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-                )
+                mutableStateOf(ShellEnvironment.hasStoragePermission(context))
             }
             val storageLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
             ) { permissions ->
                 val granted = permissions.values.any { it }
-                storageGranted = granted
-                if (granted) {
+                storageGranted = ShellEnvironment.hasStoragePermission(context) || granted
+                if (storageGranted) {
                     val home = ShellEnvironment.homeDir(context.filesDir)
                     ShellEnvironment.setupStorageDirectory(home)
                     Toast.makeText(context, context.getString(com.codeci.ide.R.string.storage_setup_complete), Toast.LENGTH_SHORT).show()
@@ -359,6 +357,24 @@ fun SettingsScreen(
                 TextButton(onClick = {
                     val home = ShellEnvironment.homeDir(context.filesDir)
                     ShellEnvironment.setupStorageDirectory(home)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        if (!android.os.Environment.isExternalStorageManager()) {
+                            val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                data = android.net.Uri.parse("package:${context.packageName}")
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                try {
+                                    val fallback = android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    context.startActivity(fallback)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Cannot open storage settings", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            return@TextButton
+                        }
+                    }
                     storageLauncher.launch(
                         arrayOf(
                             Manifest.permission.READ_EXTERNAL_STORAGE,

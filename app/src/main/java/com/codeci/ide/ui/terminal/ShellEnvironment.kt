@@ -1,7 +1,10 @@
 package com.codeci.ide.ui.terminal
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Environment
+import androidx.core.content.ContextCompat
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.utils.AppLogger
@@ -575,6 +578,10 @@ HELP
         needs_permission=0
         if [ ! -r "${'$'}SHARED_ROOT" ] || ! ls "${'$'}SHARED_ROOT" >/dev/null 2>&1; then
           needs_permission=1
+        elif ! touch "${'$'}SHARED_ROOT/Download/.codec_storage_probe_${'$'}${'$'}" 2>/dev/null; then
+          needs_permission=1
+        else
+          rm -f "${'$'}SHARED_ROOT/Download/.codec_storage_probe_${'$'}${'$'}" 2>/dev/null || true
         fi
 
         if [ "${'$'}needs_permission" -eq 1 ]; then
@@ -582,7 +589,7 @@ HELP
           if command -v am >/dev/null 2>&1; then
             am start --user 0 -a com.codeci.ide.action.REQUEST_STORAGE_PERMISSION -n com.codeci.ide/.MainActivity >/dev/null 2>&1 || \
               am start -a com.codeci.ide.action.REQUEST_STORAGE_PERMISSION >/dev/null 2>&1 || true
-            echo "Please grant storage permission in the Android prompt if shown."
+            echo "Please grant 'All files access' / storage permission in the Android prompt if shown."
           else
             echo "Note: Grant storage permissions in Android Settings -> Apps -> CodeC IDE -> Permissions."
           fi
@@ -630,6 +637,17 @@ HELP
         val createdLinks: List<StorageLink>,
         val errorMessage: String? = null
     )
+
+    fun hasStoragePermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
 
     fun setupStorageDirectory(
         homeDir: File,
