@@ -48,6 +48,8 @@ import com.codeci.ide.ui.terminal.StyleRun
 import com.codeci.ide.ui.terminal.TerminalLine
 import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.terminal.XtermColors
+import com.codeci.ide.ui.theme.DraculaTerminalTheme
+import com.codeci.ide.ui.theme.TerminalThemeColors
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import kotlin.math.abs
 import kotlin.math.floor
@@ -76,6 +78,8 @@ data class GridSelection(
 fun TerminalEmulatorView(
     snapshot: TerminalSnapshot,
     fontSizeSp: Float,
+    fontFamily: String = "Monospace",
+    theme: TerminalThemeColors = DraculaTerminalTheme,
     onInput: (String) -> Unit,
     onResize: (cols: Int, rows: Int) -> Unit,
     onFontScale: (Float) -> Unit,
@@ -87,9 +91,18 @@ fun TerminalEmulatorView(
     val density = LocalDensity.current
     var keyView by remember { mutableStateOf<TerminalKeyView?>(null) }
 
-    val paint = remember(fontSizeSp, density) {
+    val typeface = remember(fontFamily) {
+        when (fontFamily) {
+            "Courier" -> Typeface.MONOSPACE
+            "Sans Serif" -> Typeface.SANS_SERIF
+            "Serif" -> Typeface.SERIF
+            else -> Typeface.MONOSPACE
+        }
+    }
+
+    val paint = remember(fontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.MONOSPACE
+            this.typeface = typeface
             textSize = with(density) { fontSizeSp.sp.toPx() }
         }
     }
@@ -117,7 +130,7 @@ fun TerminalEmulatorView(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(DefaultBg)
+            .background(theme.background)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 // Enter is delivered via the IME TextField as \n → \r. Handling
@@ -182,7 +195,7 @@ fun TerminalEmulatorView(
                         }
                     }
             ) {
-                drawRect(DefaultBg)
+                drawRect(theme.background)
                 val transcript = snapshot.scrollbackLines + snapshot.lines
                 val origin = snapshot.scrollbackCount
                 for (screenY in 0 until rows) {
@@ -203,7 +216,8 @@ fun TerminalEmulatorView(
                         cursorX = if (isCursorRow) snapshot.cursorX else -1,
                         selection = selection,
                         extY = extY,
-                        cols = cols
+                        cols = cols,
+                        theme = theme
                     )
                 }
             }
@@ -266,7 +280,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
     cursorX: Int,
     selection: GridSelection?,
     extY: Int,
-    cols: Int
+    cols: Int,
+    theme: TerminalThemeColors
 ) {
     val text = line.text
     val runs = if (line.runs.isEmpty()) {
@@ -282,11 +297,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
         val bold = run.flags and CellFlags.BOLD != 0
         val inverse = run.flags and CellFlags.INVERSE != 0
         val invisible = run.flags and CellFlags.INVISIBLE != 0
-        val fgRgb = XtermColors.toRgb(run.fg, DefaultFgRgb, bold)
-        val bgRgb = XtermColors.toRgb(run.bg, 0x121212, false)
+        val fgRgb = XtermColors.toRgb(run.fg, theme.foregroundRgb, bold)
+        val bgRgb = XtermColors.toRgb(run.bg, theme.backgroundRgb, false)
         val drawFg = if (inverse) bgRgb else fgRgb
         val drawBg = if (inverse) fgRgb else bgRgb
-        if (drawBg != 0x121212) {
+        if (drawBg != theme.backgroundRgb) {
             drawRect(
                 color = packedColor(drawBg),
                 topLeft = Offset(start * cellW, y * cellH),
@@ -325,14 +340,14 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
             cols
         }
         drawRect(
-            color = SelectionColor,
+            color = theme.selection,
             topLeft = Offset(left * cellW, y * cellH),
             size = Size(((right - left).coerceAtLeast(0)) * cellW, cellH)
         )
     }
     if (cursorX in 0 until cols) {
         drawRect(
-            color = CursorColor.copy(alpha = 0.7f),
+            color = theme.cursor.copy(alpha = 0.7f),
             topLeft = Offset(cursorX * cellW, y * cellH),
             size = Size(cellW, cellH)
         )

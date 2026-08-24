@@ -38,6 +38,7 @@ import com.codeci.ide.R
 import com.codeci.ide.ui.components.TerminalEmulatorView
 import com.codeci.ide.ui.components.TerminalExtraKeys
 import com.codeci.ide.ui.terminal.ShellEnvironment
+import com.codeci.ide.ui.theme.getTerminalTheme
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 
 @Composable
@@ -58,6 +59,9 @@ fun TerminalScreen(
     val snapshot by viewModel.snapshot.collectAsState()
     val alive by viewModel.alive.collectAsState()
     val fontSize by viewModel.fontSizeSp.collectAsState()
+    val fontFamily by viewModel.fontFamily.collectAsState()
+    val terminalThemeType by viewModel.terminalTheme.collectAsState()
+    val terminalTheme = getTerminalTheme(terminalThemeType)
     val ctrl by viewModel.ctrlLatched.collectAsState()
     val alt by viewModel.altLatched.collectAsState()
 
@@ -77,7 +81,7 @@ fun TerminalScreen(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
-            .background(Color(0xFF121212))
+            .background(terminalTheme.background)
     ) {
         TopAppBar(
             title = {
@@ -136,6 +140,8 @@ fun TerminalScreen(
         TerminalEmulatorView(
             snapshot = snapshot,
             fontSizeSp = fontSize,
+            fontFamily = fontFamily,
+            theme = terminalTheme,
             onInput = { viewModel.send(it) },
             onResize = { cols, rows -> viewModel.resize(cols, rows) },
             onFontScale = { viewModel.setFontSize(it) },
