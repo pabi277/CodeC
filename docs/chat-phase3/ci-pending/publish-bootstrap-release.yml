@@ -140,7 +140,7 @@ jobs:
               '' \
               '- App side: `userland-v1` remains published and is used automatically' \
               '  when this release is removed or unreachable' \
-              '  (see `docs/PHASE3_STATUS.md`).' \
+              '  (see `docs/chat-phase3/PHASE3_STATUS.md`).' \
               '- Repository side: re-publish the previous Pages manifest by' \
               '  dispatching "CodeC package repository" with `publish=true` and the' \
               '  previous successful run ID.'

@@ -3,11 +3,11 @@
 **Status:** planning only. **No Phase 4 code has been written.** Phase 3
 (package management: `pkg`, apt/dpkg bootstrap, signed repository) is complete
 and device-verified — see [`JOURNEY.md`](JOURNEY.md) and
-[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md). This document is
+[`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md). This document is
 the entry point for Phase 4: polish and expansion on top of that foundation.
 
 This is deliberately a **roadmap**, not an execution plan like
-[`PHASE3_PLAN.md`](PHASE3_PLAN.md)/[`NEXT_STEPS.md`](NEXT_STEPS.md). It names
+[`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md)/[`NEXT_STEPS.md`](NEXT_STEPS.md). It names
 parts, their rough scope, and their dependencies. It does **not** pin down
 exact technical decisions, UI designs, package lists, or exit-condition
 wording — those get decided (and written down, updated in this file) when a
@@ -46,7 +46,7 @@ history to need more than one part's worth of work.
    decisions this file left open (in the part's own PR/docs, not necessarily
    back in this file), then build, test, and verify exactly like Phase 3:
    evidence before hypothesis, no unverified "done" claims, respect the
-   existing invariants (`PHASE3_PLAN.md` §1, `chat-phase1/SOLUTIONS.md`,
+   existing invariants (`chat-phase3/PHASE3_PLAN.md` §1, `chat-phase1/SOLUTIONS.md`,
    `chat-phase2/SOLUTIONS.md`).
 4. Update this roadmap's status line for that part when it is actually
    finished and verified — not before.
@@ -123,7 +123,7 @@ whether terminal-specific options (e.g. PTY-related) stay separate by design.
 
 **Basic goal.** Grow the Phase 3 package set beyond the original curated roots
 (`nano less coreutils grep sed gawk gzip tar make libmagic`, per
-[`PHASE3_PLAN.md`](PHASE3_PLAN.md) §4 and [`codec-packages/README.md`](../codec-packages/README.md))
+[`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md) §4 and [`codec-packages/README.md`](../codec-packages/README.md))
 with more commonly requested tools, using the same source-build /
 dependency-closure / signed-repository / device-acceptance discipline already
 proven in Phase 3 — not a new mechanism.
@@ -170,7 +170,7 @@ capabilities exists. Do not attempt the whole surface area in one part.
 
 - **Optional x86_64 repeat of the Part D clean-device test.** Phase 3's exit
   condition was met on aarch64; an x86_64 repeat was never run because no
-  x86_64 device was available (see [`PHASE3_PLAN.md`](PHASE3_PLAN.md) §5, M3).
+  x86_64 device was available (see [`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md) §5, M3).
   This can be done opportunistically whenever an x86_64 device is available.
   It does not block any Phase 4 part and is not itself renumbered as one.
 

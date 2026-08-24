@@ -58,7 +58,7 @@ A part is **done** only when:
 **Status: COMPLETE (2026-08-22) — and it shipped _without_ the ~104-minute
 rebuild.** The published `userland-v2-dev` assets were repaired **in place**
 by the owner in Termux (Path 2 of
-[`PART_A_ARTIFACT_REPAIR.md`](PART_A_ARTIFACT_REPAIR.md), which patches exactly
+[`chat-phase3/PART_A_ARTIFACT_REPAIR.md`](chat-phase3/PART_A_ARTIFACT_REPAIR.md), which patches exactly
 one line of the seeded `var/lib/dpkg/status`), then triple-verified: the
 script's internal proofs, the GitHub asset-digest API (aarch64
 `074806ad9066d4642d4779a28abf7aeb442c76ae9cb115b12b796eac9a9643b1`, x86_64
@@ -245,10 +245,10 @@ corrected it, CI passed, and an in-place v1 → `userland-v2-dev` update then
 passed the full package/compiler/contamination block. The exit condition below
 is met.
 
-**Why.** [`docs/PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) is
+**Why.** [`docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md) is
 the explicit clean-device acceptance gate. It now records every item as passed.
 
-**Exit condition.** Every unchecked item in `PHASE3_DEVICE_ACCEPTANCE.md`
+**Exit condition.** Every unchecked item in `chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`
 passes on a clean arm64 device (and x86_64 if available), including the
 negative checks and the recovery tests.
 
@@ -298,7 +298,7 @@ match, independent `gpgv` acceptance of the live signature and rejection of a
 tampered copy, a full nano install/uninstall cycle with working alternatives,
 a silent `dpkg --audit`, and a working embedded compiler. Full commands and
 output are recorded in
-[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8. **Do not
+[`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md) §8. **Do not
 re-run this expensive/destructive test unless a genuine new defect is found;
 this Part is done.**
 
@@ -322,7 +322,7 @@ package hash chain verify, rejects tampered metadata, and uses no
 3. Public keyring v1 and fingerprints are committed under
    `codec-packages/keys/`; no private key material is committed. The offline
    primary and CI signing subkey fingerprints are recorded in
-   [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
+   [`chat-phase3/REPOSITORY_SIGNING.md`](chat-phase3/REPOSITORY_SIGNING.md).
 4. The APK installs that keyring under `etc/apt/keyrings`; `pkg` requires
    `gpgv`, verifies signed Origin/Suite, and writes a CodeC-only `signed-by=`
    source. The Phase 3 bootstrap assembler seeds the same bytes and its
@@ -337,7 +337,7 @@ package hash chain verify, rejects tampered metadata, and uses no
 **Exit condition met.** The final clean-device
 keyring/signed-APT/package/audit/compiler test against the rebuilt
 `userland-v2-dev` assets passed (see above and
-[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8). PR #14 is
+[`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md) §8). PR #14 is
 ready to merge as "Phase 3 complete" pending final owner review.
 
 ---

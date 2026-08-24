@@ -36,10 +36,38 @@ release_tag   = userland-v2-dev   (default)
 the publish workflow also validates before release).
 
 ```sh
-git apply docs/ci-pending/package-repository.validator-step.patch
+git apply docs/chat-phase3/ci-pending/package-repository.validator-step.patch
 ```
 
+## 3. Doc-path drift after the docs/chat-phase3/ move (2026-08-24)
+
+The Phase 3 docs were reorganized from loose `docs/PHASE3_*.md` files into
+`docs/chat-phase3/` (matching the `chat-phase1`/`chat-phase2` convention).
+Every reference to those paths was updated **except** two lines inside the
+live `.github/workflows/*.yml` files, because this session's GitHub App token
+cannot push `.github/workflows/**` changes (same limitation as sections 1–2
+above). The two workflow files in this folder are the corrected mirrors,
+already updated and YAML-validated:
+
+- `.github/workflows/package-repository.yml` — the `push.paths` trigger filter
+  still says `docs/PHASE3_PLAN.md`; it should say
+  `docs/chat-phase3/PHASE3_PLAN.md` (this folder's copy already has it).
+  Effect of not fixing it: editing `PHASE3_PLAN.md` in its new location no
+  longer re-triggers this workflow on push — cosmetic/non-blocking, not a
+  correctness bug.
+- `.github/workflows/publish-bootstrap-release.yml` — a release-notes string
+  still points at `` `docs/PHASE3_STATUS.md` `` ; it should say
+  `` `docs/chat-phase3/PHASE3_STATUS.md` `` (this folder's copy already has
+  it). Effect of not fixing it: a cosmetic dead link inside generated release
+  notes, not a functional bug.
+
+To apply: copy each file in this folder over its `.github/workflows/`
+counterpart (they are otherwise byte-identical), or grant the `workflows`
+permission as described above and ask the agent to push again. Low priority —
+neither live workflow is broken, only a path reference inside each is stale.
+
 ## Rollback (works regardless of the above)
+
 
 - **Bootstrap/app:** the app automatically falls back to `userland-v1` when
   `userland-v2-dev` is removed or unreachable. To roll back a published

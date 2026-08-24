@@ -7,11 +7,13 @@ bootstrap build/release, and now the final clean-device evidence.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
-package manager". This is the narrative; the per-phase problem/solution records
-remain in [`docs/chat-phase1/`](chat-phase1/README.md),
+package manager". This is the narrative; the per-phase problem/solution
+records remain in [`docs/chat-phase1/`](chat-phase1/README.md),
 [`docs/chat-phase2/`](chat-phase2/README.md), and
-[`docs/PHASE3_PKG_DEBUGGING.md`](PHASE3_PKG_DEBUGGING.md). Remaining work is
-broken into ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md).
+[`docs/chat-phase3/`](chat-phase3/PHASE3_PKG_DEBUGGING.md) (Phase 3's plan,
+device-acceptance checklist, signing operations, and debugging records).
+Remaining work is broken into ordered parts in
+[`docs/NEXT_STEPS.md`](NEXT_STEPS.md).
 
 **Starting a new chat?** Paste [`prompt.md`](../prompt.md) as the first
 message — it encodes the self-distrust protocol and the order of work, so the
@@ -114,7 +116,7 @@ acceptance stayed pending.
 
 ## 4. Phase 3 — the package manager (`pkg`, apt/dpkg, repository)
 
-The big one. Broken into milestones in [`docs/PHASE3_PLAN.md`](PHASE3_PLAN.md).
+The big one. Broken into milestones in [`docs/chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md).
 
 ### 4.1 M1 — repository foundation ✅
 
@@ -152,7 +154,7 @@ Published development channel: **`https://pabi277.github.io/CodeC/dev`**.
 ### 4.3 This session — on-device debugging that actually finished it
 
 Installing the APK on a real aarch64 phone surfaced five independent bugs. The
-full trace and diagnosis are in [`docs/PHASE3_PKG_DEBUGGING.md`](PHASE3_PKG_DEBUGGING.md).
+full trace and diagnosis are in [`docs/chat-phase3/PHASE3_PKG_DEBUGGING.md`](chat-phase3/PHASE3_PKG_DEBUGGING.md).
 Each is fixed in `ShellEnvironment.pkgScript()` (app code — no bootstrap rebuild
 needed for four of them):
 
@@ -213,7 +215,7 @@ recipe fix, so a fresh device's seeded status DB contained
 `Depends: perl, clang, make, dpkg (= 1.22.6-5)`. Since the *entire* content
 delta between the published artifact and a full rebuild was that single
 line, the owner ran `codec-packages/scripts/repair-bootstrap-status.sh`
-(Path 2 of `docs/PART_A_ARTIFACT_REPAIR.md`) in Termux on both published
+(Path 2 of `docs/chat-phase3/PART_A_ARTIFACT_REPAIR.md`) in Termux on both published
 tarballs and re-uploaded them. Triple-verified: the script's own
 before/after tree proofs (only `./var/lib/dpkg/status` changed inside the
 archive), the GitHub asset-digest API (aarch64 `074806ad…`, x86_64
@@ -371,7 +373,7 @@ then replaced the four `userland-v2-dev` assets. The new archive digests are
 `8e9fd6a973a4c56a957d952aa0ecc1d01ac4788f9cf61bd9162fa6d93e873b4a`
 (x86_64, 23,824,737 bytes), matching the live sidecars. Operational details and
 rotation/revocation/rollback rules are in
-[`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).
+[`chat-phase3/REPOSITORY_SIGNING.md`](chat-phase3/REPOSITORY_SIGNING.md).
 
 ### 5f. Part D's final clean-device gate passed — Phase 3 acceptance complete (2026-08-24)
 
@@ -400,10 +402,10 @@ postinst, `nano --version` reported 9.2, `editor`/`pager`/`vi` resolved,
 `dpkg --audit` was silent, and uninstall cleanly fell back to busybox `vi`;
 and embedded `cc` compiled and ran a test program successfully. Full evidence
 and commands are recorded in
-[`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8.
+[`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md) §8.
 
 **This closes Part D and Phase 3's device-acceptance gate. No section in
-`PHASE3_DEVICE_ACCEPTANCE.md` remains open.** PR #14 has the code, docs, and
+`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md` remains open.** PR #14 has the code, docs, and
 now the recorded evidence for all of Parts B, C, and D and is ready to merge.
 
 ---

@@ -2,7 +2,7 @@
 # Repair the seeded dpkg status DB inside a published CodeC Phase 3 bootstrap
 # archive, without rebuilding the ~100-minute package pipeline.
 #
-# Background (docs/PHASE3_PKG_DEBUGGING.md §1): the userland-v2-dev bootstrap
+# Background (docs/chat-phase3/PHASE3_PKG_DEBUGGING.md §1): the userland-v2-dev bootstrap
 # was built before the dpkg-perl recipe override dropped the bogus *runtime*
 # dependency on clang (codec-packages/scripts/apply-recipe-overrides.sh).
 # assemble-bootstrap.sh seeds each built package's control fields verbatim

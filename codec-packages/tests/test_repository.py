@@ -17,9 +17,15 @@ GENERATE = SCRIPTS / "generate-repository.py"
 VALIDATE = SCRIPTS / "validate-repository.py"
 SIGN = SCRIPTS / "sign-repository.sh"
 KEYS = SCRIPTS.parent / "keys"
-PENDING_WORKFLOW = SCRIPTS.parents[1] / "docs" / "ci-pending" / "package-repository.yml"
+PENDING_WORKFLOW = (
+    SCRIPTS.parents[1] / "docs" / "chat-phase3" / "ci-pending" / "package-repository.yml"
+)
 PENDING_RELEASE_WORKFLOW = (
-    SCRIPTS.parents[1] / "docs" / "ci-pending" / "publish-bootstrap-release.yml"
+    SCRIPTS.parents[1]
+    / "docs"
+    / "chat-phase3"
+    / "ci-pending"
+    / "publish-bootstrap-release.yml"
 )
 TEST_PASSPHRASE = "codec-test-signing-passphrase"
 

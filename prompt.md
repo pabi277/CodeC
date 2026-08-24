@@ -33,7 +33,7 @@ of assuming one.
     bootstrap rebuild/republish, **and the final rebuilt-bootstrap
     clean-device gate** (full uninstall/reinstall against the published
     `userland-v2-dev` archive) all passed on 2026-08-24. See
-    `docs/PHASE3_DEVICE_ACCEPTANCE.md` §8 and `docs/JOURNEY.md` §5f for full
+    `docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md` §8 and `docs/JOURNEY.md` §5f for full
     evidence.
   - **Do not redo, re-debug, or re-run any of the above.** They are closed.
 - **PR #14 is open, CI-green, and mergeable.** It now bundles Parts C+D on top
@@ -48,7 +48,7 @@ of assuming one.
   make the concrete decisions that part needs before writing any code.
 - An optional x86_64 repeat of the Part D clean-device test was not run (no
   x86_64 device was available); this does not block calling Phase 3 complete
-  on the tested aarch64 architecture (see `docs/PHASE3_PLAN.md` §5 M3).
+  on the tested aarch64 architecture (see `docs/chat-phase3/PHASE3_PLAN.md` §5 M3).
 
 **SELF-DISTRUST PROTOCOL — follow strictly:**
 
@@ -70,8 +70,8 @@ of assuming one.
    keep the TCC link order with `-o` last; never use official `com.termux`
    packages or repositories; never bundle the bootstrap in the APK; repository
    metadata must stay signed (`signed-by=`, no `trusted=yes`). The full list is
-   in `chat-phase1/SOLUTIONS.md`, `chat-phase2/SOLUTIONS.md`, `PHASE3_PLAN.md`,
-   and `REPOSITORY_SIGNING.md`.
+   in `chat-phase1/SOLUTIONS.md`, `chat-phase2/SOLUTIONS.md`, `chat-phase3/PHASE3_PLAN.md`,
+   and `chat-phase3/REPOSITORY_SIGNING.md`.
 6. **One PR at a time, from the current state.**
 7. **Know the sandbox limits:** the agent sandbox reaches `api.github.com`
    only — it cannot download CI logs, release assets, or workflow artifacts

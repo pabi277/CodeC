@@ -18,7 +18,7 @@ on:
     paths:
       - "codec-packages/**"
       - ".github/workflows/package-repository.yml"
-      - "docs/PHASE3_PLAN.md"
+      - "docs/chat-phase3/PHASE3_PLAN.md"
 
 permissions:
   contents: read
