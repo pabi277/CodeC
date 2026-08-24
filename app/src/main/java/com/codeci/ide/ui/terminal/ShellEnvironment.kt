@@ -686,18 +686,40 @@ HELP
             link.delete()
         } catch (_: Exception) {
         }
-        return try {
-            android.system.Os.symlink(target.absolutePath, link.absolutePath)
-            true
+        // Try android.system.Os.symlink on Android
+        try {
+            val osClass = Class.forName("android.system.Os")
+            val symlinkMethod = osClass.getMethod("symlink", String::class.java, String::class.java)
+            symlinkMethod.invoke(null, target.absolutePath, link.absolutePath)
+            if (link.exists()) return true
         } catch (_: Throwable) {
-            try {
-                val process = ProcessBuilder("ln", "-s", target.absolutePath, link.absolutePath)
-                    .redirectErrorStream(true)
-                    .start()
-                process.waitFor() == 0
-            } catch (_: Exception) {
-                false
-            }
+        }
+        // Try java.nio.file.Files via reflection (safe on host JVM and Android 26+)
+        try {
+            val filesClass = Class.forName("java.nio.file.Files")
+            val pathsClass = Class.forName("java.nio.file.Paths")
+            val getPathMethod = pathsClass.getMethod("get", String::class.java, Array<String>::class.java)
+            val linkPath = getPathMethod.invoke(null, link.absolutePath, emptyArray<String>())
+            val targetPath = getPathMethod.invoke(null, target.absolutePath, emptyArray<String>())
+            val fileAttrArray = java.lang.reflect.Array.newInstance(Class.forName("java.nio.file.attribute.FileAttribute"), 0)
+            val createSymlinkMethod = filesClass.getMethod(
+                "createSymbolicLink",
+                Class.forName("java.nio.file.Path"),
+                Class.forName("java.nio.file.Path"),
+                fileAttrArray.javaClass
+            )
+            createSymlinkMethod.invoke(null, linkPath, targetPath, fileAttrArray)
+            if (link.exists()) return true
+        } catch (_: Throwable) {
+        }
+        // Fallback: ln -s process
+        return try {
+            val process = ProcessBuilder("ln", "-s", target.absolutePath, link.absolutePath)
+                .redirectErrorStream(true)
+                .start()
+            process.waitFor() == 0 && link.exists()
+        } catch (_: Exception) {
+            false
         }
     }
 
