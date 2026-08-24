@@ -17,7 +17,7 @@ class RecipeOverrideTest(unittest.TestCase):
         """The CI timeout host is replaced without changing the source file."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
-            recipe_dir = tree / "packages" / "util-macros"
+            recipe_dir = tree / "packages" / "xorg-util-macros"
             recipe_dir.mkdir(parents=True)
             recipe = recipe_dir / "build.sh"
             recipe.write_text(
@@ -97,8 +97,8 @@ class RecipeOverrideTest(unittest.TestCase):
                 (path / "build.sh").write_text(
                     'TERMUX_PKG_SRCURL=https://example.invalid/source\n'
                 )
-            (tree / "packages" / "util-macros").mkdir(parents=True)
-            (tree / "packages" / "util-macros" / "build.sh").write_text(
+            (tree / "packages" / "xorg-util-macros").mkdir(parents=True)
+            (tree / "packages" / "xorg-util-macros" / "build.sh").write_text(
                 'TERMUX_PKG_SRCURL=https://xorg.freedesktop.org/releases/'
                 'individual/util/util-macros-${TERMUX_PKG_VERSION}.tar.xz\n'
             )

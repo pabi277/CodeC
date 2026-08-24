@@ -36,7 +36,7 @@ done
 # builds (run 32585409356) while fetching util-macros-1.20.2. X.Org's official
 # download host serves the identical, hash-verified source archive. Limit this
 # transport fallback to the one observed recipe and URL prefix.
-UTIL_MACROS_RECIPE="$TREE/packages/util-macros/build.sh"
+UTIL_MACROS_RECIPE="$TREE/packages/xorg-util-macros/build.sh"
 if [[ -f "$UTIL_MACROS_RECIPE" ]]; then
   sed -i \
     's#https://xorg\.freedesktop\.org/releases/individual/util/#https://www.x.org/releases/individual/util/#' \
