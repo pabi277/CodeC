@@ -682,11 +682,12 @@ HELP
     }
 
     fun createOrUpdateSymlink(target: File, link: File): Boolean {
+        try {
+            link.delete()
+        } catch (_: Exception) {
+        }
         return try {
-            if (link.exists() || java.nio.file.Files.isSymbolicLink(link.toPath())) {
-                link.delete()
-            }
-            java.nio.file.Files.createSymbolicLink(link.toPath(), target.toPath())
+            android.system.Os.symlink(target.absolutePath, link.absolutePath)
             true
         } catch (_: Throwable) {
             try {
