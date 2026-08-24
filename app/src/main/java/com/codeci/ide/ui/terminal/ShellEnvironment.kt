@@ -53,7 +53,7 @@ object ShellEnvironment {
         val prefix = prefixDir(filesDir)
         val keyring = File(prefix, "etc/apt/keyrings/$PACKAGE_REPOSITORY_KEYRING")
         val isUserland = hasRealUserland(prefix)
-        val arch = UserlandManifest.archNameForAbis(Build.SUPPORTED_ABIS)
+        val arch = UserlandManifest.archNameForAbis(Build.SUPPORTED_ABIS ?: emptyArray())
         return RepositoryTrustInfo(
             channelName = "Development ($PACKAGE_REPOSITORY_SUITE/$PACKAGE_REPOSITORY_COMPONENT)",
             repositoryUrl = PACKAGE_REPOSITORY_URL,
