@@ -82,9 +82,26 @@ less
 curl
 "
 
-# Curated Phase 3 repository roots. The generated repository also contains the
-# exact source-built dependency closure; only the generated manifest is a
-# promise to users.
+# Curated repository roots. The generated repository also contains the exact
+# source-built dependency closure; only the generated manifest is a promise
+# to users.
+#
+# Round 1 (Phase 3): nano less coreutils grep sed gawk gzip tar make libmagic.
+#
+# Round 2 (Phase 4 Part 4.5, 2026-08-24): the most-requested dev-environment
+# tools for a C IDE, chosen so the incremental closure stays within the CI
+# build budget. Decisions (package list, repository-only scope, recipe
+# overrides, deferred items) are recorded in
+# docs/chat-phase4/PART_4_5_CATALOG_EXPANSION.md. New packages are
+# repository-only: CODEC_PACKAGE_MANAGER_BOOTSTRAP_PACKAGES and
+# CODEC_BOOTSTRAP_SEED_PACKAGES are unchanged, so the bootstrap archive stays
+# byte-identical to the published userland-v2-dev assets (verified in CI by
+# digest comparison).
+#
+# Deferred deliberately (round 3 candidates, with reasons):
+#   vim      — build dependencies luajit/python/ruby/tcl add 20+ min per arch
+#   openssh  — krb5/ldns/termux-auth are heavy; termux-auth needs its own review
+#   python3  — large closure; largest single value, but it is its own part
 CODEC_REPOSITORY_PACKAGES="
 nano
 less
@@ -96,6 +113,21 @@ gzip
 tar
 make
 libmagic
+git
+wget
+bat
+ripgrep
+fd
+htop
+tmux
+tree
+patch
+diffutils
+zstd
+m4
+autoconf
+automake
+libtool
 "
 
 # Development channel URL. CI/release automation may override this; the app

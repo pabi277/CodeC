@@ -354,7 +354,12 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
   Detailed record in [`docs/chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md`](chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md).
 - **Part 4.4 — Terminal/editor settings parity** ✅ **DONE (device-verified 2026-08-24).**
   Detailed record in [`docs/chat-phase4/PART_4_4_SETTINGS_PARITY.md`](chat-phase4/PART_4_4_SETTINGS_PARITY.md).
-- **Parts 4.5–4.7** remain open for pickup.
+- **Part 4.5 — Expanded package catalog (round 2, CI build)** 🚧 **IN PROGRESS (2026-08-24).**
+  Decisions recorded in [`docs/chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md)
+  (15 new roots, repository-only scope, 2 fail-loud recipe overrides, 2 reviewed
+  maintainer-script entries); code + host tests staged, CI build dispatch
+  pending explicit confirmation.
+- **Parts 4.6–4.7** remain open for pickup.
 
 ---
 
@@ -370,4 +375,5 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
 | Phase 4 Part 4.2 — install confirmation UX | none | ✅ **DONE** — transaction summary, `[Y/n]` prompt, `-y` flag |
 | Phase 4 Part 4.3 — trust/channel indicator UX | none | ✅ **DONE** — Settings trust card, `pkg status`, repo probe |
 | Phase 4 Part 4.4 — settings/theme parity | none | ✅ **DONE** — font family, themes, settings UI, live preview |
-| Phase 4 Parts 4.5–4.7 | — | Planning / ready to pick up |
+| Phase 4 Part 4.5 — expanded package build (CI) | none | 🚧 **IN PROGRESS** — decisions recorded, CI build pending confirmation |
+| Phase 4 Parts 4.6–4.7 | 4.6 on 4.5 | Planning / ready to pick up |

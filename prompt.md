@@ -11,41 +11,35 @@ Read `docs/JOURNEY.md` and `docs/NEXT_STEPS.md` first, **before doing anything
 else**, then report back what you found and the current git/PR/CI state before
 making any change.
 
-You are continuing **CodeC** (an Android C IDE). PRs #10–#13 are **merged to
-`main`**. PR #14 (`arena/01a02db3-codec` → `main`) is open and contains Part
-C, Part D (M3 repository signing), and their device-acceptance evidence on top
-of the docs updates its title describes. Each chat session gets its own
-`arena/*` session branch — verify the actual branch with `git status` instead
-of assuming one.
+You are continuing **CodeC** (an Android C IDE). PRs #1–#17 are **merged to
+`main`** (PR #14 was closed unmerged, superseded by PR #15). Each chat session
+gets its own `arena/*` session branch — verify the actual branch with
+`git status` instead of assuming one.
 
 **WHERE THINGS STAND (2026-08-24):**
 
 - **Phase 3 is device-acceptance complete.** Parts A, B, C, and D have all met
-  their exit conditions and are verified on real Android hardware:
-  - **Part A** (republish clean bootstrap): ✅ done, in-place repair, device-verified.
-  - **Part B** (bootstrap correctness — curl fetcher, no `termux-keyring`): ✅
-    done, merged, rebuilt, republished, device-verified.
-  - **Part C** (clean-device acceptance, M2 gate): ✅ done — every checklist
-    item passed on real arm64 devices, including lock-recovery and legacy-marker
-    fixes found along the way.
-  - **Part D** (M3 repository signing): ✅ done — signing implementation,
-    signed Pages publication, signed-client device acceptance, key-seeded
-    bootstrap rebuild/republish, **and the final rebuilt-bootstrap
-    clean-device gate** (full uninstall/reinstall against the published
-    `userland-v2-dev` archive) all passed on 2026-08-24. See
-    `docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md` §8 and `docs/JOURNEY.md` §5f for full
-    evidence.
+  their exit conditions and are verified on real Android hardware; the
+  Part C+D evidence and docs landed in `main` via **PR #15** (merged
+  2026-08-24). Part D's final clean-device gate (full uninstall/reinstall
+  against the published, key-seeded `userland-v2-dev` archive) passed on
+  2026-08-24. See `docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md` §8 and
+  `docs/JOURNEY.md` §5f for full evidence.
   - **Do not redo, re-debug, or re-run any of the above.** They are closed.
-- **PR #14 is open, CI-green, and mergeable.** It now bundles Parts C+D on top
-  of its original docs scope. It has not yet been merged — check
-  `gh pr view 14` for current state before assuming.
-- **Next work is Phase 4**, planned (not coded) in
-  `docs/PHASE4_ROADMAP.md`: storage access, install-confirmation and
-  trust-indicator UX, settings/theme parity, an expanded package catalog, and
-  a first Android-integration slice. Nothing in Phase 4 has started — that
-  file is a roadmap with intentionally open technical decisions, not a spec
-  to implement verbatim. Confirm with the user which part to pick up, then
-  make the concrete decisions that part needs before writing any code.
+- **Phase 4 Parts 4.1–4.4 are done** and merged: #16 (4.1 shared-storage
+  access), #17 (4.2 install-confirmation UX + 4.3 trust/channel indicator UX,
+  including 4.4 settings/theme parity). Device-verification records are in
+  `docs/chat-phase4/`.
+- **Next work is Phase 4 Parts 4.5–4.7**, planned in
+  `docs/PHASE4_ROADMAP.md`. **Part 4.5 (expanded package catalog, round 2) is
+  IN PROGRESS**: the technical decisions are recorded in
+  `docs/chat-phase4/PART_4_5_CATALOG_EXPANSION.md` (15 new repository roots,
+  repository-only scope, fail-loud git/bash recipe overrides, reviewed
+  `bat`/`util-linux` maintainer-script entries) and code + host tests are
+  staged on the session branch. Its remaining exit condition is the
+  `workflow_dispatch` CI build from `main` — an expensive action that needs
+  explicit user confirmation before dispatching. Parts 4.6 (publish + device
+  gate) and 4.7 (Android-integration slice) are not started.
 - An optional x86_64 repeat of the Part D clean-device test was not run (no
   x86_64 device was available); this does not block calling Phase 3 complete
   on the tested aarch64 architecture (see `docs/chat-phase3/PHASE3_PLAN.md` §5 M3).
@@ -81,14 +75,14 @@ of assuming one.
 
 **ORDER OF WORK:**
 
-1. Verify current state (`gh pr list`, `gh pr view 14`, `git status`,
-   `gh run list`, `gh release list`). Do not reopen completed parts.
-2. If PR #14 has not been merged yet and the user wants to proceed, merging it
-   is the natural next step (it is CI-green and mergeable as of 2026-08-24).
-3. Otherwise, move to **Phase 4** (`docs/PHASE4_ROADMAP.md`) — confirm which
-   numbered part the user wants before starting, and decide/write down that
-   part's open technical questions before coding.
-4. A part is complete only when its **"Exit condition"** is met and verified,
+1. Verify current state (`gh pr list`, `git status`, `gh run list`,
+   `gh release list`). Do not reopen completed parts.
+2. Continue the current part from its record in `docs/chat-phase4/` (as of
+   2026-08-24: Part 4.5 — see `PART_4_5_CATALOG_EXPANSION.md` "Continue
+   here"). Confirm with the user which numbered part of
+   `docs/PHASE4_ROADMAP.md` they want, and decide/write down that part's open
+   technical questions before coding.
+3. A part is complete only when its **"Exit condition"** is met and verified,
    not merely when code is written.
 
 **Before each change, state:** what you are changing, which Part and exit

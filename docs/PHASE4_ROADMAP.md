@@ -1,8 +1,12 @@
 # CodeC Phase 4 roadmap
 
-**Status:** planning only. **No Phase 4 code has been written.** Phase 3
-(package management: `pkg`, apt/dpkg bootstrap, signed repository) is complete
-and device-verified — see [`JOURNEY.md`](JOURNEY.md) and
+**Status (2026-08-24):** Parts 4.1–4.4 ✅ done (device-verified, merged via
+PRs #16–#17). Part 4.5 (expanded catalog, round 2) is in progress: decisions
+recorded in [`chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md),
+code + host tests staged; the CI build dispatch is pending explicit
+confirmation. Phase 3 (package management: `pkg`, apt/dpkg bootstrap, signed
+repository) is complete and device-verified — see [`JOURNEY.md`](JOURNEY.md)
+and
 [`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md). This document is
 the entry point for Phase 4: polish and expansion on top of that foundation.
 
@@ -132,6 +136,18 @@ surfaces.
 
 ### Part 4.5 / 4.6 — Expand the curated package catalog (round 2)
 
+**Status: Part 4.5 IN PROGRESS (2026-08-24).** Decisions recorded in
+[`chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md):
+round 2 roots = `git wget bat ripgrep fd htop tmux tree patch diffutils zstd
+m4 autoconf automake libtool` (vim/openssh/python3 deferred to round 3 with
+reasons); repository-only scope (bootstrap byte-identical, verified by
+digest); two fail-loud recipe overrides (bash `termux-tools` removal shared
+by both builds; git gitk/git-gui/git-svn subpackage exclusion +
+`--with-tcltk=no`); reviewed maintainer-script allowlist extended by
+`bat`/`util-linux` (both below `less`'s pager priority, so the default pager
+cannot change). Code + host tests staged; CI build dispatch pending explicit
+confirmation.
+
 **Basic goal.** Grow the Phase 3 package set beyond the original curated roots
 (`nano less coreutils grep sed gawk gzip tar make libmagic`, per
 [`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md) §4 and [`codec-packages/README.md`](../codec-packages/README.md))
@@ -193,7 +209,7 @@ capabilities exists. Do not attempt the whole surface area in one part.
 | 4.2 — install confirmation UX | none | small | ✅ **DONE** (verified) |
 | 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ✅ **DONE** (verified) |
 | 4.4 — settings/theme parity | none | small–medium | ✅ **DONE** (device-verified) |
-| 4.5 — expanded package build (CI) | none | medium | ~50–70 |
+| 4.5 — expanded package build (CI) | none | medium | **IN PROGRESS** — decisions recorded, CI build pending confirmation |
 | 4.6 — expanded package publish + device accept | 4.5 | medium | ~50–70 |
 | 4.7 — Android integration foundation slice | none | large (epic seed) | ~50–70 (first slice only) |
 
