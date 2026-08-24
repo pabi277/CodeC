@@ -134,11 +134,13 @@ def build(args: argparse.Namespace) -> None:
         f"Date: {date_text}",
         "Description: CodeC packages rebuilt for com.codeci.ide",
     ]
-    hashes = release_hashes(args.output, release_dir)
-    release_lines.extend(["", "SHA256:"])
+    hashes = release_hashes(release_dir)
+    # Release is a single Debian control stanza. A blank line here terminates
+    # the stanza, causing apt to ignore every following hash field.
+    release_lines.append("SHA256:")
     for digest, size, relative, _ in hashes:
         release_lines.append(f" {digest} {size:16d} {relative}")
-    release_lines.extend(["", "MD5Sum:"])
+    release_lines.append("MD5Sum:")
     # Keep the traditional MD5 section for apt clients that expect it; SHA256
     # remains the authoritative integrity value in Packages and the manifest.
     import hashlib
@@ -148,7 +150,7 @@ def build(args: argparse.Namespace) -> None:
     ):
         digest = hashlib.md5(item.read_bytes()).hexdigest()
         release_lines.append(
-            f" {digest} {item.stat().st_size:16d} {item.relative_to(args.output).as_posix()}"
+            f" {digest} {item.stat().st_size:16d} {item.relative_to(release_dir).as_posix()}"
         )
     release_path = release_dir / "Release"
     release_path.write_text("\n".join(release_lines) + "\n")

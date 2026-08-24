@@ -419,6 +419,14 @@ class AssembleBootstrapSeedTest(unittest.TestCase):
             # fresh devices had no curl/python3/wget and `pkg update`
             # failed its Release preflight).
             self.assertIn("./bin/curl", names)
+            self.assertIn("./etc/apt/keyrings/codec-archive-keyring-v1.gpg", names)
+            seeded_key = tf.extractfile(
+                "./etc/apt/keyrings/codec-archive-keyring-v1.gpg"
+            ).read()
+            self.assertEqual(
+                seeded_key,
+                (ROOT / "codec-packages" / "keys" / "codec-archive-keyring-v1.gpg").read_bytes(),
+            )
             self.assertNotIn("./bin/doxygen", names)
             self.assertNotIn("./bin/tor", names)
             # The official Termux repository keyring is never seeded.

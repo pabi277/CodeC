@@ -1,14 +1,16 @@
-# CodeC — remaining work, broken into clear parts
+# CodeC — Phase 3 task list (complete) and Phase 4 pointer
 
-**Last updated:** 2026-08-23 · **Branch:** post-PR-#12 fix branch
-(`arena/01a02d03-codec`) — **Part A ✅ device-verified; Part B code ✅
-merged, fresh-device defects 1+2 fixed here, ⏳ PR → rebuild → republish →
-re-verify**
+**Last updated:** 2026-08-24 · **State:** Parts A, B, C, and D ✅ ALL
+device-verified. Phase 3's device-acceptance gate is complete: Part D code,
+signed Pages, signed-client acceptance, the key-seeded bootstrap build/release,
+and the final rebuilt-bootstrap clean-device pass are all done in PR #14.
+Remaining work is Phase 4, planned separately in
+[`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) — nothing in Phase 4 has been coded.
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
-**task list**: everything still open, split into self-contained, ordered parts
-so each can be picked up independently. Parts A–D finish Phase 3; Parts E–F
-are Phase 4 polish.
+Phase 3 **task list**, kept for its history: Parts A–D, all now done, split
+into self-contained parts so each could be picked up independently. Phase 4's
+task list lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) instead of here.
 
 Each part states its goal, its exit condition, and the exact steps. "Done"
 means the exit condition is verified, not just the code written.
@@ -56,7 +58,7 @@ A part is **done** only when:
 **Status: COMPLETE (2026-08-22) — and it shipped _without_ the ~104-minute
 rebuild.** The published `userland-v2-dev` assets were repaired **in place**
 by the owner in Termux (Path 2 of
-[`PART_A_ARTIFACT_REPAIR.md`](PART_A_ARTIFACT_REPAIR.md), which patches exactly
+[`chat-phase3/PART_A_ARTIFACT_REPAIR.md`](chat-phase3/PART_A_ARTIFACT_REPAIR.md), which patches exactly
 one line of the seeded `var/lib/dpkg/status`), then triple-verified: the
 script's internal proofs, the GitHub asset-digest API (aarch64
 `074806ad9066d4642d4779a28abf7aeb442c76ae9cb115b12b796eac9a9643b1`, x86_64
@@ -87,10 +89,22 @@ status DB no longer references `clang`.
 
 ---
 
-## Part B — Fix bootstrap correctness (seed the right thing)
+## Part B — Fix bootstrap correctness (seed the right thing) — ✅ DONE
 
-**Status (2026-08-22, end of day): code COMPLETE, merged to `main` (PR #11),
-49/49 host tests green.** `plan-bootstrap.py` (closure walk mirroring pinned
+**Status: COMPLETE and device-verified (2026-08-23).** PR #13 merged at
+`35c350f338be34303296b0168933622991258142`; package dispatch #5
+(`32620704350`) and publish run `32625580655` succeeded. The published
+aarch64 archive is **23,926,127 bytes** with GitHub asset digest
+`sha256:863f18528afa126d19481f7308a3f9b23997fda9ad9cae3bc7033d8fa60e60cd`.
+A fresh-device run passed curl/TLS, no-clang/no-build-pollution/no-keyring,
+alternatives, `dpkg --audit`, nano 9.2 lifecycle, and embedded-compiler checks.
+The exit condition below is met. **Do not rerun the expensive build or re-test
+Part B unless Part C first records a genuine new defect, and never dispatch a
+build without explicit approval.** The remaining material in this section is
+historical context.
+
+**Earlier status (2026-08-22, end of day): code COMPLETE, merged to `main`
+(PR #11), 49/49 host tests green.** `plan-bootstrap.py` (closure walk mirroring pinned
 upstream `pull_package` semantics, fail-loud on unresolved deps) + reworked
 `assemble-bootstrap.sh` (closure-only extract/seed, upstream-format
 `md5sums`, assembly-time alternatives wiring incl. the dpkg admin DB,
@@ -99,9 +113,9 @@ Seed set = `busybox bash apt dpkg coreutils less` at merge time (2026-08-23:
 `curl` joined the seed set and `libcurl` the build roots — see the next
 status block; see `CODEC_BOOTSTRAP_SEED_PACKAGES`).
 
-**Status (2026-08-23): the first rebuilt bootstrap exposed two fresh-device
-defects; both are fixed on the branch that follows PR #12, pending another
-rebuild + republish + device-verify.**
+**Historical status before PR #13 (2026-08-23):** the first rebuilt bootstrap
+exposed two fresh-device defects. Both were fixed on the branch that followed
+PR #12 and at that time still awaited rebuild, republish, and device verification.
 
 - **Defect 1 — no HTTPS metadata fetcher.** The Part B closure seeds none of
   `curl`/`python3`/`wget` (the in-code claim that python3 was in the closure
@@ -130,9 +144,10 @@ rebuild + republish + device-verify.**
   dpkg status. Host suite: 53/53 green (fixtures prove the fetcher is
   seeded and termux-keyring is excluded without any 100-minute build).
 
-**The ~104-minute rebuild is again the ONLY remaining step** — after the fix
-branch merges. Dispatch history (the first three predate PR #12; #4 is the
-successful rebuild whose bootstrap exposed the two defects above):
+**Historical rebuild record.** Dispatches 1–4 led to the final fixes; dispatch
+#5 and the subsequent publish/device verification completed the part. The
+first three runs below predate PR #12; #4 is the successful rebuild whose
+bootstrap exposed the two defects above:
 
 | # | Run | Duration | Result |
 |---|---|---|---|
@@ -140,12 +155,15 @@ successful rebuild whose bootstrap exposed the two defects above):
 | 2 | `32582311088` | ~50 min | **Upstream network flake — log-proven:** `curl: (28)` fetching `util-macros` from `xorg.freedesktop.org`; fixed by the PR #12 mirror override. |
 | 3 | `32585409356` | ~48 min | Same util-macros step; cause unreadable from the agent sandbox; same mirror override applied. |
 | 4 | `32594910882` | 1h14m (aarch64) / 1h26m (x86_64) | ✅ **Success** → published by `32617929254` → fresh-device download/verify/extract OK → defects 1+2 found → this fix. |
+| 5 | `32620704350` | ~1h20m | ✅ **Success** from PR #13 merge → published by `32625580655` → full Part B fresh-device acceptance passed. |
 
-### Continue here (after the fix PR merges) — in this order
+### Completed procedure (historical — do not rerun)
 
-1. **Redispatch from `main`** (expect the run to take ~15–25 min longer than
-   dispatch 4: the new `libcurl` root builds OpenSSL + libnghttp2/3 +
-   libtcp2-family + libssh2 first):
+The following was the final procedure and is retained only as an audit trail.
+It is **not** a current instruction.
+
+1. **Redispatch from `main`** (the new `libcurl` root builds OpenSSL +
+   libnghttp2/3 + libtcp2-family + libssh2 first):
    ```sh
    gh workflow run "CodeC package repository" --ref main
    gh run watch
@@ -178,10 +196,11 @@ successful rebuild whose bootstrap exposed the two defects above):
    printf '#include <stdio.h>\nint main(){printf("ok\\n");return 0;}\n' > t.c
    cc t.c -o a.out && ./a.out  # expect: ok
    ```
-   When every line matches, Part B's exit condition is met — mark it ✅ here
-   and in [`JOURNEY.md`](JOURNEY.md), then move to Part C.
+   Every line matched on the fresh aarch64 device; Part B's exit condition was
+   met and recorded here and in [`JOURNEY.md`](JOURNEY.md).
 
-**Why.** The current bootstrap has three content defects, all visible on device:
+**Original rationale (resolved).** The earlier bootstrap had three content
+defects, all visible on device:
 
 1. **Build-dependency pollution.** `assemble-bootstrap.sh` seeds *every* built
    `.deb` — including build-only packages (`doxygen`, `swig`, `tcl`,
@@ -200,107 +219,154 @@ successful rebuild whose bootstrap exposed the two defects above):
 `dpkg --audit` is clean for seeded packages, and `dpkg -l` lists only the
 runtime closure (no `doxygen`/`swig`/`tcl`/`tor`/…).
 
-**Steps.**
-1. In `assemble-bootstrap.sh`, replace the "seed every built `.deb`" loop with
-   a closure walk from the four roots: read each root's `Depends`, resolve
+**Completed implementation steps.**
+1. In `assemble-bootstrap.sh`, the "seed every built `.deb`" loop was replaced
+   with a closure walk from the roots: read each root's `Depends`, resolve
    against the built set, and seed only those.
-2. Generate `md5sums` control files for the seeded packages (or suppress the
-   audit noise by seeding an empty-but-valid `md5sums`).
-3. For the seeded `coreutils`/`less` roots, emit the alternatives (either run
-   their postinst in a chroot-free way at assembly, or ship the
-   `update-alternatives` links directly).
-4. Rebuild + republish (Part A steps), then re-verify.
+2. Upstream-format `md5sums` control files were generated for seeded packages.
+3. Seeded-package alternatives were emitted at assembly time, including the
+   dpkg admin database.
+4. The bootstrap was rebuilt, republished, and device-verified.
 
 ---
 
 ## Part C — Clean-device acceptance (the M2 gate)
 
-**Why.** [`docs/PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md)
-still says **NOT PASSED**, and it is the explicit exit condition for M2. The
-work done so far was on a *patched* device, not a clean one.
+**Status: COMPLETE and device-verified (2026-08-23).** A clean Samsung
+SM-A356E (Android 16, aarch64) passed bootstrap/runtime smoke, package
+operations, alternatives, negative checks, compiler checks, airplane-mode
+restart, and interrupted-install recovery. That recovery test exposed a stale
+`codec-pkg/lock`; PR #14 commit `8e95a16` fixed dead-PID lock recovery and the
+repeated force-stop test passed without manual state deletion.
 
-**Exit condition.** Every unchecked item in `PHASE3_DEVICE_ACCEPTANCE.md`
+The final second-device test exposed a wrong legacy-marker assumption:
+v1.3.14 actually writes `.userland-vuserland-v1`. PR #14 commit `a4e5af6`
+corrected it, CI passed, and an in-place v1 → `userland-v2-dev` update then
+passed the full package/compiler/contamination block. The exit condition below
+is met.
+
+**Why.** [`docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md) is
+the explicit clean-device acceptance gate. It now records every item as passed.
+
+**Exit condition.** Every unchecked item in `chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`
 passes on a clean arm64 device (and x86_64 if available), including the
 negative checks and the recovery tests.
 
 **Steps (in order, on a clean device).**
-1. Uninstall CodeC fully; install a fresh APK (≥ 1.3.15) + Install userland.
-2. Runtime smoke (section 2 of the checklist): `$PREFIX`, `which bash`,
+1. [x] Uninstall CodeC fully; install a fresh APK (≥ 1.3.15) + Install userland.
+2. [x] Runtime smoke (section 2 of the checklist): `$PREFIX`, `which bash`,
    `$BASH_VERSION`, `busybox`, `which apt-get dpkg`, `dpkg --print-architecture`,
    `dpkg -l`.
-3. Package ops (section 3): `pkg update / search nano / install nano /
+3. [x] Package ops (section 3): `pkg update / search nano / install nano /
    nano --version / uninstall nano / upgrade`, then the `coreutils`/`less`/`nano`
    alternatives closure (`which pager editor`, `pager -V`).
-4. Negative checks: `sources.list` is CodeC-only; `pkg uninstall bash` refused;
-   no `com.termux` in `dpkg -l`.
-5. Compiler smoke before **and** after package ops (section 4).
-6. Airplane-mode restart (section 5).
-7. Interrupted-install recovery (section 6): kill mid-download, retry,
-   `pkg repair`.
-8. v1 → Phase 3 upgrade path (section 7) on a second device.
+4. [x] Negative checks: `sources.list` is CodeC-only; `pkg uninstall bash`
+   refused; no `com.termux` in `dpkg -l`.
+5. [x] Compiler smoke before **and** after package ops (section 4).
+6. [x] Airplane-mode restart (section 5).
+7. [x] Interrupted-install recovery (section 6): force-stop mid-download,
+   automatically reclaim the stale lock, retry, and confirm `pkg repair` clean.
+8. [x] v1 → Phase 3 upgrade path (section 7) on a second arm64 device.
 
 ---
 
-## Part D — M3: sign the repository and verify on device
+## Part D — M3: sign the repository and verify on device — ✅ DONE (device-verified)
 
-**Why.** The dev channel is HTTPS + SHA-256 only and is explicitly **not** a
-trusted production channel. Signing closes the integrity-vs-tampering gap
-(`[trusted=yes]` currently disables apt's own signature checks).
+**Status: COMPLETE (2026-08-24) — implementation, signed publication, client
+acceptance, bootstrap build/release, and the final clean-device gate have all
+passed.** PR #14 contains key-agnostic signing/validation, protected-subkey CI
+support, the public-only production keyring, signed-only client/bootstrap
+integration, and tamper/missing-signature tests. Corrective signed publication
+run `32642631785` reused existing artifacts, skipped both expensive builds, and
+fixed the APT Release-stanza defect found by the first device attempt. The
+real CodeC device then passed signed update, exact-key verification, tamper
+rejection, nano lifecycle, clean audit, and compiler checks. Build run
+`32643383952` then built both architectures successfully; each archive passed
+the validator's exact v3-keyring byte comparison and was uploaded as a
+non-expired artifact. Release run `32648783080` revalidated both archives and
+replaced the four `userland-v2-dev` assets.
 
-**Exit condition.** A device with only the CodeC trust file installed accepts
-the repository *because* its `Release`/`InRelease` signature verifies — and
-rejects a tampered one — without `trusted=yes`.
+**Final clean-device gate — passed 2026-08-24.** After a verified pre-uninstall
+backup (checksum, `gzip -t`, listing, independent `cmp`), a full uninstall and
+fresh reinstall against the exact published `userland-v2-dev` archive
+(aarch64, 23,928,215 bytes) reached `userland: ready` automatically and passed
+every remaining section-8 check on a real device: no `clang`/build-pollution/
+`termux-keyring` (verified with an exact package-name match after an
+unanchored `grep` gave a `sed`-description false positive), CodeC-only
+`sources.list`, warning-free signed `pkg update` with an exact keyring-hash
+match, independent `gpgv` acceptance of the live signature and rejection of a
+tampered copy, a full nano install/uninstall cycle with working alternatives,
+a silent `dpkg --audit`, and a working embedded compiler. Full commands and
+output are recorded in
+[`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md) §8. **Do not
+re-run this expensive/destructive test unless a genuine new defect is found;
+this Part is done.**
 
-**Steps.**
-1. Generate a CodeC signing key; sign `Release` → `Release.gpg` / `InRelease`.
-2. Publish the key in a CodeC-owned, versioned trust file, and install it
-   into `$PREFIX/etc/apt/trusted.gpg.d/` from the bootstrap.
-3. Remove `trusted=yes` from the `pkg` sources line; rely on apt signature
-   verification (`Verify-Peer` + signature).
-4. Add negative tests: a corrupted `Packages` or a missing signature must fail
-   before any package installs.
-5. Document key rotation and rollback.
+**Why.** The development channel originally relied on HTTPS + SHA-256 only.
+Signing closes the integrity-vs-tampering gap. The Part D client removes `[trusted=yes]`, verifies
+`InRelease` with `gpgv` before apt, and lets apt independently verify through an
+exact `signed-by=` keyring.
+
+**Exit condition.** A device with only the CodeC versioned keyring installed
+accepts the repository because its `InRelease` signature and Release/index/
+package hash chain verify, rejects tampered metadata, and uses no
+`trusted=yes`. The rebuilt bootstrap contains byte-for-byte the same keyring.
+
+**Completed inexpensive implementation.**
+1. `sign-repository.sh` emits `InRelease` and `Release.gpg` with an exact
+   dedicated signing subkey; the protected passphrase travels through stdin,
+   never argv.
+2. `validate-repository.py` requires both signature forms, exact cleartext,
+   exact fingerprint, and the existing index/package hash chains. Real-GPG
+   tests cover valid, missing, tampered, and changed-index cases.
+3. Public keyring v1 and fingerprints are committed under
+   `codec-packages/keys/`; no private key material is committed. The offline
+   primary and CI signing subkey fingerprints are recorded in
+   [`chat-phase3/REPOSITORY_SIGNING.md`](chat-phase3/REPOSITORY_SIGNING.md).
+4. The APK installs that keyring under `etc/apt/keyrings`; `pkg` requires
+   `gpgv`, verifies signed Origin/Suite, and writes a CodeC-only `signed-by=`
+   source. The Phase 3 bootstrap assembler seeds the same bytes and its
+   validator rejects missing/different keyrings.
+5. Release hash paths are now relative to `dists/stable/Release`, eliminating
+   the historical APT `No Hash entry in Release file` warning.
+6. The active publication workflow imports the CI-only subkey, fails closed on
+   secret/fingerprint drift, signs before signed validation, and deploys only
+   the public key files. Rotation, revocation, rollback, and overlap rules are
+   documented.
+
+**Exit condition met.** The final clean-device
+keyring/signed-APT/package/audit/compiler test against the rebuilt
+`userland-v2-dev` assets passed (see above and
+[`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md) §8). PR #14 is
+ready to merge as "Phase 3 complete" pending final owner review.
 
 ---
 
-## Part E — Phase 4 polish: storage access
+## Phase 4 — polish and expansion
 
-**Goal.** A `termux-setup-storage`-equivalent so users can read/write shared
-storage (`~/storage/downloads` etc.) from the terminal.
-
-**Exit condition.** `cp hello.c ~/storage/downloads/` works after the user
-grants storage permission, using Android's scoped-storage APIs (no `noexec`
-landmine, no path hard-coding).
-
----
-
-## Part F — Phase 4 polish: confirmation + signing UX + themes
-
-**Goal.** The remaining "trust" and UX items from [`TERMINAL_PLAN.md`](TERMINAL_PLAN.md) §11–12:
-
-1. **Security confirmation prompt** — surface the "install a package" intent
-   and show the resolved package set before dpkg runs (mirrors the `pkg`
-   preflight, but user-visible).
-2. **Signing UX** — surface whether the channel is dev (unsigned) vs
-   production (signed) in the terminal/Settings.
-3. **Themes / env / settings parity** — terminal theme, font, and environment
-   options already in Settings; close any gaps vs. the editor experience.
-
-**Exit condition.** A user can see *what* is being installed before it happens,
-and can tell at a glance whether they are on the trusted channel.
+This file (`NEXT_STEPS.md`) covered only Phase 3 (Parts A–D above), which is
+now complete. Phase 4 planning — storage access, install-confirmation and
+trust-indicator UX, settings/theme parity, an expanded package catalog, and a
+first Android-integration slice — has moved to its own document:
+[`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md). That file sizes each item into
+independently pickable parts and deliberately leaves exact technical
+decisions open until a part is actually started; it is a roadmap, not a
+committed spec.
 
 ---
 
 ## Ordering summary
 
-| Part | Depends on | Effort / state (2026-08-23) |
+
+| Part | Depends on | Effort / state (2026-08-24) |
 |---|---|---|
 | A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
-| B — bootstrap correctness | A | closure/md5sums/alternatives ✅ merged + rebuilt; fresh-device defects (fetcher, termux-keyring) fixed on the post-#12 branch; ⏳ **PR → one rebuild → republish → device-verify** |
-| C — clean-device acceptance | A ✅ (B ideally) | device time |
-| D — M3 signing | A ✅ / B | medium |
-| E — storage access | none (parallel) | medium |
-| F — confirmation/signing UX | D | small–medium |
+| B — bootstrap correctness | A | ✅ **DONE** — merged, rebuilt, republished, device-verified |
+| C — clean-device acceptance | A ✅, B ✅ | ✅ **DONE** — every checklist item passed on real arm64 devices |
+| D — M3 signing | A ✅, B ✅, C ✅ | ✅ **DONE** — implementation, signed publish, rebuild, and final clean-device gate all passed |
 
-**Shortest path to "Phase 3 complete":** B's rebuild → C → D. (A is done;
-B's code is merged — only its build/republish/device-verify remains.)
+**Phase 3 is complete.** Parts A, B, C, and D have all met their exit
+conditions and are device-verified. PR #14 is ready for final review/merge.
+The next work is Phase 4, planned in
+[`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) — nothing in Phase 4 has been
+started or coded yet.

@@ -27,6 +27,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List
 
 SUPPORTED_ARCHES = ("aarch64", "x86_64")
+KEYRING_MEMBER = "etc/apt/keyrings/codec-archive-keyring-v1.gpg"
+PINNED_KEYRING = Path(__file__).resolve().parents[1] / "keys" / "codec-archive-keyring-v1.gpg"
 
 ELF_MAGIC = b"\x7fELF"
 
@@ -50,6 +52,7 @@ REQUIRED_FILES = (
     # preflight (fresh-device Part B defect 2026-08-23: the closure shipped
     # no curl/python3/wget and `pkg update` failed before apt ever ran).
     "bin/curl",
+    KEYRING_MEMBER,
     "var/lib/dpkg/status",
     "var/lib/dpkg/arch",
 )
@@ -138,6 +141,19 @@ def check_required(names: List[str]) -> None:
     # symlink, but never its absence.
     if "bin/apt" not in name_set and "bin/apt-get" not in name_set:
         raise BootstrapError("archive is missing apt (bin/apt or bin/apt-get)")
+
+
+def check_repository_keyring(
+    tar: tarfile.TarFile, by_name: Dict[str, tarfile.TarInfo]
+) -> None:
+    if not PINNED_KEYRING.is_file() or PINNED_KEYRING.stat().st_size == 0:
+        raise BootstrapError("pinned CodeC repository keyring is missing from source")
+    info = by_name.get(KEYRING_MEMBER)
+    if info is None or not info.isreg():
+        raise BootstrapError(f"{KEYRING_MEMBER} is not a regular file")
+    stream = tar.extractfile(info)
+    if stream is None or stream.read() != PINNED_KEYRING.read_bytes():
+        raise BootstrapError("bootstrap CodeC repository keyring differs from pinned public key")
 
 
 def check_elf_members(
@@ -315,6 +331,7 @@ def validate(archive: Path) -> str:
                 by_name[norm] = member
         check_required(names)
         check_symlinks(members)
+        check_repository_keyring(tar, by_name)
         check_elf_members(tar, by_name, names)
         check_dpkg_status(tar, by_name, names)
         check_contamination(tar, by_name, names)

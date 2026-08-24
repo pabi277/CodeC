@@ -18,7 +18,7 @@ on:
     paths:
       - "codec-packages/**"
       - ".github/workflows/package-repository.yml"
-      - "docs/PHASE3_PLAN.md"
+      - "docs/chat-phase3/PHASE3_PLAN.md"
 
 permissions:
   contents: read
@@ -172,23 +172,72 @@ jobs:
           run-id: ${{ inputs.source_run_id || github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Merge and revalidate repository
+      - name: Merge, sign, and validate repository
+        env:
+          CODEC_REPOSITORY_SIGNING_KEY: ${{ secrets.CODEC_REPOSITORY_SIGNING_KEY }}
+          CODEC_SIGNING_KEY_PASSPHRASE: ${{ secrets.CODEC_REPOSITORY_SIGNING_PASSPHRASE }}
+          CODEC_SIGNING_FINGERPRINT: ${{ vars.CODEC_REPOSITORY_SIGNING_FINGERPRINT }}
         run: |
           set -euo pipefail
+          for required in \
+            CODEC_REPOSITORY_SIGNING_KEY \
+            CODEC_SIGNING_KEY_PASSPHRASE \
+            CODEC_SIGNING_FINGERPRINT; do
+            if [[ -z "${!required:-}" ]]; then
+              echo "ERROR: required repository signing configuration is missing: $required" >&2
+              exit 1
+            fi
+          done
+
+          fingerprint="$(printf '%s' "$CODEC_SIGNING_FINGERPRINT" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')"
+          if [[ ! "$fingerprint" =~ ^[0-9A-F]{40}$ ]]; then
+            echo "ERROR: repository signing fingerprint must be 40 hexadecimal characters" >&2
+            exit 1
+          fi
+          if ! grep -qx "signing=$fingerprint" \
+            codec-packages/keys/codec-archive-keyring-v1.fingerprints; then
+            echo "ERROR: configured signing fingerprint is not the pinned CodeC signing subkey" >&2
+            exit 1
+          fi
+
+          gnupg_home="$RUNNER_TEMP/codec-repository-gnupg"
+          rm -rf "$gnupg_home"
+          install -d -m 0700 "$gnupg_home"
+          export GNUPGHOME="$gnupg_home"
+          trap 'rm -rf "$GNUPGHOME"' EXIT
+          printf '%s\n' "$CODEC_REPOSITORY_SIGNING_KEY" | gpg --batch --import
+          unset CODEC_REPOSITORY_SIGNING_KEY
+
           mkdir -p input/debs
           find input/aarch64 input/x86_64 -name '*.deb' \
             -exec cp -n {} input/debs/ \;
 
-          rm -rf packages/dev
+          rm -rf packages/dev packages/keys
           chmod +x codec-packages/scripts/*.py codec-packages/scripts/*.sh
 
           codec-packages/scripts/generate-repository.sh \
             input/debs packages/dev aarch64 x86_64
+          codec-packages/scripts/sign-repository.sh packages/dev "$fingerprint"
+          unset CODEC_SIGNING_KEY_PASSPHRASE
+
+          install -D -m 0644 \
+            codec-packages/keys/codec-archive-keyring-v1.gpg \
+            packages/keys/codec-archive-keyring-v1.gpg
+          install -D -m 0644 \
+            codec-packages/keys/codec-archive-keyring-v1.asc \
+            packages/keys/codec-archive-keyring-v1.asc
+          install -D -m 0644 \
+            codec-packages/keys/codec-archive-keyring-v1.fingerprints \
+            packages/keys/codec-archive-keyring-v1.fingerprints
 
           python3 codec-packages/scripts/validate-repository.py \
-            packages/dev --architectures aarch64 x86_64
+            packages/dev --architectures aarch64 x86_64 \
+            --keyring packages/keys/codec-archive-keyring-v1.gpg \
+            --signing-fingerprint "$fingerprint"
 
           test -f packages/dev/CODEC-REPOSITORY
+          test -s packages/dev/dists/stable/InRelease
+          test -s packages/dev/dists/stable/Release.gpg
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

@@ -293,12 +293,13 @@ def write_bytes(path: Path, data: bytes) -> None:
     path.write_bytes(data)
 
 
-def release_hashes(root: Path, release_dir: Path) -> List[Tuple[str, int, str, str]]:
+def release_hashes(release_dir: Path) -> List[Tuple[str, int, str, str]]:
+    """Hashes named relative to Release, as required by APT."""
     files = sorted(
         item for item in release_dir.rglob("*") if item.is_file() and item.name != "Release"
     )
     return [
-        (sha256(item), item.stat().st_size, str(item.relative_to(root)), item.name)
+        (sha256(item), item.stat().st_size, item.relative_to(release_dir).as_posix(), item.name)
         for item in files
         if item.name in {"Packages", "Packages.gz"}
     ]

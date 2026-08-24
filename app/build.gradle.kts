@@ -86,6 +86,11 @@ android {
     compose = true
     buildConfig = true
   }
+  sourceSets {
+    // Part D: package only the public CodeC repository trust material. The
+    // private primary/signing keys never enter the source tree or APK.
+    getByName("main").assets.srcDir(rootProject.file("codec-packages/keys"))
+  }
   packaging {
     jniLibs {
       // Extract the bundled TCC binary (libtcc.so) to nativeLibraryDir so it

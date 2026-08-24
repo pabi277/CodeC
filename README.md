@@ -59,7 +59,7 @@ CodeC now ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`
    shell-only userland until then — which intentionally lacks apt/dpkg, in
    which case `pkg` reports a clear setup error. CodeC never uses the official
    Termux repository. Phase 3 package installation is not accepted on-device
-   yet; see [docs/PHASE3_DEVICE_ACCEPTANCE.md](docs/PHASE3_DEVICE_ACCEPTANCE.md).
+   yet; see [docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md](docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md).
 
 The extra-keys row (ESC, TAB, CTRL, ALT, arrows) is there so a phone keyboard can still drive the PTY. Pinch to zoom; long-press to copy/paste.
 
@@ -89,7 +89,8 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 > **Full journey (phases 0–3):** [docs/JOURNEY.md](docs/JOURNEY.md).  
 > **Remaining work (ordered parts):** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
 > **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
-> **Phase 3 status/handoff:** [docs/PHASE3_STATUS.md](docs/PHASE3_STATUS.md).  
+> **Phase 3 status/handoff:** [docs/chat-phase3/PHASE3_STATUS.md](docs/chat-phase3/PHASE3_STATUS.md).  
+> **Phase 4 roadmap (planning only):** [docs/PHASE4_ROADMAP.md](docs/PHASE4_ROADMAP.md).  
 > **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"

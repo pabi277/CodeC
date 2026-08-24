@@ -100,9 +100,10 @@ jobs:
               '# CodeC userland bootstrap — Phase 3 (development channel)' \
               '' \
               'Development release for CodeC IDE Phase 3 (package management).' \
-              'It is verified with **HTTPS + SHA-256 only**; production promotion' \
-              'still requires signed Release metadata and key distribution' \
-              '(see `docs/PHASE3_PLAN.md`, milestone M3).' \
+              'The CodeC repository publishes signed `InRelease` and `Release.gpg`' \
+              'metadata. The client pins the CodeC-only public keyring with' \
+              '`signed-by=`, verifies with `gpgv` before apt, and apt verifies' \
+              'the same Release/index/package hash chain independently.' \
               '' \
               'Built from the pinned official `termux-packages` revision through' \
               'the CodeC overlay (`com.codeci.ide`, prefix' \
@@ -124,6 +125,8 @@ jobs:
               '- `libtermux-exec-ld-preload.so` (shebang script execution via LD_PRELOAD)' \
               '- `libandroid-support.so` and all runtime shared libraries' \
               '- `etc/apt/sources.list` pointing at the CodeC development channel only' \
+              '- CodeC v3 public keyring at `etc/apt/keyrings/codec-archive-keyring-v1.gpg`' \
+              '  (byte-matched to the committed public key; no private material)' \
               '' \
               '## Assets' \
               '' \
@@ -137,7 +140,7 @@ jobs:
               '' \
               '- App side: `userland-v1` remains published and is used automatically' \
               '  when this release is removed or unreachable' \
-              '  (see `docs/PHASE3_STATUS.md`).' \
+              '  (see `docs/chat-phase3/PHASE3_STATUS.md`).' \
               '- Repository side: re-publish the previous Pages manifest by' \
               '  dispatching "CodeC package repository" with `publish=true` and the' \
               '  previous successful run ID.'

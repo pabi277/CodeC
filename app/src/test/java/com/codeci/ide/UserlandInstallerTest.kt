@@ -457,7 +457,8 @@ class UserlandInstallerTest {
         val prefix = File(files, "usr")
         File(prefix, "bin").mkdirs()
         File(prefix, "bin/bash").writeBytes(elfBash)
-        File(prefix, ".userland-release").writeText("userland-v1")
+        // Exact marker written by the released v1.3.14 installer.
+        File(prefix, ".userland-vuserland-v1").writeText("aarch64")
         val tar = userlandTar()
         val p3 = UserlandManifest("userland-v2-dev", "bootstrap-phase3", baseUrl)
         serveRelease(p3.releaseTag, p3.assetPrefix, "aarch64", tar, sha256(tar))
@@ -512,7 +513,7 @@ class UserlandInstallerTest {
         val prefix = File(files, "usr")
         File(prefix, "bin").mkdirs()
         File(prefix, "bin/bash").writeBytes(elfBash)
-        File(prefix, ".userland-v-userland-v1").writeText("aarch64")
+        File(prefix, ".userland-vuserland-v1").writeText("aarch64")
         val tar = userlandTar()
         serveRelease("userland-v1", "bootstrap", "aarch64", tar, sha256(tar))
         val installer = makeInstaller(files)

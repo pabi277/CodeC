@@ -524,7 +524,9 @@ class UserlandInstaller(
         private const val STAGING_DIR = ".userland-staging"
         private const val MARKER_RELEASE = ".userland-release"
         private const val MARKER_ARCH = ".userland-arch"
-        private const val LEGACY_MARKER = ".userland-v-userland-v1"
+        // Phase 2 wrote `.userland-v${UserlandManifest.RELEASE_TAG}` with no
+        // separator after `v` (device evidence: `.userland-vuserland-v1`).
+        private const val LEGACY_MARKER = ".userland-vuserland-v1"
         private const val MIN_FREE_BYTES = 48L * 1024 * 1024
 
         /**

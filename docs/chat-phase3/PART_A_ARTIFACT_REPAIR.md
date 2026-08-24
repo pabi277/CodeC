@@ -40,7 +40,7 @@ assets; remote check confirmed the release objects were never modified
   `main` rebuild is one line in `var/lib/dpkg/status`:
   `Depends: perl, clang, make` → `Depends: perl, make` — the same line the
   app's on-device self-heal rewrites via `sed` (already verified on device,
-  see `docs/PHASE3_PKG_DEBUGGING.md`).
+  see `PHASE3_PKG_DEBUGGING.md`).
 - Therefore rerunning the ~104-minute "CodeC package repository" build for
   Part A is avoidable: patching the published artifact achieves the same
   exit condition with a strictly verifiable one-line diff.

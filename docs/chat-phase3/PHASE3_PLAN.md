@@ -1,9 +1,12 @@
 # CodeC IDE Phase 3 package-management plan
 
-**Status:** M1 complete; M2 build/repository CI complete, bootstrap closure
-complete (`termux-exec`, CodeC-only apt sources), Android installer integration
-complete; release publication and device acceptance remain
-**Date:** 2026-08-21
+**Status:** M1, M2, and M3 all complete/device-verified in PR #14 — signing,
+public trust, signed Pages/client acceptance, key-seeded bootstrap
+build/release, and the final clean-device acceptance (aarch64) have all
+passed. Phase 3's device-acceptance gate is complete; only an optional
+x86_64 repeat of the same clean-device check remains unrun (no x86_64 device
+was available).
+**Date:** 2026-08-21 (updated 2026-08-24)
 **Scope:** CodeC's private Android userland only
 
 This plan follows the Phase 2 handoff and is intentionally narrower than a full
@@ -70,10 +73,11 @@ Important upstream behavior for CodeC:
 3. APT metadata includes package dependency and SHA-256 information; the
    repository's `Release` metadata covers the package indexes. CodeC will add an
    explicit repository manifest and checksum sidecars for CI/release validation.
-4. Repository signatures are the production goal. The first development channel
-   is HTTPS plus complete SHA-256 verification and is not promoted as a trusted
-   release until signing-key distribution and verification have been tested on a
-   clean device.
+4. Repository signatures are required for production trust. The first
+   development channel began as HTTPS plus SHA-256; Part D now implements
+   OpenPGP signing, exact-key validation, `signed-by=` client enforcement, and
+   public-key distribution. It is not promoted as trusted until the signed tree
+   is published and verified on a clean device.
 
 ## 3. Architecture decision
 
@@ -126,8 +130,10 @@ The development repository is published separately from the APK and bootstrap.
 The generated tree is suitable for GitHub Pages or another static HTTPS host:
 
 ```text
-packages/<channel>/
+packages/dev/
   dists/stable/Release
+  dists/stable/InRelease
+  dists/stable/Release.gpg
   dists/stable/Release.sha256
   dists/stable/main/binary-aarch64/Packages
   dists/stable/main/binary-aarch64/Packages.gz
@@ -136,6 +142,10 @@ packages/<channel>/
   dists/stable/main/binary-all/Packages
   repository.json
   repository.json.sha256
+packages/keys/
+  codec-archive-keyring-v1.gpg
+  codec-archive-keyring-v1.asc
+  codec-archive-keyring-v1.fingerprints
 ```
 
 The package builder will:
@@ -214,7 +224,7 @@ state before continuing.
   maintainer-script rejection, checksum failures, and recoverable downloads;
 - publish the development APT repository at `https://pabi277.github.io/CodeC/dev`.
 
-### M2 — package-manager bootstrap 🟡
+### M2 — package-manager bootstrap ✅
 
 - [x] build and inspect CodeC-prefixed `apt` and `dpkg` plus dependencies from
   official recipes;
@@ -231,20 +241,39 @@ state before continuing.
   `userland-v1` fallback, `.partial` downloads, SHA-256 pre-extraction
   verification, staged extraction with atomic swap/rollback, missing-shared-
   library diagnostics, disk-space preflight, and v1→Phase 3 upgrade;
-- [ ] publish the Phase 3 bootstrap as the stable development release asset
-  `userland-v2-dev` (publishing workflow written; pending `workflows` GitHub
-  App permission + one rebuild with the completed closure);
-- [ ] clean-device test install, update/search/install/remove, compiler smoke
-  tests, and airplane-mode restart
+- [x] publish the Phase 3 bootstrap as the stable development release asset
+  `userland-v2-dev`;
+- [x] clean-device test install, update/search/install/remove, compiler smoke,
+  airplane-mode restart, interrupted recovery, and v1 upgrade
   ([PHASE3_DEVICE_ACCEPTANCE.md](PHASE3_DEVICE_ACCEPTANCE.md)).
 
-### M3 — signed development channel and promotion
+### M3 — signed development channel and promotion ✅
 
-- publish a repository signature and distribute the verification key in a
-  CodeC-owned, versioned trust file;
-- verify Release/index/package signatures or checksums before apt is invoked;
-- promote only after clean-device tests on arm64 and x86_64 where supported;
-- document rollback to the previous repository manifest and bootstrap.
+- [x] generate and validate `InRelease` + `Release.gpg` with an exact dedicated
+  signing subkey;
+- [x] commit only the CodeC-owned, versioned public keyring/fingerprints and
+  install the exact keyring in the APK/bootstrap;
+- [x] make `pkg` verify signed metadata with `gpgv` before apt, while apt
+  independently enforces the exact `signed-by=` keyring;
+- [x] test valid, missing, tampered, and changed-index signature cases;
+- [x] document key rotation, revocation, rollback, and device acceptance in
+  [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md);
+- [x] apply the reviewed signed-publication workflow;
+- [x] publish signed Pages and independently verify the deployed trust chain
+  (corrective run `32642631785`, both expensive builds skipped);
+- [x] pass the signed-client section 8 checks on arm64: clean APT update, exact
+  signature, tamper rejection, package lifecycle, audit, and compiler smoke;
+- [x] rebuild both key-seeded bootstrap architectures after explicit approval
+  (run `32643383952`; exact committed-keyring validation passed);
+- [x] publish the revalidated assets as `userland-v2-dev` after separate
+  approval (run `32648783080`, live sidecars match both archive digests);
+- [x] pass the final clean-device section 8 check on aarch64 (2026-08-24: full
+  uninstall/reinstall against the published `userland-v2-dev` archive passed
+  every remaining check — see
+  [`PHASE3_DEVICE_ACCEPTANCE.md`](PHASE3_DEVICE_ACCEPTANCE.md) §8 and
+  `JOURNEY.md` §5f for the complete evidence). An x86_64 repeat is optional
+  and was not run because no x86_64 device was available; the exit condition
+  is met on the tested architecture.
 
 ## 6. Risks and unresolved decisions
 
@@ -253,15 +282,15 @@ state before continuing.
 | apt/dpkg may pull Android-specific dependencies | Build full closure from source; inspect output; isolate Docker container per checkout so Phase 2 and Phase 3 mounts cannot mix | M2 clean-prefix install and shell test |
 | apt/dpkg may be too large for the bootstrap | Keep package manager in the externally hosted bootstrap, not APK; measure CI artifact | M2 size report and device disk-space test |
 | official recipes may add maintainer scripts | Reject in M1; review candidates | Reviewed script design in M3 |
-| HTTPS-only development integrity is weaker than signatures | SHA-256 checksums plus HTTPS and explicit dev label | Signed Release verification on device |
+| Published development channel is not signed yet | Part D signer, pinned public keyring, signed-only client, and negative tests are implemented; do not install that client before signed publication | Section 8 signed Release verification/tamper rejection on device |
 | package payloads may contain baked `com.termux` paths | scan control/data files and ELF strings in CI | zero contamination in every artifact |
 | Android ABI names differ from Debian names | use Termux architectures (`aarch64`, `x86_64`, `all`) from dpkg metadata | `dpkg --print-architecture` matches on device |
 | partial dpkg transactions | private lock, preflight, status marker, repair command; never delete the old prefix | interrupted install recovery test |
 | Android kernel refuses shebang scripts outside `/system` (dpkg maintainer scripts, user scripts) | bootstrap ships `termux-exec`; shell environment/profile/`pkg` export its `LD_PRELOAD` library only when present | clean-device `pkg install nano` (postinst alternatives) and user-script test |
 | disk full during download/extract | `StatFs`/available-space preflight and actionable error | clean-device low-space test |
 | offline startup after install | no network in shell/bootstrap startup; cached package state is local | airplane-mode device test |
-| repository hosting is not yet provisioned | default URL is configurable and CI emits the complete static tree | owner publishes dev channel before M2 |
-| Phase 2 acceptance is still pending | preserve `userland-v1`; do not retag or replace it in M1 | clean phone acceptance checklist passes |
+| repository publication may expose unsigned/mismatched metadata | Pages exists; publication must sign and run exact-key validation before atomic deployment | signed workflow + independent deployed-tree verification |
+| trust-key compromise or rotation can lock out clients | offline primary, dedicated CI subkey, overlap keyring versions, APK trust-recovery path | documented and rehearsed rotation/revocation procedure |
 
 ## 7. Release and rollback
 
@@ -271,8 +300,11 @@ host must serve files over HTTPS with stable paths. The publishing workflow can
 promote a previously successful immutable build artifact by run ID, avoiding a
 second expensive source rebuild during publication.
 
-Rollback means first stopping publication of the bad manifest, restoring the prior
-manifest and package indexes atomically, and keeping the previous bootstrap asset
-available. The client must never delete the installed prefix merely because an
-update is offline or a repository is temporarily unavailable. Package removal is
-explicit and uses the package database, not a filesystem-wide delete.
+Rollback means first stopping publication, then atomically restoring one prior
+complete signed tree: packages, indexes, `Release`, `InRelease`, `Release.gpg`,
+manifest, and sidecars must come from the same validated artifact. Keep the
+previous bootstrap asset available. The client must never delete the installed
+prefix merely because an update is offline or a repository is temporarily
+unavailable. Package removal is explicit and uses the package database, not a
+filesystem-wide delete. Key rotation/revocation and detailed rollback rules are
+in [`REPOSITORY_SIGNING.md`](REPOSITORY_SIGNING.md).

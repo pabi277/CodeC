@@ -7,7 +7,10 @@ import gzip
 import hashlib
 import json
 import posixpath
+import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from repository_lib import (
@@ -23,6 +26,15 @@ def args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repository", type=Path)
     parser.add_argument("--architectures", nargs="+", default=["aarch64", "x86_64"])
+    parser.add_argument(
+        "--keyring",
+        type=Path,
+        help="require and verify InRelease + Release.gpg with this CodeC keyring",
+    )
+    parser.add_argument(
+        "--signing-fingerprint",
+        help="full fingerprint of the required CodeC signing key/subkey",
+    )
     return parser.parse_args()
 
 
@@ -38,9 +50,14 @@ def check_sidecar(path: Path, expected_name: str) -> None:
 
 
 def parse_release_hashes(text: str) -> dict[str, str]:
+    lines = text.splitlines()
+    if any(line == "" for line in lines):
+        raise PackageError(
+            "Release metadata contains a blank stanza separator; apt would ignore following hashes"
+        )
     result: dict[str, str] = {}
     in_sha = False
-    for line in text.splitlines():
+    for line in lines:
         if line == "SHA256:":
             in_sha = True
             continue
@@ -62,7 +79,89 @@ def safe_manifest_path(root: Path, value: str) -> Path:
     return result
 
 
-def validate(root: Path, requested_arches: list[str]) -> None:
+def _fingerprint(value: str) -> str:
+    normalized = value.replace(" ", "").upper()
+    if not re.fullmatch(r"[0-9A-F]{40}", normalized):
+        raise PackageError("signing fingerprint must be 40 hexadecimal characters")
+    return normalized
+
+
+def _run_gpgv(command: list[str], fingerprint: str, label: str) -> None:
+    try:
+        result = subprocess.run(command, text=True, capture_output=True)
+    except FileNotFoundError as exc:
+        raise PackageError("gpgv is required for signed repository validation") from exc
+    if result.returncode != 0:
+        detail = result.stderr.strip().splitlines()
+        suffix = f": {detail[-1]}" if detail else ""
+        raise PackageError(f"{label} signature verification failed{suffix}")
+    valid = []
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 3 and fields[0] == "[GNUPG:]" and fields[1] == "VALIDSIG":
+            valid.extend(
+                field.upper() for field in fields[2:] if re.fullmatch(r"[0-9A-Fa-f]{40}", field)
+            )
+    if fingerprint not in valid:
+        raise PackageError(f"{label} was not signed by required key {fingerprint}")
+
+
+def verify_release_signatures(
+    release_path: Path, keyring: Path, signing_fingerprint: str
+) -> None:
+    keyring = keyring.resolve()
+    if not keyring.is_file() or keyring.stat().st_size == 0:
+        raise PackageError(f"CodeC signing keyring is missing or empty: {keyring}")
+    fingerprint = _fingerprint(signing_fingerprint)
+    release_dir = release_path.parent
+    inrelease = release_dir / "InRelease"
+    detached = release_dir / "Release.gpg"
+    for path in (inrelease, detached):
+        if not path.is_file() or path.stat().st_size == 0:
+            raise PackageError(f"missing signed repository metadata: {path}")
+
+    with tempfile.TemporaryDirectory(prefix="codec-gpgv-") as tmp:
+        extracted = Path(tmp) / "Release"
+        _run_gpgv(
+            [
+                "gpgv",
+                "--status-fd",
+                "1",
+                "--keyring",
+                str(keyring),
+                "--output",
+                str(extracted),
+                str(inrelease),
+            ],
+            fingerprint,
+            "InRelease",
+        )
+        if not extracted.is_file() or extracted.read_bytes() != release_path.read_bytes():
+            raise PackageError("InRelease cleartext does not exactly match Release")
+
+    _run_gpgv(
+        [
+            "gpgv",
+            "--status-fd",
+            "1",
+            "--keyring",
+            str(keyring),
+            str(detached),
+            str(release_path),
+        ],
+        fingerprint,
+        "Release.gpg",
+    )
+
+
+def validate(
+    root: Path,
+    requested_arches: list[str],
+    keyring: Path | None = None,
+    signing_fingerprint: str | None = None,
+) -> None:
+    if (keyring is None) != (signing_fingerprint is None):
+        raise PackageError("--keyring and --signing-fingerprint must be supplied together")
     root = root.resolve()
     if not root.is_dir():
         raise PackageError(f"repository does not exist: {root}")
@@ -86,6 +185,8 @@ def validate(root: Path, requested_arches: list[str]) -> None:
     if not release_path.is_file():
         raise PackageError(f"missing {release_path}")
     check_sidecar(release_path, "Release")
+    if keyring is not None and signing_fingerprint is not None:
+        verify_release_signatures(release_path, keyring, signing_fingerprint)
     release_hashes = parse_release_hashes(release_path.read_text())
 
     records = manifest.get("packages")
@@ -119,10 +220,10 @@ def validate(root: Path, requested_arches: list[str]) -> None:
         compressed_path = package_path.with_name("Packages.gz")
         if not package_path.is_file() or not compressed_path.is_file():
             raise PackageError(f"missing package indexes for {arch}")
-        relative = package_path.relative_to(root).as_posix()
+        relative = package_path.relative_to(release_dir).as_posix()
         if release_hashes.get(relative) != sha256(package_path):
             raise PackageError(f"Release SHA256 mismatch: {relative}")
-        compressed_relative = compressed_path.relative_to(root).as_posix()
+        compressed_relative = compressed_path.relative_to(release_dir).as_posix()
         if release_hashes.get(compressed_relative) != sha256(compressed_path):
             raise PackageError(f"Release SHA256 mismatch: {compressed_relative}")
         if gzip.decompress(compressed_path.read_bytes()) != package_path.read_bytes():
@@ -139,15 +240,22 @@ def validate(root: Path, requested_arches: list[str]) -> None:
             if int(stanza.get("Size", "-1")) != deb.stat().st_size:
                 raise PackageError(f"index size mismatch: {filename}")
 
+    signature_status = " signed" if keyring is not None else " unsigned"
     print(
         f"validated CodeC repository: {len(records)} packages, "
-        f"architectures={','.join(requested_arches)}"
+        f"architectures={','.join(requested_arches)}{signature_status}"
     )
 
 
 def main() -> int:
+    parsed = args()
     try:
-        validate(args().repository, args().architectures)
+        validate(
+            parsed.repository,
+            parsed.architectures,
+            parsed.keyring,
+            parsed.signing_fingerprint,
+        )
     except (PackageError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"validate-repository: ERROR: {exc}", file=sys.stderr)
         return 2

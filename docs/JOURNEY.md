@@ -1,17 +1,19 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-23 · **Branch:** post-PR-#12 fix branch
-(`arena/01a02d03-codec`) — **Part A ✅ device-verified; Part B code ✅ merged
-+ rebuilt + republished, two fresh-device defects found and fixed here,
-⏳ PR → one more rebuild left**
+**Last updated:** 2026-08-24 · **State:** Parts A, B, C, and D ✅
+device-verified — Phase 3's device-acceptance gate is complete. PR #14 has the
+signing implementation, signed Pages/client acceptance, the key-seeded
+bootstrap build/release, and now the final clean-device evidence.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
-package manager". This is the narrative; the per-phase problem/solution records
-remain in [`docs/chat-phase1/`](chat-phase1/README.md),
+package manager". This is the narrative; the per-phase problem/solution
+records remain in [`docs/chat-phase1/`](chat-phase1/README.md),
 [`docs/chat-phase2/`](chat-phase2/README.md), and
-[`docs/PHASE3_PKG_DEBUGGING.md`](PHASE3_PKG_DEBUGGING.md). Remaining work is
-broken into ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md).
+[`docs/chat-phase3/`](chat-phase3/PHASE3_PKG_DEBUGGING.md) (Phase 3's plan,
+device-acceptance checklist, signing operations, and debugging records).
+Remaining work is broken into ordered parts in
+[`docs/NEXT_STEPS.md`](NEXT_STEPS.md).
 
 **Starting a new chat?** Paste [`prompt.md`](../prompt.md) as the first
 message — it encodes the self-distrust protocol and the order of work, so the
@@ -114,7 +116,7 @@ acceptance stayed pending.
 
 ## 4. Phase 3 — the package manager (`pkg`, apt/dpkg, repository)
 
-The big one. Broken into milestones in [`docs/PHASE3_PLAN.md`](PHASE3_PLAN.md).
+The big one. Broken into milestones in [`docs/chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md).
 
 ### 4.1 M1 — repository foundation ✅
 
@@ -132,7 +134,7 @@ The big one. Broken into milestones in [`docs/PHASE3_PLAN.md`](PHASE3_PLAN.md).
 
 Published development channel: **`https://pabi277.github.io/CodeC/dev`**.
 
-### 4.2 M2 — the apt/dpkg bootstrap 🟡
+### 4.2 M2 — the apt/dpkg bootstrap ✅
 
 - Bootstrap roots expanded to **`busybox bash apt dpkg`** plus the full
   source-built dependency closure (aarch64 + x86_64), with a seeded dpkg
@@ -152,7 +154,7 @@ Published development channel: **`https://pabi277.github.io/CodeC/dev`**.
 ### 4.3 This session — on-device debugging that actually finished it
 
 Installing the APK on a real aarch64 phone surfaced five independent bugs. The
-full trace and diagnosis are in [`docs/PHASE3_PKG_DEBUGGING.md`](PHASE3_PKG_DEBUGGING.md).
+full trace and diagnosis are in [`docs/chat-phase3/PHASE3_PKG_DEBUGGING.md`](chat-phase3/PHASE3_PKG_DEBUGGING.md).
 Each is fixed in `ShellEnvironment.pkgScript()` (app code — no bootstrap rebuild
 needed for four of them):
 
@@ -213,7 +215,7 @@ recipe fix, so a fresh device's seeded status DB contained
 `Depends: perl, clang, make, dpkg (= 1.22.6-5)`. Since the *entire* content
 delta between the published artifact and a full rebuild was that single
 line, the owner ran `codec-packages/scripts/repair-bootstrap-status.sh`
-(Path 2 of `docs/PART_A_ARTIFACT_REPAIR.md`) in Termux on both published
+(Path 2 of `docs/chat-phase3/PART_A_ARTIFACT_REPAIR.md`) in Termux on both published
 tarballs and re-uploaded them. Triple-verified: the script's own
 before/after tree proofs (only `./var/lib/dpkg/status` changed inside the
 archive), the GitHub asset-digest API (aarch64 `074806ad…`, x86_64
@@ -284,23 +286,143 @@ the real new-bootstrap evidence landed — and it convicted two assumptions:
 
 `validate-bootstrap.py` now enforces both invariants at publish time
 (`bin/curl` must exist as ELF; no `termux-keyring` stanza in status), and
-the host suite grew to **53/53 green** with fixture-level proofs. One more
-rebuild + republish + fresh-device run of the Part B acceptance block
-remains — see [`docs/NEXT_STEPS.md`](NEXT_STEPS.md) → Part B.
+the host suite grew to **53/53 green** with fixture-level proofs.
+
+### 5c. Part B completed and device-verified (2026-08-23)
+
+PR #13 merged to `main` at `35c350f338be34303296b0168933622991258142`.
+Dispatch #5 (`32620704350`) then rebuilt both architectures successfully, and
+publish run `32625580655` replaced the `userland-v2-dev` assets. The published
+aarch64 archive is **23,926,127 bytes** with GitHub asset digest
+`sha256:863f18528afa126d19481f7308a3f9b23997fda9ad9cae3bc7033d8fa60e60cd`.
+
+A full uninstall and fresh install on a real aarch64 device passed the complete
+Part B acceptance block: the source-built curl completed the HTTPS/TLS check;
+there was no `clang`, build-only package pollution, or `termux-keyring`;
+`pager`, `editor`, and `vi` resolved under `$PREFIX`; `dpkg --audit` was
+silent; the nano 9.2 install/uninstall cycle was clean; and the embedded `cc`
+compiler still printed `ok`. **Part B's exit condition is met. Do not rebuild,
+republish, or re-verify it unless Part C records evidence of a genuine new
+defect; even then, an expensive workflow requires explicit approval.**
+
+### 5d. Part C completed; two evidence-found defects fixed (2026-08-23)
+
+A clean Samsung SM-A356E (Android 16, aarch64) passed the Phase 3 bootstrap and
+runtime smoke, package update/search/install/uninstall/upgrade, alternatives,
+negative repository/base-package checks, compiler checks before and after
+package operations, and airplane-mode restart. The published bootstrap's
+best-effort termux-exec library was absent, but nano's postinst and
+`update-alternatives` ran successfully, confirming that the checklist's old
+hard requirement was stale.
+
+The interrupted-download test produced one genuine new defect: force-stop left
+a `codec-pkg/lock` owned by dead PID `18339`, causing both retry and
+`pkg repair` to reject the transaction. PR #14 commit `8e95a16` makes `pkg`
+reclaim only a lock whose recorded owner PID is dead and bumps the app bootstrap
+marker so the repaired script is installed on APK update. Build APK CI passed.
+Repeating the test left dead PID `6549`; the new script reclaimed it, completed
+the partial download and install, left `dpkg --audit` silent, and cleared the
+pending marker without manual deletion.
+
+The second-device upgrade test then exposed the other genuine defect: released
+v1.3.14 writes `.userland-vuserland-v1`, while the upgrader's legacy constant
+and unit test had an extra hyphen. PR #14 commit `a4e5af6` corrected the marker.
+After green CI, a separate arm64 device performed a genuine in-place update
+(the two CI APK payloads were re-signed with one local test-only key solely to
+satisfy Android's update-signature rule). CodeC visibly reported the v1 → v2
+upgrade, downloaded all **23,926,127 bytes**, verified SHA-256, extracted, and
+reported ready. The v2 marker, Bash/apt/dpkg/curl, clean audit, CodeC package
+operations, no-contamination check, nano 9.2, and embedded compiler all passed.
+**Part C's exit condition is met.**
+
+### 5e. Part D trust implementation staged (2026-08-23)
+
+PR #14 now has a fail-closed signing chain. Repository generation uses APT's
+required Release-relative index paths. A key-agnostic signer produces both
+`InRelease` and `Release.gpg`; validation requires both, extracts and compares
+the exact cleartext, checks the exact signing-subkey fingerprint, and retains
+the Release/index/package SHA-256 chain. Real-GPG tests cover protected signing,
+missing/tampered metadata, and changed indexes.
+
+The production design keeps primary fingerprint
+`3185B4D219C5EF30B263F5E50A458891ED0FB8D3` offline and gives CI only protected
+signing subkey `328500868CE9B0F74B62CEFC1D7D52F6F8135015`. Git contains only the
+versioned public keyring/armor/fingerprint files. The APK installs that exact
+keyring; `pkg` requires `gpgv`, verifies the signed CodeC Origin/Suite before
+APT, and uses a keyring-scoped `signed-by=` source. APT verifies independently.
+The Phase 3 bootstrap assembler seeds the same public bytes and its validator
+rejects a missing or different keyring. An earlier candidate key was replaced
+before first signed publication or released-client use when its protected CI
+export proved unusable; the operations record preserves those retired
+fingerprints.
+
+The first signed publication established valid OpenPGP metadata, then the real
+CodeC device exposed a Debian-control grammar defect: blank lines ended the
+Release stanza before its hash fields, so APT correctly rejected weak metadata.
+Commit `0fa9823` removed those separators and added a fail-closed regression
+test. Corrective run `32642631785` reused existing artifacts, skipped both
+expensive builds, signed/validated, and deployed successfully. The device then
+passed warning-free `pkg update`, exact `VALIDSIG`, tamper rejection, nano 9.2
+install/postinst/removal, clean `dpkg --audit`, and compiler smoke. Approved
+build run `32643383952` then completed both architectures; each archive passed
+assembly plus the validator's exact v3-keyring byte comparison and was uploaded.
+Release run `32648783080` downloaded and revalidated both immutable artifacts,
+then replaced the four `userland-v2-dev` assets. The new archive digests are
+`49cef1ccf82831e870d2d94537c5b9091cc71fa17c4eb0c27dc913d4e79248bf`
+(aarch64, 23,928,215 bytes) and
+`8e9fd6a973a4c56a957d952aa0ecc1d01ac4788f9cf61bd9162fa6d93e873b4a`
+(x86_64, 23,824,737 bytes), matching the live sidecars. Operational details and
+rotation/revocation/rollback rules are in
+[`chat-phase3/REPOSITORY_SIGNING.md`](chat-phase3/REPOSITORY_SIGNING.md).
+
+### 5f. Part D's final clean-device gate passed — Phase 3 acceptance complete (2026-08-24)
+
+The last open item — a full uninstall/reinstall clean-device pass against the
+published, key-seeded `userland-v2-dev` bootstrap (run `32648783080`) — was
+run and passed. The pre-uninstall backup was verified first (checksum,
+`gzip -t`, archive listing, independent-copy `cmp`); the app was fully
+uninstalled, reinstalled from a test-only re-signed sideload APK, and opened
+online. The automatic installer downloaded the aarch64 archive end to end
+(23,928,215 bytes, matching the digest above), verified its SHA-256,
+extracted it, and reached a real `codec $` prompt without a manual
+"Install userland" tap.
+
+On that clean device: `$PREFIX`, real ELF Bash (`5.3.15(1)-release`), busybox,
+and `dpkg --print-architecture aarch64` all matched expectations; the seeded
+dpkg status contained no `clang` and no build-only/`termux-keyring` package by
+exact name (an earlier unanchored `grep` had matched `sed`'s description text,
+not a real package — the exact-name recheck was clean); `sources.list`
+referenced only the CodeC channel; `pkg update` succeeded with no
+unsigned/weak-security/hash warning and the installed keyring's SHA-256
+(`e9c36bb6…e19a807`) matched the pinned value exactly; an independent `gpgv`
+run confirmed `Good signature` from the exact v3 subkey
+(`328500868CE9B0F74B62CEFC1D7D52F6F8135015`) and rejected a tampered
+`InRelease`; `pkg install nano` (+`libmagic`) ran its reviewed alternatives
+postinst, `nano --version` reported 9.2, `editor`/`pager`/`vi` resolved,
+`dpkg --audit` was silent, and uninstall cleanly fell back to busybox `vi`;
+and embedded `cc` compiled and ran a test program successfully. Full evidence
+and commands are recorded in
+[`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md) §8.
+
+**This closes Part D and Phase 3's device-acceptance gate. No section in
+`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md` remains open.** PR #14 has the code, docs, and
+now the recorded evidence for all of Parts B, C, and D and is ready to merge.
 
 ---
 
 ## 6. What is *not* done
 
-`pkg` works, but **Phase 3 is not complete**. The remaining work is broken into
-clear, ordered parts in [`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
+`pkg` works, and as of 2026-08-24 **Phase 3's device-acceptance gate is
+complete**. The remaining work is Phase 4 polish, broken into ordered parts in
+[`docs/NEXT_STEPS.md`](NEXT_STEPS.md). In brief:
 
 1. ~~Republish a clean bootstrap~~ ✅ **DONE (Part A above).**
-2. **Bootstrap correctness** — code merged; only the rebuild + republish +
-   re-verify remains (Part B "Continue here" checklist).
-3. **Run clean-device acceptance** (Part C) — airplane mode,
-   interrupted-install recovery, and the v1 → Phase 3 upgrade path.
-4. **M3 — sign the repository** (Part D; currently HTTPS + SHA-256 only).
-5. **Phase 4 — polish** (Parts E–F: storage access,
-   `termux-setup-storage`-equivalent, security confirmation prompt, themes,
-   signing UX).
+2. ~~Fix bootstrap correctness~~ ✅ **DONE (Part B above; device-verified).**
+3. ~~Run clean-device acceptance~~ ✅ **DONE (Part C above; all sections passed).**
+4. ~~M3 final gate — accept the released key-seeded bootstrap~~ ✅ **DONE**
+   (signed Pages, signed-client device path, CI builds, release publication,
+   and the backup-first clean-device proof all passed — see §5f above).
+5. **Phase 4 — polish and expansion**, not started. Planned in
+   [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md): storage access, install
+   confirmation and trust-indicator UX, settings/theme parity, an expanded
+   package catalog, and a first slice of Android-native integration.

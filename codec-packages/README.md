@@ -115,8 +115,9 @@ an actionable "package manager is not present" error rather than falling back to
 Termux. A Phase 3 bootstrap containing CodeC-built apt/dpkg is required before
 claiming on-device install success.
 
-See [`docs/PHASE3_PLAN.md`](../docs/PHASE3_PLAN.md) for trade-offs, security
-policy, device acceptance, signing, release, and rollback requirements.
+See [`docs/chat-phase3/PHASE3_PLAN.md`](../docs/chat-phase3/PHASE3_PLAN.md) for
+trade-offs, security policy, device acceptance, signing, release, and rollback
+requirements.
 
 ## Build
 

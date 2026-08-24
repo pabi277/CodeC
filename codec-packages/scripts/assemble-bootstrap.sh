@@ -95,6 +95,16 @@ fi
 # before the first interactive apt transaction. Phase 2 keeps its original
 # minimal archive behavior and does not claim apt/dpkg support.
 if [[ "$BOOTSTRAP_NAME" == "bootstrap-phase3" ]]; then
+  # Part D trust anchor. This is the public key only; the offline primary and
+  # CI signing subkey never enter package/build artifacts.
+  CODEC_KEYRING_SOURCE="$SCRIPT_DIR/../keys/codec-archive-keyring-v1.gpg"
+  if [[ ! -s "$CODEC_KEYRING_SOURCE" ]]; then
+    echo "assemble: CodeC repository public keyring is missing or empty" >&2
+    exit 1
+  fi
+  install -D -m 0644 "$CODEC_KEYRING_SOURCE" \
+    "$PREFIX_STAGE/etc/apt/keyrings/codec-archive-keyring-v1.gpg"
+
   DPKG_STATE="$PREFIX_STAGE/var/lib/dpkg"
   mkdir -p "$DPKG_STATE/info"
   : > "$DPKG_STATE/status"
