@@ -54,6 +54,12 @@
     <string name="editor_theme">Editor Theme</string>
     <string name="accent_color">Accent Color</string>
     <string name="storage">Storage</string>
+    <string name="terminal_storage_title">Terminal Storage Access (~/storage)</string>
+    <string name="terminal_storage_subtitle">Expose shared directories (Downloads, Documents, DCIM, Pictures, Music, Movies) to the terminal via ~/storage symlinks.</string>
+    <string name="setup_storage_action">SETUP STORAGE</string>
+    <string name="storage_permission_granted">Storage permission granted ✓</string>
+    <string name="storage_permission_needed">Storage permission not granted. Tap SETUP STORAGE to request permission.</string>
+    <string name="storage_setup_complete">Shared storage setup complete (~/storage)</string>
     <string name="projects_location">Projects Location</string>
     <string name="clear_cache">Clear Cache</string>
     <string name="clear">CLEAR</string>

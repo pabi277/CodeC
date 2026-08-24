@@ -1,7 +1,11 @@
 package com.codeci.ide.ui.screens
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,9 +56,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.services.TermuxCompiler
 import com.codeci.ide.ui.settings.SettingsManager
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.DeviceDiagnostics
 import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.EditorThemeType
@@ -316,20 +322,66 @@ fun SettingsScreen(
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
             // STORAGE
-            SettingsSectionHeader("Storage")
+            SettingsSectionHeader(stringResource(com.codeci.ide.R.string.storage))
             
+            var storageGranted by remember {
+                mutableStateOf(
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                )
+            }
+            val storageLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                val granted = permissions.values.any { it }
+                storageGranted = granted
+                if (granted) {
+                    val home = ShellEnvironment.homeDir(context.filesDir)
+                    ShellEnvironment.setupStorageDirectory(home)
+                    Toast.makeText(context, context.getString(com.codeci.ide.R.string.storage_setup_complete), Toast.LENGTH_SHORT).show()
+                }
+            }
+
             SettingsItem(
-                title = "Projects Location",
+                title = stringResource(com.codeci.ide.R.string.terminal_storage_title),
+                subtitle = if (storageGranted) {
+                    stringResource(com.codeci.ide.R.string.storage_permission_granted) + " — " +
+                        stringResource(com.codeci.ide.R.string.terminal_storage_subtitle)
+                } else {
+                    stringResource(com.codeci.ide.R.string.storage_permission_needed)
+                }
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = {
+                    val home = ShellEnvironment.homeDir(context.filesDir)
+                    ShellEnvironment.setupStorageDirectory(home)
+                    storageLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                        )
+                    )
+                }) {
+                    Text(stringResource(com.codeci.ide.R.string.setup_storage_action))
+                }
+            }
+
+            SettingsItem(
+                title = stringResource(com.codeci.ide.R.string.projects_location),
                 subtitle = context.getExternalFilesDir(null)?.absolutePath ?: "Internal Storage"
             )
             
             SettingsAction(
-                title = "Clear Cache",
-                actionText = "CLEAR",
+                title = stringResource(com.codeci.ide.R.string.clear_cache),
+                actionText = stringResource(com.codeci.ide.R.string.clear),
                 onClick = {
                     val cacheDir = File(context.cacheDir.absolutePath)
                     cacheDir.deleteRecursively()
-                    Toast.makeText(context, "Cache cleared", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(com.codeci.ide.R.string.cache_cleared), Toast.LENGTH_SHORT).show()
                 }
             )
 

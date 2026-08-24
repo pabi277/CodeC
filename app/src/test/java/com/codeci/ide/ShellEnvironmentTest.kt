@@ -358,4 +358,71 @@ class ShellEnvironmentTest {
         assertFalse(script.contains("packages.termux.dev"))
         assertFalse(script.contains("packages-cf.termux.dev"))
     }
+
+    @Test
+    fun `setupStorageScript creates posix script with standard shared directories and permission request`() {
+        val script = ShellEnvironment.setupStorageScript()
+        assertTrue(script.startsWith("#!/system/bin/sh"))
+        assertTrue(script.contains("STORAGE_DIR=\"\$HOME/storage\""))
+        assertTrue(script.contains("com.codeci.ide.action.REQUEST_STORAGE_PERMISSION"))
+        assertTrue(script.contains("setup_link \"\$SHARED_ROOT\" \"shared\""))
+        assertTrue(script.contains("setup_link \"\$SHARED_ROOT/Download\" \"downloads\""))
+        assertTrue(script.contains("setup_link \"\$SHARED_ROOT/Documents\" \"documents\""))
+        assertTrue(script.contains("setup_link \"\$SHARED_ROOT/DCIM\" \"dcim\""))
+        assertTrue(script.contains("setup_link \"\$SHARED_ROOT/Pictures\" \"pictures\""))
+        assertTrue(script.contains("setup_link \"\$SHARED_ROOT/Music\" \"music\""))
+        assertTrue(script.contains("setup_link \"\$SHARED_ROOT/Movies\" \"movies\""))
+        assertTrue(script.contains("external-"))
+    }
+
+    @Test
+    fun `setupStorageDirectory creates storage directory and symlinks to target folders`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-storage-test-${System.nanoTime()}")
+        try {
+            val home = File(base, "home").apply { mkdirs() }
+            val fakeShared = File(base, "emulated_0").apply { mkdirs() }
+            val subDirs = listOf("Download", "Documents", "DCIM", "Pictures", "Music", "Movies")
+            subDirs.forEach { File(fakeShared, it).mkdirs() }
+
+            val fakeStorageRoot = File(base, "storage_root").apply { mkdirs() }
+            val fakeSdCard = File(fakeStorageRoot, "1234-5678").apply { mkdirs() }
+
+            val result = ShellEnvironment.setupStorageDirectory(
+                homeDir = home,
+                externalStorageDir = fakeShared,
+                storageRoot = fakeStorageRoot
+            )
+
+            assertTrue(result.success)
+            val storageDir = File(home, "storage")
+            assertTrue(storageDir.isDirectory)
+
+            val sharedLink = File(storageDir, "shared")
+            assertTrue("shared link should exist", sharedLink.exists())
+
+            val downloadsLink = File(storageDir, "downloads")
+            assertTrue("downloads link should exist", downloadsLink.exists())
+
+            val documentsLink = File(storageDir, "documents")
+            assertTrue("documents link should exist", documentsLink.exists())
+
+            val dcimLink = File(storageDir, "dcim")
+            assertTrue("dcim link should exist", dcimLink.exists())
+
+            val ext1Link = File(storageDir, "external-1")
+            assertTrue("external-1 link should exist", ext1Link.exists())
+
+            // Re-run setup to verify idempotency
+            val rerunResult = ShellEnvironment.setupStorageDirectory(
+                homeDir = home,
+                externalStorageDir = fakeShared,
+                storageRoot = fakeStorageRoot
+            )
+            assertTrue(rerunResult.success)
+            assertTrue(sharedLink.exists())
+            assertTrue(downloadsLink.exists())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
 }
