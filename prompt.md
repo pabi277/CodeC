@@ -39,9 +39,13 @@ of assuming one.
 - **PR #14 is open, CI-green, and mergeable.** It now bundles Parts C+D on top
   of its original docs scope. It has not yet been merged — check
   `gh pr view 14` for current state before assuming.
-- **Next work is Phase 4 polish**, per `docs/NEXT_STEPS.md` Parts E (storage
-  access / `termux-setup-storage`-equivalent) and F (install-confirmation UX,
-  signing-status UX, theme/settings parity). Nothing in Phase 4 has started.
+- **Next work is Phase 4**, planned (not coded) in
+  `docs/PHASE4_ROADMAP.md`: storage access, install-confirmation and
+  trust-indicator UX, settings/theme parity, an expanded package catalog, and
+  a first Android-integration slice. Nothing in Phase 4 has started — that
+  file is a roadmap with intentionally open technical decisions, not a spec
+  to implement verbatim. Confirm with the user which part to pick up, then
+  make the concrete decisions that part needs before writing any code.
 - An optional x86_64 repeat of the Part D clean-device test was not run (no
   x86_64 device was available); this does not block calling Phase 3 complete
   on the tested aarch64 architecture (see `docs/PHASE3_PLAN.md` §5 M3).
@@ -81,8 +85,9 @@ of assuming one.
    `gh run list`, `gh release list`). Do not reopen completed parts.
 2. If PR #14 has not been merged yet and the user wants to proceed, merging it
    is the natural next step (it is CI-green and mergeable as of 2026-08-24).
-3. Otherwise, move to **Phase 4** (`docs/NEXT_STEPS.md` Parts E and F) —
-   confirm which part the user wants before starting either.
+3. Otherwise, move to **Phase 4** (`docs/PHASE4_ROADMAP.md`) — confirm which
+   numbered part the user wants before starting, and decide/write down that
+   part's open technical questions before coding.
 4. A part is complete only when its **"Exit condition"** is met and verified,
    not merely when code is written.
 

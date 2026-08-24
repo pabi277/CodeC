@@ -420,6 +420,7 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
 4. ~~M3 final gate — accept the released key-seeded bootstrap~~ ✅ **DONE**
    (signed Pages, signed-client device path, CI builds, release publication,
    and the backup-first clean-device proof all passed — see §5f above).
-5. **Phase 4 — polish** (Parts E–F: storage access,
-   `termux-setup-storage`-equivalent, security confirmation prompt, themes,
-   signing UX).
+5. **Phase 4 — polish and expansion**, not started. Planned in
+   [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md): storage access, install
+   confirmation and trust-indicator UX, settings/theme parity, an expanded
+   package catalog, and a first slice of Android-native integration.
