@@ -234,18 +234,28 @@ class RecipeOverrideTest(unittest.TestCase):
             self.assertIn("git-svn", result.stderr)
 
     def test_symlink_override_patches_termux_step_massage(self) -> None:
-        """termux_step_massage.sh must be patched to convert absolute symlinks in
-        $TERMUX_PREFIX into relative symlinks."""
+        """termux_step_massage.sh and libbz2/build.sh must be patched to convert
+        absolute symlinks in $TERMUX_PREFIX into relative symlinks."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture(tree)
+            
+            # libbz2 fixture
+            libbz2_dir = tree / "packages" / "libbz2"
+            libbz2_dir.mkdir(parents=True)
+            libbz2_build = libbz2_dir / "build.sh"
+            libbz2_build.write_text("termux_step_make_install() {\n\tmake install\n}\n")
+
+            # termux_step_massage fixture
             scripts_build = tree / "scripts" / "build"
             scripts_build.mkdir(parents=True)
             massage = scripts_build / "termux_step_massage.sh"
             massage.write_text(
                 "termux_step_massage() {\n"
                 "\techo 'hello'\n"
-                "\tfind . -type d -empty -delete\n"
+                '\tif [ "$TERMUX_PACKAGE_FORMAT" = "debian" ]; then\n'
+                "\t\ttermux_create_debian_subpackages\n"
+                "\tfi\n"
                 "}\n"
             )
 
@@ -253,9 +263,18 @@ class RecipeOverrideTest(unittest.TestCase):
 
             text = massage.read_text()
             self.assertIn("CodeC override: convert absolute symlinks", text)
-            self.assertIn("os.path.relpath", text)
+            self.assertIn("realpath -m --relative-to", text)
+            # Must be placed BEFORE termux_create_debian_subpackages
+            symlink_idx = text.find("CodeC override: convert absolute symlinks")
+            subpkg_idx = text.find("termux_create_debian_subpackages")
+            self.assertLess(symlink_idx, subpkg_idx)
+
+            libbz2_text = libbz2_build.read_text()
+            self.assertIn("CodeC: fix absolute symlinks in libbz2", libbz2_text)
+            self.assertIn("realpath -m --relative-to", libbz2_text)
 
 
 if __name__ == "__main__":
     unittest.main()
+
 
