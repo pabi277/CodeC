@@ -21,7 +21,7 @@ import java.io.File
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "18"
+    const val BOOTSTRAP_VERSION = "19"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -574,26 +574,6 @@ HELP
         SHARED_ROOT="/storage/emulated/0"
         [ -d "${'$'}SHARED_ROOT" ] || SHARED_ROOT="${'$'}{EXTERNAL_STORAGE:-/sdcard}"
 
-        # Check read/write access to shared root
-        needs_permission=0
-        if [ ! -r "${'$'}SHARED_ROOT" ] || ! ls "${'$'}SHARED_ROOT" >/dev/null 2>&1; then
-          needs_permission=1
-        elif ! touch "${'$'}SHARED_ROOT/Download/.codec_storage_probe_${'$'}${'$'}" 2>/dev/null; then
-          needs_permission=1
-        else
-          rm -f "${'$'}SHARED_ROOT/Download/.codec_storage_probe_${'$'}${'$'}" 2>/dev/null || true
-        fi
-
-        if [ "${'$'}needs_permission" -eq 1 ]; then
-          echo "Storage write access is required to access /storage/emulated/0."
-          echo "Attempting to open permission settings..."
-          am start --user 0 -a com.codeci.ide.action.REQUEST_STORAGE_PERMISSION -n com.codeci.ide/.MainActivity 2>/dev/null || \
-            am start -a com.codeci.ide.action.REQUEST_STORAGE_PERMISSION 2>/dev/null || true
-          echo "If the Android permission screen did not open automatically, grant All Files Access in:"
-          echo "  CodeC App -> Settings -> Storage -> SETUP STORAGE"
-          echo "  or: Android Settings -> Apps -> CodeC IDE -> Permissions -> All files access"
-        fi
-
         setup_link() {
           target="${'$'}1"
           link_name="${'$'}2"
@@ -626,7 +606,17 @@ HELP
           esac
         done
 
-        echo "Storage setup complete."
+        # Check read/write access to shared root
+        probe_file="${'$'}SHARED_ROOT/Download/.codec_storage_probe_${'$'}${'$'}"
+        if touch "${'$'}probe_file" 2>/dev/null; then
+          rm -f "${'$'}probe_file" 2>/dev/null || true
+          echo "Storage setup complete — write access OK."
+        else
+          echo "Storage setup complete."
+          echo "Note: If writes fail with 'Operation not permitted', grant All Files Access in:"
+          echo "  1) CodeC Terminal Top Bar -> Folder icon (or Settings -> Storage -> SETUP STORAGE)"
+          echo "  2) Or Android Settings -> Apps -> CodeC IDE -> Permissions -> All files access"
+        fi
     """.trimIndent() + "\n"
 
     data class StorageLink(val name: String, val target: File)

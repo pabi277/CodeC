@@ -364,7 +364,6 @@ class ShellEnvironmentTest {
         val script = ShellEnvironment.setupStorageScript()
         assertTrue(script.startsWith("#!/system/bin/sh"))
         assertTrue(script.contains("STORAGE_DIR=\"\$HOME/storage\""))
-        assertTrue(script.contains("com.codeci.ide.action.REQUEST_STORAGE_PERMISSION"))
         assertTrue(script.contains("setup_link \"\$SHARED_ROOT\" \"shared\""))
         assertTrue(script.contains("setup_link \"\$SHARED_ROOT/Download\" \"downloads\""))
         assertTrue(script.contains("setup_link \"\$SHARED_ROOT/Documents\" \"documents\""))

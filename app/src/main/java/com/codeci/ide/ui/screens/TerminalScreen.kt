@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GetApp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,9 +33,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.MainActivity
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.TerminalEmulatorView
 import com.codeci.ide.ui.components.TerminalExtraKeys
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 
 @Composable
@@ -80,6 +83,20 @@ fun TerminalScreen(
                 )
             },
             actions = {
+                IconButton(onClick = {
+                    if (ShellEnvironment.hasStoragePermission(context)) {
+                        val home = ShellEnvironment.homeDir(context.filesDir)
+                        ShellEnvironment.setupStorageDirectory(home)
+                        Toast.makeText(context, context.getString(R.string.storage_permission_granted), Toast.LENGTH_SHORT).show()
+                    } else {
+                        (context as? MainActivity)?.requestStoragePermissions()
+                    }
+                }) {
+                    Icon(
+                        Icons.Default.FolderOpen,
+                        contentDescription = stringResource(R.string.terminal_storage_title)
+                    )
+                }
                 IconButton(onClick = { copyText(context, viewModel.transcriptText()) }) {
                     Icon(
                         Icons.Default.ContentCopy,
