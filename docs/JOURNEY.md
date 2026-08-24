@@ -437,4 +437,8 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
    - **Part 4.3 — Trust/channel indicator UX** ✅ **DONE (verified 2026-08-24).**
      Settings "Package Repository & Trust" card (verified trust badge, channel, keyring metadata,
      signing subkey fingerprint, "CHECK REPOSITORY" probe) and terminal `pkg status` / `pkg trust` CLI.
-   - Parts 4.4–4.7 remaining.
+   - **Part 4.4 — Terminal/editor settings parity** ✅ **DONE (device-verified 2026-08-24).**
+     Unified color palettes (`Dracula`, `Monokai`, `GitHub Dark`, `Classic Dark`) for terminal canvas,
+     custom monospace/proportional font families (`Monospace`, `Courier`, `Sans Serif`, `Serif`),
+     Settings screen controls with live `TerminalThemePreview` card, and reactive DataStore flows.
+   - Parts 4.5–4.7 remaining (catalog expansion and Android integration slice).
