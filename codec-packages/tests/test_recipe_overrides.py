@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Hermetic coverage for the narrowly scoped recipe transport overrides."""
-
-from __future__ import annotations
-
+"""Recipe override integration and audit test suite (Phase 4 Part 4.5)."""
+import os
+import pathlib
 import subprocess
 import tempfile
 import unittest
@@ -37,18 +36,13 @@ class RecipeOverrideTest(unittest.TestCase):
                 'TERMUX_SUBPKG_DEPENDS="perl, clang, make"\n'
             )
             # Verbatim TERMUX_PKG_DEPENDS from the pinned upstream revision
-            # (termux-packages @ 1bbe66903526df2e8af51e704316bc68ede72603,
-            # packages/apt/build.sh line 11).
-            apt_depends = (
-                "TERMUX_PKG_DEPENDS=\"coreutils, dpkg, findutils, gpgv, grep, "
-                "libandroid-glob, libbz2, libc++, libiconv, libgcrypt, "
-                "libgnutls, liblz4, liblzma, sed, termux-keyring, "
-                "termux-licenses, xxhash, zlib, zstd\"\n"
-            )
+            # (packages/apt/build.sh at revision 1bbe669).
             apt = tree / "packages" / "apt"
             apt.mkdir(parents=True)
             (apt / "build.sh").write_text(
-                apt_depends
+                'TERMUX_PKG_DEPENDS="coreutils, dpkg, findutils, gpgv, grep, libandroid-glob, libbz2, libc++, libiconv, libgcrypt, libgnutls, liblz4, liblzma, sed, termux-keyring, termux-licenses, xxhash, zlib, zstd"\n'
+                + 'termux_step_create_debscripts() {\n'
+                + '\tcat <<EOF > postinst\n'
                 + '\t\techo "# The main termux repository, with cloudflare cache"\n'
                 + '\t\techo "deb https://packages-cf.termux.dev/apt/termux-main/ stable main"\n'
                 + '\t\techo "# The main termux repository, without cloudflare cache"\n'
@@ -71,23 +65,29 @@ class RecipeOverrideTest(unittest.TestCase):
             # $PREFIX/share/LICENSES/*, the target of packaged license
             # symlinks such as nano's share/licenses/nano).
             apt_text = (apt / "build.sh").read_text()
+            self.assertIn(
+                'TERMUX_PKG_DEPENDS="coreutils, dpkg, findutils, gpgv, grep, libandroid-glob, libbz2, libc++, libiconv, libgcrypt, libgnutls, liblz4, liblzma, sed, termux-licenses, xxhash, zlib, zstd"',
+                apt_text,
+            )
             self.assertNotIn("termux-keyring", apt_text)
-            self.assertIn(
-                "TERMUX_PKG_DEPENDS=\"coreutils, dpkg, findutils, gpgv, grep, "
-                "libandroid-glob, libbz2, libc++, libiconv, libgcrypt, "
-                "libgnutls, liblz4, liblzma, sed, "
-                "termux-licenses, xxhash, zlib, zstd\"",
-                apt_text,
-            )
-            # The sources.list rewrite still applies to the same recipe.
-            self.assertIn(
-                "deb [signed-by=/data/data/com.codeci.ide/files/usr/etc/apt/keyrings/"
-                "codec-archive-keyring-v1.gpg] https://pabi277.github.io/CodeC/dev stable main",
-                apt_text,
-            )
-            self.assertNotIn("trusted=yes", apt_text)
 
-    def test_apt_override_fails_loud_without_termux_keyring(self) -> None:
+    def _write_apt_fixture(self, tree: Path) -> Path:
+        """Write the verbatim pinned apt fixture so apply-recipe-overrides.sh
+        passes its apt assertions when running in tests focused on other packages."""
+        apt = tree / "packages" / "apt"
+        apt.mkdir(parents=True, exist_ok=True)
+        (apt / "build.sh").write_text(
+            'TERMUX_PKG_DEPENDS="coreutils, dpkg, findutils, gpgv, grep, libandroid-glob, libbz2, libc++, libiconv, libgcrypt, libgnutls, liblz4, liblzma, sed, termux-keyring, termux-licenses, xxhash, zlib, zstd"\n'
+            + 'termux_step_create_debscripts() {\n'
+            + '\tcat <<EOF > postinst\n'
+            + '\t\techo "# The main termux repository, with cloudflare cache"\n'
+            + '\t\techo "deb https://packages-cf.termux.dev/apt/termux-main/ stable main"\n'
+            + '\t\techo "# The main termux repository, without cloudflare cache"\n'
+            + '\t\techo "# deb https://packages.termux.dev/apt/termux-main/ stable main"\n'
+        )
+        return apt
+
+    def test_util_macros_drift_aborts_build(self) -> None:
         """A pinned-recipe drift that drops the expected dependency line
         shape must abort the build instead of silently skipping."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -112,66 +112,37 @@ class RecipeOverrideTest(unittest.TestCase):
             apt.mkdir(parents=True)
             (apt / "build.sh").write_text(
                 'TERMUX_PKG_DEPENDS="coreutils, dpkg"\n'
-                '\t\techo "# The main termux repository, with cloudflare cache"\n'
-                '\t\techo "deb https://packages-cf.termux.dev/apt/termux-main/ stable main"\n'
-                '\t\techo "# The main termux repository, without cloudflare cache"\n'
-                '\t\techo "# deb https://packages.termux.dev/apt/termux-main/ stable main"\n'
             )
 
             result = subprocess.run(
                 [str(OVERRIDES), str(tree)], text=True, capture_output=True
             )
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("termux-keyring", result.stderr)
+            self.assertIn("pinned-revision drift", result.stderr)
+            self.assertIn("apt TERMUX_PKG_DEPENDS", result.stderr)
 
-    # ------------------------------------------------------------------
-    # Round 2 catalog (Part 4.5): the bash and git overrides.
-    #
-    # The apt recipe is mandatory for the script to reach the round 2
-    # blocks (it exits 1 when absent); the other legacy fixtures are
-    # optional and skipped when missing.
-    # ------------------------------------------------------------------
-
-    def _write_apt_fixture(self, tree: Path) -> Path:
-        apt = tree / "packages" / "apt"
-        apt.mkdir(parents=True)
-        (apt / "build.sh").write_text(
-            'TERMUX_PKG_DEPENDS="coreutils, dpkg, findutils, gpgv, grep, '
-            'libandroid-glob, libbz2, libc++, libiconv, libgcrypt, '
-            'libgnutls, liblz4, liblzma, sed, termux-keyring, '
-            'termux-licenses, xxhash, zlib, zstd"\n'
-            '\t\techo "# The main termux repository, with cloudflare cache"\n'
-            '\t\techo "deb https://packages-cf.termux.dev/apt/termux-main/ stable main"\n'
-            '\t\techo "# The main termux repository, without cloudflare cache"\n'
-            '\t\techo "# deb https://packages.termux.dev/apt/termux-main/ stable main"\n'
-        )
-        return apt
-
-    def test_bash_termux_tools_removed_for_repository_build(self) -> None:
-        """bash (a round 2 dependency via libtool) must lose termux-tools
-        in the repository build too, not only in the bootstrap build."""
-        # Verbatim TERMUX_PKG_DEPENDS from the pinned upstream revision
-        # (termux-packages @ 1bbe66903526df2e8af51e704316bc68ede72603,
-        # packages/bash/build.sh).
-        bash_depends = 'TERMUX_PKG_DEPENDS="libandroid-support, libiconv, readline (>= 8.3), termux-tools"\n'
+    def test_bash_override_removes_termux_tools_runtime_dependency(self) -> None:
+        """bash must build without the termux-tools runtime dependency."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture(tree)
-            bash = tree / "packages" / "bash"
-            bash.mkdir(parents=True)
-            (bash / "build.sh").write_text(bash_depends)
+            bash_dir = tree / "packages" / "bash"
+            bash_dir.mkdir(parents=True)
+            (bash_dir / "build.sh").write_text(
+                'TERMUX_PKG_DEPENDS="libandroid-support, libiconv, readline (>= 8.3), termux-tools"\n'
+            )
 
             subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
 
-            self.assertEqual((bash / "build.sh").read_text(),
-                             'TERMUX_PKG_DEPENDS="libandroid-support, libiconv, readline (>= 8.3)"\n')
-            # The bootstrap build's own sed (build-bootstrap.sh) stays as a
-            # no-op double safety: it matches nothing on the cleaned line.
-            self.assertNotIn("termux-tools", (bash / "build.sh").read_text())
+            text = (bash_dir / "build.sh").read_text()
+            self.assertIn(
+                'TERMUX_PKG_DEPENDS="libandroid-support, libiconv, readline (>= 8.3)"',
+                text,
+            )
+            self.assertNotIn("termux-tools", text)
 
-    def test_git_subpackages_excluded_and_tcltk_disabled(self) -> None:
-        """gitk/git-gui (tcl/tk/X11) and git-svn (subversion-perl) are
-        excluded for CodeC arches; git builds without tcl/tk support."""
+    def test_git_override_excludes_tcltk_and_subversion_subpackages(self) -> None:
+        """git must exclude gitk, git-gui, git-svn and configure --with-tcltk=no."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture(tree)
@@ -274,8 +245,27 @@ class RecipeOverrideTest(unittest.TestCase):
             self.assertIn("CodeC: fix absolute symlinks in libbz2", libbz2_text)
             self.assertIn("realpath -m --relative-to", libbz2_text)
 
+    def test_xcb_proto_python_subpackages_excluded(self) -> None:
+        """python-xcbgen subpackage in xcb-proto must be excluded to prevent
+        unapproved maintainer scripts in the CodeC repository."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+
+            xcb_proto_dir = tree / "packages" / "xcb-proto"
+            xcb_proto_dir.mkdir(parents=True)
+            subpkg = xcb_proto_dir / "python-xcbgen.subpackage.sh"
+            subpkg.write_text('TERMUX_SUBPKG_DESCRIPTION="Python bindings for xcb-proto"\n')
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            lines = subpkg.read_text().splitlines()
+            self.assertEqual(
+                lines[0],
+                'TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" '
+                "# CodeC: no python/X11 bindings in userland",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
-
-

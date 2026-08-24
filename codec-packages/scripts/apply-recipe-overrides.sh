@@ -214,6 +214,30 @@ else
   echo "recipe-overrides: git recipe not found; skipping tcl/tk overrides" >&2
 fi
 
+# Exclude python-xcbgen subpackage in xcb-proto:
+# CodeC userland does not ship Python or X11 Python bindings.
+# The official python-xcbgen subpackage creates unapproved postinst/prerm
+# maintainer scripts (python byte-compilation hooks) which are forbidden
+# by CodeC repository policy.
+XCB_PROTO_DIR="$TREE/packages/xcb-proto"
+if [[ -d "$XCB_PROTO_DIR" ]]; then
+  for subfile in "$XCB_PROTO_DIR"/python*.subpackage.sh; do
+    if [[ -f "$subfile" ]]; then
+      subname="$(basename "$subfile" .subpackage.sh)"
+      if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$subfile"; then
+        sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: no python/X11 bindings in userland' "$subfile"
+      fi
+      if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$subfile"; then
+        echo "recipe-overrides: failed to exclude $subname subpackage" >&2
+        exit 1
+      fi
+      echo "recipe-overrides: $subname subpackage excluded for CodeC arches"
+    fi
+  done
+else
+  echo "recipe-overrides: xcb-proto recipe not found; skipping python-xcbgen exclusion" >&2
+fi
+
 # Direct override for libbz2: bzip2's upstream Makefile creates absolute symlinks
 # in $TERMUX_PREFIX/bin during `make install` (e.g. bzcmp -> $TERMUX_PREFIX/bin/bzdiff).
 # Clean them up in termux_step_post_make_install.
@@ -287,4 +311,3 @@ PY
 else
   echo "recipe-overrides: termux_step_massage.sh not found; skipping absolute symlink fix" >&2
 fi
-
