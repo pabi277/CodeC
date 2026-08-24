@@ -258,7 +258,7 @@ object ShellEnvironment {
               return 0
               ;;
             *)
-              echo "pkg: ${_action_desc} aborted by user."
+              echo "pkg: ${'$'}{_action_desc} aborted by user."
               return 1
               ;;
           esac
@@ -501,7 +501,7 @@ object ShellEnvironment {
             _pkg_count=${'$'}(( _pkg_count + 1 ))
             _fmt_dl="${'$'}(format_kb "${'$'}_deb_kb")"
             _fmt_inst="${'$'}(format_kb "${'$'}_p_inst")"
-            _pkg_list="${'$'}{_pkg_list}    • ${_p_name} ${_p_ver} (download: ${_fmt_dl}, installed: ~${_fmt_inst})\n"
+            _pkg_list="${'$'}{_pkg_list}    • ${'$'}{_p_name} ${'$'}{_p_ver} (download: ${'$'}{_fmt_dl}, installed: ~${'$'}{_fmt_inst})\n"
           done
 
           _fmt_total_dl="${'$'}(format_kb "${'$'}_total_dl_kb")"
