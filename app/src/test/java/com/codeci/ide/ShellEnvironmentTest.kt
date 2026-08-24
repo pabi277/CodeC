@@ -424,4 +424,153 @@ class ShellEnvironmentTest {
             base.deleteRecursively()
         }
     }
+
+    @Test
+    fun `pkg script includes transaction confirmation and preflight summary`() {
+        val script = ShellEnvironment.pkgScript()
+        assertTrue(script.contains("display_cache_summary"))
+        assertTrue(script.contains("confirm_transaction"))
+        assertTrue(script.contains("format_kb"))
+        assertTrue(script.contains("Do you want to continue? [Y/n]"))
+        assertTrue(script.contains("Transaction Summary"))
+        assertTrue(script.contains("Preflight:        PASSED"))
+        assertTrue(script.contains("-y|--yes|--assume-yes"))
+        assertTrue(script.contains("pkg install [-y]"))
+        assertTrue(script.contains("pkg upgrade [-y]"))
+        assertTrue(script.contains("pkg uninstall [-y]"))
+    }
+
+    @Test
+    fun `pkg script executes transaction confirmation and honors yes flag and user abort`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-pkg-confirm-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            val cache = File(prefix, "var/cache/apt/archives").apply { mkdirs() }
+            val keyrings = File(prefix, "etc/apt/keyrings").apply { mkdirs() }
+            File(keyrings, ShellEnvironment.PACKAGE_REPOSITORY_KEYRING).writeText("public-test-key")
+
+            // Mock apt-get
+            File(bin, "apt-get").apply {
+                writeText("""
+                    #!/bin/sh
+                    case "${'$'}*" in
+                      *--download-only*)
+                        deb="${cache.absolutePath}/nano_9.2_aarch64.deb"
+                        printf "fakedeb" > "${'$'}deb"
+                        exit 0
+                        ;;
+                      *)
+                        exit 0
+                        ;;
+                    esac
+                """.trimIndent() + "\n")
+                setExecutable(true)
+            }
+
+            // Mock dpkg-deb
+            File(bin, "dpkg-deb").apply {
+                writeText("""
+                    #!/bin/sh
+                    case "${'$'}*" in
+                      *"-f "*Package*) echo "nano"; exit 0 ;;
+                      *"-f "*Version*) echo "9.2"; exit 0 ;;
+                      *"-f "*Architecture*) echo "aarch64"; exit 0 ;;
+                      *"-f "*Installed-Size*) echo "840"; exit 0 ;;
+                      *"--control "*) exit 0 ;;
+                      *"--contents "*) echo "data/data/com.codeci.ide/files/usr/bin/nano"; exit 0 ;;
+                      *) exit 0 ;;
+                    esac
+                """.trimIndent() + "\n")
+                setExecutable(true)
+            }
+
+            // Mock dpkg
+            File(bin, "dpkg").apply {
+                writeText("""
+                    #!/bin/sh
+                    if [ "${'$'}1" = "--print-architecture" ]; then echo "aarch64"; exit 0; fi
+                    exit 0
+                """.trimIndent() + "\n")
+                setExecutable(true)
+            }
+
+            // Mock gpgv
+            File(bin, "gpgv").apply {
+                writeText("""
+                    #!/bin/sh
+                    out=""
+                    while [ "${'$'}#" -gt 0 ]; do
+                      if [ "${'$'}1" = "--output" ]; then out="${'$'}2"; shift 2; else shift; fi
+                    done
+                    if [ -n "${'$'}out" ]; then
+                      printf "Origin: CodeC\nSuite: stable\n" > "${'$'}out"
+                    fi
+                    exit 0
+                """.trimIndent() + "\n")
+                setExecutable(true)
+            }
+
+            // Mock curl
+            File(bin, "curl").apply {
+                writeText("""
+                    #!/bin/sh
+                    dest=""
+                    while [ "${'$'}#" -gt 0 ]; do
+                      if [ "${'$'}1" = "-o" ]; then dest="${'$'}2"; shift 2; else shift; fi
+                    done
+                    if [ -n "${'$'}dest" ]; then
+                      printf "Origin: CodeC\nSuite: stable\n" > "${'$'}dest"
+                    fi
+                    exit 0
+                """.trimIndent() + "\n")
+                setExecutable(true)
+            }
+
+            val pkg = File(bin, "pkg").apply {
+                writeText(ShellEnvironment.pkgScript())
+                setExecutable(true)
+            }
+
+            // 1) Test with -y flag -> automatic acceptance
+            val procYes = ProcessBuilder("/bin/sh", pkg.absolutePath, "install", "-y", "nano")
+                .redirectErrorStream(true)
+                .apply {
+                    environment()["PREFIX"] = prefix.absolutePath
+                    environment()["PATH"] = "${bin.absolutePath}:/bin:/usr/bin"
+                }
+                .start()
+            val completedYes = procYes.waitFor(10, TimeUnit.SECONDS)
+            if (!completedYes) procYes.destroyForcibly()
+            val outYes = procYes.inputStream.bufferedReader().readText()
+            assertTrue("pkg install -y timed out: $outYes", completedYes)
+            assertEquals(outYes, 0, procYes.exitValue())
+            assertTrue(outYes.contains("Transaction Summary"))
+            assertTrue(outYes.contains("nano 9.2"))
+            assertTrue(outYes.contains("pkg: installed nano"))
+
+            // 2) Test with interactive 'n' abort
+            val procAbort = ProcessBuilder("/bin/sh", pkg.absolutePath, "install", "nano")
+                .redirectErrorStream(true)
+                .apply {
+                    environment()["PREFIX"] = prefix.absolutePath
+                    environment()["PATH"] = "${bin.absolutePath}:/bin:/usr/bin"
+                }
+                .start()
+            procAbort.outputStream.bufferedWriter().use {
+                it.write("n\n")
+                it.flush()
+            }
+            val completedAbort = procAbort.waitFor(10, TimeUnit.SECONDS)
+            if (!completedAbort) procAbort.destroyForcibly()
+            val outAbort = procAbort.inputStream.bufferedReader().readText()
+            assertTrue("pkg install abort timed out: $outAbort", completedAbort)
+            assertEquals(outAbort, 0, procAbort.exitValue())
+            assertTrue(outAbort.contains("pkg: installation aborted by user."))
+            assertFalse(outAbort.contains("pkg: installed nano"))
+            assertFalse(File(prefix, "var/lib/codec-pkg/transaction.pending").exists())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
 }

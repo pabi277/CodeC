@@ -430,4 +430,8 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      `music`, `movies`, `external-*`). Android 11+ All Files Access
      (`MANAGE_EXTERNAL_STORAGE`) supported with OSC 1337 terminal escape
      dispatch and UI setup button.
-   - Parts 4.2–4.7 remaining.
+   - **Part 4.2 — Package-install confirmation UX** ✅ **DONE (verified 2026-08-24).**
+     In-terminal transaction summaries (operation, packages, versions, download size,
+     installed space change, preflight security status) with interactive `[Y/n]` confirmation,
+     `-y`/`--yes` bypass, clean abort on `n` with zero mutation, and core package protection.
+   - Parts 4.3–4.7 remaining.

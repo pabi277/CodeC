@@ -21,7 +21,7 @@ import java.io.File
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "19"
+    const val BOOTSTRAP_VERSION = "20"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -223,6 +223,45 @@ object ShellEnvironment {
 
         free_kb() {
           df -Pk "${'$'}PREFIX" 2>/dev/null | awk 'NR == 2 { print ${'$'}4 }'
+        }
+
+        format_kb() {
+          _kb="${'$'}1"
+          case "${'$'}_kb" in
+            ''|*[!0-9]*) _kb=0 ;;
+          esac
+          if [ "${'$'}_kb" -ge 1024 ]; then
+            _mb_int=${'$'}(( _kb / 1024 ))
+            _mb_dec=${'$'}(( (_kb * 10 / 1024) % 10 ))
+            printf '%d.%d MB' "${'$'}_mb_int" "${'$'}_mb_dec"
+          else
+            printf '%d KB' "${'$'}_kb"
+          fi
+        }
+
+        confirm_transaction() {
+          _action_desc="${'$'}1"
+          if [ "${'$'}YES_FLAG" -eq 1 ]; then
+            return 0
+          fi
+          printf 'Do you want to continue? [Y/n] '
+          if [ -t 0 ]; then
+            read -r _resp || _resp="n"
+          else
+            if ! read -r _resp; then
+              echo "" >&2
+              error "standard input is not a terminal and -y was not specified"
+            fi
+          fi
+          case "${'$'}_resp" in
+            ""|[yY]|[yY][eE][sS])
+              return 0
+              ;;
+            *)
+              echo "pkg: ${_action_desc} aborted by user."
+              return 1
+              ;;
+          esac
         }
 
         apt_get() {
@@ -437,8 +476,48 @@ object ShellEnvironment {
           [ "${'$'}found" -eq 1 ] || error "apt downloaded no packages; run pkg update and retry"
         }
 
+        display_cache_summary() {
+          _operation="${'$'}1"
+          _pkg_count=0
+          _total_dl_kb=0
+          _total_inst_kb=0
+          _pkg_list=""
+          for _deb in "${'$'}CACHE"/*.deb; do
+            [ -f "${'$'}_deb" ] || continue
+            _p_name="${'$'}("${'$'}PREFIX/bin/dpkg-deb" -f "${'$'}_deb" Package 2>/dev/null || true)"
+            [ -n "${'$'}_p_name" ] || continue
+            _p_ver="${'$'}("${'$'}PREFIX/bin/dpkg-deb" -f "${'$'}_deb" Version 2>/dev/null || echo "unknown")"
+            _p_inst="${'$'}("${'$'}PREFIX/bin/dpkg-deb" -f "${'$'}_deb" Installed-Size 2>/dev/null || echo 0)"
+            case "${'$'}_p_inst" in
+              ''|*[!0-9]*) _p_inst=0 ;;
+            esac
+            _deb_bytes="${'$'}(wc -c < "${'$'}_deb" 2>/dev/null || echo 0)"
+            case "${'$'}_deb_bytes" in
+              ''|*[!0-9]*) _deb_bytes=0 ;;
+            esac
+            _deb_kb=${'$'}(( (_deb_bytes + 1023) / 1024 ))
+            _total_dl_kb=${'$'}(( _total_dl_kb + _deb_kb ))
+            _total_inst_kb=${'$'}(( _total_inst_kb + _p_inst ))
+            _pkg_count=${'$'}(( _pkg_count + 1 ))
+            _fmt_dl="${'$'}(format_kb "${'$'}_deb_kb")"
+            _fmt_inst="${'$'}(format_kb "${'$'}_p_inst")"
+            _pkg_list="${'$'}{_pkg_list}    • ${_p_name} ${_p_ver} (download: ${_fmt_dl}, installed: ~${_fmt_inst})\n"
+          done
+
+          _fmt_total_dl="${'$'}(format_kb "${'$'}_total_dl_kb")"
+          _fmt_total_inst="${'$'}(format_kb "${'$'}_total_inst_kb")"
+
+          printf '\nCodeC Package Manager — Transaction Summary:\n'
+          printf '  Operation:        %s\n' "${'$'}_operation"
+          printf '  Packages (%d):\n' "${'$'}_pkg_count"
+          printf '%b' "${'$'}_pkg_list"
+          printf '  Preflight:        PASSED (signed repo, verified ABI, prefix-confined, script allowlist)\n'
+          printf '  Total download:   %s\n' "${'$'}_fmt_total_dl"
+          printf '  Space change:     ~%s\n\n' "${'$'}_fmt_total_inst"
+        }
+
         install_specs() {
-          [ "${'$'}#" -gt 0 ] || error "usage: pkg install <name> [name ...]"
+          [ "${'$'}#" -gt 0 ] || error "usage: pkg install [-y] <name> [name ...]"
           before="${'$'}(free_kb)"
           if [ -n "${'$'}before" ] && [ "${'$'}before" -lt "${'$'}MIN_FREE_KB" ]; then
             error "insufficient disk space under ${'$'}PREFIX (${'$'}before KB free; need at least ${'$'}MIN_FREE_KB KB)"
@@ -446,13 +525,19 @@ object ShellEnvironment {
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' "${'$'}*" > "${'$'}marker"
           verify_release_signature
-          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker"; return "${'$'}?"; }
+          rm -f "${'$'}CACHE"/*.deb
+          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}?"; }
           preflight_cache
+          display_cache_summary "Install"
+          if ! confirm_transaction "installation"; then
+            rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
+            return 0
+          fi
           # The package set was validated before dpkg is allowed to run. The
           # repository policy rejects maintainer scripts, so no untrusted code
           # is executed as part of this first milestone.
           friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker"; return "${'$'}?"; }
-          rm -f "${'$'}marker"
+          rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
           echo "pkg: installed ${'$'}*"
         }
 
@@ -464,10 +549,25 @@ object ShellEnvironment {
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' upgrade > "${'$'}marker"
           verify_release_signature
-          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
+          rm -f "${'$'}CACHE"/*.deb
+          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || { rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}?"; }
+          found=0
+          for _deb in "${'$'}CACHE"/*.deb; do
+            if [ -f "${'$'}_deb" ]; then found=1; break; fi
+          done
+          if [ "${'$'}found" -eq 0 ]; then
+            rm -f "${'$'}marker"
+            echo "pkg: all packages are up to date."
+            return 0
+          fi
           preflight_cache
+          display_cache_summary "Upgrade"
+          if ! confirm_transaction "upgrade"; then
+            rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
+            return 0
+          fi
           friendly_apt apt_get --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
-          rm -f "${'$'}marker"
+          rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
           echo "pkg: upgraded CodeC packages"
         }
 
@@ -478,17 +578,56 @@ object ShellEnvironment {
           rm -f "${'$'}STATE/transaction.pending"
         }
 
-        command="${'$'}{1:-help}"
-        shift || true
-        if [ "${'$'}command" = help ] || [ "${'$'}command" = -h ] || [ "${'$'}command" = --help ]; then
+        YES_FLAG=0
+        VERBOSE_FLAG=0
+        COMMAND=""
+        TARGETS=""
+
+        while [ "${'$'}#" -gt 0 ]; do
+          case "${'$'}1" in
+            -y|--yes|--assume-yes)
+              YES_FLAG=1
+              shift
+              ;;
+            -v|--verbose)
+              VERBOSE_FLAG=1
+              shift
+              ;;
+            -h|--help)
+              if [ -z "${'$'}COMMAND" ]; then
+                COMMAND="help"
+              fi
+              shift
+              ;;
+            -*)
+              error "unknown option '${'$'}1' (try: pkg help)"
+              ;;
+            *)
+              if [ -z "${'$'}COMMAND" ]; then
+                COMMAND="${'$'}1"
+              else
+                TARGETS="${'$'}{TARGETS}${'$'}{TARGETS:+ }${'$'}1"
+              fi
+              shift
+              ;;
+          esac
+        done
+
+        COMMAND="${'$'}{COMMAND:-help}"
+
+        if [ "${'$'}COMMAND" = help ] || [ "${'$'}COMMAND" = -h ] || [ "${'$'}COMMAND" = --help ]; then
           cat <<'HELP'
 CodeC packages (CodeC repository only)
   pkg update                 refresh CodeC package indexes
   pkg search <name>          search the cached CodeC catalog
-  pkg install <name> ...     download, verify, and install packages
-  pkg upgrade                upgrade installed CodeC packages
-  pkg uninstall <name> ...   remove packages from this userland
+  pkg install [-y] <name>... download, verify, and install packages
+  pkg upgrade [-y]           upgrade installed CodeC packages
+  pkg uninstall [-y] <name>  remove packages from this userland
   pkg repair                 recover an interrupted transaction
+
+Flags:
+  -y, --yes                  automatic yes to confirmation prompts
+  -h, --help                 show this help message
 
 The Phase 3 development channel requires a CodeC apt/dpkg bootstrap. It never
 uses official com.termux packages or repositories.
@@ -496,7 +635,8 @@ HELP
           exit 0
         fi
         require_backend
-        case "${'$'}command" in
+        set -- ${'$'}TARGETS
+        case "${'$'}COMMAND" in
           update)
             acquire_lock
             verify_release_signature
@@ -515,34 +655,27 @@ HELP
             upgrade_packages
             ;;
           uninstall|remove|rm)
-            [ "${'$'}#" -gt 0 ] || error "usage: pkg uninstall <name>"
+            [ "${'$'}#" -gt 0 ] || error "usage: pkg uninstall [-y] <name> [name ...]"
             for name in "${'$'}@"; do
               case "${'$'}name" in
                 bash|busybox|apt|dpkg|codec-pkg) error "refusing to remove CodeC base package ${'$'}name" ;;
               esac
             done
             acquire_lock
+            printf '\nCodeC Package Manager — Transaction Summary:\n'
+            printf '  Operation:        Uninstall\n'
+            printf '  Packages to remove: %s\n\n' "${'$'}*"
+            if ! confirm_transaction "uninstallation"; then
+              return 0
+            fi
             friendly_apt apt_get --yes remove "${'$'}@"
+            echo "pkg: uninstalled ${'$'}*"
             ;;
           repair)
             acquire_lock
             repair
             ;;
-          help|-h|--help)
-            cat <<'HELP'
-CodeC packages (CodeC repository only)
-  pkg update                 refresh CodeC package indexes
-  pkg search <name>          search the cached CodeC catalog
-  pkg install <name> ...     download, verify, and install packages
-  pkg upgrade                upgrade installed CodeC packages
-  pkg uninstall <name> ...   remove packages from this userland
-  pkg repair                 recover an interrupted transaction
-
-The Phase 3 development channel requires a CodeC apt/dpkg bootstrap. It never
-uses official com.termux packages or repositories.
-HELP
-            ;;
-          *) error "unknown command '${'$'}command' (try: pkg help)" ;;
+          *) error "unknown command '${'$'}COMMAND' (try: pkg help)" ;;
         esac
     """.trimIndent() + "\n"
 

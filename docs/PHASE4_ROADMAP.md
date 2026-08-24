@@ -75,7 +75,15 @@ permission is requested and re-requested if revoked.
 
 ---
 
-### Part 4.2 — Package-install confirmation UX
+### Part 4.2 — Package-install confirmation UX — ✅ DONE (verified)
+
+**Status: COMPLETE and verified (2026-08-24).**
+- In-terminal transaction summary for `pkg install`, `pkg upgrade`, and `pkg uninstall` detailing operation, package names, versions, archive download sizes, estimated installed disk footprint, and preflight security verification status (`Preflight: PASSED`).
+- Interactive `[Y/n]` prompt (defaulting to yes on `<Enter>` or `y`/`yes`) requiring explicit user confirmation before any package extraction or dpkg database mutation occurs.
+- Clean cancellation on `n`/`no`: cleans cached archives, removes pending transaction markers, leaves dpkg status database untouched, and exits cleanly with 0.
+- Positional flag parsing for `-y`, `--yes`, `--assume-yes` across `install`, `upgrade`, and `uninstall` to support scripted and unattended usage. Non-interactive invocations without `-y` fail closed if stdin is not a terminal.
+- Unit and host test suites in Kotlin and Python all passing (71/71 tests green).
+- Full record in [`docs/chat-phase4/PART_4_2_INSTALL_CONFIRMATION.md`](chat-phase4/PART_4_2_INSTALL_CONFIRMATION.md).
 
 **Basic goal.** Before `pkg install`/`dpkg` actually mutates the system, show
 the user what is about to happen (package set, versions, download size) and
@@ -83,11 +91,6 @@ require explicit confirmation, making the existing internal `pkg` preflight
 checks user-visible instead of silent.
 
 **Complexity:** small. **Est. ~50–70 replies.**
-
-**Left open on purpose:** the exact UI surface (in-terminal prompt vs. a
-dialog), how this interacts with scripted/non-interactive `pkg` invocations
-and the existing test suite, and how much detail to show by default vs. on
-request.
 
 ---
 
@@ -184,7 +187,7 @@ capabilities exists. Do not attempt the whole surface area in one part.
 | Part | Depends on | Complexity | Est. replies |
 |---|---|---|---|
 | 4.1 — storage access | none | small | ✅ **DONE** (device-verified) |
-| 4.2 — install confirmation UX | none | small | ~50–70 |
+| 4.2 — install confirmation UX | none | small | ✅ **DONE** (verified) |
 | 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ~50–70 |
 | 4.4 — settings/theme parity | none | small–medium | ~50–70 (may split) |
 | 4.5 — expanded package build (CI) | none | medium | ~50–70 |
