@@ -13,6 +13,8 @@
     <string name="open_shell_here">Open shell here</string>
     <string name="terminal_settings">Terminal</string>
     <string name="terminal_font_size">Terminal Font Size</string>
+    <string name="terminal_font_family">Terminal Font Family</string>
+    <string name="terminal_theme">Terminal Theme</string>
     <string name="terminal_paste">Paste</string>
     <string name="terminal_copy">Copy</string>
     <string name="terminal_copied">Copied to clipboard</string>

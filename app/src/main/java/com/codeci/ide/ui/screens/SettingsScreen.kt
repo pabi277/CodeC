@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,12 +18,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +37,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
@@ -48,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -64,8 +73,10 @@ import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.DeviceDiagnostics
 import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.EditorThemeType
+import com.codeci.ide.ui.theme.TerminalThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
+import com.codeci.ide.ui.theme.getTerminalTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -84,6 +95,7 @@ fun SettingsScreen(
     
     val currentAppTheme by themeManager.appThemeFlow.collectAsState(initial = AppThemeMode.SYSTEM)
     val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.DRACULA)
+    val currentTerminalTheme by themeManager.terminalThemeFlow.collectAsState(initial = TerminalThemeType.DRACULA)
 
     val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 14f)
     val fontFamily by settingsManager.fontFamilyFlow.collectAsState(initial = "Monospace")
@@ -97,6 +109,7 @@ fun SettingsScreen(
     val optimizationLevel by settingsManager.optimizationLevelFlow.collectAsState(initial = "O0")
     val compilerBackend by settingsManager.compilerBackendFlow.collectAsState(initial = "auto")
     val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 14f)
+    val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "Monospace")
     val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -261,10 +274,124 @@ fun SettingsScreen(
                 onValueChange = { scope.launch { settingsManager.setTerminalFontSize(it) } },
                 valueLabel = "${terminalFontSize.toInt()} sp"
             )
+            SettingsDropdown(
+                title = stringResource(com.codeci.ide.R.string.terminal_font_family),
+                selectedOption = terminalFontFamily,
+                options = listOf("Monospace", "Courier", "Sans Serif", "Serif"),
+                onOptionSelected = { scope.launch { settingsManager.setTerminalFontFamily(it) } }
+            )
+            SettingsDropdown(
+                title = stringResource(com.codeci.ide.R.string.terminal_theme),
+                selectedOption = currentTerminalTheme.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " "),
+                options = TerminalThemeType.values().map { it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") },
+                onOptionSelected = { option ->
+                    val theme = TerminalThemeType.values().first { 
+                        it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") == option 
+                    }
+                    scope.launch { themeManager.setTerminalTheme(theme) }
+                }
+            )
+
+            Box(modifier = Modifier.padding(16.dp)) {
+                TerminalThemePreview(
+                    terminalTheme = currentTerminalTheme,
+                    fontFamily = terminalFontFamily,
+                    fontSize = terminalFontSize
+                )
+            }
+
             SettingsItem(
                 title = stringResource(com.codeci.ide.R.string.nav_terminal),
-                subtitle = "In-app VT/ANSI terminal with a real PTY. cc is the built-in TCC; pkg arrives in Phase 3."
+                subtitle = "In-app VT/ANSI terminal with a real PTY, built-in TCC compiler (cc), and signed CodeC package manager (pkg)."
             )
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // PACKAGE REPOSITORY & TRUST (Phase 4 Part 4.3)
+            SettingsSectionHeader("Package Repository & Trust")
+
+            var trustInfo by remember {
+                mutableStateOf(ShellEnvironment.getRepositoryTrustInfo(context.filesDir))
+            }
+            var checkingRepo by remember { mutableStateOf(false) }
+            var repoStatusMessage by remember { mutableStateOf<String?>(null) }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = if (trustInfo.keyringInstalled) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            contentDescription = "Trust Status",
+                            tint = if (trustInfo.keyringInstalled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (trustInfo.keyringInstalled) "CodeC Official Signed Channel" else "Keyring Missing",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (trustInfo.keyringInstalled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "• Channel: ${trustInfo.channelName}\n" +
+                            "• Repository: ${trustInfo.repositoryUrl}\n" +
+                            "• Trust Model: OpenPGP gpgv (Fail-Closed)\n" +
+                            "• Keyring: ${trustInfo.keyringName} (${if (trustInfo.keyringInstalled) "${trustInfo.keyringSize} bytes" else "missing"})\n" +
+                            "• Signing Subkey: ${trustInfo.signingFingerprint.take(8)}...${trustInfo.signingFingerprint.takeLast(8)}\n" +
+                            "• Userland: ${if (trustInfo.userlandInstalled) "Phase 3 (Installed, ${trustInfo.arch ?: "unknown"})" else "Not installed"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (repoStatusMessage != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = repoStatusMessage!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    checkingRepo = true
+                                    repoStatusMessage = "Checking repository signature…"
+                                    val isOnline = ShellEnvironment.checkRepositoryOnline()
+                                    trustInfo = ShellEnvironment.getRepositoryTrustInfo(context.filesDir)
+                                    repoStatusMessage = if (isOnline) {
+                                        "Repository online & InRelease reachable ✓"
+                                    } else {
+                                        "Repository unreachable (offline or network error)"
+                                    }
+                                    checkingRepo = false
+                                }
+                            },
+                            enabled = !checkingRepo
+                        ) {
+                            Text(if (checkingRepo) "CHECKING…" else "CHECK REPOSITORY")
+                        }
+                    }
+                }
+            }
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -305,6 +432,18 @@ fun SettingsScreen(
                         it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") == option 
                     }
                     scope.launch { themeManager.setEditorTheme(theme) }
+                }
+            )
+
+            SettingsDropdown(
+                title = "Terminal Theme",
+                selectedOption = currentTerminalTheme.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " "),
+                options = TerminalThemeType.values().map { it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") },
+                onOptionSelected = { option ->
+                    val theme = TerminalThemeType.values().first { 
+                        it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") == option 
+                    }
+                    scope.launch { themeManager.setTerminalTheme(theme) }
                 }
             )
             
@@ -748,6 +887,46 @@ fun ThemePreview(editorTheme: EditorThemeType, fontSize: Float) {
             text = previewText,
             fontFamily = FontFamily.Monospace,
             color = colors.text,
+            fontSize = fontSize.sp
+        )
+    }
+}
+
+@Composable
+fun TerminalThemePreview(terminalTheme: TerminalThemeType, fontFamily: String, fontSize: Float) {
+    val colors = getTerminalTheme(terminalTheme)
+    val font = when (fontFamily) {
+        "Courier" -> FontFamily.Monospace
+        "Sans Serif" -> FontFamily.SansSerif
+        "Serif" -> FontFamily.Serif
+        else -> FontFamily.Monospace
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(colors.background)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+            .padding(16.dp)
+    ) {
+        val previewText = buildAnnotatedString {
+            withStyle(SpanStyle(color = Color(0xFF50FA7B))) { append("codec@user") }
+            withStyle(SpanStyle(color = colors.foreground)) { append(":") }
+            withStyle(SpanStyle(color = Color(0xFF8BE9FD))) { append("~") }
+            withStyle(SpanStyle(color = colors.foreground)) { append("$ cc -o hello hello.c\n") }
+            withStyle(SpanStyle(color = Color(0xFF50FA7B))) { append("codec@user") }
+            withStyle(SpanStyle(color = colors.foreground)) { append(":") }
+            withStyle(SpanStyle(color = Color(0xFF8BE9FD))) { append("~") }
+            withStyle(SpanStyle(color = colors.foreground)) { append("$ ./hello\n") }
+            withStyle(SpanStyle(color = colors.foreground)) { append("Hello from CodeC terminal! ") }
+            withStyle(SpanStyle(color = colors.cursor)) { append("█") }
+        }
+
+        Text(
+            text = previewText,
+            fontFamily = font,
+            color = colors.foreground,
             fontSize = fontSize.sp
         )
     }

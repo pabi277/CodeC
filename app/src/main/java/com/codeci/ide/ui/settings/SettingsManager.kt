@@ -25,6 +25,7 @@ class SettingsManager(private val context: Context) {
         val OPTIMIZATION_LEVEL = stringPreferencesKey("optimization_level")
         val COMPILER_BACKEND = stringPreferencesKey("compiler_backend")
         val TERMINAL_FONT_SIZE = floatPreferencesKey("terminal_font_size")
+        val TERMINAL_FONT_FAMILY = stringPreferencesKey("terminal_font_family")
 
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val RECENT_FILES_CSV = stringPreferencesKey("recent_files_csv")
@@ -48,6 +49,9 @@ class SettingsManager(private val context: Context) {
     }
     val terminalFontSizeFlow: Flow<Float> = context.dataStore.data.map {
         it[TERMINAL_FONT_SIZE] ?: 14f
+    }
+    val terminalFontFamilyFlow: Flow<String> = context.dataStore.data.map {
+        it[TERMINAL_FONT_FAMILY] ?: "Monospace"
     }
 
     val accentColorFlow: Flow<String> = context.dataStore.data.map { it[ACCENT_COLOR] ?: "#FF6200EE" }
@@ -97,6 +101,7 @@ class SettingsManager(private val context: Context) {
     suspend fun setTerminalFontSize(size: Float) {
         context.dataStore.edit { it[TERMINAL_FONT_SIZE] = size.coerceIn(8f, 32f) }
     }
+    suspend fun setTerminalFontFamily(family: String) { context.dataStore.edit { it[TERMINAL_FONT_FAMILY] = family } }
 
     suspend fun setAccentColor(colorHex: String) { context.dataStore.edit { it[ACCENT_COLOR] = colorHex } }
 }

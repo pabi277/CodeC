@@ -348,7 +348,13 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
 
 - **Part 4.1 — Shared-storage access (`~/storage`)** ✅ **DONE (device-verified 2026-08-24).**
   Detailed record in [`docs/chat-phase4/PART_4_1_STORAGE.md`](chat-phase4/PART_4_1_STORAGE.md).
-- **Parts 4.2–4.7** remain open for pickup.
+- **Part 4.2 — Package-install confirmation UX** ✅ **DONE (verified 2026-08-24).**
+  Detailed record in [`docs/chat-phase4/PART_4_2_INSTALL_CONFIRMATION.md`](chat-phase4/PART_4_2_INSTALL_CONFIRMATION.md).
+- **Part 4.3 — Trust/channel indicator UX** ✅ **DONE (verified 2026-08-24).**
+  Detailed record in [`docs/chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md`](chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md).
+- **Part 4.4 — Terminal/editor settings parity** ✅ **DONE (device-verified 2026-08-24).**
+  Detailed record in [`docs/chat-phase4/PART_4_4_SETTINGS_PARITY.md`](chat-phase4/PART_4_4_SETTINGS_PARITY.md).
+- **Parts 4.5–4.7** remain open for pickup.
 
 ---
 
@@ -361,4 +367,7 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
 | Phase 3 Part C — clean-device acceptance | A ✅, B ✅ | ✅ **DONE** — every checklist item passed on real arm64 devices |
 | Phase 3 Part D — M3 signing | A ✅, B ✅, C ✅ | ✅ **DONE** — implementation, signed publish, rebuild, and final clean-device gate all passed |
 | Phase 4 Part 4.1 — shared-storage access | none | ✅ **DONE** — `codec-setup-storage`, OSC 1337, device-verified |
-| Phase 4 Parts 4.2–4.7 | — | Planning / ready to pick up |
+| Phase 4 Part 4.2 — install confirmation UX | none | ✅ **DONE** — transaction summary, `[Y/n]` prompt, `-y` flag |
+| Phase 4 Part 4.3 — trust/channel indicator UX | none | ✅ **DONE** — Settings trust card, `pkg status`, repo probe |
+| Phase 4 Part 4.4 — settings/theme parity | none | ✅ **DONE** — font family, themes, settings UI, live preview |
+| Phase 4 Parts 4.5–4.7 | — | Planning / ready to pick up |

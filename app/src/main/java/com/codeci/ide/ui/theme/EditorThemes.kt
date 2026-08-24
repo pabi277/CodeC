@@ -61,3 +61,67 @@ fun getEditorTheme(type: EditorThemeType): EditorThemeColors {
         EditorThemeType.GITHUB_DARK -> GitHubDarkTheme
     }
 }
+
+enum class TerminalThemeType {
+    DRACULA, MONOKAI, GITHUB_DARK, CLASSIC_DARK
+}
+
+data class TerminalThemeColors(
+    val background: Color,
+    val foreground: Color,
+    val cursor: Color,
+    val selection: Color = Color(0x6680CBC4),
+    val topBarBackground: Color = Color(0xFF1E1E1E),
+    val backgroundRgb: Int = 0x121212,
+    val foregroundRgb: Int = 0xE5E5E5
+)
+
+val ClassicDarkTerminalTheme = TerminalThemeColors(
+    background = Color(0xFF121212),
+    foreground = Color(0xFFE5E5E5),
+    cursor = Color(0xFF55FF55),
+    selection = Color(0x6680CBC4),
+    topBarBackground = Color(0xFF1E1E1E),
+    backgroundRgb = 0x121212,
+    foregroundRgb = 0xE5E5E5
+)
+
+val DraculaTerminalTheme = TerminalThemeColors(
+    background = Color(0xFF282A36),
+    foreground = Color(0xFFF8F8F2),
+    cursor = Color(0xFF50FA7B),
+    selection = Color(0x6644475A),
+    topBarBackground = Color(0xFF21222C),
+    backgroundRgb = 0x282A36,
+    foregroundRgb = 0xF8F8F2
+)
+
+val MonokaiTerminalTheme = TerminalThemeColors(
+    background = Color(0xFF272822),
+    foreground = Color(0xFFF8F8F2),
+    cursor = Color(0xFFA6E22E),
+    selection = Color(0x6649483E),
+    topBarBackground = Color(0xFF1E1F1C),
+    backgroundRgb = 0x272822,
+    foregroundRgb = 0xF8F8F2
+)
+
+val GitHubDarkTerminalTheme = TerminalThemeColors(
+    background = Color(0xFF24292E),
+    foreground = Color(0xFFE1E4E8),
+    cursor = Color(0xFF79B8FF),
+    selection = Color(0x663B4048),
+    topBarBackground = Color(0xFF1F2428),
+    backgroundRgb = 0x24292E,
+    foregroundRgb = 0xE1E4E8
+)
+
+fun getTerminalTheme(type: TerminalThemeType): TerminalThemeColors {
+    return when (type) {
+        TerminalThemeType.DRACULA -> DraculaTerminalTheme
+        TerminalThemeType.MONOKAI -> MonokaiTerminalTheme
+        TerminalThemeType.GITHUB_DARK -> GitHubDarkTerminalTheme
+        TerminalThemeType.CLASSIC_DARK -> ClassicDarkTerminalTheme
+    }
+}
+

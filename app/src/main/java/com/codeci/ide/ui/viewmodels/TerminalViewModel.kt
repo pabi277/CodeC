@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.settings.SettingsManager
+import com.codeci.ide.ui.theme.TerminalThemeType
+import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.terminal.PreparedShell
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.TerminalSession
@@ -32,6 +34,7 @@ import kotlinx.coroutines.withContext
 class TerminalViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settings = SettingsManager(application)
+    private val themeManager = ThemeManager(application)
     private val bootstrap = ShellBootstrap(application)
     private val userland = UserlandInstaller(application)
     private val session = TerminalSession()
@@ -43,6 +46,12 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     val fontSizeSp: StateFlow<Float> = settings.terminalFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, 14f)
+
+    val fontFamily: StateFlow<String> = settings.terminalFontFamilyFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "Monospace")
+
+    val terminalTheme: StateFlow<TerminalThemeType> = themeManager.terminalThemeFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TerminalThemeType.DRACULA)
 
     private val _ctrlLatched = MutableStateFlow(false)
     val ctrlLatched: StateFlow<Boolean> = _ctrlLatched.asStateFlow()
@@ -175,6 +184,14 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     fun setFontSize(size: Float) {
         viewModelScope.launch { settings.setTerminalFontSize(size) }
+    }
+
+    fun setFontFamily(family: String) {
+        viewModelScope.launch { settings.setTerminalFontFamily(family) }
+    }
+
+    fun setTheme(theme: TerminalThemeType) {
+        viewModelScope.launch { themeManager.setTerminalTheme(theme) }
     }
 
     override fun onCleared() {

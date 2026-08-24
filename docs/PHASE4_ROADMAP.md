@@ -75,7 +75,15 @@ permission is requested and re-requested if revoked.
 
 ---
 
-### Part 4.2 — Package-install confirmation UX
+### Part 4.2 — Package-install confirmation UX — ✅ DONE (verified)
+
+**Status: COMPLETE and verified (2026-08-24).**
+- In-terminal transaction summary for `pkg install`, `pkg upgrade`, and `pkg uninstall` detailing operation, package names, versions, archive download sizes, estimated installed disk footprint, and preflight security verification status (`Preflight: PASSED`).
+- Interactive `[Y/n]` prompt (defaulting to yes on `<Enter>` or `y`/`yes`) requiring explicit user confirmation before any package extraction or dpkg database mutation occurs.
+- Clean cancellation on `n`/`no`: cleans cached archives, removes pending transaction markers, leaves dpkg status database untouched, and exits cleanly with 0.
+- Positional flag parsing for `-y`, `--yes`, `--assume-yes` across `install`, `upgrade`, and `uninstall` to support scripted and unattended usage. Non-interactive invocations without `-y` fail closed if stdin is not a terminal.
+- Unit and host test suites in Kotlin and Python all passing (71/71 tests green).
+- Full record in [`docs/chat-phase4/PART_4_2_INSTALL_CONFIRMATION.md`](chat-phase4/PART_4_2_INSTALL_CONFIRMATION.md).
 
 **Basic goal.** Before `pkg install`/`dpkg` actually mutates the system, show
 the user what is about to happen (package set, versions, download size) and
@@ -84,43 +92,41 @@ checks user-visible instead of silent.
 
 **Complexity:** small. **Est. ~50–70 replies.**
 
-**Left open on purpose:** the exact UI surface (in-terminal prompt vs. a
-dialog), how this interacts with scripted/non-interactive `pkg` invocations
-and the existing test suite, and how much detail to show by default vs. on
-request.
-
 ---
 
-### Part 4.3 — Trust/channel indicator UX
+### Part 4.3 — Trust/channel indicator UX — ✅ DONE (verified)
+
+**Status: COMPLETE and verified (2026-08-24).**
+- "Package Repository & Trust" section in Settings with verified trust badge, development channel (`stable/main`), repository URL (`https://pabi277.github.io/CodeC/dev`), keyring metadata (`codec-archive-keyring-v1.gpg`), signing subkey fingerprint (`328500868CE9B0F74B62CEFC1D7D52F6F8135015`), and "CHECK REPOSITORY" connectivity probe.
+- Terminal CLI `pkg status` (aliases `pkg trust`, `pkg channel`) displaying full repository, channel, keyring, and signing subkey status.
+- Friendly `friendly_apt` hint on unindexed package searches (`pkg: package not found; run 'pkg update' first to refresh the package catalog.`).
+- Full record in [`docs/chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md`](chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md).
 
 **Basic goal.** Let a user tell at a glance, in Settings and/or the terminal,
 whether they are talking to the signed CodeC repository and which channel/
 release they are on, instead of that information being visible only via raw
 `pkg`/`apt` output.
 
-**Complexity:** small. **Est. ~50–70 replies.** Mostly UI plus reading
-already-published repository/keyring metadata; no new backend trust model is
-implied — Part D's signing design already exists and should not be reopened.
-
-**Left open on purpose:** exact wording/placement, and whether "channel" needs
-to become a first-class concept beyond today's single development channel.
+**Complexity:** small. **Est. ~50–70 replies.**
 
 ---
 
-### Part 4.4 — Terminal/editor settings parity
+### Part 4.4 — Terminal/editor settings parity — ✅ DONE (device-verified)
+
+**Status: COMPLETE and device-verified (2026-08-24).**
+- Terminal theme palette parity across all 4 CodeC themes (`Dracula`, `Monokai`, `GitHub Dark`, `Classic Dark`), syncing canvas background, foreground text, cursor, selection, and container colors.
+- Custom Terminal font family selection (`Monospace`, `Courier`, `Sans Serif`, `Serif`) with dynamic canvas metrics recomputation (cell width, font spacing, ascent).
+- Unified `SettingsScreen` controls under Terminal Settings and Appearance with a live `TerminalThemePreview` card reflecting active font family, font size, and terminal theme colors.
+- Reactive DataStore preference flows (`terminalThemeFlow`, `terminalFontFamilyFlow`, `terminalFontSizeFlow`) updating emulator and settings in real time.
+- Unit test suite (`TerminalThemeTest.kt`) and device verification all passing.
+- Full record in [`docs/chat-phase4/PART_4_4_SETTINGS_PARITY.md`](chat-phase4/PART_4_4_SETTINGS_PARITY.md).
 
 **Basic goal.** Close gaps between the terminal's theme/font/environment
 options and the editor's existing `SettingsScreen`/`ThemeManager` so the two
 feel like one coherent product rather than two separately configured
 surfaces.
 
-**Complexity:** small–medium. **Est. ~50–70 replies** — start this part with a
-short inventory of the actual current gaps (do not assume a list here); if
-that inventory reveals more than fits the budget, split into `4.4a`/`4.4b`
-at that point.
-
-**Left open on purpose:** which specific settings need to move/merge, and
-whether terminal-specific options (e.g. PTY-related) stay separate by design.
+**Complexity:** small–medium. **Est. ~50–70 replies.**
 
 ---
 
@@ -184,9 +190,9 @@ capabilities exists. Do not attempt the whole surface area in one part.
 | Part | Depends on | Complexity | Est. replies |
 |---|---|---|---|
 | 4.1 — storage access | none | small | ✅ **DONE** (device-verified) |
-| 4.2 — install confirmation UX | none | small | ~50–70 |
-| 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ~50–70 |
-| 4.4 — settings/theme parity | none | small–medium | ~50–70 (may split) |
+| 4.2 — install confirmation UX | none | small | ✅ **DONE** (verified) |
+| 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ✅ **DONE** (verified) |
+| 4.4 — settings/theme parity | none | small–medium | ✅ **DONE** (device-verified) |
 | 4.5 — expanded package build (CI) | none | medium | ~50–70 |
 | 4.6 — expanded package publish + device accept | 4.5 | medium | ~50–70 |
 | 4.7 — Android integration foundation slice | none | large (epic seed) | ~50–70 (first slice only) |
