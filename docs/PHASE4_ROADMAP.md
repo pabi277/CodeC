@@ -94,19 +94,20 @@ checks user-visible instead of silent.
 
 ---
 
-### Part 4.3 — Trust/channel indicator UX
+### Part 4.3 — Trust/channel indicator UX — ✅ DONE (verified)
+
+**Status: COMPLETE and verified (2026-08-24).**
+- "Package Repository & Trust" section in Settings with verified trust badge, development channel (`stable/main`), repository URL (`https://pabi277.github.io/CodeC/dev`), keyring metadata (`codec-archive-keyring-v1.gpg`), signing subkey fingerprint (`328500868CE9B0F74B62CEFC1D7D52F6F8135015`), and "CHECK REPOSITORY" connectivity probe.
+- Terminal CLI `pkg status` (aliases `pkg trust`, `pkg channel`) displaying full repository, channel, keyring, and signing subkey status.
+- Friendly `friendly_apt` hint on unindexed package searches (`pkg: package not found; run 'pkg update' first to refresh the package catalog.`).
+- Full record in [`docs/chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md`](chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md).
 
 **Basic goal.** Let a user tell at a glance, in Settings and/or the terminal,
 whether they are talking to the signed CodeC repository and which channel/
 release they are on, instead of that information being visible only via raw
 `pkg`/`apt` output.
 
-**Complexity:** small. **Est. ~50–70 replies.** Mostly UI plus reading
-already-published repository/keyring metadata; no new backend trust model is
-implied — Part D's signing design already exists and should not be reopened.
-
-**Left open on purpose:** exact wording/placement, and whether "channel" needs
-to become a first-class concept beyond today's single development channel.
+**Complexity:** small. **Est. ~50–70 replies.**
 
 ---
 
@@ -188,7 +189,7 @@ capabilities exists. Do not attempt the whole surface area in one part.
 |---|---|---|---|
 | 4.1 — storage access | none | small | ✅ **DONE** (device-verified) |
 | 4.2 — install confirmation UX | none | small | ✅ **DONE** (verified) |
-| 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ~50–70 |
+| 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ✅ **DONE** (verified) |
 | 4.4 — settings/theme parity | none | small–medium | ~50–70 (may split) |
 | 4.5 — expanded package build (CI) | none | medium | ~50–70 |
 | 4.6 — expanded package publish + device accept | 4.5 | medium | ~50–70 |

@@ -569,6 +569,46 @@ class ShellEnvironmentTest {
             assertTrue(outAbort.contains("pkg: installation aborted by user."))
             assertFalse(outAbort.contains("pkg: installed nano"))
             assertFalse(File(prefix, "var/lib/codec-pkg/transaction.pending").exists())
+
+            // 3) Test pkg status command output
+            val procStatus = ProcessBuilder("/bin/sh", pkg.absolutePath, "status")
+                .redirectErrorStream(true)
+                .apply {
+                    environment()["PREFIX"] = prefix.absolutePath
+                    environment()["PATH"] = "${bin.absolutePath}:/bin:/usr/bin"
+                }
+                .start()
+            val completedStatus = procStatus.waitFor(10, TimeUnit.SECONDS)
+            if (!completedStatus) procStatus.destroyForcibly()
+            val outStatus = procStatus.inputStream.bufferedReader().readText()
+            assertTrue("pkg status timed out: $outStatus", completedStatus)
+            assertEquals(outStatus, 0, procStatus.exitValue())
+            assertTrue(outStatus.contains("CodeC Package Repository & Trust Status:"))
+            assertTrue(outStatus.contains("328500868CE9B0F74B62CEFC1D7D52F6F8135015"))
+            assertTrue(outStatus.contains("https://pabi277.github.io/CodeC/dev"))
+            assertTrue(outStatus.contains("Installed & Active"))
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `getRepositoryTrustInfo inspects active keyring and signing metadata`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-trust-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val keyrings = File(prefix, "etc/apt/keyrings").apply { mkdirs() }
+            val keyFile = File(keyrings, ShellEnvironment.PACKAGE_REPOSITORY_KEYRING)
+            keyFile.writeText("sample-keyring-data")
+
+            val info = ShellEnvironment.getRepositoryTrustInfo(base)
+            assertEquals("https://pabi277.github.io/CodeC/dev", info.repositoryUrl)
+            assertEquals("stable", info.suite)
+            assertEquals("main", info.component)
+            assertEquals("codec-archive-keyring-v1.gpg", info.keyringName)
+            assertEquals("328500868CE9B0F74B62CEFC1D7D52F6F8135015", info.signingFingerprint)
+            assertTrue(info.keyringInstalled)
+            assertTrue(info.keyringSize > 0)
         } finally {
             base.deleteRecursively()
         }

@@ -434,4 +434,7 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      In-terminal transaction summaries (operation, packages, versions, download size,
      installed space change, preflight security status) with interactive `[Y/n]` confirmation,
      `-y`/`--yes` bypass, clean abort on `n` with zero mutation, and core package protection.
-   - Parts 4.3–4.7 remaining.
+   - **Part 4.3 — Trust/channel indicator UX** ✅ **DONE (verified 2026-08-24).**
+     Settings "Package Repository & Trust" card (verified trust badge, channel, keyring metadata,
+     signing subkey fingerprint, "CHECK REPOSITORY" probe) and terminal `pkg status` / `pkg trust` CLI.
+   - Parts 4.4–4.7 remaining.

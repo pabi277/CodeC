@@ -33,6 +33,8 @@ def get_pkg_script() -> str:
     script = script.replace("${PACKAGE_REPOSITORY_SUITE}", "stable")
     script = script.replace("${PACKAGE_REPOSITORY_COMPONENT}", "main")
     script = script.replace("${PACKAGE_REPOSITORY_KEYRING}", "codec-archive-keyring-v1.gpg")
+    script = script.replace("${SIGNING_SUBKEY_FINGERPRINT}", "328500868CE9B0F74B62CEFC1D7D52F6F8135015")
+    script = script.replace("${SIGNING_PRIMARY_FINGERPRINT}", "3185B4D219C5EF30B263F5E50A458891ED0FB8D3")
     script = script.replace("${'$'}", "$")
     return script
 
@@ -488,6 +490,36 @@ exit 0
         res_opt = self._run_pkg("--invalid-flag")
         self.assertNotEqual(res_opt.returncode, 0)
         self.assertIn("unknown option '--invalid-flag'", res_opt.stderr)
+
+    def test_pkg_status_trust_indicator_command(self) -> None:
+        # Test pkg status
+        res_status = self._run_pkg("status")
+        self.assertEqual(res_status.returncode, 0, f"pkg status failed: {res_status.stderr}")
+        self.assertIn("CodeC Package Repository & Trust Status:", res_status.stdout)
+        self.assertIn("https://pabi277.github.io/CodeC/dev", res_status.stdout)
+        self.assertIn("stable/main", res_status.stdout)
+        self.assertIn("328500868CE9B0F74B62CEFC1D7D52F6F8135015", res_status.stdout)
+        self.assertIn("3185B4D219C5EF30B263F5E50A458891ED0FB8D3", res_status.stdout)
+        self.assertIn("Installed & Active", res_status.stdout)
+
+        # Test aliases pkg trust and pkg channel
+        res_trust = self._run_pkg("trust")
+        self.assertEqual(res_trust.returncode, 0)
+        self.assertIn("Trust Model", res_trust.stdout)
+
+        res_channel = self._run_pkg("channel")
+        self.assertEqual(res_channel.returncode, 0)
+        self.assertIn("Channel:", res_channel.stdout)
+
+    def test_pkg_friendly_hint_on_unindexed_package(self) -> None:
+        # Mock apt-get failing with Unable to locate package
+        self._create_mock_tool("apt-get", """#!/bin/sh
+echo "E: Unable to locate package foobar" >&2
+exit 100
+""")
+        res = self._run_pkg("install", "-y", "foobar")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("package not found; run 'pkg update' first to refresh the package catalog.", res.stderr)
 
 
 if __name__ == "__main__":

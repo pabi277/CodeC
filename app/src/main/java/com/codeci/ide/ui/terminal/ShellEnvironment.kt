@@ -10,6 +10,10 @@ import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.FileManager
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Phase-1 Mini-Termux userland that lives under the app-private prefix
@@ -21,13 +25,67 @@ import java.io.File
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "20"
+    const val BOOTSTRAP_VERSION = "21"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
     const val PACKAGE_REPOSITORY_SUITE = "stable"
     const val PACKAGE_REPOSITORY_COMPONENT = "main"
     const val PACKAGE_REPOSITORY_KEYRING = "codec-archive-keyring-v1.gpg"
+    const val SIGNING_SUBKEY_FINGERPRINT = "328500868CE9B0F74B62CEFC1D7D52F6F8135015"
+    const val SIGNING_PRIMARY_FINGERPRINT = "3185B4D219C5EF30B263F5E50A458891ED0FB8D3"
+
+    data class RepositoryTrustInfo(
+        val channelName: String,
+        val repositoryUrl: String,
+        val suite: String,
+        val component: String,
+        val keyringName: String,
+        val signingFingerprint: String,
+        val keyringFile: File,
+        val keyringInstalled: Boolean,
+        val keyringSize: Long,
+        val userlandInstalled: Boolean,
+        val arch: String?
+    )
+
+    fun getRepositoryTrustInfo(filesDir: File): RepositoryTrustInfo {
+        val prefix = prefixDir(filesDir)
+        val keyring = File(prefix, "etc/apt/keyrings/$PACKAGE_REPOSITORY_KEYRING")
+        val isUserland = hasRealUserland(prefix)
+        val arch = UserlandManifest.archNameForAbis(Build.SUPPORTED_ABIS)
+        return RepositoryTrustInfo(
+            channelName = "Development ($PACKAGE_REPOSITORY_SUITE/$PACKAGE_REPOSITORY_COMPONENT)",
+            repositoryUrl = PACKAGE_REPOSITORY_URL,
+            suite = PACKAGE_REPOSITORY_SUITE,
+            component = PACKAGE_REPOSITORY_COMPONENT,
+            keyringName = PACKAGE_REPOSITORY_KEYRING,
+            signingFingerprint = SIGNING_SUBKEY_FINGERPRINT,
+            keyringFile = keyring,
+            keyringInstalled = keyring.exists() && keyring.length() > 0,
+            keyringSize = if (keyring.exists()) keyring.length() else 0L,
+            userlandInstalled = isUserland,
+            arch = arch
+        )
+    }
+
+    suspend fun checkRepositoryOnline(
+        url: String = PACKAGE_REPOSITORY_URL,
+        suite: String = PACKAGE_REPOSITORY_SUITE
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val inreleaseUrl = "$url/dists/$suite/InRelease"
+            val conn = (URL(inreleaseUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "HEAD"
+                connectTimeout = 5000
+                readTimeout = 5000
+                instanceFollowRedirects = true
+            }
+            conn.responseCode in 200..399
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     fun prefixDir(filesDir: File): File = File(filesDir, PREFIX_NAME)
     fun homeDir(filesDir: File): File = File(filesDir, HOME_NAME)
@@ -333,6 +391,8 @@ object ShellEnvironment {
                 echo "pkg: offline or repository unreachable; installed packages remain usable." >&2 ;;
               *"Hash Sum mismatch"*|*"checksum"*|*"NO_PUBKEY"*|*"not signed"*)
                 echo "pkg: repository integrity check failed; no package was installed." >&2 ;;
+              *"Unable to locate package"*|*"Cannot find package"*)
+                echo "pkg: package not found; run 'pkg update' first to refresh the package catalog." >&2 ;;
               *"No space left"*|*"not enough free space"*)
                 echo "pkg: insufficient disk space; free space under ${'$'}PREFIX and retry." >&2 ;;
               *) echo "pkg: apt failed; check the command above and retry." >&2 ;;
@@ -526,7 +586,7 @@ object ShellEnvironment {
           printf '%s\n' "${'$'}*" > "${'$'}marker"
           verify_release_signature
           rm -f "${'$'}CACHE"/*.deb
-          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}?"; }
+          friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { _err="${'$'}?"; rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}_err"; }
           preflight_cache
           display_cache_summary "Install"
           if ! confirm_transaction "installation"; then
@@ -536,7 +596,7 @@ object ShellEnvironment {
           # The package set was validated before dpkg is allowed to run. The
           # repository policy rejects maintainer scripts, so no untrusted code
           # is executed as part of this first milestone.
-          friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || { rm -f "${'$'}marker"; return "${'$'}?"; }
+          friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || { _err="${'$'}?"; rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}_err"; }
           rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
           echo "pkg: installed ${'$'}*"
         }
@@ -550,7 +610,7 @@ object ShellEnvironment {
           printf '%s\n' upgrade > "${'$'}marker"
           verify_release_signature
           rm -f "${'$'}CACHE"/*.deb
-          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || { rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}?"; }
+          friendly_apt apt_get --download-only --yes --no-install-recommends upgrade || { _err="${'$'}?"; rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}_err"; }
           found=0
           for _deb in "${'$'}CACHE"/*.deb; do
             if [ -f "${'$'}_deb" ]; then found=1; break; fi
@@ -566,7 +626,7 @@ object ShellEnvironment {
             rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
             return 0
           fi
-          friendly_apt apt_get --yes --no-install-recommends upgrade || { rm -f "${'$'}marker"; return "${'$'}?"; }
+          friendly_apt apt_get --yes --no-install-recommends upgrade || { _err="${'$'}?"; rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}_err"; }
           rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
           echo "pkg: upgraded CodeC packages"
         }
@@ -576,6 +636,32 @@ object ShellEnvironment {
           echo "pkg: repairing the recorded transaction: ${'$'}(cat "${'$'}STATE/transaction.pending")"
           friendly_apt apt_get --yes --no-install-recommends -f install
           rm -f "${'$'}STATE/transaction.pending"
+        }
+
+        show_status() {
+          printf 'CodeC Package Repository & Trust Status:\n'
+          printf '  Channel:             %s/%s (Development)\n' "${'$'}SUITE" "${'$'}COMPONENT"
+          printf '  Repository URL:      %s\n' "${'$'}REPOSITORY"
+          printf '  Keyring File:        %s\n' "${'$'}KEYRING"
+          if [ -s "${'$'}KEYRING" ]; then
+            _kbytes="${'$'}(wc -c < "${'$'}KEYRING" 2>/dev/null || echo 0)"
+            printf '  Keyring Status:      Installed & Active (%d bytes)\n' "${'$'}_kbytes"
+          else
+            printf '  Keyring Status:      MISSING\n'
+          fi
+          printf '  Trust Model:         OpenPGP gpgv (Fail-Closed, signed-by=)\n'
+          printf '  Signing Subkey:      %s\n' "${SIGNING_SUBKEY_FINGERPRINT}"
+          printf '  Primary Fingerprint: %s\n' "${SIGNING_PRIMARY_FINGERPRINT}"
+          _arch="${'$'}("${'$'}PREFIX/bin/dpkg" --print-architecture 2>/dev/null || echo "unknown")"
+          printf '  Architecture:        %s\n' "${'$'}_arch"
+          printf '  Prefix:              %s\n' "${'$'}PREFIX"
+          if [ -f "${'$'}STATE/Release" ]; then
+            _origin="${'$'}(grep '^Origin:' "${'$'}STATE/Release" 2>/dev/null || echo "Origin: CodeC")"
+            _suite="${'$'}(grep '^Suite:' "${'$'}STATE/Release" 2>/dev/null || echo "Suite: ${'$'}SUITE")"
+            printf '  Cached Index:        %s, %s\n' "${'$'}_origin" "${'$'}_suite"
+          else
+            printf '  Cached Index:        Not cached yet (run: pkg update)\n'
+          fi
         }
 
         YES_FLAG=0
@@ -623,6 +709,7 @@ CodeC packages (CodeC repository only)
   pkg install [-y] <name>... download, verify, and install packages
   pkg upgrade [-y]           upgrade installed CodeC packages
   pkg uninstall [-y] <name>  remove packages from this userland
+  pkg status                 show repository channel and trust info
   pkg repair                 recover an interrupted transaction
 
 Flags:
@@ -653,6 +740,9 @@ HELP
           upgrade)
             acquire_lock
             upgrade_packages
+            ;;
+          status|trust|channel)
+            show_status
             ;;
           uninstall|remove|rm)
             [ "${'$'}#" -gt 0 ] || error "usage: pkg uninstall [-y] <name> [name ...]"
