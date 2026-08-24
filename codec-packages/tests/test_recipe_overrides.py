@@ -233,6 +233,29 @@ class RecipeOverrideTest(unittest.TestCase):
             self.assertIn("pinned-revision drift", result.stderr)
             self.assertIn("git-svn", result.stderr)
 
+    def test_symlink_override_patches_termux_step_massage(self) -> None:
+        """termux_step_massage.sh must be patched to convert absolute symlinks in
+        $TERMUX_PREFIX into relative symlinks."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+            scripts_build = tree / "scripts" / "build"
+            scripts_build.mkdir(parents=True)
+            massage = scripts_build / "termux_step_massage.sh"
+            massage.write_text(
+                "termux_step_massage() {\n"
+                "\techo 'hello'\n"
+                "\tfind . -type d -empty -delete\n"
+                "}\n"
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            text = massage.read_text()
+            self.assertIn("CodeC override: convert absolute symlinks", text)
+            self.assertIn("os.path.relpath", text)
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -214,3 +214,54 @@ if [[ -d "$GIT_DIR" ]]; then
 else
   echo "recipe-overrides: git recipe not found; skipping tcl/tk overrides" >&2
 fi
+
+# Convert absolute symlinks in $TERMUX_PREFIX to relative symlinks in termux_step_massage.sh.
+# Some upstream recipes (e.g. libbz2 / bzip2) install absolute symlinks such as
+# $TERMUX_PREFIX/bin/bzcmp -> $TERMUX_PREFIX/bin/bzdiff. CodeC's package validator
+# (repository_lib.py) strictly requires relative symlink targets within the CodeC
+# prefix. Convert all absolute symlinks pointing into $TERMUX_PREFIX to relative ones.
+MASSAGE_SCRIPT="$TREE/scripts/build/termux_step_massage.sh"
+if [[ -f "$MASSAGE_SCRIPT" ]]; then
+  python3 - "$MASSAGE_SCRIPT" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+target_marker = "find . -type d -empty -delete"
+symlink_fix_block = """
+	# CodeC override: convert absolute symlinks in $TERMUX_PREFIX to relative symlinks
+	while IFS= read -r -d '' file; do
+		local _link_target
+		_link_target=$(readlink "$file")
+		if [[ "$_link_target" == "$TERMUX_PREFIX"* ]]; then
+			local _rel_file="${file#./}"
+			local _rel_dir
+			_rel_dir=$(dirname "$_rel_file")
+			local _abs_dir="$TERMUX_PREFIX/$_rel_dir"
+			local _rel_target
+			_rel_target=$(python3 -c "import os.path, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$_link_target" "$_abs_dir")
+			rm -f "$file"
+			ln -s "$_rel_target" "$file"
+			echo "INFO: Converted absolute symlink $file -> $_link_target to relative $_rel_target"
+		fi
+	done < <(find . -type l -print0)
+"""
+
+if "CodeC override: convert absolute symlinks" not in text:
+    idx = text.rfind(target_marker)
+    if idx == -1:
+        print("recipe-overrides: cannot locate find marker in termux_step_massage.sh", file=sys.stderr)
+        sys.exit(1)
+    new_text = text[:idx] + symlink_fix_block + "\n\t" + text[idx:]
+    path.write_text(new_text)
+    print("recipe-overrides: patched termux_step_massage.sh to convert absolute symlinks to relative")
+else:
+    print("recipe-overrides: termux_step_massage.sh already patched for symlinks")
+PY
+  grep -q "CodeC override: convert absolute symlinks" "$MASSAGE_SCRIPT"
+else
+  echo "recipe-overrides: termux_step_massage.sh not found; skipping absolute symlink fix" >&2
+fi
+
