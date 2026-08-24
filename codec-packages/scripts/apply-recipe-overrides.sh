@@ -144,3 +144,73 @@ else
   echo "recipe-overrides: apt recipe not found; skipping sources.list rewrite" >&2
   exit 1
 fi
+
+# The official bash recipe lists termux-tools — which pulls in the
+# termux-am/termux-core chain of Android activity-manager wrappers that
+# CodeC intentionally never ships — as a runtime dependency. CodeC needs
+# bash with its remaining dependencies (libandroid-support, libiconv,
+# readline) only. The Phase 3 bootstrap build applied this removal in
+# build-bootstrap.sh; the repository build (which builds bash as a
+# dependency of the round 2 libtool package) must share it, so the
+# override now lives here. Idempotent: build-bootstrap.sh's original
+# block remains as a double-safety assertion and becomes a no-op.
+BASH_RECIPE="$TREE/packages/bash/build.sh"
+if [[ -f "$BASH_RECIPE" ]]; then
+  if ! grep -q '^TERMUX_PKG_DEPENDS=' "$BASH_RECIPE"; then
+    echo "recipe-overrides: bash recipe has no TERMUX_PKG_DEPENDS line to audit (pinned-revision drift)" >&2
+    exit 1
+  fi
+  if grep '^TERMUX_PKG_DEPENDS=' "$BASH_RECIPE" | grep -q 'termux-tools'; then
+    sed -i '/^TERMUX_PKG_DEPENDS=/s/, termux-tools//' "$BASH_RECIPE"
+  fi
+  if grep -q 'termux-tools' "$BASH_RECIPE"; then
+    echo "recipe-overrides: failed to remove termux-tools from bash dependencies" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: bash runtime dependencies (termux-tools removed): $(grep '^TERMUX_PKG_DEPENDS=' "$BASH_RECIPE")"
+else
+  echo "recipe-overrides: bash recipe not found; skipping termux-tools removal" >&2
+fi
+
+# The official git recipe builds three GUI/subversion subpackages whose
+# dependencies do not belong in the CodeC userland: gitk and git-gui pull
+# in tcl/tk and the whole X11 stack, git-svn pulls in subversion-perl.
+# Excluding them uses the upstream-native per-arch skip mechanism and keeps
+# the main git package byte-identical to the pinned recipe. Fail loudly on
+# pinned-revision drift (a file disappearing is not something to paper
+# over) so a future bump is reviewed.
+GIT_DIR="$TREE/packages/git"
+if [[ -d "$GIT_DIR" ]]; then
+  for sub in git-gitk git-gui git-svn; do
+    subfile="$GIT_DIR/$sub.subpackage.sh"
+    if [[ ! -f "$subfile" ]]; then
+      echo "recipe-overrides: git subpackage file missing (pinned-revision drift): $subfile" >&2
+      exit 1
+    fi
+    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$subfile"; then
+      sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: no tcl/tk/X11 or subversion in the userland' "$subfile"
+    fi
+    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$subfile"; then
+      echo "recipe-overrides: failed to exclude git subpackage: $sub" >&2
+      exit 1
+    fi
+    echo "recipe-overrides: git subpackage $sub excluded for CodeC arches"
+  done
+  # tcl/tk is not built for the CodeC userland, so wish does not exist at
+  # configure time: build git without Tcl/Tk support instead of pointing at
+  # a missing binary.
+  if grep -qF -- '--with-tcltk=$TERMUX_PREFIX/bin/wish' "$GIT_DIR/build.sh"; then
+    sed -i 's#^--with-tcltk=\$TERMUX_PREFIX/bin/wish$#--with-tcltk=no#' "$GIT_DIR/build.sh"
+  fi
+  if grep -qF -- '--with-tcltk=$TERMUX_PREFIX/bin/wish' "$GIT_DIR/build.sh"; then
+    echo "recipe-overrides: failed to disable git tcl/tk support" >&2
+    exit 1
+  fi
+  if ! grep -qF -- '--with-tcltk=no' "$GIT_DIR/build.sh"; then
+    echo "recipe-overrides: git recipe no longer carries the expected --with-tcltk line (pinned-revision drift)" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: git builds without tcl/tk (--with-tcltk=no)"
+else
+  echo "recipe-overrides: git recipe not found; skipping tcl/tk overrides" >&2
+fi

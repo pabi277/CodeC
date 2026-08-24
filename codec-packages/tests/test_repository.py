@@ -42,12 +42,17 @@ def make_deb(root: Path, output: Path, *, name: str = "codec-demo", arch: str = 
         "Depends: busybox\nDescription: test CodeC package\n" % (name, arch)
     )
     if script:
-        if name in {"coreutils", "less", "nano"}:
+        if name in {"coreutils", "less", "nano", "bat", "util-linux"}:
             prefix = "/data/data/com.codeci.ide/files/usr"
             values = {
                 "coreutils": ("pager", "bin/pager", "libexec/coreutils/cat", "1", "share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/cat.1.gz"),
                 "less": ("pager", "bin/pager", "bin/less", "50", "share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/less.1.gz"),
                 "nano": ("editor", "bin/editor", "bin/nano", "50", "share/man/man1/editor.1.gz", "editor.1.gz", "share/man/man1/nano.1.gz"),
+                # Round 2 catalog (Part 4.5): measured against the pinned
+                # upstream .alternatives files (bat/bat.alternatives,
+                # util-linux/more.alternatives); both below less's 50.
+                "bat": ("pager", "bin/pager", "bin/bat", "10", "share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/bat.1.gz"),
+                "util-linux": ("pager", "bin/pager", "bin/more", "25", "share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/more.1.gz"),
             }
             alt_name, alt_link, alt_target, priority, slave_link, slave_name, slave_target = values[name]
             postinst = control / "postinst"
@@ -410,12 +415,63 @@ class RepositoryTest(unittest.TestCase):
             root = Path(tmp)
             debs = root / "debs"
             debs.mkdir()
-            for name in ("coreutils", "less", "nano"):
+            for name in ("coreutils", "less", "nano", "bat", "util-linux"):
                 make_deb(root, debs / f"{name}_1.0_aarch64.deb", name=name, script=True)
             subprocess.run(
                 [sys.executable, str(GENERATE), str(debs), str(root / "repo"), "--architectures", "aarch64"],
                 check=True,
             )
+
+    def test_rejects_tampered_bat_alternatives_script(self) -> None:
+        """Round 2 (Part 4.5): a bat postinst that is not byte-exact the
+        reviewed alternatives script — e.g. one claiming pager priority
+        999 and hijacking the default pager — must be refused at publish
+        time."""
+        prefix = "/data/data/com.codeci.ide/files/usr"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            debs = root / "debs"
+            debs.mkdir()
+            package_root = root / "bat-aarch64"
+            data = package_root / "data/data/com.codeci.ide/files/usr/bin"
+            data.mkdir(parents=True)
+            (data / "bat").write_text("demo")
+            control = package_root / "DEBIAN"
+            control.mkdir()
+            (control / "control").write_text(
+                "Package: bat\nVersion: 1.0\nArchitecture: aarch64\nDescription: test\n"
+            )
+            postinst = control / "postinst"
+            postinst.write_text(
+                f"#!{prefix}/bin/sh\n"
+                "if [ \"$1\" = 'configure' ] || [ \"$1\" = 'abort-upgrade' ] || [ \"$1\" = 'abort-deconfigure' ] || [ \"$1\" = 'abort-remove' ]; then\n"
+                f"  if [ -x \"{prefix}/bin/update-alternatives\" ]; then\n"
+                f"    update-alternatives \\\n      --install \"{prefix}/bin/pager\" \"pager\" \"{prefix}/bin/bat\" 999 \\\n      --slave \"{prefix}/share/man/man1/pager.1.gz\" \"pager.1.gz\" \"{prefix}/share/man/man1/bat.1.gz\"\n"
+                "  fi\nfi\n"
+            )
+            postinst.chmod(0o755)
+            prerm = control / "prerm"
+            prerm.write_text(
+                f"#!{prefix}/bin/sh\n"
+                "if [ \"$1\" = 'remove' ] || [ \"$1\" != 'upgrade' ]; then\n"
+                f"  if [ -x \"{prefix}/bin/update-alternatives\" ]; then\n"
+                f"    update-alternatives --remove \"pager\" \"{prefix}/bin/bat\"\n"
+                "  fi\nfi\n"
+            )
+            prerm.chmod(0o755)
+            make = subprocess.run(
+                ["dpkg-deb", "--build", str(package_root), str(debs / "bat_1.0_aarch64.deb")],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(make.returncode, 0, make.stderr)
+            result = subprocess.run(
+                [sys.executable, str(GENERATE), str(debs), str(root / "repo"), "--architectures", "aarch64"],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unexpected alternatives target", result.stderr)
 
     def test_rejects_wrong_prefix_and_traversal_helper(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

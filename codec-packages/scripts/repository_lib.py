@@ -146,6 +146,20 @@ def _validate_alternatives_script(script: Path, package_name: str, script_name: 
             "name": "editor", "link": "bin/editor", "alternative": "bin/nano",
             "priority": "50", "slave": ("share/man/man1/editor.1.gz", "editor.1.gz", "share/man/man1/nano.1.gz"),
         },
+        # Round 2 catalog (Part 4.5): measured against the pinned upstream
+        # .alternatives files (packages/bat/bat.alternatives and
+        # packages/util-linux/more.alternatives at termux-packages
+        # @ 1bbe66903526df2e8af51e704316bc68ede72603). Both register the
+        # `pager` group below less's priority 50, so `less` stays the
+        # default pager on the device.
+        "bat": {
+            "name": "pager", "link": "bin/pager", "alternative": "bin/bat",
+            "priority": "10", "slave": ("share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/bat.1.gz"),
+        },
+        "util-linux": {
+            "name": "pager", "link": "bin/pager", "alternative": "bin/more",
+            "priority": "25", "slave": ("share/man/man1/pager.1.gz", "pager.1.gz", "share/man/man1/more.1.gz"),
+        },
     }.get(package_name)
     if expected is None:
         raise PackageError(f"{script.name}: maintainer scripts are not approved for {package_name}")
@@ -220,7 +234,10 @@ def validate_control_scripts(path: Path, package_name: str) -> None:
         scripts = sorted(item.name for item in control_dir.iterdir() if item.name in {"preinst", "postinst", "prerm", "postrm"})
         if not scripts:
             return
-        if package_name not in {"coreutils", "less", "nano"} or set(scripts) != {"postinst", "prerm"}:
+        # Round 2 catalog (Part 4.5): bat and util-linux also register the
+        # `pager` alternatives group; both are reviewed below and both have
+        # lower priority than less (50), so the default pager is unchanged.
+        if package_name not in {"coreutils", "less", "nano", "bat", "util-linux"} or set(scripts) != {"postinst", "prerm"}:
             raise PackageError(f"{path.name}: maintainer scripts are not allowed: {', '.join(scripts)}")
         for script_name in scripts:
             _validate_alternatives_script(control_dir / script_name, package_name, script_name)
