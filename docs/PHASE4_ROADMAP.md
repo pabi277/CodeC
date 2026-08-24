@@ -53,7 +53,12 @@ history to need more than one part's worth of work.
 
 ## Parts
 
-### Part 4.1 — Shared-storage access
+### Part 4.1 — Shared-storage access — ✅ DONE (device-verified)
+
+**Status: COMPLETE and device-verified (2026-08-24).**
+- Built-in `$PREFIX/bin/codec-setup-storage` (and `$PREFIX/bin/termux-setup-storage` compatibility alias) creates symlinks under `$HOME/storage/` (`shared`, `downloads`, `documents`, `dcim`, `pictures`, `music`, `movies`, `external-*`).
+- Integrated Android 11+ All Files Access (`MANAGE_EXTERNAL_STORAGE`) support with in-band OSC 1337 terminal escape and UI trigger (`FolderOpen` icon in Terminal TopAppBar and Settings $\rightarrow$ Storage $\rightarrow$ `SETUP STORAGE`).
+- Verified on a real Android device: symlink creation, write probing, in-terminal write (`echo > ~/storage/downloads/...`) and removal (`rm`), and embedded compiler coexistence all passed.
 
 **Basic goal.** Give terminal programs a way to read/write user-designated
 shared storage (e.g. `~/storage/downloads`-style access to Downloads/
@@ -178,7 +183,7 @@ capabilities exists. Do not attempt the whole surface area in one part.
 
 | Part | Depends on | Complexity | Est. replies |
 |---|---|---|---|
-| 4.1 — storage access | none | small | ~50–70 |
+| 4.1 — storage access | none | small | ✅ **DONE** (device-verified) |
 | 4.2 — install confirmation UX | none | small | ~50–70 |
 | 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ~50–70 |
 | 4.4 — settings/theme parity | none | small–medium | ~50–70 (may split) |

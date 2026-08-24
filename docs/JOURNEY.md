@@ -422,7 +422,12 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
 4. ~~M3 final gate — accept the released key-seeded bootstrap~~ ✅ **DONE**
    (signed Pages, signed-client device path, CI builds, release publication,
    and the backup-first clean-device proof all passed — see §5f above).
-5. **Phase 4 — polish and expansion**, not started. Planned in
-   [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md): storage access, install
-   confirmation and trust-indicator UX, settings/theme parity, an expanded
-   package catalog, and a first slice of Android-native integration.
+5. **Phase 4 — polish and expansion**, active. Planned in
+   [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md):
+   - **Part 4.1 — Shared-storage access** ✅ **DONE (device-verified 2026-08-24).**
+     `codec-setup-storage` / `termux-setup-storage` configure `~/storage`
+     symlinks (`shared`, `downloads`, `documents`, `dcim`, `pictures`,
+     `music`, `movies`, `external-*`). Android 11+ All Files Access
+     (`MANAGE_EXTERNAL_STORAGE`) supported with OSC 1337 terminal escape
+     dispatch and UI setup button.
+   - Parts 4.2–4.7 remaining.
