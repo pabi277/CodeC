@@ -1,7 +1,11 @@
 package com.codeci.ide.ui.screens
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,9 +56,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.services.TermuxCompiler
 import com.codeci.ide.ui.settings.SettingsManager
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.DeviceDiagnostics
 import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.EditorThemeType
@@ -316,20 +322,85 @@ fun SettingsScreen(
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
             // STORAGE
-            SettingsSectionHeader("Storage")
+            SettingsSectionHeader(stringResource(com.codeci.ide.R.string.storage))
             
+            var storageGranted by remember {
+                mutableStateOf(ShellEnvironment.hasStoragePermission(context))
+            }
+            val storageLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                val granted = permissions.values.any { it }
+                storageGranted = ShellEnvironment.hasStoragePermission(context) || granted
+                if (storageGranted) {
+                    val home = ShellEnvironment.homeDir(context.filesDir)
+                    ShellEnvironment.setupStorageDirectory(home)
+                    Toast.makeText(context, context.getString(com.codeci.ide.R.string.storage_setup_complete), Toast.LENGTH_SHORT).show()
+                }
+            }
+
             SettingsItem(
-                title = "Projects Location",
+                title = stringResource(com.codeci.ide.R.string.terminal_storage_title),
+                subtitle = if (storageGranted) {
+                    stringResource(com.codeci.ide.R.string.storage_permission_granted) + " — " +
+                        stringResource(com.codeci.ide.R.string.terminal_storage_subtitle)
+                } else {
+                    stringResource(com.codeci.ide.R.string.storage_permission_needed)
+                }
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = {
+                    val home = ShellEnvironment.homeDir(context.filesDir)
+                    ShellEnvironment.setupStorageDirectory(home)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        if (!android.os.Environment.isExternalStorageManager()) {
+                            val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                data = android.net.Uri.parse("package:${context.packageName}")
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                try {
+                                    val fallback = android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(fallback)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Cannot open storage settings", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            return@TextButton
+                        }
+                    }
+                    storageLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                        )
+                    )
+                }) {
+                    Text(stringResource(com.codeci.ide.R.string.setup_storage_action))
+                }
+            }
+
+            SettingsItem(
+                title = stringResource(com.codeci.ide.R.string.projects_location),
                 subtitle = context.getExternalFilesDir(null)?.absolutePath ?: "Internal Storage"
             )
             
             SettingsAction(
-                title = "Clear Cache",
-                actionText = "CLEAR",
+                title = stringResource(com.codeci.ide.R.string.clear_cache),
+                actionText = stringResource(com.codeci.ide.R.string.clear),
                 onClick = {
                     val cacheDir = File(context.cacheDir.absolutePath)
                     cacheDir.deleteRecursively()
-                    Toast.makeText(context, "Cache cleared", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(com.codeci.ide.R.string.cache_cleared), Toast.LENGTH_SHORT).show()
                 }
             )
 

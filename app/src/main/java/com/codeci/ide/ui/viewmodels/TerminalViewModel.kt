@@ -14,6 +14,7 @@ import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     val snapshot: StateFlow<TerminalSnapshot> = session.snapshot
     val alive: StateFlow<Boolean> = session.alive
     val exitCode: StateFlow<Int?> = session.exitCode
+    val storagePermissionRequests: SharedFlow<Unit> = session.storagePermissionRequests
 
     val fontSizeSp: StateFlow<Float> = settings.terminalFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, 14f)

@@ -344,29 +344,21 @@ ready to merge as "Phase 3 complete" pending final owner review.
 
 ## Phase 4 — polish and expansion
 
-This file (`NEXT_STEPS.md`) covered only Phase 3 (Parts A–D above), which is
-now complete. Phase 4 planning — storage access, install-confirmation and
-trust-indicator UX, settings/theme parity, an expanded package catalog, and a
-first Android-integration slice — has moved to its own document:
-[`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md). That file sizes each item into
-independently pickable parts and deliberately leaves exact technical
-decisions open until a part is actually started; it is a roadmap, not a
-committed spec.
+Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) and [`docs/chat-phase4/`](chat-phase4/README.md).
+
+- **Part 4.1 — Shared-storage access (`~/storage`)** ✅ **DONE (device-verified 2026-08-24).**
+  Detailed record in [`docs/chat-phase4/PART_4_1_STORAGE.md`](chat-phase4/PART_4_1_STORAGE.md).
+- **Parts 4.2–4.7** remain open for pickup.
 
 ---
 
 ## Ordering summary
 
-
 | Part | Depends on | Effort / state (2026-08-24) |
 |---|---|---|
-| A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
-| B — bootstrap correctness | A | ✅ **DONE** — merged, rebuilt, republished, device-verified |
-| C — clean-device acceptance | A ✅, B ✅ | ✅ **DONE** — every checklist item passed on real arm64 devices |
-| D — M3 signing | A ✅, B ✅, C ✅ | ✅ **DONE** — implementation, signed publish, rebuild, and final clean-device gate all passed |
-
-**Phase 3 is complete.** Parts A, B, C, and D have all met their exit
-conditions and are device-verified. PR #14 is ready for final review/merge.
-The next work is Phase 4, planned in
-[`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) — nothing in Phase 4 has been
-started or coded yet.
+| Phase 3 Part A — republish clean bootstrap | — | ✅ **DONE** (in-place repair, no rebuild, device-verified) |
+| Phase 3 Part B — bootstrap correctness | A | ✅ **DONE** — merged, rebuilt, republished, device-verified |
+| Phase 3 Part C — clean-device acceptance | A ✅, B ✅ | ✅ **DONE** — every checklist item passed on real arm64 devices |
+| Phase 3 Part D — M3 signing | A ✅, B ✅, C ✅ | ✅ **DONE** — implementation, signed publish, rebuild, and final clean-device gate all passed |
+| Phase 4 Part 4.1 — shared-storage access | none | ✅ **DONE** — `codec-setup-storage`, OSC 1337, device-verified |
+| Phase 4 Parts 4.2–4.7 | — | Planning / ready to pick up |

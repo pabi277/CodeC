@@ -6,8 +6,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -34,6 +37,15 @@ class TerminalSession(
 
     private val _exitCode = MutableStateFlow<Int?>(null)
     val exitCode: StateFlow<Int?> = _exitCode.asStateFlow()
+
+    private val _storagePermissionRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val storagePermissionRequests: SharedFlow<Unit> = _storagePermissionRequests.asSharedFlow()
+
+    init {
+        emulator.onStoragePermissionRequested = {
+            _storagePermissionRequests.tryEmit(Unit)
+        }
+    }
 
     val bracketedPaste: Boolean get() = synchronized(emulator) { emulator.bracketedPaste }
 

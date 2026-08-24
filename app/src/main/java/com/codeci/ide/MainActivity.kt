@@ -1,9 +1,18 @@
 package com.codeci.ide
 
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -38,6 +47,7 @@ import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.MyApplicationTheme
 import com.codeci.ide.ui.theme.ThemeManager
@@ -49,9 +59,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private var storagePermissionLauncher: ActivityResultLauncher<Array<String>>? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        storagePermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val anyGranted = permissions.values.any { it }
+            if (anyGranted) {
+                val home = ShellEnvironment.homeDir(filesDir)
+                ShellEnvironment.setupStorageDirectory(home)
+                Toast.makeText(this, getString(R.string.storage_setup_complete), Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        handleStoragePermissionIntent(intent)
+
         setContent {
             val context = LocalContext.current
             val themeManager = remember { ThemeManager(context) }
@@ -69,6 +95,58 @@ class MainActivity : ComponentActivity() {
                 MainApp()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (ShellEnvironment.hasStoragePermission(this)) {
+            val home = ShellEnvironment.homeDir(filesDir)
+            ShellEnvironment.setupStorageDirectory(home)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleStoragePermissionIntent(intent)
+    }
+
+    fun requestStoragePermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    startActivity(intent)
+                } catch (_: Exception) {
+                    try {
+                        val fallback = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(fallback)
+                    } catch (e: Exception) {
+                        AppLogger.e("MainActivity", "Cannot open all files access settings", e)
+                    }
+                }
+                return
+            }
+        }
+        val permissions = arrayOf(
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+        storagePermissionLauncher?.launch(permissions)
+    }
+
+    private fun handleStoragePermissionIntent(intent: Intent?) {
+        if (intent?.action == ACTION_REQUEST_STORAGE_PERMISSION) {
+            requestStoragePermissions()
+        }
+    }
+
+    companion object {
+        const val ACTION_REQUEST_STORAGE_PERMISSION = "com.codeci.ide.action.REQUEST_STORAGE_PERMISSION"
     }
 }
 

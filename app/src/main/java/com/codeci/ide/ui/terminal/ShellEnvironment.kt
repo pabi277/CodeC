@@ -1,6 +1,10 @@
 package com.codeci.ide.ui.terminal
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Environment
+import androidx.core.content.ContextCompat
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.utils.AppLogger
@@ -17,7 +21,7 @@ import java.io.File
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "16"
+    const val BOOTSTRAP_VERSION = "19"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -549,6 +553,184 @@ HELP
         exec /system/bin/sh "${'$'}@"
     """.trimIndent() + "\n"
 
+    fun setupStorageScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-setup-storage — set up symlinks to Android shared storage in ~/storage.
+        # Analogous to termux-setup-storage (Phase 4.1).
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        HOME="${'$'}{HOME:-$(cd "${'$'}PREFIX/../home" 2>/dev/null && pwd)}"
+        STORAGE_DIR="${'$'}HOME/storage"
+
+        echo "Setting up shared storage symlinks in ${'$'}STORAGE_DIR..."
+
+        mkdir -p "${'$'}STORAGE_DIR" || {
+          echo "codec-setup-storage: cannot create ${'$'}STORAGE_DIR" >&2
+          exit 1
+        }
+
+        # Standard Android external storage root
+        SHARED_ROOT="/storage/emulated/0"
+        [ -d "${'$'}SHARED_ROOT" ] || SHARED_ROOT="${'$'}{EXTERNAL_STORAGE:-/sdcard}"
+
+        setup_link() {
+          target="${'$'}1"
+          link_name="${'$'}2"
+          link_path="${'$'}STORAGE_DIR/${'$'}link_name"
+          rm -f "${'$'}link_path" 2>/dev/null
+          ln -s "${'$'}target" "${'$'}link_path" 2>/dev/null || true
+          if [ -L "${'$'}link_path" ] || [ -e "${'$'}link_path" ]; then
+            echo "  ~/storage/${'$'}link_name -> ${'$'}target"
+          fi
+        }
+
+        setup_link "${'$'}SHARED_ROOT" "shared"
+        setup_link "${'$'}SHARED_ROOT/Download" "downloads"
+        setup_link "${'$'}SHARED_ROOT/Documents" "documents"
+        setup_link "${'$'}SHARED_ROOT/DCIM" "dcim"
+        setup_link "${'$'}SHARED_ROOT/Pictures" "pictures"
+        setup_link "${'$'}SHARED_ROOT/Music" "music"
+        setup_link "${'$'}SHARED_ROOT/Movies" "movies"
+
+        # Look for secondary external storage mounts (e.g. /storage/XXXX-XXXX)
+        ext_idx=1
+        for dev in /storage/*; do
+          [ -d "${'$'}dev" ] || continue
+          case "${'$'}{dev##*/}" in
+            emulated|self|knox-emulated) continue ;;
+            *)
+              setup_link "${'$'}dev" "external-${'$'}ext_idx"
+              ext_idx=${'$'}((ext_idx + 1))
+              ;;
+          esac
+        done
+
+        # Check read/write access to shared root
+        probe_file="${'$'}SHARED_ROOT/Download/.codec_storage_probe_${'$'}${'$'}"
+        if touch "${'$'}probe_file" 2>/dev/null; then
+          rm -f "${'$'}probe_file" 2>/dev/null || true
+          echo "Storage setup complete — write access OK."
+        else
+          # Signal terminal emulator via OSC 1337 in-band escape sequence to pop up permission screen
+          printf '\033]1337;CodeCRequestStorage\007'
+          echo "Storage setup complete."
+          echo "Requesting All Files Access permission from CodeC..."
+          echo "Please grant 'Allow access to manage all files' in the Android prompt."
+        fi
+    """.trimIndent() + "\n"
+
+    data class StorageLink(val name: String, val target: File)
+    data class StorageSetupResult(
+        val success: Boolean,
+        val storageDir: File,
+        val createdLinks: List<StorageLink>,
+        val errorMessage: String? = null
+    )
+
+    fun hasStoragePermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    fun setupStorageDirectory(
+        homeDir: File,
+        externalStorageDir: File = Environment.getExternalStorageDirectory(),
+        storageRoot: File = File("/storage")
+    ): StorageSetupResult {
+        val storageDir = File(homeDir, "storage")
+        if (!storageDir.exists() && !storageDir.mkdirs()) {
+            return StorageSetupResult(
+                success = false,
+                storageDir = storageDir,
+                createdLinks = emptyList(),
+                errorMessage = "Cannot create directory ${storageDir.absolutePath}"
+            )
+        }
+
+        val targetPairs = mutableListOf(
+            "shared" to externalStorageDir,
+            "downloads" to File(externalStorageDir, "Download"),
+            "documents" to File(externalStorageDir, "Documents"),
+            "dcim" to File(externalStorageDir, "DCIM"),
+            "pictures" to File(externalStorageDir, "Pictures"),
+            "music" to File(externalStorageDir, "Music"),
+            "movies" to File(externalStorageDir, "Movies")
+        )
+
+        if (storageRoot.isDirectory) {
+            var extIndex = 1
+            storageRoot.listFiles()?.filter { it.isDirectory }?.forEach { dev ->
+                if (dev.name !in setOf("emulated", "self", "knox-emulated")) {
+                    targetPairs.add("external-$extIndex" to dev)
+                    extIndex++
+                }
+            }
+        }
+
+        val links = mutableListOf<StorageLink>()
+        for ((name, target) in targetPairs) {
+            val linkFile = File(storageDir, name)
+            if (createOrUpdateSymlink(target, linkFile)) {
+                links.add(StorageLink(name, target))
+            }
+        }
+
+        return StorageSetupResult(
+            success = true,
+            storageDir = storageDir,
+            createdLinks = links
+        )
+    }
+
+    fun createOrUpdateSymlink(target: File, link: File): Boolean {
+        try {
+            link.delete()
+        } catch (_: Exception) {
+        }
+        // Try android.system.Os.symlink on Android
+        try {
+            val osClass = Class.forName("android.system.Os")
+            val symlinkMethod = osClass.getMethod("symlink", String::class.java, String::class.java)
+            symlinkMethod.invoke(null, target.absolutePath, link.absolutePath)
+            if (link.exists()) return true
+        } catch (_: Throwable) {
+        }
+        // Try java.nio.file.Files via reflection (safe on host JVM and Android 26+)
+        try {
+            val filesClass = Class.forName("java.nio.file.Files")
+            val pathsClass = Class.forName("java.nio.file.Paths")
+            val getPathMethod = pathsClass.getMethod("get", String::class.java, Array<String>::class.java)
+            val linkPath = getPathMethod.invoke(null, link.absolutePath, emptyArray<String>())
+            val targetPath = getPathMethod.invoke(null, target.absolutePath, emptyArray<String>())
+            val fileAttrArray = java.lang.reflect.Array.newInstance(Class.forName("java.nio.file.attribute.FileAttribute"), 0)
+            val createSymlinkMethod = filesClass.getMethod(
+                "createSymbolicLink",
+                Class.forName("java.nio.file.Path"),
+                Class.forName("java.nio.file.Path"),
+                fileAttrArray.javaClass
+            )
+            createSymlinkMethod.invoke(null, linkPath, targetPath, fileAttrArray)
+            if (link.exists()) return true
+        } catch (_: Throwable) {
+        }
+        // Fallback: ln -s process
+        return try {
+            val process = ProcessBuilder("ln", "-s", target.absolutePath, link.absolutePath)
+                .redirectErrorStream(true)
+                .start()
+            process.waitFor() == 0 && link.exists()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun profileScript(prefix: File, home: File, projects: File): String = """
         # CodeC login profile (Phase 1)
         export PREFIX='${prefix.absolutePath}'
@@ -804,6 +986,8 @@ class ShellBootstrap(private val context: Context) {
         val marker = File(prefix, ".bootstrap-v${ShellEnvironment.BOOTSTRAP_VERSION}")
         writeExecutable(File(bin, "cc"), ShellEnvironment.ccScript())
         writeExecutable(File(bin, "pkg"), ShellEnvironment.pkgScript())
+        writeExecutable(File(bin, "codec-setup-storage"), ShellEnvironment.setupStorageScript())
+        writeExecutable(File(bin, "termux-setup-storage"), ShellEnvironment.setupStorageScript())
         val bash = File(bin, "bash")
         if (!ShellEnvironment.isElf(bash)) {
             writeExecutable(bash, ShellEnvironment.bashShim())
