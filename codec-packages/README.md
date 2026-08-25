@@ -35,13 +35,15 @@ provided by the minimal Phase 2 archive. Phase 3 builds them in a separate
 CodeC-only channel; the existing `userland-v1` asset is not replaced until a new
 apt/dpkg bootstrap passes device acceptance.
 
-## Phase 3 repository foundation
+## Phase 3 / Phase 4 package repository
 
 The selected format is an apt/dpkg-compatible repository with a guarded CodeC
-`pkg` frontend. The first curated roots are `nano`, `less`, `coreutils`, `grep`,
-`sed`, `gawk`, `gzip`, `tar`, `make`, and `libmagic` (the official recipe for
-file-type identification). The published manifest is the only package promise;
-it includes the full source-built dependency closure.
+`pkg` frontend. The expanded curated roots are:
+
+- **Round 1 (Phase 3)**: `nano`, `less`, `coreutils`, `grep`, `sed`, `gawk`, `gzip`, `tar`, `make`, and `libmagic`.
+- **Round 2 (Phase 4 Part 4.5)**: `git`, `wget`, `bat`, `ripgrep`, `fd`, `htop`, `tmux`, `tree`, `patch`, `diffutils`, `zstd`, `m4`, `autoconf`, `automake`, and `libtool`.
+
+The published manifest is the only package promise; it includes the full source-built dependency closure.
 
 Phase 3 bootstrap roots are `busybox`, `bash`, `apt`, `dpkg`, and
 `termux-exec` (see `properties.codec.sh`). `termux-exec` is required at
@@ -93,8 +95,8 @@ transport overrides for the official `attr` and `libacl` recipes when Savannah's
 HTTP endpoint returns 502; upstream versions and SHA-256 values remain unchanged.
 They reject wrong architectures, wrong CodeC prefix paths, `com.termux`
 contamination, unsafe symlinks, and unreviewed maintainer scripts. The only
-allowed script exceptions are the explicitly validated `cat.alternatives`,
-`less.alternatives`, and `nano.alternatives` postinst/prerm pairs. The generated
+allowed script exceptions are the explicitly validated alternatives postinst/prerm pairs
+for `coreutils`, `less`, `nano`, `bat`, and `util-linux`. The generated
 static tree contains
 `Release`, `Packages`,
 `Packages.gz`, package SHA-256 values, `repository.json`, and checksum sidecars.

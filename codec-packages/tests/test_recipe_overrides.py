@@ -59,10 +59,11 @@ class RecipeOverrideTest(unittest.TestCase):
 
             text = recipe.read_text()
             self.assertIn(
-                "https://www.x.org/releases/individual/util/util-macros-",
+                "https://ftp.x.org/pub/individual/util/util-macros-",
                 text,
             )
             self.assertNotIn("https://xorg.freedesktop.org/releases/", text)
+            self.assertNotIn("https://www.x.org/releases/", text)
 
             # Part B (2026-08-23): exactly `termux-keyring` is removed from
             # apt's runtime dependencies; every other dependency stays
@@ -149,9 +150,6 @@ class RecipeOverrideTest(unittest.TestCase):
     def test_bash_termux_tools_removed_for_repository_build(self) -> None:
         """bash (a round 2 dependency via libtool) must lose termux-tools
         in the repository build too, not only in the bootstrap build."""
-        # Verbatim TERMUX_PKG_DEPENDS from the pinned upstream revision
-        # (termux-packages @ 1bbe66903526df2e8af51e704316bc68ede72603,
-        # packages/bash/build.sh).
         bash_depends = 'TERMUX_PKG_DEPENDS="libandroid-support, libiconv, readline (>= 8.3), termux-tools"\n'
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
@@ -164,8 +162,6 @@ class RecipeOverrideTest(unittest.TestCase):
 
             self.assertEqual((bash / "build.sh").read_text(),
                              'TERMUX_PKG_DEPENDS="libandroid-support, libiconv, readline (>= 8.3)"\n')
-            # The bootstrap build's own sed (build-bootstrap.sh) stays as a
-            # no-op double safety: it matches nothing on the cleaned line.
             self.assertNotIn("termux-tools", (bash / "build.sh").read_text())
 
     def test_git_subpackages_excluded_and_tcltk_disabled(self) -> None:
@@ -176,8 +172,6 @@ class RecipeOverrideTest(unittest.TestCase):
             self._write_apt_fixture(tree)
             git_dir = tree / "packages" / "git"
             git_dir.mkdir(parents=True)
-            # Verbatim configure block from the pinned upstream revision
-            # (packages/git/build.sh, TERMUX_PKG_EXTRA_CONFIGURE_ARGS).
             (git_dir / "build.sh").write_text(
                 'TERMUX_PKG_EXTRA_CONFIGURE_ARGS="\n'
                 "ac_cv_fread_reads_directories=yes\n"
@@ -224,7 +218,6 @@ class RecipeOverrideTest(unittest.TestCase):
             (git_dir / "build.sh").write_text("--with-tcltk=$TERMUX_PREFIX/bin/wish\n")
             (git_dir / "git-gitk.subpackage.sh").write_text('TERMUX_SUBPKG_DEPENDS="tk"\n')
             (git_dir / "git-gui.subpackage.sh").write_text('TERMUX_SUBPKG_DEPENDS="tk"\n')
-            # git-svn.subpackage.sh deliberately missing.
 
             result = subprocess.run(
                 [str(OVERRIDES), str(tree)], text=True, capture_output=True
@@ -232,6 +225,123 @@ class RecipeOverrideTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("pinned-revision drift", result.stderr)
             self.assertIn("git-svn", result.stderr)
+
+    def test_symlink_override_patches_termux_step_massage(self) -> None:
+        """termux_step_massage.sh and libbz2/build.sh must be patched to convert
+        absolute symlinks in $TERMUX_PREFIX into relative symlinks."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+            
+            libbz2_dir = tree / "packages" / "libbz2"
+            libbz2_dir.mkdir(parents=True)
+            libbz2_build = libbz2_dir / "build.sh"
+            libbz2_build.write_text("termux_step_make_install() {\n\tmake install\n}\n")
+
+            scripts_build = tree / "scripts" / "build"
+            scripts_build.mkdir(parents=True)
+            massage = scripts_build / "termux_step_massage.sh"
+            massage.write_text(
+                "termux_step_massage() {\n"
+                "\techo 'hello'\n"
+                '\tif [ "$TERMUX_PACKAGE_FORMAT" = "debian" ]; then\n'
+                "\t\ttermux_create_debian_subpackages\n"
+                "\tfi\n"
+                "}\n"
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            text = massage.read_text()
+            self.assertIn("CodeC override: convert absolute symlinks", text)
+            self.assertIn("realpath -m --relative-to", text)
+            self.assertIn("CodeC override: remove maintainer scripts for non-whitelisted packages", text)
+            symlink_idx = text.find("CodeC override: convert absolute symlinks")
+            subpkg_idx = text.find("termux_create_debian_subpackages")
+            self.assertLess(symlink_idx, subpkg_idx)
+
+            libbz2_text = libbz2_build.read_text()
+            self.assertIn("CodeC: fix absolute symlinks in libbz2", libbz2_text)
+            self.assertIn("realpath -m --relative-to", libbz2_text)
+
+    def test_debscripts_override_patches_termux_step_create_debscripts(self) -> None:
+        """termux_step_create_debscripts.sh is patched to disable maintainer scripts
+        for non-whitelisted packages."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+
+            scripts_build = tree / "scripts" / "build"
+            scripts_build.mkdir(parents=True)
+            debscripts = scripts_build / "termux_step_create_debscripts.sh"
+            debscripts.write_text(
+                "termux_step_create_debscripts() {\n"
+                "\techo 'creating debscripts'\n"
+                "}\n"
+            )
+            py_debscripts = scripts_build / "termux_step_create_python_debscripts.sh"
+            py_debscripts.write_text(
+                "termux_step_create_python_debscripts() {\n"
+                "\techo 'creating python debscripts'\n"
+                "}\n"
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            text = debscripts.read_text()
+            self.assertIn('case "${TERMUX_PKG_NAME:-}" in', text)
+            self.assertIn('coreutils|less|nano|bat|util-linux)', text)
+
+            py_text = py_debscripts.read_text()
+            self.assertIn('case "${TERMUX_PKG_NAME:-}" in', py_text)
+            self.assertIn('termux_step_create_python_debscripts() { :; }', py_text)
+
+    def test_xcb_proto_python_subpackages_excluded(self) -> None:
+        """python-xcbgen subpackage in xcb-proto must be excluded and xcb-proto
+        debscripts disabled to prevent unapproved maintainer scripts in CodeC repository."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+
+            xcb_proto_dir = tree / "packages" / "xcb-proto"
+            xcb_proto_dir.mkdir(parents=True)
+            (xcb_proto_dir / "build.sh").write_text('TERMUX_PKG_HOMEPAGE=https://xorg.freedesktop.org\n')
+            subpkg = xcb_proto_dir / "python-xcbgen.subpackage.sh"
+            subpkg.write_text('TERMUX_SUBPKG_DESCRIPTION="Python bindings for xcb-proto"\n')
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            lines = subpkg.read_text().splitlines()
+            self.assertEqual(
+                lines[0],
+                'TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" '
+                "# CodeC: no python/X11 bindings in userland",
+            )
+            build_text = (xcb_proto_dir / "build.sh").read_text()
+            self.assertIn("termux_step_create_debscripts() { :; }", build_text)
+
+    def test_rxvt_unicode_uses_debian_download_mirror(self) -> None:
+        """The dist.schmorp.de timeout host is replaced with Debian CDN mirror."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+
+            rxvt_dir = tree / "packages" / "rxvt-unicode"
+            rxvt_dir.mkdir(parents=True)
+            recipe = rxvt_dir / "build.sh"
+            recipe.write_text(
+                'TERMUX_PKG_SRCURL=https://dist.schmorp.de/rxvt-unicode/Attic/'
+                'rxvt-unicode-${TERMUX_PKG_VERSION}.tar.bz2\n'
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            text = recipe.read_text()
+            self.assertIn(
+                "https://deb.debian.org/debian/pool/main/r/rxvt-unicode/rxvt-unicode_",
+                text,
+            )
+            self.assertNotIn("dist.schmorp.de", text)
 
 
 if __name__ == "__main__":

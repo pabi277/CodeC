@@ -32,23 +32,40 @@ for recipe in attr libacl; do
   echo "recipe-overrides: $recipe uses official HTTPS Savannah mirror"
 done
 
-# xorg.freedesktop.org repeatedly timed out from both GitHub Actions package
-# builds (run 32585409356) while fetching util-macros-1.20.2. X.Org's official
-# download host serves the identical, hash-verified source archive. Limit this
-# transport fallback to the one observed recipe and URL prefix.
+# xorg.freedesktop.org and www.x.org/releases repeatedly timed out from GitHub Actions
+# package builds. ftp.x.org serves all official, hash-verified X.Org source archives directly via HTTPS.
+if [[ -d "$TREE/packages" ]]; then
+  find "$TREE/packages" -name "build.sh" -exec sed -i \
+    's#https\?://\(xorg\.freedesktop\.org\|www\.x\.org\)/\(releases\|archive\)/individual/#https://ftp.x.org/pub/individual/#' {} +
+fi
 UTIL_MACROS_RECIPE="$TREE/packages/xorg-util-macros/build.sh"
 if [[ -f "$UTIL_MACROS_RECIPE" ]]; then
-  sed -i \
-    's#https://xorg\.freedesktop\.org/releases/individual/util/#https://www.x.org/releases/individual/util/#' \
-    "$UTIL_MACROS_RECIPE"
-  if grep -qF 'https://xorg.freedesktop.org/releases/individual/util/' "$UTIL_MACROS_RECIPE"; then
+  if grep -qE 'https://(xorg\.freedesktop\.org|www\.x\.org)/releases/individual/util/' "$UTIL_MACROS_RECIPE"; then
     echo "recipe-overrides: failed to update util-macros source URL" >&2
     exit 1
   fi
-  grep -qF 'https://www.x.org/releases/individual/util/' "$UTIL_MACROS_RECIPE"
-  echo "recipe-overrides: util-macros uses official X.Org download mirror"
+  grep -qF 'https://ftp.x.org/pub/individual/util/' "$UTIL_MACROS_RECIPE"
+  echo "recipe-overrides: util-macros uses official HTTPS ftp.x.org mirror"
 else
   echo "recipe-overrides: util-macros recipe not found; skipping" >&2
+fi
+
+# dist.schmorp.de repeatedly timed out from GitHub Actions package builds (run 32781913358)
+# while fetching rxvt-unicode-9.31.tar.bz2. Debian's official CDN mirror deb.debian.org
+# serves the identical, hash-verified source archive directly via HTTPS without timeouts.
+RXVT_UNICODE_RECIPE="$TREE/packages/rxvt-unicode/build.sh"
+if [[ -f "$RXVT_UNICODE_RECIPE" ]]; then
+  sed -i \
+    's#https\?://dist\.schmorp\.de/rxvt-unicode/\(Attic/\)\?rxvt-unicode-\(.*\)\.tar\.bz2#https://deb.debian.org/debian/pool/main/r/rxvt-unicode/rxvt-unicode_\2.orig.tar.bz2#' \
+    "$RXVT_UNICODE_RECIPE"
+  if grep -qE 'dist\.schmorp\.de' "$RXVT_UNICODE_RECIPE"; then
+    echo "recipe-overrides: failed to update rxvt-unicode source URL" >&2
+    exit 1
+  fi
+  grep -qF 'https://deb.debian.org/debian/pool/main/r/rxvt-unicode/' "$RXVT_UNICODE_RECIPE"
+  echo "recipe-overrides: rxvt-unicode uses official Debian HTTPS mirror"
+else
+  echo "recipe-overrides: rxvt-unicode recipe not found; skipping" >&2
 fi
 
 # The official dpkg-perl subpackage lists clang (a build-time compiler) as a
@@ -213,4 +230,193 @@ if [[ -d "$GIT_DIR" ]]; then
   echo "recipe-overrides: git builds without tcl/tk (--with-tcltk=no)"
 else
   echo "recipe-overrides: git recipe not found; skipping tcl/tk overrides" >&2
+fi
+
+# Exclude python-xcbgen subpackage in xcb-proto: CodeC userland does not ship Python
+# or X11 Python bindings.
+XCB_PROTO_DIR="$TREE/packages/xcb-proto"
+if [[ -d "$XCB_PROTO_DIR" ]]; then
+  for subfile in "$XCB_PROTO_DIR"/python*.subpackage.sh; do
+    if [[ -f "$subfile" ]]; then
+      subname="$(basename "$subfile" .subpackage.sh)"
+      if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$subfile"; then
+        sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: no python/X11 bindings in userland' "$subfile"
+      fi
+      if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$subfile"; then
+        echo "recipe-overrides: failed to exclude $subname subpackage" >&2
+        exit 1
+      fi
+      echo "recipe-overrides: $subname subpackage excluded for CodeC arches"
+    fi
+  done
+  XCB_PROTO_BUILD="$XCB_PROTO_DIR/build.sh"
+  if [[ -f "$XCB_PROTO_BUILD" ]]; then
+    if ! grep -q "termux_step_create_debscripts" "$XCB_PROTO_BUILD"; then
+      echo "termux_step_create_debscripts() { :; }" >> "$XCB_PROTO_BUILD"
+    fi
+  fi
+else
+  echo "recipe-overrides: xcb-proto recipe not found; skipping python-xcbgen exclusion" >&2
+fi
+
+# Disable maintainer scripts for all packages except the reviewed alternatives packages
+# (coreutils, less, nano, bat, util-linux). This prevents xcb-proto or any other
+# non-whitelisted package from generating unapproved postinst/prerm scripts.
+DEBSCRIPTS_SCRIPT="$TREE/scripts/build/termux_step_create_debscripts.sh"
+if [[ -f "$DEBSCRIPTS_SCRIPT" ]]; then
+  python3 - "$DEBSCRIPTS_SCRIPT" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+guard = """
+case "${TERMUX_PKG_NAME:-}" in
+  coreutils|less|nano|bat|util-linux) ;;
+  *)
+    termux_step_create_debscripts() { :; }
+    return 0 2>/dev/null || true
+    ;;
+esac
+"""
+
+if 'case "${TERMUX_PKG_NAME:-}" in' not in text:
+    path.write_text(guard.strip() + "\n\n" + text)
+    print("recipe-overrides: patched termux_step_create_debscripts.sh to disable maintainer scripts for non-whitelisted packages")
+else:
+    print("recipe-overrides: termux_step_create_debscripts.sh already guarded")
+PY
+  grep -q 'case "${TERMUX_PKG_NAME:-}" in' "$DEBSCRIPTS_SCRIPT"
+else
+  echo "recipe-overrides: termux_step_create_debscripts.sh not found; skipping debscripts guard" >&2
+fi
+
+# Disable python maintainer scripts for all packages except the reviewed alternatives packages
+# (coreutils, less, nano, bat, util-linux). This prevents xcb-proto or any python-containing
+# package from generating postinst/prerm py3compile/py3clean debscripts during termux_step_create_debian_package.
+PYTHON_DEBSCRIPTS_SCRIPT="$TREE/scripts/build/termux_step_create_python_debscripts.sh"
+if [[ -f "$PYTHON_DEBSCRIPTS_SCRIPT" ]]; then
+  python3 - "$PYTHON_DEBSCRIPTS_SCRIPT" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+guard = """
+case "${TERMUX_PKG_NAME:-}" in
+  coreutils|less|nano|bat|util-linux) ;;
+  *)
+    termux_step_create_python_debscripts() { :; }
+    return 0 2>/dev/null || true
+    ;;
+esac
+"""
+
+if 'case "${TERMUX_PKG_NAME:-}" in' not in text:
+    path.write_text(guard.strip() + "\n\n" + text)
+    print("recipe-overrides: patched termux_step_create_python_debscripts.sh to disable python maintainer scripts for non-whitelisted packages")
+else:
+    print("recipe-overrides: termux_step_create_python_debscripts.sh already guarded")
+PY
+  grep -q 'case "${TERMUX_PKG_NAME:-}" in' "$PYTHON_DEBSCRIPTS_SCRIPT"
+else
+  echo "recipe-overrides: termux_step_create_python_debscripts.sh not found; skipping python debscripts guard" >&2
+fi
+
+# Direct override for libbz2: bzip2's upstream Makefile creates absolute symlinks
+# in $TERMUX_PREFIX/bin during `make install` (e.g. bzcmp -> $TERMUX_PREFIX/bin/bzdiff).
+# Clean them up in termux_step_post_make_install.
+LIBBZ2_RECIPE="$TREE/packages/libbz2/build.sh"
+if [[ -f "$LIBBZ2_RECIPE" ]]; then
+  if ! grep -q "CodeC: fix absolute symlinks in libbz2" "$LIBBZ2_RECIPE"; then
+    cat <<'SH' >> "$LIBBZ2_RECIPE"
+
+# CodeC: fix absolute symlinks in libbz2
+termux_step_post_make_install() {
+	for f in "$TERMUX_PREFIX"/bin/*; do
+		if [ -L "$f" ]; then
+			local target
+			target=$(readlink "$f")
+			if [[ "$target" == "$TERMUX_PREFIX"* ]]; then
+				local rel_target
+				rel_target=$(realpath -m --relative-to="$TERMUX_PREFIX/bin" "$target")
+				ln -sf "$rel_target" "$f"
+			fi
+		fi
+	done
+}
+SH
+    echo "recipe-overrides: patched libbz2 to fix absolute symlinks"
+  fi
+fi
+
+# Convert absolute symlinks in $TERMUX_PREFIX to relative symlinks in termux_step_massage.sh
+# BEFORE subpackages are created (termux_create_debian_subpackages), and strip maintainer
+# scripts for non-whitelisted packages. Safe parameter expansion :- is used to comply with
+# set -u (nounset) in termux-packages.
+MASSAGE_SCRIPT="$TREE/scripts/build/termux_step_massage.sh"
+if [[ -f "$MASSAGE_SCRIPT" ]]; then
+  python3 - "$MASSAGE_SCRIPT" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+target_marker = 'if [ "$TERMUX_PACKAGE_FORMAT" = "debian" ]; then'
+symlink_fix_block = """
+	# CodeC override: convert absolute symlinks in $TERMUX_PREFIX to relative symlinks before subpackages
+	while IFS= read -r -d '' file; do
+		local _link_target
+		_link_target=$(readlink "$file")
+		if [[ "$_link_target" == "$TERMUX_PREFIX"* ]]; then
+			local _rel_file="${file#./}"
+			local _rel_dir
+			_rel_dir=$(dirname "$_rel_file")
+			local _abs_dir="$TERMUX_PREFIX/$_rel_dir"
+			local _rel_target
+			_rel_target=$(realpath -m --relative-to="$_abs_dir" "$_link_target")
+			rm -f "$file"
+			ln -s "$_rel_target" "$file"
+			echo "INFO: Converted absolute symlink $file -> $_link_target to relative $_rel_target"
+		fi
+	done < <(find . -type l -print0)
+
+	# CodeC override: remove maintainer scripts for non-whitelisted packages
+	case "${TERMUX_PKG_NAME:-}" in
+		coreutils|less|nano|bat|util-linux) ;;
+		*)
+			rm -f DEBIAN/postinst DEBIAN/prerm DEBIAN/preinst DEBIAN/postrm
+			if [ -n "${TERMUX_PKG_MASSAGEDDIR:-}" ]; then
+				rm -f "${TERMUX_PKG_MASSAGEDDIR}/DEBIAN/postinst" \\
+				      "${TERMUX_PKG_MASSAGEDDIR}/DEBIAN/prerm" \\
+				      "${TERMUX_PKG_MASSAGEDDIR}/DEBIAN/preinst" \\
+				      "${TERMUX_PKG_MASSAGEDDIR}/DEBIAN/postrm"
+			fi
+			if [ -n "${SUBPKG_MASSAGEDDIR:-}" ]; then
+				rm -f "${SUBPKG_MASSAGEDDIR}/DEBIAN/postinst" \\
+				      "${SUBPKG_MASSAGEDDIR}/DEBIAN/prerm" \\
+				      "${SUBPKG_MASSAGEDDIR}/DEBIAN/preinst" \\
+				      "${SUBPKG_MASSAGEDDIR}/DEBIAN/postrm"
+			fi
+			;;
+	esac
+"""
+
+if "CodeC override: convert absolute symlinks" not in text:
+    idx = text.find(target_marker)
+    if idx == -1:
+        print("recipe-overrides: cannot locate debian target marker in termux_step_massage.sh", file=sys.stderr)
+        sys.exit(1)
+    new_text = text[:idx] + symlink_fix_block + "\n\t" + text[idx:]
+    path.write_text(new_text)
+    print("recipe-overrides: patched termux_step_massage.sh to convert absolute symlinks to relative and purge maintainer scripts for non-whitelisted packages")
+else:
+    print("recipe-overrides: termux_step_massage.sh already patched")
+PY
+  grep -q "CodeC override: convert absolute symlinks" "$MASSAGE_SCRIPT"
+else
+  echo "recipe-overrides: termux_step_massage.sh not found; skipping absolute symlink fix" >&2
 fi

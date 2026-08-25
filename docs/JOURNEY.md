@@ -1,9 +1,8 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-24 · **State:** Parts A, B, C, and D ✅
-device-verified — Phase 3's device-acceptance gate is complete. PR #14 has the
-signing implementation, signed Pages/client acceptance, the key-seeded
-bootstrap build/release, and now the final clean-device evidence.
+**Last updated:** 2026-08-25 · **State:** Phase 3 ✅ complete (device-verified).
+Phase 4 Parts 4.1–4.6 ✅ complete. Part 4.6 published via workflow run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740)
+and device-verified on real arm64 hardware for all 15 new package roots. Part 4.7 is active.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -441,4 +440,14 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      Unified color palettes (`Dracula`, `Monokai`, `GitHub Dark`, `Classic Dark`) for terminal canvas,
      custom monospace/proportional font families (`Monospace`, `Courier`, `Sans Serif`, `Serif`),
      Settings screen controls with live `TerminalThemePreview` card, and reactive DataStore flows.
-   - Parts 4.5–4.7 remaining (catalog expansion and Android integration slice).
+   - **Part 4.5 — Expanded package catalog (Round 2 CI build)** ✅ **DONE (CI verified 2026-08-25).**
+     Expanded from 10 to 25 curated package roots (`git`, `wget`, `bat`, `ripgrep`, `fd`, `htop`,
+     `tmux`, `tree`, `patch`, `diffutils`, `zstd`, `m4`, `autoconf`, `automake`, `libtool`).
+     Workflow run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s)
+     compiled all 25 roots and dependencies for both architectures with 0 maintainer script violations and
+     byte-identical bootstrap archives.
+   - **Part 4.6 — Expanded package catalog (Round 2 publish & device gate)** ✅ **DONE (device-verified 2026-08-25).**
+     Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) (reusing CI run `32845127723`).
+     Verified `pkg update`, `pkg install`, and execution of all 15 new package roots (`git`, `wget`, `bat`, `ripgrep`, `fd`,
+     `htop`, `tmux`, `tree`, `patch`, `diffutils`, `zstd`, `m4`, `autoconf`, `automake`, `libtool`) on a real arm64 device.
+   - Part 4.7 remaining (Android integration foundation slice).
