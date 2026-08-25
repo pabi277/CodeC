@@ -34,8 +34,10 @@ done
 
 # xorg.freedesktop.org and www.x.org/releases repeatedly timed out from GitHub Actions
 # package builds. ftp.x.org serves all official, hash-verified X.Org source archives directly via HTTPS.
-find "$TREE/packages" -name "build.sh" -exec sed -i \
-  's#https\?://\(xorg\.freedesktop\.org\|www\.x\.org\)/\(releases\|archive\)/individual/#https://ftp.x.org/pub/individual/#' {} +
+if [[ -d "$TREE/packages" ]]; then
+  find "$TREE/packages" -name "build.sh" -exec sed -i \
+    's#https\?://\(xorg\.freedesktop\.org\|www\.x\.org\)/\(releases\|archive\)/individual/#https://ftp.x.org/pub/individual/#' {} +
+fi
 UTIL_MACROS_RECIPE="$TREE/packages/xorg-util-macros/build.sh"
 if [[ -f "$UTIL_MACROS_RECIPE" ]]; then
   if grep -qE 'https://(xorg\.freedesktop\.org|www\.x\.org)/releases/individual/util/' "$UTIL_MACROS_RECIPE"; then
