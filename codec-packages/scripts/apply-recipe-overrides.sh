@@ -230,11 +230,11 @@ else
   echo "recipe-overrides: git recipe not found; skipping tcl/tk overrides" >&2
 fi
 
-# Exclude python-xcbgen subpackage in xcb-proto:
+# Exclude python-xcbgen subpackage in xcb-proto and disable maintainer scripts on xcb-proto:
 # CodeC userland does not ship Python or X11 Python bindings.
-# The official python-xcbgen subpackage creates unapproved postinst/prerm
-# maintainer scripts (python byte-compilation hooks) which are forbidden
-# by CodeC repository policy.
+# The official python-xcbgen subpackage and xcb-proto default debscripts create
+# unapproved postinst/prerm maintainer scripts (python byte-compilation hooks)
+# which are forbidden by CodeC repository policy.
 XCB_PROTO_DIR="$TREE/packages/xcb-proto"
 if [[ -d "$XCB_PROTO_DIR" ]]; then
   for subfile in "$XCB_PROTO_DIR"/python*.subpackage.sh; do
@@ -250,6 +250,13 @@ if [[ -d "$XCB_PROTO_DIR" ]]; then
       echo "recipe-overrides: $subname subpackage excluded for CodeC arches"
     fi
   done
+  XCB_PROTO_BUILD="$XCB_PROTO_DIR/build.sh"
+  if [[ -f "$XCB_PROTO_BUILD" ]]; then
+    if ! grep -q "termux_step_create_debscripts" "$XCB_PROTO_BUILD"; then
+      echo "termux_step_create_debscripts() { :; }" >> "$XCB_PROTO_BUILD"
+    fi
+    echo "recipe-overrides: disabled maintainer scripts for xcb-proto"
+  fi
 else
   echo "recipe-overrides: xcb-proto recipe not found; skipping python-xcbgen exclusion" >&2
 fi

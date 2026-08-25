@@ -264,14 +264,23 @@ class RecipeOverrideTest(unittest.TestCase):
             self.assertIn("realpath -m --relative-to", libbz2_text)
 
     def test_xcb_proto_python_subpackages_excluded(self) -> None:
+<<<<<<< HEAD
         """python-xcbgen subpackage in xcb-proto must be excluded to prevent
         unapproved maintainer scripts in the CodeC repository."""
+=======
+        """python-xcbgen subpackage in xcb-proto must be excluded and xcb-proto
+        debscripts disabled to prevent unapproved maintainer scripts in CodeC repository."""
+>>>>>>> acb3af1 (Fix(recipe-overrides): disable auto-generated debscripts for xcb-proto)
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture(tree)
 
             xcb_proto_dir = tree / "packages" / "xcb-proto"
             xcb_proto_dir.mkdir(parents=True)
+<<<<<<< HEAD
+=======
+            (xcb_proto_dir / "build.sh").write_text('TERMUX_PKG_HOMEPAGE=https://xorg.freedesktop.org\n')
+>>>>>>> acb3af1 (Fix(recipe-overrides): disable auto-generated debscripts for xcb-proto)
             subpkg = xcb_proto_dir / "python-xcbgen.subpackage.sh"
             subpkg.write_text('TERMUX_SUBPKG_DESCRIPTION="Python bindings for xcb-proto"\n')
 
@@ -283,6 +292,11 @@ class RecipeOverrideTest(unittest.TestCase):
                 'TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" '
                 "# CodeC: no python/X11 bindings in userland",
             )
+<<<<<<< HEAD
+=======
+            build_text = (xcb_proto_dir / "build.sh").read_text()
+            self.assertIn("termux_step_create_debscripts() { :; }", build_text)
+>>>>>>> acb3af1 (Fix(recipe-overrides): disable auto-generated debscripts for xcb-proto)
 
     def test_rxvt_unicode_uses_debian_download_mirror(self) -> None:
         """The dist.schmorp.de timeout host is replaced with Debian CDN mirror."""
