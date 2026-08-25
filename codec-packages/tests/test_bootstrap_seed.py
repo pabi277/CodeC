@@ -20,6 +20,9 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import shutil
+import subprocess
+import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -174,8 +177,45 @@ class PlanGroupTest(unittest.TestCase):
         "/data/data/com.codeci.ide/files/usr/share/man/man1/cat.1.gz\n"
         "/data/data/com.codeci.ide/files/usr/libexec/busybox/less\n"
         "10\n"
+        # busybox/less declares no pager.1.gz slave; dpkg still requires an
+        # (empty) placeholder line per group slave, then the terminator blank.
+        "\n"
         "\n"
     )
+
+    def test_pager_admin_parses_with_real_dpkg(self) -> None:
+        """2026-08-25 incident: the seeded pager admin file shipped in
+        userland-v2-dev was rejected by dpkg as "corrupt: unexpected end of
+        file while trying to read master file" because slave-less records
+        lacked placeholder lines. Prove the generated format parses with a
+        real update-alternatives."""
+        ua = shutil.which("update-alternatives")
+        if ua is None:
+            self.skipTest("update-alternatives not available on this host")
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Path(tmp) / "p"   # on-host stand-in for the device prefix
+            fake.mkdir()
+            _, admin = plan.plan_group("pager", list(pager_members()), str(fake))
+            # dpkg only lists alternatives whose target exists; materialize them.
+            for m in pager_members():
+                target = fake / m.target
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.touch()
+            admindir = fake / "var/lib/dpkg/alternatives"
+            altdir = fake / "etc/alternatives"
+            admindir.mkdir(parents=True); altdir.mkdir(parents=True)
+            (admindir / "pager").write_text(admin)
+            result = subprocess.run(
+                [ua, "--admindir", str(admindir), "--altdir", str(altdir),
+                 "--display", "pager"],
+                text=True, capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("corrupt", result.stderr)
+            self.assertIn("pager - auto mode", result.stdout)
+            self.assertIn(f"link best version is {fake}/bin/less", result.stdout)
+            self.assertIn(f"{fake}/bin/less - priority 50", result.stdout)
+            self.assertIn(f"{fake}/libexec/busybox/less - priority 10", result.stdout)
 
     def test_pager_group_winner_and_golden_admin(self) -> None:
         members = list(pager_members())

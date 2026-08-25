@@ -163,18 +163,38 @@ update-alternatives: error: .../var/lib/dpkg/alternatives/pager corrupt:
 unexpected end of file while trying to read master file
 ```
 
-**Root cause (forensic capture in hand):** the dpkg alternatives admin file
-`pager` ended mid-record (truncated after the historical `busybox/less`
-entry's priority line, before its slave path and record terminator) — an
-`update-alternatives` run from an earlier session was interrupted mid-write.
-Neither the `bat` deb nor its postinst was defective: the postinst merely
-*read* the damaged file. All 21 round-2 packages unpacked; only `bat`'s
-configure step was blocked.
+**Definitive root cause (byte-level reproduced against live dpkg):** the
+device was later observed reset to the fresh `userland-v2-dev` seed (app
+reinstall/data reset between sessions), and the **freshly seeded** `pager`
+admin file was again unparseable — so the defect is not an interrupted write,
+it is **built into the published bootstrap archive**. `plan-bootstrap.py`'s
+admin-file writer omitted the per-record slave placeholder lines dpkg
+requires from every alternative record: for a member that declares no slave
+in a group that has slaves (`busybox/less` in the `pager` group), dpkg's
+parser consumes the file's terminator blank as the missing slave line and
+then dies at EOF — reproduced byte-for-byte on the build host with live
+`update-alternatives`. Every fresh device carried the poison; the first
+package whose postinst touched the `pager` group (round 2's `bat`) failed
+to configure.
 
-**Recovery (proven on-device):** snapshot the damaged file, delete it,
-re-register the pager group (`update-alternatives --install .../pager pager
-.../bin/less 50 --slave ...`), then `dpkg --configure -a`; `bat 0.26.1` then
-configured and ran, priorities verified (`less` p50 default, `bat` p10).
+**Fixes:**
+
+1. `plan-bootstrap.py` now emits per-record slave placeholders (empty line
+   per undeclared group slave) plus the terminator blank — output
+   byte-matches live dpkg's own writer; golden test updated and a new
+   live-parse test runs the generated file through real
+   `update-alternatives --display` (with a graceful skip where dpkg is
+   absent). This corrects **future** bootstrap archives.
+2. The already-published `userland-v2-dev` archive stays byte-identical as
+   required; on device the new **`pkg heal` / `heal_alternatives_db`**
+   client layer mitigates the poisoned seed automatically (proven
+   on-device 2026-08-25: the healer quarantined the freshly seeded file,
+   the install proceeded, and the group re-registered).
+
+**Recovery on today's already-seeded devices (proven on-device):** quarantine
+or delete the unparseable admin file (healer does this), then reinstall the
+affected packages (`pkg uninstall -y less && pkg install -y less`) so their
+postinsts re-register the group.
 
 **Two red herrings ruled out as defects during the same verification:**
 
