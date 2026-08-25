@@ -33,13 +33,11 @@ for recipe in attr libacl; do
 done
 
 # xorg.freedesktop.org and www.x.org/releases repeatedly timed out from GitHub Actions
-# package builds (runs 32585409356 and 32768209859) while fetching util-macros-1.20.2.
-# ftp.x.org serves the official, hash-verified source archive directly via HTTPS without timeouts.
+# package builds. ftp.x.org serves all official, hash-verified X.Org source archives directly via HTTPS.
+find "$TREE/packages" -name "build.sh" -exec sed -i \
+  's#https\?://\(xorg\.freedesktop\.org\|www\.x\.org\)/\(releases\|archive\)/individual/#https://ftp.x.org/pub/individual/#' {} +
 UTIL_MACROS_RECIPE="$TREE/packages/xorg-util-macros/build.sh"
 if [[ -f "$UTIL_MACROS_RECIPE" ]]; then
-  sed -i \
-    's#https://\(xorg\.freedesktop\.org\|www\.x\.org\)/releases/individual/util/#https://ftp.x.org/pub/individual/util/#' \
-    "$UTIL_MACROS_RECIPE"
   if grep -qE 'https://(xorg\.freedesktop\.org|www\.x\.org)/releases/individual/util/' "$UTIL_MACROS_RECIPE"; then
     echo "recipe-overrides: failed to update util-macros source URL" >&2
     exit 1
