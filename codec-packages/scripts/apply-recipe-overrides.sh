@@ -50,6 +50,24 @@ else
   echo "recipe-overrides: util-macros recipe not found; skipping" >&2
 fi
 
+# dist.schmorp.de repeatedly timed out from GitHub Actions package builds (run 32781913358)
+# while fetching rxvt-unicode-9.31.tar.bz2. Debian's official CDN mirror deb.debian.org
+# serves the identical, hash-verified source archive directly via HTTPS without timeouts.
+RXVT_UNICODE_RECIPE="$TREE/packages/rxvt-unicode/build.sh"
+if [[ -f "$RXVT_UNICODE_RECIPE" ]]; then
+  sed -i \
+    's#https\?://dist\.schmorp\.de/rxvt-unicode/\(Attic/\)\?rxvt-unicode-\(.*\)\.tar\.bz2#https://deb.debian.org/debian/pool/main/r/rxvt-unicode/rxvt-unicode_\2.orig.tar.bz2#' \
+    "$RXVT_UNICODE_RECIPE"
+  if grep -qE 'dist\.schmorp\.de' "$RXVT_UNICODE_RECIPE"; then
+    echo "recipe-overrides: failed to update rxvt-unicode source URL" >&2
+    exit 1
+  fi
+  grep -qF 'https://deb.debian.org/debian/pool/main/r/rxvt-unicode/' "$RXVT_UNICODE_RECIPE"
+  echo "recipe-overrides: rxvt-unicode uses official Debian HTTPS mirror"
+else
+  echo "recipe-overrides: rxvt-unicode recipe not found; skipping" >&2
+fi
+
 # The official dpkg-perl subpackage lists clang (a build-time compiler) as a
 # *runtime* dependency: TERMUX_SUBPKG_DEPENDS="perl, clang, make". CodeC
 # userland never installs clang, and a runtime dependency on a compiler is

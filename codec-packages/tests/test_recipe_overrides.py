@@ -284,6 +284,29 @@ class RecipeOverrideTest(unittest.TestCase):
                 "# CodeC: no python/X11 bindings in userland",
             )
 
+    def test_rxvt_unicode_uses_debian_download_mirror(self) -> None:
+        """The dist.schmorp.de timeout host is replaced with Debian CDN mirror."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+
+            rxvt_dir = tree / "packages" / "rxvt-unicode"
+            rxvt_dir.mkdir(parents=True)
+            recipe = rxvt_dir / "build.sh"
+            recipe.write_text(
+                'TERMUX_PKG_SRCURL=https://dist.schmorp.de/rxvt-unicode/Attic/'
+                'rxvt-unicode-${TERMUX_PKG_VERSION}.tar.bz2\n'
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            text = recipe.read_text()
+            self.assertIn(
+                "https://deb.debian.org/debian/pool/main/r/rxvt-unicode/rxvt-unicode_",
+                text,
+            )
+            self.assertNotIn("dist.schmorp.de", text)
+
 
 if __name__ == "__main__":
     unittest.main()
