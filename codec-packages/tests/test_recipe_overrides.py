@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
 """Hermetic coverage for the narrowly scoped recipe transport overrides."""
 
 from __future__ import annotations
@@ -255,6 +255,7 @@ class RecipeOverrideTest(unittest.TestCase):
             text = massage.read_text()
             self.assertIn("CodeC override: convert absolute symlinks", text)
             self.assertIn("realpath -m --relative-to", text)
+            self.assertIn("CodeC override: remove maintainer scripts for non-whitelisted packages", text)
             symlink_idx = text.find("CodeC override: convert absolute symlinks")
             subpkg_idx = text.find("termux_create_debian_subpackages")
             self.assertLess(symlink_idx, subpkg_idx)
@@ -262,6 +263,28 @@ class RecipeOverrideTest(unittest.TestCase):
             libbz2_text = libbz2_build.read_text()
             self.assertIn("CodeC: fix absolute symlinks in libbz2", libbz2_text)
             self.assertIn("realpath -m --relative-to", libbz2_text)
+
+    def test_debscripts_override_patches_termux_step_create_debscripts(self) -> None:
+        """termux_step_create_debscripts.sh is patched to disable maintainer scripts
+        for non-whitelisted packages."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+
+            scripts_build = tree / "scripts" / "build"
+            scripts_build.mkdir(parents=True)
+            debscripts = scripts_build / "termux_step_create_debscripts.sh"
+            debscripts.write_text(
+                "termux_step_create_debscripts() {\n"
+                "\techo 'creating debscripts'\n"
+                "}\n"
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            text = debscripts.read_text()
+            self.assertIn('case "${TERMUX_PKG_NAME:-}" in', text)
+            self.assertIn('coreutils|less|nano|bat|util-linux)', text)
 
     def test_xcb_proto_python_subpackages_excluded(self) -> None:
         """python-xcbgen subpackage in xcb-proto must be excluded and xcb-proto

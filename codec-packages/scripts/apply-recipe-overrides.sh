@@ -232,11 +232,8 @@ else
   echo "recipe-overrides: git recipe not found; skipping tcl/tk overrides" >&2
 fi
 
-# Exclude python-xcbgen subpackage in xcb-proto and disable maintainer scripts on xcb-proto:
-# CodeC userland does not ship Python or X11 Python bindings.
-# The official python-xcbgen subpackage and xcb-proto default debscripts create
-# unapproved postinst/prerm maintainer scripts (python byte-compilation hooks)
-# which are forbidden by CodeC repository policy.
+# Exclude python-xcbgen subpackage in xcb-proto: CodeC userland does not ship Python
+# or X11 Python bindings.
 XCB_PROTO_DIR="$TREE/packages/xcb-proto"
 if [[ -d "$XCB_PROTO_DIR" ]]; then
   for subfile in "$XCB_PROTO_DIR"/python*.subpackage.sh; do
@@ -257,10 +254,42 @@ if [[ -d "$XCB_PROTO_DIR" ]]; then
     if ! grep -q "termux_step_create_debscripts" "$XCB_PROTO_BUILD"; then
       echo "termux_step_create_debscripts() { :; }" >> "$XCB_PROTO_BUILD"
     fi
-    echo "recipe-overrides: disabled maintainer scripts for xcb-proto"
   fi
 else
   echo "recipe-overrides: xcb-proto recipe not found; skipping python-xcbgen exclusion" >&2
+fi
+
+# Disable maintainer scripts for all packages except the reviewed alternatives packages
+# (coreutils, less, nano, bat, util-linux). This prevents xcb-proto or any other
+# non-whitelisted package from generating unapproved postinst/prerm scripts.
+DEBSCRIPTS_SCRIPT="$TREE/scripts/build/termux_step_create_debscripts.sh"
+if [[ -f "$DEBSCRIPTS_SCRIPT" ]]; then
+  python3 - "$DEBSCRIPTS_SCRIPT" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+guard = """
+case "${TERMUX_PKG_NAME:-}" in
+  coreutils|less|nano|bat|util-linux) ;;
+  *)
+    termux_step_create_debscripts() { :; }
+    return 0 2>/dev/null || true
+    ;;
+esac
+"""
+
+if 'case "${TERMUX_PKG_NAME:-}" in' not in text:
+    path.write_text(guard.strip() + "\n\n" + text)
+    print("recipe-overrides: patched termux_step_create_debscripts.sh to disable maintainer scripts for non-whitelisted packages")
+else:
+    print("recipe-overrides: termux_step_create_debscripts.sh already guarded")
+PY
+  grep -q 'case "${TERMUX_PKG_NAME:-}" in' "$DEBSCRIPTS_SCRIPT"
+else
+  echo "recipe-overrides: termux_step_create_debscripts.sh not found; skipping debscripts guard" >&2
 fi
 
 # Direct override for libbz2: bzip2's upstream Makefile creates absolute symlinks
@@ -291,7 +320,8 @@ SH
 fi
 
 # Convert absolute symlinks in $TERMUX_PREFIX to relative symlinks in termux_step_massage.sh
-# BEFORE subpackages are created (termux_create_debian_subpackages).
+# BEFORE subpackages are created (termux_create_debian_subpackages), and strip maintainer
+# scripts for non-whitelisted packages.
 MASSAGE_SCRIPT="$TREE/scripts/build/termux_step_massage.sh"
 if [[ -f "$MASSAGE_SCRIPT" ]]; then
   python3 - "$MASSAGE_SCRIPT" <<'PY'
@@ -319,6 +349,17 @@ symlink_fix_block = """
 			echo "INFO: Converted absolute symlink $file -> $_link_target to relative $_rel_target"
 		fi
 	done < <(find . -type l -print0)
+
+	# CodeC override: remove maintainer scripts for non-whitelisted packages
+	case "${TERMUX_PKG_NAME:-}" in
+		coreutils|less|nano|bat|util-linux) ;;
+		*)
+			rm -f "$TERMUX_PKG_MASSAGEDDIR/DEBIAN/postinst" \\
+			      "$TERMUX_PKG_MASSAGEDDIR/DEBIAN/prerm" \\
+			      "$TERMUX_PKG_MASSAGEDDIR/DEBIAN/preinst" \\
+			      "$TERMUX_PKG_MASSAGEDDIR/DEBIAN/postrm"
+			;;
+	esac
 """
 
 if "CodeC override: convert absolute symlinks" not in text:
@@ -328,9 +369,9 @@ if "CodeC override: convert absolute symlinks" not in text:
         sys.exit(1)
     new_text = text[:idx] + symlink_fix_block + "\n\t" + text[idx:]
     path.write_text(new_text)
-    print("recipe-overrides: patched termux_step_massage.sh to convert absolute symlinks to relative before subpackage creation")
+    print("recipe-overrides: patched termux_step_massage.sh to convert absolute symlinks to relative and purge maintainer scripts for non-whitelisted packages")
 else:
-    print("recipe-overrides: termux_step_massage.sh already patched for symlinks")
+    print("recipe-overrides: termux_step_massage.sh already patched")
 PY
   grep -q "CodeC override: convert absolute symlinks" "$MASSAGE_SCRIPT"
 else
