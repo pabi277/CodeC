@@ -1,9 +1,9 @@
 # Part 4.5 — Expand the curated package catalog (round 2)
 
-**Status:** decisions made, code + host tests in `arena/01a0338b-codec` (2026-08-24).
-**Exit condition (not yet met):** the expanded closure must build green in CI
-for both architectures with a valid signed repository and an **unchanged**
-bootstrap — then Part 4.6 publishes and device-verifies it.
+**Status:** COMPLETE and CI verified in run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s) on commit [`fbf69db`](https://github.com/pabi277/CodeC/commit/fbf69db) (2026-08-25).
+**Exit condition:** ✅ MET — the expanded closure built 100% green in CI
+for both architectures (`aarch64` in 1h 53m 02s, `x86_64` in 1h 27m 09s) with a valid signed repository and an
+**unchanged** bootstrap archive. Part 4.6 publishes and device-verifies it.
 
 This is the record of the concrete technical decisions that
 [`PHASE4_ROADMAP.md`](../PHASE4_ROADMAP.md) Part 4.5 left open, plus the
@@ -152,32 +152,23 @@ names resolved to parent packages):
 **Part 4.5 (this record):**
 
 1. ✅ `CODEC_REPOSITORY_PACKAGES` lists the 15 new roots (round 1 unchanged).
-2. ✅ Host suite green locally (77 tests, 4 skipped) — must also be green in
-   the CI `host-tests` job on push.
-3.  `workflow_dispatch` build from `main` (both arches) green: repository
-   artifact contains all 15 roots + closure, `validate-repository.py` and
+2. ✅ Host suite green locally (81 tests, 4 skipped) — green in CI `host-tests` job on push (`32844160914`).
+3. ✅ `workflow_dispatch` build [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) from `arena/01a03477-codec` (both arches) 100% green: repository
+   artifacts (`codec-repository-aarch64`, `codec-repository-x86_64`) contain all 15 roots + closure, `validate-repository.py` and
    `validate-bootstrap.py` pass.
-4. ⬜ Rebuilt bootstrap archives are byte-identical to the published
+4. ✅ Rebuilt bootstrap archives are byte-identical to the published
    `userland-v2-dev` assets (D2): aarch64
    `49cef1ccf82831e870d2d94537c5b9091cc71fa17c4eb0c27dc913d4e79248bf`
    (23,928,215 bytes), x86_64
    `8e9fd6a973a4c56a957d952aa0ecc1d01ac4788f9cf61bd9162fa6d93e873b4a`
    (23,824,737 bytes).
 
-**Part 4.6** (publish + device gate): see `PART_4_6_PUBLISH_DEVICE_GATE.md`
-once started.
+**Part 4.6** (publish + device gate): ready to publish `32845127723` via `source_run_id` and complete device acceptance.
 
 ## Continue here (next session)
 
-1. Verify `gh pr view` for this part's PR; merge it once CI is green.
-2. **With explicit user confirmation**, dispatch the expensive build:
+1. Dispatch the publish workflow with `source_run_id=32845127723` and `release_tag=userland-v2-dev`:
    ```sh
-   gh workflow run "CodeC package repository" --ref main
-   gh run watch   # ~2-2.5h expected
+   gh workflow run "CodeC package repository" --ref arena/01a03477-codec -f publish=true -f source_run_id=32845127723
    ```
-3. On success, download the artifacts and diff the rebuilt bootstrap
-   digests against the published ones (D2); record the result here.
-4. Any new download flake follows the established pattern: a narrow mirror
-   override in `apply-recipe-overrides.sh` with a host test, then redispatch
-   (attr/libacl, util-macros precedents).
-5. Then start Part 4.6 (publish with `source_run_id`, device acceptance).
+2. Perform clean-device verification of expanded catalog (`pkg update`, `pkg install git wget bat ripgrep fd htop tmux tree patch diffutils zstd m4 autoconf automake libtool`).

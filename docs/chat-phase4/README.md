@@ -12,10 +12,13 @@ Phase 4 covers polish, expansion, and UX improvements on top of the Phase 3 pack
   Provides transparent trust and channel indicators in Settings ("Package Repository & Trust" card, keyring status, signing subkey fingerprint, "CHECK REPOSITORY" probe) and in terminal CLI (`pkg status`, `pkg trust`, `pkg channel`).
 - **[Part 4.4 — Terminal/editor settings parity](PART_4_4_SETTINGS_PARITY.md):** ✅ **DONE (verified 2026-08-24).**
   Closes gaps between terminal and editor settings with custom terminal font family, synchronized terminal theme palettes (Dracula, Monokai, GitHub Dark, Classic Dark), SettingsScreen integration with live TerminalThemePreview card, and reactive DataStore flows.
-- **Part 4.5 — Expand curated package catalog (Round 2 — CI Build):** 🚧 **IN PROGRESS (2026-08-24).**
+- **Part 4.5 — Expand curated package catalog (Round 2 — CI Build):** ✅ **DONE (CI verified 2026-08-25).**
   Decisions and evidence in [`PART_4_5_CATALOG_EXPANSION.md`](PART_4_5_CATALOG_EXPANSION.md):
   15 new roots (`git wget bat ripgrep fd htop tmux tree patch diffutils zstd m4 autoconf automake libtool`),
   repository-only scope (bootstrap unchanged), fail-loud git/bash recipe overrides,
-  reviewed `bat`/`util-linux` alternatives entries. CI build dispatch pending explicit confirmation.
-- **Part 4.6 — Expand curated package catalog (Round 2 — Publish & Device Gate):** Planning.
+  reviewed `bat`/`util-linux` alternatives entries, guarded `termux_step_create_debscripts`,
+  `termux_step_create_python_debscripts`, and `termux_step_massage` scripts.
+  CI workflow run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s) completed green for both `aarch64` and `x86_64`.
+- **Part 4.6 — Expand curated package catalog (Round 2 — Publish & Device Gate):** 🚧 **IN PROGRESS.**
+  Publish successful run `32845127723` via `source_run_id` and complete clean-device acceptance.
 - **Part 4.7 — Android-integration foundation slice:** Planning.

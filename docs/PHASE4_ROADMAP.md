@@ -1,14 +1,12 @@
 # CodeC Phase 4 roadmap
 
-**Status (2026-08-24):** Parts 4.1–4.4 ✅ done (device-verified, merged via
-PRs #16–#17). Part 4.5 (expanded catalog, round 2) is in progress: decisions
-recorded in [`chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md),
-code + host tests staged; the CI build dispatch is pending explicit
-confirmation. Phase 3 (package management: `pkg`, apt/dpkg bootstrap, signed
-repository) is complete and device-verified — see [`JOURNEY.md`](JOURNEY.md)
-and
-[`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md). This document is
-the entry point for Phase 4: polish and expansion on top of that foundation.
+**Status (2026-08-25):** Parts 4.1–4.5 ✅ done (device-verified or CI-verified).
+Part 4.5 (expanded catalog, round 2) completed in CI workflow run
+[`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s, 25 roots, both arches green).
+Part 4.6 (publish & device acceptance) is in progress / ready for pickup. Phase 3 (package management: `pkg`,
+apt/dpkg bootstrap, signed repository) is complete and device-verified — see [`JOURNEY.md`](JOURNEY.md)
+and [`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md).
+This document is the entry point for Phase 4: polish and expansion on top of that foundation.
 
 This is deliberately a **roadmap**, not an execution plan like
 [`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md)/[`NEXT_STEPS.md`](NEXT_STEPS.md). It names
@@ -136,8 +134,8 @@ surfaces.
 
 ### Part 4.5 / 4.6 — Expand the curated package catalog (round 2)
 
-**Status: Part 4.5 IN PROGRESS (2026-08-24).** Decisions recorded in
-[`chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md):
+**Status: Part 4.5 COMPLETE (CI verified 2026-08-25); Part 4.6 IN PROGRESS.**
+Decisions recorded in [`chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md):
 round 2 roots = `git wget bat ripgrep fd htop tmux tree patch diffutils zstd
 m4 autoconf automake libtool` (vim/openssh/python3 deferred to round 3 with
 reasons); repository-only scope (bootstrap byte-identical, verified by
@@ -145,8 +143,9 @@ digest); two fail-loud recipe overrides (bash `termux-tools` removal shared
 by both builds; git gitk/git-gui/git-svn subpackage exclusion +
 `--with-tcltk=no`); reviewed maintainer-script allowlist extended by
 `bat`/`util-linux` (both below `less`'s pager priority, so the default pager
-cannot change). Code + host tests staged; CI build dispatch pending explicit
-confirmation.
+cannot change). CI workflow run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723)
+(1h 53m 36s) completed with 100% success for both `aarch64` and `x86_64`.
+Part 4.6 publishes run `32845127723` and completes clean-device acceptance.
 
 **Basic goal.** Grow the Phase 3 package set beyond the original curated roots
 (`nano less coreutils grep sed gawk gzip tar make libmagic`, per
@@ -159,13 +158,10 @@ proven in Phase 3 — not a new mechanism.
 own history shows the build side and the device-acceptance side are each a
 full part's worth of work on their own:
 
-- **Part 4.5 — build and validate the expanded closure in CI.** Est. ~50–70
-  replies. Candidate package list, recipe overrides if needed, host-test
-  coverage, and a green CI build — no device testing yet.
-- **Part 4.6 — publish and device-verify the expanded repository/bootstrap.**
-  Est. ~50–70 replies. Depends on 4.5. Mirrors Part D's publish +
-  clean/upgrade-device acceptance pattern, including the same "never dispatch
-  an expensive/destructive step without explicit confirmation" rule.
+- **Part 4.5 — build and validate the expanded closure in CI.** ✅ **DONE (CI verified 2026-08-25).**
+  Candidate package list, recipe overrides, host-test coverage, and a green CI build (`32845127723`).
+- **Part 4.6 — publish and device-verify the expanded repository/bootstrap.** 🚧 **IN PROGRESS.**
+  Mirrors Part D's publish + clean/upgrade-device acceptance pattern, publishing run `32845127723` via `source_run_id`.
 
 **Left open on purpose:** exactly which packages, and whether new packages
 ship inside the bootstrap or are only ever installed later via `pkg` from the
@@ -209,8 +205,8 @@ capabilities exists. Do not attempt the whole surface area in one part.
 | 4.2 — install confirmation UX | none | small | ✅ **DONE** (verified) |
 | 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ✅ **DONE** (verified) |
 | 4.4 — settings/theme parity | none | small–medium | ✅ **DONE** (device-verified) |
-| 4.5 — expanded package build (CI) | none | medium | **IN PROGRESS** — decisions recorded, CI build pending confirmation |
-| 4.6 — expanded package publish + device accept | 4.5 | medium | ~50–70 |
+| 4.5 — expanded package build (CI) | none | medium | ✅ **DONE** (run `32845127723` green) |
+| 4.6 — expanded package publish + device accept | 4.5 | medium | 🚧 **IN PROGRESS** (~50–70) |
 | 4.7 — Android integration foundation slice | none | large (epic seed) | ~50–70 (first slice only) |
 
 None of these parts block each other except 4.6 on 4.5. Pick whichever the
