@@ -113,6 +113,58 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `pkg heal quarantines only unreadable alternatives admin files`() {
+        // On-device evidence 2026-08-25: an interrupted transaction left the
+        // pager admin file truncated; dpkg refused every later postinst with
+        // "corrupt: unexpected end of file". The healer must move only the
+        // unreadable file aside so the group can re-register.
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-heal-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            listOf("apt-get", "dpkg", "gpgv").forEach { name ->
+                File(bin, name).apply {
+                    writeText("#!/bin/sh\nexit 0\n")
+                    setExecutable(true)
+                }
+            }
+            File(prefix, "etc/apt/keyrings").mkdirs()
+            File(prefix, "etc/apt/keyrings/${ShellEnvironment.PACKAGE_REPOSITORY_KEYRING}")
+                .writeText("public-test-key")
+            // update-alternatives stub: parses every group except the
+            // truncated "editor" record, mirroring dpkg's behaviour.
+            File(bin, "update-alternatives").apply {
+                writeText("#!/bin/sh\n[ \"\$2\" = editor ] && exit 2\nexit 0\n")
+                setExecutable(true)
+            }
+            val altDir = File(prefix, "var/lib/dpkg/alternatives").apply { mkdirs() }
+            File(altDir, "pager").writeText("auto\nwell-formed\n")
+            File(altDir, "editor").writeText("auto\n/truncated")
+            val pkg = File(bin, "pkg").apply {
+                writeText(ShellEnvironment.pkgScript())
+                setExecutable(true)
+            }
+
+            val process = ProcessBuilder("/bin/sh", pkg.absolutePath, "heal")
+                .redirectErrorStream(true)
+                .apply { environment()["PREFIX"] = prefix.absolutePath }
+                .start()
+            val completed = process.waitFor(10, TimeUnit.SECONDS)
+            if (!completed) process.destroyForcibly()
+            val output = process.inputStream.bufferedReader().readText()
+
+            assertTrue("pkg heal timed out: $output", completed)
+            assertEquals(output, 0, process.exitValue())
+            assertTrue(output.contains("quarantined unreadable alternatives admin file: editor"))
+            assertFalse(File(altDir, "editor").exists())
+            assertTrue(altDir.listFiles()!!.any { it.name.startsWith("editor.corrupt-") })
+            assertTrue("well-formed pager admin file must be untouched", File(altDir, "pager").exists())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `pkg spec checks do not require python3 on the device`() {
         // Part B (2026-08-23): the fresh-device Phase 3 closure ships no
         // python3, so the maintainer-script byte checks must be pure shell.

@@ -153,7 +153,55 @@ valid.
   fails loudly at the apt check. CI always applies overrides once on a
   fresh clone, so this is safe; noted here for future reference.
 
-## 6. What was verified as correct (no action)
+## 6. Device-acceptance incident follow-up (2026-08-25)
+
+During re-verification of the latest APK on a long-lived device, `bat`'s
+postinst failed:
+
+```
+update-alternatives: error: .../var/lib/dpkg/alternatives/pager corrupt:
+unexpected end of file while trying to read master file
+```
+
+**Root cause (forensic capture in hand):** the dpkg alternatives admin file
+`pager` ended mid-record (truncated after the historical `busybox/less`
+entry's priority line, before its slave path and record terminator) — an
+`update-alternatives` run from an earlier session was interrupted mid-write.
+Neither the `bat` deb nor its postinst was defective: the postinst merely
+*read* the damaged file. All 21 round-2 packages unpacked; only `bat`'s
+configure step was blocked.
+
+**Recovery (proven on-device):** snapshot the damaged file, delete it,
+re-register the pager group (`update-alternatives --install .../pager pager
+.../bin/less 50 --slave ...`), then `dpkg --configure -a`; `bat 0.26.1` then
+configured and ran, priorities verified (`less` p50 default, `bat` p10).
+
+**Two red herrings ruled out as defects during the same verification:**
+
+- `readlink bin/bzcmp` → `../bin/bzdiff` (also `bzless`): these come from the
+  **Phase 3 bootstrap assembler's relativizer**
+  (`codec-packages/scripts/assemble-bootstrap.sh`), which rewrites absolute
+  in-prefix targets as `"../"×depth + inner` (depth 1 for `bin/`). The links
+  are prefix-relative and resolve correctly; the bootstrap remains the
+  byte-identical, already-accepted `userland-v2-dev`.
+- `termux-setup-storage` in `$PREFIX/bin` is CodeC's own compatibility shim
+  written by the app bootstrap (`ShellEnvironment.prepare`), not com.termux
+  contamination.
+
+**Fix shipped in this PR (client-side only, no repository rebuild):**
+`heal_alternatives_db` in the `pkg` script scans the alternatives admin
+directory before every dpkg-touching operation (`install`, `upgrade`,
+`repair`) and quarantines any file `update-alternatives` can no longer parse
+to `<name>.corrupt-<epoch>`; the next postinst re-registers the group — the
+exact recovery proven manually above. Also exposed as `pkg heal` and covered
+by a Kotlin execution test that runs the real generated script against a
+stubbed prefix.
+
+**Device state note:** `nano` and `gawk` were absent on this device only —
+accepted device state, not a repository regression (both remain in the
+published catalog and were part of the original clean-device acceptance).
+
+## 7. What was verified as correct (no action)
 
 - xorg download-host sweep + fail-loud util-macros check.
 - libbz2 `termux_step_post_make_install` layering (no clobbering: the
