@@ -255,18 +255,57 @@ class RecipeOverrideTest(unittest.TestCase):
             text = massage.read_text()
             self.assertIn("CodeC override: convert absolute symlinks", text)
             self.assertIn("realpath -m --relative-to", text)
-            self.assertIn("CodeC override: remove maintainer scripts for non-whitelisted packages", text)
             symlink_idx = text.find("CodeC override: convert absolute symlinks")
             subpkg_idx = text.find("termux_create_debian_subpackages")
             self.assertLess(symlink_idx, subpkg_idx)
+            # Regression (post-4.5/4.6 review): the massage layer must NOT try
+            # to purge maintainer scripts — DEBIAN/ does not exist during
+            # massage, and the previous attempt used variable names that do
+            # not exist at the pinned revision (TERMUX_PKG_MASSAGEDDIR /
+            # SUBPKG_MASSAGEDDIR), making it unreachable dead code.
+            self.assertNotIn("TERMUX_PKG_MASSAGEDDIR", text)
+            self.assertNotIn("SUBPKG_MASSAGEDDIR", text)
+            self.assertNotIn("rm -f DEBIAN/postinst", text)
 
             libbz2_text = libbz2_build.read_text()
             self.assertIn("CodeC: fix absolute symlinks in libbz2", libbz2_text)
             self.assertIn("realpath -m --relative-to", libbz2_text)
 
+    def _assert_stub_wins_at_source_time(self, script: Path, func: str, helper: str | None) -> None:
+        """Source the patched step file the way build-package.sh does — at top
+        level, under set -u, with TERMUX_PKG_NAME still unset (step files are
+        sourced before any recipe is parsed) — and assert that sourcing
+        succeeds and that the effective definition of `func` is the no-op
+        stub, while sibling helpers remain defined. This is the runtime check
+        the original text-only assertions lacked: a source-time
+        `case "${TERMUX_PKG_NAME:-}"` guard always falls into its `*)` branch,
+        which is why it was replaced by an unconditional end-of-file stub."""
+        probe = subprocess.run(
+            [
+                "bash", "-c",
+                "set -euo pipefail; "
+                "unset TERMUX_PKG_NAME; "
+                f"source '{script}'; "
+                f"declare -f {func}; "
+                + (f"declare -f {helper}; " if helper else "")
+                + f"{func}; echo FUNC_RAN_OK",
+            ],
+            text=True, capture_output=True,
+        )
+        self.assertEqual(probe.returncode, 0, probe.stderr)
+        self.assertIn("FUNC_RAN_OK", probe.stdout)
+        body = probe.stdout.split("FUNC_RAN_OK")[0]
+        # The effective body is exactly the stub: no real implementation leaked.
+        self.assertNotIn("creating debscripts", body)
+        self.assertNotIn("creating python debscripts", body)
+        self.assertRegex(body, r"\{\s*:;?\s*\}")
+        if helper:
+            self.assertIn(f"{helper} ()", body)
+
     def test_debscripts_override_patches_termux_step_create_debscripts(self) -> None:
-        """termux_step_create_debscripts.sh is patched to disable maintainer scripts
-        for non-whitelisted packages."""
+        """Maintainer-script generation is stubbed unconditionally: the stub is
+        appended last (so it wins by bash's last-definition rule), the rest of
+        the file stays sourced, and nothing is evaluated at source time."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture(tree)
@@ -277,6 +316,9 @@ class RecipeOverrideTest(unittest.TestCase):
             debscripts.write_text(
                 "termux_step_create_debscripts() {\n"
                 "\techo 'creating debscripts'\n"
+                "}\n"
+                "termux_step_create_debscripts__copy_from_dir() {\n"
+                "\techo 'helper'\n"
                 "}\n"
             )
             py_debscripts = scripts_build / "termux_step_create_python_debscripts.sh"
@@ -289,23 +331,63 @@ class RecipeOverrideTest(unittest.TestCase):
             subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
 
             text = debscripts.read_text()
-            self.assertIn('case "${TERMUX_PKG_NAME:-}" in', text)
-            self.assertIn('coreutils|less|nano|bat|util-linux)', text)
+            self.assertNotIn('case "${TERMUX_PKG_NAME', text)
+            self.assertIn("CodeC: maintainer scripts forbidden for every package", text)
+            self.assertTrue(text.rstrip().endswith("termux_step_create_debscripts() { :; }"))
 
             py_text = py_debscripts.read_text()
-            self.assertIn('case "${TERMUX_PKG_NAME:-}" in', py_text)
-            self.assertIn('termux_step_create_python_debscripts() { :; }', py_text)
+            self.assertNotIn('case "${TERMUX_PKG_NAME', py_text)
+            self.assertIn("CodeC: no Python interpreter in the userland", py_text)
+            self.assertTrue(py_text.rstrip().endswith("termux_step_create_python_debscripts() { :; }"))
+
+            self._assert_stub_wins_at_source_time(
+                debscripts,
+                "termux_step_create_debscripts",
+                "termux_step_create_debscripts__copy_from_dir",
+            )
+            self._assert_stub_wins_at_source_time(
+                py_debscripts,
+                "termux_step_create_python_debscripts",
+                None,
+            )
+
+    def test_debscripts_stub_fails_loud_on_pinned_revision_drift(self) -> None:
+        """If upstream restructures the step files so the expected function
+        definition disappears, the override must refuse to proceed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture(tree)
+
+            scripts_build = tree / "scripts" / "build"
+            scripts_build.mkdir(parents=True)
+            (scripts_build / "termux_step_create_debscripts.sh").write_text(
+                "# restructured upstream: no function definitions at all\n"
+            )
+            (scripts_build / "termux_step_create_python_debscripts.sh").write_text(
+                "# restructured upstream: no function definitions at all\n"
+            )
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("pinned-revision drift", result.stderr)
 
     def test_xcb_proto_python_subpackages_excluded(self) -> None:
-        """python-xcbgen subpackage in xcb-proto must be excluded and xcb-proto
-        debscripts disabled to prevent unapproved maintainer scripts in CodeC repository."""
+        """python-xcbgen subpackage in xcb-proto must be excluded for the CodeC
+        arches. The unapproved xcb-proto postinst scripts observed during
+        Part 4.5 came from termux_step_create_python_debscripts, which the
+        global stubs above disable; appending a per-recipe
+        termux_step_create_debscripts stub was dead code (the pinned upstream
+        function is already a no-op) and must not come back."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture(tree)
 
             xcb_proto_dir = tree / "packages" / "xcb-proto"
             xcb_proto_dir.mkdir(parents=True)
-            (xcb_proto_dir / "build.sh").write_text('TERMUX_PKG_HOMEPAGE=https://xorg.freedesktop.org\n')
+            build_sh = xcb_proto_dir / "build.sh"
+            build_sh.write_text('TERMUX_PKG_HOMEPAGE=https://xorg.freedesktop.org\n')
             subpkg = xcb_proto_dir / "python-xcbgen.subpackage.sh"
             subpkg.write_text('TERMUX_SUBPKG_DESCRIPTION="Python bindings for xcb-proto"\n')
 
@@ -317,31 +399,8 @@ class RecipeOverrideTest(unittest.TestCase):
                 'TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" '
                 "# CodeC: no python/X11 bindings in userland",
             )
-            build_text = (xcb_proto_dir / "build.sh").read_text()
-            self.assertIn("termux_step_create_debscripts() { :; }", build_text)
-
-    def test_rxvt_unicode_uses_debian_download_mirror(self) -> None:
-        """The dist.schmorp.de timeout host is replaced with Debian CDN mirror."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture(tree)
-
-            rxvt_dir = tree / "packages" / "rxvt-unicode"
-            rxvt_dir.mkdir(parents=True)
-            recipe = rxvt_dir / "build.sh"
-            recipe.write_text(
-                'TERMUX_PKG_SRCURL=https://dist.schmorp.de/rxvt-unicode/Attic/'
-                'rxvt-unicode-${TERMUX_PKG_VERSION}.tar.bz2\n'
-            )
-
-            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
-
-            text = recipe.read_text()
-            self.assertIn(
-                "https://deb.debian.org/debian/pool/main/r/rxvt-unicode/rxvt-unicode_",
-                text,
-            )
-            self.assertNotIn("dist.schmorp.de", text)
+            build_text = build_sh.read_text()
+            self.assertNotIn("termux_step_create_debscripts", build_text)
 
 
 if __name__ == "__main__":

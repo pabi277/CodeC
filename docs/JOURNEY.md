@@ -450,4 +450,16 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) (reusing CI run `32845127723`).
      Verified `pkg update`, `pkg install`, and execution of all 15 new package roots (`git`, `wget`, `bat`, `ripgrep`, `fd`,
      `htop`, `tmux`, `tree`, `patch`, `diffutils`, `zstd`, `m4`, `autoconf`, `automake`, `libtool`) on a real arm64 device.
+   - **Post-implementation review (4.5/4.6)** ✅ **DONE (2026-08-25).** Latent recipe-override bugs found and fixed
+     (unreachable whitelist guards, dead override code) with runtime-semantics regression tests; provably artifact-neutral,
+     so the published repository stood unchanged. The device-acceptance follow-up additionally root-caused two
+     device-side symptoms: the seeded dpkg alternatives admin DB omitted per-record slave placeholders (poisoned
+     `pager` group on every fresh bootstrap — fixed for future archives in `plan-bootstrap.py`, mitigated on device
+     by the new `pkg heal` self-repair), and CI debug APKs were signed with per-runner ephemeral keys, forcing an
+     uninstall-and-wipe on every new build — fixed by pinning a shared repo-level debug key (`debug.keystore`).
+     Device acceptance (2026-08-26): 46/46 checks green after one final pinned-key reinstall, and a pinned-cert →
+     pinned-cert in-place update proven non-destructive (82 packages, userland, and alternatives DB all intact);
+     two non-blocking client known-issues recorded (KI-1 already-installed `pkg install` reports failure,
+     KI-2 `$PREFIX` vs dpkg-recorded prefix spelling).
+     See [`chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
    - Part 4.7 remaining (Android integration foundation slice).

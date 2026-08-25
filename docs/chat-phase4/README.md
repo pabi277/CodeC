@@ -21,4 +21,6 @@ Phase 4 covers polish, expansion, and UX improvements on top of the Phase 3 pack
   CI workflow run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s) completed green for both `aarch64` and `x86_64`.
 - **[Part 4.6 — Expand curated package catalog (Round 2 — Publish & Device Gate)](PART_4_6_CATALOG_ACCEPTANCE.md):** ✅ **DONE (device-verified 2026-08-25).**
   Published run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) to `https://pabi277.github.io/CodeC/dev` and verified `pkg install` + execution of all 15 new package roots on a real arm64 device.
-- **Part 4.7 — Android-integration foundation slice:** 🚧 **IN PROGRESS / READY FOR PICKUP.**
+- **[Post-implementation review — Parts 4.5/4.6 recipe-override hardening](PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md):** ✅ **DONE (device-verified 2026-08-26).**
+  Fixed latent override bugs found in review (unreachable whitelist guards, dead purge/dead override code), added runtime-semantics tests; fully artifact-neutral — the published repository needed no rebuild.
+- **Part 4.7 — Android-integration foundation slice:** 🚧 **READY FOR PICKUP.**

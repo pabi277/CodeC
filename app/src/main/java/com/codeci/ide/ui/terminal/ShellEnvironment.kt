@@ -454,8 +454,8 @@ object ShellEnvironment {
             else
               spec_in_file "${'$'}file" "${'$'}remove_spec" || error "unexpected ${'$'}package_name removal alternative"
             fi
-            grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in coreutils ${'$'}script"
-            grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in coreutils ${'$'}script"
+            grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in ${'$'}package_name ${'$'}script"
+            grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in ${'$'}package_name ${'$'}script"
             while IFS= read -r line; do
               line="${'$'}{line#"${'$'}{line%%[![:space:]]*}"}"
               case "${'$'}line" in
@@ -598,6 +598,7 @@ object ShellEnvironment {
           # The package set was validated before dpkg is allowed to run. The
           # repository policy rejects maintainer scripts, so no untrusted code
           # is executed as part of this first milestone.
+          heal_alternatives_db
           friendly_apt apt_get --yes --no-install-recommends install "${'$'}@" || { _err="${'$'}?"; rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}_err"; }
           rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
           echo "pkg: installed ${'$'}*"
@@ -628,14 +629,42 @@ object ShellEnvironment {
             rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
             return 0
           fi
+          heal_alternatives_db
           friendly_apt apt_get --yes --no-install-recommends upgrade || { _err="${'$'}?"; rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}_err"; }
           rm -f "${'$'}marker" "${'$'}CACHE"/*.deb
           echo "pkg: upgraded CodeC packages"
         }
 
+        heal_alternatives_db() {
+          # update-alternatives admin files can be left truncated when a device
+          # is interrupted in the middle of a transaction (observed on-device
+          # 2026-08-25: the pager admin file ended mid-record and every later
+          # postinst failed with "corrupt ... unexpected end of file"). dpkg
+          # refuses to parse them, so quarantine any file that no longer
+          # parses; the next postinst re-registers the group from scratch (the
+          # exact recovery proven on-device for the pager group).
+          _alt_bin="${'$'}PREFIX/bin/update-alternatives"
+          _alt_dir="${'$'}PREFIX/var/lib/dpkg/alternatives"
+          [ -x "${'$'}_alt_bin" ] || return 0
+          [ -d "${'$'}_alt_dir" ] || return 0
+          for _alt in "${'$'}_alt_dir"/*; do
+            [ -f "${'$'}_alt" ] || continue
+            case "${'$'}(basename "${'$'}_alt")" in
+              *.corrupt-*) continue ;;
+            esac
+            if ! "${'$'}_alt_bin" --display "${'$'}(basename "${'$'}_alt")" >/dev/null 2>&1; then
+              mv -f "${'$'}_alt" "${'$'}_alt.corrupt-${'$'}(date +%s)" || continue
+              echo "pkg: quarantined unreadable alternatives admin file: ${'$'}(basename "${'$'}_alt")"
+              echo "pkg: the alternatives group re-registers on the next install or reinstall of its packages"
+            fi
+          done
+          return 0
+        }
+
         repair() {
           [ -e "${'$'}STATE/transaction.pending" ] || { echo "pkg: no interrupted transaction"; return 0; }
           echo "pkg: repairing the recorded transaction: ${'$'}(cat "${'$'}STATE/transaction.pending")"
+          heal_alternatives_db
           friendly_apt apt_get --yes --no-install-recommends -f install
           rm -f "${'$'}STATE/transaction.pending"
         }
@@ -713,6 +742,7 @@ CodeC packages (CodeC repository only)
   pkg uninstall [-y] <name>  remove packages from this userland
   pkg status                 show repository channel and trust info
   pkg repair                 recover an interrupted transaction
+  pkg heal                   quarantine corrupted alternatives admin files
 
 Flags:
   -y, --yes                  automatic yes to confirmation prompts
@@ -745,6 +775,10 @@ HELP
             ;;
           status|trust|channel)
             show_status
+            ;;
+          heal)
+            acquire_lock
+            heal_alternatives_db
             ;;
           uninstall|remove|rm)
             [ "${'$'}#" -gt 0 ] || error "usage: pkg uninstall [-y] <name> [name ...]"

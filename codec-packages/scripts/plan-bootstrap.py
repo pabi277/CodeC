@@ -18,9 +18,11 @@ Part B of docs/NEXT_STEPS.md fixes three bootstrap content defects:
    install. This tool parses .alternatives files in the termux-packages
    tree (the same files termux_step_create_alternatives consumes) and
    wires the link chains + the dpkg alternatives admin database, in the
-   exact on-disk format dpkg's update-alternatives writes (verified against
-   a live dpkg 1.21 reference), with absolute device-prefix targets that
-   the assembler later relativizes like every other in-prefix symlink.
+   exact on-disk format dpkg's update-alternatives writes (byte-level
+   verified against live dpkg, including per-record slave placeholders and
+   the trailing terminator blank — see plan_group()), with absolute
+   device-prefix targets that the assembler later relativizes like every
+   other in-prefix symlink.
 
 3. (Handled by the assembler) md5sums control files for every seeded
    package, in the pinned-upstream format (paths relative to the package
@@ -282,8 +284,18 @@ def plan_group(
     for m in reversed(members):  # prepend order: most recent first
         lines.append(f"{prefix}/{_confine(m.target)}")
         lines.append(str(m.priority))
-        for slave in m.slaves:
-            lines.append(f"{prefix}/{_confine(slave.target)}")
+        # dpkg requires every alternative record to carry exactly one line
+        # per GROUP slave: a member that does not declare that slave gets an
+        # EMPTY placeholder line. Byte-level verified against dpkg's
+        # update-alternatives (2026-08-25): omitting the placeholder makes
+        # the file's terminator blank get consumed as the slave line, after
+        # which dpkg rejects the file as
+        # "corrupt: unexpected end of file while trying to read master file"
+        # — this is what poisoned the seeded pager admin file in
+        # userland-v2-dev on every fresh device until `pkg heal` covered it.
+        for slave in slaves:
+            target = next((s.target for s in m.slaves if s.name == slave.name), "")
+            lines.append(f"{prefix}/{_confine(target)}" if target else "")
     lines.append("")
     return ops, "\n".join(lines) + "\n"
 
