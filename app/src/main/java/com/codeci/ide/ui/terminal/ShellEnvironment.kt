@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "21"
+    const val BOOTSTRAP_VERSION = "22"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -436,6 +436,8 @@ object ShellEnvironment {
             coreutils) alt_name=pager; alt_link=bin/pager; alt_target=libexec/coreutils/cat; priority=1; slave_link=share/man/man1/pager.1.gz; slave_name=pager.1.gz; slave_target=share/man/man1/cat.1.gz ;;
             less) alt_name=pager; alt_link=bin/pager; alt_target=bin/less; priority=50; slave_link=share/man/man1/pager.1.gz; slave_name=pager.1.gz; slave_target=share/man/man1/less.1.gz ;;
             nano) alt_name=editor; alt_link=bin/editor; alt_target=bin/nano; priority=50; slave_link=share/man/man1/editor.1.gz; slave_name=editor.1.gz; slave_target=share/man/man1/nano.1.gz ;;
+            bat) alt_name=pager; alt_link=bin/pager; alt_target=bin/bat; priority=10; slave_link=share/man/man1/pager.1.gz; slave_name=pager.1.gz; slave_target=share/man/man1/bat.1.gz ;;
+            util-linux) alt_name=pager; alt_link=bin/pager; alt_target=bin/more; priority=25; slave_link=share/man/man1/pager.1.gz; slave_name=pager.1.gz; slave_target=share/man/man1/more.1.gz ;;
             *) error "maintainer scripts are forbidden for ${'$'}package_name: ${'$'}scripts" ;;
           esac
           [ ! -e "${'$'}control_dir/preinst" ] && [ ! -e "${'$'}control_dir/postrm" ] || error "${'$'}package_name has an unapproved maintainer script"
