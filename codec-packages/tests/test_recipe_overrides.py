@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
 """Hermetic coverage for the narrowly scoped recipe transport overrides."""
 
 from __future__ import annotations
@@ -279,12 +279,22 @@ class RecipeOverrideTest(unittest.TestCase):
                 "\techo 'creating debscripts'\n"
                 "}\n"
             )
+            py_debscripts = scripts_build / "termux_step_create_python_debscripts.sh"
+            py_debscripts.write_text(
+                "termux_step_create_python_debscripts() {\n"
+                "\techo 'creating python debscripts'\n"
+                "}\n"
+            )
 
             subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
 
             text = debscripts.read_text()
             self.assertIn('case "${TERMUX_PKG_NAME:-}" in', text)
             self.assertIn('coreutils|less|nano|bat|util-linux)', text)
+
+            py_text = py_debscripts.read_text()
+            self.assertIn('case "${TERMUX_PKG_NAME:-}" in', py_text)
+            self.assertIn('termux_step_create_python_debscripts() { :; }', py_text)
 
     def test_xcb_proto_python_subpackages_excluded(self) -> None:
         """python-xcbgen subpackage in xcb-proto must be excluded and xcb-proto

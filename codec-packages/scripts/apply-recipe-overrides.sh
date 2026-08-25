@@ -292,6 +292,39 @@ else
   echo "recipe-overrides: termux_step_create_debscripts.sh not found; skipping debscripts guard" >&2
 fi
 
+# Disable python maintainer scripts for all packages except the reviewed alternatives packages
+# (coreutils, less, nano, bat, util-linux). This prevents xcb-proto or any python-containing
+# package from generating postinst/prerm py3compile/py3clean debscripts during termux_step_create_debian_package.
+PYTHON_DEBSCRIPTS_SCRIPT="$TREE/scripts/build/termux_step_create_python_debscripts.sh"
+if [[ -f "$PYTHON_DEBSCRIPTS_SCRIPT" ]]; then
+  python3 - "$PYTHON_DEBSCRIPTS_SCRIPT" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+guard = """
+case "${TERMUX_PKG_NAME:-}" in
+  coreutils|less|nano|bat|util-linux) ;;
+  *)
+    termux_step_create_python_debscripts() { :; }
+    return 0 2>/dev/null || true
+    ;;
+esac
+"""
+
+if 'case "${TERMUX_PKG_NAME:-}" in' not in text:
+    path.write_text(guard.strip() + "\n\n" + text)
+    print("recipe-overrides: patched termux_step_create_python_debscripts.sh to disable python maintainer scripts for non-whitelisted packages")
+else:
+    print("recipe-overrides: termux_step_create_python_debscripts.sh already guarded")
+PY
+  grep -q 'case "${TERMUX_PKG_NAME:-}" in' "$PYTHON_DEBSCRIPTS_SCRIPT"
+else
+  echo "recipe-overrides: termux_step_create_python_debscripts.sh not found; skipping python debscripts guard" >&2
+fi
+
 # Direct override for libbz2: bzip2's upstream Makefile creates absolute symlinks
 # in $TERMUX_PREFIX/bin during `make install` (e.g. bzcmp -> $TERMUX_PREFIX/bin/bzdiff).
 # Clean them up in termux_step_post_make_install.
