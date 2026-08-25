@@ -321,7 +321,8 @@ fi
 
 # Convert absolute symlinks in $TERMUX_PREFIX to relative symlinks in termux_step_massage.sh
 # BEFORE subpackages are created (termux_create_debian_subpackages), and strip maintainer
-# scripts for non-whitelisted packages.
+# scripts for non-whitelisted packages. Safe parameter expansion :- is used to comply with
+# set -u (nounset) in termux-packages.
 MASSAGE_SCRIPT="$TREE/scripts/build/termux_step_massage.sh"
 if [[ -f "$MASSAGE_SCRIPT" ]]; then
   python3 - "$MASSAGE_SCRIPT" <<'PY'
@@ -354,10 +355,19 @@ symlink_fix_block = """
 	case "${TERMUX_PKG_NAME:-}" in
 		coreutils|less|nano|bat|util-linux) ;;
 		*)
-			rm -f "$TERMUX_PKG_MASSAGEDDIR/DEBIAN/postinst" \\
-			      "$TERMUX_PKG_MASSAGEDDIR/DEBIAN/prerm" \\
-			      "$TERMUX_PKG_MASSAGEDDIR/DEBIAN/preinst" \\
-			      "$TERMUX_PKG_MASSAGEDDIR/DEBIAN/postrm"
+			rm -f DEBIAN/postinst DEBIAN/prerm DEBIAN/preinst DEBIAN/postrm
+			if [ -n "${TERMUX_PKG_MASSAGEDDIR:-}" ]; then
+				rm -f "${TERMUX_PKG_MASSAGEDDIR}/DEBIAN/postinst" \\
+				      "${TERMUX_PKG_MASSAGEDDIR}/DEBIAN/prerm" \\
+				      "${TERMUX_PKG_MASSAGEDDIR}/DEBIAN/preinst" \\
+				      "${TERMUX_PKG_MASSAGEDDIR}/DEBIAN/postrm"
+			fi
+			if [ -n "${SUBPKG_MASSAGEDDIR:-}" ]; then
+				rm -f "${SUBPKG_MASSAGEDDIR}/DEBIAN/postinst" \\
+				      "${SUBPKG_MASSAGEDDIR}/DEBIAN/prerm" \\
+				      "${SUBPKG_MASSAGEDDIR}/DEBIAN/preinst" \\
+				      "${SUBPKG_MASSAGEDDIR}/DEBIAN/postrm"
+			fi
 			;;
 	esac
 """
