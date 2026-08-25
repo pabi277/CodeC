@@ -362,12 +362,20 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
   Detailed record in [`docs/chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md`](chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md).
   Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified `pkg install` + execution of all 15 new roots on real arm64 hardware.
 - **Part 4.7 — Android integration slice** 🚧 **READY FOR PICKUP.**
-- **Post-4.5/4.6 review** ✅ **DONE (host-verified 2026-08-25).** Recipe-override
+- **Post-4.5/4.6 review** ✅ **DONE (device-verified 2026-08-26).** Recipe-override
   hardening, fully artifact-neutral (no rebuild/re-publish needed) — plus the
   `pkg heal` alternatives-DB self-repair, the `plan-bootstrap.py` slave-placeholder
   fix (future bootstrap archives), and the pinned shared CI debug key
-  (`debug.keystore`) that stops wipe-on-update between CI builds. Record in
-  [`docs/chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
+  (`debug.keystore`) that stops wipe-on-update between CI builds (proven:
+  pinned-cert APK updated in place, 82 packages and the userland intact).
+  Record in
+  [`docs/chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md) —
+  including two non-blocking known issues for a future client PR:
+  **KI-1** `pkg install` reports failure when the target is already the
+  newest version (treat apt's "0 newly installed" as success), and
+  **KI-2** device `$PREFIX` (`/data/user/0/...`) vs the dpkg-recorded
+  `/data/data/...` spelling confuse manual `update-alternatives` calls
+  (canonicalize `PREFIX` at shell setup after a full regression pass).
 
 ---
 

@@ -1,12 +1,14 @@
 # Post-implementation review — Parts 4.5 & 4.6 recipe-override hardening
 
-**Status:** ✅ DONE (host-verified 2026-08-25). Follow-up record for the
+**Status:** ✅ DONE (device-verified 2026-08-26). Follow-up record for the
 code review of PR #20 (Parts 4.5/4.6). All fixes are **provably
 artifact-neutral**: none of them changes the effective behavior of the
 published build ([`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723))
 or the published repository ([`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740)),
 so **no rebuild, re-publish, or device re-acceptance was required**. Fixes
-land as a follow-up PR on top of PR #20's merge.
+land as a follow-up PR on top of PR #20's merge. The client-side additions
+(`pkg heal`, `plan-bootstrap.py` slave placeholders, pinned CI debug key)
+were device-verified 2026-08-26 — see section 6.2.
 
 ---
 
@@ -257,12 +259,75 @@ APK with this identity — acceptable for the dev channel; the release path
 (`release` signingConfig from `KEYSTORE_PATH`/`my-upload-key.jks`, never
 committed) is unchanged and unaffected.
 
-**Expected one-time fallout:** the first APK signed with the new pinned key
-still differs from the ephemeral cert of the previous build, so **one final
-uninstall/wipe** is required when installing it; all subsequent CI builds
-update in place.
+**One-time fallout (VERIFIED done 2026-08-26):** the first APK signed with
+the new pinned key still differed from the ephemeral cert of the previous
+build, so installing it required **one final uninstall/wipe** — performed as
+the baseline of the acceptance run below. All subsequent builds update in
+place (proven, section 6.2).
 
-## 7. What was verified as correct (no action)
+### 6.2 Final device acceptance (2026-08-26) — ✅ PASSED
+
+Device wipe of record: the pinned-key APK (Build APK artifact of run
+[`32889069946`](https://github.com/pabi277/CodeC/actions/runs/32889069946) —
+the first CI build with the committed `debug.keystore`) was installed after
+the one final uninstall. Three iterations of the acceptance script were
+needed; **every interim failure was root-caused to a defect in the
+acceptance script itself, never in the product**:
+
+| Run | Result | Failures — all script-side |
+|---|---|---|
+| v3   | 40 / 5 | `$PREFIX`-spelling in 4 alternatives ops (restore + 3 display greps — link-rename `Cross-device link` error, see KI-2); whitelist omitted `nano.postinst`/`nano.prerm` (design-allowed since Phase 3). |
+| v3.1 | 42 / 4 | `readlink -f "$PREFIX"` does not canonicalize on this device (`/data/user/0` is not a symlink here) — same 4 alternatives failures. |
+| v3.2 | **46 / 0** | ✅ all green using the dpkg-recorded spelling `/data/data/com.codeci.ide/files/usr` (proven earlier by the manual pager recovery). |
+
+**Final green coverage (46 checks):** userland marker `userland-v2-dev`;
+signed `pkg update`; round-2 catalog + `nano`/`gawk`/`file` (and `make`)
+installed (82 packages total); healer quarantined the poisoned seed `pager`
+file during install and the pager group was restored (less p50 default,
+bat p10) using the dpkg-recorded prefix spelling; all 4 alternatives admin
+files parse; editor → nano; every catalog binary on PATH with spot-checked
+versions (`bat 0.26.1`, `diffutils 3.12`, `zstd 1.5.7`); functional
+roundtrips in `$HOME` scratch (diff+patch, zstd, m4, gawk, rg/fd/tree, bat
+on stdin, htop/tmux incl. detached server, autoconf → runnable configure,
+make, git ls-remote + wget over TLS); relative `bzcmp`/`bzless` links
+resolve; no `com.termux` references; CodeC-only `sources.list`; only
+whitelisted maintainer scripts (`bat`, `util-linux`, `nano`); `pkg heal`
+dummy-corruption self-test incl. healthy-group preservation; `dpkg --audit`
+clean before/after.
+
+**Pinned-key in-place update proof:** the same run artifact was then
+re-installed over itself (pinned cert → pinned cert — the operation that
+always demanded an uninstall under ephemeral keys): normal update flow, no
+uninstall prompt; afterwards `userland: already installed
+(userland-v2-dev)`, all **82 packages** intact, zero missing binaries,
+`dpkg --audit` clean, pager group unchanged. CI debug builds now preserve
+app data across updates.
+
+**Known issues recorded for a future client PR (non-blocking, pre-existing,
+out of scope for this artifact-neutral PR):**
+
+- **KI-1 — `pkg install` of an already-installed package reports failure.**
+  apt exits fine (`make is already the newest version (4.4.1-1)`), but the
+  `pkg` wrapper treats "0 newly installed / no packages downloaded" as a
+  fetch failure (`pkg: apt downloaded no packages; run pkg update and
+  retry`) and exits nonzero. Purely cosmetic for humans but hostile to
+  scripts and idempotent re-runs. Fix direction: treat apt's
+  "already the newest version" / "0 newly installed" outcome as success.
+- **KI-2 — `$PREFIX` vs dpkg-recorded prefix spelling.** On-device
+  `$PREFIX` is `/data/user/0/com.codeci.ide/files/usr` (from
+  `Context.getFilesDir()`), while every deb, the dpkg DB, and the
+  alternatives admin files record `/data/data/com.codeci.ide/files/usr`.
+  Same inodes (Android user emulation), so dpkg/apt/pkg never notice — but
+  a *manual* `update-alternatives --install` mixing the two spellings makes
+  dpkg attempt a link-rename through the emulation, which fails with
+  `mv: ... are the same file` / `Cross-device link` (exit 2), and string
+  greps over `--display` output mismatch. Also, `readlink -f` does **not**
+  collapse `/data/user/0` on the Samsung test device (not a symlink), so a
+  runtime canonicalization-by-symlink-resolution is unreliable. Fix
+  direction: set `PREFIX` to the dpkg-recorded `/data/data/...` spelling at
+  shell-environment setup (Termux hardcodes its `/data/data` prefix the
+  same way), after a full regression pass; interim rule for manual
+  alternatives work is to use the `/data/data/...` spelling.
 
 - xorg download-host sweep + fail-loud util-macros check.
 - libbz2 `termux_step_post_make_install` layering (no clobbering: the

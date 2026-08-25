@@ -457,5 +457,9 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      `pager` group on every fresh bootstrap — fixed for future archives in `plan-bootstrap.py`, mitigated on device
      by the new `pkg heal` self-repair), and CI debug APKs were signed with per-runner ephemeral keys, forcing an
      uninstall-and-wipe on every new build — fixed by pinning a shared repo-level debug key (`debug.keystore`).
+     Device acceptance (2026-08-26): 46/46 checks green after one final pinned-key reinstall, and a pinned-cert →
+     pinned-cert in-place update proven non-destructive (82 packages, userland, and alternatives DB all intact);
+     two non-blocking client known-issues recorded (KI-1 already-installed `pkg install` reports failure,
+     KI-2 `$PREFIX` vs dpkg-recorded prefix spelling).
      See [`chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
    - Part 4.7 remaining (Android integration foundation slice).
