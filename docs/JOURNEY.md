@@ -452,6 +452,10 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      `htop`, `tmux`, `tree`, `patch`, `diffutils`, `zstd`, `m4`, `autoconf`, `automake`, `libtool`) on a real arm64 device.
    - **Post-implementation review (4.5/4.6)** ✅ **DONE (2026-08-25).** Latent recipe-override bugs found and fixed
      (unreachable whitelist guards, dead override code) with runtime-semantics regression tests; provably artifact-neutral,
-     so the published repository stood unchanged. See
-     [`chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
+     so the published repository stood unchanged. The device-acceptance follow-up additionally root-caused two
+     device-side symptoms: the seeded dpkg alternatives admin DB omitted per-record slave placeholders (poisoned
+     `pager` group on every fresh bootstrap — fixed for future archives in `plan-bootstrap.py`, mitigated on device
+     by the new `pkg heal` self-repair), and CI debug APKs were signed with per-runner ephemeral keys, forcing an
+     uninstall-and-wipe on every new build — fixed by pinning a shared repo-level debug key (`debug.keystore`).
+     See [`chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
    - Part 4.7 remaining (Android integration foundation slice).

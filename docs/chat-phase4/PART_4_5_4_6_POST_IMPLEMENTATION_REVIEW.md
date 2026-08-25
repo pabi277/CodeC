@@ -221,6 +221,47 @@ stubbed prefix.
 accepted device state, not a repository regression (both remain in the
 published catalog and were part of the original clean-device acceptance).
 
+### 6.1 Why the device kept being wiped between sessions
+
+The acceptance transcripts showed a second, independent symptom that
+masqueraded as a repository/userland regression: **every newly CI-built APK
+demanded an uninstall before install, wiping the whole app sandbox** — the
+userland prefix, dpkg DB, and every round-1/round-2 package installed on
+device (`git`, `wget`, `bat`, `ripgrep`, …) vanished between sessions, even
+though `UserlandInstaller.installIfNeeded()` correctly skips reinstall when
+`.userland-release` matches (no app-side wipe happened). Evidence: the dpkg
+status count was the identical fresh-seed number at both session starts
+(`3765 files and directories currently installed`), and only the seeded
+closure (`busybox, bash, apt, dpkg, coreutils, less, curl` + `Essential`
+deps) survived each time.
+
+**Root cause (repo-proven):** `app/build.gradle.kts` only applied the
+`debugConfig` signing config when `${rootDir}/debug.keystore` existed, and
+`debug.keystore` was listed in `.gitignore`, so it never existed in CI. Each
+CI runner therefore fell back to AGP's per-runner **ephemeral**
+`~/.android/debug.keystore` → every CI-built `CodeC-IDE` artifact carried a
+**different signing certificate** → the OS refused in-place updates
+(`INSTALL_FAILED_UPDATE_INCOMPATIBLE` / uninstall-prompt), and the required
+uninstall deletes the app data directory.
+
+**Fix (this PR):** a pinned, shared **debug** key is committed at the repo
+root (`debug.keystore`, OpenSSL-generated PKCS12, standard Android debug DN
+`C=US, O=Android, CN=Android Debug`, alias `androiddebugkey`, 30-year
+validity, AES-256 PBE / SHA-256 MAC per OpenSSL 3 defaults — readable by
+SunJCE PKCS12 on JDK 11+, CI uses Temurin 17), `.gitignore` gains
+`!/debug.keystore`, and `debugConfig` now declares `storeType = "PKCS12"`.
+Every CI and local debug build now signs with the same certificate, so
+sideloading the next build installs **in place** and preserves app data.
+Security note: a committed debug key means anyone can sign a *debuggable*
+APK with this identity — acceptable for the dev channel; the release path
+(`release` signingConfig from `KEYSTORE_PATH`/`my-upload-key.jks`, never
+committed) is unchanged and unaffected.
+
+**Expected one-time fallout:** the first APK signed with the new pinned key
+still differs from the ephemeral cert of the previous build, so **one final
+uninstall/wipe** is required when installing it; all subsequent CI builds
+update in place.
+
 ## 7. What was verified as correct (no action)
 
 - xorg download-host sweep + fail-loud util-macros check.

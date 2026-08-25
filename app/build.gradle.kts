@@ -54,9 +54,19 @@ android {
       keyPassword = System.getenv("KEY_PASSWORD")
     }
     create("debugConfig") {
+      // Pinned shared debug key (committed at the repo root) so that every
+      // CI-built and locally-built debug APK carries the SAME certificate.
+      // Before this, each CI runner fell back to a per-runner ephemeral
+      // ~/.android/debug.keystore, so sideloading the next build over the
+      // previous one failed with INSTALL_FAILED_UPDATE_INCOMPATIBLE and the
+      // required uninstall wiped the whole app sandbox (userland prefix,
+      // dpkg DB, installed packages). Debug-only; release uses the upload
+      // key above. The store is generated with OpenSSL as PKCS12 (30-year
+      // validity, standard Android debug DN/AES-256 PBE), so declare it:
       val debugStore = file("${rootDir}/debug.keystore")
       if (debugStore.exists()) {
         storeFile = debugStore
+        storeType = "PKCS12"
         storePassword = "android"
         keyAlias = "androiddebugkey"
         keyPassword = "android"

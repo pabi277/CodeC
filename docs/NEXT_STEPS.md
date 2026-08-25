@@ -363,7 +363,10 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
   Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified `pkg install` + execution of all 15 new roots on real arm64 hardware.
 - **Part 4.7 — Android integration slice** 🚧 **READY FOR PICKUP.**
 - **Post-4.5/4.6 review** ✅ **DONE (host-verified 2026-08-25).** Recipe-override
-  hardening, fully artifact-neutral (no rebuild/re-publish needed). Record in
+  hardening, fully artifact-neutral (no rebuild/re-publish needed) — plus the
+  `pkg heal` alternatives-DB self-repair, the `plan-bootstrap.py` slave-placeholder
+  fix (future bootstrap archives), and the pinned shared CI debug key
+  (`debug.keystore`) that stops wipe-on-update between CI builds. Record in
   [`docs/chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
 
 ---

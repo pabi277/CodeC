@@ -16,6 +16,13 @@
 local.properties
 .env
 debug.keystore
+# ...except the repo-pinned shared debug key: without it every CI runner
+# generated a fresh ephemeral key, so each CI-built APK had a different
+# signing certificate and Android demanded an uninstall (full app-data wipe)
+# before Installing the next build. The pinned key keeps debug-APK updates
+# install-in-place. It only signs debug builds; release signing uses the
+# upload key from KEYSTORE_PATH/my-upload-key.jks (never committed).
+!/debug.keystore
 codec-packages/.work
 codec-packages/dist
 __pycache__/
