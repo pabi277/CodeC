@@ -454,8 +454,8 @@ object ShellEnvironment {
             else
               spec_in_file "${'$'}file" "${'$'}remove_spec" || error "unexpected ${'$'}package_name removal alternative"
             fi
-            grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in coreutils ${'$'}script"
-            grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in coreutils ${'$'}script"
+            grep -E -q '(\$\(|`|com\.termux|/system/)' "${'$'}file" 2>/dev/null && error "unsafe command in ${'$'}package_name ${'$'}script"
+            grep -E -v '^[[:space:]]*(if \[|#|fi|then|${'$'})' "${'$'}file" 2>/dev/null | grep -E -q '(;|&&|\|\||(^|[^[:alnum:]_])(rm|curl|wget|chmod|chown|ln|cp|mv|dd|eval|exec|source)([^[:alnum:]_]|${'$'}))' && error "unsafe command in ${'$'}package_name ${'$'}script"
             while IFS= read -r line; do
               line="${'$'}{line#"${'$'}{line%%[![:space:]]*}"}"
               case "${'$'}line" in
