@@ -1,12 +1,9 @@
 # CodeC Phase 4 roadmap
 
-**Status (2026-08-25):** Parts 4.1–4.5 ✅ done (device-verified or CI-verified).
-Part 4.5 (expanded catalog, round 2) completed in CI workflow run
-[`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s, 25 roots, both arches green).
-Part 4.6 (publish & device acceptance) is in progress / ready for pickup. Phase 3 (package management: `pkg`,
-apt/dpkg bootstrap, signed repository) is complete and device-verified — see [`JOURNEY.md`](JOURNEY.md)
-and [`chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md`](chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md).
-This document is the entry point for Phase 4: polish and expansion on top of that foundation.
+**Status (2026-08-25):** Parts 4.1–4.6 ✅ done (device-verified or CI-verified).
+Part 4.5 (expanded catalog CI build) completed in run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s, 25 roots, both arches green).
+Part 4.6 (publish & device acceptance) completed in run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified on real arm64 hardware.
+Part 4.7 (Android integration slice) is the active next step.
 
 This is deliberately a **roadmap**, not an execution plan like
 [`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md)/[`NEXT_STEPS.md`](NEXT_STEPS.md). It names
@@ -134,8 +131,8 @@ surfaces.
 
 ### Part 4.5 / 4.6 — Expand the curated package catalog (round 2)
 
-**Status: Part 4.5 COMPLETE (CI verified 2026-08-25); Part 4.6 IN PROGRESS.**
-Decisions recorded in [`chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md):
+**Status: COMPLETE and device-verified (2026-08-25).**
+Decisions recorded in [`chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md) and [`chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md`](chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md):
 round 2 roots = `git wget bat ripgrep fd htop tmux tree patch diffutils zstd
 m4 autoconf automake libtool` (vim/openssh/python3 deferred to round 3 with
 reasons); repository-only scope (bootstrap byte-identical, verified by
@@ -145,7 +142,7 @@ by both builds; git gitk/git-gui/git-svn subpackage exclusion +
 `bat`/`util-linux` (both below `less`'s pager priority, so the default pager
 cannot change). CI workflow run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723)
 (1h 53m 36s) completed with 100% success for both `aarch64` and `x86_64`.
-Part 4.6 publishes run `32845127723` and completes clean-device acceptance.
+Publish workflow run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) deployed to `https://pabi277.github.io/CodeC/dev`, and clean-device acceptance passed on real arm64 hardware for all 15 new package roots.
 
 **Basic goal.** Grow the Phase 3 package set beyond the original curated roots
 (`nano less coreutils grep sed gawk gzip tar make libmagic`, per
@@ -160,8 +157,8 @@ full part's worth of work on their own:
 
 - **Part 4.5 — build and validate the expanded closure in CI.** ✅ **DONE (CI verified 2026-08-25).**
   Candidate package list, recipe overrides, host-test coverage, and a green CI build (`32845127723`).
-- **Part 4.6 — publish and device-verify the expanded repository/bootstrap.** 🚧 **IN PROGRESS.**
-  Mirrors Part D's publish + clean/upgrade-device acceptance pattern, publishing run `32845127723` via `source_run_id`.
+- **Part 4.6 — publish and device-verify the expanded repository/bootstrap.** ✅ **DONE (device-verified 2026-08-25).**
+  Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified `pkg install` + execution of all 15 new package roots on real arm64 hardware.
 
 **Left open on purpose:** exactly which packages, and whether new packages
 ship inside the bootstrap or are only ever installed later via `pkg` from the
@@ -206,7 +203,7 @@ capabilities exists. Do not attempt the whole surface area in one part.
 | 4.3 — trust/channel indicator UX | none (reads existing Part D metadata) | small | ✅ **DONE** (verified) |
 | 4.4 — settings/theme parity | none | small–medium | ✅ **DONE** (device-verified) |
 | 4.5 — expanded package build (CI) | none | medium | ✅ **DONE** (run `32845127723` green) |
-| 4.6 — expanded package publish + device accept | 4.5 | medium | 🚧 **IN PROGRESS** (~50–70) |
+| 4.6 — expanded package publish + device accept | 4.5 | medium | ✅ **DONE** (device-verified) |
 | 4.7 — Android integration foundation slice | none | large (epic seed) | ~50–70 (first slice only) |
 
 None of these parts block each other except 4.6 on 4.5. Pick whichever the

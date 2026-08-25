@@ -163,7 +163,7 @@ names resolved to parent packages):
    `8e9fd6a973a4c56a957d952aa0ecc1d01ac4788f9cf61bd9162fa6d93e873b4a`
    (23,824,737 bytes).
 
-**Part 4.6** (publish + device gate): ready to publish `32845127723` via `source_run_id` and complete device acceptance.
+**Part 4.6** (publish + device gate): ✅ **DONE** (see [`PART_4_6_CATALOG_ACCEPTANCE.md`](PART_4_6_CATALOG_ACCEPTANCE.md)). Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified on real arm64 hardware.
 
 ## Continue here (next session)
 

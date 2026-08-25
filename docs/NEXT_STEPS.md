@@ -358,9 +358,10 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
   Detailed record in [`docs/chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md).
   Workflow run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s)
   built both architectures (`aarch64`, `x86_64`) green with 25 curated package roots, zero maintainer script violations, and byte-identical bootstrap archives.
-- **Part 4.6 — Expanded package catalog (round 2, publish & device gate)** 🚧 **IN PROGRESS / READY FOR PICKUP.**
-  Publish successful run `32845127723` to the development channel and device-verify `pkg install git/wget/bat/ripgrep/fd/...`.
-- **Part 4.7** remains open for pickup.
+- **Part 4.6 — Expanded package catalog (round 2, publish & device gate)** ✅ **DONE (device-verified 2026-08-25).**
+  Detailed record in [`docs/chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md`](chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md).
+  Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified `pkg install` + execution of all 15 new roots on real arm64 hardware.
+- **Part 4.7 — Android integration slice** 📋 Planned.
 
 ---
 
@@ -377,5 +378,5 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
 | Phase 4 Part 4.3 — trust/channel indicator UX | none | ✅ **DONE** — Settings trust card, `pkg status`, repo probe |
 | Phase 4 Part 4.4 — settings/theme parity | none | ✅ **DONE** — font family, themes, settings UI, live preview |
 | Phase 4 Part 4.5 — expanded package build (CI) | none | ✅ **DONE** — run `32845127723` green (25 roots, aarch64 + x86_64) |
-| Phase 4 Part 4.6 — expanded package publish + device accept | 4.5 | 🚧 **IN PROGRESS** — publish run `32845127723` & device acceptance |
-| Phase 4 Part 4.7 | 4.6 on 4.5 | Planning / ready to pick up |
+| Phase 4 Part 4.6 — expanded package publish + device accept | 4.5 | ✅ **DONE** — published run `32858460740` & device-verified |
+| Phase 4 Part 4.7 | 4.6 on 4.5 | 🚧 **IN PROGRESS / READY FOR PICKUP** — Android integration slice |

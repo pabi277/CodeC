@@ -1,9 +1,8 @@
 # CodeC — the full journey
 
 **Last updated:** 2026-08-25 · **State:** Phase 3 ✅ complete (device-verified).
-Phase 4 Parts 4.1–4.5 ✅ complete. Part 4.5 expanded catalog compiled and validated
-in 100% successful CI build [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723)
-(1h 53m 36s, 25 roots, aarch64 + x86_64). Part 4.6 publish & device acceptance is active.
+Phase 4 Parts 4.1–4.6 ✅ complete. Part 4.6 published via workflow run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740)
+and device-verified on real arm64 hardware for all 15 new package roots. Part 4.7 is active.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -447,6 +446,8 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      Workflow run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s)
      compiled all 25 roots and dependencies for both architectures with 0 maintainer script violations and
      byte-identical bootstrap archives.
-   - **Part 4.6 — Expanded package catalog (Round 2 publish & device gate)** 🚧 **IN PROGRESS.**
-     Publish run `32845127723` via `source_run_id` and complete clean-device acceptance.
+   - **Part 4.6 — Expanded package catalog (Round 2 publish & device gate)** ✅ **DONE (device-verified 2026-08-25).**
+     Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) (reusing CI run `32845127723`).
+     Verified `pkg update`, `pkg install`, and execution of all 15 new package roots (`git`, `wget`, `bat`, `ripgrep`, `fd`,
+     `htop`, `tmux`, `tree`, `patch`, `diffutils`, `zstd`, `m4`, `autoconf`, `automake`, `libtool`) on a real arm64 device.
    - Part 4.7 remaining (Android integration foundation slice).
