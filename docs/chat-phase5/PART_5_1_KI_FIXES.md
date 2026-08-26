@@ -167,15 +167,18 @@ run by CI. The new tests were written to compile and run in the existing
 `ShellEnvironmentTest` suite (JUnit4, `sh` + mocked backend binaries on a temp
 prefix, matching the existing `pkg install`/`heal`/`confirm` execution tests).
 
-### 5.2 CI (run [`32932276532`](https://github.com/pabi277/CodeC/actions/runs/32932276532), green — 2026-08-26)
+### 5.2 CI (runs green — 2026-08-26)
 
-Pushing to the session branch triggered the legacy "Build APK" workflow,
-which the `gradle-bootstrap` bridge expands to
-`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`. **Green in
-2m40s** — the three new host tests (`canonicalPrefix`, `KI-2 prefix
-canonicalizes…`, `pkg install of an already-newest package succeeds (KI-1)`)
-compiled and passed, and lint was clean. The only annotations are unrelated
-runner deprecation notices (Node.js 20 / setup-java v4).
+Pushing to the session branch triggers the legacy "Build APK" workflow, which
+the `gradle-bootstrap` bridge expands to
+`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`.
+
+- [`32932276532`](https://github.com/pabi277/CodeC/actions/runs/32932276532) (2m40s): first KI-1/KI-2 commit — host tests compiled and passed.
+- [`32934130117`](https://github.com/pabi277/CodeC/actions/runs/32934130117) (3m21s): KI-2 download-loop revert — green.
+- [`32935516850`](https://github.com/pabi277/CodeC/actions/runs/32935516850) (green): the CodeCApi bridge regression fix — `canonicalUserPrefix`
+  test and the existing confinement tests all pass; lint clean. The only
+  annotations are unrelated runner deprecation notices (Node.js 20 /
+  setup-java v4).
 
 ### 5.3 Device (pending)
 
