@@ -1,8 +1,18 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-25 · **State:** Phase 3 ✅ complete (device-verified).
-Phase 4 Parts 4.1–4.6 ✅ complete. Part 4.6 published via workflow run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740)
-and device-verified on real arm64 hardware for all 15 new package roots. Part 4.7 is active.
+**Last updated:** 2026-08-26 · **State:** Phase 3 ✅ complete (device-verified).
+**Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
+2026-08-26; 4.8 verified the runtime-permission path
+(`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
+owner-confirmed notification tap opens CodeC). The Phase 4 roadmap now
+lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
+**Phase 5 is next** (not started): planning-only skeleton at
+[`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
+
+> **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
+> without an explicit command from the owner in chat.** Committing to and
+> pushing the session branch (`arena/*`) is fine; PR creation and any merge
+> wait for the owner's explicit instruction.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -421,8 +431,10 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
 4. ~~M3 final gate — accept the released key-seeded bootstrap~~ ✅ **DONE**
    (signed Pages, signed-client device path, CI builds, release publication,
    and the backup-first clean-device proof all passed — see §5f above).
-5. **Phase 4 — polish and expansion**, active. Planned in
-   [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md):
+5. **Phase 4 — polish and expansion** ✅ **COMPLETE (device-verified 2026-08-26).**
+   Planned in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md);
+   every part below is DONE. **Phase 5** (not started) has its planning
+   skeleton at [`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md):
    - **Part 4.1 — Shared-storage access** ✅ **DONE (device-verified 2026-08-24).**
      `codec-setup-storage` / `termux-setup-storage` configure `~/storage`
      symlinks (`shared`, `downloads`, `documents`, `dcim`, `pictures`,
@@ -462,4 +474,21 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      two non-blocking client known-issues recorded (KI-1 already-installed `pkg install` reports failure,
      KI-2 `$PREFIX` vs dpkg-recorded prefix spelling).
      See [`chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
-   - Part 4.7 remaining (Android integration foundation slice).
+   - **Part 4.7 — Android-integration foundation slice** ✅ **DONE (device-verified 2026-08-26).**
+     First capability = clipboard (`codec-clipboard get|set|clear|status`) over the reusable
+     `CodeCApi` OSC 1337 bridge (file-based request/response under
+     `$PREFIX/tmp/codec-api`, path-confined). CI + every primary device check green, incl. the
+     piped/redirected channel fix (`/dev/tty` + stdout fallback, device-confirmed); two optional
+     negatives waived by owner; post-acceptance review moved request dispatch to activity scope.
+     See [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
+   - **Part 4.8 — Android notifications slice** ✅ **DONE (device-verified 2026-08-26).**
+     Chosen capability = notifications (`codec-notify send|clear|status`) — the
+     runtime-permission path deferred by 4.7: `POST_NOTIFICATIONS` channel creation,
+     `NEED_PERMISSION` marker, activity launcher, atomic resume after the dialog.
+     Protocol/bridge/CLI implemented, `BOOTSTRAP_VERSION` 24; host `sh` harness green; CI
+     green (assemble + unit tests + lint, incl. one fixed test-compile issue). First device
+     run uncovered two real issues (hint spam + system-owned dialog not completing the
+     parked request) → F1/F2 fixes in `7a321ad`; retest passed: one hint → dialog → allow
+     → `OK`, status enabled/ready, `clear` OK, second send with no re-prompt, and the
+     owner-confirmed notification tap opens CodeC. **Phase 4 complete.**
+     See [`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).

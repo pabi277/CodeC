@@ -1,16 +1,21 @@
-# CodeC — Phase 3 task list (complete) and Phase 4 pointer
+# CodeC — Phase 3 task list (complete), Phase 4 pointer, Phase 5 next
 
-**Last updated:** 2026-08-24 · **State:** Parts A, B, C, and D ✅ ALL
-device-verified. Phase 3's device-acceptance gate is complete: Part D code,
-signed Pages, signed-client acceptance, the key-seeded bootstrap build/release,
-and the final rebuilt-bootstrap clean-device pass are all done in PR #14.
-Remaining work is Phase 4, planned separately in
-[`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) — nothing in Phase 4 has been coded.
+**Last updated:** 2026-08-26 · **State:** Parts A, B, C, and D ✅ ALL
+device-verified (Phase 3 complete). **Phase 4 (Parts 4.1–4.8) ✅ COMPLETE,
+device-verified 2026-08-26.** Next work is **Phase 5 — not started**, with a
+planning-only skeleton in [`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
+
+> **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
+> without an explicit command from the owner in chat.** Committing to and
+> pushing the session branch (`arena/*`) is fine; PR creation and any merge
+> wait for the owner's explicit instruction.
 
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 Phase 3 **task list**, kept for its history: Parts A–D, all now done, split
 into self-contained parts so each could be picked up independently. Phase 4's
-task list lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) instead of here.
+task list lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md)
+instead of here — it is **complete** (Parts 4.1–4.8, all DONE). The next
+phase's planning-only skeleton is [`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
 
 Each part states its goal, its exit condition, and the exact steps. "Done"
 means the exit condition is verified, not just the code written.
@@ -344,7 +349,7 @@ ready to merge as "Phase 3 complete" pending final owner review.
 
 ## Phase 4 — polish and expansion
 
-Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) and [`docs/chat-phase4/`](chat-phase4/README.md).
+Phase 4 planning and tracking lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md) and [`docs/chat-phase4/`](chat-phase4/README.md); **Phase 4 is complete (Parts 4.1–4.8)**.
 
 - **Part 4.1 — Shared-storage access (`~/storage`)** ✅ **DONE (device-verified 2026-08-24).**
   Detailed record in [`docs/chat-phase4/PART_4_1_STORAGE.md`](chat-phase4/PART_4_1_STORAGE.md).
@@ -361,7 +366,19 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
 - **Part 4.6 — Expanded package catalog (round 2, publish & device gate)** ✅ **DONE (device-verified 2026-08-25).**
   Detailed record in [`docs/chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md`](chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md).
   Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified `pkg install` + execution of all 15 new roots on real arm64 hardware.
-- **Part 4.7 — Android integration slice** 🚧 **READY FOR PICKUP.**
+- **Part 4.7 — Android integration slice** ✅ **DONE (device-verified 2026-08-26)** — clipboard
+  over the reusable `CodeCApi` bridge; CI + all primary device checks green incl. the piped/
+  redirected channel fix (`/dev/tty`); optional negatives waived; dispatch moved to activity
+  scope. 4.8+ ready. See
+  [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
+- **Part 4.8 — Android notifications slice** ✅ **DONE (device-verified 2026-08-26)** — `codec-notify
+  send|clear|status` over the 4.7 bridge, deliberately exercising the `POST_NOTIFICATIONS`
+  runtime-permission path (channel creation, `NEED_PERMISSION` marker, activity launcher,
+  atomic resume). Host `sh` harness green; CI green; device-verified end to end incl. the
+  permission dialog → allow → `OK` flow, no re-prompt on later sends, and owner-confirmed
+  notification tap → CodeC opens. Two device-driven fixes during acceptance (hint once + 30 s
+  wait; onResume recovery for the system-owned dialog). **Phase 4 complete.** See
+  [`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).
 - **Post-4.5/4.6 review** ✅ **DONE (device-verified 2026-08-26).** Recipe-override
   hardening, fully artifact-neutral (no rebuild/re-publish needed) — plus the
   `pkg heal` alternatives-DB self-repair, the `plan-bootstrap.py` slave-placeholder
@@ -393,4 +410,19 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
 | Phase 4 Part 4.4 — settings/theme parity | none | ✅ **DONE** — font family, themes, settings UI, live preview |
 | Phase 4 Part 4.5 — expanded package build (CI) | none | ✅ **DONE** — run `32845127723` green (25 roots, aarch64 + x86_64) |
 | Phase 4 Part 4.6 — expanded package publish + device accept | 4.5 | ✅ **DONE** — published run `32858460740` & device-verified |
-| Phase 4 Part 4.7 | 4.6 on 4.5 | 🚧 **IN PROGRESS / READY FOR PICKUP** — Android integration slice |
+| Phase 4 Part 4.7 | 4.6 on 4.5 | ✅ **DONE** (device-verified 2026-08-26) — `codec-clipboard` over `CodeCApi` OSC bridge |
+| Phase 4 Part 4.8 | 4.7 | ✅ **DONE** (device-verified 2026-08-26) — `codec-notify` over the same bridge, `POST_NOTIFICATIONS` runtime path device-verified (dialog → allow → OK; tap opens CodeC) |
+
+---
+
+## Phase 5 — not started
+
+Planning-only skeleton: [`docs/PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
+Candidate areas (nothing committed): more Termux:API-style capabilities
+(share sheet / open URL / vibrate / toast / sensors / camera / intents —
+each = one `CodeCApi` wire op + one CLI script + bootstrap bump), the two
+known client fixes from the 4.5/4.6 post-review (KI-1 already-newest
+`pkg install`; KI-2 `$PREFIX` vs dpkg-recorded prefix spelling for
+`update-alternatives`), and the deferred GUI/catalog/root areas from
+`TERMINAL_PLAN.md` §12. Exact parts and exit conditions get decided and
+recorded in `docs/chat-phase5/` when the owner picks one.

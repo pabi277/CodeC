@@ -1,0 +1,107 @@
+package com.codeci.ide.ui.terminal
+
+import java.io.File
+
+/**
+ * CodeC terminal bridge protocol — Phase 4.7 foundation, extended by 4.8.
+ *
+ * Terminal programs request Android capabilities by printing an in-band
+ * OSC 1337 sequence of the form:
+ *
+ *   ESC ] 1337 ; CodeCApi:<op>:<requestFile>:<responseFile> BEL
+ *
+ * The app ([CodecApiBridge]) validates that both paths are direct children
+ * of `$PREFIX/tmp/codec-api`, performs the capability, and atomically
+ * writes the outcome into `<responseFile>` (so the CLI can poll for the
+ * file and never relies on terminal echo). Content never travels inside
+ * the escape sequence itself — only paths to app-private files — which
+ * keeps payloads small and avoids binary/base64 encoding issues.
+ *
+ * The `CodeCApi:` namespace is separate from the legacy
+ * `CodeCRequestStorage` control (Phase 4.1) and is *additive*: old APKs
+ * simply ignore unknown OSC values, and this APK still honors the legacy
+ * control.
+ *
+ * Capabilities are grouped by wire name (`clipboard.*`, `notify.*`, …).
+ * Adding a capability in 4.9+ = one new [Op] + one CLI script; the
+ * plumbing in [TerminalEmulator] / [TerminalSession] / [CodecApiBridge]
+ * is reused unchanged.
+ */
+object CodecApiProtocol {
+    const val OSC_CODE = "1337"
+    const val NAMESPACE = "CodeCApi"
+    const val API_DIR_NAME = "codec-api"
+
+    /** Upper bound for `clipboard set` content (keeps the app's memory use bounded). */
+    const val MAX_SET_BYTES = 4 * 1024 * 1024
+
+    /** Upper bound for a `notify.send` payload (title + body). */
+    const val MAX_NOTIFY_BYTES = 8 * 1024
+
+    const val ERR_PREFIX = "ERR:"
+
+    /**
+     * Response marker the app writes while a runtime permission is pending;
+     * the CLI prints a hint and keeps polling until the app replaces the
+     * file with the real outcome (or fails after a bounded wait).
+     */
+    const val NEED_PERMISSION_PREFIX = "NEED_PERMISSION:"
+
+    enum class Op(val wire: String) {
+        CLIPBOARD_GET("clipboard.get"),
+        CLIPBOARD_SET("clipboard.set"),
+        CLIPBOARD_CLEAR("clipboard.clear"),
+        CLIPBOARD_STATUS("clipboard.status"),
+        NOTIFY_SEND("notify.send"),
+        NOTIFY_CLEAR("notify.clear"),
+        NOTIFY_STATUS("notify.status");
+
+        val isNotifyOperation: Boolean
+            get() = this == NOTIFY_SEND || this == NOTIFY_CLEAR || this == NOTIFY_STATUS
+
+        companion object {
+            fun fromWire(value: String): Op? = entries.firstOrNull { it.wire == value }
+        }
+    }
+
+    data class Request(
+        val op: Op,
+        /** Path of the payload file (e.g. `clipboard set`/`notify send` content). Null when not needed. */
+        val requestFile: String?,
+        val responseFile: String
+    )
+
+    /**
+     * Parses the value part of an OSC 1337 sequence (`CodeCApi:...`).
+     * Returns null for anything that is not a valid CodeCApi request so the
+     * caller can ignore it (unknown/foreign sequences must not be fatal).
+     */
+    fun parse(payload: String): Request? {
+        if (!payload.startsWith("$NAMESPACE:")) return null
+        val parts = payload.substring(NAMESPACE.length + 1).split(':')
+        if (parts.size != 3) return null
+        val op = Op.fromWire(parts[0]) ?: return null
+        val requestFile = parts[1].takeIf { it.isNotEmpty() }
+        val responseFile = parts[2]
+        if (responseFile.isEmpty()) return null
+        return Request(op, requestFile, responseFile)
+    }
+
+    /** Inverse of [parse] (used by the CLI scripts and by host tests). */
+    fun build(op: Op, requestFile: String?, responseFile: String): String =
+        "$NAMESPACE:${op.wire}:${requestFile ?: ""}:$responseFile"
+
+    /** Body of the `NEED_PERMISSION` response sent to the CLI. */
+    fun permissionNotice(permission: String): String = "$NEED_PERMISSION_PREFIX$permission"
+
+    /**
+     * True only when [path] resolves (symlinks included) to a *direct child*
+     * of [apiDir]. This is the security boundary of the bridge: a payload
+     * from the terminal can name only files inside `$PREFIX/tmp/codec-api`.
+     */
+    fun isConfinedDirectChild(path: String, apiDir: File): Boolean {
+        val root = runCatching { apiDir.canonicalFile }.getOrNull() ?: return false
+        val canonical = runCatching { File(path).canonicalFile }.getOrNull() ?: return false
+        return canonical.parentFile == root
+    }
+}

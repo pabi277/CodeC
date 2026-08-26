@@ -2,6 +2,11 @@
 
 A C programming IDE for Android. Write C, tap **RUN**, or open the in-app terminal and type `cc file.c`.
 
+> **🔒 STANDING RULE (owner, 2026-08-26):** agents/session branches must
+> **not open a PR or merge anything without the owner's explicit command** in
+> chat. Committing to and pushing the session branch is fine; PR creation and
+> merging wait for the owner.
+
 ## Install the APK from GitHub
 
 1. Push this branch (or merge to `main`). GitHub Actions builds `app-debug.apk`.
@@ -90,7 +95,8 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 > **Remaining work (ordered parts):** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
 > **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
 > **Phase 3 status/handoff:** [docs/chat-phase3/PHASE3_STATUS.md](docs/chat-phase3/PHASE3_STATUS.md).  
-> **Phase 4 roadmap (planning only):** [docs/PHASE4_ROADMAP.md](docs/PHASE4_ROADMAP.md).  
+> **Phase 4 roadmap (planning only):** [docs/chat-phase4/PHASE4_ROADMAP.md](docs/chat-phase4/PHASE4_ROADMAP.md).  \
+> **Phase 5 roadmap (not started):** [docs/PHASE5_ROADMAP.md](docs/PHASE5_ROADMAP.md).  
 > **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"

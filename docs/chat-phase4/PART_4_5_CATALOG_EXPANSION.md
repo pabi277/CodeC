@@ -6,7 +6,7 @@ for both architectures (`aarch64` in 1h 53m 02s, `x86_64` in 1h 27m 09s) with a 
 **unchanged** bootstrap archive. Part 4.6 publishes and device-verifies it.
 
 This is the record of the concrete technical decisions that
-[`PHASE4_ROADMAP.md`](../PHASE4_ROADMAP.md) Part 4.5 left open, plus the
+[`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) Part 4.5 left open, plus the
 evidence collected while making them. The pinned revision used for all
 recipe inspection below is the one in `codec-packages/properties.codec.sh`:
 `termux-packages @ 1bbe66903526df2e8af51e704316bc68ede72603`.

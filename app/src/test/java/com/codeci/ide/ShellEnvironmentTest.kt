@@ -427,6 +427,232 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `clipboardScript is a posix sh CLI speaking the CodeCApi osc protocol`() {
+        val script = ShellEnvironment.clipboardScript()
+        assertTrue(script.startsWith("#!/system/bin/sh"))
+        assertTrue(script.contains("codec-clipboard get"))
+        assertTrue(script.contains("codec-clipboard set [TEXT]"))
+        assertTrue(script.contains("codec-clipboard clear"))
+        assertTrue(script.contains("codec-clipboard status"))
+        assertTrue(script.contains("API_DIR=\"\$PREFIX/tmp/codec-api\""))
+        assertTrue(script.contains("mktemp \"\$API_DIR/req.XXXXXX\""))
+        // The response file derives from the request temp file so it is
+        // unique AND not pre-created (the CLI polls for the app's rename).
+        assertTrue(script.contains("res=\"\${req}.out\""))
+        assertTrue(script.contains("wire_op=\"clipboard.\$op\""))
+        assertTrue(script.contains("CodeCApi:%s:%s:%s"))
+        assertTrue(script.contains("sleep 0.05"))
+        assertTrue(script.contains("trap 'rm -f"))
+        // The request must go to the controlling terminal when stdout is
+        // piped/redirected, with a stdout fallback when there is no tty.
+        // The tty path must be an *attempted write* (a `[ -w /dev/tty ]`
+        // test is unreliable: access(2) succeeds even with no controlling
+        // terminal, and the real open() then fails with ENXIO).
+        assertTrue(script.contains("} 2>/dev/null; then"))
+        assertTrue(script.contains(">/dev/tty"))
+        // Both the /dev/tty branch and the stdout fallback emit the OSC.
+        assertEquals(2, script.windowed("CodeCApi:%s:%s:%s".length)
+            .count { it == "CodeCApi:%s:%s:%s" })
+        // The OSC must be emitted as real ESC/BEL bytes: a single backslash
+        // before 033/007, never a doubled backslash (which printf prints
+        // literally and the emulator would render as text).
+        assertTrue(script.contains("\\033]1337;CodeCApi:%s:%s:%s\\007"))
+        assertFalse(script.contains("\\\\033]1337;CodeCApi"))
+    }
+
+    @Test
+    fun `clipboardScript performs a full osc request and prints the app response`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-clip-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            val script = File(bin, "codec-clipboard")
+            script.writeText(ShellEnvironment.clipboardScript())
+            script.setExecutable(true)
+
+            val proc = ProcessBuilder("sh", script.absolutePath, "get")
+                .redirectErrorStream(true)
+                .start()
+
+            // Fake the app: scan the script's stdout byte-by-byte for the
+            // OSC request (a large blocking read would not see it until the
+            // script exits), then create the named response file.
+            val output = StringBuilder()
+            val responded = java.util.concurrent.atomic.AtomicBoolean(false)
+            val marker = Regex("\u001b\\]1337;CodeCApi:([^:]+):([^:]+):([^\u0007]*)\u0007")
+            val responder = Thread {
+                try {
+                    val input = proc.inputStream
+                    while (true) {
+                        val b = input.read()
+                        if (b < 0) break
+                        output.append(b.toChar()) // byte-preserving (Latin-1)
+                        val match = marker.find(output)
+                        if (match != null && !responded.get()) {
+                            responded.set(true)
+                            val resPath = match.groupValues[3]
+                            if (resPath.isNotEmpty()) {
+                                File(resPath).writeText("hello from clipboard")
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            responder.start()
+            val exitCode = proc.waitFor()
+            responder.join(5000)
+
+            assertEquals(0, exitCode)
+            assertTrue(output.toString().contains("\u001b]1337;CodeCApi:clipboard.get:"))
+            assertTrue(output.toString().contains("\u0007"))
+            assertTrue(output.toString().contains("hello from clipboard"))
+            assertTrue(responded.get())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `notifyScript is a posix sh CLI speaking the CodeCApi osc protocol`() {
+        val script = ShellEnvironment.notifyScript()
+        assertTrue(script.startsWith("#!/system/bin/sh"))
+        assertTrue(script.contains("codec-notify send TITLE [BODY]"))
+        assertTrue(script.contains("codec-notify clear"))
+        assertTrue(script.contains("codec-notify status"))
+        assertTrue(script.contains("API_DIR=\"\$PREFIX/tmp/codec-api\""))
+        assertTrue(script.contains("mktemp \"\$API_DIR/req.XXXXXX\""))
+        assertTrue(script.contains("res=\"\${req}.out\""))
+        assertTrue(script.contains("wire_op=\"notify.\$op\""))
+        assertTrue(script.contains("CodeCApi:%s:%s:%s"))
+        assertTrue(script.contains("sleep 0.05"))
+        assertTrue(script.contains("trap 'rm -f"))
+        // Permission flow: NEED_PERMISSION is not a final outcome — the CLI
+        // prints a hint and keeps polling until the app writes OK/ERR.
+        assertTrue(script.contains("NEED_PERMISSION:*"))
+        // The hint must be printed ONCE (early feedback: 25+ per-poll
+        // repeats flooded the terminal) and the permission wait must be
+        // long enough for the user to answer the system dialog.
+        assertTrue(script.contains("hint_shown=0"))
+        assertTrue(script.contains("hint_shown=1"))
+        assertTrue(script.contains("\$i\" -ge 600"))
+        // Same /dev/tty-first, attempted-write discipline as clipboard.
+        assertEquals(2, script.windowed("CodeCApi:%s:%s:%s".length)
+            .count { it == "CodeCApi:%s:%s:%s" })
+        assertTrue(script.contains("\\033]1337;CodeCApi:%s:%s:%s\\007"))
+        assertFalse(script.contains("\\\\033]1337;CodeCApi"))
+    }
+
+    @Test
+    fun `notifyScript waits through the permission dance and prints the final outcome`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-notify-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            val script = File(bin, "codec-notify")
+            script.writeText(ShellEnvironment.notifyScript())
+            script.setExecutable(true)
+
+            val proc = ProcessBuilder("sh", script.absolutePath, "send", "Build done", "3 files")
+                .redirectErrorStream(true)
+                .start()
+
+            val output = StringBuilder()
+            val responded = java.util.concurrent.atomic.AtomicBoolean(false)
+            val marker = Regex("\\u001b\\]1337;CodeCApi:([^:]+):([^:]+):([^\\u0007]*)\\u0007")
+            val responder = Thread {
+                try {
+                    val input = proc.inputStream
+                    while (true) {
+                        val b = input.read()
+                        if (b < 0) break
+                        output.append(b.toChar())
+                        val match = marker.find(output)
+                        if (match != null && !responded.get()) {
+                            responded.set(true)
+                            val resPath = match.groupValues[3]
+                            if (resPath.isNotEmpty()) {
+                                // 1) Permission dialog pending → marker; 2) user
+                                // allows → the app atomically rewrites OK.
+                                File(resPath).writeText(
+                                    "NEED_PERMISSION:android.permission.POST_NOTIFICATIONS"
+                                )
+                                Thread.sleep(300)
+                                File(resPath).writeText("OK")
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            responder.start()
+            val exitCode = proc.waitFor()
+            responder.join(5000)
+
+            assertEquals(0, exitCode)
+            assertTrue(output.toString().contains("\u001b]1337;CodeCApi:notify.send:"))
+            val hint = "Android notification permission: allow it"
+            assertEquals(1, Regex(Regex.escape(hint)).findAll(output.toString()).count())
+            assertTrue(output.toString().trim().endsWith("OK"))
+            assertTrue(responded.get())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `notifyScript exits 1 when permission is denied`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-notify-denied-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            val script = File(bin, "codec-notify")
+            script.writeText(ShellEnvironment.notifyScript())
+            script.setExecutable(true)
+
+            val proc = ProcessBuilder("sh", script.absolutePath, "send", "Hi")
+                .redirectErrorStream(true)
+                .start()
+
+            val output = StringBuilder()
+            val responded = java.util.concurrent.atomic.AtomicBoolean(false)
+            val marker = Regex("\\u001b\\]1337;CodeCApi:([^:]+):([^:]+):([^\\u0007]*)\\u0007")
+            val responder = Thread {
+                try {
+                    val input = proc.inputStream
+                    while (true) {
+                        val b = input.read()
+                        if (b < 0) break
+                        output.append(b.toChar())
+                        val match = marker.find(output)
+                        if (match != null && !responded.get()) {
+                            responded.set(true)
+                            val resPath = match.groupValues[3]
+                            if (resPath.isNotEmpty()) {
+                                Thread.sleep(100)
+                                File(resPath).writeText(
+                                    "ERR:notification permission denied"
+                                )
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            responder.start()
+            val exitCode = proc.waitFor()
+            responder.join(5000)
+
+            assertEquals(1, exitCode)
+            assertTrue(output.toString().contains("notification permission denied"))
+            assertTrue(output.toString().contains("ERR:") == false)
+            assertTrue(responded.get())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `setupStorageDirectory creates storage directory and symlinks to target folders`() {
         val base = File(System.getProperty("java.io.tmpdir"), "codec-storage-test-${System.nanoTime()}")
         try {

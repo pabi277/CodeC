@@ -11,7 +11,8 @@ class TerminalEmulator(
     rows: Int = 24,
     scrollbackLimit: Int = 2000,
     var responder: ((String) -> Unit)? = null,
-    var onStoragePermissionRequested: (() -> Unit)? = null
+    var onStoragePermissionRequested: (() -> Unit)? = null,
+    var onCodecApiRequest: ((String) -> Unit)? = null
 ) : AnsiParser.Host {
 
     val buffer = TerminalBuffer(cols, rows, scrollbackLimit)
@@ -100,8 +101,10 @@ class TerminalEmulator(
         when (code) {
             "0", "2" -> buffer.title = value
             "1337" -> {
-                if (value == "CodeCRequestStorage") {
-                    onStoragePermissionRequested?.invoke()
+                when {
+                    value == "CodeCRequestStorage" -> onStoragePermissionRequested?.invoke()
+                    value.startsWith("${CodecApiProtocol.NAMESPACE}:") ->
+                        onCodecApiRequest?.invoke(value)
                 }
             }
         }
