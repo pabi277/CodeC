@@ -90,7 +90,8 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 > **Remaining work (ordered parts):** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
 > **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
 > **Phase 3 status/handoff:** [docs/chat-phase3/PHASE3_STATUS.md](docs/chat-phase3/PHASE3_STATUS.md).  
-> **Phase 4 roadmap (planning only):** [docs/PHASE4_ROADMAP.md](docs/PHASE4_ROADMAP.md).  
+> **Phase 4 roadmap (planning only):** [docs/chat-phase4/PHASE4_ROADMAP.md](docs/chat-phase4/PHASE4_ROADMAP.md).  \
+> **Phase 5 roadmap (not started):** [docs/PHASE5_ROADMAP.md](docs/PHASE5_ROADMAP.md).  
 > **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"

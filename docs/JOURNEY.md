@@ -4,7 +4,10 @@
 **Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
 2026-08-26; 4.8 verified the runtime-permission path
 (`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
-owner-confirmed notification tap opens CodeC).
+owner-confirmed notification tap opens CodeC). The Phase 4 roadmap now
+lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
+**Phase 5 is next** (not started): planning-only skeleton at
+[`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -423,8 +426,10 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
 4. ~~M3 final gate — accept the released key-seeded bootstrap~~ ✅ **DONE**
    (signed Pages, signed-client device path, CI builds, release publication,
    and the backup-first clean-device proof all passed — see §5f above).
-5. **Phase 4 — polish and expansion**, active. Planned in
-   [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md):
+5. **Phase 4 — polish and expansion** ✅ **COMPLETE (device-verified 2026-08-26).**
+   Planned in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md);
+   every part below is DONE. **Phase 5** (not started) has its planning
+   skeleton at [`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md):
    - **Part 4.1 — Shared-storage access** ✅ **DONE (device-verified 2026-08-24).**
      `codec-setup-storage` / `termux-setup-storage` configure `~/storage`
      symlinks (`shared`, `downloads`, `documents`, `dcim`, `pictures`,

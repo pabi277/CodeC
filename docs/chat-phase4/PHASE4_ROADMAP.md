@@ -1,17 +1,18 @@
 # CodeC Phase 4 roadmap
 
-**Status (2026-08-25):** Parts 4.1–4.6 ✅ done (device-verified or CI-verified).
+**Status (2026-08-26):** **Phase 4 COMPLETE — Parts 4.1–4.8 ✅ all done**
+(device-verified or CI-verified; 4.7 and 4.8 device-verified 2026-08-26).
 Part 4.5 (expanded catalog CI build) completed in run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s, 25 roots, both arches green).
 Part 4.6 (publish & device acceptance) completed in run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified on real arm64 hardware.
 Part 4.7 (Android integration slice) ✅ DONE (device-verified 2026-08-26).
 Part 4.8 (Android notifications slice, the runtime-permission path 4.7 deferred)
 ✅ DONE (device-verified 2026-08-26) — **Phase 4 is complete (Parts 4.1–4.8)**; see
-[`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).
+[`PART_4_8_ANDROID_NOTIFICATIONS.md`](PART_4_8_ANDROID_NOTIFICATIONS.md).
 A post-implementation review of the 4.5/4.6 recipe overrides landed artifact-neutral
-hardening fixes; see [`chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
+hardening fixes; see [`PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
 
 This is deliberately a **roadmap**, not an execution plan like
-[`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md)/[`NEXT_STEPS.md`](NEXT_STEPS.md). It names
+[`chat-phase3/PHASE3_PLAN.md`](../chat-phase3/PHASE3_PLAN.md)/[`NEXT_STEPS.md`](../NEXT_STEPS.md). It names
 parts, their rough scope, and their dependencies. It does **not** pin down
 exact technical decisions, UI designs, package lists, or exit-condition
 wording — those get decided (and written down, updated in this file) when a
@@ -41,7 +42,7 @@ history to need more than one part's worth of work.
 
 ## How to use this file
 
-1. Read [`JOURNEY.md`](JOURNEY.md) and [`NEXT_STEPS.md`](NEXT_STEPS.md) first
+1. Read [`JOURNEY.md`](../JOURNEY.md) and [`NEXT_STEPS.md`](../NEXT_STEPS.md) first
    to confirm Phase 3's state has not regressed.
 2. Pick **one** part below. Confirm with the project owner which one before
    starting, and confirm current repo/PR/CI state — do not assume anything in
@@ -87,7 +88,7 @@ permission is requested and re-requested if revoked.
 - Clean cancellation on `n`/`no`: cleans cached archives, removes pending transaction markers, leaves dpkg status database untouched, and exits cleanly with 0.
 - Positional flag parsing for `-y`, `--yes`, `--assume-yes` across `install`, `upgrade`, and `uninstall` to support scripted and unattended usage. Non-interactive invocations without `-y` fail closed if stdin is not a terminal.
 - Unit and host test suites in Kotlin and Python all passing (71/71 tests green).
-- Full record in [`docs/chat-phase4/PART_4_2_INSTALL_CONFIRMATION.md`](chat-phase4/PART_4_2_INSTALL_CONFIRMATION.md).
+- Full record in [`PART_4_2_INSTALL_CONFIRMATION.md`](PART_4_2_INSTALL_CONFIRMATION.md).
 
 **Basic goal.** Before `pkg install`/`dpkg` actually mutates the system, show
 the user what is about to happen (package set, versions, download size) and
@@ -104,7 +105,7 @@ checks user-visible instead of silent.
 - "Package Repository & Trust" section in Settings with verified trust badge, development channel (`stable/main`), repository URL (`https://pabi277.github.io/CodeC/dev`), keyring metadata (`codec-archive-keyring-v1.gpg`), signing subkey fingerprint (`328500868CE9B0F74B62CEFC1D7D52F6F8135015`), and "CHECK REPOSITORY" connectivity probe.
 - Terminal CLI `pkg status` (aliases `pkg trust`, `pkg channel`) displaying full repository, channel, keyring, and signing subkey status.
 - Friendly `friendly_apt` hint on unindexed package searches (`pkg: package not found; run 'pkg update' first to refresh the package catalog.`).
-- Full record in [`docs/chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md`](chat-phase4/PART_4_3_TRUST_CHANNEL_UX.md).
+- Full record in [`PART_4_3_TRUST_CHANNEL_UX.md`](PART_4_3_TRUST_CHANNEL_UX.md).
 
 **Basic goal.** Let a user tell at a glance, in Settings and/or the terminal,
 whether they are talking to the signed CodeC repository and which channel/
@@ -123,7 +124,7 @@ release they are on, instead of that information being visible only via raw
 - Unified `SettingsScreen` controls under Terminal Settings and Appearance with a live `TerminalThemePreview` card reflecting active font family, font size, and terminal theme colors.
 - Reactive DataStore preference flows (`terminalThemeFlow`, `terminalFontFamilyFlow`, `terminalFontSizeFlow`) updating emulator and settings in real time.
 - Unit test suite (`TerminalThemeTest.kt`) and device verification all passing.
-- Full record in [`docs/chat-phase4/PART_4_4_SETTINGS_PARITY.md`](chat-phase4/PART_4_4_SETTINGS_PARITY.md).
+- Full record in [`PART_4_4_SETTINGS_PARITY.md`](PART_4_4_SETTINGS_PARITY.md).
 
 **Basic goal.** Close gaps between the terminal's theme/font/environment
 options and the editor's existing `SettingsScreen`/`ThemeManager` so the two
@@ -137,7 +138,7 @@ surfaces.
 ### Part 4.5 / 4.6 — Expand the curated package catalog (round 2)
 
 **Status: COMPLETE and device-verified (2026-08-25).**
-Decisions recorded in [`chat-phase4/PART_4_5_CATALOG_EXPANSION.md`](chat-phase4/PART_4_5_CATALOG_EXPANSION.md) and [`chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md`](chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md):
+Decisions recorded in [`PART_4_5_CATALOG_EXPANSION.md`](PART_4_5_CATALOG_EXPANSION.md) and [`PART_4_6_CATALOG_ACCEPTANCE.md`](PART_4_6_CATALOG_ACCEPTANCE.md):
 round 2 roots = `git wget bat ripgrep fd htop tmux tree patch diffutils zstd
 m4 autoconf automake libtool` (vim/openssh/python3 deferred to round 3 with
 reasons); repository-only scope (bootstrap byte-identical, verified by
@@ -151,7 +152,7 @@ Publish workflow run [`32858460740`](https://github.com/pabi277/CodeC/actions/ru
 
 **Basic goal.** Grow the Phase 3 package set beyond the original curated roots
 (`nano less coreutils grep sed gawk gzip tar make libmagic`, per
-[`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md) §4 and [`codec-packages/README.md`](../codec-packages/README.md))
+[`chat-phase3/PHASE3_PLAN.md`](../chat-phase3/PHASE3_PLAN.md) §4 and [`codec-packages/README.md`](../../codec-packages/README.md))
 with more commonly requested tools, using the same source-build /
 dependency-closure / signed-repository / device-acceptance discipline already
 proven in Phase 3 — not a new mechanism.
@@ -181,7 +182,7 @@ over a reusable in-band bridge: OSC 1337 `CodeCApi:<op>:<req>:<res>` →
 `CodecApiBridge`, with request/response carried in app-private files under
 `$PREFIX/tmp/codec-api` (path-confinement enforced). Protocol, security
 model, architecture, tests, and the (not-yet-run) device transcript are in
-[`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
+[`PART_4_7_ANDROID_INTEGRATION.md`](PART_4_7_ANDROID_INTEGRATION.md).
 Second device run (2026-08-26) confirmed the piped/redirected fix on
 hardware; every primary device check is green, the two optional
 negatives were waived by the owner, and a post-acceptance review
@@ -196,7 +197,7 @@ the bridge/IPC mechanism, and a CLI command shape) that later capabilities
 can follow without redesigning the plumbing each time.
 
 **Complexity:** large epic. **This entry only scopes a first foundation
-slice at ~50–70 replies.** [`TERMINAL_PLAN.md`](TERMINAL_PLAN.md) §12 lists
+slice at ~50–70 replies.** [`TERMINAL_PLAN.md`](../TERMINAL_PLAN.md) §12 lists
 this area as explicitly out of scope for Phase 3, and it is the least-defined
 item in this roadmap — treat it as lower priority than Parts 4.1–4.6, and
 expect it to spawn further numbered parts (`4.8`, `4.9`, ...) once the
@@ -215,7 +216,7 @@ creation from the activity, `NEED_PERMISSION` marker while the system
 dialog is up, atomic `OK`/`ERR` resume, and actionable denial handling
 (for targetSdk ≤ 32 one "Don't allow" is final until reinstall).
 Protocol, permission design, implementation map and host evidence are in
-[`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).
+[`PART_4_8_ANDROID_NOTIFICATIONS.md`](PART_4_8_ANDROID_NOTIFICATIONS.md).
 
 **Basic goal.** Prove the runtime-permission half of the 4.7 pattern end to
 end on hardware; later slices (4.9+) can then add permission-free
@@ -230,7 +231,7 @@ wiring.
 
 - **Optional x86_64 repeat of the Part D clean-device test.** Phase 3's exit
   condition was met on aarch64; an x86_64 repeat was never run because no
-  x86_64 device was available (see [`chat-phase3/PHASE3_PLAN.md`](chat-phase3/PHASE3_PLAN.md) §5, M3).
+  x86_64 device was available (see [`chat-phase3/PHASE3_PLAN.md`](../chat-phase3/PHASE3_PLAN.md) §5, M3).
   This can be done opportunistically whenever an x86_64 device is available.
   It does not block any Phase 4 part and is not itself renumbered as one.
 

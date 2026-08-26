@@ -30,3 +30,14 @@ Phase 4 covers polish, expansion, and UX improvements on top of the Phase 3 pack
   redirected channel fix via `/dev/tty`); two optional negatives waived by owner; post-acceptance
   review moved request dispatch to activity scope (no drops on tab switches).
   Record and evidence in [`PART_4_7_ANDROID_INTEGRATION.md`](PART_4_7_ANDROID_INTEGRATION.md).
+- **Part 4.8 — Android notifications slice:** ✅ **DONE (device-verified 2026-08-26).**
+  `codec-notify send|clear|status` over the 4.7 `CodeCApi` bridge, deliberately exercising
+  the runtime-permission path deferred in 4.7: `POST_NOTIFICATIONS` channel creation,
+  `NEED_PERMISSION` marker while the dialog is up, activity launcher + onResume recovery,
+  atomic `OK`/`ERR` resume. Device-verified: one hint → dialog → allow → `OK`, status
+  enabled/ready, `clear` OK, no re-prompt on later sends, owner-confirmed notification tap
+  opens CodeC. Record and evidence in [`PART_4_8_ANDROID_NOTIFICATIONS.md`](PART_4_8_ANDROID_NOTIFICATIONS.md).
+
+**◆ Phase 4 is COMPLETE (Parts 4.1–4.8).** Planning/status:
+[`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) (moved into this folder 2026-08-26);
+next phase's skeleton is [`../PHASE5_ROADMAP.md`](../PHASE5_ROADMAP.md).
