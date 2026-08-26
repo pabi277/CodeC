@@ -465,5 +465,6 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
    - **Part 4.7 — Android-integration foundation slice** 🚧 **IN PROGRESS (2026-08-26).**
      First capability = clipboard (`codec-clipboard get|set|clear|status`) over the reusable
      `CodeCApi` OSC 1337 bridge (file-based request/response under
-     `$PREFIX/tmp/codec-api`, path-confined). Implemented with host tests; device gate
-     pending. See [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
+     `$PREFIX/tmp/codec-api`, path-confined). Host tests green; first device run passed all unpiped
+     checks and surfaced a piped-stdout channel defect (fixed via `/dev/tty` + stdout fallback);
+     final confirmation pending. See [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).

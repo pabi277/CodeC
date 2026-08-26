@@ -1,10 +1,16 @@
 # Phase 4 Part 4.7 — Android-integration foundation slice (clipboard bridge)
 
 **Status: 🚧 IN PROGRESS (2026-08-26).** The reusable bridge protocol
-(`CodeCApi`) and the first capability (`codec-clipboard`) are implemented and
-covered by host tests that run in CI. **The device gate has not been run
-yet** — per this project's discipline this part is *not* claimed DONE until
-the transcript in §7 passes on a real phone.
+(`CodeCApi`) and the first capability (`codec-clipboard`) are implemented,
+host-tested in CI, and **partially device-verified**: the first real-phone
+run (§5.1) passed every unpiped check and surfaced one real protocol
+defect — the OSC request was emitted to stdout, so piping/redirecting the
+CLI (`codec-clipboard get | head`, `> file`) swallowed the request channel.
+Fixed by emitting to the controlling terminal `/dev/tty` with a stdout
+fallback, and verified locally under a real PTY for both channels. **One
+final device confirmation of the piped/redirected case (§7) is still
+pending** — per this project's discipline the part is *not* claimed DONE
+until that transcript passes on a real phone.
 
 ---
 
@@ -48,6 +54,13 @@ ESC ] 1337 ; CodeCApi:<op>:<requestFile>:<responseFile> BEL
   (canonicalized, symlinks resolved). The app refuses anything else.
 - CLI subcommand names map to wire names: `get` → `clipboard.get`,
   `set` → `clipboard.set`, etc.
+- The CLI emits the sequence to the **controlling terminal** (`/dev/tty`)
+  when it has one and falls back to stdout otherwise, so piped/redirected
+  stdout (`codec-clipboard get | head`, `codec-clipboard get > file`) still
+  reaches the emulator. The fallback is engaged by *attempting* the write
+  (a `[ -w /dev/tty ]` test is unreliable: `access(2)` reports success even
+  when there is no controlling terminal and the real `open()` then fails
+  with ENXIO).
 - Content never travels inside the OSC payload (only ~120 bytes of paths),
   keeping it far under the emulator's 1024-byte OSC cap and avoiding
   base64/binary issues.
@@ -151,12 +164,48 @@ text, and a byte-level `ord()` check rules that out for both).
   (`codec-packages/`, the bootstrap, and the repository are untouched; the
   build side of this part does not exist by design.)
 
-## 7. Device acceptance transcript (NOT RUN YET — run on a real arm64 phone)
+## 5.1 First on-device run (2026-08-26) — everything unpiped passed
 
-Install the CI `CodeC-IDE` artifact from a green `Build APK` run of this
-branch. With the pinned `debug.keystore` in place this installs **in place**
-(no wipe). Open Term (the shell rewrite happens on start) and run each line
-separately:
+APK from Build APK run `32915432981` (signed with the pinned debug key,
+installed in place). Shell restart rewrote `codec-clipboard`
+(`BOOTSTRAP_VERSION` 23) into the existing `userland-v2-dev` userland.
+
+| Command | Result |
+|---|---|
+| `which codec-clipboard` | ✅ `…/usr/bin/codec-clipboard` |
+| `codec-clipboard status` | ✅ `clipboard: text` / `length: 434` (the pasted command block — real text, proving content end-to-end) |
+| `codec-clipboard set "hello from codec"` | ✅ `OK` |
+| `codec-clipboard get` | ✅ `hello from codec` |
+| `codec-clipboard clear` | ✅ `OK` |
+| `codec-clipboard get; echo "exit=$?"` | ✅ blank, `exit=0` (empty body = valid response) |
+| `codec-clipboard set ""` (empty content via failed `cat`) | ✅ `OK` |
+| `pkg update` | ✅ signed channel, no warnings |
+| `dpkg --audit` | ✅ silent (clean) |
+| `cc` + `./a.out` | ✅ `clip-ok` (warning was the transcript's own missing `#include <stdio.h>`, not a product issue) |
+
+**F1 — piped output swallowed the request channel (REAL DEFECT, fixed).**
+`codec-clipboard get | head -3` timed out with `no response from CodeC`.
+The request OSC was `printf`-ed to **stdout**, so when stdout is a pipe
+`head` buffers it (no newline until the response, which never comes) and
+the emulator never sees the request. Same breakage for `get > file`.
+**Fix (this PR's follow-up commit):** emit the OSC to `/dev/tty` first and
+fall back to stdout only when the write cannot be delivered. Verified
+locally under a real PTY for all three channels: direct (OSC + body via
+tty), `get | head -3` (OSC via `/dev/tty`, body through the pipe), and
+`get > file` (OSC via `/dev/tty`, content in the file) — all exit 0.
+On-device re-confirmation of the piped/redirected case is the remaining
+step (CI's test process has no controlling terminal, so the round-trip
+JVM test exercises the stdout fallback path, not `/dev/tty`).
+
+**Test-command corrections (transcript author's errors, no product fix):**
+the userland profile is `$PREFIX/etc/profile`, not `/etc/profile`; the
+smoke C file must `#include <stdio.h>`.
+
+## 7. Device acceptance transcript (one confirmation run still pending)
+
+Run each line separately on the real phone (same preconditions: green
+Build APK artifact of this branch, installed in place, Term opened once so
+the shell rewrite lands):
 
 ```sh
 which codec-clipboard                       # $PREFIX/bin/codec-clipboard
@@ -166,12 +215,15 @@ codec-clipboard get                         # hello from codec
 # Paste check: long-press the terminal -> Paste, or open another app and paste.
 codec-clipboard clear                       # OK
 codec-clipboard get; echo "exit=$?"         # blank output, exit=0
-codec-clipboard set "$(cat /etc/profile)"   # multi-line content round-trip
-codec-clipboard get | head -3
+# Multi-line round-trip (profile lives at $PREFIX/etc/profile):
+codec-clipboard set "$(cat "$PREFIX/etc/profile")"   # OK
+codec-clipboard get | head -3               # first 3 profile lines (piped channel regression)
+codec-clipboard get > "$HOME/clip.out"; head -3 "$HOME/clip.out"; rm -f "$HOME/clip.out"
 # Negative: non-text clip (copy an image from Photos, then):
 codec-clipboard get; echo "exit=$?"         # ERR: clipboard does not contain text, exit=1
 pkg update && dpkg --audit                  # must stay clean (no regression)
-echo 'int main(void){printf("clip-ok\n");return 0;}' > t.c
+echo '#include <stdio.h>
+int main(void){printf("clip-ok\n");return 0;}' > t.c
 cc t.c -o a.out && ./a.out                  # TCC regression: clip-ok
 ```
 

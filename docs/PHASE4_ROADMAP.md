@@ -179,9 +179,13 @@ over a reusable in-band bridge: OSC 1337 `CodeCApi:<op>:<req>:<res>` →
 `$PREFIX/tmp/codec-api` (path-confinement enforced). Protocol, security
 model, architecture, tests, and the (not-yet-run) device transcript are in
 [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
-**The part is NOT done until that transcript passes on a real device**;
-later capabilities (4.8, 4.9, …) each add one wire op + one CLI script and
-reuse the plumbing.
+First device run (2026-08-26) passed every unpiped check and found one
+real defect — the OSC went to stdout so piped/redirected output
+(`get | head`, `> file`) lost the request channel; fixed by emitting to
+/dev/tty with a stdout fallback (PTY-verified locally). **The part is
+NOT done until the final piped/redirected on-device confirmation
+passes**; later capabilities (4.8, 4.9, …) each add one wire op + one
+CLI script and reuse the plumbing.
 
 **Basic goal.** A first, narrow slice of Android-native capability exposed to
 terminal programs, establishing a reusable pattern (permission handling,

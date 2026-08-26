@@ -26,5 +26,8 @@ Phase 4 covers polish, expansion, and UX improvements on top of the Phase 3 pack
 - **Part 4.7 — Android-integration foundation slice:** 🚧 **IN PROGRESS (2026-08-26).** First
   capability chosen: **clipboard** (`codec-clipboard get|set|clear|status`) over a reusable
   in-band `CodeCApi` OSC 1337 bridge (file-based request/response under `$PREFIX/tmp/codec-api`,
-  path-confinement security boundary). Implemented with host tests; **device gate pending** —
+  path-confinement security boundary). Host tests green in CI; **first device run passed all
+  unpiped checks** and found one real defect (piped/redirected stdout swallowed the request
+  channel) — fixed by emitting the OSC to `/dev/tty` with a stdout fallback, verified under a
+  real PTY locally; **final piped/redirected on-device confirmation pending** —
   record and transcript in [`PART_4_7_ANDROID_INTEGRATION.md`](PART_4_7_ANDROID_INTEGRATION.md).

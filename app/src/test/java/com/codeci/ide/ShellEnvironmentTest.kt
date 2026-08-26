@@ -443,6 +443,16 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("CodeCApi:%s:%s:%s"))
         assertTrue(script.contains("sleep 0.05"))
         assertTrue(script.contains("trap 'rm -f"))
+        // The request must go to the controlling terminal when stdout is
+        // piped/redirected, with a stdout fallback when there is no tty.
+        // The tty path must be an *attempted write* (a `[ -w /dev/tty ]`
+        // test is unreliable: access(2) succeeds even with no controlling
+        // terminal, and the real open() then fails with ENXIO).
+        assertTrue(script.contains("} 2>/dev/null; then"))
+        assertTrue(script.contains(">/dev/tty"))
+        // Both the /dev/tty branch and the stdout fallback emit the OSC.
+        assertEquals(2, script.windowed("CodeCApi:%s:%s:%s".length)
+            .count { it == "CodeCApi:%s:%s:%s" })
         // The OSC must be emitted as real ESC/BEL bytes: a single backslash
         // before 033/007, never a doubled backslash (which printf prints
         // literally and the emulator would render as text).

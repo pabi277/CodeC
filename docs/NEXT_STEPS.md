@@ -362,8 +362,9 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
   Detailed record in [`docs/chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md`](chat-phase4/PART_4_6_CATALOG_ACCEPTANCE.md).
   Published via run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified `pkg install` + execution of all 15 new roots on real arm64 hardware.
 - **Part 4.7 — Android integration slice** 🚧 **IN PROGRESS (2026-08-26)** — first
-  capability (clipboard) implemented over the reusable `CodeCApi` bridge; device gate
-  pending. See [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
+  capability (clipboard) implemented over the reusable `CodeCApi` bridge; first device run
+  green except piped-output channel (fixed via `/dev/tty`), final confirmation pending.
+  See [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
 - **Post-4.5/4.6 review** ✅ **DONE (device-verified 2026-08-26).** Recipe-override
   hardening, fully artifact-neutral (no rebuild/re-publish needed) — plus the
   `pkg heal` alternatives-DB self-repair, the `plan-bootstrap.py` slave-placeholder
@@ -395,4 +396,4 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
 | Phase 4 Part 4.4 — settings/theme parity | none | ✅ **DONE** — font family, themes, settings UI, live preview |
 | Phase 4 Part 4.5 — expanded package build (CI) | none | ✅ **DONE** — run `32845127723` green (25 roots, aarch64 + x86_64) |
 | Phase 4 Part 4.6 — expanded package publish + device accept | 4.5 | ✅ **DONE** — published run `32858460740` & device-verified |
-| Phase 4 Part 4.7 | 4.6 on 4.5 | 🚧 **IN PROGRESS** — foundation slice: `codec-clipboard` over `CodeCApi` OSC bridge; device gate pending |
+| Phase 4 Part 4.7 | 4.6 on 4.5 | 🚧 **IN PROGRESS** — `codec-clipboard` over `CodeCApi` OSC bridge; device run green except piped channel (fixed), final confirmation pending |

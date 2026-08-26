@@ -937,8 +937,19 @@ HELP
         # CLI subcommand names map to wire protocol names (CodeCApi:<domain>.<op>).
         wire_op="clipboard.${'$'}op"
 
-        # Single backslashes on purpose: \033 is ESC and \007 is BEL.
-        printf '\033]1337;CodeCApi:%s:%s:%s\007' "${'$'}wire_op" "${'$'}req" "${'$'}res"
+        # Emit the request on the controlling terminal (/dev/tty) so the
+        # channel still reaches the emulator when stdout is piped or
+        # redirected (e.g. `codec-clipboard get | head`). Must attempt the
+        # actual write: `[ -w /dev/tty ]` uses access(2), which reports
+        # success even when no controlling terminal exists (open() then
+        # fails with ENXIO). If the write cannot be delivered, fall back to
+        # stdout so the current (unpiped) behaviour is preserved.
+        if { printf '\033]1337;CodeCApi:%s:%s:%s\007' "${'$'}wire_op" "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          # Single backslashes on purpose: \033 is ESC and \007 is BEL.
+          printf '\033]1337;CodeCApi:%s:%s:%s\007' "${'$'}wire_op" "${'$'}req" "${'$'}res"
+        fi
 
         # Wait for the app to deliver <res> (created by an atomic rename).
         # ~2.5s in 50ms steps.
