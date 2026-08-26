@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.FileManagerViewModel
 import java.io.File
 
@@ -69,7 +70,8 @@ import java.io.File
 fun FileManagerScreen(
     modifier: Modifier = Modifier,
     viewModel: FileManagerViewModel = viewModel(),
-    onFileSelected: (String) -> Unit = {}
+    onFileSelected: (String) -> Unit = {},
+    onPreviewFile: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val files by viewModel.files.collectAsState()
@@ -137,7 +139,12 @@ fun FileManagerScreen(
                             viewModel = viewModel,
                             onClick = { onFileSelected(file.name) },
                             onRenameClick = { showRenameDialog = file },
-                            onDeleteClick = { showDeleteDialog = file }
+                            onDeleteClick = { showDeleteDialog = file },
+                            onPreviewClick = if (WebFileSupport.isHtml(file.name)) {
+                                { onPreviewFile(file.name) }
+                            } else {
+                                null
+                            }
                         )
                     }
                 }
@@ -288,7 +295,8 @@ fun FileItem(
     viewModel: FileManagerViewModel,
     onClick: () -> Unit,
     onRenameClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onPreviewClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
@@ -361,6 +369,15 @@ fun FileItem(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
             ) {
+                onPreviewClick?.let { preview ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(com.codeci.ide.R.string.preview)) },
+                        onClick = {
+                            showMenu = false
+                            preview()
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text("Rename") },
                     onClick = {

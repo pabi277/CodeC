@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "24"
+    const val BOOTSTRAP_VERSION = "26"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -87,7 +87,29 @@ object ShellEnvironment {
         }
     }
 
+    /**
+     * dpkg and every published `.deb` record the userland prefix using
+     * Android's canonical `/data/data/` spelling, while
+     * [android.content.Context.getFilesDir] reports the `/data/user/0/`
+     * user-emulation alias on modern Android. The two names address the same
+     * inodes, so dpkg/apt never notice — but a manual `update-alternatives`
+     * that mixes them fails with a `Cross-device link` error, and greps over
+     * `--display` output mismatch (KI-2). This helper resolves the shell's
+     * exported `$PREFIX` to the dpkg-recorded spelling so `update-alternatives`
+     * and the dpkg DB agree; Termux hardcodes its `/data/data` prefix the same
+     * way. No-op for any other prefix (host-test temp dirs, secondary users).
+     *
+     * IMPORTANT: this is applied ONLY to the `$PREFIX` value exported into the
+     * shell environment ([buildEnv], [profileScript]) — never to [prefixDir],
+     * which the bootstrap installer uses for real filesystem operations. The
+     * `/data/data` and `/data/user/0` names resolve to the same inodes, so the
+     * installer and the exported variable stay consistent without rewriting the
+     * installer's paths.
+     */
+    fun canonicalPrefix(path: String): String = CodecApiProtocol.canonicalUserPrefix(path)
+
     fun prefixDir(filesDir: File): File = File(filesDir, PREFIX_NAME)
+
     fun homeDir(filesDir: File): File = File(filesDir, HOME_NAME)
 
     fun binDir(prefix: File): File = File(prefix, "bin")
@@ -589,6 +611,19 @@ object ShellEnvironment {
           verify_release_signature
           rm -f "${'$'}CACHE"/*.deb
           friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { _err="${'$'}?"; rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}_err"; }
+          # KI-1: when apt succeeds but downloads nothing, every requested
+          # package is already at its newest installed version. That is a
+          # success, not a fetch failure, so report it and exit 0 (hostile to
+          # scripts and idempotent re-runs otherwise).
+          found=0
+          for _deb in "${'$'}CACHE"/*.deb; do
+            [ -f "${'$'}_deb" ] && found=1
+          done
+          if [ "${'$'}found" -eq 0 ]; then
+            rm -f "${'$'}marker"
+            echo "pkg: ${'$'}* already installed (already the newest version)."
+            return 0
+          fi
           preflight_cache
           display_cache_summary "Install"
           if ! confirm_transaction "installation"; then
@@ -1093,6 +1128,260 @@ HELP
         printf '%s\n' "${'$'}out"
     """.trimIndent() + "\n"
 
+    /**
+     * Phase 5.3: `codec-toast` — show an Android toast via the CodeCApi bridge.
+     * No permission; the message is the joined argv.
+     */
+    fun toastScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-toast — Android toast via the CodeC terminal bridge.
+        # Usage: codec-toast MESSAGE
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-toast MESSAGE" >&2
+          exit 2
+        }
+
+        [ "${'$'}#" -ge 1 ] || usage
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-toast: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-toast: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        printf '%s' "${'$'}*" > "${'$'}req"
+
+        if { printf '\033]1337;CodeCApi:toast.show:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:toast.show:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-toast: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
+    /**
+     * Phase 5.3: `codec-share` — launch the Android share sheet for text.
+     */
+    fun shareScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-share — Android share sheet via the CodeC terminal bridge.
+        # Usage: codec-share TEXT
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-share TEXT" >&2
+          exit 2
+        }
+
+        [ "${'$'}#" -ge 1 ] || usage
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-share: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-share: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        printf '%s' "${'$'}*" > "${'$'}req"
+
+        if { printf '\033]1337;CodeCApi:share.text:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:share.text:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-share: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
+    /**
+     * Phase 5.3: `codec-open-url` — open a URL in the browser via the bridge.
+     * Only http(s) URLs are accepted (enforced in the bridge core).
+     */
+    fun openUrlScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-open-url — open a URL in the browser via the CodeC bridge.
+        # Usage: codec-open-url URL
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-open-url URL" >&2
+          exit 2
+        }
+
+        [ "${'$'}#" -ge 1 ] || usage
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-open-url: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-open-url: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        printf '%s' "${'$'}1" > "${'$'}req"
+
+        if { printf '\033]1337;CodeCApi:url.open:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:url.open:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-open-url: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
+    /**
+     * Phase 5.3: `codec-vibrate` — vibrate the device via the bridge.
+     * `VIBRATE` is a normal (install-time) permission, so no runtime dialog.
+     */
+    fun vibrateScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-vibrate — vibrate the device via the CodeC terminal bridge.
+        # Usage: codec-vibrate [MILLISECONDS]   (default 500)
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-vibrate [MILLISECONDS]" >&2
+          exit 2
+        }
+
+        ms="${'$'}{1:-500}"
+        case "${'$'}ms" in
+          ''|*[!0-9]*) usage ;;
+        esac
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-vibrate: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-vibrate: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        printf '%s' "${'$'}ms" > "${'$'}req"
+
+        if { printf '\033]1337;CodeCApi:vibrate:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:vibrate:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-vibrate: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
     fun codecApiDir(prefix: File): File = File(prefix, "tmp/${CodecApiProtocol.API_DIR_NAME}")
 
     data class StorageLink(val name: String, val target: File)
@@ -1208,7 +1497,9 @@ HELP
 
     fun profileScript(prefix: File, home: File, projects: File): String = """
         # CodeC login profile (Phase 1)
-        export PREFIX='${prefix.absolutePath}'
+        # KI-2: export the dpkg-recorded /data/data/… spelling (same inode as
+        # the /data/user/0/… alias) so manual update-alternatives and dpkg agree.
+        export PREFIX='${canonicalPrefix(prefix.absolutePath)}'
         export HOME='${home.absolutePath}'
         # Prefer the path the app exported (current editor folder).
         if [ -z "${'$'}CODEC_PROJECTS" ]; then
@@ -1261,7 +1552,10 @@ HELP
         extraPath: List<File> = emptyList(),
         projectsDir: File? = null
     ): Map<String, String> {
-        val prefix = prefixDir(filesDir)
+        // KI-2: export the dpkg-recorded /data/data/… spelling so the shell's
+        // `$PREFIX`, PATH, TMPDIR, and ENV agree with the dpkg DB and the
+        // alternatives admin files (Termux hardcodes /data/data the same way).
+        val prefix = File(canonicalPrefix(prefixDir(filesDir).path))
         val home = homeDir(filesDir)
         val projects = projectsDir ?: File(filesDir, "CodeC/projects")
         val pathParts = buildList {
@@ -1465,6 +1759,10 @@ class ShellBootstrap(private val context: Context) {
         writeExecutable(File(bin, "termux-setup-storage"), ShellEnvironment.setupStorageScript())
         writeExecutable(File(bin, "codec-clipboard"), ShellEnvironment.clipboardScript())
         writeExecutable(File(bin, "codec-notify"), ShellEnvironment.notifyScript())
+        writeExecutable(File(bin, "codec-toast"), ShellEnvironment.toastScript())
+        writeExecutable(File(bin, "codec-share"), ShellEnvironment.shareScript())
+        writeExecutable(File(bin, "codec-open-url"), ShellEnvironment.openUrlScript())
+        writeExecutable(File(bin, "codec-vibrate"), ShellEnvironment.vibrateScript())
         val bash = File(bin, "bash")
         if (!ShellEnvironment.isElf(bash)) {
             writeExecutable(bash, ShellEnvironment.bashShim())

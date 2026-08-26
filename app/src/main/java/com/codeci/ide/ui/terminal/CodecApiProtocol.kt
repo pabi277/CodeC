@@ -38,6 +38,19 @@ object CodecApiProtocol {
     /** Upper bound for a `notify.send` payload (title + body). */
     const val MAX_NOTIFY_BYTES = 8 * 1024
 
+    /** Upper bound for a `toast.show` message. */
+    const val MAX_TOAST_BYTES = 4 * 1024
+
+    /** Upper bound for a `share.text` payload. */
+    const val MAX_SHARE_BYTES = 256 * 1024
+
+    /** Upper bound for a `url.open` payload. */
+    const val MAX_URL_BYTES = 8 * 1024
+
+    /** `vibrate` duration bounds (milliseconds) and default when unspecified. */
+    const val MAX_VIBRATE_MS = 10_000L
+    const val DEFAULT_VIBRATE_MS = 500L
+
     const val ERR_PREFIX = "ERR:"
 
     /**
@@ -54,10 +67,17 @@ object CodecApiProtocol {
         CLIPBOARD_STATUS("clipboard.status"),
         NOTIFY_SEND("notify.send"),
         NOTIFY_CLEAR("notify.clear"),
-        NOTIFY_STATUS("notify.status");
+        NOTIFY_STATUS("notify.status"),
+        TOAST_SHOW("toast.show"),
+        SHARE_TEXT("share.text"),
+        OPEN_URL("url.open"),
+        VIBRATE("vibrate");
 
         val isNotifyOperation: Boolean
             get() = this == NOTIFY_SEND || this == NOTIFY_CLEAR || this == NOTIFY_STATUS
+
+        val isTermuxApiOperation: Boolean
+            get() = this == TOAST_SHOW || this == SHARE_TEXT || this == OPEN_URL || this == VIBRATE
 
         companion object {
             fun fromWire(value: String): Op? = entries.firstOrNull { it.wire == value }
@@ -95,13 +115,36 @@ object CodecApiProtocol {
     fun permissionNotice(permission: String): String = "$NEED_PERMISSION_PREFIX$permission"
 
     /**
+     * Android's `/data/user/0/` is the user-emulation alias of the canonical
+     * `/data/data/` spelling that dpkg and every published `.deb` record.
+     * They address the same inodes, but `File.canonicalFile()` (realpath)
+     * cannot always collapse one into the other: on some devices they are
+     * distinct bind mounts rather than a symlink — the same reason the
+     * Phase 4.5/4.6 review found `readlink -f` unreliable for canonicalization.
+     * Maps to the dpkg-recorded spelling so path comparisons are invariant to
+     * which alias a caller used.
+     */
+    fun canonicalUserPrefix(path: String): String =
+        if (path.startsWith("/data/user/0/")) "/data/data/" + path.removePrefix("/data/user/0/")
+        else path
+
+    /**
      * True only when [path] resolves (symlinks included) to a *direct child*
      * of [apiDir]. This is the security boundary of the bridge: a payload
      * from the terminal can name only files inside `$PREFIX/tmp/codec-api`.
+     *
+     * KI-2 makes the shell export the canonical `/data/data/…` `$PREFIX`, so
+     * the CLI emits `/data/data/…` request/response paths while the app still
+     * computes `apiDir` from the raw `Context.getFilesDir()` spelling. Both
+     * spellings are normalized ([canonicalUserPrefix]) *before* resolving so
+     * the confinement check does not reject a valid request on bind-mounted
+     * devices where `canonicalFile` cannot collapse the alias.
      */
     fun isConfinedDirectChild(path: String, apiDir: File): Boolean {
-        val root = runCatching { apiDir.canonicalFile }.getOrNull() ?: return false
-        val canonical = runCatching { File(path).canonicalFile }.getOrNull() ?: return false
+        val root = runCatching { File(canonicalUserPrefix(apiDir.path)).canonicalFile }.getOrNull()
+            ?: return false
+        val canonical = runCatching { File(canonicalUserPrefix(path)).canonicalFile }.getOrNull()
+            ?: return false
         return canonical.parentFile == root
     }
 }

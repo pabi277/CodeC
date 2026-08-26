@@ -15,6 +15,7 @@ import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import com.codeci.ide.ui.utils.WebFileSupport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,7 +109,7 @@ class EditorViewModel : ViewModel() {
             _userMessage.value = context.getString(com.codeci.ide.R.string.invalid_file_name)
             return
         }
-        val name = if (sanitized.endsWith(".c")) sanitized else "$sanitized.c"
+        val name = WebFileSupport.normalizeFileName(sanitized)
         val oldName = _fileName.value
         if (name == oldName) return
 
@@ -247,7 +248,7 @@ class EditorViewModel : ViewModel() {
         val fm = FileManager(context)
         val success = fm.saveFile(safe, _codeText.value.text)
         if (success) {
-            _fileName.value = if (safe.endsWith(".c")) safe else "$safe.c"
+            _fileName.value = WebFileSupport.normalizeFileName(safe)
             _isDirty.value = false
         }
         return success

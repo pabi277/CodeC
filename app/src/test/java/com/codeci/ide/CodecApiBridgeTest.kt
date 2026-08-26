@@ -4,6 +4,7 @@ import com.codeci.ide.ui.terminal.ClipboardContent
 import com.codeci.ide.ui.terminal.CodecApiBridge
 import com.codeci.ide.ui.terminal.CodecApiProtocol
 import com.codeci.ide.ui.terminal.NotifyOps
+import com.codeci.ide.ui.terminal.TermuxApiOps
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -332,6 +333,163 @@ class CodecApiBridgeTest {
             assertTrue(denied.contains("permission denied"))
             // Denial must never fall through to posting a notification.
             assertEquals(1, sent.size)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    private fun recordingTermuxApi(): Pair<TermuxApiOps, MutableList<String>> {
+        val events = mutableListOf<String>()
+        val ops = TermuxApiOps(
+            toast = { events.add("toast:$it") },
+            shareText = { events.add("share:$it") },
+            openUrl = { events.add("url:$it") },
+            vibrate = { events.add("vibrate:$it") }
+        )
+        return ops to events
+    }
+
+    private fun termuxRequest(
+        op: CodecApiProtocol.Op,
+        apiDir: File,
+        content: String?,
+        file: String = "req.api"
+    ): CodecApiProtocol.Request {
+        val req = if (content != null) {
+            File(apiDir, file).apply { writeText(content) }
+        } else {
+            File(apiDir, file)
+        }
+        return CodecApiProtocol.Request(op, req.absolutePath, File(apiDir, "res.api").absolutePath)
+    }
+
+    @Test
+    fun `toast records the message and answers OK`() {
+        val base = tempDir()
+        try {
+            val (ops, events) = recordingTermuxApi()
+            val response = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.TOAST_SHOW, base, "hello from CodeC"),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertEquals("OK", response)
+            assertEquals(listOf("toast:hello from CodeC"), events)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `toast rejects blank text`() {
+        val base = tempDir()
+        try {
+            val (ops, events) = recordingTermuxApi()
+            val response = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.TOAST_SHOW, base, "   "),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertTrue(response.startsWith("ERR:"))
+            assertTrue(events.isEmpty())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `share records the text and answers OK`() {
+        val base = tempDir()
+        try {
+            val (ops, events) = recordingTermuxApi()
+            val response = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.SHARE_TEXT, base, "https://github.com/pabi277/CodeC"),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertEquals("OK", response)
+            assertEquals(listOf("share:https://github.com/pabi277/CodeC"), events)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `open url accepts http and https but rejects other schemes`() {
+        val base = tempDir()
+        try {
+            val (ops, events) = recordingTermuxApi()
+            val ok = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.OPEN_URL, base, "https://example.com", "req.url"),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertEquals("OK", ok)
+            assertEquals(listOf("url:https://example.com"), events)
+
+            val bad = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.OPEN_URL, base, "file:///etc/passwd", "req.bad"),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertTrue(bad.startsWith("ERR:"))
+            assertTrue(bad.contains("http"))
+            // The invalid URL must not reach the side effect.
+            assertEquals(1, events.size)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `vibrate parses and clamps the duration`() {
+        val base = tempDir()
+        try {
+            val (ops, events) = recordingTermuxApi()
+
+            val ok = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.VIBRATE, base, "300"),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertEquals("OK", ok)
+            assertEquals(listOf("vibrate:300"), events)
+
+            // Blank -> default.
+            val default = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.VIBRATE, base, "", "req.blank"),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertEquals("OK", default)
+            assertEquals("vibrate:500", events.last())
+
+            // Non-numeric -> ERR.
+            val bad = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.VIBRATE, base, "abc", "req.bad"),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertTrue(bad.startsWith("ERR:"))
+
+            // Oversized -> clamped to the max.
+            val huge = CodecApiBridge.execute(
+                termuxRequest(CodecApiProtocol.Op.VIBRATE, base, "999999", "req.huge"),
+                base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertEquals("OK", huge)
+            assertEquals("vibrate:10000", events.last())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `termux-api op without a request file is an error`() {
+        val base = tempDir()
+        try {
+            val (ops, events) = recordingTermuxApi()
+            val request = CodecApiProtocol.Request(
+                CodecApiProtocol.Op.TOAST_SHOW, null, File(base, "res.noreq").absolutePath
+            )
+            val response = CodecApiBridge.execute(
+                request, base, { error("must not read") }, {}, termuxApi = ops
+            )
+            assertTrue(response.startsWith("ERR:"))
+            assertTrue(response.contains("missing request file"))
+            assertTrue(events.isEmpty())
         } finally {
             base.deleteRecursively()
         }

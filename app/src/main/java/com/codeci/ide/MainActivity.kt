@@ -46,6 +46,7 @@ import com.codeci.ide.ui.screens.ModulesScreen
 import com.codeci.ide.ui.screens.SettingsScreen
 import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
+import com.codeci.ide.ui.screens.WebPreviewScreen
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.CodecApiBridge
@@ -340,6 +341,11 @@ fun MainApp() {
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onOpenPreview = { name ->
+                        navController.navigate(Screen.Preview.createRoute(name)) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -361,7 +367,22 @@ fun MainApp() {
                 FileManagerScreen(
                     onFileSelected = { selectedFile ->
                         navController.navigate(Screen.Editor.createRoute(selectedFile))
+                    },
+                    onPreviewFile = { name ->
+                        navController.navigate(Screen.Preview.createRoute(name)) {
+                            launchSingleTop = true
+                        }
                     }
+                )
+            }
+            composable(
+                route = Screen.Preview.route,
+                arguments = listOf(navArgument("fileName") { nullable = true })
+            ) { backStackEntry ->
+                val previewFileName = backStackEntry.arguments?.getString("fileName")
+                WebPreviewScreen(
+                    fileName = previewFileName,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             composable(Screen.Templates.route) {

@@ -73,6 +73,31 @@ class CodecApiProtocolTest {
     }
 
     @Test
+    fun `parse accepts the phase 5_3 termux-api ops`() {
+        val cases = mapOf(
+            "toast.show" to CodecApiProtocol.Op.TOAST_SHOW,
+            "share.text" to CodecApiProtocol.Op.SHARE_TEXT,
+            "url.open" to CodecApiProtocol.Op.OPEN_URL,
+            "vibrate" to CodecApiProtocol.Op.VIBRATE
+        )
+        for ((wire, op) in cases) {
+            val req = CodecApiProtocol.parse("CodeCApi:$wire:/p/tmp/codec-api/req.a:/p/tmp/codec-api/res.b")
+            requireNotNull(req)
+            assertEquals(op, req.op)
+        }
+    }
+
+    @Test
+    fun `termux-api ops are flagged but notify ops are not`() {
+        assertTrue(CodecApiProtocol.Op.TOAST_SHOW.isTermuxApiOperation)
+        assertTrue(CodecApiProtocol.Op.SHARE_TEXT.isTermuxApiOperation)
+        assertTrue(CodecApiProtocol.Op.OPEN_URL.isTermuxApiOperation)
+        assertTrue(CodecApiProtocol.Op.VIBRATE.isTermuxApiOperation)
+        assertFalse(CodecApiProtocol.Op.NOTIFY_SEND.isTermuxApiOperation)
+        assertFalse(CodecApiProtocol.Op.CLIPBOARD_GET.isTermuxApiOperation)
+    }
+
+    @Test
     fun `notify ops are flagged as permission operations`() {
         assertTrue(CodecApiProtocol.Op.NOTIFY_SEND.isNotifyOperation)
         assertTrue(CodecApiProtocol.Op.NOTIFY_CLEAR.isNotifyOperation)
@@ -126,6 +151,24 @@ class CodecApiProtocolTest {
         } finally {
             apiDir.deleteRecursively()
         }
+    }
+
+    @Test
+    fun `canonicalUserPrefix maps the user 0 alias and leaves others untouched`() {
+        assertEquals(
+            "/data/data/com.codeci.ide/files/usr",
+            CodecApiProtocol.canonicalUserPrefix("/data/user/0/com.codeci.ide/files/usr")
+        )
+        // Already-canonical, temp dirs, and secondary users are unchanged.
+        assertEquals(
+            "/data/data/com.codeci.ide/files/usr",
+            CodecApiProtocol.canonicalUserPrefix("/data/data/com.codeci.ide/files/usr")
+        )
+        assertEquals("/tmp/codec/usr", CodecApiProtocol.canonicalUserPrefix("/tmp/codec/usr"))
+        assertEquals(
+            "/data/user/10/com.codeci.ide/files/usr",
+            CodecApiProtocol.canonicalUserPrefix("/data/user/10/com.codeci.ide/files/usr")
+        )
     }
 
     @Test

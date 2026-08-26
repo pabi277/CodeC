@@ -1,15 +1,21 @@
 # CodeC Phase 5 roadmap
 
-**Status (2026-08-26):** 🚧 **NOT STARTED — planning skeleton only.** Phase 4
-(Parts 4.1–4.8) is complete and device-verified; its roadmap now lives in
-[`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md). This file is
-the same kind of **roadmap, not an execution plan** — it names candidate
+**Status (2026-08-26):** 🚧 **STARTED — Parts 5.1, 5.2, and 5.3 ✅ DONE
+(device-verified 2026-08-26).** Phase 4 (Parts 4.1–4.8) is complete and
+device-verified; its roadmap now lives in
+[`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md). This file
+is the same kind of **roadmap, not an execution plan** — it names candidate
 areas and their rough provenance. It does **not** pin down exact technical
 decisions, UI designs, package lists, or exit-condition wording; those get
 decided (and written down in `docs/chat-phase5/`) when a part is actually
 picked up, using the same verify-first / evidence-before-hypothesis
 discipline used throughout Phases 3–4. **Do not treat anything below as a
 spec; treat it as a starting scope to confirm with the owner.**
+
+Parts 5.1 (the two known client fixes), 5.2 (web preview), and 5.3 (the
+CodeCApi capability batch) are all **DONE (device-verified 2026-08-26)**;
+their decisions, exit conditions, and evidence live in
+[`chat-phase5/`](chat-phase5/README.md).
 
 ## Why parts are sized the way they are
 
@@ -51,7 +57,10 @@ This is a budget, not a target to hit exactly. Two consequences:
 
 | Part | Depends on | Complexity | Est. replies | Status |
 |---|---|---|---|---|
-| *(none defined yet — parts are decided when picked up)* | — | — | — | 🚧 not started |
+| **5.1 — KI-1 & KI-2 client fixes** | none (client-side only, no rebuild) | small / low-risk | ~10 | ✅ DONE (device-verified 2026-08-26) |
+| **5.2 — Web preview (HTML/CSS/JS in WebView)** | none (client-side only, no rebuild) | medium | ~20 | ✅ DONE (device-verified 2026-08-26) |
+| **5.3 — CodeCApi batch (toast/share/open-URL/vibrate)** | none (client-side only, no rebuild) | medium | ~15 | ✅ DONE (device-verified 2026-08-26) |
+| *(further parts decided when picked up)* | — | — | — | — |
 
 ## Rules that carry forward to Phase 5
 
