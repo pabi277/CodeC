@@ -1,7 +1,7 @@
 package com.codeci.ide.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,15 +34,14 @@ fun TerminalExtraKeys(
     cursorSequence: (Char) -> String,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    FlowRow(
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(88.dp)
             .background(Color(0xFF1E1E1E))
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         ExtraKey("ESC", latched = false) { onKey("\u001b") }
         ExtraKey("TAB", latched = false) { onKey("\t") }
