@@ -1,10 +1,10 @@
 # Phase 5 Part 5.2 — Web preview (HTML/CSS/JS in an in-app WebView)
 
-**Status: 🚧 IN PROGRESS (design recorded; code + host tests next).** This is
-the "web preview" candidate from `IDEA_BACKLOG.md` §F (the owner's #1
-recommended "biggest feel for least work") and
-[`../PHASE5_ROADMAP.md`](../PHASE5_ROADMAP.md). It is **client-side only** —
-no userland change, no package rebuild, no repository re-publish.
+**Status: ✅ DONE (device-verified 2026-08-26).** This is the "web preview"
+candidate from `IDEA_BACKLOG.md` §F (the owner's #1 recommended "biggest feel
+for least work") and [`../PHASE5_ROADMAP.md`](../PHASE5_ROADMAP.md). It is
+**client-side only** — no userland change, no package rebuild, no repository
+re-publish.
 
 ---
 
@@ -135,9 +135,15 @@ Push triggered "Build APK", which the `gradle-bootstrap` bridge expands to
 only annotations are unrelated runner deprecation notices (Node.js 20 /
 setup-java v4).
 
-### 5.3 Device
+### 5.3 Device (2026-08-26) — ✅ EXIT CONDITION MET
 
-The §4 recipe; to be filled in with the owner's transcript.
+The owner ran the §4 recipe on a real device with the new APK (Build APK
+artifact of run [`32937366350`](https://github.com/pabi277/CodeC/actions/runs/32937366350))
+and confirmed the preview **worked** (screenshot): the HTML page rendered in
+the in-app WebView with its local `style.css` applied and its `script.js`
+executed — the `file://` + `allowFileAccessFromFileURLs` approach is
+confirmed valid on this device. **Part 5.2 exit condition is met; the part is
+DONE (device-verified 2026-08-26).**
 
 ## 6. Out of scope (future slices)
 
