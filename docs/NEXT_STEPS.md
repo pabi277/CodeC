@@ -5,6 +5,11 @@ device-verified (Phase 3 complete). **Phase 4 (Parts 4.1–4.8) ✅ COMPLETE,
 device-verified 2026-08-26.** Next work is **Phase 5 — not started**, with a
 planning-only skeleton in [`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
 
+> **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
+> without an explicit command from the owner in chat.** Committing to and
+> pushing the session branch (`arena/*`) is fine; PR creation and any merge
+> wait for the owner's explicit instruction.
+
 The narrative is in [`docs/JOURNEY.md`](JOURNEY.md). This file is the
 Phase 3 **task list**, kept for its history: Parts A–D, all now done, split
 into self-contained parts so each could be picked up independently. Phase 4's

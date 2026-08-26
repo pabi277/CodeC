@@ -67,7 +67,8 @@ gets its own `arena/*` session branch — verify the actual branch with
    in `chat-phase1/SOLUTIONS.md`, `chat-phase2/SOLUTIONS.md`, `chat-phase3/PHASE3_PLAN.md`,
    and `chat-phase3/REPOSITORY_SIGNING.md`.
 6. **One PR at a time, from the current state.**
-7. **Know the sandbox limits:** the agent sandbox reaches `api.github.com`
+7. **NEVER create, open, or merge a PR, and never merge/push to `main`, without the owner explicitly commanding it in chat.** Coding, committing to the session branch (`arena/*`), and pushing that branch are fine; PR creation and any merge are NOT. If the user's message does not literally say to open/merge a PR, do not do it — end the turn by reporting state and waiting.
+8. **Know the sandbox limits:** the agent sandbox reaches `api.github.com`
    only — it cannot download CI logs, release assets, or workflow artifacts
    directly, and cannot perform on-device testing. Device tests and any
    log-pull-dependent debugging need the user in Termux/on-device; give exact
@@ -81,7 +82,9 @@ gets its own `arena/*` session branch — verify the actual branch with
    user which candidate area from `docs/PHASE5_ROADMAP.md` they want, and
    decide/write down that part's open technical questions before coding
    (record it in `docs/chat-phase5/`).
-3. A part is complete only when its **"Exit condition"** is met and verified,
+3. **No PR / no merge without an explicit owner command** (see rule 7).
+   Work on the session branch; push it if useful; report and wait.
+4. A part is complete only when its **"Exit condition"** is met and verified,
    not merely when code is written.
 
 **Before each change, state:** what you are changing, which Part and exit

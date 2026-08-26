@@ -2,6 +2,11 @@
 
 A C programming IDE for Android. Write C, tap **RUN**, or open the in-app terminal and type `cc file.c`.
 
+> **🔒 STANDING RULE (owner, 2026-08-26):** agents/session branches must
+> **not open a PR or merge anything without the owner's explicit command** in
+> chat. Committing to and pushing the session branch is fine; PR creation and
+> merging wait for the owner.
+
 ## Install the APK from GitHub
 
 1. Push this branch (or merge to `main`). GitHub Actions builds `app-debug.apk`.

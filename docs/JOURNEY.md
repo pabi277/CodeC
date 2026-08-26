@@ -9,6 +9,11 @@ lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
 **Phase 5 is next** (not started): planning-only skeleton at
 [`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
 
+> **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
+> without an explicit command from the owner in chat.** Committing to and
+> pushing the session branch (`arena/*`) is fine; PR creation and any merge
+> wait for the owner's explicit instruction.
+
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
 package manager". This is the narrative; the per-phase problem/solution

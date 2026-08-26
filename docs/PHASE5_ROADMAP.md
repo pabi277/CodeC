@@ -64,5 +64,5 @@ This is a budget, not a target to hit exactly. Two consequences:
   no `.` on `PATH`, no `build-package.sh -I`, no `com.termux` binaries or
   official repos, no overwriting `cc`/real ELF `bash`, TCC link order with
   `-o` last, no bootstrap bundled in the APK, signed repository metadata.
-- One PR at a time; no PR/merge without explicit owner approval on this
-  working branch.
+- One PR at a time; **no PR creation and no merge without an explicit
+  owner command in chat** (owner standing rule, 2026-08-26).
