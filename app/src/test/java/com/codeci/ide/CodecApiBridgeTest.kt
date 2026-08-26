@@ -244,7 +244,7 @@ class CodecApiBridgeTest {
         try {
             val (missingReq, _) = request(CodecApiProtocol.Op.NOTIFY_SEND, base)
             val response = CodecApiBridge.execute(
-                missingReq, base, { error("must not read") }, {}, NotifyOps({}, {}, { "x" })
+                missingReq, base, { error("must not read") }, {}, NotifyOps({ _, _ -> }, {}, { "x" })
             )
             assertTrue(response.startsWith("ERR:"))
 
