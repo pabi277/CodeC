@@ -3,8 +3,10 @@ package com.codeci.ide
 import com.codeci.ide.ui.terminal.ClipboardContent
 import com.codeci.ide.ui.terminal.CodecApiBridge
 import com.codeci.ide.ui.terminal.CodecApiProtocol
+import com.codeci.ide.ui.terminal.NotifyOps
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -176,6 +178,160 @@ class CodecApiBridgeTest {
                 writeClipboard = { error("must not write") }
             )
             assertEquals("clipboard: empty\nlength: 0", emptyResponse)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    private fun recordingNotify(): Pair<NotifyOps, MutableList<String>> {
+        val sent = mutableListOf<String>()
+        val cleared = intArrayOf(0)
+        val ops = NotifyOps(
+            send = { title, body -> sent.add("$title\n$body") },
+            clear = { cleared[0]++ },
+            status = { "notify: fake status" }
+        )
+        return ops to sent
+    }
+
+    @Test
+    fun `notify send splits first line as title and rest as body`() {
+        val base = tempDir()
+        try {
+            val reqFile = File(base, "req.notify")
+            reqFile.writeText("Build finished\n3 files compiled")
+            val res = File(base, "res.notify")
+            val request = CodecApiProtocol.Request(
+                CodecApiProtocol.Op.NOTIFY_SEND, reqFile.absolutePath, res.absolutePath
+            )
+            val (ops, sent) = recordingNotify()
+            val response = CodecApiBridge.execute(
+                request, base, { error("must not read clipboard") }, {}, ops
+            )
+            assertEquals("OK", response)
+            assertEquals(listOf("Build finished\n3 files compiled"), sent.toList())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `notify send without a title is an error`() {
+        val base = tempDir()
+        try {
+            val reqFile = File(base, "req.notify")
+            reqFile.writeText("\nbody only")
+            val res = File(base, "res.notify")
+            val request = CodecApiProtocol.Request(
+                CodecApiProtocol.Op.NOTIFY_SEND, reqFile.absolutePath, res.absolutePath
+            )
+            var sent = false
+            val ops = NotifyOps({ _, _ -> sent = true }, {}, { "x" })
+            val response = CodecApiBridge.execute(
+                request, base, { error("must not read clipboard") }, {}, ops
+            )
+            assertTrue(response.startsWith("ERR:"))
+            assertTrue(response.contains("title is empty"))
+            assertFalse(sent)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `notify send without request file and oversized payload are errors`() {
+        val base = tempDir()
+        try {
+            val (missingReq, _) = request(CodecApiProtocol.Op.NOTIFY_SEND, base)
+            val response = CodecApiBridge.execute(
+                missingReq, base, { error("must not read") }, {}, NotifyOps({}, {}, { "x" })
+            )
+            assertTrue(response.startsWith("ERR:"))
+
+            val big = File(base, "req.big-notify")
+            big.writeBytes(ByteArray(CodecApiProtocol.MAX_NOTIFY_BYTES + 1))
+            val res = File(base, "res.big-notify")
+            val request = CodecApiProtocol.Request(
+                CodecApiProtocol.Op.NOTIFY_SEND, big.absolutePath, res.absolutePath
+            )
+            var sent = false
+            val response2 = CodecApiBridge.execute(
+                request, base, { error("must not read") }, {}, NotifyOps({ _, _ -> sent = true }, {}, { "x" })
+            )
+            assertTrue(response2.startsWith("ERR:"))
+            assertTrue(response2.contains("too large"))
+            assertFalse(sent)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `notify clear and status route through the ops adapter`() {
+        val base = tempDir()
+        try {
+            val (clearReq, _) = request(CodecApiProtocol.Op.NOTIFY_CLEAR, base)
+            var cleared = 0
+            val clearResponse = CodecApiBridge.execute(
+                clearReq, base, { error("must not read") }, {},
+                NotifyOps({ _, _ -> }, { cleared++ }, { "notify: fake status" })
+            )
+            assertEquals("OK", clearResponse)
+            assertEquals(1, cleared)
+
+            val (statusReq, _) = request(CodecApiProtocol.Op.NOTIFY_STATUS, base)
+            val statusResponse = CodecApiBridge.execute(
+                statusReq, base, { error("must not read") }, {},
+                NotifyOps({ _, _ -> }, {}, { "notify: fake status" })
+            )
+            assertEquals("notify: fake status", statusResponse)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `notify ops without an adapter report an unavailable service`() {
+        val base = tempDir()
+        try {
+            val (sendReq, _) = request(CodecApiProtocol.Op.NOTIFY_SEND, base, withRequestFile = true)
+            val sendResponse = CodecApiBridge.execute(
+                sendReq, base, { error("must not read") }, {}, null
+            )
+            assertTrue(sendResponse.startsWith("ERR:"))
+            assertTrue(sendResponse.contains("notification service unavailable"))
+
+            val (statusReq, _) = request(CodecApiProtocol.Op.NOTIFY_STATUS, base)
+            val statusResponse = CodecApiBridge.execute(
+                statusReq, base, { error("must not read") }, {}, null
+            )
+            assertTrue(statusResponse.startsWith("ERR:"))
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `resume after granted runs the send, after denial it errors`() {
+        val base = tempDir()
+        try {
+            val reqFile = File(base, "req.resume")
+            reqFile.writeText("Granted afterwards")
+            val res = File(base, "res.resume")
+            val request = CodecApiProtocol.Request(
+                CodecApiProtocol.Op.NOTIFY_SEND, reqFile.absolutePath, res.absolutePath
+            )
+            val (ops, sent) = recordingNotify()
+
+            val granted = CodecApiBridge.resumeResponse(request, base, granted = true, notify = ops)
+            assertEquals("OK", granted)
+            assertEquals(listOf("Granted afterwards\n"), sent)
+
+            val denied = CodecApiBridge.resumeResponse(request, base, granted = false, notify = ops)
+            assertTrue(denied.startsWith("ERR:"))
+            assertTrue(denied.contains("permission denied"))
+            // Denial must never fall through to posting a notification.
+            assertEquals(1, sent.size)
         } finally {
             base.deleteRecursively()
         }

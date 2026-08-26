@@ -71,6 +71,11 @@ fun TerminalScreen(
             (context as? MainActivity)?.requestStoragePermissions()
         }
     }
+    LaunchedEffect(Unit) {
+        viewModel.notificationPermissionRequests.collect { request ->
+            (context as? MainActivity)?.requestNotificationPermission(request)
+        }
+    }
     LaunchedEffect(commandNonce, initialCommand) {
         if (!initialCommand.isNullOrBlank()) {
             viewModel.sendCommand(initialCommand)

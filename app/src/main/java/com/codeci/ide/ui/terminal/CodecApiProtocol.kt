@@ -3,7 +3,7 @@ package com.codeci.ide.ui.terminal
 import java.io.File
 
 /**
- * CodeC terminal bridge protocol — Phase 4.7 foundation.
+ * CodeC terminal bridge protocol — Phase 4.7 foundation, extended by 4.8.
  *
  * Terminal programs request Android capabilities by printing an in-band
  * OSC 1337 sequence of the form:
@@ -22,9 +22,10 @@ import java.io.File
  * simply ignore unknown OSC values, and this APK still honors the legacy
  * control.
  *
- * Later capabilities (4.8+) add a new [Op] (or a new namespace) plus the
- * corresponding CLI script; the plumbing in [TerminalEmulator] /
- * [TerminalSession] / [CodecApiBridge] is reused unchanged.
+ * Capabilities are grouped by wire name (`clipboard.*`, `notify.*`, …).
+ * Adding a capability in 4.9+ = one new [Op] + one CLI script; the
+ * plumbing in [TerminalEmulator] / [TerminalSession] / [CodecApiBridge]
+ * is reused unchanged.
  */
 object CodecApiProtocol {
     const val OSC_CODE = "1337"
@@ -34,13 +35,29 @@ object CodecApiProtocol {
     /** Upper bound for `clipboard set` content (keeps the app's memory use bounded). */
     const val MAX_SET_BYTES = 4 * 1024 * 1024
 
+    /** Upper bound for a `notify.send` payload (title + body). */
+    const val MAX_NOTIFY_BYTES = 8 * 1024
+
     const val ERR_PREFIX = "ERR:"
+
+    /**
+     * Response marker the app writes while a runtime permission is pending;
+     * the CLI prints a hint and keeps polling until the app replaces the
+     * file with the real outcome (or fails after a bounded wait).
+     */
+    const val NEED_PERMISSION_PREFIX = "NEED_PERMISSION:"
 
     enum class Op(val wire: String) {
         CLIPBOARD_GET("clipboard.get"),
         CLIPBOARD_SET("clipboard.set"),
         CLIPBOARD_CLEAR("clipboard.clear"),
-        CLIPBOARD_STATUS("clipboard.status");
+        CLIPBOARD_STATUS("clipboard.status"),
+        NOTIFY_SEND("notify.send"),
+        NOTIFY_CLEAR("notify.clear"),
+        NOTIFY_STATUS("notify.status");
+
+        val isNotifyOperation: Boolean
+            get() = this == NOTIFY_SEND || this == NOTIFY_CLEAR || this == NOTIFY_STATUS
 
         companion object {
             fun fromWire(value: String): Op? = entries.firstOrNull { it.wire == value }
@@ -49,7 +66,7 @@ object CodecApiProtocol {
 
     data class Request(
         val op: Op,
-        /** Path of the payload file (`clipboard set` content). Null when not needed. */
+        /** Path of the payload file (e.g. `clipboard set`/`notify send` content). Null when not needed. */
         val requestFile: String?,
         val responseFile: String
     )
@@ -73,6 +90,9 @@ object CodecApiProtocol {
     /** Inverse of [parse] (used by the CLI scripts and by host tests). */
     fun build(op: Op, requestFile: String?, responseFile: String): String =
         "$NAMESPACE:${op.wire}:${requestFile ?: ""}:$responseFile"
+
+    /** Body of the `NEED_PERMISSION` response sent to the CLI. */
+    fun permissionNotice(permission: String): String = "$NEED_PERMISSION_PREFIX$permission"
 
     /**
      * True only when [path] resolves (symlinks included) to a *direct child*

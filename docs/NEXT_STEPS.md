@@ -366,6 +366,12 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
   redirected channel fix (`/dev/tty`); optional negatives waived; dispatch moved to activity
   scope. 4.8+ ready. See
   [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
+- **Part 4.8 — Android notifications slice** 🚧 **IN PROGRESS (2026-08-26)** — `codec-notify
+  send|clear|status` over the 4.7 bridge, deliberately exercising the `POST_NOTIFICATIONS`
+  runtime-permission path (channel creation, `NEED_PERMISSION` marker, activity launcher,
+  atomic resume). Host `sh` harness green (permission dance, denial, PTY, clipboard
+  regression); CI assemble + device transcript pending. See
+  [`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).
 - **Post-4.5/4.6 review** ✅ **DONE (device-verified 2026-08-26).** Recipe-override
   hardening, fully artifact-neutral (no rebuild/re-publish needed) — plus the
   `pkg heal` alternatives-DB self-repair, the `plan-bootstrap.py` slave-placeholder
@@ -398,3 +404,4 @@ Phase 4 planning and tracking lives in [`PHASE4_ROADMAP.md`](PHASE4_ROADMAP.md) 
 | Phase 4 Part 4.5 — expanded package build (CI) | none | ✅ **DONE** — run `32845127723` green (25 roots, aarch64 + x86_64) |
 | Phase 4 Part 4.6 — expanded package publish + device accept | 4.5 | ✅ **DONE** — published run `32858460740` & device-verified |
 | Phase 4 Part 4.7 | 4.6 on 4.5 | ✅ **DONE** (device-verified 2026-08-26) — `codec-clipboard` over `CodeCApi` OSC bridge; 4.8+ ready |
+| Phase 4 Part 4.8 | 4.7 | 🚧 **IN PROGRESS** (2026-08-26) — `codec-notify` over the same bridge, `POST_NOTIFICATIONS` runtime path; host harness green, device transcript pending |

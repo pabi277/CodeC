@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "23"
+    const val BOOTSTRAP_VERSION = "24"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -975,6 +975,115 @@ HELP
         printf '%s\n' "${'$'}out"
     """.trimIndent() + "\n"
 
+    /**
+     * Phase 4.8: `codec-notify` — Android notifications via the same
+     * [CodecApiProtocol] in-band bridge as `codec-clipboard`.
+     * `notify.send` is a runtime-permission operation (POST_NOTIFICATIONS on
+     * Android 13+): the app writes `NEED_PERMISSION:...` while the system
+     * dialog is up, so this script prints a hint and keeps polling; after
+     * the user answers, the app replaces the response with `OK` or `ERR:`.
+     */
+    fun notifyScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-notify — Android notifications via the CodeC terminal bridge.
+        # Usage:
+        #   codec-notify send TITLE [BODY]   post a notification (TITLE = argv joined)
+        #   codec-notify clear               dismiss the CodeC notification
+        #   codec-notify status              describe permission + channel state
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-notify send TITLE [BODY]|clear|status" >&2
+          exit 2
+        }
+
+        op="${'$'}{1:-}"
+        case "${'$'}op" in
+          clear|status) ;;
+          send) [ "${'$'}#" -ge 2 ] || usage ;;
+          *) usage ;;
+        esac
+        shift
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-notify: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req=""
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-notify: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        # Same derived-response discipline as codec-clipboard: unique direct
+        # child of the API dir, not pre-created, polled until atomic rename.
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        case "${'$'}op" in
+          send)
+            # All remaining argv is payload; the first line is the title
+            # (argv is joined with spaces, so pass the title as ONE arg).
+            printf '%s' "${'$'}*" > "${'$'}req"
+            ;;
+        esac
+
+        wire_op="notify.${'$'}op"
+
+        if { printf '\033]1337;CodeCApi:%s:%s:%s\007' "${'$'}wire_op" "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:%s:%s:%s\007' "${'$'}wire_op" "${'$'}req" "${'$'}res"
+        fi
+
+        # Wait for the app to deliver <res>. While the Android 13+
+        # permission dialog is pending the app first writes
+        # NEED_PERMISSION:<permission>; keep polling because the app
+        # atomically replaces it with the real outcome (OK or ERR) once the
+        # user answers. ~10s in 50ms steps.
+        i=0
+        while :; do
+          if [ -e "${'$'}res" ]; then
+            preview="$(cat "${'$'}res" 2>/dev/null || true)"
+            case "${'$'}preview" in
+              NEED_PERMISSION:*)
+                echo "Android notification permission: allow it in the dialog (CodeC > Notifications)" >&2
+                ;;
+              *)
+                break
+                ;;
+            esac
+          fi
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 200 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-notify: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          NEED_PERMISSION:*)
+            echo "codec-notify: notification permission was not answered (open the app and retry)" >&2
+            exit 3
+            ;;
+        esac
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
     fun codecApiDir(prefix: File): File = File(prefix, "tmp/${CodecApiProtocol.API_DIR_NAME}")
 
     data class StorageLink(val name: String, val target: File)
@@ -1346,6 +1455,7 @@ class ShellBootstrap(private val context: Context) {
         writeExecutable(File(bin, "codec-setup-storage"), ShellEnvironment.setupStorageScript())
         writeExecutable(File(bin, "termux-setup-storage"), ShellEnvironment.setupStorageScript())
         writeExecutable(File(bin, "codec-clipboard"), ShellEnvironment.clipboardScript())
+        writeExecutable(File(bin, "codec-notify"), ShellEnvironment.notifyScript())
         val bash = File(bin, "bash")
         if (!ShellEnvironment.isElf(bash)) {
             writeExecutable(bash, ShellEnvironment.bashShim())

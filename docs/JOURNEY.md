@@ -1,8 +1,10 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-25 · **State:** Phase 3 ✅ complete (device-verified).
-Phase 4 Parts 4.1–4.6 ✅ complete. Part 4.6 published via workflow run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740)
-and device-verified on real arm64 hardware for all 15 new package roots. Part 4.7 is active.
+**Last updated:** 2026-08-26 · **State:** Phase 3 ✅ complete (device-verified).
+Phase 4 Parts 4.1–4.7 ✅ complete (4.7 device-verified 2026-08-26).
+Part 4.8 (Android notifications, the runtime-permission slice 4.7 deferred)
+🚧 is active — `codec-notify` over the same `CodeCApi` bridge; host harness
+green, CI assemble + device transcript pending.
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -469,3 +471,10 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      piped/redirected channel fix (`/dev/tty` + stdout fallback, device-confirmed); two optional
      negatives waived by owner; post-acceptance review moved request dispatch to activity scope.
      See [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
+   - **Part 4.8 — Android notifications slice** 🚧 **IN PROGRESS (2026-08-26).** Chosen
+     capability = notifications (`codec-notify send|clear|status`) — the runtime-permission
+     path deferred by 4.7: `POST_NOTIFICATIONS` channel creation, `NEED_PERMISSION` marker,
+     activity launcher, atomic resume after the dialog. Protocol/bridge/CLI implemented,
+     `BOOTSTRAP_VERSION` 24; host `sh` harness green (permission dance, denial, PTY,
+     clipboard regression). CI assemble + device transcript pending.
+     See [`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).

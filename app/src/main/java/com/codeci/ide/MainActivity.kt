@@ -47,6 +47,8 @@ import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
+import com.codeci.ide.ui.terminal.CodecApiBridge
+import com.codeci.ide.ui.terminal.CodecApiProtocol
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.MyApplicationTheme
@@ -54,12 +56,19 @@ import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import androidx.lifecycle.lifecycleScope
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private var storagePermissionLauncher: ActivityResultLauncher<Array<String>>? = null
+    private var notificationPermissionLauncher: ActivityResultLauncher<String>? = null
+
+    /** CodeCApi notify request parked while the Android 13+ dialog is up. */
+    private var pendingNotificationRequest: CodecApiProtocol.Request? = null
+    private var pendingNotificationApiDir: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,6 +83,15 @@ class MainActivity : ComponentActivity() {
                 ShellEnvironment.setupStorageDirectory(home)
                 Toast.makeText(this, getString(R.string.storage_setup_complete), Toast.LENGTH_SHORT).show()
             }
+        }
+
+        // CodeC targets SDK 28 on purpose (W^X exec-of-app-data), so on
+        // Android 13+ POST_NOTIFICATIONS must be requested at runtime; the
+        // bridge parks the CodeCApi request and emits it here.
+        notificationPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            completeNotificationPermission(granted)
         }
 
         handleStoragePermissionIntent(intent)
@@ -142,6 +160,33 @@ class MainActivity : ComponentActivity() {
     private fun handleStoragePermissionIntent(intent: Intent?) {
         if (intent?.action == ACTION_REQUEST_STORAGE_PERMISSION) {
             requestStoragePermissions()
+        }
+    }
+
+    /**
+     * Shows the Android 13+ POST_NOTIFICATIONS runtime dialog for a parked
+     * CodeCApi `notify.send` request. On devices below 13 the bridge never
+     * emits a permission request (the permission is not runtime on older
+     * API levels).
+     */
+    fun requestNotificationPermission(request: CodecApiProtocol.Request) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        pendingNotificationRequest = request
+        pendingNotificationApiDir =
+            ShellEnvironment.codecApiDir(ShellEnvironment.prefixDir(filesDir))
+        notificationPermissionLauncher?.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    private fun completeNotificationPermission(granted: Boolean) {
+        val request = pendingNotificationRequest ?: return
+        val apiDir = pendingNotificationApiDir
+        pendingNotificationRequest = null
+        pendingNotificationApiDir = null
+        if (apiDir == null) return
+        // Tell the terminal (still waiting on the response file) the real
+        // outcome; the CLI prints the result and exits.
+        lifecycleScope.launch {
+            CodecApiBridge.resumeAfterPermission(this@MainActivity, request, apiDir, granted)
         }
     }
 

@@ -8,6 +8,7 @@ import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.TerminalThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.terminal.CodecApiBridge
+import com.codeci.ide.ui.terminal.CodecApiProtocol
 import com.codeci.ide.ui.terminal.PreparedShell
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.ShellEnvironment
@@ -17,10 +18,12 @@ import com.codeci.ide.ui.terminal.UserlandStatus
 import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -45,6 +48,12 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     val alive: StateFlow<Boolean> = session.alive
     val exitCode: StateFlow<Int?> = session.exitCode
     val storagePermissionRequests: SharedFlow<Unit> = session.storagePermissionRequests
+
+    /** Requests that need the Android 13+ notification permission before they can run. */
+    private val _notificationPermissionRequests =
+        MutableSharedFlow<CodecApiProtocol.Request>(extraBufferCapacity = 16)
+    val notificationPermissionRequests: SharedFlow<CodecApiProtocol.Request> =
+        _notificationPermissionRequests.asSharedFlow()
 
     val fontSizeSp: StateFlow<Float> = settings.terminalFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, 14f)
@@ -82,7 +91,10 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                     payload,
                     ShellEnvironment.codecApiDir(
                         ShellEnvironment.prefixDir(app.filesDir)
-                    )
+                    ),
+                    onPermissionRequired = { request, _ ->
+                        _notificationPermissionRequests.tryEmit(request)
+                    }
                 )
             }
         }

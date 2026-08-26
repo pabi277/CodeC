@@ -27,7 +27,10 @@ class CodecApiProtocolTest {
             "clipboard.get" to CodecApiProtocol.Op.CLIPBOARD_GET,
             "clipboard.set" to CodecApiProtocol.Op.CLIPBOARD_SET,
             "clipboard.clear" to CodecApiProtocol.Op.CLIPBOARD_CLEAR,
-            "clipboard.status" to CodecApiProtocol.Op.CLIPBOARD_STATUS
+            "clipboard.status" to CodecApiProtocol.Op.CLIPBOARD_STATUS,
+            "notify.send" to CodecApiProtocol.Op.NOTIFY_SEND,
+            "notify.clear" to CodecApiProtocol.Op.NOTIFY_CLEAR,
+            "notify.status" to CodecApiProtocol.Op.NOTIFY_STATUS
         )
         for ((wire, op) in cases) {
             val req = CodecApiProtocol.parse("CodeCApi:$wire:/prefix/tmp/codec-api/req.abc:/prefix/tmp/codec-api/res.def")
@@ -67,6 +70,28 @@ class CodecApiProtocolTest {
         assertEquals(CodecApiProtocol.Op.CLIPBOARD_SET, parsed.op)
         assertEquals("/prefix/tmp/codec-api/req.1", parsed.requestFile)
         assertEquals("/prefix/tmp/codec-api/res.2", parsed.responseFile)
+    }
+
+    @Test
+    fun `notify ops are flagged as permission operations`() {
+        assertTrue(CodecApiProtocol.Op.NOTIFY_SEND.isNotifyOperation)
+        assertTrue(CodecApiProtocol.Op.NOTIFY_CLEAR.isNotifyOperation)
+        assertTrue(CodecApiProtocol.Op.NOTIFY_STATUS.isNotifyOperation)
+        assertFalse(CodecApiProtocol.Op.CLIPBOARD_GET.isNotifyOperation)
+    }
+
+    @Test
+    fun `permission notice markers are protocol constants`() {
+        assertEquals(
+            "NEED_PERMISSION:android.permission.POST_NOTIFICATIONS",
+            CodecApiProtocol.permissionNotice(
+                "android.permission.POST_NOTIFICATIONS"
+            )
+        )
+        assertTrue(
+            CodecApiProtocol.permissionNotice("x")
+                .startsWith(CodecApiProtocol.NEED_PERMISSION_PREFIX)
+        )
     }
 
     @Test
