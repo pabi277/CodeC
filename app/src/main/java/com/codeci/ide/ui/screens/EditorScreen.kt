@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -76,6 +77,7 @@ import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
+import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 
@@ -87,6 +89,7 @@ fun EditorScreen(
     onNavigateBack: () -> Unit = {},
     onFileRenamed: (String) -> Unit = {},
     onOpenInTerminal: (String?) -> Unit = {},
+    onOpenPreview: (String) -> Unit = {},
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -220,6 +223,20 @@ fun EditorScreen(
                     }
                 },
                 actions = {
+                    if (WebFileSupport.isHtml(currentFileName)) {
+                        IconButton(onClick = {
+                            if (viewModel.saveFile(context)) {
+                                onOpenPreview(viewModel.fileName.value)
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }) {
+                            Icon(
+                                Icons.Default.Visibility,
+                                contentDescription = stringResource(R.string.preview)
+                            )
+                        }
+                    }
                     IconButton(onClick = {
                         val path = viewModel.saveAndAbsolutePath(context)
                         if (path != null) {

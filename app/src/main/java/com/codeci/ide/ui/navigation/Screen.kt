@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
@@ -17,6 +18,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
         fun createRoute(fileName: String? = null): String {
             return if (fileName != null) "editor?fileName=$fileName" else "editor"
         }
+    }
+    object Preview : Screen("preview?fileName={fileName}", "Preview", Icons.Default.Visibility) {
+        fun createRoute(fileName: String): String = "preview?fileName=$fileName"
     }
     object Terminal : Screen("terminal?cmd={cmd}&nonce={nonce}", "Term", Icons.Default.Terminal) {
         fun createRoute(cmd: String? = null): String {

@@ -115,7 +115,7 @@ class FileManager(private val context: Context) {
         return try {
             val dir = getProjectDir()
             val files = dir.listFiles() ?: return emptyList()
-            files.filter { it.isFile && it.name.endsWith(".c") }
+            files.filter { it.isFile && (it.name.endsWith(".c") || WebFileSupport.isWeb(it.name)) }
                 .map { FileInfo(it.name, it.length(), it.lastModified(), it.absolutePath) }
                 .sortedByDescending { it.lastModified }
         } catch (e: Exception) {

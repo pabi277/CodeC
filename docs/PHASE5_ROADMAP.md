@@ -57,6 +57,7 @@ This is a budget, not a target to hit exactly. Two consequences:
 | Part | Depends on | Complexity | Est. replies | Status |
 |---|---|---|---|---|
 | **5.1 — KI-1 & KI-2 client fixes** | none (client-side only, no rebuild) | small / low-risk | ~10 | ✅ DONE (device-verified 2026-08-26) |
+| **5.2 — Web preview (HTML/CSS/JS in WebView)** | none (client-side only, no rebuild) | medium | ~20 | 🚧 in progress (code + host tests written; awaiting CI + device) |
 | *(further parts decided when picked up)* | — | — | — | — |
 
 ## Rules that carry forward to Phase 5

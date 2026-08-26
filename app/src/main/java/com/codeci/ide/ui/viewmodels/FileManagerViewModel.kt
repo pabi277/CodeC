@@ -8,6 +8,7 @@ import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,12 +47,12 @@ class FileManagerViewModel : ViewModel() {
     fun createFile(context: Context, name: String): Result<String> {
         val sanitized = FileNameUtils.sanitizeFileName(name)
             ?: return Result.failure(IllegalArgumentException(context.getString(R.string.invalid_file_name)))
-        val fileName = if (sanitized.endsWith(".c")) sanitized else "$sanitized.c"
+        val fileName = WebFileSupport.normalizeFileName(sanitized)
         val fm = FileManager(context)
         return try {
             if (fm.loadFile(fileName) != null) {
                 Result.failure(IllegalStateException(context.getString(R.string.file_already_exists)))
-            } else if (fm.saveFile(fileName, "#include <stdio.h>\n\nint main() {\n    return 0;\n}\n")) {
+            } else if (fm.saveFile(fileName, WebFileSupport.starterContent(fileName))) {
                 viewModelScope.launch { StatsManager(context).incrementFilesCreated() }
                 loadFiles(context)
                 Result.success(fileName)
@@ -83,7 +84,7 @@ class FileManagerViewModel : ViewModel() {
             onDone(false, null)
             return
         }
-        val fileName = if (sanitized.endsWith(".c")) sanitized else "$sanitized.c"
+        val fileName = WebFileSupport.normalizeFileName(sanitized)
         viewModelScope.launch {
             _isBusy.value = true
             val fm = FileManager(context)
