@@ -871,6 +871,145 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `pkg install of an already-newest package succeeds (KI-1)`() {
+        // KI-1 (2026-08-26): apt exits 0 with "already the newest version" and
+        // downloads nothing, but the wrapper treated "0 packages downloaded"
+        // as a fetch failure. It must now report success and exit 0.
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-ki1-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            val cache = File(prefix, "var/cache/apt/archives").apply { mkdirs() }
+            val keyrings = File(prefix, "etc/apt/keyrings").apply { mkdirs() }
+            File(keyrings, ShellEnvironment.PACKAGE_REPOSITORY_KEYRING).writeText("public-test-key")
+
+            // Mock apt-get: --download-only install of an already-newest
+            // package succeeds but writes no .deb (the KI-1 trigger).
+            File(bin, "apt-get").apply {
+                writeText("#!/bin/sh\nexit 0\n")
+                setExecutable(true)
+            }
+
+            // Mock dpkg (existence is checked by require_backend).
+            File(bin, "dpkg").apply {
+                writeText("#!/bin/sh\nif [ \"\$1\" = \"--print-architecture\" ]; then echo \"aarch64\"; exit 0; fi\nexit 0\n")
+                setExecutable(true)
+            }
+
+            // Mock gpgv: emit signed release metadata into the --output file.
+            File(bin, "gpgv").apply {
+                writeText("""
+                    #!/bin/sh
+                    out=""
+                    while [ "${'$'}#" -gt 0 ]; do
+                      if [ "${'$'}1" = "--output" ]; then out="${'$'}2"; shift 2; else shift; fi
+                    done
+                    if [ -n "${'$'}out" ]; then
+                      printf "Origin: CodeC\nSuite: stable\n" > "${'$'}out"
+                    fi
+                    exit 0
+                """.trimIndent() + "\n")
+                setExecutable(true)
+            }
+
+            // Mock curl: fetch the signed InRelease into the -o destination.
+            File(bin, "curl").apply {
+                writeText("""
+                    #!/bin/sh
+                    dest=""
+                    while [ "${'$'}#" -gt 0 ]; do
+                      if [ "${'$'}1" = "-o" ]; then dest="${'$'}2"; shift 2; else shift; fi
+                    done
+                    if [ -n "${'$'}dest" ]; then
+                      printf "Origin: CodeC\nSuite: stable\n" > "${'$'}dest"
+                    fi
+                    exit 0
+                """.trimIndent() + "\n")
+                setExecutable(true)
+            }
+
+            val pkg = File(bin, "pkg").apply {
+                writeText(ShellEnvironment.pkgScript())
+                setExecutable(true)
+            }
+
+            val proc = ProcessBuilder("/bin/sh", pkg.absolutePath, "install", "-y", "make")
+                .redirectErrorStream(true)
+                .apply {
+                    environment()["PREFIX"] = prefix.absolutePath
+                    environment()["PATH"] = "${bin.absolutePath}:/bin:/usr/bin"
+                }
+                .start()
+            val completed = proc.waitFor(10, TimeUnit.SECONDS)
+            if (!completed) proc.destroyForcibly()
+            val output = proc.inputStream.bufferedReader().readText()
+
+            assertTrue("pkg install timed out: $output", completed)
+            assertEquals(output, 0, proc.exitValue())
+            assertTrue(output.contains("already installed (already the newest version)"))
+            assertFalse(output.contains("apt downloaded no packages"))
+            assertFalse(File(prefix, "var/lib/codec-pkg/transaction.pending").exists())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `canonicalPrefix only rewrites the user 0 emulation alias`() {
+        assertEquals(
+            "/data/data/com.codeci.ide/files/usr",
+            ShellEnvironment.canonicalPrefix("/data/user/0/com.codeci.ide/files/usr")
+        )
+        // Already-canonical, host-test temp dirs, and secondary users are
+        // untouched (rewriting /data/user/10 to /data/data would be wrong).
+        assertEquals(
+            "/data/data/com.codeci.ide/files/usr",
+            ShellEnvironment.canonicalPrefix("/data/data/com.codeci.ide/files/usr")
+        )
+        assertEquals("/tmp/codec/usr", ShellEnvironment.canonicalPrefix("/tmp/codec/usr"))
+        assertEquals(
+            "/data/user/10/com.codeci.ide/files/usr",
+            ShellEnvironment.canonicalPrefix("/data/user/10/com.codeci.ide/files/usr")
+        )
+    }
+
+    @Test
+    fun `KI-2 prefix canonicalizes to the dpkg data data spelling everywhere`() {
+        val files = File("/data/user/0/com.codeci.ide/files")
+
+        // The prefix File itself resolves to the dpkg-recorded spelling.
+        val prefix = ShellEnvironment.prefixDir(files)
+        assertEquals("/data/data/com.codeci.ide/files/usr", prefix.absolutePath)
+
+        // The CodeCApi bridge must confine to the SAME canonical spelling the
+        // CLI scripts derive from the exported $PREFIX, or the confinement
+        // check would reject a valid clipboard/notify request (KI-2 guard).
+        val apiDir = ShellEnvironment.codecApiDir(prefix)
+        assertEquals("/data/data/com.codeci.ide/files/usr/tmp/codec-api", apiDir.absolutePath)
+
+        // The exported process env and the sourced profile both use it.
+        val env = ShellEnvironment.buildEnv(
+            filesDir = files,
+            nativeLibDir = File("/data/app/lib"),
+            tccBinary = null,
+            tccBundle = File(files, "CodeC/tcc"),
+            standard = "c11",
+            warnings = false,
+            optimization = 0
+        )
+        assertEquals("/data/data/com.codeci.ide/files/usr", env["PREFIX"])
+
+        // ShellBootstrap.prepare() passes the canonical prefixDir() into the
+        // profile writer, so the sourced profile must record the same spelling.
+        val profile = ShellEnvironment.profileScript(
+            ShellEnvironment.prefixDir(files),
+            File("/data/user/0/com.codeci.ide/files/home"),
+            File("/data/user/0/com.codeci.ide/files/CodeC/projects")
+        )
+        assertTrue(profile.contains("export PREFIX='/data/data/com.codeci.ide/files/usr'"))
+    }
+
+    @Test
     fun `getRepositoryTrustInfo inspects active keyring and signing metadata`() {
         val base = File(System.getProperty("java.io.tmpdir"), "codec-trust-${System.nanoTime()}")
         try {

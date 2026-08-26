@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "24"
+    const val BOOTSTRAP_VERSION = "25"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -87,7 +87,28 @@ object ShellEnvironment {
         }
     }
 
-    fun prefixDir(filesDir: File): File = File(filesDir, PREFIX_NAME)
+    /**
+     * dpkg and every published `.deb` record the userland prefix using
+     * Android's canonical `/data/data/` spelling, while
+     * [android.content.Context.getFilesDir] reports the `/data/user/0/`
+     * user-emulation alias on modern Android. The two names address the same
+     * inodes, so dpkg/apt never notice — but a manual `update-alternatives`
+     * that mixes them fails with a `Cross-device link` error, greps over
+     * `--display` output mismatch, and the CodeCApi bridge's confinement
+     * check compares resolved paths as strings (KI-2). Resolve to the
+     * dpkg-recorded spelling so the exported `$PREFIX`, the bridge's API
+     * directory, and the dpkg DB always agree; Termux hardcodes its
+     * `/data/data` prefix the same way. No-op for any other prefix (host-test
+     * temp dirs, secondary users) — the same rule as the `pkg` script's own
+     * `CANON_PREFIX`.
+     */
+    fun canonicalPrefix(path: String): String =
+        if (path.startsWith("/data/user/0/")) "/data/data/" + path.removePrefix("/data/user/0/")
+        else path
+
+    fun prefixDir(filesDir: File): File =
+        File(canonicalPrefix(File(filesDir, PREFIX_NAME).path))
+
     fun homeDir(filesDir: File): File = File(filesDir, HOME_NAME)
 
     fun binDir(prefix: File): File = File(prefix, "bin")
@@ -589,6 +610,19 @@ object ShellEnvironment {
           verify_release_signature
           rm -f "${'$'}CACHE"/*.deb
           friendly_apt apt_get --download-only --yes --no-install-recommends install "${'$'}@" || { _err="${'$'}?"; rm -f "${'$'}marker" "${'$'}CACHE"/*.deb; return "${'$'}_err"; }
+          # KI-1: when apt succeeds but downloads nothing, every requested
+          # package is already at its newest installed version. That is a
+          # success, not a fetch failure, so report it and exit 0 (hostile to
+          # scripts and idempotent re-runs otherwise).
+          found=0
+          for _deb in "${'$'}CACHE"/*.deb; do
+            [ -f "${'$'}_deb" ] && found=1
+          done
+          if [ "${'$'}found" -eq 0 ]; then
+            rm -f "${'$'}marker"
+            echo "pkg: ${'$'}* already installed (already the newest version)."
+            return 0
+          fi
           preflight_cache
           display_cache_summary "Install"
           if ! confirm_transaction "installation"; then
