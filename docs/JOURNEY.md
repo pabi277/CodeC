@@ -1,10 +1,10 @@
 # CodeC — the full journey
 
 **Last updated:** 2026-08-26 · **State:** Phase 3 ✅ complete (device-verified).
-Phase 4 Parts 4.1–4.7 ✅ complete (4.7 device-verified 2026-08-26).
-Part 4.8 (Android notifications, the runtime-permission slice 4.7 deferred)
-🚧 is active — `codec-notify` over the same `CodeCApi` bridge; host harness
-green, CI green (`32920735841`), device transcript pending.
+**Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
+2026-08-26; 4.8 verified the runtime-permission path
+(`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
+owner-confirmed notification tap opens CodeC).
 
 A single, chronological record of how CodeC got from "a C editor for Android"
 to "an IDE with its own terminal, its own Termux-style userland, and its own
@@ -471,11 +471,14 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      piped/redirected channel fix (`/dev/tty` + stdout fallback, device-confirmed); two optional
      negatives waived by owner; post-acceptance review moved request dispatch to activity scope.
      See [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
-   - **Part 4.8 — Android notifications slice** 🚧 **IN PROGRESS (2026-08-26).** Chosen
-     capability = notifications (`codec-notify send|clear|status`) — the runtime-permission
-     path deferred by 4.7: `POST_NOTIFICATIONS` channel creation, `NEED_PERMISSION` marker,
-     activity launcher, atomic resume after the dialog. Protocol/bridge/CLI implemented,
-     `BOOTSTRAP_VERSION` 24; host `sh` harness green (permission dance, denial, PTY,
-     clipboard regression); CI green (run `32920735841`: assemble + unit tests +
-     lint, incl. one fixed test-compile issue); device transcript pending.
+   - **Part 4.8 — Android notifications slice** ✅ **DONE (device-verified 2026-08-26).**
+     Chosen capability = notifications (`codec-notify send|clear|status`) — the
+     runtime-permission path deferred by 4.7: `POST_NOTIFICATIONS` channel creation,
+     `NEED_PERMISSION` marker, activity launcher, atomic resume after the dialog.
+     Protocol/bridge/CLI implemented, `BOOTSTRAP_VERSION` 24; host `sh` harness green; CI
+     green (assemble + unit tests + lint, incl. one fixed test-compile issue). First device
+     run uncovered two real issues (hint spam + system-owned dialog not completing the
+     parked request) → F1/F2 fixes in `7a321ad`; retest passed: one hint → dialog → allow
+     → `OK`, status enabled/ready, `clear` OK, second send with no re-prompt, and the
+     owner-confirmed notification tap opens CodeC. **Phase 4 complete.**
      See [`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).

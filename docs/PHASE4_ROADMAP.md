@@ -5,7 +5,7 @@ Part 4.5 (expanded catalog CI build) completed in run [`32845127723`](https://gi
 Part 4.6 (publish & device acceptance) completed in run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified on real arm64 hardware.
 Part 4.7 (Android integration slice) ✅ DONE (device-verified 2026-08-26).
 Part 4.8 (Android notifications slice, the runtime-permission path 4.7 deferred)
-🚧 IN PROGRESS (2026-08-26) — see
+✅ DONE (device-verified 2026-08-26) — **Phase 4 is complete (Parts 4.1–4.8)**; see
 [`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).
 A post-implementation review of the 4.5/4.6 recipe overrides landed artifact-neutral
 hardening fixes; see [`chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
@@ -207,9 +207,9 @@ capabilities exists. Do not attempt the whole surface area in one part.
 
 ### Part 4.8 — Android integration slice 2 (notifications)
 
-**Status: 🚧 IN PROGRESS (2026-08-26).** Capability (chosen when the part
-started): **notifications** — `codec-notify send|clear|status` over the
-4.7 `CodeCApi` bridge, deliberately exercising the runtime-permission path
+**Status: ✅ DONE (device-verified 2026-08-26).** Capability (chosen when
+the part started): **notifications** — `codec-notify send|clear|status`
+over the 4.7 `CodeCApi` bridge, deliberately exercising the runtime-permission path
 (`POST_NOTIFICATIONS` on Android 13+; CodeC targets SDK 28): channel
 creation from the activity, `NEED_PERMISSION` marker while the system
 dialog is up, atomic `OK`/`ERR` resume, and actionable denial handling
@@ -245,7 +245,7 @@ wiring.
 | 4.5 — expanded package build (CI) | none | medium | ✅ **DONE** (run `32845127723` green) |
 | 4.6 — expanded package publish + device accept | 4.5 | medium | ✅ **DONE** (device-verified) |
 | 4.7 — Android integration foundation slice | none | large (epic seed) | ✅ **DONE** (device-verified 2026-08-26) — `codec-clipboard` over `CodeCApi`; 4.8+ ready |
-| 4.8 — Android notifications slice (`POST_NOTIFICATIONS`) | 4.7 | medium | 🚧 **IN PROGRESS** (2026-08-26) — `codec-notify send|clear|status`; host harness green, CI green (`32920735841`); device transcript pending |
+| 4.8 — Android notifications slice (`POST_NOTIFICATIONS`) | 4.7 | medium | ✅ **DONE** (device-verified 2026-08-26) — `codec-notify send|clear|status`; permission flow + tap verified; F1/F2 fixes. **Phase 4 complete** |
 
 None of these parts block each other except 4.6 on 4.5. Pick whichever the
 project owner wants next; nothing here is a fixed sequence.

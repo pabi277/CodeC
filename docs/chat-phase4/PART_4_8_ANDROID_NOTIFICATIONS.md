@@ -1,11 +1,13 @@
 # Phase 4 Part 4.8 — Android-integration slice 2 (notifications)
 
-**Status: 🚧 IN PROGRESS (2026-08-26).** Decision D1 is locked; code and
-host tests are written; the CLI was validated end-to-end with a local
-fake-app harness (real `sh`, real OSC bytes, including the Android 13+
-permission dance) and CI is green (run `32920735841`: assemble + unit
-tests + lint). Only the **device transcript is pending** — this record
-will be updated with it.
+**Status: ✅ DONE (device-verified 2026-08-26).** The notifications slice
+is implemented, host-tested (CLI harness + JUnit via CI), and verified on
+a real arm64 phone: permission dialog → allow → `OK`, notification
+posted, status enabled/ready, `clear` OK, second send with no re-prompt,
+and the owner confirmed the notification tap opens CodeC. The permission
+flow — the part of the 4.7 pattern that 4.7 deliberately deferred — is
+now proven end to end, including the two device-driven fixes (hint once +
+30 s wait; onResume recovery for the system-owned dialog).
 
 Part 4.7 already established the reusable `CodeCApi` bridge (`OSC 1337;
 CodeCApi:<op>:<req>:<res>BEL` + app-private files under
@@ -163,7 +165,7 @@ User ran the corrected recipe (`codec-notify`, not `notify`):
   `OK`/`ERR`, regardless of which dialog answered it. The launcher result
   still wins when it arrives (it clears the parked request first).
 
-### 5.4 Device retest (2026-08-26) — PASS (pending: tap-opens-app visual)
+### 5.4 Device retest (2026-08-26) — PASS (owner-confirmed tap)
 
 After installing the fixed APK and turning Notifications off in Settings,
 the user ran the exact recipe; transcript (abridged):
@@ -181,10 +183,12 @@ the user ran the exact recipe; transcript (abridged):
 5. A second `codec-notify send "Build done" "3 files compiled"` → `OK`
    with **no hint and no dialog** — the granted-state fast path works. **PASS**
 
-The only check not visible in a text transcript: the notification
-visually appearing and **tapping it opening CodeC** (content intent) —
-owner will confirm; code path is `NotificationCompat` + `PendingIntent` →
-`MainActivity` (SINGLE_TOP/CLEAR_TOP).
+The one check not visible in a text transcript was the notification
+visually appearing and **tapping it opening CodeC** (content intent):
+**owner-confirmed 2026-08-26** — tapping the notification brings CodeC
+to the foreground (`NotificationCompat` + `PendingIntent` →
+`MainActivity`, SINGLE_TOP/CLEAR_TOP). Exit condition met; **Part 4.8 is
+DONE (device-verified 2026-08-26)**.
 
 ## 6. Invariants maintained from 4.7
 
