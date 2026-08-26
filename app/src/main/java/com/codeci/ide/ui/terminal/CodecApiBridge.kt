@@ -9,7 +9,13 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.codeci.ide.MainActivity
@@ -38,6 +44,18 @@ data class NotifyOps(
     val send: (title: String, body: String) -> Unit,
     val clear: () -> Unit,
     val status: () -> String
+)
+
+/**
+ * Android "Termux:API-style" operations (Phase 5.3), kept android-free so the
+ * pure core of [CodecApiBridge] is host-testable. The validation lives in the
+ * core; these lambdas only perform the side effect.
+ */
+data class TermuxApiOps(
+    val toast: (text: String) -> Unit = {},
+    val shareText: (text: String) -> Unit = {},
+    val openUrl: (url: String) -> Unit = {},
+    val vibrate: (millis: Long) -> Unit = {}
 )
 
 /**
@@ -106,29 +124,41 @@ object CodecApiBridge {
             return@withContext true
         }
 
-        val response = if (request.op.isNotifyOperation) {
-            val notifyOps = androidNotifyOps(context)
-            if (notifyOps == null) {
-                "${CodecApiProtocol.ERR_PREFIX}notification service unavailable"
-            } else {
-                execute(request, apiDir, { ClipboardContent.Empty }, {}, notifyOps)
+        val response = when {
+            request.op.isNotifyOperation -> {
+                val notifyOps = androidNotifyOps(context)
+                if (notifyOps == null) {
+                    "${CodecApiProtocol.ERR_PREFIX}notification service unavailable"
+                } else {
+                    execute(request, apiDir, { ClipboardContent.Empty }, {}, notifyOps)
+                }
             }
-        } else {
-            val clipboardManager =
-                context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            if (clipboardManager == null) {
-                "${CodecApiProtocol.ERR_PREFIX}clipboard service unavailable"
-            } else {
+            request.op.isTermuxApiOperation -> {
                 execute(
                     request = request,
                     apiDir = apiDir,
-                    readClipboard = { readClipboard(clipboardManager, context) },
-                    writeClipboard = { text ->
-                        clipboardManager.setPrimaryClip(
-                            ClipData.newPlainText("CodeC clipboard", text)
-                        )
-                    }
+                    readClipboard = { ClipboardContent.Empty },
+                    writeClipboard = {},
+                    termuxApi = androidTermuxApiOps(context)
                 )
+            }
+            else -> {
+                val clipboardManager =
+                    context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                if (clipboardManager == null) {
+                    "${CodecApiProtocol.ERR_PREFIX}clipboard service unavailable"
+                } else {
+                    execute(
+                        request = request,
+                        apiDir = apiDir,
+                        readClipboard = { readClipboard(clipboardManager, context) },
+                        writeClipboard = { text ->
+                            clipboardManager.setPrimaryClip(
+                                ClipData.newPlainText("CodeC clipboard", text)
+                            )
+                        }
+                    )
+                }
             }
         }
         deliver(request, apiDir, response)
@@ -187,7 +217,8 @@ object CodecApiBridge {
         apiDir: File,
         readClipboard: () -> ClipboardContent,
         writeClipboard: (String) -> Unit,
-        notify: NotifyOps? = null
+        notify: NotifyOps? = null,
+        termuxApi: TermuxApiOps = TermuxApiOps()
     ): String {
         if (!CodecApiProtocol.isConfinedDirectChild(request.responseFile, apiDir)) {
             return "${CodecApiProtocol.ERR_PREFIX}response path escapes the CodeC API directory"
@@ -274,6 +305,108 @@ object CodecApiBridge {
 
             CodecApiProtocol.Op.NOTIFY_STATUS ->
                 (notify ?: return "${CodecApiProtocol.ERR_PREFIX}notification service unavailable").status()
+
+            CodecApiProtocol.Op.TOAST_SHOW -> {
+                if (requestFile == null) {
+                    "${CodecApiProtocol.ERR_PREFIX}missing request file"
+                } else {
+                    val file = File(requestFile)
+                    if (file.length() > CodecApiProtocol.MAX_TOAST_BYTES.toLong()) {
+                        "${CodecApiProtocol.ERR_PREFIX}toast text too large " +
+                            "(max ${CodecApiProtocol.MAX_TOAST_BYTES} bytes)"
+                    } else {
+                        val text = try {
+                            file.readText(Charsets.UTF_8)
+                        } catch (e: Exception) {
+                            AppLogger.e("CodecApiBridge", "cannot read toast request", e)
+                            return "${CodecApiProtocol.ERR_PREFIX}cannot read request file"
+                        }
+                        if (text.isBlank()) {
+                            "${CodecApiProtocol.ERR_PREFIX}toast text is empty"
+                        } else {
+                            termuxApi.toast(text)
+                            "OK"
+                        }
+                    }
+                }
+            }
+
+            CodecApiProtocol.Op.SHARE_TEXT -> {
+                if (requestFile == null) {
+                    "${CodecApiProtocol.ERR_PREFIX}missing request file"
+                } else {
+                    val file = File(requestFile)
+                    if (file.length() > CodecApiProtocol.MAX_SHARE_BYTES.toLong()) {
+                        "${CodecApiProtocol.ERR_PREFIX}share text too large " +
+                            "(max ${CodecApiProtocol.MAX_SHARE_BYTES} bytes)"
+                    } else {
+                        val text = try {
+                            file.readText(Charsets.UTF_8)
+                        } catch (e: Exception) {
+                            AppLogger.e("CodecApiBridge", "cannot read share request", e)
+                            return "${CodecApiProtocol.ERR_PREFIX}cannot read request file"
+                        }
+                        if (text.isBlank()) {
+                            "${CodecApiProtocol.ERR_PREFIX}share text is empty"
+                        } else {
+                            termuxApi.shareText(text)
+                            "OK"
+                        }
+                    }
+                }
+            }
+
+            CodecApiProtocol.Op.OPEN_URL -> {
+                if (requestFile == null) {
+                    "${CodecApiProtocol.ERR_PREFIX}missing request file"
+                } else {
+                    val file = File(requestFile)
+                    if (file.length() > CodecApiProtocol.MAX_URL_BYTES.toLong()) {
+                        "${CodecApiProtocol.ERR_PREFIX}url too large " +
+                            "(max ${CodecApiProtocol.MAX_URL_BYTES} bytes)"
+                    } else {
+                        val url = try {
+                            file.readText(Charsets.UTF_8).trim()
+                        } catch (e: Exception) {
+                            AppLogger.e("CodecApiBridge", "cannot read url request", e)
+                            return "${CodecApiProtocol.ERR_PREFIX}cannot read request file"
+                        }
+                        if (!url.startsWith("http://", ignoreCase = true) &&
+                            !url.startsWith("https://", ignoreCase = true)
+                        ) {
+                            "${CodecApiProtocol.ERR_PREFIX}only http(s) URLs can be opened"
+                        } else {
+                            termuxApi.openUrl(url)
+                            "OK"
+                        }
+                    }
+                }
+            }
+
+            CodecApiProtocol.Op.VIBRATE -> {
+                if (requestFile == null) {
+                    "${CodecApiProtocol.ERR_PREFIX}missing request file"
+                } else {
+                    val file = File(requestFile)
+                    val raw = try {
+                        file.readText(Charsets.UTF_8).trim()
+                    } catch (e: Exception) {
+                        AppLogger.e("CodecApiBridge", "cannot read vibrate request", e)
+                        return "${CodecApiProtocol.ERR_PREFIX}cannot read request file"
+                    }
+                    val millis = if (raw.isEmpty()) {
+                        CodecApiProtocol.DEFAULT_VIBRATE_MS
+                    } else {
+                        raw.toLongOrNull()
+                    }
+                    if (millis == null) {
+                        "${CodecApiProtocol.ERR_PREFIX}vibrate duration must be a number of milliseconds"
+                    } else {
+                        termuxApi.vibrate(millis.coerceIn(1L, CodecApiProtocol.MAX_VIBRATE_MS))
+                        "OK"
+                    }
+                }
+            }
         }
     }
 
@@ -362,6 +495,50 @@ object CodecApiBridge {
             }
         )
     }
+
+    /**
+     * Android side of the Termux:API-style operations (Phase 5.3). All four
+     * are permission-light: toast/share/open-URL need nothing, and `VIBRATE`
+     * is a normal (install-time) permission declared in the manifest. The
+     * bridge runs on `Dispatchers.IO` with the Application context, so:
+     *  - toast posts to the main looper (Toast requires it), and
+     *  - share/open-URL launch their intents with `FLAG_ACTIVITY_NEW_TASK`.
+     */
+    private fun androidTermuxApiOps(context: Context): TermuxApiOps = TermuxApiOps(
+        toast = { text ->
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context.applicationContext, text, Toast.LENGTH_SHORT).show()
+            }
+        },
+        shareText = { text ->
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+            }
+            val chooser = Intent.createChooser(send, "Share via").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+        },
+        openUrl = { url ->
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        },
+        vibrate = { millis ->
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            if (vibrator == null || !vibrator.hasVibrator()) return@TermuxApiOps
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(
+                    VibrationEffect.createOneShot(millis, VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(millis)
+            }
+        }
+    )
 
     private fun readClipboard(clipboardManager: ClipboardManager, context: Context): ClipboardContent {
         val clip = clipboardManager.primaryClip ?: return ClipboardContent.Empty

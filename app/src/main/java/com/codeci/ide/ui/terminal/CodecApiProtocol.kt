@@ -38,6 +38,19 @@ object CodecApiProtocol {
     /** Upper bound for a `notify.send` payload (title + body). */
     const val MAX_NOTIFY_BYTES = 8 * 1024
 
+    /** Upper bound for a `toast.show` message. */
+    const val MAX_TOAST_BYTES = 4 * 1024
+
+    /** Upper bound for a `share.text` payload. */
+    const val MAX_SHARE_BYTES = 256 * 1024
+
+    /** Upper bound for a `url.open` payload. */
+    const val MAX_URL_BYTES = 8 * 1024
+
+    /** `vibrate` duration bounds (milliseconds) and default when unspecified. */
+    const val MAX_VIBRATE_MS = 10_000L
+    const val DEFAULT_VIBRATE_MS = 500L
+
     const val ERR_PREFIX = "ERR:"
 
     /**
@@ -54,10 +67,17 @@ object CodecApiProtocol {
         CLIPBOARD_STATUS("clipboard.status"),
         NOTIFY_SEND("notify.send"),
         NOTIFY_CLEAR("notify.clear"),
-        NOTIFY_STATUS("notify.status");
+        NOTIFY_STATUS("notify.status"),
+        TOAST_SHOW("toast.show"),
+        SHARE_TEXT("share.text"),
+        OPEN_URL("url.open"),
+        VIBRATE("vibrate");
 
         val isNotifyOperation: Boolean
             get() = this == NOTIFY_SEND || this == NOTIFY_CLEAR || this == NOTIFY_STATUS
+
+        val isTermuxApiOperation: Boolean
+            get() = this == TOAST_SHOW || this == SHARE_TEXT || this == OPEN_URL || this == VIBRATE
 
         companion object {
             fun fromWire(value: String): Op? = entries.firstOrNull { it.wire == value }

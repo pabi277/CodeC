@@ -653,6 +653,79 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `toast share openUrl and vibrate scripts are posix sh CLIs over the bridge`() {
+        val toast = ShellEnvironment.toastScript()
+        assertTrue(toast.startsWith("#!/system/bin/sh"))
+        assertTrue(toast.contains("usage: codec-toast MESSAGE"))
+        assertTrue(toast.contains("toast.show"))
+
+        val share = ShellEnvironment.shareScript()
+        assertTrue(share.startsWith("#!/system/bin/sh"))
+        assertTrue(share.contains("usage: codec-share TEXT"))
+        assertTrue(share.contains("share.text"))
+
+        val openUrl = ShellEnvironment.openUrlScript()
+        assertTrue(openUrl.startsWith("#!/system/bin/sh"))
+        assertTrue(openUrl.contains("usage: codec-open-url URL"))
+        assertTrue(openUrl.contains("url.open"))
+
+        val vibrate = ShellEnvironment.vibrateScript()
+        assertTrue(vibrate.startsWith("#!/system/bin/sh"))
+        assertTrue(vibrate.contains("usage: codec-vibrate [MILLISECONDS]"))
+        assertTrue(vibrate.contains("vibrate"))
+        assertTrue(vibrate.contains("ms=\"\${1:-500}\""))
+    }
+
+    @Test
+    fun `toastScript performs a full osc request and prints OK`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-toast-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            val script = File(bin, "codec-toast")
+            script.writeText(ShellEnvironment.toastScript())
+            script.setExecutable(true)
+
+            val proc = ProcessBuilder("sh", script.absolutePath, "hello", "from", "CodeC")
+                .redirectErrorStream(true)
+                .start()
+
+            val output = StringBuilder()
+            val responded = java.util.concurrent.atomic.AtomicBoolean(false)
+            val marker = Regex("\u001b\\]1337;CodeCApi:([^:]+):([^:]+):([^\u0007]*)\u0007")
+            val responder = Thread {
+                try {
+                    val input = proc.inputStream
+                    while (true) {
+                        val b = input.read()
+                        if (b < 0) break
+                        output.append(b.toChar())
+                        val match = marker.find(output)
+                        if (match != null && !responded.get()) {
+                            responded.set(true)
+                            val resPath = match.groupValues[3]
+                            if (resPath.isNotEmpty()) {
+                                File(resPath).writeText("OK")
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            responder.start()
+            val exitCode = proc.waitFor()
+            responder.join(5000)
+
+            assertEquals(0, exitCode)
+            assertTrue(output.toString().contains("\u001b]1337;CodeCApi:toast.show:"))
+            assertTrue(output.toString().trim().endsWith("OK"))
+            assertTrue(responded.get())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `setupStorageDirectory creates storage directory and symlinks to target folders`() {
         val base = File(System.getProperty("java.io.tmpdir"), "codec-storage-test-${System.nanoTime()}")
         try {
