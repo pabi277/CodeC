@@ -163,22 +163,28 @@ User ran the corrected recipe (`codec-notify`, not `notify`):
   `OK`/`ERR`, regardless of which dialog answered it. The launcher result
   still wins when it arrives (it clears the parked request first).
 
-### 5.4 Pending — device retest (user's phone)
+### 5.4 Device retest (2026-08-26) — PASS (pending: tap-opens-app visual)
 
-The device permission is now **enabled**; to re-exercise the dialog, first
-turn it off: **Android Settings → Apps → CodeC → Notifications → off**,
-then in the terminal:
+After installing the fixed APK and turning Notifications off in Settings,
+the user ran the exact recipe; transcript (abridged):
 
-```sh
-codec-notify status        # expect: disabled
-codec-notify send "Build done" "3 files compiled"
-# dialog should appear; tap Allow; notification should show; tap it -> CodeC opens
-codec-notify status        # expect: enabled / channel ready
-codec-notify clear         # expect: OK
-```
+1. `codec-notify status` → `notification permission: disabled` /
+   `channel: codec-terminal (not created)`. **PASS**
+2. `codec-notify send "Build done" "3 files compiled"` → exactly **one**
+   `Android notification permission: allow it in the dialog…` line, then
+   `OK` — the dialog appeared, the user tapped Allow, and the parked
+   request completed via the launcher/onResume path. **PASS** (hint exactly
+   once, no spam, no premature timeout).
+3. `codec-notify status` → `notification permission: enabled` /
+   `channel: codec-terminal (ready)`. **PASS**
+4. `codec-notify clear` → `OK`. **PASS**
+5. A second `codec-notify send "Build done" "3 files compiled"` → `OK`
+   with **no hint and no dialog** — the granted-state fast path works. **PASS**
 
-Expected after the fix: exactly **one** hint line, then `OK` once the
-dialog is answered. Denial-path check optional (owner decision).
+The only check not visible in a text transcript: the notification
+visually appearing and **tapping it opening CodeC** (content intent) —
+owner will confirm; code path is `NotificationCompat` + `PendingIntent` →
+`MainActivity` (SINGLE_TOP/CLEAR_TOP).
 
 ## 6. Invariants maintained from 4.7
 
