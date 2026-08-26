@@ -4,7 +4,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.background
+import android.text.util.Linkify
+import android.text.SpannableString
+import android.text.style.ClickableSpan
+import android.view.Viewimport androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +44,23 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.viewmodels.TerminalSegment
 import com.codeci.ide.ui.viewmodels.TerminalSegmentType
+
+
+// Phase 6.1: URL tap-to-open in terminal output
+fun linkifyUrls(text: String, onUrlClick: (String) -> Unit): android.text.SpannableString {
+    val ss = SpannableString(text)
+    val patterns = Linkify.Patterns.WEB_URL.toString()
+    // Simple regex fallback for https:// URLs
+    val regex = android.util.Pattern.compile("(https?://[^\s]+)")
+    val matcher = regex.matcher(text)
+    while (matcher.find()) {
+        val url = matcher.group(1) ?: continue
+        ss.setSpan(object : ClickableSpan() {
+            override fun onClick(widget: View) { onUrlClick(url) }
+        }, matcher.start(), matcher.end(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+    return ss
+}
 
 @Composable
 fun TerminalOutput(
