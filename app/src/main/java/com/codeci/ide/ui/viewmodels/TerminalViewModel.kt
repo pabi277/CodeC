@@ -7,8 +7,10 @@ import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.TerminalThemeType
 import com.codeci.ide.ui.theme.ThemeManager
+import com.codeci.ide.ui.terminal.CodecApiBridge
 import com.codeci.ide.ui.terminal.PreparedShell
 import com.codeci.ide.ui.terminal.ShellBootstrap
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalSession
 import com.codeci.ide.ui.terminal.UserlandInstaller
 import com.codeci.ide.ui.terminal.UserlandStatus
@@ -43,7 +45,6 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     val alive: StateFlow<Boolean> = session.alive
     val exitCode: StateFlow<Int?> = session.exitCode
     val storagePermissionRequests: SharedFlow<Unit> = session.storagePermissionRequests
-    val codecApiRequests: SharedFlow<String> = session.codecApiRequests
 
     val fontSizeSp: StateFlow<Float> = settings.terminalFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, 14f)
@@ -68,6 +69,22 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     init {
         viewModelScope.launch(Dispatchers.IO) { startInternal() }
+        // Consume CodeCApi requests in the activity scope (not the Terminal
+        // screen): the PTY/session survives tab switches, and a
+        // SharedFlow emission is silently dropped when nothing is
+        // collecting — so a `codec-clipboard` run from another tab or a
+        // queued initial command must still be answered.
+        viewModelScope.launch(Dispatchers.IO) {
+            session.codecApiRequests.collect { payload ->
+                CodecApiBridge.handle(
+                    getApplication(),
+                    payload,
+                    ShellEnvironment.codecApiDir(
+                        ShellEnvironment.prefixDir(getApplication().filesDir)
+                    )
+                )
+            }
+        }
     }
 
     fun ensureStarted() {

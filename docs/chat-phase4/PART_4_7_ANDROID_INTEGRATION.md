@@ -1,17 +1,19 @@
 # Phase 4 Part 4.7 — Android-integration foundation slice (clipboard bridge)
 
-**Status: 🚧 NEARLY COMPLETE (2026-08-26) — every primary device check has
-passed.** The reusable bridge protocol (`CodeCApi`) and the first
-capability (`codec-clipboard`) are implemented and host-tested in CI. The
-first real-phone run (§5.1) passed all unpiped checks and surfaced one real
-protocol defect — the OSC request went to stdout, so piped/redirected
-output (`get | head`, `> file`) swallowed the request channel. Fixed by
-emitting to the controlling terminal `/dev/tty` (stdout fallback),
-PTY-verified locally, and **re-confirmed on device (§5.2): the piped and
-redirected channels now round-trip multi-line content**. Only two optional
-negatives remain (§7, both quick): a non-text clipboard read — covered by
-host tests — and an airplane-mode restart smoke. The part will be marked
-DONE once those two are run or explicitly waived by the owner.
+**Status: ✅ DONE (device-verified 2026-08-26).** The reusable bridge
+protocol (`CodeCApi`) and the first capability (`codec-clipboard`) are
+implemented, host-tested in CI, and verified on a real arm64 phone —
+§5.1 and §5.2 pass every primary check, including the piped/redirected
+channel fix. The two remaining optional negatives (§7: non-text clipboard
+read, airplane-mode restart smoke) were **explicitly waived by the owner
+(2026-08-26)** after the primary checks passed; the non-text read is
+covered by host tests and the restart smoke cannot regress (clipboard is
+app-side, no network). Review also found and fixed one robustness gap
+after device acceptance (§5.3, F2): bridge requests are now consumed in
+the activity-scoped `TerminalViewModel` instead of the Terminal screen, so
+a `codec-clipboard` running from another tab or a queued initial command is
+never dropped. Exit condition met; next slices (4.8, 4.9, …) extend the
+same protocol.
 
 ---
 
@@ -238,6 +240,27 @@ redirected channel, signed `pkg update`, silent `dpkg --audit`, embedded
 `cc` smoke). Combined with the §5.1 run, the only things never exercised
 on hardware are the two optional checks below.
 
+### 5.3 Post-acceptance review — F2: request dispatch moved to activity scope
+
+The bridge requests were consumed by a `LaunchedEffect` collector in
+`TerminalScreen`. That works while the Terminal tab is composed, but the
+PTY/session is **activity-scoped and survives tab switches**, and a
+`MutableSharedFlow` emission is silently dropped when no collector is
+active (`extraBufferCapacity` does not replay to a late subscriber).
+Consequence: a `codec-clipboard` run from another tab — or a queued
+initial command racing the screen's collector — would time out. The device
+transcripts above stayed green because the commands ran inside the
+Terminal tab.
+
+**Fix (committed in this PR, no protocol change):** `TerminalViewModel`
+(activity-scoped) now owns the collector — it starts in `init`, is alive
+for the whole activity, and calls `CodecApiBridge.handle` with the
+application context; `TerminalScreen` no longer collects. Host behaviour
+unchanged; rerun of the device transcript is not required because the
+protocol, script, and handler are untouched (only **who** consumes the
+flow changed). Final CI: Build APK runs `32916275655` (fix) and
+`32917705206` (docs) green.
+
 ## 7. Device acceptance — remaining optional checks
 
 Status of each primary check (all run on the two artifacts above, on a real
@@ -249,11 +272,14 @@ arm64 phone): ✅ `which` (§5.1) · ✅ `status` §5.1) · ✅ `set` (§5.1+5.2
 The long-press → Paste UI check was not separately exercised but is
 covered by the same `ClipboardManager` set() path that `get` verifies.
 
-Two optional checks remain (each ~30 s). Run them when convenient:
+**Owner waiver (2026-08-26): both optional checks were skipped by explicit
+decision** after all primary checks passed.
 
 ```sh
 # O1 — non-text clipboard (copy an image from Photos/Gallery first, then):
 codec-clipboard get; echo "exit=$?"       # expected: ERR: clipboard does not contain text, exit=1
+#   — NOT RUN on device. Covered by CodecApiBridgeTest
+#     `get reports non-text clipboard as an error` (host).
 # O2 — airplane-mode restart smoke:
 #   close CodeC, enable airplane mode, reopen -> Term, then:
 codec-clipboard status                    # text/empty + length (no network involved)
@@ -261,6 +287,9 @@ codec-clipboard set "after-restart"; codec-clipboard get
 which bash cc pkg
 echo '#include <stdio.h>
 int main(void){printf("clip-ok\n");return 0;}' > t.c && cc t.c -o a.out && ./a.out
+#   — NOT RUN. Clipboard/script state is app-private, no network path, and
+#     the userland/Bash/cc paths these commands exercise were already
+#     verified post-restart in Phase 3's airplane-mode acceptance.
 ```
 
 

@@ -179,16 +179,13 @@ over a reusable in-band bridge: OSC 1337 `CodeCApi:<op>:<req>:<res>` →
 `$PREFIX/tmp/codec-api` (path-confinement enforced). Protocol, security
 model, architecture, tests, and the (not-yet-run) device transcript are in
 [`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
-First device run (2026-08-26) passed every unpiped check and found one
-real defect — the OSC went to stdout so piped/redirected output
-(`get | head`, `> file`) lost the request channel; fixed by emitting to
-/dev/tty with a stdout fallback and **re-confirmed on device** (both
-channels round-trip multi-line content). All primary device checks are
-green; the two remaining items are optional and quick (non-text
-clipboard read — host-tested — and an airplane-mode restart smoke).
-The part is marked DONE once those two are run or waived by the owner.
-Later capabilities (4.8, 4.9, …) each add one wire op + one CLI script
-and reuse the plumbing.
+Second device run (2026-08-26) confirmed the piped/redirected fix on
+hardware; every primary device check is green, the two optional
+negatives were waived by the owner, and a post-acceptance review
+moved request dispatch to the activity-scoped ViewModel (no drops
+when the Terminal tab is not composed). **Part 4.7 is DONE
+(device-verified 2026-08-26).** Later capabilities (4.8, 4.9, …)
+each add one wire op + one CLI script and reuse the plumbing.
 
 **Basic goal.** A first, narrow slice of Android-native capability exposed to
 terminal programs, establishing a reusable pattern (permission handling,
@@ -223,7 +220,7 @@ capabilities exists. Do not attempt the whole surface area in one part.
 | 4.4 — settings/theme parity | none | small–medium | ✅ **DONE** (device-verified) |
 | 4.5 — expanded package build (CI) | none | medium | ✅ **DONE** (run `32845127723` green) |
 | 4.6 — expanded package publish + device accept | 4.5 | medium | ✅ **DONE** (device-verified) |
-| 4.7 — Android integration foundation slice | none | large (epic seed) | ~50–70 (first slice only) |
+| 4.7 — Android integration foundation slice | none | large (epic seed) | ✅ **DONE** (device-verified 2026-08-26) — `codec-clipboard` over `CodeCApi`; 4.8+ ready |
 
 None of these parts block each other except 4.6 on 4.5. Pick whichever the
 project owner wants next; nothing here is a fixed sequence.
