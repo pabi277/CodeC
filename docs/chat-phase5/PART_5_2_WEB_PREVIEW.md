@@ -127,9 +127,13 @@ Then in the app:
 Pure logic (`WebFileSupport`) unit tests. The WebView itself is Android-only
 and cannot run on the host JVM; it is exercised only on device.
 
-### 5.2 CI
+### 5.2 CI (run [`32937366350`](https://github.com/pabi277/CodeC/actions/runs/32937366350), green — 2026-08-26)
 
-Push → "Build APK" (assemble + unit tests + lint) must be green.
+Push triggered "Build APK", which the `gradle-bootstrap` bridge expands to
+`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`. **Green in 3m1s** —
+`WebFileSupportTest` and all existing tests passed, and lint was clean. The
+only annotations are unrelated runner deprecation notices (Node.js 20 /
+setup-java v4).
 
 ### 5.3 Device
 
