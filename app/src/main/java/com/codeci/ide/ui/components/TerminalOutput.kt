@@ -7,7 +7,8 @@ import android.widget.Toast
 import android.text.util.Linkify
 import android.text.SpannableString
 import android.text.style.ClickableSpan
-import android.view.Viewimport androidx.compose.foundation.background
+import android.view.View
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,7 +50,6 @@ import com.codeci.ide.ui.viewmodels.TerminalSegmentType
 // Phase 6.1: URL tap-to-open in terminal output
 fun linkifyUrls(text: String, onUrlClick: (String) -> Unit): android.text.SpannableString {
     val ss = SpannableString(text)
-    val patterns = Linkify.Patterns.WEB_URL.toString()
     // Simple regex fallback for https:// URLs
     val regex = android.util.Pattern.compile("(https?://[^\s]+)")
     val matcher = regex.matcher(text)
