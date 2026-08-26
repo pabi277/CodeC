@@ -1,13 +1,16 @@
 # Phase 5 Part 5.1 — Client fixes KI-1 & KI-2
 
-**Status: 🚧 IN PROGRESS (code + host tests written, awaiting CI + device
-verification).** These are the two known, non-blocking client issues recorded
-at the end of the Phase 4.5/4.6 post-implementation review
+**Status: ✅ DONE (device-verified 2026-08-26).** These are the two known,
+non-blocking client issues recorded at the end of the Phase 4.5/4.6
+post-implementation review
 ([`../chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](../chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md)
 §6.2 "Known issues recorded for a future client PR"). Both are **client-side
 only** — no repository rebuild, no re-publish, no bootstrap archive change —
-so this part is inexpensive and does not trigger the ~60–100 minute package
+so this part is inexpensive and did not trigger the ~60–100 minute package
 workflow.
+
+The full exit condition (no re-download, KI-1 success, KI-2 `$PREFIX` +
+`update-alternatives` + bridge round-trip) passed on a real device; see §5.3.
 
 ---
 
@@ -180,9 +183,33 @@ the `gradle-bootstrap` bridge expands to
   annotations are unrelated runner deprecation notices (Node.js 20 /
   setup-java v4).
 
-### 5.3 Device (pending)
+### 5.3 Device (2026-08-26) — ✅ ALL EXIT CONDITIONS MET
 
-The §4 recipe above; to be filled in with the owner's transcript.
+The owner ran the §4 recipe on a real device with the latest APK (Build APK
+artifact of run [`32935516850`](https://github.com/pabi277/CodeC/actions/runs/32935516850)). Transcript (abridged):
+
+1. **No re-download:** a single `userland: already installed
+   (userland-v2-dev)`; no repeated download lines. **PASS** (regression 1 gone).
+2. **KI-1:** `pkg update` fetched the signed indexes, then
+   `pkg install -y less; echo "exit=$?"` → apt reported
+   `less is already the newest version (704)` / `0 newly installed`, the
+   wrapper printed `pkg: less already installed (already the newest
+   version).`, and `exit=0`. **PASS**.
+3. **KI-2 `$PREFIX`:** `echo "$PREFIX"` →
+   `/data/data/com.codeci.ide/files/usr`. **PASS**.
+4. **KI-2 `update-alternatives`:** `--install "$PREFIX/bin/editor" editor
+   "$PREFIX/bin/less" 50` registered cleanly (`using …/bin/less to provide
+   …/bin/editor (editor) in auto mode` — no `Cross-device link` / `are the
+   same file`), and `--remove` fell back to busybox `vi`. The only warnings
+   are benign (a previously dangling `editor` link being fixed, and the
+   absent `makewhatis`/`mandoc` man-page database). **PASS**.
+5. **Bridge round-trip:** `codec-clipboard set "hello" && codec-clipboard
+   get` → `OK` then `hello` (regression 2 fixed); `codec-notify status` →
+   `notification permission: disabled` / `channel: codec-terminal (not
+   created)` — the correct fresh-device state, proving the notify bridge
+   path also works. **PASS**.
+
+**Part 5.1 exit condition is met and device-verified; the part is DONE.**
 
 ## 6. Not done / out of scope this part
 

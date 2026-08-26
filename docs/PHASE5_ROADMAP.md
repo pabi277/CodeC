@@ -1,18 +1,19 @@
 # CodeC Phase 5 roadmap
 
 **Status (2026-08-26):** 🚧 **STARTED — Part 5.1 (KI-1 & KI-2 client fixes)
-in progress.** Phase 4 (Parts 4.1–4.8) is complete and device-verified; its
-roadmap now lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
-This file is the same kind of **roadmap, not an execution plan** — it names
-candidate areas and their rough provenance. It does **not** pin down exact
-technical decisions, UI designs, package lists, or exit-condition wording;
-those get decided (and written down in `docs/chat-phase5/`) when a part is
-actually picked up, using the same verify-first / evidence-before-hypothesis
+✅ DONE (device-verified 2026-08-26).** Phase 4 (Parts 4.1–4.8) is complete
+and device-verified; its roadmap now lives in
+[`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md). This file
+is the same kind of **roadmap, not an execution plan** — it names candidate
+areas and their rough provenance. It does **not** pin down exact technical
+decisions, UI designs, package lists, or exit-condition wording; those get
+decided (and written down in `docs/chat-phase5/`) when a part is actually
+picked up, using the same verify-first / evidence-before-hypothesis
 discipline used throughout Phases 3–4. **Do not treat anything below as a
 spec; treat it as a starting scope to confirm with the owner.**
 
-Part 5.1 (the two known client fixes) was picked 2026-08-26; its decisions,
-exit condition, and evidence live in
+Part 5.1 (the two known client fixes) was picked 2026-08-26 and is **DONE
+(device-verified)**; its decisions, exit condition, and evidence live in
 [`chat-phase5/PART_5_1_KI_FIXES.md`](chat-phase5/PART_5_1_KI_FIXES.md).
 
 ## Why parts are sized the way they are
@@ -55,7 +56,7 @@ This is a budget, not a target to hit exactly. Two consequences:
 
 | Part | Depends on | Complexity | Est. replies | Status |
 |---|---|---|---|---|
-| **5.1 — KI-1 & KI-2 client fixes** | none (client-side only, no rebuild) | small / low-risk | ~10 | 🚧 in progress (code + host tests written; awaiting CI + device) |
+| **5.1 — KI-1 & KI-2 client fixes** | none (client-side only, no rebuild) | small / low-risk | ~10 | ✅ DONE (device-verified 2026-08-26) |
 | *(further parts decided when picked up)* | — | — | — | — |
 
 ## Rules that carry forward to Phase 5
