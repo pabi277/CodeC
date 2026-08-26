@@ -114,12 +114,15 @@ run by CI. The new tests were written to compile and run in the existing
 `ShellEnvironmentTest` suite (JUnit4, `sh` + mocked backend binaries on a temp
 prefix, matching the existing `pkg install`/`heal`/`confirm` execution tests).
 
-### 5.2 CI (pending)
+### 5.2 CI (run [`32932276532`](https://github.com/pabi277/CodeC/actions/runs/32932276532), green — 2026-08-26)
 
-Next push to this session branch triggers the legacy "Build APK" workflow,
+Pushing to the session branch triggered the legacy "Build APK" workflow,
 which the `gradle-bootstrap` bridge expands to
-`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` — this will
-compile and run the new tests. To be filled in when green.
+`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`. **Green in
+2m40s** — the three new host tests (`canonicalPrefix`, `KI-2 prefix
+canonicalizes…`, `pkg install of an already-newest package succeeds (KI-1)`)
+compiled and passed, and lint was clean. The only annotations are unrelated
+runner deprecation notices (Node.js 20 / setup-java v4).
 
 ### 5.3 Device (pending)
 
