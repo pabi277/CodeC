@@ -129,13 +129,56 @@ The legacy workflow invokes `gradle :app:assembleDebug`, which the
 real test-compile error this way: `NotifyOps({}, {}, …)` send lambda arity;
 fixed in `c90965e`). APK artifact `CodeC-IDE` produced.
 
-### 5.3 Pending — device transcript (user's phone)
+### 5.3 First on-device run (2026-08-26) — permission flow works, two fixes found
 
-- `notify status` (permission off) → `notify send` → **system dialog** →
-  allow → notification visible + tap opens the app → `notify status` shows
-  enabled → `notify clear` →
-  denial-path check (if the owner wants it: Settings → turn off → `send`
-  → `ERR:`).
+User ran the corrected recipe (`codec-notify`, not `notify`):
+
+1. `which codec-notify` → `/data/user/0/com.codeci.ide/files/usr/bin/codec-notify`
+   — bootstrap v24 deployed; **PASS**.
+2. `codec-notify status` → `notification permission: disabled` /
+   `channel: codec-terminal (not created)` — the exact Android 13+ new-install
+   state; **PASS**.
+3. `codec-notify send "Build done" "3 files compiled"` → the CLI printed
+   `Android notification permission: allow it in the dialog (CodeC >
+   Notifications)` **~25 times**, then the command ended — **no OK, no
+   notification**. Post-run `codec-notify status` showed
+   `permission: enabled` + `channel: ready`, and `codec-notify clear`
+   returned `OK` — so the permission/channel machinery worked, but the
+   send never completed in the CLI's window.
+4. Diagnosis: (a) the hint was printed **every 50 ms poll** and the
+   permission wait was only ~10 s — too short for answering the system
+   dialog (especially since the user may answer it after the CLI has
+   already timed out); (b) for a targetSdk ≤ 32 app the Android 13+
+   dialog can be **system-owned** (shown on first channel creation), and
+   in that path **no `ActivityResult` reaches our launcher**, so the
+   parked request was never completed → the CLI timed out.
+
+**Fixes (commit `7a321ad`, CI green run `32922988131`):**
+- **F1 (CLI):** the hint is printed **once**, and once `NEED_PERMISSION`
+  is seen the poll window extends to ~30 s (600 × 0.05 s); without any
+  response file the CLI still gives up after ~2.5 s (no-response case).
+- **F2 (activity):** `MainActivity.onResume` now recovers a parked notify
+  request: after the dialog closes (or the user returns from Settings)
+  it re-checks `areNotificationsEnabled()` and completes the request with
+  `OK`/`ERR`, regardless of which dialog answered it. The launcher result
+  still wins when it arrives (it clears the parked request first).
+
+### 5.4 Pending — device retest (user's phone)
+
+The device permission is now **enabled**; to re-exercise the dialog, first
+turn it off: **Android Settings → Apps → CodeC → Notifications → off**,
+then in the terminal:
+
+```sh
+codec-notify status        # expect: disabled
+codec-notify send "Build done" "3 files compiled"
+# dialog should appear; tap Allow; notification should show; tap it -> CodeC opens
+codec-notify status        # expect: enabled / channel ready
+codec-notify clear         # expect: OK
+```
+
+Expected after the fix: exactly **one** hint line, then `OK` once the
+dialog is answered. Denial-path check optional (owner decision).
 
 ## 6. Invariants maintained from 4.7
 
