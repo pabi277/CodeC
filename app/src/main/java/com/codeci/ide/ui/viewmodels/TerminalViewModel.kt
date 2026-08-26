@@ -1,6 +1,7 @@
 package com.codeci.ide.ui.viewmodels
 
 import android.app.Application
+import android.os.PowerManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.services.CompilerSettings
@@ -43,7 +44,20 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private val bootstrap = ShellBootstrap(application)
     private val userland = UserlandInstaller(application)
     private val session = TerminalSession()
+    private val wakeLock: PowerManager.WakeLock? = (getApplication() as? android.app.Application)?.let {
+        (it.getSystemService(android.content.Context.POWER_SERVICE) as? PowerManager)?.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK, "CodeC::TerminalWake"
+        )
+    }
 
+    init {
+        // Phase 6.1: wake lock when terminal session is active
+        viewModelScope.launch(Dispatchers.Main) {
+            session.alive.collect { alive ->
+                if (alive) wakeLock?.acquire(10*60*1000L) else wakeLock?.release()
+            }
+        }
+    }
     val snapshot: StateFlow<TerminalSnapshot> = session.snapshot
     val alive: StateFlow<Boolean> = session.alive
     val exitCode: StateFlow<Int?> = session.exitCode
