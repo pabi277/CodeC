@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "22"
+    const val BOOTSTRAP_VERSION = "23"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -879,6 +879,93 @@ HELP
         fi
     """.trimIndent() + "\n"
 
+    /**
+     * Phase 4.7 foundation: `codec-clipboard` talks to the app through the
+     * in-band [CodecApiProtocol] bridge. The script never carries the
+     * clipboard content inside the escape sequence — the payload only names
+     * app-private files under `$PREFIX/tmp/codec-api`.
+     */
+    fun clipboardScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-clipboard — Android clipboard access via the CodeC terminal bridge.
+        # Usage:
+        #   codec-clipboard get            print the clipboard text (empty prints nothing, exit 0)
+        #   codec-clipboard set [TEXT]     set the clipboard to TEXT (argv joined by spaces)
+        #   codec-clipboard clear          empty the clipboard
+        #   codec-clipboard status         describe the clipboard (text/empty/non-text + length)
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-clipboard get|set [TEXT]|clear|status" >&2
+          exit 2
+        }
+
+        op="${'$'}{1:-}"
+        case "${'$'}op" in
+          get|clear|status) ;;
+          set) [ "${'$'}#" -ge 2 ] || usage ;;
+          *) usage ;;
+        esac
+        shift
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-clipboard: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req=""
+        res=""
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-clipboard: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        # The response name is derived from the request temp file: unique,
+        # a direct child of the API dir, and NOT pre-created. The CLI polls
+        # for the app's atomic rename, so an empty clipboard is a valid
+        # empty response (mktemp would otherwise create an empty file).
+        res="${'$'}req.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}res.partial"' EXIT HUP INT TERM
+
+        if [ "${'$'}op" = "set" ]; then
+          printf '%s' "${'$'}*" > "${'$'}req"
+        fi
+
+        # CLI subcommand names map to wire protocol names (CodeCApi:<domain>.<op>).
+        wire_op="clipboard.${'$'}op"
+
+        # Single backslashes on purpose: \033 is ESC and \007 is BEL.
+        printf '\033]1337;CodeCApi:%s:%s:%s\007' "${'$'}wire_op" "${'$'}req" "${'$'}res"
+
+        # Wait for the app to deliver <res> (created by an atomic rename).
+        # ~2.5s in 50ms steps.
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-clipboard: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
+    fun codecApiDir(prefix: File): File = File(prefix, "tmp/${CodecApiProtocol.API_DIR_NAME}")
+
     data class StorageLink(val name: String, val target: File)
     data class StorageSetupResult(
         val success: Boolean,
@@ -1247,6 +1334,7 @@ class ShellBootstrap(private val context: Context) {
         writeExecutable(File(bin, "pkg"), ShellEnvironment.pkgScript())
         writeExecutable(File(bin, "codec-setup-storage"), ShellEnvironment.setupStorageScript())
         writeExecutable(File(bin, "termux-setup-storage"), ShellEnvironment.setupStorageScript())
+        writeExecutable(File(bin, "codec-clipboard"), ShellEnvironment.clipboardScript())
         val bash = File(bin, "bash")
         if (!ShellEnvironment.isElf(bash)) {
             writeExecutable(bash, ShellEnvironment.bashShim())

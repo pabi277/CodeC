@@ -41,9 +41,15 @@ class TerminalSession(
     private val _storagePermissionRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val storagePermissionRequests: SharedFlow<Unit> = _storagePermissionRequests.asSharedFlow()
 
+    private val _codecApiRequests = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    val codecApiRequests: SharedFlow<String> = _codecApiRequests.asSharedFlow()
+
     init {
         emulator.onStoragePermissionRequested = {
             _storagePermissionRequests.tryEmit(Unit)
+        }
+        emulator.onCodecApiRequest = { payload ->
+            _codecApiRequests.tryEmit(payload)
         }
     }
 

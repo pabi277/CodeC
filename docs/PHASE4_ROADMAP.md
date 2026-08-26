@@ -171,12 +171,22 @@ confirm this when the part starts).
 
 ### Part 4.7 — Termux:API-style Android integration (foundation slice)
 
+**Status: 🚧 IN PROGRESS (2026-08-26).** First capability (chosen when the
+part started): **clipboard access** — `codec-clipboard get|set|clear|status`
+over a reusable in-band bridge: OSC 1337 `CodeCApi:<op>:<req>:<res>` →
+`TerminalEmulator` → `TerminalSession` → `TerminalScreen` →
+`CodecApiBridge`, with request/response carried in app-private files under
+`$PREFIX/tmp/codec-api` (path-confinement enforced). Protocol, security
+model, architecture, tests, and the (not-yet-run) device transcript are in
+[`chat-phase4/PART_4_7_ANDROID_INTEGRATION.md`](chat-phase4/PART_4_7_ANDROID_INTEGRATION.md).
+**The part is NOT done until that transcript passes on a real device**;
+later capabilities (4.8, 4.9, …) each add one wire op + one CLI script and
+reuse the plumbing.
+
 **Basic goal.** A first, narrow slice of Android-native capability exposed to
-terminal programs (for example, a single low-risk capability such as
-clipboard access or a vibrate/notify call — the exact first capability is
-chosen when this part starts), establishing a reusable pattern (permission
-handling, the bridge/IPC mechanism, and a CLI command shape) that later
-capabilities can follow without redesigning the plumbing each time.
+terminal programs, establishing a reusable pattern (permission handling,
+the bridge/IPC mechanism, and a CLI command shape) that later capabilities
+can follow without redesigning the plumbing each time.
 
 **Complexity:** large epic. **This entry only scopes a first foundation
 slice at ~50–70 replies.** [`TERMINAL_PLAN.md`](TERMINAL_PLAN.md) §12 lists

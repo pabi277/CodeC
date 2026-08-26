@@ -427,6 +427,80 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `clipboardScript is a posix sh CLI speaking the CodeCApi osc protocol`() {
+        val script = ShellEnvironment.clipboardScript()
+        assertTrue(script.startsWith("#!/system/bin/sh"))
+        assertTrue(script.contains("codec-clipboard get"))
+        assertTrue(script.contains("codec-clipboard set [TEXT]"))
+        assertTrue(script.contains("codec-clipboard clear"))
+        assertTrue(script.contains("codec-clipboard status"))
+        assertTrue(script.contains("API_DIR=\"\$PREFIX/tmp/codec-api\""))
+        assertTrue(script.contains("mktemp \"\$API_DIR/req.XXXXXX\""))
+        assertTrue(script.contains("mktemp \"\$API_DIR/res.XXXXXX\""))
+        assertTrue(script.contains("CodeCApi:%s:%s:%s"))
+        assertTrue(script.contains("sleep 0.05"))
+        assertTrue(script.contains("trap 'rm -f"))
+        // The OSC must be emitted as real ESC/BEL bytes: a single backslash
+        // before 033/007, never a doubled backslash (which printf prints
+        // literally and the emulator would render as text).
+        assertTrue(script.contains("\\033]1337;CodeCApi:%s:%s:%s\\007"))
+        assertFalse(script.contains("\\\\033]1337;CodeCApi"))
+    }
+
+    @Test
+    fun `clipboardScript performs a full osc request and prints the app response`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-clip-${System.nanoTime()}")
+        try {
+            val prefix = File(base, "usr")
+            val bin = File(prefix, "bin").apply { mkdirs() }
+            val script = File(bin, "codec-clipboard")
+            script.writeText(ShellEnvironment.clipboardScript())
+            script.setExecutable(true)
+
+            val proc = ProcessBuilder("sh", script.absolutePath, "get")
+                .redirectErrorStream(true)
+                .start()
+
+            // Fake the app: scan the script's stdout byte-by-byte for the
+            // OSC request (a large blocking read would not see it until the
+            // script exits), then create the named response file.
+            val output = StringBuilder()
+            val responded = java.util.concurrent.atomic.AtomicBoolean(false)
+            val marker = Regex("\u001b\\]1337;CodeCApi:([^:]+):([^:]+):([^\u0007]*)\u0007")
+            val responder = Thread {
+                try {
+                    val input = proc.inputStream
+                    while (true) {
+                        val b = input.read()
+                        if (b < 0) break
+                        output.append(b.toChar()) // byte-preserving (Latin-1)
+                        val match = marker.find(output)
+                        if (match != null && !responded.get()) {
+                            responded.set(true)
+                            val resPath = match.groupValues[3]
+                            if (resPath.isNotEmpty()) {
+                                File(resPath).writeText("hello from clipboard")
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            responder.start()
+            val exitCode = proc.waitFor()
+            responder.join(5000)
+
+            assertEquals(0, exitCode)
+            assertTrue(output.toString().contains("\u001b]1337;CodeCApi:clipboard.get:"))
+            assertTrue(output.toString().contains("\u0007"))
+            assertTrue(output.toString().contains("hello from clipboard"))
+            assertTrue(responded.get())
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `setupStorageDirectory creates storage directory and symlinks to target folders`() {
         val base = File(System.getProperty("java.io.tmpdir"), "codec-storage-test-${System.nanoTime()}")
         try {

@@ -43,6 +43,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     val alive: StateFlow<Boolean> = session.alive
     val exitCode: StateFlow<Int?> = session.exitCode
     val storagePermissionRequests: SharedFlow<Unit> = session.storagePermissionRequests
+    val codecApiRequests: SharedFlow<String> = session.codecApiRequests
 
     val fontSizeSp: StateFlow<Float> = settings.terminalFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, 14f)

@@ -37,6 +37,7 @@ import com.codeci.ide.MainActivity
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.TerminalEmulatorView
 import com.codeci.ide.ui.components.TerminalExtraKeys
+import com.codeci.ide.ui.terminal.CodecApiBridge
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.theme.getTerminalTheme
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -69,6 +70,17 @@ fun TerminalScreen(
     LaunchedEffect(Unit) {
         viewModel.storagePermissionRequests.collect {
             (context as? MainActivity)?.requestStoragePermissions()
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.codecApiRequests.collect { payload ->
+            CodecApiBridge.handle(
+                context.applicationContext,
+                payload,
+                ShellEnvironment.codecApiDir(
+                    ShellEnvironment.prefixDir(context.filesDir)
+                )
+            )
         }
     }
     LaunchedEffect(commandNonce, initialCommand) {
