@@ -245,7 +245,7 @@ wiring.
 | 4.5 — expanded package build (CI) | none | medium | ✅ **DONE** (run `32845127723` green) |
 | 4.6 — expanded package publish + device accept | 4.5 | medium | ✅ **DONE** (device-verified) |
 | 4.7 — Android integration foundation slice | none | large (epic seed) | ✅ **DONE** (device-verified 2026-08-26) — `codec-clipboard` over `CodeCApi`; 4.8+ ready |
-| 4.8 — Android notifications slice (`POST_NOTIFICATIONS`) | 4.7 | medium | 🚧 **IN PROGRESS** (2026-08-26) — `codec-notify send|clear|status`; host harness green; device transcript pending |
+| 4.8 — Android notifications slice (`POST_NOTIFICATIONS`) | 4.7 | medium | 🚧 **IN PROGRESS** (2026-08-26) — `codec-notify send|clear|status`; host harness green, CI green (`32920735841`); device transcript pending |
 
 None of these parts block each other except 4.6 on 4.5. Pick whichever the
 project owner wants next; nothing here is a fixed sequence.

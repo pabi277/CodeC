@@ -1,10 +1,11 @@
 # Phase 4 Part 4.8 — Android-integration slice 2 (notifications)
 
-**Status: 🚧 IN PROGRESS (2026-08-26).** Decision D1 is locked, code and host
-tests are written, and the CLI was validated end-to-end with a local
+**Status: 🚧 IN PROGRESS (2026-08-26).** Decision D1 is locked; code and
+host tests are written; the CLI was validated end-to-end with a local
 fake-app harness (real `sh`, real OSC bytes, including the Android 13+
-permission dance). CI compilation run and the **device transcript are
-pending** — this record will be updated with them.
+permission dance) and CI is green (run `32920735841`: assemble + unit
+tests + lint). Only the **device transcript is pending** — this record
+will be updated with it.
 
 Part 4.7 already established the reusable `CodeCApi` bridge (`OSC 1337;
 CodeCApi:<op>:<req>:<res>BEL` + app-private files under
@@ -119,13 +120,20 @@ at a time):
 - `codec-clipboard` regression harness (get/set/clear/status/ERR + piped
   get): **PASS**.
 
-### 5.2 Pending
+### 5.2 CI (run [`32920735841`](https://github.com/pabi277/CodeC/actions/runs/32920735841), green — 2026-08-26)
 
-- CI `assembleDebug` (compiles main sources; unit tests are not compiled by
-  the workflow) + APK artifact.
-- Device transcript (user's phone): `notify status` (permission off) →
-  `notify send` → **system dialog** → allow → notification visible + tap
-  opens the app → `notify status` shows enabled → `notify clear` →
+The legacy workflow invokes `gradle :app:assembleDebug`, which the
+`gradle-bootstrap` compatibility bridge turns into
+`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` — so the whole
+4.8 test suite compiled **and passed** (the first push, `e20d2d8`, caught a
+real test-compile error this way: `NotifyOps({}, {}, …)` send lambda arity;
+fixed in `c90965e`). APK artifact `CodeC-IDE` produced.
+
+### 5.3 Pending — device transcript (user's phone)
+
+- `notify status` (permission off) → `notify send` → **system dialog** →
+  allow → notification visible + tap opens the app → `notify status` shows
+  enabled → `notify clear` →
   denial-path check (if the owner wants it: Settings → turn off → `send`
   → `ERR:`).
 
