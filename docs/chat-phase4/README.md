@@ -23,11 +23,10 @@ Phase 4 covers polish, expansion, and UX improvements on top of the Phase 3 pack
   Published run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) to `https://pabi277.github.io/CodeC/dev` and verified `pkg install` + execution of all 15 new package roots on a real arm64 device.
 - **[Post-implementation review — Parts 4.5/4.6 recipe-override hardening](PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md):** ✅ **DONE (device-verified 2026-08-26).**
   Fixed latent override bugs found in review (unreachable whitelist guards, dead purge/dead override code), added runtime-semantics tests; fully artifact-neutral — the published repository needed no rebuild.
-- **Part 4.7 — Android-integration foundation slice:** 🚧 **IN PROGRESS (2026-08-26).** First
-  capability chosen: **clipboard** (`codec-clipboard get|set|clear|status`) over a reusable
+- **Part 4.7 — Android-integration foundation slice:** 🚧 **NEARLY COMPLETE (2026-08-26).**
+  First capability chosen: **clipboard** (`codec-clipboard get|set|clear|status`) over a reusable
   in-band `CodeCApi` OSC 1337 bridge (file-based request/response under `$PREFIX/tmp/codec-api`,
-  path-confinement security boundary). Host tests green in CI; **first device run passed all
-  unpiped checks** and found one real defect (piped/redirected stdout swallowed the request
-  channel) — fixed by emitting the OSC to `/dev/tty` with a stdout fallback, verified under a
-  real PTY locally; **final piped/redirected on-device confirmation pending** —
-  record and transcript in [`PART_4_7_ANDROID_INTEGRATION.md`](PART_4_7_ANDROID_INTEGRATION.md).
+  path-confinement security boundary). CI + every primary device check green, including the
+  piped/redirected channel fix (`/dev/tty` + stdout fallback, device-confirmed). Two optional
+  negatives remain (non-text clip — host-tested; airplane-mode smoke).
+  Record and evidence in [`PART_4_7_ANDROID_INTEGRATION.md`](PART_4_7_ANDROID_INTEGRATION.md).

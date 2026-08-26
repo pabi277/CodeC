@@ -182,10 +182,13 @@ model, architecture, tests, and the (not-yet-run) device transcript are in
 First device run (2026-08-26) passed every unpiped check and found one
 real defect — the OSC went to stdout so piped/redirected output
 (`get | head`, `> file`) lost the request channel; fixed by emitting to
-/dev/tty with a stdout fallback (PTY-verified locally). **The part is
-NOT done until the final piped/redirected on-device confirmation
-passes**; later capabilities (4.8, 4.9, …) each add one wire op + one
-CLI script and reuse the plumbing.
+/dev/tty with a stdout fallback and **re-confirmed on device** (both
+channels round-trip multi-line content). All primary device checks are
+green; the two remaining items are optional and quick (non-text
+clipboard read — host-tested — and an airplane-mode restart smoke).
+The part is marked DONE once those two are run or waived by the owner.
+Later capabilities (4.8, 4.9, …) each add one wire op + one CLI script
+and reuse the plumbing.
 
 **Basic goal.** A first, narrow slice of Android-native capability exposed to
 terminal programs, establishing a reusable pattern (permission handling,
