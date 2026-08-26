@@ -927,8 +927,8 @@ HELP
         # a direct child of the API dir, and NOT pre-created. The CLI polls
         # for the app's atomic rename, so an empty clipboard is a valid
         # empty response (mktemp would otherwise create an empty file).
-        res="${'$'}req.out"
-        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}res.partial"' EXIT HUP INT TERM
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
 
         if [ "${'$'}op" = "set" ]; then
           printf '%s' "${'$'}*" > "${'$'}req"
