@@ -106,9 +106,7 @@ object ShellEnvironment {
      * installer and the exported variable stay consistent without rewriting the
      * installer's paths.
      */
-    fun canonicalPrefix(path: String): String =
-        if (path.startsWith("/data/user/0/")) "/data/data/" + path.removePrefix("/data/user/0/")
-        else path
+    fun canonicalPrefix(path: String): String = CodecApiProtocol.canonicalUserPrefix(path)
 
     fun prefixDir(filesDir: File): File = File(filesDir, PREFIX_NAME)
 

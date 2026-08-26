@@ -95,13 +95,36 @@ object CodecApiProtocol {
     fun permissionNotice(permission: String): String = "$NEED_PERMISSION_PREFIX$permission"
 
     /**
+     * Android's `/data/user/0/` is the user-emulation alias of the canonical
+     * `/data/data/` spelling that dpkg and every published `.deb` record.
+     * They address the same inodes, but `File.canonicalFile()` (realpath)
+     * cannot always collapse one into the other: on some devices they are
+     * distinct bind mounts rather than a symlink — the same reason the
+     * Phase 4.5/4.6 review found `readlink -f` unreliable for canonicalization.
+     * Maps to the dpkg-recorded spelling so path comparisons are invariant to
+     * which alias a caller used.
+     */
+    fun canonicalUserPrefix(path: String): String =
+        if (path.startsWith("/data/user/0/")) "/data/data/" + path.removePrefix("/data/user/0/")
+        else path
+
+    /**
      * True only when [path] resolves (symlinks included) to a *direct child*
      * of [apiDir]. This is the security boundary of the bridge: a payload
      * from the terminal can name only files inside `$PREFIX/tmp/codec-api`.
+     *
+     * KI-2 makes the shell export the canonical `/data/data/…` `$PREFIX`, so
+     * the CLI emits `/data/data/…` request/response paths while the app still
+     * computes `apiDir` from the raw `Context.getFilesDir()` spelling. Both
+     * spellings are normalized ([canonicalUserPrefix]) *before* resolving so
+     * the confinement check does not reject a valid request on bind-mounted
+     * devices where `canonicalFile` cannot collapse the alias.
      */
     fun isConfinedDirectChild(path: String, apiDir: File): Boolean {
-        val root = runCatching { apiDir.canonicalFile }.getOrNull() ?: return false
-        val canonical = runCatching { File(path).canonicalFile }.getOrNull() ?: return false
+        val root = runCatching { File(canonicalUserPrefix(apiDir.path)).canonicalFile }.getOrNull()
+            ?: return false
+        val canonical = runCatching { File(canonicalUserPrefix(path)).canonicalFile }.getOrNull()
+            ?: return false
         return canonical.parentFile == root
     }
 }

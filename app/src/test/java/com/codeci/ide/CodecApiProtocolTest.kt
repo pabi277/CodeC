@@ -129,6 +129,24 @@ class CodecApiProtocolTest {
     }
 
     @Test
+    fun `canonicalUserPrefix maps the user 0 alias and leaves others untouched`() {
+        assertEquals(
+            "/data/data/com.codeci.ide/files/usr",
+            CodecApiProtocol.canonicalUserPrefix("/data/user/0/com.codeci.ide/files/usr")
+        )
+        // Already-canonical, temp dirs, and secondary users are unchanged.
+        assertEquals(
+            "/data/data/com.codeci.ide/files/usr",
+            CodecApiProtocol.canonicalUserPrefix("/data/data/com.codeci.ide/files/usr")
+        )
+        assertEquals("/tmp/codec/usr", CodecApiProtocol.canonicalUserPrefix("/tmp/codec/usr"))
+        assertEquals(
+            "/data/user/10/com.codeci.ide/files/usr",
+            CodecApiProtocol.canonicalUserPrefix("/data/user/10/com.codeci.ide/files/usr")
+        )
+    }
+
+    @Test
     fun `confinement resolves symlink escapes`() {
         val base = tempDir()
         try {
