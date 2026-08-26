@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -60,6 +61,7 @@ import androidx.lifecycle.lifecycleScope
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -120,6 +122,29 @@ class MainActivity : ComponentActivity() {
         if (ShellEnvironment.hasStoragePermission(this)) {
             val home = ShellEnvironment.homeDir(filesDir)
             ShellEnvironment.setupStorageDirectory(home)
+        }
+        recoverParkedNotificationPermission()
+    }
+
+    /**
+     * Android 13+ can answer `POST_NOTIFICATIONS` through the system-owned
+     * dialog it shows on first channel creation for targetSdk ≤ 32 apps —
+     * in that path no `ActivityResult` reaches the launcher, so the parked
+     * CodeCApi request would never be completed. Re-check after the dialog
+     * is gone (onResume) and finish the request with the actual state. A
+     * short delay avoids racing a launcher dialog that is still opening; if
+     * the launcher already answered, the request is no longer parked.
+     */
+    private fun recoverParkedNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (pendingNotificationRequest == null) return
+        lifecycleScope.launch {
+            delay(400)
+            if (pendingNotificationRequest != null) {
+                completeNotificationPermission(
+                    NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled()
+                )
+            }
         }
     }
 

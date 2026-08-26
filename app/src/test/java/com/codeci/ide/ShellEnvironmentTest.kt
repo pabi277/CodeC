@@ -530,6 +530,12 @@ class ShellEnvironmentTest {
         // Permission flow: NEED_PERMISSION is not a final outcome — the CLI
         // prints a hint and keeps polling until the app writes OK/ERR.
         assertTrue(script.contains("NEED_PERMISSION:*"))
+        // The hint must be printed ONCE (early feedback: 25+ per-poll
+        // repeats flooded the terminal) and the permission wait must be
+        // long enough for the user to answer the system dialog.
+        assertTrue(script.contains("hint_shown=0"))
+        assertTrue(script.contains("hint_shown=1"))
+        assertTrue(script.contains("\$i\" -ge 600"))
         // Same /dev/tty-first, attempted-write discipline as clipboard.
         assertEquals(2, script.windowed("CodeCApi:%s:%s:%s".length)
             .count { it == "CodeCApi:%s:%s:%s" })
@@ -585,7 +591,8 @@ class ShellEnvironmentTest {
 
             assertEquals(0, exitCode)
             assertTrue(output.toString().contains("\u001b]1337;CodeCApi:notify.send:"))
-            assertTrue(output.toString().contains("Android notification permission: allow it"))
+            val hint = "Android notification permission: allow it"
+            assertEquals(1, Regex(Regex.escape(hint)).findAll(output.toString()).count())
             assertTrue(output.toString().trim().endsWith("OK"))
             assertTrue(responded.get())
         } finally {

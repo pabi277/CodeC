@@ -1042,16 +1042,21 @@ HELP
 
         # Wait for the app to deliver <res>. While the Android 13+
         # permission dialog is pending the app first writes
-        # NEED_PERMISSION:<permission>; keep polling because the app
-        # atomically replaces it with the real outcome (OK or ERR) once the
-        # user answers. ~10s in 50ms steps.
+        # NEED_PERMISSION:<permission>; atomic rewrite with the real outcome
+        # (OK or ERR) happens when the user answers. Print the hint ONCE and
+        # be patient (30s in 50ms steps): answering the dialog can take a
+        # while, and past feedback showed per-poll spam + a too-early timeout.
         i=0
+        hint_shown=0
         while :; do
           if [ -e "${'$'}res" ]; then
             preview="$(cat "${'$'}res" 2>/dev/null || true)"
             case "${'$'}preview" in
               NEED_PERMISSION:*)
-                echo "Android notification permission: allow it in the dialog (CodeC > Notifications)" >&2
+                if [ "${'$'}hint_shown" -eq 0 ]; then
+                  echo "Android notification permission: allow it in the dialog (CodeC > Notifications)" >&2
+                  hint_shown=1
+                fi
                 ;;
               *)
                 break
@@ -1059,7 +1064,11 @@ HELP
             esac
           fi
           i=${'$'}((i + 1))
-          [ "${'$'}i" -ge 200 ] && break
+          if [ "${'$'}hint_shown" -eq 0 ]; then
+            [ "${'$'}i" -ge 50 ] && break
+          else
+            [ "${'$'}i" -ge 600 ] && break
+          fi
           sleep 0.05
         done
 
