@@ -1,7 +1,7 @@
 # Phase 5 Part 5.3 — CodeCApi capability batch: toast, share, open URL, vibrate
 
-**Status: 🚧 IN PROGRESS (design recorded; code + host tests next).** This is
-the "more Termux:API-style capabilities" candidate from
+**Status: ✅ DONE (device-verified 2026-08-26).** This is the "more
+Termux:API-style capabilities" candidate from
 [`../PHASE5_ROADMAP.md`](../PHASE5_ROADMAP.md). The owner chose to add **all
 four** in one part rather than one at a time. Each capability = one `CodeCApi`
 wire op group + one CLI script + one `BOOTSTRAP_VERSION` bump, reusing the
@@ -89,8 +89,12 @@ codec-open-url "https://example.com"                # expect: browser opens + OK
 codec-open-url "file:///etc/passwd"                 # expect: ERR (http/https only)
 codec-vibrate 300                                    # expect: vibrate + OK
 codec-vibrate                                        # expect: vibrate ~500ms + OK
-codec-vibrate abc                                    # expect: ERR + exit 1
+codec-vibrate abc                                    # expect: usage + exit 2 (rejected at CLI)
 ```
+
+Note: `codec-vibrate abc` is rejected by the CLI itself (`usage:` + exit 2)
+before reaching the bridge; the bridge's numeric check remains as
+defense-in-depth for a malformed request file.
 
 ## 5. Evidence
 
@@ -107,9 +111,23 @@ Push triggered "Build APK", which the `gradle-bootstrap` bridge expands to
 lint was clean. The only annotations are unrelated runner deprecation notices
 (Node.js 20 / setup-java v4).
 
-### 5.3 Device
+### 5.3 Device (2026-08-26) — ✅ EXIT CONDITION MET
 
-The §4 recipe; to be filled in with the owner's transcript.
+The owner ran the §4 recipe on a real device with the new APK (Build APK
+artifact of run [`32949467172`](https://github.com/pabi277/CodeC/actions/runs/32949467172)). Transcript (abridged):
+
+1. `codec-toast "hello from CodeC"` → `OK`, `exit=0`. **PASS**
+2. `codec-share "https://github.com/pabi277/CodeC"` → `OK`. **PASS**
+3. `codec-open-url "https://example.com"` → `OK`. **PASS**
+4. `codec-open-url "file:///etc/passwd"` → `only http(s) URLs can be opened`. **PASS**
+5. `codec-vibrate 300` → `OK`. **PASS**
+6. `codec-vibrate` (default 500 ms) → `OK`. **PASS**
+7. `codec-vibrate abc` → rejected by the CLI (`usage:` + exit 2). **PASS**
+
+All four capabilities (toast, share, open URL, vibrate) are confirmed working
+end to end over the bridge, including the http(s)-only URL gate and the
+duration validation. **Part 5.3 exit condition is met; the part is DONE
+(device-verified 2026-08-26).**
 
 ## 6. Out of scope
 
