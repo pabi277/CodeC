@@ -20,18 +20,31 @@ issues; no new capability, no catalog/GUI/root work in this part.
 | Fix | Symptom (from the 4.5/4.6 review) | Decision |
 |---|---|---|
 | **KI-1** | `pkg install` of an already-installed package reports **failure**: apt exits 0 with `make is already the newest version (4.4.1-1)`, but the wrapper treats "0 newly installed / no packages downloaded" as a fetch failure (`pkg: apt downloaded no packages; run pkg update and retry`) and exits nonzero. Hostile to scripts and idempotent re-runs. | In `pkg`'s `install_specs()`, detect the **zero-`.deb`-downloaded** case right after the `--download-only` step and `return 0` with a friendly message — the exact idiom `upgrade_packages()` already uses for "all packages are up to date". |
-| **KI-2** | On-device `$PREFIX` is `/data/user/0/com.codeci.ide/files/usr` (from `Context.getFilesDir()`), while every deb, the dpkg DB, and the alternatives admin files record `/data/data/com.codeci.ide/files/usr`. A manual `update-alternatives --install` mixing the two spellings fails with `mv: ... are the same file` / `Cross-device link` (exit 2); greps over `--display` mismatch; and `readlink -f` does **not** collapse `/data/user/0` on the Samsung test device (not a symlink), so runtime canonicalization-by-symlink-resolution is unreliable. | Canonicalize the prefix to the dpkg-recorded `/data/data/…` spelling at the single choke point `ShellEnvironment.prefixDir()`, so the exported `$PREFIX` (via `buildEnv`), the sourced profile, and the `CodeCApi` bridge's `apiDir` all agree. Termux hardcodes its `/data/data` prefix the same way. |
+| **KI-2** | On-device `$PREFIX` is `/data/user/0/com.codeci.ide/files/usr` (from `Context.getFilesDir()`), while every deb, the dpkg DB, and the alternatives admin files record `/data/data/com.codeci.ide/files/usr`. A manual `update-alternatives --install` mixing the two spellings fails with `mv: ... are the same file` / `Cross-device link` (exit 2); greps over `--display` mismatch; and `readlink -f` does **not** collapse `/data/user/0` on the Samsung test device (not a symlink), so runtime canonicalization-by-symlink-resolution is unreliable. | Canonicalize **only the `$PREFIX` value exported into the shell** (`buildEnv` + `profileScript`) to the dpkg-recorded `/data/data/…` spelling. `prefixDir()` — used by the bootstrap installer for real filesystem operations — is left untouched. Termux hardcodes its `/data/data` prefix the same way. |
 
 ### Why KI-2 is done in Kotlin (not only the `pkg` script)
 
 The `pkg` script already computes a `CANON_PREFIX` for its *own* byte checks,
-so `pkg` was never broken. The real KI-2 surface is **the whole shell
-environment** and the **`CodeCApi` bridge**: `CodecApiProtocol.isConfinedDirectChild`
-compares `canonicalFile` paths as strings, and `File.canonicalFile` does not
-reliably collapse `/data/user/0` either (same reason `readlink -f` doesn't).
-Making `prefixDir()` return the canonical spelling is the single source of
-truth that fixes `$PREFIX`, the bridge's confinement base, and dpkg/apt
-consistency at once.
+so `pkg` was never broken. The KI-2 surface is the **shell environment**: the
+`$PREFIX` a user references in a manual `update-alternatives --install
+"$PREFIX/bin/editor" …` must be the same `/data/data/…` spelling the dpkg DB
+and alternatives admin files record, or dpkg attempts a link-rename through
+the emulation and fails with `Cross-device link`.
+
+### Regression found and reverted (2026-08-26)
+
+The first attempt applied the canonicalization at `prefixDir()`, the single
+choke point the **bootstrap installer** (`UserlandInstaller.installIfNeeded` /
+`installRelease` / `hasRunnableUserland`) also uses for real filesystem
+operations (download, extract, `swapPrefix` rename, the ELF launch probe).
+The owner reported that this build downloaded the bootstrap **repeatedly,
+automatically** — consistent with `hasRunnableUserland(prefix)` no longer
+seeing a runnable userland at the rewritten `/data/data/…` path and thus
+re-downloading on every start. Fix: canonicalize **only the exported
+`$PREFIX`** (`buildEnv` + `profileScript`); `prefixDir()` and every
+installer path are back to the exact Phase-4 form. A regression test now
+asserts `prefixDir()` returns the raw `/data/user/0/…` spelling so this
+cannot recur silently.
 
 ## 2. Implementation map
 
@@ -39,7 +52,12 @@ consistency at once.
   - New `canonicalPrefix(path: String)`: rewrites `/data/user/0/…` →
     `/data/data/…`; no-op for everything else (already-canonical paths,
     host-test temp dirs, secondary users `/data/user/10/…`).
-  - `prefixDir()` now returns `File(canonicalPrefix(File(filesDir, "usr").path))`.
+  - `buildEnv()`: canonicalizes the `prefix` File used to build the exported
+    `PREFIX`, `PATH`, `TMPDIR`, and `ENV` entries (so the whole exported
+    environment is spelled `/data/data/…`).
+  - `profileScript()`: canonicalizes the `export PREFIX='…'` line (everything
+    else derives from `$PREFIX` at runtime).
+  - `prefixDir()`: **unchanged** (returns `File(filesDir, "usr")`).
   - `pkgScript()` → `install_specs()`: after the `--download-only` step
     succeeds, scan `$CACHE/*.deb`; if zero were downloaded, `rm -f` the
     pending marker, print `pkg: <names> already installed (already the newest
@@ -54,9 +72,10 @@ consistency at once.
     absence of "apt downloaded no packages", and no lingering transaction
     marker.
   - `canonicalPrefix only rewrites the user 0 emulation alias`.
-  - `KI-2 prefix canonicalizes to the dpkg data data spelling everywhere`
-    — asserts `prefixDir`, `codecApiDir`, `buildEnv["PREFIX"]`, and the
-    sourced profile all carry `/data/data/…`.
+  - `KI-2 exports the canonical prefix without changing the installer path`
+    — asserts `prefixDir()`/`codecApiDir()` stay raw (regression guard),
+    while `buildEnv["PREFIX"]`/`PATH`/`TMPDIR` and the sourced profile export
+    `/data/data/…`.
 
 ## 3. Invariants (none weakened — checked)
 
@@ -72,6 +91,11 @@ consistency at once.
 
 On a real device with the new APK:
 
+0. **No bootstrap re-download (regression guard):** on a device that already
+   has `userland-v2-dev` installed, opening the app (and switching to the
+   Terminal tab) reports `userland: already installed (userland-v2-dev)` and
+   does **not** download the bootstrap again — the repeated-download
+   regression is gone.
 1. **KI-1:** `pkg install <already-newest-package>` (e.g. a package already
    installed at its newest version) prints the "already installed (already
    the newest version)" message and **exits 0**; `echo $?` is `0`; a
@@ -85,6 +109,10 @@ On a real device with the new APK:
 ### Device verification recipe (for the owner — exact copy-paste)
 
 ```sh
+# 0) no re-download: with userland already installed, open app → Terminal
+#    expect a single "userland: already installed (userland-v2-dev)", and NO
+#    repeated "userland: downloading … %" lines.
+
 # 1) KI-1 — install an already-newest package (pick one known installed)
 pkg install -y make; echo "exit=$?"
 #    expect: "pkg: make already installed (already the newest version)."

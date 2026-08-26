@@ -93,21 +93,24 @@ object ShellEnvironment {
      * [android.content.Context.getFilesDir] reports the `/data/user/0/`
      * user-emulation alias on modern Android. The two names address the same
      * inodes, so dpkg/apt never notice — but a manual `update-alternatives`
-     * that mixes them fails with a `Cross-device link` error, greps over
-     * `--display` output mismatch, and the CodeCApi bridge's confinement
-     * check compares resolved paths as strings (KI-2). Resolve to the
-     * dpkg-recorded spelling so the exported `$PREFIX`, the bridge's API
-     * directory, and the dpkg DB always agree; Termux hardcodes its
-     * `/data/data` prefix the same way. No-op for any other prefix (host-test
-     * temp dirs, secondary users) — the same rule as the `pkg` script's own
-     * `CANON_PREFIX`.
+     * that mixes them fails with a `Cross-device link` error, and greps over
+     * `--display` output mismatch (KI-2). This helper resolves the shell's
+     * exported `$PREFIX` to the dpkg-recorded spelling so `update-alternatives`
+     * and the dpkg DB agree; Termux hardcodes its `/data/data` prefix the same
+     * way. No-op for any other prefix (host-test temp dirs, secondary users).
+     *
+     * IMPORTANT: this is applied ONLY to the `$PREFIX` value exported into the
+     * shell environment ([buildEnv], [profileScript]) — never to [prefixDir],
+     * which the bootstrap installer uses for real filesystem operations. The
+     * `/data/data` and `/data/user/0` names resolve to the same inodes, so the
+     * installer and the exported variable stay consistent without rewriting the
+     * installer's paths.
      */
     fun canonicalPrefix(path: String): String =
         if (path.startsWith("/data/user/0/")) "/data/data/" + path.removePrefix("/data/user/0/")
         else path
 
-    fun prefixDir(filesDir: File): File =
-        File(canonicalPrefix(File(filesDir, PREFIX_NAME).path))
+    fun prefixDir(filesDir: File): File = File(filesDir, PREFIX_NAME)
 
     fun homeDir(filesDir: File): File = File(filesDir, HOME_NAME)
 
@@ -1242,7 +1245,9 @@ HELP
 
     fun profileScript(prefix: File, home: File, projects: File): String = """
         # CodeC login profile (Phase 1)
-        export PREFIX='${prefix.absolutePath}'
+        # KI-2: export the dpkg-recorded /data/data/… spelling (same inode as
+        # the /data/user/0/… alias) so manual update-alternatives and dpkg agree.
+        export PREFIX='${canonicalPrefix(prefix.absolutePath)}'
         export HOME='${home.absolutePath}'
         # Prefer the path the app exported (current editor folder).
         if [ -z "${'$'}CODEC_PROJECTS" ]; then
@@ -1295,7 +1300,10 @@ HELP
         extraPath: List<File> = emptyList(),
         projectsDir: File? = null
     ): Map<String, String> {
-        val prefix = prefixDir(filesDir)
+        // KI-2: export the dpkg-recorded /data/data/… spelling so the shell's
+        // `$PREFIX`, PATH, TMPDIR, and ENV agree with the dpkg DB and the
+        // alternatives admin files (Termux hardcodes /data/data the same way).
+        val prefix = File(canonicalPrefix(prefixDir(filesDir).path))
         val home = homeDir(filesDir)
         val projects = projectsDir ?: File(filesDir, "CodeC/projects")
         val pathParts = buildList {

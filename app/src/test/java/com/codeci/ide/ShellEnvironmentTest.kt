@@ -974,20 +974,24 @@ class ShellEnvironmentTest {
     }
 
     @Test
-    fun `KI-2 prefix canonicalizes to the dpkg data data spelling everywhere`() {
+    fun `KI-2 exports the canonical prefix without changing the installer path`() {
         val files = File("/data/user/0/com.codeci.ide/files")
 
-        // The prefix File itself resolves to the dpkg-recorded spelling.
-        val prefix = ShellEnvironment.prefixDir(files)
-        assertEquals("/data/data/com.codeci.ide/files/usr", prefix.absolutePath)
+        // The installer's filesystem path must stay the raw Context.getFilesDir()
+        // spelling: the bootstrap download/extract/swap logic operates on this
+        // path, and rewriting it to /data/data/… was observed to make the
+        // installer re-download the bootstrap. KI-2 is an *environment* fix.
+        assertEquals("/data/user/0/com.codeci.ide/files/usr", ShellEnvironment.prefixDir(files).path)
 
-        // The CodeCApi bridge must confine to the SAME canonical spelling the
-        // CLI scripts derive from the exported $PREFIX, or the confinement
-        // check would reject a valid clipboard/notify request (KI-2 guard).
-        val apiDir = ShellEnvironment.codecApiDir(prefix)
-        assertEquals("/data/data/com.codeci.ide/files/usr/tmp/codec-api", apiDir.absolutePath)
+        // The CodeCApi bridge confines against the raw prefix; the CLI scripts
+        // emit paths derived from the exported $PREFIX. Both resolve to the
+        // same inodes (canonicalFile collapses /data/data → /data/user/0), so
+        // the confinement check still matches.
+        val apiDir = ShellEnvironment.codecApiDir(ShellEnvironment.prefixDir(files))
+        assertEquals("/data/user/0/com.codeci.ide/files/usr/tmp/codec-api", apiDir.path)
 
-        // The exported process env and the sourced profile both use it.
+        // The exported process env must use the dpkg-recorded /data/data/…
+        // spelling (the actual KI-2 fix).
         val env = ShellEnvironment.buildEnv(
             filesDir = files,
             nativeLibDir = File("/data/app/lib"),
@@ -998,9 +1002,10 @@ class ShellEnvironmentTest {
             optimization = 0
         )
         assertEquals("/data/data/com.codeci.ide/files/usr", env["PREFIX"])
+        assertTrue(env["PATH"]!!.startsWith("/data/data/com.codeci.ide/files/usr/bin"))
+        assertEquals("/data/data/com.codeci.ide/files/usr/tmp", env["TMPDIR"])
 
-        // ShellBootstrap.prepare() passes the canonical prefixDir() into the
-        // profile writer, so the sourced profile must record the same spelling.
+        // The sourced profile must export the same canonical spelling.
         val profile = ShellEnvironment.profileScript(
             ShellEnvironment.prefixDir(files),
             File("/data/user/0/com.codeci.ide/files/home"),
