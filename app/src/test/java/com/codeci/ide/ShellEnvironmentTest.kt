@@ -436,7 +436,10 @@ class ShellEnvironmentTest {
         assertTrue(script.contains("codec-clipboard status"))
         assertTrue(script.contains("API_DIR=\"\$PREFIX/tmp/codec-api\""))
         assertTrue(script.contains("mktemp \"\$API_DIR/req.XXXXXX\""))
-        assertTrue(script.contains("mktemp \"\$API_DIR/res.XXXXXX\""))
+        // The response file derives from the request temp file so it is
+        // unique AND not pre-created (the CLI polls for the app's rename).
+        assertTrue(script.contains("res=\"\${req}.out\""))
+        assertTrue(script.contains("wire_op=\"clipboard.\$op\""))
         assertTrue(script.contains("CodeCApi:%s:%s:%s"))
         assertTrue(script.contains("sleep 0.05"))
         assertTrue(script.contains("trap 'rm -f"))
