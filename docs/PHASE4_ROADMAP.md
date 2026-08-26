@@ -3,7 +3,8 @@
 **Status (2026-08-25):** Parts 4.1–4.6 ✅ done (device-verified or CI-verified).
 Part 4.5 (expanded catalog CI build) completed in run [`32845127723`](https://github.com/pabi277/CodeC/actions/runs/32845127723) (1h 53m 36s, 25 roots, both arches green).
 Part 4.6 (publish & device acceptance) completed in run [`32858460740`](https://github.com/pabi277/CodeC/actions/runs/32858460740) and verified on real arm64 hardware.
-Part 4.7 (Android integration slice) is the active next step — ready for pickup.
+Part 4.7 (Android integration slice) ✅ DONE (device-verified 2026-08-26) — the next slice in
+that area is 4.8 (a further Termux:API-style capability), not yet scoped.
 A post-implementation review of the 4.5/4.6 recipe overrides landed artifact-neutral
 hardening fixes; see [`chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md`](chat-phase4/PART_4_5_4_6_POST_IMPLEMENTATION_REVIEW.md).
 
