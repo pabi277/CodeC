@@ -98,9 +98,14 @@ codec-vibrate abc                                    # expect: ERR + exit 1
 
 Pure-core unit tests (op parse, execute validation/recording).
 
-### 5.2 CI
+### 5.2 CI (run [`32949467172`](https://github.com/pabi277/CodeC/actions/runs/32949467172), green — 2026-08-26)
 
-Push → "Build APK" (assemble + unit tests + lint) must be green.
+Push triggered "Build APK", which the `gradle-bootstrap` bridge expands to
+`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`. **Green in 3m12s**
+— the new protocol/bridge/script tests all passed (op parsing, the four
+`execute` success/error paths, script content, and the toast round-trip), and
+lint was clean. The only annotations are unrelated runner deprecation notices
+(Node.js 20 / setup-java v4).
 
 ### 5.3 Device
 

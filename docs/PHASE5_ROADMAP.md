@@ -58,6 +58,7 @@ This is a budget, not a target to hit exactly. Two consequences:
 |---|---|---|---|---|
 | **5.1 — KI-1 & KI-2 client fixes** | none (client-side only, no rebuild) | small / low-risk | ~10 | ✅ DONE (device-verified 2026-08-26) |
 | **5.2 — Web preview (HTML/CSS/JS in WebView)** | none (client-side only, no rebuild) | medium | ~20 | ✅ DONE (device-verified 2026-08-26) |
+| **5.3 — CodeCApi batch (toast/share/open-URL/vibrate)** | none (client-side only, no rebuild) | medium | ~15 | 🚧 in progress (code + host tests + CI green; awaiting device) |
 | *(further parts decided when picked up)* | — | — | — | — |
 
 ## Rules that carry forward to Phase 5

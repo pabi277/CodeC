@@ -18,6 +18,10 @@ GUI/catalog/root areas.
   (device-verified 2026-08-26).** Preview an HTML file and its local CSS/JS in
   an in-app WebView, with a Preview action in the editor/file manager, live
   reload on save, and a JS console strip.
+- **[Part 5.3 — CodeCApi capability batch (toast, share, open URL, vibrate)](PART_5_3_CAPABILITIES.md):** 🚧 **IN PROGRESS.**
+  Four Termux:API-style capabilities over the 4.7/4.8 bridge — `codec-toast`,
+  `codec-share`, `codec-open-url`, `codec-vibrate` — all permission-light
+  (`VIBRATE` is a normal install-time permission).
 
 Each part gets its own record here with Decision D1, an exit condition, and
 an evidence section (§5.x host + device), same as Parts 4.1–4.8.
