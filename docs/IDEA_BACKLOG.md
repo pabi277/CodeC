@@ -1,8 +1,46 @@
 ====================================================================
-CodeC — FUTURE IDEAS / IMPLEMENTATION BACKLOG
-(collected 2026-08-26 · Phase 4 is DONE & merged · everything below
-is OPTIONAL future work, choose any slice when you want it)
+CodeC — FUTURE IDEAS / IMPLEMENTATION BACKLOG  [FROZEN — 2026-08-26]
 ====================================================================
+
+> STATUS: FROZEN AS HISTORY. All items from this file have been
+> reviewed, classified (done / deferred / folded into plan), and
+> either completed (Phase 3–5) or moved into the new master roadmap
+> [`TERMINAL_PLAN.md`](TERMINAL_PLAN.md) (Phases 6–15, updated 2026-08-26).
+> Do NOT add new items here — add them to `TERMINAL_PLAN.md` §13 (out-of-scope / deferred) or open a Phase 6+ part.
+> Session rule still applies: no PR/merge without explicit owner command.
+
+--------------------------------------------------------------------
+COMPLETED / MERGED (do not redo)
+--------------------------------------------------------------------
+- Phase 3 (A–D): bootstrap, signing, device acceptance → see `JOURNEY.md` §5, PR #15.
+- Phase 4 (4.1–4.8): storage, install UX, trust, settings, catalog, CodeCApi clipboard+notify → `chat-phase4/`, PR #22.
+- Phase 5 (5.1–5.3): KI fixes, web preview, capability batch → `chat-phase5/`, PR #23.
+- Backlog sections A1 (share/open/URL/vibrate/toast) → COMPLETED in 5.3.
+- Backlog A2 (KI-1, KI-2) → COMPLETED in 5.1.
+- Backlog F (web preview) → COMPLETED in 5.2.
+
+--------------------------------------------------------------------
+DEFERRED (kept in TERMINAL_PLAN.md §13)
+--------------------------------------------------------------------
+- X11 / SDL / Qt (GUI packages) — text-first terminal; only if real demand.
+- Full Termux catalog mirroring — needs cardinality decision; not before 5.3 + 6–15.
+- Root-based acceleration — out of scope by policy.
+- Optional x86_64 repeat of Phase 3 Part D — opportunistic, not blocking.
+
+--------------------------------------------------------------------
+FOLDED INTO TERMINAL_PLAN.md (Phases 6–15)
+--------------------------------------------------------------------
+- B (multi-language) → Phase 12 (Python first, light autocomplete, per-language highlighting).
+- C (CLI -> GUI) → Phase 10 (pkg catalog INSTALL buttons) + Phase 11 (output panel + Run) + Phase 9 (editor buttons) + Phase 13 (GitHub buttons).
+- D (mixed-language projects / run-config) → Phase 8 (project model with run-config).
+- E (file import/export/ZIP/folders) → Phase 8 (folder tree, SAF import/export, ZIP).
+- F (web preview / local server + WebView) → Phase 8 (project type: static web / Python server) and can be picked early if desired.
+- Additional gaps found 2026-08-26 (terminal cutout/insets, extra-keys, wake lock, URL tap, selection copy, multi-terminal, editor undo/find/format) → Phase 6 (terminal UX) + Phase 7 (multi-terminal) + Phase 9 (editor).
+- More CodeCApi (sensors/camera/intents) → Phase 15.
+
+--------------------------------------------------------------------
+ORIGINAL BACKLOG CONTENT (preserved for audit)
+--------------------------------------------------------------------
 
 © SESSION RULES (must stay active in every new chat)
 - No PR, no merge, no push to main WITHOUT the owner's explicit

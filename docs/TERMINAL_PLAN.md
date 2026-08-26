@@ -1,6 +1,6 @@
 # CodeC Terminal — Mini-Termux Plan
 
-> **Status:** Phase 1 **working on device** · Phase 2 `userland-v1` **released** · Phase 3 **`pkg` verified working on device** (install/search/remove/upgrade + alternatives postinst) with the bootstrap published as `userland-v2-dev`; clean-device acceptance, bootstrap correctness, and signing **remain**. See [`JOURNEY.md`](JOURNEY.md) and [`NEXT_STEPS.md`](NEXT_STEPS.md).
+> **Status (2026-08-26):** Phase 0–5 complete and device-verified (Phase 3 bootstrapping / Phase 4 CodeCApi / Phase 5 client fixes, web preview, capabilities — all merged). **Phase 6–15 master roadmap is NEW in this file** — see §13 (updated 2026-08-26). New priorities: multi-terminal, terminal UX (cutout/insets + extra-keys + wake lock), projects/files, editor foundation, pkg-install GUI, output panel + Run, Python + language intelligence (ONE repo build), GitHub, mixed-language, CodeCApi tail. All client-only except Phase 12 (Python = one ~1–2h build). See `docs/chat-phase5/README.md` and `docs/PHASE5_ROADMAP.md` for Phase 5 evidence.
 > **This-session bugs/fixes:** [docs/chat-phase1/README.md](chat-phase1/README.md).  
 > **Goal:** turn CodeC into a self-contained C IDE **with its own
 > Termux-style terminal and package manager** — install packages like `pkg install clang`
@@ -271,3 +271,147 @@ the shell with zero downloads, even before apt exists.
 - X11/GUI packages (SDL/Qt) — the terminal is text-first.
 - Full Termux catalog mirroring.
 - Root-based acceleration.
+
+---
+
+
+====================================================================
+APPENDIX — MASTER ROADMAP 2026-08-26 (Phase 6–15)
+Updated after Phase 5 (5.1 KI fixes / 5.2 web preview / 5.3 capabilities)
+is complete and merged (PR #23). All prior phases (0–5) are CLOSED.
+No code changes made to this append-only update; only docs + prompt.md.
+====================================================================
+
+## A. NORTH STAR (one sentence, drives every phase)
+
+CodeC grows from an offline C IDE into a privacy-first mobile dev environment
+(C + web + Python + projects + terminal/GUI parity), with terminal and GUI
+as equals — every new feature works both ways, nothing is GUI-only.
+
+## B. METHODOLOGY — what protects us (applies to 6–15)
+
+1. VERIFY FIRST (git status / gh pr list / gh run list) before each part.
+2. EVIDENCE BEFORE HYPOTHESIS — device transcript required; never commit
+   a fix on a guess.
+3. NO REDO — Phase 3/4/5 are closed. Only revisit if identical symptom
+   reappears with new evidence.
+4. COST TAG ON EVERY PHASE — check at a glance:
+   - [client-only] = no rebuild, quick (minutes to ~1 week)
+   - [repo-build] = ONE ~60–100 min "CodeC package repository" CI run
+   - [bootstrap] = rebuild of userland-v2-dev (NOT planned until needed)
+5. NEVER TRIGGER EXPENSIVE ACTION (build / release / destructive device
+   test / force-push) without explicit owner command.
+6. INVARIANTS (law): no `.` on PATH; no `build-package.sh -I`; never
+   overwrite `cc` / real ELF `bash`; TCC link `-o` last; no `com.termux`;
+   `signed-by=` only; no bootstrap in APK.
+7. ONE PR AT A TIME; NO PR / MERGE / PUSH TO MAIN without your literal
+   "open PR" / "merge" command in chat.
+8. TERMINAL / GUI PARITY LAW — every new GUI button is a 1:1 wrapper
+   over an existing terminal command (`pkg install`, `cc`, `git`, `bash`).
+   The terminal stays source-of-truth; GUI never invents new behavior.
+9. PRIVACY BY DEFAULT — import = copy-in; export = explicit tap only;
+   GitHub token = app-private Settings; nothing auto-public.
+
+## C. DECISIONS LOCKED (delegated by owner, 2026-08-26)
+
+| Decision | Choice | Why |
+|---|---|---|
+| Editor intelligence (Phase 9/12) | **Native Compose** (not WebView/Monaco) | Matches current architecture (`BasicTextField` → custom `VisualTransformation`); harder to reverse; avoids WebView overhead; multi-language highlighting can extend existing regex engine per-language. WebView can be revisited later if full IntelliSense demands it. |
+| Python dependency management (Phase 12) | **`pkg`-managed first**; `pip` deferred | Keeps the signed-repo / installation-confirmation / verification flow intact. `pip` inside Android userland can clash with `PREFIX` paths and isn't verifiable by the repo. If users need `pip`, we can add it as a Phase 15+ option with its own decision. |
+| Extra-keys / shortcuts (Phase 6) | **Configurable multi-row grid** anchored to IME | Matches Termux; solves the single-row horizontal-scroll and "way above screen" problems; allows macros (`pkg install`, `git status`, etc.). |
+
+## D. GAPS FOUND IN SOURCE SWEEP (2026-08-26) — ground truth, not guesses
+
+Files verified: `TerminalScreen.kt`, `TerminalEmulatorView.kt`, `TerminalViewModel.kt`, `TerminalSession.kt`, `TerminalExtraKeys.kt`, `EditorScreen.kt`, `MainActivity.kt`, `FileManagerScreen.kt`, `CSyntaxVisualTransformation.kt`, `PtyNative.kt` / `PtySession.kt`, manifest/theme.
+
+- **Cutout / insets:** `enableEdgeToEdge()` in `MainActivity.kt`; terminal `Column` only `.imePadding()`; zero `displayCutout` / `safeDrawingPadding()` hits. Right-edge text clipped in landscape.
+- **Extra-keys:** `TerminalExtraKeys.kt` = hardcoded `Row` of 12 keys in `.horizontalScroll`; not configurable; appears too high / off-screen.
+- **Wake lock:** none — screen sleeps during `pkg install` / compile.
+- **URL detection:** no tap-to-open in terminal output despite `codec-open-url` existing.
+- **Selection / copy:** toolbar "copy" copies full transcript; selection only via long-press dropdown.
+- **Bell:** VT BEL (`\a`) silently ignored.
+- **Title:** static — doesn't reflect cwd or command.
+- **Font size:** only pinch-zoom in terminal; buried in Settings.
+- **Multi-terminal:** `TerminalViewModel` holds ONE `TerminalSession(); `PtySession` wraps one PTY. No manager / switcher / "+"; `nonce` in route is recomposition trick.
+- **Editor dead buttons:** Undo, Redo, Format, Find = `onClick = { showComingSoon() }` (40% alpha). No undo/redo stack.
+- **Editor missing:** bracket match, error squiggles, line/col indicator, cursor-line highlight.
+- **Editor single field:** one `BasicTextField`; no split panes, no multi-file tabs.
+- **File manager flat:** no folder tree.
+- **Module screen dead:** `ModulesScreen.kt` / `ModuleCatalog` / `ModuleInstaller` / `ModuleViewModel` exist only for optional Clang module (superseded by `pkg`). Should become `pkg install` GUI.
+- **CodeCApi single-session:** bridge answers to one session; multi-terminal must define session routing.
+
+All of the above are captured in the Phase 6–9 plan.
+
+## E. PHASE 6 — 15 TABLE (dependencies + cost + exit conditions)
+
+| Phase | Deliverable | Cost | Depends on | Exit condition (must be device-verified) |
+|---|---|---|---|---|
+| **6** | Terminal UX fixes: safe-area/cutout padding; configurable multi-row extra-keys (macros, editable in Settings); wake lock; URL tap-to-open; BEL flash/vibration; dynamic title (cwd / cmd); selection-based copy | [client-only] | 5.3 (bridge stable) | Device: landscape terminal shows full width without cutout clipping; extra-keys configurable with macros; `pkg install` completes with screen-on; URLs in output open browser; `echo -e '\a'` flashes; long-press copy copies selected text only. |
+| **7** | Multi-terminal sessions: `TerminalSessionManager` (N sessions, each PTY + emulator); session drawer / switcher / "+" button; route `CodeCApi` per session; persist session list across screen changes (not across app restart — matches Termux) | [client-only] | 6 | Device: open 2+ terminals, run `bash -c 'while true; do sleep 1; done'` in one and `ls` in second; switch via drawer; `codec-clipboard` works from second tab. |
+| **8** | Projects & files (KEYSTONE): real folder tree in FileManager; SAF import/export (OpenDocument / CreateDocument); ZIP import/export; per-project run-config (`run.json`: command + type); editor opens files from folder; terminal `cd` follows folder; project icon / list | [client-only] | 7 (multi-session lets project + terminal coexist) | Device: create folder `~/project/test`, import `.c` from Downloads (SAF), open in editor; edit; run via button (uses run-config); export ZIP to Downloads; terminal `pwd` shows project path. |
+| **9** | Editor foundation: undo/redo stack; find/replace (Find dialog, regex option); format button (calls `clang-format` or `indent`); bracket match highlight; error squiggles (from compiler output parsed to line/col); line/col indicator; cursor-line highlight; multi-file tabs or split | [client-only] | 8 (folder model gives multi-file context) | Device: type code, undo, redo; find "main", replace; format button runs; bracket pairs highlight; compile error shows red squiggle; tap line number jumps; cursor line highlighted. |
+| **10** | GUI package catalog (replaces Modules): `pkg install` catalog screen with INSTALL buttons, progress, friendly errors; integrate with `validate-bootstrap.py` style checks; no real rebuild — just UI over `pkg` | [client-only] | 3/5 (pkg verified) | Device: open catalog, tap INSTALL on `nano`; progress bar; error shown clearly (not raw apt); installed appears in list; uninstall works. No rebuild required (client-only UI). |
+| **11** | Output panel + Run button (Spck/C4droid feel): editor-screen layout (editor top / output bottom); "Run" button executes run-config command in background; scrollable output below; clickable errors (line reference jumps to editor); keep Terminal tab for interactive | [client-only] | 8 (run-config) + 9 (editor ready) | Device: open C file, tap Run; output appears below with `a.out` result; error at line 14 is tappable → jumps to line 14; Terminal tab still works for interactive `bash`. |
+| **12** | Multi-language: Python first: `python3` into `codec-packages`/repo (§1 build ~1–2h); language detect by extension + `#!/usr/bin/env python3`; per-language highlighting engine (extend `CSyntaxVisualTransformation` to keyword/string/comment tables per lang); light autocomplete (buffer identifiers + stdlib snippet table); run-config presets (`python3`, `python3 -m flask'); error parsing per language | [repo-build] (ONE build) | 10 (catalog) + 8 (projects) + 9 (editor) | Device: create `test.py`, open editor (Python keywords highlighted); type `def ` → snippet or identifier suggest (buffer + stdlib); Run button executes `python3 test.py`; error at line 5 parsed correctly; web server (`python3 -m http.server`) opens in WebView; repo rebuilt and published; device installs from new catalog. |
+| **13** | GitHub integration (client-only): clone/commit/push screen; repo URL input; token saved in Settings (app-private); clone → folder in FileManager; commit message + push button; terminal still works for `git` commands | [client-only] | 8 (folder) + 11 (output/push feedback) | Device: paste repo URL, tap Clone → files appear; edit file, commit with message, push → success message in output; Settings can update/remove token; no token leaked. |
+| **14** | Mixed-language & long-tail: Flask/FastAPI local server (Project type: server); web project opens in WebView (already have `codec-open-url`); add Go / Node / Rust to repo and catalog only when needed (each = [repo-build] on demand); generic meta run (user-defined command) | [repo-build] on demand | 12 (Python proven) + 8 | Device: Python Flask project, run, open `http://127.0.0.1:5000` in WebView; add Go package to repo on request only; run-config supports custom command. |
+| **15** | CodeCApi tail + deferred: sensors / camera / intents capabilities over bridge; any remaining 5.3 gaps; terminal session persistence across restart (optional, matches Termux); final polish (font settings discoverability, theme parity) | [client-only] | 7 (multi-session defines routing) + 6 | Device: `codec-sensor` reads accelerometer; `codec-camera` takes photo; `codec-intent` opens other apps; all over per-session bridge; no regression in clipboard/notify/toast/share/open/URL/vibrate. |
+
+## F. DEPENDENCY GRAPH (compact — pick a leaf, all prerequisites known)
+
+```
+5.3 (capabilities + bridge proven)
+  ├─► 6 (terminal UX)
+  │     └─► 7 (multi-terminal)
+  │           └─► 8 (projects / files / run-config) ◄── KEYSTONE
+  │                 ├─► 9 (editor)
+  │                 │     └─► 11 (output panel + Run)
+  │                 │           └─► 13 (GitHub)
+  │                 ├─► 10 (pkg catalog UI)
+  │                 │     └─► 12 (Python + intelligence) ◄── ONE build
+  │                 │           └─► 14 (mixed / long-tail, builds on demand)
+  │                 └─► 15 (CodeCApi tail / polish)
+```
+
+Rule: never start a phase whose prerequisites aren't verified. Phase 8 is the key dependency; everything else feeds off it.
+
+## G. ORDER RECOMMENDATION (matches user's priorities from 2026-08-26)
+
+User priorities folded in:
+- Multi-terminal (Phase 7) is #2 after terminal UX (Phase 6).
+- Projects/files / folder tree / run-config (Phase 8) is the keystone — everything else needs it.
+- Editor foundation (Phase 9) comes after projects because multi-file only makes sense with folders.
+- GUI pkg install (Phase 10) replaces dead Modules screen — can go in parallel with 8/9 if staff allows.
+- Python (Phase 12) is the ONLY planned [repo-build]; schedule it when you're ready for the ~1–2h CI wait + device verification.
+- GitHub (13) and mixed-language (14) come after Python proves the multi-language pattern.
+
+Recommended sequence: **6 → 7 → 8 → (9 || 10) → 11 → 12 → 13 → 14 → 15**.
+Within each: agree D1, write doc in `docs/chat-phase6/` etc., host-test, CI, device verification.
+
+## H. PRIVACY STORY PER PHASE (consistent with Phase 4.1)
+
+- Import = SAF copy-into-private; export = explicit CreateDocument tap.
+- GitHub token = Settings, app-private, never in `~` or logs.
+- `pkg` only installs from signed repo (`signed-by=`); no auto-install.
+- WebView loads `127.0.0.1` / local files only; no external URL loading in preview (except user's explicit `codec-open-url`).
+- No telemetry, no analytics, no cloud sync.
+
+## I. OUT-OF-SCOPE / DEFERRED (clearly labeled so they don't creep in)
+
+- X11 / SDL / Qt (GUI packages) — deferred until real demand; terminal is text-first.
+- Full Termux catalog mirroring — needs cardinality / scope decision; not before Phase 12.
+- Root-based acceleration — out of policy.
+- `pip` inside userland — deferred to Phase 15+; pkg-only first.
+- WebView editor (Monaco/CodeMirror) — deferred; native Compose is the recorded decision; revisit only if Phase 9 proves inadequate.
+- Session persistence across app restart — optional; Termux doesn't do it; `tmux` already available.
+
+## J. WHAT HAS NOT CHANGED (preserve invariants)
+
+- Bootstrap (`userland-v2-dev`) stays byte-stable. Nothing in 6–15 touches it.
+- Repository signing (`codec-packages/keys/`) stays intact; new packages (Python, Go, etc.) added only through verified CI pipeline.
+- `prompt.md` self-distrust protocol stays; this appendix is part of the evidence.
+- `build-package.sh -I` never used; official `com.termux` never referenced.
+
+====================================================================
+END OF APPENDIX — Phase 6–15 master roadmap (2026-08-26 update)
+====================================================================

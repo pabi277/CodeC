@@ -33,13 +33,9 @@ gets its own `arena/*` session branch — verify the actual branch with
   path (`codec-notify`; owner-confirmed tap opens CodeC). Per-part records
   are in `docs/chat-phase4/`; the (now completed) Phase 4 roadmap is
   `docs/chat-phase4/PHASE4_ROADMAP.md`. **Do not redo any of it.**
-- **Next work is Phase 5 — NOT STARTED**, planned in the new
-  `docs/PHASE5_ROADMAP.md` (planning-only skeleton; candidate areas:
-  further Termux:API-style capabilities — share sheet / open URL / vibrate /
-  toast / sensors / camera / intents — the two known client fixes KI-1 and
-  KI-2 from the 4.5/4.6 post-review, and the deferred GUI/catalog/root
-  areas). Confirm with the user which candidate part they want before
-  coding; the exact parts are not yet defined.
+- **Phase 5 (5.1 KI fixes / 5.2 web preview / 5.3 capability batch) ✅ COMPLETE, merged PR #23 (2026-08-26).** Evidence in `docs/chat-phase5/`. See `docs/PHASE5_ROADMAP.md`.
+- **Phase 6–15 master roadmap ✅ PLANNED (2026-08-26)** — new in `docs/TERMINAL_PLAN.md` §A–J (terminal UX + multi-terminal + projects/files + editor + pkg GUI + output + Python + GitHub + mixed-language + CodeCApi tail). **Not started.** Confirm with owner before any Phase 6+ coding; Phase 12 (Python) is the single planned ~1–2h repo build. Cost tags (`[client-only]` / `[repo-build]`) on every phase.
+- Next work: pick Phase 6 (terminal UX / cutout + extra-keys) or Phase 7 (multi-terminal) or Phase 8 (projects / folder tree / run-config — the keystone). All client-only except Phase 12. No PR/merge without explicit command.
 - An optional x86_64 repeat of the Part D clean-device test was not run (no
   x86_64 device was available); this does not block calling Phase 3 complete
   on the tested aarch64 architecture (see `docs/chat-phase3/PHASE3_PLAN.md` §5 M3).
