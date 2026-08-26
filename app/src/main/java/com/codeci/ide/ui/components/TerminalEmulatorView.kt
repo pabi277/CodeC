@@ -503,3 +503,5 @@ private fun handleHardwareKey(
         }
     }
 }
+
+// Phase 6.1 BEL: on escape \a trigger brief screen-flash overlay + optional vibrate (VIBRATE permission present from 5.3)

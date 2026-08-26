@@ -189,3 +189,5 @@ private fun pasteFromClipboard(context: Context, viewModel: TerminalViewModel) {
     }
     viewModel.send(viewModel.wrapPaste(text))
 }
+
+// Phase 6.1: toolbar copy uses selection if present, else full transcript (backward compat)
