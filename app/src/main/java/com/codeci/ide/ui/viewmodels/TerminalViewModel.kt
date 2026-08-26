@@ -75,12 +75,13 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         // collecting — so a `codec-clipboard` run from another tab or a
         // queued initial command must still be answered.
         viewModelScope.launch(Dispatchers.IO) {
+            val app = getApplication<Application>()
             session.codecApiRequests.collect { payload ->
                 CodecApiBridge.handle(
-                    getApplication(),
+                    app,
                     payload,
                     ShellEnvironment.codecApiDir(
-                        ShellEnvironment.prefixDir(getApplication().filesDir)
+                        ShellEnvironment.prefixDir(app.filesDir)
                     )
                 )
             }
