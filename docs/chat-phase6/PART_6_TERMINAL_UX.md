@@ -137,7 +137,7 @@ echo '{"test":1}' > "$PREFIX/project/test/sample.json"
 
 Evidence sections:
 - **§5.1 Host:** 82 Python repository/bootstrap tests passed; `TerminalUxTest` (URL finder, macro parser, selection text, dynamic title, word boundary lookup) and `AnsiParserTest` (BEL C0 0x07 callback) passed.
-- **§5.2 CI:** Workflow `33170612649` (Build APK on `arena/01a0482c-codec`) ✅ GREEN (assembleDebug + lintDebug + artifact upload passed in 3m17s).
+- **§5.2 CI:** Workflow `33173848420` (Build APK on `arena/01a0482c-codec`) ✅ GREEN (assembleDebug + lintDebug + artifact upload passed in 2m58s).
 - **§5.3 Device & UX Polish (2026-08-28):**
   - **Cursor alignment:** Replaced bulk line canvas rendering with cell-by-cell monospace character rendering at `(start + i) * cellW` to permanently eliminate any font metric cursor drift.
   - **Word boundary & drag selection:** Long press expands to complete word boundary (`[a-zA-Z0-9_\-./]`) with drag handle support and contextual menu ("Copy", "Select All", "Paste", "Open URL").
