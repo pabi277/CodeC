@@ -2,6 +2,7 @@ package com.codeci.ide.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.sp
  * ESC/TAB/CTRL/ALT, symbols, cursor keys, and macros into the PTY.
  * Uses FlowRow to wrap cleanly across screen widths without horizontal scroll clipping.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TerminalExtraKeys(
     ctrlLatched: Boolean,
