@@ -40,6 +40,15 @@ object ProjectTransfer {
             ?.let { ProjectPathUtils.sanitizeSegment(it) }
             ?: ProjectPathUtils.sanitizeSegment(fallbackName)
             ?: error("The selected file has an invalid name")
+        if (name.endsWith(".zip", ignoreCase = true)) {
+            // The in-project Import File action also accepts ZIPs. Treating a
+            // ZIP as an ordinary document leaves one opaque archive in the
+            // tree, so expand it into the active private project instead.
+            resolver.openInputStream(documentUri)?.use { input ->
+                importZip(input, destination)
+            } ?: error("Could not read the selected ZIP")
+            return@runCatching name
+        }
         val target = File(destination, name)
         if (target.exists()) error("A file with that name already exists")
         resolver.openInputStream(documentUri)?.use { input ->
