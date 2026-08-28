@@ -1,13 +1,13 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-26 · **State:** Phase 3 ✅ complete (device-verified).
+**Last updated:** 2026-08-28 · **State:** Phases 3–7 ✅ complete (Phase 7 device-verified).
 **Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
 2026-08-26; 4.8 verified the runtime-permission path
 (`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
 owner-confirmed notification tap opens CodeC). The Phase 4 roadmap now
 lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
-**Phase 5 is next** (not started): planning-only skeleton at
-[`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
+**Phases 5–7 are complete. Phase 8 is now in implementation**; the design and
+verification record lives in [`chat-phase8/`](chat-phase8/).
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and

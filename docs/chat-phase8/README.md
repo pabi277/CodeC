@@ -1,5 +1,7 @@
 # CodeC Phase 8 Documentation — Projects & File Tree (Keystone)
 
+**Status:** Implementation started 2026-08-28 · device acceptance pending · **Cost:** `[client-only]`
+
 Phase 8 is the **Keystone Architecture Phase** (`[client-only]`). It replaces flat file listing with a full-fledged hierarchical Project Tree model, adds `.codec/project.json` run configuration, native SAF file/folder import/export, and synchronizes Terminal working directories (`cwd`) with projects.
 
 ## Contents & References

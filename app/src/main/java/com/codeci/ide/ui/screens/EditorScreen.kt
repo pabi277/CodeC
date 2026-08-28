@@ -72,6 +72,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SymbolBar
 import com.codeci.ide.ui.components.TerminalOutput
+import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
@@ -85,9 +87,11 @@ import com.codeci.ide.ui.viewmodels.EditorViewModel
 @Composable
 fun EditorScreen(
     modifier: Modifier = Modifier,
+    projectName: String? = null,
     fileName: String? = null,
     onNavigateBack: () -> Unit = {},
     onFileRenamed: (String) -> Unit = {},
+    onProjectSelected: (ProjectInfo) -> Unit = {},
     onOpenInTerminal: (String?) -> Unit = {},
     onOpenPreview: (String) -> Unit = {},
     viewModel: EditorViewModel = viewModel()
@@ -112,8 +116,12 @@ fun EditorScreen(
         else -> FontFamily.Monospace
     }
 
-    LaunchedEffect(fileName) {
-        if (fileName != null) {
+    LaunchedEffect(projectName, fileName) {
+        if (projectName != null && fileName != null) {
+            viewModel.loadProjectFile(context, projectName, fileName)
+            ProjectManager(context).project(projectName)?.let(onProjectSelected)
+            settingsManager.addRecentFile(fileName)
+        } else if (fileName != null) {
             viewModel.loadFile(context, fileName)
             settingsManager.addRecentFile(fileName)
         }
@@ -137,6 +145,13 @@ fun EditorScreen(
         scope.launch { snackbarHostState.showSnackbar(comingSoon) }
     }
 
+    fun projectRunCommandOrNull(): String? {
+        val project = projectName ?: return null
+        if (!viewModel.saveFile(context)) return null
+        val info = ProjectManager(context).project(project) ?: return null
+        return TerminalHandoff.projectRunCommand(info.root.absolutePath, info.config)
+    }
+
     LaunchedEffect(userMessage) {
         val message = userMessage
         if (message != null) {
@@ -150,7 +165,7 @@ fun EditorScreen(
     }
 
     if (showRenameDialog) {
-        var newName by remember { mutableStateOf(currentFileName) }
+        var newName by remember { mutableStateOf(currentFileName.substringAfterLast('/')) }
         AlertDialog(
             onDismissRequest = { if (!isRenaming) showRenameDialog = false },
             title = { Text(stringResource(R.string.rename_file)) },
@@ -210,7 +225,7 @@ fun EditorScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = currentFileName + if (isDirty) " *" else "",
+                        text = currentFileName.substringAfterLast('/') + if (isDirty) " *" else "",
                         modifier = Modifier.clickable { showRenameDialog = true },
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -238,9 +253,10 @@ fun EditorScreen(
                         }
                     }
                     IconButton(onClick = {
-                        val path = viewModel.saveAndAbsolutePath(context)
-                        if (path != null) {
-                            onOpenInTerminal(TerminalHandoff.compileAndRunCommand(path))
+                        val command = projectRunCommandOrNull()
+                            ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
+                        if (command != null) {
+                            onOpenInTerminal(command)
                         } else {
                             Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
                         }
@@ -251,7 +267,18 @@ fun EditorScreen(
                         )
                     }
                     Button(
-                        onClick = { viewModel.runCode(context) },
+                        onClick = {
+                            if (projectName != null) {
+                                val command = projectRunCommandOrNull()
+                                if (command != null) {
+                                    onOpenInTerminal(command)
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                viewModel.runCode(context)
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                         modifier = Modifier.padding(end = 8.dp),
                         shape = RoundedCornerShape(8.dp)
@@ -264,6 +291,18 @@ fun EditorScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
+
+            if (projectName != null) {
+                Text(
+                    text = projectName + "  >  " + currentFileName.replace("/", "  >  "),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
 
             Row(
                 modifier = Modifier

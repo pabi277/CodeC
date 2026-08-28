@@ -1,6 +1,6 @@
 # CodeC Phase 8 — Projects & File Tree (Keystone Architecture)
 
-**Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal)  
+**Status:** Implementation started 2026-08-28 · device acceptance pending · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal)
 **Keystone Role:** Phase 8 is the foundational keystone for Phase 9 (Editor), Phase 11 (Output Panel & Run), Phase 12 (Multi-language), and Phase 13 (GitHub).
 
 ---

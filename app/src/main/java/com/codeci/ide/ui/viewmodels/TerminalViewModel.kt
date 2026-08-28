@@ -19,9 +19,12 @@ import com.codeci.ide.ui.terminal.TerminalSession
 import com.codeci.ide.ui.terminal.TerminalSessionItem
 import com.codeci.ide.ui.terminal.TerminalSessionManager
 import com.codeci.ide.ui.terminal.TerminalSnapshot
+import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.terminal.UserlandInstaller
 import com.codeci.ide.ui.terminal.UserlandStatus
+import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.utils.AppLogger
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -342,6 +345,18 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             _altLatched.value = false
         }
         activeSession()?.send(payload)
+    }
+
+    /** Move the active shell into an app-private project directory. */
+    fun setProjectCwd(projectDir: File) {
+        val projectsRoot = File(getApplication<Application>().filesDir, "CodeC/projects")
+        val root = runCatching { projectsRoot.canonicalFile }.getOrNull() ?: return
+        val project = runCatching { projectDir.canonicalFile }.getOrNull() ?: return
+        if (!project.isDirectory ||
+            (project.path != root.path && !project.path.startsWith(root.path + File.separator)) ||
+            ProjectPathUtils.sanitizeProjectName(project.name) == null
+        ) return
+        sendCommand(TerminalHandoff.openInDirectoryCommand(project.path))
     }
 
     fun sendCommand(command: String) {

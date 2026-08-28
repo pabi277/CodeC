@@ -3,24 +3,39 @@ package com.codeci.ide.ui.navigation
 import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesomeMosaic
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Home : Screen("home", "Home", Icons.Default.Home)
-    object Editor : Screen("editor?fileName={fileName}", "Editor", Icons.Default.Code) {
-        fun createRoute(fileName: String? = null): String {
-            return if (fileName != null) "editor?fileName=$fileName" else "editor"
+    object Editor : Screen(
+        "editor?projectName={projectName}&fileName={fileName}",
+        "Editor",
+        Icons.Default.Code
+    ) {
+        fun createRoute(fileName: String? = null, projectName: String? = null): String {
+            val args = buildList {
+                projectName?.takeIf { it.isNotBlank() }?.let { add("projectName=${Uri.encode(it)}") }
+                fileName?.takeIf { it.isNotBlank() }?.let { add("fileName=${Uri.encode(it)}") }
+            }
+            return if (args.isEmpty()) "editor" else "editor?${args.joinToString("&")}"
         }
     }
-    object Preview : Screen("preview?fileName={fileName}", "Preview", Icons.Default.Visibility) {
-        fun createRoute(fileName: String): String = "preview?fileName=$fileName"
+    object Preview : Screen(
+        "preview?projectName={projectName}&fileName={fileName}",
+        "Preview",
+        Icons.Default.Visibility
+    ) {
+        fun createRoute(fileName: String, projectName: String? = null): String {
+            val project = projectName?.takeIf { it.isNotBlank() }?.let { "projectName=${Uri.encode(it)}&" }.orEmpty()
+            return "preview?${project}fileName=${Uri.encode(fileName)}"
+        }
     }
     object Terminal : Screen("terminal?cmd={cmd}&nonce={nonce}", "Term", Icons.Default.Terminal) {
         fun createRoute(cmd: String? = null): String {

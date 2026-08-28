@@ -1,5 +1,6 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.projects.ProjectConfig
 import com.codeci.ide.ui.terminal.TerminalHandoff
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -35,6 +36,24 @@ class TerminalHandoffTest {
     fun `open in directory just cds`() {
         val cmd = TerminalHandoff.openInDirectoryCommand("/tmp/work dir")
         assertEquals("cd '/tmp/work dir'", cmd)
+    }
+
+    @Test
+    fun `project run uses config from the project root`() {
+        val config = ProjectConfig(
+            name = "calculator",
+            entry = "src/main.c",
+            build = "cc -I include src/main.c src/calc.c -o bin/app",
+            run = "./bin/app"
+        )
+        assertEquals(
+            "cd /data/data/com.codeci.ide/files/CodeC/projects/calculator && " +
+                "cc -I include src/main.c src/calc.c -o bin/app && ./bin/app",
+            TerminalHandoff.projectRunCommand(
+                "/data/data/com.codeci.ide/files/CodeC/projects/calculator",
+                config
+            )
+        )
     }
 
     @Test
