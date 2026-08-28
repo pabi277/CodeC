@@ -433,6 +433,27 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 
 ---
 
+## Phase 7 — Multi-terminal sessions
+
+✅ **COMPLETE (device-verified 2026-08-28 on `arena/01a048df-codec`).**
+- `TerminalSessionManager` (N concurrent PTY sessions, adjacent-selection close,
+  auto-recreate, 8-cap, `anyAlive` wake lock) + `TerminalViewModel` delegation with
+  one CodeCApi collector per session; active-session routing preserves the public
+  API (`ModulesScreen` and command routes untouched).
+- Session switcher dropdown + rename/close dialogs in `TerminalScreen`;
+  `TerminalEmulatorView.resizeKey` fixes latent cursor drift on switch.
+- Design decisions D1–D12: `docs/chat-phase7/PART_7_DESIGN_DECISIONS.md`.
+  Status + owner follow-ups (CI unit-test step one-liner — the agent token cannot
+  modify workflow files — and the §4 device recipe):
+  `docs/chat-phase7/README.md`.
+- Evidence: CI compile-green run `33185424586`; 10 unit tests written
+  (`TerminalSessionManagerTest`) but not yet executed (no JDK in the agent
+  sandbox; CI runs assemble only). **Device acceptance green (§6): full §4
+  recipe + regression batch on the owner's aarch64 device. Exit condition MET —
+  closed.**
+
+---
+
 ## Phase 10 — Package & Command Hub (Modules Screen Upgrade)
 
 ✅ **IMPLEMENTED (2026-08-28 on `arena/01a0482c-codec`).**

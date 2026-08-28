@@ -151,7 +151,9 @@ fun TerminalEmulatorView(
     modifier: Modifier = Modifier,
     bellTrigger: Long = 0L,
     onSelectionChanged: (String?) -> Unit = {},
-    onUrlClick: (String) -> Unit = {}
+    onUrlClick: (String) -> Unit = {},
+    /** Re-fires [onResize] when this key changes (e.g. active session id, Phase 7). */
+    resizeKey: Any? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -240,7 +242,11 @@ fun TerminalEmulatorView(
     ) {
         val ptyCols = max(1, (with(density) { maxWidth.toPx() } / settledCellW).toInt())
         val ptyRows = max(1, (with(density) { maxHeight.toPx() } / settledCellH).toInt())
-        LaunchedEffect(ptyCols, ptyRows) { onResize(ptyCols, ptyRows) }
+        // resizeKey (Phase 7): re-apply the grid to the PTY when the *bound
+        // session* changes even if the view's own size did not — otherwise a
+        // freshly created session keeps the emulator-default 80x24 grid and
+        // the cursor drifts (the exact bug class Phase 6.1 closed).
+        LaunchedEffect(ptyCols, ptyRows, resizeKey) { onResize(ptyCols, ptyRows) }
 
         val cols = max(1, (with(density) { maxWidth.toPx() } / cellW).toInt())
         val rows = max(1, (with(density) { maxHeight.toPx() } / cellH).toInt())

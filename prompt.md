@@ -26,11 +26,28 @@ gets its own `arena/*` session branch — verify the actual branch with
   catalog build, 4.6 publish + device gate, 4.7 clipboard over the reusable
   `CodeCApi` bridge, 4.8 notifications (`codec-notify`).
 - **Phase 5 (5.1 KI fixes / 5.2 web preview / 5.3 capability batch) ✅ COMPLETE, merged PR #23 (2026-08-26).** Evidence in `docs/chat-phase5/`. See `docs/PHASE5_ROADMAP.md`.
-- **Phase 6 (Terminal UX) & Package Hub (Phase 10) ✅ IMPLEMENTED (2026-08-28, branch `arena/01a0482c-codec`).**
+- **Phase 6 (Terminal UX) & Package Hub (Phase 10) ✅ IMPLEMENTED (2026-08-28, merged PR #25).**
   - **Terminal UX:** Cutout / landscape safe area, configurable extra-keys + custom macros, wake-lock during active jobs, URL tap-to-open, VT BEL visual pulse + vibration, dynamic title, selection copy + word boundary lookup, monospace cell-by-cell drawing (no cursor drift), and smooth 60fps pinch-to-zoom (PTY resize decoupled from continuous in-flight touch gestures).
   - **Package & Command Hub (`ModulesScreen`):** 1-tap package installation & execution (`pkg install -y <pkg>`), curated 25+ tool catalog (Compilers, Editors, Languages, CLI tools, Compression), live `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`), 1-tap quick actions (`pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, `pkg repair`), custom command runner, and line discipline (`\r`) terminal dispatch.
   - CI Build: `33177852501` passed green (2m53s).
-- **Next Work:** Phase 7 (multi-terminal / session manager) or Phase 8 (projects / folder tree / run configuration). All client-only except Phase 12 (Python repo build). No PR/merge without explicit owner command.
+- **Phase 7 (multi-terminal sessions) ✅ COMPLETE (2026-08-28, PR #26, device-verified).**
+  `TerminalSessionManager` (N concurrent PTY sessions, monotonic numbering,
+  adjacent-selection close, auto-recreate on last close, 8-session cap),
+  dropdown session switcher (rename / close-confirm / "+ New session"),
+  one CodeCApi collector per session (wire protocol unchanged — responses are
+  per-invocation `mktemp` files), wake lock while any session is alive,
+  active-session routing preserving the public API, and
+  `TerminalEmulatorView.resizeKey` (grid dims re-applied on switch). Device
+  evidence: `docs/chat-phase7/PART_7_MULTI_TERMINAL.md` §6; decisions D1–D12:
+  `docs/chat-phase7/PART_7_DESIGN_DECISIONS.md`. Known non-blocking follow-up:
+  **CI runs assemble only — unit tests are never executed**; owner one-liner
+  recorded in `docs/chat-phase7/README.md` (agent tokens cannot push workflow
+  changes).
+- **Next Work:** Phase 8 (projects / folder tree / run configuration — the
+  keystone; see `docs/chat-phase8/PART_8_PROJECTS.md`), or resolve PR #24
+  (open, now CONFLICTING with `main` after PR #25 — and it touches 6 Kotlin
+  files despite its "docs-only" title). All client-only except Phase 12
+  (Python repo build). No PR/merge without explicit owner command.
 - An optional x86_64 repeat of the Part D clean-device test was not run (no
   x86_64 device was available); this does not block calling Phase 3 complete
   on the tested aarch64 architecture (see `docs/chat-phase3/PHASE3_PLAN.md` §5 M3).

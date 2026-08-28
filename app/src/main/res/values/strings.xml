@@ -22,6 +22,17 @@
     <string name="terminal_restart">Restart shell</string>
     <string name="terminal_install_userland">Install userland</string>
     <string name="terminal_clipboard_empty">Clipboard is empty</string>
+    <string name="session_list">Sessions</string>
+    <string name="session_new">New session</string>
+    <string name="session_rename">Rename session</string>
+    <string name="session_name_hint">Session name</string>
+    <string name="session_close">Close session</string>
+    <string name="session_confirm_close">This session is still running. Close it anyway?</string>
+    <string name="session_status_running">running</string>
+    <string name="session_status_exited">exited</string>
+    <string name="session_limit">Session limit reached</string>
+    <string name="session_cancel">Cancel</string>
+    <string name="session_ok">OK</string>
     <string name="home_ready">Ready to code today?</string>
     <string name="action_new_file">New File</string>
     <string name="action_open_file">Open File</string>
