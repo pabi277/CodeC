@@ -256,7 +256,7 @@ fun FileManagerScreen(
                     },
                     onRename = { renameTarget = it },
                     onDelete = { deleteTarget = it },
-                    onPreview = { path -> onPreviewFile(path) },
+                    onPreview = { path -> onProjectPreviewFile(activeProject!!.name, path) },
                     modifier = Modifier.fillMaxSize()
                 )
             }

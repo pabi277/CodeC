@@ -78,10 +78,14 @@ object ProjectTransfer {
             while (true) {
                 val entry = zip.nextEntry ?: break
                 if (++count > MAX_ZIP_ENTRIES) error("ZIP contains too many entries")
-                val rawPath = entry.name.replace('\\', '/').trimEnd('/')
+                val entryName = entry.name.replace('\\', '/')
+                // Strip only the one separator used by a normal directory
+                // entry. Repeated separators and a root-only entry must be
+                // rejected instead of being normalised into a safe path.
+                val rawPath = if (entryName.endsWith('/')) entryName.dropLast(1) else entryName
+                if (rawPath.isEmpty()) throw SecurityException("ZIP contains an unsafe path")
                 val safePath = ProjectPathUtils.sanitizeRelativePath(rawPath)
                     ?: throw SecurityException("ZIP contains an unsafe path")
-                if (safePath.isEmpty()) continue
                 val target = ProjectPathUtils.resolveInside(canonicalDestination, safePath)
                     ?: throw SecurityException("ZIP escapes the project directory")
                 if (entry.isDirectory) {
