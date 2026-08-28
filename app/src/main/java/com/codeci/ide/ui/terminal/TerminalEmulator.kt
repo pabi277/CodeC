@@ -12,7 +12,8 @@ class TerminalEmulator(
     scrollbackLimit: Int = 2000,
     var responder: ((String) -> Unit)? = null,
     var onStoragePermissionRequested: (() -> Unit)? = null,
-    var onCodecApiRequest: ((String) -> Unit)? = null
+    var onCodecApiRequest: ((String) -> Unit)? = null,
+    var onBell: (() -> Unit)? = null
 ) : AnsiParser.Host {
 
     val buffer = TerminalBuffer(cols, rows, scrollbackLimit)
@@ -70,7 +71,7 @@ class TerminalEmulator(
 
     override fun executeC0(byte: Int) {
         when (byte) {
-            0x07 -> { /* BEL — ignored at Phase 1 */ }
+            0x07 -> onBell?.invoke()
             0x08 -> buffer.backspace()
             0x09 -> buffer.tab()
             0x0A, 0x0B, 0x0C -> buffer.lineFeed()

@@ -34,7 +34,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     }
     object FileManager : Screen("file_manager", "Files", Icons.Default.Folder)
     object Templates : Screen("templates", "Templates", Icons.Default.AutoAwesomeMosaic)
-    object Modules : Screen("modules", "Modules", Icons.Default.Download)
+    object Modules : Screen("modules", "Packages", Icons.Default.Download)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)
     object Logs : Screen("logs", "Logs", Icons.Default.Settings)
 }

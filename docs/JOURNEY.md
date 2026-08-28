@@ -492,3 +492,19 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      → `OK`, status enabled/ready, `clear` OK, second send with no re-prompt, and the
      owner-confirmed notification tap opens CodeC. **Phase 4 complete.**
      See [`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).
+6. **Phase 5 — Client fixes, web preview, and CodeCApi capability batch** ✅ **COMPLETE, merged PR #23 (2026-08-26).**
+   - 5.1 KI fixes (KI-1 already-installed package error message, KI-2 prefix casing).
+   - 5.2 Web preview in app via local server / WebView.
+   - 5.3 CodeCApi batch: `codec-toast`, `codec-share`, `codec-open-url`, `codec-vibrate`.
+   See `docs/chat-phase5/` and `docs/PHASE5_ROADMAP.md`.
+7. **Phase 6 — Terminal UX fixes** ✅ **IMPLEMENTED (2026-08-28).**
+   - Part 6.1: safe-area / display-cutout padding (`safeDrawingPadding()`, `shortEdges`), configurable FlowRow extra-keys grid + custom macros in Settings, safe wake-lock on active session, URL tap-to-open detection, VT BEL visual flash + vibration, dynamic title, selection-based toolbar copy + word boundary lookup, monospace cell-by-cell rendering (no cursor drift), and smooth 60fps pinch-to-zoom (PTY resize decoupled from continuous in-flight touch gestures).
+   See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
+8. **Phase 10 — Package & Command Hub (Modules Screen Upgrade)** ✅ **IMPLEMENTED (2026-08-28).**
+   - Transformed legacy Modules screen into a full-featured Package Catalog & Command Hub:
+   - 1-tap direct package installation (`pkg install -y <pkg>`) and execution into the live terminal with carriage return line discipline (`\r`).
+   - Quick action shortcuts for repository management: `pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, `pkg repair`.
+   - Curated catalog covering Compilers, Editors, Languages, CLI utilities, and Compression tools.
+   - Real-time `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`).
+   - Custom interactive command runner card.
+   See `docs/chat-phase10/PART_10_PKG_GUI.md`.

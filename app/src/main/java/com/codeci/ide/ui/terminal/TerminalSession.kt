@@ -44,12 +44,18 @@ class TerminalSession(
     private val _codecApiRequests = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val codecApiRequests: SharedFlow<String> = _codecApiRequests.asSharedFlow()
 
+    private val _bellEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+    val bellEvents: SharedFlow<Unit> = _bellEvents.asSharedFlow()
+
     init {
         emulator.onStoragePermissionRequested = {
             _storagePermissionRequests.tryEmit(Unit)
         }
         emulator.onCodecApiRequest = { payload ->
             _codecApiRequests.tryEmit(payload)
+        }
+        emulator.onBell = {
+            _bellEvents.tryEmit(Unit)
         }
     }
 
@@ -93,7 +99,8 @@ class TerminalSession(
 
     fun sendCommand(command: String) {
         if (command.isBlank()) return
-        send(command.trimEnd() + "\n")
+        val clean = command.trim()
+        send("$clean\r")
     }
 
     fun resize(cols: Int, rows: Int) {

@@ -16,30 +16,21 @@ You are continuing **CodeC** (an Android C IDE). PRs #1–#17 are **merged to
 gets its own `arena/*` session branch — verify the actual branch with
 `git status` instead of assuming one.
 
-**WHERE THINGS STAND (2026-08-26):**
+**WHERE THINGS STAND (2026-08-28):**
 
 - **Phase 3 is device-acceptance complete.** Parts A, B, C, and D have all met
-  their exit conditions and are verified on real Android hardware; the
-  Part C+D evidence and docs landed in `main` via **PR #15** (merged
-  2026-08-24). Part D's final clean-device gate (full uninstall/reinstall
-  against the published, key-seeded `userland-v2-dev` archive) passed on
-  2026-08-24. See `docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md` §8 and
-  `docs/JOURNEY.md` §5f for full evidence.
+  their exit conditions and are verified on real Android hardware (PR #15).
   - **Do not redo, re-debug, or re-run any of the above.** They are closed.
 - **Phase 4 is COMPLETE (Parts 4.1–4.8, device-verified 2026-08-26).**
   4.1 storage, 4.2 install UX, 4.3 trust/channel, 4.4 settings parity, 4.5
   catalog build, 4.6 publish + device gate, 4.7 clipboard over the reusable
-  `CodeCApi` bridge, 4.8 notifications + the `POST_NOTIFICATIONS` runtime
-  path (`codec-notify`; owner-confirmed tap opens CodeC). Per-part records
-  are in `docs/chat-phase4/`; the (now completed) Phase 4 roadmap is
-  `docs/chat-phase4/PHASE4_ROADMAP.md`. **Do not redo any of it.**
-- **Next work is Phase 5 — NOT STARTED**, planned in the new
-  `docs/PHASE5_ROADMAP.md` (planning-only skeleton; candidate areas:
-  further Termux:API-style capabilities — share sheet / open URL / vibrate /
-  toast / sensors / camera / intents — the two known client fixes KI-1 and
-  KI-2 from the 4.5/4.6 post-review, and the deferred GUI/catalog/root
-  areas). Confirm with the user which candidate part they want before
-  coding; the exact parts are not yet defined.
+  `CodeCApi` bridge, 4.8 notifications (`codec-notify`).
+- **Phase 5 (5.1 KI fixes / 5.2 web preview / 5.3 capability batch) ✅ COMPLETE, merged PR #23 (2026-08-26).** Evidence in `docs/chat-phase5/`. See `docs/PHASE5_ROADMAP.md`.
+- **Phase 6 (Terminal UX) & Package Hub (Phase 10) ✅ IMPLEMENTED (2026-08-28, branch `arena/01a0482c-codec`).**
+  - **Terminal UX:** Cutout / landscape safe area, configurable extra-keys + custom macros, wake-lock during active jobs, URL tap-to-open, VT BEL visual pulse + vibration, dynamic title, selection copy + word boundary lookup, monospace cell-by-cell drawing (no cursor drift), and smooth 60fps pinch-to-zoom (PTY resize decoupled from continuous in-flight touch gestures).
+  - **Package & Command Hub (`ModulesScreen`):** 1-tap package installation & execution (`pkg install -y <pkg>`), curated 25+ tool catalog (Compilers, Editors, Languages, CLI tools, Compression), live `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`), 1-tap quick actions (`pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, `pkg repair`), custom command runner, and line discipline (`\r`) terminal dispatch.
+  - CI Build: `33177852501` passed green (2m53s).
+- **Next Work:** Phase 7 (multi-terminal / session manager) or Phase 8 (projects / folder tree / run configuration). All client-only except Phase 12 (Python repo build). No PR/merge without explicit owner command.
 - An optional x86_64 repeat of the Part D clean-device test was not run (no
   x86_64 device was available); this does not block calling Phase 3 complete
   on the tested aarch64 architecture (see `docs/chat-phase3/PHASE3_PLAN.md` §5 M3).

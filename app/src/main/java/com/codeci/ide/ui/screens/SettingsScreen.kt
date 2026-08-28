@@ -110,6 +110,7 @@ fun SettingsScreen(
     val compilerBackend by settingsManager.compilerBackendFlow.collectAsState(initial = "auto")
     val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 14f)
     val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "Monospace")
+    val terminalExtraKeysMacros by settingsManager.terminalExtraKeysMacrosFlow.collectAsState(initial = "")
     val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -304,6 +305,69 @@ fun SettingsScreen(
                 title = stringResource(com.codeci.ide.R.string.nav_terminal),
                 subtitle = "In-app VT/ANSI terminal with a real PTY, built-in TCC compiler (cc), and signed CodeC package manager (pkg)."
             )
+
+            var editingMacros by remember(terminalExtraKeysMacros) { mutableStateOf(terminalExtraKeysMacros) }
+            var macrosSaved by remember { mutableStateOf(false) }
+
+            SettingsSectionHeader("Terminal Extra-Keys & Shortcuts")
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Custom Extra-Key Shortcuts",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Add custom shortcut buttons to the terminal key bar (e.g. 'pkg install nano', 'git status', 'make', 'cc').",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = editingMacros,
+                        onValueChange = {
+                            editingMacros = it
+                            macrosSaved = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("pkg install nano, git status, make") },
+                        label = { Text("Extra Keys (comma-separated)") },
+                        singleLine = false,
+                        maxLines = 3
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = {
+                            editingMacros = if (editingMacros.isBlank()) "pkg install nano, git status, make" else "$editingMacros, pkg install nano"
+                            macrosSaved = false
+                        }) {
+                            Text("+ ADD EXAMPLE")
+                        }
+                        TextButton(onClick = {
+                            scope.launch {
+                                settingsManager.setTerminalExtraKeysMacros(editingMacros)
+                                macrosSaved = true
+                                Toast.makeText(context, "Shortcuts saved ✓", Toast.LENGTH_SHORT).show()
+                            }
+                        }) {
+                            Text(if (macrosSaved) "SAVED ✓" else "SAVE SHORTCUTS")
+                        }
+                    }
+                }
+            }
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 

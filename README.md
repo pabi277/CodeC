@@ -39,9 +39,9 @@ downloads, no Termux and no setup**. Programs are compiled to fully static execu
 The bundled Clang module (optional) must be **arm64**; an x86 emulator can't run it — but
 the built-in TCC covers x86_64 emulators automatically.
 
-### In-app terminal (Phase 1 of Mini-Termux)
+### In-app terminal & Package Manager (Mini-Termux)
 
-CodeC now ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`):
+CodeC ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`):
 
 1. Open the **Term** tab, or tap the terminal icon in the editor toolbar.
 2. A login shell starts under `$PREFIX` (`/data/data/com.codeci.ide/files/usr`).
@@ -59,14 +59,18 @@ CodeC now ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`
 4. Programs that use `scanf` / `getchar` must run in **Term**, not the editor RUN button (RUN has no keyboard into the process).
 5. `pkg` is a guarded CodeC-only frontend for the Phase 3 apt/dpkg repository
    (`https://pabi277.github.io/CodeC/dev`). The app installs the Phase 3
-   bootstrap release `userland-v2-dev` (SHA-256 verified, staged, atomic) when
-   it is published and automatically falls back to the Phase 2 `userland-v1`
-   shell-only userland until then — which intentionally lacks apt/dpkg, in
-   which case `pkg` reports a clear setup error. CodeC never uses the official
-   Termux repository. Phase 3 package installation is not accepted on-device
-   yet; see [docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md](docs/chat-phase3/PHASE3_DEVICE_ACCEPTANCE.md).
+   bootstrap release `userland-v2-dev` (SHA-256 verified, staged, atomic) and
+   provides 25+ packages including `git`, `python`, `clang`, `nano`, `make`, `ripgrep`, `tmux`, and more.
 
-The extra-keys row (ESC, TAB, CTRL, ALT, arrows) is there so a phone keyboard can still drive the PTY. Pinch to zoom; long-press to copy/paste.
+### Package & Command Hub (Packages tab)
+
+The **Packages** tab provides a visual 1-tap package manager and command hub:
+- **1-Tap Install & Run:** Tap **INSTALL** or **RUN** on any package (`git`, `nano`, `python3`, `clang`, `make`, etc.) to execute the command directly in the live terminal.
+- **Quick System Actions:** 1-tap buttons for `pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, and `pkg repair`.
+- **Live Status Badges:** Checks real-time installation status in `$PREFIX/bin` (`INSTALLED ✓` / `AVAILABLE`).
+- **Interactive Command Runner:** Execute custom commands directly from the UI.
+
+The extra-keys row (ESC, TAB, CTRL, ALT, arrows) and custom macros in Settings make mobile keyboard input seamless. Smooth 60fps pinch-to-zoom and long-press selection with word boundary detection and copy/paste contextual menu are fully supported.
 
 **Next-chat handoff** (bugs already fixed this session, what not to regress): [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 

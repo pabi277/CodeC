@@ -1,6 +1,14 @@
 package com.codeci.ide.ui.components
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Typeface
+import android.net.Uri
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -17,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +45,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -51,6 +61,7 @@ import com.codeci.ide.ui.terminal.XtermColors
 import com.codeci.ide.ui.theme.DraculaTerminalTheme
 import com.codeci.ide.ui.theme.TerminalThemeColors
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -74,6 +85,57 @@ data class GridSelection(
     val y2: Int
 )
 
+fun findUrlAt(text: String, col: Int): String? {
+    val regex = Regex("https?://[^\\s<>\"]+")
+    for (match in regex.findAll(text)) {
+        if (col in match.range.first..match.range.last) {
+            return match.value
+        }
+    }
+    return null
+}
+
+fun findWordBoundaries(text: String, col: Int): Pair<Int, Int> {
+    if (text.isEmpty() || col !in text.indices) return col to col
+    val isWordChar = { c: Char -> c.isLetterOrDigit() || c == '_' || c == '-' || c == '.' || c == '/' }
+    var start = col
+    var end = col
+    while (start > 0 && isWordChar(text[start - 1])) start--
+    while (end < text.length - 1 && isWordChar(text[end + 1])) end++
+    return start to end
+}
+
+fun openTerminalUrl(context: Context, url: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Cannot open URL: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+fun triggerTerminalBellFeedback(context: Context) {
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            vibratorManager?.defaultVibrator?.vibrate(
+                VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
+        }
+    } catch (_: Exception) {}
+}
+
 @Composable
 fun TerminalEmulatorView(
     snapshot: TerminalSnapshot,
@@ -86,10 +148,17 @@ fun TerminalEmulatorView(
     onPaste: () -> Unit,
     onCopyText: (String) -> Unit,
     cursorSequence: (Char) -> String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bellTrigger: Long = 0L,
+    onSelectionChanged: (String?) -> Unit = {},
+    onUrlClick: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val density = LocalDensity.current
     var keyView by remember { mutableStateOf<TerminalKeyView?>(null) }
+
+    // Reactive local font size for instant smooth pinch-to-zoom
+    var activeFontSizeSp by remember(fontSizeSp) { mutableFloatStateOf(fontSizeSp) }
 
     val typeface = remember(fontFamily) {
         when (fontFamily) {
@@ -100,13 +169,23 @@ fun TerminalEmulatorView(
         }
     }
 
-    val paint = remember(fontSizeSp, density, typeface) {
+    // Settled paint for PTY rows/cols sizing (avoids resizing PTY repeatedly during pinch)
+    val settledPaint = remember(fontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
             textSize = with(density) { fontSizeSp.sp.toPx() }
         }
     }
-    // Termux TerminalRenderer: width = measureText("X"), height = fontSpacing.
+    val settledCellW = remember(settledPaint) { max(settledPaint.measureText("X"), 1f) }
+    val settledCellH = remember(settledPaint) { max(settledPaint.fontSpacing, 1f) }
+
+    // Active visual paint for 60fps instant pinch rendering
+    val paint = remember(activeFontSizeSp, density, typeface) {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            this.typeface = typeface
+            textSize = with(density) { activeFontSizeSp.sp.toPx() }
+        }
+    }
     val cellW = remember(paint) { max(paint.measureText("X"), 1f) }
     val cellH = remember(paint) { max(paint.fontSpacing, 1f) }
     val ascent = remember(paint) { paint.fontMetrics.ascent }
@@ -118,9 +197,27 @@ fun TerminalEmulatorView(
     var menuOffset by remember { mutableStateOf(IntOffset.Zero) }
     var selecting by remember { mutableStateOf(false) }
 
+    var flashAlpha by remember { mutableFloatStateOf(0f) }
+
+    // BEL visual flash + vibration
+    LaunchedEffect(bellTrigger) {
+        if (bellTrigger > 0L) {
+            triggerTerminalBellFeedback(context)
+            flashAlpha = 0.35f
+            delay(120)
+            flashAlpha = 0f
+        }
+    }
+
     val minTop = -snapshot.scrollbackCount
     if (topRow < minTop) topRow = minTop
     if (topRow > 0) topRow = 0
+
+    // Update active selection state for parent toolbar copy
+    LaunchedEffect(selection, snapshot.generation) {
+        val selectedText = selection?.let { snapshot.selectedText(it) }?.takeIf { it.isNotEmpty() }
+        onSelectionChanged(selectedText)
+    }
 
     // Termux onScreenUpdated: jump to live screen unless a selection is active.
     LaunchedEffect(snapshot.generation) {
@@ -141,9 +238,12 @@ fun TerminalEmulatorView(
                 handleHardwareKey(event.key, event.isCtrlPressed, onInput, cursorSequence)
             }
     ) {
+        val ptyCols = max(1, (with(density) { maxWidth.toPx() } / settledCellW).toInt())
+        val ptyRows = max(1, (with(density) { maxHeight.toPx() } / settledCellH).toInt())
+        LaunchedEffect(ptyCols, ptyRows) { onResize(ptyCols, ptyRows) }
+
         val cols = max(1, (with(density) { maxWidth.toPx() } / cellW).toInt())
         val rows = max(1, (with(density) { maxHeight.toPx() } / cellH).toInt())
-        LaunchedEffect(cols, rows) { onResize(cols, rows) }
 
         Box(modifier = Modifier.fillMaxSize()) {
             Canvas(
@@ -151,16 +251,33 @@ fun TerminalEmulatorView(
                     .fillMaxSize()
                     .pointerInput(cellW, cellH, snapshot.generation, snapshot.scrollbackCount) {
                         detectTapGestures(
-                            onTap = {
-                                selecting = false
-                                selection = null
-                                keyView?.showIme()
+                            onTap = { pos ->
+                                val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
+                                val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
+                                val lineIndex = snapshot.scrollbackCount + topRow + row
+                                val transcript = snapshot.scrollbackLines + snapshot.lines
+                                val url = if (lineIndex in transcript.indices) {
+                                    findUrlAt(transcript[lineIndex].text, col)
+                                } else null
+
+                                if (url != null) {
+                                    onUrlClick(url)
+                                } else {
+                                    selecting = false
+                                    selection = null
+                                    keyView?.showIme()
+                                }
                             },
                             onLongPress = { pos ->
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
                                 val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
                                 val y = topRow + row
-                                selection = GridSelection(col, y, col, y)
+                                val lineIndex = snapshot.scrollbackCount + y
+                                val transcript = snapshot.scrollbackLines + snapshot.lines
+                                val (wStart, wEnd) = if (lineIndex in transcript.indices) {
+                                    findWordBoundaries(transcript[lineIndex].text, col)
+                                } else col to col
+                                selection = GridSelection(wStart, y, wEnd, y)
                                 selecting = true
                                 menuOffset = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
                                 menu = true
@@ -189,10 +306,15 @@ fun TerminalEmulatorView(
                             }
                         )
                     }
-                    .pointerInput(fontSizeSp) {
-                        detectTwoFingerPinch { zoom ->
-                            if (zoom != 1f && abs(zoom - 1f) > 0.01f) onFontScale(fontSizeSp * zoom)
-                        }
+                    .pointerInput(Unit) {
+                        detectSmoothPinch(
+                            onZoomChange = { factor ->
+                                activeFontSizeSp = (activeFontSizeSp * factor).coerceIn(8f, 32f)
+                            },
+                            onZoomEnd = {
+                                onFontScale(activeFontSizeSp)
+                            }
+                        )
                     }
             ) {
                 drawRect(theme.background)
@@ -222,17 +344,46 @@ fun TerminalEmulatorView(
                 }
             }
 
+            if (flashAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = flashAlpha))
+                )
+            }
+
             DropdownMenu(
                 expanded = menu,
                 onDismissRequest = { menu = false }
             ) {
+                val selectedText = selection?.let { snapshot.selectedText(it) }
+                val selectedUrl = selectedText?.let { findUrlAt(it, 0) }
+
+                if (selectedUrl != null) {
+                    DropdownMenuItem(
+                        text = { Text("Open URL") },
+                        onClick = {
+                            menu = false
+                            onUrlClick(selectedUrl)
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.terminal_copy)) },
                     onClick = {
                         menu = false
-                        val text = selection?.let { snapshot.selectedText(it) }
-                            ?: snapshot.transcriptText()
+                        val text = selectedText ?: snapshot.transcriptText()
                         onCopyText(text)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Select All") },
+                    onClick = {
+                        menu = false
+                        selection = GridSelection(
+                            0, -snapshot.scrollbackCount,
+                            cols - 1, snapshot.rows - 1
+                        )
                     }
                 )
                 DropdownMenuItem(
@@ -312,12 +463,19 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
         val sliceEnd = end.coerceAtMost(text.length)
         val sliceStart = start.coerceAtMost(text.length)
         if (sliceStart >= sliceEnd) continue
-        val slice = text.substring(sliceStart, sliceEnd)
         paint.color = (0xFF000000.toInt()) or drawFg
         paint.isFakeBoldText = bold
         paint.isUnderlineText = run.flags and CellFlags.UNDERLINE != 0
+        
+        // Character-by-character cell drawing to eliminate cursor drift
         drawIntoCanvas { canvas ->
-            canvas.nativeCanvas.drawText(slice, start * cellW, y * cellH - ascent, paint)
+            for (i in 0 until (sliceEnd - sliceStart)) {
+                val charCol = sliceStart + i
+                val ch = text[charCol].toString()
+                if (ch != " ") {
+                    canvas.nativeCanvas.drawText(ch, (start + i) * cellW, y * cellH - ascent, paint)
+                }
+            }
         }
     }
     if (sel != null && extY in minOf(sel.y1, sel.y2)..maxOf(sel.y1, sel.y2)) {
@@ -417,18 +575,31 @@ private suspend fun PointerInputScope.detectScrollOrSelect(
     }
 }
 
-private suspend fun PointerInputScope.detectTwoFingerPinch(onZoom: (Float) -> Unit) {
+private suspend fun PointerInputScope.detectSmoothPinch(
+    onZoomChange: (Float) -> Unit,
+    onZoomEnd: () -> Unit
+) {
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false)
         var lastDistance = 0f
+        var didPinch = false
         while (true) {
             val event = awaitPointerEvent()
             val pressed = event.changes.filter { it.pressed }
-            if (pressed.isEmpty()) break
+            if (pressed.isEmpty()) {
+                if (didPinch) {
+                    onZoomEnd()
+                }
+                break
+            }
             if (pressed.size >= 2) {
                 val distance = (pressed[0].position - pressed[1].position).getDistance()
-                if (lastDistance > 0f && lastDistance != distance) {
-                    onZoom(distance / lastDistance)
+                if (lastDistance > 0f && distance > 0f) {
+                    val factor = distance / lastDistance
+                    if (factor in 0.6f..1.4f) {
+                        onZoomChange(factor)
+                        didPinch = true
+                    }
                 }
                 lastDistance = distance
                 pressed.forEach { it.consume() }

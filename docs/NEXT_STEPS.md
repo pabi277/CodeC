@@ -415,14 +415,30 @@ Phase 4 planning and tracking lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-ph
 
 ---
 
-## Phase 5 — not started
+## Phase 5 — client fixes, web preview, and capability batch
 
-Planning-only skeleton: [`docs/PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
-Candidate areas (nothing committed): more Termux:API-style capabilities
-(share sheet / open URL / vibrate / toast / sensors / camera / intents —
-each = one `CodeCApi` wire op + one CLI script + bootstrap bump), the two
-known client fixes from the 4.5/4.6 post-review (KI-1 already-newest
-`pkg install`; KI-2 `$PREFIX` vs dpkg-recorded prefix spelling for
-`update-alternatives`), and the deferred GUI/catalog/root areas from
-`TERMINAL_PLAN.md` §12. Exact parts and exit conditions get decided and
-recorded in `docs/chat-phase5/` when the owner picks one.
+✅ **COMPLETE (2026-08-26, merged in PR #23).**
+- Part 5.1: KI-1 / KI-2 client fixes.
+- Part 5.2: In-app web preview via WebView / local server.
+- Part 5.3: Capability batch (`codec-toast`, `codec-share`, `codec-open-url`, `codec-vibrate`).
+See `docs/chat-phase5/` and `docs/PHASE5_ROADMAP.md`.
+
+---
+
+## Phase 6 — Terminal UX
+
+✅ **IMPLEMENTED (2026-08-28 on `arena/01a0482c-codec`).**
+- Part 6.1: Safe-area / cutout padding (`safeDrawingPadding()`, `shortEdges`), configurable multi-row extra-keys grid + macros in Settings, wake lock with safety, URL tap-to-open, VT BEL visual flash + vibrate, dynamic title, selection-aware copy, character cell alignment, and smooth 60fps pinch-to-zoom.
+See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
+
+---
+
+## Phase 10 — Package & Command Hub (Modules Screen Upgrade)
+
+✅ **IMPLEMENTED (2026-08-28 on `arena/01a0482c-codec`).**
+- 1-tap direct package installation (`pkg install -y <pkg>`) and execution into live terminal (`\r` line discipline).
+- Quick repository management actions (`pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, `pkg repair`).
+- Curated 25+ package catalog (Compilers, Editors, Languages, CLI tools, Compression).
+- Live `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`).
+- Custom interactive command runner card.
+See `docs/chat-phase10/PART_10_PKG_GUI.md`.

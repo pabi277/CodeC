@@ -1,6 +1,8 @@
 package com.codeci.ide.ui.viewmodels
 
 import android.app.Application
+import android.content.Context
+import android.os.PowerManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.services.CompilerSettings
@@ -44,10 +46,37 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private val userland = UserlandInstaller(application)
     private val session = TerminalSession()
 
+    private val wakeLock: PowerManager.WakeLock? = runCatching {
+        (application.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK, "CodeC::TerminalWake"
+        )
+    }.getOrNull()
+
+    init {
+        // Phase 6.1: wake lock when terminal session is active
+        viewModelScope.launch(Dispatchers.Main) {
+            session.alive.collect { alive ->
+                try {
+                    if (alive) {
+                        wakeLock?.let { if (!it.isHeld) it.acquire(10 * 60 * 1000L) }
+                    } else {
+                        wakeLock?.let { if (it.isHeld) it.release() }
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e("TerminalViewModel", "wake lock error", e)
+                }
+            }
+        }
+    }
+
     val snapshot: StateFlow<TerminalSnapshot> = session.snapshot
     val alive: StateFlow<Boolean> = session.alive
     val exitCode: StateFlow<Int?> = session.exitCode
     val storagePermissionRequests: SharedFlow<Unit> = session.storagePermissionRequests
+    val bellEvents: SharedFlow<Unit> = session.bellEvents
+
+    val extraKeysMacros: StateFlow<String> = settings.terminalExtraKeysMacrosFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     /** Requests that need the Android 13+ notification permission before they can run. */
     private val _notificationPermissionRequests =
@@ -132,6 +161,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             val pending = queuedCommand
             queuedCommand = null
             if (!pending.isNullOrBlank()) {
+                kotlinx.coroutines.delay(350)
                 session.sendCommand(pending)
             }
         } catch (e: Exception) {
@@ -181,12 +211,15 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun sendCommand(command: String) {
-        if (!_started.value) {
+        if (!_started.value || !session.alive.value) {
             queuedCommand = command
             ensureStarted()
             return
         }
-        session.sendCommand(command)
+        viewModelScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(80)
+            session.sendCommand(command)
+        }
     }
 
     fun sendKey(sequence: String) {
@@ -226,6 +259,9 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     override fun onCleared() {
+        try {
+            wakeLock?.let { if (it.isHeld) it.release() }
+        } catch (_: Exception) {}
         session.stop()
         super.onCleared()
     }

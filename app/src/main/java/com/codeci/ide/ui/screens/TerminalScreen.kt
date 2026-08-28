@@ -8,9 +8,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
@@ -28,6 +33,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +46,8 @@ import com.codeci.ide.MainActivity
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.TerminalEmulatorView
 import com.codeci.ide.ui.components.TerminalExtraKeys
+import com.codeci.ide.ui.components.openTerminalUrl
+import com.codeci.ide.ui.components.parseExtraKeysMacros
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.theme.getTerminalTheme
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -64,8 +75,18 @@ fun TerminalScreen(
     val terminalTheme = getTerminalTheme(terminalThemeType)
     val ctrl by viewModel.ctrlLatched.collectAsState()
     val alt by viewModel.altLatched.collectAsState()
+    val macrosRaw by viewModel.extraKeysMacros.collectAsState()
+    val customMacros = remember(macrosRaw) { parseExtraKeysMacros(macrosRaw) }
+
+    var activeSelection by remember { mutableStateOf<String?>(null) }
+    var bellTrigger by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) { viewModel.ensureStarted() }
+    LaunchedEffect(Unit) {
+        viewModel.bellEvents.collect {
+            bellTrigger = System.currentTimeMillis()
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.storagePermissionRequests.collect {
             (context as? MainActivity)?.requestStoragePermissions()
@@ -85,6 +106,7 @@ fun TerminalScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
             .imePadding()
             .background(terminalTheme.background)
     ) {
@@ -111,7 +133,10 @@ fun TerminalScreen(
                         contentDescription = stringResource(R.string.terminal_storage_title)
                     )
                 }
-                IconButton(onClick = { copyText(context, viewModel.transcriptText()) }) {
+                IconButton(onClick = {
+                    val textToCopy = activeSelection ?: viewModel.transcriptText()
+                    copyText(context, textToCopy)
+                }) {
                     Icon(
                         Icons.Default.ContentCopy,
                         contentDescription = stringResource(R.string.terminal_copy)
@@ -153,6 +178,9 @@ fun TerminalScreen(
             onPaste = { pasteFromClipboard(context, viewModel) },
             onCopyText = { copyText(context, it) },
             cursorSequence = { viewModel.cursorKey(it) },
+            bellTrigger = bellTrigger,
+            onSelectionChanged = { activeSelection = it },
+            onUrlClick = { openTerminalUrl(context, it) },
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -163,7 +191,8 @@ fun TerminalScreen(
             onCtrl = { viewModel.toggleCtrl() },
             onAlt = { viewModel.toggleAlt() },
             onKey = { viewModel.sendKey(it) },
-            cursorSequence = { viewModel.cursorKey(it) }
+            cursorSequence = { viewModel.cursorKey(it) },
+            customMacros = customMacros
         )
     }
 }

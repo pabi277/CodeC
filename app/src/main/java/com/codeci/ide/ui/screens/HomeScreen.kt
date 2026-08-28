@@ -48,6 +48,7 @@ import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.utils.FileManager
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,10 +69,11 @@ fun HomeScreen(
     val totalRuns by statsManager.totalRunsFlow.collectAsState(initial = 0)
     val runStreak by statsManager.currentStreakFlow.collectAsState(initial = 0)
     val totalFiles = fileManager.listFiles().size
-    val moduleViewModel = activityModuleViewModel()
-    val compilerInstalled by moduleViewModel.isCompilerInstalled.collectAsState()
-    val builtInTcc by remember { mutableStateOf(EmbeddedCompiler.isAvailable(context)) }
-    val compilerAvailable = compilerInstalled || builtInTcc
+    val builtInTcc = remember { EmbeddedCompiler.isAvailable(context) }
+    val clangInstalled = remember {
+        File(File(context.filesDir, "usr"), "bin/clang").exists()
+    }
+    val compilerAvailable = builtInTcc || clangInstalled
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
@@ -98,7 +100,7 @@ fun HomeScreen(
                 )
             }
 
-            if (builtInTcc && !compilerInstalled) {
+            if (builtInTcc && !clangInstalled) {
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
@@ -139,13 +141,7 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = {
-                                val compiler = moduleViewModel.requiredCompiler()
-                                if (compiler != null) {
-                                    moduleViewModel.downloadModule(compiler.id)
-                                }
-                                onNavigateToModules()
-                            }) {
+                            Button(onClick = onNavigateToModules) {
                                 Text(stringResource(R.string.download_now))
                             }
                         }
