@@ -415,8 +415,8 @@ fun MainApp() {
             }
             composable(Screen.Modules.route) {
                 ModulesScreen(
-                    onRunCommand = { cmd ->
-                        navController.navigate(Screen.Terminal.createRoute(cmd)) {
+                    onNavigateToTerminal = {
+                        navController.navigate(Screen.Terminal.createRoute(null)) {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }

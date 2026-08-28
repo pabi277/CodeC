@@ -161,6 +161,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             val pending = queuedCommand
             queuedCommand = null
             if (!pending.isNullOrBlank()) {
+                kotlinx.coroutines.delay(350)
                 session.sendCommand(pending)
             }
         } catch (e: Exception) {
@@ -210,12 +211,15 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun sendCommand(command: String) {
-        if (!_started.value) {
+        if (!_started.value || !session.alive.value) {
             queuedCommand = command
             ensureStarted()
             return
         }
-        session.sendCommand(command)
+        viewModelScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(80)
+            session.sendCommand(command)
+        }
     }
 
     fun sendKey(sequence: String) {

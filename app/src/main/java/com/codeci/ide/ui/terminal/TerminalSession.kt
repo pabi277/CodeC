@@ -99,7 +99,8 @@ class TerminalSession(
 
     fun sendCommand(command: String) {
         if (command.isBlank()) return
-        send(command.trimEnd() + "\n")
+        val clean = command.trim()
+        send("$clean\r")
     }
 
     fun resize(cols: Int, rows: Int) {

@@ -169,13 +169,23 @@ fun TerminalEmulatorView(
         }
     }
 
+    // Settled paint for PTY rows/cols sizing (avoids resizing PTY repeatedly during pinch)
+    val settledPaint = remember(fontSizeSp, density, typeface) {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            this.typeface = typeface
+            textSize = with(density) { fontSizeSp.sp.toPx() }
+        }
+    }
+    val settledCellW = remember(settledPaint) { max(settledPaint.measureText("X"), 1f) }
+    val settledCellH = remember(settledPaint) { max(settledPaint.fontSpacing, 1f) }
+
+    // Active visual paint for 60fps instant pinch rendering
     val paint = remember(activeFontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
             textSize = with(density) { activeFontSizeSp.sp.toPx() }
         }
     }
-    // Termux TerminalRenderer: width = measureText("X"), height = fontSpacing.
     val cellW = remember(paint) { max(paint.measureText("X"), 1f) }
     val cellH = remember(paint) { max(paint.fontSpacing, 1f) }
     val ascent = remember(paint) { paint.fontMetrics.ascent }
@@ -228,9 +238,12 @@ fun TerminalEmulatorView(
                 handleHardwareKey(event.key, event.isCtrlPressed, onInput, cursorSequence)
             }
     ) {
+        val ptyCols = max(1, (with(density) { maxWidth.toPx() } / settledCellW).toInt())
+        val ptyRows = max(1, (with(density) { maxHeight.toPx() } / settledCellH).toInt())
+        LaunchedEffect(ptyCols, ptyRows) { onResize(ptyCols, ptyRows) }
+
         val cols = max(1, (with(density) { maxWidth.toPx() } / cellW).toInt())
         val rows = max(1, (with(density) { maxHeight.toPx() } / cellH).toInt())
-        LaunchedEffect(cols, rows) { onResize(cols, rows) }
 
         Box(modifier = Modifier.fillMaxSize()) {
             Canvas(
@@ -569,18 +582,24 @@ private suspend fun PointerInputScope.detectSmoothPinch(
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false)
         var lastDistance = 0f
+        var didPinch = false
         while (true) {
             val event = awaitPointerEvent()
             val pressed = event.changes.filter { it.pressed }
             if (pressed.isEmpty()) {
-                onZoomEnd()
+                if (didPinch) {
+                    onZoomEnd()
+                }
                 break
             }
             if (pressed.size >= 2) {
                 val distance = (pressed[0].position - pressed[1].position).getDistance()
-                if (lastDistance > 0f && lastDistance != distance) {
+                if (lastDistance > 0f && distance > 0f) {
                     val factor = distance / lastDistance
-                    onZoomChange(factor)
+                    if (factor in 0.6f..1.4f) {
+                        onZoomChange(factor)
+                        didPinch = true
+                    }
                 }
                 lastDistance = distance
                 pressed.forEach { it.consume() }

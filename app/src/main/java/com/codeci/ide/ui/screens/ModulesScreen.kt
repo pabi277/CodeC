@@ -75,7 +75,8 @@ import java.io.File
 @Composable
 fun ModulesScreen(
     modifier: Modifier = Modifier,
-    onRunCommand: (String) -> Unit = {}
+    terminalViewModel: TerminalViewModel = activityTerminalViewModel(),
+    onNavigateToTerminal: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
@@ -151,7 +152,8 @@ fun ModulesScreen(
                             action = action,
                             onClick = {
                                 Toast.makeText(context, "Running: ${action.command}", Toast.LENGTH_SHORT).show()
-                                onRunCommand(action.command)
+                                terminalViewModel.sendCommand(action.command)
+                                onNavigateToTerminal()
                             }
                         )
                     }
@@ -201,7 +203,8 @@ fun ModulesScreen(
                                     if (customCommand.isNotBlank()) {
                                         val cmd = customCommand.trim()
                                         Toast.makeText(context, "Running in terminal: $cmd", Toast.LENGTH_SHORT).show()
-                                        onRunCommand(cmd)
+                                        terminalViewModel.sendCommand(cmd)
+                                        onNavigateToTerminal()
                                     }
                                 },
                                 enabled = customCommand.isNotBlank(),
@@ -263,15 +266,18 @@ fun ModulesScreen(
                         isInstalled = isInstalled,
                         onInstall = {
                             Toast.makeText(context, "Installing ${item.name}…", Toast.LENGTH_SHORT).show()
-                            onRunCommand(item.installCommand)
+                            terminalViewModel.sendCommand(item.installCommand)
+                            onNavigateToTerminal()
                         },
                         onRun = {
                             Toast.makeText(context, "Launching ${item.name}…", Toast.LENGTH_SHORT).show()
-                            onRunCommand(item.runCommand)
+                            terminalViewModel.sendCommand(item.runCommand)
+                            onNavigateToTerminal()
                         },
                         onUninstall = {
                             Toast.makeText(context, "Uninstalling ${item.name}…", Toast.LENGTH_SHORT).show()
-                            onRunCommand("pkg uninstall -y ${item.id}")
+                            terminalViewModel.sendCommand("pkg uninstall -y ${item.id}")
+                            onNavigateToTerminal()
                         },
                         onCopyCommand = { cmd ->
                             copyToClipboard(context, cmd)
