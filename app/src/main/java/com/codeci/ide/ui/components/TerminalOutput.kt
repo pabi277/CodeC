@@ -42,6 +42,12 @@ import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.viewmodels.TerminalSegment
 import com.codeci.ide.ui.viewmodels.TerminalSegmentType
 
+// Phase 6.1: URL detection helper for terminal text
+fun extractUrls(text: String): List<String> {
+    val regex = Regex("https?://[^\\s<>\"]+")
+    return regex.findAll(text).map { it.value }.toList()
+}
+
 @Composable
 fun TerminalOutput(
     segments: List<TerminalSegment>,

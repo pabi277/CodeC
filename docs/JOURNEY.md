@@ -492,3 +492,11 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      → `OK`, status enabled/ready, `clear` OK, second send with no re-prompt, and the
      owner-confirmed notification tap opens CodeC. **Phase 4 complete.**
      See [`chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md`](chat-phase4/PART_4_8_ANDROID_NOTIFICATIONS.md).
+6. **Phase 5 — Client fixes, web preview, and CodeCApi capability batch** ✅ **COMPLETE, merged PR #23 (2026-08-26).**
+   - 5.1 KI fixes (KI-1 already-installed package error message, KI-2 prefix casing).
+   - 5.2 Web preview in app via local server / WebView.
+   - 5.3 CodeCApi batch: `codec-toast`, `codec-share`, `codec-open-url`, `codec-vibrate`.
+   See `docs/chat-phase5/` and `docs/PHASE5_ROADMAP.md`.
+7. **Phase 6 — Terminal UX fixes** ✅ **IMPLEMENTED (2026-08-28).**
+   - Part 6.1: safe-area / display-cutout padding (`safeDrawingPadding()`, `shortEdges`), configurable FlowRow extra-keys grid + custom macros, safe wake-lock on active session, URL tap-to-open detection, VT BEL visual flash + vibration, dynamic title, and selection-based toolbar copy.
+   See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.

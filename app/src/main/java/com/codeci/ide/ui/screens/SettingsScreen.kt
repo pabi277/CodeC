@@ -110,6 +110,7 @@ fun SettingsScreen(
     val compilerBackend by settingsManager.compilerBackendFlow.collectAsState(initial = "auto")
     val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 14f)
     val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "Monospace")
+    val terminalExtraKeysMacros by settingsManager.terminalExtraKeysMacrosFlow.collectAsState(initial = "")
     val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -304,6 +305,47 @@ fun SettingsScreen(
                 title = stringResource(com.codeci.ide.R.string.nav_terminal),
                 subtitle = "In-app VT/ANSI terminal with a real PTY, built-in TCC compiler (cc), and signed CodeC package manager (pkg)."
             )
+
+            var editingMacros by remember(terminalExtraKeysMacros) { mutableStateOf(terminalExtraKeysMacros) }
+            var macrosSaved by remember { mutableStateOf(false) }
+
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Terminal Extra-Keys & Macros",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "Add custom macro buttons to the terminal key bar (comma or newline separated, e.g. 'pkg install nano, git status, cc').",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = editingMacros,
+                    onValueChange = {
+                        editingMacros = it
+                        macrosSaved = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("pkg install nano, git status") },
+                    singleLine = false,
+                    maxLines = 3
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                settingsManager.setTerminalExtraKeysMacros(editingMacros)
+                                macrosSaved = true
+                                Toast.makeText(context, "Macros saved", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) {
+                        Text(if (macrosSaved) "SAVED ✓" else "SAVE MACROS")
+                    }
+                }
+            }
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 

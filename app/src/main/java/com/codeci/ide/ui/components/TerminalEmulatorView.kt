@@ -1,6 +1,14 @@
 package com.codeci.ide.ui.components
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Typeface
+import android.net.Uri
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -17,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +45,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -51,6 +61,7 @@ import com.codeci.ide.ui.terminal.XtermColors
 import com.codeci.ide.ui.theme.DraculaTerminalTheme
 import com.codeci.ide.ui.theme.TerminalThemeColors
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -74,6 +85,47 @@ data class GridSelection(
     val y2: Int
 )
 
+fun findUrlAt(text: String, col: Int): String? {
+    val regex = Regex("https?://[^\\s<>\"]+")
+    for (match in regex.findAll(text)) {
+        if (col in match.range.first..match.range.last) {
+            return match.value
+        }
+    }
+    return null
+}
+
+fun openTerminalUrl(context: Context, url: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Cannot open URL: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+fun triggerTerminalBellFeedback(context: Context) {
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            vibratorManager?.defaultVibrator?.vibrate(
+                VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
+        }
+    } catch (_: Exception) {}
+}
+
 @Composable
 fun TerminalEmulatorView(
     snapshot: TerminalSnapshot,
@@ -86,8 +138,12 @@ fun TerminalEmulatorView(
     onPaste: () -> Unit,
     onCopyText: (String) -> Unit,
     cursorSequence: (Char) -> String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bellTrigger: Long = 0L,
+    onSelectionChanged: (String?) -> Unit = {},
+    onUrlClick: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val density = LocalDensity.current
     var keyView by remember { mutableStateOf<TerminalKeyView?>(null) }
 
@@ -118,9 +174,27 @@ fun TerminalEmulatorView(
     var menuOffset by remember { mutableStateOf(IntOffset.Zero) }
     var selecting by remember { mutableStateOf(false) }
 
+    var flashAlpha by remember { mutableFloatStateOf(0f) }
+
+    // BEL visual flash + vibration
+    LaunchedEffect(bellTrigger) {
+        if (bellTrigger > 0L) {
+            triggerTerminalBellFeedback(context)
+            flashAlpha = 0.35f
+            delay(120)
+            flashAlpha = 0f
+        }
+    }
+
     val minTop = -snapshot.scrollbackCount
     if (topRow < minTop) topRow = minTop
     if (topRow > 0) topRow = 0
+
+    // Update active selection state for parent toolbar copy
+    LaunchedEffect(selection, snapshot.generation) {
+        val selectedText = selection?.let { snapshot.selectedText(it) }?.takeIf { it.isNotEmpty() }
+        onSelectionChanged(selectedText)
+    }
 
     // Termux onScreenUpdated: jump to live screen unless a selection is active.
     LaunchedEffect(snapshot.generation) {
@@ -151,10 +225,22 @@ fun TerminalEmulatorView(
                     .fillMaxSize()
                     .pointerInput(cellW, cellH, snapshot.generation, snapshot.scrollbackCount) {
                         detectTapGestures(
-                            onTap = {
-                                selecting = false
-                                selection = null
-                                keyView?.showIme()
+                            onTap = { pos ->
+                                val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
+                                val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
+                                val lineIndex = snapshot.scrollbackCount + topRow + row
+                                val transcript = snapshot.scrollbackLines + snapshot.lines
+                                val url = if (lineIndex in transcript.indices) {
+                                    findUrlAt(transcript[lineIndex].text, col)
+                                } else null
+
+                                if (url != null) {
+                                    onUrlClick(url)
+                                } else {
+                                    selecting = false
+                                    selection = null
+                                    keyView?.showIme()
+                                }
                             },
                             onLongPress = { pos ->
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
@@ -222,16 +308,35 @@ fun TerminalEmulatorView(
                 }
             }
 
+            if (flashAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = flashAlpha))
+                )
+            }
+
             DropdownMenu(
                 expanded = menu,
                 onDismissRequest = { menu = false }
             ) {
+                val selectedText = selection?.let { snapshot.selectedText(it) }
+                val selectedUrl = selectedText?.let { findUrlAt(it, 0) }
+
+                if (selectedUrl != null) {
+                    DropdownMenuItem(
+                        text = { Text("Open URL") },
+                        onClick = {
+                            menu = false
+                            onUrlClick(selectedUrl)
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.terminal_copy)) },
                     onClick = {
                         menu = false
-                        val text = selection?.let { snapshot.selectedText(it) }
-                            ?: snapshot.transcriptText()
+                        val text = selectedText ?: snapshot.transcriptText()
                         onCopyText(text)
                     }
                 )

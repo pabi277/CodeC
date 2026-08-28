@@ -190,4 +190,13 @@ class AnsiParserTest {
         emu.feed("\u001b[?1h")
         assertEquals("\u001bOA", emu.cursorKey('A'))
     }
+
+    @Test
+    fun `c0 bell triggers onBell callback`() {
+        var bellRung = false
+        val emu = emu()
+        emu.onBell = { bellRung = true }
+        emu.feed("\u0007")
+        assertTrue(bellRung)
+    }
 }
