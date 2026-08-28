@@ -508,3 +508,21 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
    - Real-time `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`).
    - Custom interactive command runner card.
    See `docs/chat-phase10/PART_10_PKG_GUI.md`.
+9. **Phase 7 — Multi-terminal sessions** 🔶 **IMPLEMENTED (2026-08-28, `arena/01a048df-codec`); device verification pending.**
+   - `TerminalSessionManager` (pure Kotlin, host-tested design): N concurrent PTY
+     sessions, monotonic numbering, adjacent-selection close, auto-recreate on last
+     close, 8-session cap, `anyAlive` wake-lock source.
+   - `TerminalViewModel` delegates session state to the manager; one CodeCApi
+     collector per session (protocol unchanged — responses are per-invocation
+     `mktemp` files, so no cross-talk); `send`/`sendCommand`/`resize` route to the
+     active session (public API preserved); `installUserland(force)` resets to one
+     fresh session.
+   - UI: session-number badge + dropdown switcher (status dot, rename, close-confirm,
+     "+ New session"); `TerminalEmulatorView.resizeKey` re-applies grid dims on
+     switch (kills the 80×24 cursor-drift latent bug).
+   - Evidence: decisions D1–D12 in `docs/chat-phase7/PART_7_DESIGN_DECISIONS.md`;
+     10 unit tests in `TerminalSessionManagerTest` (written, **not yet executed by
+     CI** — `build-apk.yml` runs assemble only and the agent token cannot change
+     workflow files; owner one-liner recorded in `docs/chat-phase7/README.md`);
+     CI compile-green run `33185424586`.
+   See `docs/chat-phase7/`.

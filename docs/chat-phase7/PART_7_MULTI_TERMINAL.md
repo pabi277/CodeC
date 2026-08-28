@@ -1,7 +1,14 @@
 # CodeC Phase 7 — Multi-Terminal Sessions
 
-**Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 6 (Terminal UX & Insets verified)  
+**Status:** IMPLEMENTED (2026-08-28, `arena/01a048df-codec`; CI compile-green run `33185424586`) — unit tests written (not yet executed by CI — see `README.md` follow-ups) and **device verification pending** · **Cost:** `[client-only]` · **Depends on:** Phase 6 (Terminal UX & Insets verified)  
 **Invariants:** no `.` on `PATH`; no `build-package.sh -I`; TCC `-o` last; no `com.termux`; signed repo only; no bootstrap in APK.
+
+> Implementation decisions D1–D12 (resolved against the code *before* coding,
+> including the §2.4 amendment: CodeCApi responses are per-invocation
+> `mktemp` files, so the shared-`codec-api` protocol is unchanged and
+> cross-talk is impossible by construction) are in
+> [`PART_7_DESIGN_DECISIONS.md`](PART_7_DESIGN_DECISIONS.md). The switcher UI
+> option chosen is the **dropdown** (D9), not a drawer.
 
 ---
 
@@ -71,6 +78,9 @@ data class TerminalSessionItem(
 ---
 
 ## 4. Exit Condition & Verification Recipe
+
+**Status: PENDING — code + CI compile-green; needs the owner on a real device
+with the branch APK (artifact of run `33185424586`).**
 
 A fresh APK passes the following recipe on a real Android device:
 
