@@ -1,6 +1,12 @@
-# CodeC Phase 9 — Editor Foundation
-Status: planned · cost [client-only] · depends Phase 8
-Source refs: EditorScreen.kt, CSyntaxVisualTransformation.kt, docs/chat-phase8/
-D1: Undo/redo stack; find/replace dialog; format (clang-format/indent); bracket match; error squiggles; line/col indicator; cursor-line highlight; multi-file tabs (or split).
-Exit device: type code → undo → redo → find → format → bracket highlight → compile error red squiggle → tap line → jump.
-Not in scope: full IntelliSense (Phase 12), WebView editor (deferred), split panes only if needed.
+# CodeC Phase 9 Documentation — Editor Foundation
+
+Phase 9 implements all foundational editor capabilities (`[client-only]`) in Jetpack Compose:
+- **Undo / Redo:** Full history stack with snapshot debouncing.
+- **Find & Replace:** Search bar with regex, match count, next/prev navigation, and match highlights.
+- **Code Formatter:** `clang-format` integration + built-in indent engine.
+- **Bracket Matching:** Pair highlighting for `()`, `{}`, `[]`.
+- **Compiler Squiggles:** Inline red error underlines parsed from compiler diagnostics.
+- **Status Bar & Multi-File Tabs:** Line/Col indicator, cursor line highlight, and multi-file tabs.
+
+## Contents & References
+- **[Part 9.1 — Editor Foundation Implementation Plan](PART_9_EDITOR.md)**
