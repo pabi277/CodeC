@@ -137,8 +137,10 @@ echo '{"test":1}' > "$PREFIX/project/test/sample.json"
 
 Evidence sections:
 - **§5.1 Host:** 82 Python repository/bootstrap tests passed; `TerminalUxTest` (URL finder, macro parser, selection text, dynamic title, word boundary lookup), `PackageCatalogTest` (package catalog and quick actions), and `AnsiParserTest` (BEL C0 0x07 callback) passed.
-- **§5.2 CI:** Workflow `33176035736` (Build APK on `arena/01a0482c-codec`) ✅ GREEN (assembleDebug + lintDebug + artifact upload passed in 3m16s).
+- **§5.2 CI:** Workflow `33177852501` (Build APK on `arena/01a0482c-codec`) ✅ GREEN (assembleDebug + lintDebug + artifact upload passed in 2m53s).
 - **§5.3 Device & UX Polish (2026-08-28):**
+  - **Direct Command Execution & Line Discipline:** Fixed `TerminalSession.sendCommand` to send `\r` (carriage return line discipline) and wired `terminalViewModel.sendCommand()` directly from `ModulesScreen` before tab transition. Added 350ms buffer during initial shell startup to prevent swallowing commands during profile sourcing.
+  - **Smooth Pinch Zoom without PTY Flood:** Separated PTY `onResize(cols, rows)` and DataStore disk writes from in-flight touch gestures. Pinching scales visual canvas locally, and only settles PTY size on gesture completion to prevent `SIGWINCH` signal storms and UI stutter.
   - **Package & Command Hub (Modules Screen):** Replaced legacy placeholder screen with a full-fledged Package Catalog & Command Hub:
     - **1-Tap Direct Terminal Execution:** "INSTALL", "RUN", "REINSTALL", and "UNINSTALL" buttons navigate directly to Terminal and run commands live with toast confirmation.
     - **Quick System Actions:** 1-tap buttons for `pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, and `pkg repair`.
@@ -148,7 +150,6 @@ Evidence sections:
     - **Custom Command Runner:** Run arbitrary shell commands directly in terminal.
   - **Cursor alignment:** Replaced bulk line canvas rendering with cell-by-cell monospace character rendering at `(start + i) * cellW` to permanently eliminate any font metric cursor drift.
   - **Word boundary & drag selection:** Long press expands to complete word boundary (`[a-zA-Z0-9_\-./]`) with drag handle support and contextual menu ("Copy", "Select All", "Paste", "Open URL").
-  - **Smooth Pinch-to-Zoom:** Dynamic 60fps gesture scaling using reactive local font sizing, debounced to persistent settings upon gesture completion.
   - **Keyboard Insets:** Applied `.imePadding()` directly to terminal container column while navigation bar is hidden under IME, pinning extra-keys directly above IME with 0dp gap.
   - **Shortcuts UI:** Prominent Settings card with preset example button and save verification.
 
