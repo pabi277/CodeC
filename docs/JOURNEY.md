@@ -498,5 +498,13 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
    - 5.3 CodeCApi batch: `codec-toast`, `codec-share`, `codec-open-url`, `codec-vibrate`.
    See `docs/chat-phase5/` and `docs/PHASE5_ROADMAP.md`.
 7. **Phase 6 — Terminal UX fixes** ✅ **IMPLEMENTED (2026-08-28).**
-   - Part 6.1: safe-area / display-cutout padding (`safeDrawingPadding()`, `shortEdges`), configurable FlowRow extra-keys grid + custom macros, safe wake-lock on active session, URL tap-to-open detection, VT BEL visual flash + vibration, dynamic title, and selection-based toolbar copy.
+   - Part 6.1: safe-area / display-cutout padding (`safeDrawingPadding()`, `shortEdges`), configurable FlowRow extra-keys grid + custom macros in Settings, safe wake-lock on active session, URL tap-to-open detection, VT BEL visual flash + vibration, dynamic title, selection-based toolbar copy + word boundary lookup, monospace cell-by-cell rendering (no cursor drift), and smooth 60fps pinch-to-zoom (PTY resize decoupled from continuous in-flight touch gestures).
    See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
+8. **Phase 10 — Package & Command Hub (Modules Screen Upgrade)** ✅ **IMPLEMENTED (2026-08-28).**
+   - Transformed legacy Modules screen into a full-featured Package Catalog & Command Hub:
+   - 1-tap direct package installation (`pkg install -y <pkg>`) and execution into the live terminal with carriage return line discipline (`\r`).
+   - Quick action shortcuts for repository management: `pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, `pkg repair`.
+   - Curated catalog covering Compilers, Editors, Languages, CLI utilities, and Compression tools.
+   - Real-time `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`).
+   - Custom interactive command runner card.
+   See `docs/chat-phase10/PART_10_PKG_GUI.md`.

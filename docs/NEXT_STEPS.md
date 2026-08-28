@@ -428,5 +428,17 @@ See `docs/chat-phase5/` and `docs/PHASE5_ROADMAP.md`.
 ## Phase 6 — Terminal UX
 
 ✅ **IMPLEMENTED (2026-08-28 on `arena/01a0482c-codec`).**
-- Part 6.1: Safe-area / cutout padding (`safeDrawingPadding()`, `shortEdges`), configurable multi-row extra-keys grid + macros, wake lock with safety, URL tap-to-open, VT BEL visual flash + vibrate, dynamic title, selection-aware copy.
+- Part 6.1: Safe-area / cutout padding (`safeDrawingPadding()`, `shortEdges`), configurable multi-row extra-keys grid + macros in Settings, wake lock with safety, URL tap-to-open, VT BEL visual flash + vibrate, dynamic title, selection-aware copy, character cell alignment, and smooth 60fps pinch-to-zoom.
 See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
+
+---
+
+## Phase 10 — Package & Command Hub (Modules Screen Upgrade)
+
+✅ **IMPLEMENTED (2026-08-28 on `arena/01a0482c-codec`).**
+- 1-tap direct package installation (`pkg install -y <pkg>`) and execution into live terminal (`\r` line discipline).
+- Quick repository management actions (`pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, `pkg repair`).
+- Curated 25+ package catalog (Compilers, Editors, Languages, CLI tools, Compression).
+- Live `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`).
+- Custom interactive command runner card.
+See `docs/chat-phase10/PART_10_PKG_GUI.md`.
