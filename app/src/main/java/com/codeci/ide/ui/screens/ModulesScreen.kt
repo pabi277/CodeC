@@ -69,6 +69,7 @@ import com.codeci.ide.ui.modules.PackageCategory
 import com.codeci.ide.ui.modules.PackageItem
 import com.codeci.ide.ui.modules.QuickAction
 import com.codeci.ide.ui.services.EmbeddedCompiler
+import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
