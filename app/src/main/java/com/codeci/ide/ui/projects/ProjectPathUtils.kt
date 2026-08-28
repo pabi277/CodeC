@@ -13,7 +13,9 @@ import java.io.File
 object ProjectPathUtils {
     private val safeSegment = Regex("^[A-Za-z0-9._-]+$")
 
-    fun sanitizeProjectName(name: String): String? = sanitizeSegment(name)
+    /** Project directories may preserve normal archive names such as `My App`. */
+    fun sanitizeProjectName(name: String): String? =
+        name.trim().takeIf { isSafeSegment(it) && it.isNotBlank() }
 
     /** Validates names entered through the UI (project/file/folder dialogs). */
     fun sanitizeSegment(name: String): String? {

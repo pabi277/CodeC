@@ -233,6 +233,21 @@ class FileManagerViewModel : ViewModel() {
         }
     }
 
+    /** Suggests the archive filename (without `.zip`) for the import dialog. */
+    fun suggestZipProjectName(context: Context, uri: Uri, onSuggested: (String) -> Unit) {
+        viewModelScope.launch {
+            val suggestion = withContext(Dispatchers.IO) {
+                val displayName = queryDisplayName(context, uri)
+                    ?: uri.lastPathSegment
+                        ?.substringAfterLast('/')
+                        ?.let { Uri.decode(it) }
+                val stem = displayName?.substringBeforeLast('.', displayName).orEmpty()
+                ProjectPathUtils.sanitizeProjectName(stem) ?: "imported_project"
+            }
+            onSuggested(suggestion)
+        }
+    }
+
     fun importZip(context: Context, uri: Uri, requestedName: String, onImported: (ProjectInfo) -> Unit = {}) {
         viewModelScope.launch {
             _isBusy.value = true
@@ -316,9 +331,24 @@ class FileManagerViewModel : ViewModel() {
         _projects.value = manager.listProjects()
         val refreshed = manager.project(project.name) ?: project
         _activeProject.value = refreshed
-        expandedDirectories.clear()
+        expandAllDirectories(refreshed.root)
         refreshTree()
         onImported(refreshed)
+    }
+
+    /** Make every extracted directory visible immediately after an import. */
+    private fun expandAllDirectories(projectRoot: File) {
+        expandedDirectories.clear()
+        val root = FileTreeRepository.buildTree(projectRoot)
+        fun collect(directory: FileNode.DirectoryNode) {
+            directory.children.forEach { child ->
+                if (child is FileNode.DirectoryNode) {
+                    expandedDirectories += child.relativePath
+                    collect(child)
+                }
+            }
+        }
+        collect(root)
     }
 
     private fun ensureImportedConfig(manager: ProjectManager, project: ProjectInfo) {

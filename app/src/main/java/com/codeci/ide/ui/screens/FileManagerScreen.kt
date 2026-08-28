@@ -109,6 +109,7 @@ fun FileManagerScreen(
     var deleteTarget by remember { mutableStateOf<FileNode?>(null) }
     var deleteProjectTarget by remember { mutableStateOf<ProjectInfo?>(null) }
     var zipImportUri by remember { mutableStateOf<Uri?>(null) }
+    var zipProjectName by remember { mutableStateOf("imported_project") }
     var showZipNameDialog by remember { mutableStateOf(false) }
     var exportProjectName by remember { mutableStateOf<String?>(null) }
 
@@ -134,8 +135,12 @@ fun FileManagerScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
+            zipProjectName = "imported_project"
             zipImportUri = uri
             showZipNameDialog = true
+            viewModel.suggestZipProjectName(context, uri) { suggested ->
+                if (zipImportUri == uri) zipProjectName = suggested
+            }
         }
     }
     val exportLauncher = rememberLauncherForActivityResult(
@@ -401,7 +406,6 @@ fun FileManagerScreen(
     }
 
     if (showZipNameDialog) {
-        var name by remember { mutableStateOf("imported_project") }
         AlertDialog(
             onDismissRequest = {
                 showZipNameDialog = false
@@ -410,8 +414,8 @@ fun FileManagerScreen(
             title = { Text(stringResource(R.string.import_zip)) },
             text = {
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
+                    value = zipProjectName,
+                    onValueChange = { zipProjectName = it },
                     label = { Text(stringResource(R.string.project_name)) },
                     singleLine = true
                 )
@@ -419,8 +423,8 @@ fun FileManagerScreen(
             confirmButton = {
                 TextButton(onClick = {
                     val uri = zipImportUri
-                    if (uri != null && name.isNotBlank()) {
-                        viewModel.importZip(context, uri, name) { imported ->
+                    if (uri != null && zipProjectName.isNotBlank()) {
+                        viewModel.importZip(context, uri, zipProjectName) { imported ->
                             showZipNameDialog = false
                             zipImportUri = null
                             onProjectSelected(imported)

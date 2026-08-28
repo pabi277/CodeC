@@ -36,7 +36,11 @@ object ProjectTransfer {
         fallbackName: String = "imported_file"
     ): Result<String> = runCatching {
         if (!destination.exists() && !destination.mkdirs()) error("Could not create import project")
-        val name = queryDisplayName(resolver, documentUri)
+        val rawName = queryDisplayName(resolver, documentUri)
+            ?: documentUri.lastPathSegment
+                ?.substringAfterLast('/')
+                ?.let { Uri.decode(it) }
+        val name = rawName
             ?.let { ProjectPathUtils.sanitizeArchiveSegment(it) }
             ?: ProjectPathUtils.sanitizeArchiveSegment(fallbackName)
             ?: error("The selected file has an invalid name")
