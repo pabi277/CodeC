@@ -4,7 +4,10 @@ Phase 7 brings native **Multi-Terminal Sessions** (`[client-only]`) to CodeC, al
 
 **Status (2026-08-28): IMPLEMENTED on `arena/01a048df-codec` — CI
 compile-green (run `33185424586`); unit tests written but not yet executed
-(see below); device verification pending.**
+(see below); **device evidence: core checks ✅ (2026-08-28)** — background
+execution, switching, per-session grid (`stty size` = `27 63` both sessions),
+per-session CodeCApi. Remaining: close-session transition + regression batch
+(`PART_7_MULTI_TERMINAL.md` §6).**
 
 ## Contents & References
 

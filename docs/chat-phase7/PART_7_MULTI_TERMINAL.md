@@ -79,8 +79,10 @@ data class TerminalSessionItem(
 
 ## 4. Exit Condition & Verification Recipe
 
-**Status: PENDING — code + CI compile-green; needs the owner on a real device
-with the branch APK (artifact of run `33185424586`).**
+**Status: PARTIALLY DEVICE-VERIFIED (2026-08-28) — see §6. Core behaviors
+(background execution, switching, per-session grid, per-session CodeCApi)
+confirmed on the owner's aarch64 device; the close-session transition and the
+regression batch are the remaining checks.**
 
 A fresh APK passes the following recipe on a real Android device:
 
@@ -102,3 +104,28 @@ A fresh APK passes the following recipe on a real Android device:
 
 - **Not in Phase 7:** Projects / folder tree (Phase 8), Editor split (Phase 9/11).
 - **Session Persistence:** Termux does not persist PTY processes across full app termination/process kill (Linux OS limitation); sessions persist across screen/tab navigation during app runtime.
+
+---
+
+## 6. Device evidence (2026-08-28, owner — branch APK, CI runs 33185424586/33186566000)
+
+Device: owner's aarch64 phone (tcc reports `AArch64 Linux`); userland
+`userland-v2-dev` already installed (pinned debug key → in-place update).
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Single-terminal sanity after update: prompt, `echo hello`, `cc -v` (embedded TCC untouched) | ✅ `tcc version 0.9.27 … (AArch64 Linux)` (run twice, identical) |
+| 2 | Multi-session core: ticker in session 1 → `+ New session` → `ls` + echo in session 2 → switch back to 1 | ✅ "Working" — background session keeps running; no reset, scrollback intact |
+| 3 | Per-session grid dims (`stty size` in both sessions) — the D10 `resizeKey` fix | ✅ identical `27 63` in both sessions (no 80×24 drift) |
+| 4 | CodeCApi from session 2 (`codec-toast`, `codec-clipboard set/get`) while session 1 runs | ✅ "Worked" — per-session routing, no cross-talk |
+
+### Remaining checks (last line of §4 + regression batch)
+
+- [ ] Close a **running** session (✕ → confirm dialog) → clean transition to
+      the adjacent session, no crash — the formal PASS line of §4.
+- [ ] `exit` leaves the session listed (gray/exited badge), then closing the
+      last session auto-creates a fresh one (D6).
+- [ ] Regression batch: Modules/Hub 1-tap action lands in the **active**
+      terminal; Editor compile-and-run handoff routes to active session;
+      toolbar 🔄 restarts only the active session.
+- [ ] (optional) 9th session → "Session limit reached" toast (D7).
