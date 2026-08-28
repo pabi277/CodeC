@@ -3,6 +3,7 @@ package com.codeci.ide
 import com.codeci.ide.ui.components.GridSelection
 import com.codeci.ide.ui.components.extractUrls
 import com.codeci.ide.ui.components.findUrlAt
+import com.codeci.ide.ui.components.findWordBoundaries
 import com.codeci.ide.ui.components.parseExtraKeysMacros
 import com.codeci.ide.ui.components.selectedText
 import com.codeci.ide.ui.terminal.TerminalEmulator
@@ -70,6 +71,13 @@ class TerminalUxTest {
         val sel = GridSelection(x1 = 6, y1 = 0, x2 = 10, y2 = 0)
         val text = snapshot.selectedText(sel)
         assertEquals("World", text)
+    }
+
+    @Test
+    fun `findWordBoundaries selects full word at column`() {
+        val line = "echo \"hello_world-123 foo\""
+        val (start, end) = findWordBoundaries(line, 10)
+        assertEquals("hello_world-123", line.substring(start, end + 1))
     }
 
     @Test

@@ -309,40 +309,62 @@ fun SettingsScreen(
             var editingMacros by remember(terminalExtraKeysMacros) { mutableStateOf(terminalExtraKeysMacros) }
             var macrosSaved by remember { mutableStateOf(false) }
 
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text(
-                    text = "Terminal Extra-Keys & Macros",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = "Add custom macro buttons to the terminal key bar (comma or newline separated, e.g. 'pkg install nano, git status, cc').",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                OutlinedTextField(
-                    value = editingMacros,
-                    onValueChange = {
-                        editingMacros = it
-                        macrosSaved = false
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("pkg install nano, git status") },
-                    singleLine = false,
-                    maxLines = 3
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(
-                        onClick = {
+            SettingsSectionHeader("Terminal Extra-Keys & Shortcuts")
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Custom Extra-Key Shortcuts",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Add custom shortcut buttons to the terminal key bar (e.g. 'pkg install nano', 'git status', 'make', 'cc').",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = editingMacros,
+                        onValueChange = {
+                            editingMacros = it
+                            macrosSaved = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("pkg install nano, git status, make") },
+                        label = { Text("Extra Keys (comma-separated)") },
+                        singleLine = false,
+                        maxLines = 3
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = {
+                            editingMacros = if (editingMacros.isBlank()) "pkg install nano, git status, make" else "$editingMacros, pkg install nano"
+                            macrosSaved = false
+                        }) {
+                            Text("+ ADD EXAMPLE")
+                        }
+                        TextButton(onClick = {
                             scope.launch {
                                 settingsManager.setTerminalExtraKeysMacros(editingMacros)
                                 macrosSaved = true
-                                Toast.makeText(context, "Macros saved", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Shortcuts saved ✓", Toast.LENGTH_SHORT).show()
                             }
+                        }) {
+                            Text(if (macrosSaved) "SAVED ✓" else "SAVE SHORTCUTS")
                         }
-                    ) {
-                        Text(if (macrosSaved) "SAVED ✓" else "SAVE MACROS")
                     }
                 }
             }
