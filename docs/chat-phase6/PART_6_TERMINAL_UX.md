@@ -136,9 +136,16 @@ echo '{"test":1}' > "$PREFIX/project/test/sample.json"
 ```
 
 Evidence sections:
-- **§5.1 Host:** 82 Python repository/bootstrap tests passed; `TerminalUxTest` (URL finder, macro parser, selection text, dynamic title, word boundary lookup) and `AnsiParserTest` (BEL C0 0x07 callback) passed.
-- **§5.2 CI:** Workflow `33173848420` (Build APK on `arena/01a0482c-codec`) ✅ GREEN (assembleDebug + lintDebug + artifact upload passed in 2m58s).
+- **§5.1 Host:** 82 Python repository/bootstrap tests passed; `TerminalUxTest` (URL finder, macro parser, selection text, dynamic title, word boundary lookup), `PackageCatalogTest` (package catalog and quick actions), and `AnsiParserTest` (BEL C0 0x07 callback) passed.
+- **§5.2 CI:** Workflow `33176035736` (Build APK on `arena/01a0482c-codec`) ✅ GREEN (assembleDebug + lintDebug + artifact upload passed in 3m16s).
 - **§5.3 Device & UX Polish (2026-08-28):**
+  - **Package & Command Hub (Modules Screen):** Replaced legacy placeholder screen with a full-fledged Package Catalog & Command Hub:
+    - **1-Tap Direct Terminal Execution:** "INSTALL", "RUN", "REINSTALL", and "UNINSTALL" buttons navigate directly to Terminal and run commands live with toast confirmation.
+    - **Quick System Actions:** 1-tap buttons for `pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, and `pkg repair`.
+    - **Curated Package Catalog:** Compilers & Build (`tcc`, `clang`, `make`, `cmake`, `binutils`, `gdb`), Editors (`nano`, `vim`, `tmux`, `bash`), Languages (`python`, `lua`, `nodejs`), CLI Tools (`git`, `gh`, `ripgrep`, `bat`, `fd`, `htop`, `tree`, `curl`, `wget`), Compression (`coreutils`, `tar`, `gzip`, `zstd`, `diffutils`, `patch`).
+    - **Live Detection & Status:** Checks `$PREFIX/bin/<binary>` and `dpkg/status` to show `INSTALLED ✓` / `AVAILABLE` badges.
+    - **Copy Command:** 1-tap copy of exact `pkg install -y <pkg>` commands.
+    - **Custom Command Runner:** Run arbitrary shell commands directly in terminal.
   - **Cursor alignment:** Replaced bulk line canvas rendering with cell-by-cell monospace character rendering at `(start + i) * cellW` to permanently eliminate any font metric cursor drift.
   - **Word boundary & drag selection:** Long press expands to complete word boundary (`[a-zA-Z0-9_\-./]`) with drag handle support and contextual menu ("Copy", "Select All", "Paste", "Open URL").
   - **Smooth Pinch-to-Zoom:** Dynamic 60fps gesture scaling using reactive local font sizing, debounced to persistent settings upon gesture completion.
