@@ -22,7 +22,39 @@ data class ProjectConfig(
         put("clean", clean)
     }
 
-    fun toJsonString(): String = toJson().toString()
+    /**
+     * Avoid Android's nullable/stubbed JSONObject string methods in JVM tests;
+     * this schema is small enough to serialize explicitly and safely.
+     */
+    fun toJsonString(): String = buildString {
+        append('{')
+        append("\"version\":").append(version)
+        append(",\"name\":").append(jsonString(name))
+        append(",\"type\":").append(jsonString(type))
+        append(",\"entry\":").append(jsonString(entry))
+        append(",\"build\":").append(jsonString(build))
+        append(",\"run\":").append(jsonString(run))
+        append(",\"clean\":").append(jsonString(clean))
+        append('}')
+    }
+
+    private fun jsonString(value: String): String = buildString(value.length + 2) {
+        append('"')
+        value.forEach { character ->
+            when (character) {
+                '\\' -> append("\\\\")
+                '"' -> append("\\\"")
+                '\b' -> append("\\b")
+                '\u000C' -> append("\\f")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                in '\u0000'..'\u001F' -> append("\\u%04x".format(character.code))
+                else -> append(character)
+            }
+        }
+        append('"')
+    }
 
     companion object {
         const val CURRENT_VERSION = 1
