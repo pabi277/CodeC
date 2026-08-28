@@ -2,12 +2,12 @@
 
 Phase 7 brings native **Multi-Terminal Sessions** (`[client-only]`) to CodeC, allowing developers to run multiple independent shells concurrently (e.g. running builds/servers in background while editing or running git commands in foreground).
 
-**Status (2026-08-28): IMPLEMENTED on `arena/01a048df-codec` — CI
-compile-green (run `33185424586`); unit tests written but not yet executed
-(see below); **device evidence: core checks ✅ (2026-08-28)** — background
-execution, switching, per-session grid (`stty size` = `27 63` both sessions),
-per-session CodeCApi. Remaining: close-session transition + regression batch
-(`PART_7_MULTI_TERMINAL.md` §6).**
+**Status (2026-08-28): ✅ **COMPLETE — device-verified** on
+`arena/01a048df-codec`. CI compile-green (run `33185424586`); full §4 recipe +
+regression batch passed on the owner's aarch64 device (evidence:
+`PART_7_MULTI_TERMINAL.md` §6) — background execution, switching, per-session
+grid (`stty size` = `27 63` both sessions), per-session CodeCApi, close/exit
+transitions, active-session routing for Modules/Editor/toolbar, session cap.**
 
 ## Contents & References
 
@@ -35,7 +35,7 @@ per-session CodeCApi. Remaining: close-session transition + regression batch
 - `TerminalSessionManagerTest` — 10 pure-JVM tests (create/switch/close/
   adjacent/auto-recreate/rename/cap/anyAlive).
 
-### Known follow-ups
+### Known follow-up (non-blocking)
 
 1. **Unit tests are not executed by CI yet.** Verified against
    `.github/workflows/build-apk.yml` on `main`: the workflow runs
@@ -49,8 +49,11 @@ per-session CodeCApi. Remaining: close-session transition + regression batch
    - name: Unit tests
      run: gradle :app:testDebugUnitTest --no-daemon --stacktrace
    ```
-2. **Device verification recipe** (§4 below) still pending — needs the owner
-   on hardware with the branch APK (CI artifact of run `33185424586`).
+
+### Verification (✅ 2026-08-28)
+
+- **Device:** full §4 recipe + regression batch green on the owner's aarch64
+  phone (branch APK; `PART_7_MULTI_TERMINAL.md` §6).
 
 ## Key Invariants
 - Each terminal session owns its independent PTY master/slave pair and VT ANSI buffer.

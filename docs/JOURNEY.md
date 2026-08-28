@@ -508,7 +508,7 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
    - Real-time `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`).
    - Custom interactive command runner card.
    See `docs/chat-phase10/PART_10_PKG_GUI.md`.
-9. **Phase 7 — Multi-terminal sessions** 🔶 **IMPLEMENTED (2026-08-28, `arena/01a048df-codec`); device verification pending.**
+9. **Phase 7 — Multi-terminal sessions** ✅ **COMPLETE (device-verified 2026-08-28, `arena/01a048df-codec`).**
    - `TerminalSessionManager` (pure Kotlin, host-tested design): N concurrent PTY
      sessions, monotonic numbering, adjacent-selection close, auto-recreate on last
      close, 8-session cap, `anyAlive` wake-lock source.
@@ -524,5 +524,8 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      10 unit tests in `TerminalSessionManagerTest` (written, **not yet executed by
      CI** — `build-apk.yml` runs assemble only and the agent token cannot change
      workflow files; owner one-liner recorded in `docs/chat-phase7/README.md`);
-     CI compile-green run `33185424586`.
+     CI compile-green run `33185424586`; **device acceptance §6 green** (sanity
+     `cc -v`, background ticker + switch, `stty size` `27 63` both sessions,
+     `codec-toast`/`codec-clipboard` from session 2, close/exit transitions,
+     active-session routing for Modules/Editor/toolbar, session cap).
    See `docs/chat-phase7/`.

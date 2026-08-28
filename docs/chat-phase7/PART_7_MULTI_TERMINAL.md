@@ -1,6 +1,6 @@
 # CodeC Phase 7 — Multi-Terminal Sessions
 
-**Status:** IMPLEMENTED (2026-08-28, `arena/01a048df-codec`; CI compile-green run `33185424586`) — unit tests written (not yet executed by CI — see `README.md` follow-ups) and **device verification pending** · **Cost:** `[client-only]` · **Depends on:** Phase 6 (Terminal UX & Insets verified)  
+**Status:** ✅ **COMPLETE — device-verified (2026-08-28, `arena/01a048df-codec`)**; CI compile-green run `33185424586`; unit tests written (CI execution is a non-blocking follow-up — see `README.md`) · **Cost:** `[client-only]` · **Depends on:** Phase 6 (Terminal UX & Insets verified)  
 **Invariants:** no `.` on `PATH`; no `build-package.sh -I`; TCC `-o` last; no `com.termux`; signed repo only; no bootstrap in APK.
 
 > Implementation decisions D1–D12 (resolved against the code *before* coding,
@@ -79,10 +79,9 @@ data class TerminalSessionItem(
 
 ## 4. Exit Condition & Verification Recipe
 
-**Status: PARTIALLY DEVICE-VERIFIED (2026-08-28) — see §6. Core behaviors
-(background execution, switching, per-session grid, per-session CodeCApi)
-confirmed on the owner's aarch64 device; the close-session transition and the
-regression batch are the remaining checks.**
+**Status: ✅ MET (2026-08-28) — the full recipe below plus the regression
+batch passed on the owner's aarch64 device ("All working", evidence in §6).
+Phase 7 is device-acceptance complete.**
 
 A fresh APK passes the following recipe on a real Android device:
 
@@ -119,13 +118,16 @@ Device: owner's aarch64 phone (tcc reports `AArch64 Linux`); userland
 | 3 | Per-session grid dims (`stty size` in both sessions) — the D10 `resizeKey` fix | ✅ identical `27 63` in both sessions (no 80×24 drift) |
 | 4 | CodeCApi from session 2 (`codec-toast`, `codec-clipboard set/get`) while session 1 runs | ✅ "Worked" — per-session routing, no cross-talk |
 
-### Remaining checks (last line of §4 + regression batch)
+### Remaining checks — ALL PASSED (owner, 2026-08-28: "All working")
 
-- [ ] Close a **running** session (✕ → confirm dialog) → clean transition to
+- [x] Close a **running** session (✕ → confirm dialog) → clean transition to
       the adjacent session, no crash — the formal PASS line of §4.
-- [ ] `exit` leaves the session listed (gray/exited badge), then closing the
+- [x] `exit` leaves the session listed (gray/exited badge), then closing the
       last session auto-creates a fresh one (D6).
-- [ ] Regression batch: Modules/Hub 1-tap action lands in the **active**
+- [x] Regression batch: Modules/Hub 1-tap action lands in the **active**
       terminal; Editor compile-and-run handoff routes to active session;
       toolbar 🔄 restarts only the active session.
-- [ ] (optional) 9th session → "Session limit reached" toast (D7).
+- [x] (optional) 9th session → "Session limit reached" toast (D7).
+
+**Phase 7's exit condition is met (2026-08-28). Closed — do not redo,
+re-debug, or re-verify unless evidence of a genuine regression appears.**
