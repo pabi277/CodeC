@@ -15,27 +15,48 @@ object ProjectPathUtils {
 
     fun sanitizeProjectName(name: String): String? = sanitizeSegment(name)
 
+    /** Validates names entered through the UI (project/file/folder dialogs). */
     fun sanitizeSegment(name: String): String? {
         val value = name.trim()
-        return value.takeIf {
-            it.isNotEmpty() &&
-                it != "." &&
-                it != ".." &&
-                !it.contains('/') &&
-                !it.contains('\\') &&
-                !it.contains('\u0000') &&
-                safeSegment.matches(it)
-        }
+        return value.takeIf { isSafeSegment(it) && safeSegment.matches(it) }
     }
+
+    /**
+     * ZIPs are user archives, not UI names. Preserve normal spaces, Unicode,
+     * brackets, parentheses, and other filesystem-safe characters instead of
+     * silently dropping those entries from an imported project.
+     */
+    fun sanitizeArchiveSegment(name: String): String? =
+        name.takeIf { isSafeSegment(it) && it.isNotBlank() }
+
+    private fun isSafeSegment(value: String): Boolean =
+        value.isNotEmpty() &&
+            value != "." &&
+            value != ".." &&
+            !value.contains('/') &&
+            !value.contains('\\') &&
+            !value.contains('\u0000') &&
+            value.none { it.isISOControl() }
 
     /** Returns a safe relative path, or null for absolute/traversal paths. */
     fun sanitizeRelativePath(path: String): String? {
-        val normalised = path.trim().replace('\\', '/')
+        val normalised = path.replace('\\', '/')
         if (normalised.isEmpty()) return ""
         if (normalised.startsWith('/') || normalised.startsWith("~")) return null
         val parts = normalised.split('/')
-        if (parts.any { it.isEmpty() || it == "." || it == ".." }) return null
-        if (parts.any { sanitizeSegment(it) == null }) return null
+        if (parts.any { sanitizeArchiveSegment(it) == null }) return null
+        return parts.joinToString("/")
+    }
+
+    /**
+     * ZIP-relative paths use the same traversal rules but accept every normal
+     * filesystem filename. The caller removes a single directory suffix
+     * before calling this function.
+     */
+    fun sanitizeArchiveRelativePath(path: String): String? {
+        if (path.isEmpty() || path.startsWith('/') || path.startsWith("~")) return null
+        val parts = path.split('/')
+        if (parts.any { sanitizeArchiveSegment(it) == null }) return null
         return parts.joinToString("/")
     }
 

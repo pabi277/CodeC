@@ -37,8 +37,8 @@ object ProjectTransfer {
     ): Result<String> = runCatching {
         if (!destination.exists() && !destination.mkdirs()) error("Could not create import project")
         val name = queryDisplayName(resolver, documentUri)
-            ?.let { ProjectPathUtils.sanitizeSegment(it) }
-            ?: ProjectPathUtils.sanitizeSegment(fallbackName)
+            ?.let { ProjectPathUtils.sanitizeArchiveSegment(it) }
+            ?: ProjectPathUtils.sanitizeArchiveSegment(fallbackName)
             ?: error("The selected file has an invalid name")
         if (name.endsWith(".zip", ignoreCase = true)) {
             // The in-project Import File action also accepts ZIPs. Treating a
@@ -93,7 +93,7 @@ object ProjectTransfer {
                 // rejected instead of being normalised into a safe path.
                 val rawPath = if (entryName.endsWith('/')) entryName.dropLast(1) else entryName
                 if (rawPath.isEmpty()) throw SecurityException("ZIP contains an unsafe path")
-                val safePath = ProjectPathUtils.sanitizeRelativePath(rawPath)
+                val safePath = ProjectPathUtils.sanitizeArchiveRelativePath(rawPath)
                     ?: throw SecurityException("ZIP contains an unsafe path")
                 val target = ProjectPathUtils.resolveInside(canonicalDestination, safePath)
                     ?: throw SecurityException("ZIP escapes the project directory")
@@ -134,7 +134,7 @@ object ProjectTransfer {
             while (cursor.moveToNext()) {
                 val id = cursor.getString(idColumn)
                 val rawName = cursor.getString(nameColumn) ?: "untitled"
-                val name = ProjectPathUtils.sanitizeSegment(rawName) ?: continue
+                val name = ProjectPathUtils.sanitizeArchiveSegment(rawName) ?: continue
                 val mime = cursor.getString(mimeColumn)
                 val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
                 val target = File(destination, name)
