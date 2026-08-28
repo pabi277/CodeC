@@ -15,7 +15,9 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -29,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -224,6 +227,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainApp() {
     val navController = rememberNavController()
+    val density = LocalDensity.current
+    val isImeVisible = WindowInsets.ime.getBottom(density) > 0
     val screens = listOf(
         Screen.Home,
         Screen.Editor,
@@ -245,34 +250,36 @@ fun MainApp() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
+            if (!isImeVisible) {
+                NavigationBar {
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentDestination = navBackStackEntry?.destination
 
-                screens.forEach { screen ->
-                    val selected = currentDestination?.hierarchy?.any {
-                        it.route?.startsWith(screen.route.substringBefore("?")) == true
-                    } == true
-                    NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(
-                                when (screen) {
-                                    is Screen.Editor -> Screen.Editor.createRoute(null)
-                                    is Screen.Terminal -> Screen.Terminal.createRoute(null)
-                                    else -> screen.route
+                    screens.forEach { screen ->
+                        val selected = currentDestination?.hierarchy?.any {
+                            it.route?.startsWith(screen.route.substringBefore("?")) == true
+                        } == true
+                        NavigationBarItem(
+                            icon = { Icon(screen.icon, contentDescription = screen.title) },
+                            label = { Text(screen.title) },
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(
+                                    when (screen) {
+                                        is Screen.Editor -> Screen.Editor.createRoute(null)
+                                        is Screen.Terminal -> Screen.Terminal.createRoute(null)
+                                        else -> screen.route
+                                    }
+                                ) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                            ) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
