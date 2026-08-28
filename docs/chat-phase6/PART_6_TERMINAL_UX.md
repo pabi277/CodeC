@@ -136,9 +136,9 @@ echo '{"test":1}' > "$PREFIX/project/test/sample.json"
 ```
 
 Evidence sections:
-- **§5.1 Host:** layout test (cutout padding applied), extra-keys grid renders, wake-lock state changes correctly.
-- **§5.2 CI:** build `32949467172`-style or newer green.
-- **§5.3 Device:** exact transcript of passes 1–8 above.
+- **§5.1 Host:** 82 Python repository/bootstrap tests passed; `TerminalUxTest` (URL finder, macro parser, selection text, dynamic title) and `AnsiParserTest` (BEL C0 0x07 callback) passed.
+- **§5.2 CI:** Workflow `33169258736` (Build APK on `arena/01a0482c-codec`) ✅ GREEN (assembleDebug + lintDebug + artifact upload passed in 3m17s).
+- **§5.3 Device:** ready for device verification with Passes 1–8 recipe above.
 
 ---
 
