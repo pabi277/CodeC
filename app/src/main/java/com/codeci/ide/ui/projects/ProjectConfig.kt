@@ -22,7 +22,7 @@ data class ProjectConfig(
         put("clean", clean)
     }
 
-    fun toJsonString(): String = toJson().toString(2)
+    fun toJsonString(): String = toJson().toString()
 
     companion object {
         const val CURRENT_VERSION = 1
