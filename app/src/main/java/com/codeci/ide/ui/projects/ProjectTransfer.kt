@@ -95,16 +95,20 @@ object ProjectTransfer {
                 val entry = zip.nextEntry ?: break
                 if (++count > MAX_ZIP_ENTRIES) error("ZIP contains too many entries")
                 val entryName = entry.name.replace('\\', '/')
+                // ZIP directory entries are identified by their trailing `/`.
+                // Do not depend on ZipEntry.isDirectory(), because archives
+                // produced by some file managers set that flag inconsistently.
+                val isDirectory = entryName.endsWith('/')
                 // Strip only the one separator used by a normal directory
                 // entry. Repeated separators and a root-only entry must be
                 // rejected instead of being normalised into a safe path.
-                val rawPath = if (entryName.endsWith('/')) entryName.dropLast(1) else entryName
+                val rawPath = if (isDirectory) entryName.dropLast(1) else entryName
                 if (rawPath.isEmpty()) throw SecurityException("ZIP contains an unsafe path")
                 val safePath = ProjectPathUtils.sanitizeArchiveRelativePath(rawPath)
                     ?: throw SecurityException("ZIP contains an unsafe path")
                 val target = ProjectPathUtils.resolveInside(canonicalDestination, safePath)
                     ?: throw SecurityException("ZIP escapes the project directory")
-                if (entry.isDirectory) {
+                if (isDirectory) {
                     if (!target.exists() && !target.mkdirs()) error("Could not create ZIP directory")
                 } else {
                     fileCount++
@@ -119,7 +123,8 @@ object ProjectTransfer {
                 zip.closeEntry()
             }
         }
-        if (fileCount == 0) error("ZIP contains no files")
+        if (count == 0) error("ZIP contains no entries")
+        if (fileCount == 0) error("ZIP contains no files (directory entries: $count)")
         return count
     }
 
