@@ -57,8 +57,12 @@ gets its own `arena/*` session branch — verify the actual branch with
   file drawer + "Save to project…", per-file "Run in terminal" from the
   Projects tree, and an in-app `127.0.0.1` HTTP server behind the HTML preview
   (whole project folder served; fetch/json/ES-modules work; CI green run
-  `33241237168`). Remaining gate: owner re-check on device per
-  `docs/chat-phase9/PART_9_IMPLEMENTATION.md` §"Device recipe (Phase 9.1)".
+  `33241237168`). Owner re-checked ("Yes working") and asked for a simpler UI,
+  opening folders from the editor and single files without a project — shipped as
+  **Phase 9.2** (CI green `33243620762`): toolbar trimmed to undo/redo/save/⋮,
+  Files & Projects sheet with a folder picker and New-file/Run/Delete actions,
+  single files as a first-class context. Remaining gate: owner device re-check
+  per `docs/chat-phase9/PART_9_IMPLEMENTATION.md` §"Device recipe (Phase 9.2)".
   All client-only except Phase 12 (Python repo build).
 - CI reality check (supersedes older notes): `Build APK` runs on every branch
   push and **does execute `:app:testDebugUnitTest` and `:app:lintDebug`**

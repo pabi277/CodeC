@@ -10,11 +10,12 @@ lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
 merged in PR #27 (`348eb03`), core workflows and the final export →
 re-import-as-a-new-project round trip owner-confirmed on device 2026-08-29. The
 current design and verification record lives in [`chat-phase8/`](chat-phase8/).
-**Phase 9 (Editor Foundation) is implemented on `arena/01a04c1c-codec` — CI green
-(run `33239651690`). The owner's device pass ("Good working") raised three
-problems; **Phase 9.1** fixes all three (in-editor file drawer + Save-to-project,
-Run-in-terminal on project `.c` files, loopback HTTP server behind the HTML
-preview) — CI green run `33241237168`, device re-check pending.**
+**Phase 9 (Editor Foundation) is implemented on `arena/01a04c1c-codec`. Two device
+follow-up rounds shipped: **Phase 9.1** (file drawer + Save-to-project, per-file
+Run-in-terminal, loopback HTTP server behind the HTML preview — CI green
+`33241237168`) and **Phase 9.2** ("make ui less complex", open a project folder
+from the editor, single files without a project — CI green `33243620762`).
+Device re-check pending.**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and
@@ -576,3 +577,15 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     so `fetch("data.json")`, XHR, ES modules and relative assets work; falls back to
     `file://` if binding fails. New host tests for `WebPreviewServer` path rules and the
     handoff command. See `chat-phase9/PART_9_IMPLEMENTATION.md` §Phase 9.1.
+
+13. **Phase 9.2 — simpler editor UI + folders & single files from the editor** ✅ **IMPLEMENTED + CI green (2026-08-29, run `33243620762`); device check pending.**
+    Owner: "still not a friendly editor, make ui less complex", "open a project folder from
+    the editor is not possible", "everything need a project — i want an option for single
+    file also". Editor toolbar trimmed to undo/redo/save/⋮ (Format, Find, Run-in-terminal
+    moved into the menu); the folder button + breadcrumb open a Files & Projects sheet with
+    a **Change** folder picker (Single files ⇄ any project — buffers saved first, tabs
+    re-keyed, terminal cwd follows) and a **+ New file** action; single files are a
+    first-class context (create/run/delete straight from the sheet, `cc` via the terminal
+    handoff); long-press on any listed file gives Run in terminal / Delete. VM API:
+    `switchContext`, `createAndOpenFile`, `deleteFileEntry`. See
+    `chat-phase9/PART_9_IMPLEMENTATION.md` §Phase 9.2.

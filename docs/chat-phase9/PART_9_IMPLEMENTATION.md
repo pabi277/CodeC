@@ -99,3 +99,26 @@ compile-green on the session branch is recorded below; device acceptance is owne
    `fetch('data.json').then(r=>r.json()).then(console.log)` in the page — the value
    prints in the preview's console strip (it failed under file://). Assets by
    relative path load; Refresh or saving the file in the editor reloads the page.
+
+## Phase 9.2 — "less complex UI, open folders from the editor, single files" (owner feedback 2026-08-29)
+
+| Ask | Shipped |
+|---|---|
+| "make ui less complex" | Bottom toolbar reduced to **undo / redo / save / ⋮** (was 7 buttons). Format, Find & Replace, and Run in terminal moved into the ⋮ menu alongside Save all / Reload / Save to project / Clear diagnostics. The redundant top-bar terminal-run icon and the duplicated "Project files" menu entry are gone. |
+| "to open a project folder from the editor is not possible" | Top-bar **folder button** (and the always-visible breadcrumb strip, now labelled `Single files > main.c ▾` in scratch mode) opens the Files & Projects sheet; its **Change** action opens an *Open folder* picker — "Single files" + every project. Selecting one saves open buffers, re-keys the tab set to the new folder's entry file (empty project keeps the buffer so Save creates the first file), and points the terminal cwd at the project. |
+| "everything need a project … want an option for single file also" | Single files are a first-class context: the sheet's **+ New file** creates a file in the current folder — the single-files folder when no project is open — and opens it as a tab; the drawer lists single files, long-press gives **Run in terminal** (`cc` the scratch file directly) and **Delete** (confirm dialog). "Save to project…" remains for moving a single file into a project. |
+
+New VM API (Phase 9.2): `switchContext(context, projectNameOrNull)` (save-then-switch),
+`createAndOpenFile(context, name)` (sanitised, creates empty file if absent, opens as tab),
+`deleteFileEntry(context, entry)` (project via `FileTreeRepository.delete`, scratch via
+`FileManager.deleteFile`; drops the matching tab). No new pure-function surface → no new
+unit tests; the existing suites guard regressions. CI: run `33243620762` green.
+
+### Device recipe (Phase 9.2)
+1. Editor → bottom row should show only undo/redo/save/⋮; the ⋮ menu carries Format,
+   Find & Replace, Run in terminal.
+2. Tap the folder icon (or the breadcrumb) → sheet → Change → pick another project:
+   tabs re-key to that project's files, and the breadcrumb line updates.
+3. Switch to "Single files" → + New file → `hello.c` → type a `main()`, Run button
+   compiles it; or long-press the row → Run in terminal → `cc hello.c -o a.out && ./a.out`
+   executes in the terminal tab. Long-press → Delete removes the file.
