@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
@@ -112,6 +113,7 @@ fun FileManagerScreen(
     var zipProjectName by remember { mutableStateOf("imported_project") }
     var showZipNameDialog by remember { mutableStateOf(false) }
     var exportProjectName by remember { mutableStateOf<String?>(null) }
+    var showActionsMenu by remember { mutableStateOf(false) }
 
     val folderImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -191,34 +193,76 @@ fun FileManagerScreen(
                     }
                 },
                 actions = {
-                    if (activeProject == null) {
-                        IconButton(onClick = { folderImportLauncher.launch(null) }) {
-                            Icon(Icons.Default.FolderOpen, contentDescription = stringResource(R.string.import_folder))
-                        }
-                        IconButton(onClick = { zipImportLauncher.launch(arrayOf("*/*")) }) {
-                            Icon(Icons.Default.Archive, contentDescription = stringResource(R.string.import_zip))
-                        }
-                        IconButton(onClick = { viewModel.refresh(context) }) {
-                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh_projects))
-                        }
-                    } else {
-                        IconButton(onClick = {
-                            activeProject?.let {
-                                exportProjectName = it.name
-                                exportLauncher.launch("${it.name}.zip")
-                            }
-                        }) {
-                            Icon(Icons.Default.Download, contentDescription = stringResource(R.string.export_zip))
-                        }
-                        IconButton(onClick = { fileImportLauncher.launch(arrayOf("*/*")) }) {
-                            Icon(Icons.Default.UploadFile, contentDescription = stringResource(R.string.import_file))
-                        }
-                        IconButton(onClick = {
-                            newItemParent = ""
-                            newItemFolder = false
-                            showCreateItem = true
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_file))
+                    IconButton(onClick = { showActionsMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
+                    }
+                    DropdownMenu(
+                        expanded = showActionsMenu,
+                        onDismissRequest = { showActionsMenu = false }
+                    ) {
+                        if (activeProject == null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.import_folder)) },
+                                leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    folderImportLauncher.launch(null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.import_zip)) },
+                                leadingIcon = { Icon(Icons.Default.Archive, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    zipImportLauncher.launch(arrayOf("*/*"))
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.refresh_projects)) },
+                                leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    viewModel.refresh(context)
+                                }
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.refresh_project_tree)) },
+                                leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    viewModel.refresh(context)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.import_file)) },
+                                leadingIcon = { Icon(Icons.Default.UploadFile, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    fileImportLauncher.launch(arrayOf("*/*"))
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.export_zip)) },
+                                leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    activeProject?.let {
+                                        exportProjectName = it.name
+                                        exportLauncher.launch("${it.name}.zip")
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.new_file)) },
+                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    newItemParent = ""
+                                    newItemFolder = false
+                                    showCreateItem = true
+                                }
+                            )
                         }
                     }
                 },
@@ -262,6 +306,7 @@ fun FileManagerScreen(
                     onRename = { renameTarget = it },
                     onDelete = { deleteTarget = it },
                     onPreview = { path -> onProjectPreviewFile(activeProject!!.name, path) },
+                    onSetDefaultRun = { path -> viewModel.setDefaultWebRun(context, path) },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -522,6 +567,7 @@ private fun ProjectTree(
     onRename: (FileNode) -> Unit,
     onDelete: (FileNode) -> Unit,
     onPreview: (String) -> Unit,
+    onSetDefaultRun: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -566,7 +612,8 @@ private fun ProjectTree(
                     onCreateIn = onCreateIn,
                     onRename = onRename,
                     onDelete = onDelete,
-                    onPreview = onPreview
+                    onPreview = onPreview,
+                    onSetDefaultRun = onSetDefaultRun
                 )
             }
         }
@@ -581,7 +628,8 @@ private fun TreeRow(
     onCreateIn: (String, Boolean) -> Unit,
     onRename: (FileNode) -> Unit,
     onDelete: (FileNode) -> Unit,
-    onPreview: (String) -> Unit
+    onPreview: (String) -> Unit,
+    onSetDefaultRun: (String) -> Unit
 ) {
     var menuOpen by remember(node.relativePath) { mutableStateOf(false) }
     val isDirectory = node is FileNode.DirectoryNode
@@ -629,6 +677,11 @@ private fun TreeRow(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.preview)) },
                     onClick = { menuOpen = false; onPreview(node.relativePath) }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.set_default_run)) },
+                    leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                    onClick = { menuOpen = false; onSetDefaultRun(node.relativePath) }
                 )
             }
             DropdownMenuItem(

@@ -74,6 +74,7 @@ import com.codeci.ide.ui.components.SymbolBar
 import com.codeci.ide.ui.components.TerminalOutput
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectInfo
+import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
@@ -145,11 +146,28 @@ fun EditorScreen(
         scope.launch { snackbarHostState.showSnackbar(comingSoon) }
     }
 
+    val isWebProject = remember(projectName) {
+        projectName?.let { name ->
+            ProjectManager(context).project(name)?.config?.type?.equals("web", ignoreCase = true)
+        } == true
+    }
+
     fun projectRunCommandOrNull(): String? {
         val project = projectName ?: return null
         if (!viewModel.saveFile(context)) return null
         val info = ProjectManager(context).project(project) ?: return null
+        if (info.config.type.equals("web", ignoreCase = true)) return null
         return TerminalHandoff.projectRunCommand(info.root.absolutePath, info.config)
+    }
+
+    fun webDefaultEntryOrNull(): String? {
+        val project = projectName ?: return null
+        if (!viewModel.saveFile(context)) return null
+        val info = ProjectManager(context).project(project) ?: return null
+        if (!info.config.type.equals("web", ignoreCase = true)) return null
+        val entry = ProjectPathUtils.sanitizeRelativePath(info.config.entry) ?: return null
+        val target = ProjectPathUtils.resolveInside(info.root, entry) ?: return null
+        return entry.takeIf { target.isFile && WebFileSupport.isHtml(target.name) }
     }
 
     LaunchedEffect(userMessage) {
@@ -252,23 +270,36 @@ fun EditorScreen(
                             )
                         }
                     }
-                    IconButton(onClick = {
-                        val command = projectRunCommandOrNull()
-                            ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
-                        if (command != null) {
-                            onOpenInTerminal(command)
-                        } else {
-                            Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
+                    if (!isWebProject) {
+                        IconButton(onClick = {
+                            val command = projectRunCommandOrNull()
+                                ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
+                            if (command != null) {
+                                onOpenInTerminal(command)
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }) {
+                            Icon(
+                                Icons.Default.Terminal,
+                                contentDescription = stringResource(R.string.run_in_terminal)
+                            )
                         }
-                    }) {
-                        Icon(
-                            Icons.Default.Terminal,
-                            contentDescription = stringResource(R.string.run_in_terminal)
-                        )
                     }
                     Button(
                         onClick = {
-                            if (projectName != null) {
+                            if (isWebProject) {
+                                val entry = webDefaultEntryOrNull()
+                                if (entry != null) {
+                                    onOpenPreview(entry)
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.default_run_page_missing),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            } else if (projectName != null) {
                                 val command = projectRunCommandOrNull()
                                 if (command != null) {
                                     onOpenInTerminal(command)

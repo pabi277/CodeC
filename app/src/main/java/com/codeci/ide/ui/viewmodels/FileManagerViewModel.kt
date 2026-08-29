@@ -85,7 +85,9 @@ class FileManagerViewModel : ViewModel() {
         refreshTree()
     }
 
+    /** Reload projects and reset the visible tree to a clean, collapsed state. */
     fun refresh(context: Context) {
+        expandedDirectories.clear()
         loadProjects(context)
     }
 
@@ -273,6 +275,46 @@ class FileManagerViewModel : ViewModel() {
                 finishImport(manager, project, onImported)
             } catch (e: Exception) {
                 _userMessage.value = "ZIP import failed: ${e.message ?: "unknown error"}"
+            } finally {
+                _isBusy.value = false
+            }
+        }
+    }
+
+    /** Set an HTML/HTM file as the entry opened by a web project's Run action. */
+    fun setDefaultWebRun(context: Context, relativePath: String) {
+        val project = _activeProject.value ?: return
+        val safePath = ProjectPathUtils.sanitizeRelativePath(relativePath)
+        val target = safePath?.let { ProjectPathUtils.resolveInside(project.root, it) }
+        if (safePath == null || target == null || !target.isFile || !WebFileSupport.isHtml(target.name)) {
+            _userMessage.value = context.getString(R.string.select_html_for_default_run)
+            return
+        }
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val manager = ProjectManager(context)
+                withContext(Dispatchers.IO) {
+                    manager.writeConfig(
+                        project.root,
+                        project.config.copy(
+                            type = "web",
+                            entry = safePath,
+                            build = "",
+                            run = "",
+                            clean = ""
+                        )
+                    )
+                }
+                _projects.value = withContext(Dispatchers.IO) { manager.listProjects() }
+                _activeProject.value = withContext(Dispatchers.IO) { manager.project(project.name) }
+                refreshTree()
+                _userMessage.value = context.getString(R.string.default_run_page_set, safePath)
+            } catch (e: Exception) {
+                _userMessage.value = context.getString(
+                    R.string.default_run_page_failed,
+                    e.message ?: "unknown error"
+                )
             } finally {
                 _isBusy.value = false
             }

@@ -140,6 +140,12 @@
     <string name="import_action">Import</string>
     <string name="export_zip">Export ZIP</string>
     <string name="refresh_projects">Refresh Projects</string>
+    <string name="refresh_project_tree">Refresh and collapse folders</string>
+    <string name="set_default_run">Set as default run</string>
+    <string name="select_html_for_default_run">Select an HTML file to set as the default run page</string>
+    <string name="default_run_page_set">Default run page set to %1$s</string>
+    <string name="default_run_page_failed">Could not set default run page: %1$s</string>
+    <string name="default_run_page_missing">The default HTML run page is missing or invalid</string>
     <string name="delete_project">Delete Project</string>
     <string name="no_projects">No projects yet</string>
     <string name="no_projects_hint">Create a project or import a codebase to get started.</string>
