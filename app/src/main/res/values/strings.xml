@@ -172,7 +172,6 @@
     <string name="level">Level %1$d</string>
     <string name="concepts">Concepts</string>
     <string name="preview">Preview</string>
-    <string name="run_in_terminal">Run in terminal</string>
     <string name="project_files">Project files</string>
     <string name="save_to_project">Save to project…</string>
     <string name="use_template">Use Template</string>
