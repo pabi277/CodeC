@@ -10,7 +10,8 @@ lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
 merged in PR #27 (`348eb03`), core workflows and the final export →
 re-import-as-a-new-project round trip owner-confirmed on device 2026-08-29. The
 current design and verification record lives in [`chat-phase8/`](chat-phase8/).
-**Phase 9 (Editor Foundation) is in progress on `arena/01a04c1c-codec`.**
+**Phase 9 (Editor Foundation) is implemented on `arena/01a04c1c-codec` — CI green
+(run `33239651690`), device acceptance pending.**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and
@@ -543,7 +544,17 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     owner confirmed on device that the final export → re-import-as-a-different-project
     round trip succeeded, closing the last acceptance gate.
     see [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md).
-11. **In progress:** Phase 9 — Editor Foundation (multi-file navigation/tabs, undo/redo,
-    find/replace, formatting, diagnostics, and line/column status), implemented on
-    `arena/01a04c1c-codec` after the Phase 8 round-trip gate closed. See
-    [`chat-phase9/`](chat-phase9/).
+11. **Phase 9 — Editor Foundation** 🟡 **IMPLEMENTED (2026-08-29, `arena/01a04c1c-codec`); CI green, device acceptance pending.**
+    Undo/redo (per-file snapshot history with typing-burst coalescing), find/replace
+    (literal + regex, match case/whole word, wrap-around, group references, live
+    highlights), Format (`clang-format` bridge first, built-in line-preserving C
+    indenter fallback), bracket pair matching (string/comment aware), compiler
+    diagnostics (parsed `file:line:col` output + structured errors → line squiggles,
+    tap-to-inspect tooltip, missing-`;` quick fix), Ln/Col status bar, current-line
+    highlight, and multi-file project tabs (per-tab undo history + dirty state,
+    close-confirm, save-all, reload). 55 new host unit tests, executed green by CI
+    (which also revealed and fixed two real API-compat issues: Compose 1.7 has no
+    `SpanStyle.drawStyle`; `ProcessBuilder` file redirects need API 26). Exit
+    condition: device recipe §4 of `PART_9_EDITOR.md` — owner check pending. See
+    [`chat-phase9/`](chat-phase9/) and
+    [`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md).

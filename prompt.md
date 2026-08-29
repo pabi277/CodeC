@@ -48,12 +48,18 @@ gets its own `arena/*` session branch — verify the actual branch with
   has not yet been explicitly reported and must be confirmed before calling
   the Phase 8 acceptance gate fully closed. See `docs/chat-phase8/`.
 - **Phase 9 (Editor Foundation) is the next planned client-only phase after the Phase 8 round-trip gate.** It covers multi-file tabs/navigation, undo/redo, find/replace, formatting, diagnostics, bracket matching, and line/column status. See `docs/chat-phase9/PART_9_EDITOR.md`.
-- PR #27 is open from `arena/01a04962-codec` to `main`; never merge it without
-  the owner's explicit merge command. All client-only except Phase 12
-  (Python repo build).
-- The latest successful APK assembly for PR #27 before documentation changes
-  is run `33236115940`. The workflow assembles the APK only; it does not run
-  unit tests. The local sandbox has no Java runtime.
+- **PR #27 is MERGED to `main` at `348eb03` (2026-08-29).** The Phase 8
+  acceptance gate is CLOSED: the owner confirmed the export → re-import-as-a-
+  different-project round trip on device 2026-08-29. **Phase 9 (Editor
+  Foundation) is implemented on `arena/01a04c1c-codec` with CI green
+  (run `33239651690`)** — its remaining gate is the owner's on-device run of
+  the `docs/chat-phase9/PART_9_EDITOR.md` §4 recipe. All client-only except
+  Phase 12 (Python repo build).
+- CI reality check (supersedes older notes): `Build APK` runs on every branch
+  push and **does execute `:app:testDebugUnitTest` and `:app:lintDebug`**
+  (a unit-test or lint-error regression fails the run — Phase 9 caught real
+  bugs this way). The local sandbox has no Java runtime; CI is the test
+  executor.
 
 **SELF-DISTRUST PROTOCOL — follow strictly:**
 

@@ -33,14 +33,20 @@ empty, so the visual behavior there is byte-identical.
 
 ## Tests
 
-Written (host JUnit4, plain JVM): `EditorUndoManagerTest` (8), `FindReplaceTest` (15),
+Host JUnit4 (plain JVM): `EditorUndoManagerTest` (8), `FindReplaceTest` (16),
 `BracketMatcherTest` (9), `CodeFormatterTest` (13), `CompilerDiagnosticsTest` (9).
-Not executed in the agent sandbox (no JDK; `build-apk.yml` runs `assembleDebug` only) — same
-status as the Phase 7 unit tests. Engine semantics for find/replace, formatting, bracket
-matching and diagnostics were additionally traced through equivalent Python simulations of
-each test case during development (all green).
 
-**Owner one-liner to run them from a machine with a JDK:**
+**Executed and green in CI** — correction of the stale "build-apk.yml runs assemble
+only" note in `prompt.md`: on current `main` the `Build APK` workflow fails the build
+on unit-test regressions too (`:app:testDebugUnitTest` runs as part of the build, and
+`:app:lintDebug` gates on lint errors). The agent sandbox has no JDK, so CI is the
+test executor; the first three CI iterations caught (and this session fixed) one real
+API-compat bug (Compose BOM 2024.09.00 has no `SpanStyle.drawStyle` — squiggle
+path-effect dropped), one real lint/`NewApi` error (`ProcessBuilder.redirect*` file
+overloads need API 26 → replaced with daemon-thread pipe pumps), and two wrong test
+expectations of mine (regex-replace `from` semantics and the indented-semicolon fix).
+
+Locally equivalent command (any machine with a JDK):
 
 ```sh
 ./gradlew :app:testDebugUnitTest --tests 'com.codeci.ide.EditorUndoManagerTest' \
@@ -56,5 +62,5 @@ compile-green on the session branch is recorded below; device acceptance is owne
 
 | Gate | Result |
 |---|---|
-| CI compile (`Build APK`, branch push) | pending — recorded here once observed |
+| CI compile + unit tests + lint (`Build APK`, branch push) | ✅ **GREEN** — run `33239651690` (2026-08-29, head `1a0170e`-chain on `arena/01a04c1c-codec`) |
 | Device recipe §4 | ⚠️ owner check required |
