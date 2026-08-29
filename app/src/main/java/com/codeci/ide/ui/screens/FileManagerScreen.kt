@@ -195,7 +195,7 @@ fun FileManagerScreen(
                         IconButton(onClick = { folderImportLauncher.launch(null) }) {
                             Icon(Icons.Default.FolderOpen, contentDescription = stringResource(R.string.import_folder))
                         }
-                        IconButton(onClick = { zipImportLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }) {
+                        IconButton(onClick = { zipImportLauncher.launch(arrayOf("*/*")) }) {
                             Icon(Icons.Default.Archive, contentDescription = stringResource(R.string.import_zip))
                         }
                         IconButton(onClick = { viewModel.refresh(context) }) {
