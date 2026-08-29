@@ -1,7 +1,10 @@
 # CodeC Phase 9 — Editor Foundation (Undo/Redo, Find/Replace, Format, Squiggles)
 
-**Status:** ✅ Implemented 2026-08-29 on `arena/01a04c1c-codec` (see
-[`PART_9_IMPLEMENTATION.md`](PART_9_IMPLEMENTATION.md)); device acceptance pending ·
+**Status:** ✅ Implemented 2026-08-29 on `arena/01a04c1c-codec`; §4 device recipe
+was run by the owner that day ("Yes working" + three problems) — follow-ups shipped
+as **Phase 9.1** and **Phase 9.2** (see
+[`PART_9_IMPLEMENTATION.md`](PART_9_IMPLEMENTATION.md)); final acceptance = owner
+re-check of the "Device recipe (Phase 9.2)" section there ·
 **Cost:** `[client-only]` · **Depends on:** Phase 8 (fully accepted 2026-08-29)
 **Target Files:** `EditorScreen.kt`, `CSyntaxVisualTransformation.kt`, `EditorViewModel.kt`
 

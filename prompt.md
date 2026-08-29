@@ -47,7 +47,7 @@ gets its own `arena/*` session branch — verify the actual branch with
   default-run preview. The export → import-as-a-different-project round trip
   has not yet been explicitly reported and must be confirmed before calling
   the Phase 8 acceptance gate fully closed. See `docs/chat-phase8/`.
-- **Phase 9 (Editor Foundation) is the next planned client-only phase after the Phase 8 round-trip gate.** It covers multi-file tabs/navigation, undo/redo, find/replace, formatting, diagnostics, bracket matching, and line/column status. See `docs/chat-phase9/PART_9_EDITOR.md`.
+- **Phase 9 (Editor Foundation) — with device follow-up rounds 9.1 (file drawer, Save-to-project, tree Run, loopback preview server) and 9.2 (simpler toolbar, open-folder-from-editor, single files without a project) — is IMPLEMENTED on `arena/01a04c1c-codec`, CI green (`33239651690`, `33241237168`, `33243620762`).** Open gate: owner device re-check of `docs/chat-phase9/PART_9_IMPLEMENTATION.md` §"Device recipe (Phase 9.2)". Full plan in `docs/chat-phase9/`.
 - **PR #27 is MERGED to `main` at `348eb03` (2026-08-29).** The Phase 8
   acceptance gate is CLOSED: the owner confirmed the export → re-import-as-a-
   different-project round trip on device 2026-08-29. **Phase 9 (Editor
@@ -110,8 +110,9 @@ gets its own `arena/*` session branch — verify the actual branch with
    re-import as a different project, complete tree preservation, editor opening,
    and project-relative terminal behavior. Do not infer device acceptance from
    APK assembly or source tests.
-4. After Phase 8 is fully accepted, Phase 9 is next: implement the planned
-   editor foundation in `docs/chat-phase9/PART_9_EDITOR.md`.
+4. Phase 8 is closed and Phase 9 (+9.1/9.2) is implemented; close Phase 9 with
+   the owner's device re-check of the Phase 9.2 recipe, then take the next
+   client phase (11, output panel + Run) only on the owner's word.
 5. No PR / no merge without an explicit owner command. Work on the session
    branch only; never push or merge to `main`.
 6. A part is complete only when its "Exit condition" is met and verified, not

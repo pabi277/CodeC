@@ -548,7 +548,7 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     owner confirmed on device that the final export → re-import-as-a-different-project
     round trip succeeded, closing the last acceptance gate.
     see [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md).
-11. **Phase 9 — Editor Foundation** 🟡 **IMPLEMENTED (2026-08-29, `arena/01a04c1c-codec`); CI green, device acceptance pending.**
+11. **Phase 9 — Editor Foundation** 🟡 **IMPLEMENTED (2026-08-29, `arena/01a04c1c-codec`); CI green; first device pass done — final acceptance after the Phase 9.2 re-check.**
     Undo/redo (per-file snapshot history with typing-burst coalescing), find/replace
     (literal + regex, match case/whole word, wrap-around, group references, live
     highlights), Format (`clang-format` bridge first, built-in line-preserving C
@@ -559,7 +559,8 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     close-confirm, save-all, reload). 55 new host unit tests, executed green by CI
     (which also revealed and fixed two real API-compat issues: Compose 1.7 has no
     `SpanStyle.drawStyle`; `ProcessBuilder` file redirects need API 26). Exit
-    condition: device recipe §4 of `PART_9_EDITOR.md` — owner check pending. See
+    condition: device recipe §4 of `PART_9_EDITOR.md` — run on device 2026-08-29
+    ("Yes working" + three problems; resolved by items 12–13, re-check pending). See
     [`chat-phase9/`](chat-phase9/) and
     [`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md).
 
