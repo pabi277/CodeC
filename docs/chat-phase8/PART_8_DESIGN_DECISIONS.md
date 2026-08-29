@@ -1,10 +1,13 @@
 # Phase 8 — Projects & File Tree Design Decisions
 
-**Status:** Implementation started 2026-08-28 · device acceptance pending
+**Status:** ✅ Implementation complete in PR #27 · **final full device acceptance gate pending explicit export/re-import confirmation**
 **Cost:** `[client-only]` · **Depends on:** Phase 7 (merged/device-verified)
 
-This record turns the Phase 8 handoff into concrete implementation decisions
-before device verification. It does not claim the Phase 8 exit condition is met.
+This record is the source of truth for the Phase 8 implementation and its
+verification state. The code is complete and the owner has confirmed the core
+ZIP, terminal, project-tree, refresh, and web-entry workflows on device. The
+remaining acceptance item is recorded explicitly in the completion checklist
+rather than inferred from a successful APK assembly.
 
 ## D1 — Project storage and compatibility
 
@@ -27,8 +30,10 @@ Each project has `.codec/project.json`, version `1`, with `name`, `type`,
 `entry`, `build`, `run`, and `clean`. New C projects get a small starter
 `main.c`; imported projects preserve an existing config when present, otherwise
 a default config is generated. Project Run/Run-in-Terminal dispatches the
-configured build and run commands from the project root. Phase 11 owns the
-future split output panel.
+configured build and run commands from the project root. Selecting an HTML/HTM
+file as **Set as default run** changes the project type to `web` and stores its
+safe relative path as `entry`; the web Run action opens that page in the
+built-in preview. Phase 11 still owns the future split output panel.
 
 ## D4 — SAF privacy model
 
@@ -37,26 +42,59 @@ selected data is streamed into a newly created private project or the active
 private project. `ACTION_CREATE_DOCUMENT` is used only after an explicit Export
 ZIP action. The app never edits a SAF source tree in place and never auto-exports.
 
-## D5 — ZIP safety
+## D5 — ZIP safety and complete enumeration
 
 Exports contain paths relative to the project root and preserve empty
- directories. Imports reject traversal/absolute paths, duplicate files, symlink
- representations (which ZIP cannot safely carry here), more than 10,000 entries,
-entries over 128 MiB, or an archive over 1.28 GiB. Failed imports are removed by
-the ViewModel so a partial project is not presented as complete.
+directories. Imports reject traversal/absolute paths, duplicate files, symlink
+representations (which ZIP cannot safely carry here), more than 10,000 entries,
+entries over 128 MiB, or an archive over 1.28 GiB. SAF ZIP streams are staged in
+temporary private storage and read with `ZipFile`, which enumerates the ZIP
+central directory and handles archives whose local stream exposes only a root
+directory. Extraction remains extension-agnostic and preserves nested paths,
+spaces, Unicode, extensionless files, and binary content. Failed imports are
+removed by the ViewModel so a partial project is not presented as complete.
 
 ## D6 — Terminal synchronization
 
-The existing activity-scoped `TerminalViewModel` remains the routing owner.
-Opening a project or project file sends a quoted `cd` command to the active
-session; if the shell is still bootstrapping, the existing command queue sends
-it after startup. The public multi-terminal wire protocol is unchanged.
+The activity-scoped `TerminalViewModel` remains the routing owner. Selecting a
+project validates the direct child project path and moves the active terminal to
+the app-private `CodeC/projects` directory, so `ls` shows project directories.
+Project build/run commands explicitly `cd` to the project root before using
+project-relative paths. The public multi-terminal wire protocol is unchanged.
 
-## Remaining verification
+## D7 — Projects UI actions
 
-- Host tests for path confinement, tree ordering/mutation, config round-trip,
-  run command construction, ZIP round-trip, and malicious ZIP rejection.
-- Green APK CI build and test execution where available.
-- Real-device recipe from `PART_8_PROJECTS.md`, including SAF folder/file import,
-  nested editor breadcrumb, terminal `pwd`, run config, ZIP export/import, and
-  no files outside `filesDir/CodeC/projects`.
+The Projects top bar uses a three-dot overflow menu for import and project
+actions. At the project-list level it provides Import Folder, Import ZIP, and
+Refresh Projects. Inside a project it provides Refresh and collapse folders,
+Import File, Export ZIP, and New File. Each HTML/HTM file's own overflow menu
+provides Preview and Set as default run.
+
+## Verification record
+
+| Area | Evidence | State |
+|---|---|---|
+| Project tree, nested paths, metadata, and path guards | Source implementation plus `FileTreeRepositoryTest`, `ProjectPathUtilsTest`, and `ProjectConfigTest` | ✅ Implemented and covered |
+| Extension-agnostic ZIP import | Owner device report: archive containing HTML, CSS, JS, C, and Python files imported with all files intact | ✅ Owner-confirmed |
+| ZIP central-directory robustness | CI APK build for `fc19bd9` passed after the device error; implementation is present in PR #27 | ✅ Implemented / CI assembled |
+| Terminal project listing | Owner confirmed project files/folders work and requested projects-folder `ls` behavior | ✅ Owner-confirmed |
+| Refresh and collapse-all | Owner confirmed the new refresh option works | ✅ Owner-confirmed |
+| HTML default run | Owner confirmed the new web default-run workflow works | ✅ Owner-confirmed |
+| APK build | Build APK workflow `33236115940` passed for `71978e6` | ✅ Passed |
+| Full export → import as a separate project | Export/import implementation and ZIP round-trip tests are present; no explicit device transcript for this final round trip is recorded yet | ⚠️ Owner confirmation required before merge |
+| Unit-test execution | The workflow assembles the APK only; local sandbox has no Java runtime | ⚠️ Not executed in this environment |
+
+## Merge gate
+
+Phase 8 implementation is complete and PR #27 is ready for review. Before
+merging, run the remaining device round-trip check once:
+
+1. Export the active project through Projects → three-dot menu → Export ZIP.
+2. Import that ZIP through the Projects → three-dot menu as a different project name.
+3. Confirm the second project contains the same nested files and opens them in
+   the editor.
+4. Confirm the terminal can enter the copied project and use project-relative
+   paths.
+
+After that owner confirmation is recorded, this checklist can be changed from
+`⚠️ Owner confirmation required` to `✅ Device acceptance complete`.

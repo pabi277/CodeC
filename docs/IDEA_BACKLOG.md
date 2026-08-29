@@ -1,5 +1,5 @@
 ====================================================================
-CodeC — FUTURE IDEAS / IMPLEMENTATION BACKLOG  [FROZEN — 2026-08-26]
+CodeC — FUTURE IDEAS / IMPLEMENTATION BACKLOG  [FROZEN — 2026-08-29]
 ====================================================================
 
 > STATUS: FROZEN AS HISTORY. All items from this file have been
@@ -10,7 +10,7 @@ CodeC — FUTURE IDEAS / IMPLEMENTATION BACKLOG  [FROZEN — 2026-08-26]
 > Session rule still applies: no PR/merge without explicit owner command.
 
 --------------------------------------------------------------------
-COMPLETED / MERGED (do not redo)
+COMPLETED / IMPLEMENTED / MERGED (do not redo)
 --------------------------------------------------------------------
 - Phase 3 (A–D): bootstrap, signing, device acceptance → see `JOURNEY.md` §5, PR #15.
 - Phase 4 (4.1–4.8): storage, install UX, trust, settings, catalog, CodeCApi clipboard+notify → `chat-phase4/`, PR #22.
@@ -18,6 +18,9 @@ COMPLETED / MERGED (do not redo)
 - Backlog sections A1 (share/open/URL/vibrate/toast) → COMPLETED in 5.3.
 - Backlog A2 (KI-1, KI-2) → COMPLETED in 5.1.
 - Backlog F (web preview) → COMPLETED in 5.2.
+- Phase 8 project work (D/E/F extensions) → IMPLEMENTED in PR #27;
+  core device workflows confirmed, final export/re-import round trip tracked
+  in `docs/chat-phase8/PART_8_DESIGN_DECISIONS.md` before merge.
 
 --------------------------------------------------------------------
 DEFERRED (kept in TERMINAL_PLAN.md §13)
@@ -169,25 +172,28 @@ E. FILE MANAGEMENT — SPCK-STYLE IMPORT / EXPORT / PROJECTS
    - ~/storage symlinks (Downloads, Documents, DCIM, Pictures...)
      from Phase 4.1 — reach your private files from file apps.
    - createDirectory helper exists; migrate-existing-.c-files path.
-2. TO ADD (all standard Android features):
-   - IMPORT a single file into a project: tap Import -> Android SAF
-     picker (OpenDocument) -> pick from Downloads/Documents ->
-     copy into private project folder. EASY.
-   - EXPORT / "Save as": Android SAF CreateDocument picker -> user
-     chooses destination (Downloads, Drive, any folder) -> app writes
-     file there. (Existing Share is a light version.) EASY-MEDIUM.
-   - CREATE FOLDER for projects: real folder tree (tap folder ->
-     open -> files inside) + "New folder" button; editor must follow
-     the selected folder. MEDIUM (mostly UI + path handling).
-   - IMPORT/EXPORT WHOLE PROJECT as ZIP: Import zip -> unpack into new
-     project folder; Export zip -> zip project + share/save. MEDIUM.
-   - "Open with CodeC" from other apps (receive intent filter).
-     MEDIUM.
-   - Terminal shortcut: cp from ~/storage/downloads/file.py (works
-     even before GUI buttons exist).
-3. Privacy story stays: private by default; import = copy into private
+2. DELIVERED IN PR #27 (core implementation; final round-trip device gate is
+   recorded in the Phase 8 completion record):
+   - IMPORT a single file into a project: Android SAF OpenDocument picker
+     copies it into the private project.
+   - EXPORT / "Save as": Android SAF CreateDocument picker writes the project
+     ZIP only after an explicit user action.
+   - CREATE FOLDER for projects: real hierarchical tree with open/close,
+     nested creation, rename, and delete; editor follows the selected path.
+   - IMPORT/EXPORT WHOLE PROJECT as ZIP: ZIP import extracts all file types and
+     preserves the complete tree; export writes paths relative to the project.
+   - Projects overflow actions: Import Folder, Import ZIP, Refresh Projects,
+     Refresh/collapse folders, Import File, Export ZIP, and New File.
+   - HTML/HTM files: Preview and Set as default run; web Run opens the stored
+     project entry page.
+   - Terminal project listing and project-relative build/run handoff.
+3. REMAINING / DEFERRED:
+   - "Open with CodeC" from other apps (receive intent filter) remains deferred.
+   - Terminal shortcut: `cp` from `~/storage/downloads/file.py` remains available
+     as a terminal workflow rather than a separate GUI button.
+4. Privacy story stays: private by default; import = copy into private
    folder; export only on explicit tap; nothing auto-public.
-4. Android 13+ SAF pickers need NO storage permissions (cleaner than
+5. Android 13+ SAF pickers need NO storage permissions (cleaner than
    old model).
 
 --------------------------------------------------------------------
@@ -195,25 +201,15 @@ F. WEB PREVIEW, SPCK-STYLE (HTML + CSS + JS)
 --------------------------------------------------------------------
 1. FACT: Android DOES support HTML with external CSS/JS files — the
    issue is HOW the page is loaded, not a platform limit.
-2. Spck's actual approach (two parts, both standard):
-   - Runs a tiny LOCAL WEB SERVER on the phone serving the project
-     folder (e.g. http://127.0.0.1:8080) — can already be done in
-     the userland with `python3 -m http.server` or Node.
-   - Shows that URL inside an embedded WebView (Chrome engine via
-     Android's WebView updates) with its own toolbar
-     (refresh, live reload, device-size buttons).
-3. What to add in CodeC:
-   - "PREVIEW" button on HTML files. EASY.
-   - WebView screen with refresh + live-reload. EASY-MEDIUM.
-   - External CSS/JS working: base-URL loading
-     (loadDataWithBaseURL) for static sites — NO server needed —
-     OR the local-server route. EASY-MEDIUM.
-   - Live reload on save (watch file changes -> reload page).
-     MEDIUM.
-   - Console / JS errors shown in the Output panel
-     (WebView onConsoleMessage). MEDIUM — nice Spck-like win.
-   - Multiple pages / whole web project -> just point server at the
-     project folder. EASY once server exists.
+2. DELIVERED: Phase 5.2 provides the in-app WebView preview with sibling
+   CSS/JS loading, live reload, and console output. PR #27 adds project-aware
+   HTML/HTM Preview plus Set as default run; the web project Run action opens
+   the configured entry page.
+3. REMAINING / DEFERRED:
+   - Local-server/project-type runners for Python/Node backends belong to
+     Phase 12/14.
+   - Device-size preview controls and other future WebView polish remain
+     deferred.
 4. Honest limits:
    - WebView is Android's Chromium WebView, not desktop Chrome —
      most modern HTML/CSS/JS works, exotic desktop APIs may not.

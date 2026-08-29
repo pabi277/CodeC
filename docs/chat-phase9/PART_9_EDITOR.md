@@ -1,6 +1,6 @@
 # CodeC Phase 9 — Editor Foundation (Undo/Redo, Find/Replace, Format, Squiggles)
 
-**Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Projects & Folder Tree)  
+**Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Projects & Folder Tree implementation complete in PR #27; final device round-trip gate recorded before merge)
 **Target Files:** `EditorScreen.kt`, `CSyntaxVisualTransformation.kt`, `EditorViewModel.kt`
 
 ---
