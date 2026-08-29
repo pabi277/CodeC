@@ -398,7 +398,7 @@ fun EditorScreen(
                     TextButton(
                         enabled = diagnostics.isNotEmpty(),
                         onClick = { viewModel.clearDiagnostics() }
-                    ) { Text(stringResource(R.string.clear)) }
+                    ) { Text(stringResource(R.string.clear_action)) }
                     TextButton(onClick = { showDiagnosticsDialog = false }) {
                         Text(stringResource(R.string.cancel))
                     }

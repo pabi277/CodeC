@@ -212,7 +212,7 @@
     <string name="reload_from_disk">Reload from disk</string>
     <string name="reloaded_from_disk">Reloaded from disk</string>
     <string name="clear_diagnostics">Clear diagnostics</string>
-    <string name="clear">Clear</string>
+    <string name="clear_action">Clear</string>
     <string name="diagnostics">Diagnostics</string>
     <string name="no_diagnostics">No problems reported</string>
     <string name="diagnostic_error">error</string>
