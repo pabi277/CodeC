@@ -1,5 +1,8 @@
 # CodeC Phase 9 Documentation — Editor Foundation
 
+**Status:** Planned · Phase 8 project implementation is complete in PR #27, with
+its final export/re-import device gate recorded before merge.
+
 Phase 9 implements all foundational editor capabilities (`[client-only]`) in Jetpack Compose:
 - **Undo / Redo:** Full history stack with snapshot debouncing.
 - **Find & Replace:** Search bar with regex, match count, next/prev navigation, and match highlights.

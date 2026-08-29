@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
 import com.codeci.ide.ui.utils.WebFileSupport
@@ -58,10 +60,11 @@ import java.io.File
 fun WebPreviewScreen(
     fileName: String?,
     onNavigateBack: () -> Unit,
+    projectName: String? = null,
     viewModel: WebPreviewViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val htmlFile = remember(fileName) { resolveHtmlFile(context, fileName) }
+    val htmlFile = remember(projectName, fileName) { resolveHtmlFile(context, projectName, fileName) }
     val console by viewModel.console.collectAsState()
     val reloadTick by viewModel.reloadTick.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -188,8 +191,13 @@ private fun levelLabel(level: ConsoleMessage.MessageLevel): String = when (level
     ConsoleMessage.MessageLevel.LOG -> "log"
 }
 
-private fun resolveHtmlFile(context: Context, fileName: String?): File? {
+private fun resolveHtmlFile(context: Context, projectName: String?, fileName: String?): File? {
     if (fileName.isNullOrBlank()) return null
+    if (projectName != null) {
+        val project = ProjectManager(context).project(projectName) ?: return null
+        val path = ProjectPathUtils.sanitizeRelativePath(fileName) ?: return null
+        return ProjectPathUtils.resolveInside(project.root, path)
+    }
     val safe = FileNameUtils.sanitizeFileName(fileName) ?: return null
     val dir = runCatching { FileManager(context).getProjectDir() }.getOrNull() ?: return null
     return File(dir, safe)

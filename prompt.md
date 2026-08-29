@@ -16,7 +16,7 @@ You are continuing **CodeC** (an Android C IDE). PRs #1–#17 are **merged to
 gets its own `arena/*` session branch — verify the actual branch with
 `git status` instead of assuming one.
 
-**WHERE THINGS STAND (2026-08-28):**
+**WHERE THINGS STAND (2026-08-29):**
 
 - **Phase 3 is device-acceptance complete.** Parts A, B, C, and D have all met
   their exit conditions and are verified on real Android hardware (PR #15).
@@ -27,30 +27,33 @@ gets its own `arena/*` session branch — verify the actual branch with
   `CodeCApi` bridge, 4.8 notifications (`codec-notify`).
 - **Phase 5 (5.1 KI fixes / 5.2 web preview / 5.3 capability batch) ✅ COMPLETE, merged PR #23 (2026-08-26).** Evidence in `docs/chat-phase5/`. See `docs/PHASE5_ROADMAP.md`.
 - **Phase 6 (Terminal UX) & Package Hub (Phase 10) ✅ IMPLEMENTED (2026-08-28, merged PR #25).**
-  - **Terminal UX:** Cutout / landscape safe area, configurable extra-keys + custom macros, wake-lock during active jobs, URL tap-to-open, VT BEL visual pulse + vibration, dynamic title, selection copy + word boundary lookup, monospace cell-by-cell drawing (no cursor drift), and smooth 60fps pinch-to-zoom (PTY resize decoupled from continuous in-flight touch gestures).
-  - **Package & Command Hub (`ModulesScreen`):** 1-tap package installation & execution (`pkg install -y <pkg>`), curated 25+ tool catalog (Compilers, Editors, Languages, CLI tools, Compression), live `$PREFIX/bin` installation status detection (`INSTALLED ✓` / `AVAILABLE`), 1-tap quick actions (`pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, `pkg repair`), custom command runner, and line discipline (`\r`) terminal dispatch.
-  - CI Build: `33177852501` passed green (2m53s).
+  - **Terminal UX:** Cutout / landscape safe area, configurable extra-keys + custom macros, wake-lock during active jobs, URL tap-to-open, VT BEL visual pulse + vibration, dynamic title, selection copy, smooth terminal rendering, and pinch-to-zoom.
+  - **Package & Command Hub:** 1-tap package installation/execution, curated catalog, live `$PREFIX/bin` status detection, quick actions, custom command runner, and terminal line discipline.
+  - CI Build: `33177852501` passed green.
 - **Phase 7 (multi-terminal sessions) ✅ COMPLETE (2026-08-28, PR #26, device-verified).**
   `TerminalSessionManager` (N concurrent PTY sessions, monotonic numbering,
   adjacent-selection close, auto-recreate on last close, 8-session cap),
-  dropdown session switcher (rename / close-confirm / "+ New session"),
-  one CodeCApi collector per session (wire protocol unchanged — responses are
-  per-invocation `mktemp` files), wake lock while any session is alive,
-  active-session routing preserving the public API, and
-  `TerminalEmulatorView.resizeKey` (grid dims re-applied on switch). Device
-  evidence: `docs/chat-phase7/PART_7_MULTI_TERMINAL.md` §6; decisions D1–D12:
-  `docs/chat-phase7/PART_7_DESIGN_DECISIONS.md`. Known non-blocking follow-up:
-  **CI runs assemble only — unit tests are never executed**; owner one-liner
-  recorded in `docs/chat-phase7/README.md` (agent tokens cannot push workflow
-  changes).
-- **Next Work:** Phase 8 (projects / folder tree / run configuration — the
-  keystone; see `docs/chat-phase8/PART_8_PROJECTS.md`), or resolve PR #24
-  (open, now CONFLICTING with `main` after PR #25 — and it touches 6 Kotlin
-  files despite its "docs-only" title). All client-only except Phase 12
-  (Python repo build). No PR/merge without explicit owner command.
-- An optional x86_64 repeat of the Part D clean-device test was not run (no
-  x86_64 device was available); this does not block calling Phase 3 complete
-  on the tested aarch64 architecture (see `docs/chat-phase3/PHASE3_PLAN.md` §5 M3).
+  dropdown switcher, per-session CodeCApi collectors, wake lock while any
+  session is alive, and active-session routing. Device evidence is recorded in
+  `docs/chat-phase7/PART_7_MULTI_TERMINAL.md`.
+- **Phase 8 project implementation is complete in PR #27, but its final merge gate is still explicit.**
+  The branch delivers private project storage, hierarchical file trees,
+  breadcrumbs, project run configuration, SAF folder/file transfer,
+  extension-agnostic ZIP import/export, central-directory ZIP recovery,
+  project-aware terminal/editor integration, Projects overflow actions,
+  refresh/collapse-all, and HTML/HTM Set as default run.
+  The owner has confirmed on device: ZIP extraction with HTML, CSS, JS, C, and
+  Python files; terminal project-folder listing; refresh/collapse; and HTML
+  default-run preview. The export → import-as-a-different-project round trip
+  has not yet been explicitly reported and must be confirmed before calling
+  the Phase 8 acceptance gate fully closed. See `docs/chat-phase8/`.
+- **Phase 9 (Editor Foundation) is the next planned client-only phase after the Phase 8 round-trip gate.** It covers multi-file tabs/navigation, undo/redo, find/replace, formatting, diagnostics, bracket matching, and line/column status. See `docs/chat-phase9/PART_9_EDITOR.md`.
+- PR #27 is open from `arena/01a04962-codec` to `main`; never merge it without
+  the owner's explicit merge command. All client-only except Phase 12
+  (Python repo build).
+- The latest successful APK assembly for PR #27 before documentation changes
+  is run `33236115940`. The workflow assembles the APK only; it does not run
+  unit tests. The local sandbox has no Java runtime.
 
 **SELF-DISTRUST PROTOCOL — follow strictly:**
 
@@ -85,15 +88,19 @@ gets its own `arena/*` session branch — verify the actual branch with
 **ORDER OF WORK:**
 
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
-   `gh release list`). Do not reopen completed parts.
-2. Phase 4 is complete; next work is Phase 5 (not started). Confirm with the
-   user which candidate area from `docs/PHASE5_ROADMAP.md` they want, and
-   decide/write down that part's open technical questions before coding
-   (record it in `docs/chat-phase5/`).
-3. **No PR / no merge without an explicit owner command** (see rule 7).
-   Work on the session branch; push it if useful; report and wait.
-4. A part is complete only when its **"Exit condition"** is met and verified,
-   not merely when code is written.
+   `gh release list`) before acting.
+2. Do not redo completed Phases 3–7 or Package Hub/Phase 10 unless identical
+   regression evidence appears.
+3. Close the Phase 8 acceptance gate only after the owner confirms export,
+   re-import as a different project, complete tree preservation, editor opening,
+   and project-relative terminal behavior. Do not infer device acceptance from
+   APK assembly or source tests.
+4. After Phase 8 is fully accepted, Phase 9 is next: implement the planned
+   editor foundation in `docs/chat-phase9/PART_9_EDITOR.md`.
+5. No PR / no merge without an explicit owner command. Work on the session
+   branch only; never push or merge to `main`.
+6. A part is complete only when its "Exit condition" is met and verified, not
+   merely when code is written.
 
 **Before each change, state:** what you are changing, which Part and exit
 condition it serves, and which invariant (if any) it could affect.

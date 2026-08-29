@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.terminal
 
+import com.codeci.ide.ui.projects.ProjectConfig
 import java.io.File
 
 /**
@@ -49,4 +50,16 @@ object TerminalHandoff {
     /** Just drop the user into the file's directory. */
     fun openInDirectoryCommand(directory: String): String =
         "cd ${shellEscape(directory)}"
+
+    /**
+     * Runs a project configuration from the project root. Build and run are
+     * intentionally command strings: they are the user's run configuration,
+     * while only the app-private path needs quoting.
+     */
+    fun projectRunCommand(projectDirectory: String, config: ProjectConfig): String {
+        val commands = mutableListOf("cd ${shellEscape(projectDirectory)}")
+        config.build.trim().takeIf { it.isNotEmpty() }?.let(commands::add)
+        config.run.trim().takeIf { it.isNotEmpty() }?.let(commands::add)
+        return commands.joinToString(" && ")
+    }
 }

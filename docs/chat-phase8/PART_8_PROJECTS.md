@@ -1,28 +1,43 @@
 # CodeC Phase 8 — Projects & File Tree (Keystone Architecture)
 
-**Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal)  
-**Keystone Role:** Phase 8 is the foundational keystone for Phase 9 (Editor), Phase 11 (Output Panel & Run), Phase 12 (Multi-language), and Phase 13 (GitHub).
+**Status:** ✅ Implementation complete in PR #27 · **core workflows device-confirmed; final export/re-import round-trip confirmation pending**
+**Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal)
+
+**Keystone Role:** Phase 8 is the foundational keystone for Phase 9 (Editor),
+Phase 11 (Output Panel & Run), Phase 12 (Multi-language), and Phase 13
+(GitHub).
 
 ---
 
 ## 1. Context & Motivation
 
-In current versions of CodeC, `FileManagerScreen.kt` is a flat file list in a single directory without hierarchical folder support. Projects cannot have subdirectories (e.g. `src/`, `include/`, `assets/`), cannot easily be imported/exported from device storage, and the terminal's working directory (`cwd`) is not synchronized with the active project.
+Before Phase 8, `FileManagerScreen.kt` was a flat file list in a single
+directory. Projects could not have subdirectories, could not be imported and
+exported as complete codebases, and the terminal/editor had no project model.
 
 Phase 8 creates a real hierarchical Project Workspace model:
-1. **Hierarchical File Tree:** Expandable/collapsible directories, breadcrumbs, nested file creation, rename, move, and delete.
-2. **Project Model & Run Configuration (`.codec/project.json`):** Standard metadata defining build commands, run commands, and compiler flags per project.
-3. **SAF Import / Export:** Native Android Storage Access Framework (SAF) document tree picker for importing existing codebases and exporting projects as ZIP archives.
-4. **Terminal & Editor Synchronization:** Selecting a project synchronizes the terminal session's working directory (`cd <project_dir>`) and editor workspace.
 
----
+1. **Hierarchical File Tree:** Expandable/collapsible directories, breadcrumbs,
+   nested file creation, rename, and delete.
+2. **Project Model & Run Configuration (`.codec/project.json`):** Standard
+   metadata defining project type, entry file, build command, run command, and
+   clean command.
+3. **SAF Import / Export:** Native Android Storage Access Framework (SAF)
+   document and folder pickers for private imports and explicit ZIP exports.
+4. **Terminal & Editor Integration:** Project files open with project-relative
+   paths and breadcrumbs; the terminal lists project directories from the
+   private projects parent and build/run commands enter the project root.
+5. **Web Project Entry:** An HTML/HTM file can be selected as the default web
+   run page and opened by the project Run action.
 
-## 2. Architectural Design (Decision D1)
+## 2. Architectural Design
 
 ### 2.1 Project Workspace Structure
-Projects reside in the app-private executable storage (`$HOME/projects/` or `filesDir/CodeC/projects/<projectName>/`):
+
+Projects reside in app-private executable storage:
+
 ```text
-my_c_project/
+filesDir/CodeC/projects/my_c_project/
 ├── .codec/
 │   └── project.json
 ├── include/
@@ -34,7 +49,11 @@ my_c_project/
 └── README.md
 ```
 
+Compiled project outputs remain in this app-private location so executable
+permissions are not lost on a `noexec` shared-storage mount.
+
 ### 2.2 Project Configuration Schema (`project.json`)
+
 ```json
 {
   "version": 1,
@@ -47,68 +66,105 @@ my_c_project/
 }
 ```
 
+For a static web project, selecting an HTML file as the default run page stores
+its safe relative path in `entry` and changes `type` to `web`.
+
 ### 2.3 Hierarchical Tree Data Model
-```kotlin
-sealed class FileNode(val file: File, val depth: Int) {
-    data class DirectoryNode(
-        val dir: File,
-        val depth: Int,
-        val isExpanded: Boolean = false,
-        val children: List<FileNode> = emptyList()
-    ) : FileNode(dir, depth)
 
-    data class FileLeaf(
-        val fileItem: File,
-        val depth: Int,
-        val extension: String,
-        val sizeBytes: Long
-    ) : FileNode(fileItem, depth)
-}
-```
+`FileTreeRepository` builds a canonical-path-checked tree of `DirectoryNode` and
+`FileLeaf` values. It sorts directories before files, tracks expanded relative
+paths, and flattens only visible nodes for Compose rendering. Symlink escapes
+are excluded.
 
-### 2.4 SAF Import & Export Architecture
-- **Import Folder (`ACTION_OPEN_DOCUMENT_TREE`):** Recursively reads DocumentFile tree and copies files into `$HOME/projects/<imported_name>`.
-- **Export ZIP (`ACTION_CREATE_DOCUMENT`):** Compresses project folder into a `.zip` stream and writes directly to user's chosen location (e.g. `Downloads/`).
-- **Import Single File (`ACTION_OPEN_DOCUMENT`):** Imports `.c`, `.h`, `.txt`, `.py`, etc. into current folder.
+### 2.4 SAF Import / Export Architecture
 
-### 2.5 Terminal CWD & Editor Integration
-- When opening a project, `TerminalViewModel` / `TerminalSessionManager` receives `setProjectCwd(projectDir)`.
-- If an active terminal exists, it dispatches `cd "$PROJECT_DIR"` into the shell.
-- Editor displays breadcrumb path (e.g., `my_c_project > src > main.c`) and remembers active open files.
+- **Import Folder (`ACTION_OPEN_DOCUMENT_TREE`):** Recursively reads the selected
+  document tree and copies its files into a new private project.
+- **Import ZIP (`ACTION_OPEN_DOCUMENT`):** Copies the selected SAF stream into
+  temporary private storage, opens the archive through `ZipFile`, and extracts
+  every central-directory file entry into a new private project. It is not
+  restricted by filename extension.
+- **Import File (`ACTION_OPEN_DOCUMENT`):** Copies ordinary files into the active
+  private project; ZIP files selected through this path are expanded instead of
+  stored as opaque archives.
+- **Export ZIP (`ACTION_CREATE_DOCUMENT`):** Only after an explicit user action,
+  writes the project tree to the chosen destination with paths relative to the
+  project root.
 
----
+ZIP imports preserve nested directories, spaces, Unicode, extensionless files,
+binary content, and all normal file extensions. Traversal, absolute paths,
+duplicate files, symlink representations, excessive entry counts, and oversized
+entries/archives are rejected.
 
-## 3. Implementation Steps
+### 2.5 Terminal and Editor Integration
 
-1. **Step 1:** Create `ProjectManager.kt` and `FileTreeRepository.kt` in `app/src/main/java/com/codeci/ide/ui/projects/`.
-2. **Step 2:** Refactor `FileManagerScreen.kt` to render a tree view with directory expand/collapse, icons by extension, and contextual options (New File, New Folder, Rename, Delete, Export ZIP).
-3. **Step 3:** Implement SAF file & folder picker launcher contracts in `MainActivity.kt` and `FileManagerScreen.kt`.
-4. **Step 4:** Implement `.codec/project.json` parser, generator, and default config builder.
-5. **Step 5:** Wire project selection with `TerminalViewModel` (`cd`) and `EditorScreen` (breadcrumbs).
-6. **Step 6:** Write unit tests for recursive tree parsing, SAF copy streaming, and ZIP pack/unpack.
+- Selecting a project moves the terminal to the private `CodeC/projects`
+  directory, allowing `ls` to show the project as a folder.
+- Build/run handoffs explicitly `cd` to the selected project root, so relative
+  includes and run commands continue to work.
+- Opening a project file navigates with a project name and sanitized relative
+  path. The editor displays a breadcrumb such as
+  `my_c_project > src > main.c`.
+- HTML/HTM files provide Preview and Set as default run in their file menu.
+  Web projects use the configured entry page when Run is pressed.
 
----
+### 2.6 Projects UI
 
-## 4. Exit Condition & Verification Recipe
+The Projects top bar uses a three-dot menu:
 
-A fresh APK passes the following checklist on a real device:
+- Project list: Import Folder, Import ZIP, Refresh Projects.
+- Open project: Refresh and collapse folders, Import File, Export ZIP, New File.
+- HTML/HTM file row: Preview and Set as default run.
 
-```sh
-# Setup & Folder Tree Test
-# 1. Open Files tab -> Tap "+ New Project" -> Name "calculator".
-# 2. Inside "calculator", create subfolder "src" and "include".
-# 3. Create "include/calc.h" and "src/calc.c", and "src/main.c".
-# 4. Open "src/main.c" in Editor -> verify breadcrumb shows "calculator > src > main.c".
-# 5. Open Terminal -> run `pwd` -> verify output is ".../calculator".
-# 6. Run: cc -I include src/main.c src/calc.c -o a.out && ./a.out -> verify output.
-# 7. In Files tab, tap "Export as ZIP" -> select Downloads in SAF -> verify calculator.zip created.
-# 8. In Files tab, tap "Import ZIP" -> import calculator.zip as "calculator_copy" -> verify file tree identical.
-# PASS
-```
+Refresh reloads the project tree and clears all expanded-directory state, giving
+a clean collapsed structure.
 
----
+## 3. Implementation Summary
 
-## 5. Non-Goals & Invariants
+1. Created `ProjectManager.kt`, `ProjectConfig.kt`, `ProjectPathUtils.kt`, and
+   `FileTreeRepository.kt`.
+2. Refactored `FileManagerScreen.kt` and `FileManagerViewModel.kt` for project
+   lifecycle, hierarchical files, SAF operations, ZIP transfers, overflow
+   actions, refresh/collapse, and web entry selection.
+3. Added project-aware routes and editor breadcrumbs in `MainActivity.kt`,
+   `EditorScreen.kt`, and `WebPreviewScreen.kt`.
+4. Added terminal project synchronization and safe project-relative handoffs.
+5. Added tests for tree operations, config round trips, path confinement, ZIP
+   preservation/security, and terminal handoff construction.
+6. Fixed ZIP reading for SAF archives whose streaming local entries exposed only
+   a root directory by enumerating the ZIP central directory with `ZipFile`.
 
-- **Invariants:** Projects must reside on app-private storage (`filesDir`) so compiled binaries retain executable (`chmod +x`) permissions without `noexec` blocks.
-- **Not in Phase 8:** Editor split output panel (Phase 11), Git remote sync (Phase 13).
+## 4. Acceptance and Verification
+
+The implementation acceptance record is maintained in
+[`PART_8_DESIGN_DECISIONS.md`](PART_8_DESIGN_DECISIONS.md).
+
+Owner-confirmed on device:
+
+- ZIP containing HTML, CSS, JS, C, and Python files imported successfully with
+  all files intact.
+- Project-folder terminal listing behavior works.
+- Refresh and collapse-all folders works.
+- HTML default-run selection and web preview Run behavior works.
+
+Automated/source verification:
+
+- APK assembly passed in CI run
+  [33236115940](https://github.com/pabi277/CodeC/actions/runs/33236115940).
+- `git diff --check` passed for the implementation commits.
+- Project tree, path, config, ZIP, and terminal handoff tests are present.
+
+Before merge, explicitly complete the export → import-as-a-different-project
+round trip and record the device result. CI currently assembles the APK but does
+not execute the unit-test task; the agent sandbox has no Java runtime for local
+execution.
+
+## 5. Non-Goals and Invariants
+
+- **Not in Phase 8:** The split output panel remains Phase 11; full editor
+  foundation remains Phase 9; Git remote sync remains Phase 13.
+- Projects remain under app-private executable storage.
+- SAF imports copy into private storage; exports happen only after an explicit
+  user action.
+- Every archive path is validated before extraction; no archive may escape its
+  project directory.

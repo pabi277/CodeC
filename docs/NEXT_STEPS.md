@@ -1,9 +1,14 @@
-# CodeC — Phase 3 task list (complete), Phase 4 pointer, Phase 5 next
+# CodeC — historical Phase 3 task list and current handoff
 
-**Last updated:** 2026-08-26 · **State:** Parts A, B, C, and D ✅ ALL
+**Last updated:** 2026-08-29 · **State:** Phases 3–7 complete; Phase 8 implementation is complete in PR #27, with core device workflows confirmed and the final export → re-import-as-a-new-project check pending. Phase 9 Editor Foundation is next. Current Phase 8 records live in [`chat-phase8/`](chat-phase8/).
+
+> This file is retained as the historical Phase 3 task list. For current work, use [`TERMINAL_PLAN.md`](TERMINAL_PLAN.md), [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md), and [`chat-phase9/PART_9_EDITOR.md`](chat-phase9/PART_9_EDITOR.md).
+
+**Historical state:** Parts A, B, C, and D ✅ ALL
 device-verified (Phase 3 complete). **Phase 4 (Parts 4.1–4.8) ✅ COMPLETE,
-device-verified 2026-08-26.** Next work is **Phase 5 — not started**, with a
-planning-only skeleton in [`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
+device-verified 2026-08-26.** Historical Phase 5 text follows; current work is
+Phase 8's final export/re-import device gate followed by Phase 9, tracked in
+[`chat-phase8/`](chat-phase8/) and [`chat-phase9/`](chat-phase9/).
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and

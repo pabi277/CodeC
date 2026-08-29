@@ -1,13 +1,15 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-26 · **State:** Phase 3 ✅ complete (device-verified).
+**Last updated:** 2026-08-29 · **State:** Phases 3–7 ✅ complete (Phase 7 device-verified).
 **Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
 2026-08-26; 4.8 verified the runtime-permission path
 (`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
 owner-confirmed notification tap opens CodeC). The Phase 4 roadmap now
 lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
-**Phase 5 is next** (not started): planning-only skeleton at
-[`PHASE5_ROADMAP.md`](PHASE5_ROADMAP.md).
+**Phases 5–7 are complete. Phase 8 implementation is complete in PR #27**;
+core workflows are owner-confirmed on device, and the final export →
+re-import-as-a-new-project check is recorded as the remaining merge gate. The
+current design and verification record lives in [`chat-phase8/`](chat-phase8/).
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and
@@ -529,3 +531,16 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      `codec-toast`/`codec-clipboard` from session 2, close/exit transitions,
      active-session routing for Modules/Editor/toolbar, session cap).
    See `docs/chat-phase7/`.
+10. **Phase 8 — Projects & File Tree** ✅ **IMPLEMENTATION COMPLETE in PR #27; core device workflows owner-confirmed (2026-08-29).**
+    Added private project directories, hierarchical folders, breadcrumbs, project
+    metadata/run configuration, SAF folder/file import, complete
+    extension-agnostic ZIP import/export, central-directory ZIP recovery,
+    terminal project listing, editor project routes, Projects overflow actions,
+    refresh/collapse-all, and HTML/HTM default web Run entry. Owner confirmed
+    ZIP extraction with HTML, CSS, JS, C, and Python files, terminal project
+    listing behavior, refresh/collapse, and HTML default Run. The final
+    export → import-as-a-different-project device check remains the merge gate;
+    see [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md).
+11. **Next:** Phase 9 — Editor Foundation (multi-file navigation/tabs, undo/redo,
+    find/replace, formatting, diagnostics, and line/column status) after the
+    Phase 8 round-trip gate closes. See [`chat-phase9/`](chat-phase9/).

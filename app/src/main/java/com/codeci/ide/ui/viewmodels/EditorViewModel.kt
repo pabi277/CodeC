@@ -16,6 +16,9 @@ import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
 import com.codeci.ide.ui.utils.WebFileSupport
+import com.codeci.ide.ui.projects.FileTreeRepository
+import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.ProjectPathUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +48,9 @@ class EditorViewModel : ViewModel() {
 
     private val _fileName = MutableStateFlow("main.c")
     val fileName: StateFlow<String> = _fileName.asStateFlow()
+
+    private val _projectName = MutableStateFlow<String?>(null)
+    val projectName: StateFlow<String?> = _projectName.asStateFlow()
 
     private val _terminalSegments = MutableStateFlow<List<TerminalSegment>>(emptyList())
     val terminalSegments: StateFlow<List<TerminalSegment>> = _terminalSegments.asStateFlow()
@@ -104,32 +110,47 @@ class EditorViewModel : ViewModel() {
         newName: String,
         onRenamed: (String) -> Unit
     ) {
-        val sanitized = FileNameUtils.sanitizeFileName(newName)
+        val sanitized = ProjectPathUtils.sanitizeSegment(newName)
         if (sanitized == null) {
             _userMessage.value = context.getString(com.codeci.ide.R.string.invalid_file_name)
             return
         }
-        val name = WebFileSupport.normalizeFileName(sanitized)
+        val project = _projectName.value
+        val name = if (project != null) sanitized else WebFileSupport.normalizeFileName(sanitized)
         val oldName = _fileName.value
-        if (name == oldName) return
+        val parent = oldName.substringBeforeLast('/', "")
+        val newPath = if (parent.isEmpty()) name else "$parent/$name"
+        if (newPath == oldName) return
 
         viewModelScope.launch {
             _isRenaming.value = true
-            val fm = FileManager(context)
-            val existingOnDisk = withContext(Dispatchers.IO) { fm.loadFile(oldName) != null }
-            val success = if (existingOnDisk) {
-                withContext(Dispatchers.IO) { fm.renameFile(oldName, name) }
+            val success: Boolean
+            val existingOnDisk: Boolean
+            if (project != null) {
+                val info = withContext(Dispatchers.IO) { ProjectManager(context).project(project) }
+                val oldFile = info?.let { ProjectPathUtils.resolveInside(it.root, oldName) }
+                existingOnDisk = oldFile?.isFile == true
+                success = if (info != null && existingOnDisk) {
+                    withContext(Dispatchers.IO) {
+                        FileTreeRepository.rename(info.root, oldName, name).isSuccess
+                    }
+                } else {
+                    info != null
+                }
             } else {
-                true
+                val fm = FileManager(context)
+                existingOnDisk = withContext(Dispatchers.IO) { fm.loadFile(oldName) != null }
+                success = if (existingOnDisk) {
+                    withContext(Dispatchers.IO) { fm.renameFile(oldName, name) }
+                } else true
             }
             if (success) {
-                _fileName.value = name
+                _fileName.value = newPath
                 if (!existingOnDisk) _isDirty.value = true
-                SettingsManager(context).replaceRecentFile(oldName, name)
+                SettingsManager(context).replaceRecentFile(oldName, newPath)
                 _userMessage.value = context.getString(com.codeci.ide.R.string.rename_success)
-                onRenamed(name)
+                onRenamed(newPath)
             } else {
-                _fileName.value = oldName
                 _userMessage.value = context.getString(com.codeci.ide.R.string.rename_failed)
             }
             _isRenaming.value = false
@@ -238,12 +259,41 @@ class EditorViewModel : ViewModel() {
         val safe = FileNameUtils.sanitizeFileName(name) ?: return
         val fm = FileManager(context)
         val content = fm.loadFile(safe) ?: return
+        _projectName.value = null
+        _fileName.value = safe
+        _codeText.value = TextFieldValue(content)
+        _isDirty.value = false
+    }
+
+    /** Loads a path relative to a Phase 8 project root. */
+    fun loadProjectFile(context: Context, projectName: String, relativePath: String) {
+        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return
+        val info = ProjectManager(context).project(projectName) ?: return
+        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return
+        if (!file.isFile || !file.canRead()) return
+        val content = runCatching { file.readText() }.getOrNull() ?: return
+        _projectName.value = info.name
         _fileName.value = safe
         _codeText.value = TextFieldValue(content)
         _isDirty.value = false
     }
 
     fun saveFile(context: Context): Boolean {
+        val project = _projectName.value
+        if (project != null) {
+            val info = ProjectManager(context).project(project) ?: return false
+            val safe = ProjectPathUtils.sanitizeRelativePath(_fileName.value) ?: return false
+            val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return false
+            return try {
+                file.parentFile?.mkdirs()
+                file.writeText(_codeText.value.text)
+                _fileName.value = safe
+                _isDirty.value = false
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
         val safe = FileNameUtils.sanitizeFileName(_fileName.value) ?: return false
         val fm = FileManager(context)
         val success = fm.saveFile(safe, _codeText.value.text)
@@ -260,8 +310,13 @@ class EditorViewModel : ViewModel() {
      */
     fun saveAndAbsolutePath(context: Context): String? {
         if (!saveFile(context)) return null
+        val project = _projectName.value
+        if (project != null) {
+            val info = ProjectManager(context).project(project) ?: return null
+            val safe = ProjectPathUtils.sanitizeRelativePath(_fileName.value) ?: return null
+            return ProjectPathUtils.resolveInside(info.root, safe)?.absolutePath
+        }
         val safe = FileNameUtils.sanitizeFileName(_fileName.value) ?: return null
-        val file = java.io.File(FileManager(context).getProjectDir(), safe)
-        return file.absolutePath
+        return java.io.File(FileManager(context).getProjectDir(), safe).absolutePath
     }
 }

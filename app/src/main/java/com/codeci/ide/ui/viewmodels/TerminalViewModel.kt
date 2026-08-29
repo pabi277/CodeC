@@ -19,9 +19,12 @@ import com.codeci.ide.ui.terminal.TerminalSession
 import com.codeci.ide.ui.terminal.TerminalSessionItem
 import com.codeci.ide.ui.terminal.TerminalSessionManager
 import com.codeci.ide.ui.terminal.TerminalSnapshot
+import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.terminal.UserlandInstaller
 import com.codeci.ide.ui.terminal.UserlandStatus
+import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.utils.AppLogger
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -342,6 +345,23 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             _altLatched.value = false
         }
         activeSession()?.send(payload)
+    }
+
+    /**
+     * Select a project in the terminal without entering it. The projects
+     * directory is intentional: `ls` then shows the selected project as a
+     * folder, while project build/run commands still `cd` to the project root
+     * explicitly before using project-relative paths.
+     */
+    fun setProjectCwd(projectDir: File) {
+        val projectsRoot = File(getApplication<Application>().filesDir, "CodeC/projects")
+        val root = runCatching { projectsRoot.canonicalFile }.getOrNull() ?: return
+        val project = runCatching { projectDir.canonicalFile }.getOrNull() ?: return
+        if (!project.isDirectory ||
+            project.parentFile?.path != root.path ||
+            ProjectPathUtils.sanitizeProjectName(project.name) == null
+        ) return
+        sendCommand(TerminalHandoff.openInDirectoryCommand(root.path))
     }
 
     fun sendCommand(command: String) {

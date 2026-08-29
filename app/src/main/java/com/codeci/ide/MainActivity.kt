@@ -41,6 +41,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.codeci.ide.ui.navigation.Screen
+import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.screens.EditorScreen
 import com.codeci.ide.ui.screens.FileManagerScreen
 import com.codeci.ide.ui.screens.HomeScreen
@@ -59,9 +61,11 @@ import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.MyApplicationTheme
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.utils.AppLogger
-import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -227,6 +231,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainApp() {
     val navController = rememberNavController()
+    val activity = requireNotNull(LocalActivity.current) as ComponentActivity
+    val terminalViewModel: TerminalViewModel = viewModel(viewModelStoreOwner = activity)
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
     val screens = listOf(
@@ -331,18 +337,24 @@ fun MainApp() {
             }
             composable(
                 route = Screen.Editor.route,
-                arguments = listOf(navArgument("fileName") { nullable = true })
+                arguments = listOf(
+                    navArgument("projectName") { nullable = true },
+                    navArgument("fileName") { nullable = true }
+                )
             ) { backStackEntry ->
+                val projectName = backStackEntry.arguments?.getString("projectName")
                 val fileName = backStackEntry.arguments?.getString("fileName")
                 EditorScreen(
+                    projectName = projectName,
                     fileName = fileName,
                     onNavigateBack = { navController.popBackStack() },
                     onFileRenamed = { newName ->
-                        navController.navigate(Screen.Editor.createRoute(newName)) {
+                        navController.navigate(Screen.Editor.createRoute(newName, projectName)) {
                             popUpTo(Screen.Editor.route) { inclusive = true }
                             launchSingleTop = true
                         }
                     },
+                    onProjectSelected = { project -> terminalViewModel.setProjectCwd(project.root) },
                     onOpenInTerminal = { cmd ->
                         navController.navigate(Screen.Terminal.createRoute(cmd)) {
                             launchSingleTop = true
@@ -350,7 +362,7 @@ fun MainApp() {
                         }
                     },
                     onOpenPreview = { name ->
-                        navController.navigate(Screen.Preview.createRoute(name)) {
+                        navController.navigate(Screen.Preview.createRoute(name, projectName)) {
                             launchSingleTop = true
                         }
                     }
@@ -375,6 +387,18 @@ fun MainApp() {
                     onFileSelected = { selectedFile ->
                         navController.navigate(Screen.Editor.createRoute(selectedFile))
                     },
+                    onProjectSelected = { project -> terminalViewModel.setProjectCwd(project.root) },
+                    onProjectFileSelected = { projectName, path ->
+                        navController.navigate(Screen.Editor.createRoute(path, projectName)) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onProjectPreviewFile = { projectName, path ->
+                        navController.navigate(Screen.Preview.createRoute(path, projectName)) {
+                            launchSingleTop = true
+                        }
+                    },
                     onPreviewFile = { name ->
                         navController.navigate(Screen.Preview.createRoute(name)) {
                             launchSingleTop = true
@@ -384,10 +408,15 @@ fun MainApp() {
             }
             composable(
                 route = Screen.Preview.route,
-                arguments = listOf(navArgument("fileName") { nullable = true })
+                arguments = listOf(
+                    navArgument("projectName") { nullable = true },
+                    navArgument("fileName") { nullable = true }
+                )
             ) { backStackEntry ->
+                val previewProjectName = backStackEntry.arguments?.getString("projectName")
                 val previewFileName = backStackEntry.arguments?.getString("fileName")
                 WebPreviewScreen(
+                    projectName = previewProjectName,
                     fileName = previewFileName,
                     onNavigateBack = { navController.popBackStack() }
                 )
@@ -398,15 +427,23 @@ fun MainApp() {
                     onUseTemplate = { fileName, code ->
                         val safe = FileNameUtils.sanitizeFileName(fileName)
                         if (safe != null) {
-                            val fm = FileManager(context)
-                            if (fm.saveFile(safe, code)) {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    StatsManager(context).incrementFilesCreated()
-                                }
-                                navController.navigate(Screen.Editor.createRoute(safe)) {
-                                    popUpTo(Screen.Home.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                            val manager = ProjectManager(context)
+                            val project = manager.project("default")
+                                ?: manager.createProject("default").getOrNull()
+                            val target = project?.let { ProjectPathUtils.resolveInside(it.root, safe) }
+                            if (target != null) {
+                                runCatching {
+                                    target.parentFile?.mkdirs()
+                                    target.writeText(code)
+                                }.onSuccess {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        StatsManager(context).incrementFilesCreated()
+                                    }
+                                    navController.navigate(Screen.Editor.createRoute(safe, project.name)) {
+                                        popUpTo(Screen.Home.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             }
                         }
