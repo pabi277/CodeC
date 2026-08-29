@@ -195,4 +195,35 @@
     <string name="module_download_complete">Module download complete!</string>
     <string name="spaces_format">%1$d spaces</string>
     <string name="font_size_sp">%1$d sp</string>
+    <!-- Phase 9: editor foundation -->
+    <string name="find_placeholder">Find…</string>
+    <string name="replace_placeholder">Replace with…</string>
+    <string name="no_matches">No matches</string>
+    <string name="match_count">%1$d / %2$d</string>
+    <string name="previous_match">Previous match</string>
+    <string name="next_match">Next match</string>
+    <string name="replace">Replace</string>
+    <string name="replace_all">All</string>
+    <string name="close_find">Close find</string>
+    <string name="close_tab">Close tab</string>
+    <string name="close_tab_unsaved_message">\"%1$s\" has unsaved changes. Save before closing?</string>
+    <string name="save_and_close">Save &amp; Close</string>
+    <string name="save_all">Save all</string>
+    <string name="reload_from_disk">Reload from disk</string>
+    <string name="reloaded_from_disk">Reloaded from disk</string>
+    <string name="clear_diagnostics">Clear diagnostics</string>
+    <string name="clear">Clear</string>
+    <string name="diagnostics">Diagnostics</string>
+    <string name="no_diagnostics">No problems reported</string>
+    <string name="diagnostic_error">error</string>
+    <string name="diagnostic_warning">warning</string>
+    <string name="fix_add_semicolon">Add missing ;</string>
+    <string name="jump_to_line">Go to line</string>
+    <string name="status_ln_col">Ln %1$d, Col %2$d</string>
+    <string name="status_spaces">Spaces: %1$d</string>
+    <string name="status_selection">%1$d selected</string>
+    <string name="already_formatted">Already formatted</string>
+    <string name="formatted_clang_format">Formatted with clang-format</string>
+    <string name="formatted_builtin">Formatted with built-in indenter</string>
+    <string name="replace_all_done">Replaced %1$d occurrence(s)</string>
 </resources>

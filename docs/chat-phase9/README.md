@@ -1,7 +1,9 @@
 # CodeC Phase 9 Documentation — Editor Foundation
 
-**Status:** Planned · Phase 8 project implementation is complete in PR #27, with
-its final export/re-import device gate recorded before merge.
+**Status:** ✅ Implemented on `arena/01a04c1c-codec` (2026-08-29) — Phase 8 is fully
+accepted (PR #27 merged; export/re-import round trip owner-confirmed on device), which
+closed the gate Phase 9 was waiting on. Device acceptance of the §4 recipe is pending.
+See [PART_9_IMPLEMENTATION.md](PART_9_IMPLEMENTATION.md).
 
 Phase 9 implements all foundational editor capabilities (`[client-only]`) in Jetpack Compose:
 - **Undo / Redo:** Full history stack with snapshot debouncing.

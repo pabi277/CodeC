@@ -5,7 +5,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -44,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,35 +60,52 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.EditorStatusBar
+import com.codeci.ide.ui.components.EditorTabBar
+import com.codeci.ide.ui.components.EditorTabUi
+import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.SymbolBar
 import com.codeci.ide.ui.components.TerminalOutput
-import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.editor.CompilerDiagnostics
+import com.codeci.ide.ui.editor.DiagnosticSeverity
+import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.projects.ProjectInfo
+import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
-import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
-import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.terminal.TerminalHandoff
+import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
+import com.codeci.ide.ui.utils.EditorDecorations
+import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorViewModel
+import kotlin.math.roundToInt
+
+/** Tap-anchor for the inline diagnostic tooltip. */
+internal data class EditorPopupAnchor(val x: Float, val y: Float, val diagnostic: EditorDiagnostic)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,11 +142,11 @@ fun EditorScreen(
 
     LaunchedEffect(projectName, fileName) {
         if (projectName != null && fileName != null) {
-            viewModel.loadProjectFile(context, projectName, fileName)
+            viewModel.openFile(context, projectName, fileName)
             ProjectManager(context).project(projectName)?.let(onProjectSelected)
             settingsManager.addRecentFile(fileName)
         } else if (fileName != null) {
-            viewModel.loadFile(context, fileName)
+            viewModel.openFile(context, null, fileName)
             settingsManager.addRecentFile(fileName)
         }
     }
@@ -135,16 +158,25 @@ fun EditorScreen(
     val isDirty by viewModel.isDirty.collectAsState()
     val isRenaming by viewModel.isRenaming.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
+    val canUndo by viewModel.canUndo.collectAsState()
+    val canRedo by viewModel.canRedo.collectAsState()
+    val findState by viewModel.find.collectAsState()
+    val diagnostics by viewModel.diagnostics.collectAsState()
+    val currentLineRange by viewModel.currentLineRange.collectAsState()
+    val bracketRanges by viewModel.bracketRanges.collectAsState()
+    val cursorPos by viewModel.cursorPos.collectAsState()
+    val isFormatting by viewModel.formatting.collectAsState()
+    val openTabs by viewModel.openTabs.collectAsState()
+    val activeTabPath by viewModel.activeTabPath.collectAsState()
 
     var showUnsavedDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showDiagnosticsDialog by remember { mutableStateOf(false) }
+    var pendingCloseTab by remember { mutableStateOf<String?>(null) }
+    var popup by remember { mutableStateOf<EditorPopupAnchor?>(null) }
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val comingSoon = stringResource(R.string.coming_soon)
-    fun showComingSoon() {
-        scope.launch { snackbarHostState.showSnackbar(comingSoon) }
-    }
 
     val isWebProject = remember(projectName) {
         projectName?.let { name ->
@@ -177,6 +209,38 @@ fun EditorScreen(
             viewModel.consumeMessage()
         }
     }
+
+    // A stale popup points at a moved line; drop it whenever the buffer text changes.
+    LaunchedEffect(codeText.text) { popup = null }
+
+    val decorations = remember(
+        currentLineRange, bracketRanges, diagnostics,
+        findState.matches, findState.activeIndex
+    ) {
+        EditorDecorations(
+            currentLineRange = currentLineRange,
+            findMatches = findState.matches,
+            activeFindMatch = findState.matches.getOrNull(findState.activeIndex),
+            bracketRanges = bracketRanges,
+            diagnostics = diagnostics
+        )
+    }
+    val transformation = remember(currentEditorTheme, decorations) {
+        CSyntaxVisualTransformation(currentEditorTheme, decorations)
+    }
+
+    val tabViews = remember(openTabs, activeTabPath, codeText, isDirty) {
+        openTabs.map { tab ->
+            val dirty = if (tab.relativePath == activeTabPath) {
+                isDirty
+            } else {
+                tab.buffer.text != tab.savedText
+            }
+            EditorTabUi(tab.relativePath, tab.displayName, dirty)
+        }
+    }
+
+    val latestDiagnostics by rememberUpdatedState(diagnostics)
 
     BackHandler(enabled = isDirty) {
         showUnsavedDialog = true
@@ -234,6 +298,111 @@ fun EditorScreen(
                     showUnsavedDialog = false
                     onNavigateBack()
                 }) { Text(stringResource(R.string.discard)) }
+            }
+        )
+    }
+
+    pendingCloseTab?.let { closingPath ->
+        AlertDialog(
+            onDismissRequest = { pendingCloseTab = null },
+            title = { Text(stringResource(R.string.close_tab)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.close_tab_unsaved_message,
+                        closingPath.substringAfterLast('/')
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.closeTab(context, closingPath, saveFirst = true)
+                    pendingCloseTab = null
+                }) { Text(stringResource(R.string.save_and_close)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        viewModel.closeTab(context, closingPath, saveFirst = false)
+                        pendingCloseTab = null
+                    }) { Text(stringResource(R.string.discard)) }
+                    TextButton(onClick = { pendingCloseTab = null }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            }
+        )
+    }
+
+    if (showDiagnosticsDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiagnosticsDialog = false },
+            title = { Text(stringResource(R.string.diagnostics)) },
+            text = {
+                if (diagnostics.isEmpty()) {
+                    Text(stringResource(R.string.no_diagnostics))
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        diagnostics.forEach { diagnostic ->
+                            val label = if (diagnostic.severity == DiagnosticSeverity.ERROR) {
+                                stringResource(R.string.diagnostic_error)
+                            } else {
+                                stringResource(R.string.diagnostic_warning)
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.jumpToDiagnostic(diagnostic)
+                                        showDiagnosticsDialog = false
+                                    }
+                                    .padding(vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "$label · L${diagnostic.line}:${diagnostic.column}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (diagnostic.severity == DiagnosticSeverity.ERROR) {
+                                        Color(0xFFFF5555)
+                                    } else {
+                                        Color(0xFFFFB347)
+                                    }
+                                )
+                                Text(
+                                    text = diagnostic.message,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                if (CompilerDiagnostics.semicolonFixLabel(diagnostic) != null) {
+                                    TextButton(
+                                        onClick = {
+                                            viewModel.applyQuickFix(diagnostic)
+                                        },
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                            horizontal = 0.dp,
+                                            vertical = 0.dp
+                                        )
+                                    ) {
+                                        Text(
+                                            stringResource(R.string.fix_add_semicolon),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Row {
+                    TextButton(
+                        enabled = diagnostics.isNotEmpty(),
+                        onClick = { viewModel.clearDiagnostics() }
+                    ) { Text(stringResource(R.string.clear)) }
+                    TextButton(onClick = { showDiagnosticsDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
             }
         )
     }
@@ -335,6 +504,28 @@ fun EditorScreen(
                 )
             }
 
+            EditorTabBar(
+                tabs = tabViews,
+                activePath = activeTabPath,
+                onSelect = { path -> viewModel.selectTab(path) },
+                onClose = { path ->
+                    val dirty = if (path == activeTabPath) {
+                        isDirty
+                    } else {
+                        openTabs.firstOrNull { it.relativePath == path }
+                            ?.let { it.buffer.text != it.savedText } == true
+                    }
+                    if (dirty) {
+                        pendingCloseTab = path
+                    } else {
+                        viewModel.closeTab(context, path, saveFirst = false)
+                    }
+                },
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(top = 2.dp)
+            )
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -343,32 +534,56 @@ fun EditorScreen(
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { showComingSoon() }) {
+                IconButton(onClick = { viewModel.undo() }) {
                     Icon(
                         Icons.AutoMirrored.Filled.Undo,
                         contentDescription = stringResource(R.string.undo),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        tint = if (canUndo) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        }
                     )
                 }
-                IconButton(onClick = { showComingSoon() }) {
+                IconButton(onClick = { viewModel.redo() }) {
                     Icon(
                         Icons.AutoMirrored.Filled.Redo,
                         contentDescription = stringResource(R.string.redo),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        tint = if (canRedo) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        }
                     )
                 }
-                IconButton(onClick = { showComingSoon() }) {
-                    Icon(
-                        Icons.Default.AutoFixHigh,
-                        contentDescription = stringResource(R.string.format),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    )
+                IconButton(onClick = { viewModel.formatCode(context, tabSize) }) {
+                    if (isFormatting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .width(18.dp)
+                                .height(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.AutoFixHigh,
+                            contentDescription = stringResource(R.string.format),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
-                IconButton(onClick = { showComingSoon() }) {
+                IconButton(onClick = {
+                    if (findState.visible) viewModel.hideFind() else viewModel.showFind()
+                }) {
                     Icon(
                         Icons.Default.Search,
                         contentDescription = stringResource(R.string.find),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        tint = if (findState.visible) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
                     )
                 }
                 IconButton(onClick = {
@@ -385,14 +600,55 @@ fun EditorScreen(
                     }
                     DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.coming_soon), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
+                            text = { Text(stringResource(R.string.save_all)) },
                             onClick = {
                                 showMoreMenu = false
-                                showComingSoon()
+                                viewModel.saveAllTabs(context)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.reload_from_disk)) },
+                            onClick = {
+                                showMoreMenu = false
+                                viewModel.reloadActiveTab(context)
+                            }
+                        )
+                        DropdownMenuItem(
+                            enabled = diagnostics.isNotEmpty(),
+                            text = {
+                                Text(
+                                    stringResource(R.string.clear_diagnostics),
+                                    color = if (diagnostics.isEmpty()) {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                            },
+                            onClick = {
+                                showMoreMenu = false
+                                viewModel.clearDiagnostics()
                             }
                         )
                     }
                 }
+            }
+
+            AnimatedVisibility(visible = findState.visible) {
+                FindReplaceBar(
+                    state = findState,
+                    onQueryChange = { viewModel.setFindQuery(it) },
+                    onReplacementChange = { viewModel.setFindReplacement(it) },
+                    onToggleCase = { viewModel.toggleFindMatchCase() },
+                    onToggleWord = { viewModel.toggleFindWholeWord() },
+                    onToggleRegex = { viewModel.toggleFindRegex() },
+                    onNext = { viewModel.findNext() },
+                    onPrev = { viewModel.findPrev() },
+                    onReplace = { viewModel.replaceCurrent() },
+                    onReplaceAll = { viewModel.replaceAll(context) },
+                    onClose = { viewModel.hideFind() },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                )
             }
 
             HorizontalDivider()
@@ -435,12 +691,95 @@ fun EditorScreen(
                             fontSize = fontSize.sp,
                             color = editorColors.text
                         ),
-                        visualTransformation = CSyntaxVisualTransformation(currentEditorTheme),
+                        visualTransformation = transformation,
                         cursorBrush = SolidColor(editorColors.text),
-                        modifier = Modifier.fillMaxWidth()
+                        onTextLayout = { result -> textLayoutResult = result },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pointerInputDiagnosticsTap(
+                                layoutResult = { textLayoutResult },
+                                diagnosticsProvider = { latestDiagnostics },
+                                hasDiagnostics = diagnostics.isNotEmpty()
+                            ) { position, diagnostic ->
+                                popup = EditorPopupAnchor(position.x, position.y, diagnostic)
+                            }
                     )
                 }
+
+                if (isFormatting) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+
+                popup?.let { anchor ->
+                    val density = LocalDensity.current
+                    val config = LocalConfiguration.current
+                    val (x, y) = with(density) {
+                        val maxX = config.screenWidthDp.dp.toPx() - 280.dp.toPx()
+                        anchor.x.coerceAtMost(maxX).coerceAtLeast(0f) to
+                            (anchor.y - 12.dp.toPx()).coerceAtLeast(0f)
+                    }
+                    Surface(
+                        tonalElevation = 4.dp,
+                        shape = RoundedCornerShape(12.dp),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
+                            .padding(8.dp)
+                            .width(260.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "L${anchor.diagnostic.line}:${anchor.diagnostic.column} · ${anchor.diagnostic.message}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (anchor.diagnostic.severity == DiagnosticSeverity.ERROR) {
+                                    Color(0xFFFF5555)
+                                } else {
+                                    Color(0xFFFFB347)
+                                }
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                CompilerDiagnostics.semicolonFixLabel(anchor.diagnostic)?.let {
+                                    TextButton(onClick = {
+                                        viewModel.applyQuickFix(anchor.diagnostic)
+                                        popup = null
+                                    }) {
+                                        Text(
+                                            stringResource(R.string.fix_add_semicolon),
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    }
+                                }
+                                TextButton(onClick = {
+                                    viewModel.jumpToDiagnostic(anchor.diagnostic)
+                                    popup = null
+                                }) {
+                                    Text(
+                                        stringResource(R.string.jump_to_line),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                                TextButton(onClick = { popup = null }) {
+                                    Text(
+                                        stringResource(R.string.cancel),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
+
+            EditorStatusBar(
+                line = cursorPos.line,
+                column = cursorPos.column,
+                selectionLength = cursorPos.selectionLength,
+                tabSize = tabSize,
+                errorCount = diagnostics.count { it.severity == DiagnosticSeverity.ERROR },
+                warningCount = diagnostics.count { it.severity == DiagnosticSeverity.WARNING },
+                onDiagnosticsClick = { showDiagnosticsDialog = true }
+            )
 
             SymbolBar(
                 textFieldValue = codeText,
@@ -479,9 +818,32 @@ fun EditorScreen(
                 .padding(16.dp)
         )
     }
+}
 
-    LaunchedEffect(Unit) {
-        // keep comingSoon referenced for snackbar from disabled taps via clickable overlay if needed
-        comingSoon
+/**
+ * Phase 9 — tap-to-inspect diagnostics. Follows the Compose custom-text-link
+ * pattern: track the gesture WITHOUT consuming it (so the text field still
+ * places the caret normally), and only consume when a diagnostic line was
+ * actually hit. [diagnosticsProvider] is read at gesture time (backed by
+ * rememberUpdatedState) so the pointer input never restarts on every keystroke.
+ */
+internal fun Modifier.pointerInputDiagnosticsTap(
+    layoutResult: () -> TextLayoutResult?,
+    diagnosticsProvider: () -> List<EditorDiagnostic>,
+    hasDiagnostics: Boolean,
+    onDiagnosticHit: (Offset, EditorDiagnostic) -> Unit
+): Modifier = pointerInput(hasDiagnostics) {
+    if (!hasDiagnostics) return@pointerInput
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false)
+        val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+        val layout = layoutResult() ?: return@awaitEachGesture
+        val text = layout.layoutInput.text.text
+        val offset = runCatching { layout.getOffsetForPosition(up.position) }.getOrDefault(-1)
+        if (offset < 0 || offset > text.length) return@awaitEachGesture
+        val line = text.take(offset).count { it == '\n' } + 1
+        val diagnostic = diagnosticsProvider().firstOrNull { it.line == line } ?: return@awaitEachGesture
+        up.consume()
+        onDiagnosticHit(up.position, diagnostic)
     }
 }
