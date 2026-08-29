@@ -1,8 +1,6 @@
 package com.codeci.ide.ui.utils
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.DrawStyle
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -30,8 +28,6 @@ data class EditorDecorations(
     val bracketRanges: List<IntRange> = emptyList(),
     val diagnostics: List<EditorDiagnostic> = emptyList()
 )
-
-private val SquigglePathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 4f), 0f)
 
 class CSyntaxVisualTransformation(
     private val theme: EditorThemeType = EditorThemeType.DRACULA,
@@ -149,7 +145,10 @@ class CSyntaxVisualTransformation(
                 bounds,
                 text
             )
-            // Wavy-ish red underline from the reported column to the line end.
+            // Diagnostic marker: red underline from the reported column to the
+            // line end, over a soft tinted line background. (Compose BOM
+            // 2024.09.00 SpanStyle has no drawStyle/pathEffect yet - a true
+            // squiggle needs ui-graphics 1.8+; see PART_9_IMPLEMENTATION.md.)
             val squiggleStart = (bounds.first + diagnostic.column - 1).coerceIn(bounds.first, bounds.last + 1)
             addClamped(
                 SpanStyle(
@@ -158,8 +157,7 @@ class CSyntaxVisualTransformation(
                     } else {
                         WarnSquiggle
                     },
-                    textDecoration = TextDecoration.Underline,
-                    drawStyle = DrawStyle(pathEffect = SquigglePathEffect)
+                    textDecoration = TextDecoration.Underline
                 ),
                 squiggleStart until (bounds.last + 1).coerceAtLeast(squiggleStart + 1),
                 text
