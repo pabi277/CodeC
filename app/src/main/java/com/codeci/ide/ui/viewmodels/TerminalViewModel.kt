@@ -347,16 +347,21 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         activeSession()?.send(payload)
     }
 
-    /** Move the active shell into an app-private project directory. */
+    /**
+     * Select a project in the terminal without entering it. The projects
+     * directory is intentional: `ls` then shows the selected project as a
+     * folder, while project build/run commands still `cd` to the project root
+     * explicitly before using project-relative paths.
+     */
     fun setProjectCwd(projectDir: File) {
         val projectsRoot = File(getApplication<Application>().filesDir, "CodeC/projects")
         val root = runCatching { projectsRoot.canonicalFile }.getOrNull() ?: return
         val project = runCatching { projectDir.canonicalFile }.getOrNull() ?: return
         if (!project.isDirectory ||
-            (project.path != root.path && !project.path.startsWith(root.path + File.separator)) ||
+            project.parentFile?.path != root.path ||
             ProjectPathUtils.sanitizeProjectName(project.name) == null
         ) return
-        sendCommand(TerminalHandoff.openInDirectoryCommand(project.path))
+        sendCommand(TerminalHandoff.openInDirectoryCommand(root.path))
     }
 
     fun sendCommand(command: String) {
