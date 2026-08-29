@@ -558,3 +558,18 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     condition: device recipe §4 of `PART_9_EDITOR.md` — owner check pending. See
     [`chat-phase9/`](chat-phase9/) and
     [`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md).
+
+12. **Phase 9.1 — device follow-ups to Phase 9** ✅ **IMPLEMENTED + CI green (2026-08-29, `arena/01a04c1c-codec` run `33241237168`); device check pending.**
+    Three problems from the owner's device pass: (1) no Spck-like file switching in the
+    editor → folder-icon bottom-sheet drawer listing the open project's tree (or scratch
+    files), tap to open as tab; (2) a project's `.c` file could not be run from the folder
+    → per-file **Run in terminal** in the Projects tree (`cd proj && mkdir -p bin && cc
+    main.c -o bin/main.out && ./bin/main.out`) plus editor **Save to project…** fixing the
+    root cause (scratch Save wrote `CodeC/projects/main.c`, outside every project folder,
+    so `cc` in `portfolio-system3` found nothing); (3) HTML preview loaded via `file://`
+    so only inline-referenced css/js worked → `WebPreviewServer`, an in-app HTTP server on
+    `127.0.0.1` (ephemeral port, loopback-only cleartext via `network_security_config`,
+    traversal-safe resolution, index fallback, MIME map) serving the whole project folder
+    so `fetch("data.json")`, XHR, ES modules and relative assets work; falls back to
+    `file://` if binding fails. New host tests for `WebPreviewServer` path rules and the
+    handoff command. See `chat-phase9/PART_9_IMPLEMENTATION.md` §Phase 9.1.

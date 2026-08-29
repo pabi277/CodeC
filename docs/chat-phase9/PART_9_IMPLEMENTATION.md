@@ -64,3 +64,38 @@ compile-green on the session branch is recorded below; device acceptance is owne
 |---|---|
 | CI compile + unit tests + lint (`Build APK`, branch push) | ✅ **GREEN** — run `33239651690` (2026-08-29, head `1a0170e`-chain on `arena/01a04c1c-codec`) |
 | Device recipe §4 | ⚠️ owner check required |
+
+## Phase 9.1 — device follow-up (owner report 2026-08-29, three problems)
+
+| # | Device symptom | Fix (all client-side) |
+|---|---|---|
+| 1 | "Like spck editor i cannot swich folder files easily" — no way to jump between project files inside the editor | New `FolderOpen` toolbar button (also in the ⋮ menu) opens a file drawer (bottom sheet): the open project's whole tree (scratch files when no project context). Tapping a file opens it as a tab; the active file is highlighted and marked dirty. State: `EditorViewModel.fileEntries` / `refreshFileEntries` (`drawerEntries` skips dotfiles and `bin/`). |
+| 2 | "i have a c file but i cannot run it directly from the folder" — `cc: not found: …/portfolio-system3/main.c` | Two parts: (a) per-file **Run in terminal** action in the Projects tree for `.c` leaves → `TerminalHandoff.projectFileRunCommand(projectDir, rel)` = `cd <proj> && mkdir -p bin && cc <rel> -o bin/<name>.out && ./bin/<name>.out` (quoted via `shellEscape`; build lands in `bin/`). (b) root cause of the missing file: scratch-mode Save writes to `CodeC/projects/` itself, never into the project folder — the editor now has **Save to project…** (⋮ menu), which writes the buffer into the chosen project root, re-keys the tab, switches the editor's project context, and bootstraps the project's other tabs. |
+| 3 | "HTML viwer not using any local server… only basic css,js not full project json and other files" — `file://` preview | New `ui/services/WebPreviewServer.kt`: in-app HTTP server bound to `127.0.0.1` on an ephemeral port, rooted at the previewed file's folder (project root, or the scratch dir). GET/HEAD only, no listings, `Cache-Control: no-store`, encoded-aware `..` traversal refusal (canonical containment per segment), directory → `index.html`, MIME map for html/css/js/mjs/json/svg/fonts/media. The WebView loads `http://127.0.0.1:<port>/<entry>` so `fetch("data.json")`, XHR, ES modules and relative assets behave like a dev server; if binding fails it degrades to the old `file://` load. `res/xml/network_security_config.xml` permits cleartext for `127.0.0.1`/`localhost` only. |
+
+### Tests (Phase 9.1)
+- `WebPreviewServerTest` — `decodePercent` (malformed/control rejects), `cleanSegments`
+  (dot collapse, encoded `..`/`%2f` traversal refusal, query/fragment strip),
+  `resolveServedFile` (index fallback, no listings, no absolute-path escape),
+  `contentTypeFor`, `urlPathFor`.
+- `TerminalHandoffTest` — `projectFileRunCommand` for a normal file, a nested path
+  with spaces (`'src/my file.c'`, output `bin/my_file.out`), and the empty-selection
+  echo branch.
+- CI note: `assembleDebug` chain runs `:app:testDebugUnitTest` + `:app:lintDebug`;
+  two CI iterations caught a duplicate `run_in_terminal` string (already existed
+  from the editor overflow) and a missing `LocalContext.current` capture in the
+  FileManager nav route. Green: run `33241237168`.
+
+### Device recipe (Phase 9.1)
+1. Editor → toolbar folder icon: sheet lists the open project's files; tap one →
+   opens as tab (title changes, tab bar gains it). No project → the sheet lists
+   scratch files and explains "Save to project…".
+2. Type C code in a fresh scratch file → ⋮ → "Save to project…" → pick
+   `portfolio-system3`. Terminal: `cd portfolio-system3 && ls` shows it; `cc main.c`
+   now compiles. Or: Projects → `portfolio-system3` → ⋮ on `main.c` → "Run in
+   terminal" → jumps to the terminal tab and runs `cd … && cc main.c -o bin/main.out
+   && ./bin/main.out`, output visible in the terminal.
+3. Preview any HTML in the project (file → Preview): add `data.json` next to it and
+   `fetch('data.json').then(r=>r.json()).then(console.log)` in the page — the value
+   prints in the preview's console strip (it failed under file://). Assets by
+   relative path load; Refresh or saving the file in the editor reloads the page.
