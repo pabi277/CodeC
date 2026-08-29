@@ -1,6 +1,6 @@
 # CodeC — historical Phase 3 task list and current handoff
 
-**Last updated:** 2026-08-29 · **State:** Phases 3–7 complete; Phase 8 implementation is complete in PR #27, with core device workflows confirmed and the final export → re-import-as-a-new-project check pending. Phase 9 Editor Foundation is next. Current Phase 8 records live in [`chat-phase8/`](chat-phase8/).
+**Last updated:** 2026-08-29 · **State:** Phases 3–7 complete; **Phase 8 complete and fully accepted** (PR #27 merged at `348eb03`; the final export → re-import-as-a-new-project round trip was owner-confirmed on device 2026-08-29). Phase 9 Editor Foundation is being implemented on `arena/01a04c1c-codec`. Current Phase 8 records live in [`chat-phase8/`](chat-phase8/).
 
 > This file is retained as the historical Phase 3 task list. For current work, use [`TERMINAL_PLAN.md`](TERMINAL_PLAN.md), [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md), and [`chat-phase9/PART_9_EDITOR.md`](chat-phase9/PART_9_EDITOR.md).
 

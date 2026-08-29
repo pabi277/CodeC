@@ -6,10 +6,11 @@
 (`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
 owner-confirmed notification tap opens CodeC). The Phase 4 roadmap now
 lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
-**Phases 5–7 are complete. Phase 8 implementation is complete in PR #27**;
-core workflows are owner-confirmed on device, and the final export →
-re-import-as-a-new-project check is recorded as the remaining merge gate. The
+**Phases 5–7 are complete. Phase 8 is complete and fully accepted**: implementation
+merged in PR #27 (`348eb03`), core workflows and the final export →
+re-import-as-a-new-project round trip owner-confirmed on device 2026-08-29. The
 current design and verification record lives in [`chat-phase8/`](chat-phase8/).
+**Phase 9 (Editor Foundation) is in progress on `arena/01a04c1c-codec`.**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and
@@ -531,16 +532,18 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      `codec-toast`/`codec-clipboard` from session 2, close/exit transitions,
      active-session routing for Modules/Editor/toolbar, session cap).
    See `docs/chat-phase7/`.
-10. **Phase 8 — Projects & File Tree** ✅ **IMPLEMENTATION COMPLETE in PR #27; core device workflows owner-confirmed (2026-08-29).**
+10. **Phase 8 — Projects & File Tree** ✅ **COMPLETE and device-accepted (2026-08-29; PR #27 merged at `348eb03`).**
     Added private project directories, hierarchical folders, breadcrumbs, project
     metadata/run configuration, SAF folder/file import, complete
     extension-agnostic ZIP import/export, central-directory ZIP recovery,
     terminal project listing, editor project routes, Projects overflow actions,
     refresh/collapse-all, and HTML/HTM default web Run entry. Owner confirmed
     ZIP extraction with HTML, CSS, JS, C, and Python files, terminal project
-    listing behavior, refresh/collapse, and HTML default Run. The final
-    export → import-as-a-different-project device check remains the merge gate;
+    listing behavior, refresh/collapse, and HTML default Run. On 2026-08-29 the
+    owner confirmed on device that the final export → re-import-as-a-different-project
+    round trip succeeded, closing the last acceptance gate.
     see [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md).
-11. **Next:** Phase 9 — Editor Foundation (multi-file navigation/tabs, undo/redo,
-    find/replace, formatting, diagnostics, and line/column status) after the
-    Phase 8 round-trip gate closes. See [`chat-phase9/`](chat-phase9/).
+11. **In progress:** Phase 9 — Editor Foundation (multi-file navigation/tabs, undo/redo,
+    find/replace, formatting, diagnostics, and line/column status), implemented on
+    `arena/01a04c1c-codec` after the Phase 8 round-trip gate closed. See
+    [`chat-phase9/`](chat-phase9/).
