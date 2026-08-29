@@ -4,7 +4,8 @@
 was run by the owner that day ("Yes working" + three problems) — follow-ups shipped
 as **Phase 9.1** and **Phase 9.2** (see
 [`PART_9_IMPLEMENTATION.md`](PART_9_IMPLEMENTATION.md)); final acceptance = owner
-re-check of the "Device recipe (Phase 9.2)" section there ·
+closed by the owner's finalization + PR #28 instruction 2026-08-29 (the recipe
+stays as the regression checklist) ·
 **Cost:** `[client-only]` · **Depends on:** Phase 8 (fully accepted 2026-08-29)
 **Target Files:** `EditorScreen.kt`, `CSyntaxVisualTransformation.kt`, `EditorViewModel.kt`
 

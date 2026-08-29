@@ -2,7 +2,8 @@
 
 **Status:** ✅ Implemented on `arena/01a04c1c-codec` (2026-08-29) · **Device
 acceptance:** first pass run by the owner ("Yes working" + three problems → fixed in
-Phase 9.1/9.2 below); final gate = §"Device recipe (Phase 9.2)" · CI green:
+Phase 9.1/9.2 below), and the **phase is CLOSED 2026-08-29** — the owner directed
+finalization + PR #28 · CI green:
 `33239651690` (Phase 9), `33241237168` (9.1), `33243620762` (9.2)
 **Plan of record:** [`PART_9_EDITOR.md`](PART_9_EDITOR.md) (unchanged exit recipe below).
 **Cost:** `[client-only]` — no bootstrap/package-repo impact; zero invariants touched.
@@ -68,7 +69,7 @@ compile-green on the session branch is recorded below; device acceptance is owne
 | CI compile + unit tests + lint (`Build APK`, branch push) | ✅ **GREEN** — run `33239651690` (2026-08-29, head `1a0170e`-chain on `arena/01a04c1c-codec`) |
 | Device recipe §4 (first pass) | ✅ run 2026-08-29 — "Yes working"; 3 problems → Phase 9.1 |
 | Device recipe (Phase 9.1) | ✅ owner pass → "Yes working", led to Phase 9.2 asks |
-| Device recipe (Phase 9.2) | ⚠️ owner re-check required |
+| Device recipe (Phase 9.2) | ✅ closed — owner finalization + PR #28 instruction 2026-08-29 |
 
 ## Phase 9.1 — device follow-up (owner report 2026-08-29, three problems)
 

@@ -10,12 +10,11 @@ lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
 merged in PR #27 (`348eb03`), core workflows and the final export →
 re-import-as-a-new-project round trip owner-confirmed on device 2026-08-29. The
 current design and verification record lives in [`chat-phase8/`](chat-phase8/).
-**Phase 9 (Editor Foundation) is implemented on `arena/01a04c1c-codec`. Two device
-follow-up rounds shipped: **Phase 9.1** (file drawer + Save-to-project, per-file
-Run-in-terminal, loopback HTTP server behind the HTML preview — CI green
-`33241237168`) and **Phase 9.2** ("make ui less complex", open a project folder
-from the editor, single files without a project — CI green `33243620762`).
-Device re-check pending.**
+**Phases 9–9.2 (Editor Foundation + device rounds) are ✅ COMPLETE and ACCEPTED
+(2026-08-29): the owner's device rounds passed ("Good working" → three fixes in
+9.1 → "Yes working" → 9.2 UI/folders/single-files), CI green throughout
+(`33239651690`, `33241237168`, `33243620762`), and the owner closed the phase by
+directing doc finalization + PR creation — **PR #28** (merge is the owner's call).**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and
@@ -548,7 +547,7 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     owner confirmed on device that the final export → re-import-as-a-different-project
     round trip succeeded, closing the last acceptance gate.
     see [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md).
-11. **Phase 9 — Editor Foundation** 🟡 **IMPLEMENTED (2026-08-29, `arena/01a04c1c-codec`); CI green; first device pass done — final acceptance after the Phase 9.2 re-check.**
+11. **Phase 9 — Editor Foundation** ✅ **COMPLETE (2026-08-29, `arena/01a04c1c-codec`); CI green; device rounds passed; closed by the owner's finalization instruction → PR #28.**
     Undo/redo (per-file snapshot history with typing-burst coalescing), find/replace
     (literal + regex, match case/whole word, wrap-around, group references, live
     highlights), Format (`clang-format` bridge first, built-in line-preserving C
@@ -560,11 +559,12 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     (which also revealed and fixed two real API-compat issues: Compose 1.7 has no
     `SpanStyle.drawStyle`; `ProcessBuilder` file redirects need API 26). Exit
     condition: device recipe §4 of `PART_9_EDITOR.md` — run on device 2026-08-29
-    ("Yes working" + three problems; resolved by items 12–13, re-check pending). See
+    ("Yes working" + three problems; resolved by items 12–13; owner closed Phase 9 on
+    2026-08-29 by directing finalization + PR #28). See
     [`chat-phase9/`](chat-phase9/) and
     [`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md).
 
-12. **Phase 9.1 — device follow-ups to Phase 9** ✅ **IMPLEMENTED + CI green (2026-08-29, `arena/01a04c1c-codec` run `33241237168`); device check pending.**
+12. **Phase 9.1 — device follow-ups to Phase 9** ✅ **COMPLETE (2026-08-29, `arena/01a04c1c-codec` run `33241237168`) — owner's device round passed ("Yes working"; its three new asks shipped as item 13).**
     Three problems from the owner's device pass: (1) no Spck-like file switching in the
     editor → folder-icon bottom-sheet drawer listing the open project's tree (or scratch
     files), tap to open as tab; (2) a project's `.c` file could not be run from the folder
@@ -579,7 +579,7 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     `file://` if binding fails. New host tests for `WebPreviewServer` path rules and the
     handoff command. See `chat-phase9/PART_9_IMPLEMENTATION.md` §Phase 9.1.
 
-13. **Phase 9.2 — simpler editor UI + folders & single files from the editor** ✅ **IMPLEMENTED + CI green (2026-08-29, run `33243620762`); device check pending.**
+13. **Phase 9.2 — simpler editor UI + folders & single files from the editor** ✅ **COMPLETE (2026-08-29, run `33243620762`) — owner closed Phase 9 with the finalization + PR #28 instruction.**
     Owner: "still not a friendly editor, make ui less complex", "open a project folder from
     the editor is not possible", "everything need a project — i want an option for single
     file also". Editor toolbar trimmed to undo/redo/save/⋮ (Format, Find, Run-in-terminal

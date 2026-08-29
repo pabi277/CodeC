@@ -7,7 +7,8 @@ merged; export/re-import round trip owner-confirmed on device), which closed the
 Phase 9 was waiting on. The owner ran §4 on device 2026-08-29 ("Yes working"; three
 reported problems) → fixed by Phase 9.1, then the Phase 9.2 round (simpler toolbar,
 open-folder-from-editor sheet, single files as a first-class context).
-**Final gate: owner device re-check of §"Device recipe (Phase 9.2)" below.**
+**Phase 9 is CLOSED: on 2026-08-29 the owner directed finalization + PR creation →
+PR #28.** The 9.1/9.2 device recipes below remain the regression checklist.
 See [PART_9_IMPLEMENTATION.md](PART_9_IMPLEMENTATION.md).
 
 Phase 9 implements all foundational editor capabilities (`[client-only]`) in Jetpack Compose:

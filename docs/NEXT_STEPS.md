@@ -1,16 +1,17 @@
 # CodeC — historical Phase 3 task list and current handoff
 
 **Last updated:** 2026-08-29 · **State:** Phases 3–7 complete; **Phase 8 complete and fully accepted** (PR #27 merged at `348eb03`; the final export → re-import-as-a-new-project round trip was owner-confirmed on device 2026-08-29). Phase 9 (Editor Foundation) plus the Phase 9.1/9.2 device follow-up rounds are
-implemented on `arena/01a04c1c-codec`, CI green (`33243620762` tip); the remaining gate
-is the owner's device re-check of §"Device recipe (Phase 9.2)" in
-[`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md). Current Phase 8 records live in [`chat-phase8/`](chat-phase8/).
+COMPLETE and ACCEPTED on `arena/01a04c1c-codec` (CI green `33243620762` tip); the owner
+closed the phase on 2026-08-29 by directing finalization + **PR #28** (merge = owner's
+call). Device recipes in [`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md)
+remain the regression checklist. Current Phase 8 records live in [`chat-phase8/`](chat-phase8/).
 
 > This file is retained as the historical Phase 3 task list. For current work, use [`TERMINAL_PLAN.md`](TERMINAL_PLAN.md), [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md), and [`chat-phase9/PART_9_EDITOR.md`](chat-phase9/PART_9_EDITOR.md).
 
 **Historical state:** Parts A, B, C, and D ✅ ALL
 device-verified (Phase 3 complete). **Phase 4 (Parts 4.1–4.8) ✅ COMPLETE,
 device-verified 2026-08-26.** Historical Phase 5 text follows; current work is
-Phase 8's gate is closed and Phase 9 (+9.1/9.2) awaits its device re-check, tracked in
+Phase 8 and Phase 9 (+9.1/9.2, PR #28) are closed; Phase 11 is next on the owner's word, tracked in
 [`chat-phase8/`](chat-phase8/) and [`chat-phase9/`](chat-phase9/); the next planned
 client phase after acceptance is 11 (output panel + Run), see
 [`chat-phase11/`](chat-phase11/).
