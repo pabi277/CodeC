@@ -11,7 +11,10 @@ merged in PR #27 (`348eb03`), core workflows and the final export →
 re-import-as-a-new-project round trip owner-confirmed on device 2026-08-29. The
 current design and verification record lives in [`chat-phase8/`](chat-phase8/).
 **Phase 9 (Editor Foundation) is implemented on `arena/01a04c1c-codec` — CI green
-(run `33239651690`), device acceptance pending.**
+(run `33239651690`). The owner's device pass ("Good working") raised three
+problems; **Phase 9.1** fixes all three (in-editor file drawer + Save-to-project,
+Run-in-terminal on project `.c` files, loopback HTTP server behind the HTML
+preview) — CI green run `33241237168`, device re-check pending.**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and

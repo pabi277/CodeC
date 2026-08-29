@@ -52,9 +52,14 @@ gets its own `arena/*` session branch — verify the actual branch with
   acceptance gate is CLOSED: the owner confirmed the export → re-import-as-a-
   different-project round trip on device 2026-08-29. **Phase 9 (Editor
   Foundation) is implemented on `arena/01a04c1c-codec` with CI green
-  (run `33239651690`)** — its remaining gate is the owner's on-device run of
-  the `docs/chat-phase9/PART_9_EDITOR.md` §4 recipe. All client-only except
-  Phase 12 (Python repo build).
+  (run `33239651690`)**. The owner device-checked it ("Good working") and
+  reported three problems — all fixed by **Phase 9.1**: in-editor Spck-style
+  file drawer + "Save to project…", per-file "Run in terminal" from the
+  Projects tree, and an in-app `127.0.0.1` HTTP server behind the HTML preview
+  (whole project folder served; fetch/json/ES-modules work; CI green run
+  `33241237168`). Remaining gate: owner re-check on device per
+  `docs/chat-phase9/PART_9_IMPLEMENTATION.md` §"Device recipe (Phase 9.1)".
+  All client-only except Phase 12 (Python repo build).
 - CI reality check (supersedes older notes): `Build APK` runs on every branch
   push and **does execute `:app:testDebugUnitTest` and `:app:lintDebug`**
   (a unit-test or lint-error regression fails the run — Phase 9 caught real
