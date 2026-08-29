@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
@@ -45,6 +47,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -76,6 +79,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -172,6 +176,8 @@ fun EditorScreen(
     var showUnsavedDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showFilesSheet by remember { mutableStateOf(false) }
+    var showSaveToProject by remember { mutableStateOf(false) }
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
     var popup by remember { mutableStateOf<EditorPopupAnchor?>(null) }
@@ -556,6 +562,13 @@ fun EditorScreen(
                         }
                     )
                 }
+                IconButton(onClick = { showFilesSheet = true }) {
+                    Icon(
+                        Icons.Default.FolderOpen,
+                        contentDescription = stringResource(R.string.project_files),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 IconButton(onClick = { viewModel.formatCode(context, tabSize) }) {
                     if (isFormatting) {
                         CircularProgressIndicator(
@@ -611,6 +624,20 @@ fun EditorScreen(
                             onClick = {
                                 showMoreMenu = false
                                 viewModel.reloadActiveTab(context)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.project_files)) },
+                            onClick = {
+                                showMoreMenu = false
+                                showFilesSheet = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.save_to_project)) },
+                            onClick = {
+                                showMoreMenu = false
+                                showSaveToProject = true
                             }
                         )
                         DropdownMenuItem(
@@ -817,6 +844,135 @@ fun EditorScreen(
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
         )
+
+        // Phase 9.1: Spck-style file drawer. Lists the open project's tree (or
+        // the scratch folder) and opens the tapped file as a tab — switching
+        // files no longer means leaving the editor for the Projects screen.
+        if (showFilesSheet) {
+            val fileEntries by viewModel.fileEntries.collectAsState()
+            LaunchedEffect(Unit) { viewModel.refreshFileEntries(context) }
+            ModalBottomSheet(onDismissRequest = { showFilesSheet = false }) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Text(
+                        text = if (projectName != null) "Files — $projectName"
+                               else "Files — Scratch (not in a project)",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (projectName != null) "Tap a file to open it in a tab."
+                               else "Scratch files live in CodeC/projects. Use “Save to project…” " +
+                                    "to move the current file into a real project folder.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 24.dp)
+                ) {
+                    if (fileEntries.isEmpty()) {
+                        Text(
+                            "Nothing on disk yet.",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    fileEntries.forEach { entry ->
+                        val active = entry.projectName == projectName &&
+                            entry.relativePath == activeTabPath
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !entry.isDirectory) {
+                                    if (!entry.isDirectory) {
+                                        viewModel.openFile(context, entry.projectName, entry.relativePath)
+                                        showFilesSheet = false
+                                    }
+                                }
+                                .padding(
+                                    start = (16 + entry.depth * 18).dp,
+                                    end = 16.dp,
+                                    top = 8.dp,
+                                    bottom = 8.dp
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (entry.isDirectory) "▸ ${entry.name}" else entry.name,
+                                style = if (entry.isDirectory) {
+                                    MaterialTheme.typography.labelLarge
+                                } else {
+                                    MaterialTheme.typography.bodyMedium
+                                },
+                                color = when {
+                                    entry.isDirectory || active -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (!entry.isDirectory && active && isDirty) {
+                                Text("●", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Phase 9.1: save the current buffer into a real project folder —
+        // scratch saves land outside every project, which is why the terminal
+        // could not find main.c next to portfolio-system3.
+        if (showSaveToProject) {
+            val projectList = remember {
+                runCatching { ProjectManager(context).listProjects() }.getOrDefault(emptyList())
+            }
+            AlertDialog(
+                onDismissRequest = { showSaveToProject = false },
+                title = { Text(stringResource(R.string.save_to_project)) },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        Text(
+                            "The current file is written into the chosen project's folder and the " +
+                                "editor switches to that project, so the terminal and Run can find it.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        if (projectList.isEmpty()) {
+                            Text(
+                                "No projects yet — create one in the Projects tab first.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            projectList.forEach { project ->
+                                TextButton(
+                                    onClick = {
+                                        showSaveToProject = false
+                                        viewModel.saveToProject(context, project.name)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(project.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showSaveToProject = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
     }
 }
 

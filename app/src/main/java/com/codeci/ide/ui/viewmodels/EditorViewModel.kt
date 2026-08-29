@@ -42,6 +42,18 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Row of the editor's file drawer (Phase 9.1). [projectName] is null for
+ * scratch files stored directly under `CodeC/projects/`.
+ */
+data class EditorFileEntry(
+    val projectName: String?,
+    val relativePath: String,
+    val name: String,
+    val depth: Int,
+    val isDirectory: Boolean
+)
+
 enum class TerminalSegmentType { COMPILATION, ERROR, OUTPUT, STATS }
 data class TerminalSegment(val text: String, val type: TerminalSegmentType)
 
@@ -464,6 +476,95 @@ class EditorViewModel : ViewModel() {
     // ---------------------------------------------------------------------
     // Save
     // ---------------------------------------------------------------------
+
+    /**
+     * Phase 9.1: save the active buffer into the root of [projectName] and
+     * switch the editor's context to that project. Scratch-mode Save writes
+     * into `CodeC/projects/` itself (outside every project folder), so this
+     * is the escape hatch: after "Save to project…" the terminal's
+     * `cd <project> && cc main.c` and the tree's Run action find the file.
+     */
+    fun saveToProject(context: Context, projectName: String) {
+        val appContext = context.applicationContext
+        val text = _codeText.value.text
+        val base = FileNameUtils.sanitizeFileName(_fileName.value.substringAfterLast('/'))
+            ?: "untitled.c"
+        if (!writeProjectFile(appContext, projectName, base, text)) {
+            _userMessage.value = "Could not save into project '$projectName'"
+            return
+        }
+        val oldPath = _activeTabPath.value
+        val tabs = ArrayList(_openTabs.value)
+        if (oldPath != null) tabs.removeAll { it.relativePath == oldPath }
+        tabs.removeAll { it.relativePath == base }
+        tabs.add(0, EditorTab(base, TextFieldValue(text), text))
+        _openTabs.value = trimTabs(tabs)
+        _activeTabPath.value = base
+        _fileName.value = base
+        _projectName.value = projectName
+        _isDirty.value = false
+        if (oldPath == null) scratchSavedText = text
+        if (oldPath != base) undoManagers.remove(oldPath ?: SCRATCH_KEY)
+        syncUndoFlags(undoManager())
+        val root = runCatching { ProjectManager(appContext).project(projectName)?.root }.getOrNull()
+        if (root != null) bootstrapRemainingTabs(appContext, root, _openTabs.value)
+        _userMessage.value = "Saved to project '$projectName' as $base"
+    }
+
+    // ---- Phase 9.1: in-editor file drawer --------------------------------
+
+    private val _fileEntries = MutableStateFlow<List<EditorFileEntry>>(emptyList())
+    val fileEntries: StateFlow<List<EditorFileEntry>> = _fileEntries.asStateFlow()
+
+    /**
+     * Load the drawer contents: the whole tree of the open project, or the
+     * scratch files (CodeC/projects root) when no project context is set.
+     */
+    fun refreshFileEntries(context: Context) {
+        val appContext = context.applicationContext
+        val project = _projectName.value
+        val entries = if (project != null) {
+            val root = runCatching { ProjectManager(appContext).project(project)?.root }.getOrNull()
+            if (root == null) {
+                emptyList()
+            } else {
+                runCatching { drawerEntries(FileTreeRepository.buildTree(root).children) }
+                    .getOrDefault(emptyList())
+                    .map { it.copy(projectName = project) }
+            }
+        } else {
+            runCatching {
+                FileManager(appContext).getProjectDir()
+                    .listFiles()
+                    ?.filter { it.isFile && !it.name.startsWith(".") }
+                    ?.sortedBy { it.name.lowercase() }
+                    ?.map { EditorFileEntry(null, it.name, it.name, 0, false) }
+                    ?: emptyList()
+            }.getOrDefault(emptyList())
+        }
+        _fileEntries.value = entries
+    }
+
+    private fun drawerEntries(nodes: List<FileNode>): List<EditorFileEntry> {
+        val out = ArrayList<EditorFileEntry>()
+        fun walk(list: List<FileNode>) {
+            for (node in list) {
+                if (node.file.name.startsWith(".") ||
+                    node.relativePath == "bin" || node.relativePath.startsWith("bin/")
+                ) continue
+                when (node) {
+                    is FileNode.DirectoryNode -> {
+                        out += EditorFileEntry(null, node.relativePath, node.file.name, node.depth, true)
+                        walk(node.children)
+                    }
+                    is FileNode.FileLeaf ->
+                        out += EditorFileEntry(null, node.relativePath, node.file.name, node.depth, false)
+                }
+            }
+        }
+        walk(nodes)
+        return out
+    }
 
     private fun writeProjectFile(context: Context, project: String, relativePath: String, text: String): Boolean {
         val info = ProjectManager(context).project(project) ?: return false

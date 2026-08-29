@@ -399,6 +399,19 @@ fun MainApp() {
                             launchSingleTop = true
                         }
                     },
+                    onRunProjectFile = { projectName, path ->
+                        val projectRoot = com.codeci.ide.ui.projects.ProjectManager(context)
+                            .project(projectName)?.root
+                        val command = if (projectRoot != null) {
+                            com.codeci.ide.ui.terminal.TerminalHandoff
+                                .projectFileRunCommand(projectRoot, path)
+                        } else {
+                            "echo 'CodeC: project $projectName was removed'"
+                        }
+                        navController.navigate(Screen.Terminal.createRoute(command)) {
+                            launchSingleTop = true
+                        }
+                    },
                     onPreviewFile = { name ->
                         navController.navigate(Screen.Preview.createRoute(name)) {
                             launchSingleTop = true
