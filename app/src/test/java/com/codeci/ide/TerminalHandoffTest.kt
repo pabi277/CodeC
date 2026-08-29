@@ -62,4 +62,30 @@ class TerminalHandoffTest {
         assertTrue(cmd.contains("-o 'my prog'"))
         assertTrue(cmd.endsWith("./'my prog'"))
     }
+
+    @Test
+    fun `project file run compiles in place from the project folder`() {
+        val dir = java.io.File(
+            "/data/user/0/com.codeci.ide/files/CodeC/projects/portfolio-system3"
+        )
+        assertEquals(
+            "cd /data/user/0/com.codeci.ide/files/CodeC/projects/portfolio-system3 && " +
+                "mkdir -p bin && cc main.c -o bin/main.out && ./bin/main.out",
+            TerminalHandoff.projectFileRunCommand(dir, "main.c")
+        )
+    }
+
+    @Test
+    fun `project file run handles nested and awkward names`() {
+        val dir = java.io.File("/data/CodeC/projects/my proj")
+        val cmd = TerminalHandoff.projectFileRunCommand(dir, "src/my file.c")
+        assertTrue(cmd.startsWith("cd '/data/CodeC/projects/my proj'"))
+        assertTrue(" cc 'src/my file.c' -o bin/my_file.out && ./bin/my_file.out" in cmd)
+    }
+
+    @Test
+    fun `project file run with empty selection is a safe echo`() {
+        val cmd = TerminalHandoff.projectFileRunCommand(java.io.File("/tmp/p"), "  ")
+        assertEquals("cd /tmp/p && echo 'run: no file selected'", cmd)
+    }
 }

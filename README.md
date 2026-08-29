@@ -1,6 +1,8 @@
 # CodeC IDE
 
-A C programming IDE for Android. Write C, tap **RUN**, or open the in-app terminal and type `cc file.c`.
+A C programming IDE for Android. Write C in projects or as single files, tap **RUN**,
+or open the in-app terminal and type `cc file.c` — plus a package hub and an HTML
+preview served by a local loopback server.
 
 > **🔒 STANDING RULE (owner, 2026-08-26):** agents/session branches must
 > **not open a PR or merge anything without the owner's explicit command** in
@@ -72,7 +74,28 @@ The **Packages** tab provides a visual 1-tap package manager and command hub:
 
 The extra-keys row (ESC, TAB, CTRL, ALT, arrows) and custom macros in Settings make mobile keyboard input seamless. Smooth 60fps pinch-to-zoom and long-press selection with word boundary detection and copy/paste contextual menu are fully supported.
 
-**Next-chat handoff** (bugs already fixed this session, what not to regress): [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
+## Editor, Projects & Web preview
+
+Since Phases 8–9 (all device-accepted, 2026-08-29) CodeC is a full little IDE around that
+terminal:
+
+- **Projects**: private project folders (`files/CodeC/projects/<name>`) with a hierarchical
+  tree, SAF folder/file/ZIP import & export, breadcrumbs, per-project run configuration,
+  and **"Run in terminal"** on any `.c` file straight from the tree.
+- **Editor foundation**: multi-file tabs (per-tab undo/redo + dirty state, save-all,
+  reload), undo/redo with typing-burst coalescing, find & replace (literal + regex,
+  highlights, replace-all), Format (`clang-format` bridge with built-in C-indenter
+  fallback), bracket matching, compiler-error squiggles with tap-to-inspect and a
+  missing-`;` quick fix, and a Ln/Col status bar.
+- **Single files without a project**: the editor's file sheet treats the shared
+  single-files folder as a first-class context — new file, open, run, delete, and
+  "Save to project…" when a file graduates.
+- **Open a project from the editor**: folder button / breadcrumb → Files & Projects
+  sheet → *Change* folder picker (projects ⇄ single files); tabs re-key and the terminal
+  follows.
+- **Web preview**: HTML files preview in-app served by a loopback HTTP server over the
+  whole project folder, so relative CSS/JS, `fetch("data.json")` and ES modules work;
+  live reload on save. Console output shows under the page.
 
 To rebuild the embedded TCC bundles (e.g. to add more ABIs), run `scripts/build-tcc.sh`
 with a musl cross toolchain — the script is self-contained and CI-ready.
@@ -94,13 +117,13 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 
 ## Troubleshooting
 
-> **Roadmap:** Mini-Termux plan — [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).  
-> **Full journey (phases 0–3):** [docs/JOURNEY.md](docs/JOURNEY.md).  
-> **Remaining work (ordered parts):** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
+> **Roadmap (historical):** Mini-Termux plan — [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).  
+> **Full journey (phases 0–9.2, authoritative timeline):** [docs/JOURNEY.md](docs/JOURNEY.md).  
+> **What's next:** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
 > **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
-> **Phase 3 status/handoff:** [docs/chat-phase3/PHASE3_STATUS.md](docs/chat-phase3/PHASE3_STATUS.md).  
-> **Phase 4 roadmap (planning only):** [docs/chat-phase4/PHASE4_ROADMAP.md](docs/chat-phase4/PHASE4_ROADMAP.md).  \
-> **Phase 5 roadmap (not started):** [docs/PHASE5_ROADMAP.md](docs/PHASE5_ROADMAP.md).  
+> **Editor/Projects/preview record (Phase 9 rounds):** [docs/chat-phase9/](docs/chat-phase9/).  
+> **Projects record (Phase 8):** [docs/chat-phase8/](docs/chat-phase8/).  
+> **Phase 3 status:** [docs/chat-phase3/PHASE3_STATUS.md](docs/chat-phase3/PHASE3_STATUS.md) · **Phase 4 roadmap:** [docs/chat-phase4/PHASE4_ROADMAP.md](docs/chat-phase4/PHASE4_ROADMAP.md) · **Phase 5 roadmap (complete):** [docs/PHASE5_ROADMAP.md](docs/PHASE5_ROADMAP.md).  
 > **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"

@@ -2,6 +2,15 @@
 
 **Analyzed:** 2026-08-19 · **Branch:** `arena/01a01b17-codec` (from `main` @ `19cf97c`) · **CI:** ✅ passing on `main`
 
+> **Addendum 2026-08-29:** this file is the architectural baseline snapshot, kept as
+> history. Everything since — storage/install UX (Phase 4), preview & capabilities
+> (Phase 5), terminal UX & Package Hub (Phases 6/10), multi-terminal (Phase 7),
+> Projects & file tree (Phase 8) and the Editor Foundation with device rounds 9.1/9.2
+> (tabs, undo/redo, find/replace, format, squiggles, single files, in-editor folders,
+> loopback preview server) — is complete and accepted. The authoritative timeline is
+> [docs/JOURNEY.md](docs/JOURNEY.md); the current handoff prompt is
+> [prompt.md](prompt.md).
+
 ---
 
 ## 1. What the project is

@@ -383,6 +383,7 @@ fun MainApp() {
                 )
             }
             composable(Screen.FileManager.route) {
+                val context = LocalContext.current
                 FileManagerScreen(
                     onFileSelected = { selectedFile ->
                         navController.navigate(Screen.Editor.createRoute(selectedFile))
@@ -396,6 +397,19 @@ fun MainApp() {
                     },
                     onProjectPreviewFile = { projectName, path ->
                         navController.navigate(Screen.Preview.createRoute(path, projectName)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onRunProjectFile = { projectName, path ->
+                        val projectRoot = com.codeci.ide.ui.projects.ProjectManager(context)
+                            .project(projectName)?.root
+                        val command = if (projectRoot != null) {
+                            com.codeci.ide.ui.terminal.TerminalHandoff
+                                .projectFileRunCommand(projectRoot, path)
+                        } else {
+                            "echo 'CodeC: project $projectName was removed'"
+                        }
+                        navController.navigate(Screen.Terminal.createRoute(command)) {
                             launchSingleTop = true
                         }
                     },

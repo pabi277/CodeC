@@ -172,9 +172,10 @@ with `gcc`-free tooling and add clang right after.
 |---|---|---|
 | **0** ✅ done | targetSdk 28 (executable storage), embedded TCC, module store, Termux bridge | — |
 | **1** ✅ done on device (1.3.13) | Terminal UI + `cc`/`./a.out` + scanf prompts. Remaining polish: RUN stdin. See [chat-phase1](chat-phase1/README.md) | 1–3 weeks |
-| **2** | Bootstrap overlay and runtime download are released as `userland-v1`; clean-device/runtime-library acceptance remains pending. | done, acceptance pending |
-| **3** | M1 complete + M2 build/closure complete: CodeC-only APT repository, source-built starter closure, apt/dpkg/termux-exec bootstrap artifacts with pre-release validation, guarded `pkg`, green CI, and the app installer selecting the Phase 3 release with a `userland-v1` fallback. Remaining: publish bootstrap release, device tests, signing. | ongoing |
-| **4** | Polish: storage access (`termux-setup-storage`-equivalent), env vars, themes, security confirmation prompt, package signing | ongoing |
+| **2** ✅ | Bootstrap overlay and runtime download shipped; superseded by `userland-v2-dev`, published, SHA-verified and owner-confirmed working on device (2026-08-29). | ✅ done |
+| **3** | M1 complete + M2 build/closure complete: CodeC-only APT repository, source-built starter closure, apt/dpkg/termux-exec bootstrap artifacts with pre-release validation, guarded `pkg`, green CI, and the app installer selecting the Phase 3 release with a `userland-v1` fallback. Delivered: bootstrap release published, device-tested, repo metadata signed (see
+`chat-phase3/REPOSITORY_SIGNING.md` + `PHASE3_STATUS.md`). | ✅ done |
+| **4** ✅ | Polish delivered across Phases 3/4/6: storage access (`codec-setup-storage`, Phase 4.1 + hub quick action), themes/env parity (4.4), install-confirmation security UX (4.2/4.3), repo signing (Phase 3). | ✅ done |
 | **Total** | | **6–10 weeks part-time** (phases 1–2 already give a useful in-app terminal) |
 
 ### Phase 1 detail (terminal UI) — shipped and device-verified (1.3.13)

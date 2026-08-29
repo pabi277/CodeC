@@ -91,7 +91,8 @@ fun FileManagerScreen(
     onProjectFileSelected: (projectName: String, relativePath: String) -> Unit = { _, path -> onFileSelected(path) },
     onProjectSelected: (ProjectInfo) -> Unit = {},
     onPreviewFile: (String) -> Unit = {},
-    onProjectPreviewFile: (projectName: String, relativePath: String) -> Unit = { _, path -> onPreviewFile(path) }
+    onProjectPreviewFile: (projectName: String, relativePath: String) -> Unit = { _, path -> onPreviewFile(path) },
+    onRunProjectFile: (projectName: String, relativePath: String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val projects by viewModel.projects.collectAsState()
@@ -307,6 +308,7 @@ fun FileManagerScreen(
                     onDelete = { deleteTarget = it },
                     onPreview = { path -> onProjectPreviewFile(activeProject!!.name, path) },
                     onSetDefaultRun = { path -> viewModel.setDefaultWebRun(context, path) },
+                    onRunFile = { path -> onRunProjectFile(activeProject!!.name, path) },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -568,6 +570,7 @@ private fun ProjectTree(
     onDelete: (FileNode) -> Unit,
     onPreview: (String) -> Unit,
     onSetDefaultRun: (String) -> Unit,
+    onRunFile: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -613,7 +616,8 @@ private fun ProjectTree(
                     onRename = onRename,
                     onDelete = onDelete,
                     onPreview = onPreview,
-                    onSetDefaultRun = onSetDefaultRun
+                    onSetDefaultRun = onSetDefaultRun,
+                    onRun = onRunFile
                 )
             }
         }
@@ -629,7 +633,8 @@ private fun TreeRow(
     onRename: (FileNode) -> Unit,
     onDelete: (FileNode) -> Unit,
     onPreview: (String) -> Unit,
-    onSetDefaultRun: (String) -> Unit
+    onSetDefaultRun: (String) -> Unit,
+    onRun: (String) -> Unit
 ) {
     var menuOpen by remember(node.relativePath) { mutableStateOf(false) }
     val isDirectory = node is FileNode.DirectoryNode
@@ -672,6 +677,14 @@ private fun TreeRow(
                     text = { Text(stringResource(R.string.new_folder)) },
                     leadingIcon = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) },
                     onClick = { menuOpen = false; onCreateIn(node.relativePath, true) }
+                )
+            } else if (node.file.name.endsWith(".c", ignoreCase = true)) {
+                // Phase 9.1: run one file straight from the folder — the
+                // command lands in the terminal tab with its full output.
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.run_in_terminal)) },
+                    leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                    onClick = { menuOpen = false; onRun(node.relativePath) }
                 )
             } else if (WebFileName.isPreviewable(node.file.name)) {
                 DropdownMenuItem(

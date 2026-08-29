@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase 9.1: the web preview serves project files from an in-app HTTP server
+  bound to the loopback interface. Android blocks cleartext traffic by default
+  from API 28 on, so only the loopback origins are permitted here; everything
+  else keeps the platform default policy.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

@@ -1,6 +1,8 @@
 # CodeC Phase 8 Documentation — Projects & File Tree (Keystone)
 
-**Status:** ✅ Implementation complete in PR #27 · **core device workflows confirmed; final export/re-import round trip remains the merge gate**
+**Status:** ✅ Complete — implementation merged in PR #27 (`348eb03`), core device
+workflows and the final export → re-import-as-a-new-project round trip owner-confirmed
+on 2026-08-29. Phase 8 acceptance gate is fully closed.
 **Completed:** 2026-08-29 · **Cost:** `[client-only]`
 
 Phase 8 is the **Keystone Architecture Phase**. It replaces the flat file
@@ -28,7 +30,8 @@ web-project default HTML entry.
 
 ## Phase Dependencies
 
-Phase 8 implementation is complete, so the Phase 9 Editor Foundation work is
-now unblocked after the final export/re-import device check. Phase 11 (Output
-Panel & Run), Phase 12 (Multi-language/Python), and Phase 13 (GitHub) continue
-to depend on the project model.
+Phase 8 is fully accepted: implementation merged in PR #27, and the final
+export/re-import device round trip was owner-confirmed on 2026-08-29. The Phase 9
+Editor Foundation work is therefore unblocked; it is being implemented on
+`arena/01a04c1c-codec`. Phase 11 (Output Panel & Run), Phase 12 (Multi-language/
+Python), and Phase 13 (GitHub) continue to depend on the project model.

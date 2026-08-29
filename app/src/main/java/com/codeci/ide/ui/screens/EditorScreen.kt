@@ -4,8 +4,14 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +19,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,7 +32,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
@@ -40,10 +51,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,37 +67,58 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.EditorStatusBar
+import com.codeci.ide.ui.components.EditorTabBar
+import com.codeci.ide.ui.components.EditorTabUi
+import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.SymbolBar
 import com.codeci.ide.ui.components.TerminalOutput
-import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.editor.CompilerDiagnostics
+import com.codeci.ide.ui.editor.DiagnosticSeverity
+import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.projects.ProjectInfo
+import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
-import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
-import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.terminal.TerminalHandoff
+import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
+import com.codeci.ide.ui.utils.EditorDecorations
+import com.codeci.ide.ui.utils.FileManager
+import com.codeci.ide.ui.utils.WebFileSupport
+import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.viewmodels.EditorViewModel
+import java.io.File
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Tap-anchor for the inline diagnostic tooltip. */
+internal data class EditorPopupAnchor(val x: Float, val y: Float, val diagnostic: EditorDiagnostic)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EditorScreen(
     modifier: Modifier = Modifier,
@@ -119,11 +153,11 @@ fun EditorScreen(
 
     LaunchedEffect(projectName, fileName) {
         if (projectName != null && fileName != null) {
-            viewModel.loadProjectFile(context, projectName, fileName)
+            viewModel.openFile(context, projectName, fileName)
             ProjectManager(context).project(projectName)?.let(onProjectSelected)
             settingsManager.addRecentFile(fileName)
         } else if (fileName != null) {
-            viewModel.loadFile(context, fileName)
+            viewModel.openFile(context, null, fileName)
             settingsManager.addRecentFile(fileName)
         }
     }
@@ -135,16 +169,31 @@ fun EditorScreen(
     val isDirty by viewModel.isDirty.collectAsState()
     val isRenaming by viewModel.isRenaming.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
+    val canUndo by viewModel.canUndo.collectAsState()
+    val canRedo by viewModel.canRedo.collectAsState()
+    val findState by viewModel.find.collectAsState()
+    val diagnostics by viewModel.diagnostics.collectAsState()
+    val currentLineRange by viewModel.currentLineRange.collectAsState()
+    val bracketRanges by viewModel.bracketRanges.collectAsState()
+    val cursorPos by viewModel.cursorPos.collectAsState()
+    val isFormatting by viewModel.formatting.collectAsState()
+    val openTabs by viewModel.openTabs.collectAsState()
+    val activeTabPath by viewModel.activeTabPath.collectAsState()
+    val currentProject by viewModel.projectName.collectAsState()
 
     var showUnsavedDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showFilesSheet by remember { mutableStateOf(false) }
+    var showSaveToProject by remember { mutableStateOf(false) }
+    var showContextPicker by remember { mutableStateOf(false) }
+    var showNewFileDialog by remember { mutableStateOf(false) }
+    var newFileName by remember { mutableStateOf("main.c") }
+    var showDiagnosticsDialog by remember { mutableStateOf(false) }
+    var pendingCloseTab by remember { mutableStateOf<String?>(null) }
+    var popup by remember { mutableStateOf<EditorPopupAnchor?>(null) }
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val comingSoon = stringResource(R.string.coming_soon)
-    fun showComingSoon() {
-        scope.launch { snackbarHostState.showSnackbar(comingSoon) }
-    }
 
     val isWebProject = remember(projectName) {
         projectName?.let { name ->
@@ -177,6 +226,38 @@ fun EditorScreen(
             viewModel.consumeMessage()
         }
     }
+
+    // A stale popup points at a moved line; drop it whenever the buffer text changes.
+    LaunchedEffect(codeText.text) { popup = null }
+
+    val decorations = remember(
+        currentLineRange, bracketRanges, diagnostics,
+        findState.matches, findState.activeIndex
+    ) {
+        EditorDecorations(
+            currentLineRange = currentLineRange,
+            findMatches = findState.matches,
+            activeFindMatch = findState.matches.getOrNull(findState.activeIndex),
+            bracketRanges = bracketRanges,
+            diagnostics = diagnostics
+        )
+    }
+    val transformation = remember(currentEditorTheme, decorations) {
+        CSyntaxVisualTransformation(currentEditorTheme, decorations)
+    }
+
+    val tabViews = remember(openTabs, activeTabPath, codeText, isDirty) {
+        openTabs.map { tab ->
+            val dirty = if (tab.relativePath == activeTabPath) {
+                isDirty
+            } else {
+                tab.buffer.text != tab.savedText
+            }
+            EditorTabUi(tab.relativePath, tab.displayName, dirty)
+        }
+    }
+
+    val latestDiagnostics by rememberUpdatedState(diagnostics)
 
     BackHandler(enabled = isDirty) {
         showUnsavedDialog = true
@@ -238,6 +319,111 @@ fun EditorScreen(
         )
     }
 
+    pendingCloseTab?.let { closingPath ->
+        AlertDialog(
+            onDismissRequest = { pendingCloseTab = null },
+            title = { Text(stringResource(R.string.close_tab)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.close_tab_unsaved_message,
+                        closingPath.substringAfterLast('/')
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.closeTab(context, closingPath, saveFirst = true)
+                    pendingCloseTab = null
+                }) { Text(stringResource(R.string.save_and_close)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        viewModel.closeTab(context, closingPath, saveFirst = false)
+                        pendingCloseTab = null
+                    }) { Text(stringResource(R.string.discard)) }
+                    TextButton(onClick = { pendingCloseTab = null }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            }
+        )
+    }
+
+    if (showDiagnosticsDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiagnosticsDialog = false },
+            title = { Text(stringResource(R.string.diagnostics)) },
+            text = {
+                if (diagnostics.isEmpty()) {
+                    Text(stringResource(R.string.no_diagnostics))
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        diagnostics.forEach { diagnostic ->
+                            val label = if (diagnostic.severity == DiagnosticSeverity.ERROR) {
+                                stringResource(R.string.diagnostic_error)
+                            } else {
+                                stringResource(R.string.diagnostic_warning)
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.jumpToDiagnostic(diagnostic)
+                                        showDiagnosticsDialog = false
+                                    }
+                                    .padding(vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "$label · L${diagnostic.line}:${diagnostic.column}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (diagnostic.severity == DiagnosticSeverity.ERROR) {
+                                        Color(0xFFFF5555)
+                                    } else {
+                                        Color(0xFFFFB347)
+                                    }
+                                )
+                                Text(
+                                    text = diagnostic.message,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                if (CompilerDiagnostics.semicolonFixLabel(diagnostic) != null) {
+                                    TextButton(
+                                        onClick = {
+                                            viewModel.applyQuickFix(diagnostic)
+                                        },
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                            horizontal = 0.dp,
+                                            vertical = 0.dp
+                                        )
+                                    ) {
+                                        Text(
+                                            stringResource(R.string.fix_add_semicolon),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Row {
+                    TextButton(
+                        enabled = diagnostics.isNotEmpty(),
+                        onClick = { viewModel.clearDiagnostics() }
+                    ) { Text(stringResource(R.string.clear_action)) }
+                    TextButton(onClick = { showDiagnosticsDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            }
+        )
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
@@ -256,6 +442,12 @@ fun EditorScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showFilesSheet = true }) {
+                        Icon(
+                            Icons.Default.FolderOpen,
+                            contentDescription = stringResource(R.string.project_files)
+                        )
+                    }
                     if (WebFileSupport.isHtml(currentFileName)) {
                         IconButton(onClick = {
                             if (viewModel.saveFile(context)) {
@@ -267,22 +459,6 @@ fun EditorScreen(
                             Icon(
                                 Icons.Default.Visibility,
                                 contentDescription = stringResource(R.string.preview)
-                            )
-                        }
-                    }
-                    if (!isWebProject) {
-                        IconButton(onClick = {
-                            val command = projectRunCommandOrNull()
-                                ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
-                            if (command != null) {
-                                onOpenInTerminal(command)
-                            } else {
-                                Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
-                            }
-                        }) {
-                            Icon(
-                                Icons.Default.Terminal,
-                                contentDescription = stringResource(R.string.run_in_terminal)
                             )
                         }
                     }
@@ -323,17 +499,46 @@ fun EditorScreen(
                 )
             )
 
-            if (projectName != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { showFilesSheet = true }
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = projectName + "  >  " + currentFileName.replace("/", "  >  "),
+                    text = (currentProject ?: "Single files") + "  >  " +
+                        currentFileName.replace("/", "  >  ") + "   ▾",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
+
+            EditorTabBar(
+                tabs = tabViews,
+                activePath = activeTabPath,
+                onSelect = { path -> viewModel.selectTab(path) },
+                onClose = { path ->
+                    val dirty = if (path == activeTabPath) {
+                        isDirty
+                    } else {
+                        openTabs.firstOrNull { it.relativePath == path }
+                            ?.let { it.buffer.text != it.savedText } == true
+                    }
+                    if (dirty) {
+                        pendingCloseTab = path
+                    } else {
+                        viewModel.closeTab(context, path, saveFirst = false)
+                    }
+                },
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(top = 2.dp)
+            )
 
             Row(
                 modifier = Modifier
@@ -343,32 +548,26 @@ fun EditorScreen(
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { showComingSoon() }) {
+                IconButton(onClick = { viewModel.undo() }) {
                     Icon(
                         Icons.AutoMirrored.Filled.Undo,
                         contentDescription = stringResource(R.string.undo),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        tint = if (canUndo) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        }
                     )
                 }
-                IconButton(onClick = { showComingSoon() }) {
+                IconButton(onClick = { viewModel.redo() }) {
                     Icon(
                         Icons.AutoMirrored.Filled.Redo,
                         contentDescription = stringResource(R.string.redo),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    )
-                }
-                IconButton(onClick = { showComingSoon() }) {
-                    Icon(
-                        Icons.Default.AutoFixHigh,
-                        contentDescription = stringResource(R.string.format),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    )
-                }
-                IconButton(onClick = { showComingSoon() }) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = stringResource(R.string.find),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        tint = if (canRedo) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        }
                     )
                 }
                 IconButton(onClick = {
@@ -385,14 +584,95 @@ fun EditorScreen(
                     }
                     DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.coming_soon), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
+                            text = { Text(stringResource(R.string.save_all)) },
                             onClick = {
                                 showMoreMenu = false
-                                showComingSoon()
+                                viewModel.saveAllTabs(context)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.reload_from_disk)) },
+                            onClick = {
+                                showMoreMenu = false
+                                viewModel.reloadActiveTab(context)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.save_to_project)) },
+                            onClick = {
+                                showMoreMenu = false
+                                showSaveToProject = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.format)) },
+                            onClick = {
+                                showMoreMenu = false
+                                viewModel.formatCode(context, tabSize)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.find)) },
+                            onClick = {
+                                showMoreMenu = false
+                                if (findState.visible) viewModel.hideFind() else viewModel.showFind()
+                            }
+                        )
+                        if (!isWebProject) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.run_in_terminal)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    val command = projectRunCommandOrNull()
+                                        ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
+                                    if (command != null) {
+                                        onOpenInTerminal(command)
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.file_save_failed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            enabled = diagnostics.isNotEmpty(),
+                            text = {
+                                Text(
+                                    stringResource(R.string.clear_diagnostics),
+                                    color = if (diagnostics.isEmpty()) {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                            },
+                            onClick = {
+                                showMoreMenu = false
+                                viewModel.clearDiagnostics()
                             }
                         )
                     }
                 }
+            }
+
+            AnimatedVisibility(visible = findState.visible) {
+                FindReplaceBar(
+                    state = findState,
+                    onQueryChange = { viewModel.setFindQuery(it) },
+                    onReplacementChange = { viewModel.setFindReplacement(it) },
+                    onToggleCase = { viewModel.toggleFindMatchCase() },
+                    onToggleWord = { viewModel.toggleFindWholeWord() },
+                    onToggleRegex = { viewModel.toggleFindRegex() },
+                    onNext = { viewModel.findNext() },
+                    onPrev = { viewModel.findPrev() },
+                    onReplace = { viewModel.replaceCurrent() },
+                    onReplaceAll = { viewModel.replaceAll(context) },
+                    onClose = { viewModel.hideFind() },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                )
             }
 
             HorizontalDivider()
@@ -435,12 +715,95 @@ fun EditorScreen(
                             fontSize = fontSize.sp,
                             color = editorColors.text
                         ),
-                        visualTransformation = CSyntaxVisualTransformation(currentEditorTheme),
+                        visualTransformation = transformation,
                         cursorBrush = SolidColor(editorColors.text),
-                        modifier = Modifier.fillMaxWidth()
+                        onTextLayout = { result -> textLayoutResult = result },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pointerInputDiagnosticsTap(
+                                layoutResult = { textLayoutResult },
+                                diagnosticsProvider = { latestDiagnostics },
+                                hasDiagnostics = diagnostics.isNotEmpty()
+                            ) { position, diagnostic ->
+                                popup = EditorPopupAnchor(position.x, position.y, diagnostic)
+                            }
                     )
                 }
+
+                if (isFormatting) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+
+                popup?.let { anchor ->
+                    val density = LocalDensity.current
+                    val config = LocalConfiguration.current
+                    val (x, y) = with(density) {
+                        val maxX = config.screenWidthDp.dp.toPx() - 280.dp.toPx()
+                        anchor.x.coerceAtMost(maxX).coerceAtLeast(0f) to
+                            (anchor.y - 12.dp.toPx()).coerceAtLeast(0f)
+                    }
+                    Surface(
+                        tonalElevation = 4.dp,
+                        shape = RoundedCornerShape(12.dp),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
+                            .padding(8.dp)
+                            .width(260.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "L${anchor.diagnostic.line}:${anchor.diagnostic.column} · ${anchor.diagnostic.message}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (anchor.diagnostic.severity == DiagnosticSeverity.ERROR) {
+                                    Color(0xFFFF5555)
+                                } else {
+                                    Color(0xFFFFB347)
+                                }
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                CompilerDiagnostics.semicolonFixLabel(anchor.diagnostic)?.let {
+                                    TextButton(onClick = {
+                                        viewModel.applyQuickFix(anchor.diagnostic)
+                                        popup = null
+                                    }) {
+                                        Text(
+                                            stringResource(R.string.fix_add_semicolon),
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    }
+                                }
+                                TextButton(onClick = {
+                                    viewModel.jumpToDiagnostic(anchor.diagnostic)
+                                    popup = null
+                                }) {
+                                    Text(
+                                        stringResource(R.string.jump_to_line),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                                TextButton(onClick = { popup = null }) {
+                                    Text(
+                                        stringResource(R.string.cancel),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
+
+            EditorStatusBar(
+                line = cursorPos.line,
+                column = cursorPos.column,
+                selectionLength = cursorPos.selectionLength,
+                tabSize = tabSize,
+                errorCount = diagnostics.count { it.severity == DiagnosticSeverity.ERROR },
+                warningCount = diagnostics.count { it.severity == DiagnosticSeverity.WARNING },
+                onDiagnosticsClick = { showDiagnosticsDialog = true }
+            )
 
             SymbolBar(
                 textFieldValue = codeText,
@@ -478,10 +841,350 @@ fun EditorScreen(
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
         )
-    }
 
-    LaunchedEffect(Unit) {
-        // keep comingSoon referenced for snackbar from disabled taps via clickable overlay if needed
-        comingSoon
+        // Phase 9.2: the single hub for files and folders. Lists the current
+        // folder (project or single files), switches folders, creates files,
+        // and long-press runs or deletes — everything the owner asked to have
+        // without leaving the editor.
+        if (showFilesSheet) {
+            val fileEntries by viewModel.fileEntries.collectAsState()
+            var rowMenuFor by remember { mutableStateOf<EditorFileEntry?>(null) }
+            var pendingDelete by remember { mutableStateOf<EditorFileEntry?>(null) }
+            LaunchedEffect(Unit) { viewModel.refreshFileEntries(context) }
+            ModalBottomSheet(onDismissRequest = { showFilesSheet = false }) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = currentProject ?: "Single files",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = "Tap a file to open it · long-press for Run / Delete",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        TextButton(onClick = { showContextPicker = true }) {
+                            Text("Change")
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .heightIn(max = 380.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 8.dp)
+                ) {
+                    if (fileEntries.isEmpty()) {
+                        Text(
+                            text = if (currentProject != null) "This project has no files yet."
+                                   else "No single files yet — create one below.",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    fileEntries.forEach { entry ->
+                        val active = entry.projectName == currentProject &&
+                            entry.relativePath == activeTabPath
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (!entry.isDirectory) {
+                                                viewModel.openFile(context, entry.projectName, entry.relativePath)
+                                                showFilesSheet = false
+                                            }
+                                        },
+                                        onLongClick = {
+                                            if (!entry.isDirectory) rowMenuFor = entry
+                                        }
+                                    )
+                                    .padding(
+                                        start = (12 + entry.depth * 18).dp,
+                                        end = 8.dp,
+                                        top = 8.dp,
+                                        bottom = 8.dp
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (entry.isDirectory) "▸ ${entry.name}" else entry.name,
+                                    style = if (entry.isDirectory) {
+                                        MaterialTheme.typography.labelLarge
+                                    } else {
+                                        MaterialTheme.typography.bodyMedium
+                                    },
+                                    color = when {
+                                        entry.isDirectory || active -> MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.onSurface
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (!entry.isDirectory && active && isDirty) {
+                                    Text("●", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = rowMenuFor == entry,
+                                onDismissRequest = { rowMenuFor = null }
+                            ) {
+                                if (entry.name.endsWith(".c", ignoreCase = true)) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.run_in_terminal)) },
+                                        onClick = {
+                                            rowMenuFor = null
+                                            val rootDir = if (entry.projectName != null) {
+                                                ProjectManager(context).project(entry.projectName)?.root
+                                            } else {
+                                                runCatching { FileManager(context).getProjectDir() }.getOrNull()
+                                            }
+                                            val command = if (rootDir == null) null else if (entry.projectName != null) {
+                                                TerminalHandoff.projectFileRunCommand(rootDir, entry.relativePath)
+                                            } else {
+                                                TerminalHandoff.compileAndRunCommand(
+                                                    File(rootDir, entry.relativePath).absolutePath
+                                                )
+                                            }
+                                            if (command != null) {
+                                                showFilesSheet = false
+                                                onOpenInTerminal(command)
+                                            }
+                                        }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.delete)) },
+                                    onClick = {
+                                        rowMenuFor = null
+                                        pendingDelete = entry
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider()
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { showNewFileDialog = true }) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.new_file))
+                    }
+                    if (currentProject == null) {
+                        TextButton(onClick = { showSaveToProject = true }) {
+                            Text(stringResource(R.string.save_to_project))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+            if (pendingDelete != null) {
+                AlertDialog(
+                    onDismissRequest = { pendingDelete = null },
+                    title = { Text("Delete ${pendingDelete?.name ?: ""}?") },
+                    text = { Text("The file is removed from disk. This cannot be undone.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            pendingDelete?.let { viewModel.deleteFileEntry(context, it) }
+                            pendingDelete = null
+                        }) {
+                            Text(stringResource(R.string.delete))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingDelete = null }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+        }
+
+        // Phase 9.2: open a project folder (or back to single files) without
+        // leaving the editor.
+        if (showContextPicker) {
+            val pickerProjects = remember {
+                runCatching { ProjectManager(context).listProjects() }.getOrDefault(emptyList())
+            }
+            AlertDialog(
+                onDismissRequest = { showContextPicker = false },
+                title = { Text("Open folder") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        Text(
+                            "The editor works inside one folder at a time. Everything you open " +
+                                "from it becomes a tab.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(
+                            onClick = {
+                                showContextPicker = false
+                                viewModel.switchContext(context, null)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (currentProject == null) "●  Single files" else "Single files")
+                        }
+                        pickerProjects.forEach { project ->
+                            TextButton(
+                                onClick = {
+                                    showContextPicker = false
+                                    ProjectManager(context).project(project.name)?.let(onProjectSelected)
+                                    viewModel.switchContext(context, project.name)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (currentProject == project.name) "●  ${project.name}" else project.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        if (pickerProjects.isEmpty()) {
+                            Text(
+                                "No projects yet — create one in the Projects tab, or keep working " +
+                                    "with single files here.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showContextPicker = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        if (showNewFileDialog) {
+            AlertDialog(
+                onDismissRequest = { showNewFileDialog = false },
+                title = { Text(stringResource(R.string.new_file)) },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = newFileName,
+                            onValueChange = { newFileName = it },
+                            label = { Text("File name") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Created in: ${currentProject ?: "Single files"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showNewFileDialog = false
+                        viewModel.createAndOpenFile(context, newFileName)
+                    }) {
+                        Text("Create")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNewFileDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        // Phase 9.1: save the current buffer into a real project folder —
+        // scratch saves land outside every project, which is why the terminal
+        // could not find main.c next to portfolio-system3.
+        if (showSaveToProject) {
+            val projectList = remember {
+                runCatching { ProjectManager(context).listProjects() }.getOrDefault(emptyList())
+            }
+            AlertDialog(
+                onDismissRequest = { showSaveToProject = false },
+                title = { Text(stringResource(R.string.save_to_project)) },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        Text(
+                            "The current file is written into the chosen project's folder and the " +
+                                "editor switches to that project, so the terminal and Run can find it.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        if (projectList.isEmpty()) {
+                            Text(
+                                "No projects yet — create one in the Projects tab first.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            projectList.forEach { project ->
+                                TextButton(
+                                    onClick = {
+                                        showSaveToProject = false
+                                        viewModel.saveToProject(context, project.name)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(project.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showSaveToProject = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Phase 9 — tap-to-inspect diagnostics. Follows the Compose custom-text-link
+ * pattern: track the gesture WITHOUT consuming it (so the text field still
+ * places the caret normally), and only consume when a diagnostic line was
+ * actually hit. [diagnosticsProvider] is read at gesture time (backed by
+ * rememberUpdatedState) so the pointer input never restarts on every keystroke.
+ */
+internal fun Modifier.pointerInputDiagnosticsTap(
+    layoutResult: () -> TextLayoutResult?,
+    diagnosticsProvider: () -> List<EditorDiagnostic>,
+    hasDiagnostics: Boolean,
+    onDiagnosticHit: (Offset, EditorDiagnostic) -> Unit
+): Modifier = pointerInput(hasDiagnostics) {
+    if (!hasDiagnostics) return@pointerInput
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false)
+        val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+        val layout = layoutResult() ?: return@awaitEachGesture
+        val text = layout.layoutInput.text.text
+        val offset = runCatching { layout.getOffsetForPosition(up.position) }.getOrDefault(-1)
+        if (offset < 0 || offset > text.length) return@awaitEachGesture
+        val line = text.take(offset).count { it == '\n' } + 1
+        val diagnostic = diagnosticsProvider().firstOrNull { it.line == line } ?: return@awaitEachGesture
+        up.consume()
+        onDiagnosticHit(up.position, diagnostic)
     }
 }

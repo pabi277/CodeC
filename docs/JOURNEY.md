@@ -6,10 +6,15 @@
 (`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
 owner-confirmed notification tap opens CodeC). The Phase 4 roadmap now
 lives in [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md).
-**Phases 5–7 are complete. Phase 8 implementation is complete in PR #27**;
-core workflows are owner-confirmed on device, and the final export →
-re-import-as-a-new-project check is recorded as the remaining merge gate. The
+**Phases 5–7 are complete. Phase 8 is complete and fully accepted**: implementation
+merged in PR #27 (`348eb03`), core workflows and the final export →
+re-import-as-a-new-project round trip owner-confirmed on device 2026-08-29. The
 current design and verification record lives in [`chat-phase8/`](chat-phase8/).
+**Phases 9–9.2 (Editor Foundation + device rounds) are ✅ COMPLETE and ACCEPTED
+(2026-08-29): the owner's device rounds passed ("Good working" → three fixes in
+9.1 → "Yes working" → 9.2 UI/folders/single-files), CI green throughout
+(`33239651690`, `33241237168`, `33243620762`), and the owner closed the phase by
+directing doc finalization + PR creation — **PR #28** (merge is the owner's call).**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and
@@ -531,16 +536,57 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
      `codec-toast`/`codec-clipboard` from session 2, close/exit transitions,
      active-session routing for Modules/Editor/toolbar, session cap).
    See `docs/chat-phase7/`.
-10. **Phase 8 — Projects & File Tree** ✅ **IMPLEMENTATION COMPLETE in PR #27; core device workflows owner-confirmed (2026-08-29).**
+10. **Phase 8 — Projects & File Tree** ✅ **COMPLETE and device-accepted (2026-08-29; PR #27 merged at `348eb03`).**
     Added private project directories, hierarchical folders, breadcrumbs, project
     metadata/run configuration, SAF folder/file import, complete
     extension-agnostic ZIP import/export, central-directory ZIP recovery,
     terminal project listing, editor project routes, Projects overflow actions,
     refresh/collapse-all, and HTML/HTM default web Run entry. Owner confirmed
     ZIP extraction with HTML, CSS, JS, C, and Python files, terminal project
-    listing behavior, refresh/collapse, and HTML default Run. The final
-    export → import-as-a-different-project device check remains the merge gate;
+    listing behavior, refresh/collapse, and HTML default Run. On 2026-08-29 the
+    owner confirmed on device that the final export → re-import-as-a-different-project
+    round trip succeeded, closing the last acceptance gate.
     see [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md).
-11. **Next:** Phase 9 — Editor Foundation (multi-file navigation/tabs, undo/redo,
-    find/replace, formatting, diagnostics, and line/column status) after the
-    Phase 8 round-trip gate closes. See [`chat-phase9/`](chat-phase9/).
+11. **Phase 9 — Editor Foundation** ✅ **COMPLETE (2026-08-29, `arena/01a04c1c-codec`); CI green; device rounds passed; closed by the owner's finalization instruction → PR #28.**
+    Undo/redo (per-file snapshot history with typing-burst coalescing), find/replace
+    (literal + regex, match case/whole word, wrap-around, group references, live
+    highlights), Format (`clang-format` bridge first, built-in line-preserving C
+    indenter fallback), bracket pair matching (string/comment aware), compiler
+    diagnostics (parsed `file:line:col` output + structured errors → line squiggles,
+    tap-to-inspect tooltip, missing-`;` quick fix), Ln/Col status bar, current-line
+    highlight, and multi-file project tabs (per-tab undo history + dirty state,
+    close-confirm, save-all, reload). 55 new host unit tests, executed green by CI
+    (which also revealed and fixed two real API-compat issues: Compose 1.7 has no
+    `SpanStyle.drawStyle`; `ProcessBuilder` file redirects need API 26). Exit
+    condition: device recipe §4 of `PART_9_EDITOR.md` — run on device 2026-08-29
+    ("Yes working" + three problems; resolved by items 12–13; owner closed Phase 9 on
+    2026-08-29 by directing finalization + PR #28). See
+    [`chat-phase9/`](chat-phase9/) and
+    [`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md).
+
+12. **Phase 9.1 — device follow-ups to Phase 9** ✅ **COMPLETE (2026-08-29, `arena/01a04c1c-codec` run `33241237168`) — owner's device round passed ("Yes working"; its three new asks shipped as item 13).**
+    Three problems from the owner's device pass: (1) no Spck-like file switching in the
+    editor → folder-icon bottom-sheet drawer listing the open project's tree (or scratch
+    files), tap to open as tab; (2) a project's `.c` file could not be run from the folder
+    → per-file **Run in terminal** in the Projects tree (`cd proj && mkdir -p bin && cc
+    main.c -o bin/main.out && ./bin/main.out`) plus editor **Save to project…** fixing the
+    root cause (scratch Save wrote `CodeC/projects/main.c`, outside every project folder,
+    so `cc` in `portfolio-system3` found nothing); (3) HTML preview loaded via `file://`
+    so only inline-referenced css/js worked → `WebPreviewServer`, an in-app HTTP server on
+    `127.0.0.1` (ephemeral port, loopback-only cleartext via `network_security_config`,
+    traversal-safe resolution, index fallback, MIME map) serving the whole project folder
+    so `fetch("data.json")`, XHR, ES modules and relative assets work; falls back to
+    `file://` if binding fails. New host tests for `WebPreviewServer` path rules and the
+    handoff command. See `chat-phase9/PART_9_IMPLEMENTATION.md` §Phase 9.1.
+
+13. **Phase 9.2 — simpler editor UI + folders & single files from the editor** ✅ **COMPLETE (2026-08-29, run `33243620762`) — owner closed Phase 9 with the finalization + PR #28 instruction.**
+    Owner: "still not a friendly editor, make ui less complex", "open a project folder from
+    the editor is not possible", "everything need a project — i want an option for single
+    file also". Editor toolbar trimmed to undo/redo/save/⋮ (Format, Find, Run-in-terminal
+    moved into the menu); the folder button + breadcrumb open a Files & Projects sheet with
+    a **Change** folder picker (Single files ⇄ any project — buffers saved first, tabs
+    re-keyed, terminal cwd follows) and a **+ New file** action; single files are a
+    first-class context (create/run/delete straight from the sheet, `cc` via the terminal
+    handoff); long-press on any listed file gives Run in terminal / Delete. VM API:
+    `switchContext`, `createAndOpenFile`, `deleteFileEntry`. See
+    `chat-phase9/PART_9_IMPLEMENTATION.md` §Phase 9.2.

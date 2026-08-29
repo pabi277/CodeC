@@ -1,8 +1,10 @@
 # Phase 8 — Completion and Acceptance Record
 
-**Implementation:** ✅ Complete in PR #27
+**Implementation:** ✅ Complete in PR #27 (merged to `main` at `348eb03`)
 **Core device workflows:** ✅ Owner-confirmed on 2026-08-29
-**Final merge gate:** ⚠️ Explicit export → re-import-as-a-new-project device confirmation still required
+**Final merge gate:** ✅ Closed — owner confirmed the export → re-import-as-a-new-project
+round trip succeeded on device (2026-08-29, session `arena/01a04c1c-codec`:
+"Phase 8 is a successful"). Phase 8 acceptance is now fully closed.
 
 This record separates what is implemented and tested in the repository from
 what has been explicitly confirmed on an Android device. Phase 8 must not be
@@ -37,12 +39,17 @@ marked fully closed on the basis of APK assembly alone.
 | Terminal project listing | Owner confirmed project-folder listing behavior after the terminal-directory correction | ✅ Passed on device |
 | Refresh and collapse-all folders | Owner reported the new refresh action works | ✅ Passed on device |
 | HTML default run | Owner reported Set as default run and web Run/preview work | ✅ Passed on device |
-| Export ZIP | SAF CreateDocument export implementation and ZIP output tests | ✅ Implemented; device transcript not recorded |
-| Re-import ZIP as a separate project | New-project ZIP import implementation and preservation tests | ⚠️ Device confirmation required |
+| Export ZIP | SAF CreateDocument export implementation and ZIP output tests; owner reported the export → re-import round trip successful on device | ✅ Passed on device (2026-08-29) |
+| Re-import ZIP as a separate project | New-project ZIP import implementation and preservation tests; owner reported the re-imported project kept the tree and mixed file types | ✅ Passed on device (2026-08-29) |
 | APK assembly | Build APK run `33236115940` passed for PR #27 code | ✅ Passed |
 | Unit-test execution | CI workflow runs `assembleDebug` only; local sandbox has no Java runtime | ⚠️ Not executed here |
 
 ## Final device check before merge
+
+Completed: after PR #27 merged, the owner ran the export → re-import round trip on
+device (2026-08-29) and reported it successful. Steps 1–7 of the recipe below are
+therefore confirmed passed by the owner; the two `⚠️`/transcript rows above were
+replaced with `✅ Passed on device` and the Phase 8 acceptance gate is **fully closed**.
 
 On the latest PR #27 APK:
 

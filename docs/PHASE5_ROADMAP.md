@@ -1,7 +1,7 @@
 # CodeC Phase 5 roadmap
 
-**Status (2026-08-26):** 🚧 **STARTED — Parts 5.1, 5.2, and 5.3 ✅ DONE
-(device-verified 2026-08-26).** Phase 4 (Parts 4.1–4.8) is complete and
+**Status (2026-08-29):** ✅ **COMPLETE & SUPERSEDED — Parts 5.1–5.4 shipped
+(device-verified rounds 2026-08-26/27, merged in PR #23).** Phase 4 (Parts 4.1–4.8) is complete and
 device-verified; its roadmap now lives in
 [`chat-phase4/PHASE4_ROADMAP.md`](chat-phase4/PHASE4_ROADMAP.md). This file
 is the same kind of **roadmap, not an execution plan** — it names candidate

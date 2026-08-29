@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.services.WebPreviewServer
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.utils.FileManager
@@ -70,6 +72,16 @@ fun WebPreviewScreen(
     val error by viewModel.error.collectAsState()
 
     var webView by remember { mutableStateOf<WebView?>(null) }
+
+    // Phase 9.1: serve the whole folder over a loopback HTTP server so
+    // relative CSS/JS, fetch("data.json") and ES modules work like under a
+    // real dev server (`file://` blocks all of those). If binding fails the
+    // preview degrades to the old file:// load instead of erroring out.
+    val servedRoot = remember(projectName, htmlFile) { resolveServedRoot(context, projectName, htmlFile) }
+    val server = remember(servedRoot) { servedRoot?.let { WebPreviewServer.start(it) } }
+    DisposableEffect(server) {
+        onDispose { server?.stop() }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -139,7 +151,13 @@ fun WebPreviewScreen(
                 viewModel.reportError("Preview supports HTML files (.html / .htm)")
             else -> {
                 viewModel.clearError()
-                wv.loadUrl("file://" + file.absolutePath)
+                val root = servedRoot
+                val viaServer = if (server != null && root != null) {
+                    ProjectPathUtils.relativePath(root, file)?.let { rel ->
+                        "http://127.0.0.1:${server.port}/${WebPreviewServer.urlPathFor(rel)}"
+                    }
+                } else null
+                wv.loadUrl(viaServer ?: ("file://" + file.absolutePath))
             }
         }
     }
@@ -189,6 +207,15 @@ private fun levelLabel(level: ConsoleMessage.MessageLevel): String = when (level
     ConsoleMessage.MessageLevel.TIP -> "info"
     ConsoleMessage.MessageLevel.DEBUG -> "debug"
     ConsoleMessage.MessageLevel.LOG -> "log"
+}
+
+private fun resolveServedRoot(context: Context, projectName: String?, htmlFile: File?): File? {
+    if (htmlFile == null) return null
+    return if (projectName != null) {
+        ProjectManager(context).project(projectName)?.root
+    } else {
+        htmlFile.parentFile?.takeIf { it.isDirectory }
+    }
 }
 
 private fun resolveHtmlFile(context: Context, projectName: String?, fileName: String?): File? {

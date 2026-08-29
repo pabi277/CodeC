@@ -47,6 +47,22 @@ object TerminalHandoff {
         ).joinToString(" && ")
     }
 
+    /**
+     * Phase 9.1: compile and run one project file in place, from the project
+     * folder — the tree's "Run in terminal" action. Build output goes under
+     * `<dir>/bin` so the source tree stays clean; [relativePath] is inside
+     * [projectDirectory].
+     */
+    fun projectFileRunCommand(projectDirectory: File, relativePath: String): String {
+        val dir = projectDirectory.absolutePath
+        val rel = relativePath.replace('\\', '/').trim().trimStart('/')
+        if (rel.isBlank()) return "cd ${shellEscape(dir)} && echo 'run: no file selected'"
+        val leaf = rel.substringAfterLast('/')
+        val out = (leaf.substringBeforeLast('.', leaf).ifBlank { "main" } + ".out")
+            .replace(Regex("[^A-Za-z0-9._-]"), "_")
+        return "cd ${shellEscape(dir)} && mkdir -p bin && cc ${shellEscape(rel)} -o bin/$out && ./bin/$out"
+    }
+
     /** Just drop the user into the file's directory. */
     fun openInDirectoryCommand(directory: String): String =
         "cd ${shellEscape(directory)}"
