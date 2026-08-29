@@ -12,9 +12,10 @@ import kotlinx.coroutines.withContext
  * Phase 9 — optional `clang-format` bridge.
  *
  * When the user has installed the `clang-format` package into the CodeC
- * userland, the editor runs it over the buffer via stdin/stdout (files
- * redirected to a scratch dir under `cacheDir` so pipes can never deadlock);
- * otherwise the caller falls back to [CodeFormatter]'s built-in indenter.
+ * userland, the editor runs it over the buffer via stdin/stdout (pumped in
+ * daemon threads so neither pipe can deadlock; file redirection needs API 26
+ * while CodeC's minSdk is 24); otherwise the caller falls back to
+ * [CodeFormatter]'s built-in indenter.
  *
  * This only *executes* a user-installed ELF under `$PREFIX/bin` — exactly what
  * `cc` and the package manager already do under the targetSdk-28 exec model.
@@ -44,28 +45,34 @@ object ClangFormatBridge {
     }
 
     private fun runOnce(bin: File, cacheDir: File, source: String, style: String): String? {
-        val dir = File(cacheDir, "codec-format").apply { mkdirs() }
-        val inFile = File(dir, "input.c").apply { writeText(source) }
-        val outFile = File(dir, "output.c")
-        if (outFile.exists()) outFile.delete()
-        var process: Process? = null
-        try {
-            process = ProcessBuilder(bin.absolutePath, style)
+        val dir = cacheDir.resolve("codec-format").apply { mkdirs() }
+        val process = runCatching {
+            ProcessBuilder(bin.absolutePath, style)
                 .directory(dir)
-                .redirectInput(inFile)
-                .redirectOutput(outFile)
-                .redirectError(File("/dev/null"))
                 .start()
+        }.getOrNull() ?: return null
+        val stdout = java.io.ByteArrayOutputStream()
+        val outThread = Thread { runCatching { process.inputStream.use { it.copyTo(stdout) } } }
+        val errThread = Thread { runCatching { process.errorStream.use { it.readBytes() } } }
+        val inThread = Thread { runCatching { process.outputStream.use { it.write(source.toByteArray()) } } }
+        outThread.isDaemon = true
+        errThread.isDaemon = true
+        inThread.isDaemon = true
+        try {
+            outThread.start(); errThread.start(); inThread.start()
             val finished = waitFor(process, TIMEOUT_SECONDS)
             if (!finished) {
                 terminate(process)
                 return null
             }
+            inThread.join(2_000)
+            outThread.join(2_000)
+            errThread.join(2_000)
             if (process.exitValue() != 0) return null
-            return if (outFile.isFile) outFile.readText() else null
-        } finally {
-            runCatching { inFile.delete() }
-            runCatching { outFile.delete() }
+            return String(stdout.toByteArray())
+        } catch (_: Exception) {
+            runCatching { terminate(process) }
+            return null
         }
     }
 
