@@ -383,6 +383,7 @@ fun MainApp() {
                 )
             }
             composable(Screen.FileManager.route) {
+                val context = LocalContext.current
                 FileManagerScreen(
                     onFileSelected = { selectedFile ->
                         navController.navigate(Screen.Editor.createRoute(selectedFile))
