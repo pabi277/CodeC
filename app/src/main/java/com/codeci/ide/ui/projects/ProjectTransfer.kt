@@ -3,13 +3,12 @@ package com.codeci.ide.ui.projects
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.DocumentsContract
-import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
+import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
 /** SAF and ZIP transfer helpers. Imports always copy into private storage. */
@@ -83,49 +82,76 @@ object ProjectTransfer {
         }
     }
 
+    /**
+     * Import a SAF stream through a temporary private file, then enumerate the
+     * ZIP central directory. Some Android/file-manager ZIP writers produce a
+     * local stream containing only the root directory even though their
+     * central directory contains all project files; ZipFile reads the complete
+     * archive index and also supports ZIP64 archives.
+     */
     fun importZip(input: InputStream, destination: File): Int {
         val canonicalDestination = destination.canonicalFile
         require(!canonicalDestination.exists() || canonicalDestination.isDirectory) { "Invalid project destination" }
         if (!canonicalDestination.exists() && !canonicalDestination.mkdirs()) error("Could not create imported project")
-        var count = 0
-        var fileCount = 0
-        var totalBytes = 0L
-        ZipInputStream(BufferedInputStream(input)).use { zip ->
-            while (true) {
-                val entry = zip.nextEntry ?: break
-                if (++count > MAX_ZIP_ENTRIES) error("ZIP contains too many entries")
-                val entryName = entry.name.replace('\\', '/')
-                // ZIP directory entries are identified by their trailing `/`.
-                // Do not depend on ZipEntry.isDirectory(), because archives
-                // produced by some file managers set that flag inconsistently.
-                val isDirectory = entryName.endsWith('/')
-                // Strip only the one separator used by a normal directory
-                // entry. Repeated separators and a root-only entry must be
-                // rejected instead of being normalised into a safe path.
-                val rawPath = if (isDirectory) entryName.dropLast(1) else entryName
-                if (rawPath.isEmpty()) throw SecurityException("ZIP contains an unsafe path")
-                val safePath = ProjectPathUtils.sanitizeArchiveRelativePath(rawPath)
-                    ?: throw SecurityException("ZIP contains an unsafe path")
-                val target = ProjectPathUtils.resolveInside(canonicalDestination, safePath)
-                    ?: throw SecurityException("ZIP escapes the project directory")
-                if (isDirectory) {
-                    if (!target.exists() && !target.mkdirs()) error("Could not create ZIP directory")
-                } else {
-                    fileCount++
-                    target.parentFile?.let { if (!it.exists() && !it.mkdirs()) error("Could not create ZIP directory") }
-                    if (target.exists()) error("ZIP contains duplicate file: $safePath")
-                    target.outputStream().use { output ->
-                        val copied = copyLimited(zip, output, MAX_ZIP_ENTRY_BYTES)
-                        totalBytes += copied
-                        if (totalBytes > MAX_ZIP_ENTRY_BYTES * 10) error("ZIP is too large")
+
+        val temporaryZip = File.createTempFile("codec-import-", ".zip", canonicalDestination.parentFile)
+        return try {
+            input.use { source ->
+                temporaryZip.outputStream().use { output ->
+                    copyLimited(
+                        source,
+                        output,
+                        MAX_ZIP_ENTRY_BYTES * 10,
+                        "ZIP archive is too large"
+                    )
+                }
+            }
+            var count = 0
+            var fileCount = 0
+            var totalBytes = 0L
+            ZipFile(temporaryZip).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (++count > MAX_ZIP_ENTRIES) error("ZIP contains too many entries")
+                    val entryName = entry.name.replace('\\', '/')
+                    // ZIP directory entries are identified by their trailing
+                    // `/`; this works for entries with or without external
+                    // directory attributes.
+                    val isDirectory = entryName.endsWith('/')
+                    val rawPath = if (isDirectory) entryName.dropLast(1) else entryName
+                    if (rawPath.isEmpty()) throw SecurityException("ZIP contains an unsafe path")
+                    val safePath = ProjectPathUtils.sanitizeArchiveRelativePath(rawPath)
+                        ?: throw SecurityException("ZIP contains an unsafe path")
+                    val target = ProjectPathUtils.resolveInside(canonicalDestination, safePath)
+                        ?: throw SecurityException("ZIP escapes the project directory")
+                    if (isDirectory) {
+                        if (target.exists() && !target.isDirectory) {
+                            error("ZIP directory conflicts with a file: $safePath")
+                        }
+                        if (!target.exists() && !target.mkdirs()) error("Could not create ZIP directory")
+                    } else {
+                        fileCount++
+                        target.parentFile?.let {
+                            if (!it.exists() && !it.mkdirs()) error("Could not create ZIP directory")
+                        }
+                        if (target.exists()) error("ZIP contains duplicate file: $safePath")
+                        zip.getInputStream(entry).use { source ->
+                            target.outputStream().use { output ->
+                                val copied = copyLimited(source, output, MAX_ZIP_ENTRY_BYTES)
+                                totalBytes += copied
+                                if (totalBytes > MAX_ZIP_ENTRY_BYTES * 10) error("ZIP is too large")
+                            }
+                        }
                     }
                 }
-                zip.closeEntry()
             }
+            if (count == 0) error("ZIP contains no entries")
+            if (fileCount == 0) error("ZIP contains no files (directory entries: $count)")
+            count
+        } finally {
+            temporaryZip.delete()
         }
-        if (count == 0) error("ZIP contains no entries")
-        if (fileCount == 0) error("ZIP contains no files (directory entries: $count)")
-        return count
     }
 
     private fun copyDocumentChildren(
@@ -194,14 +220,19 @@ object ProjectTransfer {
         }
     }
 
-    private fun copyLimited(input: InputStream, output: OutputStream, limit: Long): Long {
+    private fun copyLimited(
+        input: InputStream,
+        output: OutputStream,
+        limit: Long,
+        limitMessage: String = "ZIP entry is too large"
+    ): Long {
         val buffer = ByteArray(BUFFER_SIZE)
         var total = 0L
         while (true) {
             val read = input.read(buffer)
             if (read < 0) break
             total += read
-            if (total > limit) error("ZIP entry is too large")
+            if (total > limit) error(limitMessage)
             output.write(buffer, 0, read)
         }
         return total
