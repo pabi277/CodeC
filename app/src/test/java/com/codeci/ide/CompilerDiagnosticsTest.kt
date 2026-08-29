@@ -100,7 +100,9 @@ class CompilerDiagnosticsTest {
     @Test
     fun `semicolon fix appends and refuses when already terminated`() {
         assertEquals("int x = 5;", CompilerDiagnostics.applySemicolonFix("int x = 5"))
-        assertEquals("call(1);", CompilerDiagnostics.applySemicolonFix("  call(1)  "))
+        // Trailing whitespace is trimmed (the ';' lands after the code), leading
+        // indentation is preserved so the splice keeps the original line's indent.
+        assertEquals("  call(1);", CompilerDiagnostics.applySemicolonFix("  call(1)  "))
         // already terminated -> the fix refuses and leaves the line untouched
         assertNull(CompilerDiagnostics.applySemicolonFix("  call(1);  "))
         assertNull(CompilerDiagnostics.applySemicolonFix("if (x) {"))
