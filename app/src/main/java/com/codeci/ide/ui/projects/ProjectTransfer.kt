@@ -44,7 +44,9 @@ object ProjectTransfer {
             ?.let { ProjectPathUtils.sanitizeArchiveSegment(it) }
             ?: ProjectPathUtils.sanitizeArchiveSegment(fallbackName)
             ?: error("The selected file has an invalid name")
-        if (name.endsWith(".zip", ignoreCase = true)) {
+        val isZip = name.endsWith(".zip", ignoreCase = true) ||
+            isZipDocument(resolver, documentUri)
+        if (isZip) {
             // The in-project Import File action also accepts ZIPs. Treating a
             // ZIP as an ordinary document leaves one opaque archive in the
             // tree, so expand it into the active private project instead.
@@ -86,6 +88,7 @@ object ProjectTransfer {
         require(!canonicalDestination.exists() || canonicalDestination.isDirectory) { "Invalid project destination" }
         if (!canonicalDestination.exists() && !canonicalDestination.mkdirs()) error("Could not create imported project")
         var count = 0
+        var fileCount = 0
         var totalBytes = 0L
         ZipInputStream(BufferedInputStream(input)).use { zip ->
             while (true) {
@@ -104,6 +107,7 @@ object ProjectTransfer {
                 if (entry.isDirectory) {
                     if (!target.exists() && !target.mkdirs()) error("Could not create ZIP directory")
                 } else {
+                    fileCount++
                     target.parentFile?.let { if (!it.exists() && !it.mkdirs()) error("Could not create ZIP directory") }
                     if (target.exists()) error("ZIP contains duplicate file: $safePath")
                     target.outputStream().use { output ->
@@ -115,6 +119,7 @@ object ProjectTransfer {
                 zip.closeEntry()
             }
         }
+        if (fileCount == 0) error("ZIP contains no files")
         return count
     }
 
@@ -156,6 +161,26 @@ object ProjectTransfer {
         } ?: error("Could not read the selected folder")
         return copied
     }
+
+    private fun isZipDocument(resolver: ContentResolver, uri: Uri): Boolean = runCatching {
+        resolver.openInputStream(uri)?.use { input ->
+            val header = ByteArray(4)
+            var offset = 0
+            while (offset < header.size) {
+                val read = input.read(header, offset, header.size - offset)
+                if (read < 0) break
+                offset += read
+            }
+            offset == header.size &&
+                header[0] == 'P'.code.toByte() &&
+                header[1] == 'K'.code.toByte() &&
+                ((header[2].toInt() and 0xff) == 3 ||
+                    (header[2].toInt() and 0xff) == 5 ||
+                    (header[2].toInt() and 0xff) == 7) &&
+                (header[3].toInt() and 0xff) == 4 +
+                ((header[2].toInt() and 0xff) - 3)
+        } ?: false
+    }.getOrDefault(false)
 
     private fun queryDisplayName(resolver: ContentResolver, uri: Uri): String? {
         val projection = arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
