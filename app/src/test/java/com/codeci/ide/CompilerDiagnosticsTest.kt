@@ -100,7 +100,9 @@ class CompilerDiagnosticsTest {
     @Test
     fun `semicolon fix appends and refuses when already terminated`() {
         assertEquals("int x = 5;", CompilerDiagnostics.applySemicolonFix("int x = 5"))
-        assertEquals("call(1);", CompilerDiagnostics.applySemicolonFix("  call(1);  "))
+        assertEquals("call(1);", CompilerDiagnostics.applySemicolonFix("  call(1)  "))
+        // already terminated -> the fix refuses and leaves the line untouched
+        assertNull(CompilerDiagnostics.applySemicolonFix("  call(1);  "))
         assertNull(CompilerDiagnostics.applySemicolonFix("if (x) {"))
         assertNull(CompilerDiagnostics.applySemicolonFix(""))
     }

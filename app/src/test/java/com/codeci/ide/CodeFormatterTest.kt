@@ -77,7 +77,8 @@ class CodeFormatterTest {
         val cursor = before.indexOf('y')
         assertEquals(3, CodeFormatter.mapCursor(before, after, cursor))
         assertEquals(0, CodeFormatter.mapCursor(before, after, 0))
-        assertEquals(1, CodeFormatter.mapCursor(before, after, before.length))
+        // End-of-text caret clamps to the end of the shorter reindented line.
+        assertEquals(3, CodeFormatter.mapCursor(before, after, before.length))
     }
 
     @Test

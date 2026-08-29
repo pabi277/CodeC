@@ -107,7 +107,8 @@ class FindReplaceTest {
             "b"
         )
         assertEquals("ba", replaced)
-        assertEquals("", FindReplaceEngine.replaceAllLiteral("foo foo", listOf(0 until 3, 4 until 7), ""))
+        // Both "foo" occurrences removed; the separator space remains.
+        assertEquals(" ", FindReplaceEngine.replaceAllLiteral("foo foo", listOf(0 until 3, 4 until 7), ""))
     }
 
     @Test
@@ -130,11 +131,20 @@ class FindReplaceTest {
     fun `single regex replace starts at the active match position`() {
         val text = "x1 y2 z3"
         val result = FindReplaceEngine.replaceFirstRegexFrom(
+            text, from = 3, query = "(\\w)(\\d)", replacement = "$2$1", matchCase = true
+        )
+        // "y2" is the first match at/after index 3; "$2$1" swaps its groups.
+        assertEquals("x1 2y z3", result?.first)
+        assertEquals(5, result?.second)
+    }
+
+    @Test
+    fun `single regex replace skips matches before the active position`() {
+        val text = "x1 y2 z3"
+        val result = FindReplaceEngine.replaceFirstRegexFrom(
             text, from = 4, query = "(\\w)(\\d)", replacement = "$2$1", matchCase = true
         )
-        assertEquals("x1 y2 z3".length, 8)
-        assertEquals("x1 2y z3", result?.first)
-        assertEquals(6, result?.second)
+        assertEquals("x1 y2 3z", result?.first)
     }
 
     @Test
