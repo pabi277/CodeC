@@ -566,6 +566,128 @@ class EditorViewModel : ViewModel() {
         return out
     }
 
+    // ---- Phase 9.2: contexts, single files, drawer actions ---------------
+
+    /**
+     * Switch the editor's context between the open project folders and the
+     * single-files folder ([projectName] == null). Buffers are saved first so
+     * nothing is lost; then the entry file of the new folder opens. This is
+     * the "open a project from the editor" gesture the device feedback asked
+     * for — no trip through the Projects screen.
+     */
+    fun switchContext(context: Context, projectName: String?) {
+        val appContext = context.applicationContext
+        stashActiveTabBuffer(_codeText.value)
+        saveAllTabs(appContext)
+        _openTabs.value = emptyList()
+        undoManagers.clear()
+        _activeTabPath.value = null
+        if (projectName != null) {
+            val info = runCatching { ProjectManager(appContext).project(projectName) }.getOrNull()
+            if (info == null) {
+                _userMessage.value = "Project '$projectName' is gone"
+                refreshFileEntries(appContext)
+                return
+            }
+            _projectName.value = info.name
+            val entry = runCatching {
+                drawerEntries(FileTreeRepository.buildTree(info.root).children)
+                    .firstOrNull { !it.isDirectory && isTextLikeFile(it.name) }
+            }.getOrNull()
+            if (entry != null) {
+                openFile(appContext, info.name, entry.relativePath)
+            } else {
+                // Empty project: the buffer stays, and Save creates main.c in it.
+                _fileName.value = "main.c"
+                _isDirty.value = true
+                resetDecorationsForNewBuffer()
+                syncUndoFlags(undoManager())
+                refreshFileEntries(appContext)
+            }
+            return
+        }
+        _projectName.value = null
+        val first = runCatching {
+            FileManager(appContext).getProjectDir().listFiles()
+                ?.filter { it.isFile && !it.name.startsWith(".") }
+                ?.sortedBy { it.name.lowercase() }
+                ?.firstOrNull()?.name
+        }.getOrNull()
+        if (first != null) {
+            openFile(appContext, null, first)
+        } else {
+            _fileName.value = "untitled.c"
+            scratchSavedText = _codeText.value.text
+            _isDirty.value = false
+            resetDecorationsForNewBuffer()
+            syncUndoFlags(undoManager())
+        }
+        refreshFileEntries(appContext)
+    }
+
+    /**
+     * Create [rawName] in the current context — the project root, or the
+     * single-files folder when no project is open — and open it as a tab.
+     * This is the single-file path: a file, no project required.
+     */
+    fun createAndOpenFile(context: Context, rawName: String) {
+        val appContext = context.applicationContext
+        val base = FileNameUtils.sanitizeFileName(rawName.trim())
+        if (base == null) {
+            _userMessage.value = "Invalid file name"
+            return
+        }
+        val project = _projectName.value
+        if (project != null) {
+            val info = ProjectManager(appContext).project(project)
+            if (info == null) {
+                _userMessage.value = "Project '$project' is gone"
+                return
+            }
+            val exists = runCatching {
+                ProjectPathUtils.resolveInside(info.root, base)?.isFile == true
+            }.getOrDefault(false)
+            if (!exists && !writeProjectFile(appContext, project, base, "")) {
+                _userMessage.value = "Could not create $base"
+                return
+            }
+            openFile(appContext, project, base)
+        } else {
+            val fm = FileManager(appContext)
+            val exists = fm.loadFile(base) != null
+            if (!exists && !fm.saveFile(base, "")) {
+                _userMessage.value = "Could not create $base"
+                return
+            }
+            openFile(appContext, null, base)
+        }
+        refreshFileEntries(appContext)
+        _userMessage.value = "Opened $base"
+    }
+
+    /** Delete a drawer entry from disk and drop its tab if it was open. */
+    fun deleteFileEntry(context: Context, entry: EditorFileEntry) {
+        val appContext = context.applicationContext
+        val ok = if (entry.projectName != null) {
+            runCatching {
+                val info = ProjectManager(appContext).project(entry.projectName)
+                info != null && FileTreeRepository.delete(info.root, entry.relativePath)
+            }.getOrDefault(false)
+        } else {
+            runCatching { FileManager(appContext).deleteFile(entry.relativePath) }.getOrDefault(false)
+        }
+        if (!ok) {
+            _userMessage.value = "Could not delete ${entry.name}"
+            return
+        }
+        val tab = _openTabs.value.firstOrNull { it.relativePath == entry.relativePath }
+        if (tab != null && _openTabs.value.size > 1) {
+            closeTab(appContext, tab.relativePath, saveFirst = false)
+        }
+        refreshFileEntries(appContext)
+        _userMessage.value = "Deleted ${entry.name}"
+    }
+
     private fun writeProjectFile(context: Context, project: String, relativePath: String, text: String): Boolean {
         val info = ProjectManager(context).project(project) ?: return false
         val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return false

@@ -4,7 +4,9 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
@@ -104,14 +108,17 @@ import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
 import com.codeci.ide.ui.utils.EditorDecorations
+import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.WebFileSupport
+import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.viewmodels.EditorViewModel
+import java.io.File
 import kotlin.math.roundToInt
 
 /** Tap-anchor for the inline diagnostic tooltip. */
 internal data class EditorPopupAnchor(val x: Float, val y: Float, val diagnostic: EditorDiagnostic)
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EditorScreen(
     modifier: Modifier = Modifier,
@@ -172,12 +179,16 @@ fun EditorScreen(
     val isFormatting by viewModel.formatting.collectAsState()
     val openTabs by viewModel.openTabs.collectAsState()
     val activeTabPath by viewModel.activeTabPath.collectAsState()
+    val currentProject by viewModel.projectName.collectAsState()
 
     var showUnsavedDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showFilesSheet by remember { mutableStateOf(false) }
     var showSaveToProject by remember { mutableStateOf(false) }
+    var showContextPicker by remember { mutableStateOf(false) }
+    var showNewFileDialog by remember { mutableStateOf(false) }
+    var newFileName by remember { mutableStateOf("main.c") }
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
     var popup by remember { mutableStateOf<EditorPopupAnchor?>(null) }
@@ -431,6 +442,12 @@ fun EditorScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showFilesSheet = true }) {
+                        Icon(
+                            Icons.Default.FolderOpen,
+                            contentDescription = stringResource(R.string.project_files)
+                        )
+                    }
                     if (WebFileSupport.isHtml(currentFileName)) {
                         IconButton(onClick = {
                             if (viewModel.saveFile(context)) {
@@ -442,22 +459,6 @@ fun EditorScreen(
                             Icon(
                                 Icons.Default.Visibility,
                                 contentDescription = stringResource(R.string.preview)
-                            )
-                        }
-                    }
-                    if (!isWebProject) {
-                        IconButton(onClick = {
-                            val command = projectRunCommandOrNull()
-                                ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
-                            if (command != null) {
-                                onOpenInTerminal(command)
-                            } else {
-                                Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
-                            }
-                        }) {
-                            Icon(
-                                Icons.Default.Terminal,
-                                contentDescription = stringResource(R.string.run_in_terminal)
                             )
                         }
                     }
@@ -498,15 +499,22 @@ fun EditorScreen(
                 )
             )
 
-            if (projectName != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { showFilesSheet = true }
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = projectName + "  >  " + currentFileName.replace("/", "  >  "),
+                    text = (currentProject ?: "Single files") + "  >  " +
+                        currentFileName.replace("/", "  >  ") + "   ▾",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -562,43 +570,6 @@ fun EditorScreen(
                         }
                     )
                 }
-                IconButton(onClick = { showFilesSheet = true }) {
-                    Icon(
-                        Icons.Default.FolderOpen,
-                        contentDescription = stringResource(R.string.project_files),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                IconButton(onClick = { viewModel.formatCode(context, tabSize) }) {
-                    if (isFormatting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(10.dp)
-                                .width(18.dp)
-                                .height(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.AutoFixHigh,
-                            contentDescription = stringResource(R.string.format),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-                IconButton(onClick = {
-                    if (findState.visible) viewModel.hideFind() else viewModel.showFind()
-                }) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = stringResource(R.string.find),
-                        tint = if (findState.visible) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                }
                 IconButton(onClick = {
                     if (viewModel.saveFile(context)) {
                         Toast.makeText(context, context.getString(R.string.file_saved), Toast.LENGTH_SHORT).show()
@@ -627,19 +598,45 @@ fun EditorScreen(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.project_files)) },
-                            onClick = {
-                                showMoreMenu = false
-                                showFilesSheet = true
-                            }
-                        )
-                        DropdownMenuItem(
                             text = { Text(stringResource(R.string.save_to_project)) },
                             onClick = {
                                 showMoreMenu = false
                                 showSaveToProject = true
                             }
                         )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.format)) },
+                            onClick = {
+                                showMoreMenu = false
+                                viewModel.formatCode(context, tabSize)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.find)) },
+                            onClick = {
+                                showMoreMenu = false
+                                if (findState.visible) viewModel.hideFind() else viewModel.showFind()
+                            }
+                        )
+                        if (!isWebProject) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.run_in_terminal)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    val command = projectRunCommandOrNull()
+                                        ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
+                                    if (command != null) {
+                                        onOpenInTerminal(command)
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.file_save_failed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            )
+                        }
                         DropdownMenuItem(
                             enabled = diagnostics.isNotEmpty(),
                             text = {
@@ -845,85 +842,273 @@ fun EditorScreen(
                 .padding(16.dp)
         )
 
-        // Phase 9.1: Spck-style file drawer. Lists the open project's tree (or
-        // the scratch folder) and opens the tapped file as a tab — switching
-        // files no longer means leaving the editor for the Projects screen.
+        // Phase 9.2: the single hub for files and folders. Lists the current
+        // folder (project or single files), switches folders, creates files,
+        // and long-press runs or deletes — everything the owner asked to have
+        // without leaving the editor.
         if (showFilesSheet) {
             val fileEntries by viewModel.fileEntries.collectAsState()
+            var rowMenuFor by remember { mutableStateOf<EditorFileEntry?>(null) }
+            var pendingDelete by remember { mutableStateOf<EditorFileEntry?>(null) }
             LaunchedEffect(Unit) { viewModel.refreshFileEntries(context) }
             ModalBottomSheet(onDismissRequest = { showFilesSheet = false }) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    Text(
-                        text = if (projectName != null) "Files — $projectName"
-                               else "Files — Scratch (not in a project)",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = currentProject ?: "Single files",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = "Tap a file to open it · long-press for Run / Delete",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        TextButton(onClick = { showContextPicker = true }) {
+                            Text("Change")
+                        }
+                    }
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = if (projectName != null) "Tap a file to open it in a tab."
-                               else "Scratch files live in CodeC/projects. Use “Save to project…” " +
-                                    "to move the current file into a real project folder.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
                 }
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 420.dp)
+                        .weight(1f, fill = false)
+                        .heightIn(max = 380.dp)
                         .verticalScroll(rememberScrollState())
-                        .padding(bottom = 24.dp)
+                        .padding(horizontal = 8.dp)
                 ) {
                     if (fileEntries.isEmpty()) {
                         Text(
-                            "Nothing on disk yet.",
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            text = if (currentProject != null) "This project has no files yet."
+                                   else "No single files yet — create one below.",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                     fileEntries.forEach { entry ->
-                        val active = entry.projectName == projectName &&
+                        val active = entry.projectName == currentProject &&
                             entry.relativePath == activeTabPath
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = !entry.isDirectory) {
-                                    if (!entry.isDirectory) {
-                                        viewModel.openFile(context, entry.projectName, entry.relativePath)
-                                        showFilesSheet = false
-                                    }
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (!entry.isDirectory) {
+                                                viewModel.openFile(context, entry.projectName, entry.relativePath)
+                                                showFilesSheet = false
+                                            }
+                                        },
+                                        onLongClick = {
+                                            if (!entry.isDirectory) rowMenuFor = entry
+                                        }
+                                    )
+                                    .padding(
+                                        start = (12 + entry.depth * 18).dp,
+                                        end = 8.dp,
+                                        top = 8.dp,
+                                        bottom = 8.dp
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (entry.isDirectory) "▸ ${entry.name}" else entry.name,
+                                    style = if (entry.isDirectory) {
+                                        MaterialTheme.typography.labelLarge
+                                    } else {
+                                        MaterialTheme.typography.bodyMedium
+                                    },
+                                    color = when {
+                                        entry.isDirectory || active -> MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.onSurface
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (!entry.isDirectory && active && isDirty) {
+                                    Text("●", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
                                 }
-                                .padding(
-                                    start = (16 + entry.depth * 18).dp,
-                                    end = 16.dp,
-                                    top = 8.dp,
-                                    bottom = 8.dp
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (entry.isDirectory) "▸ ${entry.name}" else entry.name,
-                                style = if (entry.isDirectory) {
-                                    MaterialTheme.typography.labelLarge
-                                } else {
-                                    MaterialTheme.typography.bodyMedium
-                                },
-                                color = when {
-                                    entry.isDirectory || active -> MaterialTheme.colorScheme.primary
-                                    else -> MaterialTheme.colorScheme.onSurface
-                                },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (!entry.isDirectory && active && isDirty) {
-                                Text("●", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+                            }
+                            DropdownMenu(
+                                expanded = rowMenuFor == entry,
+                                onDismissRequest = { rowMenuFor = null }
+                            ) {
+                                if (entry.name.endsWith(".c", ignoreCase = true)) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.run_in_terminal)) },
+                                        onClick = {
+                                            rowMenuFor = null
+                                            val rootDir = if (entry.projectName != null) {
+                                                ProjectManager(context).project(entry.projectName)?.root
+                                            } else {
+                                                runCatching { FileManager(context).getProjectDir() }.getOrNull()
+                                            }
+                                            val command = if (rootDir == null) null else if (entry.projectName != null) {
+                                                TerminalHandoff.projectFileRunCommand(rootDir, entry.relativePath)
+                                            } else {
+                                                TerminalHandoff.compileAndRunCommand(
+                                                    File(rootDir, entry.relativePath).absolutePath
+                                                )
+                                            }
+                                            if (command != null) {
+                                                showFilesSheet = false
+                                                onOpenInTerminal(command)
+                                            }
+                                        }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.delete)) },
+                                    onClick = {
+                                        rowMenuFor = null
+                                        pendingDelete = entry
+                                    }
+                                )
                             }
                         }
                     }
                 }
+                HorizontalDivider()
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { showNewFileDialog = true }) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.new_file))
+                    }
+                    if (currentProject == null) {
+                        TextButton(onClick = { showSaveToProject = true }) {
+                            Text(stringResource(R.string.save_to_project))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
             }
+            if (pendingDelete != null) {
+                AlertDialog(
+                    onDismissRequest = { pendingDelete = null },
+                    title = { Text("Delete ${pendingDelete?.name ?: ""}?") },
+                    text = { Text("The file is removed from disk. This cannot be undone.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            pendingDelete?.let { viewModel.deleteFileEntry(context, it) }
+                            pendingDelete = null
+                        }) {
+                            Text(stringResource(R.string.delete))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingDelete = null }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+        }
+
+        // Phase 9.2: open a project folder (or back to single files) without
+        // leaving the editor.
+        if (showContextPicker) {
+            val pickerProjects = remember {
+                runCatching { ProjectManager(context).listProjects() }.getOrDefault(emptyList())
+            }
+            AlertDialog(
+                onDismissRequest = { showContextPicker = false },
+                title = { Text("Open folder") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        Text(
+                            "The editor works inside one folder at a time. Everything you open " +
+                                "from it becomes a tab.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(
+                            onClick = {
+                                showContextPicker = false
+                                viewModel.switchContext(context, null)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (currentProject == null) "●  Single files" else "Single files")
+                        }
+                        pickerProjects.forEach { project ->
+                            TextButton(
+                                onClick = {
+                                    showContextPicker = false
+                                    ProjectManager(context).project(project.name)?.let(onProjectSelected)
+                                    viewModel.switchContext(context, project.name)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (currentProject == project.name) "●  ${project.name}" else project.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        if (pickerProjects.isEmpty()) {
+                            Text(
+                                "No projects yet — create one in the Projects tab, or keep working " +
+                                    "with single files here.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showContextPicker = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        if (showNewFileDialog) {
+            AlertDialog(
+                onDismissRequest = { showNewFileDialog = false },
+                title = { Text(stringResource(R.string.new_file)) },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = newFileName,
+                            onValueChange = { newFileName = it },
+                            label = { Text("File name") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Created in: ${currentProject ?: "Single files"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showNewFileDialog = false
+                        viewModel.createAndOpenFile(context, newFileName)
+                    }) {
+                        Text("Create")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNewFileDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
         }
 
         // Phase 9.1: save the current buffer into a real project folder —
