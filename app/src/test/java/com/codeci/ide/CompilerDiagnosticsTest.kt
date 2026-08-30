@@ -45,6 +45,21 @@ class CompilerDiagnosticsTest {
     }
 
     @Test
+    fun `parses tcc line-only diagnostics without a column`() {
+        // Device evidence 2026-08-30: the embedded `cc` (TCC) prints
+        // `file:line: error: message` — no column.
+        val out = CompilerDiagnostics.parse(
+            "/data/user/0/com.codeci.ide/files/CodeC/projects/main.c:6: error: ';' expected (got \"}\")",
+            targetFileName = "main.c"
+        )
+        assertEquals(1, out.size)
+        assertEquals(6, out[0].line)
+        assertEquals(1, out[0].column)
+        assertEquals(DiagnosticSeverity.ERROR, out[0].severity)
+        assertEquals("';' expected (got \"}\")", out[0].message)
+    }
+
+    @Test
     fun `fatal error counts as an error and note lines are ignored`() {
         val out = CompilerDiagnostics.parse(
             "main.c:1:1: fatal error: missing include\nmain.c:1:1: note: did you mean",

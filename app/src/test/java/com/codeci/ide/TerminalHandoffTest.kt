@@ -88,4 +88,44 @@ class TerminalHandoffTest {
         val cmd = TerminalHandoff.projectFileRunCommand(java.io.File("/tmp/p"), "  ")
         assertEquals("cd /tmp/p && echo 'run: no file selected'", cmd)
     }
+
+    @Test
+    fun `compile parts split build and run for the output panel`() {
+        val (build, run) = TerminalHandoff.compileParts(
+            "/data/data/com.codeci.ide/files/CodeC/projects/main.c"
+        )
+        assertEquals(
+            "cc /data/data/com.codeci.ide/files/CodeC/projects/main.c -o a.out",
+            build
+        )
+        assertEquals("./a.out", run)
+    }
+
+    @Test
+    fun `compile parts honor a custom output name`() {
+        val (build, run) = TerminalHandoff.compileParts("/tmp/x.c", "my prog")
+        assertEquals("cc /tmp/x.c -o 'my prog'", build)
+        assertEquals("./'my prog'", run)
+    }
+
+    @Test
+    fun `project run parts return the config commands`() {
+        val config = ProjectConfig(
+            name = "calculator",
+            entry = "src/main.c",
+            build = "cc -I include src/main.c src/calc.c -o bin/app",
+            run = "./bin/app"
+        )
+        val (build, run) = TerminalHandoff.projectRunParts("/data/p/calculator", config)
+        assertEquals("cc -I include src/main.c src/calc.c -o bin/app", build)
+        assertEquals("./bin/app", run)
+    }
+
+    @Test
+    fun `project run parts allow an empty build or run`() {
+        val web = ProjectConfig(name = "site", type = "web", build = "", run = "")
+        val (build, run) = TerminalHandoff.projectRunParts("/data/p/site", web)
+        assertEquals(null, build)
+        assertEquals(null, run)
+    }
 }

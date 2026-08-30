@@ -29,21 +29,39 @@ object CompilerDiagnostics {
     private val PATTERN =
         """(.+?):(\d+):(\d+):\s*(error|warning|fatal error|note|line)\s*(\d+)?:?\s*:?\s*(.*)""".toRegex()
 
+    // TCC (the embedded `cc` frontend) prints `file:line: kind: message` —
+    // no column. Phase 11: the Output Panel uses TCC for builds, so squiggles
+    // must understand this form too (device evidence 2026-08-30:
+    // `/.../main.c:6: error: ';' expected (got "}")`).
+    private val TCC_PATTERN =
+        """(.+?):(\d+):\s*(error|warning|fatal error|note):\s*(.*)""".toRegex()
+
     /** Parse free-form compiler/terminal output, filtered to [targetFileName]. */
     fun parse(output: String, targetFileName: String?): List<EditorDiagnostic> {
         val byLine = LinkedHashMap<Int, EditorDiagnostic>()
         output.lineSequence().forEach { rawLine ->
             val line = rawLine.trim()
             if (line.isEmpty()) return@forEach
-            val match = PATTERN.matchEntire(line) ?: return@forEach
-            val kind = match.groupValues[4]
+            val match = PATTERN.matchEntire(line) ?: TCC_PATTERN.matchEntire(line)
+                ?: return@forEach
+            // Clang form has 7 groups (0..6), TCC form has 5 (0..4).
+            val isClang = match.groupValues.size >= 7
+            val kind = if (isClang) match.groupValues[4] else match.groupValues[3]
             if (kind == "note" || kind == "line") return@forEach
             val file = match.groupValues[1]
             if (targetFileName != null && !sameFile(file, targetFileName)) return@forEach
             val number = match.groupValues[2].toIntOrNull() ?: return@forEach
             if (number < 1) return@forEach
-            val column = match.groupValues[3].toIntOrNull()?.coerceAtLeast(1) ?: 1
-            val message = match.groupValues[6].ifBlank { match.groupValues[5] }
+            val column = if (isClang) {
+                match.groupValues[3].toIntOrNull()?.coerceAtLeast(1) ?: 1
+            } else {
+                1
+            }
+            val message = if (isClang) {
+                match.groupValues[6].ifBlank { match.groupValues[5] }
+            } else {
+                match.groupValues[4]
+            }
             val severity =
                 if (kind == "warning") DiagnosticSeverity.WARNING else DiagnosticSeverity.ERROR
             val existing = byLine[number]
@@ -100,6 +118,21 @@ object CompilerDiagnostics {
             lower.contains("want")) && lower.contains("';'")
         return if (wantsSemicolon) "Add missing ';'" else null
     }
+
+    /** Phase 11 — same check for a raw Output Panel diagnostic (pure). */
+    fun semicolonFixLabel(diag: OutputDiagnostic): String? =
+        semicolonFixLabel(
+            EditorDiagnostic(
+                line = diag.line,
+                column = diag.column.coerceAtLeast(1),
+                message = diag.message,
+                severity = if (diag.isError) {
+                    DiagnosticSeverity.ERROR
+                } else {
+                    DiagnosticSeverity.WARNING
+                }
+            )
+        )
 
     /**
      * Applies the semicolon fix to [lineText]: returns the corrected line text,
