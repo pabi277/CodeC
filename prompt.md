@@ -53,8 +53,10 @@ of assuming one.
     ✅ (owner transcripts); one-tap **Apply fix** ("Add missing ;" button +
     TCC no-column squiggle parsing + brace-line fallback) shipped on the
     owner's "write a code to apply" (commit `bc4efea`, CI `33290932427`).
-    Remaining gates: tap-jump + Apply-fix device re-test, then the §4/§6.3
-    recipe close-out.
+    Remaining gates: tap-jump + Apply-fix device re-test (round 3: "1.
+    Working"), the interactive-`scanf` timeout got honest wording + an
+    always-visible Open-in-Terminal escape hatch (D7, commit `bfed3b4`), then
+    the §4/§6.3 recipe close-out.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`

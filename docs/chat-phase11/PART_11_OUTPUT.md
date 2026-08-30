@@ -181,6 +181,28 @@ Build failed with exit code 1
 Owner's follow-up: "2. Write a code to apply" → shipped D6 (commit `bc4efea`,
 CI `33290932427`).
 
+**Round 3 — error re-test + interactive program (2026-08-30):**
+```
+1. Working
+$ cc /data/user/0/com.codeci.ide/files/CodeC/projects/main.c -o a.out
+/data/user/0/com.codeci.ide/files/CodeC/projects/main.c:6: error: ';' expected (got "}")
+Build failed with exit code 1
+
+2. $ cc /data/user/0/com.codeci.ide/files/CodeC/projects/main.c -o a.out
+Build OK (104ms)
+Enter your full name:
+Program exceeded time limit (possible infinite loop)
+```
+"1. Working" re-verifies the error path with the new build. Test 2 is the
+plan's **non-goal** (§5): a `scanf`/`gets` program blocks at its prompt because
+the panel cannot feed stdin, and waits out the 10 s run timeout — with a
+misleading "possible infinite loop" message. Response (D7, commit
+`bfed3b4`, CI …): the timeout wording now says "(possible infinite loop, or
+waiting for input)", a guidance line is appended ("If it is waiting for input
+(scanf/gets), tap the terminal icon to run it interactively"), and the
+**Open-in-Terminal** icon is now visible during every run (not only after a
+non-busy finish) so the escape hatch is discoverable while the program waits.
+
 ### 6.3 Device recipe (the §4 exit condition — needs the owner's device run)
 
 1. Open the Editor with `main.c` containing `#include <stdio.h>` / `int main()

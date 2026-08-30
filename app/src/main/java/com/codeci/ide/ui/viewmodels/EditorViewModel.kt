@@ -1176,20 +1176,32 @@ class EditorViewModel : ViewModel() {
                             } else {
                                 appContext.getString(R.string.output_exit_code, exitCode)
                             }
+                            // Device evidence 2026-08-30: a `scanf` program
+                            // blocks at its prompt until the run timeout. Say
+                            // so honestly and point at the interactive path.
+                            val finalLines = if (timedOut) {
+                                listOf(
+                                    OutputLine(summary, OutputLineKind.ERROR),
+                                    OutputLine(
+                                        appContext.getString(R.string.output_timed_out_input_hint),
+                                        OutputLineKind.SYSTEM
+                                    )
+                                )
+                            } else {
+                                listOf(
+                                    OutputLine(
+                                        "Process finished with exit code $exitCode (${event.durationMs}ms)",
+                                        OutputLineKind.STATS
+                                    )
+                                )
+                            }
                             _outputState.value = _outputState.value.copy(
                                 phase = OutputPhase.DONE,
                                 busy = false,
                                 runExitCode = exitCode,
                                 runDurationMs = event.durationMs,
                                 summary = summary,
-                                lines = _outputState.value.lines + OutputLine(
-                                    if (timedOut) {
-                                        summary
-                                    } else {
-                                        "Process finished with exit code $exitCode (${event.durationMs}ms)"
-                                    },
-                                    if (timedOut) OutputLineKind.ERROR else OutputLineKind.STATS
-                                )
+                                lines = _outputState.value.lines + finalLines
                             )
                         }
                         is RunEvent.Failed -> {

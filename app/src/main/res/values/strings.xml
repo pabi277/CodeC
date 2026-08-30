@@ -155,7 +155,8 @@
     <string name="output_build_failed">Build failed with exit code %1$d</string>
     <string name="output_compile_timed_out">Build timed out after the time limit</string>
     <string name="output_exit_code">Process finished with exit code %1$d</string>
-    <string name="output_timed_out">Program exceeded time limit (possible infinite loop)</string>
+    <string name="output_timed_out">Program did not finish within the time limit (possible infinite loop, or waiting for input)</string>
+    <string name="output_timed_out_input_hint">If it is waiting for input (scanf/gets), tap the terminal icon to run it interactively.</string>
     <string name="output_failed">Run failed: %1$s</string>
     <string name="output_no_command">No build or run command for this file</string>
     <string name="delete_project">Delete Project</string>

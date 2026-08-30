@@ -147,7 +147,10 @@ fun OutputPanelView(
                     )
                 }
             }
-            if (!state.busy && state.lastTerminalCommand != null) {
+            // Always offer the interactive escape hatch once a run exists —
+            // stdin-blocking programs (scanf/gets) need the terminal session,
+            // so the terminal icon stays visible during and after a run.
+            if (state.lastTerminalCommand != null) {
                 IconButton(onClick = onOpenInTerminal, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Default.Terminal,
