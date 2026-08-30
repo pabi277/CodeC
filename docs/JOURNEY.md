@@ -14,7 +14,11 @@ current design and verification record lives in [`chat-phase8/`](chat-phase8/).
 (2026-08-29): the owner's device rounds passed ("Good working" → three fixes in
 9.1 → "Yes working" → 9.2 UI/folders/single-files), CI green throughout
 (`33239651690`, `33241237168`, `33243620762`), and the owner closed the phase by
-directing doc finalization + PR creation — **PR #28** (merge is the owner's call).**
+directing doc finalization + PR creation — **PR #28** (merged to `main` at `961e942`).**
+**Phase 11 (Output Panel & Integrated Run) is ✅ IMPLEMENTED (2026-08-30,
+`arena/01a0508b-codec`) — code complete on the owner's instruction; CI run and
+the owner's device recipe remain the gates before it is closed. See
+[`chat-phase11/`](chat-phase11/).**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and
@@ -590,3 +594,6 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     handoff); long-press on any listed file gives Run in terminal / Delete. VM API:
     `switchContext`, `createAndOpenFile`, `deleteFileEntry`. See
     `chat-phase9/PART_9_IMPLEMENTATION.md` §Phase 9.2.
+14. **Phase 11 — Output Panel & Integrated Run** ✅ **IMPLEMENTED (2026-08-30, `arena/01a0508b-codec`)** — code complete on the owner's instruction ("Ok start phase 11"); CI + owner's device recipe are the remaining gates.
+    Split-screen **Output Panel** under the editor with a draggable splitter; **RUN ▶** now builds & executes through the app's real toolchain (`cc` frontend → embedded TCC, the exact commands the terminal handoff produces) for both project contexts (project.json build/run) and single files (`cc <file> -o a.out && ./a.out`); real-time streamed output with per-phase status (Compiling… → Build OK (Nms) → program output → exit code + duration), Stop (kills the live process), Copy, Clear, collapse/expand, auto-scroll, and an **Open in Terminal** escape hatch for interactive programs. Compiler diagnostics in the panel are clickable (`file:line:col: error:` — Clang and TCC forms) and jump the editor to the position; failed builds also light up the Phase 9 squiggles. New: `ExecutionRunner` (Android-free, JVM-tested: streaming, failing-build-skips-run, timeouts, kill), `OutputLineParser`, `OutputPanelView`; `TerminalHandoff.compileParts`/`projectRunParts`; 20 new/updated host unit tests (CI executes them). Design decisions D1–D5 and the device recipe: `docs/chat-phase11/PART_11_OUTPUT.md` §6. Legacy `runCode`/`CompilerService` in-editor pipeline removed (D1: editor RUN now matches the terminal's `cc`; the Settings "Compiler Engine" picker's editor effect is superseded — flagged as a follow-up).
+    See [`chat-phase11/`](chat-phase11/).

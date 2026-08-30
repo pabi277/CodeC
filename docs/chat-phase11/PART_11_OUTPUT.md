@@ -1,7 +1,10 @@
 # CodeC Phase 11 — Output Panel & Integrated Run (Spck / C4droid Experience)
 
-**Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
-**Target Files:** `EditorScreen.kt`, `OutputPanelView.kt`, `ExecutionRunner.kt`
+**Status:** ✅ **IMPLEMENTED 2026-08-30** (`arena/01a0508b-codec`) — code + host unit
+tests written; CI (Build APK → `:app:testDebugUnitTest` + lint) and the owner's
+device recipe (§4 below) are the remaining gates. **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
+**Target Files:** `EditorScreen.kt`, `OutputPanelView.kt`, `ExecutionRunner.kt` (+
+`OutputLineParser.kt`, `EditorViewModel.kt`, `TerminalHandoff.kt`)
 
 ---
 
@@ -88,3 +91,75 @@ A fresh APK passes the following recipe on device:
 ## 5. Non-Goals & Invariants
 
 - **Interactive Input:** Interactive console applications requiring live keyboard stdin (like `scanf` or `ncurses`) should offer a 1-tap "OPEN IN TERMINAL" button.
+
+---
+
+## 6. Implementation record (2026-08-30, `arena/01a0508b-codec`)
+
+Implemented against the current codebase (post-Phase 9.2, PR #28 merged). The
+editor at that point already had: a RUN button (project → terminal handoff,
+scratch → legacy `CompilerService` in-editor pipeline), a `TerminalOutput`
+bottom panel driven by `terminalSegments`, and Phase 9's squiggle
+(`CompilerDiagnostics`) + tap-to-inspect machinery. What changed:
+
+### 6.1 Delivered
+
+| Piece | File | Notes |
+|---|---|---|
+| Output line parser (clickable diagnostics) | `ui/editor/OutputLineParser.kt` (new) | Clang `file:line:col: kind:` and TCC `file:line: kind:` forms; `fatal error`/`warning`/`note`; column 0 for TCC. |
+| Process runner | `ui/services/ExecutionRunner.kt` (new) | Android-free (JVM-testable). Runs build/run command strings via the resolved userland shell with the CodeC env; merged stdout+stderr streaming; build then run (failing build skips run); 30 s build / 10 s run timeouts (exit 124); responsive Stop (50 ms poll + destroy, `destroyForcibly` reflective for API 26+). |
+| Output panel | `ui/components/OutputPanelView.kt` (new) | Header: status summary, Stop (while busy), Open in Terminal, Copy, Clear, expand/collapse chevron; auto-scroll; collapsed one-line strip (tap expands); diagnostic lines red/orange + underlined + clickable → editor jump. `extractUrls` moved here from the deleted `TerminalOutput.kt` (same package, `TerminalUxTest` untouched). |
+| VM pipeline | `ui/viewmodels/EditorViewModel.kt` | New `OutputRunState` (phase, lines, build/run exit+duration, summary, lastTerminalCommand) replacing `terminalSegments`; `runActiveFile` / `stopRun` / `clearOutput` / `toggleOutput` / `jumpToOutputDiagnostic`; legacy `runCode`/`CompilerService` editor pipeline removed. |
+| Build/run split | `ui/terminal/TerminalHandoff.kt` | Added `compileParts` and `projectRunParts` (pure); `compileAndRunCommand`/`projectRunCommand` refactored onto them with byte-identical output (existing tests still pass). |
+| Editor screen | `ui/screens/EditorScreen.kt` | RUN ▶ → `runActiveFile` (all non-web contexts); draggable `OutputPanelSplitter` (10 dp, vertical drag, panel height 120 dp … 55 % screen); panel replaces the old TerminalOutput block. |
+| Strings | `res/values/strings.xml` | 11 new `output_*` strings. |
+| Tests | `OutputLineParserTest`, `ExecutionRunnerTest` (new, host JVM via `/bin/sh`); `TerminalHandoffTest` +4 | |
+
+### 6.2 Design decisions (D1–D5)
+
+- **D1 — RUN now uses the real toolchain (`cc` frontend → embedded TCC), the
+  same command strings the terminal handoff builds.** The legacy in-editor
+  `CompilerService` pipeline (which honored the Settings "Compiler Engine"
+  backend for scratch mode only) is removed — the terminal has used `cc` since
+  Phase 9.1, and the output panel is the batch twin of that path. The Settings
+  backend picker remains in place (it still documents/installs the bundled
+  Clang); its runtime effect on the editor is superseded — flagged for the
+  owner as a possible follow-up.
+- **D2 — Project contexts run `project.json` build/run via
+  `projectRunParts`; single files compile in place
+  (`cc <abs> -o a.out`, then `./a.out`).** Web projects keep the preview path.
+  A project RUN no longer navigates to the Terminal screen — the panel IS the
+  batch runner; "Run in Terminal" stays in the ⋮ menu and the panel header
+  ("Open in Terminal") as the interactive escape hatch (Phase 11 non-goal).
+- **D3 — Environment from `ShellBootstrap.prepare()`** (`ShellEnvironment.buildEnv`):
+  PATH with `$PREFIX/bin`, `PREFIX`/`HOME`/`TMPDIR`, termux-exec `LD_PRELOAD`
+  when present, `CC_STD/CC_WARN/CC_OPT` from Settings, `TCC_BIN/TCC_BUNDLE`.
+  This guarantees `cc` exists (the frontend script is written by `prepare` even
+  before a Phase 2/3 userland) and keeps every Phase 1–3 invariant (no `.` on
+  PATH, `-o` last, no Termux identity).
+- **D4 — Squiggles on failed build:** the accumulated build output is fed to
+  `CompilerDiagnostics.parse` (filtered to the active file), so the existing
+  Phase 9 error underlines + tap-to-inspect tooltip light up from a failed
+  RUN — and the panel's error lines are clickable into any file of the current
+  folder (jump is path-confined to the project root / single-files dir).
+- **D5 — Stop is a real kill:** the runner polls `exitValue` every 50 ms
+  instead of blocking `waitFor`, so cancelling the collection (Stop) destroys
+  the live process within one tick instead of after the timeout.
+
+### 6.3 Device recipe (the §4 exit condition — needs the owner's device run)
+
+1. Open the Editor with `main.c` containing `#include <stdio.h>` / `int main()
+   { printf("Output panel working!\n"); return 0; }`.
+2. Tap **RUN ▶** → the Output panel opens at the bottom: `$ cc …` (single file)
+   or the project's build command, output lines, `Build OK (Nms)`, the program
+   output, and `Process finished with exit code 0 (Nms)`.
+3. Introduce an intentional error at line 3 (`printf("Error)`), RUN again →
+   the panel shows the red diagnostic `main.c:3:12: error: missing terminating
+   " character`, the editor shows the squiggle, and tapping the red panel line
+   places the cursor at line 3, col 12.
+4. Drag the splitter bar to resize; collapse the panel and tap the strip to
+   re-expand; with `scanf`-style programs tap **Open in Terminal** to get the
+   interactive PTY.
+
+Known follow-ups (non-blocking): Settings "Compiler Engine" runtime effect
+(D1); `extractUrls` has no in-app consumer (moved, not removed).

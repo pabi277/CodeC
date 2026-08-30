@@ -15,7 +15,7 @@ You are continuing **CodeC** (an Android C IDE). Each chat session gets its own
 `arena/*` session branch — verify the actual branch with `git status` instead
 of assuming one.
 
-**WHERE THINGS STAND (2026-08-29):**
+**WHERE THINGS STAND (2026-08-30):**
 
 - **Phases 3–9.2 and the Package Hub (Phase 10) are all COMPLETE and
   device-accepted. Do not redo, re-debug or "improve" any of them** unless the
@@ -35,11 +35,22 @@ of assuming one.
     sheet, single files as a first-class context)** ✅ CI green
     (`33239651690`, `33241237168`, `33243620762`), owner device rounds passed
     ("Good working" → "Yes working"), closed 2026-08-29 by the owner's
-    finalization instruction → **PR #28** (`arena/01a04c1c-codec` → `main`).
-    FIRST ACTION: `gh pr view 28` / `gh pr list` — if it is merged, main has
-    everything; if not, it awaits the owner's merge decision (never merge for
-    them). Records: `docs/chat-phase9/` (device recipes = regression
-    checklist).
+    finalization instruction → **PR #28 MERGED to `main` at `961e942`** — main
+    has everything through Phase 9.2. Records: `docs/chat-phase9/` (device
+    recipes = regression checklist).
+  - **Phase 11 (Output Panel & Integrated Run) — IMPLEMENTED 2026-08-30 on
+    `arena/01a0508b-codec`** (owner: "Ok start phase 11"). Split-screen
+    Output Panel + draggable splitter; RUN ▶ builds/executes via the real `cc`
+    toolchain (project.json build/run, or `cc <file> -o a.out && ./a.out` for
+    single files) with streaming, Stop, Copy/Clear, auto-scroll, clickable
+    `file:line:col:` error lines → editor jump + Phase 9 squiggles, and an
+    Open-in-Terminal escape hatch. New: `ExecutionRunner` (JVM-tested),
+    `OutputLineParser`, `OutputPanelView`; `TerminalHandoff.compileParts`/
+    `projectRunParts`; legacy in-editor `runCode`/`CompilerService` pipeline
+    removed (D1 — editor RUN now matches the terminal's `cc`; the Settings
+    "Compiler Engine" picker's editor effect is superseded, flagged as a
+    follow-up). Remaining gates: CI run on this branch + the owner's device
+    recipe (`docs/chat-phase11/PART_11_OUTPUT.md` §4/§6.3).
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`
@@ -62,8 +73,9 @@ of assuming one.
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phase 11 — Output Panel & Integrated Run** (`[client-only]`, unblocked):
-   `docs/chat-phase11/`.
+1. **Finish Phase 11** — CI run on `arena/01a0508b-codec` + the owner's device
+   recipe (`docs/chat-phase11/PART_11_OUTPUT.md` §4/§6.3) must pass before the
+   phase closes; then (on the owner's word) open the PR from this branch.
 2. **Phase 12 — Python repo build** (`[repo-build]`, the ONE planned CI package
    build ~1–2h, plus multi-language highlight/autocomplete): `docs/chat-phase12/`.
 3. Phases 13 (GitHub/Git UI), 14 (mixed-language servers + webview), 15
@@ -102,10 +114,12 @@ of assuming one.
 
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
    `gh release list`) before acting.
-2. If PR #28 is still open: leave it to the owner (they merge). If merged and
-   the owner commands a next phase, pick Phase 11 from `docs/chat-phase11/`
-   and re-verify its plan against current code before implementing (the editor
-   files changed heavily in 9/9.1/9.2).
+2. If Phase 11 on `arena/01a0508b-codec` is not yet closed (CI or device gate
+   pending): continue it — do not redo the implementation, do not start Phase
+   12. If Phase 11 is closed and the owner commands a next phase, pick Phase
+   12 from `docs/chat-phase12/` and re-verify its plan against current code
+   before implementing (it includes the expensive ~1–2h repo build — explicit
+   approval required before dispatching).
 3. A part is complete only when its "Exit condition" is met and verified
    (device evidence from the owner for device gates), not merely when code is
    written.

@@ -34,16 +34,30 @@ object TerminalHandoff {
     }
 
     /**
+     * Phase 11 — split [compileAndRunCommand] into its build and run halves so
+     * the Output Panel can report each phase separately. [build] compiles the
+     * saved source with the `cc` frontend; [run] executes the result in the
+     * source's directory.
+     */
+    fun compileParts(sourcePath: String, outputName: String = DEFAULT_OUTPUT): Pair<String, String> {
+        val source = File(sourcePath)
+        val build = "cc ${shellEscape(sourcePath)} -o ${shellEscape(outputName)}"
+        val run = "./${shellEscape(outputName)}"
+        return build to run
+    }
+
+    /**
      * `cd` to the source directory, compile with `cc`, run `./a.out`.
      * [sourcePath] should be an absolute path to a saved `.c` file.
      */
     fun compileAndRunCommand(sourcePath: String, outputName: String = DEFAULT_OUTPUT): String {
         val source = File(sourcePath)
         val dir = source.parent ?: "."
+        val (build, run) = compileParts(sourcePath, outputName)
         return listOf(
             "cd ${shellEscape(dir)}",
-            "cc ${shellEscape(sourcePath)} -o ${shellEscape(outputName)}",
-            "./${shellEscape(outputName)}"
+            build,
+            run
         ).joinToString(" && ")
     }
 
@@ -68,14 +82,27 @@ object TerminalHandoff {
         "cd ${shellEscape(directory)}"
 
     /**
+     * Phase 11 — split a project's run configuration into its build and run
+     * halves (either may be empty, e.g. web or python projects with no build
+     * step). Commands are intentionally returned verbatim: they are the
+     * user's run configuration, while only app-private paths need quoting.
+     */
+    fun projectRunParts(projectDirectory: String, config: ProjectConfig): Pair<String?, String?> {
+        val build = config.build.trim().takeIf { it.isNotEmpty() }
+        val run = config.run.trim().takeIf { it.isNotEmpty() }
+        return build to run
+    }
+
+    /**
      * Runs a project configuration from the project root. Build and run are
      * intentionally command strings: they are the user's run configuration,
      * while only the app-private path needs quoting.
      */
     fun projectRunCommand(projectDirectory: String, config: ProjectConfig): String {
         val commands = mutableListOf("cd ${shellEscape(projectDirectory)}")
-        config.build.trim().takeIf { it.isNotEmpty() }?.let(commands::add)
-        config.run.trim().takeIf { it.isNotEmpty() }?.let(commands::add)
+        val (build, run) = projectRunParts(projectDirectory, config)
+        build?.let(commands::add)
+        run?.let(commands::add)
         return commands.joinToString(" && ")
     }
 }

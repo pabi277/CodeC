@@ -10,28 +10,32 @@ import com.codeci.ide.ui.editor.BracketMatcher
 import com.codeci.ide.ui.editor.ClangFormatBridge
 import com.codeci.ide.ui.editor.CodeFormatter
 import com.codeci.ide.ui.editor.CompilerDiagnostics
+import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorTab
 import com.codeci.ide.ui.editor.EditorUndoManager
 import com.codeci.ide.ui.editor.FindOptions
 import com.codeci.ide.ui.editor.FindOutcome
 import com.codeci.ide.ui.editor.FindReplaceEngine
+import com.codeci.ide.ui.editor.OutputDiagnostic
+import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
-import com.codeci.ide.ui.services.CompilerEngine
-import com.codeci.ide.ui.services.CompilerError
-import com.codeci.ide.ui.services.CompilerService
 import com.codeci.ide.ui.services.CompilerSettings
-import com.codeci.ide.ui.services.ErrorType
-import com.codeci.ide.ui.services.ExecutionUpdate
+import com.codeci.ide.ui.services.ExecutionRunner
+import com.codeci.ide.ui.services.RunEvent
+import com.codeci.ide.ui.services.RunPhase
+import com.codeci.ide.ui.services.RunSpec
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
+import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
 import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -54,8 +58,29 @@ data class EditorFileEntry(
     val isDirectory: Boolean
 )
 
-enum class TerminalSegmentType { COMPILATION, ERROR, OUTPUT, STATS }
-data class TerminalSegment(val text: String, val type: TerminalSegmentType)
+enum class OutputPhase { IDLE, BUILDING, RUNNING, DONE, CANCELLED, FAILED }
+
+enum class OutputLineKind { COMMAND, BUILD, OUTPUT, ERROR, STATS, SYSTEM }
+
+/** One rendered line of the Phase 11 Output Panel. */
+data class OutputLine(val text: String, val kind: OutputLineKind)
+
+/**
+ * Phase 11 — the whole Output Panel state: the streaming lines, the current
+ * phase, build/run timing and exit codes, the header summary, and the last
+ * full terminal command (for the "Open in Terminal" escape hatch).
+ */
+data class OutputRunState(
+    val phase: OutputPhase = OutputPhase.IDLE,
+    val lines: List<OutputLine> = emptyList(),
+    val buildExitCode: Int? = null,
+    val runExitCode: Int? = null,
+    val buildDurationMs: Long? = null,
+    val runDurationMs: Long? = null,
+    val busy: Boolean = false,
+    val summary: String? = null,
+    val lastTerminalCommand: String? = null
+)
 
 /** Phase 9 — cursor readout for the editor status bar. */
 data class EditorCursorPos(val line: Int, val column: Int, val selectionLength: Int)
@@ -96,11 +121,11 @@ class EditorViewModel : ViewModel() {
     private val _projectName = MutableStateFlow<String?>(null)
     val projectName: StateFlow<String?> = _projectName.asStateFlow()
 
-    private val _terminalSegments = MutableStateFlow<List<TerminalSegment>>(emptyList())
-    val terminalSegments: StateFlow<List<TerminalSegment>> = _terminalSegments.asStateFlow()
+    private val _outputState = MutableStateFlow(OutputRunState())
+    val outputState: StateFlow<OutputRunState> = _outputState.asStateFlow()
 
-    private val _isTerminalExpanded = MutableStateFlow(false)
-    val isTerminalExpanded: StateFlow<Boolean> = _isTerminalExpanded.asStateFlow()
+    private val _outputExpanded = MutableStateFlow(false)
+    val outputExpanded: StateFlow<Boolean> = _outputExpanded.asStateFlow()
 
     private val _isDirty = MutableStateFlow(false)
     val isDirty: StateFlow<Boolean> = _isDirty.asStateFlow()
@@ -151,6 +176,11 @@ class EditorViewModel : ViewModel() {
     val cursorPos: StateFlow<EditorCursorPos> = _cursorPos.asStateFlow()
 
     private var decorationJob: Job? = null
+
+    // ---- Phase 11: Output Panel run pipeline -----------------------------
+
+    private var runJob: Job? = null
+    private var buildOutputBuffer = StringBuilder()
 
     fun consumeMessage() {
         _userMessage.value = null
@@ -966,88 +996,300 @@ class EditorViewModel : ViewModel() {
     }
 
     // ---------------------------------------------------------------------
-    // Terminal output panel + run pipeline
+    // Phase 11: Output Panel & Integrated Run
     // ---------------------------------------------------------------------
 
-    fun toggleTerminal() {
-        _isTerminalExpanded.value = !_isTerminalExpanded.value
+    fun toggleOutput() {
+        _outputExpanded.value = !_outputExpanded.value
     }
 
-    fun clearTerminal() {
-        _terminalSegments.value = emptyList()
+    /** Clears the panel. A still-running pipeline is cancelled first. */
+    fun clearOutput() {
+        runJob?.cancel()
+        runJob = null
+        _outputState.value = OutputRunState(phase = OutputPhase.IDLE)
     }
 
-    fun runCode(context: Context) {
-        _isTerminalExpanded.value = true
+    /** Stops the running build/run pipeline and kills the live process. */
+    fun stopRun() {
+        runJob?.cancel()
+        runJob = null
+        val current = _outputState.value
+        if (current.busy) {
+            _outputState.value = current.copy(
+                phase = OutputPhase.CANCELLED,
+                busy = false,
+                summary = "Stopped",
+                lines = current.lines + OutputLine("Stopped by user", OutputLineKind.SYSTEM)
+            )
+        }
+    }
+
+    /**
+     * Phase 11 — the RUN entry point. Saves the active buffer, then builds and
+     * executes through the app's real toolchain (`cc` frontend over the
+     * embedded TCC, exactly like the terminal) streaming into the Output
+     * Panel. Project contexts run their project.json build/run configuration;
+     * single files compile in place (`cc <file> -o a.out && ./a.out`).
+     */
+    fun runActiveFile(context: Context) {
+        if (_outputState.value.busy) return
+        val appContext = context.applicationContext
+        if (!saveFile(appContext)) {
+            _userMessage.value = appContext.getString(R.string.file_save_failed)
+            return
+        }
         _diagnostics.value = emptyList()
-        val currentSegments = mutableListOf<TerminalSegment>()
-        currentSegments.add(TerminalSegment("Compiling...\n", TerminalSegmentType.COMPILATION))
-        _terminalSegments.value = currentSegments.toList()
 
-        viewModelScope.launch {
+        val project = _projectName.value
+        val workDir: File
+        val buildCommand: String?
+        val runCommand: String?
+        val terminalCommand: String
+        if (project != null) {
+            val info = ProjectManager(appContext).project(project)
+            if (info == null) {
+                _userMessage.value = "Project '$project' is gone"
+                return
+            }
+            // Web projects are handled by the preview flow, not the panel.
+            if (info.config.type.equals("web", ignoreCase = true)) return
+            workDir = info.root
+            val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, info.config)
+            buildCommand = build
+            runCommand = run
+            terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, info.config)
+        } else {
+            val path = saveAndAbsolutePath(appContext) ?: return
+            val source = File(path)
+            workDir = source.parentFile ?: File(appContext.filesDir, "CodeC/projects")
+            val (build, run) = TerminalHandoff.compileParts(path)
+            buildCommand = build
+            runCommand = run
+            terminalCommand = TerminalHandoff.compileAndRunCommand(path)
+        }
+        if (buildCommand.isNullOrBlank() && runCommand.isNullOrBlank()) {
+            _userMessage.value = appContext.getString(R.string.output_no_command)
+            return
+        }
+
+        _outputExpanded.value = true
+        buildOutputBuffer = StringBuilder()
+        val startLines = buildList {
+            if (!buildCommand.isNullOrBlank()) {
+                add(OutputLine("$ ${buildCommand.trim()}", OutputLineKind.COMMAND))
+            } else if (!runCommand.isNullOrBlank()) {
+                add(OutputLine("$ ${runCommand.trim()}", OutputLineKind.COMMAND))
+            }
+        }
+        _outputState.value = OutputRunState(
+            phase = if (buildCommand.isNullOrBlank()) OutputPhase.RUNNING else OutputPhase.BUILDING,
+            busy = true,
+            lines = startLines,
+            summary = appContext.getString(
+                if (buildCommand.isNullOrBlank()) R.string.output_running else R.string.output_compiling
+            ),
+            lastTerminalCommand = terminalCommand
+        )
+        StatsManager(appContext).incrementRuns()
+
+        runJob = viewModelScope.launch {
+            val settings = compilerSettingsFrom(SettingsManager(appContext))
+            val prepared = withContext(Dispatchers.IO) {
+                ShellBootstrap(appContext).prepare(settings)
+            }
+            val runner = ExecutionRunner(prepared.shell, prepared.env)
             try {
-                StatsManager(context).incrementRuns()
-                val settingsManager = SettingsManager(context)
-                val compilerSettings = compilerSettingsFrom(settingsManager)
-                val backend = settingsManager.compilerBackendFlow.first()
-                val compilerService = CompilerService(context)
-                val compileResult = compilerService.compile(_codeText.value.text, compilerSettings, backend)
-
-                if (compileResult.engine == CompilerEngine.TERMUX && compileResult.engineNote != null) {
-                    currentSegments.add(TerminalSegment("(Note: ${compileResult.engineNote})\n", TerminalSegmentType.COMPILATION))
-                }
-                compileResult.errors.forEach { error ->
-                    currentSegments.add(TerminalSegment(formatError(error) + "\n", errorTypeOf(error)))
-                }
-                if (compileResult.output.isNotBlank() && compileResult.errors.isEmpty()) {
-                    currentSegments.add(TerminalSegment(compileResult.output + "\n", TerminalSegmentType.COMPILATION))
-                }
-                _terminalSegments.value = currentSegments.toList()
-
-                _diagnostics.value = CompilerDiagnostics.combine(
-                    errors = compileResult.errors,
-                    output = compileResult.output,
-                    targetFileName = _fileName.value.substringAfterLast('/')
-                )
-
-                val hasBinary = compileResult.binaryPath != null || compileResult.termuxProgramPath != null
-                if (!compileResult.success || !hasBinary) {
-                    currentSegments.add(TerminalSegment("Compilation failed.\n", TerminalSegmentType.ERROR))
-                    _terminalSegments.value = currentSegments.toList()
-                    return@launch
-                }
-
-                currentSegments.add(TerminalSegment("Compilation successful.\nRunning...\n$ ./program\n", TerminalSegmentType.COMPILATION))
-                _terminalSegments.value = currentSegments.toList()
-
-                compilerService.execute(compileResult).collect { update ->
-                    when (update) {
-                        is ExecutionUpdate.OutputLine -> {
-                            currentSegments.add(TerminalSegment(update.line + "\n", TerminalSegmentType.OUTPUT))
-                            _terminalSegments.value = currentSegments.toList()
+                runner.run(RunSpec(workDir, buildCommand, runCommand)).collect { event ->
+                    when (event) {
+                        is RunEvent.PhaseChanged -> {
+                            val phase = if (event.phase == RunPhase.BUILDING) {
+                                OutputPhase.BUILDING
+                            } else {
+                                OutputPhase.RUNNING
+                            }
+                            _outputState.value = _outputState.value.copy(
+                                phase = phase,
+                                summary = appContext.getString(
+                                    if (event.phase == RunPhase.BUILDING) {
+                                        R.string.output_compiling
+                                    } else {
+                                        R.string.output_running
+                                    }
+                                )
+                            )
                         }
-                        is ExecutionUpdate.Completed -> {
-                            val result = update.result
-                            if (result.timedOut) {
-                                currentSegments.add(
-                                    TerminalSegment(
-                                        "Program exceeded time limit (possible infinite loop)\n",
-                                        TerminalSegmentType.ERROR
+                        is RunEvent.Output -> {
+                            if (event.phase == RunPhase.BUILDING) {
+                                buildOutputBuffer.append(event.line).append('\n')
+                            }
+                            val kind = if (event.phase == RunPhase.BUILDING) {
+                                OutputLineKind.BUILD
+                            } else {
+                                OutputLineKind.OUTPUT
+                            }
+                            _outputState.value = _outputState.value.copy(
+                                lines = _outputState.value.lines + OutputLine(event.line, kind)
+                            )
+                        }
+                        is RunEvent.BuildFinished -> {
+                            _outputState.value = _outputState.value.copy(
+                                buildExitCode = event.exitCode,
+                                buildDurationMs = event.durationMs
+                            )
+                            if (event.exitCode != 0) {
+                                finishFailedBuild(appContext, event.exitCode, event.durationMs, event.timedOut)
+                            } else {
+                                _outputState.value = _outputState.value.copy(
+                                    lines = _outputState.value.lines + OutputLine(
+                                        appContext.getString(R.string.output_build_ok_time, event.durationMs),
+                                        OutputLineKind.STATS
                                     )
                                 )
                             }
-                            val stats =
-                                "\nProcess finished with exit code ${result.exitCode} (Execution time: ${result.executionTime}ms)\n"
-                            currentSegments.add(TerminalSegment(stats, TerminalSegmentType.STATS))
-                            _terminalSegments.value = currentSegments.toList()
+                        }
+                        is RunEvent.RunFinished -> {
+                            val timedOut = event.timedOut
+                            val exitCode = if (timedOut) {
+                                ExecutionRunner.TIMED_OUT_EXIT_CODE
+                            } else {
+                                event.exitCode
+                            }
+                            val summary = if (timedOut) {
+                                appContext.getString(R.string.output_timed_out)
+                            } else {
+                                appContext.getString(R.string.output_exit_code, exitCode)
+                            }
+                            _outputState.value = _outputState.value.copy(
+                                phase = OutputPhase.DONE,
+                                busy = false,
+                                runExitCode = exitCode,
+                                runDurationMs = event.durationMs,
+                                summary = summary,
+                                lines = _outputState.value.lines + OutputLine(
+                                    if (timedOut) {
+                                        summary
+                                    } else {
+                                        "Process finished with exit code $exitCode (${event.durationMs}ms)"
+                                    },
+                                    if (timedOut) OutputLineKind.ERROR else OutputLineKind.STATS
+                                )
+                            )
+                        }
+                        is RunEvent.Failed -> {
+                            _outputState.value = _outputState.value.copy(
+                                phase = OutputPhase.FAILED,
+                                busy = false,
+                                summary = appContext.getString(R.string.output_failed, event.message),
+                                lines = _outputState.value.lines + OutputLine(
+                                    event.message,
+                                    OutputLineKind.ERROR
+                                )
+                            )
                         }
                     }
                 }
+            } catch (e: CancellationException) {
+                // Stop pressed: stopRun() already updated the state.
+                throw e
             } catch (e: Exception) {
-                currentSegments.add(TerminalSegment("Run failed: ${e.message}\n", TerminalSegmentType.ERROR))
-                _terminalSegments.value = currentSegments.toList()
+                val message = e.message ?: "Run failed"
+                _outputState.value = _outputState.value.copy(
+                    phase = OutputPhase.FAILED,
+                    busy = false,
+                    summary = appContext.getString(R.string.output_failed, message),
+                    lines = _outputState.value.lines + OutputLine(message, OutputLineKind.ERROR)
+                )
             }
         }
+    }
+
+    /**
+     * A failing build ends the run: re-color diagnostic lines red, summarize,
+     * and feed the squiggle layer with the diagnostics for the active file.
+     */
+    private fun finishFailedBuild(context: Context, exitCode: Int, durationMs: Long, timedOut: Boolean) {
+        val current = _outputState.value
+        val summary = if (timedOut) {
+            context.getString(R.string.output_compile_timed_out)
+        } else {
+            context.getString(R.string.output_build_failed, exitCode)
+        }
+        val reColored = current.lines.map { line ->
+            if (line.kind == OutputLineKind.BUILD && OutputLineParser.parseLine(line.text) != null) {
+                line.copy(kind = OutputLineKind.ERROR)
+            } else {
+                line
+            }
+        }
+        _outputState.value = current.copy(
+            phase = OutputPhase.DONE,
+            busy = false,
+            summary = summary,
+            lines = reColored + OutputLine(summary, OutputLineKind.ERROR)
+        )
+        _diagnostics.value = CompilerDiagnostics.parse(
+            buildOutputBuffer.toString(),
+            _fileName.value.substringAfterLast('/')
+        )
+    }
+
+    /**
+     * Tap on a clickable diagnostic line in the Output Panel: open the file
+     * (when it is not already the active tab) and move the editor cursor to
+     * the reported line/column. Paths are confined to the current project
+     * root (or the single-files folder) — a diagnostic naming a file outside
+     * the active context is ignored.
+     */
+    fun jumpToOutputDiagnostic(context: Context, diagnostic: OutputDiagnostic) {
+        val appContext = context.applicationContext
+        val project = _projectName.value
+        val root = if (project != null) {
+            runCatching { ProjectManager(appContext).project(project)?.root }.getOrNull()
+        } else {
+            runCatching { FileManager(appContext).getProjectDir() }.getOrNull()
+        }
+        val file = root?.let { resolveDiagnosticFile(it, diagnostic.file) } ?: return
+        val relative = runCatching { root.toRelativeString(file) }.getOrNull() ?: return
+        if (relative.startsWith("..")) return
+
+        val opened = if (project != null) {
+            openFile(appContext, project, relative)
+            _fileName.value == relative
+        } else {
+            if (file.name != _fileName.value) openFile(appContext, null, file.name)
+            _fileName.value == file.name
+        }
+        if (!opened) return
+        jumpToDiagnostic(
+            EditorDiagnostic(
+                line = diagnostic.line,
+                column = diagnostic.column.coerceAtLeast(1),
+                message = diagnostic.message,
+                severity = if (diagnostic.isError) {
+                    DiagnosticSeverity.ERROR
+                } else {
+                    DiagnosticSeverity.WARNING
+                }
+            )
+        )
+    }
+
+    /**
+     * Resolves the file named by a diagnostic against [root]. Absolute paths
+     * must live under the root; relative paths are resolved inside it.
+     */
+    private fun resolveDiagnosticFile(root: File, raw: String): File? {
+        val candidate = if (raw.startsWith('/')) {
+            File(raw)
+        } else {
+            File(root, raw)
+        }
+        if (!candidate.isFile) return null
+        val rootPath = root.absolutePath
+        val candidatePath = candidate.absolutePath
+        if (candidatePath != rootPath && !candidatePath.startsWith(rootPath + File.separator)) return null
+        return candidate
     }
 
     private suspend fun compilerSettingsFrom(settingsManager: SettingsManager): CompilerSettings {
@@ -1059,19 +1301,6 @@ class EditorViewModel : ViewModel() {
             warnings = !warningLevel.equals("None", ignoreCase = true),
             optimization = optimization.filter { it.isDigit() }.toIntOrNull() ?: 0
         )
-    }
-
-    private fun formatError(error: CompilerError): String {
-        val kind = if (error.type == ErrorType.WARNING) "warning" else "error"
-        return if (error.line > 0) {
-            "source.c:${error.line}:${error.column}: $kind: ${error.message}"
-        } else {
-            "$kind: ${error.message}"
-        }
-    }
-
-    private fun errorTypeOf(error: CompilerError): TerminalSegmentType {
-        return if (error.type == ErrorType.ERROR) TerminalSegmentType.ERROR else TerminalSegmentType.COMPILATION
     }
 
     /**

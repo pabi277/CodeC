@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -93,8 +94,8 @@ import com.codeci.ide.ui.components.EditorStatusBar
 import com.codeci.ide.ui.components.EditorTabBar
 import com.codeci.ide.ui.components.EditorTabUi
 import com.codeci.ide.ui.components.FindReplaceBar
+import com.codeci.ide.ui.components.OutputPanelView
 import com.codeci.ide.ui.components.SymbolBar
-import com.codeci.ide.ui.components.TerminalOutput
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
@@ -164,8 +165,8 @@ fun EditorScreen(
 
     val codeText by viewModel.codeText.collectAsState()
     val currentFileName by viewModel.fileName.collectAsState()
-    val terminalSegments by viewModel.terminalSegments.collectAsState()
-    val isTerminalExpanded by viewModel.isTerminalExpanded.collectAsState()
+    val outputState by viewModel.outputState.collectAsState()
+    val outputExpanded by viewModel.outputExpanded.collectAsState()
     val isDirty by viewModel.isDirty.collectAsState()
     val isRenaming by viewModel.isRenaming.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
@@ -475,15 +476,8 @@ fun EditorScreen(
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
-                            } else if (projectName != null) {
-                                val command = projectRunCommandOrNull()
-                                if (command != null) {
-                                    onOpenInTerminal(command)
-                                } else {
-                                    Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
-                                }
                             } else {
-                                viewModel.runCode(context)
+                                viewModel.runActiveFile(context)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
@@ -812,21 +806,36 @@ fun EditorScreen(
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
             )
 
-            AnimatedVisibility(visible = isTerminalExpanded) {
-                TerminalOutput(
-                    segments = terminalSegments,
-                    onClear = { viewModel.clearTerminal() },
-                    onToggleExpand = { viewModel.toggleTerminal() },
-                    isExpanded = isTerminalExpanded,
-                    modifier = Modifier.height(200.dp)
+            // Phase 11: split-screen Output Panel. Expanded = draggable
+            // splitter + panel; collapsed = one-line strip (tap to expand).
+            val maxPanelHeight = LocalConfiguration.current.screenHeightDp * 0.55f
+            var outputPanelHeight by remember { mutableStateOf(220f) }
+            if (outputExpanded) {
+                OutputPanelSplitter(
+                    onDragDelta = { dragAmount ->
+                        outputPanelHeight = (outputPanelHeight - dragAmount)
+                            .coerceIn(120f, maxPanelHeight)
+                    }
                 )
-            }
-            if (!isTerminalExpanded) {
-                TerminalOutput(
-                    segments = terminalSegments.takeLast(1),
-                    onClear = { viewModel.clearTerminal() },
-                    onToggleExpand = { viewModel.toggleTerminal() },
-                    isExpanded = isTerminalExpanded,
+                OutputPanelView(
+                    state = outputState,
+                    isExpanded = true,
+                    onStop = { viewModel.stopRun() },
+                    onClear = { viewModel.clearOutput() },
+                    onToggleExpand = { viewModel.toggleOutput() },
+                    onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
+                    onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
+                    modifier = Modifier.height(outputPanelHeight.dp)
+                )
+            } else {
+                OutputPanelView(
+                    state = outputState,
+                    isExpanded = false,
+                    onStop = { viewModel.stopRun() },
+                    onClear = { viewModel.clearOutput() },
+                    onToggleExpand = { viewModel.toggleOutput() },
+                    onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
+                    onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
                     modifier = Modifier.height(64.dp)
                 )
             }
@@ -1186,5 +1195,37 @@ internal fun Modifier.pointerInputDiagnosticsTap(
         val diagnostic = diagnosticsProvider().firstOrNull { it.line == line } ?: return@awaitEachGesture
         up.consume()
         onDiagnosticHit(up.position, diagnostic)
+    }
+}
+
+/**
+ * Phase 11 — the draggable splitter between the editor pane and the Output
+ * Panel. Dragging up grows the panel; dragging down shrinks it. The caller
+ * clamps the resulting height.
+ */
+@Composable
+private fun OutputPanelSplitter(onDragDelta: (Float) -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, dragAmount ->
+                    change.consume()
+                    onDragDelta(dragAmount)
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(48.dp)
+                .height(3.dp)
+                .background(
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    RoundedCornerShape(2.dp)
+                )
+        )
     }
 }
