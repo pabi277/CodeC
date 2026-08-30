@@ -403,5 +403,86 @@ class RecipeOverrideTest(unittest.TestCase):
             self.assertNotIn("termux_step_create_debscripts", build_text)
 
 
+    # ------------------------------------------------------------------
+    # Phase 12 (round 3): the python recipe — tk / python-tkinter.
+    #
+    # The python recipe is optional for the earlier blocks (the apt fixture
+    # is still mandatory), so it is asserted in its own focused tests.
+    # ------------------------------------------------------------------
+
+    def _write_apt_fixture_only(self, tree: Path) -> Path:
+        """Minimal apt fixture for the python tests (the script exits 1 when
+        the apt recipe is absent before reaching the python block)."""
+        return self._write_apt_fixture(tree)
+
+    def test_python_tkinter_excluded_and_tk_build_dep_removed(self) -> None:
+        """python-tkinter (tcl/tk/X11) is excluded for CodeC arches and tk
+        is removed from python's build-dependencies, keeping the Phase 12
+        build out of the X11 closure."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            py_dir = tree / "packages" / "python"
+            py_dir.mkdir(parents=True)
+            (py_dir / "build.sh").write_text(
+                'TERMUX_PKG_VERSION="3.14.6"\n'
+                'TERMUX_PKG_DEPENDS="gdbm, openssl, readline, zlib"\n'
+                'TERMUX_PKG_BUILD_DEPENDS="tk"\n'
+            )
+            tkinter = py_dir / "python-tkinter.subpackage.sh"
+            tkinter.write_text(
+                'TERMUX_SUBPKG_DESCRIPTION="Tkinter support for Python 3"\n'
+                'TERMUX_SUBPKG_DEPENDS="tcl, tk"\n'
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            build_text = (py_dir / "build.sh").read_text()
+            self.assertNotIn("TERMUX_PKG_BUILD_DEPENDS", build_text)
+            self.assertIn("TERMUX_PKG_DEPENDS=", build_text)
+            lines = tkinter.read_text().splitlines()
+            self.assertEqual(
+                lines[0],
+                'TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" '
+                "# CodeC: no tcl/tk/X11 in the userland",
+            )
+
+    def test_python_override_fails_loud_on_pinned_revision_drift(self) -> None:
+        """A python recipe whose build-depends line changed shape (or a
+        missing tkinter subpackage file) must abort instead of silently
+        skipping the X11-closure review."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            py_dir = tree / "packages" / "python"
+            py_dir.mkdir(parents=True)
+            (py_dir / "build.sh").write_text(
+                'TERMUX_PKG_BUILD_DEPENDS="tk, tcl"\n'
+            )
+            (py_dir / "python-tkinter.subpackage.sh").write_text(
+                'TERMUX_SUBPKG_DEPENDS="tcl, tk"\n'
+            )
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("pinned-revision drift", result.stderr)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            py_dir = tree / "packages" / "python"
+            py_dir.mkdir(parents=True)
+            (py_dir / "build.sh").write_text('TERMUX_PKG_BUILD_DEPENDS="tk"\n')
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("pinned-revision drift", result.stderr)
+            self.assertIn("python-tkinter", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

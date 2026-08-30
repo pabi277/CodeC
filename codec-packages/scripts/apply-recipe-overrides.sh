@@ -397,3 +397,41 @@ PY
 else
   echo "recipe-overrides: termux_step_massage.sh not found; skipping absolute symlink fix" >&2
 fi
+
+# The official python recipe (packages/python at the pinned revision, 3.14.6)
+# declares tk as a build dependency and ships a python-tkinter subpackage.
+# tk pulls the whole X11 stack (fontconfig, libx11, libxft, libxss, tcl)
+# solely to build Tkinter, which the CodeC userland does not use (no X11).
+# Phase 12: drop it the same way the git round-2 override drops gitk/git-gui —
+# exclude the subpackage for CodeC arches with the upstream-native per-arch
+# skip mechanism, and remove the build dependency so the closure stays lean.
+# Fail loudly on pinned-revision drift (a shape change is worth a re-review).
+PYTHON_DIR="$TREE/packages/python"
+if [[ -d "$PYTHON_DIR" ]]; then
+  TKINTER_SUBPKG="$PYTHON_DIR/python-tkinter.subpackage.sh"
+  if [[ ! -f "$TKINTER_SUBPKG" ]]; then
+    echo "recipe-overrides: python-tkinter subpackage file missing (pinned-revision drift): $TKINTER_SUBPKG" >&2
+    exit 1
+  fi
+  if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$TKINTER_SUBPKG"; then
+    sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: no tcl/tk/X11 in the userland' "$TKINTER_SUBPKG"
+  fi
+  if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$TKINTER_SUBPKG"; then
+    echo "recipe-overrides: failed to exclude python-tkinter subpackage" >&2
+    exit 1
+  fi
+  # Verbatim from the pinned upstream revision (termux-packages @
+  # 1bbe66903526df2e8af51e704316bc68ede72603, packages/python/build.sh).
+  if ! grep -q '^TERMUX_PKG_BUILD_DEPENDS="tk"$' "$PYTHON_DIR/build.sh"; then
+    echo "recipe-overrides: python recipe build-depends no longer has the expected tk line (pinned-revision drift)" >&2
+    exit 1
+  fi
+  sed -i '/^TERMUX_PKG_BUILD_DEPENDS="tk"$/d' "$PYTHON_DIR/build.sh"
+  if grep -q '^TERMUX_PKG_BUILD_DEPENDS=' "$PYTHON_DIR/build.sh"; then
+    echo "recipe-overrides: failed to remove tk build dependency from python recipe" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: python builds without tk (tkinter excluded for CodeC arches)"
+else
+  echo "recipe-overrides: python recipe not found; skipping tk removal" >&2
+fi
