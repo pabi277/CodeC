@@ -74,16 +74,16 @@ object MultiLanguageSyntaxHighlighter {
      */
     fun tokenize(text: String, language: LanguageType): List<TokenSpan> {
         if (text.isEmpty() || language == LanguageType.TEXT) return emptyList()
-        val regex = pattern(language) ?: return emptyList()
+        val compiled = pattern(language) ?: return emptyList()
         // Named group lookup via MatchGroupCollection.get(String) calls
         // Matcher.start(String), an API 26 call (minSdk is 24), so resolve
-        // group names to 1-based indices once and access by index instead.
-        val indexByName = namedGroupIndices(regex.pattern)
-        // Query only the names that exist in this language's pattern; the
-        // alternation order is the priority order.
+        // group names to 1-based capturing indices from the construction
+        // order recorded in CompiledPattern and access by index instead.
+        // groupKinds mirrors the same alternation priority order.
+        val indexByName = compiled.groupNames.mapIndexed { i, name -> name to (i + 1) }.toMap()
         val groupKinds = tokenGroupKinds(language)
         val spans = mutableListOf<TokenSpan>()
-        for (match in regex.findAll(text)) {
+        for (match in compiled.regex.findAll(text)) {
             val kind = groupKinds.firstNotNullOfOrNull { (name, tokenKind) ->
                 val index = indexByName[name] ?: return@firstNotNullOfOrNull null
                 if (match.groups[index] != null) tokenKind else null
@@ -91,43 +91,6 @@ object MultiLanguageSyntaxHighlighter {
             spans += TokenSpan(match.range.first, match.range.last + 1, kind)
         }
         return spans
-    }
-
-    /**
-     * Maps each named group in the pattern source to its 1-based capturing
-     * index. Only counts real capturing groups; `(?:…)` and lookarounds are
-     * skipped. Derived from the final pattern so it can never drift from the
-     * alternation order.
-     */
-    private fun namedGroupIndices(pattern: String): Map<String, Int> {
-        val map = mutableMapOf<String, Int>()
-        var index = 0
-        var i = 0
-        var inClass = false
-        while (i < pattern.length) {
-            val c = pattern[i]
-            when {
-                c == '\\' -> i += 2
-                inClass -> { if (c == ']') inClass = false; i++ }
-                c == '[' -> { inClass = true; i++ }
-                c == '(' -> {
-                    when {
-                        pattern.startsWith("(?:", i) || pattern.startsWith("(?=", i) ||
-                            pattern.startsWith("(?!", i) || pattern.startsWith("(?<=", i) ||
-                            pattern.startsWith("(?<!", i) -> i += 2
-                        pattern.startsWith("(?<", i) -> {
-                            val close = pattern.indexOf('>', i + 3)
-                            map[pattern.substring(i + 3, close)] = index + 1
-                            index++
-                            i = close + 1
-                        }
-                        else -> { index++; i++ }
-                    }
-                }
-                else -> i++
-            }
-        }
-        return map
     }
 
     /** (group name, kind) pairs in alternation priority order, per language. */
@@ -200,8 +163,21 @@ object MultiLanguageSyntaxHighlighter {
         TokenKind.OPERATOR -> colors.operator
     }
 
-    private fun pattern(language: LanguageType): Regex? {
+    /** A compiled alternation plus its named groups in construction order. */
+    private class CompiledPattern(val regex: Regex, val groupNames: List<String>)
+
+    private fun pattern(language: LanguageType): CompiledPattern? {
         val kw = keywords(language)
+        // (group name, regex body) pairs in alternation priority order. Each
+        // named group's 1-based capturing index equals its position in this
+        // list + 1, because every inner group is non-capturing (?:…), a
+        // lookahead, or a lookbehind — so the group order can never drift
+        // from the priority order (no pattern-string scanning needed).
+        val groups = mutableListOf<Pair<String, String>>()
+        fun add(name: String, body: String) {
+            groups += name to body
+        }
+
         // C/C++ preprocessor directives (#include, #define, …) share the
         // keyword color; fold them into the same named group (Java regex does
         // not allow two groups with one name).
@@ -210,73 +186,85 @@ object MultiLanguageSyntaxHighlighter {
         } else {
             ""
         }
-        val keywordGroup = if (kw.isEmpty() && preprocessor.isEmpty()) {
-            ""
+        val keywordBody = if (kw.isEmpty() && preprocessor.isEmpty()) {
+            null
         } else {
-            "(?<keyword>(?:\\b(?:${kw.joinToString("|") { Regex.escape(it) }})${preprocessor}))"
+            "(?:\\b(?:${kw.joinToString("|") { Regex.escape(it) }})$preprocessor)"
         }
-        return when (language) {
-            LanguageType.C, LanguageType.CPP -> Regex(
-                """(?m)(?<comment>//[^\n]*|/\*[\s\S]*?\*/)""" +
-                    """|(?<string>"(?:[^"\\]|\\.)*")""" +
-                    """|(?<number>\b(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?[fFlLuU]*)\b)""" +
-                    (if (keywordGroup.isEmpty()) "" else "|$keywordGroup") +
-                    """|(?<function>\b[a-zA-Z_][a-zA-Z0-9_]*\s*(?=\())""" +
-                    """|(?<operator>[+\-*/%=<>!&|^~]+)"""
-            )
-            LanguageType.PYTHON -> Regex(
-                "(?m)(?<comment>#[^\\n]*)" +
-                    "|(?<string>(?<![A-Za-z0-9_])(?:[rRuUbBfF]{0,2})(?:" +
-                    "\"\"\"(?:\\\\.|[^\"])*\"\"\"|'''(?:\\\\.|[^'])*'''" +
-                    "|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'))" +
-                    "|(?<number>\\b(?:0[xXbBoO][0-9a-fA-F_]+|\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?[jJ]?)\\b)" +
-                    (if (keywordGroup.isEmpty()) "" else "|$keywordGroup") +
-                    "|(?<decorator>^[ \\t]*@[A-Za-z_][A-Za-z0-9_.]*)" +
-                    "|(?<function>\\b[a-zA-Z_][a-zA-Z0-9_]*\\s*(?=\\())" +
-                    "|(?<operator>[+\\-*/%=<>!&|^~]+)"
-            )
-            LanguageType.JAVASCRIPT -> Regex(
-                """(?m)(?<comment>//[^\n]*|/\*[\s\S]*?\*/)""" +
-                    """|(?<string>`[^`\n]*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')""" +
-                    """|(?<number>\b(?:0[xX][0-9a-fA-F]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?)\b)""" +
-                    (if (keywordGroup.isEmpty()) "" else "|$keywordGroup") +
-                    """|(?<function>\b[a-zA-Z_$][a-zA-Z0-9_$]*\s*(?=\())""" +
-                    """|(?<operator>[+\-*/%=<>!&|^~]+)"""
-            )
-            LanguageType.JSON -> Regex(
-                """(?<string>"(?:[^"\\]|\\.)*")""" +
-                    """|(?<number>-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)""" +
-                    (if (keywordGroup.isEmpty()) "" else "|$keywordGroup")
-            )
-            LanguageType.HTML_CSS -> Regex(
-                """(?<comment><!--[\s\S]*?-->|/\*[\s\S]*?\*/)""" +
-                    """|(?<string>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')""" +
-                    """|(?<number>\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|s|ms|fr|deg|ch|ex)?\b|#[0-9a-fA-F]{3,8}\b)""" +
-                    // One keyword group only: CSS property names, HTML tag
-                    // NAMES (not the whole tag, so attribute strings still
-                    // get string color), and !important (Java forbids
-                    // duplicate group names).
-                    "|(?<keyword>(?:\\b(?:${kw.joinToString("|") { Regex.escape(it) }})|" +
-                    "</?[A-Za-z][A-Za-z0-9]*\\b|!important))"
-            )
-            LanguageType.SHELL -> Regex(
-                """(?m)(?<comment>#[^\n]*)""" +
-                    """|(?<string>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')""" +
-                    """|(?<variable>\$[A-Za-z_][A-Za-z0-9_]*|\$\{[^}]*\}|\$[0-9@#?$!*-])""" +
-                    """|(?<number>\b\d+\b)""" +
-                    (if (keywordGroup.isEmpty()) "" else "|$keywordGroup") +
-                    """|(?<function>\b[a-zA-Z_][a-zA-Z0-9_]*\s*(?=\())""" +
-                    """|(?<operator>[|&;<>]+)"""
-            )
-            LanguageType.MARKDOWN -> Regex(
-                """(?m)(?<comment>^<!--[\s\S]*?-->$)""" +
-                    """|(?<string>^```[\s\S]*?^```$|`[^`\n]+`)""" +
-                    """|(?<keyword>^#{1,6}[^\n]*)""" +
-                    """|(?<function>\[[^\]\n]*\]\([^)\n]*\))""" +
-                    """|(?<operator>\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|(?<![A-Za-z0-9_])_[^_\n]+_(?![A-Za-z0-9_]))"""
-            )
-            LanguageType.TEXT -> null
+
+        when (language) {
+            LanguageType.C, LanguageType.CPP -> {
+                add("comment", """//[^\n]*|/\*[\s\S]*?\*/""")
+                add("string", """"(?:[^"\\]|\\.)*"""")
+                add("number", """\b(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?[fFlLuU]*)\b""")
+                keywordBody?.let { add("keyword", it) }
+                add("function", """\b[a-zA-Z_][a-zA-Z0-9_]*\s*(?=\()""")
+                add("operator", """[+\-*/%=<>!&|^~]+""")
+            }
+            LanguageType.PYTHON -> {
+                add("comment", "#[^\n]*")
+                add(
+                    "string",
+                    "(?<![A-Za-z0-9_])(?:[rRuUbBfF]{0,2})(?:" +
+                        "\"\"\"(?:\\\\.|[^\"])*\"\"\"|'''(?:\\\\.|[^'])*'''" +
+                        "|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*')"
+                )
+                add("number", """\b(?:0[xXbBoO][0-9a-fA-F_]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?[jJ]?)\b""")
+                keywordBody?.let { add("keyword", it) }
+                add("decorator", "^[ \t]*@[A-Za-z_][A-Za-z0-9_.]*")
+                add("function", """\b[a-zA-Z_][a-zA-Z0-9_]*\s*(?=\()""")
+                add("operator", """[+\-*/%=<>!&|^~]+""")
+            }
+            LanguageType.JAVASCRIPT -> {
+                add("comment", """//[^\n]*|/\*[\s\S]*?\*/""")
+                add("string", """`[^`\n]*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'""")
+                add("number", """\b(?:0[xX][0-9a-fA-F]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?)\b""")
+                keywordBody?.let { add("keyword", it) }
+                add("function", """\b[a-zA-Z_$][a-zA-Z0-9_$]*\s*(?=\()""")
+                add("operator", """[+\-*/%=<>!&|^~]+""")
+            }
+            LanguageType.JSON -> {
+                add("string", """"(?:[^"\\]|\\.)*"""")
+                add("number", """-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b""")
+                keywordBody?.let { add("keyword", it) }
+            }
+            LanguageType.HTML_CSS -> {
+                add("comment", """<!--[\s\S]*?-->|/\*[\s\S]*?\*/""")
+                add("string", """"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'""")
+                add("number", """\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|s|ms|fr|deg|ch|ex)?\b|#[0-9a-fA-F]{3,8}\b""")
+                // One keyword group only: CSS property names, HTML tag NAMES
+                // (not the whole tag, so attribute strings still get string
+                // color), and !important (Java forbids duplicate group names).
+                add(
+                    "keyword",
+                    "(?:\\b(?:${kw.joinToString("|") { Regex.escape(it) }})|" +
+                        "</?[A-Za-z][A-Za-z0-9]*\\b|!important)"
+                )
+            }
+            LanguageType.SHELL -> {
+                add("comment", "#[^\n]*")
+                add("string", """"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'""")
+                add("variable", """\$[A-Za-z_][A-Za-z0-9_]*|\$\{[^}]*\}|\$[0-9@#?$!*-]""")
+                add("number", """\b\d+\b""")
+                keywordBody?.let { add("keyword", it) }
+                add("function", """\b[a-zA-Z_][a-zA-Z0-9_]*\s*(?=\()""")
+                add("operator", """[|&;<>]+""")
+            }
+            LanguageType.MARKDOWN -> {
+                add("comment", """^<!--[\s\S]*?-->$""")
+                add("string", """^```[\s\S]*?^```$|`[^`\n]+`""")
+                add("keyword", """^#{1,6}[^\n]*""")
+                add("function", """\[[^\]\n]*\]\([^)\n]*\)""")
+                add("operator", """\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|(?<![A-Za-z0-9_])_[^_\n]+_(?![A-Za-z0-9_])""")
+            }
+            LanguageType.TEXT -> return null
         }
+        val needsMultiline = language != LanguageType.JSON && language != LanguageType.HTML_CSS
+        val body = groups.joinToString("|") { "(?<${it.first}>${it.second})" }
+        return CompiledPattern(
+            Regex(if (needsMultiline) "(?m)$body" else body),
+            groups.map { it.first }
+        )
     }
 
     private val cKeywords = setOf(
