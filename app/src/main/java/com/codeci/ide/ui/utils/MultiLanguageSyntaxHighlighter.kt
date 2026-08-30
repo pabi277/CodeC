@@ -75,19 +75,59 @@ object MultiLanguageSyntaxHighlighter {
     fun tokenize(text: String, language: LanguageType): List<TokenSpan> {
         if (text.isEmpty() || language == LanguageType.TEXT) return emptyList()
         val regex = pattern(language) ?: return emptyList()
-        // Kotlin's MatchGroupCollection.get(name) THROWS for a group name
-        // that the pattern does not define, so only query the names that
-        // exist in this language's pattern (the alternation order is the
-        // priority order).
+        // Named group lookup via MatchGroupCollection.get(String) calls
+        // Matcher.start(String), an API 26 call (minSdk is 24), so resolve
+        // group names to 1-based indices once and access by index instead.
+        val indexByName = namedGroupIndices(regex.pattern)
+        // Query only the names that exist in this language's pattern; the
+        // alternation order is the priority order.
         val groupKinds = tokenGroupKinds(language)
         val spans = mutableListOf<TokenSpan>()
         for (match in regex.findAll(text)) {
             val kind = groupKinds.firstNotNullOfOrNull { (name, tokenKind) ->
-                if (match.groups[name] != null) tokenKind else null
+                val index = indexByName[name] ?: return@firstNotNullOfOrNull null
+                if (match.groups[index] != null) tokenKind else null
             } ?: continue
             spans += TokenSpan(match.range.first, match.range.last + 1, kind)
         }
         return spans
+    }
+
+    /**
+     * Maps each named group in the pattern source to its 1-based capturing
+     * index. Only counts real capturing groups; `(?:…)` and lookarounds are
+     * skipped. Derived from the final pattern so it can never drift from the
+     * alternation order.
+     */
+    private fun namedGroupIndices(pattern: String): Map<String, Int> {
+        val map = mutableMapOf<String, Int>()
+        var index = 0
+        var i = 0
+        var inClass = false
+        while (i < pattern.length) {
+            val c = pattern[i]
+            when {
+                c == '\\' -> i += 2
+                inClass -> { if (c == ']') inClass = false; i++ }
+                c == '[' -> { inClass = true; i++ }
+                c == '(' -> {
+                    when {
+                        pattern.startsWith("(?:", i) || pattern.startsWith("(?=", i) ||
+                            pattern.startsWith("(?!", i) || pattern.startsWith("(?<=", i) ||
+                            pattern.startsWith("(?<!", i) -> i += 2
+                        pattern.startsWith("(?<", i) -> {
+                            val close = pattern.indexOf('>', i + 3)
+                            map[pattern.substring(i + 3, close)] = index + 1
+                            index++
+                            i = close + 1
+                        }
+                        else -> { index++; i++ }
+                    }
+                }
+                else -> i++
+            }
+        }
+        return map
     }
 
     /** (group name, kind) pairs in alternation priority order, per language. */
