@@ -106,9 +106,13 @@ of assuming one.
    is solved"); C active-file RUN works ("Worked properly") — the two
    run-path bugs found on device were fixed (`e4c5d48` `.py`→`.py.c`
    naming; `9bfe216` project RUN always built `main.c`) and CI is green
-   (`33323569312`). **Remaining gate: explicit device check of the Python
-   highlighting + autocomplete popup (PART_12_PYTHON.md §4 steps 4–5),
-   then the owner's word to open the PR.** Only the owner's word opens a
+   (`33323569312`). **Device recipe FULLY
+   PASSED (owner: "Now python is solved" / "Worked properly" / "Both
+   working"): python installed (3.14.6-1), keywords highlighted, `def `
+   autocomplete popup + TAB insert works, python RUN prints Pi is 3.1416,
+   C active-file RUN works — the two device-found run bugs are fixed and
+   CI-green (`e4c5d48`, `9bfe216`).** **Remaining: the owner's word to
+   open the PR.** Only the owner's word opens a
    PR.
 3. Phases 13 (GitHub/Git UI), 14 (mixed-language servers + webview), 15
    (CodeCApi device capabilities): `docs/chat-phase13/..15/`.

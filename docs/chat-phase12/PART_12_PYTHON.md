@@ -1,7 +1,7 @@
 # CodeC Phase 12 — Multi-Language Support, Python & Code Intelligence
 
 **Status:** ✅ **IMPLEMENTED, CI-VERIFIED, REPOSITORY-PUBLISHED &
-RUN-PATH DEVICE-VERIFIED (2026-08-30, `arena/01a05221-codec`)** — repo-build
+DEVICE-ACCEPTED (2026-08-30, `arena/01a05221-codec`)** — repo-build
 config (python + python-pip added to `CODEC_REPOSITORY_PACKAGES`, tk/X11
 recipe override + maintainer-script neutralization) and client work
 (multi-language highlighter, autocomplete popup, python run path) are
@@ -11,13 +11,13 @@ built & published** (build `33314588441` both arches → publish `33320104745`
 on `main` via `source_run_id`; catalog verified live at
 `pabi277.github.io/CodeC/dev` — `python` 3.14.6-1, `python-pip` 26.2.1,
 `python-ensurepip-wheels`, `python-static`; `python-tkinter` absent).
-**Device (2026-08-30):** `pkg install -y python` works (3.14.6-1, preflight
-PASSED), python RUN works (owner: "Now python is solved"), and C active-file
-RUN works (owner: "Worked properly") — the two run-path bugs found on device
-(`.py` saved as `.py.c`; project RUN always built `main.c`) are fixed
-(`e4c5d48`, `9bfe216`). **Remaining (§4):** explicit device checks of the
-highlighting (step 4) and the autocomplete popup (step 5), then the owner's
-word to open the PR.
+**Device (2026-08-30): the FULL §4 recipe passed.** `pkg install -y python`
+works (3.14.6-1, preflight PASSED); Python keywords highlighted; `def `
+autocomplete popup appears and TAB inserts; python RUN prints `Pi is 3.1416`;
+C active-file RUN works — including the two run-path bugs found on device
+(`.py` saved as `.py.c`; project RUN always built `main.c`), both fixed and
+CI-green (`e4c5d48`, `9bfe216`). Owner: "Now python is solved" → "Worked
+properly" → "Both working". **Remaining: the owner's word to open the PR.**
 **Cost:** `[repo-build]` (ONE planned CI package build ~1–2h) · **Depends on:**
 Phase 8 (Projects) + Phase 9 (Editor) + Phase 10 (Package Hub)
 **Target Files:** `codec-packages/properties.codec.sh`, `codec-packages/scripts/apply-recipe-overrides.sh`,
@@ -198,13 +198,13 @@ build is published to the dev channel):
 # 1. Open Packages tab -> Tap INSTALL on "python" (pkg install -y python).     [✅ 2026-08-30: installed 3.14.6-1 + deps, preflight PASSED]
 # 2. Open Terminal -> Run: python3 --version -> Verify Python 3.x prints.      [✅ 2026-08-30: python3 works on device]
 # 3. In Files tab, create new file "script.py".                                [✅ 2026-08-30: .py keeps its extension; python RUN works]
-# 4. Open "script.py" in Editor -> Observe Python keywords (def, import, print, class) highlighted.   [pending]
-# 5. Type "def " -> Observe autocomplete popup appears with function template -> Press TAB to insert. [pending]
+# 4. Open "script.py" in Editor -> Observe Python keywords (def, import, print, class) highlighted.   [✅ 2026-08-30: "Both working"]
+# 5. Type "def " -> Observe autocomplete popup appears with function template -> Press TAB to insert. [✅ 2026-08-30: "Both working"]
 # 6. Type code:
 #    import math
 #    print(f"Pi is {math.pi:.4f}")
 # 7. Tap "RUN ▶" in toolbar -> Observe Output Panel shows "Pi is 3.1416" with exit code 0.  [✅ 2026-08-30: python RUN works; owner "Now python is solved"]
-# PASS
+# PASS  ✅ 2026-08-30 — ALL steps device-verified (owner: "Now python is solved" / "Worked properly" / "Both working")
 ```
 
 Regression check (Phase 9/11 behavior must be unchanged): C file highlighting,
