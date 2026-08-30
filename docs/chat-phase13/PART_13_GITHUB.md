@@ -1,6 +1,6 @@
 # CodeC Phase 13 — GitHub & Git Version Control Integration
 
-**Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Projects & Folder Tree) + Phase 11 (Output Feedback)  
+**Status:** IMPLEMENTED (2026-08-30, `arena/01a053b3-codec`) · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Projects & Folder Tree) + Phase 11 (Output Feedback)  
 **Target Files:** `GitManager.kt`, `GitControlView.kt`, `SettingsScreen.kt`, `FileManagerScreen.kt`
 
 ---
@@ -81,3 +81,94 @@ A fresh APK passes the following recipe on device:
 
 - Personal Access Tokens must never be exported to unconfined terminal environment variables or logged in `AppLogger`.
 - All Git operations run with project path confinement.
+
+---
+
+## 6. Implementation record (2026-08-30)
+
+All client-side work is committed on the session branch. CI (`Build APK`)
+executes the new host unit tests; device rounds below remain the exit gate.
+
+### Files
+
+| File | Role |
+|---|---|
+| `ui/projects/GitManager.kt` | Android-free git CLI engine: argv-list `ProcessBuilder` (no shell), porcelain `status -b` parser (`GitStatusParser`), change model (`GitFileChange`/`GitStatus`), secret scrubbing (`GitRedactor`), askpass script generator, timeouts (60 s local / 300 s network, exit 124) |
+| `ui/projects/GitDiff.kt` | Pure-Kotlin line diff (`DiffEngine`): common prefix/suffix trim + LCS, oversized middles fall back to whole-block replace |
+| `ui/projects/GitCredentialsStore.kt` | App-private DataStore: token, GitHub username, commit name/email; `clearCredentials()` disconnects while keeping the author identity |
+| `ui/projects/GitContext.kt` | Context-aware factory: resolves `$PREFIX/bin/git`, the `ShellBootstrap.prepare()` environment, askpass file, stored credentials → `GitManager` (null ⇒ git not installed) |
+| `ui/viewmodels/GitControlViewModel.kt` | Pane state: status/diff/commit-push/pull, per-step messages |
+| `ui/screens/GitControlView.kt` | Source Control bottom sheet + inline diff dialog |
+| `FileManagerScreen` / `FileManagerViewModel` | ⋮ → **Clone from GitHub** dialog (URL + name, suggested from the URL), ⋮ → **Source Control** entry for an open project |
+| `SettingsScreen` | **GitHub Account** card: masked token (SHOW/HIDE), username, commit name/email, SAVE / DISCONNECT |
+| Tests | `GitStatusParserTest` (17), `DiffEngineTest` (10), `GitManagerTest` (10, real processes via a fake `git` script) — 37 new host tests |
+
+### Design decisions
+
+- **D1 — engine stays Android-free and shell-free.** Like `ExecutionRunner`,
+  `GitManager` takes the binary/env from the caller; commands go to
+  `ProcessBuilder` as an argv list, so no URL/branch/message can inject shell
+  words and everything is host-testable.
+- **D2 — token transport = `GIT_ASKPASS` + per-child env.** The token lives
+  only in the git child's environment (`CODEC_GIT_TOKEN`) read back by the
+  askpass script (`#!/system/bin/sh` — always present on Android; no
+  dependency on `$PREFIX`'s shell). Not in argv, not in `.git/config`, not in
+  the terminal environment, not written anywhere on disk beyond the
+  app-private DataStore. `GIT_TERMINAL_PROMPT=0` prevents hangs;
+  `GIT_MERGE_AUTOEDIT=no` prevents editor blocks on pull. Every git output
+  line and error message is scrubbed by `GitRedactor` (token literal +
+  `user:password@` URL credentials) before UI/AppLogger.
+- **D3 — whole-tree staging.** The pane stages with `git add -A`; no partial
+  staging UI in 13.1 (follow-up candidate). Commit identity falls back to
+  `CodeC <codec@localhost>` so a commit can never hard-fail on missing
+  identity.
+- **D4 — one-tap COMMIT & PUSH with honest results.** Commit runs first; a
+  push failure (offline, no token, rejected) is reported *in addition* to the
+  commit success ("Committed ✓ — push failed: …") instead of hiding it.
+- **D5 — clone lands in the projects root.** Same flow as the Phase 8 ZIP
+  import: uniquely named folder (suffix `_2`, `_3`, …), `.codec/project.json`
+  ensured, project opened on success, partial clone deleted on failure.
+  Only `http(s)://` URLs are accepted (no local paths, no scp syntax).
+- **D6 — diff computed in Kotlin, not parsed from git.** Old side =
+  `git --no-pager show HEAD:<path>` (empty for new files), new side = working
+  tree; `DiffEngine` renders +/-/context lines. No pager risk, theme-aware
+  colors, host-testable.
+- **D7 — git resolution is `$PREFIX/bin/git` only** (never system git; no
+  `.` on PATH — the env comes from `ShellEnvironment.buildEnv`). Missing git
+  ⇒ actionable guidance ("Modules tab → Git, or `pkg install -y git`").
+
+### Invariant check
+
+No `.` on PATH (unchanged `buildEnv`); nothing written into `$PREFIX/bin`;
+`cc`/bash/TCC link order untouched; no bootstrap/republish involved
+(client-only); terminal sessions never receive the token.
+
+---
+
+## 7. Device verification recipe (exit gate)
+
+1. **Install git** if needed: Modules tab → Git → Install (or terminal
+   `pkg install -y git`).
+2. **Settings → GitHub Account:** paste a fine-grained PAT (contents
+   read/write), username, commit name/email → **SAVE** → toast + "Connected
+   (user · ••••xxxx)".
+3. **Files → ⋮ → Clone from GitHub:** enter `https://github.com/pabi277/CodeC`
+   (or any small test repo) → name auto-fills → **CLONE** → project opens in
+   the tree.
+4. Open `README.md` in the editor → make a small edit → save.
+5. Files → ⋮ → **Source Control**: branch shows; `README.md` listed with an
+   **M** badge.
+6. Tap the file → inline diff shows the `-`/`+` lines → close.
+7. Type `docs: test mobile commit` → **COMMIT & PUSH** → status
+   "Committed & pushed ✓" (verify on github.com).
+8. Tap **PULL** → "Pull completed".
+9. Regression: open a non-git project → Source Control shows the
+   "not a Git repository" guidance; with git uninstalled the pane shows the
+   install guidance.
+10. Security spot-checks: `env | grep -i token` in the CodeC terminal shows
+    nothing; `.git/config` of the cloned project contains no token;
+    Settings → Logs contains no token after a failed push (use a wrong token
+    once).
+
+**PASS** = steps 2–8 succeed without manual fixes and the step-10 checks stay
+clean.
