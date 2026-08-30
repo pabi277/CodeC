@@ -35,6 +35,7 @@ import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -1109,10 +1110,20 @@ class EditorViewModel : ViewModel() {
             val path = saveAndAbsolutePath(appContext) ?: return
             val source = File(path)
             workDir = source.parentFile ?: File(appContext.filesDir, "CodeC/projects")
-            val (build, run) = TerminalHandoff.compileParts(path)
-            buildCommand = build
-            runCommand = run
-            terminalCommand = TerminalHandoff.compileAndRunCommand(path)
+            // Phase 12: script files (.py) run directly with python3 — there
+            // is no compile step, so the panel reports RUNNING immediately.
+            val isPython = LanguageType.fromFileName(source.name) == LanguageType.PYTHON
+            if (isPython) {
+                val (build, run) = TerminalHandoff.interpretedParts(path)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = TerminalHandoff.interpretedRunCommand(path)
+            } else {
+                val (build, run) = TerminalHandoff.compileParts(path)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = TerminalHandoff.compileAndRunCommand(path)
+            }
         }
         if (buildCommand.isNullOrBlank() && runCommand.isNullOrBlank()) {
             _userMessage.value = appContext.getString(R.string.output_no_command)

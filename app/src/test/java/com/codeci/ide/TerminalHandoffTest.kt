@@ -128,4 +128,41 @@ class TerminalHandoffTest {
         assertEquals(null, build)
         assertEquals(null, run)
     }
+
+    @Test
+    fun `interpreted parts have no build step and run python3`() {
+        val (build, run) = TerminalHandoff.interpretedParts(
+            "/data/data/com.codeci.ide/files/CodeC/projects/script.py"
+        )
+        assertEquals(null, build)
+        assertEquals(
+            "python3 /data/data/com.codeci.ide/files/CodeC/projects/script.py",
+            run
+        )
+    }
+
+    @Test
+    fun `interpreted run command cds then runs python3`() {
+        assertEquals(
+            "cd /data/scripts && python3 /data/scripts/main.py",
+            TerminalHandoff.interpretedRunCommand("/data/scripts/main.py")
+        )
+    }
+
+    @Test
+    fun `project file run command uses python3 for py files`() {
+        val dir = java.io.File("/tmp/p")
+        assertEquals(
+            "cd /tmp/p && python3 main.py",
+            TerminalHandoff.projectFileRunCommand(dir, "main.py")
+        )
+        assertEquals(
+            "cd /tmp/p && python3 'a b.py'",
+            TerminalHandoff.projectFileRunCommand(dir, "a b.py")
+        )
+        assertEquals(
+            "cd /tmp/p && python3 src/run.py",
+            TerminalHandoff.projectFileRunCommand(dir, "src/run.py")
+        )
+    }
 }
