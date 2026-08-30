@@ -49,8 +49,12 @@ of assuming one.
     `projectRunParts`; legacy in-editor `runCode`/`CompilerService` pipeline
     removed (D1 — editor RUN now matches the terminal's `cc`; the Settings
     "Compiler Engine" picker's editor effect is superseded, flagged as a
-    follow-up). Remaining gates: CI run on this branch + the owner's device
-    recipe (`docs/chat-phase11/PART_11_OUTPUT.md` §4/§6.3).
+    follow-up). Device rounds in progress: single-file run ✅ + error display
+    ✅ (owner transcripts); one-tap **Apply fix** ("Add missing ;" button +
+    TCC no-column squiggle parsing + brace-line fallback) shipped on the
+    owner's "write a code to apply" (commit `bc4efea`, CI `33290932427`).
+    Remaining gates: tap-jump + Apply-fix device re-test, then the §4/§6.3
+    recipe close-out.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`

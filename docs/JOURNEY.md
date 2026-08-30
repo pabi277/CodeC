@@ -17,8 +17,10 @@ current design and verification record lives in [`chat-phase8/`](chat-phase8/).
 directing doc finalization + PR creation — **PR #28** (merged to `main` at `961e942`).**
 **Phase 11 (Output Panel & Integrated Run) is ✅ IMPLEMENTED (2026-08-30,
 `arena/01a0508b-codec`) — code complete on the owner's instruction, CI green
-(`33289190964`); the owner's device recipe remains the gate before it is
-closed. See [`chat-phase11/`](chat-phase11/).**
+(`33289190964`, `33290932427`); device rounds in progress (single-file run ✅
+and error display ✅ per the owner's transcripts; one-tap **Apply fix** shipped
+on the owner's "write a code to apply"; tap-jump + Apply pending the next
+device round). See [`chat-phase11/`](chat-phase11/).**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and

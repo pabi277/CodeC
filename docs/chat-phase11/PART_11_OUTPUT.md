@@ -1,11 +1,12 @@
 # CodeC Phase 11 — Output Panel & Integrated Run (Spck / C4droid Experience)
 
 **Status:** ✅ **IMPLEMENTED 2026-08-30** (`arena/01a0508b-codec`) — code + host unit
-tests written; **CI GREEN** (run `33289190964`: assemble + `:app:testDebugUnitTest`
-+ lint via the `gradle-bootstrap` chain; first attempt `33289110743` caught two
-compile errors — missing `TerminalHandoff` import, suspend `incrementRuns` outside
-a coroutine — fixed in `15a0bc6`). The owner's device recipe (§4 below) is the
-remaining gate. **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
+tests written; **CI GREEN** (runs `33289190964`, `33290932427`: assemble +
+`:app:testDebugUnitTest` + lint via the `gradle-bootstrap` chain; first attempt
+`33289110743` caught two compile errors — missing `TerminalHandoff` import, suspend
+`incrementRuns` outside a coroutine — fixed in `15a0bc6`). **Device rounds in
+progress** — §6.4 records the owner's transcripts (single-file run ✅, error
+display ✅, Apply-fix shipped in response). **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
 **Target Files:** `EditorScreen.kt`, `OutputPanelView.kt`, `ExecutionRunner.kt` (+
 `OutputLineParser.kt`, `EditorViewModel.kt`, `TerminalHandoff.kt`)
 
@@ -148,6 +149,37 @@ bottom panel driven by `terminalSegments`, and Phase 9's squiggle
 - **D5 — Stop is a real kill:** the runner polls `exitValue` every 50 ms
   instead of blocking `waitFor`, so cancelling the collection (Stop) destroys
   the live process within one tick instead of after the timeout.
+- **D6 — One-tap Apply fix (owner: "Write a code to apply", device round 2):**
+  fixable diagnostics (`';' expected`-style) render an **Add missing ;** button
+  under the red line; tapping opens/jumps the file and applies the Phase 9
+  quick fix, then the user re-runs. Two device-evidence fixes landed with it:
+  (a) TCC prints `file:line:` with **no column**, which the Phase 9 squiggle
+  parser did not understand — `CompilerDiagnostics.parse` now accepts the TCC
+  line-only form (column → 1) so failed builds light up squiggles for the
+  embedded `cc`; (b) TCC reports `';' expected (got "}")` **at the closing
+  brace line** while the missing `;` belongs to the line above —
+  `applyQuickFix` gained a brace fallback (fixes the previous line when the
+  reported line ends with `}`). Pure label overload
+  `CompilerDiagnostics.semicolonFixLabel(OutputDiagnostic)` gates the button.
+
+### 6.4 Device evidence (owner transcripts, 2026-08-30)
+
+**Round 1 — single-file run (PASS):**
+```
+$ cc /data/user/0/com.codeci.ide/files/CodeC/projects/main.c -o a.out
+Build OK (51ms)
+Hello, World!
+Process finished with exit code 0 (50ms)
+```
+**Round 2 — intentional error (PASS — display + stop; tap-jump/apply pending
+re-test with the new build):**
+```
+$ cc /data/user/0/com.codeci.ide/files/CodeC/projects/main.c -o a.out
+/data/user/0/com.codeci.ide/files/CodeC/projects/main.c:6: error: ';' expected (got "}")
+Build failed with exit code 1
+```
+Owner's follow-up: "2. Write a code to apply" → shipped D6 (commit `bc4efea`,
+CI `33290932427`).
 
 ### 6.3 Device recipe (the §4 exit condition — needs the owner's device run)
 
