@@ -1,11 +1,13 @@
 # CodeC Phase 12 — Multi-Language Support, Python & Code Intelligence
 
-**Status:** ✅ **IMPLEMENTED (2026-08-30, `arena/01a05221-codec`)** — repo-build config
-(python + python-pip added to `CODEC_REPOSITORY_PACKAGES`, tk/X11 recipe override)
-and client work (multi-language highlighter, autocomplete popup, python run path)
-are committed; host repo tests green (84 OK, 4 gpg skips). **Pending:** the
-`[repo-build]` CI dispatch (~1–2 h, owner-run per standing rule), CI verification
-of the Kotlin work (`Build APK` on push), and the owner's device recipe (§4).
+**Status:** ✅ **IMPLEMENTED & CI-VERIFIED (2026-08-30, `arena/01a05221-codec`)** —
+repo-build config (python + python-pip added to `CODEC_REPOSITORY_PACKAGES`,
+tk/X11 recipe override) and client work (multi-language highlighter, autocomplete
+popup, python run path) are committed; host repo tests green (84 OK, 4 gpg skips);
+**`Build APK` CI green** (run `33308137225` — `:app:compileDebugKotlin`,
+`:app:testDebugUnitTest` incl. all 27 Phase 12 tests, `:app:lintDebug`).
+**Pending:** the `[repo-build]` CI dispatch (~1–2 h, owner-run per standing rule)
+and the owner's device recipe (§4).
 **Cost:** `[repo-build]` (ONE planned CI package build ~1–2h) · **Depends on:**
 Phase 8 (Projects) + Phase 9 (Editor) + Phase 10 (Package Hub)
 **Target Files:** `codec-packages/properties.codec.sh`, `codec-packages/scripts/apply-recipe-overrides.sh`,

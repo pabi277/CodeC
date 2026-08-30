@@ -84,19 +84,20 @@ of assuming one.
 
 1. **Phase 11 is COMPLETE, DEVICE-ACCEPTED, and MERGED (PR #29 → `main` at
    `771f58f`).** Nothing pending on it.
-2. **Phase 12 is IMPLEMENTED on `arena/01a05221-codec`** (2026-08-30, on the
-   owner's "I allow to you to do the phase 12"): python + python-pip added to
-   `CODEC_REPOSITORY_PACKAGES` with a tk/tkinter (X11) recipe override;
+2. **Phase 12 is IMPLEMENTED & CI-VERIFIED on `arena/01a05221-codec`** (2026-08-30,
+   on the owner's "I allow to you to do the phase 12"): python + python-pip added
+   to `CODEC_REPOSITORY_PACKAGES` with a tk/tkinter (X11) recipe override;
    `MultiLanguageSyntaxHighlighter.kt` (LanguageType by extension + tokenizer)
    replacing `CSyntaxVisualTransformation` as `SyntaxVisualTransformation`;
    `CodeCompletionEngine.kt` + floating autocomplete popup in EditorScreen
    (TAB/ENTER insert, arrows cycle, ESC dismiss); `.py` single-file and
    project-tree RUN via `python3`; 27 new/updated host tests. Host repo tests
-   84 OK. **Open gates: (a) the `[repo-build]` CI dispatch (~1–2 h, owner-run
-   per standing rule — `gh workflow run "CodeC package repository" --ref
-   arena/01a05221-codec -f publish=true`, after checking `gh run list`);
-   (b) `Build APK` CI verification of the Kotlin work; (c) the owner's device
-   recipe (docs/chat-phase12/PART_12_PYTHON.md §4).** Only the owner's word
+   84 OK. **`Build APK` CI is GREEN** (run `33308137225`: Kotlin compile, all
+   27 Phase 12 unit tests, lint). **Open gates: (a) the `[repo-build]` CI
+   dispatch (~1–2 h, owner-run per standing rule — `gh workflow run "CodeC
+   package repository" --ref arena/01a05221-codec -f publish=true`, after
+   checking `gh run list`); (b) the owner's device recipe
+   (docs/chat-phase12/PART_12_PYTHON.md §4).** Only the owner's word
    opens a PR.
 3. Phases 13 (GitHub/Git UI), 14 (mixed-language servers + webview), 15
    (CodeCApi device capabilities): `docs/chat-phase13/..15/`.
