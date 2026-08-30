@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,12 +63,15 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.services.TermuxCompiler
+import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.DeviceDiagnostics
@@ -452,6 +456,159 @@ fun SettingsScreen(
                             enabled = !checkingRepo
                         ) {
                             Text(if (checkingRepo) "CHECKING…" else "CHECK REPOSITORY")
+                        }
+                    }
+                }
+            }
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // GITHUB ACCOUNT (Phase 13 — Git integration credentials)
+            SettingsSectionHeader("GitHub Account")
+
+            val gitStore = remember { GitCredentialsStore(context) }
+            var gitHubUser by remember { mutableStateOf("") }
+            var gitHubToken by remember { mutableStateOf("") }
+            var gitAuthorName by remember { mutableStateOf("") }
+            var gitAuthorEmail by remember { mutableStateOf("") }
+            var tokenVisible by remember { mutableStateOf(false) }
+            var gitSavedMessage by remember { mutableStateOf<String?>(null) }
+            var gitLoaded by remember { mutableStateOf(false) }
+
+            LaunchedEffect(Unit) {
+                val stored = gitStore.stored()
+                gitHubToken = stored.token
+                gitHubUser = stored.username
+                gitAuthorName = stored.authorName
+                gitAuthorEmail = stored.authorEmail
+                gitLoaded = true
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = if (gitHubToken.isNotBlank()) Icons.Default.CheckCircle else Icons.Default.Info,
+                            contentDescription = "GitHub Status",
+                            tint = if (gitHubToken.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (gitHubToken.isNotBlank()) {
+                                "Connected (${gitHubUser.ifBlank { "oauth2" }} · ••••${gitHubToken.takeLast(4)})"
+                            } else {
+                                "Not connected"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (gitHubToken.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "A fine-grained Personal Access Token (repo contents read/write) enables push from the Source Control pane. The token stays in app-private storage — it is never written to repositories or logs.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = gitHubToken,
+                        onValueChange = { gitHubToken = it },
+                        label = { Text("Personal Access Token") },
+                        singleLine = true,
+                        visualTransformation = if (tokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(onClick = { tokenVisible = !tokenVisible }) {
+                                Text(if (tokenVisible) "HIDE" else "SHOW")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = gitHubUser,
+                        onValueChange = { gitHubUser = it },
+                        label = { Text("GitHub username (optional)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = gitAuthorName,
+                            onValueChange = { gitAuthorName = it },
+                            label = { Text("Commit name") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = gitAuthorEmail,
+                            onValueChange = { gitAuthorEmail = it },
+                            label = { Text("Commit email") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    if (gitSavedMessage != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = gitSavedMessage!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (gitHubToken.isNotBlank()) {
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        gitStore.clearCredentials()
+                                        gitHubToken = ""
+                                        gitHubUser = ""
+                                        gitSavedMessage = "GitHub account disconnected"
+                                    }
+                                },
+                                enabled = gitLoaded
+                            ) {
+                                Text("DISCONNECT")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    gitStore.save(gitHubToken, gitHubUser, gitAuthorName, gitAuthorEmail)
+                                    gitSavedMessage = "GitHub credentials saved ✓"
+                                    Toast.makeText(context, "GitHub credentials saved ✓", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            enabled = gitLoaded
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("SAVE")
                         }
                     }
                 }

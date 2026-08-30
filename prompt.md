@@ -58,8 +58,20 @@ of assuming one.
     unit tests. Legacy in-editor `runCode`/`CompilerService` pipeline removed
     (D1 — editor RUN now matches the terminal's `cc`; the Settings "Compiler
     Engine" picker's editor effect is superseded, flagged as a follow-up).
-    **PR #29 MERGED to `main` at `771f58f` (2026-08-30) — main has everything
-    through Phase 11.**
+    **PR #29 MERGED to `main` at `771f58f` (2026-08-30).**
+  - **Phase 12 (Multi-Language Support, Python & Code Intelligence) ✅
+    COMPLETE & DEVICE-ACCEPTED — PR #30 MERGED to `main` at `260d8b6`
+    (2026-08-30). Main has everything through Phase 12.** Multi-language
+    highlighter, autocomplete popup, python/python-pip in the repo (device:
+    "Now python is solved"), python RUN path. See item 1 of NEXT UP and
+    `docs/chat-phase12/`.
+  - **Phase 13 (GitHub & Git Integration) ✅ COMPLETE & DEVICE-ACCEPTED
+    (2026-08-31, `arena/01a053b3-codec`) — CI green (`33326161083`, 37 new
+    tests; two CI-caught bugs fixed `501b6f2`) and the full §7 device
+    recipe passed (clone, M/?? badges + inline diff, "Committed & pushed
+    ✓" to a scratch repo, PULL round trip; no token in terminal env /
+    `.git/config` / Logs).** Acceptance record: `PART_13_GITHUB.md` §8.
+    Remaining: the owner's word to open the PR.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`
@@ -82,40 +94,36 @@ of assuming one.
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phase 11 is COMPLETE, DEVICE-ACCEPTED, and MERGED (PR #29 → `main` at
-   `771f58f`).** Nothing pending on it.
-2. **Phase 12 is IMPLEMENTED, CI-VERIFIED & REPOSITORY-PUBLISHED on
-   `arena/01a05221-codec`** (2026-08-30, on the owner's "I allow to you to do
-   the phase 12"): python + python-pip added to `CODEC_REPOSITORY_PACKAGES`
-   with a tk/tkinter (X11) recipe override + maintainer-script
-   neutralization (python/python-pip per-recipe debscripts stubbed — found
-   by the first `[repo-build]` dispatch, fixed `eec4570`); the
-   `_tkinter` post-massage override (`a007aa3`); `MultiLanguageSyntaxHighlighter.kt`
-   (LanguageType by extension + tokenizer) replacing
-   `CSyntaxVisualTransformation` as `SyntaxVisualTransformation`;
-   `CodeCompletionEngine.kt` + floating autocomplete popup in EditorScreen
-   (TAB/ENTER insert, arrows cycle, ESC dismiss); `.py` single-file and
-   project-tree RUN via `python3`; 27 new/updated host tests. Host repo
-   tests 85 OK. **`Build APK` CI is GREEN** (`33308137225` / `33314362040`).
-   **The `[repo-build]` is DONE: build `33314588441` (aarch64 + x86_64) and
-   publish `33320104745` (main, `source_run_id`) both succeeded; catalog
-   verified live at `pabi277.github.io/CodeC/dev` — `python` 3.14.6-1,
-   `python-pip` 26.2.1, `python-ensurepip-wheels`, `python-static`;
-   `python-tkinter` absent.** **Device 2026-08-30:** `pkg install -y
-   python` works (3.14.6-1, preflight PASSED); python RUN works ("Now python
-   is solved"); C active-file RUN works ("Worked properly") — the two
-   run-path bugs found on device were fixed (`e4c5d48` `.py`→`.py.c`
-   naming; `9bfe216` project RUN always built `main.c`) and CI is green
-   (`33323569312`). **Device recipe FULLY
-   PASSED (owner: "Now python is solved" / "Worked properly" / "Both
-   working"): python installed (3.14.6-1), keywords highlighted, `def `
-   autocomplete popup + TAB insert works, python RUN prints Pi is 3.1416,
-   C active-file RUN works — the two device-found run bugs are fixed and
-   CI-green (`e4c5d48`, `9bfe216`).** **Remaining: the owner's word to
-   open the PR.** Only the owner's word opens a
-   PR.
-3. Phases 13 (GitHub/Git UI), 14 (mixed-language servers + webview), 15
-   (CodeCApi device capabilities): `docs/chat-phase13/..15/`.
+1. **Phase 11 and Phase 12 are both COMPLETE, DEVICE-ACCEPTED, and MERGED**
+   (PR #29 → `main` at `771f58f`; **PR #30 (Phase 12) → `main` at `260d8b6`,
+   2026-08-30**). Nothing pending on either. Phase 12's record:
+   implemented on `arena/01a05221-codec` (python + python-pip in
+   `CODEC_REPOSITORY_PACKAGES` with tk/tkinter (X11) recipe override,
+   multi-language highlighter, autocomplete popup, python run path, 27 host
+   tests; `[repo-build]` published python 3.14.6-1 + python-pip 26.2.1;
+   device recipe FULLY PASSED — owner: "Now python is solved" / "Worked
+   properly" / "Both working"), then merged as PR #30 on the owner's
+   explicit command.
+2. **Phase 13 (GitHub & Git Integration) is IMPLEMENTED on
+   `arena/01a053b3-codec`** (2026-08-30, on the owner's "Start phase 13"):
+   `GitManager.kt` Android-free engine over `$PREFIX/bin/git` (argv-list
+   ProcessBuilder, no shell; porcelain `status -b` parser; timeouts),
+   `GIT_ASKPASS`-based token transport with `GitRedactor` scrubbing on every
+   output path (token never in argv/.git-config/terminal env/logs; stored
+   app-private in DataStore), `GitDiff.kt` Kotlin line diff, Source Control
+   bottom sheet (`GitControlView.kt`/`GitControlViewModel`), Files ⋮ →
+   Clone from GitHub, Settings GitHub Account card, 37 new host tests
+   (`GitStatusParserTest`, `DiffEngineTest`, `GitManagerTest`). Plan +
+   design decisions D1–D7 + device recipe: `docs/chat-phase13/`. **CI is
+   GREEN (`Build APK` `33326161083`; the first round caught two real bugs,
+   fixed `501b6f2`) and the §7 device recipe is FULLY PASSED (2026-08-31 —
+   clone, badges + diff, commit & push to scratch repo `pabi277/T`, PULL
+   round trip, security spot-checks clean; 403 round was a token-permission
+   misconfiguration, honest-failure UX worked). Acceptance record:
+   `PART_13_GITHUB.md` §8. Remaining: ONLY the owner's word to open the
+   PR (one PR at a time; from the current branch state).
+3. Phases 14 (mixed-language servers + webview) and 15 (CodeCApi device
+   capabilities): `docs/chat-phase14/`, `docs/chat-phase15/`.
 
 **SELF-DISTRUST PROTOCOL — follow strictly:**
 
@@ -150,12 +158,12 @@ of assuming one.
 
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
    `gh release list`) before acting.
-2. Phases 3–11 are closed (PR #15/#23/#25/#26/#27/#28/#29 merged; main is
-   current). If the owner commands a next phase, pick Phase 12 from
-   `docs/chat-phase12/` and re-verify its plan against current code before
-   implementing (it includes the expensive ~1–2h repo build — explicit
-   approval required before dispatching). Never open/merge a PR without the
-   owner's explicit word.
+2. Phases 3–12 are closed (PR #15/#23/#25/#26/#27/#28/#29/#30 merged; main
+   at `260d8b6` is current). If the owner commands the next phase, pick
+   Phase 14 from `docs/chat-phase14/` — or continue Phase 13 device rounds
+   from `docs/chat-phase13/` — and re-verify the plan against current code
+   before implementing. Never open/merge a PR without the owner's explicit
+   word.
 3. A part is complete only when its "Exit condition" is met and verified
    (device evidence from the owner for device gates), not merely when code is
    written.

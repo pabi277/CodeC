@@ -8,6 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.codeci.ide.R
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
+import com.codeci.ide.ui.projects.GitContext
+import com.codeci.ide.ui.projects.GitManager
+import com.codeci.ide.ui.projects.ProjectConfig
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -275,6 +278,67 @@ class FileManagerViewModel : ViewModel() {
                 finishImport(manager, project, onImported)
             } catch (e: Exception) {
                 _userMessage.value = "ZIP import failed: ${e.message ?: "unknown error"}"
+            } finally {
+                _isBusy.value = false
+            }
+        }
+    }
+
+    /**
+     * Phase 13 — visual GitHub clone: `git clone <url>` into a NEW uniquely
+     * named folder inside the projects root, then register it as a project
+     * (same flow as the Phase 8 ZIP import) and open it. Partial clones are
+     * cleaned up on failure. Public repositories clone without credentials;
+     * a stored token (Settings → GitHub Account) is used automatically.
+     */
+    fun cloneFromGitHub(
+        context: Context,
+        url: String,
+        requestedName: String,
+        onCloned: (ProjectInfo) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val git = GitContext(context.applicationContext).manager()
+                    ?: error(context.getString(R.string.git_not_installed_message))
+                if (!GitManager.isCloneableUrl(url.trim())) {
+                    error(context.getString(R.string.clone_invalid_url))
+                }
+                val manager = ProjectManager(context)
+                val baseName = requestedName.trim().ifBlank {
+                    GitManager.repoNameFromUrl(url.trim()) ?: "cloned_repo"
+                }
+                val name = run {
+                    val base = ProjectPathUtils.sanitizeProjectName(baseName) ?: "cloned_repo"
+                    var candidate = base
+                    var suffix = 2
+                    while (File(manager.projectsRoot(), candidate).exists()) {
+                        candidate = "${base}_$suffix"
+                        suffix++
+                    }
+                    candidate
+                }
+                val dest = File(manager.projectsRoot(), name)
+                try {
+                    withContext(Dispatchers.IO) { git.clone(url.trim(), dest) }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.IO) { dest.deleteRecursively() }
+                    throw e
+                }
+                withContext(Dispatchers.IO) {
+                    val config = File(dest, ".codec/project.json")
+                    if (!config.isFile) {
+                        manager.writeConfig(dest, ProjectConfig.defaultFor(name))
+                    }
+                }
+                finishImport(manager, manager.project(name) ?: ProjectInfo(name, dest, ProjectConfig.defaultFor(name)), onCloned)
+                _userMessage.value = context.getString(R.string.clone_success, name)
+            } catch (e: Exception) {
+                _userMessage.value = context.getString(
+                    R.string.clone_failed,
+                    e.message ?: context.getString(R.string.create_failed)
+                )
             } finally {
                 _isBusy.value = false
             }
