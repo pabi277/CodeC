@@ -1,13 +1,14 @@
 # CodeC Phase 11 — Output Panel & Integrated Run (Spck / C4droid Experience)
 
-**Status:** ✅ **IMPLEMENTED 2026-08-30** (`arena/01a0508b-codec`) — code + host unit
-tests written; **CI GREEN** (runs `33289190964`, `33290932427`, `33291489632`
-(D7), `33291903077` (D8), `33293358085` (D9 PTY): assemble +
+**Status:** ✅ **COMPLETE & DEVICE-ACCEPTED 2026-08-30** (`arena/01a0508b-codec`) —
+code + host unit tests written; **CI GREEN** (runs `33289190964`, `33290932427`,
+`33291489632` (D7), `33291903077` (D8), `33293358085` (D9 PTY): assemble +
 `:app:testDebugUnitTest` + lint via the `gradle-bootstrap` chain). **Device
-rounds in progress** — §6.4 records the owner's transcripts
-(single-file run ✅, error display ✅, Apply-fix shipped in response; **owner
-decision 2026-08-30: Output Panel gets an input field for interactive programs,
-terminal escape kept** → D8). **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
+acceptance PASSED** — the owner's rounds covered the full §4 recipe: single-file
+run, error display + clickable-jump, one-tap Apply fix, splitter/collapse, and
+the interactive PTY path (per-prompt input). Owner's final word: **"All of the
+check passed"**. Awaiting the owner's instruction to open the PR from
+`arena/01a0508b-codec` (standing rule). **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
 **Target Files:** `EditorScreen.kt`, `OutputPanelView.kt`, `ExecutionRunner.kt` (+
 `OutputLineParser.kt`, `EditorViewModel.kt`, `TerminalHandoff.kt`)
 
@@ -212,6 +213,12 @@ over the process stdin pipe, `hasLiveProcess()` for sync; VM
 `sendInputToRun`). The Open-in-Terminal icon remains for full-PTY programs
 (ncurses, arrows, history). This reverses the §5 non-goal for plain line input
 only — the panel is still not a full terminal.
+
+**Round 4 — PTY re-test (PASS):** the two-prompt `scanf` program ran on the
+PTY path: `Enter your full name:` appeared immediately, one typed line per
+prompt (echoed), program finished with exit code 0 — separate input for each
+input, no timeout. **Round 5 — acceptance (PASS):** owner: **"All of the check
+passed"**. Phase 11 exit condition (§4) MET — device-accepted 2026-08-30.
 
 **D9 — run the program on a real PTY (owner: "It takes all input at once can
 it be separate input for each input", device round 4; commit `b13b080`, CI
