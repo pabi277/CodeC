@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.models.Template
 import com.codeci.ide.ui.models.TemplateProvider
 import com.codeci.ide.ui.theme.EditorThemeType
-import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
+import com.codeci.ide.ui.utils.SyntaxVisualTransformation
 import androidx.compose.ui.text.AnnotatedString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -219,7 +219,7 @@ fun TemplateDetailView(
     template: Template,
     onUseTemplate: () -> Unit
 ) {
-    val syntaxTransformer = remember { CSyntaxVisualTransformation(EditorThemeType.GITHUB_DARK) }
+    val syntaxTransformer = remember { SyntaxVisualTransformation(EditorThemeType.GITHUB_DARK) }
     val highlightedCode = syntaxTransformer.filter(AnnotatedString(template.code)).text
 
     Column(
