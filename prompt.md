@@ -65,11 +65,13 @@ of assuming one.
     highlighter, autocomplete popup, python/python-pip in the repo (device:
     "Now python is solved"), python RUN path. See item 1 of NEXT UP and
     `docs/chat-phase12/`.
-  - **Phase 13 (GitHub & Git Integration) 🔨 IMPLEMENTED on this session
-    branch `arena/01a053b3-codec` (2026-08-30)** — GitManager engine,
-    Source Control pane, Clone from GitHub, Settings GitHub card, 37 new
-    host tests. Awaiting CI + device rounds + the owner's word to open the
-    PR. See item 2 of NEXT UP and `docs/chat-phase13/`.
+  - **Phase 13 (GitHub & Git Integration) 🔨 IMPLEMENTED & CI-GREEN on
+    this session branch `arena/01a053b3-codec` (2026-08-30; `Build APK`
+    `33326161083` green incl. all 37 new tests; the first CI round caught
+    two real bugs, fixed `501b6f2`)** — GitManager engine, Source Control
+    pane, Clone from GitHub, Settings GitHub card. Awaiting device rounds
+    (`PART_13_GITHUB.md` §7) + the owner's word to open the PR. See item 2
+    of NEXT UP and `docs/chat-phase13/`.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`

@@ -4,8 +4,9 @@
 **Phase 12 (Multi-Language Support, Python & Code Intelligence) is ✅ COMPLETE
 & DEVICE-ACCEPTED — PR #30 MERGED to `main` at `260d8b6` (2026-08-30)**; main
 has everything through Phase 12. **Phase 13 (GitHub & Git Integration) is
-IMPLEMENTED on `arena/01a053b3-codec`** (engine + Source Control pane + clone
-+ Settings GitHub card + 37 new host tests; awaiting CI + device rounds).
+IMPLEMENTED & CI-GREEN on `arena/01a053b3-codec`** (run `33326161083` — engine
++ Source Control pane + clone + Settings GitHub card + 37 new host tests; the
+first CI round caught two real bugs, fixed `501b6f2`; awaiting device rounds).
 **Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
 2026-08-26; 4.8 verified the runtime-permission path
 (`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
@@ -619,6 +620,6 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     - **Tests:** `SyntaxHighlighterTest.kt` (12), `CodeCompletionTest.kt` (12), `TerminalHandoffTest` python additions (3) — pure Kotlin, run by CI.
     See [`chat-phase12/`](chat-phase12/).
 
-16. **Phase 13 — GitHub & Git Version Control Integration** 🔨 **IMPLEMENTED (2026-08-30, `arena/01a053b3-codec`, on the owner's "Start phase 13") — awaiting CI + device rounds.**
+16. **Phase 13 — GitHub & Git Version Control Integration** 🔨 **IMPLEMENTED & CI-GREEN (2026-08-30, `arena/01a053b3-codec`, on the owner's "Start phase 13"; `Build APK` `33326161083` green incl. the 37 new tests; first round caught two real bugs — diff new-side numbering + fake-git `--no-pager` dispatch — fixed `501b6f2`) — awaiting device rounds.**
     Visual GitHub/Git integration, client-only: `GitManager.kt` (Android-free engine over the packaged `$PREFIX/bin/git` — argv-list ProcessBuilder, no shell; `git status --porcelain=v1 -b` parser; 60 s/300 s timeouts), secret-safe auth (`GIT_ASKPASS` script over a per-child `CODEC_GIT_TOKEN` env — never argv/.git-config/terminal env; `GitRedactor` scrubs every output line; token stored app-private in DataStore), `GitDiff.kt` (Kotlin LCS line diff), **Source Control bottom sheet** (`GitControlView.kt` + `GitControlViewModel`: branch + ahead/behind, M/A/D/R/?? badges, tap-to-diff dialog, PULL, one-tap COMMIT & PUSH with honest per-step results), **Files → ⋮ → Clone from GitHub** (unique project name, Phase-8 import flow, partial-clone cleanup, https-only URLs), **Settings → GitHub Account card** (masked PAT + username + commit identity, SAVE/DISCONNECT). 37 new host tests (`GitStatusParserTest`, `DiffEngineTest`, `GitManagerTest` — the last runs a fake `git` script through real processes to prove argv/env/redaction). Design decisions D1–D7 + device recipe: [`chat-phase13/PART_13_GITHUB.md`](chat-phase13/PART_13_GITHUB.md) §6–§7.
     See [`chat-phase13/`](chat-phase13/).
