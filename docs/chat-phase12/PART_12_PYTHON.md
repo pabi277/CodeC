@@ -1,16 +1,23 @@
 # CodeC Phase 12 — Multi-Language Support, Python & Code Intelligence
 
-**Status:** ✅ **IMPLEMENTED, CI-VERIFIED & REPOSITORY-PUBLISHED (2026-08-30,
-`arena/01a05221-codec`)** — repo-build config (python + python-pip added to
-`CODEC_REPOSITORY_PACKAGES`, tk/X11 recipe override + maintainer-script
-neutralization) and client work (multi-language highlighter, autocomplete
-popup, python run path) are committed; host repo tests green (85 OK, 4 gpg
-skips); **`Build APK` CI green** (`33308137225` / `33314362040`);
-**`[repo-build]` built & published** (build `33314588441` both arches →
-publish `33320104745` on `main` via `source_run_id`; catalog verified live at
+**Status:** ✅ **IMPLEMENTED, CI-VERIFIED, REPOSITORY-PUBLISHED &
+RUN-PATH DEVICE-VERIFIED (2026-08-30, `arena/01a05221-codec`)** — repo-build
+config (python + python-pip added to `CODEC_REPOSITORY_PACKAGES`, tk/X11
+recipe override + maintainer-script neutralization) and client work
+(multi-language highlighter, autocomplete popup, python run path) are
+committed; host repo tests green (85 OK, 4 gpg skips); **`Build APK` CI
+green** (`33308137225` / `33314362040` / `33323569312`); **`[repo-build]`
+built & published** (build `33314588441` both arches → publish `33320104745`
+on `main` via `source_run_id`; catalog verified live at
 `pabi277.github.io/CodeC/dev` — `python` 3.14.6-1, `python-pip` 26.2.1,
 `python-ensurepip-wheels`, `python-static`; `python-tkinter` absent).
-**Remaining:** the owner's device recipe (§4).
+**Device (2026-08-30):** `pkg install -y python` works (3.14.6-1, preflight
+PASSED), python RUN works (owner: "Now python is solved"), and C active-file
+RUN works (owner: "Worked properly") — the two run-path bugs found on device
+(`.py` saved as `.py.c`; project RUN always built `main.c`) are fixed
+(`e4c5d48`, `9bfe216`). **Remaining (§4):** explicit device checks of the
+highlighting (step 4) and the autocomplete popup (step 5), then the owner's
+word to open the PR.
 **Cost:** `[repo-build]` (ONE planned CI package build ~1–2h) · **Depends on:**
 Phase 8 (Projects) + Phase 9 (Editor) + Phase 10 (Package Hub)
 **Target Files:** `codec-packages/properties.codec.sh`, `codec-packages/scripts/apply-recipe-overrides.sh`,
@@ -140,7 +147,9 @@ enum class LanguageType(val label: String, val extensions: List<String>) {
   text, custom multi-file builds). Device-found twice: first the panel
   echoed the C command for a `.py` active file ("print the main.c"); then
   any C run printed the Hello-World of `main.c` because RUN ▶ always built
-  the project's configured `main.c` regardless of the active file.
+  the project's configured `main.c` regardless of the active file. **Both
+  fixes device-verified 2026-08-30 (owner: "Now python is solved"; "Worked
+  properly" for C active-file runs).**
 - Project-tree "Run in terminal" (`.py`): `cd <project> && python3 <file>`.
 - Project presets pre-existed: `ProjectConfig.defaultFor(type="python")` →
   `{"type":"python","build":"","run":"python3 main.py"}`; `ModuleCatalog`
@@ -186,15 +195,15 @@ build is published to the dev channel):
 
 ```sh
 # Setup & Python Verification
-# 1. Open Packages tab -> Tap INSTALL on "python" (pkg install -y python).
-# 2. Open Terminal -> Run: python3 --version -> Verify Python 3.x prints.
-# 3. In Files tab, create new file "script.py".
-# 4. Open "script.py" in Editor -> Observe Python keywords (def, import, print, class) highlighted.
-# 5. Type "def " -> Observe autocomplete popup appears with function template -> Press TAB to insert.
+# 1. Open Packages tab -> Tap INSTALL on "python" (pkg install -y python).     [✅ 2026-08-30: installed 3.14.6-1 + deps, preflight PASSED]
+# 2. Open Terminal -> Run: python3 --version -> Verify Python 3.x prints.      [✅ 2026-08-30: python3 works on device]
+# 3. In Files tab, create new file "script.py".                                [✅ 2026-08-30: .py keeps its extension; python RUN works]
+# 4. Open "script.py" in Editor -> Observe Python keywords (def, import, print, class) highlighted.   [pending]
+# 5. Type "def " -> Observe autocomplete popup appears with function template -> Press TAB to insert. [pending]
 # 6. Type code:
 #    import math
 #    print(f"Pi is {math.pi:.4f}")
-# 7. Tap "RUN ▶" in toolbar -> Observe Output Panel shows "Pi is 3.1416" with exit code 0.
+# 7. Tap "RUN ▶" in toolbar -> Observe Output Panel shows "Pi is 3.1416" with exit code 0.  [✅ 2026-08-30: python RUN works; owner "Now python is solved"]
 # PASS
 ```
 

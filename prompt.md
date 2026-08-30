@@ -101,10 +101,15 @@ of assuming one.
    publish `33320104745` (main, `source_run_id`) both succeeded; catalog
    verified live at `pabi277.github.io/CodeC/dev` — `python` 3.14.6-1,
    `python-pip` 26.2.1, `python-ensurepip-wheels`, `python-static`;
-   `python-tkinter` absent.** **Remaining gate: the owner's device recipe
-   (docs/chat-phase12/PART_12_PYTHON.md §4) — `pkg update && pkg install -y
-   python && python3 --version`, then the client checks with the new APK
-   (Build APK `33314362040`).** Only the owner's word opens a PR.
+   `python-tkinter` absent.** **Device 2026-08-30:** `pkg install -y
+   python` works (3.14.6-1, preflight PASSED); python RUN works ("Now python
+   is solved"); C active-file RUN works ("Worked properly") — the two
+   run-path bugs found on device were fixed (`e4c5d48` `.py`→`.py.c`
+   naming; `9bfe216` project RUN always built `main.c`) and CI is green
+   (`33323569312`). **Remaining gate: explicit device check of the Python
+   highlighting + autocomplete popup (PART_12_PYTHON.md §4 steps 4–5),
+   then the owner's word to open the PR.** Only the owner's word opens a
+   PR.
 3. Phases 13 (GitHub/Git UI), 14 (mixed-language servers + webview), 15
    (CodeCApi device capabilities): `docs/chat-phase13/..15/`.
 
