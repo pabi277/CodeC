@@ -181,7 +181,16 @@ class EditorViewModel : ViewModel() {
     // ---- Phase 11: Output Panel run pipeline -----------------------------
 
     private var runJob: Job? = null
+    private var activeRunner: ExecutionRunner? = null
     private var buildOutputBuffer = StringBuilder()
+
+    /**
+     * Phase 11 — forward a typed line to the running program's stdin (the
+     * Output Panel input row). No-op when nothing is running.
+     */
+    fun sendInputToRun(text: String) {
+        activeRunner?.sendInput(text)
+    }
 
     fun consumeMessage() {
         _userMessage.value = null
@@ -1024,6 +1033,7 @@ class EditorViewModel : ViewModel() {
     fun clearOutput() {
         runJob?.cancel()
         runJob = null
+        activeRunner = null
         _outputState.value = OutputRunState(phase = OutputPhase.IDLE)
     }
 
@@ -1031,6 +1041,7 @@ class EditorViewModel : ViewModel() {
     fun stopRun() {
         runJob?.cancel()
         runJob = null
+        activeRunner = null
         val current = _outputState.value
         if (current.busy) {
             _outputState.value = current.copy(
@@ -1115,6 +1126,7 @@ class EditorViewModel : ViewModel() {
                 ShellBootstrap(appContext).prepare(settings)
             }
             val runner = ExecutionRunner(prepared.shell, prepared.env)
+            activeRunner = runner
             try {
                 runner.run(RunSpec(workDir, buildCommand, runCommand)).collect { event ->
                     when (event) {

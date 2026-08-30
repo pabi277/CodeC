@@ -1,12 +1,14 @@
 # CodeC Phase 11 — Output Panel & Integrated Run (Spck / C4droid Experience)
 
 **Status:** ✅ **IMPLEMENTED 2026-08-30** (`arena/01a0508b-codec`) — code + host unit
-tests written; **CI GREEN** (runs `33289190964`, `33290932427`: assemble +
-`:app:testDebugUnitTest` + lint via the `gradle-bootstrap` chain; first attempt
-`33289110743` caught two compile errors — missing `TerminalHandoff` import, suspend
-`incrementRuns` outside a coroutine — fixed in `15a0bc6`). **Device rounds in
-progress** — §6.4 records the owner's transcripts (single-file run ✅, error
-display ✅, Apply-fix shipped in response). **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
+tests written; **CI GREEN** (runs `33289190964`, `33290932427`, plus the D7/D8
+rounds: assemble + `:app:testDebugUnitTest` + lint via the `gradle-bootstrap`
+chain; first attempt `33289110743` caught two compile errors — missing
+`TerminalHandoff` import, suspend `incrementRuns` outside a coroutine — fixed in
+`15a0bc6`). **Device rounds in progress** — §6.4 records the owner's transcripts
+(single-file run ✅, error display ✅, Apply-fix shipped in response; **owner
+decision 2026-08-30: Output Panel gets an input field for interactive programs,
+terminal escape kept** → D8). **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
 **Target Files:** `EditorScreen.kt`, `OutputPanelView.kt`, `ExecutionRunner.kt` (+
 `OutputLineParser.kt`, `EditorViewModel.kt`, `TerminalHandoff.kt`)
 
@@ -197,11 +199,20 @@ Program exceeded time limit (possible infinite loop)
 plan's **non-goal** (§5): a `scanf`/`gets` program blocks at its prompt because
 the panel cannot feed stdin, and waits out the 10 s run timeout — with a
 misleading "possible infinite loop" message. Response (D7, commit
-`bfed3b4`, CI …): the timeout wording now says "(possible infinite loop, or
-waiting for input)", a guidance line is appended ("If it is waiting for input
-(scanf/gets), tap the terminal icon to run it interactively"), and the
-**Open-in-Terminal** icon is now visible during every run (not only after a
-non-busy finish) so the escape hatch is discoverable while the program waits.
+`fa45440`, CI `332917…`): the timeout wording now says "(possible infinite
+loop, or waiting for input)", a guidance line is appended ("If it is waiting
+for input (scanf/gets), tap the terminal icon to run it interactively"), and
+the **Open-in-Terminal** icon is now visible during every run (not only after
+a non-busy finish) so the escape hatch is discoverable while the program waits.
+
+**D8 — interactive input in the panel (owner decision 2026-08-30, "Both: panel
+input field + keep terminal escape"):** while a program is running the expanded
+panel shows an input row ("Input for the program (Enter sends)"); Enter or the
+send icon writes the line to the program's stdin (new `ExecutionRunner.sendInput`
+over the process stdin pipe, `hasLiveProcess()` for sync; VM
+`sendInputToRun`). The Open-in-Terminal icon remains for full-PTY programs
+(ncurses, arrows, history). This reverses the §5 non-goal for plain line input
+only — the panel is still not a full terminal.
 
 ### 6.3 Device recipe (the §4 exit condition — needs the owner's device run)
 

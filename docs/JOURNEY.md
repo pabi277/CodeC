@@ -20,7 +20,9 @@ directing doc finalization + PR creation — **PR #28** (merged to `main` at `96
 device rounds in progress (single-file run ✅, error display ✅, "1. Working"
 round-3 re-verification; one-tap **Apply fix** shipped on the owner's "write a
 code to apply"; the interactive-`scanf` timeout case was clarified with honest
-wording + an always-visible Open-in-Terminal escape hatch (D7)). See
+wording + an always-visible Open-in-Terminal escape hatch (D7), and — on the
+owner's "Both" decision — an **input field in the Output Panel** for
+interactive programs, with the terminal escape kept (D8)). See
 [`chat-phase11/`](chat-phase11/).**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything

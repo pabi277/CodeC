@@ -56,16 +56,44 @@ class ExecutionRunner(
         val timedOut: Boolean
     )
 
+    private val processLock = Any()
+    private var currentProcess: Process? = null
+
+    private fun setProcess(process: Process?) {
+        synchronized(processLock) { currentProcess = process }
+    }
+
+    /**
+     * Phase 11 — send one line of input to the running program's stdin (the
+     * ProcessBuilder stdin pipe). No-op when nothing is running. Used by the
+     * Output Panel's input field for interactive (scanf/gets) programs.
+     */
+    fun sendInput(line: String) {
+        val process = synchronized(processLock) { currentProcess } ?: return
+        try {
+            process.outputStream.write((line + "\n").toByteArray(Charsets.UTF_8))
+            process.outputStream.flush()
+        } catch (_: Exception) {
+            // Process already exited or its stdin is closed — ignore.
+        }
+    }
+
+    /** True while a live process exists (tests use this to sync with the child). */
+    fun hasLiveProcess(): Boolean = synchronized(processLock) { currentProcess != null }
+
     /**
      * Build (when configured) then run (when configured and the build
      * succeeded). A failing build stops the pipeline — the run command never
      * executes. Cancelling the collection destroys the live process.
      */
     fun run(spec: RunSpec): Flow<RunEvent> = callbackFlow {
-        var currentProcess: Process? = null
         fun kill() {
-            currentProcess?.let(::destroyProcess)
-            currentProcess = null
+            val process = synchronized(processLock) {
+                val current = currentProcess
+                currentProcess = null
+                current
+            }
+            process?.let(::destroyProcess)
         }
         try {
             val build = spec.buildCommand?.trim().orEmpty()
@@ -86,9 +114,10 @@ class ExecutionRunner(
                     workDir = spec.workDir,
                     command = build,
                     timeoutSeconds = buildTimeoutSeconds,
-                    onProcess = { process -> currentProcess = process },
+                    onProcess = { process -> setProcess(process) },
                     onLine = { line -> trySend(RunEvent.Output(RunPhase.BUILDING, line)) }
                 )
+                setProcess(null)
                 trySend(RunEvent.BuildFinished(result.exitCode, result.durationMs, result.timedOut))
                 if (result.exitCode != 0) {
                     close()
@@ -101,9 +130,10 @@ class ExecutionRunner(
                     workDir = spec.workDir,
                     command = run,
                     timeoutSeconds = runTimeoutSeconds,
-                    onProcess = { process -> currentProcess = process },
+                    onProcess = { process -> setProcess(process) },
                     onLine = { line -> trySend(RunEvent.Output(RunPhase.RUNNING, line)) }
                 )
+                setProcess(null)
                 trySend(RunEvent.RunFinished(result.exitCode, result.durationMs, result.timedOut))
             }
             close()

@@ -5,8 +5,11 @@ import com.codeci.ide.ui.services.RunEvent
 import com.codeci.ide.ui.services.RunPhase
 import com.codeci.ide.ui.services.RunSpec
 import java.io.File
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -106,5 +109,34 @@ class ExecutionRunnerTest {
         assertTrue(finished.timedOut)
         assertEquals(ExecutionRunner.TIMED_OUT_EXIT_CODE, finished.exitCode)
         assertTrue(finished.durationMs >= 1_000)
+    }
+
+    @Test
+    fun `send input reaches the running program stdin`() = runBlocking {
+        val dir = tempDir()
+        val runner = runner()
+        val events = mutableListOf<RunEvent>()
+        val collectJob = launch {
+            runner.run(
+                RunSpec(dir, null, "read line && echo \"got: $line\"")
+            ).collect { events += it }
+        }
+        // Wait until the child process exists and is blocked on its read.
+        withTimeout(5_000) {
+            while (!runner.hasLiveProcess()) delay(20)
+        }
+        // Let the child actually start reading before sending.
+        delay(300)
+        runner.sendInput("hello panel")
+        collectJob.join()
+
+        assertTrue(
+            events.any {
+                it is RunEvent.Output &&
+                    it.phase == RunPhase.RUNNING &&
+                    it.line == "got: hello panel"
+            }
+        )
+        assertTrue(events.any { it is RunEvent.RunFinished && it.exitCode == 0 })
     }
 }

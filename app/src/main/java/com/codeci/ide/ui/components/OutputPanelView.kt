@@ -19,13 +19,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,16 +38,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -89,6 +98,7 @@ fun OutputPanelView(
     onOpenInTerminal: () -> Unit,
     onDiagnosticTap: (OutputDiagnostic) -> Unit,
     onApplyFix: (OutputDiagnostic) -> Unit = {},
+    onSendInput: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -209,7 +219,8 @@ fun OutputPanelView(
             LazyColumn(
                 state = listState,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .weight(1f)
+                    .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
@@ -220,6 +231,13 @@ fun OutputPanelView(
                         onApplyFix = onApplyFix
                     )
                 }
+            }
+            // Phase 11 (owner decision 2026-08-30): interactive programs
+            // (scanf/gets) get an input field while they run — typed lines go
+            // to the program's stdin; the Open-in-Terminal icon stays for the
+            // full PTY experience.
+            if (state.phase == OutputPhase.RUNNING) {
+                OutputInputRow(onSendInput = onSendInput)
             }
         } else {
             // Collapsed strip: preview the last line.
@@ -306,5 +324,63 @@ private fun OutputLineItem(
             overflow = if (singleLine) TextOverflow.Ellipsis else TextOverflow.Clip,
             modifier = modifier
         )
+    }
+}
+
+/**
+ * Phase 11 — the interactive-input row. Visible while a program is running;
+ * Enter (or the send icon) writes the line to the program's stdin.
+ */
+@Composable
+private fun OutputInputRow(onSendInput: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    fun send() {
+        if (text.isNotBlank()) {
+            onSendInput(text)
+            text = ""
+        }
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF1E1E1E))
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BasicTextField(
+            value = text,
+            onValueChange = { text = it },
+            singleLine = true,
+            textStyle = TextStyle(
+                color = Color.White,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp
+            ),
+            cursorBrush = SolidColor(Color.White),
+            decorationBox = { innerTextField ->
+                if (text.isEmpty()) {
+                    Text(
+                        text = "Input for the program (Enter sends)",
+                        color = Color(0xFF666666),
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+                innerTextField()
+            },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = { send() }),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp, vertical = 4.dp)
+        )
+        IconButton(onClick = { send() }, modifier = Modifier.size(32.dp)) {
+            Icon(
+                Icons.Default.Send,
+                contentDescription = "Send input",
+                tint = Color(0xFF66B2FF),
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
