@@ -97,7 +97,7 @@ A fresh APK passes the following recipe on device:
 
 ## 5. Non-Goals & Invariants
 
-- **Interactive Input:** Interactive console applications requiring live keyboard stdin (like `scanf` or `ncurses`) should offer a 1-tap "OPEN IN TERMINAL" button.
+- **Interactive Input:** ~~Interactive console applications requiring live keyboard stdin (like `scanf` or `ncurses`) should offer a 1-tap "OPEN IN TERMINAL" button.~~ **REVISED 2026-08-30:** the Output Panel now handles interactive input itself — D8 added the input row and D9 runs the program on a real PTY (line-buffered prompts, one input per scanf, echo). The "Open in Terminal" escape hatch remains for full-PTY needs (ncurses, arrows, history). The panel is still not a full terminal emulator (no raw-mode keys, no screen buffers).
 
 ---
 
@@ -214,6 +214,22 @@ over the process stdin pipe, `hasLiveProcess()` for sync; VM
 `sendInputToRun`). The Open-in-Terminal icon remains for full-PTY programs
 (ncurses, arrows, history). This reverses the §5 non-goal for plain line input
 only — the panel is still not a full terminal.
+
+**D9 — run the program on a real PTY (owner: "It takes all input at once can
+it be separate input for each input", device round 4):** a plain pipe makes
+stdio block-buffered, so prompts without `\n` do not appear when printed and
+all scanf calls can feel like one burst. The run phase now execs
+`sh -c <runCommand>` under a fresh PTY via the app's existing
+`PtyNative`/`PtySession` (the same machinery as the terminal): output is
+line-buffered (every `printf("Enter your name: ")` prompt shows immediately
+as a partial line), canonical-mode input delivers exactly one entered line
+per scanf (typed input is echoed), and there is **no run timeout** in
+interactive mode — Stop kills. New `InteractiveRunSession` (Android-only,
+`PtyLineBuffer` assembles lines + partial prompts, `decodeExitStatus` maps
+waitpid → shell exit code; both pure and host-tested). When the PTY library
+is unavailable the runner falls back to the piped `ExecutionRunner` (timeout
++ input hint retained). Input row, diagnostics, Apply fix and Stop all work
+identically on the PTY path.
 
 ### 6.3 Device recipe (the §4 exit condition — needs the owner's device run)
 

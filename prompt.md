@@ -57,8 +57,13 @@ of assuming one.
     Working"), the interactive-`scanf` timeout got honest wording + an
     always-visible Open-in-Terminal escape hatch (D7, commit `fa45440`), and
     on the owner's "Both" decision an **input field in the Output Panel** for
-    interactive programs (D8, `ExecutionRunner.sendInput`), then the §4/§6.3
-    recipe close-out.
+    interactive programs (D8, `ExecutionRunner.sendInput`). Device round 4:
+    "It takes all input at once can it be separate input for each input" →
+    **D9: the run phase now executes on a real PTY** (`InteractiveRunSession`
+    over PtyNative/PtySession: per-prompt output, one line per scanf, echo,
+    no timeout — Stop kills; piped fallback retained). Remaining gates:
+    owner re-test of the PTY interactive path + tap-jump/Apply, then the
+    §4/§6.3 recipe close-out.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`

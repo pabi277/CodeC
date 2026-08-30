@@ -22,7 +22,11 @@ round-3 re-verification; one-tap **Apply fix** shipped on the owner's "write a
 code to apply"; the interactive-`scanf` timeout case was clarified with honest
 wording + an always-visible Open-in-Terminal escape hatch (D7), and — on the
 owner's "Both" decision — an **input field in the Output Panel** for
-interactive programs, with the terminal escape kept (D8)). See
+interactive programs, with the terminal escape kept (D8). Device round 4
+("It takes all input at once can it be separate input for each input") →
+**D9: the run phase now executes on a real PTY** (reusing PtyNative/PtySession:
+line-buffered prompts appear per-printf, one entered line per scanf, echo, no
+run timeout — Stop kills; piped fallback retained)). See
 [`chat-phase11/`](chat-phase11/).**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything

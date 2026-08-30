@@ -25,6 +25,7 @@ import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.ExecutionRunner
+import com.codeci.ide.ui.services.InteractiveRunSession
 import com.codeci.ide.ui.services.RunEvent
 import com.codeci.ide.ui.services.RunPhase
 import com.codeci.ide.ui.services.RunSpec
@@ -37,6 +38,7 @@ import com.codeci.ide.ui.utils.FileNameUtils
 import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -64,7 +66,12 @@ enum class OutputPhase { IDLE, BUILDING, RUNNING, DONE, CANCELLED, FAILED }
 enum class OutputLineKind { COMMAND, BUILD, OUTPUT, ERROR, STATS, SYSTEM }
 
 /** One rendered line of the Phase 11 Output Panel. */
-data class OutputLine(val text: String, val kind: OutputLineKind)
+data class OutputLine(
+    val text: String,
+    val kind: OutputLineKind,
+    /** True for an unterminated PTY fragment (a prompt without a newline). */
+    val partial: Boolean = false
+)
 
 /**
  * Phase 11 — the whole Output Panel state: the streaming lines, the current
@@ -182,14 +189,21 @@ class EditorViewModel : ViewModel() {
 
     private var runJob: Job? = null
     private var activeRunner: ExecutionRunner? = null
+    private var interactiveRun: InteractiveRunSession? = null
     private var buildOutputBuffer = StringBuilder()
 
     /**
-     * Phase 11 — forward a typed line to the running program's stdin (the
-     * Output Panel input row). No-op when nothing is running.
+     * Phase 11 — forward a typed line to the running program's stdin. The
+     * interactive PTY session (preferred) gets the line with CR line
+     * discipline; the piped fallback gets LF.
      */
     fun sendInputToRun(text: String) {
-        activeRunner?.sendInput(text)
+        val interactive = interactiveRun
+        if (interactive != null) {
+            interactive.sendLine(text)
+        } else {
+            activeRunner?.sendInput(text)
+        }
     }
 
     fun consumeMessage() {
@@ -1034,6 +1048,8 @@ class EditorViewModel : ViewModel() {
         runJob?.cancel()
         runJob = null
         activeRunner = null
+        interactiveRun?.stop()
+        interactiveRun = null
         _outputState.value = OutputRunState(phase = OutputPhase.IDLE)
     }
 
@@ -1042,6 +1058,8 @@ class EditorViewModel : ViewModel() {
         runJob?.cancel()
         runJob = null
         activeRunner = null
+        interactiveRun?.stop()
+        interactiveRun = null
         val current = _outputState.value
         if (current.busy) {
             _outputState.value = current.copy(
@@ -1126,122 +1144,184 @@ class EditorViewModel : ViewModel() {
                 ShellBootstrap(appContext).prepare(settings)
             }
             val runner = ExecutionRunner(prepared.shell, prepared.env)
-            activeRunner = runner
+            val runFinished = CompletableDeferred<Int>()
             try {
-                runner.run(RunSpec(workDir, buildCommand, runCommand)).collect { event ->
-                    when (event) {
-                        is RunEvent.PhaseChanged -> {
-                            val phase = if (event.phase == RunPhase.BUILDING) {
-                                OutputPhase.BUILDING
-                            } else {
-                                OutputPhase.RUNNING
-                            }
-                            _outputState.value = _outputState.value.copy(
-                                phase = phase,
-                                summary = appContext.getString(
-                                    if (event.phase == RunPhase.BUILDING) {
-                                        R.string.output_compiling
-                                    } else {
-                                        R.string.output_running
-                                    }
-                                )
-                            )
-                        }
-                        is RunEvent.Output -> {
-                            if (event.phase == RunPhase.BUILDING) {
-                                buildOutputBuffer.append(event.line).append('\n')
-                            }
-                            val kind = if (event.phase == RunPhase.BUILDING) {
-                                OutputLineKind.BUILD
-                            } else {
-                                OutputLineKind.OUTPUT
-                            }
-                            _outputState.value = _outputState.value.copy(
-                                lines = _outputState.value.lines + OutputLine(event.line, kind)
-                            )
-                        }
-                        is RunEvent.BuildFinished -> {
-                            _outputState.value = _outputState.value.copy(
-                                buildExitCode = event.exitCode,
-                                buildDurationMs = event.durationMs
-                            )
-                            if (event.exitCode != 0) {
-                                finishFailedBuild(appContext, event.exitCode, event.durationMs, event.timedOut)
-                            } else {
+                // 1) Build phase — batch, piped (a failing build stops here).
+                if (!buildCommand.isNullOrBlank()) {
+                    runner.run(RunSpec(workDir, buildCommand, null)).collect { event ->
+                        when (event) {
+                            is RunEvent.PhaseChanged -> {
                                 _outputState.value = _outputState.value.copy(
-                                    lines = _outputState.value.lines + OutputLine(
-                                        appContext.getString(R.string.output_build_ok_time, event.durationMs),
-                                        OutputLineKind.STATS
+                                    phase = OutputPhase.BUILDING,
+                                    summary = appContext.getString(R.string.output_compiling)
+                                )
+                            }
+                            is RunEvent.Output -> {
+                                buildOutputBuffer.append(event.line).append('\n')
+                                appendOutputLine(OutputLine(event.line, OutputLineKind.BUILD))
+                            }
+                            is RunEvent.BuildFinished -> {
+                                _outputState.value = _outputState.value.copy(
+                                    buildExitCode = event.exitCode,
+                                    buildDurationMs = event.durationMs
+                                )
+                                if (event.exitCode != 0) {
+                                    finishFailedBuild(
+                                        appContext, event.exitCode, event.durationMs, event.timedOut
                                     )
-                                )
-                            }
-                        }
-                        is RunEvent.RunFinished -> {
-                            val timedOut = event.timedOut
-                            val exitCode = if (timedOut) {
-                                ExecutionRunner.TIMED_OUT_EXIT_CODE
-                            } else {
-                                event.exitCode
-                            }
-                            val summary = if (timedOut) {
-                                appContext.getString(R.string.output_timed_out)
-                            } else {
-                                appContext.getString(R.string.output_exit_code, exitCode)
-                            }
-                            // Device evidence 2026-08-30: a `scanf` program
-                            // blocks at its prompt until the run timeout. Say
-                            // so honestly and point at the interactive path.
-                            val finalLines = if (timedOut) {
-                                listOf(
-                                    OutputLine(summary, OutputLineKind.ERROR),
-                                    OutputLine(
-                                        appContext.getString(R.string.output_timed_out_input_hint),
-                                        OutputLineKind.SYSTEM
+                                } else {
+                                    appendOutputLine(
+                                        OutputLine(
+                                            appContext.getString(
+                                                R.string.output_build_ok_time, event.durationMs
+                                            ),
+                                            OutputLineKind.STATS
+                                        )
                                     )
-                                )
-                            } else {
-                                listOf(
-                                    OutputLine(
-                                        "Process finished with exit code $exitCode (${event.durationMs}ms)",
-                                        OutputLineKind.STATS
-                                    )
-                                )
+                                }
                             }
-                            _outputState.value = _outputState.value.copy(
-                                phase = OutputPhase.DONE,
-                                busy = false,
-                                runExitCode = exitCode,
-                                runDurationMs = event.durationMs,
-                                summary = summary,
-                                lines = _outputState.value.lines + finalLines
-                            )
-                        }
-                        is RunEvent.Failed -> {
-                            _outputState.value = _outputState.value.copy(
-                                phase = OutputPhase.FAILED,
-                                busy = false,
-                                summary = appContext.getString(R.string.output_failed, event.message),
-                                lines = _outputState.value.lines + OutputLine(
-                                    event.message,
-                                    OutputLineKind.ERROR
-                                )
-                            )
+                            is RunEvent.RunFinished -> {
+                                // Never emitted: the build spec has no run command.
+                            }
+                            is RunEvent.Failed -> {
+                                failRun(appContext, event.message)
+                            }
                         }
                     }
+                    if (_outputState.value.buildExitCode != 0) return@launch
+                }
+
+                // 2) Run phase — interactive PTY when available (per-prompt
+                //    input, line-buffered prompts), piped fallback otherwise.
+                if (runCommand.isNullOrBlank()) {
+                    _outputState.value = _outputState.value.copy(
+                        phase = OutputPhase.DONE,
+                        busy = false,
+                        summary = appContext.getString(
+                            R.string.output_build_ok_time, _outputState.value.buildDurationMs ?: 0L
+                        )
+                    )
+                    return@launch
+                }
+                _outputState.value = _outputState.value.copy(
+                    phase = OutputPhase.RUNNING,
+                    summary = appContext.getString(R.string.output_running)
+                )
+                val runStart = System.currentTimeMillis()
+                val interactive = InteractiveRunSession.start(
+                    command = runCommand,
+                    workDir = workDir,
+                    env = prepared.env,
+                    shellFile = prepared.shell,
+                    onOutput = { text, partial ->
+                        appendOutputLine(OutputLine(text, OutputLineKind.OUTPUT, partial))
+                    },
+                    onExit = { exitCode -> runFinished.complete(exitCode) }
+                )
+                if (interactive != null) {
+                    interactiveRun = interactive
+                    val exitCode = runFinished.await()
+                    interactiveRun = null
+                    finishRun(appContext, exitCode, System.currentTimeMillis() - runStart, timedOut = false)
+                } else {
+                    // PTY unavailable — piped fallback with the run timeout.
+                    activeRunner = runner
+                    runner.run(RunSpec(workDir, null, runCommand)).collect { event ->
+                        when (event) {
+                            is RunEvent.PhaseChanged -> {
+                                _outputState.value = _outputState.value.copy(
+                                    phase = OutputPhase.RUNNING,
+                                    summary = appContext.getString(R.string.output_running)
+                                )
+                            }
+                            is RunEvent.Output -> {
+                                appendOutputLine(OutputLine(event.line, OutputLineKind.OUTPUT))
+                            }
+                            is RunEvent.RunFinished -> {
+                                val exitCode = if (event.timedOut) {
+                                    ExecutionRunner.TIMED_OUT_EXIT_CODE
+                                } else {
+                                    event.exitCode
+                                }
+                                finishRun(appContext, exitCode, event.durationMs, event.timedOut)
+                            }
+                            is RunEvent.BuildFinished -> {
+                                // Never emitted: the run spec has no build command.
+                            }
+                            is RunEvent.Failed -> {
+                                failRun(appContext, event.message)
+                            }
+                        }
+                    }
+                    activeRunner = null
                 }
             } catch (e: CancellationException) {
-                // Stop pressed: stopRun() already updated the state.
+                // Stop pressed: stopRun() already updated the state; kill the
+                // interactive PTY session if one is alive.
+                interactiveRun?.stop()
+                interactiveRun = null
                 throw e
             } catch (e: Exception) {
-                val message = e.message ?: "Run failed"
-                _outputState.value = _outputState.value.copy(
-                    phase = OutputPhase.FAILED,
-                    busy = false,
-                    summary = appContext.getString(R.string.output_failed, message),
-                    lines = _outputState.value.lines + OutputLine(message, OutputLineKind.ERROR)
-                )
+                failRun(appContext, e.message ?: "Run failed")
             }
         }
+    }
+
+    /** Appends a line, replacing a trailing partial prompt when it updates. */
+    private fun appendOutputLine(line: OutputLine) {
+        val current = _outputState.value
+        val lines = current.lines
+        val next = if (line.partial && lines.lastOrNull()?.partial == true) {
+            lines.dropLast(1) + line
+        } else {
+            lines + line
+        }
+        _outputState.value = current.copy(lines = next)
+    }
+
+    private fun failRun(context: Context, message: String) {
+        _outputState.value = _outputState.value.copy(
+            phase = OutputPhase.FAILED,
+            busy = false,
+            summary = context.getString(R.string.output_failed, message),
+            lines = _outputState.value.lines + OutputLine(message, OutputLineKind.ERROR)
+        )
+    }
+
+    /** Finalizes a finished run phase (interactive exit or piped fallback). */
+    private fun finishRun(context: Context, exitCode: Int, durationMs: Long, timedOut: Boolean) {
+        val summary = if (timedOut) {
+            context.getString(R.string.output_timed_out)
+        } else {
+            context.getString(R.string.output_exit_code, exitCode)
+        }
+        // Device evidence 2026-08-30: a piped `scanf` program blocks at its
+        // prompt until the run timeout. Say so honestly and point at the
+        // interactive path (PTY runs never time out — Stop is the escape).
+        val finalLines = if (timedOut) {
+            listOf(
+                OutputLine(summary, OutputLineKind.ERROR),
+                OutputLine(
+                    context.getString(R.string.output_timed_out_input_hint),
+                    OutputLineKind.SYSTEM
+                )
+            )
+        } else {
+            listOf(
+                OutputLine(
+                    "Process finished with exit code $exitCode (${durationMs}ms)",
+                    OutputLineKind.STATS
+                )
+            )
+        }
+        _outputState.value = _outputState.value.copy(
+            phase = OutputPhase.DONE,
+            busy = false,
+            runExitCode = exitCode,
+            runDurationMs = durationMs,
+            summary = summary,
+            lines = _outputState.value.lines + finalLines
+        )
     }
 
     /**
