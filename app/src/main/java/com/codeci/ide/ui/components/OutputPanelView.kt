@@ -64,6 +64,7 @@ import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.viewmodels.OutputLine
 import com.codeci.ide.ui.viewmodels.OutputLineKind
+import com.codeci.ide.ui.viewmodels.OutputPhase
 import com.codeci.ide.ui.viewmodels.OutputRunState
 
 // Phase 6.1: URL detection helper for terminal text
