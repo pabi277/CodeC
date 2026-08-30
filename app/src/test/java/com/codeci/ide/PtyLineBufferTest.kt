@@ -48,7 +48,7 @@ class PtyLineBufferTest {
             onCompleteLine = { sink.complete += it },
             onPartialLine = { sink.partial += it }
         )
-        buffer.append("Enter your ".toByteArray(Charsets.UTF_8), 12)
+        buffer.append("Enter your ".toByteArray(Charsets.UTF_8), 11)
         buffer.append("full name: \r\n".toByteArray(Charsets.UTF_8), 13)
         assertEquals(listOf("Enter your full name: "), sink.complete)
         assertEquals(emptyList<String>(), sink.partial)
