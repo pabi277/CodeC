@@ -25,8 +25,8 @@ toolchain; clickable error lines → editor jump + Phase 9 squiggles; one-tap
 PTY (per-prompt output, one input per scanf, echo, no timeout — D9, after the
 owner's "It takes all input at once" round); honest timeout wording +
 always-visible Open-in-Terminal escape hatch (D7); input row + terminal escape
-kept (D8). Awaiting the owner's instruction to open the PR from
-`arena/01a0508b-codec` (standing rule). See
+kept (D8). **PR #29 MERGED to `main` at `771f58f` (2026-08-30) — main has
+everything through Phase 11.** See
 [`chat-phase11/`](chat-phase11/).**
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
@@ -603,6 +603,6 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     handoff); long-press on any listed file gives Run in terminal / Delete. VM API:
     `switchContext`, `createAndOpenFile`, `deleteFileEntry`. See
     `chat-phase9/PART_9_IMPLEMENTATION.md` §Phase 9.2.
-14. **Phase 11 — Output Panel & Integrated Run** ✅ **COMPLETE & DEVICE-ACCEPTED (2026-08-30, `arena/01a0508b-codec`)** — implemented on the owner's instruction ("Ok start phase 11"); CI green (incl. `33293358085`); **every device round passed; owner's final word: "All of the check passed"**. Awaiting the owner's instruction to open the PR (standing rule).
+14. **Phase 11 — Output Panel & Integrated Run** ✅ **COMPLETE & DEVICE-ACCEPTED (2026-08-30, `arena/01a0508b-codec`)** — implemented on the owner's instruction ("Ok start phase 11"); CI green (incl. `33293358085`); **every device round passed; owner's final word: "All of the check passed"**; **PR #29 MERGED to `main` at `771f58f` (2026-08-30).**
     Split-screen **Output Panel** under the editor with a draggable splitter; **RUN ▶** now builds & executes through the app's real toolchain (`cc` frontend → embedded TCC, the exact commands the terminal handoff produces) for both project contexts (project.json build/run) and single files (`cc <file> -o a.out && ./a.out`); real-time streamed output with per-phase status (Compiling… → Build OK (Nms) → program output → exit code + duration), Stop (kills the live process), Copy, Clear, collapse/expand, auto-scroll, and an **Open in Terminal** escape hatch for interactive programs. Compiler diagnostics in the panel are clickable (`file:line:col: error:` — Clang and TCC forms) and jump the editor to the position; failed builds also light up the Phase 9 squiggles. **Interactive runs happen on a real PTY** (reusing PtyNative/PtySession: per-prompt output, one input per scanf, echo, no timeout — D9; piped fallback retained); one-tap **Add missing ;** Apply fix under fixable errors (D6); honest timeout wording + always-visible Open-in-Terminal (D7); panel input row + terminal escape kept (D8). New: `ExecutionRunner`, `OutputLineParser`, `OutputPanelView`, `InteractiveRunSession` (+`PtyLineBuffer`, `decodeExitStatus`); `TerminalHandoff.compileParts`/`projectRunParts`; ~30 new/updated host unit tests (CI executes them). Design decisions D1–D9 and the device recipe: `docs/chat-phase11/PART_11_OUTPUT.md` §6. Legacy `runCode`/`CompilerService` in-editor pipeline removed (D1: editor RUN now matches the terminal's `cc`; the Settings "Compiler Engine" picker's editor effect is superseded — flagged as a follow-up).
     See [`chat-phase11/`](chat-phase11/).

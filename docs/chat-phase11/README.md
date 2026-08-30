@@ -4,9 +4,8 @@
 implemented per [Part 11.1](PART_11_OUTPUT.md) (Output Panel, ExecutionRunner,
 clickable error jump, draggable splitter, one-tap Apply fix, PTY interactive
 run, unit tests); CI green through the D9 round (`33293358085`); all device
-rounds passed (owner's final word: "All of the check passed"). Awaiting the
-owner's instruction to open the PR from `arena/01a0508b-codec` (standing
-rule). **UNBLOCKED 2026-08-29** — its
+rounds passed (owner's final word: "All of the check passed"). **PR #29 merged
+to `main` at `771f58f` (2026-08-30).** **UNBLOCKED 2026-08-29** — its
 dependencies (Phase 8 Projects, Phase 9 editor foundation incl. 9.1/9.2, closed
 via PR #28) are all accepted.
 
