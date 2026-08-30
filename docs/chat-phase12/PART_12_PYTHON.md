@@ -17,7 +17,7 @@ autocomplete popup appears and TAB inserts; python RUN prints `Pi is 3.1416`;
 C active-file RUN works — including the two run-path bugs found on device
 (`.py` saved as `.py.c`; project RUN always built `main.c`), both fixed and
 CI-green (`e4c5d48`, `9bfe216`). Owner: "Now python is solved" → "Worked
-properly" → "Both working". **Remaining: the owner's word to open the PR.**
+properly" → "Both working"). **PR #30 MERGED to `main` at `260d8b6` (2026-08-30) — Phase 12 COMPLETE.**
 **Cost:** `[repo-build]` (ONE planned CI package build ~1–2h) · **Depends on:**
 Phase 8 (Projects) + Phase 9 (Editor) + Phase 10 (Package Hub)
 **Target Files:** `codec-packages/properties.codec.sh`, `codec-packages/scripts/apply-recipe-overrides.sh`,
