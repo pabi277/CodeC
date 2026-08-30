@@ -144,8 +144,8 @@ class SyntaxHighlighterTest {
         val source = "<!-- hi -->\n<div class=\"x\">text</div>\nbody { color: #fff; margin: 8px; }"
         val spans = MultiLanguageSyntaxHighlighter.tokenize(source, LanguageType.HTML_CSS)
         assertSpan(source, spans, "<!-- hi -->", TokenKind.COMMENT)
-        assertSpan(source, spans, "<div class=\"x\">", TokenKind.KEYWORD)
-        assertSpan(source, spans, "</div>", TokenKind.KEYWORD)
+        assertSpan(source, spans, "<div", TokenKind.KEYWORD)
+        assertSpan(source, spans, "</div", TokenKind.KEYWORD)
         assertSpan(source, spans, "\"x\"", TokenKind.STRING)
         assertSpan(source, spans, "#fff", TokenKind.NUMBER)
         assertSpan(source, spans, "8px", TokenKind.NUMBER)

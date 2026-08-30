@@ -212,10 +212,12 @@ object MultiLanguageSyntaxHighlighter {
                 """(?<comment><!--[\s\S]*?-->|/\*[\s\S]*?\*/)""" +
                     """|(?<string>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')""" +
                     """|(?<number>\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|s|ms|fr|deg|ch|ex)?\b|#[0-9a-fA-F]{3,8}\b)""" +
-                    // One keyword group only: CSS property names, whole HTML
-                    // tags, and !important (Java forbids duplicate group names).
+                    // One keyword group only: CSS property names, HTML tag
+                    // NAMES (not the whole tag, so attribute strings still
+                    // get string color), and !important (Java forbids
+                    // duplicate group names).
                     "|(?<keyword>(?:\\b(?:${kw.joinToString("|") { Regex.escape(it) }})|" +
-                    "</?[A-Za-z][A-Za-z0-9]*[^>]*>|!important))"
+                    "</?[A-Za-z][A-Za-z0-9]*\\b|!important))"
             )
             LanguageType.SHELL -> Regex(
                 """(?m)(?<comment>#[^\n]*)""" +
