@@ -1,11 +1,12 @@
 # CodeC Phase 11 — Output Panel & Integrated Run (Spck / C4droid Experience)
 
 **Status:** ✅ **IMPLEMENTED 2026-08-30** (`arena/01a0508b-codec`) — code + host unit
-tests written; **CI GREEN** (runs `33289190964`, `33290932427`, plus the D7/D8
-rounds: assemble + `:app:testDebugUnitTest` + lint via the `gradle-bootstrap`
-chain; first attempt `33289110743` caught two compile errors — missing
-`TerminalHandoff` import, suspend `incrementRuns` outside a coroutine — fixed in
-`15a0bc6`). **Device rounds in progress** — §6.4 records the owner's transcripts
+tests written; **CI GREEN** (runs `33289190964`, `33290932427`, `33291489632`
+(D7), `33291903077` (D8, incl. the stdin-delivery unit test): assemble +
+`:app:testDebugUnitTest` + lint via the `gradle-bootstrap` chain; the D8 rounds
+caught two follow-up compile errors — missing `OutputPhase` import, unescaped
+`$line` in a test string — fixed in `d3ed0a5`/`6e468d9`). **Device rounds in
+progress** — §6.4 records the owner's transcripts
 (single-file run ✅, error display ✅, Apply-fix shipped in response; **owner
 decision 2026-08-30: Output Panel gets an input field for interactive programs,
 terminal escape kept** → D8). **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
@@ -199,7 +200,7 @@ Program exceeded time limit (possible infinite loop)
 plan's **non-goal** (§5): a `scanf`/`gets` program blocks at its prompt because
 the panel cannot feed stdin, and waits out the 10 s run timeout — with a
 misleading "possible infinite loop" message. Response (D7, commit
-`fa45440`, CI `332917…`): the timeout wording now says "(possible infinite
+`fa45440`, CI `33291489632`): the timeout wording now says "(possible infinite
 loop, or waiting for input)", a guidance line is appended ("If it is waiting
 for input (scanf/gets), tap the terminal icon to run it interactively"), and
 the **Open-in-Terminal** icon is now visible during every run (not only after
