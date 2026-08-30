@@ -31,6 +31,7 @@ import com.codeci.ide.ui.services.RunSpec
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.ShellBootstrap
+import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
 import com.codeci.ide.ui.utils.WebFileSupport
@@ -1091,9 +1092,8 @@ class EditorViewModel : ViewModel() {
             ),
             lastTerminalCommand = terminalCommand
         )
-        StatsManager(appContext).incrementRuns()
-
         runJob = viewModelScope.launch {
+            StatsManager(appContext).incrementRuns()
             val settings = compilerSettingsFrom(SettingsManager(appContext))
             val prepared = withContext(Dispatchers.IO) {
                 ShellBootstrap(appContext).prepare(settings)
