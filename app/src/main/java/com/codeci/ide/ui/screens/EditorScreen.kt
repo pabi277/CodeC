@@ -718,7 +718,7 @@ fun EditorScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .background(editorColors.background)
-                    .onPreviewKeyEvent { event ->
+                    .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
                         // Phase 12 — autocomplete keys while the popup is up:
                         // TAB/ENTER insert the highlighted suggestion, arrows
                         // move the highlight, ESC dismisses until next edit.

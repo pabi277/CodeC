@@ -80,12 +80,14 @@ object CodeCompletionEngine {
         return label.split(Regex("[^A-Za-z0-9_]+")).any { it.startsWith(prefix) }
     }
 
-    private fun identifiers(text: String, prefix: String, keywords: Set<String>): List<String> =
-        Regex("\\b[A-Za-z_][A-Za-z0-9_]*\\b").findAll(text)
+    private fun identifiers(text: String, prefix: String, keywords: Set<String>): List<String> {
+        val words = Regex("\\b[A-Za-z_][A-Za-z0-9_]*\\b").findAll(text)
             .map { it.value }
             .filter { it.length > prefix.length && it.startsWith(prefix) && it !in keywords }
             .distinct()
-            .sorted()
+            .toList()
+        return words.sorted()
+    }
 
     private fun lastToken(text: String, cursor: Int): String {
         var i = cursor
@@ -135,7 +137,7 @@ object CodeCompletionEngine {
             snippet("if [ cond ]; then ... fi", "if [ condition ]; then\n    \nfi"),
             snippet("for x in list; do ... done", "for x in list; do\n    \ndone"),
             snippet("while ...; do ... done", "while condition; do\n    \ndone"),
-            snippet("case $x in ... esac", "case \$x in\n    pattern) ;;\nesac"),
+            snippet("case \$x in ... esac", "case \$x in\n    pattern) ;;\nesac"),
             snippet("function name() {", "function name() {\n    \n}"),
             snippet("echo ...", "echo ")
         )
