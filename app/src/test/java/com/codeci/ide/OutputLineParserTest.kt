@@ -88,4 +88,23 @@ class OutputLineParserTest {
         assertNull(OutputLineParser.parseLine("main.c:0: error: weird"))
         assertNull(OutputLineParser.parseLine("main.c:-2: error: weird"))
     }
+
+    @Test
+    fun `device tcc missing semicolon line parses and is fixable`() {
+        // Device evidence 2026-08-30 (owner transcript): the exact line the
+        // Output Panel showed for a missing-';' build failure.
+        val diag = OutputLineParser.parseLine(
+            "/data/user/0/com.codeci.ide/files/CodeC/projects/main.c:6: error: ';' expected (got \"}\")"
+        )
+        assertEquals("/data/user/0/com.codeci.ide/files/CodeC/projects/main.c", diag?.file)
+        assertEquals(6, diag?.line)
+        assertEquals(0, diag?.column)
+        assertTrue(diag!!.isError)
+        assertEquals("';' expected (got \"}\")", diag.message)
+        // The one-tap "Add missing ;" action must be offered for it.
+        assertEquals(
+            "Add missing ';'",
+            com.codeci.ide.ui.editor.CompilerDiagnostics.semicolonFixLabel(diag)
+        )
+    }
 }

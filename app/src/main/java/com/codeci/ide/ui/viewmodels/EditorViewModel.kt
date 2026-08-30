@@ -985,14 +985,30 @@ class EditorViewModel : ViewModel() {
     /** Returns true when the buffer was modified by the fix. */
     fun applyQuickFix(diagnostic: EditorDiagnostic): Boolean {
         if (CompilerDiagnostics.semicolonFixLabel(diagnostic) == null) return false
-        val bounds = CodeFormatter.lineBounds(_codeText.value.text, diagnostic.line) ?: return false
+        // Direct fix on the reported line (the usual clang case).
+        val applied = applySemicolonFixToLine(diagnostic.line) ||
+            // Device evidence 2026-08-30: TCC reports `';' expected (got "}")`
+            // at the closing-brace line, but the missing ';' belongs to the
+            // line above. Fix that line when the reported one is a brace.
+            applySemicolonFixToLine(diagnostic.line - 1)
+        if (applied) {
+            _diagnostics.value = _diagnostics.value.filterNot { it.line == diagnostic.line }
+        }
+        return applied
+    }
+
+    private fun applySemicolonFixToLine(line: Int): Boolean {
+        if (line < 1) return false
+        val bounds = CodeFormatter.lineBounds(_codeText.value.text, line) ?: return false
         if (bounds.isEmpty()) return false
         val text = _codeText.value.text
         val lineText = text.substring(bounds.first, bounds.last + 1)
+        // Only the direct-line fix may proceed when the reported line itself
+        // is a closing brace — a `}` can never take the ';'.
+        if (lineText.trimEnd().endsWith("}")) return false
         val fixed = CompilerDiagnostics.applySemicolonFix(lineText) ?: return false
         val newText = text.substring(0, bounds.first) + fixed + text.substring(bounds.last + 1)
         applyBufferEdit(_codeText.value, TextFieldValue(newText, TextRange(bounds.first + fixed.length)))
-        _diagnostics.value = _diagnostics.value.filterNot { it.line == diagnostic.line }
         return true
     }
 
@@ -1242,6 +1258,33 @@ class EditorViewModel : ViewModel() {
      * the active context is ignored.
      */
     fun jumpToOutputDiagnostic(context: Context, diagnostic: OutputDiagnostic) {
+        if (!openOutputDiagnosticFile(context, diagnostic)) return
+        jumpToDiagnostic(toEditorDiagnostic(diagnostic))
+    }
+
+    /**
+     * Phase 11 — "Write a code to apply": one tap applies the automatic quick
+     * fix for the tapped diagnostic (currently the missing-`;` fix) in the
+     * file it belongs to. Opens/jumps to the file first, then applies the fix
+     * to the active buffer via the Phase 9 machinery.
+     */
+    fun applyFixForOutputDiagnostic(context: Context, diagnostic: OutputDiagnostic) {
+        if (!openOutputDiagnosticFile(context, diagnostic)) return
+        val editorDiagnostic = toEditorDiagnostic(diagnostic)
+        jumpToDiagnostic(editorDiagnostic)
+        if (CompilerDiagnostics.semicolonFixLabel(editorDiagnostic) == null) {
+            _userMessage.value = "No automatic fix for this error"
+            return
+        }
+        if (applyQuickFix(editorDiagnostic)) {
+            _userMessage.value = "Added missing ';' — tap RUN to rebuild"
+        } else {
+            _userMessage.value = "No automatic fix for this error"
+        }
+    }
+
+    /** Opens the file a diagnostic names (confined to the active folder). */
+    private fun openOutputDiagnosticFile(context: Context, diagnostic: OutputDiagnostic): Boolean {
         val appContext = context.applicationContext
         val project = _projectName.value
         val root = if (project != null) {
@@ -1249,31 +1292,30 @@ class EditorViewModel : ViewModel() {
         } else {
             runCatching { FileManager(appContext).getProjectDir() }.getOrNull()
         }
-        val file = root?.let { resolveDiagnosticFile(it, diagnostic.file) } ?: return
-        val relative = runCatching { root.toRelativeString(file) }.getOrNull() ?: return
-        if (relative.startsWith("..")) return
+        val file = root?.let { resolveDiagnosticFile(it, diagnostic.file) } ?: return false
+        val relative = runCatching { root.toRelativeString(file) }.getOrNull() ?: return false
+        if (relative.startsWith("..")) return false
 
-        val opened = if (project != null) {
+        return if (project != null) {
             openFile(appContext, project, relative)
             _fileName.value == relative
         } else {
             if (file.name != _fileName.value) openFile(appContext, null, file.name)
             _fileName.value == file.name
         }
-        if (!opened) return
-        jumpToDiagnostic(
-            EditorDiagnostic(
-                line = diagnostic.line,
-                column = diagnostic.column.coerceAtLeast(1),
-                message = diagnostic.message,
-                severity = if (diagnostic.isError) {
-                    DiagnosticSeverity.ERROR
-                } else {
-                    DiagnosticSeverity.WARNING
-                }
-            )
-        )
     }
+
+    private fun toEditorDiagnostic(diagnostic: OutputDiagnostic): EditorDiagnostic =
+        EditorDiagnostic(
+            line = diagnostic.line,
+            column = diagnostic.column.coerceAtLeast(1),
+            message = diagnostic.message,
+            severity = if (diagnostic.isError) {
+                DiagnosticSeverity.ERROR
+            } else {
+                DiagnosticSeverity.WARNING
+            }
+        )
 
     /**
      * Resolves the file named by a diagnostic against [root]. Absolute paths

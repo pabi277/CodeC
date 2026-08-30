@@ -825,6 +825,7 @@ fun EditorScreen(
                     onToggleExpand = { viewModel.toggleOutput() },
                     onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
                     onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
+                    onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
                     modifier = Modifier.height(outputPanelHeight.dp)
                 )
             } else {
@@ -836,6 +837,7 @@ fun EditorScreen(
                     onToggleExpand = { viewModel.toggleOutput() },
                     onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
                     onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
+                    onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
                     modifier = Modifier.height(64.dp)
                 )
             }

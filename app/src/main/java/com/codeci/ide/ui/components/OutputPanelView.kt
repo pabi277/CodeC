@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -46,6 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.R
+import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.viewmodels.OutputLine
@@ -83,6 +88,7 @@ fun OutputPanelView(
     onToggleExpand: () -> Unit,
     onOpenInTerminal: () -> Unit,
     onDiagnosticTap: (OutputDiagnostic) -> Unit,
+    onApplyFix: (OutputDiagnostic) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -205,7 +211,11 @@ fun OutputPanelView(
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
                 items(state.lines) { line ->
-                    OutputLineItem(line = line, onDiagnosticTap = onDiagnosticTap)
+                    OutputLineItem(
+                        line = line,
+                        onDiagnosticTap = onDiagnosticTap,
+                        onApplyFix = onApplyFix
+                    )
                 }
             }
         } else {
@@ -235,6 +245,7 @@ fun OutputPanelView(
 private fun OutputLineItem(
     line: OutputLine,
     onDiagnosticTap: (OutputDiagnostic) -> Unit,
+    onApplyFix: (OutputDiagnostic) -> Unit = {},
     singleLine: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -252,14 +263,38 @@ private fun OutputLineItem(
                 append(line.text)
             }
         }
-        ClickableText(
-            text = annotated,
-            style = style,
-            maxLines = if (singleLine) 1 else Int.MAX_VALUE,
-            overflow = if (singleLine) TextOverflow.Ellipsis else TextOverflow.Clip,
-            onClick = { onDiagnosticTap(diagnostic) },
-            modifier = modifier
-        )
+        val fixable = CompilerDiagnostics.semicolonFixLabel(diagnostic) != null
+        if (fixable && !singleLine) {
+            // Phase 11: a fixable error gets a one-tap Apply action under the line.
+            Column(modifier = modifier) {
+                ClickableText(
+                    text = annotated,
+                    style = style,
+                    maxLines = Int.MAX_VALUE,
+                    overflow = TextOverflow.Clip,
+                    onClick = { onDiagnosticTap(diagnostic) }
+                )
+                TextButton(
+                    onClick = { onApplyFix(diagnostic) },
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.fix_add_semicolon),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        } else {
+            ClickableText(
+                text = annotated,
+                style = style,
+                maxLines = if (singleLine) 1 else Int.MAX_VALUE,
+                overflow = if (singleLine) TextOverflow.Ellipsis else TextOverflow.Clip,
+                onClick = { onDiagnosticTap(diagnostic) },
+                modifier = modifier
+            )
+        }
     } else {
         Text(
             text = line.text,
