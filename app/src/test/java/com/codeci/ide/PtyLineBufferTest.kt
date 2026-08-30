@@ -49,9 +49,12 @@ class PtyLineBufferTest {
             onPartialLine = { sink.partial += it }
         )
         buffer.append("Enter your ".toByteArray(Charsets.UTF_8), 11)
+        assertEquals(listOf("Enter your "), sink.partial)
         buffer.append("full name: \r\n".toByteArray(Charsets.UTF_8), 13)
         assertEquals(listOf("Enter your full name: "), sink.complete)
-        assertEquals(emptyList<String>(), sink.partial)
+        // The earlier partial event stays recorded; the VM replaces the
+        // rendered partial line in place when the complete line arrives.
+        assertEquals(listOf("Enter your "), sink.partial)
     }
 
     @Test
