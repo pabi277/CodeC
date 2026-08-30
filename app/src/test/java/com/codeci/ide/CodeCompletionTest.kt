@@ -16,7 +16,7 @@ class CodeCompletionTest {
     fun `prefix is the word fragment before the cursor`() {
         assertEquals("foo", CodeCompletionEngine.currentPrefix("def foo", 7))
         assertEquals("", CodeCompletionEngine.currentPrefix("def foo", 4))
-        assertEquals("pr", CodeCompletionEngine.currentPrefix("print(", 5))
+        assertEquals("pr", CodeCompletionEngine.currentPrefix("print(", 2))
         assertEquals("", CodeCompletionEngine.currentPrefix("", 0))
         assertEquals("main", CodeCompletionEngine.currentPrefix("int main", 8))
     }

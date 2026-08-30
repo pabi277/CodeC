@@ -75,22 +75,68 @@ object MultiLanguageSyntaxHighlighter {
     fun tokenize(text: String, language: LanguageType): List<TokenSpan> {
         if (text.isEmpty() || language == LanguageType.TEXT) return emptyList()
         val regex = pattern(language) ?: return emptyList()
+        // Kotlin's MatchGroupCollection.get(name) THROWS for a group name
+        // that the pattern does not define, so only query the names that
+        // exist in this language's pattern (the alternation order is the
+        // priority order).
+        val groupKinds = tokenGroupKinds(language)
         val spans = mutableListOf<TokenSpan>()
         for (match in regex.findAll(text)) {
-            val kind = when {
-                match.groups["comment"] != null -> TokenKind.COMMENT
-                match.groups["string"] != null -> TokenKind.STRING
-                match.groups["number"] != null -> TokenKind.NUMBER
-                match.groups["keyword"] != null -> TokenKind.KEYWORD
-                match.groups["decorator"] != null -> TokenKind.DECORATOR
-                match.groups["variable"] != null -> TokenKind.OPERATOR
-                match.groups["function"] != null -> TokenKind.FUNCTION
-                match.groups["operator"] != null -> TokenKind.OPERATOR
-                else -> continue
-            }
+            val kind = groupKinds.firstNotNullOfOrNull { (name, tokenKind) ->
+                if (match.groups[name] != null) tokenKind else null
+            } ?: continue
             spans += TokenSpan(match.range.first, match.range.last + 1, kind)
         }
         return spans
+    }
+
+    /** (group name, kind) pairs in alternation priority order, per language. */
+    private fun tokenGroupKinds(language: LanguageType): List<Pair<String, TokenKind>> = when (language) {
+        LanguageType.C, LanguageType.CPP, LanguageType.JAVASCRIPT -> listOf(
+            "comment" to TokenKind.COMMENT,
+            "string" to TokenKind.STRING,
+            "number" to TokenKind.NUMBER,
+            "keyword" to TokenKind.KEYWORD,
+            "function" to TokenKind.FUNCTION,
+            "operator" to TokenKind.OPERATOR
+        )
+        LanguageType.PYTHON -> listOf(
+            "comment" to TokenKind.COMMENT,
+            "string" to TokenKind.STRING,
+            "number" to TokenKind.NUMBER,
+            "keyword" to TokenKind.KEYWORD,
+            "decorator" to TokenKind.DECORATOR,
+            "function" to TokenKind.FUNCTION,
+            "operator" to TokenKind.OPERATOR
+        )
+        LanguageType.SHELL -> listOf(
+            "comment" to TokenKind.COMMENT,
+            "string" to TokenKind.STRING,
+            "variable" to TokenKind.OPERATOR,
+            "number" to TokenKind.NUMBER,
+            "keyword" to TokenKind.KEYWORD,
+            "function" to TokenKind.FUNCTION,
+            "operator" to TokenKind.OPERATOR
+        )
+        LanguageType.HTML_CSS -> listOf(
+            "comment" to TokenKind.COMMENT,
+            "string" to TokenKind.STRING,
+            "number" to TokenKind.NUMBER,
+            "keyword" to TokenKind.KEYWORD
+        )
+        LanguageType.JSON -> listOf(
+            "string" to TokenKind.STRING,
+            "number" to TokenKind.NUMBER,
+            "keyword" to TokenKind.KEYWORD
+        )
+        LanguageType.MARKDOWN -> listOf(
+            "comment" to TokenKind.COMMENT,
+            "string" to TokenKind.STRING,
+            "keyword" to TokenKind.KEYWORD,
+            "function" to TokenKind.FUNCTION,
+            "operator" to TokenKind.OPERATOR
+        )
+        LanguageType.TEXT -> emptyList()
     }
 
     /** Build the styled [AnnotatedString] the editor transformation shows. */
@@ -166,8 +212,10 @@ object MultiLanguageSyntaxHighlighter {
                 """(?<comment><!--[\s\S]*?-->|/\*[\s\S]*?\*/)""" +
                     """|(?<string>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')""" +
                     """|(?<number>\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|s|ms|fr|deg|ch|ex)?\b|#[0-9a-fA-F]{3,8}\b)""" +
-                    """|(?<keyword></?[A-Za-z][A-Za-z0-9]*[^>]*>|!important)""" +
-                    (if (keywordGroup.isEmpty()) "" else "|$keywordGroup")
+                    // One keyword group only: CSS property names, whole HTML
+                    // tags, and !important (Java forbids duplicate group names).
+                    "|(?<keyword>(?:\\b(?:${kw.joinToString("|") { Regex.escape(it) }})|" +
+                    "</?[A-Za-z][A-Za-z0-9]*[^>]*>|!important))"
             )
             LanguageType.SHELL -> Regex(
                 """(?m)(?<comment>#[^\n]*)""" +
