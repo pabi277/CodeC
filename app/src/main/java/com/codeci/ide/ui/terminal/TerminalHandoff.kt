@@ -90,16 +90,40 @@ object TerminalHandoff {
      * there is nothing to compile.
      */
     fun projectFileRunCommand(projectDirectory: File, relativePath: String): String {
+        val (build, run, fallback) = projectFileParts(projectDirectory, relativePath)
         val dir = projectDirectory.absolutePath
         val rel = relativePath.replace('\\', '/').trim().trimStart('/')
-        if (rel.isBlank()) return "cd ${shellEscape(dir)} && echo 'run: no file selected'"
+        if (rel.isBlank()) return fallback
+        val steps = buildList {
+            if (build != null) add(build)
+            if (run != null) add(run)
+        }
+        return "cd ${shellEscape(dir)} && " + steps.joinToString(" && ")
+    }
+
+    /**
+     * Phase 12 — split a project-file run into its build/run halves (or a
+     * fallback terminal command when nothing is selected). Mirrors
+     * [projectFileRunCommand] exactly: a `.py` file has no build step and
+     * runs with python3; a C/C++ file compiles with `cc` into `<dir>/bin`
+     * and runs from there (the source tree stays clean). The Output Panel
+     * needs the halves separately; the terminal needs them joined.
+     */
+    fun projectFileParts(projectDirectory: File, relativePath: String): Triple<String?, String?, String> {
+        val dir = projectDirectory.absolutePath
+        val rel = relativePath.replace('\\', '/').trim().trimStart('/')
+        if (rel.isBlank()) {
+            return Triple(null, null, "cd ${shellEscape(dir)} && echo 'run: no file selected'")
+        }
         val leaf = rel.substringAfterLast('/')
         if (leaf.endsWith(".py", ignoreCase = true)) {
-            return "cd ${shellEscape(dir)} && python3 ${shellEscape(rel)}"
+            return Triple(null, "python3 ${shellEscape(rel)}", "cd ${shellEscape(dir)} && python3 ${shellEscape(rel)}")
         }
         val out = (leaf.substringBeforeLast('.', leaf).ifBlank { "main" } + ".out")
             .replace(Regex("[^A-Za-z0-9._-]"), "_")
-        return "cd ${shellEscape(dir)} && mkdir -p bin && cc ${shellEscape(rel)} -o bin/$out && ./bin/$out"
+        val build = "mkdir -p bin && cc ${shellEscape(rel)} -o bin/$out"
+        val run = "./bin/$out"
+        return Triple(build, run, "cd ${shellEscape(dir)} && $build && $run")
     }
 
     /** Just drop the user into the file's directory. */

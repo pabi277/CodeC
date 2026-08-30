@@ -1116,17 +1116,25 @@ class EditorViewModel : ViewModel() {
             // Web projects are handled by the preview flow, not the panel.
             if (info.config.type.equals("web", ignoreCase = true)) return
             workDir = info.root
-            // Phase 12: when the ACTIVE file is a script (.py), RUN ▶ runs
-            // that file with python3 instead of the project's C build/run
-            // command — the project config still drives C (and other
-            // non-script) builds exactly as before.
-            val activePath = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
-                ?.let { ProjectPathUtils.resolveInside(info.root, it) }
-            if (activePath != null && LanguageType.fromFileName(activePath.name) == LanguageType.PYTHON) {
-                val (build, run) = TerminalHandoff.interpretedParts(activePath.absolutePath)
+            // Phase 12 (device-found): RUN ▶ executes the ACTIVE file, not
+            // the project's configured main. A .py active file runs with
+            // python3; a .c/.cpp active file compiles with cc into bin/ and
+            // runs — exactly like the tree's per-file "Run in terminal".
+            // The project.json build/run still drives everything else
+            // (headers, text, custom multi-file builds).
+            val activeRel = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
+            val activeLang = activeRel?.let { LanguageType.fromFileName(it) }
+            val activeFile = activeRel?.let { ProjectPathUtils.resolveInside(info.root, it) }
+            if (activeLang == LanguageType.PYTHON && activeFile != null) {
+                val (build, run) = TerminalHandoff.interpretedParts(activeFile.absolutePath)
                 buildCommand = build
                 runCommand = run
-                terminalCommand = TerminalHandoff.interpretedRunCommand(activePath.absolutePath)
+                terminalCommand = TerminalHandoff.interpretedRunCommand(activeFile.absolutePath)
+            } else if ((activeLang == LanguageType.C || activeLang == LanguageType.CPP) && activeRel != null) {
+                val (build, run, terminal) = TerminalHandoff.projectFileParts(info.root, activeRel)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = terminal
             } else {
                 val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, info.config)
                 buildCommand = build

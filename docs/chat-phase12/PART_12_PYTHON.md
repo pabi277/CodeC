@@ -132,11 +132,15 @@ enum class LanguageType(val label: String, val extensions: List<String>) {
 - Single-file RUN ▶ (`.py`): no compile step — `interpretedParts` returns
   `null` build + `python3 <file>`; the Output Panel goes straight to RUNNING;
   Open-in-Terminal uses `cd <dir> && python3 <file>`.
-- Project RUN ▶ with a `.py` active file: runs `python3 <file>` instead of the
-  project's C build/run command (the project config still drives C and other
-  non-script builds). Device-found: RUN ▶ in a project context always ran the
-  project.json command (`cc main.c && ./a.out`) even when a `.py` file was
-  active — the Output Panel echoed the C command ("print the main.c").
+- Project RUN ▶ runs the **active file**, not the project's configured main:
+  a `.py` active file runs `python3 <file>`; a `.c`/`.cpp` active file
+  compiles in place (`mkdir -p bin && cc <file> -o bin/<name>.out &&
+  ./bin/<name>.out`, same as the tree's per-file "Run in terminal"). The
+  project.json build/run command still drives everything else (headers,
+  text, custom multi-file builds). Device-found twice: first the panel
+  echoed the C command for a `.py` active file ("print the main.c"); then
+  any C run printed the Hello-World of `main.c` because RUN ▶ always built
+  the project's configured `main.c` regardless of the active file.
 - Project-tree "Run in terminal" (`.py`): `cd <project> && python3 <file>`.
 - Project presets pre-existed: `ProjectConfig.defaultFor(type="python")` →
   `{"type":"python","build":"","run":"python3 main.py"}`; `ModuleCatalog`
