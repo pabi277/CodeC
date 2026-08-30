@@ -1,6 +1,6 @@
 # CodeC Phase 13 — GitHub & Git Version Control Integration
 
-**Status:** ✅ COMPLETE & DEVICE-ACCEPTED (2026-08-31, `arena/01a053b3-codec`) · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Projects & Folder Tree) + Phase 11 (Output Feedback)  
+**Status:** ✅ COMPLETE & DEVICE-ACCEPTED — **PR #31 MERGED to `main` at `006515a` (2026-08-31)** · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Projects & Folder Tree) + Phase 11 (Output Feedback)  
 **Target Files:** `GitManager.kt`, `GitControlView.kt`, `SettingsScreen.kt`, `FileManagerScreen.kt`
 
 ---
@@ -199,5 +199,5 @@ Owner device rounds on aarch64 (scratch repo `pabi277/T` for pushes; the real
   (`git add -A`), so clones commit CodeC's `.codec/` metadata folder —
   candidate: skip `.codec/` or seed a `.gitignore`; no partial staging UI (D3).
 
-Phase 13 exit condition MET. PR awaits the owner's explicit word (standing
-rule).
+Phase 13 exit condition MET. **PR #31 MERGED to `main` at `006515a`
+(2026-08-31, owner's explicit command).**
