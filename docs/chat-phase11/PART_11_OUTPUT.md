@@ -2,11 +2,9 @@
 
 **Status:** ✅ **IMPLEMENTED 2026-08-30** (`arena/01a0508b-codec`) — code + host unit
 tests written; **CI GREEN** (runs `33289190964`, `33290932427`, `33291489632`
-(D7), `33291903077` (D8, incl. the stdin-delivery unit test): assemble +
-`:app:testDebugUnitTest` + lint via the `gradle-bootstrap` chain; the D8 rounds
-caught two follow-up compile errors — missing `OutputPhase` import, unescaped
-`$line` in a test string — fixed in `d3ed0a5`/`6e468d9`). **Device rounds in
-progress** — §6.4 records the owner's transcripts
+(D7), `33291903077` (D8), `33293358085` (D9 PTY): assemble +
+`:app:testDebugUnitTest` + lint via the `gradle-bootstrap` chain). **Device
+rounds in progress** — §6.4 records the owner's transcripts
 (single-file run ✅, error display ✅, Apply-fix shipped in response; **owner
 decision 2026-08-30: Output Panel gets an input field for interactive programs,
 terminal escape kept** → D8). **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
@@ -216,7 +214,8 @@ over the process stdin pipe, `hasLiveProcess()` for sync; VM
 only — the panel is still not a full terminal.
 
 **D9 — run the program on a real PTY (owner: "It takes all input at once can
-it be separate input for each input", device round 4):** a plain pipe makes
+it be separate input for each input", device round 4; commit `b13b080`, CI
+`33293358085`):** a plain pipe makes
 stdio block-buffered, so prompts without `\n` do not appear when printed and
 all scanf calls can feel like one burst. The run phase now execs
 `sh -c <runCommand>` under a fresh PTY via the app's existing
