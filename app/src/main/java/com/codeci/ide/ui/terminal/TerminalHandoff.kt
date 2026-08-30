@@ -62,19 +62,68 @@ object TerminalHandoff {
     }
 
     /**
+     * Phase 12 — split a script (interpreted) run into its build and run
+     * halves. Scripts have no build step; [run] executes the saved file with
+     * [interpreter] (python3 for CodeC's Phase 12 package).
+     */
+    fun interpretedParts(sourcePath: String, interpreter: String = "python3"): Pair<String?, String?> {
+        val run = "$interpreter ${shellEscape(sourcePath)}"
+        return null to run
+    }
+
+    /**
+     * Phase 12 — `cd` to the source directory, then run the file with the
+     * interpreter (python3). Scripts are not compiled; the RUN ▶ pipeline
+     * treats them like a project with an empty build step.
+     */
+    fun interpretedRunCommand(sourcePath: String, interpreter: String = "python3"): String {
+        val source = File(sourcePath)
+        val dir = source.parent ?: "."
+        return "cd ${shellEscape(dir)} && $interpreter ${shellEscape(sourcePath)}"
+    }
+
+    /**
      * Phase 9.1: compile and run one project file in place, from the project
      * folder — the tree's "Run in terminal" action. Build output goes under
      * `<dir>/bin` so the source tree stays clean; [relativePath] is inside
-     * [projectDirectory].
+     * [projectDirectory]. Script files (.py) are run directly with python3 —
+     * there is nothing to compile.
      */
     fun projectFileRunCommand(projectDirectory: File, relativePath: String): String {
+        val (build, run, fallback) = projectFileParts(projectDirectory, relativePath)
         val dir = projectDirectory.absolutePath
         val rel = relativePath.replace('\\', '/').trim().trimStart('/')
-        if (rel.isBlank()) return "cd ${shellEscape(dir)} && echo 'run: no file selected'"
+        if (rel.isBlank()) return fallback
+        val steps = buildList {
+            if (build != null) add(build)
+            if (run != null) add(run)
+        }
+        return "cd ${shellEscape(dir)} && " + steps.joinToString(" && ")
+    }
+
+    /**
+     * Phase 12 — split a project-file run into its build/run halves (or a
+     * fallback terminal command when nothing is selected). Mirrors
+     * [projectFileRunCommand] exactly: a `.py` file has no build step and
+     * runs with python3; a C/C++ file compiles with `cc` into `<dir>/bin`
+     * and runs from there (the source tree stays clean). The Output Panel
+     * needs the halves separately; the terminal needs them joined.
+     */
+    fun projectFileParts(projectDirectory: File, relativePath: String): Triple<String?, String?, String> {
+        val dir = projectDirectory.absolutePath
+        val rel = relativePath.replace('\\', '/').trim().trimStart('/')
+        if (rel.isBlank()) {
+            return Triple(null, null, "cd ${shellEscape(dir)} && echo 'run: no file selected'")
+        }
         val leaf = rel.substringAfterLast('/')
+        if (leaf.endsWith(".py", ignoreCase = true)) {
+            return Triple(null, "python3 ${shellEscape(rel)}", "cd ${shellEscape(dir)} && python3 ${shellEscape(rel)}")
+        }
         val out = (leaf.substringBeforeLast('.', leaf).ifBlank { "main" } + ".out")
             .replace(Regex("[^A-Za-z0-9._-]"), "_")
-        return "cd ${shellEscape(dir)} && mkdir -p bin && cc ${shellEscape(rel)} -o bin/$out && ./bin/$out"
+        val build = "mkdir -p bin && cc ${shellEscape(rel)} -o bin/$out"
+        val run = "./bin/$out"
+        return Triple(build, run, "cd ${shellEscape(dir)} && $build && $run")
     }
 
     /** Just drop the user into the file's directory. */

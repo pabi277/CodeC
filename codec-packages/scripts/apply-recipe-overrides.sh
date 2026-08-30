@@ -397,3 +397,174 @@ PY
 else
   echo "recipe-overrides: termux_step_massage.sh not found; skipping absolute symlink fix" >&2
 fi
+
+# The official python recipe (packages/python at the pinned revision, 3.14.6)
+# declares tk as a build dependency and ships a python-tkinter subpackage.
+# tk pulls the whole X11 stack (fontconfig, libx11, libxft, libxss, tcl)
+# solely to build Tkinter, which the CodeC userland does not use (no X11).
+# Phase 12: drop it the same way the git round-2 override drops gitk/git-gui —
+# exclude the subpackage for CodeC arches with the upstream-native per-arch
+# skip mechanism, and remove the build dependency so the closure stays lean.
+# Fail loudly on pinned-revision drift (a shape change is worth a re-review).
+PYTHON_DIR="$TREE/packages/python"
+if [[ -d "$PYTHON_DIR" ]]; then
+  TKINTER_SUBPKG="$PYTHON_DIR/python-tkinter.subpackage.sh"
+  if [[ ! -f "$TKINTER_SUBPKG" ]]; then
+    echo "recipe-overrides: python-tkinter subpackage file missing (pinned-revision drift): $TKINTER_SUBPKG" >&2
+    exit 1
+  fi
+  if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$TKINTER_SUBPKG"; then
+    sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: no tcl/tk/X11 in the userland' "$TKINTER_SUBPKG"
+  fi
+  if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$TKINTER_SUBPKG"; then
+    echo "recipe-overrides: failed to exclude python-tkinter subpackage" >&2
+    exit 1
+  fi
+  # Verbatim from the pinned upstream revision (termux-packages @
+  # 1bbe66903526df2e8af51e704316bc68ede72603, packages/python/build.sh).
+  if ! grep -q '^TERMUX_PKG_BUILD_DEPENDS="tk"$' "$PYTHON_DIR/build.sh"; then
+    echo "recipe-overrides: python recipe build-depends no longer has the expected tk line (pinned-revision drift)" >&2
+    exit 1
+  fi
+  sed -i '/^TERMUX_PKG_BUILD_DEPENDS="tk"$/d' "$PYTHON_DIR/build.sh"
+  if grep -q '^TERMUX_PKG_BUILD_DEPENDS=' "$PYTHON_DIR/build.sh"; then
+    echo "recipe-overrides: failed to remove tk build dependency from python recipe" >&2
+    exit 1
+  fi
+
+  # The pinned recipe's termux_step_post_massage() hard-verifies that
+  # _tkinter was built (among other modules):
+  #
+  #   for module in _bz2 _curses _lzma _multiprocessing _sqlite3 _ssl _tkinter
+  #                 zlib _zstd; do
+  #       if [ ! -f ".../lib-dynload/${module}".*.so ]; then
+  #           termux_error_exit "Python module library $module not built"
+  #       fi
+  #   done
+  #
+  # Once tk is removed from build-depends (above) _tkinter can never exist,
+  # so that check aborts every python build. Tkinter is intentionally not
+  # part of the CodeC userland (no X11; python-tkinter excluded above), so
+  # append an overriding termux_step_post_massage (bash last-definition-wins:
+  # the recipe is sourced as one file, and this definition follows the
+  # upstream one) that validates the same module list minus _tkinter. Fail
+  # loudly if the upstream function's shape drifts.
+  PYTHON_BUILD="$PYTHON_DIR/build.sh"
+  if grep -q '^termux_step_post_massage()' "$PYTHON_BUILD"; then
+    if ! grep -q 'CodeC: python builds without tk' "$PYTHON_BUILD"; then
+      if ! grep -q 'for module in .*_tkinter' "$PYTHON_BUILD"; then
+        echo "recipe-overrides: python recipe module-verification list no longer contains _tkinter (pinned-revision drift) — re-review the post_massage override" >&2
+        exit 1
+      fi
+      cat <<'SH' >> "$PYTHON_BUILD"
+
+# CodeC: python builds without tk (tk removed from build-depends above;
+# python-tkinter subpackage excluded for CodeC arches), so _tkinter is
+# intentionally not built. Override the upstream post-massage module
+# verification to validate the same module list minus _tkinter. Appended
+# last so this definition wins (bash last-definition-wins).
+termux_step_post_massage() {
+	# Verify that desired modules have been included (no _tkinter — CodeC):
+	for module in _bz2 _curses _lzma _multiprocessing _sqlite3 _ssl zlib _zstd; do
+		if [ ! -f "${TERMUX_PREFIX}/lib/python${_MAJOR_VERSION}/lib-dynload/${module}".*.so ]; then
+			termux_error_exit "Python module library $module not built"
+		fi
+	done
+}
+SH
+    fi
+    if ! grep -q 'CodeC: python builds without tk' "$PYTHON_BUILD"; then
+      echo "recipe-overrides: failed to append python post_massage override" >&2
+      exit 1
+    fi
+    if grep -q 'for module in .*_tkinter' <(tail -n 12 "$PYTHON_BUILD"); then
+      echo "recipe-overrides: appended python post_massage still requires _tkinter" >&2
+      exit 1
+    fi
+  else
+    echo "recipe-overrides: python recipe has no termux_step_post_massage (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+
+  # The python recipe defines its own termux_step_create_debscripts()
+  # (a pip-separation notice postinst). CodeC policy forbids maintainer
+  # scripts for EVERY package (the five approved update-alternatives
+  # packages are the only exception), and the shared debscripts stub
+  # cannot help here: the recipe is sourced AFTER the step scripts, so a
+  # per-recipe definition overrides the stub and the deb ships with
+  # DEBIAN/postinst — which generate-repository rejects ("maintainer
+  # scripts are not allowed", CI repo-build 33308884424). Append a
+  # last-defined no-op so python's deb has no maintainer scripts. Fail
+  # loudly if the per-recipe definition disappears (shape change worth a
+  # re-review: dropping the no-op would silently reintroduce postinst).
+  if ! grep -q '^termux_step_create_debscripts()' "$PYTHON_BUILD"; then
+    echo "recipe-overrides: python recipe no longer defines its own termux_step_create_debscripts (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for python' "$PYTHON_BUILD"; then
+    cat <<'SH' >> "$PYTHON_BUILD"
+
+# CodeC: no maintainer scripts for python — maintainer scripts are
+# forbidden for every package. The shared termux_step_create_debscripts
+# stub is overridden by this recipe's own definition (recipes are sourced
+# after the step scripts), so neutralize it here — appended last so this
+# definition wins (bash last-definition-wins).
+termux_step_create_debscripts() { :; }
+SH
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for python' "$PYTHON_BUILD"; then
+    echo "recipe-overrides: failed to append python debscripts override" >&2
+    exit 1
+  fi
+  if tail -n 8 "$PYTHON_BUILD" | grep -q 'POSTINST_EOF\|cat <<-'; then
+    echo "recipe-overrides: python recipe still emits a postinst after the override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: python ships without maintainer scripts"
+
+  echo "recipe-overrides: python builds without tk (tkinter excluded for CodeC arches)"
+else
+  echo "recipe-overrides: python recipe not found; skipping tk removal" >&2
+fi
+
+# The python-pip recipe defines its own termux_step_create_debscripts()
+# (postinst: pip disable-version-check config; prerm: pip.conf cleanup).
+# Same CodeC policy and the same reason the shared stub cannot help (the
+# recipe is sourced after the step scripts, so its definition overrides
+# the stub) — the deb ships with DEBIAN/postinst + DEBIAN/prerm and
+# generate-repository aborts (CI repo-build 33308884424). Append a
+# last-defined no-op. Fail loudly on pinned-revision drift.
+PIP_DIR="$TREE/packages/python-pip"
+if [[ -d "$PIP_DIR" ]]; then
+  PIP_BUILD="$PIP_DIR/build.sh"
+  if [[ ! -f "$PIP_BUILD" ]]; then
+    echo "recipe-overrides: python-pip recipe build.sh missing (pinned-revision drift)" >&2
+    exit 1
+  fi
+  if ! grep -q '^termux_step_create_debscripts()' "$PIP_BUILD"; then
+    echo "recipe-overrides: python-pip recipe no longer defines its own termux_step_create_debscripts (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for python-pip' "$PIP_BUILD"; then
+    cat <<'SH' >> "$PIP_BUILD"
+
+# CodeC: no maintainer scripts for python-pip — maintainer scripts are
+# forbidden for every package. This recipe's own
+# termux_step_create_debscripts (postinst/prerm) overrides the shared
+# stub because recipes are sourced after the step scripts; neutralize it —
+# appended last so this definition wins (bash last-definition-wins).
+termux_step_create_debscripts() { :; }
+SH
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for python-pip' "$PIP_BUILD"; then
+    echo "recipe-overrides: failed to append python-pip debscripts override" >&2
+    exit 1
+  fi
+  if tail -n 8 "$PIP_BUILD" | grep -q 'POSTINST_EOF\|PRERM_EOF\|cat <<-'; then
+    echo "recipe-overrides: python-pip recipe still emits maintainer scripts after the override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: python-pip ships without maintainer scripts"
+else
+  echo "recipe-overrides: python-pip recipe not found; skipping debscripts neutralization" >&2
+fi

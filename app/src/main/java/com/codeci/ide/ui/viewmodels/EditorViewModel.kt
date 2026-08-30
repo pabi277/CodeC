@@ -35,6 +35,7 @@ import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -765,7 +766,21 @@ class EditorViewModel : ViewModel() {
             _isDirty.value = false
             return true
         }
-        val safe = FileNameUtils.sanitizeFileName(_fileName.value) ?: return false
+        // Phase 12: a never-named scratch buffer (the app's default
+        // main.c/untitled.c, still holding the untouched starter) whose
+        // content is clearly Python is saved as <name>.py so RUN ▶ routes it
+        // through python3 instead of cc. Only fires for a buffer the user
+        // has not explicitly named and never saved; anything else keeps the
+        // existing naming exactly.
+        val currentName = _fileName.value
+        val untouchedDefault = (currentName == "main.c" || currentName == "untitled.c") &&
+            scratchSavedText == INITIAL_CODE
+        val nameToSave = if (untouchedDefault && WebFileSupport.looksLikePython(text)) {
+            currentName.substringBeforeLast('.') + ".py"
+        } else {
+            currentName
+        }
+        val safe = FileNameUtils.sanitizeFileName(nameToSave) ?: return false
         val fm = FileManager(context)
         val success = fm.saveFile(safe, text)
         if (success) {
@@ -1101,18 +1116,49 @@ class EditorViewModel : ViewModel() {
             // Web projects are handled by the preview flow, not the panel.
             if (info.config.type.equals("web", ignoreCase = true)) return
             workDir = info.root
-            val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, info.config)
-            buildCommand = build
-            runCommand = run
-            terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, info.config)
+            // Phase 12 (device-found): RUN ▶ executes the ACTIVE file, not
+            // the project's configured main. A .py active file runs with
+            // python3; a .c/.cpp active file compiles with cc into bin/ and
+            // runs — exactly like the tree's per-file "Run in terminal".
+            // The project.json build/run still drives everything else
+            // (headers, text, custom multi-file builds).
+            val activeRel = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
+            val activeLang = activeRel?.let { LanguageType.fromFileName(it) }
+            val activeFile = activeRel?.let { ProjectPathUtils.resolveInside(info.root, it) }
+            if (activeLang == LanguageType.PYTHON && activeFile != null) {
+                val (build, run) = TerminalHandoff.interpretedParts(activeFile.absolutePath)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = TerminalHandoff.interpretedRunCommand(activeFile.absolutePath)
+            } else if ((activeLang == LanguageType.C || activeLang == LanguageType.CPP) && activeRel != null) {
+                val (build, run, terminal) = TerminalHandoff.projectFileParts(info.root, activeRel)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = terminal
+            } else {
+                val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, info.config)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, info.config)
+            }
         } else {
             val path = saveAndAbsolutePath(appContext) ?: return
             val source = File(path)
             workDir = source.parentFile ?: File(appContext.filesDir, "CodeC/projects")
-            val (build, run) = TerminalHandoff.compileParts(path)
-            buildCommand = build
-            runCommand = run
-            terminalCommand = TerminalHandoff.compileAndRunCommand(path)
+            // Phase 12: script files (.py) run directly with python3 — there
+            // is no compile step, so the panel reports RUNNING immediately.
+            val isPython = LanguageType.fromFileName(source.name) == LanguageType.PYTHON
+            if (isPython) {
+                val (build, run) = TerminalHandoff.interpretedParts(path)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = TerminalHandoff.interpretedRunCommand(path)
+            } else {
+                val (build, run) = TerminalHandoff.compileParts(path)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = TerminalHandoff.compileAndRunCommand(path)
+            }
         }
         if (buildCommand.isNullOrBlank() && runCommand.isNullOrBlank()) {
             _userMessage.value = appContext.getString(R.string.output_no_command)

@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -71,18 +73,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -96,6 +106,8 @@ import com.codeci.ide.ui.components.EditorTabUi
 import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.OutputPanelView
 import com.codeci.ide.ui.components.SymbolBar
+import com.codeci.ide.ui.editor.CodeCompletionEngine
+import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
@@ -107,9 +119,10 @@ import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.terminal.TerminalHandoff
-import com.codeci.ide.ui.utils.CSyntaxVisualTransformation
 import com.codeci.ide.ui.utils.EditorDecorations
 import com.codeci.ide.ui.utils.FileManager
+import com.codeci.ide.ui.utils.LanguageType
+import com.codeci.ide.ui.utils.SyntaxVisualTransformation
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.viewmodels.EditorViewModel
@@ -119,7 +132,7 @@ import kotlin.math.roundToInt
 /** Tap-anchor for the inline diagnostic tooltip. */
 internal data class EditorPopupAnchor(val x: Float, val y: Float, val diagnostic: EditorDiagnostic)
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EditorScreen(
     modifier: Modifier = Modifier,
@@ -196,6 +209,35 @@ fun EditorScreen(
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Phase 12 — language-aware editing: the active file's extension selects
+    // the syntax highlighter and the autocomplete suggestions. The popup
+    // recomputes on every buffer/selection change, resets its selection on
+    // new suggestions, and ESC dismisses it until the next edit.
+    val language = remember(activeTabPath, currentFileName) {
+        LanguageType.fromFileName(activeTabPath ?: currentFileName)
+    }
+    val completionItems = remember(codeText, language) {
+        val sel = codeText.selection
+        CodeCompletionEngine.completions(
+            codeText.text,
+            sel.end.coerceAtLeast(sel.start),
+            language
+        )
+    }
+    var completionDismissed by remember(codeText.text) { mutableStateOf(false) }
+    var completionIndex by remember(completionItems) { mutableStateOf(0) }
+    val showCompletion = completionItems.isNotEmpty() && !completionDismissed
+
+    fun insertCompletion(item: CompletionItem) {
+        val sel = codeText.selection
+        val cursor = sel.end.coerceAtLeast(sel.start)
+        val start = CodeCompletionEngine.prefixStart(codeText.text, cursor)
+        val newText = codeText.text.substring(0, start) + item.insertText +
+            codeText.text.substring(cursor)
+        val caret = start + item.insertText.length
+        viewModel.updateCode(TextFieldValue(newText, selection = TextRange(caret)))
+    }
+
     val isWebProject = remember(projectName) {
         projectName?.let { name ->
             ProjectManager(context).project(name)?.config?.type?.equals("web", ignoreCase = true)
@@ -243,8 +285,8 @@ fun EditorScreen(
             diagnostics = diagnostics
         )
     }
-    val transformation = remember(currentEditorTheme, decorations) {
-        CSyntaxVisualTransformation(currentEditorTheme, decorations)
+    val transformation = remember(currentEditorTheme, decorations, language) {
+        SyntaxVisualTransformation(currentEditorTheme, decorations, language)
     }
 
     val tabViews = remember(openTabs, activeTabPath, codeText, isDirty) {
@@ -672,17 +714,47 @@ fun EditorScreen(
             HorizontalDivider()
 
             val scrollState = rememberScrollState()
+            val hScrollState = rememberScrollState()
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .background(editorColors.background)
+                    .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
+                        // Phase 12 — autocomplete keys while the popup is up:
+                        // TAB/ENTER insert the highlighted suggestion, arrows
+                        // move the highlight, ESC dismisses until next edit.
+                        if (event.type == KeyEventType.KeyDown && showCompletion) {
+                            val size = completionItems.size
+                            when (event.key) {
+                                Key.Tab, Key.Enter, Key.NumPadEnter -> {
+                                    insertCompletion(completionItems[completionIndex % size])
+                                    true
+                                }
+                                Key.DirectionDown -> {
+                                    completionIndex = (completionIndex + 1) % size
+                                    true
+                                }
+                                Key.DirectionUp -> {
+                                    completionIndex = (completionIndex - 1 + size) % size
+                                    true
+                                }
+                                Key.Escape -> {
+                                    completionDismissed = true
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else {
+                            false
+                        }
+                    }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(scrollState)
-                        .then(if (!wordWrap) Modifier.horizontalScroll(rememberScrollState()) else Modifier)
+                        .then(if (!wordWrap) Modifier.horizontalScroll(hScrollState) else Modifier)
                         .padding(vertical = 8.dp)
                 ) {
                     if (showLineNumbers) {
@@ -782,6 +854,71 @@ fun EditorScreen(
                                         stringResource(R.string.cancel),
                                         style = MaterialTheme.typography.labelMedium
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Phase 12 — floating autocomplete popup, anchored near the
+                // cursor's text-layout rectangle (line-number gutter + padding
+                // and the current scroll offsets are folded in).
+                if (showCompletion) {
+                    val density = LocalDensity.current
+                    val cursorRect = textLayoutResult?.let { result ->
+                        runCatching {
+                            result.getCursorRect(
+                                codeText.selection.end.coerceAtLeast(codeText.selection.start)
+                            )
+                        }.getOrNull()
+                    }
+                    val lineNumberWidthPx = with(density) { (40.dp + 8.dp).toPx() }
+                    val topPaddingPx = with(density) { 8.dp.toPx() }
+                    val anchorX = (lineNumberWidthPx + (cursorRect?.left ?: 0f) - hScrollState.value)
+                        .coerceAtLeast(0f)
+                    val anchorY = (topPaddingPx + (cursorRect?.top ?: 0f) - scrollState.value)
+                        .coerceAtLeast(0f)
+                    Surface(
+                        tonalElevation = 6.dp,
+                        shape = RoundedCornerShape(10.dp),
+                        shadowElevation = 8.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .offset { IntOffset(anchorX.roundToInt(), anchorY.roundToInt()) }
+                            .width(280.dp)
+                            .heightIn(max = 220.dp)
+                    ) {
+                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                            itemsIndexed(completionItems) { index, item ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { insertCompletion(item) }
+                                        .background(
+                                            if (index == completionIndex % completionItems.size) {
+                                                Color(0x33FFFFFF)
+                                            } else {
+                                                Color.Transparent
+                                            }
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = item.label,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    item.detail?.let { detail ->
+                                        Text(
+                                            text = detail,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0x99FFFFFF),
+                                            modifier = Modifier.padding(start = 8.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

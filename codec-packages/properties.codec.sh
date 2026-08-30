@@ -101,7 +101,19 @@ curl
 # Deferred deliberately (round 3 candidates, with reasons):
 #   vim      — build dependencies luajit/python/ruby/tcl add 20+ min per arch
 #   openssh  — krb5/ldns/termux-auth are heavy; termux-auth needs its own review
-#   python3  — large closure; largest single value, but it is its own part
+#
+# Round 3 (Phase 12, 2026-08-30): python + python-pip — the ONE planned CI
+# package build (~1–2 h). The python recipe closure (gdbm, openssl, readline,
+# ncurses-ui-libs, libsqlite, zstd, …) is built from source for the CodeC
+# prefix. python-ensurepip-wheels is a subpackage of python and ships with it;
+# python-pip is its own recipe and is added explicitly so `pkg install -y
+# python` gives a pip-capable interpreter. Repository-only: the bootstrap seed
+# and package-manager roots are unchanged, so the published bootstrap archives
+# stay byte-identical (python is installed on demand, like every round-2/3
+# package). apply-recipe-overrides.sh excludes the python-tkinter subpackage
+# and drops tk from python's build-depends (tk would pull the whole X11
+# closure; CodeC has no X11 use for Tkinter — same rationale as the git
+# round-2 override).
 CODEC_REPOSITORY_PACKAGES="
 nano
 less
@@ -128,6 +140,8 @@ m4
 autoconf
 automake
 libtool
+python
+python-pip
 "
 
 # Development channel URL. CI/release automation may override this; the app

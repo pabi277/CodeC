@@ -7,8 +7,8 @@ code + host unit tests written; **CI GREEN** (runs `33289190964`, `33290932427`,
 acceptance PASSED** — the owner's rounds covered the full §4 recipe: single-file
 run, error display + clickable-jump, one-tap Apply fix, splitter/collapse, and
 the interactive PTY path (per-prompt input). Owner's final word: **"All of the
-check passed"**. Awaiting the owner's instruction to open the PR from
-`arena/01a0508b-codec` (standing rule). **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
+check passed"**. **PR #29 merged to `main` at `771f58f` (2026-08-30) — main has
+everything through Phase 11.** **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
 **Target Files:** `EditorScreen.kt`, `OutputPanelView.kt`, `ExecutionRunner.kt` (+
 `OutputLineParser.kt`, `EditorViewModel.kt`, `TerminalHandoff.kt`)
 

@@ -128,4 +128,70 @@ class TerminalHandoffTest {
         assertEquals(null, build)
         assertEquals(null, run)
     }
+
+    @Test
+    fun `interpreted parts have no build step and run python3`() {
+        val (build, run) = TerminalHandoff.interpretedParts(
+            "/data/data/com.codeci.ide/files/CodeC/projects/script.py"
+        )
+        assertEquals(null, build)
+        assertEquals(
+            "python3 /data/data/com.codeci.ide/files/CodeC/projects/script.py",
+            run
+        )
+    }
+
+    @Test
+    fun `interpreted run command cds then runs python3`() {
+        assertEquals(
+            "cd /data/scripts && python3 /data/scripts/main.py",
+            TerminalHandoff.interpretedRunCommand("/data/scripts/main.py")
+        )
+    }
+
+    @Test
+    fun `project file run command uses python3 for py files`() {
+        val dir = java.io.File("/tmp/p")
+        assertEquals(
+            "cd /tmp/p && python3 main.py",
+            TerminalHandoff.projectFileRunCommand(dir, "main.py")
+        )
+        assertEquals(
+            "cd /tmp/p && python3 'a b.py'",
+            TerminalHandoff.projectFileRunCommand(dir, "a b.py")
+        )
+        assertEquals(
+            "cd /tmp/p && python3 src/run.py",
+            TerminalHandoff.projectFileRunCommand(dir, "src/run.py")
+        )
+    }
+
+    @Test
+    fun `project file parts split build and run for the output panel`() {
+        val dir = java.io.File("/data/CodeC/projects/p1")
+        val (build, run, terminal) = TerminalHandoff.projectFileParts(dir, "src/tool.c")
+        assertEquals("mkdir -p bin && cc src/tool.c -o bin/tool.out", build)
+        assertEquals("./bin/tool.out", run)
+        assertEquals(
+            "cd /data/CodeC/projects/p1 && mkdir -p bin && cc src/tool.c -o bin/tool.out && ./bin/tool.out",
+            terminal
+        )
+    }
+
+    @Test
+    fun `project file parts for py has no build step`() {
+        val dir = java.io.File("/tmp/p")
+        val (build, run, terminal) = TerminalHandoff.projectFileParts(dir, "main.py")
+        assertEquals(null, build)
+        assertEquals("python3 main.py", run)
+        assertEquals("cd /tmp/p && python3 main.py", terminal)
+    }
+
+    @Test
+    fun `project file parts for blank selection is a safe echo`() {
+        val (build, run, terminal) = TerminalHandoff.projectFileParts(java.io.File("/tmp/p"), "  ")
+        assertEquals(null, build)
+        assertEquals(null, run)
+        assertEquals("cd /tmp/p && echo 'run: no file selected'", terminal)
+    }
 }
