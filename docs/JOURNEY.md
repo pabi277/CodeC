@@ -3,11 +3,11 @@
 **Last updated:** 2026-08-30 · **State:** Phases 3–11 ✅ complete & merged.
 **Phase 12 (Multi-Language Support, Python & Code Intelligence) is ✅ COMPLETE
 & DEVICE-ACCEPTED — PR #30 MERGED to `main` at `260d8b6` (2026-08-30)**; main
-has everything through Phase 12. **Phase 13 (GitHub & Git Integration) is ✅ COMPLETE & DEVICE-ACCEPTED
-(2026-08-31, `arena/01a053b3-codec`)** — CI green (`33326161083`, 37 new host
-tests; two CI-caught bugs fixed `501b6f2`), full §7 recipe passed on device
-(clone, M badge + diff, "Committed & pushed ✓", PULL round trip, no token in
-env/.git-config/logs). PR awaits the owner's explicit word.
+has everything through Phase 12. **Phase 13 (GitHub & Git Integration) is ✅ COMPLETE, DEVICE-ACCEPTED & MERGED
+— PR #31 merged to `main` at `006515a` (2026-08-31) — main has everything
+through Phase 13.** CI green (`33326161083`, 37 new host tests; two CI-caught
+bugs fixed `501b6f2`), full §7 recipe passed on device (clone, M badge + diff,
+"Committed & pushed ✓", PULL round trip, no token in env/.git-config/logs).
 **Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
 2026-08-26; 4.8 verified the runtime-permission path
 (`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,

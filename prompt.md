@@ -65,13 +65,13 @@ of assuming one.
     highlighter, autocomplete popup, python/python-pip in the repo (device:
     "Now python is solved"), python RUN path. See item 1 of NEXT UP and
     `docs/chat-phase12/`.
-  - **Phase 13 (GitHub & Git Integration) ✅ COMPLETE & DEVICE-ACCEPTED
-    (2026-08-31, `arena/01a053b3-codec`) — CI green (`33326161083`, 37 new
-    tests; two CI-caught bugs fixed `501b6f2`) and the full §7 device
-    recipe passed (clone, M/?? badges + inline diff, "Committed & pushed
-    ✓" to a scratch repo, PULL round trip; no token in terminal env /
-    `.git/config` / Logs).** Acceptance record: `PART_13_GITHUB.md` §8.
-    Remaining: the owner's word to open the PR.
+  - **Phase 13 (GitHub & Git Integration) ✅ COMPLETE, DEVICE-ACCEPTED &
+    MERGED — PR #31 merged to `main` at `006515a` (owner's explicit command,
+    2026-08-30/31; main has everything through Phase 13).** CI green
+    (`33326161083`, 37 new tests; two CI-caught bugs fixed `501b6f2`); full
+    §7 device recipe passed (clone, M/?? badges + inline diff, "Committed &
+    pushed ✓" to a scratch repo, PULL round trip; no token in terminal env /
+    `.git/config` / Logs). Acceptance record: `PART_13_GITHUB.md` §8.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`
@@ -119,9 +119,11 @@ of assuming one.
    fixed `501b6f2`) and the §7 device recipe is FULLY PASSED (2026-08-31 —
    clone, badges + diff, commit & push to scratch repo `pabi277/T`, PULL
    round trip, security spot-checks clean; 403 round was a token-permission
-   misconfiguration, honest-failure UX worked). Acceptance record:
-   `PART_13_GITHUB.md` §8. Remaining: ONLY the owner's word to open the
-   PR (one PR at a time; from the current branch state).
+   misconfiguration, honest-failure UX worked). **PR #31 MERGED to `main`
+   at `006515a` on the owner's command — NOTHING pending on Phase 13.**
+   Follow-up candidates for a future client PR: skip CodeC's `.codec/`
+   metadata in the pane's `git add -A` staging (or seed a `.gitignore` in
+   clones); partial per-file staging UI (D3).
 3. Phases 14 (mixed-language servers + webview) and 15 (CodeCApi device
    capabilities): `docs/chat-phase14/`, `docs/chat-phase15/`.
 
@@ -158,12 +160,11 @@ of assuming one.
 
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
    `gh release list`) before acting.
-2. Phases 3–12 are closed (PR #15/#23/#25/#26/#27/#28/#29/#30 merged; main
-   at `260d8b6` is current). If the owner commands the next phase, pick
-   Phase 14 from `docs/chat-phase14/` — or continue Phase 13 device rounds
-   from `docs/chat-phase13/` — and re-verify the plan against current code
-   before implementing. Never open/merge a PR without the owner's explicit
-   word.
+2. Phases 3–13 are closed (PR #15/#23/#25/#26/#27/#28/#29/#30/#31 merged;
+   main at `006515a` is current). If the owner commands the next phase,
+   pick Phase 14 from `docs/chat-phase14/` and re-verify its plan against
+   current code before implementing. Never open/merge a PR without the
+   owner's explicit word.
 3. A part is complete only when its "Exit condition" is met and verified
    (device evidence from the owner for device gates), not merely when code is
    written.
