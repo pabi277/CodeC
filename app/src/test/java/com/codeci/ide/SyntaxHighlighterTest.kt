@@ -109,15 +109,15 @@ class SyntaxHighlighterTest {
 
     @Test
     fun `shell variables comments and keywords are tokenized`() {
-        val source = "#!/bin/bash\nif [ -f \"$HOME/x\" ]; then\n    echo $HOME\nfi"
+        val source = "#!/bin/bash\nif [ -f \"\$HOME/x\" ]; then\n    echo \$HOME\nfi"
         val spans = MultiLanguageSyntaxHighlighter.tokenize(source, LanguageType.SHELL)
         assertSpan(source, spans, "#!/bin/bash", TokenKind.COMMENT)
         assertSpan(source, spans, "if", TokenKind.KEYWORD)
         assertSpan(source, spans, "then", TokenKind.KEYWORD)
         assertSpan(source, spans, "fi", TokenKind.KEYWORD)
         assertSpan(source, spans, "echo", TokenKind.KEYWORD)
-        assertSpan(source, spans, "\"$HOME/x\"", TokenKind.STRING)
-        assertSpan(source, spans, "$HOME", TokenKind.OPERATOR)
+        assertSpan(source, spans, "\"\$HOME/x\"", TokenKind.STRING)
+        assertSpan(source, spans, "\$HOME", TokenKind.OPERATOR)
     }
 
     @Test
