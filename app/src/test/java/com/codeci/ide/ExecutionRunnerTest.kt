@@ -118,7 +118,7 @@ class ExecutionRunnerTest {
         val events = mutableListOf<RunEvent>()
         val collectJob = launch {
             runner.run(
-                RunSpec(dir, null, "read line && echo \"got: $line\"")
+                RunSpec(dir, null, "read line && echo \"got: \$line\"")
             ).collect { events += it }
         }
         // Wait until the child process exists and is blocked on its read.
