@@ -766,7 +766,21 @@ class EditorViewModel : ViewModel() {
             _isDirty.value = false
             return true
         }
-        val safe = FileNameUtils.sanitizeFileName(_fileName.value) ?: return false
+        // Phase 12: a never-named scratch buffer (the app's default
+        // main.c/untitled.c, still holding the untouched starter) whose
+        // content is clearly Python is saved as <name>.py so RUN ▶ routes it
+        // through python3 instead of cc. Only fires for a buffer the user
+        // has not explicitly named and never saved; anything else keeps the
+        // existing naming exactly.
+        val currentName = _fileName.value
+        val untouchedDefault = (currentName == "main.c" || currentName == "untitled.c") &&
+            scratchSavedText == INITIAL_CODE
+        val nameToSave = if (untouchedDefault && WebFileSupport.looksLikePython(text)) {
+            currentName.substringBeforeLast('.') + ".py"
+        } else {
+            currentName
+        }
+        val safe = FileNameUtils.sanitizeFileName(nameToSave) ?: return false
         val fm = FileManager(context)
         val success = fm.saveFile(safe, text)
         if (success) {
@@ -1102,10 +1116,23 @@ class EditorViewModel : ViewModel() {
             // Web projects are handled by the preview flow, not the panel.
             if (info.config.type.equals("web", ignoreCase = true)) return
             workDir = info.root
-            val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, info.config)
-            buildCommand = build
-            runCommand = run
-            terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, info.config)
+            // Phase 12: when the ACTIVE file is a script (.py), RUN ▶ runs
+            // that file with python3 instead of the project's C build/run
+            // command — the project config still drives C (and other
+            // non-script) builds exactly as before.
+            val activePath = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
+                ?.let { ProjectPathUtils.resolveInside(info.root, it) }
+            if (activePath != null && LanguageType.fromFileName(activePath.name) == LanguageType.PYTHON) {
+                val (build, run) = TerminalHandoff.interpretedParts(activePath.absolutePath)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = TerminalHandoff.interpretedRunCommand(activePath.absolutePath)
+            } else {
+                val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, info.config)
+                buildCommand = build
+                runCommand = run
+                terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, info.config)
+            }
         } else {
             val path = saveAndAbsolutePath(appContext) ?: return
             val source = File(path)

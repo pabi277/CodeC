@@ -132,11 +132,25 @@ enum class LanguageType(val label: String, val extensions: List<String>) {
 - Single-file RUN ▶ (`.py`): no compile step — `interpretedParts` returns
   `null` build + `python3 <file>`; the Output Panel goes straight to RUNNING;
   Open-in-Terminal uses `cd <dir> && python3 <file>`.
+- Project RUN ▶ with a `.py` active file: runs `python3 <file>` instead of the
+  project's C build/run command (the project config still drives C and other
+  non-script builds). Device-found: RUN ▶ in a project context always ran the
+  project.json command (`cc main.c && ./a.out`) even when a `.py` file was
+  active — the Output Panel echoed the C command ("print the main.c").
 - Project-tree "Run in terminal" (`.py`): `cd <project> && python3 <file>`.
 - Project presets pre-existed: `ProjectConfig.defaultFor(type="python")` →
   `{"type":"python","build":"","run":"python3 main.py"}`; `ModuleCatalog`
   python entry (`pkg install -y python`); the Phase 11 `projectRunParts`
   already handles empty-build projects.
+- **Naming fix (device-found):** `WebFileSupport.normalizeFileName` only kept
+  `.c`/web extensions, so a `.py` file was renamed to `test.py.c` on save —
+  reclassifying it as C and routing RUN ▶ through `cc` ("it auto saves the
+  python as c"). It now keeps every `LanguageType` extension (py, pyw, sh,
+  json, md, cpp, …); bare names still default to `.c`. A never-named scratch
+  buffer (default `main.c`/`untitled.c`, never saved) whose content is clearly
+  Python is saved as `.py` (`WebFileSupport.looksLikePython`) so RUN ▶ uses
+  python3; `.py` files created via "+ New file" get a Python starter
+  (`def main(): …`).
 
 ## 3. Implementation Steps
 
