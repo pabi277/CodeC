@@ -13,9 +13,8 @@ live at `pabi277.github.io/CodeC/dev` — `python` 3.14.6-1, `python-pip`
 **FULL §4 device recipe PASSED 2026-08-30** (install, highlight, autocomplete
 TAB-insert, `Pi is 3.1416` run, C active-file run; two device-found run bugs
 fixed and CI-green `e4c5d48`/`9bfe216`). Owner: "Now python is solved" →
-"Worked properly" → "Both working". **Remaining: the owner's word to open the
-PR.**
-**Remaining:** the owner's device recipe (§4 in `PART_12_PYTHON.md`).
+"Worked properly" → "Both working"). **PR #30 MERGED to `main` at
+`260d8b6` (2026-08-30) — Phase 12 COMPLETE & DEVICE-ACCEPTED.**
 
 Phase 12 is the **Single Planned CI Repository Build** (`[repo-build]`), adding Python 3 to the official CodeC repository along with a multi-language syntax highlighter and lightweight in-editor autocomplete engine.
 
