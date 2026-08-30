@@ -111,8 +111,9 @@ of assuming one.
    working"): python installed (3.14.6-1), keywords highlighted, `def `
    autocomplete popup + TAB insert works, python RUN prints Pi is 3.1416,
    C active-file RUN works — the two device-found run bugs are fixed and
-   CI-green (`e4c5d48`, `9bfe216`).** **Remaining: the owner's word to
-   open the PR.** Only the owner's word opens a
+   CI-green (`e4c5d48`, `9bfe216`).** **PR #30 MERGED to `main` at
+   `260d8b6` (2026-08-30, owner: "Please merge the pull request") — Phase
+   12 is COMPLETE & DEVICE-ACCEPTED.** Only the owner's word opens a
    PR.
 3. Phases 13 (GitHub/Git UI), 14 (mixed-language servers + webview), 15
    (CodeCApi device capabilities): `docs/chat-phase13/..15/`.
