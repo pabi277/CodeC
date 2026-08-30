@@ -1,8 +1,11 @@
 # CodeC Phase 11 — Output Panel & Integrated Run (Spck / C4droid Experience)
 
 **Status:** ✅ **IMPLEMENTED 2026-08-30** (`arena/01a0508b-codec`) — code + host unit
-tests written; CI (Build APK → `:app:testDebugUnitTest` + lint) and the owner's
-device recipe (§4 below) are the remaining gates. **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
+tests written; **CI GREEN** (run `33289190964`: assemble + `:app:testDebugUnitTest`
++ lint via the `gradle-bootstrap` chain; first attempt `33289110743` caught two
+compile errors — missing `TerminalHandoff` import, suspend `incrementRuns` outside
+a coroutine — fixed in `15a0bc6`). The owner's device recipe (§4 below) is the
+remaining gate. **Cost:** `[client-only]` · **Depends on:** Phase 8 (Project Config) + Phase 9 (Editor Ready)  
 **Target Files:** `EditorScreen.kt`, `OutputPanelView.kt`, `ExecutionRunner.kt` (+
 `OutputLineParser.kt`, `EditorViewModel.kt`, `TerminalHandoff.kt`)
 
