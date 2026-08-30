@@ -9,11 +9,11 @@ remain the regression checklist. Current Phase 8 records live in [`chat-phase8/`
 device-verified (Phase 3 complete). **Phase 4 (Parts 4.1–4.8) ✅ COMPLETE,
 device-verified 2026-08-26.** Historical Phase 5 text follows; Phase 8 and
 Phase 9 (+9.1/9.2) are closed (PR #27/#28 merged); **Phase 11 (Output Panel &
-Integrated Run) is IMPLEMENTED on `arena/01a0508b-codec`** and awaits CI + the
-owner's device recipe — see [`chat-phase11/`](chat-phase11/). The next planned
-phase after Phase 11's acceptance is 12 (Python repo build, `[repo-build]`,
-~1–2 h — requires the owner's explicit approval), see
-[`chat-phase12/`](chat-phase12/).
+Integrated Run) ✅ COMPLETE & DEVICE-ACCEPTED on `arena/01a0508b-codec`**
+(2026-08-30 — CI green `33293358085`; owner: "All of the check passed") — see
+[`chat-phase11/`](chat-phase11/). The next planned phase after Phase 11 is 12
+(Python repo build, `[repo-build]`, ~1–2 h — requires the owner's explicit
+approval), see [`chat-phase12/`](chat-phase12/).
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and
