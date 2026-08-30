@@ -1,13 +1,16 @@
 # CodeC Phase 12 — Multi-Language Support, Python & Code Intelligence
 
-**Status:** ✅ **IMPLEMENTED & CI-VERIFIED (2026-08-30, `arena/01a05221-codec`)** —
-repo-build config (python + python-pip added to `CODEC_REPOSITORY_PACKAGES`,
-tk/X11 recipe override) and client work (multi-language highlighter, autocomplete
-popup, python run path) are committed; host repo tests green (84 OK, 4 gpg skips);
-**`Build APK` CI green** (run `33308137225` — `:app:compileDebugKotlin`,
-`:app:testDebugUnitTest` incl. all 27 Phase 12 tests, `:app:lintDebug`).
-**Pending:** the `[repo-build]` CI dispatch (~1–2 h, owner-run per standing rule)
-and the owner's device recipe (§4).
+**Status:** ✅ **IMPLEMENTED, CI-VERIFIED & REPOSITORY-PUBLISHED (2026-08-30,
+`arena/01a05221-codec`)** — repo-build config (python + python-pip added to
+`CODEC_REPOSITORY_PACKAGES`, tk/X11 recipe override + maintainer-script
+neutralization) and client work (multi-language highlighter, autocomplete
+popup, python run path) are committed; host repo tests green (85 OK, 4 gpg
+skips); **`Build APK` CI green** (`33308137225` / `33314362040`);
+**`[repo-build]` built & published** (build `33314588441` both arches →
+publish `33320104745` on `main` via `source_run_id`; catalog verified live at
+`pabi277.github.io/CodeC/dev` — `python` 3.14.6-1, `python-pip` 26.2.1,
+`python-ensurepip-wheels`, `python-static`; `python-tkinter` absent).
+**Remaining:** the owner's device recipe (§4).
 **Cost:** `[repo-build]` (ONE planned CI package build ~1–2h) · **Depends on:**
 Phase 8 (Projects) + Phase 9 (Editor) + Phase 10 (Package Hub)
 **Target Files:** `codec-packages/properties.codec.sh`, `codec-packages/scripts/apply-recipe-overrides.sh`,
