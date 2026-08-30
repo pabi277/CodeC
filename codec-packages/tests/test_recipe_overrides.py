@@ -416,9 +416,10 @@ class RecipeOverrideTest(unittest.TestCase):
         return self._write_apt_fixture(tree)
 
     def test_python_tkinter_excluded_and_tk_build_dep_removed(self) -> None:
-        """python-tkinter (tcl/tk/X11) is excluded for CodeC arches and tk
-        is removed from python's build-dependencies, keeping the Phase 12
-        build out of the X11 closure."""
+        """python-tkinter (tcl/tk/X11) is excluded for CodeC arches, tk
+        is removed from python's build-dependencies, and the recipe's
+        _tkinter post-massage verification is overridden (it can never pass
+        without tk), keeping the Phase 12 build out of the X11 closure."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture_only(tree)
@@ -428,6 +429,17 @@ class RecipeOverrideTest(unittest.TestCase):
                 'TERMUX_PKG_VERSION="3.14.6"\n'
                 'TERMUX_PKG_DEPENDS="gdbm, openssl, readline, zlib"\n'
                 'TERMUX_PKG_BUILD_DEPENDS="tk"\n'
+                "\n"
+                "termux_step_post_massage() {\n"
+                "\t# Verify that desired modules have been included:\n"
+                "\tfor module in _bz2 _curses _lzma _multiprocessing "
+                "_sqlite3 _ssl _tkinter zlib _zstd; do\n"
+                '\t\tif [ ! -f "${TERMUX_PREFIX}/lib/python${_MAJOR_VERSION}/'
+                'lib-dynload/${module}".*.so ]; then\n'
+                '\t\t\ttermux_error_exit "Python module library $module not built"\n'
+                "\t\tfi\n"
+                "\tdone\n"
+                "}\n"
             )
             tkinter = py_dir / "python-tkinter.subpackage.sh"
             tkinter.write_text(
@@ -440,6 +452,17 @@ class RecipeOverrideTest(unittest.TestCase):
             build_text = (py_dir / "build.sh").read_text()
             self.assertNotIn("TERMUX_PKG_BUILD_DEPENDS", build_text)
             self.assertIn("TERMUX_PKG_DEPENDS=", build_text)
+            # The upstream _tkinter verification is overridden by a
+            # last-defined termux_step_post_massage without _tkinter.
+            self.assertIn("CodeC: python builds without tk", build_text)
+            self.assertIn(
+                "termux_step_post_massage()", build_text
+            )
+            self.assertIn(
+                "for module in _bz2 _curses _lzma _multiprocessing "
+                "_sqlite3 _ssl zlib _zstd; do",
+                build_text,
+            )
             lines = tkinter.read_text().splitlines()
             self.assertEqual(
                 lines[0],
@@ -482,6 +505,29 @@ class RecipeOverrideTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("pinned-revision drift", result.stderr)
             self.assertIn("python-tkinter", result.stderr)
+
+        # A python recipe whose termux_step_post_massage no longer verifies
+        # _tkinter (or is missing entirely) must also fail loudly: the
+        # tk-free build then silently drops the module the upstream check
+        # was guarding, so a shape change is worth a re-review.
+        for post_massage in ("", "termux_step_post_massage() { :; }\n"):
+            with tempfile.TemporaryDirectory() as tmp:
+                tree = Path(tmp)
+                self._write_apt_fixture_only(tree)
+                py_dir = tree / "packages" / "python"
+                py_dir.mkdir(parents=True)
+                (py_dir / "build.sh").write_text(
+                    'TERMUX_PKG_BUILD_DEPENDS="tk"\n' + post_massage
+                )
+                (py_dir / "python-tkinter.subpackage.sh").write_text(
+                    'TERMUX_SUBPKG_DEPENDS="tcl, tk"\n'
+                )
+
+                result = subprocess.run(
+                    [str(OVERRIDES), str(tree)], text=True, capture_output=True
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("post_massage", result.stderr)
 
 
 if __name__ == "__main__":

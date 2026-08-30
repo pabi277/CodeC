@@ -431,6 +431,61 @@ if [[ -d "$PYTHON_DIR" ]]; then
     echo "recipe-overrides: failed to remove tk build dependency from python recipe" >&2
     exit 1
   fi
+
+  # The pinned recipe's termux_step_post_massage() hard-verifies that
+  # _tkinter was built (among other modules):
+  #
+  #   for module in _bz2 _curses _lzma _multiprocessing _sqlite3 _ssl _tkinter
+  #                 zlib _zstd; do
+  #       if [ ! -f ".../lib-dynload/${module}".*.so ]; then
+  #           termux_error_exit "Python module library $module not built"
+  #       fi
+  #   done
+  #
+  # Once tk is removed from build-depends (above) _tkinter can never exist,
+  # so that check aborts every python build. Tkinter is intentionally not
+  # part of the CodeC userland (no X11; python-tkinter excluded above), so
+  # append an overriding termux_step_post_massage (bash last-definition-wins:
+  # the recipe is sourced as one file, and this definition follows the
+  # upstream one) that validates the same module list minus _tkinter. Fail
+  # loudly if the upstream function's shape drifts.
+  PYTHON_BUILD="$PYTHON_DIR/build.sh"
+  if grep -q '^termux_step_post_massage()' "$PYTHON_BUILD"; then
+    if ! grep -q 'CodeC: python builds without tk' "$PYTHON_BUILD"; then
+      if ! grep -q 'for module in .*_tkinter' "$PYTHON_BUILD"; then
+        echo "recipe-overrides: python recipe module-verification list no longer contains _tkinter (pinned-revision drift) — re-review the post_massage override" >&2
+        exit 1
+      fi
+      cat <<'SH' >> "$PYTHON_BUILD"
+
+# CodeC: python builds without tk (tk removed from build-depends above;
+# python-tkinter subpackage excluded for CodeC arches), so _tkinter is
+# intentionally not built. Override the upstream post-massage module
+# verification to validate the same module list minus _tkinter. Appended
+# last so this definition wins (bash last-definition-wins).
+termux_step_post_massage() {
+	# Verify that desired modules have been included (no _tkinter — CodeC):
+	for module in _bz2 _curses _lzma _multiprocessing _sqlite3 _ssl zlib _zstd; do
+		if [ ! -f "${TERMUX_PREFIX}/lib/python${_MAJOR_VERSION}/lib-dynload/${module}".*.so ]; then
+			termux_error_exit "Python module library $module not built"
+		fi
+	done
+}
+SH
+    fi
+    if ! grep -q 'CodeC: python builds without tk' "$PYTHON_BUILD"; then
+      echo "recipe-overrides: failed to append python post_massage override" >&2
+      exit 1
+    fi
+    if grep -q 'for module in .*_tkinter' <(tail -n 12 "$PYTHON_BUILD"); then
+      echo "recipe-overrides: appended python post_massage still requires _tkinter" >&2
+      exit 1
+    fi
+  else
+    echo "recipe-overrides: python recipe has no termux_step_post_massage (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+
   echo "recipe-overrides: python builds without tk (tkinter excluded for CodeC arches)"
 else
   echo "recipe-overrides: python recipe not found; skipping tk removal" >&2
