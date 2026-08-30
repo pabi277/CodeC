@@ -65,13 +65,13 @@ of assuming one.
     highlighter, autocomplete popup, python/python-pip in the repo (device:
     "Now python is solved"), python RUN path. See item 1 of NEXT UP and
     `docs/chat-phase12/`.
-  - **Phase 13 (GitHub & Git Integration) 🔨 IMPLEMENTED & CI-GREEN on
-    this session branch `arena/01a053b3-codec` (2026-08-30; `Build APK`
-    `33326161083` green incl. all 37 new tests; the first CI round caught
-    two real bugs, fixed `501b6f2`)** — GitManager engine, Source Control
-    pane, Clone from GitHub, Settings GitHub card. Awaiting device rounds
-    (`PART_13_GITHUB.md` §7) + the owner's word to open the PR. See item 2
-    of NEXT UP and `docs/chat-phase13/`.
+  - **Phase 13 (GitHub & Git Integration) ✅ COMPLETE & DEVICE-ACCEPTED
+    (2026-08-31, `arena/01a053b3-codec`) — CI green (`33326161083`, 37 new
+    tests; two CI-caught bugs fixed `501b6f2`) and the full §7 device
+    recipe passed (clone, M/?? badges + inline diff, "Committed & pushed
+    ✓" to a scratch repo, PULL round trip; no token in terminal env /
+    `.git/config` / Logs).** Acceptance record: `PART_13_GITHUB.md` §8.
+    Remaining: the owner's word to open the PR.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`
@@ -116,8 +116,12 @@ of assuming one.
    (`GitStatusParserTest`, `DiffEngineTest`, `GitManagerTest`). Plan +
    design decisions D1–D7 + device recipe: `docs/chat-phase13/`. **CI is
    GREEN (`Build APK` `33326161083`; the first round caught two real bugs,
-   fixed `501b6f2`).** Remaining: owner device rounds (`PART_13_GITHUB.md`
-   §7) + the owner's word to open the PR.
+   fixed `501b6f2`) and the §7 device recipe is FULLY PASSED (2026-08-31 —
+   clone, badges + diff, commit & push to scratch repo `pabi277/T`, PULL
+   round trip, security spot-checks clean; 403 round was a token-permission
+   misconfiguration, honest-failure UX worked). Acceptance record:
+   `PART_13_GITHUB.md` §8. Remaining: ONLY the owner's word to open the
+   PR (one PR at a time; from the current branch state).
 3. Phases 14 (mixed-language servers + webview) and 15 (CodeCApi device
    capabilities): `docs/chat-phase14/`, `docs/chat-phase15/`.
 

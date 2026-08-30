@@ -1,6 +1,6 @@
 # CodeC Phase 13 — GitHub & Git Version Control Integration
 
-**Status:** IMPLEMENTED (2026-08-30, `arena/01a053b3-codec`) · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Projects & Folder Tree) + Phase 11 (Output Feedback)  
+**Status:** ✅ COMPLETE & DEVICE-ACCEPTED (2026-08-31, `arena/01a053b3-codec`) · **Cost:** `[client-only]` · **Depends on:** Phase 8 (Projects & Folder Tree) + Phase 11 (Output Feedback)  
 **Target Files:** `GitManager.kt`, `GitControlView.kt`, `SettingsScreen.kt`, `FileManagerScreen.kt`
 
 ---
@@ -172,3 +172,32 @@ No `.` on PATH (unchanged `buildEnv`); nothing written into `$PREFIX/bin`;
 
 **PASS** = steps 2–8 succeed without manual fixes and the step-10 checks stay
 clean.
+
+---
+
+## 8. Device acceptance record (2026-08-31) ✅ PASSED
+
+Owner device rounds on aarch64 (scratch repo `pabi277/T` for pushes; the real
+`pabi277/CodeC` clone used read-only for status/diff/pull checks):
+
+- **Round 1 (found, not an app bug):** push to `pabi277/CodeC` returned
+  `403 Permission … denied` — the token was fine-grained WITHOUT
+  Contents write. The pane showed the honest D4 split result
+  ("Committed ✓ — push failed: …"), tree stayed consistent, and the owner
+  was guided to fix token permissions and use a scratch repo. No code change.
+- **Round 2 (all green):** `pkg` git installed; Settings GitHub Account saved;
+  Clone from GitHub (`CodeC`, `T`) works; `M README.md` badge + `? .codec/`
+  untracked entry appear; tap-to-diff shows the −/+ edit lines;
+  **"Committed & pushed ✓"** on `T`; web PULL round trip returns
+  "Pull completed" with `HEAD -> main, origin/main` in sync
+  (`5447bdc`); `git log` shows the owner's commits.
+- **Security spot-checks clean:** `env | grep -i token` empty in the CodeC
+  terminal; `T/.git/config` and `CodeC/.git/config` contain plain https URLs
+  with **no token**; Settings Logs contain no token material after the 403
+  failure (redaction path exercised by the failed push).
+- Known follow-up candidates (not blockers): pane stages the whole tree
+  (`git add -A`), so clones commit CodeC's `.codec/` metadata folder —
+  candidate: skip `.codec/` or seed a `.gitignore`; no partial staging UI (D3).
+
+Phase 13 exit condition MET. PR awaits the owner's explicit word (standing
+rule).
