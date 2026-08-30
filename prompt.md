@@ -114,9 +114,10 @@ of assuming one.
    bottom sheet (`GitControlView.kt`/`GitControlViewModel`), Files ⋮ →
    Clone from GitHub, Settings GitHub Account card, 37 new host tests
    (`GitStatusParserTest`, `DiffEngineTest`, `GitManagerTest`). Plan +
-   design decisions D1–D7 + device recipe: `docs/chat-phase13/`. Remaining:
-   CI green + owner device rounds (`PART_13_GITHUB.md` §7) + the owner's
-   word to open the PR.
+   design decisions D1–D7 + device recipe: `docs/chat-phase13/`. **CI is
+   GREEN (`Build APK` `33326161083`; the first round caught two real bugs,
+   fixed `501b6f2`).** Remaining: owner device rounds (`PART_13_GITHUB.md`
+   §7) + the owner's word to open the PR.
 3. Phases 14 (mixed-language servers + webview) and 15 (CodeCApi device
    capabilities): `docs/chat-phase14/`, `docs/chat-phase15/`.
 
