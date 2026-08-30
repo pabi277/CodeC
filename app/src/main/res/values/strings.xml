@@ -241,4 +241,25 @@
     <string name="formatted_clang_format">Formatted with clang-format</string>
     <string name="formatted_builtin">Formatted with built-in indenter</string>
     <string name="replace_all_done">Replaced %1$d occurrence(s)</string>
+
+    <!-- Phase 13: GitHub & Git source control -->
+    <string name="clone_from_github">Clone from GitHub</string>
+    <string name="clone_url_label">Repository URL (https://…)</string>
+    <string name="clone_name_label">Project name</string>
+    <string name="clone_action">Clone</string>
+    <string name="clone_invalid_url">Enter an https:// GitHub repository URL</string>
+    <string name="clone_failed">Clone failed: %1$s</string>
+    <string name="clone_success">Cloned %1$s</string>
+    <string name="source_control_title">Source Control</string>
+    <string name="git_refresh">Refresh status</string>
+    <string name="git_not_installed_message">git is not installed. Install it from the Modules tab (Git) or run “pkg install -y git” in the terminal, then come back.</string>
+    <string name="git_not_a_repo_message">This project is not a Git repository. Clone one from Files → ⋮ → Clone from GitHub, or run “git init” in the terminal.</string>
+    <string name="git_detached_head">detached HEAD</string>
+    <string name="git_pull">PULL</string>
+    <string name="git_working_tree_clean">Working tree clean ✓</string>
+    <string name="git_commit_hint">Commit message</string>
+    <string name="git_commit_push">COMMIT &amp; PUSH</string>
+    <string name="git_renamed_from">renamed from %1$s</string>
+    <string name="git_diff_title">Changes</string>
+    <string name="git_diff_empty">No textual differences (binary file, mode change, or empty diff).</string>
 </resources>

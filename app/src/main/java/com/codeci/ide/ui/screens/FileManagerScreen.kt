@@ -22,9 +22,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
@@ -77,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
 import com.codeci.ide.ui.projects.FileNode
+import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.viewmodels.FileManagerViewModel
 import kotlinx.coroutines.launch
@@ -115,6 +118,8 @@ fun FileManagerScreen(
     var showZipNameDialog by remember { mutableStateOf(false) }
     var exportProjectName by remember { mutableStateOf<String?>(null) }
     var showActionsMenu by remember { mutableStateOf(false) }
+    var showCloneDialog by remember { mutableStateOf(false) }
+    var showGitSheet by remember { mutableStateOf(false) }
 
     val folderImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -219,6 +224,14 @@ fun FileManagerScreen(
                                 }
                             )
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.clone_from_github)) },
+                                leadingIcon = { Icon(Icons.Default.CloudDownload, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    showCloneDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.refresh_projects)) },
                                 leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
                                 onClick = {
@@ -233,6 +246,14 @@ fun FileManagerScreen(
                                 onClick = {
                                     showActionsMenu = false
                                     viewModel.refresh(context)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.source_control_title)) },
+                                leadingIcon = { Icon(Icons.Default.AccountTree, contentDescription = null) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    showGitSheet = true
                                 }
                             )
                             DropdownMenuItem(
@@ -486,6 +507,63 @@ fun FileManagerScreen(
                 }) { Text(stringResource(R.string.cancel)) }
             }
         )
+    }
+
+    if (showCloneDialog) {
+        var cloneUrl by remember { mutableStateOf("") }
+        var cloneName by remember { mutableStateOf("") }
+        var nameEdited by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { showCloneDialog = false },
+            title = { Text(stringResource(R.string.clone_from_github)) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = cloneUrl,
+                        onValueChange = {
+                            cloneUrl = it
+                            if (!nameEdited) cloneName = GitManager.repoNameFromUrl(it) ?: ""
+                        },
+                        label = { Text(stringResource(R.string.clone_url_label)) },
+                        placeholder = { Text("https://github.com/user/repo") },
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = cloneName,
+                        onValueChange = {
+                            cloneName = it
+                            nameEdited = true
+                        },
+                        label = { Text(stringResource(R.string.clone_name_label)) },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.cloneFromGitHub(context, cloneUrl.trim(), cloneName) { cloned ->
+                            showCloneDialog = false
+                            onProjectSelected(cloned)
+                        }
+                    },
+                    enabled = cloneUrl.isNotBlank() && !isBusy
+                ) { Text(stringResource(R.string.clone_action)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCloneDialog = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+
+    if (showGitSheet) {
+        activeProject?.let { project ->
+            GitControlSheet(
+                projectRoot = project.root,
+                onDismiss = { showGitSheet = false }
+            )
+        } ?: run { showGitSheet = false }
     }
 }
 
