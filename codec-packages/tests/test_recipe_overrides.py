@@ -417,9 +417,11 @@ class RecipeOverrideTest(unittest.TestCase):
 
     def test_python_tkinter_excluded_and_tk_build_dep_removed(self) -> None:
         """python-tkinter (tcl/tk/X11) is excluded for CodeC arches, tk
-        is removed from python's build-dependencies, and the recipe's
-        _tkinter post-massage verification is overridden (it can never pass
-        without tk), keeping the Phase 12 build out of the X11 closure."""
+        is removed from python's build-dependencies, the recipe's
+        _tkinter post-massage verification is overridden (it can never
+        pass without tk), and the recipe's own termux_step_create_debscripts
+        (postinst) is neutralized — keeping the Phase 12 build out of the
+        X11 closure and free of maintainer scripts."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture_only(tree)
@@ -440,6 +442,15 @@ class RecipeOverrideTest(unittest.TestCase):
                 "\t\tfi\n"
                 "\tdone\n"
                 "}\n"
+                "\n"
+                "termux_step_create_debscripts() {\n"
+                "\tcat <<- POSTINST_EOF > ./postinst\n"
+                "\t#!$TERMUX_PREFIX/bin/bash\n"
+                "\t# pip-separation notice\n"
+                "\texit 0\n"
+                "\tPOSTINST_EOF\n"
+                "\tchmod 0755 postinst\n"
+                "}\n"
             )
             tkinter = py_dir / "python-tkinter.subpackage.sh"
             tkinter.write_text(
@@ -456,18 +467,61 @@ class RecipeOverrideTest(unittest.TestCase):
             # last-defined termux_step_post_massage without _tkinter.
             self.assertIn("CodeC: python builds without tk", build_text)
             self.assertIn(
-                "termux_step_post_massage()", build_text
-            )
-            self.assertIn(
                 "for module in _bz2 _curses _lzma _multiprocessing "
                 "_sqlite3 _ssl zlib _zstd; do",
                 build_text,
+            )
+            # The recipe's own debscripts (postinst) are neutralized by a
+            # last-defined no-op.
+            self.assertIn("CodeC: no maintainer scripts for python", build_text)
+            self.assertTrue(
+                build_text.rstrip().endswith(
+                    "termux_step_create_debscripts() { :; }"
+                )
             )
             lines = tkinter.read_text().splitlines()
             self.assertEqual(
                 lines[0],
                 'TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" '
                 "# CodeC: no tcl/tk/X11 in the userland",
+            )
+
+    def test_python_pip_debscripts_neutralized(self) -> None:
+        """python-pip defines its own termux_step_create_debscripts
+        (postinst + prerm); the override must append a last-defined no-op
+        so the published deb has no maintainer scripts (CI repo-build
+        33308884424 aborted on python-pip_26.2.1_all.deb otherwise)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            pip_dir = tree / "packages" / "python-pip"
+            pip_dir.mkdir(parents=True)
+            (pip_dir / "build.sh").write_text(
+                'TERMUX_PKG_VERSION="26.2.1"\n'
+                'TERMUX_PKG_DEPENDS="python (>= 3.11.1-1)"\n'
+                "\n"
+                "termux_step_create_debscripts() {\n"
+                "\tcat <<- POSTINST_EOF > ./postinst\n"
+                "\t#!$TERMUX_PREFIX/bin/bash\n"
+                "\techo \"pip setup...\"\n"
+                "\texit 0\n"
+                "\tPOSTINST_EOF\n"
+                "\tcat <<- PRERM_EOF > ./prerm\n"
+                "\t#!$TERMUX_PREFIX/bin/bash\n"
+                "\texit 0\n"
+                "\tPRERM_EOF\n"
+                "\tchmod 0755 postinst prerm\n"
+                "}\n"
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            build_text = (pip_dir / "build.sh").read_text()
+            self.assertIn("CodeC: no maintainer scripts for python-pip", build_text)
+            self.assertTrue(
+                build_text.rstrip().endswith(
+                    "termux_step_create_debscripts() { :; }"
+                )
             )
 
     def test_python_override_fails_loud_on_pinned_revision_drift(self) -> None:
@@ -528,6 +582,44 @@ class RecipeOverrideTest(unittest.TestCase):
                 )
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("post_massage", result.stderr)
+
+        # A python or python-pip recipe that no longer defines its own
+        # termux_step_create_debscripts must fail loudly: a shape change
+        # means the neutralization was written against a different recipe,
+        # so it needs a re-review rather than a silent pass.
+        for name in ("python", "python-pip"):
+            with tempfile.TemporaryDirectory() as tmp:
+                tree = Path(tmp)
+                self._write_apt_fixture_only(tree)
+                pkg_dir = tree / "packages" / name
+                pkg_dir.mkdir(parents=True)
+                # The python fixture must still pass the earlier tk and
+                # post_massage overrides so the debscripts check is reached.
+                post_massage = (
+                    "termux_step_post_massage() {\n"
+                    "\tfor module in _bz2 _curses _lzma _multiprocessing "
+                    "_sqlite3 _ssl _tkinter zlib _zstd; do\n"
+                    '\t\tif [ ! -f "${TERMUX_PREFIX}/lib/python${_MAJOR_VERSION}/'
+                    'lib-dynload/${module}".*.so ]; then\n'
+                    '\t\t\ttermux_error_exit "Python module library $module not built"\n'
+                    "\t\tfi\n"
+                    "\tdone\n"
+                    "}\n"
+                ) if name == "python" else ""
+                (pkg_dir / "build.sh").write_text(
+                    'TERMUX_PKG_BUILD_DEPENDS="tk"\n'
+                    + post_massage
+                )
+                if name == "python":
+                    (pkg_dir / "python-tkinter.subpackage.sh").write_text(
+                        'TERMUX_SUBPKG_DEPENDS="tcl, tk"\n'
+                    )
+
+                result = subprocess.run(
+                    [str(OVERRIDES), str(tree)], text=True, capture_output=True
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("termux_step_create_debscripts", result.stderr)
 
 
 if __name__ == "__main__":

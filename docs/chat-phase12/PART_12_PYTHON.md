@@ -49,6 +49,23 @@ wording):** CodeC does not vendor recipes under `codec-packages/packages/`.
   userland has no X11 use for Tkinter → the tkinter subpackage is excluded
   (`TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"`) and `tk` is removed from
   python's build-depends, keeping the ONE planned build inside budget.
+- **Maintainer-script neutralization** (found by the first `[repo-build]`
+  dispatch `33308884424`, which built python + python-pip successfully but
+  aborted at repository generation — `generate-repository: ERROR:
+  python-pip_26.2.1_all.deb: maintainer scripts are not allowed: postinst,
+  prerm`): both the python and python-pip recipes define their own
+  `termux_step_create_debscripts()` (pip-separation postinst; pip
+  version-check postinst + pip.conf prerm). Because recipes are sourced
+  AFTER the step scripts, those per-recipe definitions override the shared
+  CodeC no-op stub, so the debs shipped with `DEBIAN/postinst`(+`prerm`) —
+  which the CodeC validator rejects (maintainer scripts are forbidden for
+  every package except the five reviewed update-alternatives packages).
+  The override now appends a last-defined `termux_step_create_debscripts() {
+  :; }` to both recipes (bash last-definition-wins), fail-loud if either
+  recipe's per-recipe definition disappears. The first dispatch also
+  surfaced that the pinned python recipe's `termux_step_post_massage()`
+  hard-verifies `_tkinter` was built (impossible once tk is dropped) — an
+  overriding post-massage validates the same modules minus `_tkinter`.
 - **Repository-only:** the bootstrap seed and package-manager roots are
   unchanged, so the published `userland-v2-dev` bootstrap archives stay
   byte-identical; python is installed on demand (`pkg install -y python`).
@@ -121,8 +138,13 @@ enum class LanguageType(val label: String, val extensions: List<String>) {
 ## 3. Implementation Steps
 
 1. ✅ **Step 1:** Add `python`/`python-pip` to `CODEC_REPOSITORY_PACKAGES`,
-   recipe override (tk/tkinter), host tests — committed `9b8943b`. **Dispatch
-   of the `[repo-build]` is the remaining gate (owner-run, per standing rule).**
+   recipe override (tk/tkinter + maintainer-script neutralization + `_tkinter`
+   post-massage override), host tests — committed `9b8943b`, hardened by
+   `a007aa3` (post-massage) and the debscripts fix. **Dispatch of the
+   `[repo-build]` is owner-run, per standing rule.** First dispatch
+   `33308884424` built python+python-pip but failed at repository generation
+   on python-pip's maintainer scripts (see §2.1); the fix is committed and
+   host-tested, and the build is ready to re-dispatch.
 2. ✅ **Step 2:** `MultiLanguageSyntaxHighlighter.kt` (LanguageType + tokenizer
    + `SyntaxVisualTransformation` rename) — committed `b876667`.
 3. ✅ **Step 3:** `CodeCompletionEngine.kt` (identifier scan + snippet

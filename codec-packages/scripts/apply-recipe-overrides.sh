@@ -486,7 +486,85 @@ SH
     exit 1
   fi
 
+  # The python recipe defines its own termux_step_create_debscripts()
+  # (a pip-separation notice postinst). CodeC policy forbids maintainer
+  # scripts for EVERY package (the five approved update-alternatives
+  # packages are the only exception), and the shared debscripts stub
+  # cannot help here: the recipe is sourced AFTER the step scripts, so a
+  # per-recipe definition overrides the stub and the deb ships with
+  # DEBIAN/postinst — which generate-repository rejects ("maintainer
+  # scripts are not allowed", CI repo-build 33308884424). Append a
+  # last-defined no-op so python's deb has no maintainer scripts. Fail
+  # loudly if the per-recipe definition disappears (shape change worth a
+  # re-review: dropping the no-op would silently reintroduce postinst).
+  if ! grep -q '^termux_step_create_debscripts()' "$PYTHON_BUILD"; then
+    echo "recipe-overrides: python recipe no longer defines its own termux_step_create_debscripts (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for python' "$PYTHON_BUILD"; then
+    cat <<'SH' >> "$PYTHON_BUILD"
+
+# CodeC: no maintainer scripts for python — maintainer scripts are
+# forbidden for every package. The shared termux_step_create_debscripts
+# stub is overridden by this recipe's own definition (recipes are sourced
+# after the step scripts), so neutralize it here — appended last so this
+# definition wins (bash last-definition-wins).
+termux_step_create_debscripts() { :; }
+SH
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for python' "$PYTHON_BUILD"; then
+    echo "recipe-overrides: failed to append python debscripts override" >&2
+    exit 1
+  fi
+  if tail -n 8 "$PYTHON_BUILD" | grep -q 'POSTINST_EOF\|cat <<-'; then
+    echo "recipe-overrides: python recipe still emits a postinst after the override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: python ships without maintainer scripts"
+
   echo "recipe-overrides: python builds without tk (tkinter excluded for CodeC arches)"
 else
   echo "recipe-overrides: python recipe not found; skipping tk removal" >&2
+fi
+
+# The python-pip recipe defines its own termux_step_create_debscripts()
+# (postinst: pip disable-version-check config; prerm: pip.conf cleanup).
+# Same CodeC policy and the same reason the shared stub cannot help (the
+# recipe is sourced after the step scripts, so its definition overrides
+# the stub) — the deb ships with DEBIAN/postinst + DEBIAN/prerm and
+# generate-repository aborts (CI repo-build 33308884424). Append a
+# last-defined no-op. Fail loudly on pinned-revision drift.
+PIP_DIR="$TREE/packages/python-pip"
+if [[ -d "$PIP_DIR" ]]; then
+  PIP_BUILD="$PIP_DIR/build.sh"
+  if [[ ! -f "$PIP_BUILD" ]]; then
+    echo "recipe-overrides: python-pip recipe build.sh missing (pinned-revision drift)" >&2
+    exit 1
+  fi
+  if ! grep -q '^termux_step_create_debscripts()' "$PIP_BUILD"; then
+    echo "recipe-overrides: python-pip recipe no longer defines its own termux_step_create_debscripts (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for python-pip' "$PIP_BUILD"; then
+    cat <<'SH' >> "$PIP_BUILD"
+
+# CodeC: no maintainer scripts for python-pip — maintainer scripts are
+# forbidden for every package. This recipe's own
+# termux_step_create_debscripts (postinst/prerm) overrides the shared
+# stub because recipes are sourced after the step scripts; neutralize it —
+# appended last so this definition wins (bash last-definition-wins).
+termux_step_create_debscripts() { :; }
+SH
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for python-pip' "$PIP_BUILD"; then
+    echo "recipe-overrides: failed to append python-pip debscripts override" >&2
+    exit 1
+  fi
+  if tail -n 8 "$PIP_BUILD" | grep -q 'POSTINST_EOF\|PRERM_EOF\|cat <<-'; then
+    echo "recipe-overrides: python-pip recipe still emits maintainer scripts after the override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: python-pip ships without maintainer scripts"
+else
+  echo "recipe-overrides: python-pip recipe not found; skipping debscripts neutralization" >&2
 fi
