@@ -56,7 +56,7 @@ object DiffEngine {
             oldMiddle.mapTo(mutableListOf()) { DiffLine(DiffOp.REMOVE, null, null, it) } +
                 newMiddle.map { DiffLine(DiffOp.ADD, null, null, it) }
         } else {
-            lcsDiff(oldMiddle, newMiddle, prefix, suffix)
+            lcsDiff(oldMiddle, newMiddle, prefix, prefix)
         }
         output += middle
 

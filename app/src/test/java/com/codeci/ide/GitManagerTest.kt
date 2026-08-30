@@ -39,6 +39,10 @@ class GitManagerTest {
               for a in "${'$'}@"; do printf ' [%s]' "${'$'}a"; done
               printf '\n'
             } >> "${'$'}FAKE_LOG"
+            # Global flags come before the subcommand (e.g. --no-pager show).
+            case "${'$'}1" in
+              --no-pager) shift ;;
+            esac
             case "${'$'}1" in
               --version)
                 echo "git version 2.45-fake"
