@@ -1,11 +1,11 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-31 · **State:** Phases 3–13 ✅ complete & merged
-(main at `006515a` = PR #31, Phase 13). **Phase 14 (Mixed-Language, Server
-WebViews & Long-Tail Ecosystem) is IMPLEMENTED & CI-GREEN on
-`arena/01a05421-codec`** — client-only, no `[repo-build]`; `Build APK`
-`33352164172` green (assemble + unit tests + lint); **device recipe pending
-(owner)**. See item 17 below and [`chat-phase14/`](chat-phase14/).
+**Last updated:** 2026-08-31 · **State:** Phases 3–14 ✅ merged into `main`
+at **`0b591e2` (PR #32, Phase 14, merged 2026-08-31)** — main has everything
+through Phase 14 (client-only, no `[repo-build]`; merge CI green
+`33362113438`). **Phase 14's device acceptance recipe is still pending
+(owner-run):** [`chat-phase14/PART_14_IMPLEMENTATION.md`](chat-phase14/PART_14_IMPLEMENTATION.md)
+§5. See item 17 below and [`chat-phase14/`](chat-phase14/).
 **Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
 2026-08-26; 4.8 verified the runtime-permission path
 (`codec-notify` over the `CodeCApi` bridge: dialog → allow → OK,
@@ -623,7 +623,7 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     Visual GitHub/Git integration, client-only: `GitManager.kt` (Android-free engine over the packaged `$PREFIX/bin/git` — argv-list ProcessBuilder, no shell; `git status --porcelain=v1 -b` parser; 60 s/300 s timeouts), secret-safe auth (`GIT_ASKPASS` script over a per-child `CODEC_GIT_TOKEN` env — never argv/.git-config/terminal env; `GitRedactor` scrubs every output line; token stored app-private in DataStore), `GitDiff.kt` (Kotlin LCS line diff), **Source Control bottom sheet** (`GitControlView.kt` + `GitControlViewModel`: branch + ahead/behind, M/A/D/R/?? badges, tap-to-diff dialog, PULL, one-tap COMMIT & PUSH with honest per-step results), **Files → ⋮ → Clone from GitHub** (unique project name, Phase-8 import flow, partial-clone cleanup, https-only URLs), **Settings → GitHub Account card** (masked PAT + username + commit identity, SAVE/DISCONNECT). 37 new host tests (`GitStatusParserTest`, `DiffEngineTest`, `GitManagerTest` — the last runs a fake `git` script through real processes to prove argv/env/redaction). Design decisions D1–D7 + device recipe: [`chat-phase13/PART_13_GITHUB.md`](chat-phase13/PART_13_GITHUB.md) §6–§7.
     See [`chat-phase13/`](chat-phase13/).
 
-17. **Phase 14 — Mixed-Language, Server WebViews & Long-Tail Ecosystem** 🚧 **IMPLEMENTED & CI-GREEN (2026-08-31, `arena/01a05421-codec`, on the owner's \"You have to work on phase 14\").** Client-only (`Build APK` `33352164172` — assemble + `testDebugUnitTest` + `lintDebug`; four CI-caught bugs fixed: `const val` interpolation, `${Q}` identifier parse, missing `assertTrue` import, and three test-logic bugs — see the record). **Device recipe pending (owner):** [`chat-phase14/PART_14_IMPLEMENTATION.md`](chat-phase14/PART_14_IMPLEMENTATION.md) §5.
+17. **Phase 14 — Mixed-Language, Server WebViews & Long-Tail Ecosystem** ✅ **MERGED (2026-08-31, `arena/01a05421-codec` → PR #32 → `main` at `0b591e2`; owner's explicit \"Please merge the pull request\"; merge CI green `33362113438`)** — implemented on the owner's \"You have to work on phase 14\". Client-only, no `[repo-build]`. **Device acceptance recipe still pending (owner):** [`chat-phase14/PART_14_IMPLEMENTATION.md`](chat-phase14/PART_14_IMPLEMENTATION.md) §5.
     - **Server pipeline:** `ServerRunner.kt` — long-lived background process (reuses `ShellBootstrap` env, merged output streaming, no timeout, Stop; `awaitClose` kills the child); `ServerPortDetector` — bind-line patterns only (Flask `* Running on http://…`, Uvicorn, `Serving HTTP on … port …`, `CodeC server listening on http://…`, generic `listening on`; `0.0.0.0` rewritten to `127.0.0.1`; URLs inside rendered content never match), 20 s readiness warning.
     - **Config & presets:** `ProjectConfig` v1 + optional `port`/`previewUrl` (back-compat; `previewUrl` falls back to `http://127.0.0.1:<port>`); presets `python-flask` (5000, app.py), `python-fastapi` (8000, main.py), `c-microservice` (8080, server.c → `cc server.c -o bin/server`, TCC only); `SERVER_TYPES`.
     - **Scaffolds (`ProjectScaffold`):** Flask/FastAPI run the real framework when installed (`pip install flask` / `fastapi uvicorn`), else a stdlib `http.server` fallback serves the identical pages — works out of the box with Phase-12 `python`; the page is `index.html` read per request (edit → Reload, no restart). C microservice: single-file socket server (no deps). Static web `index.html`, python `main.py`, C starter byte-identical.

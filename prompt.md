@@ -69,20 +69,15 @@ of assuming one.
     MERGED — PR #31 merged to `main` at `006515a` (2026-08-31).** Main now
     has everything through Phase 13. Acceptance record:
     `PART_13_GITHUB.md` §8.
-  - **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) 🚧
-    IMPLEMENTED & CI-GREEN on `arena/01a05421-codec` (2026-08-31, on the
-    owner's "You have to work on phase 14")** — client-only, **no
-    `[repo-build]`** (Flask/FastAPI are pip packages; the C server uses the
-    embedded TCC). `Build APK` `33352164172` green (assemble + unit tests +
-    lint; four CI-caught bugs fixed along the way — see the implementation
-    record). Server Runner + port monitor, Web Preview live mode,
-    Flask/FastAPI/C-microservice presets serving `index.html` per request
-    (stdlib fallback, out-of-the-box), templates picker, a **bundled
-    `demo_flask` project ships in Files** (D9 — one-time seed, never
-    overwrites), and the wizard defaults to **Auto (detect)** (D10: no type
-    selection — RUN ▶ infers Flask/FastAPI/C-microservice/static-web/Python/C
-    from the project's files). **Device recipe pending (owner):**
-    `PART_14_IMPLEMENTATION.md` §5.
+  - **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) ✅
+    MERGED — PR #32 → `main` at `0b591e2` (2026-08-31, owner's explicit
+    "Please merge the pull request"; merge CI green `33362113438`).** Client-
+    only, no `[repo-build]`. Server Runner + port monitor, Web Preview live
+    mode, Flask/FastAPI/C-microservice presets (stdlib fallback,
+    out-of-the-box), **bundled `demo_flask`** (D9), **Auto (detect)** wizard
+    default (D10). **Remaining gate: the owner's device acceptance round**
+    (`PART_14_IMPLEMENTATION.md` §5) — the phase is merged but not yet
+    device-accepted.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`
@@ -117,8 +112,8 @@ of assuming one.
    properly" / "Both working"), then merged as PR #30 on the owner's
    explicit command.
 2. **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) is
-   IMPLEMENTED & CI-GREEN on `arena/01a05421-codec`** (2026-08-31, on the
-   owner's "You have to work on phase 14"): background `ServerRunner` +
+   MERGED (PR #32 → `main` at `0b591e2`, 2026-08-31) but NOT yet
+   device-accepted.** Implemented on `arena/01a05421-codec`: background `ServerRunner` +
    `ServerPortDetector` bind-line recognition; `ProjectConfig` v1 with
    optional `port`/`previewUrl` + presets `python-flask` (5000),
    `python-fastapi` (8000), `c-microservice` (8080); `ProjectScaffold`
@@ -132,9 +127,11 @@ of assuming one.
    `ServerScaffoldE2ETest` (4 — auto→Flask on port 5099, isolated from the
    exact-5000 preset test), `DemoProjectSeedTest` (4),
    `ProjectRunDetectorTest` (13). **`Build APK` GREEN** — tip run
-   `33360571874`. Plan + design decisions D1–D10 + device recipe:
+   `33360571874`; PR checks green on merge (run `33362113438`). Plan +
+   design decisions D1–D10 + device recipe:
    `docs/chat-phase14/PART_14_IMPLEMENTATION.md`. **Remaining: the owner's
-   device round (§5 recipe) — then, on the owner's explicit word, the PR.**
+   device round (§5 recipe) — the only open gate before Phase 14 counts as
+   complete; no code changes expected without device evidence.**
 3. Phase 15 (CodeCApi device capabilities): `docs/chat-phase15/` (skeleton,
    not started).
 
@@ -171,13 +168,13 @@ of assuming one.
 
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
    `gh release list`) before acting.
-2. Phases 3–13 are closed (PR #15/#23/#25/#26/#27/#28/#29/#30/#31 merged;
-   main at `006515a` is current). Phase 14 is implemented & CI-green on
-   `arena/01a05421-codec` — the owner's next gate is the device recipe
-   (`PART_14_IMPLEMENTATION.md` §5), not more code. If the owner commands
-   the next phase, pick Phase 15 from `docs/chat-phase15/` and re-verify
-   the plan against current code before implementing. Never open/merge a PR
-   without the owner's explicit word.
+2. Phases 3–14 are closed code-wise (PR #15/#23/#25/#26/#27/#28/#29/#30/
+   #31/#32 merged; main at `0b591e2` is current). Phase 14's only open gate
+   is the owner's device acceptance (`PART_14_IMPLEMENTATION.md` §5) — do
+   not change code without device evidence. If the owner commands the next
+   phase, pick Phase 15 from `docs/chat-phase15/` and re-verify the plan
+   against current code before implementing. Never open/merge a PR without
+   the owner's explicit word.
 3. A part is complete only when its "Exit condition" is met and verified
    (device evidence from the owner for device gates), not merely when code is
    written.
