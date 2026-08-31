@@ -104,7 +104,7 @@ class TerminalKeyView(context: Context) : View(context) {
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
             ?: return
         if (!imm.isActive(this)) {
-            if (hasWindowFocus) {
+            if (hasWindowFocus()) {
                 imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
             }
             // Still not up (window unfocused): onWindowFocusChanged retries.
