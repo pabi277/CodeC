@@ -166,7 +166,7 @@ class ProjectsHubTest {
         assertEquals("just now", ProjectsHub.relativeAge(now + 5 * day, now)) // clock skew clamps
         assertEquals("59 min ago", ProjectsHub.relativeAge(now - 59 * minute, now))
         assertEquals("1 hour ago", ProjectsHub.relativeAge(now - 61 * minute, now))
-        assertEquals("2 hours ago", ProjectsHub.relativeAge(now - 3 * hour, now))
+        assertEquals("3 hours ago", ProjectsHub.relativeAge(now - 3 * hour, now))
         assertEquals("yesterday", ProjectsHub.relativeAge(now - 25 * hour, now))
         assertEquals("6 days ago", ProjectsHub.relativeAge(now - 6 * day, now))
         assertEquals("1 week ago", ProjectsHub.relativeAge(now - 8 * day, now))
