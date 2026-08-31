@@ -48,7 +48,7 @@ class EditorKeySetTest {
     }
 
     @Test
-    fun `TAB clamps tabSize into the editor range 2..8`() {
+    fun `TAB clamps tabSize into the editor range 2 to 8`() {
         val tiny = EditorKeySet.apply(EditorKey.Tab, TextFieldValue("", TextRange(0)), tabSize = 1)
         assertEquals("  ", tiny.text)
         val huge = EditorKeySet.apply(EditorKey.Tab, TextFieldValue("", TextRange(0)), tabSize = 10)
