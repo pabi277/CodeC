@@ -291,3 +291,19 @@ run `33388547817`** (assembleDebug + testDebugUnitTest + lintDebug) at
 `a1f73fa`. Device APK = artifact `CodeC-IDE` of that run. All 29 new
 host tests included: `EditorKeySetTest` ×13, `LineEndingsTest` ×5,
 `LaunchDefaultTest` ×5, `FileTreeCollapseTest` ×5, `ProjectsHubTest` ×15.
+
+**Device round 1 (2026-08-31) — git-noise fix from the owner.** Running a
+Python file created `__pycache__/`, which `git status` listed and the git
+panel then offered for commit & push ("no work with git"). Fix: new
+`ui/projects/PythonCacheIgnore.kt` — pure policy (`splitLines`/`covers`/
+`shouldAppend`/`appendTo` + a shallow `hasCacheIn` probe) with a thin,
+never-throwing `ensure(root)` that appends `__pycache__/`, `*.pyc`, `*.pyo`
+to the repo-local **`.git/info/exclude`** (machine-private; the user's
+`.gitignore` is never touched and always wins). `ensure` runs from every
+surface that could offer the junk: git-panel refresh (covers staging —
+`git add -A` respects excludes), the drawer's `refreshGitMeta`, the hub
+cards' `hasChanges` scan, and the Python branch of RUN ▶ (before the run,
+fire-and-forget on IO). `.git` handled as dir AND `gitdir:` pointer file.
+Tests: `PythonCacheIgnoreTest` ×10 (policy + real temp-dir IO incl.
+idempotent re-run, user-gitignore skip, pointer-file follow, append
+preservation).

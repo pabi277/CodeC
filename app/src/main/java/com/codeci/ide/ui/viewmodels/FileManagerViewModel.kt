@@ -11,6 +11,7 @@ import com.codeci.ide.ui.projects.FileTreeRepository
 import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectConfig
+import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubStats
 import com.codeci.ide.ui.projects.ProjectInfo
@@ -96,6 +97,9 @@ class FileManagerViewModel : ViewModel() {
             val isGit = gitDir.exists()
             val branch = if (isGit) readBranchQuietly(project.root, gitDir) else null
             val hasChanges = if (isGit && git != null) {
+                // Device round fix 2026-08-31: stray __pycache__ from a python
+                // run must not light up the card badge / push offer either.
+                runCatching { PythonCacheIgnore.ensure(project.root) }
                 runCatching { git.status(project.root).files.isNotEmpty() }.getOrNull()
             } else {
                 null
