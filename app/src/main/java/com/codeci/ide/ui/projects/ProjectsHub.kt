@@ -124,14 +124,31 @@ object ProjectsHub {
         is AutoRunPlan.None -> ProjectHubKind.GENERIC
     }
 
-    /** The kind the hub shows: declared config, or the detector for `auto`. */
-    fun kindFor(config: ProjectConfig, autoPlan: AutoRunPlan?): ProjectHubKind {
+    /** The kind the hub shows: the declared config, or the detector's answer
+     *  for projects that were marked [autoDetected] (see [shouldAutoDetect]).
+     *  Device round 1 (owner): a clone kept the Phase 13 `"c"` fallback and
+     *  was labelled C — a `"c"` config whose entry file is absent is a
+     *  placeholder, not a fact, so the hub now trusts the detector there.
+     */
+    fun kindFor(
+        config: ProjectConfig,
+        autoPlan: AutoRunPlan?,
+        autoDetected: Boolean = false
+    ): ProjectHubKind {
         val declared = kindOfConfigType(config.type)
-        return if (config.type.trim().lowercase() == "auto" && autoPlan != null) {
-            kindOfAutoPlan(autoPlan)
-        } else {
-            declared
-        }
+        return if (autoDetected && autoPlan != null) kindOfAutoPlan(autoPlan) else declared
+    }
+
+    /**
+     * When the hub must run the Phase 14 detector for a project: always for
+     * `auto` type, and for the legacy `"c"` fallback whenever the config's
+     * entry file does not actually exist (clones/imports created before the
+     * clone-defaults-to-auto fix). A `"c"` project WITH its entry present is
+     * trusted as declared — detection never overrides a true wizard choice.
+     */
+    fun shouldAutoDetect(configType: String, entryFileExists: Boolean): Boolean {
+        val type = configType.trim().lowercase()
+        return type == "auto" || (type == "c" && !entryFileExists)
     }
 
     /** Chip filter + case-insensitive name substring search over [entries]. */

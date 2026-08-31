@@ -58,29 +58,60 @@ class ProjectsHubTest {
         val autoConfig = ProjectConfig(name = "x", type = "auto")
         assertEquals(
             ProjectHubKind.PY_SERVER,
-            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Server("python-flask"))
+            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Server("python-flask"), autoDetected = true)
         )
         assertEquals(
             ProjectHubKind.C_SERVER,
-            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Server("c-microservice"))
+            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Server("c-microservice"), autoDetected = true)
         )
         assertEquals(
             ProjectHubKind.WEB_STATIC,
-            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Web("index.html"))
+            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Web("index.html"), autoDetected = true)
         )
         assertEquals(
             ProjectHubKind.PY,
-            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Project("python"))
+            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Project("python"), autoDetected = true)
         )
         assertEquals(
             ProjectHubKind.GENERIC,
-            ProjectsHub.kindFor(autoConfig, AutoRunPlan.None("no files"))
+            ProjectsHub.kindFor(autoConfig, AutoRunPlan.None("no files"), autoDetected = true)
         )
         // Without a plan the auto project still renders (empty GENERIC card).
-        assertEquals(ProjectHubKind.GENERIC, ProjectsHub.kindFor(autoConfig, null))
-        // A declared type never consults the plan.
+        assertEquals(ProjectHubKind.GENERIC, ProjectsHub.kindFor(autoConfig, null, autoDetected = true))
+        // A declared type is trusted unless flagged stale (autoDetected).
         val cConfig = ProjectConfig(name = "x", type = "c")
         assertEquals(ProjectHubKind.C, ProjectsHub.kindFor(cConfig, AutoRunPlan.Server("python-flask")))
+        assertEquals(ProjectHubKind.C, ProjectsHub.kindFor(cConfig, null))
+    }
+
+    @Test
+    fun `stale c placeholders re-detect - the cloned-repo mislabel fix`() {
+        val cConfig = ProjectConfig(name = "x", type = "c")
+        // Entry present → declared C stands even without any plan.
+        assertTrue(ProjectsHub.shouldAutoDetect("auto", true))
+        assertTrue(ProjectsHub.shouldAutoDetect("C", false))
+        assertFalse(ProjectsHub.shouldAutoDetect("c", true))
+        assertFalse(ProjectsHub.shouldAutoDetect("python", false))
+        assertFalse(ProjectsHub.shouldAutoDetect("web", false))
+
+        // A "c" placeholder over an html repo must show Web, not C…
+        assertEquals(
+            ProjectHubKind.WEB_STATIC,
+            ProjectsHub.kindFor(cConfig, AutoRunPlan.Web("index.html"), autoDetected = true)
+        )
+        // …and an unrecognizable repo must degrade to generic gray, never lie C.
+        assertEquals(
+            ProjectHubKind.GENERIC,
+            ProjectsHub.kindFor(cConfig, AutoRunPlan.None("no files"), autoDetected = true)
+        )
+        // A genuine C project (entry exists → not autoDetected) is untouched.
+        assertEquals(ProjectHubKind.C, ProjectsHub.kindFor(cConfig, null, autoDetected = false))
+        // Auto projects keep answering to the detector.
+        val autoConfig = ProjectConfig(name = "x", type = "auto")
+        assertEquals(
+            ProjectHubKind.PY_SERVER,
+            ProjectsHub.kindFor(autoConfig, AutoRunPlan.Server("python-flask"), autoDetected = true)
+        )
     }
 
     // ---- filter membership ----

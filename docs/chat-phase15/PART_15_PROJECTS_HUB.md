@@ -348,5 +348,22 @@ PASS = steps 1–9 succeed without manual fixes; step 10 leaves the app healthy.
   branch tip `3ba2d58`): `:app:assembleDebug` + `:app:testDebugUnitTest` +
   `:app:lintDebug` all pass; artifact `CodeC-IDE` (21 MB) downloadable via
   `gh run download 33383946165 -n CodeC-IDE`.
-**Device:** §4 recipe unchanged — run it against the artifact `CodeC-IDE` of
-the latest green `Build APK` run for `arena/01a05743-codec`.
+**Device round 1 (2026-08-31, owner): 2 issues, both fixed same day —**
+1. *Cloned repo labeled C*: the clone flow kept Phase 13's
+   `ProjectConfig.defaultFor(name)` fallback (type `"c"`), while the spec
+   §2.3.2 required ensuring `auto`. **Fix:** clones now land as type `auto`
+   (hub + RUN ▶ detect the real family from the repo's files), AND the hub
+   is self-correcting for pre-fix projects: a declared `"c"` config whose
+   entry file does not exist is a placeholder, so the card re-labels via
+   `ProjectRunDetector` (`ProjectsHub.shouldAutoDetect` + `kindFor
+   (…, autoDetected)`); unrecognizable repos degrade to gray GENERIC instead
+   of lying C. Genuine wizard-created C projects (entry present) are
+   untouched. 4 new/updated host tests.
+2. *Package & Command Hub tab removed*: I had traded the Modules bottom tab
+   for Projects to match the mockup's five tabs. Owner's live word outranks
+   the mockup — **the Packages tab is restored** (six-item bar:
+   Home · Projects · Editor · Term · Packages · Settings; short labels keep
+   it legible).
+   **Known limit (not a defect):** clones made before fix 1 keep their
+   `"c"` config for RUN ▶ (hub label is already right); re-clone or open
+   the file's own run path to use server/web run flows.
