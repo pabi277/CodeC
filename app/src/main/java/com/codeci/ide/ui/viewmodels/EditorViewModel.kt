@@ -978,7 +978,9 @@ class EditorViewModel : ViewModel() {
         _activeTabPath.value?.let { _activeTabPath.value = remap(it) ?: it }
         _fileName.value = remap(_fileName.value) ?: _fileName.value
         _launchDefault.value?.let { _launchDefault.value = remap(it) ?: it }
-        runCatching { SettingsManager(appContext).replaceRecentFile(oldPath, newPath) }
+        viewModelScope.launch {
+            runCatching { SettingsManager(appContext).replaceRecentFile(oldPath, newPath) }
+        }
         refreshFileEntries(appContext)
         _userMessage.value = appContext.getString(R.string.rename_success)
     }
