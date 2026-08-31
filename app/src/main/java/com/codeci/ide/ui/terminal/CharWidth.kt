@@ -48,38 +48,43 @@ object CharWidth {
         0x0825, 0x0827,
         0x0829, 0x082D,
         0x0859, 0x085B,       // Mandaic
-        0x08E3, 0x0903,       // Arabic ext + Devanagari signs (Mn+Mc)
-        0x093A, 0x093C,
-        0x0941, 0x0948,
-        0x094D, 0x094D,
-        0x0951, 0x0957,
+        0x08E3, 0x0903,       // Arabic ext + Devanagari 0900-0903
+        0x093A, 0x093C,       // Devanagari vowel signs (Mc/Mn)
+        0x093E, 0x0940,       // vowel signs AA/I/II (Mc/Mc/Mn)
+        0x0941, 0x0948,       // Mn vowel signs U..AI
+        0x0949, 0x094C,       // Mc vowel signs
+        0x094D, 0x094D,       // virama (Mn)
+        0x094E, 0x094F,
+        0x0951, 0x0957,       // Mn stress signs
         0x0962, 0x0963,
-        0x0981, 0x0981,       // Bengali/Assamese: candrabindu (Mn)
+        0x0981, 0x0983,       // Bengali candrabindu/anusvara/visarga
         0x09BC, 0x09BC,       // nukta
-        0x09BE, 0x09BE,       // vowel sign AA (Mc — clusters with base)
-        0x09C1, 0x09C4,       // vowel signs U..VOCAL RR (Mn)
+        0x09BE, 0x09C0,       // vowel signs AA/I/II (Mc/Mc/Mn)
+        0x09C1, 0x09C4,       // Mn vowel signs U..VOCAL RR
+        0x09C7, 0x09C8,       // Mc vowel signs E/AI
+        0x09CB, 0x09CC,       // Mc vowel signs O/AU
         0x09CD, 0x09CD,       // virama
         0x09D7, 0x09D7,       // vowel sign AU (Mc)
         0x09E2, 0x09E3,
         0x0A01, 0x0A03,       // Gurmukhi
         0x0A3C, 0x0A3C,
-        0x0A41, 0x0A51,
+        0x0A41, 0x0A42,
+        0x0A47, 0x0A51,       // incl. 0A4B-0A4D vowel signs
         0x0A70, 0x0A71,
         0x0A75, 0x0A75,
         0x0A81, 0x0A82,       // Gujarati
         0x0ABC, 0x0ABC,
+        0x0ABE, 0x0AC0,       // vowel signs AA/I/II (Mc)
         0x0AC1, 0x0ACD,
         0x0AE2, 0x0AE3,
-        0x0B01, 0x0B01,       // Oriya
+        0x0B01, 0x0B03,       // Oriya
         0x0B3C, 0x0B3C,
-        0x0B3F, 0x0B3F,
-        0x0B41, 0x0B44,
-        0x0B4D, 0x0B56,
+        0x0B3F, 0x0B44,       // vowel sign I (Mc) + Mn signs
+        0x0B4D, 0x0B56,       // virama + Mc signs
         0x0B62, 0x0B63,
         0x0B82, 0x0B82,       // Tamil
-        0x0BBE, 0x0BBE,       // vowel sign AA (Mc)
-        0x0BC0, 0x0BC0,
-        0x0BCD, 0x0BCD,
+        0x0BBE, 0x0BC2,       // vowel signs (Mc/Mn)
+        0x0BCD, 0x0BCD,       // virama
         0x0BD7, 0x0BD7,
         0x0C00, 0x0C04,       // Telugu
         0x0C3E, 0x0C40,
@@ -87,19 +92,17 @@ object CharWidth {
         0x0C62, 0x0C63,
         0x0C81, 0x0C81,       // Kannada
         0x0CBC, 0x0CBC,
-        0x0CBF, 0x0CBF,
+        0x0CBF, 0x0CC4,       // vowel signs (Mc/Mn)
         0x0CC6, 0x0CC6,
         0x0CCC, 0x0CCD,
         0x0CE2, 0x0CE3,
         0x0D01, 0x0D03,       // Malayalam
-        0x0D3E, 0x0D3E,       // vowel sign AA (Mc)
+        0x0D3E, 0x0D40,       // vowel signs (Mc/Mc/Mn)
         0x0D41, 0x0D44,
         0x0D4D, 0x0D4D,
         0x0D57, 0x0D57,
         0x0D62, 0x0D63,
-        0x0DCA, 0x0DCA,       // Sinhala
-        0x0DCF, 0x0DCF,
-        0x0DDF, 0x0DDF,
+        0x0DCA, 0x0DDF,       // Sinhala virama + vowel signs
         0x1160, 0x11FF,       // Hangul Jamo medial/final (conjoining)
         0x1AB0, 0x1AFF,       // Combining Diacritical Marks Extended
         0x1DC0, 0x1DFF,       // Combining Diacritical Marks Supplement

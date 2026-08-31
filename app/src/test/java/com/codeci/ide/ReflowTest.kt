@@ -39,7 +39,10 @@ class ReflowTest {
 
         buf.resize(4, 2)
 
-        assertEquals("abcd\nefgh", buf.visibleText())
+        // The empty second screen row is real screen state, so the rewrapped
+        // top ("abcd") overflows into scrollback — assert over the transcript.
+        assertEquals("abcd\nefgh", buf.snapshot().transcriptText())
+        assertEquals("efgh", buf.visibleText())
     }
 
     @Test
@@ -183,10 +186,14 @@ class ReflowTest {
 
         buf.resize(2, 2)
 
-        assertEquals('x'.code, buf.cell(0, 0).cp)
-        assertEquals(' '.code, buf.cell(1, 0).cp)   // padded blank at row end
-        assertEquals(0x6F22, buf.cell(0, 1).cp)     // the wide glyph starts row 2
-        assertTrue(buf.cell(0, 1).flags and CellFlags.WIDE_LEAD != 0)
+        // Fragment 1 shrinks to "x" (blank padding at the boundary), the pair
+        // moves to the next fragment intact; the trailing empty screen row
+        // overflows "x" into scrollback first.
+        val snap = buf.snapshot()
+        assertEquals("x\n漢", snap.transcriptText())
+        assertEquals(0x6F22, buf.cell(0, 0).cp)     // wide glyph heads the screen
+        assertTrue(buf.cell(0, 0).flags and CellFlags.WIDE_LEAD != 0)
+        assertEquals(' '.code, buf.cell(1, 0).cp)   // continuation half
     }
 
     @Test

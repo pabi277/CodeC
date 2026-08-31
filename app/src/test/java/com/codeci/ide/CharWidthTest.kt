@@ -23,6 +23,11 @@ class CharWidthTest {
         assertEquals(0, CharWidth.width(0x09BE))   // Bengali vowel sign AA (Mc)
         assertEquals(0, CharWidth.width(0x09BF))   // Bengali vowel sign I (Mc)
         assertEquals(0, CharWidth.width(0x093E))   // Devanagari vowel sign AA (Mc)
+        assertEquals(0, CharWidth.width(0x093F))   // Devanagari vowel sign I (Mc)
+        assertEquals(0, CharWidth.width(0x09C0))   // Bengali vowel sign II (Mn)
+        assertEquals(0, CharWidth.width(0x0BBF))   // Tamil vowel sign I (Mc)
+        assertEquals(0, CharWidth.width(0x0ABE))   // Gurmukhi vowel sign AA (Mc)
+        assertEquals(0, CharWidth.width(0x0CC0))   // Kannada vowel sign II (Mc)
         assertEquals(0, CharWidth.width(0xFE0F))   // variation selector-16
         assertEquals(0, CharWidth.width(0x200D))   // zero-width joiner
     }
