@@ -2,8 +2,10 @@
 
 **Status (2026-08-31):** Phases 15 + 16 IMPLEMENTED, mockup-exact re-skinned,
 3 device rounds done, **MERGED to `main`** (session branch
-`arena/01a057e0-codec`); Phase 17 PARTIAL — SC sheet + per-file stage toggle
-shipped in the re-skin, Switch Branch + conflict UI pending · **Cost:**
+`arena/01a057e0-codec`); **Phase 17 now fully IMPLEMENTED on
+`arena/01a05878-codec`** — Switch Branch (stash/auto-restore + New branch),
+merge-conflict grouping, Mark Resolved and commit blocking join the SC sheet
++ per-file stage toggle; **device gate pending** · **Cost:**
 `[client-only]` · **Depends on:** Phase 8 (Projects & folder tree), Phase 9
 (Editor foundation), Phase 11 (Output panel), Phase 13 (Git integration),
 Phase 14 (Web preview)

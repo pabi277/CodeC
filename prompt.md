@@ -75,11 +75,16 @@ of assuming one. Commit and push to the SESSION branch only; never push to
       (`GitManager.trackedFiles`/`rmCached`) so they stop traveling at push.
     - **RUN ▶ is the HTML preview:** an open `.html` file makes RUN ▶ save +
       open Web Preview; the separate "Preview" overflow item is deleted.
-  - **Phase 17 — Source Control:** PARTIALLY implemented — the mockup-exact
-    SC sheet + in-tree M/A/D/? letters + tap-to-diff + **per-file +/− stage
-    toggle** (`GitManager.stageFile`/`unstageFile`) shipped in the re-skin;
-    **Switch Branch (checkout/stash dialog) and merge-conflict UI are still
-    PENDING** (drawer/chip show a "coming soon" toast).
+  - **Phase 17 — Source Control:** now **fully IMPLEMENTED on
+    `arena/01a05878-codec` (2026-08-31)** — the mockup-exact SC sheet +
+    in-tree M/A/D/? letters + tap-to-diff + **per-file +/− stage toggle**
+    (`GitManager.stageFile`/`unstageFile`) from the re-skin, **plus** the
+    Switch Branch dialog (checkout/stash/auto-restore + bonus New branch) and
+    the merge-conflict UI (Conflicts group, purple `U`, Mark Resolved, commit
+    blocked). Both "coming soon" toasts are gone. Record + decisions D1–D8:
+    `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §6.1. **Open gate: the
+    owner's §4 device recipe steps 5–8** — do not re-implement; only fix on
+    device evidence.
   - **Vector-API compile saga (round 2/3 of the re-skin, resolved
     2026-08-31, `253201e`):** the resolved `ui-graphics` is far newer than the
     BOM number suggests — the old string-path `addPath` API is gone. Verified
@@ -150,12 +155,11 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phase 17 remainder — Switch Branch + merge-conflict UI.** The SC sheet,
-   in-tree status letters, tap-to-diff and per-file stage toggle are already
-   in; what's left is the branch checkout/stash dialog (the drawer footer +
-   SC chip currently toast "coming soon") and conflict marking per
-   `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §4 recipe. Reuse Phase 13
-   `GitManager` — add `checkout`/`stash` argv methods the same way.
+1. **Phase 17 — device gate.** The code is written (Switch Branch +
+   merge-conflict UI, `arena/01a05878-codec`); what's left is the owner
+   running `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §4 steps 5–8 on the
+   device APK and reporting back. Fix only on device evidence; do not
+   re-implement.
 2. **Phase 18 — CodeCApi Device Capabilities** (the tail phase):
    `docs/chat-phase18/PART_18_CODEAPI.md`.
 3. Phases 15–16 remain open to **owner device feedback** on the merged build

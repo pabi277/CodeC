@@ -1,6 +1,9 @@
 # CodeC Phase 17 — In-editor Source Control & Branching (Spck git parity)
 
-**Status:** Planned (design/spec only) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a05878-codec`) — Switch Branch
+(checkout/stash/auto-restore + New branch), merge-conflict grouping and Mark
+Resolved all shipped; **device gate (§4 steps 5–8) pending owner run** ·
+**Cost:** `[client-only]`
 · **Depends on:** Phase 13 (Git engine: clone/status/diff/commit/push/pull,
 credential store, redaction), Phase 15 (Projects Hub git actions), Phase 16
 (editor drawer + in-tree git status letters)
@@ -234,3 +237,90 @@ checkout/stash dialog (drawer footer + SC chip currently toast "coming
 soon" — `hub_switch_branch_soon` / `editor_drawer_branch_soon` strings),
 "New branch…" bonus, and merge-conflict marking (purple/U grouping,
 COMMIT blocked, Mark Resolved).
+
+### 6.1 Switch Branch + merge conflicts — IMPLEMENTED (2026-08-31, `arena/01a05878-codec`)
+
+**Status: IMPLEMENTED, `[client-only]`, CI pending at the time of writing.**
+Everything the §4 recipe needs for steps 5–8 is in place; the device gate is
+the owner's run of that recipe.
+
+**Research notes (recorded before writing code, owner's
+RESEARCH-WHEN-NEEDED rule):**
+
+1. **Conflict codes.** git-status(1) "Short Format"
+   ([manpage](https://manpages.debian.org/testing/git-man/git-status.1.en.html),
+   [discussion](https://stackoverflow.com/questions/44573213/parsing-git-status))
+   lists exactly seven unmerged XY pairs: `DD AU UD UA DU AA UU`. Two carry
+   no `U` at all, so "either column is U" would miss them, while "both
+   columns ∈ {A,D,U}" false-positives on `AD` (staged addition deleted in the
+   work tree). The exact set is hard-coded in `GitBranchOps.isConflict`.
+2. **Branch listing.** `git branch -a` prints a remote symref line
+   (`remotes/origin/HEAD -> origin/main`) that is not a branch, and a detached
+   HEAD prints `* (HEAD detached at <sha>)` / `* (no branch)` in the current
+   slot. Both are handled by `GitBranchParser`.
+3. **Remote checkouts.** `git checkout origin/x` detaches HEAD
+   ([ref](https://stackoverflow.com/questions/74626663/how-can-i-fix-head-detached-at-origin-development-when-i-have-2-remotes));
+   the correct form is `git checkout -b <local> --track <remote>/<local>`.
+4. **Stash.** `git stash push -u -m <msg>` covers untracked files;
+   `git stash list` prints `stash@{N}: WIP on <branch>: <sha> <subject>` or
+   `stash@{N}: On <branch>: <message>` when `-m` was used
+   ([ref](https://linuxcapable.com/git-stash-command/)); and **`git stash pop`
+   only drops the entry when the apply succeeds**, so a conflicting pop loses
+   nothing — the UI can honestly say "your changes are still saved".
+
+**What shipped:**
+
+| Piece | Where |
+|---|---|
+| Pure branch/stash/conflict logic (no Android, no process) | `ui/projects/GitBranchOps.kt` (new) |
+| `listBranches` / `currentBranch` / `checkout` / `checkoutNew` / `checkoutRemote` / `stashPush` / `stashPop` / `stashList` / `switchBranch` | `ui/projects/GitManager.kt` |
+| `isConflict` (AA/DD included), purple `U` badge | `GitFileChange` in `GitManager.kt` |
+| Branch loading, switch flow, Mark Resolved, commit guard | `ui/viewmodels/GitControlViewModel.kt` |
+| Switch Branch dialog (local + remote + New branch) | `ui/screens/BranchSwitchSheet.kt` (new) |
+| Conflicts group, Mark Resolved ✓, blocked COMMIT, clickable branch chip | `ui/screens/GitControlView.kt` |
+| Entry points: SC chip, editor drawer footer, Projects card ⋮ | `EditorScreen.kt`, `FileManagerScreen.kt` |
+| Push Changes menu item | `FileManagerViewModel.pushProject`, hub card ⋮ |
+| Purple `U` in the drawer tree | `ui/components/EditorProjectDrawer.kt` |
+
+**Tests (host, run by CI):** `GitBranchOpsTest` ×17 (branch/stash parsing,
+detached HEAD, conflict set, name safety, marker round-trip) and
+`GitBranchManagerTest` ×16 (fake-git argv proofs: `branch --all --no-color`,
+`checkout -b … --track …`, `stash push -u -m codec-switch: main`, the
+dirty→stash→checkout ordering, pop-back on a failed checkout, auto-restore
+only for CodeC-marked stashes belonging to the target branch, no-op on a
+clean tree, `stashChanges = false`, and rejection of an option-shaped name
+before git ever runs).
+
+**Decisions:**
+
+- **D1 — branch list is `git branch --all --no-color`.** One call covers
+  local + remote; `--no-color` blocks a user `color.branch=always` config
+  from injecting escapes. Symref (`origin/HEAD -> …`) and detached-HEAD rows
+  are dropped; detached-ness is reported to the UI instead.
+- **D2 — remote branches become local tracking branches.** Never
+  `checkout origin/x` (detaches HEAD); always
+  `git checkout -b <name> --track <remote>` — and if a local branch of that
+  name already exists, the plain local checkout is used so the command cannot
+  fail with "a branch named 'x' already exists".
+- **D3 — stash message marker `codec-switch: <branch>`.** Auto-restore only
+  ever pops entries carrying *our* marker *and* naming the branch we just
+  landed on, so a user's own stashes are never touched (proved by test).
+- **D4 — failure handling is honest and loss-free.** A failed checkout after
+  a stash pops the stash straight back; a conflicting pop leaves the entry on
+  the stack and the dialog says the changes are still saved.
+- **D5 — `-u` (include untracked) by default**, because Spck's promise is
+  "your uncommitted changes" — new files included. The dialog's checkbox
+  defaults to on and can be turned off.
+- **D6 — Mark Resolved = `git add -- <path>`** (the Phase 16 argv-safe
+  `stageFile`), exactly what git needs to end the unmerged state. Commits
+  stay blocked until no `U` remains (both in the UI and in the ViewModel).
+- **D7 — the editor menu does NOT gain Pull/Push rows.** The drawer footer is
+  mockup-exact (owner's Phase 16 device round 2 requirement) and the editor
+  ⋮ is already long; Pull/Push are reachable from the drawer's Source Control
+  sheet and from the Projects card ⋮, which gained **Push Changes**. Recorded
+  here as a deliberate deviation from §2.4 — say the word and it moves.
+- **D8 — no new credential path, no new process rules.** Everything reuses
+  the Phase 13 `GitManager` argv/environment/redaction model; branch names
+  and stash refs are validated before exec (`isSafeExistingBranch`,
+  `ProjectsHub.isValidBranchName`), and nothing is written to `$PREFIX/bin`,
+  `.git/config` or the terminal environment.
