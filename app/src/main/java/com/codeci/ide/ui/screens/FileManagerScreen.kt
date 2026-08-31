@@ -1188,6 +1188,24 @@ private fun ProjectHubCard(
                     )
                 }
             }
+            if (entry.unpushed > 0) {
+                // Phase 17 device fix — amber "not pushed" pill: a failed push
+                // must never look like an uploaded project.
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(5.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        "↑${entry.unpushed}",
+                        color = HubBadgeYellow,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))

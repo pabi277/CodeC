@@ -45,7 +45,14 @@ class GitControlViewModel : ViewModel() {
         val branchesLoading: Boolean = false,
         val branchBusy: Boolean = false,
         val branchResult: String? = null,
-        val branchError: String? = null
+        val branchError: String? = null,
+        /**
+         * Phase 17 device fix — the reason the last push failed, kept until a
+         * push succeeds or the user dismisses it. A failed push used to look
+         * exactly like a successful one (the commit clears the change list),
+         * so the app silently claimed work was on GitHub when it was not.
+         */
+        val pushError: String? = null
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -247,14 +254,42 @@ class GitControlViewModel : ViewModel() {
             BuildArtifactIgnore.ensure(projectRoot)
             git.stageAll(projectRoot)
             git.commit(projectRoot, trimmed)
-            val pushResult = runCatching { git.push(projectRoot) }
-            pushResult.fold(
-                onSuccess = { "Committed & pushed ✓" },
-                onFailure = { failure ->
-                    "Committed ✓ — push failed: ${failure.message ?: "unknown error"}"
-                }
-            )
+            // Phase 17 device fix: publish a branch that has no upstream yet
+            // (`git push --set-upstream <remote> HEAD`) instead of failing
+            // with "has no upstream branch" — and never claim a push worked.
+            val pushFailure = runCatching { git.pushHandlingUpstream(projectRoot) }
+                .exceptionOrNull()
+            if (pushFailure == null) {
+                _state.value = _state.value.copy(pushError = null)
+                "Committed & pushed ✓"
+            } else {
+                val detail = pushFailure.message ?: "unknown error"
+                _state.value = _state.value.copy(pushError = detail)
+                "Committed locally ✓ — NOT pushed: $detail"
+            }
         }
+    }
+
+    /**
+     * Phase 17 device fix — retry a push on its own (the Source Control sheet
+     * offers this whenever the branch is ahead of its remote).
+     */
+    fun push(context: Context, projectRoot: File) {
+        runGitOperation(
+            context,
+            projectRoot,
+            "Pushing…",
+            onError = { failure -> _state.value = _state.value.copy(pushError = failure) }
+        ) { git ->
+            git.pushHandlingUpstream(projectRoot)
+            _state.value = _state.value.copy(pushError = null)
+            "Pushed ✓"
+        }
+    }
+
+    /** Dismisses the sticky "not pushed" explanation. */
+    fun dismissPushError() {
+        _state.value = _state.value.copy(pushError = null)
     }
 
     /**
@@ -317,6 +352,7 @@ class GitControlViewModel : ViewModel() {
         context: Context,
         projectRoot: File,
         busyLabel: String,
+        onError: ((String) -> Unit)? = null,
         operation: suspend (GitManager) -> String
     ) {
         viewModelScope.launch {
@@ -328,10 +364,13 @@ class GitControlViewModel : ViewModel() {
                 _state.value = _state.value.copy(busy = false)
                 refresh(context, projectRoot, finalMessage = result)
             } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    busy = false,
-                    message = e.message ?: "git operation failed"
-                )
+                val failure = e.message ?: "git operation failed"
+                onError?.invoke(failure)
+                _state.value = _state.value.copy(busy = false, message = failure)
+                // Phase 17 device fix: re-read the repository after a failure
+                // too, so the "N commit(s) ahead" figure on screen is real —
+                // a failed push must not look like a clean, pushed tree.
+                refresh(context, projectRoot, finalMessage = failure)
             }
         }
     }

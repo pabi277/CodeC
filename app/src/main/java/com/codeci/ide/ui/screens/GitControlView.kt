@@ -391,6 +391,69 @@ fun GitControlSheet(
                             Text(stringResource(R.string.refresh), letterSpacing = 0.8.sp)
                         }
                     }
+
+                    // ---- honest push state (Phase 17 device fix) -----------
+                    // A commit clears the change list, so a FAILED push used
+                    // to look exactly like a successful one. Whenever the
+                    // branch is ahead of its remote (or a push failed), say so
+                    // and offer a retry.
+                    val ahead = state.status?.ahead ?: 0
+                    // A branch that tracks nothing has no "ahead" figure at
+                    // all — it simply is not published yet, which is exactly
+                    // the case the owner hit with a freshly created branch.
+                    val unpublished = state.status?.upstream == null &&
+                        state.status?.detached != true &&
+                        state.status?.branch != null
+                    if (ahead > 0 || state.pushError != null || unpublished) {
+                        HorizontalDivider()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = "↑",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = UnpushedAmber
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = when {
+                                        ahead > 0 ->
+                                            stringResource(R.string.git_unpushed_count, ahead)
+                                        state.pushError != null ->
+                                            stringResource(R.string.git_unpushed_unknown)
+                                        else -> stringResource(
+                                            R.string.git_unpushed_new_branch,
+                                            state.status?.branch ?: ""
+                                        )
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = UnpushedAmber
+                                )
+                                state.pushError?.let { error ->
+                                    Text(
+                                        text = error,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.push(context, projectRoot) },
+                                enabled = !state.busy && !state.loading,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.height(42.dp)
+                            ) {
+                                Text(stringResource(R.string.git_push_action), letterSpacing = 0.8.sp)
+                            }
+                        }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -630,6 +693,9 @@ private val DiffRemoveColor = Color(0xFFEF5350)
 
 /** Spck marks merge conflicts purple (Phase 17 §2.5). */
 private val ConflictPurple = Color(0xFFBA68C8)
+
+/** "Not pushed yet" — amber, so it reads as a warning, not an error. */
+private val UnpushedAmber = Color(0xFFE6B33C)
 
 private fun badgeColor(state: GitFileState): Color = when (state) {
     GitFileState.MODIFIED -> Color(0xFFE6B33C)

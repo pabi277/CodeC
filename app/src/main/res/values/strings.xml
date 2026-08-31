@@ -345,6 +345,10 @@
     <string name="git_stage">Stage file</string>
     <string name="git_unstage">Unstage file</string>
     <string name="git_no_other_changes">No other changes — only the conflicts above.</string>
+    <string name="git_unpushed_count">%1$d commit(s) not pushed yet</string>
+    <string name="git_unpushed_unknown">Push did not finish — your commits are still on this device</string>
+    <string name="git_unpushed_new_branch">Branch "%1$s" is not on the remote yet — the first push publishes it</string>
+    <string name="git_push_action">PUSH</string>
 
     <!-- Phase 17: merge conflicts -->
     <string name="git_conflicts_header">Conflicts</string>

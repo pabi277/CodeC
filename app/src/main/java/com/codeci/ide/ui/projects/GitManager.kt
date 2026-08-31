@@ -207,9 +207,54 @@ class GitManager(
         exec(root, args, localTimeoutSeconds, "git commit failed")
     }
 
-    /** `git push` — needs an upstream (clone sets it) and, for private remotes, a token. */
-    fun push(root: File) {
-        exec(root, listOf("push"), networkTimeoutSeconds, "git push failed")
+    /**
+     * `git push` — needs an upstream (clone sets it) and, for private remotes,
+     * a token.
+     *
+     * Phase 17 device fix (owner, 2026-08-31): a branch created in the app
+     * (New branch…, `git checkout -b`, or the first push of a local repo) has
+     * **no upstream**, so a plain `git push` dies with
+     * `fatal: The current branch <name> has no upstream branch`. Pass
+     * [setUpstream] to publish it instead:
+     * `git push --set-upstream <remote> HEAD`, which pushes HEAD to the
+     * same-named branch on the remote and remembers the tracking link, so
+     * later pushes are plain again. Use [pushHandlingUpstream] to decide
+     * automatically.
+     */
+    fun push(root: File, setUpstream: Boolean = false) {
+        if (!setUpstream) {
+            exec(root, listOf("push"), networkTimeoutSeconds, "git push failed")
+            return
+        }
+        // `origin` is what CodeC's clone creates; `git remote` covers repos
+        // that were renamed or initialised by hand.
+        val remote = firstRemote(root) ?: "origin"
+        exec(
+            root,
+            listOf("push", "--set-upstream", remote, "HEAD"),
+            networkTimeoutSeconds,
+            "git push failed"
+        )
+    }
+
+    /** First configured remote (`git remote`), or null when the command fails. */
+    fun firstRemote(root: File): String? {
+        val result = runGit(root, listOf("remote"), localTimeoutSeconds)
+        if (result.exitCode != 0) return null
+        return result.stdout.map { it.trim() }.firstOrNull { it.isNotEmpty() }
+    }
+
+    /**
+     * Pushes, setting the upstream first when the current branch has none.
+     *
+     * `git status --porcelain=v1 -b` prints `## main...origin/main` only once
+     * a branch tracks something, so a missing upstream is detectable without
+     * another process — and the extra `status` call is the one CodeC already
+     * makes for the Source Control sheet.
+     */
+    fun pushHandlingUpstream(root: File) {
+        val upstream = runCatching { status(root) }.getOrNull()?.upstream
+        push(root, setUpstream = upstream == null)
     }
 
     /** `git pull` — merge auto-edit disabled so no editor can ever block. */

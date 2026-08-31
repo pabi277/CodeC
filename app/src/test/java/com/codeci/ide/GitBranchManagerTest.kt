@@ -38,7 +38,7 @@ class GitBranchManagerTest {
             {
               printf 'CMD'
               for a in "${'$'}@"; do printf ' [%s]' "${'$'}a"; done
-              printf '\n'
+              echo ""
             } >> "${'$'}FAKE_LOG"
             case "${'$'}1" in
               --version)
@@ -46,25 +46,25 @@ class GitBranchManagerTest {
                 exit 0
                 ;;
               branch)
-                if [ -n "${'$'}FAKE_BRANCH_OUT" ]; then printf '%b\n' "${'$'}FAKE_BRANCH_OUT"; fi
+                if [ -n "${'$'}FAKE_BRANCH_OUT" ]; then printf '%b' "${'$'}FAKE_BRANCH_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_BRANCH_EXIT:-0}"
                 ;;
               rev-parse)
-                if [ -n "${'$'}FAKE_REVPARSE_OUT" ]; then printf '%b\n' "${'$'}FAKE_REVPARSE_OUT"; fi
+                if [ -n "${'$'}FAKE_REVPARSE_OUT" ]; then printf '%b' "${'$'}FAKE_REVPARSE_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_REVPARSE_EXIT:-0}"
                 ;;
               checkout)
-                if [ -n "${'$'}FAKE_CHECKOUT_OUT" ]; then printf '%b\n' "${'$'}FAKE_CHECKOUT_OUT"; fi
+                if [ -n "${'$'}FAKE_CHECKOUT_OUT" ]; then printf '%b' "${'$'}FAKE_CHECKOUT_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_CHECKOUT_EXIT:-0}"
                 ;;
               stash)
                 case "${'$'}2" in
                   list)
-                    if [ -n "${'$'}FAKE_STASH_OUT" ]; then printf '%b\n' "${'$'}FAKE_STASH_OUT"; fi
+                    if [ -n "${'$'}FAKE_STASH_OUT" ]; then printf '%b' "${'$'}FAKE_STASH_OUT"; echo ""; fi
                     exit 0
                     ;;
                   push)
-                    if [ -n "${'$'}FAKE_STASH_PUSH_OUT" ]; then printf '%b\n' "${'$'}FAKE_STASH_PUSH_OUT"; fi
+                    if [ -n "${'$'}FAKE_STASH_PUSH_OUT" ]; then printf '%b' "${'$'}FAKE_STASH_PUSH_OUT"; echo ""; fi
                     exit "${'$'}{FAKE_STASH_PUSH_EXIT:-0}"
                     ;;
                   pop)
@@ -73,8 +73,12 @@ class GitBranchManagerTest {
                 esac
                 exit 0
                 ;;
+              remote)
+                if [ -n "${'$'}FAKE_REMOTE_OUT" ]; then printf '%b' "${'$'}FAKE_REMOTE_OUT"; echo ""; fi
+                exit "${'$'}{FAKE_REMOTE_EXIT:-0}"
+                ;;
               status)
-                if [ -n "${'$'}FAKE_STATUS_OUT" ]; then printf '%b\n' "${'$'}FAKE_STATUS_OUT"; fi
+                if [ -n "${'$'}FAKE_STATUS_OUT" ]; then printf '%b' "${'$'}FAKE_STATUS_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_STATUS_EXIT:-0}"
                 ;;
             esac
@@ -410,6 +414,73 @@ class GitBranchManagerTest {
             val commands = log(e)
             assertEquals("CMD [branch] [--all] [--no-color]", commands[1])
             assertEquals("CMD [checkout] [develop]", commands[2])
+        }
+    }
+
+    // --- push & upstream (device fix 2026-08-31) -----------------------------
+
+    @Test
+    fun `push on a tracking branch stays a plain push`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir)
+            manager(dir, e).push(repo(dir))
+            assertEquals("CMD [push]", log(e).last())
+        }
+    }
+
+    @Test
+    fun `push with setUpstream publishes the branch under its own name`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
+            manager(dir, e).push(repo(dir), setUpstream = true)
+            val commands = log(e)
+            assertEquals("CMD [remote]", commands[0])
+            assertEquals("CMD [push] [--set-upstream] [origin] [HEAD]", commands[1])
+        }
+    }
+
+    @Test
+    fun `push with setUpstream falls back to origin when the remote cannot be read`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_EXIT" to "1"))
+            manager(dir, e).push(repo(dir), setUpstream = true)
+            assertEquals("CMD [push] [--set-upstream] [origin] [HEAD]", log(e).last())
+        }
+    }
+
+    @Test
+    fun `pushHandlingUpstream sets the upstream only when the branch has none`() = runBlocking {
+        withTimeout(20_000) {
+            // A branch created inside the app (`## test` — no `...origin/test`):
+            // this is the case that used to die with "has no upstream branch".
+            val fresh = tempDir()
+            val freshEnv = env(
+                fresh,
+                mapOf("FAKE_STATUS_OUT" to "## test", "FAKE_REMOTE_OUT" to "origin")
+            )
+            manager(fresh, freshEnv).pushHandlingUpstream(repo(fresh))
+            assertEquals("CMD [push] [--set-upstream] [origin] [HEAD]", log(freshEnv).last())
+
+            // A cloned branch already tracks its remote: keep the plain push.
+            val tracking = tempDir()
+            val trackingEnv = env(tracking, mapOf("FAKE_STATUS_OUT" to "## main...origin/main"))
+            manager(tracking, trackingEnv).pushHandlingUpstream(repo(tracking))
+            val commands = log(trackingEnv)
+            assertEquals("CMD [status] [--porcelain=v1] [-b]", commands[0])
+            assertEquals("CMD [push]", commands[1])
+            assertEquals(2, commands.size)
+        }
+    }
+
+    @Test
+    fun `firstRemote reads the first configured remote`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "upstream\\norigin"))
+            assertEquals("upstream", manager(dir, e).firstRemote(repo(dir)))
         }
     }
 
