@@ -12,7 +12,14 @@ data class ProjectConfig(
     /** Phase 14 — the port a server-type project binds to (null for plain projects). */
     val port: Int? = null,
     /** Phase 14 — the exact local URL to open in Web Preview (defaults to http://127.0.0.1:<port>). */
-    val previewUrl: String? = null
+    val previewUrl: String? = null,
+    /**
+     * Phase 16 — Spck-style "Launch Default": project-relative path of the
+     * file the preview/Launch action targets when the active tab itself is
+     * not previewable. Null (omitted from the JSON) on every pre-Phase-16
+     * config, exactly like [port] above.
+     */
+    val launchDefault: String? = null
 ) {
     /**
      * Avoid Android's nullable/stubbed JSONObject string methods in JVM tests;
@@ -29,6 +36,7 @@ data class ProjectConfig(
         append(",\"clean\":").append(jsonString(clean))
         port?.let { append(",\"port\":").append(it) }
         previewUrl?.let { append(",\"previewUrl\":").append(jsonString(it)) }
+        launchDefault?.let { append(",\"launchDefault\":").append(jsonString(it)) }
         append('}')
     }
 
@@ -142,7 +150,8 @@ data class ProjectConfig(
                 run = fields["run"] ?: "./bin/app",
                 clean = fields["clean"] ?: "rm -rf bin/app",
                 port = fields["port"]?.toIntOrNull(),
-                previewUrl = fields["previewUrl"]
+                previewUrl = fields["previewUrl"],
+                launchDefault = fields["launchDefault"]?.takeIf { it.isNotBlank() }
             )
         }
 

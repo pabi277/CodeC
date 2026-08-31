@@ -115,7 +115,13 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phase 15 — Projects Hub & Unified Import (Spck clone), ACTIVE — the
+1. **Phase 16 — Spck-style Editor Shell, ACTIVE (2026-08-31, owner: "Start
+   phase 16"): IMPLEMENTED — awaiting CI + device.** Spec
+   `docs/chat-phase15/PART_16_EDITOR_SHELL.md` (record §6 there). Phase 15
+   itself: device round 1 closed (clone re-detect + Packages tab fixes on
+   `83ba499`, CI green `33385105931`) — owner re-test + later re-acceptance
+   outstanding; the original Phase 15 notes follow for reference.
+   Original Phase 15 entry: Projects Hub & Unified Import (Spck clone), the
    owner directed the start on 2026-08-31 ("i going to start phase 15").**
    Spec: `docs/chat-phase15/PART_15_PROJECTS_HUB.md` (README + mockups in
    `docs/chat-phase15/`). Redesigned Projects screen (card list, filter

@@ -33,6 +33,17 @@ class SettingsManager(private val context: Context) {
 
         val DEV_MODE = booleanPreferencesKey("dev_mode")
         val SHOW_FILE_PATHS = booleanPreferencesKey("show_file_paths")
+        val EDITOR_CUSTOM_SNIPPETS = stringPreferencesKey("editor_custom_snippets")
+    }
+
+    /**
+     * Phase 16 — the custom-snippet row of the editor keys (Spck "Custom
+     * Snippets"), stored as `label=text` lines. The data model + rendering
+     * ship now; the editing UI in Settings is a recorded follow-up.
+     */
+    val editorCustomSnippetsFlow: Flow<String> = context.dataStore.data.map { it[EDITOR_CUSTOM_SNIPPETS] ?: "" }
+    suspend fun setEditorCustomSnippets(raw: String) {
+        context.dataStore.edit { it[EDITOR_CUSTOM_SNIPPETS] = raw }
     }
 
     val fontSizeFlow: Flow<Float> = context.dataStore.data.map { it[FONT_SIZE] ?: 14f }

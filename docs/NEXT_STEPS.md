@@ -463,9 +463,11 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 
 ## Phases 15–17 — Spck-style Editor & Project Experience (PLANNED, design/spec only)
 
-📋 **Phase 15 IMPLEMENTED & CI-GREEN (2026-08-31, `arena/01a05743-codec`,
-run `33383946165`) — device recipe pending** (record: [`chat-phase15/PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md)
-§6). **Phases 16–17 remain spec-only.** Started on the owner's instructions
+📋 **Phase 15 device round 1 closed on `83ba499` (CI green `33385105931`) —
+owner re-test of the two fixes outstanding** (record: [`chat-phase15/PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md)
+§6). **Phase 16 IMPLEMENTED (2026-08-31, same branch) — awaiting CI + device
+recipe** (record: [`chat-phase15/PART_16_EDITOR_SHELL.md`](chat-phase15/PART_16_EDITOR_SHELL.md)
+§6). **Phase 17 remains spec-only.** Started on the owner's instructions
 ("i going to start phase 15" → "Start phase 15"). Originally
 added 2026-08-31 on the owner's request to clone the
 [Spck Editor / Git Client](https://play.google.com/store/apps/details?id=io.spck)

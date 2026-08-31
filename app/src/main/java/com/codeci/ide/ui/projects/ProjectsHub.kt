@@ -238,6 +238,18 @@ object ProjectsHub {
     }
 
     /**
+     * Phase 16 — tree letters for the editor drawer (Spck's M/A/D/? badges):
+     * relative path → porcelain badge. First change wins so a file staged AND
+     * modified keeps the staged mark, mirroring `git status --porcelain`
+     * column priority (X over Y).
+     */
+    fun fileBadges(files: List<GitFileChange>): Map<String, String> {
+        val out = LinkedHashMap<String, String>()
+        for (change in files) out.putIfAbsent(change.path, change.badge)
+        return out
+    }
+
+    /**
      * Parses `git ls-remote --heads` output (`<sha>\trefs/heads/<name>`) into
      * branch names, preserving the remote's order and dropping refs that are
      * not heads.

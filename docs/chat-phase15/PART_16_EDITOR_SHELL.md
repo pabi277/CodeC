@@ -201,3 +201,86 @@ PASS = steps 1–7 behave as described and step 8 shows no regressions.
   compatible, like Phase 14's `port`/`previewUrl`).
 - **Out of scope (stretch, note don't block):** minimap, language-specific key
   sets beyond the default, custom-snippet editing UI, Markdown preview.
+
+---
+
+## 6. Implementation record (2026-08-31) — design decisions
+
+Clean-room again throughout: Spck's public behavior + the §1 mockups were the
+only references; zero code or assets copied. `[client-only]`; native Compose
+editor kept (invariant).
+
+**Research notes (what the public docs describe, mirrored):** Spck's keys row
+ships `TAB { } ( ) ; < > / = " '` + arrows and per-language keyboard modes;
+custom snippets are simple `label → text` inserts; the drawer keeps a project
+header with branch, a tree with per-file git letters, and footer rows; tapping
+the status-bar errors count jumps to the first error. All mirrored, none copied.
+
+- **D1 — tabs live in the TopAppBar title slot.** Active = bold + accent
+  underline (drawn `drawBehind`, immune to the scrollable Row's infinite
+  width), dirty = ●, ✕ stays on every tab when >1 (superset of "close on
+  active" — removal would regress the Phase 9 acceptances), long-press =
+  Close others / Close all / Copy path. With no tabs (fresh scratch buffer)
+  the title falls back to the filename, tap-to-rename as before; rename also
+  sits in the overflow.
+- **D2 — `ModalNavigationDrawer` replaces the Phase 9.2 files bottom-sheet.**
+  The sheet's full block was removed; its flows (open, new file, run-in-
+  terminal, delete, "Change" context picker) moved into the drawer header,
+  toolbar and per-row menu. The context picker dialog itself is unchanged.
+- **D3 — collapse is a pure filter, not a tree rebuild.** The VM keeps its
+  one-pass full-tree scan (`fileEntries`); `ui/editor/FileTreeCollapse.kt`
+  hides descendants of collapsed dirs (the collapsed folder row itself stays
+  visible so its chevron remains tappable). "Collapse All" stores every dir.
+- **D4 — line endings: LF buffers, native files.** `ui/editor/LineEndings.kt`
+  (pure): open detects by majority rule and normalizes; save re-expands the
+  tab's ending. Toggling (status chip or overflow) rewrites the saved copy
+  immediately. Scratch files stay LF — there is no per-file config for them.
+- **D5 — git metadata stays best-effort.** Branch chip = direct `.git/HEAD`
+  read (no git process; `ProjectsHub.branchFromHeadFile` reused); M/A/D/?
+  letters + change count = `git status --porcelain` via `GitContext` only
+  when the packaged git is installed, refreshed on drawer open; tree badges
+  via the new pure `ProjectsHub.fileBadges` (first change wins).
+- **D6 — `launchDefault` is an optional `ProjectConfig` field omitted from
+  the JSON when null** — the Phase 14 `port`/`previewUrl` backward-compat
+  contract verbatim. Set/clear from the drawer row menu and the editor ⋮.
+  The 👁 preview targets: active HTML file → `launchDefault` → web project's
+  entry. RUN ▶ itself keeps its Phase 11/14 behavior (only the entry the web
+  branch opens is now launchDefault-aware). The launch file carries a blue
+  icon + ⚡ marker in the tree.
+- **D7 — the keys row is data-driven.** `ui/editor/EditorKeySet.kt` (pure):
+  the §2.4 general set exactly, small per-language tails (`->` for C/C++,
+  `:`/`self ` for Python, `</>`, backtick/`=>`, `$`), then user snippets.
+  `EditorKeysRow` renders keycaps; all insert/caret/TAB math lives in the
+  engine (host-tested). Custom snippets ship as the data model +
+  `label=text` parsing in Settings (`editor_custom_snippets`); the editing
+  UI is the recorded follow-up the spec pre-approved.
+- **D8 — pinch = the terminal's reactive pattern on Compose pointers.**
+  Two-finger only (single-finger taps/scroll untouched), distance ratio →
+  `FontSizeZoom.applyZoom` (half-point steps, clamped 8–30 sp), committed
+  through the SAME `SettingsManager.setFontSize` store the Settings stepper
+  uses — no second font state to sync.
+- **D9 — "Close all" = save all, then close all-but-the-active tab.** The
+  editor's "never close the last tab" invariant (Phase 9) is kept; dirty
+  others are saved through the regular close path (a failed save keeps that
+  tab open — edits are never dropped silently).
+- **D10 — errors badge tap = jump to first error** (`EditorShellUi.firstError`,
+  pure); warnings-only still opens the review dialog, and the dialog stays
+  reachable via ⋮ → Diagnostics. Status bar also shows the language label and
+  the LF/CRLF chip (inert for scratch).
+- **D11 — bottom order follows the mockup: code → keys row → status bar →
+  Output panel** (the old bar sat under the status line); the toolbar chevron
+  hides the keys row on small screens.
+
+**Files:** `ui/editor/{EditorKeySet,LineEndings,FileTreeCollapse,FontSizeZoom,EditorShellUi}.kt`
+(new pure engines), `EditorTab.kt` (+`lineEnding`), `EditorViewModel.kt`
+(tab/ending plumbing, collapse + row mutations incl. folder create/rename,
+git meta, launch default, close-others/all, jumpToLine), `ProjectConfig.kt`
+(`launchDefault`), `ProjectsHub.kt` (`fileBadges`), `SettingsManager.kt`
+(snippets string), components `EditorTabBar/EditorStatusBar/EditorKeysRow`
+(SymbolBar retired), `EditorProjectDrawer.kt` (new), `EditorScreen.kt`
+(drawer shell, top-bar menu, pinch, reorder), `MainActivity.kt`
+(⚙ wiring), 34+ strings, tests: `EditorKeySetTest` ×13, `LineEndingsTest` ×5,
+`LaunchDefaultTest` ×5, `FileTreeCollapseTest` ×5, `ProjectsHubTest` +1.
+
+**CI:** first run pending — this section is appended with the run id once
+`Build APK` reports.
