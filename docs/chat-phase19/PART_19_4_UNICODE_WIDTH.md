@@ -89,6 +89,8 @@ separate cells instead of forming one cluster.
 
 ## 5. Exit condition & device recipe
 
+**Verdict: PASS — owner device rounds, final word 2026-08-31: "All ok now"** (Phase 19 accepted as a whole; see README + JOURNEY item 18).
+
 ```text
 1. echo '漢字 日本語 한글 ひらがな'      EXPECT: readable, no overlapping, wraps whole.
 2. printf 'emoji: 😀 👍 ⌚\\n'          EXPECT: emoji occupy 2 cells (no neighbor overlap).

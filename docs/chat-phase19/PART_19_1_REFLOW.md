@@ -138,6 +138,8 @@ Extend `TerminalBufferTest`:
 
 ## 5. Exit condition & device recipe
 
+**Verdict: PASS — owner device rounds, final word 2026-08-31: "All ok now"** (Phase 19 accepted as a whole; see README + JOURNEY item 18).
+
 ```text
 1. Open the terminal; run: seq 1 60   (or `ls -la /usr` — many lines).
 2. Pinch to ZOOM OUT (smaller font, more columns).

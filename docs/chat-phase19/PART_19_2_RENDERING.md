@@ -276,3 +276,5 @@ math, clamp). Assets: `res/font/jetbrainsmono_{medium,bold}.ttf` (~544 KB).
 **Round-3 recipe (objective):** after install, `stty size` should report
 ≈ **70 cols / 36–38 rows** (was 32/60; Termux reference 39/71), and the
 MWMW wall should look dense and dark next to Termux.
+
+**Final verdict (2026-08-31): PASS — owner: "All ok now"** after rounds 3–4 on top of §7.1–7.2 (density pack + perf work).

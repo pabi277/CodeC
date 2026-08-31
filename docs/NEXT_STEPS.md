@@ -463,7 +463,10 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 
 ## Phases 15–17 — Spck-style Editor & Project Experience (PLANNED, design/spec only)
 
-📋 **Planned (no code yet), added 2026-08-31 on the owner's request** to clone the
+📋 **Planned; **Phase 15 ACTIVE per the owner's instruction (2026-08-31:
+"i going to start phase 15")** — start with
+[`PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md).** Originally
+added 2026-08-31 on the owner's request to clone the
 [Spck Editor / Git Client](https://play.google.com/store/apps/details?id=io.spck)
 project & editor experience (import git project, project list, full editor look &
 feel). Client-only; reuses the Phase 8/9/11/13/14 engines — a UI/UX parity + gap
@@ -488,7 +491,7 @@ fill, not a rewrite. Spec + phone mockups in [`chat-phase15/`](chat-phase15/).
 
 ---
 
-## Phase 19 — Terminal Parity (Termux-quality terminal) — 🚧 IMPLEMENTED & CI-GREEN, device gate pending
+## Phase 19 — Terminal Parity (Termux-quality terminal) — ✅ COMPLETE & DEVICE-ACCEPTED (PR on owner's word)
 
 ✅ **IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) on the owner's "Ok start
 phase 19 … also find other things Termux does better and fix it"** — all FIVE
@@ -514,8 +517,9 @@ weight — fixed via default 12sp + bundled JetBrains Mono Medium/Bold (OFL) +
 not smooth scrolling / keyboard sometimes not popping up"): 4 fixes —
 run-batched drawing, gesture detectors no longer restart every output
 frame, pixel-smooth sub-row scrolling, IME retry loop (PART_19_3 §9).
-**Next: round 4 — `stty size` ≈ 70×37, `yes | head -200000` scroll-DURING-
-stream test, tap-after-command keyboard test.**
+**Round 4 (2026-08-31): PASS — owner: "All ok now".**
+Phase 19 CLOSED: CI `33377713289`, 4 device rounds, ~70 new host tests.
+The PR is NOT open — it waits for the owner's literal command.**
 
 Phase 19 was specced 2026-08-31 on the owner's report that the terminal
 (a) prints downloads only at the end, (b) overlaps letters, and (c)

@@ -93,6 +93,8 @@ Termux does better than CodeC terminal and fix it"* — parity-audit gaps
 
 ## 5. Exit condition & device recipe
 
+**Verdict: PASS — owner device rounds, final word 2026-08-31: "All ok now"** (Phase 19 accepted as a whole; see README + JOURNEY item 18).
+
 ```text
 1. printf '\\e]52;c;%s\\a' "$(printf 'hello from osc52' | base64)"
    EXPECT: paste anywhere → "hello from osc52".

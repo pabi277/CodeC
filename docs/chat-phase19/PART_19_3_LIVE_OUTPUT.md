@@ -254,3 +254,5 @@ row each edge, hit-tests offset by the remainder), `TerminalKeyView.kt`
 scroll DURING the stream (pixel-smooth, no rubber-band); tap the terminal
 right after a command finishes — keyboard must pop up every time (also
 after switching Editor↔Terminal tabs).
+
+**Round-4 verdict (2026-08-31): PASS — owner: "All ok now"** (responsive during streams, smooth scrolling, keyboard pops up every time).

@@ -39,12 +39,11 @@ of assuming one. Commit and push to the SESSION branch only; never push to
     port monitor, Web Preview live mode, Flask/FastAPI/C-microservice presets,
     bundled `demo_flask`, Auto (detect) projects (D10). `[client-only]` — no
     `[repo-build]`. Record: `docs/chat-phase14/PART_14_IMPLEMENTATION.md`.
-- **`main` is at `0b591e2` and current through Phase 14.**
+- **`main` is at `8dd961a2` (PR #33 merged — the Phase 15–19 specs).**
 
-- **Phases 15–19 are PLANNED — design/spec + phone mockups ONLY, NO code yet.**
-  They live under `docs/chat-phase15/` and `docs/chat-phase19/` and are tracked
-  in **PR #33 (docs-only, OPEN on `arena/01a05668-codec`)** — awaiting the
-  owner's word to merge. Two owner requests drove them:
+- **Phases 15–18 are PLANNED — design/spec + phone mockups ONLY, NO code yet.**
+  They live under `docs/chat-phase15/` (+ `chat-phase16/17` specs inside it)
+  and `docs/chat-phase18/`. Two owner requests drove them:
   - **Phases 15–17 — Spck Editor clone** (make CodeC's project + editor UX
     mirror **Spck Editor / Git Client**): 15 = Projects Hub & Unified Import
     (card list, filter chips, search, one `+` sheet → New Project / Clone Git
@@ -66,10 +65,16 @@ of assuming one. Commit and push to the SESSION branch only; never push to
     — CI round 2 caught missing Brahmic vowel signs) and 19.5 protocol/
     interaction parity (DA1/DA2 responses, OSC 52 clipboard write, xterm
     mouse reporting with Termux-style tap/swipe mapping, Ctrl+arrows,
-    Copy-All/Share/Reset menu). ~50 new host tests. **Remaining: the
-    owner's device recipes** (`docs/chat-phase19/PART_19_*.md` §5) and the
-    owner's word to open/merge a PR. Clean-room throughout (public specs
-    only).
+    Copy-All/Share/Reset menu). ~70 new host tests total. **DEVICE-ACCEPTED
+    (2026-08-31, owner's final word: "All ok now") after 4 device rounds:**
+    R1 letter gaps → `fitSizeToGrid`; R2 density/weight (`stty size` 32×60 vs
+    Termux 39×71) → 12sp default + bundled JetBrains Mono Medium/Bold (SIL
+    OFL, notice in `assets/licenses/`) + 0.9 row pitch; R3 lag/steppy
+    scroll/IME misses → run-batched drawing, stable gesture keys, sub-row
+    smooth scrolling, IME retry; R4 = owner PASS. Clean-room throughout
+    (public specs only). Lives on `arena/01a056aa-codec` (CI-green run
+    `33377713289`); **PR only on the owner's literal word.** Postmortems:
+    `docs/chat-phase19/PART_19_2_RENDERING.md` §7.1–7.2, `PART_19_3_LIVE_OUTPUT.md` §9.
 
 - **CLEAN-ROOM LAW (owner, 2026-08-31) — replicate FEATURES, never COPY code.**
   When a phase clones another app (Spck's UX in 15–17, Termux's terminal
@@ -106,21 +111,22 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Merge PR #33** (docs for Phases 15–19) if the owner says so — it is
-   docs-only and CI-green. Do not merge without the literal command.
-2. **Phase 19 device round 4, then PR on the owner's word.** Round 1:
-   letter gaps → `fitSizeToGrid` (PART_19_2 §7.1). Round 2: density/weight
-   → 12sp + bundled JetBrains Mono + 0.9 row pitch (PART_19_2 §7.2).
-   Round 3: "lagging / not smooth scrolling / keyboard not popping up" →
-   run-batched drawing, stable gesture-detector keys, pixel-smooth
-   sub-row scrolling, IME retry loop (PART_19_3 §9). Round 4 = `stty size`
-   ≈ 70×37, `yes | head -200000` while scrolling DURING the stream,
-   tap-after-command keyboard check (`gh run download <latest-green> -n
-   CodeC-IDE`); then the owner says the word to open/merge the PR.
-3. **Then the next planned phase.** The owner picks:
-   - **Phases 15 → 16 → 17 (Spck clone)** — run in order; reuse Phase 8/9/11/
-     13/14 engines; UI/UX parity + gap fill, not a rewrite.
-   - **Phase 18 (CodeCApi tail)** — last.
+1. **Phase 15 — Projects Hub & Unified Import (Spck clone), ACTIVE — the
+   owner directed the start on 2026-08-31 ("i going to start phase 15").**
+   Spec: `docs/chat-phase15/PART_15_PROJECTS_HUB.md` (README + mockups in
+   `docs/chat-phase15/`). Redesigned Projects screen (card list, filter
+   chips, search) + one `+` sheet (New Project / Clone Git Repo / Import
+   ZIP / Open Folder) + per-project git overflow actions. Reuses the
+   Phase 8/9/13 engines — UI/UX parity + gap fill, NOT a rewrite. Re-verify
+   the plan against the current code before writing anything, follow the
+   CLEAN-ROOM LAW (Spck is closed-source: public behavior/mockups/docs
+   only) and the RESEARCH-WHEN-NEEDED rule, keep it `[client-only]` +
+   host-testable, CI green, then a device recipe.
+2. **Phase 19 → PR on the owner's literal word.** The work is complete,
+   CI-green (`33377713289`) and device-accepted on `arena/01a056aa-codec`;
+   do NOT open/merge the PR until the owner commands it in chat.
+3. **Then Phases 16 → 17 (Spck clone, in order) → 18 (CodeCApi tail)** on
+   the owner's pick.
    Re-verify each plan against the current code before writing anything, follow
    the CLEAN-ROOM LAW and RESEARCH-WHEN-NEEDED rule, and record design
    decisions (D1, D2, …) in the part doc as you go.
