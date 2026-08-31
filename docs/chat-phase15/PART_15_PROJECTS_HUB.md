@@ -1,6 +1,6 @@
 # CodeC Phase 15 — Projects Hub & Unified Import (Spck-style project list)
 
-**Status:** IMPLEMENTED 2026-08-31 (see §6; CI + device pending) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED & CI-GREEN 2026-08-31 (see §6; device recipe pending) · **Cost:** `[client-only]`
 · **Depends on:** Phase 8 (Projects & folder tree), Phase 13 (Git clone),
 Phase 14 (project types / auto-detect)
 · **Target files (anticipated):** `ui/screens/FileManagerScreen.kt` (or a new
@@ -264,7 +264,7 @@ PASS = steps 1–9 succeed without manual fixes; step 10 leaves the app healthy.
 
 ## 6. Implementation record (2026-08-31, `arena/01a05743-codec`)
 
-**Status: IMPLEMENTED — CI pending.** Started on the owner's "Start phase 15".
+**Status: IMPLEMENTED & CI-GREEN — device recipe pending.** Started on the owner's "Start phase 15".
 `[client-only]`, no `[repo-build]`; all engines reused (Phases 8/9/13/14).
 
 **Research notes** (RESEARCH-WHEN-NEEDED rule):
@@ -344,5 +344,9 @@ PASS = steps 1–9 succeed without manual fixes; step 10 leaves the app healthy.
   with two explicit arms (`a31b66d`→round 2); membership test also proves
   it. One test-only math bug (3 h asserting "2 hours ago") was fixed too.
   Lesson recorded: pure logic first means CI *finds* the bugs, as designed.
+- Round 2: **GREEN** — `33383900234` (fix commit) and `33383946165` (final
+  branch tip `3ba2d58`): `:app:assembleDebug` + `:app:testDebugUnitTest` +
+  `:app:lintDebug` all pass; artifact `CodeC-IDE` (21 MB) downloadable via
+  `gh run download 33383946165 -n CodeC-IDE`.
 **Device:** §4 recipe unchanged — run it against the artifact `CodeC-IDE` of
 the latest green `Build APK` run for `arena/01a05743-codec`.
