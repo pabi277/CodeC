@@ -29,6 +29,14 @@ class TerminalSession(
     private var pty: PtySession? = null
     private var readerJob: Job? = null
 
+    /**
+     * Phase 19.3: snapshots are published by a frame-paced emitter instead of
+     * once per PTY chunk. Conflated StateFlow + per-chunk publishes dropped
+     * intermediate frames, so streaming output only appeared when it finished.
+     */
+    private val renderPump = RenderPump { publish() }
+    private var renderJob: Job? = null
+
     private val _snapshot = MutableStateFlow(emulator.snapshot())
     val snapshot: StateFlow<TerminalSnapshot> = _snapshot.asStateFlow()
 
@@ -76,6 +84,8 @@ class TerminalSession(
             _alive.value = true
             _exitCode.value = null
             session.setWindowSize(emulator.rows, emulator.cols)
+            renderJob?.cancel()
+            renderJob = renderPump.start(scope)
             readerJob = scope.launch { readLoop(session) }
         } catch (e: Exception) {
             AppLogger.e("TerminalSession", "failed to start shell", e)
@@ -121,6 +131,8 @@ class TerminalSession(
         running.set(false)
         readerJob?.cancel()
         readerJob = null
+        renderJob?.cancel()
+        renderJob = null
         try {
             pty?.close()
         } catch (_: Exception) {
@@ -144,7 +156,10 @@ class TerminalSession(
                     continue
                 }
                 synchronized(emulator) { emulator.feed(buf, 0, n) }
-                publish()
+                // Phase 19.3: mark dirty; the frame-paced RenderPump publishes
+                // at ~60 fps so streaming output animates instead of appearing
+                // only when the program finishes.
+                renderPump.markDirty()
             }
         } catch (e: Exception) {
             if (running.get()) {
@@ -176,6 +191,11 @@ class TerminalSession(
         }
     }
 
+    /**
+     * Immediate, out-of-band publish. Used for user-visible low-frequency
+     * events (resize, notice, reset, start failure) and the reader's exit
+     * path — the final state must always land even mid-frame.
+     */
     private fun publish() {
         _snapshot.value = synchronized(emulator) { emulator.snapshot() }
     }
