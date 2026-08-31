@@ -192,6 +192,43 @@ PASS = steps 1–7 succeed without manual fixes; step 9 stays clean. Step 8 pass
 if a conflict is reproducible on the day.
 ```
 
+### 4.1 Quick device checks for the Switch Branch + conflict work (2026-08-31)
+
+Entry points to exercise (all three must open the SAME dialog):
+**Projects tab → card ⋮ → Switch Branch**, **editor → ☰ → footer Switch
+Branch**, **editor → ☰ → Source Control → the `⌥ branch ▾` chip**.
+
+| # | Do this | Expect |
+|---|---|---|
+| 1 | Open a git project → ☰ → Switch Branch | Dialog titled *Switch Branch* with the project name, a **Branches** list (current one tagged `current`), a **Remote** group, a **New branch…** row, and the stash checkbox |
+| 2 | (Clean tree) pick another branch → SWITCH | Spinner → **"Switched to \<branch\>"** → Close; the drawer's `⌥` chip shows the new branch |
+| 3 | Edit a file, wait for autosave (dirty dot clears) → Switch Branch | Checkbox reads **"N uncommitted change(s) will be saved and restored"** |
+| 4 | Keep the checkbox on → switch away → switch back to the first branch | Away: *"your changes are stashed…"*; back: **"— your stashed changes were restored"** and the edit is back in the file |
+| 5 | Switch Branch → **Remote** → tap `origin/<x>` | **"Switched to \<x\>"** (a local tracking branch is created — *not* a detached HEAD) |
+| 6 | Switch Branch → **New branch…** → `feature/test` → SWITCH | **"Switched to feature/test"**; drawer chip follows |
+| 7 | Projects tab → card ⋮ → **Push Changes** | **"Pushed \<project\>"**, or an honest failure (no upstream / offline / bad token) |
+| 8 | Force a conflict (see below) → open the project | Drawer tree shows a **purple `U`** on the file; the SC sheet shows a **Conflicts N** group *above* Changes |
+| 9 | In the SC sheet, try COMMIT & PUSH with a conflict open | Button is disabled and **"Resolve the conflicts below before committing."** is shown |
+| 10 | Edit the file to remove `<<<<<<< ======= >>>>>>>` → tap the **✓** on its row | **"Marked resolved: \<file\>"**, purple `U` clears, COMMIT & PUSH becomes enabled |
+
+Forcing a conflict on-device (CodeC terminal, one command per line, from the
+project folder — it merges a divergent branch into itself):
+```text
+git checkout -b conflict-test
+(echo edit A > conflict.txt) && git add -A && git commit -m a
+git checkout main
+(echo edit B > conflict.txt) && git add -A && git commit -m b
+git merge conflict-test
+```
+`git merge` reports the conflict; the tree and the SC sheet should then behave
+as rows 8–10. Afterwards: `git merge --abort` (or resolve + commit) and delete
+the scratch branch with `git branch -D conflict-test`.
+
+Security regression (Phase 13, unchanged engine): `env | grep -i token` in the
+CodeC terminal prints nothing, `.git/config` holds no token, and Settings →
+Logs shows no token after a failed push.
+```
+
 ---
 
 ## 5. Invariants & scope guard
