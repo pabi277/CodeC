@@ -215,7 +215,9 @@ fun TerminalEmulatorView(
     // isFakeBoldText, whose stroke thickening pushes past the cell edge.
     val boldPaint = remember(paint, typeface) {
         android.graphics.Paint(paint).apply {
-            typeface = Typeface.create(typeface, Typeface.BOLD)
+            // `this.` — the bare name would resolve to the OUTER val
+            // typeface (the family face local), a reassignment error.
+            this.typeface = Typeface.create(typeface, Typeface.BOLD)
         }
     }
 
