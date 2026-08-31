@@ -59,7 +59,7 @@ object ProjectScaffold {
 </html>
 """
 
-    private const val PYTHON_STARTER = """#!/usr/bin/env python3
+    private val PYTHON_STARTER = """#!/usr/bin/env python3
 $QCodeC Python starter.$Q
 import sys
 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     print(greet(sys.argv[1] if len(sys.argv) > 1 else "CodeC"))
 """
 
-    private const val FLASK_APP = """#!/usr/bin/env python3
+    private val FLASK_APP = """#!/usr/bin/env python3
 $QCodeC Flask starter — Phase 14.
 
 Serves a small web app on http://127.0.0.1:5000. When the Flask package is
@@ -153,7 +153,7 @@ except ImportError:
 </html>
 """
 
-    private const val FASTAPI_APP = """#!/usr/bin/env python3
+    private val FASTAPI_APP = """#!/usr/bin/env python3
 $QCodeC FastAPI starter — Phase 14.
 
 Serves a small web API on http://127.0.0.1:8000. When FastAPI + uvicorn are
