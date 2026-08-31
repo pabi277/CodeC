@@ -128,6 +128,21 @@ class ReflowTest {
     }
 
     @Test
+    fun `rows-only shrink keeps the cursor on its content`() {
+        val buf = TerminalBuffer(cols = 4, rows = 4)
+        line(buf, "aa")
+        line(buf, "bb")
+        // Cursor now sits on the row that prints "cc".
+        "cc".forEach { buf.print(it.code) }
+
+        buf.resize(4, 2)
+
+        // Two rows overflowed to scrollback; "cc" is the new top row.
+        assertEquals(0, buf.cursorY)
+        assertEquals('c'.code, buf.cell(0, 0).cp)
+    }
+
+    @Test
     fun `alt screen keeps a rectangular copy`() {
         val buf = TerminalBuffer(cols = 4, rows = 2)
         buf.enterAltScreen()

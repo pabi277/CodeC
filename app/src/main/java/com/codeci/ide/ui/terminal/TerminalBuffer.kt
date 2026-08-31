@@ -314,17 +314,22 @@ class TerminalBuffer(
         val current = ArrayList<Row>(rows)
         for (y in 0 until rows) current.add(screen[y])
         if (r > rows) {
-            // Grow: restore rows from scrollback (most recent first).
+            // Grow: restore rows from scrollback (most recent first). The
+            // restored rows sit ABOVE the old screen, so the cursor travels
+            // down with its content.
             val take = minOf(r - rows, scrollback.size)
             repeat(take) { current.add(0, scrollback.removeLast()) }
+            cursorY += take
         } else if (r < rows) {
-            // Shrink: overflow top screen rows into scrollback.
+            // Shrink: overflow top screen rows into scrollback; the cursor
+            // follows its content up (clamped onto the screen).
             val push = rows - r
             for (i in 0 until push) {
                 scrollback.addLast(current[i])
                 while (scrollback.size > scrollbackLimit) scrollback.removeFirst()
             }
             repeat(push) { current.removeAt(0) }
+            cursorY -= push
         }
         screen = Array(r) { y ->
             if (y < current.size) ensureWidth(current[y], cols) else Row(cols)

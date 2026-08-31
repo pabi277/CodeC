@@ -411,6 +411,11 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     fun transcriptText(): String = activeSession()?.transcriptText().orEmpty()
 
+    /** Phase 19.5: terminal RESET (RIS) — clears the active session's screen. */
+    fun resetEmulator() {
+        activeSession()?.resetEmulator()
+    }
+
     fun wrapPaste(text: String): String =
         activeSession()?.wrapPaste(text) ?: text
 
