@@ -282,5 +282,12 @@ git meta, launch default, close-others/all, jumpToLine), `ProjectConfig.kt`
 (⚙ wiring), 34+ strings, tests: `EditorKeySetTest` ×13, `LineEndingsTest` ×5,
 `LaunchDefaultTest` ×5, `FileTreeCollapseTest` ×5, `ProjectsHubTest` +1.
 
-**CI:** first run pending — this section is appended with the run id once
-`Build APK` reports.
+**CI (2026-08-31):** red round 1 = nested-enum qualification (`Move`) + a
+material icon that does not exist in the pinned set (`SourceControl` → swapped
+for AutoMirrored `CallMerge`); round 2 = a suspend `replaceRecentFile` called
+from the sync rename path (now `viewModelScope.launch`); round 3 = a JVM
+illegal method-name character in a test name (`2..8`); **round 4 GREEN —
+run `33388547817`** (assembleDebug + testDebugUnitTest + lintDebug) at
+`a1f73fa`. Device APK = artifact `CodeC-IDE` of that run. All 29 new
+host tests included: `EditorKeySetTest` ×13, `LineEndingsTest` ×5,
+`LaunchDefaultTest` ×5, `FileTreeCollapseTest` ×5, `ProjectsHubTest` ×15.
