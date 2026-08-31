@@ -141,6 +141,26 @@ class GitManager(
         exec(root, listOf("add", "-A"), localTimeoutSeconds, "git add failed")
     }
 
+    /**
+     * Phase 15/16 — stage one file: `git add -- <path>`. The `--` guard keeps
+     * a path that looks like a flag (e.g. `-weird.c`) from ever being parsed
+     * as one; the path is a single argv element (no shell, no injection).
+     */
+    fun stageFile(root: File, path: String) {
+        exec(root, listOf("add", "--", path), localTimeoutSeconds, "git add failed")
+    }
+
+    /**
+     * Phase 15/16 — unstage one file: `git reset -- <path>` (mixed reset of a
+     * single path — works on every supported git version, unlike the newer
+     * `git restore` subcommand). Unstages staged changes, additions and
+     * deletions; an untracked file that was staged simply becomes untracked
+     * again.
+     */
+    fun unstageFile(root: File, path: String) {
+        exec(root, listOf("reset", "--", path), localTimeoutSeconds, "git reset failed")
+    }
+
     /** `git commit -m <message>` with the stored (or fallback) author identity. */
     fun commit(root: File, message: String) {
         val args = mutableListOf<String>()
