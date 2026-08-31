@@ -384,6 +384,8 @@ private fun DrawerRow(
                         "M" -> Color(0xFFE6B33C)
                         "A" -> Color(0xFF66BB6A)
                         "D" -> Color(0xFFFF5555)
+                        // Phase 17 — Spck marks merge conflicts purple.
+                        "U" -> Color(0xFFBA68C8)
                         else -> muted.copy(alpha = 0.8f)
                     },
                     modifier = Modifier.padding(end = 4.dp)

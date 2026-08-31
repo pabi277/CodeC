@@ -304,9 +304,11 @@
     <string name="hub_remote_url_copied">Remote URL copied</string>
     <string name="hub_no_remote_url">No remote URL configured</string>
     <string name="hub_switch_branch">Switch Branch</string>
-    <string name="hub_switch_branch_soon">Branch switching arrives with Source Control (Phase 17)</string>
     <string name="hub_pull_success">Pulled %1$s</string>
     <string name="hub_pull_failed">Pull failed: %1$s</string>
+    <string name="hub_push">Push Changes</string>
+    <string name="hub_push_success">Pushed %1$s</string>
+    <string name="hub_push_failed">Push failed: %1$s</string>
     <string name="project_missing">Project is no longer available</string>
     <string name="invalid_project_name">Invalid project name</string>
     <string name="project_name_taken">A project with that name already exists</string>
@@ -323,7 +325,6 @@
     <string name="editor_drawer_switch_hint">Tap to switch folder</string>
     <string name="editor_drawer_source_control">Source Control</string>
     <string name="editor_drawer_switch_branch">Switch Branch</string>
-    <string name="editor_drawer_branch_soon">Branch switching ships with the source-control phase</string>
     <string name="editor_drawer_expand_all">Expand All</string>
     <string name="editor_drawer_collapse_all">Collapse All</string>
     <string name="editor_drawer_empty">This folder has no files yet.</string>
@@ -343,5 +344,29 @@
     <string name="git_changes_header">Changes</string>
     <string name="git_stage">Stage file</string>
     <string name="git_unstage">Unstage file</string>
+    <string name="git_no_other_changes">No other changes — only the conflicts above.</string>
+
+    <!-- Phase 17: merge conflicts -->
+    <string name="git_conflicts_header">Conflicts</string>
+    <string name="git_conflict_hint">Edit the file to resolve the conflict, then tap ✓ to mark it resolved.</string>
+    <string name="git_commit_blocked">Resolve the conflicts below before committing.</string>
+    <string name="git_mark_resolved">Mark resolved</string>
+
+    <!-- Phase 17: Switch Branch -->
+    <string name="branch_switch_title">Switch Branch</string>
+    <string name="branch_switch_stash">Stash my uncommitted changes</string>
+    <string name="branch_switch_clean">Working tree clean — nothing to stash</string>
+    <string name="branch_switch_dirty">%1$d uncommitted change(s) will be saved and restored</string>
+    <string name="branch_switch_local_header">Branches</string>
+    <string name="branch_switch_remote_header">Remote</string>
+    <string name="branch_switch_remote_tag">remote</string>
+    <string name="branch_switch_new">New branch…</string>
+    <string name="branch_switch_new_hint">Branch name</string>
+    <string name="branch_switch_invalid_name">Use letters, digits and . _ / + -</string>
+    <string name="branch_switch_action">SWITCH</string>
+    <string name="branch_switch_current">current</string>
+    <string name="branch_switch_working">Switching branch…</string>
+    <string name="branch_switch_empty">This repository has no branches yet.</string>
+    <string name="close_action">Close</string>
 </resources>
 

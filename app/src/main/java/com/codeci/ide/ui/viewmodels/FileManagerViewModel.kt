@@ -532,6 +532,35 @@ class FileManagerViewModel : ViewModel() {
     }
 
     /**
+     * Phase 17 §2.4 — hub card ⋮ → Push. Pushes the active branch (needs an
+     * upstream and, for a private remote, the stored token). Mirrors
+     * [pullProject] so both menu items behave the same way.
+     */
+    fun pushProject(context: Context, projectName: String, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val manager = ProjectManager(context)
+                val project = withContext(Dispatchers.IO) { manager.project(projectName) }
+                    ?: error(context.getString(R.string.project_missing))
+                val git = GitContext(context.applicationContext).manager()
+                    ?: error(context.getString(R.string.git_not_installed_message))
+                withContext(Dispatchers.IO) { git.push(project.root) }
+                loadProjects(context)
+                _userMessage.value = context.getString(R.string.hub_push_success, projectName)
+                onDone()
+            } catch (e: Exception) {
+                _userMessage.value = context.getString(
+                    R.string.hub_push_failed,
+                    e.message ?: context.getString(R.string.create_failed)
+                )
+            } finally {
+                _isBusy.value = false
+            }
+        }
+    }
+
+    /**
      * Phase 15 — hub card ⋮ → Pull. Runs `git pull` on the project through
      * the Phase 13 engine (network timeout, redaction) and refreshes the hub
      * so the M badge and branch chip reflect the new state.
