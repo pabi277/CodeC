@@ -30,6 +30,7 @@ import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.ProjectRunDetector
+import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.ExecutionRunner
@@ -1063,6 +1064,7 @@ class EditorViewModel : ViewModel() {
                             File(gitDir, "HEAD").takeIf { it.isFile }?.readText()
                         )
                     }.getOrNull()
+                    runCatching { PythonCacheIgnore.ensure(root) }
                     val files = runCatching { GitContext(appContext).manager()?.status(root)?.files }.getOrNull()
                     Triple(branch, files?.let(ProjectsHub::fileBadges), files?.size)
                 }.getOrNull()
@@ -1511,6 +1513,10 @@ class EditorViewModel : ViewModel() {
             val activeLang = activeRel?.let { LanguageType.fromFileName(it) }
             val activeFile = activeRel?.let { ProjectPathUtils.resolveInside(info.root, it) }
             if (activeLang == LanguageType.PYTHON && activeFile != null) {
+                // Device round fix 2026-08-31: python writes __pycache__ and
+                // `git add -A` used to stage it — exclude it repo-locally
+                // BEFORE the run so the git panel never offers cache files.
+                viewModelScope.launch(Dispatchers.IO) { PythonCacheIgnore.ensure(info.root) }
                 val (build, run) = TerminalHandoff.interpretedParts(activeFile.absolutePath)
                 buildCommand = build
                 runCommand = run

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.projects.DiffEngine
+import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitManager
@@ -65,7 +66,14 @@ class GitControlViewModel : ViewModel() {
                 }
                 val isRepo = withContext(Dispatchers.IO) { git.isRepository(projectRoot) }
                 val status = if (isRepo) {
-                    withContext(Dispatchers.IO) { git.status(projectRoot) }
+                    withContext(Dispatchers.IO) {
+                        // Device round fix 2026-08-31: a python bytecode cache
+                        // that nothing ignores gets repo-locally excluded right
+                        // before we list changes — the panel (and its COMMIT &
+                        // PUSH staging) never offers __pycache__ files again.
+                        PythonCacheIgnore.ensure(projectRoot)
+                        git.status(projectRoot)
+                    }
                 } else {
                     null
                 }
