@@ -240,9 +240,27 @@ COMMIT blocked, Mark Resolved).
 
 ### 6.1 Switch Branch + merge conflicts — IMPLEMENTED (2026-08-31, `arena/01a05878-codec`)
 
-**Status: IMPLEMENTED, `[client-only]`, CI pending at the time of writing.**
+**Status: IMPLEMENTED, `[client-only]`, CI-GREEN (2026-08-31, `Build APK`
+`33417811422` @ `3a2846f`, assemble + unit tests + lint).**
 Everything the §4 recipe needs for steps 5–8 is in place; the device gate is
 the owner's run of that recipe.
+
+**CI rounds (all three red rounds were real, for-cause, and none of them
+touched product behaviour):**
+1. `33416562391` — `Unresolved reference 'CloudUpload'`: the resolved
+   `material-icons-extended` no longer ships that icon.
+2. `33416826771` — `Unresolved reference 'Send'`: `Icons.Default.<name>` only
+   resolves when the matching `androidx.compose.material.icons.filled.<name>`
+   extension is imported (that's why `ModulesScreen` imports `filled.Send`);
+   `Icons.Default.UploadFile` is imported in `FileManagerScreen` already.
+3. `33417133821` — 6 test failures, all from my harness: the fake-git script
+   was written with `printf '\\n'` (two backslashes), so `sh` printed a
+   literal `\n`; every command landed on one log line and canned output
+   carried a trailing `\n` (so the stash marker never matched). Aligned with
+   the Phase 13 harness's single backslash. **The product code was never at
+   fault** — evidence: `expected:<CMD [checkout] [main][]> but
+   was:<…[main][\n]>`.
+4. `33417811422` — green.
 
 **Research notes (recorded before writing code, owner's
 RESEARCH-WHEN-NEEDED rule):**

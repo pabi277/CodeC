@@ -155,11 +155,12 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phase 17 — device gate.** The code is written (Switch Branch +
-   merge-conflict UI, `arena/01a05878-codec`); what's left is the owner
+1. **Phase 17 — device gate.** The code is written and **CI-green**
+   (Switch Branch + merge-conflict UI, `arena/01a05878-codec`, `Build APK`
+   `33417811422` @ `3a2846f`, +33 host tests); what's left is the owner
    running `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §4 steps 5–8 on the
-   device APK and reporting back. Fix only on device evidence; do not
-   re-implement.
+   device APK (artifact `CodeC-IDE` of that run) and reporting back. Fix only
+   on device evidence; do not re-implement.
 2. **Phase 18 — CodeCApi Device Capabilities** (the tail phase):
    `docs/chat-phase18/PART_18_CODEAPI.md`.
 3. Phases 15–16 remain open to **owner device feedback** on the merged build
