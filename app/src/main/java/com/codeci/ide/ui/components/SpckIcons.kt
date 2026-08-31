@@ -17,9 +17,15 @@ import androidx.compose.ui.unit.dp
  * icons use a white base color so callers can re-tint with `Icon(tint=...)`;
  * the two-tone marks (Python, HTML) keep fixed colors and must NOT be tinted.
  *
- * API note: the pinned ui-graphics builds vectors from `List<PathNode>` and
- * takes `fill`/`stroke` as `Brush`, so colors are wrapped in [SolidColor] and
- * every path is spelled out as PathNode commands (no string path data).
+ * API note (verified against CI): the pinned ui-graphics builds vectors from
+ * `List<PathNode>` — `ImageVector.Builder.addPath(pathData, pathFillType, name,
+ * fill: Brush?, fillAlpha, stroke: Brush?, strokeAlpha, strokeLineWidth,
+ * strokeLineCap, strokeLineJoin, ...)` — so colors are wrapped in
+ * [SolidColor] and every path is spelled out as PathNode commands
+ * (`PathNode.MoveTo/LineTo/HorizontalTo/VerticalTo/CurveTo/ArcTo/Close`; no
+ * string path data, no `fillColor`/`strokeWidth`-style params, and `Color` is
+ * not a `Brush`). `DrawScope.drawLine` takes `end` (not `stop`); the bottom
+ * bar uses `navigationBarsPadding()`.
  */
 object SpckIcons {
 
