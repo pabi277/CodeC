@@ -14,16 +14,29 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -235,16 +248,15 @@ fun MainApp() {
     val terminalViewModel: TerminalViewModel = viewModel(viewModelStoreOwner = activity)
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
-    // Phase 15 — Projects is a first-class destination (Spck's Projects tab).
-    // Device round 1 (owner): the Package & Command Hub tab must NOT be
-    // traded away for it — the mockup's 5 tabs are overridden by the owner;
-    // Modules returns to the bar (six items, short labels, still fits).
+    // Phase 15/16 mockup-exact — exactly Spck's five tabs:
+    // Home · Projects · Editor · Terminal · Settings. Packages remains one
+    // tap away from the Home screen; the flat bar (no M3 selection pill,
+    // purple active state) matches mockups/projects-list.png.
     val screens = listOf(
         Screen.Home,
         Screen.FileManager,
         Screen.Editor,
         Screen.Terminal,
-        Screen.Modules,
         Screen.Settings
     )
 
@@ -262,36 +274,27 @@ fun MainApp() {
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             if (!isImeVisible) {
-                NavigationBar {
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentDestination = navBackStackEntry?.destination
-
-                    screens.forEach { screen ->
-                        val selected = currentDestination?.hierarchy?.any {
-                            it.route?.startsWith(screen.route.substringBefore("?")) == true
-                        } == true
-                        NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = screen.title) },
-                            label = { Text(screen.title) },
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(
-                                    when (screen) {
-                                        is Screen.Editor -> Screen.Editor.createRoute(null)
-                                        is Screen.Terminal -> Screen.Terminal.createRoute(null)
-                                        else -> screen.route
-                                    }
-                                ) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
+                FlatBottomBar(
+                    screens = screens,
+                    currentDestination = currentDestination,
+                    onNavigate = { screen ->
+                        navController.navigate(
+                            when (screen) {
+                                is Screen.Editor -> Screen.Editor.createRoute(null)
+                                is Screen.Terminal -> Screen.Terminal.createRoute(null)
+                                else -> screen.route
                             }
-                        )
+                        ) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         }
     ) { innerPadding ->
@@ -517,6 +520,66 @@ fun MainApp() {
             }
             composable(Screen.Logs.route) {
                 LogsScreen(onNavigateBack = { navController.popBackStack() })
+            }
+        }
+    }
+}
+
+/**
+ * Phase 15/16 mockup-exact bottom bar: five flat tabs (Home · Projects ·
+ * Editor · Terminal · Settings) with icon-over-label, purple for the active
+ * tab and muted grey otherwise — no M3 selection pill.
+ */
+@Composable
+private fun FlatBottomBar(
+    screens: List<Screen>,
+    currentDestination: NavDestination?,
+    onNavigate: (Screen) -> Unit
+) {
+    val density = LocalDensity.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = WindowInsets.navigationBars.getBottom(density))
+        ) {
+            screens.forEach { screen ->
+                val selected = currentDestination?.hierarchy?.any {
+                    it.route?.startsWith(screen.route.substringBefore("?")) == true
+                } == true
+                val activeColor = MaterialTheme.colorScheme.primary
+                val idleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onNavigate(screen) }
+                        .padding(vertical = 7.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        screen.icon,
+                        contentDescription = screen.title,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (selected) activeColor else idleColor
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = screen.title,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (selected) activeColor else idleColor,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
