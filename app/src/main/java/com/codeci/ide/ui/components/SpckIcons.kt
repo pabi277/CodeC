@@ -1,6 +1,7 @@
 package com.codeci.ide.ui.components
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -14,6 +15,11 @@ import androidx.compose.ui.unit.dp
  * from scratch (public design mockups only — no copied assets). Single-color
  * icons use a white base color so callers can re-tint with `Icon(tint=...)`;
  * the two-tone marks (Python, HTML) keep fixed colors and must NOT be tinted.
+ *
+ * API note: strokes are passed as a [Stroke] object (the pinned Compose
+ * `ImageVector.Builder.addPath` has no `strokeWidth`/`strokeCap` parameters);
+ * outline-only shapes keep `fillColor` at [Color.Unspecified] so they render
+ * as strokes, not filled blobs.
  */
 object SpckIcons {
 
@@ -27,15 +33,13 @@ object SpckIcons {
     ).apply {
         addPath(
             pathData = "M6,8.4 L6,15.5",
-            color = Color.White,
-            strokeWidth = 2f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 2f, cap = StrokeCap.Round)
         )
         addPath(
             pathData = "M18,9.4 C18,13.8 13.2,15.5 6.2,15.5",
-            color = Color.White,
-            strokeWidth = 2f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 2f, cap = StrokeCap.Round)
         )
         addPath(
             pathData = "M3.7,6 a2.3,2.3 0 1,0 4.6,0 a2.3,2.3 0 1,0 -4.6,0 Z",
@@ -81,15 +85,13 @@ object SpckIcons {
     ).apply {
         addPath(
             pathData = "M6.2,2.5 H14 L18.8,7.3 V21.5 H6.2 Z",
-            color = Color.White,
-            strokeWidth = 1.8f,
-            strokeJoin = StrokeJoin.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.8f, join = StrokeJoin.Round)
         )
         addPath(
             pathData = "M14,2.5 V7.3 H18.8",
-            color = Color.White,
-            strokeWidth = 1.8f,
-            strokeJoin = StrokeJoin.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.8f, join = StrokeJoin.Round)
         )
         addPath(pathData = "M11.2,8.2 H12.8 V10.2 H11.2 Z", fillColor = Color.White)
         addPath(pathData = "M11.2,11.5 H12.8 V13.5 H11.2 Z", fillColor = Color.White)
@@ -107,23 +109,20 @@ object SpckIcons {
     ).apply {
         addPath(
             pathData = "M8,7.2 L8,15.8",
-            color = Color.White,
-            strokeWidth = 2f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 2f, cap = StrokeCap.Round)
         )
         addPath(
             pathData = "M17.5,10.2 C17.5,14 12.8,14.8 8,14.8",
-            color = Color.White,
-            strokeWidth = 2f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 2f, cap = StrokeCap.Round)
         )
         addPath(pathData = "M5.8,5 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0 Z", fillColor = Color.White)
         addPath(pathData = "M15.3,8 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0 Z", fillColor = Color.White)
         addPath(
             pathData = "M8,15.8 L8,19.2",
-            color = Color.White,
-            strokeWidth = 2f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 2f, cap = StrokeCap.Round)
         )
         addPath(pathData = "M8,21 L5.6,17.6 H10.4 Z", fillColor = Color.White)
     }.build()
@@ -138,27 +137,23 @@ object SpckIcons {
     ).apply {
         addPath(
             pathData = "M5,2.5 H13.5 L19,8 V21.5 H5 Z",
-            color = Color.White,
-            strokeWidth = 1.8f,
-            strokeJoin = StrokeJoin.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.8f, join = StrokeJoin.Round)
         )
         addPath(
             pathData = "M13.5,2.5 V8 H19",
-            color = Color.White,
-            strokeWidth = 1.8f,
-            strokeJoin = StrokeJoin.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.8f, join = StrokeJoin.Round)
         )
         addPath(
             pathData = "M10.5,15.2 H17.5",
-            color = Color.White,
-            strokeWidth = 2f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 2f, cap = StrokeCap.Round)
         )
         addPath(
             pathData = "M14,11.7 V18.7",
-            color = Color.White,
-            strokeWidth = 2f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 2f, cap = StrokeCap.Round)
         )
     }.build()
 
@@ -173,9 +168,8 @@ object SpckIcons {
         addPath(
             pathData = "M3,7 C3,5.9 3.9,5 5,5 H9.6 L11.8,7.6 H19 C20.1,7.6 21,8.5 21,9.6 " +
                 "V17.5 C21,18.6 20.1,19.5 19,19.5 H5 C3.9,19.5 3,18.6 3,17.5 Z",
-            color = Color.White,
-            strokeWidth = 1.8f,
-            strokeJoin = StrokeJoin.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.8f, join = StrokeJoin.Round)
         )
     }.build()
 
@@ -235,21 +229,18 @@ object SpckIcons {
     ).apply {
         addPath(
             pathData = "M12,5.4 C10.2,3.9 7.8,3.5 4.8,4.1 V19.3 C7.8,18.7 10.2,19.1 12,20.6",
-            color = Color.White,
-            strokeWidth = 1.6f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.6f, cap = StrokeCap.Round)
         )
         addPath(
             pathData = "M12,5.4 C13.8,3.9 16.2,3.5 19.2,4.1 V19.3 C16.2,18.7 13.8,19.1 12,20.6",
-            color = Color.White,
-            strokeWidth = 1.6f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.6f, cap = StrokeCap.Round)
         )
         addPath(
             pathData = "M12,5.4 V20.6",
-            color = Color.White,
-            strokeWidth = 1.6f,
-            strokeCap = StrokeCap.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.6f, cap = StrokeCap.Round)
         )
     }.build()
 
@@ -263,15 +254,13 @@ object SpckIcons {
     ).apply {
         addPath(
             pathData = "M6,2.5 H13.8 L18.6,7.3 V21.5 H6 Z",
-            color = Color.White,
-            strokeWidth = 1.8f,
-            strokeJoin = StrokeJoin.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.8f, join = StrokeJoin.Round)
         )
         addPath(
             pathData = "M13.8,2.5 V7.3 H18.6",
-            color = Color.White,
-            strokeWidth = 1.8f,
-            strokeJoin = StrokeJoin.Round
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.8f, join = StrokeJoin.Round)
         )
     }.build()
 
@@ -283,10 +272,10 @@ object SpckIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).apply {
-        addPath(pathData = "M4,5.5 H20", color = Color.White, strokeWidth = 1.8f, strokeCap = StrokeCap.Round)
-        addPath(pathData = "M4,18.5 H20", color = Color.White, strokeWidth = 1.8f, strokeCap = StrokeCap.Round)
-        addPath(pathData = "M4,9.8 H13.5", color = Color.White, strokeWidth = 1.8f, strokeCap = StrokeCap.Round)
-        addPath(pathData = "M4,14.2 H13.5", color = Color.White, strokeWidth = 1.8f, strokeCap = StrokeCap.Round)
+        addPath(pathData = "M4,5.5 H20", fillColor = Color.Unspecified, stroke = Stroke(width = 1.8f, cap = StrokeCap.Round))
+        addPath(pathData = "M4,18.5 H20", fillColor = Color.Unspecified, stroke = Stroke(width = 1.8f, cap = StrokeCap.Round))
+        addPath(pathData = "M4,9.8 H13.5", fillColor = Color.Unspecified, stroke = Stroke(width = 1.8f, cap = StrokeCap.Round))
+        addPath(pathData = "M4,14.2 H13.5", fillColor = Color.Unspecified, stroke = Stroke(width = 1.8f, cap = StrokeCap.Round))
         addPath(pathData = "M15.5,9.8 L20,12 L15.5,14.2 Z", fillColor = Color.White)
     }.build()
 
@@ -299,10 +288,10 @@ object SpckIcons {
         viewportHeight = 24f
     ).apply {
         // plus (left)
-        addPath(pathData = "M6.5,12 H12.5", color = Color.White, strokeWidth = 1.8f, strokeCap = StrokeCap.Round)
-        addPath(pathData = "M9.5,9 V15", color = Color.White, strokeWidth = 1.8f, strokeCap = StrokeCap.Round)
+        addPath(pathData = "M6.5,12 H12.5", fillColor = Color.Unspecified, stroke = Stroke(width = 1.8f, cap = StrokeCap.Round))
+        addPath(pathData = "M9.5,9 V15", fillColor = Color.Unspecified, stroke = Stroke(width = 1.8f, cap = StrokeCap.Round))
         // minus (right)
-        addPath(pathData = "M14.5,12 H20", color = Color.White, strokeWidth = 1.8f, strokeCap = StrokeCap.Round)
+        addPath(pathData = "M14.5,12 H20", fillColor = Color.Unspecified, stroke = Stroke(width = 1.8f, cap = StrokeCap.Round))
     }.build()
 
     /** Globe (static web projects) — kept here for a single import site. */
@@ -320,13 +309,13 @@ object SpckIcons {
         )
         addPath(
             pathData = "M4.5,12 H19.5",
-            color = Color.White,
-            strokeWidth = 1.6f
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.6f)
         )
         addPath(
             pathData = "M12,4.5 C9,6.8 9,17.2 12,19.5 C15,17.2 15,6.8 12,4.5 Z",
-            color = Color.White,
-            strokeWidth = 1.6f
+            fillColor = Color.Unspecified,
+            stroke = Stroke(width = 1.6f)
         )
     }.build()
 }
