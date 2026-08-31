@@ -73,8 +73,9 @@ of assuming one. Commit and push to the SESSION branch only; never push to
     scroll/IME misses → run-batched drawing, stable gesture keys, sub-row
     smooth scrolling, IME retry; R4 = owner PASS. Clean-room throughout
     (public specs only). Lives on `arena/01a056aa-codec` (CI-green run
-    `33377713289`); **PR #34 OPEN (created 2026-08-31 on the owner's word) —
-    MERGE only on the owner's literal command.** Postmortems:
+    `33377713289`); **PR #34 MERGED 2026-08-31 on the owner's literal
+    command ("Please merge the pull request.") — `main` at `b869ce6`, post-merge
+    CI `33380041937` green.** Postmortems:
     `docs/chat-phase19/PART_19_2_RENDERING.md` §7.1–7.2, `PART_19_3_LIVE_OUTPUT.md` §9.
 
 - **CLEAN-ROOM LAW (owner, 2026-08-31) — replicate FEATURES, never COPY code.**
@@ -123,10 +124,9 @@ of assuming one. Commit and push to the SESSION branch only; never push to
    CLEAN-ROOM LAW (Spck is closed-source: public behavior/mockups/docs
    only) and the RESEARCH-WHEN-NEEDED rule, keep it `[client-only]` +
    host-testable, CI green, then a device recipe.
-2. **Phase 19 → PR #34 is OPEN** (created 2026-08-31 on the owner's
-   "create a pr"). The work is complete, CI-green (`33378705305`) and
-   device-accepted on `arena/01a056aa-codec`. **Do NOT merge until the
-   owner's literal command in chat.**
+2. **Phase 19 — CLOSED: PR #34 MERGED to `main`** (2026-08-31, on the
+   owner's literal "Please merge the pull request."). `main` at `b869ce6`;
+   post-merge Build APK `33380041937` green. Nothing left on this item.
 3. **Then Phases 16 → 17 (Spck clone, in order) → 18 (CodeCApi tail)** on
    the owner's pick.
    Re-verify each plan against the current code before writing anything, follow
