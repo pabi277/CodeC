@@ -100,7 +100,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     val fontSizeSp: StateFlow<Float> = settings.terminalFontSizeFlow
-        .stateIn(viewModelScope, SharingStarted.Eagerly, 14f)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 12f)
 
     val fontFamily: StateFlow<String> = settings.terminalFontFamilyFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, "Monospace")
@@ -195,6 +195,20 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             },
             viewModelScope.launch(Dispatchers.IO) {
                 item.session.bellEvents.collect { _bellEvents.tryEmit(it) }
+            },
+            // Phase 19.5: OSC 52 — a program asked to set the clipboard.
+            viewModelScope.launch(Dispatchers.IO) {
+                item.session.clipboardWrites.collect { text ->
+                    runCatching {
+                        val cm = app.getSystemService(Context.CLIPBOARD_SERVICE)
+                            as? android.content.ClipboardManager
+                        cm?.setPrimaryClip(
+                            android.content.ClipData.newPlainText("terminal", text)
+                        )
+                    }.onFailure { e ->
+                        AppLogger.e("TerminalViewModel", "OSC 52 clipboard write failed", e)
+                    }
+                }
             }
         )
         synchronized(jobsLock) { sessionJobs[item.id] = jobs }
@@ -396,6 +410,11 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun transcriptText(): String = activeSession()?.transcriptText().orEmpty()
+
+    /** Phase 19.5: terminal RESET (RIS) — clears the active session's screen. */
+    fun resetEmulator() {
+        activeSession()?.resetEmulator()
+    }
 
     fun wrapPaste(text: String): String =
         activeSession()?.wrapPaste(text) ?: text

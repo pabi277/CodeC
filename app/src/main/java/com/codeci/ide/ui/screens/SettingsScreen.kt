@@ -112,8 +112,8 @@ fun SettingsScreen(
     val warningLevel by settingsManager.warningLevelFlow.collectAsState(initial = "Standard")
     val optimizationLevel by settingsManager.optimizationLevelFlow.collectAsState(initial = "O0")
     val compilerBackend by settingsManager.compilerBackendFlow.collectAsState(initial = "auto")
-    val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 14f)
-    val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "Monospace")
+    val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 12f)
+    val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "JetBrains Mono")
     val terminalExtraKeysMacros by settingsManager.terminalExtraKeysMacrosFlow.collectAsState(initial = "")
     val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
 
@@ -282,7 +282,7 @@ fun SettingsScreen(
             SettingsDropdown(
                 title = stringResource(com.codeci.ide.R.string.terminal_font_family),
                 selectedOption = terminalFontFamily,
-                options = listOf("Monospace", "Courier", "Sans Serif", "Serif"),
+                options = listOf("JetBrains Mono", "Monospace", "Courier", "Sans Serif", "Serif"),
                 onOptionSelected = { scope.launch { settingsManager.setTerminalFontFamily(it) } }
             )
             SettingsDropdown(
@@ -1117,6 +1117,9 @@ fun ThemePreview(editorTheme: EditorThemeType, fontSize: Float) {
 fun TerminalThemePreview(terminalTheme: TerminalThemeType, fontFamily: String, fontSize: Float) {
     val colors = getTerminalTheme(terminalTheme)
     val font = when (fontFamily) {
+        "JetBrains Mono" -> FontFamily(
+            androidx.compose.ui.text.font.Font(com.codeci.ide.R.font.jetbrainsmono_medium)
+        )
         "Courier" -> FontFamily.Monospace
         "Sans Serif" -> FontFamily.SansSerif
         "Serif" -> FontFamily.Serif

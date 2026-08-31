@@ -1,6 +1,6 @@
 # CodeC Phase 19.3 — Live render cadence & streaming output
 
-**Status:** Planned (design/spec only) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — **CI GREEN `33371114549`** (assemble + unit tests + lint; two earlier rounds caught the Brahmic vowel-sign width gap + 9 test-trace bugs, fixed `ee1c054`/`39bd3e2`) · **Cost:** `[client-only]`
 · **Depends on:** none (independent; safe to do first)
 · **Fixes bug #1:** *"if I download something it prints everything after the
 download"* — progress bars / streaming output only appear at the end.
@@ -135,19 +135,23 @@ unchanged).
 
 ## 5. Exit condition & device recipe
 
+**Device round 1 note (2026-08-31):** the original recipe below was a
+MULTI-LINE `python3 -c` paste, which the phone IME mangles — the owner
+collapsed it to `python3 -c "…\r…%"` (literal ellipsis → `SyntaxError:
+U+2026`), so 19.3 has NOT been exercised on a device yet. Round-2 recipes are
+single-line and verified on the host:
+
 ```text
-1. Terminal: pkg install something sizable, or:
-     python3 -c "import time,sys
-     for i in range(0,101,2):
-         sys.stdout.write('\rDownloading %3d%%' % i); sys.stdout.flush(); time.sleep(0.05)
-     print()"
+1. PROGRESS BAR (one line, copy-paste whole):
+   python3 -c 'import time;[(print("\r%3d%%"%i,end="",flush=True),time.sleep(0.03)) for i in range(101)];print()'
    EXPECT: the percentage counts up SMOOTHLY on one line in real time
-   (not a single jump to 100% at the end).
-2. Run `yes | head -100000` or `cat /usr/bin/large` → output streams smoothly;
-   UI stays responsive; no freeze; ends on the correct final screen.
-3. Run `apt update` / a real download → progress/percentages animate live.
-4. top/htop refresh smoothly at their interval.
-PASS = streaming output and progress bars animate live like Termux (step 1 & 3).
+   (not a single jump to 100% at the end). Takes ~3 s.
+2. BULK STREAM: yes | head -100000   → output streams smoothly; UI stays
+   responsive; no freeze; ends on the correct final screen.
+   (was "cat /usr/bin/large" — /usr/bin does not exist in the CodeC userland)
+3. top  (or htop) → refreshes smoothly at its interval, digits animate live.
+4. A real  pkg install  → download percentages animate live.
+PASS = steps 1 & 3 animate live like Termux.
 ```
 
 ## 6. Invariants
@@ -155,3 +159,100 @@ PASS = streaming output and progress bars animate live like Termux (step 1 & 3).
 Client-only; Kotlin coroutines only; no native/PTY/parser changes; Phase 7
 multi-session routing, bell/CodecApi channels, and wake-lock behavior preserved.
 No `.` on PATH.
+
+
+---
+
+## 7. Research notes (2026-08-31)
+
+* Confirmed the conflation mechanism against kotlinx.coroutines docs:
+  `MutableStateFlow` "conflates … updates always update the value and are
+  not coalesced" — intermediate values are skipped for slow collectors, so
+  the reader MUST NOT be the publisher during a burst.
+  (kotlinx.coroutines StateFlow documentation.)
+* The paced-emitter pattern used (`Channel(CONFLATED)` as a dirty signal +
+  `receive()` → `publish()` → `delay(frameIntervalMs)` loop) is the standard
+  frame-coalescer shape: conflated signals arriving during the `delay` are
+  absorbed by the next `receive()`, so each published value carries the
+  LATEST state while guaranteeing one publication per frame.
+* `runTest` virtual time (`advanceTimeBy`/`advanceUntilIdle`,
+  kotlinx-coroutines-test 1.10.2) exercises the cadence without real time.
+
+## 8. Implementation record (2026-08-31, commits 865fa79)
+
+* **New `RenderPump.kt`** (pure Kotlin): `markDirty()` never blocks; a
+  single coroutine parks on `receive()`, publishes, sleeps
+  `DEFAULT_FRAME_INTERVAL_MS = 16` (~60 fps), and repeats. Idle cost: zero.
+* **`TerminalSession`**: the read loop now calls `renderPump.markDirty()`
+  after `emulator.feed(...)`; a per-session render job is started in
+  `start()` and cancelled in `stopLocked()`. **Immediate publishes are kept
+  for low-frequency, user-visible events** — `resize()`, `notice()`,
+  `resetEmulator()`, the start-failure path, and the reader's `finally`
+  block (the true final state must land even mid-frame) — exactly the
+  design in §2.4. Phase 7 multi-session routing is untouched (one pump per
+  `TerminalSession`; the ViewModel still `flatMapLatest`es the active
+  session's `StateFlow`).
+* **Tests** — `RenderPumpTest` (6, `runTest` virtual time): burst-in-one-
+  frame → 1 publish; bursts across M frames → M publishes; intermediate
+  states `[10, 50, 100]` are all observed (the pre-fix behavior collapsed
+  them to a single 100); idle publishes nothing; newest state wins inside a
+  busy window; a pre-start dirty mark publishes once started.
+* **Perf note:** while touching the view, the per-frame
+  `snapshot.scrollbackLines + snapshot.lines` concatenation (an O(2000)
+  list copy every draw at 60 fps) was replaced by a `lineAt(extY)` index
+  helper (draw loop, tap, long-press, `selectedText`).
+
+**Device gate (owner):** §5 recipe unchanged. PASS = progress bars count up
+smoothly (steps 1 & 3) and `yes | head -100000` stays responsive.
+
+---
+
+## 9. Device round 3 postmortem — "terminal feels lagging, not smooth scrolling, keyboard sometimes not popping up" (FIXED 2026-08-31)
+
+Four root causes, all mine, all in the view layer:
+
+1. **Per-glyph draw cost (the lag).** `drawLine` issued a
+   `measureText` + `drawText` native pair for EVERY cell — ~2600/frame on
+   the new 70×37 grid, every frame, including blanks. Fix: **run-batched
+   drawing** — the snapped grid (§7.1 of PART_19_2) makes the font advance
+   EQUAL `cellW`, so consecutive PLAIN columns (ASCII, no cluster, non-wide
+   run) draw as ONE `drawText` at identical positions. Cluster / wide /
+   non-ASCII (fallback-font) cells keep the individual path with the
+   squeeze guard; all-space spans draw nothing. New pure helper
+   `GlyphSpans.spanLength()` + 6 tests. Draw calls per frame: ~2600 → a
+   handful per style run.
+2. **Gesture detectors restarting every output frame (dropped taps →
+   keyboard not popping up).** The tap detector's `pointerInput` was keyed
+   on `snapshot.generation` — which bumps on EVERY publish — so mid-output
+   the detector cancelled and restarted continuously and taps were eaten
+   (exactly when a user taps after running a command). The scroll detector
+   was keyed on `snapshot.scrollbackCount`, which GROWS mid-drag → drags
+   broke while history scrolled in. Fix: keys are now geometry only
+   (`cellW, cellH, cols, rows`); handlers read a `latestSnapshot` state at
+   EVENT time.
+3. **Scroll fighting + whole-row jumps (not smooth).** (a) A
+   `LaunchedEffect(generation)` reset `topRow = 0` on every update — while
+   output streamed, the scrollback rubber-banded back to live. Removed
+   (Termux semantics: typed input jumps to live; output does not).
+   (b) Drag moved in whole-row steps (`(dy/cellH).toInt()`). New
+   `ScrollMath` keeps the sub-row remainder and the canvas translates by
+   that fraction of a row — pixel-smooth, finger-following scroll; rails
+   drop overshoot. +6 tests.
+4. **IME one-shot.** `showIme()` called `showSoftInput` once (plus a
+   wasteful `restartInput` on every tap); if the window had not regained
+   focus (screen switch/dialog dismiss) the request was silently dropped.
+   Now: retry after 150 ms + retry from `onWindowFocusChanged` until the
+   IME reports the view active; `restartInput` removed.
+
+**Code:** `TerminalEmulatorView.kt` (batched `drawLine`, stable gesture
+keys, `latestSnapshot`, `translate(0, -scrollSubPx)` draw with one spare
+row each edge, hit-tests offset by the remainder), `TerminalKeyView.kt`
+(IME retry), new `ui/terminal/GlyphSpans.kt` + `ScrollMath.kt`.
+**Tests:** `GlyphSpansTest` (6), `ScrollMathTest` (6).
+
+**Round-4 recipe:** `yes | head -200000` — UI must stay responsive and
+scroll DURING the stream (pixel-smooth, no rubber-band); tap the terminal
+right after a command finishes — keyboard must pop up every time (also
+after switching Editor↔Terminal tabs).
+
+**Round-4 verdict (2026-08-31): PASS — owner: "All ok now"** (responsive during streams, smooth scrolling, keyboard pops up every time).

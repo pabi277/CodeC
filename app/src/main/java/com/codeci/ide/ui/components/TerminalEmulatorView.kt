@@ -24,6 +24,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.Key
@@ -54,6 +56,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.R
 import com.codeci.ide.ui.terminal.CellFlags
+import com.codeci.ide.ui.terminal.CellMetrics
+import com.codeci.ide.ui.terminal.GlyphSpans
+import com.codeci.ide.ui.terminal.MouseEncoding
+import com.codeci.ide.ui.terminal.MouseModes
+import com.codeci.ide.ui.terminal.ScrollMath
 import com.codeci.ide.ui.terminal.StyleRun
 import com.codeci.ide.ui.terminal.TerminalLine
 import com.codeci.ide.ui.terminal.TerminalSnapshot
@@ -64,7 +71,6 @@ import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.floor
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
@@ -152,6 +158,10 @@ fun TerminalEmulatorView(
     bellTrigger: Long = 0L,
     onSelectionChanged: (String?) -> Unit = {},
     onUrlClick: (String) -> Unit = {},
+    /** Phase 19.5: raw mouse-reporting bytes for the running program. */
+    onMouseEvent: (String) -> Unit = {},
+    /** Phase 19.5: terminal RESET (RIS) from the context menu. */
+    onReset: () -> Unit = {},
     /** Re-fires [onResize] when this key changes (e.g. active session id, Phase 7). */
     resizeKey: Any? = null
 ) {
@@ -162,44 +172,101 @@ fun TerminalEmulatorView(
     // Reactive local font size for instant smooth pinch-to-zoom
     var activeFontSizeSp by remember(fontSizeSp) { mutableFloatStateOf(fontSizeSp) }
 
+    // Phase 19.2 device round 2 (2026-08-31): default family is the BUNDLED
+    // JetBrains Mono (Medium weight) — Android's stock Droid Sans Mono is
+    // light-stroked with wide sidebearings, which the owner saw as "thin,
+    // letters far apart, stretched" next to Termux's custom font. Bold runs
+    // use the real Bold face so ANSI bold stays distinct from Medium.
     val typeface = remember(fontFamily) {
         when (fontFamily) {
+            "JetBrains Mono" ->
+                androidx.core.content.res.ResourcesCompat.getFont(
+                    context, com.codeci.ide.R.font.jetbrainsmono_medium
+                ) ?: Typeface.MONOSPACE
             "Courier" -> Typeface.MONOSPACE
             "Sans Serif" -> Typeface.SANS_SERIF
             "Serif" -> Typeface.SERIF
             else -> Typeface.MONOSPACE
         }
     }
+    val boldTypeface = remember(fontFamily, typeface) {
+        if (fontFamily == "JetBrains Mono") {
+            androidx.core.content.res.ResourcesCompat.getFont(
+                context, com.codeci.ide.R.font.jetbrainsmono_bold
+            ) ?: Typeface.create(typeface, Typeface.BOLD)
+        } else {
+            Typeface.create(typeface, Typeface.BOLD)
+        }
+    }
 
-    // Settled paint for PTY rows/cols sizing (avoids resizing PTY repeatedly during pinch)
+    // Settled paint for PTY rows/cols sizing (avoids resizing PTY repeatedly
+    // during pinch). Phase 19.2: cells are INTEGER pixels — a fractional
+    // cellW made (col * cellW) drift across a row and glyphs collide.
+    // Device-round fix (2026-08-31): the size is additionally FITTED to the
+    // grid (CellMetrics.fitSizeToGrid) so the cell EQUALS the font advance —
+    // plain ceil() left up to 1px of slack per letter, which the owner saw
+    // as "a noticeable gap between them".
     val settledPaint = remember(fontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
             textSize = with(density) { fontSizeSp.sp.toPx() }
+            configureGridPaint()
         }
     }
-    val settledCellW = remember(settledPaint) { max(settledPaint.measureText("X"), 1f) }
-    val settledCellH = remember(settledPaint) { max(settledPaint.fontSpacing, 1f) }
+    val settledGrid = remember(settledPaint) { fitGridPaint(settledPaint) }
+    val settledCellW = settledGrid.cellW
+    val settledCellH = settledGrid.cellH
 
-    // Active visual paint for 60fps instant pinch rendering
+    // Active visual paint for 60fps instant pinch rendering (fitted to the
+    // pixel grid exactly like the settled paint).
     val paint = remember(activeFontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
             textSize = with(density) { activeFontSizeSp.sp.toPx() }
+            configureGridPaint()
         }
     }
-    val cellW = remember(paint) { max(paint.measureText("X"), 1f) }
-    val cellH = remember(paint) { max(paint.fontSpacing, 1f) }
-    val ascent = remember(paint) { paint.fontMetrics.ascent }
+    // Fit FIRST: fitGridPaint mutates paint.textSize, and boldPaint below
+    // copies the fitted paint so bold shares the snapped size and grid.
+    val grid = remember(paint) { fitGridPaint(paint) }
+    val cellW = grid.cellW
+    val cellH = grid.cellH
+    val ascent = grid.ascent
+
+    // Real bold face (keeps the monospace advance when available) instead of
+    // isFakeBoldText, whose stroke thickening pushes past the cell edge.
+    val boldPaint = remember(paint, boldTypeface) {
+        android.graphics.Paint(paint).apply {
+            // `this.` — the bare name would resolve to an OUTER val, a
+            // reassignment error.
+            this.typeface = boldTypeface
+        }
+    }
 
     // Termux mTopRow: 0 = live screen, negative = scrolled into transcript.
     var topRow by remember { mutableIntStateOf(0) }
+    var wheelRemainder by remember { mutableFloatStateOf(0f) }
+    // Phase 19.2 round 3: sub-row scroll remainder (px) for pixel-smooth
+    // scrolling — the grid translates by this fraction of a row.
+    var scrollSubPx by remember { mutableFloatStateOf(0f) }
     var selection by remember { mutableStateOf<GridSelection?>(null) }
     var menu by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(IntOffset.Zero) }
     var selecting by remember { mutableStateOf(false) }
 
     var flashAlpha by remember { mutableFloatStateOf(0f) }
+
+    // Reusable glyph batch buffer (Phase 19.2 round 3 run-batching).
+    val glyphBatch = remember { StringBuilder(512) }
+
+    // Phase 19.2 round 3: gesture handlers must read the LATEST snapshot at
+    // EVENT time. The previous code keyed pointerInput on
+    // snapshot.generation / scrollbackCount, which restart the detector on
+    // EVERY output frame — mid-output taps were cancelled (keyboard did not
+    // pop up) and drags broke when scrollback grew. Reading this state
+    // instead keeps the detectors alive across frames.
+    var latestSnapshot by remember { mutableStateOf(snapshot) }
+    SideEffect { latestSnapshot = snapshot }
 
     // BEL visual flash + vibration
     LaunchedEffect(bellTrigger) {
@@ -221,10 +288,11 @@ fun TerminalEmulatorView(
         onSelectionChanged(selectedText)
     }
 
-    // Termux onScreenUpdated: jump to live screen unless a selection is active.
-    LaunchedEffect(snapshot.generation) {
-        if (selection == null) topRow = 0
-    }
+    // Phase 19.2 round 3: REMOVED the "jump to live on every update" effect —
+    // it reset topRow=0 on every output frame, so while output streamed the
+    // scrollback fought the user's finger (rubber-banding). Termux semantics:
+    // a scrolled-up view STAYS put during output; typed input jumps to live
+    // (the onInput path below sets topRow = 0).
 
     BoxWithConstraints(
         modifier = modifier
@@ -240,30 +308,40 @@ fun TerminalEmulatorView(
                 handleHardwareKey(event.key, event.isCtrlPressed, onInput, cursorSequence)
             }
     ) {
-        val ptyCols = max(1, (with(density) { maxWidth.toPx() } / settledCellW).toInt())
-        val ptyRows = max(1, (with(density) { maxHeight.toPx() } / settledCellH).toInt())
+        val ptyCols = CellMetrics.columnsForWidth(with(density) { maxWidth.toPx() }, settledCellW)
+        val ptyRows = CellMetrics.rowsForHeight(with(density) { maxHeight.toPx() }, settledCellH)
         // resizeKey (Phase 7): re-apply the grid to the PTY when the *bound
         // session* changes even if the view's own size did not — otherwise a
         // freshly created session keeps the emulator-default 80x24 grid and
         // the cursor drifts (the exact bug class Phase 6.1 closed).
         LaunchedEffect(ptyCols, ptyRows, resizeKey) { onResize(ptyCols, ptyRows) }
 
-        val cols = max(1, (with(density) { maxWidth.toPx() } / cellW).toInt())
-        val rows = max(1, (with(density) { maxHeight.toPx() } / cellH).toInt())
+        val cols = CellMetrics.columnsForWidth(with(density) { maxWidth.toPx() }, cellW)
+        val rows = CellMetrics.rowsForHeight(with(density) { maxHeight.toPx() }, cellH)
 
         Box(modifier = Modifier.fillMaxSize()) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(cellW, cellH, snapshot.generation, snapshot.scrollbackCount) {
+                    .pointerInput(cellW, cellH, cols, rows) {
                         detectTapGestures(
                             onTap = { pos ->
+                                val snap = latestSnapshot
+                                // Content is translated by -scrollSubPx (see
+                                // the draw loop), so map the touch back.
+                                val row = ((pos.y + scrollSubPx) / cellH).toInt().coerceIn(0, rows - 1)
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
-                                val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
-                                val lineIndex = snapshot.scrollbackCount + topRow + row
-                                val transcript = snapshot.scrollbackLines + snapshot.lines
-                                val url = if (lineIndex in transcript.indices) {
-                                    findUrlAt(transcript[lineIndex].text, col)
+                                if (snap.mouseMode and MouseModes.CAPTURE_MASK != 0) {
+                                    // Phase 19.5: the app owns the mouse —
+                                    // a tap is a left click at that cell.
+                                    val sgr = snap.mouseMode and MouseModes.SGR_EXT != 0
+                                    MouseEncoding.press(0, col + 1, row + 1, sgr)?.let(onMouseEvent)
+                                    MouseEncoding.release(0, col + 1, row + 1, sgr)?.let(onMouseEvent)
+                                    return@detectTapGestures
+                                }
+                                val line = snap.lineAt(topRow + row)
+                                val url = if (line != null) {
+                                    findUrlAt(line.text, col)
                                 } else null
 
                                 if (url != null) {
@@ -275,13 +353,13 @@ fun TerminalEmulatorView(
                                 }
                             },
                             onLongPress = { pos ->
+                                val snap = latestSnapshot
+                                val row = ((pos.y + scrollSubPx) / cellH).toInt().coerceIn(0, rows - 1)
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
-                                val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
                                 val y = topRow + row
-                                val lineIndex = snapshot.scrollbackCount + y
-                                val transcript = snapshot.scrollbackLines + snapshot.lines
-                                val (wStart, wEnd) = if (lineIndex in transcript.indices) {
-                                    findWordBoundaries(transcript[lineIndex].text, col)
+                                val line = snap.lineAt(y)
+                                val (wStart, wEnd) = if (line != null) {
+                                    findWordBoundaries(line.text, col)
                                 } else col to col
                                 selection = GridSelection(wStart, y, wEnd, y)
                                 selecting = true
@@ -290,24 +368,54 @@ fun TerminalEmulatorView(
                             }
                         )
                     }
-                    .pointerInput(cellH, snapshot.scrollbackCount, selecting) {
+                    .pointerInput(cellW, cellH, cols, rows) {
                         detectScrollOrSelect(
                             cellW = cellW,
                             cellH = cellH,
                             cols = cols,
                             rows = rows,
                             selecting = { selecting },
-                            onScroll = { dy ->
-                                val deltaRows = (dy / cellH).toInt()
-                                if (deltaRows != 0) {
-                                    topRow = (topRow + deltaRows).coerceIn(-snapshot.scrollbackCount, 0)
+                            onScroll = { dy, x, y ->
+                                val snap = latestSnapshot
+                                if (snap.mouseMode and MouseModes.CAPTURE_MASK != 0) {
+                                    // Termux-style touch mapping: while the app
+                                    // reports the mouse, swipes act as the
+                                    // WHEEL (buttons 64/65), so htop/vim/tmux
+                                    // scroll instead of the local scrollback.
+                                    wheelRemainder += dy
+                                    val units = (wheelRemainder / cellH).toInt()
+                                    if (units != 0) {
+                                        wheelRemainder -= units * cellH
+                                        val sgr = snap.mouseMode and MouseModes.SGR_EXT != 0
+                                        val col = (x / cellW).toInt().coerceIn(0, cols - 1)
+                                        val row = (y / cellH).toInt().coerceIn(0, rows - 1)
+                                        val dir = if (units > 0) MouseEncoding.WHEEL_DOWN else MouseEncoding.WHEEL_UP
+                                        repeat(kotlin.math.abs(units)) {
+                                            MouseEncoding.wheel(dir, col + 1, row + 1, sgr)?.let(onMouseEvent)
+                                        }
+                                    }
+                                } else {
+                                    // Phase 19.2 round 3: pixel-smooth local
+                                    // scrolling — whole rows change topRow,
+                                    // the sub-row remainder translates the
+                                    // grid (was: whole-row jumps only).
+                                    val r = ScrollMath.step(
+                                        subRowPx = scrollSubPx,
+                                        deltaPx = dy,
+                                        cellH = cellH.toFloat(),
+                                        topRow = topRow,
+                                        minTop = -snap.scrollbackCount
+                                    )
+                                    scrollSubPx = r.subRowPx
+                                    topRow = r.topRow
                                 }
                             },
                             onSelectMove = { col, row ->
+                                val snap = latestSnapshot
                                 val cur = selection ?: return@detectScrollOrSelect
                                 selection = cur.copy(
                                     x2 = col.coerceIn(0, cols - 1),
-                                    y2 = (topRow + row).coerceIn(-snapshot.scrollbackCount, snapshot.rows - 1)
+                                    y2 = (topRow + row).coerceIn(-snap.scrollbackCount, snap.rows - 1)
                                 )
                             }
                         )
@@ -324,29 +432,33 @@ fun TerminalEmulatorView(
                     }
             ) {
                 drawRect(theme.background)
-                val transcript = snapshot.scrollbackLines + snapshot.lines
-                val origin = snapshot.scrollbackCount
-                for (screenY in 0 until rows) {
-                    val extY = topRow + screenY
-                    val lineIndex = origin + extY
-                    if (lineIndex !in transcript.indices) continue
-                    val line = transcript[lineIndex]
-                    val isCursorRow = snapshot.cursorVisible &&
-                        topRow == 0 &&
-                        extY == snapshot.cursorY
-                    drawLine(
-                        line = line,
-                        y = screenY,
-                        cellW = cellW,
-                        cellH = cellH,
-                        ascent = ascent,
-                        paint = paint,
-                        cursorX = if (isCursorRow) snapshot.cursorX else -1,
-                        selection = selection,
-                        extY = extY,
-                        cols = cols,
-                        theme = theme
-                    )
+                // Phase 19.2 round 3: translate by the sub-row scroll
+                // remainder (px) so scrolling follows the finger between
+                // row boundaries. One extra row on each edge stays ready
+                // under the shifted viewport; null lines just skip.
+                translate(left = 0f, top = -scrollSubPx) {
+                    for (screenY in -1 until rows + 1) {
+                        val extY = topRow + screenY
+                        val line = snapshot.lineAt(extY) ?: continue
+                        val isCursorRow = snapshot.cursorVisible &&
+                            topRow == 0 &&
+                            extY == snapshot.cursorY
+                        drawLine(
+                            line = line,
+                            y = screenY,
+                            cellW = cellW,
+                            cellH = cellH,
+                            ascent = ascent,
+                            paint = paint,
+                            boldPaint = boldPaint,
+                            cursorX = if (isCursorRow) snapshot.cursorX else -1,
+                            selection = selection,
+                            extY = extY,
+                            cols = cols,
+                            theme = theme,
+                            batch = glyphBatch
+                        )
+                    }
                 }
             }
 
@@ -393,6 +505,38 @@ fun TerminalEmulatorView(
                     }
                 )
                 DropdownMenuItem(
+                    text = { Text("Copy All") },
+                    onClick = {
+                        menu = false
+                        onCopyText(snapshot.transcriptText())
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Share") },
+                    onClick = {
+                        menu = false
+                        val text = selectedText ?: snapshot.transcriptText()
+                        runCatching {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(
+                                Intent.createChooser(intent, "Share terminal text")
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Reset") },
+                    onClick = {
+                        menu = false
+                        onReset()
+                    }
+                )
+                DropdownMenuItem(
                     text = { Text(stringResource(R.string.terminal_paste)) },
                     onClick = {
                         menu = false
@@ -430,15 +574,17 @@ fun TerminalEmulatorView(
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
     line: TerminalLine,
     y: Int,
-    cellW: Float,
-    cellH: Float,
+    cellW: Int,
+    cellH: Int,
     ascent: Float,
     paint: android.graphics.Paint,
+    boldPaint: android.graphics.Paint,
     cursorX: Int,
     selection: GridSelection?,
     extY: Int,
     cols: Int,
-    theme: TerminalThemeColors
+    theme: TerminalThemeColors,
+    batch: StringBuilder
 ) {
     val text = line.text
     val runs = if (line.runs.isEmpty()) {
@@ -461,27 +607,97 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
         if (drawBg != theme.backgroundRgb) {
             drawRect(
                 color = packedColor(drawBg),
-                topLeft = Offset(start * cellW, y * cellH),
-                size = Size((end - start) * cellW, cellH)
+                topLeft = Offset(CellMetrics.columnX(start, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
+                size = Size(((end - start) * cellW).toFloat(), cellH.toFloat())
             )
         }
         if (invisible) continue
         val sliceEnd = end.coerceAtMost(text.length)
         val sliceStart = start.coerceAtMost(text.length)
         if (sliceStart >= sliceEnd) continue
-        paint.color = (0xFF000000.toInt()) or drawFg
-        paint.isFakeBoldText = bold
-        paint.isUnderlineText = run.flags and CellFlags.UNDERLINE != 0
-        
-        // Character-by-character cell drawing to eliminate cursor drift
+        val glyphPaint = if (bold) boldPaint else paint
+        glyphPaint.color = (0xFF000000.toInt()) or drawFg
+        glyphPaint.isUnderlineText = run.flags and CellFlags.UNDERLINE != 0
+
+        // Phase 19.2: glyphs sit at exact INTEGER cell origins — no drift,
+        // no collisions. Phase 19.4: draws the base+marks CLUSTER when
+        // present and gives a double-width lead cell a two-cell slot.
+        // Phase 19.2 round 3 (owner: "terminal feels lagging"): the snapped
+        // grid makes the font's advance EQUAL cellW, so consecutive PLAIN
+        // columns are drawn as ONE drawText (identical positions) — a full
+        // 70x37 screen drops from ~2600 measure+draw native call pairs per
+        // frame to a handful per style run. Cluster, wide and non-ASCII
+        // (fallback-font) cells still draw individually with the squeeze
+        // guard; all-space spans draw nothing at all.
+        val clusters = line.clusters
+        val baseline = CellMetrics.rowY(y, cellH) - ascent
+        val wideRun = run.flags and (CellFlags.WIDE_LEAD or CellFlags.WIDE_CONT) != 0
         drawIntoCanvas { canvas ->
-            for (i in 0 until (sliceEnd - sliceStart)) {
-                val charCol = sliceStart + i
-                val ch = text[charCol].toString()
-                if (ch != " ") {
-                    canvas.nativeCanvas.drawText(ch, (start + i) * cellW, y * cellH - ascent, paint)
+            var batchStart = -1
+            var batchInk = false
+            fun flushBatch() {
+                if (batchStart >= 0 && batchInk) {
+                    canvas.nativeCanvas.drawText(
+                        batch, 0, batch.length,
+                        CellMetrics.columnX(batchStart, cellW).toFloat(), baseline, glyphPaint
+                    )
+                }
+                batch.setLength(0)
+                batchStart = -1
+                batchInk = false
+            }
+            var charCol = sliceStart
+            while (charCol < sliceEnd) {
+                if (wideRun) {
+                    // Homogeneous wide run — per-cell path (two-cell slots).
+                    val glyph = clusters?.get(charCol) ?: text[charCol].toString()
+                    if (glyph.isNotEmpty() && glyph != " ") {
+                        val wide = run.flags and CellFlags.WIDE_LEAD != 0 && charCol < cols - 1
+                        val slot = if (wide) cellW * 2 else cellW
+                        val x = CellMetrics.columnX(charCol, cellW).toFloat()
+                        val advance = glyphPaint.measureText(glyph)
+                        if (advance > slot) {
+                            val savedScale = glyphPaint.textScaleX
+                            glyphPaint.textScaleX = savedScale * (slot / advance)
+                            canvas.nativeCanvas.drawText(glyph, x, baseline, glyphPaint)
+                            glyphPaint.textScaleX = savedScale
+                        } else {
+                            canvas.nativeCanvas.drawText(glyph, x, baseline, glyphPaint)
+                        }
+                    }
+                    charCol++
+                } else {
+                    val span = GlyphSpans.spanLength(text, clusters, charCol, sliceEnd)
+                    if (span > 0) {
+                        if (batchStart < 0) batchStart = charCol
+                        for (k in 0 until span) {
+                            val c = text[charCol + k]
+                            if (c != ' ') batchInk = true
+                            batch.append(c)
+                        }
+                        charCol += span
+                    } else {
+                        // Special column (cluster / non-ASCII): flush first
+                        // so the batch never bridges over this cell.
+                        flushBatch()
+                        val glyph = clusters?.get(charCol) ?: text[charCol].toString()
+                        if (glyph.isNotEmpty() && glyph != " ") {
+                            val x = CellMetrics.columnX(charCol, cellW).toFloat()
+                            val advance = glyphPaint.measureText(glyph)
+                            if (advance > cellW) {
+                                val savedScale = glyphPaint.textScaleX
+                                glyphPaint.textScaleX = savedScale * (cellW / advance)
+                                canvas.nativeCanvas.drawText(glyph, x, baseline, glyphPaint)
+                                glyphPaint.textScaleX = savedScale
+                            } else {
+                                canvas.nativeCanvas.drawText(glyph, x, baseline, glyphPaint)
+                            }
+                        }
+                        charCol++
+                    }
                 }
             }
+            flushBatch()
         }
     }
     if (sel != null && extY in minOf(sel.y1, sel.y2)..maxOf(sel.y1, sel.y2)) {
@@ -505,17 +721,55 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
         }
         drawRect(
             color = theme.selection,
-            topLeft = Offset(left * cellW, y * cellH),
-            size = Size(((right - left).coerceAtLeast(0)) * cellW, cellH)
+            topLeft = Offset(CellMetrics.columnX(left, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
+            size = Size(((right - left).coerceAtLeast(0)) * cellW.toFloat(), cellH.toFloat())
         )
     }
     if (cursorX in 0 until cols) {
         drawRect(
             color = theme.cursor.copy(alpha = 0.7f),
-            topLeft = Offset(cursorX * cellW, y * cellH),
-            size = Size(cellW, cellH)
+            topLeft = Offset(CellMetrics.columnX(cursorX, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
+            size = Size(cellW.toFloat(), cellH.toFloat())
         )
     }
+}
+
+/**
+ * Phase 19.2 grid paint hygiene: no letter spacing or horizontal scaling of
+ * the font's own advances (they must equal the integer cell), subpixel
+ * positioning for crisp small text.
+ */
+private fun android.graphics.Paint.configureGridPaint() {
+    letterSpacing = 0f
+    textScaleX = 1f
+    isSubpixelText = true
+}
+
+/** Integer grid metrics of an already-configured paint (Phase 19.2). */
+private class GridFit(val cellW: Int, val cellH: Int, val ascent: Float)
+
+/**
+ * Phase 19.2 device-round fix: snap [paint]'s textSize so its monospace
+ * advance is a whole pixel (CellMetrics.fitSizeToGrid), then derive the
+ * integer grid from it. Afterwards cellW EQUALS the font's own advance —
+ * the previous ceil() added up to a full pixel of tracking per letter
+ * ("letters have a noticeable gap between them", owner device report
+ * 2026-08-31).
+ */
+private fun fitGridPaint(paint: android.graphics.Paint): GridFit {
+    val fit = CellMetrics.fitSizeToGrid(paint.textSize) { size ->
+        val saved = paint.textSize
+        paint.textSize = size
+        val advance = paint.measureText("MMMMMMMMMM") / 10f
+        paint.textSize = saved
+        advance
+    }
+    paint.textSize = fit.textSizePx
+    return GridFit(
+        cellW = fit.cellWidthPx,
+        cellH = CellMetrics.cellHeightPx(paint.fontSpacing, CellMetrics.TERMINAL_LINE_FACTOR),
+        ascent = paint.fontMetrics.ascent
+    )
 }
 
 private fun packedColor(packed: Int): Color = Color(
@@ -531,30 +785,49 @@ private fun GridSelection.normalized(): GridSelection {
 
 fun TerminalSnapshot.selectedText(sel: GridSelection): String {
     val n = sel.normalized()
-    val transcript = scrollbackLines + lines
-    val origin = scrollbackCount
     return buildString {
         for (y in n.y1..n.y2) {
-            val idx = origin + y
-            if (idx !in transcript.indices) continue
-            val line = transcript[idx].text
+            val line = lineAt(y) ?: continue
+            val text = line.text
             val start = if (y == n.y1) n.x1.coerceAtLeast(0) else 0
-            val end = if (y == n.y2) (n.x2 + 1).coerceAtMost(line.length) else line.length
-            if (start < end && start < line.length) {
-                append(line.substring(start, end.coerceAtMost(line.length)).trimEnd())
+            val end = if (y == n.y2) (n.x2 + 1).coerceAtMost(text.length) else text.length
+            if (start < end && start < text.length) {
+                val sb = StringBuilder()
+                for (col in start until end.coerceAtMost(text.length)) {
+                    // Phase 19.4: join wide pairs and expand clusters.
+                    if (line.columnIsContinuation(col)) continue
+                    val cluster = line.clusters?.get(col)
+                    if (cluster != null) sb.append(cluster) else sb.append(text[col])
+                }
+                append(sb.toString().trimEnd())
             }
             if (y != n.y2) append('\n')
         }
     }.trimEnd()
 }
 
+/**
+ * Transcript row for an extended Y coordinate (0 = top live row, negative =
+ * scrolled into history) without concatenating the two lists.
+ */
+fun TerminalSnapshot.lineAt(extY: Int): TerminalLine? {
+    val idx = scrollbackCount + extY
+    if (idx < 0) return null
+    return if (idx < scrollbackLines.size) {
+        scrollbackLines[idx]
+    } else {
+        val live = idx - scrollbackLines.size
+        if (live in lines.indices) lines[live] else null
+    }
+}
+
 private suspend fun PointerInputScope.detectScrollOrSelect(
-    cellW: Float,
-    cellH: Float,
+    cellW: Int,
+    cellH: Int,
     cols: Int,
     rows: Int,
     selecting: () -> Boolean,
-    onScroll: (Float) -> Unit,
+    onScroll: (Float, Float, Float) -> Unit,
     onSelectMove: (Int, Int) -> Unit
 ) {
     awaitEachGesture {
@@ -573,7 +846,7 @@ private suspend fun PointerInputScope.detectScrollOrSelect(
                 onSelectMove(col, row)
                 change.consume()
             } else if (dragged) {
-                onScroll(-dy)
+                onScroll(-dy, change.position.x, change.position.y)
                 lastY = change.position.y
                 change.consume()
             }
@@ -636,19 +909,19 @@ private fun handleHardwareKey(
             return true
         }
         Key.DirectionUp -> {
-            onInput(cursorSequence('A'))
+            onInput(if (ctrl) "\u001b[1;5A" else cursorSequence('A'))
             return true
         }
         Key.DirectionDown -> {
-            onInput(cursorSequence('B'))
+            onInput(if (ctrl) "\u001b[1;5B" else cursorSequence('B'))
             return true
         }
         Key.DirectionRight -> {
-            onInput(cursorSequence('C'))
+            onInput(if (ctrl) "\u001b[1;5C" else cursorSequence('C'))
             return true
         }
         Key.DirectionLeft -> {
-            onInput(cursorSequence('D'))
+            onInput(if (ctrl) "\u001b[1;5D" else cursorSequence('D'))
             return true
         }
         Key.MoveHome, Key.Home -> {

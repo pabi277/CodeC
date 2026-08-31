@@ -24,6 +24,9 @@ class TerminalKeyView(context: Context) : View(context) {
     @Volatile
     var onInput: (String) -> Unit = {}
 
+    /** True while we still owe the user a showSoftInput (IME retry loop). */
+    private var pendingIme = false
+
     init {
         isFocusable = true
         isFocusableInTouchMode = true
@@ -85,8 +88,43 @@ class TerminalKeyView(context: Context) : View(context) {
         requestFocus()
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
             ?: return
-        imm.restartInput(this)
+        // Phase 19.2 round 3 (owner: "keyboard sometimes does not pop up"):
+        // the one-shot showSoftInput is silently dropped when the window has
+        // not regained focus yet (screen switch, dialog/back). Retry once
+        // shortly after, and again from onWindowFocusChanged, until the IME
+        // reports this view active. restartInput() was removed — it rebound
+        // the IME on EVERY tap for no benefit.
+        pendingIme = true
         imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+        postDelayed(::retryShowIme, IME_RETRY_MS)
+    }
+
+    private fun retryShowIme() {
+        if (!pendingIme || !isAttachedToWindow) return
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            ?: return
+        if (!imm.isActive(this)) {
+            if (hasWindowFocus()) {
+                imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+            }
+            // Still not up (window unfocused): onWindowFocusChanged retries.
+        } else {
+            pendingIme = false
+        }
+    }
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        super.onWindowFocusChanged(hasWindowFocus)
+        if (hasWindowFocus && pendingIme) retryShowIme()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        removeCallbacks(::retryShowIme)
+    }
+
+    companion object {
+        private const val IME_RETRY_MS = 150L
     }
 
     private fun sendKey(event: KeyEvent): Boolean {

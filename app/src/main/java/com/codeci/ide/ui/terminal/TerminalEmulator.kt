@@ -13,7 +13,9 @@ class TerminalEmulator(
     var responder: ((String) -> Unit)? = null,
     var onStoragePermissionRequested: (() -> Unit)? = null,
     var onCodecApiRequest: ((String) -> Unit)? = null,
-    var onBell: (() -> Unit)? = null
+    var onBell: (() -> Unit)? = null,
+    /** Phase 19.5: OSC 52 clipboard-write requests (decoded, capped). */
+    var onClipboardWrite: ((String) -> Unit)? = null
 ) : AnsiParser.Host {
 
     val buffer = TerminalBuffer(cols, rows, scrollbackLimit)
@@ -25,6 +27,7 @@ class TerminalEmulator(
     val bracketedPaste: Boolean get() = buffer.bracketedPaste
     val applicationCursorKeys: Boolean get() = buffer.applicationCursorKeys
     val title: String get() = buffer.title
+    val mouseMode: Int get() = buffer.mouseMode
 
     fun feed(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size) {
         parser.feed(bytes, offset, length)
@@ -101,6 +104,23 @@ class TerminalEmulator(
         val value = if (semi < 0) "" else payload.substring(semi + 1)
         when (code) {
             "0", "2" -> buffer.title = value
+            "52" -> {
+                // Phase 19.5 — OSC 52 ; Pc ; Pd (BEL/ST terminated upstream).
+                // WRITE-ONLY by policy: a program may set the clipboard but a
+                // `?` read query is refused (never silently leak the clip).
+                val secondSemi = value.indexOf(';')
+                if (secondSemi >= 0) {
+                    val selection = value.substring(0, secondSemi)
+                    val data = value.substring(secondSemi + 1)
+                    val targetsClipboard = selection.isEmpty() || selection.contains('c')
+                    if (targetsClipboard && data.isNotEmpty() && data != "?") {
+                        val decoded = Base64Codec.decode(data)
+                        if (decoded != null && decoded.length <= MAX_OSC52_LENGTH) {
+                            onClipboardWrite?.invoke(decoded)
+                        }
+                    }
+                }
+            }
             "1337" -> {
                 when {
                     value == "CodeCRequestStorage" -> onStoragePermissionRequested?.invoke()
@@ -173,6 +193,14 @@ class TerminalEmulator(
                 val n = AnsiParser.param(params, count, 0, 1).coerceAtLeast(1)
                 repeat(n) { buffer.print(lastPrinted) }
             }
+            'c' -> {
+                // Primary DA (CSI 0 c / CSI c): report a VT102-class terminal
+                // (vt100.net: the VT102 answers "CSI ? 6 c"). Programs probe
+                // this before using advanced modes.
+                if (AnsiParser.param(params, count, 0, 0) == 0) {
+                    responder?.invoke("\u001b[?6c")
+                }
+            }
             'h' -> applyMode(params, count, enable = true)
             'l' -> applyMode(params, count, enable = false)
         }
@@ -206,6 +234,15 @@ class TerminalEmulator(
     }
 
     private fun handlePrivate(prefix: Char, params: IntArray, count: Int, finalByte: Char) {
+        if (prefix == '>') {
+            if (finalByte == 'c') {
+                // Secondary DA (CSI > c): "CSI > Pp ; Pv ; Pc c" per xterm.
+                // Self-identify as a VT100-class terminal running CodeC's
+                // own emulator (own version number — not borrowed identity).
+                responder?.invoke("\u001b[>0;100;0c")
+            }
+            return
+        }
         if (prefix != '?') return
         if (finalByte != 'h' && finalByte != 'l') return
         val enable = finalByte == 'h'
@@ -214,9 +251,19 @@ class TerminalEmulator(
             when (AnsiParser.param(params, count, i, 0)) {
                 1 -> buffer.applicationCursorKeys = enable
                 7 -> buffer.autoWrap = enable
+                9 -> setMouseTracking(enable, MouseModes.X10)
                 12 -> { /* cursor blink — cosmetic */ }
                 25 -> buffer.cursorVisible = enable
                 47, 1047 -> if (enable) buffer.enterAltScreen() else buffer.leaveAltScreen()
+                1000 -> setMouseTracking(enable, MouseModes.NORMAL)
+                1002 -> setMouseTracking(enable, MouseModes.BUTTON)
+                1003 -> setMouseTracking(enable, MouseModes.ANY)
+                1006 -> buffer.mouseMode =
+                    if (enable) buffer.mouseMode or MouseModes.SGR_EXT
+                    else buffer.mouseMode and MouseModes.SGR_EXT.inv()
+                1007 -> buffer.mouseMode =
+                    if (enable) buffer.mouseMode or MouseModes.ALT_SCROLL
+                    else buffer.mouseMode and MouseModes.ALT_SCROLL.inv()
                 1048 -> if (enable) buffer.saveCursor() else buffer.restoreCursor()
                 1049 -> {
                     if (enable) {
@@ -230,6 +277,15 @@ class TerminalEmulator(
                 }
                 2004 -> buffer.bracketedPaste = enable
             }
+        }
+    }
+
+    /** Enabling one tracking mode replaces the others (xterm semantics). */
+    private fun setMouseTracking(enable: Boolean, mode: Int) {
+        buffer.mouseMode = if (enable) {
+            (buffer.mouseMode and MouseModes.CAPTURE_MASK.inv()) or mode
+        } else {
+            buffer.mouseMode and mode.inv()
         }
     }
 
@@ -297,5 +353,11 @@ class TerminalEmulator(
             }
             else -> 1
         }
+    }
+
+    companion object {
+        /** OSC 52 clipboard writes are capped to keep a rogue program from
+         * flooding the Android clipboard with megabytes. */
+        const val MAX_OSC52_LENGTH = 100_000
     }
 }

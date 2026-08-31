@@ -463,7 +463,10 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 
 ## Phases 15–17 — Spck-style Editor & Project Experience (PLANNED, design/spec only)
 
-📋 **Planned (no code yet), added 2026-08-31 on the owner's request** to clone the
+📋 **Planned; **Phase 15 ACTIVE per the owner's instruction (2026-08-31:
+"i going to start phase 15")** — start with
+[`PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md).** Originally
+added 2026-08-31 on the owner's request to clone the
 [Spck Editor / Git Client](https://play.google.com/store/apps/details?id=io.spck)
 project & editor experience (import git project, project list, full editor look &
 feel). Client-only; reuses the Phase 8/9/11/13/14 engines — a UI/UX parity + gap
@@ -488,10 +491,38 @@ fill, not a rewrite. Spec + phone mockups in [`chat-phase15/`](chat-phase15/).
 
 ---
 
-## Phase 19 — Terminal Parity (Termux-quality terminal) (PLANNED, design/spec only)
+## Phase 19 — Terminal Parity (Termux-quality terminal) — ✅ COMPLETE & DEVICE-ACCEPTED (PR on owner's word)
 
-📋 **Planned (no code yet), added 2026-08-31 on the owner's report** that the
-terminal (a) prints downloads only at the end, (b) overlaps letters, and (c)
+✅ **IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) on the owner's "Ok start
+phase 19 … also find other things Termux does better and fix it"** — all FIVE
+parts (19.1 reflow, 19.2 integer cells, 19.3 live cadence, **19.4 Unicode
+widths**, **19.5 protocol/interaction parity** — the last two from the parity
+audit). `Build APK` `33371114549` green (assemble + tests + lint; 2 red rounds
+first caught the Indic vowel-sign width gap + test bugs). ~50 new host tests.
+**Remaining gate: the owner's per-part device recipes**
+(`chat-phase19/PART_19_*.md` §5). Original spec follows.
+
+**Device round 1 (2026-08-31, owner transcript):** ONE regression found —
+*"letters have a noticeable gap between them"*: 19.2's `ceil(advance)` cell
+added up to 1px of tracking per letter. **Fixed same day** with
+`CellMetrics.fitSizeToGrid` (nudge the font size <1% until the advance IS a
+whole pixel, so the integer cell equals the font's advance — crisp AND tight;
+postmortem in `chat-phase19/PART_19_2_RENDERING.md` §7.1). Round-1 recipes
+were also unusable on-device (multi-line paste, nonexistent `/usr/bin`) — all
+round-2 recipes are single-line copy-pasteable. Round-1 positives: soft-wrap
+of long lines ✓, Bengali/CJK/emoji echo ran clean. **Round 2 (same day,
+owner screenshots + answers + `stty size` 32×60 vs Termux 39×71): density &
+weight — fixed via default 12sp + bundled JetBrains Mono Medium/Bold (OFL) +
+0.9 row-pitch factor (`fitSizeToGrid` kept; PART_19_2 §7.2). Round 3 (owner: "feels lagging /
+not smooth scrolling / keyboard sometimes not popping up"): 4 fixes —
+run-batched drawing, gesture detectors no longer restart every output
+frame, pixel-smooth sub-row scrolling, IME retry loop (PART_19_3 §9).
+**Round 4 (2026-08-31): PASS — owner: "All ok now".**
+Phase 19 CLOSED: CI `33377713289`, 4 device rounds, ~70 new host tests.
+**PR #34 is OPEN (2026-08-31, on the owner's "create a pr") — merge only on the owner's literal command.**
+
+Phase 19 was specced 2026-08-31 on the owner's report that the terminal
+(a) prints downloads only at the end, (b) overlaps letters, and (c)
 doesn't reflow on zoom-out. Re-implements Termux-quality behavior in CodeC's own
 clean-room emulator (⚖️ **not** copying GPLv3 Termux code). Client-only, pure
 Kotlin/Compose, host-testable. Spec + before/after mockup in

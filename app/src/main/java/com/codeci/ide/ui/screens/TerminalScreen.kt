@@ -297,6 +297,8 @@ fun TerminalScreen(
             bellTrigger = bellTrigger,
             onSelectionChanged = { activeSelection = it },
             onUrlClick = { openTerminalUrl(context, it) },
+            onMouseEvent = { viewModel.sendKey(it) },
+            onReset = { viewModel.resetEmulator() },
             resizeKey = activeSessionId,
             modifier = Modifier
                 .fillMaxWidth()
