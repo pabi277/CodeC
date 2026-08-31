@@ -161,6 +161,38 @@ class GitManager(
         exec(root, listOf("reset", "--", path), localTimeoutSeconds, "git reset failed")
     }
 
+    /**
+     * `git ls-files` — every tracked path (one per line), or null when the
+     * command fails. Used by [BuildArtifactIgnore] to find build outputs an
+     * earlier push already committed.
+     */
+    fun trackedFiles(root: File): List<String>? {
+        val result = runGit(
+            workingDir = root,
+            args = listOf("ls-files"),
+            timeoutSeconds = localTimeoutSeconds
+        )
+        if (result.exitCode != 0) return null
+        return result.stdout.map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    /**
+     * `git rm -f --cached --quiet -- <paths>` — untrack [paths] from the
+     * index while leaving them on disk. Once untracked (and ignored via
+     * `.git/info/exclude`), a previously committed build output stops
+     * traveling to the remote on the next push.
+     */
+    fun rmCached(root: File, paths: List<String>) {
+        val safe = paths.filter { it.isNotEmpty() }
+        if (safe.isEmpty()) return
+        exec(
+            root,
+            listOf("rm", "-f", "--cached", "--quiet", "--") + safe,
+            localTimeoutSeconds,
+            "git rm --cached failed"
+        )
+    }
+
     /** `git commit -m <message>` with the stored (or fallback) author identity. */
     fun commit(root: File, message: String) {
         val args = mutableListOf<String>()

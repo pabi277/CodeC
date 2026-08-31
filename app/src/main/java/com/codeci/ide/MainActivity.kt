@@ -56,11 +56,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.codeci.ide.ui.navigation.Screen
+import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.screens.EditorScreen
 import com.codeci.ide.ui.screens.FileManagerScreen
-import com.codeci.ide.ui.screens.HomeScreen
 import com.codeci.ide.ui.screens.LogsScreen
 import com.codeci.ide.ui.screens.ModulesScreen
 import com.codeci.ide.ui.screens.SettingsScreen
@@ -250,17 +250,24 @@ fun MainApp() {
     val terminalViewModel: TerminalViewModel = viewModel(viewModelStoreOwner = activity)
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
-    // Phase 15/16 mockup-exact — exactly Spck's five tabs:
-    // Home · Projects · Editor · Terminal · Settings. Packages remains one
-    // tap away from the Home screen; the flat bar (no M3 selection pill,
-    // purple active state) matches mockups/projects-list.png.
+    // 2026-08-31 bar: five tabs with Terminal dead-center —
+    // Projects · Editor · Terminal · Packages · Settings. The Home dashboard
+    // is gone; the app opens straight into the editor where the user left
+    // off (or the Projects hub on first launch).
     val screens = listOf(
-        Screen.Home,
         Screen.FileManager,
         Screen.Editor,
         Screen.Terminal,
+        Screen.Modules,
         Screen.Settings
     )
+    // "Open where I left off": the last project file wins as the start
+    // destination; first launch (or a stale entry) lands on the hub.
+    val launchState = remember { EditorLaunchState.load(activity) }
+    val startDestination = remember(launchState) {
+        launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
+            ?: Screen.FileManager.route
+    }
 
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -302,49 +309,9 @@ fun MainApp() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) {
-                HomeScreen(
-                    onNavigateToSettings = {
-                        navController.navigate(Screen.Settings.route) {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToEditor = { fileName ->
-                        navController.navigate(Screen.Editor.createRoute(fileName)) {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToFileManager = {
-                        navController.navigate(Screen.FileManager.route) {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToTemplates = {
-                        navController.navigate(Screen.Templates.route) {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToModules = {
-                        navController.navigate(Screen.Modules.route) {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToTerminal = {
-                        navController.navigate(Screen.Terminal.createRoute(null)) {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
             composable(
                 route = Screen.Editor.route,
                 arguments = listOf(
@@ -487,7 +454,7 @@ fun MainApp() {
                                         StatsManager(context).incrementFilesCreated()
                                     }
                                     navController.navigate(Screen.Editor.createRoute(safe, project.name)) {
-                                        popUpTo(Screen.Home.route) { saveState = true }
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                         launchSingleTop = true
                                         restoreState = true
                                     }
@@ -528,9 +495,9 @@ fun MainApp() {
 }
 
 /**
- * Phase 15/16 mockup-exact bottom bar: five flat tabs (Home · Projects ·
- * Editor · Terminal · Settings) with icon-over-label, purple for the active
- * tab and muted grey otherwise — no M3 selection pill.
+ * 2026-08-31 bottom bar: five flat tabs (Projects · Editor · Terminal ·
+ * Packages · Settings — Terminal dead-center) with icon-over-label, the
+ * active tab in primary color, muted grey otherwise — no M3 selection pill.
  */
 @Composable
 private fun FlatBottomBar(

@@ -3,6 +3,7 @@ package com.codeci.ide.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codeci.ide.ui.projects.BuildArtifactIgnore
 import com.codeci.ide.ui.projects.DiffEngine
 import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.DiffLine
@@ -73,6 +74,11 @@ class GitControlViewModel : ViewModel() {
                         // before we list changes — the panel (and its COMMIT &
                         // PUSH staging) never offers __pycache__ files again.
                         PythonCacheIgnore.ensure(projectRoot)
+                        // Same treatment for build/run outputs (a.out, bin/*):
+                        // exclude new ones AND untrack any that an earlier
+                        // push already committed, so artifacts stop traveling.
+                        BuildArtifactIgnore.ensure(projectRoot)
+                        BuildArtifactIgnore.untrackTracked(projectRoot, git)
                         git.status(projectRoot)
                     }
                 } else {
@@ -114,6 +120,9 @@ class GitControlViewModel : ViewModel() {
             return
         }
         runGitOperation(context, projectRoot, "Committing…") { git ->
+            // Make sure fresh build outputs (a.out, bin/…) are ignored before
+            // `git add -A` sweeps the tree.
+            BuildArtifactIgnore.ensure(projectRoot)
             git.stageAll(projectRoot)
             git.commit(projectRoot, trimmed)
             val pushResult = runCatching { git.push(projectRoot) }

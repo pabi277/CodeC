@@ -45,7 +45,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -70,6 +69,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -328,15 +328,18 @@ fun EditorScreen(
             webDefaultEntryOrNull()
         }
     }
-    val showPreviewAction = WebFileSupport.isHtml(currentFileName) ||
-        launchDefault != null || isWebProject
-
     LaunchedEffect(userMessage) {
         val message = userMessage
         if (message != null) {
             snackbarHostState.showSnackbar(message)
             viewModel.consumeMessage()
         }
+    }
+
+    // Auto-save: leaving the editor (tab switch, deep link, back) saves any
+    // unsaved buffer immediately instead of waiting for the debounce.
+    DisposableEffect(Unit) {
+        onDispose { viewModel.flushAutoSave() }
     }
 
     // A stale popup points at a moved line; drop it whenever the buffer text changes.
@@ -843,27 +846,6 @@ fun EditorScreen(
                                     )
                                 }
                             }
-                            if (showPreviewAction) {
-                                // The mockup top bar has no preview eye; the
-                                // Phase 14 preview action lives in the menu.
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.preview)) },
-                                    leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        val entry = previewEntryOrNull()
-                                        if (entry != null) {
-                                            onOpenPreview(entry)
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.file_save_failed),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                )
-                            }
                             if (!isWebProject) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.run_in_terminal)) },
@@ -943,7 +925,21 @@ fun EditorScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
-                                if (isWebProject) {
+                                if (WebFileSupport.isHtml(currentFileName)) {
+                                    // 2026-08-31 — RUN ▶ IS the preview for
+                                    // HTML files: save the buffer and open it.
+                                    // No separate preview affordance.
+                                    val entry = previewEntryOrNull()
+                                    if (entry != null) {
+                                        onOpenPreview(entry)
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.file_save_failed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else if (isWebProject) {
                                     val entry = webDefaultEntryOrNull()
                                     if (entry != null) {
                                         onOpenPreview(entry)
