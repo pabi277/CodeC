@@ -1,4 +1,4 @@
-# CodeC Phase 15 — CodeCApi Device Capabilities & Final System Polish
+# CodeC Phase 18 — CodeCApi Device Capabilities & Final System Polish
 
 **Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
 **Target Files:** `CodecApiBridge.kt`, `CodecApiProtocol.kt`, `ShellEnvironment.kt`, `MainActivity.kt`
@@ -9,7 +9,7 @@
 
 Phase 4.7, 4.8, and 5.3 established the in-band OSC 1337 `CodeCApi` protocol bridge (`codec-clipboard`, `codec-notify`, `codec-toast`, `codec-share`, `codec-open-url`, `codec-vibrate`).
 
-Phase 15 completes the `CodeCApi` device capabilities suite (sensors, battery, text-to-speech, camera, intent dispatch) and applies final cross-app polish.
+Phase 18 completes the `CodeCApi` device capabilities suite (sensors, battery, text-to-speech, camera, intent dispatch) and applies final cross-app polish.
 
 ---
 
