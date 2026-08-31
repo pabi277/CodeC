@@ -80,11 +80,18 @@ data class ProjectHubEntry(
             when (kind) {
                 ProjectHubKind.C, ProjectHubKind.C_SERVER -> add(ProjectHubFilter.C)
                 ProjectHubKind.PY, ProjectHubKind.PY_SERVER -> add(ProjectHubFilter.PYTHON)
-                // Server apps are "web" in the family sense, exactly like Spck
-                // groups framework projects under its web filter.
+                ProjectHubKind.WEB_STATIC -> add(ProjectHubFilter.WEB)
+                ProjectHubKind.GENERIC -> Unit
+            }
+            // Server apps are ALSO "web" in the family sense, exactly like
+            // Spck groups framework projects under its web filter. Separate
+            // from the branch above: a `when` runs only its first matching
+            // arm, so PY_SERVER/C_SERVER would never reach a WEB arm there
+            // (caught by CI round 1, 2026-08-31).
+            when (kind) {
                 ProjectHubKind.WEB_STATIC, ProjectHubKind.PY_SERVER, ProjectHubKind.C_SERVER ->
                     add(ProjectHubFilter.WEB)
-                ProjectHubKind.GENERIC -> Unit
+                else -> Unit
             }
         }
 }
