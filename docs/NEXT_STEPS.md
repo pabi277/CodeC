@@ -519,7 +519,7 @@ run-batched drawing, gesture detectors no longer restart every output
 frame, pixel-smooth sub-row scrolling, IME retry loop (PART_19_3 §9).
 **Round 4 (2026-08-31): PASS — owner: "All ok now".**
 Phase 19 CLOSED: CI `33377713289`, 4 device rounds, ~70 new host tests.
-The PR is NOT open — it waits for the owner's literal command.**
+**PR #34 is OPEN (2026-08-31, on the owner's "create a pr") — merge only on the owner's literal command.**
 
 Phase 19 was specced 2026-08-31 on the owner's report that the terminal
 (a) prints downloads only at the end, (b) overlaps letters, and (c)
