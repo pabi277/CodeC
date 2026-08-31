@@ -1,6 +1,6 @@
 # Phase 14 — Implementation Record (Part 14.1: Server Runner, Port Monitor & Web Preview Integration)
 
-**Status:** IMPLEMENTED (client-only, `arena/01a05421-codec`) — CI round + device recipe pending.
+**Status:** IMPLEMENTED & CI-GREEN (client-only, `arena/01a05421-codec`) — **device recipe pending** (owner).
 **Date:** 2026-08-31
 **Branch:** `arena/01a05421-codec` (started from `main` at `006515a`, i.e. after PR #31/Phase 13)
 
@@ -135,4 +135,18 @@ way (step 4–6 only; C needs a RUN again after editing `server.c`).
 
 ## 6. CI
 
-`Build APK` run — see §“CI” of this phase's README / JOURNEY once posted.
+`Build APK` **GREEN — run `33352164172`** (assemble `:app:assembleDebug` +
+`:app:testDebugUnitTest` + `:app:lintDebug` via the gradle-bootstrap bridge).
+Four earlier rounds failed, each caught by CI and fixed (evidence-first, as
+recorded here):
+
+| Run | Failure | Fix |
+|---|---|---|
+| `33351530009` | `ProjectScaffold` compile: `Const 'val' initializer must be a constant value` | Python templates are plain `val` (Kotlin `const val` cannot interpolate) |
+| `33351638813` | compile: `Unresolved reference 'QCodeC'` | `$QCodeC` parses as the identifier `QCodeC` → `${Q}CodeC` |
+| `33351751134` | test compile: missing `assertTrue` import | import added |
+| `33351961497` | 5 unit-test failures | (a) templates printed bind URLs with `%d` — now the literal URLs (matches the device recipe); (b) `server exit` test raced the fast process exit — stay-alive sleep added; (c) disk test grepped `app.py` for the page text — page lives in `index.html` |
+
+New host tests: `ServerPortDetectorTest` (10), `ServerRunnerTest` (7, real
+processes via `/bin/sh`), `ProjectScaffoldTest` (7), `ProjectConfigTest` (+7).
+Device recipe §5 is now the only open gate; the owner runs it on aarch64.

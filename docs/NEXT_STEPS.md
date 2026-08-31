@@ -1,16 +1,16 @@
 # CodeC — historical Phase 3 task list and current handoff
 
-**Last updated:** 2026-08-30 · **State:** Phases 3–7 complete; **Phase 8 complete and fully accepted** (PR #27 merged at `348eb03`); **Phase 9 + 9.1/9.2 complete and accepted — PR #28 MERGED to `main` at `961e942`** (2026-08-29). **Phase 11 (Output Panel & Integrated Run) ✅ COMPLETE & DEVICE-ACCEPTED — PR #29 MERGED to `main` at `771f58f`** (2026-08-30 — CI green `33293358085`; owner: "All of the check passed"). **Phase 12 (Multi-Language Support, Python & Code Intelligence) ✅ COMPLETE, DEVICE-ACCEPTED & MERGED — PR #30 merged to `main` at `260d8b6`** (2026-08-30; device recipe FULLY PASSED — owner: "Now python is solved" / "Worked properly" / "Both working"; `[repo-build]` published python 3.14.6-1 + python-pip 26.2.1 — see [`chat-phase12/`](chat-phase12/)). **Phase 13 (GitHub & Git Integration) ✅ COMPLETE & DEVICE-ACCEPTED on `arena/01a053b3-codec`** (2026-08-31 — `Build APK` `33326161083` green with 37 new host tests; full §7 device recipe passed: clone, badges, diff, commit & push to a scratch repo, PULL round trip, no token leakage anywhere; pending: the owner's word to open the PR — see [`chat-phase13/`](chat-phase13/)). Device recipes in [`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md)
+**Last updated:** 2026-08-30 · **State:** Phases 3–7 complete; **Phase 8 complete and fully accepted** (PR #27 merged at `348eb03`); **Phase 9 + 9.1/9.2 complete and accepted — PR #28 MERGED to `main` at `961e942`** (2026-08-29). **Phase 11 (Output Panel & Integrated Run) ✅ COMPLETE & DEVICE-ACCEPTED — PR #29 MERGED to `main` at `771f58f`** (2026-08-30 — CI green `33293358085`; owner: "All of the check passed"). **Phase 12 (Multi-Language Support, Python & Code Intelligence) ✅ COMPLETE, DEVICE-ACCEPTED & MERGED — PR #30 merged to `main` at `260d8b6`** (2026-08-30; device recipe FULLY PASSED — owner: "Now python is solved" / "Worked properly" / "Both working"; `[repo-build]` published python 3.14.6-1 + python-pip 26.2.1 — see [`chat-phase12/`](chat-phase12/)). **Phase 13 (GitHub & Git Integration) ✅ COMPLETE & DEVICE-ACCEPTED & MERGED — PR #31 merged to `main` at `006515a`** (2026-08-31 — `Build APK` `33326161083` green with 37 new host tests; full §7 device recipe passed; see [`chat-phase13/`](chat-phase13/)). **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) 🚧 IMPLEMENTED & CI-GREEN on `arena/01a05421-codec`** (2026-08-31 — `Build APK` `33352164172` green; host tests incl. `ServerPortDetectorTest`/`ServerRunnerTest`/`ProjectScaffoldTest`/`ProjectConfigTest`; no `[repo-build]`; device recipe pending — see [`chat-phase14/`](chat-phase14/)). Device recipes in [`chat-phase9/PART_9_IMPLEMENTATION.md`](chat-phase9/PART_9_IMPLEMENTATION.md)
 remain the regression checklist. Current Phase 8 records live in [`chat-phase8/`](chat-phase8/).
 
 > This file is retained as the historical Phase 3 task list. For current work, use [`TERMINAL_PLAN.md`](TERMINAL_PLAN.md), [`chat-phase8/PART_8_DESIGN_DECISIONS.md`](chat-phase8/PART_8_DESIGN_DECISIONS.md), and [`chat-phase9/PART_9_EDITOR.md`](chat-phase9/PART_9_EDITOR.md).
 
 **Historical state:** Parts A, B, C, and D ✅ ALL
 device-verified (Phase 3 complete). **Phase 4 (Parts 4.1–4.8) ✅ COMPLETE,
-device-verified 2026-08-26.** Historical Phase 5 text follows; Phases 8–12 are
-closed (**PR #27/#28/#29/#30 merged**) — see [`chat-phase12/`](chat-phase12/).
-Phase 13 (GitHub/Git UI) is in progress on the session branch — see
-[`chat-phase13/`](chat-phase13/).
+device-verified 2026-08-26.** Historical Phase 5 text follows; Phases 8–13 are
+closed (**PR #27/#28/#29/#30/#31 merged**) — see [`chat-phase13/`](chat-phase13/).
+Phase 14 (server WebViews) is implemented & CI-green on the session branch — see
+[`chat-phase14/`](chat-phase14/).
 
 > **🔒 STANDING RULE (owner, 2026-08-26): do NOT open a PR or merge anything
 > without an explicit command from the owner in chat.** Committing to and

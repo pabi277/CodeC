@@ -1,8 +1,9 @@
 # CodeC Phase 14 — Mixed-Language, Server WebViews & Long-Tail Ecosystem
 
-**Status:** IMPLEMENTED (client-only, 2026-08-31, `arena/01a05421-codec`) — server
-runner, port monitor, Web Preview live mode, presets + wizard are in; CI + device
-round pending. See [PART_14_IMPLEMENTATION.md](PART_14_IMPLEMENTATION.md).
+**Status:** IMPLEMENTED & CI-GREEN (client-only, 2026-08-31, `arena/01a05421-codec` —
+`Build APK` `33352164172`; four CI-caught bugs fixed, see the record) — server
+runner, port monitor, Web Preview live mode, presets + wizard are in; **device
+round pending**. See [PART_14_IMPLEMENTATION.md](PART_14_IMPLEMENTATION.md).
 **Cost:** `[repo-build]` on-demand (only when adding new compiled toolchains like Go/Rust) / `[client-only]` for WebViews
 **Depends on:** Phase 8 (Projects) + Phase 12 (Python & Multi-Language)
 
