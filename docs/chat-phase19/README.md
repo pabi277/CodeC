@@ -36,6 +36,38 @@ integer-cell rendering, render cadence) in CodeC's existing clean-room
 pasted.** The result is Termux-*quality*, license-clean, and host-unit-testable
 on CI (the local sandbox has no JDK; CI is the only test executor).
 
+## ⚖️ Ground rule — replicate the behavior, never copy the code
+
+**Do NOT copy Termux's (or anyone's) source code.** Termux's terminal is GPLv3
+and copying it would relicense CodeC and violate the project's standing invariant
+against using official Termux code. We replicate the **same behavior and result**
+(smooth live output, crisp non-overlapping glyphs, correct reflow on zoom) by
+writing **original code in CodeC's own clean-room emulator**
+(`TerminalEmulator`/`TerminalBuffer`/`TerminalEmulatorView`). Same *features*,
+original implementation. It's fine to read public specs (VT100/xterm/ECMA-48) and
+learn the *technique*; it is not fine to paste GPL code.
+
+## 🔎 Research step — do more research when needed (per part)
+
+Each part is root-caused from the current code, but **do additional research if a
+detail is unclear**, and record it as a short "Research notes" block in that
+part:
+
+- Consult **public terminal specs** for exact behavior: the
+  [xterm control sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html),
+  ECMA-48, VT100/VT220 references, and Unicode line-breaking/width (UAX #11) for
+  the reflow width question.
+- Look up **Jetpack Compose Canvas / Android `Paint`** specifics before guessing
+  (integer text metrics, `Paint.getFontMetricsInt`, subpixel/hinting, real bold
+  typeface vs `isFakeBoldText`) — Part 19.2.
+- Look up **`kotlinx-coroutines`** patterns for frame-paced emission and
+  `runTest` virtual time — Part 19.3.
+- Study the technique of mature clean-room/permissively-licensed emulators
+  *conceptually* (how reflow rejoins soft-wrapped rows, how render cadence is
+  decoupled) — read, understand, then write CodeC's own version. Do **not** copy.
+- **TODO for the implementer:** if a device round reveals behavior the doc didn't
+  predict, research the cause, note it, and adjust the part before calling it done.
+
 ## The three parts
 
 | Part | Fixes | Bug | Doc |
