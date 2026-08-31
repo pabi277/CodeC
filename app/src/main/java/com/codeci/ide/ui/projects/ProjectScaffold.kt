@@ -60,7 +60,7 @@ object ProjectScaffold {
 """
 
     private val PYTHON_STARTER = """#!/usr/bin/env python3
-$QCodeC Python starter.$Q
+${Q}CodeC Python starter.$Q
 import sys
 
 def greet(name):
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 """
 
     private val FLASK_APP = """#!/usr/bin/env python3
-$QCodeC Flask starter — Phase 14.
+${Q}CodeC Flask starter — Phase 14.
 
 Serves a small web app on http://127.0.0.1:5000. When the Flask package is
 installed it runs the real framework; otherwise a stdlib fallback serves the
@@ -154,7 +154,7 @@ except ImportError:
 """
 
     private val FASTAPI_APP = """#!/usr/bin/env python3
-$QCodeC FastAPI starter — Phase 14.
+${Q}CodeC FastAPI starter — Phase 14.
 
 Serves a small web API on http://127.0.0.1:8000. When FastAPI + uvicorn are
 installed it runs the real framework; otherwise a stdlib fallback serves the
