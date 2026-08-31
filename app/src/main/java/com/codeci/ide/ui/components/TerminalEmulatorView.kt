@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.R
 import com.codeci.ide.ui.terminal.CellFlags
+import com.codeci.ide.ui.terminal.CellMetrics
 import com.codeci.ide.ui.terminal.StyleRun
 import com.codeci.ide.ui.terminal.TerminalLine
 import com.codeci.ide.ui.terminal.TerminalSnapshot
@@ -64,7 +65,6 @@ import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.floor
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
@@ -171,25 +171,40 @@ fun TerminalEmulatorView(
         }
     }
 
-    // Settled paint for PTY rows/cols sizing (avoids resizing PTY repeatedly during pinch)
+    // Settled paint for PTY rows/cols sizing (avoids resizing PTY repeatedly
+    // during pinch). Phase 19.2: cells are INTEGER pixels — a fractional
+    // cellW made (col * cellW) drift across a row and glyphs collide.
     val settledPaint = remember(fontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
             textSize = with(density) { fontSizeSp.sp.toPx() }
+            configureGridPaint()
         }
     }
-    val settledCellW = remember(settledPaint) { max(settledPaint.measureText("X"), 1f) }
-    val settledCellH = remember(settledPaint) { max(settledPaint.fontSpacing, 1f) }
+    val settledCellW = remember(settledPaint) {
+        CellMetrics.cellWidthPx(settledPaint.measureText("MMMMMMMMMM") / 10f)
+    }
+    val settledCellH = remember(settledPaint) { CellMetrics.cellHeightPx(settledPaint.fontSpacing) }
 
     // Active visual paint for 60fps instant pinch rendering
     val paint = remember(activeFontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
             textSize = with(density) { activeFontSizeSp.sp.toPx() }
+            configureGridPaint()
         }
     }
-    val cellW = remember(paint) { max(paint.measureText("X"), 1f) }
-    val cellH = remember(paint) { max(paint.fontSpacing, 1f) }
+    // Real bold face (keeps the monospace advance when available) instead of
+    // isFakeBoldText, whose stroke thickening pushes past the cell edge.
+    val boldPaint = remember(activeFontSizeSp, density, typeface) {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            this.typeface = Typeface.create(typeface, Typeface.BOLD)
+            textSize = with(density) { activeFontSizeSp.sp.toPx() }
+            configureGridPaint()
+        }
+    }
+    val cellW = remember(paint) { CellMetrics.cellWidthPx(paint.measureText("MMMMMMMMMM") / 10f) }
+    val cellH = remember(paint) { CellMetrics.cellHeightPx(paint.fontSpacing) }
     val ascent = remember(paint) { paint.fontMetrics.ascent }
 
     // Termux mTopRow: 0 = live screen, negative = scrolled into transcript.
@@ -240,16 +255,16 @@ fun TerminalEmulatorView(
                 handleHardwareKey(event.key, event.isCtrlPressed, onInput, cursorSequence)
             }
     ) {
-        val ptyCols = max(1, (with(density) { maxWidth.toPx() } / settledCellW).toInt())
-        val ptyRows = max(1, (with(density) { maxHeight.toPx() } / settledCellH).toInt())
+        val ptyCols = CellMetrics.columnsForWidth(with(density) { maxWidth.toPx() }, settledCellW)
+        val ptyRows = CellMetrics.rowsForHeight(with(density) { maxHeight.toPx() }, settledCellH)
         // resizeKey (Phase 7): re-apply the grid to the PTY when the *bound
         // session* changes even if the view's own size did not — otherwise a
         // freshly created session keeps the emulator-default 80x24 grid and
         // the cursor drifts (the exact bug class Phase 6.1 closed).
         LaunchedEffect(ptyCols, ptyRows, resizeKey) { onResize(ptyCols, ptyRows) }
 
-        val cols = max(1, (with(density) { maxWidth.toPx() } / cellW).toInt())
-        val rows = max(1, (with(density) { maxHeight.toPx() } / cellH).toInt())
+        val cols = CellMetrics.columnsForWidth(with(density) { maxWidth.toPx() }, cellW)
+        val rows = CellMetrics.rowsForHeight(with(density) { maxHeight.toPx() }, cellH)
 
         Box(modifier = Modifier.fillMaxSize()) {
             Canvas(
@@ -341,6 +356,7 @@ fun TerminalEmulatorView(
                         cellH = cellH,
                         ascent = ascent,
                         paint = paint,
+                        boldPaint = boldPaint,
                         cursorX = if (isCursorRow) snapshot.cursorX else -1,
                         selection = selection,
                         extY = extY,
@@ -430,10 +446,11 @@ fun TerminalEmulatorView(
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
     line: TerminalLine,
     y: Int,
-    cellW: Float,
-    cellH: Float,
+    cellW: Int,
+    cellH: Int,
     ascent: Float,
     paint: android.graphics.Paint,
+    boldPaint: android.graphics.Paint,
     cursorX: Int,
     selection: GridSelection?,
     extY: Int,
@@ -461,25 +478,40 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
         if (drawBg != theme.backgroundRgb) {
             drawRect(
                 color = packedColor(drawBg),
-                topLeft = Offset(start * cellW, y * cellH),
-                size = Size((end - start) * cellW, cellH)
+                topLeft = Offset(CellMetrics.columnX(start, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
+                size = Size(((end - start) * cellW).toFloat(), cellH.toFloat())
             )
         }
         if (invisible) continue
         val sliceEnd = end.coerceAtMost(text.length)
         val sliceStart = start.coerceAtMost(text.length)
         if (sliceStart >= sliceEnd) continue
-        paint.color = (0xFF000000.toInt()) or drawFg
-        paint.isFakeBoldText = bold
-        paint.isUnderlineText = run.flags and CellFlags.UNDERLINE != 0
-        
-        // Character-by-character cell drawing to eliminate cursor drift
+        val glyphPaint = if (bold) boldPaint else paint
+        glyphPaint.color = (0xFF000000.toInt()) or drawFg
+        glyphPaint.isUnderlineText = run.flags and CellFlags.UNDERLINE != 0
+
+        // Phase 19.2: character-by-character drawing at exact INTEGER cell
+        // origins — (start + i) * cellW is a whole pixel, so there is no
+        // accumulated rounding drift and glyphs can never collide.
         drawIntoCanvas { canvas ->
             for (i in 0 until (sliceEnd - sliceStart)) {
                 val charCol = sliceStart + i
                 val ch = text[charCol].toString()
                 if (ch != " ") {
-                    canvas.nativeCanvas.drawText(ch, (start + i) * cellW, y * cellH - ascent, paint)
+                    val x = CellMetrics.columnX(start + i, cellW).toFloat()
+                    val baseline = CellMetrics.rowY(y, cellH) - ascent
+                    val advance = glyphPaint.measureText(ch)
+                    if (advance > cellW) {
+                        // Fallback-font glyph wider than the cell (e.g. a
+                        // non-monospace face): squeeze it into its slot so it
+                        // cannot bleed into the neighbour.
+                        val savedScale = glyphPaint.textScaleX
+                        glyphPaint.textScaleX = savedScale * (cellW / advance)
+                        canvas.nativeCanvas.drawText(ch, x, baseline, glyphPaint)
+                        glyphPaint.textScaleX = savedScale
+                    } else {
+                        canvas.nativeCanvas.drawText(ch, x, baseline, glyphPaint)
+                    }
                 }
             }
         }
@@ -505,17 +537,28 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
         }
         drawRect(
             color = theme.selection,
-            topLeft = Offset(left * cellW, y * cellH),
-            size = Size(((right - left).coerceAtLeast(0)) * cellW, cellH)
+            topLeft = Offset(CellMetrics.columnX(left, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
+            size = Size(((right - left).coerceAtLeast(0)) * cellW.toFloat(), cellH.toFloat())
         )
     }
     if (cursorX in 0 until cols) {
         drawRect(
             color = theme.cursor.copy(alpha = 0.7f),
-            topLeft = Offset(cursorX * cellW, y * cellH),
-            size = Size(cellW, cellH)
+            topLeft = Offset(CellMetrics.columnX(cursorX, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
+            size = Size(cellW.toFloat(), cellH.toFloat())
         )
     }
+}
+
+/**
+ * Phase 19.2 grid paint hygiene: no letter spacing or horizontal scaling of
+ * the font's own advances (they must equal the integer cell), subpixel
+ * positioning for crisp small text.
+ */
+private fun android.graphics.Paint.configureGridPaint() {
+    letterSpacing = 0f
+    textScaleX = 1f
+    isSubpixelText = true
 }
 
 private fun packedColor(packed: Int): Color = Color(
@@ -549,8 +592,8 @@ fun TerminalSnapshot.selectedText(sel: GridSelection): String {
 }
 
 private suspend fun PointerInputScope.detectScrollOrSelect(
-    cellW: Float,
-    cellH: Float,
+    cellW: Int,
+    cellH: Int,
     cols: Int,
     rows: Int,
     selecting: () -> Boolean,
