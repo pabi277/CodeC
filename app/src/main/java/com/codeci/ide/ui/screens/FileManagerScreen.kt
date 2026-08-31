@@ -1211,7 +1211,7 @@ private fun ProjectHubCard(
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.hub_push)) },
-                            leadingIcon = { Icon(Icons.Default.Send, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.UploadFile, contentDescription = null) },
                             onClick = { menuOpen = false; onAction(entry, HubCardAction.PUSH) }
                         )
                         DropdownMenuItem(
