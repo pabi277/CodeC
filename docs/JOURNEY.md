@@ -8,10 +8,16 @@ DEVICE-ACCEPTED and MERGED — PR #34 merged to `main` at `b869ce6`
 (`Build APK` `33380041937`).
 **Phase 15 (Spck clone — Projects Hub & Unified Import): device round 1 done
 (2026-08-31) — both owner issues fixed (clone kind re-detect; Packages tab
-restored), CI green `33385105931` @ `83ba499`; owner re-test outstanding.**
-**Phase 16 (Spck-style Editor Shell) is IMPLEMENTED (2026-08-31,
-`arena/01a05743-codec`) — CI + device verification pending** —
-see items 19–20 and [`chat-phase15/`](chat-phase15/).
+restored), CI green `33385105931` @ `83ba499`.**
+**Device round 2 (2026-08-31, owner: "something is off about the ui — I want
+exactly same ui"): mockup-exact re-skin of the whole Phase 15/16 UI** (flat
+5-tab bar, pill filter chips, 16dp cards + 56dp type squares w/ Python logo,
+mockup-color `+` sheet, clone dialog rebuilt, editor top bar → `☰ tabs ⋮ ▶ RUN`,
+3dp tab underline, keycap keys row, dot status bar, gutter divider, drawer
+re-skin, Source Control sheet rebuilt to `mockups/source-control.png` with
+per-file stage toggle `GitManager.stageFile`/`unstageFile` +2 host tests).
+Clean-room hand-drawn glyphs in `SpckIcons.kt`. — see items 19–20 and
+[PART_15 §6 / PART_16 §6](chat-phase15/) (device round 2).
 **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) was merged in PR #32** — client-only, no `[repo-build]`; `Build APK`
 `33352164172` green (assemble + unit tests + lint); **device recipe pending
 (owner)**. See item 17 below and [`chat-phase14/`](chat-phase14/).

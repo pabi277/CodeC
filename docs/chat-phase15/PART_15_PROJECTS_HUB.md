@@ -367,3 +367,43 @@ PASS = steps 1–9 succeed without manual fixes; step 10 leaves the app healthy.
    **Known limit (not a defect):** clones made before fix 1 keep their
    `"c"` config for RUN ▶ (hub label is already right); re-clone or open
    the file's own run path to use server/web run flows.
+
+**Device round 2 (2026-08-31, owner: "something is off about the ui … I want
+exactly same ui") — mockup-exact re-skin of the Phase 15/16 UI.** The PR's
+first pass was functionally complete but drifted from the design
+(`mockups/*.png`). Re-skin (no engine changes, same VM flows):
+
+- *Projects Hub:* large bold "Projects" title on a transparent app bar (was a
+  small caption on `surfaceVariant`); flat pill filter chips (filled purple /
+  outlined dark, branch glyph on the Git chip) instead of stock M3
+  `FilterChip`; cards at 16dp radius, 0 elevation, 56dp/14dp type squares with
+  the mockup colors (orange C / blue **Python logo** / purple web-framework /
+  green globe / grey), single ` · ` subtitle separator, the yellow `M` mark as
+  a small outlined square; the `+` is a 64dp flat purple circle (no raised
+  M3 FAB).
+- *Unified `+` sheet:* "New Project" headline + four rows with 58dp circular
+  icons in the mockup palette (lavender file-plus, indigo branch-download,
+  blue zip, green folder) — clean-room vector glyphs in
+  `ui/components/SpckIcons.kt` (the Material set has no git-branch/QR/zip/clone
+  marks; zero copied assets).
+- *Clone dialog:* labels sit ABOVE the outlined fields (were floating labels),
+  trailing QR-scan icon on the URL field, chevron-collapsed **Advanced**,
+  Branch as a dropdown field (chevron fetches `ls-remote --heads` on demand,
+  free-text fallback kept), shallow toggle kept, info hint ends in a purple
+  **Settings** link, CLONE is a filled button.
+- *Bottom nav:* back to the mockup's exact five tabs (Home · Projects ·
+  Editor · Terminal · Settings) as a flat custom bar (icon-over-label, purple
+  active, no M3 pill) — the owner's round-2 instruction overrides the
+  round-1 "keep six tabs" word; Packages stays one tap away from the Home
+  screen. Editor tab uses the pencil glyph, "Term" renamed "Terminal".
+- *Source Control sheet (Phase 17 spec §2.1, mockups/source-control.png):*
+  re-skinned to title + outlined `⌥ branch ▾` chip, multiline "Message
+  (Ctrl+Enter to commit)" box, full-width filled **COMMIT & PUSH**, "Changes N"
+  list with typed file icons (python/html marks) + folder path + porcelain
+  letter + a **per-file +/− stage toggle** (new `GitManager.stageFile` /
+  `unstageFile` — `add -- <path>` / `reset -- <path>`, argv-safe), and the
+  outlined **PULL** / **REFRESH** pair. `GitControlViewModel.toggleStage`
+  decides stage vs unstage from the porcelain `x` column. +2 host tests
+  (argv shape incl. a flag-looking path).
+- *Clean-room note unchanged:* Spck behavior mirrored from the public
+  mockups/docs only; all glyphs hand-drawn; no copied code or assets.
