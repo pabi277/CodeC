@@ -1,6 +1,6 @@
 # CodeC Phase 19.2 — Integer-cell crisp rendering (no glyph overlap)
 
-**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — host tests written, CI pending · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — **CI GREEN `33371114549`** (assemble + unit tests + lint; two earlier rounds caught the Brahmic vowel-sign width gap + 9 test-trace bugs, fixed `ee1c054`/`39bd3e2`) · **Cost:** `[client-only]`
 · **Depends on:** none (independent; pairs well with 19.1)
 · **Fixes bug #2:** *"letters overlapping, not visuals good."*
 · **Primary target file:** `ui/components/TerminalEmulatorView.kt`

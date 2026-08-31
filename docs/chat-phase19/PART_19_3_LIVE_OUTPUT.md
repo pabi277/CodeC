@@ -1,6 +1,6 @@
 # CodeC Phase 19.3 — Live render cadence & streaming output
 
-**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — host tests written, CI pending · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — **CI GREEN `33371114549`** (assemble + unit tests + lint; two earlier rounds caught the Brahmic vowel-sign width gap + 9 test-trace bugs, fixed `ee1c054`/`39bd3e2`) · **Cost:** `[client-only]`
 · **Depends on:** none (independent; safe to do first)
 · **Fixes bug #1:** *"if I download something it prints everything after the
 download"* — progress bars / streaming output only appear at the end.

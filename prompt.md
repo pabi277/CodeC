@@ -57,15 +57,19 @@ of assuming one. Commit and push to the SESSION branch only; never push to
     PART_15/16/17 + `mockups/`).
   - **Phase 18 — CodeCApi Device Capabilities** (WAS Phase 15) renumbered and
     moved to the end: `docs/chat-phase18/PART_18_CODEAPI.md`.
-  - **Phase 19 — Terminal Parity (Termux-quality terminal)**: fixes three
-    owner-reported bugs, root-caused from the current code — 19.1 scrollback/
-    screen **reflow on zoom/resize** (`TerminalBuffer.resize` only does a
-    rectangular copy today, no reflow); 19.2 **integer-cell crisp rendering**
-    (fractional `cellW` + fake-bold cause glyph overlap); 19.3 **live render
-    cadence** (conflating `StateFlow` + per-chunk `publish()` drop progress
-    frames → output appears only at the end). Docs: `docs/chat-phase19/`
-    (README + PART_19_1/2/3 + before/after mockup). Independent of 15–18;
-    can be implemented first.
+  - **Phase 19 — Terminal Parity** ✅ **IMPLEMENTED & CI-GREEN
+    (2026-08-31, `arena/01a056aa-codec`, run `33371114549`)** — on the
+    owner's "Ok start phase 19 … also find other things Termux better and
+    fix it". FIVE parts: the three planned bugs (19.1 reflow, 19.2
+    integer-cell rendering, 19.3 frame-paced live output) **plus** 19.4
+    Unicode column widths (CJK/emoji double-width, Indic cluster combining
+    — CI round 2 caught missing Brahmic vowel signs) and 19.5 protocol/
+    interaction parity (DA1/DA2 responses, OSC 52 clipboard write, xterm
+    mouse reporting with Termux-style tap/swipe mapping, Ctrl+arrows,
+    Copy-All/Share/Reset menu). ~50 new host tests. **Remaining: the
+    owner's device recipes** (`docs/chat-phase19/PART_19_*.md` §5) and the
+    owner's word to open/merge a PR. Clean-room throughout (public specs
+    only).
 
 - **CLEAN-ROOM LAW (owner, 2026-08-31) — replicate FEATURES, never COPY code.**
   When a phase clones another app (Spck's UX in 15–17, Termux's terminal
@@ -104,10 +108,11 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 1. **Merge PR #33** (docs for Phases 15–19) if the owner says so — it is
    docs-only and CI-green. Do not merge without the literal command.
-2. **Implement a planned phase.** The owner picks. Recommended entry points:
-   - **Phase 19 (Terminal Parity)** — fixes real, reported terminal bugs;
-     `[client-only]`, pure Kotlin/Compose, independent of 15–18; each of 19.1/
-     19.2/19.3 is separately shippable and host-testable.
+2. **Phase 19 device round, then PR on the owner's word.** Phase 19 is
+   implemented & CI-green on `arena/01a056aa-codec`; the owner runs the
+   per-part device recipes (`docs/chat-phase19/PART_19_*.md` §5), then says
+   the word to open/merge the PR.
+3. **Then the next planned phase.** The owner picks:
    - **Phases 15 → 16 → 17 (Spck clone)** — run in order; reuse Phase 8/9/11/
      13/14 engines; UI/UX parity + gap fill, not a rewrite.
    - **Phase 18 (CodeCApi tail)** — last.

@@ -488,9 +488,16 @@ fill, not a rewrite. Spec + phone mockups in [`chat-phase15/`](chat-phase15/).
 
 ---
 
-## Phase 19 — Terminal Parity (Termux-quality terminal) (PLANNED, design/spec only)
+## Phase 19 — Terminal Parity (Termux-quality terminal) — 🚧 IMPLEMENTED & CI-GREEN, device gate pending
 
-📋 **Planned (no code yet), added 2026-08-31 on the owner's report** that the
+✅ **IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) on the owner's "Ok start
+phase 19 … also find other things Termux does better and fix it"** — all FIVE
+parts (19.1 reflow, 19.2 integer cells, 19.3 live cadence, **19.4 Unicode
+widths**, **19.5 protocol/interaction parity** — the last two from the parity
+audit). `Build APK` `33371114549` green (assemble + tests + lint; 2 red rounds
+first caught the Indic vowel-sign width gap + test bugs). ~50 new host tests.
+**Remaining gate: the owner's per-part device recipes**
+(`chat-phase19/PART_19_*.md` §5). Original spec follows. that the
 terminal (a) prints downloads only at the end, (b) overlaps letters, and (c)
 doesn't reflow on zoom-out. Re-implements Termux-quality behavior in CodeC's own
 clean-room emulator (⚖️ **not** copying GPLv3 Termux code). Client-only, pure

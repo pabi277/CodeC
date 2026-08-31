@@ -1,6 +1,6 @@
 # CodeC Phase 19.1 — Scrollback & screen reflow on resize / zoom
 
-**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — host tests written, CI pending · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — **CI GREEN `33371114549`** (assemble + unit tests + lint; two earlier rounds caught the Brahmic vowel-sign width gap + 9 test-trace bugs, fixed `ee1c054`/`39bd3e2`) · **Cost:** `[client-only]`
 · **Depends on:** Phase 6 (Terminal UX — pinch-zoom), Phase 7 (`resizeKey`)
 · **Fixes bug #3:** *"if I zoom out the terminal the previous commands don't get
 full screen, they remain as they were."*

@@ -1,6 +1,6 @@
 # CodeC Phase 19 — Terminal Parity (Termux-quality terminal)
 
-**Status:** IMPLEMENTED on `arena/01a056aa-codec` (2026-08-31, owner: "Ok start phase 19 … fix the bugs mentioned and also try to find other things that Termux better than CodeC terminal and fix it") — all five parts coded, host tests written, CI + device gates pending · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED on `arena/01a056aa-codec` (2026-08-31, owner: "Ok start phase 19 … fix the bugs mentioned and also try to find other things that Termux better than CodeC terminal and fix it") — all five parts coded and **CI-GREEN (`Build APK` `33371114549`** on `arena/01a056aa-codec`: assemble + `testDebugUnitTest` + `lintDebug`; rounds 1–2 caught the Brahmic vowel-sign width gap and test-trace bugs, now fixed**)**; remaining gate = the owner's device recipes · **Cost:** `[client-only]`
 · **Depends on:** Phase 6 (Terminal UX), Phase 7 (Multi-terminal sessions)
 
 > Goal: make CodeC's terminal behave like **Termux** — smooth live output,
