@@ -236,12 +236,15 @@ fun MainApp() {
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
     // Phase 15 — Projects is a first-class destination (Spck's Projects tab).
-    // Packages (Modules) stays reachable from the Home screen's action card.
+    // Device round 1 (owner): the Package & Command Hub tab must NOT be
+    // traded away for it — the mockup's 5 tabs are overridden by the owner;
+    // Modules returns to the bar (six items, short labels, still fits).
     val screens = listOf(
         Screen.Home,
         Screen.FileManager,
         Screen.Editor,
         Screen.Terminal,
+        Screen.Modules,
         Screen.Settings
     )
 

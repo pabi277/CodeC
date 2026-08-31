@@ -100,14 +100,20 @@ class FileManagerViewModel : ViewModel() {
             } else {
                 null
             }
-            val autoPlan = if (project.config.type.trim().lowercase() == "auto") {
+            // Phase 15 device round 1 fix: run the detector for auto AND for
+            // stale "c" placeholders (entry file missing — e.g. clones from
+            // before the clone-defaults-to-auto change).
+            val entryName = project.config.entry.ifBlank { "main.c" }
+            val entryExists = File(project.root, entryName).isFile
+            val autoDetected = ProjectsHub.shouldAutoDetect(project.config.type, entryExists)
+            val autoPlan = if (autoDetected) {
                 runCatching { ProjectRunDetector.detect(project.root, null) }.getOrNull()
             } else {
                 null
             }
             ProjectHubEntry(
                 name = project.name,
-                kind = ProjectsHub.kindFor(project.config, autoPlan),
+                kind = ProjectsHub.kindFor(project.config, autoPlan, autoDetected),
                 isGit = isGit,
                 branch = branch,
                 fileCount = scan.fileCount,
@@ -465,13 +471,17 @@ class FileManagerViewModel : ViewModel() {
                     withContext(Dispatchers.IO) { dest.deleteRecursively() }
                     throw e
                 }
+                // Phase 15 — cloned repositories are ensured as type `auto`
+                // (spec §2.3.2): RUN ▶ and the hub card then detect the real
+                // family from the repo's files instead of trusting a "c"
+                // placeholder that Phase 13's default carried.
                 withContext(Dispatchers.IO) {
                     val config = File(dest, ".codec/project.json")
                     if (!config.isFile) {
-                        manager.writeConfig(dest, ProjectConfig.defaultFor(name))
+                        manager.writeConfig(dest, ProjectConfig.defaultFor(name, "auto"))
                     }
                 }
-                finishImport(context, manager, manager.project(name) ?: ProjectInfo(name, dest, ProjectConfig.defaultFor(name)), onCloned)
+                finishImport(context, manager, manager.project(name) ?: ProjectInfo(name, dest, ProjectConfig.defaultFor(name, "auto")), onCloned)
                 _userMessage.value = context.getString(R.string.clone_success, name)
             } catch (e: Exception) {
                 _userMessage.value = context.getString(
