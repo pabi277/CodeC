@@ -74,6 +74,21 @@ Delivered (all client-only — **no `[repo-build]` dispatch**):
   `.demo-flask-seeded-v1`), never overwrites a user's `demo_flask`, and
   deleting it does not make it reappear. `ProjectScaffold.writeFiles` is now
   the single write path for ProjectManager, the wizard and the demo.
+- **D10 — Auto projects (owner request, 2026-08-31: "no selection … just
+  created and run any type").** The New Project wizard's default is now
+  **Auto (detect)**: creating a project needs no type choice and scaffolds no
+  starter files; RUN ▶ infers the type from the user's own files. Detection
+  is pure and host-tested (`ProjectRunDetector`): the actively open file wins,
+  then a root scan — `app.py` → Flask server, `server.c` → C microservice,
+  `main.py` → FastAPI server iff it imports fastapi/uvicorn else Python
+  script, any `.html` → static Web, `main.c`/any `.c`/`.cpp` → C, any `.py`
+  → Python, otherwise an honest "add a file" hint. Server and Web plans reuse
+  the exact existing pipelines (`ProjectConfig.defaultFor(type)` +
+  `startServerRun`; preview handler for static web), so an auto project
+  behaves identically to the picked preset once detected; c/python fall
+  through to the Phase 12 active-file run path with the preset as the
+  project-level fallback. Each RUN re-detects, so files can change type
+  freely (config stays `auto`).
 
 ## 3. Invariants
 
@@ -103,11 +118,18 @@ app/src/main/java/com/codeci/ide/ui/services/ServerRunner.kt        (NEW)
 app/src/main/java/com/codeci/ide/ui/viewmodels/EditorViewModel.kt   (server pipeline)
 app/src/main/java/com/codeci/ide/ui/viewmodels/FileManagerViewModel.kt (createProject(type))
 app/src/main/java/com/codeci/ide/ui/projects/DemoProjects.kt        (NEW — bundled demo_flask, D9)
+app/src/main/java/com/codeci/ide/ui/projects/ProjectRunDetector.kt  (NEW — auto type detection, D10)
+app/src/main/java/com/codeci/ide/ui/projects/ProjectTypes.kt        (auto first)
+app/src/main/java/com/codeci/ide/ui/viewmodels/EditorViewModel.kt   (auto plan routing + web preview handler)
+app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt         (web preview handler wiring)
+app/src/main/java/com/codeci/ide/ui/screens/FileManagerScreen.kt    (wizard default = auto)
 app/src/test/java/com/codeci/ide/ServerPortDetectorTest.kt          (NEW)
 app/src/test/java/com/codeci/ide/ServerRunnerTest.kt                (NEW)
-app/src/test/java/com/codeci/ide/ProjectScaffoldTest.kt             (NEW + writeFiles)
-app/src/test/java/com/codeci/ide/ProjectConfigTest.kt               (extended)
+app/src/test/java/com/codeci/ide/ProjectScaffoldTest.kt             (NEW + writeFiles + auto)
+app/src/test/java/com/codeci/ide/ProjectConfigTest.kt               (extended + auto)
 app/src/test/java/com/codeci/ide/DemoProjectSeedTest.kt             (NEW — D9)
+app/src/test/java/com/codeci/ide/ProjectRunDetectorTest.kt          (NEW — D10, 13 cases)
+app/src/test/java/com/codeci/ide/ServerScaffoldE2ETest.kt           (+ auto → flask end to end)
 ```
 
 ## 5. Device recipe (owner, aarch64, latest green `Build APK` APK)
@@ -116,7 +138,10 @@ app/src/test/java/com/codeci/ide/DemoProjectSeedTest.kt             (NEW — D9)
 # 0. Install the APK (fresh or in-place), open the Files tab.
 #    → `demo_flask` is ALREADY there (bundled, D9): app.py + index.html +
 #      README.md + .codec/project.json (type python-flask, port 5000).
-#    (Alternative: “+ New Project” → name + “Flask Web Server”.)
+#    (Alternative A: “+ New Project” → name + “Flask Web Server”.)
+#    (Alternative B — no type selection, D10: “+ New Project” → name only,
+#     leave the default “Auto (detect)” — then inside the project add
+#     app.py + index.html yourself, or copy them from demo_flask.)
 # 1. Open app.py (observe the dual-path Flask/fallback code).
 # 2. Ensure python3 is installed:  pkg install -y python   (Phase 12 package)
 # 3. Tap RUN ▶ in the editor toolbar.
@@ -126,6 +151,8 @@ app/src/test/java/com/codeci/ide/DemoProjectSeedTest.kt             (NEW — D9)
 #      summary: “Server running at http://127.0.0.1:5000”
 #    then the app navigates to Web Preview automatically,
 #    address bar shows “● live http://127.0.0.1:5000”.
+#    (Auto projects detect the same way from app.py/main.py/server.c/
+#     index.html/main.c — no type selection needed at creation.)
 # 4. Web Preview shows “Welcome to CodeC Flask App!”.
 # 5. Edit index.html (e.g. change h1 text) in the editor → Save.
 #    → Web Preview auto-reloads (or tap the Refresh icon) → updated text.

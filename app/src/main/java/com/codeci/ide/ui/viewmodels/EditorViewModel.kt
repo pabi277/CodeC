@@ -19,11 +19,14 @@ import com.codeci.ide.ui.editor.FindOutcome
 import com.codeci.ide.ui.editor.FindReplaceEngine
 import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
+import com.codeci.ide.ui.projects.AutoRunPlan
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
+import com.codeci.ide.ui.projects.ProjectConfig
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.ProjectRunDetector
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.ExecutionRunner
 import com.codeci.ide.ui.services.InteractiveRunSession
@@ -205,6 +208,7 @@ class EditorViewModel : ViewModel() {
     private var serverRunJob: Job? = null
     private var activeServer: ServerRunner? = null
     private var serverReadyHandler: ((String) -> Unit)? = null
+    private var webPreviewHandler: ((String) -> Unit)? = null
 
     /**
      * Phase 14 — the Editor wires this to navigation: when a server project's
@@ -213,6 +217,15 @@ class EditorViewModel : ViewModel() {
      */
     fun setServerReadyHandler(handler: (String) -> Unit) {
         serverReadyHandler = handler
+    }
+
+    /**
+     * Phase 14 — Auto projects detected as static web (index.html) have no
+     * server; the Editor wires this to the same preview navigation used by
+     * `web` projects so RUN ▶ just opens the preview.
+     */
+    fun setWebPreviewHandler(handler: (String) -> Unit) {
+        webPreviewHandler = handler
     }
 
     override fun onCleared() {
@@ -1157,6 +1170,30 @@ class EditorViewModel : ViewModel() {
                 startServerRun(appContext, info)
                 return
             }
+            // Phase 14 — Auto projects: no type selection at creation; RUN ▶
+            // infers the type from the files (active file first). Server and
+            // web plans are terminal; c/python fall through to the normal
+            // active-file run path with the preset as the project fallback.
+            var config = info.config
+            if (config.type.equals("auto", ignoreCase = true)) {
+                val activeRelForDetect = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
+                when (val plan = ProjectRunDetector.detect(info.root, activeRelForDetect)) {
+                    is AutoRunPlan.Server -> {
+                        config = ProjectConfig.defaultFor(info.name, plan.type)
+                        startServerRun(appContext, info.copy(config = config))
+                        return
+                    }
+                    is AutoRunPlan.Web -> {
+                        webPreviewHandler?.invoke(plan.entry)
+                        return
+                    }
+                    is AutoRunPlan.Project -> config = ProjectConfig.defaultFor(info.name, plan.type)
+                    is AutoRunPlan.None -> {
+                        _userMessage.value = plan.message
+                        return
+                    }
+                }
+            }
             workDir = info.root
             // Phase 12 (device-found): RUN ▶ executes the ACTIVE file, not
             // the project's configured main. A .py active file runs with
@@ -1178,10 +1215,10 @@ class EditorViewModel : ViewModel() {
                 runCommand = run
                 terminalCommand = terminal
             } else {
-                val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, info.config)
+                val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, config)
                 buildCommand = build
                 runCommand = run
-                terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, info.config)
+                terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, config)
             }
         } else {
             val path = saveAndAbsolutePath(appContext) ?: return

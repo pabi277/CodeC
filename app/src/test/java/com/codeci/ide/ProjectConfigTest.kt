@@ -63,6 +63,17 @@ class ProjectConfigTest {
     }
 
     @Test
+    fun `auto project has no preset commands and is not a server type`() {
+        val config = ProjectConfig.defaultFor("demo", "auto")
+        assertEquals("auto", config.type)
+        assertEquals("", config.build)
+        assertEquals("", config.run)
+        assertEquals("", config.entry)
+        assertFalse(config.isServerType())
+        assertNull(config.serverPreviewUrl())
+    }
+
+    @Test
     fun `config round trips port and preview url`() {
         val original = ProjectConfig.defaultFor("api", "python-fastapi")
         val restored = ProjectConfig.fromJson(original.toJsonString(), "fallback")

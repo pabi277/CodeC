@@ -1,6 +1,8 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.projects.AutoRunPlan
 import com.codeci.ide.ui.projects.ProjectConfig
+import com.codeci.ide.ui.projects.ProjectRunDetector
 import com.codeci.ide.ui.projects.ProjectScaffold
 import com.codeci.ide.ui.services.ServerEvent
 import com.codeci.ide.ui.services.ServerRunner
@@ -185,5 +187,50 @@ class ServerScaffoldE2ETest {
                 }
             )
         }
+    }
+
+    @Test
+    fun `auto project detects flask and runs it end to end`() {
+        // Owner request: no type selection at creation. The project is created
+        // as "auto" (no scaffold), the user adds app.py + index.html, and
+        // RUN ▶ detects flask, then behaves exactly like the flask preset.
+        val dir = tempProject("python-flask")
+        val plan = ProjectRunDetector.detect(dir, "app.py")
+        assertTrue(plan is AutoRunPlan.Server)
+        val type = (plan as AutoRunPlan.Server).type
+        assertEquals("python-flask", type)
+
+        val config = ProjectConfig.defaultFor("demo", type)
+        val runner = ServerRunner(shell, env, config.run, dir, readyTimeoutSeconds = 10)
+        val events = mutableListOf<ServerEvent>()
+        runBlocking {
+            val job = launch { runner.start().collect { events += it } }
+            try {
+                withTimeout(20_000) {
+                    while (events.none { it is ServerEvent.Ready }) {
+                        events.filterIsInstance<ServerEvent.Failed>().firstOrNull()?.let {
+                            throw AssertionError("server failed: ${it.message}")
+                        }
+                        events.filterIsInstance<ServerEvent.Exited>().firstOrNull()?.let {
+                            throw AssertionError(
+                                "server exited early (${it.exitCode}); output=" +
+                                    events.filterIsInstance<ServerEvent.Output>().map { it.line }
+                            )
+                        }
+                        delay(50)
+                    }
+                }
+                val ready = events.filterIsInstance<ServerEvent.Ready>().first()
+                assertEquals("http://127.0.0.1:5000", ready.url)
+                val (code, body) = httpGet("$ready.url/")
+                assertEquals(200, code)
+                assertTrue(body.contains("Welcome to CodeC Flask App!"))
+            } finally {
+                runner.stop()
+                withTimeout(5_000) { job.join() }
+            }
+        }
+        assertFalse(runner.hasLiveProcess())
+        dir.deleteRecursively()
     }
 }

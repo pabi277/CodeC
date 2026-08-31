@@ -306,10 +306,14 @@ fun EditorScreen(
 
     // Phase 14 — when RUN ▶ detects a server's bind line, open the Web Preview
     // on that URL. rememberUpdatedState keeps the callback fresh without
-    // restarting the effect, and the handler survives navigation.
+    // restarting the effect, and the handler survives navigation. Auto
+    // projects detected as static web (index.html) use the same preview
+    // navigation as `web` projects.
     val openPreviewUrlState = rememberUpdatedState(onOpenPreviewUrl)
+    val openPreviewState = rememberUpdatedState(onOpenPreview)
     LaunchedEffect(Unit) {
         viewModel.setServerReadyHandler { url -> openPreviewUrlState.value(url) }
+        viewModel.setWebPreviewHandler { entry -> openPreviewState.value(entry) }
     }
 
     BackHandler(enabled = isDirty) {

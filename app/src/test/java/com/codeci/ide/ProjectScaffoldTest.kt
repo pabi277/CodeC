@@ -74,6 +74,13 @@ class ProjectScaffoldTest {
     }
 
     @Test
+    fun `auto type scaffolds nothing by design`() {
+        // Auto projects get no starter files: RUN ▶ detects the type from the
+        // user's own files (ProjectRunDetector).
+        assertTrue(ProjectScaffold.filesFor("auto").isEmpty())
+    }
+
+    @Test
     fun `scaffold files land on disk under their relative path`() {
         val root = File.createTempFile("codec-scaffold", "").apply {
             delete()

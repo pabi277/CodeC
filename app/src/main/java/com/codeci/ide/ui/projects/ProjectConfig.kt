@@ -70,6 +70,14 @@ data class ProjectConfig(
         fun defaultFor(name: String, type: String = "c"): ProjectConfig {
             val projectType = type.trim().ifEmpty { "c" }.lowercase()
             return when (projectType) {
+                "auto" -> ProjectConfig(
+                    name = name,
+                    type = "auto",
+                    entry = "",
+                    build = "",
+                    run = "",
+                    clean = ""
+                )
                 "web", "static-web" -> ProjectConfig(
                     name = name,
                     type = "web",

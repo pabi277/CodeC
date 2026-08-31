@@ -25,6 +25,10 @@ object ProjectScaffold {
         "pkg install -y python-pip && pip install"
 
     fun filesFor(type: String): List<ScaffoldFile> = when (type.trim().lowercase()) {
+        // Auto projects carry no starter files on purpose: the user adds their
+        // own (app.py / main.py / server.c / index.html / main.c) and RUN ▶
+        // detects the type at run time (ProjectRunDetector).
+        "auto" -> emptyList()
         "c" -> listOf(ScaffoldFile("main.c", C_STARTER))
         "web", "static-web" -> listOf(ScaffoldFile("index.html", WEB_INDEX))
         "python" -> listOf(ScaffoldFile("main.py", PYTHON_STARTER))

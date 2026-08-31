@@ -14,8 +14,12 @@ see the implementation record), and **`33355693242`** adds
 `ServerScaffoldE2ETest` — the presets' real build/run commands + `ServerRunner`
 + loopback HTTP + edit-index.html-hot-read, all verified on CI. The app now
 also **ships a bundled `demo_flask` project** in the Files tab (D9 — one-time
-seed, never overwrites; `DemoProjectSeedTest`: 4). Only the Compose WebView
-part of the recipe (§5) still needs the owner's device round.
+seed, never overwrites; `DemoProjectSeedTest`: 4) and the **New Project
+wizard defaults to Auto (detect)** (D10, owner request 2026-08-31): no type
+selection — RUN ▶ infers Flask/FastAPI/C-microservice/static-web/Python/C
+from the project's files (`ProjectRunDetectorTest`: 13 + E2E auto→Flask).
+Only the Compose WebView part of the recipe (§5) still needs the owner's
+device round.
 Long-tail toolchains (Node/Lua/Go/Rust) remain deferred until the owner
 requests one.
 

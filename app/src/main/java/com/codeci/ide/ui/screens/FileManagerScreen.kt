@@ -347,8 +347,9 @@ fun FileManagerScreen(
         var name by remember { mutableStateOf("") }
         // Phase 14 — the wizard: pick the template, then the project is
         // scaffolded with its starter files (server types get a RUN ▶ that
-        // opens the live Web Preview).
-        var selectedType by remember { mutableStateOf("c") }
+        // opens the live Web Preview). Default is "auto": no type choice —
+        // RUN ▶ detects the type from the project's files.
+        var selectedType by remember { mutableStateOf("auto") }
         AlertDialog(
             onDismissRequest = { showCreateProject = false },
             title = { Text(stringResource(R.string.new_project)) },

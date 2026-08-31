@@ -15,6 +15,11 @@ data class ProjectTypeOption(
 object ProjectTypes {
 
     val options: List<ProjectTypeOption> = listOf(
+        ProjectTypeOption(
+            "auto",
+            "Auto (detect)",
+            "No choice needed — RUN ▶ detects app.py / main.py / server.c / index.html / main.c"
+        ),
         ProjectTypeOption("c", "C Program", "main.c — compiled with CodeC's embedded TCC"),
         ProjectTypeOption("python", "Python Script", "main.py — run with python3"),
         ProjectTypeOption("web", "Static Web", "index.html — open in the Web Preview"),
