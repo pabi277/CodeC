@@ -333,6 +333,35 @@ class GitManagerTest {
         }
     }
 
+    // --- per-file stage/unstage (Phase 15/16 mockup sheet) ---
+
+    @Test
+    fun `stage and unstage one file use the dash-dash protected argv`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            val git = manager(dir, env)
+            git.stageFile(workDir, "src/app.py")
+            git.unstageFile(workDir, "src/app.py")
+            val log = loggedCommands(File(env["FAKE_LOG"]!!))
+            assertEquals("CMD [add] [--] [src/app.py]", log[0])
+            assertEquals("CMD [reset] [--] [src/app.py]", log[1])
+        }
+    }
+
+    @Test
+    fun `stageFile protects flag-looking paths from being parsed as options`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            manager(dir, env).stageFile(workDir, "-weird.c")
+            val last = loggedCommands(File(env["FAKE_LOG"]!!)).last()
+            assertEquals("CMD [add] [--] [-weird.c]", last)
+        }
+    }
+
     // --- ls-remote (Phase 15) ---
 
     @Test
