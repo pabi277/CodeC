@@ -222,7 +222,7 @@ class ServerScaffoldE2ETest {
                 }
                 val ready = events.filterIsInstance<ServerEvent.Ready>().first()
                 assertEquals("http://127.0.0.1:5000", ready.url)
-                val (code, body) = httpGet("$ready.url/")
+                val (code, body) = httpGet("${ready.url}/")
                 assertEquals(200, code)
                 assertTrue(body.contains("Welcome to CodeC Flask App!"))
             } finally {
