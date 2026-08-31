@@ -343,3 +343,42 @@ exactly same ui") — mockup-exact re-skin of the editor shell** (mockups:
 - No engine changes; `EditorKeySet`/`FileTreeCollapse`/line-endings/launch
   default logic and their tests untouched. All new glyphs live in
   `ui/components/SpckIcons.kt` (clean-room, hand-drawn).
+**Device round 3 (2026-08-31, owner: "… when user open app 1st it will open
+where the use left in editor and set editor as auto save … make the run
+botton even for html no extra preview botton …", on
+`arena/01a057e0-codec`, merged to `main`):**
+- *Open where I left off:* `ui/projects/EditorLaunchState.kt` — the last
+  opened project file is persisted on every `openProjectFile` success and on
+  every tab activation/close (active tab = the "left-off" point). `MainApp`
+  uses it as the NavHost start destination (editor route with
+  `projectName`+`fileName`; first launch or stale entry → Projects hub).
+- *Autosave:* `EditorViewModel.scheduleAutoSave()` — a 2 s debounce restarted
+  by every buffer mutation (typing, undo/redo, code actions via
+  `applyBufferEdit`); `flushAutoSave()` runs immediately on editor
+  dispose (`EditorScreen` `DisposableEffect`). Silent on success (no
+  snackbar), clears the dirty dot; scratch buffers save through the same
+  path. The Phase 12 "rename main.c→.py" edge can't fire via autosave (it
+  requires the untouched starter, which is never dirty).
+- *RUN ▶ is the HTML preview:* when the active file is `.html`, the green
+  ▶ RUN saves the buffer and opens Web Preview on it (web projects still open
+  their launch-default page; C/Python/server runs unchanged). The separate
+  "Preview" item in the ⋮ overflow is **deleted** (the Phase 14 preview eye
+  re-landed in round 2 — it's gone for good; per-file "Launch" in the drawer
+  tree menu stays).
+- *Vector-API compile saga (the re-skin's build break, resolved `253201e`):*
+  the hand-drawn `SpckIcons` glyphs were written against the old string-path
+  `addPath` API, which the resolved `ui-graphics` no longer has (the BOM's
+  version number misleads — Gradle resolves a far newer 2026-era Compose).
+  No local JDK + CI-log blobs unreachable ⇒ the API was pinned with **CI as
+  the compiler oracle** (three `ApiProbe.kt` rounds, deleted after) and then
+  cross-checked against the `androidx/androidx` mirror. Verified facts (also
+  in the `SpckIcons.kt` header): `addPath(pathData: List<PathNode>,
+  pathFillType, name, fill: Brush?, fillAlpha, stroke: Brush?, strokeAlpha,
+  strokeLineWidth, strokeLineCap, strokeLineJoin, strokeLineMiter, trim…)`;
+  `PathNode` = `androidx.compose.ui.graphics.vector.PathNode`
+  (`MoveTo/LineTo/HorizontalTo/VerticalTo/CurveTo/QuadTo/ArcTo/Close`);
+  `Color` is NOT a `Brush` → `SolidColor(color)`; `drawLine` endpoint
+  parameter is `end` (not `stop`); bottom-bar inset =
+  `navigationBarsPadding()`. All 13 glyphs rewritten as PathNode lists
+  (helpers: `circle`, `rect`, `strokePath`, `fillPath`); shapes unchanged,
+  no visual difference. `Build APK` green `33402899023` / `33403600667`.

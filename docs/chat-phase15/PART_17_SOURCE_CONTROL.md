@@ -203,3 +203,34 @@ if a conflict is reproducible on the day.
 - Whole-tree staging remains the default (Phase 13 D3); per-hunk staging is
   **out of scope** (note as a future candidate). Auto merge-conflict resolution
   is out of scope (Spck is manual too). Branch *creation* is a bonus, not a gate.
+
+---
+
+## 6. Implementation record (partial — 2026-08-31)
+
+Status: **PARTIAL.** Shipped as part of the Phase 15/16 device rounds on
+`arena/01a057e0-codec` (merged to `main` 2026-08-31):
+- *Device round 2:* the SC sheet is the mockup-exact re-skin (title +
+  outlined `⌥ branch ▾` chip, multiline "Message (Ctrl+Enter to commit)"
+  box, full-width filled COMMIT & PUSH, "Changes N" with typed file icons +
+  folder path + porcelain letter) and gained the **per-file +/− stage
+  toggle**: `GitManager.stageFile`/`unstageFile` (`git add -- <path>` /
+  `git reset -- <path>`, argv-safe; +2 fake-git argv-proof host tests),
+  `GitControlViewModel.toggleStage` deciding from the porcelain `x` column.
+  In-tree M/A/D/? letters + tap-to-diff already shipped with the re-skin.
+- *Device round 3:* **build outputs stop traveling at push.**
+  `BuildArtifactIgnore.ensure(root)` now runs at git refresh and before
+  COMMIT & PUSH's `git add -A` (plus project open and every RUN), and
+  `BuildArtifactIgnore.untrackTracked(root, git)` runs `git ls-files` →
+  `git rm -f --cached` on any tracked path matching the artifact patterns
+  (`*.out/*.o/*.obj/*.exe/*.class`, `bin/`, `dist/`, `build/`, `target/`,
+  `node_modules/`, `.venv/`, `venv/`) — files stay on disk, the next commit
+  records the removal. Policy lives in `.git/info/exclude` (machine-private;
+  the user's `.gitignore` is never touched — same rule as
+  `PythonCacheIgnore`); patterns already covered by either file are skipped.
+
+Still **PENDING** (per §4 recipe steps 5–8): the Switch Branch
+checkout/stash dialog (drawer footer + SC chip currently toast "coming
+soon" — `hub_switch_branch_soon` / `editor_drawer_branch_soon` strings),
+"New branch…" bonus, and merge-conflict marking (purple/U grouping,
+COMMIT blocked, Mark Resolved).

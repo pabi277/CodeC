@@ -1,6 +1,6 @@
 # CodeC Terminal — Mini-Termux Plan
 
-> **Status (2026-08-29):** Phases 0–7 and Phase 10 are implemented/complete according to their recorded gates. Phase 8 project implementation is complete in PR #27; core workflows are owner-confirmed on device, with the final export → re-import-as-a-new-project check still required before merge. **Phase 9 Editor Foundation is the next implementation phase.** All client-only except Phase 12 (Python = one ~1–2h build). See `docs/chat-phase8/` for the current Phase 8 record.
+> **Status (2026-08-31):** Phases 0–14 and Phase 19 (terminal parity) are all implemented and merged to `main`; **Phases 15/16 (Spck Projects Hub + Editor Shell) are implemented, device-rounded and merged** (2026-08-31, `arena/01a057e0-codec`), **Phase 17 (Source Control) is partial** (SC sheet + per-file stage done; Switch Branch + conflicts pending), **Phase 18 (CodeCApi) is spec'd** in `docs/chat-phase18/`. The terminal itself is CLOSED (Phase 19, device-accepted — "All ok now"). See `docs/prompt.md` and `docs/JOURNEY.md` for the current state.
 > **This-session bugs/fixes:** [docs/chat-phase1/README.md](chat-phase1/README.md).  
 > **Goal:** turn CodeC into a self-contained C IDE **with its own
 > Termux-style terminal and package manager** — install packages like `pkg install clang`

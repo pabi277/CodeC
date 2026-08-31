@@ -1,8 +1,12 @@
 # CodeC Phases 15–17 — Spck-style Editor & Project Experience
 
-**Status:** Phase 15 IMPLEMENTED 2026-08-31 on `arena/01a05743-codec` (CI + device pending); Phases 16–17 still planned (spec only) · **Cost:** `[client-only]`
-· **Depends on:** Phase 8 (Projects & folder tree), Phase 9 (Editor foundation),
-Phase 11 (Output panel), Phase 13 (Git integration), Phase 14 (Web preview)
+**Status (2026-08-31):** Phases 15 + 16 IMPLEMENTED, mockup-exact re-skinned,
+3 device rounds done, **MERGED to `main`** (session branch
+`arena/01a057e0-codec`); Phase 17 PARTIAL — SC sheet + per-file stage toggle
+shipped in the re-skin, Switch Branch + conflict UI pending · **Cost:**
+`[client-only]` · **Depends on:** Phase 8 (Projects & folder tree), Phase 9
+(Editor foundation), Phase 11 (Output panel), Phase 13 (Git integration),
+Phase 14 (Web preview)
 
 > These three phases redesign CodeC's project and editor UX so it looks and
 > flows like **[Spck Editor / Git Client](https://play.google.com/store/apps/details?id=io.spck)**

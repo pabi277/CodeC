@@ -77,7 +77,25 @@ The extra-keys row (ESC, TAB, CTRL, ALT, arrows) and custom macros in Settings m
 ## Editor, Projects & Web preview
 
 Since Phases 8–9 (all device-accepted, 2026-08-29) CodeC is a full little IDE around that
-terminal:
+terminal — and since Phases 15–16 (device-accepted, 2026-08-31) it wears a
+Spck-grade skin:
+
+- **Projects Hub**: the Projects tab is a card list (type mark, `⌥ branch · N
+  files · age`, change badge) with filter chips + search and ONE `+` sheet —
+  New Project / Clone Git Repo / Import ZIP / Open Folder.
+- **Spck-style editor**: nav-drawer file tree with in-tree git status letters,
+  tabs in the app bar (dirty dot, close), a snippet/extra-keys row above the
+  status bar, and a Source Control sheet with per-file stage toggle. The app
+  **opens straight into the file you left in** (first launch → Projects hub),
+  and edits **autosave** ~2 s after you stop typing.
+- **Bottom bar**: Projects · Editor · **Terminal (middle)** · Packages ·
+  Settings.
+- **RUN ▶** builds & runs C/Python (or launches your web page); on an HTML
+  file it **is** the preview — no separate preview button. Build outputs
+  (`a.out`, `bin/`, `dist/`, …) are kept out of git automatically (repo-local
+  ignore; your `.gitignore` is never touched).
+
+The earlier foundations:
 
 - **Projects**: private project folders (`files/CodeC/projects/<name>`) with a hierarchical
   tree, SAF folder/file/ZIP import & export, breadcrumbs, per-project run configuration,
@@ -118,7 +136,7 @@ Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
 ## Troubleshooting
 
 > **Roadmap (historical):** Mini-Termux plan — [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).  
-> **Full journey (phases 0–9.2, authoritative timeline):** [docs/JOURNEY.md](docs/JOURNEY.md).  
+> **Full journey (phases 0–19, authoritative timeline):** [docs/JOURNEY.md](docs/JOURNEY.md).  
 > **What's next:** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
 > **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
 > **Editor/Projects/preview record (Phase 9 rounds):** [docs/chat-phase9/](docs/chat-phase9/).  

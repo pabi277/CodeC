@@ -39,23 +39,58 @@ of assuming one. Commit and push to the SESSION branch only; never push to
     port monitor, Web Preview live mode, Flask/FastAPI/C-microservice presets,
     bundled `demo_flask`, Auto (detect) projects (D10). `[client-only]` — no
     `[repo-build]`. Record: `docs/chat-phase14/PART_14_IMPLEMENTATION.md`.
-- **`main` is at `b869ce6`** (PR #34 merged 2026-08-31 09:55Z — Phase 19 on
+- **`main` was at `b869ce6`** (PR #34 merged 2026-08-31 09:55Z — Phase 19 on
   top of the `8dd961a2` = PR #33 docs state). Post-merge `Build APK`
-  `33380041937` green.
+  `33380041937` green. **On 2026-08-31 the owner also merged the Phase 15/16
+  + device-round branch (`arena/01a057e0-codec`, branch tip `4db8c72` or
+  later) into `main` — verify the actual tip with `git log` before acting.**
 
-- **Phases 15–18 are PLANNED — design/spec + phone mockups ONLY, NO code yet.**
-  They live under `docs/chat-phase15/` (+ `chat-phase16/17` specs inside it)
-  and `docs/chat-phase18/`. Two owner requests drove them:
-  - **Phases 15–17 — Spck Editor clone** (make CodeC's project + editor UX
-    mirror **Spck Editor / Git Client**): 15 = Projects Hub & Unified Import
-    (card list, filter chips, search, one `+` sheet → New Project / Clone Git
-    Repo / Import ZIP / Open Folder, per-project git actions); 16 = Spck-style
-    Editor Shell (nav drawer file tree with git status, refined tabs, snippet/
-    extra-keys keyboard row, readability controls, launch-default HTML preview,
-    errors badge); 17 = In-editor Source Control & Branching (SC sheet, in-tree
-    M/A/D/? status letters, tap-to-diff, Switch Branch + stash, Pull/Push,
-    merge-conflict marking). Docs: `docs/chat-phase15/` (README +
-    PART_15/16/17 + `mockups/`).
+- **Phases 15–17 (Spck clone) are IMPLEMENTED on that branch — CI green +
+  three device rounds done.** They live under `docs/chat-phase15/`
+  (README + PART_15/16/17 + `mockups/`):
+  - **Phase 15 — Projects Hub & Unified Import:** implemented, device round 1
+    (clone re-detect + Packages tab fixes, `83ba499`) AND round 2 (mockup-exact
+    re-skin of hub, clone dialog, import sheet — `95cd554`) done.
+  - **Phase 16 — Spck-style Editor Shell:** implemented, CI-green
+    (`33388547817`), device round 1 done (`__pycache__` git fix, `435c5f4`),
+    mockup-exact re-skin done (single top bar, gutter divider, ghost RUN,
+    keycap-style keys row, drawer, status bar).
+  - **Device round 3 (2026-08-31, owner: "remove the home button … terminal
+    will be in the middle … open where the user left off … auto save … .out
+    files … run button even for html"):**
+    - Bottom bar is now **Projects · Editor · Terminal · Packages · Settings**
+      — Home tab + `HomeScreen` deleted, Packages tab restored to the bar
+      (undoing round 2's Home-screen button), **Terminal dead-center**.
+    - **Launch-restore:** the last opened project file (or active tab) is
+      persisted (`ui/projects/EditorLaunchState.kt`) and is the app's start
+      destination; first launch / stale entry → Projects hub.
+    - **Editor autosave:** 2 s debounced save after any edit (type/undo/redo/
+      format) + immediate flush when leaving the editor (`EditorViewModel`
+      `scheduleAutoSave`/`flushAutoSave`, `EditorScreen` dispose hook).
+    - **Build outputs stay out of git:** `*.out/*.o/*.obj/*.exe/*.class`,
+      `bin/`, `dist/`, `build/`, `target/`, `node_modules/`, venvs are
+      repo-locally excluded via `.git/info/exclude` (`BuildArtifactIgnore`,
+      user's `.gitignore` untouched) at git refresh / commit & push / project
+      open / RUN — and already-tracked artifacts get `git rm --cached`
+      (`GitManager.trackedFiles`/`rmCached`) so they stop traveling at push.
+    - **RUN ▶ is the HTML preview:** an open `.html` file makes RUN ▶ save +
+      open Web Preview; the separate "Preview" overflow item is deleted.
+  - **Phase 17 — Source Control:** PARTIALLY implemented — the mockup-exact
+    SC sheet + in-tree M/A/D/? letters + tap-to-diff + **per-file +/− stage
+    toggle** (`GitManager.stageFile`/`unstageFile`) shipped in the re-skin;
+    **Switch Branch (checkout/stash dialog) and merge-conflict UI are still
+    PENDING** (drawer/chip show a "coming soon" toast).
+  - **Vector-API compile saga (round 2/3 of the re-skin, resolved
+    2026-08-31, `253201e`):** the resolved `ui-graphics` is far newer than the
+    BOM number suggests — the old string-path `addPath` API is gone. Verified
+    API (recorded in `ui/components/SpckIcons.kt` header):
+    `addPath(pathData: List<PathNode>, …, fill: Brush?, …, stroke: Brush?,
+    strokeLineWidth, strokeLineCap, strokeLineJoin, …)`; `PathNode` lives in
+    `androidx.compose.ui.graphics.vector` (`MoveTo/LineTo/HorizontalTo/
+    VerticalTo/CurveTo/ArcTo/Close`); `Color` is NOT a `Brush` (wrap in
+    `SolidColor`); `DrawScope.drawLine` endpoint is `end` (not `stop`);
+    bottom-bar inset is `navigationBarsPadding()`. Do NOT reintroduce the old
+    string-path `fillColor`/`Stroke(width=…)` calls.
   - **Phase 18 — CodeCApi Device Capabilities** (WAS Phase 15) renumbered and
     moved to the end: `docs/chat-phase18/PART_18_CODEAPI.md`.
   - **Phase 19 — Terminal Parity** ✅ **IMPLEMENTED & CI-GREEN
@@ -115,30 +150,19 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phase 16 — Spck-style Editor Shell, ACTIVE (2026-08-31, owner: "Start
-   phase 16"): IMPLEMENTED & CI-GREEN (`33388547817`) — awaiting the owner's
-   device run of the §4 recipe.** Spec
-   `docs/chat-phase15/PART_16_EDITOR_SHELL.md` (record §6 there). Phase 15
-   itself: device round 1 closed (clone re-detect + Packages tab fixes on
-   `83ba499`, CI green `33385105931`) — owner re-test + later re-acceptance
-   outstanding; the original Phase 15 notes follow for reference.
-   Original Phase 15 entry: Projects Hub & Unified Import (Spck clone), the
-   owner directed the start on 2026-08-31 ("i going to start phase 15").**
-   Spec: `docs/chat-phase15/PART_15_PROJECTS_HUB.md` (README + mockups in
-   `docs/chat-phase15/`). Redesigned Projects screen (card list, filter
-   chips, search) + one `+` sheet (New Project / Clone Git Repo / Import
-   ZIP / Open Folder) + per-project git overflow actions. Reuses the
-   Phase 8/9/13 engines — UI/UX parity + gap fill, NOT a rewrite. Re-verify
-   the plan against the current code before writing anything, follow the
-   CLEAN-ROOM LAW (Spck is closed-source: public behavior/mockups/docs
-   only) and the RESEARCH-WHEN-NEEDED rule, keep it `[client-only]` +
-   host-testable, CI green, then a device recipe.
-2. **Phase 19 — CLOSED.** PR #34 merged to `main` at `b869ce6` on
-   2026-08-31 (owner-side merge after device acceptance). Nothing owed.
-3. **Then Phases 16 → 17 (Spck clone, in order) → 18 (CodeCApi tail)** on
-   the owner's pick.
-   Re-verify each plan against the current code before writing anything, follow
-   the CLEAN-ROOM LAW and RESEARCH-WHEN-NEEDED rule, and record design
+1. **Phase 17 remainder — Switch Branch + merge-conflict UI.** The SC sheet,
+   in-tree status letters, tap-to-diff and per-file stage toggle are already
+   in; what's left is the branch checkout/stash dialog (the drawer footer +
+   SC chip currently toast "coming soon") and conflict marking per
+   `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §4 recipe. Reuse Phase 13
+   `GitManager` — add `checkout`/`stash` argv methods the same way.
+2. **Phase 18 — CodeCApi Device Capabilities** (the tail phase):
+   `docs/chat-phase18/PART_18_CODEAPI.md`.
+3. Phases 15–16 remain open to **owner device feedback** on the merged build
+   (the bar/autosave/launch-restore/.out/RUN-html changes of device round 3
+   have not had a dedicated device pass yet — the owner is reviewing).
+   Re-verify any plan against the current code before writing anything,
+   follow the CLEAN-ROOM LAW and RESEARCH-WHEN-NEEDED rule, and record design
    decisions (D1, D2, …) in the part doc as you go.
 
 **SELF-DISTRUST PROTOCOL — follow strictly:**
@@ -175,9 +199,11 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
    `gh release list`) before acting.
-2. Phases 3–14 are closed (PRs #15/#23/#25/#26/#27/#28/#29/#30/#31/#32 merged;
-   `main` at `0b591e2`). Phases 15–19 are spec'd (docs only, PR #33 open). If
-   the owner commands a phase, re-verify its plan against current code, then
+2. Phases 3–14 + 19 are closed (PRs #15/#23/#25/#26/#27/#28/#29/#30/#31/#32/#34
+   merged). Phases 15–16 are implemented + device-rounded and merged
+   (2026-08-31, from `arena/01a057e0-codec`); Phase 17 is partial (SC sheet +
+   stage toggle done; Switch Branch + conflicts pending); Phase 18 is spec'd.
+   If the owner commands a phase, re-verify its plan against current code, then
    implement it host-testably, commit + push the session branch, and let CI
    run. Never open/merge a PR without the owner's explicit word.
 3. A part is complete only when its "Exit condition" is met and verified

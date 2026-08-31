@@ -407,3 +407,27 @@ first pass was functionally complete but drifted from the design
   (argv shape incl. a flag-looking path).
 - *Clean-room note unchanged:* Spck behavior mirrored from the public
   mockups/docs only; all glyphs hand-drawn; no copied code or assets.
+**Device round 3 (2026-08-31, owner: "Remove the home botton and undo the
+packages install option and the terminal will be in the middle …", on
+`arena/01a057e0-codec`, merged to `main`):**
+- *Bottom nav:* round 2's five-tab mockup bar (Home · Projects · Editor ·
+  Terminal · Settings) is overridden again — **Home is deleted** (tab, route
+  and the `HomeScreen` composable) and the **Packages tab is restored to the
+  bar** (round 2 had demoted it to a Home-screen button; "undo the packages
+  install option" = undo that demotion — the Packages screen itself keeps its
+  install/run UX). Final order: **Projects · Editor · Terminal · Packages ·
+  Settings** with **Terminal exactly in the middle** — the literal consequence
+  the owner described. Flat bar rendering unchanged (`FlatBottomBar`).
+- *Launch-restore:* the app now opens **where the user left off** — the last
+  opened project file (updated on open, tab switch, and tab close) is
+  persisted (`ui/projects/EditorLaunchState.kt`, app-private prefs, stale
+  project/file → fallback) and is `MainApp`'s start destination; first launch
+  or stale entry lands on the Projects hub (replacing Home as the default).
+- *Build outputs stay out of git (hub side):* the hub scan's `git status`
+  change-count now runs after `BuildArtifactIgnore.ensure(project.root)` (new
+  engine, `ui/projects/BuildArtifactIgnore.kt`), so `a.out` / `bin/*.out` /
+  `dist/` etc. no longer light up the card badge or the push offer. The git
+  panel side (refresh + COMMIT & PUSH + untracking already-committed
+  artifacts) is recorded in `PART_17_SOURCE_CONTROL.md`.
+- *Clean-room note unchanged:* Spck behavior mirrored from the public
+  mockups/docs only; no copied code or assets.
