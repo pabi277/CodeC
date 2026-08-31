@@ -28,13 +28,21 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
         }
     }
     object Preview : Screen(
-        "preview?projectName={projectName}&fileName={fileName}",
+        "preview?projectName={projectName}&fileName={fileName}&url={url}",
         "Preview",
         Icons.Default.Visibility
     ) {
-        fun createRoute(fileName: String, projectName: String? = null): String {
-            val project = projectName?.takeIf { it.isNotBlank() }?.let { "projectName=${Uri.encode(it)}&" }.orEmpty()
-            return "preview?${project}fileName=${Uri.encode(fileName)}"
+        /**
+         * Phase 14 — [url] loads a live server URL directly (server projects);
+         * otherwise [fileName] resolves a project file for the static preview.
+         */
+        fun createRoute(fileName: String? = null, projectName: String? = null, url: String? = null): String {
+            val args = buildList {
+                projectName?.takeIf { it.isNotBlank() }?.let { add("projectName=${Uri.encode(it)}") }
+                fileName?.takeIf { it.isNotBlank() }?.let { add("fileName=${Uri.encode(it)}") }
+                url?.takeIf { it.isNotBlank() }?.let { add("url=${Uri.encode(it)}") }
+            }
+            return if (args.isEmpty()) "preview" else "preview?${args.joinToString("&")}"
         }
     }
     object Terminal : Screen("terminal?cmd={cmd}&nonce={nonce}", "Term", Icons.Default.Terminal) {

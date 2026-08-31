@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -100,6 +101,8 @@ fun OutputPanelView(
     onDiagnosticTap: (OutputDiagnostic) -> Unit,
     onApplyFix: (OutputDiagnostic) -> Unit = {},
     onSendInput: (String) -> Unit = {},
+    /** Phase 14 — a running server project: open the Web Preview at state.serverUrl. */
+    onOpenPreviewUrl: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -154,6 +157,20 @@ fun OutputPanelView(
                         Icons.Default.Close,
                         contentDescription = "Stop",
                         tint = Color(0xFFFF5555),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            // Phase 14: server projects — jump straight back to Web Preview.
+            if (state.serverUrl != null) {
+                IconButton(
+                    onClick = { state.serverUrl?.let(onOpenPreviewUrl) },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Visibility,
+                        contentDescription = stringResource(R.string.open_preview),
+                        tint = Color(0xFF55FF55),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -236,8 +253,9 @@ fun OutputPanelView(
             // Phase 11 (owner decision 2026-08-30): interactive programs
             // (scanf/gets) get an input field while they run — typed lines go
             // to the program's stdin; the Open-in-Terminal icon stays for the
-            // full PTY experience.
-            if (state.phase == OutputPhase.RUNNING) {
+            // full PTY experience. Phase 14: a background server is not
+            // interactive — the stdin row would be a dead input.
+            if (state.phase == OutputPhase.RUNNING && !state.serverRun) {
                 OutputInputRow(onSendInput = onSendInput)
             }
         } else {

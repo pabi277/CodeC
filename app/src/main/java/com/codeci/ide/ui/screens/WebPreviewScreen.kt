@@ -9,6 +9,7 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,11 +38,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.R
 import com.codeci.ide.ui.services.WebPreviewServer
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -63,21 +68,29 @@ fun WebPreviewScreen(
     fileName: String?,
     onNavigateBack: () -> Unit,
     projectName: String? = null,
+    /** Phase 14 — load a live server URL (e.g. http://127.0.0.1:5000) instead of a project file. */
+    customUrl: String? = null,
     viewModel: WebPreviewViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val liveUrl = customUrl?.trim()?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+    val isLive = liveUrl != null
     val htmlFile = remember(projectName, fileName) { resolveHtmlFile(context, projectName, fileName) }
     val console by viewModel.console.collectAsState()
     val reloadTick by viewModel.reloadTick.collectAsState()
     val error by viewModel.error.collectAsState()
 
     var webView by remember { mutableStateOf<WebView?>(null) }
+    var currentUrl by remember { mutableStateOf<String?>(liveUrl) }
 
     // Phase 9.1: serve the whole folder over a loopback HTTP server so
     // relative CSS/JS, fetch("data.json") and ES modules work like under a
     // real dev server (`file://` blocks all of those). If binding fails the
     // preview degrades to the old file:// load instead of erroring out.
-    val servedRoot = remember(projectName, htmlFile) { resolveServedRoot(context, projectName, htmlFile) }
+    // Phase 14: live server URLs skip the static server entirely.
+    val servedRoot = remember(projectName, htmlFile, liveUrl) {
+        if (isLive) null else resolveServedRoot(context, projectName, htmlFile)
+    }
     val server = remember(servedRoot) { servedRoot?.let { WebPreviewServer.start(it) } }
     DisposableEffect(server) {
         onDispose { server?.stop() }
@@ -85,7 +98,9 @@ fun WebPreviewScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(htmlFile?.name ?: (fileName ?: "Preview")) },
+            title = {
+                Text(htmlFile?.name ?: (fileName ?: if (isLive) "Live server" else "Preview"))
+            },
             navigationIcon = {
                 IconButton(onClick = onNavigateBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -100,6 +115,39 @@ fun WebPreviewScreen(
                 }
             }
         )
+
+        // Phase 14 — the address bar: shows the live server URL (or the static
+        // preview URL) and a "live" badge while a server project is running.
+        val address = currentUrl
+        if (address != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isLive) {
+                    Text(
+                        text = "● ${stringResource(R.string.server_preview_live)}",
+                        color = Color(0xFF55FF55),
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+                Text(
+                    text = address,
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
 
         if (error != null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -140,9 +188,17 @@ fun WebPreviewScreen(
         }
     }
 
-    // Initial load once the WebView instance and the resolved file are known.
-    LaunchedEffect(webView, htmlFile) {
+    // Initial load once the WebView instance and the target URL are known.
+    LaunchedEffect(webView, htmlFile, liveUrl) {
         val wv = webView ?: return@LaunchedEffect
+        if (liveUrl != null) {
+            // Phase 14: live server mode — the URL comes from the runner's
+            // detected bind line; load it directly, no static server needed.
+            viewModel.clearError()
+            currentUrl = liveUrl
+            wv.loadUrl(liveUrl)
+            return@LaunchedEffect
+        }
         val file = htmlFile
         when {
             file == null -> viewModel.reportError("Cannot resolve file: ${fileName ?: ""}")
@@ -157,14 +213,32 @@ fun WebPreviewScreen(
                         "http://127.0.0.1:${server.port}/${WebPreviewServer.urlPathFor(rel)}"
                     }
                 } else null
-                wv.loadUrl(viaServer ?: ("file://" + file.absolutePath))
+                currentUrl = viaServer ?: ("file://" + file.absolutePath)
+                wv.loadUrl(currentUrl.orEmpty())
             }
         }
     }
 
-    // Start live-reload watching for the resolved file.
-    LaunchedEffect(htmlFile) {
-        htmlFile?.let { viewModel.watch(it) }
+    // Start live-reload watching for the resolved file (static mode only).
+    LaunchedEffect(htmlFile, liveUrl) {
+        if (liveUrl == null) htmlFile?.let { viewModel.watch(it) }
+    }
+
+    // Phase 14 — live server mode: server templates read index.html per
+    // request, so watching the project's index.html makes Save → auto-reload
+    // work exactly like the static preview (Reload always works too).
+    val liveWatchFile = remember(projectName, liveUrl) {
+        if (liveUrl != null && projectName != null) {
+            runCatching {
+                ProjectManager(context).project(projectName)?.root
+                    ?.let { File(it, "index.html") }?.takeIf { it.isFile }
+            }.getOrNull()
+        } else {
+            null
+        }
+    }
+    LaunchedEffect(liveWatchFile, liveUrl) {
+        if (liveWatchFile != null) viewModel.watch(liveWatchFile)
     }
 
     // Reload the WebView whenever the file changed on disk or Refresh was tapped.

@@ -6,7 +6,10 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,6 +84,7 @@ import com.codeci.ide.R
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectInfo
+import com.codeci.ide.ui.projects.ProjectTypes
 import com.codeci.ide.ui.viewmodels.FileManagerViewModel
 import kotlinx.coroutines.launch
 
@@ -341,21 +345,71 @@ fun FileManagerScreen(
 
     if (showCreateProject) {
         var name by remember { mutableStateOf("") }
+        // Phase 14 — the wizard: pick the template, then the project is
+        // scaffolded with its starter files (server types get a RUN ▶ that
+        // opens the live Web Preview). Default is "auto": no type choice —
+        // RUN ▶ detects the type from the project's files.
+        var selectedType by remember { mutableStateOf("auto") }
         AlertDialog(
             onDismissRequest = { showCreateProject = false },
             title = { Text(stringResource(R.string.new_project)) },
             text = {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.project_name)) },
-                    singleLine = true
-                )
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text(stringResource(R.string.project_name)) },
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.project_type),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    ProjectTypes.options.forEach { option ->
+                        val selected = option.id == selectedType
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedType = option.id }
+                                .padding(vertical = 7.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (selected) "●" else "○",
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = option.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                                Text(
+                                    text = option.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
                     if (name.isNotBlank()) {
-                        viewModel.createProject(context, name) { project ->
+                        viewModel.createProject(context, name, selectedType) { project ->
                             showCreateProject = false
                             onProjectSelected(project)
                         }

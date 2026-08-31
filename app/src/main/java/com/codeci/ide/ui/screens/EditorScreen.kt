@@ -143,6 +143,8 @@ fun EditorScreen(
     onProjectSelected: (ProjectInfo) -> Unit = {},
     onOpenInTerminal: (String?) -> Unit = {},
     onOpenPreview: (String) -> Unit = {},
+    /** Phase 14 — open Web Preview on a live server URL detected by RUN ▶. */
+    onOpenPreviewUrl: (String) -> Unit = {},
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -301,6 +303,18 @@ fun EditorScreen(
     }
 
     val latestDiagnostics by rememberUpdatedState(diagnostics)
+
+    // Phase 14 — when RUN ▶ detects a server's bind line, open the Web Preview
+    // on that URL. rememberUpdatedState keeps the callback fresh without
+    // restarting the effect, and the handler survives navigation. Auto
+    // projects detected as static web (index.html) use the same preview
+    // navigation as `web` projects.
+    val openPreviewUrlState = rememberUpdatedState(onOpenPreviewUrl)
+    val openPreviewState = rememberUpdatedState(onOpenPreview)
+    LaunchedEffect(Unit) {
+        viewModel.setServerReadyHandler { url -> openPreviewUrlState.value(url) }
+        viewModel.setWebPreviewHandler { entry -> openPreviewState.value(entry) }
+    }
 
     BackHandler(enabled = isDirty) {
         showUnsavedDialog = true
@@ -964,6 +978,7 @@ fun EditorScreen(
                     onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
                     onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
                     onSendInput = { viewModel.sendInputToRun(it) },
+                    onOpenPreviewUrl = onOpenPreviewUrl,
                     modifier = Modifier.height(outputPanelHeight.dp)
                 )
             } else {
@@ -977,6 +992,7 @@ fun EditorScreen(
                     onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
                     onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
                     onSendInput = { viewModel.sendInputToRun(it) },
+                    onOpenPreviewUrl = onOpenPreviewUrl,
                     modifier = Modifier.height(64.dp)
                 )
             }

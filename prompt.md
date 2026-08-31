@@ -15,7 +15,7 @@ You are continuing **CodeC** (an Android C IDE). Each chat session gets its own
 `arena/*` session branch — verify the actual branch with `git status` instead
 of assuming one.
 
-**WHERE THINGS STAND (2026-08-30):**
+**WHERE THINGS STAND (2026-08-31):**
 
 - **Phases 3–11 (incl. the Package Hub, Phase 10) are all COMPLETE and
   device-accepted. Do not redo, re-debug or "improve" any of them** unless the
@@ -65,13 +65,24 @@ of assuming one.
     highlighter, autocomplete popup, python/python-pip in the repo (device:
     "Now python is solved"), python RUN path. See item 1 of NEXT UP and
     `docs/chat-phase12/`.
-  - **Phase 13 (GitHub & Git Integration) ✅ COMPLETE & DEVICE-ACCEPTED
-    (2026-08-31, `arena/01a053b3-codec`) — CI green (`33326161083`, 37 new
-    tests; two CI-caught bugs fixed `501b6f2`) and the full §7 device
-    recipe passed (clone, M/?? badges + inline diff, "Committed & pushed
-    ✓" to a scratch repo, PULL round trip; no token in terminal env /
-    `.git/config` / Logs).** Acceptance record: `PART_13_GITHUB.md` §8.
-    Remaining: the owner's word to open the PR.
+  - **Phase 13 (GitHub & Git Integration) ✅ COMPLETE, DEVICE-ACCEPTED &
+    MERGED — PR #31 merged to `main` at `006515a` (2026-08-31).** Main now
+    has everything through Phase 13. Acceptance record:
+    `PART_13_GITHUB.md` §8.
+  - **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) 🚧
+    IMPLEMENTED & CI-GREEN on `arena/01a05421-codec` (2026-08-31, on the
+    owner's "You have to work on phase 14")** — client-only, **no
+    `[repo-build]`** (Flask/FastAPI are pip packages; the C server uses the
+    embedded TCC). `Build APK` `33352164172` green (assemble + unit tests +
+    lint; four CI-caught bugs fixed along the way — see the implementation
+    record). Server Runner + port monitor, Web Preview live mode,
+    Flask/FastAPI/C-microservice presets serving `index.html` per request
+    (stdlib fallback, out-of-the-box), templates picker, a **bundled
+    `demo_flask` project ships in Files** (D9 — one-time seed, never
+    overwrites), and the wizard defaults to **Auto (detect)** (D10: no type
+    selection — RUN ▶ infers Flask/FastAPI/C-microservice/static-web/Python/C
+    from the project's files). **Device recipe pending (owner):**
+    `PART_14_IMPLEMENTATION.md` §5.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`
@@ -94,9 +105,10 @@ of assuming one.
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phase 11 and Phase 12 are both COMPLETE, DEVICE-ACCEPTED, and MERGED**
-   (PR #29 → `main` at `771f58f`; **PR #30 (Phase 12) → `main` at `260d8b6`,
-   2026-08-30**). Nothing pending on either. Phase 12's record:
+1. **Phases 11–13 are all COMPLETE, DEVICE-ACCEPTED, and MERGED**
+   (PR #29 → `main` at `771f58f`; **PR #30 (Phase 12) → `main` at `260d8b6`**;
+   **PR #31 (Phase 13) → `main` at `006515a`, 2026-08-31**). Nothing pending
+   on any of them. Phase 12's record:
    implemented on `arena/01a05221-codec` (python + python-pip in
    `CODEC_REPOSITORY_PACKAGES` with tk/tkinter (X11) recipe override,
    multi-language highlighter, autocomplete popup, python run path, 27 host
@@ -104,26 +116,27 @@ of assuming one.
    device recipe FULLY PASSED — owner: "Now python is solved" / "Worked
    properly" / "Both working"), then merged as PR #30 on the owner's
    explicit command.
-2. **Phase 13 (GitHub & Git Integration) is IMPLEMENTED on
-   `arena/01a053b3-codec`** (2026-08-30, on the owner's "Start phase 13"):
-   `GitManager.kt` Android-free engine over `$PREFIX/bin/git` (argv-list
-   ProcessBuilder, no shell; porcelain `status -b` parser; timeouts),
-   `GIT_ASKPASS`-based token transport with `GitRedactor` scrubbing on every
-   output path (token never in argv/.git-config/terminal env/logs; stored
-   app-private in DataStore), `GitDiff.kt` Kotlin line diff, Source Control
-   bottom sheet (`GitControlView.kt`/`GitControlViewModel`), Files ⋮ →
-   Clone from GitHub, Settings GitHub Account card, 37 new host tests
-   (`GitStatusParserTest`, `DiffEngineTest`, `GitManagerTest`). Plan +
-   design decisions D1–D7 + device recipe: `docs/chat-phase13/`. **CI is
-   GREEN (`Build APK` `33326161083`; the first round caught two real bugs,
-   fixed `501b6f2`) and the §7 device recipe is FULLY PASSED (2026-08-31 —
-   clone, badges + diff, commit & push to scratch repo `pabi277/T`, PULL
-   round trip, security spot-checks clean; 403 round was a token-permission
-   misconfiguration, honest-failure UX worked). Acceptance record:
-   `PART_13_GITHUB.md` §8. Remaining: ONLY the owner's word to open the
-   PR (one PR at a time; from the current branch state).
-3. Phases 14 (mixed-language servers + webview) and 15 (CodeCApi device
-   capabilities): `docs/chat-phase14/`, `docs/chat-phase15/`.
+2. **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) is
+   IMPLEMENTED & CI-GREEN on `arena/01a05421-codec`** (2026-08-31, on the
+   owner's "You have to work on phase 14"): background `ServerRunner` +
+   `ServerPortDetector` bind-line recognition; `ProjectConfig` v1 with
+   optional `port`/`previewUrl` + presets `python-flask` (5000),
+   `python-fastapi` (8000), `c-microservice` (8080); `ProjectScaffold`
+   templates — Flask/FastAPI preferred real framework else stdlib
+   `http.server` fallback, page = `index.html` read per request; C socket
+   server (TCC); Files New Project template picker; RUN ▶ → background
+   server → Output summary URL → Web Preview auto-open (live address bar,
+   `index.html` watch/auto-reload); Output Panel Open Preview action. Host
+   tests: `ServerPortDetectorTest` (10), `ServerRunnerTest` (7),
+   `ProjectScaffoldTest` (8), `ProjectConfigTest` (+8),
+   `ServerScaffoldE2ETest` (4 — auto→Flask on port 5099, isolated from the
+   exact-5000 preset test), `DemoProjectSeedTest` (4),
+   `ProjectRunDetectorTest` (13). **`Build APK` GREEN** — tip run
+   `33360571874`. Plan + design decisions D1–D10 + device recipe:
+   `docs/chat-phase14/PART_14_IMPLEMENTATION.md`. **Remaining: the owner's
+   device round (§5 recipe) — then, on the owner's explicit word, the PR.**
+3. Phase 15 (CodeCApi device capabilities): `docs/chat-phase15/` (skeleton,
+   not started).
 
 **SELF-DISTRUST PROTOCOL — follow strictly:**
 
@@ -158,12 +171,13 @@ of assuming one.
 
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
    `gh release list`) before acting.
-2. Phases 3–12 are closed (PR #15/#23/#25/#26/#27/#28/#29/#30 merged; main
-   at `260d8b6` is current). If the owner commands the next phase, pick
-   Phase 14 from `docs/chat-phase14/` — or continue Phase 13 device rounds
-   from `docs/chat-phase13/` — and re-verify the plan against current code
-   before implementing. Never open/merge a PR without the owner's explicit
-   word.
+2. Phases 3–13 are closed (PR #15/#23/#25/#26/#27/#28/#29/#30/#31 merged;
+   main at `006515a` is current). Phase 14 is implemented & CI-green on
+   `arena/01a05421-codec` — the owner's next gate is the device recipe
+   (`PART_14_IMPLEMENTATION.md` §5), not more code. If the owner commands
+   the next phase, pick Phase 15 from `docs/chat-phase15/` and re-verify
+   the plan against current code before implementing. Never open/merge a PR
+   without the owner's explicit word.
 3. A part is complete only when its "Exit condition" is met and verified
    (device evidence from the owner for device gates), not merely when code is
    written.

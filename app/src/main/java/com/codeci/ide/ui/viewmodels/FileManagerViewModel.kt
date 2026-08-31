@@ -94,10 +94,20 @@ class FileManagerViewModel : ViewModel() {
         loadProjects(context)
     }
 
-    fun createProject(context: Context, name: String, onCreated: (ProjectInfo) -> Unit = {}) {
+    /**
+     * Phase 14 — [type] selects the wizard template (C / Python / Static Web /
+     * Flask / FastAPI / C microservice); default keeps the historical plain-C
+     * project so existing callers are unaffected.
+     */
+    fun createProject(
+        context: Context,
+        name: String,
+        type: String = "c",
+        onCreated: (ProjectInfo) -> Unit = {}
+    ) {
         runOperation(
             context = context,
-            operation = { ProjectManager(context).createProject(name).getOrThrow() },
+            operation = { ProjectManager(context).createProject(name, type).getOrThrow() },
             onSuccess = { project ->
                 _projects.value = ProjectManager(context).listProjects()
                 _activeProject.value = project
