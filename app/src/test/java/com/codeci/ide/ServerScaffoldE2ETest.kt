@@ -211,7 +211,12 @@ class ServerScaffoldE2ETest {
         // Owner request: no type selection at creation. The project is created
         // as "auto" (no scaffold), the user adds app.py + index.html, and
         // RUN ▶ detects flask, then behaves exactly like the flask preset.
+        // The copied app.py is patched to a distinct test port so this test
+        // can never collide with the 5000 preset test above (parallel forks
+        // or timing); detection itself is name-based and unchanged.
         val dir = tempProject("python-flask")
+        val appFile = File(dir, "app.py")
+        appFile.writeText(appFile.readText().replace("5000", "5099"))
         val plan = ProjectRunDetector.detect(dir, "app.py")
         assertTrue(plan is AutoRunPlan.Server)
         val type = (plan as AutoRunPlan.Server).type
@@ -238,7 +243,7 @@ class ServerScaffoldE2ETest {
                     }
                 }
                 val ready = events.filterIsInstance<ServerEvent.Ready>().first()
-                assertEquals("http://127.0.0.1:5000", ready.url)
+                assertEquals("http://127.0.0.1:5099", ready.url)
                 val (code, body) = awaitHttp("${ready.url}/")
                 assertEquals(200, code)
                 assertTrue(body.contains("Welcome to CodeC Flask App!"))
