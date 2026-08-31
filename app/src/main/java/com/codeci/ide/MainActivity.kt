@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.toDp
 import androidx.navigation.NavDestination
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -539,7 +538,6 @@ private fun FlatBottomBar(
     currentDestination: NavDestination?,
     onNavigate: (Screen) -> Unit
 ) {
-    val density = LocalDensity.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -554,7 +552,8 @@ private fun FlatBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = WindowInsets.navigationBars.getBottom(density).toDp())
+                // Let the insets modifier do the px→dp conversion.
+                .padding(WindowInsets.navigationBars)
         ) {
             screens.forEach { screen ->
                 val selected = currentDestination?.hierarchy?.any {
