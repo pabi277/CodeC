@@ -229,8 +229,6 @@ CodeC terminal prints nothing, `.git/config` holds no token, and Settings →
 Logs shows no token after a failed push.
 ```
 
----
-
 ## 5. Invariants & scope guard
 
 - **Client-only.** Reuse Phase 13 `GitManager`/`GitContext`/`GitDiff`/
@@ -379,3 +377,54 @@ before git ever runs).
   and stash refs are validated before exec (`isSafeExistingBranch`,
   `ProjectsHub.isValidBranchName`), and nothing is written to `$PREFIX/bin`,
   `.git/config` or the terminal environment.
+
+### 6.2 Device round 1 (2026-08-31) — two real push bugs, both fixed
+
+The owner's first run of the Switch Branch work surfaced two genuine defects
+(transcript-quoted, so both are evidence, not guesses):
+
+**Bug 1 — "The current branch test has no upstream branch."**
+```
+Committed - push failed: git push failed: fatal: The current branch test has
+no upstream branch. To push the current branch and set the remote as upstream,
+use git push --set-upstream origin test
+```
+A branch created inside the app (the new **New branch…** row, `checkout -b` in
+the terminal, or the first push of a local repo) has no tracking branch, so
+the Phase 13 `git push` could never work. **Fix:** `GitManager.push(root,
+setUpstream)` now runs `git push --set-upstream <remote> HEAD` (remote from
+`git remote`, falling back to `origin` — `HEAD` makes git use the current
+branch's own name), and `pushHandlingUpstream()` picks the right form by
+reading the status branch line: `## test` (no `...origin/test`) → publish,
+`## main...origin/main` → plain push. Wired into commit-and-push, the new
+in-sheet PUSH retry and the Projects card **Push Changes**.
+
+**Bug 2 — "If something upload failed it doesn't return the changes in app —
+it stay updated but never go to github."**
+A successful commit clears the change list, so a *failed* push looked exactly
+like a successful one: clean tree, no `M` badge, no hint that the commit was
+still only on the phone. **Fix — make the state honest:**
+- the sheet reports **"Committed locally ✓ — NOT pushed: \<reason\>"**;
+- the failure text is **sticky** (`pushError`) until a push succeeds;
+- an amber **"N commit(s) not pushed yet"** row with a **PUSH** retry button
+  appears whenever the branch is ahead, a push failed, **or the branch is not
+  published at all** — a new branch has no `ahead` figure at all, so that case
+  needed its own wording ("Branch \"x\" is not on the remote yet — the first
+  push publishes it");
+- the Projects card shows an amber **↑N** badge for commits that never left
+  the device (`ProjectHubEntry.unpushed`, from `git status -b` ahead);
+- git operations now re-read `status` **after** a failure too, so the ahead
+  count on screen is real instead of stale.
+
+**CI:** green at `33421815293` @ `1c01f84` (assemble + unit tests + lint),
+with +5 fake-git argv proofs: plain `push`, `push --set-upstream origin HEAD`,
+`origin` fallback when `git remote` fails, upstream detection both ways, and
+`firstRemote`. The fake-git harness was also rewritten so it contains **no**
+`printf '…\n'` at all — the double-escaped newline that broke CI round 3 of
+§6.1 cannot recur.
+
+**Still open:** the Devices-card ↑N badge only counts commits git knows are
+ahead (`git status -b`); a branch that was never published shows no hub badge
+(the in-sheet row covers it) — say the word to extend it.
+
+---

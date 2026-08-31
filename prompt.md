@@ -82,7 +82,19 @@ of assuming one. Commit and push to the SESSION branch only; never push to
     Switch Branch dialog (checkout/stash/auto-restore + bonus New branch) and
     the merge-conflict UI (Conflicts group, purple `U`, Mark Resolved, commit
     blocked). Both "coming soon" toasts are gone. Record + decisions D1–D8:
-    `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §6.1. **Open gate: the
+    `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §6.1.
+    **Device round 1 (2026-08-31) — two owner-reported bugs FIXED:** (a) a
+    branch created in the app had no upstream, so every push died with
+    `fatal: The current branch X has no upstream branch` → `pushHandlingUpstream()`
+    now runs `git push --set-upstream <remote> HEAD` when the status branch
+    line has no `...origin/x`, plain `git push` otherwise; (b) a failed push
+    was indistinguishable from a successful one (a commit clears the change
+    list) → the sheet now reports **"Committed locally ✓ — NOT pushed: …"**,
+    keeps the failure sticky, shows an amber **"N commit(s) not pushed yet"**
+    row with a **PUSH** retry (also for a never-published branch), the
+    Projects card shows an amber **↑N** badge, and git ops re-read status
+    after failures. CI green `33421815293` @ `1c01f84`. Record:
+    `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §6.2. **Do not redo these.** **Open gate: the
     owner's §4 device recipe steps 5–8** — do not re-implement; only fix on
     device evidence.
   - **Vector-API compile saga (round 2/3 of the re-skin, resolved
