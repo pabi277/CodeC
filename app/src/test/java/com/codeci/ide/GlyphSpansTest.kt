@@ -14,7 +14,7 @@ class GlyphSpansTest {
 
     @Test
     fun `plain ascii run is one span`() {
-        assertEquals(9, GlyphSpans.spanLength("ls -la /usr", null, 0, 11))
+        assertEquals(11, GlyphSpans.spanLength("ls -la /usr", null, 0, 11))
         assertEquals(4, GlyphSpans.spanLength("abcd", null, 0, 4))
     }
 
