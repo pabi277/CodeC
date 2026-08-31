@@ -204,3 +204,53 @@ No `.` on PATH.
 
 **Device gate (owner):** §5 recipe unchanged. PASS = progress bars count up
 smoothly (steps 1 & 3) and `yes | head -100000` stays responsive.
+
+---
+
+## 9. Device round 3 postmortem — "terminal feels lagging, not smooth scrolling, keyboard sometimes not popping up" (FIXED 2026-08-31)
+
+Four root causes, all mine, all in the view layer:
+
+1. **Per-glyph draw cost (the lag).** `drawLine` issued a
+   `measureText` + `drawText` native pair for EVERY cell — ~2600/frame on
+   the new 70×37 grid, every frame, including blanks. Fix: **run-batched
+   drawing** — the snapped grid (§7.1 of PART_19_2) makes the font advance
+   EQUAL `cellW`, so consecutive PLAIN columns (ASCII, no cluster, non-wide
+   run) draw as ONE `drawText` at identical positions. Cluster / wide /
+   non-ASCII (fallback-font) cells keep the individual path with the
+   squeeze guard; all-space spans draw nothing. New pure helper
+   `GlyphSpans.spanLength()` + 6 tests. Draw calls per frame: ~2600 → a
+   handful per style run.
+2. **Gesture detectors restarting every output frame (dropped taps →
+   keyboard not popping up).** The tap detector's `pointerInput` was keyed
+   on `snapshot.generation` — which bumps on EVERY publish — so mid-output
+   the detector cancelled and restarted continuously and taps were eaten
+   (exactly when a user taps after running a command). The scroll detector
+   was keyed on `snapshot.scrollbackCount`, which GROWS mid-drag → drags
+   broke while history scrolled in. Fix: keys are now geometry only
+   (`cellW, cellH, cols, rows`); handlers read a `latestSnapshot` state at
+   EVENT time.
+3. **Scroll fighting + whole-row jumps (not smooth).** (a) A
+   `LaunchedEffect(generation)` reset `topRow = 0` on every update — while
+   output streamed, the scrollback rubber-banded back to live. Removed
+   (Termux semantics: typed input jumps to live; output does not).
+   (b) Drag moved in whole-row steps (`(dy/cellH).toInt()`). New
+   `ScrollMath` keeps the sub-row remainder and the canvas translates by
+   that fraction of a row — pixel-smooth, finger-following scroll; rails
+   drop overshoot. +6 tests.
+4. **IME one-shot.** `showIme()` called `showSoftInput` once (plus a
+   wasteful `restartInput` on every tap); if the window had not regained
+   focus (screen switch/dialog dismiss) the request was silently dropped.
+   Now: retry after 150 ms + retry from `onWindowFocusChanged` until the
+   IME reports the view active; `restartInput` removed.
+
+**Code:** `TerminalEmulatorView.kt` (batched `drawLine`, stable gesture
+keys, `latestSnapshot`, `translate(0, -scrollSubPx)` draw with one spare
+row each edge, hit-tests offset by the remainder), `TerminalKeyView.kt`
+(IME retry), new `ui/terminal/GlyphSpans.kt` + `ScrollMath.kt`.
+**Tests:** `GlyphSpansTest` (6), `ScrollMathTest` (6).
+
+**Round-4 recipe:** `yes | head -200000` — UI must stay responsive and
+scroll DURING the stream (pixel-smooth, no rubber-band); tap the terminal
+right after a command finishes — keyboard must pop up every time (also
+after switching Editor↔Terminal tabs).

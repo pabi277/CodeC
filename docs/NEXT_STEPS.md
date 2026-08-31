@@ -510,8 +510,12 @@ round-2 recipes are single-line copy-pasteable. Round-1 positives: soft-wrap
 of long lines ✓, Bengali/CJK/emoji echo ran clean. **Round 2 (same day,
 owner screenshots + answers + `stty size` 32×60 vs Termux 39×71): density &
 weight — fixed via default 12sp + bundled JetBrains Mono Medium/Bold (OFL) +
-0.9 row-pitch factor (`fitSizeToGrid` kept; PART_19_2 §7.2). Next: round 3 —
-objective check `stty size` ≈ 70 cols × 36–38 rows, then the §5 recipes.**
+0.9 row-pitch factor (`fitSizeToGrid` kept; PART_19_2 §7.2). Round 3 (owner: "feels lagging /
+not smooth scrolling / keyboard sometimes not popping up"): 4 fixes —
+run-batched drawing, gesture detectors no longer restart every output
+frame, pixel-smooth sub-row scrolling, IME retry loop (PART_19_3 §9).
+**Next: round 4 — `stty size` ≈ 70×37, `yes | head -200000` scroll-DURING-
+stream test, tap-after-command keyboard test.**
 
 Phase 19 was specced 2026-08-31 on the owner's report that the terminal
 (a) prints downloads only at the end, (b) overlaps letters, and (c)

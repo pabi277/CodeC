@@ -108,14 +108,15 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 1. **Merge PR #33** (docs for Phases 15–19) if the owner says so — it is
    docs-only and CI-green. Do not merge without the literal command.
-2. **Phase 19 device round 3, then PR on the owner's word.** Round 1 fixed
-   19.2 letter gaps (`fitSizeToGrid`, PART_19_2 §7.1). Round 2 (owner
-   screenshots + `stty size` 32×60 vs Termux 39×71) fixed density & weight:
-   default 12sp, bundled JetBrains Mono Medium/Bold (SIL OFL, notice in
-   assets/licenses), 0.9 row-pitch factor (PART_19_2 §7.2). Round 3 =
-   objective check: `stty size` ≈ 70×37 in CodeC, plus the §5 recipes on
-   the new APK (`gh run download <latest-green> -n CodeC-IDE`); then the
-   owner says the word to open/merge the PR.
+2. **Phase 19 device round 4, then PR on the owner's word.** Round 1:
+   letter gaps → `fitSizeToGrid` (PART_19_2 §7.1). Round 2: density/weight
+   → 12sp + bundled JetBrains Mono + 0.9 row pitch (PART_19_2 §7.2).
+   Round 3: "lagging / not smooth scrolling / keyboard not popping up" →
+   run-batched drawing, stable gesture-detector keys, pixel-smooth
+   sub-row scrolling, IME retry loop (PART_19_3 §9). Round 4 = `stty size`
+   ≈ 70×37, `yes | head -200000` while scrolling DURING the stream,
+   tap-after-command keyboard check (`gh run download <latest-green> -n
+   CodeC-IDE`); then the owner says the word to open/merge the PR.
 3. **Then the next planned phase.** The owner picks:
    - **Phases 15 → 16 → 17 (Spck clone)** — run in order; reuse Phase 8/9/11/
      13/14 engines; UI/UX parity + gap fill, not a rewrite.
