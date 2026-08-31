@@ -497,8 +497,21 @@ widths**, **19.5 protocol/interaction parity** — the last two from the parity
 audit). `Build APK` `33371114549` green (assemble + tests + lint; 2 red rounds
 first caught the Indic vowel-sign width gap + test bugs). ~50 new host tests.
 **Remaining gate: the owner's per-part device recipes**
-(`chat-phase19/PART_19_*.md` §5). Original spec follows. that the
-terminal (a) prints downloads only at the end, (b) overlaps letters, and (c)
+(`chat-phase19/PART_19_*.md` §5). Original spec follows.
+
+**Device round 1 (2026-08-31, owner transcript):** ONE regression found —
+*"letters have a noticeable gap between them"*: 19.2's `ceil(advance)` cell
+added up to 1px of tracking per letter. **Fixed same day** with
+`CellMetrics.fitSizeToGrid` (nudge the font size <1% until the advance IS a
+whole pixel, so the integer cell equals the font's advance — crisp AND tight;
+postmortem in `chat-phase19/PART_19_2_RENDERING.md` §7.1). Round-1 recipes
+were also unusable on-device (multi-line paste, nonexistent `/usr/bin`) — all
+round-2 recipes are single-line copy-pasteable. Round-1 positives: soft-wrap
+of long lines ✓, Bengali/CJK/emoji echo ran clean. **Next: round 2 of the
+recipes on the new APK.**
+
+Phase 19 was specced 2026-08-31 on the owner's report that the terminal
+(a) prints downloads only at the end, (b) overlaps letters, and (c)
 doesn't reflow on zoom-out. Re-implements Termux-quality behavior in CodeC's own
 clean-room emulator (⚖️ **not** copying GPLv3 Termux code). Client-only, pure
 Kotlin/Compose, host-testable. Spec + before/after mockup in

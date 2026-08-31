@@ -180,6 +180,10 @@ fun TerminalEmulatorView(
     // Settled paint for PTY rows/cols sizing (avoids resizing PTY repeatedly
     // during pinch). Phase 19.2: cells are INTEGER pixels — a fractional
     // cellW made (col * cellW) drift across a row and glyphs collide.
+    // Device-round fix (2026-08-31): the size is additionally FITTED to the
+    // grid (CellMetrics.fitSizeToGrid) so the cell EQUALS the font advance —
+    // plain ceil() left up to 1px of slack per letter, which the owner saw
+    // as "a noticeable gap between them".
     val settledPaint = remember(fontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
@@ -187,12 +191,12 @@ fun TerminalEmulatorView(
             configureGridPaint()
         }
     }
-    val settledCellW = remember(settledPaint) {
-        CellMetrics.cellWidthPx(settledPaint.measureText("MMMMMMMMMM") / 10f)
-    }
-    val settledCellH = remember(settledPaint) { CellMetrics.cellHeightPx(settledPaint.fontSpacing) }
+    val settledGrid = remember(settledPaint) { fitGridPaint(settledPaint) }
+    val settledCellW = settledGrid.cellW
+    val settledCellH = settledGrid.cellH
 
-    // Active visual paint for 60fps instant pinch rendering
+    // Active visual paint for 60fps instant pinch rendering (fitted to the
+    // pixel grid exactly like the settled paint).
     val paint = remember(activeFontSizeSp, density, typeface) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
@@ -200,18 +204,20 @@ fun TerminalEmulatorView(
             configureGridPaint()
         }
     }
+    // Fit FIRST: fitGridPaint mutates paint.textSize, and boldPaint below
+    // copies the fitted paint so bold shares the snapped size and grid.
+    val grid = remember(paint) { fitGridPaint(paint) }
+    val cellW = grid.cellW
+    val cellH = grid.cellH
+    val ascent = grid.ascent
+
     // Real bold face (keeps the monospace advance when available) instead of
     // isFakeBoldText, whose stroke thickening pushes past the cell edge.
-    val boldPaint = remember(activeFontSizeSp, density, typeface) {
-        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            this.typeface = Typeface.create(typeface, Typeface.BOLD)
-            textSize = with(density) { activeFontSizeSp.sp.toPx() }
-            configureGridPaint()
+    val boldPaint = remember(paint, typeface) {
+        android.graphics.Paint(paint).apply {
+            typeface = Typeface.create(typeface, Typeface.BOLD)
         }
     }
-    val cellW = remember(paint) { CellMetrics.cellWidthPx(paint.measureText("MMMMMMMMMM") / 10f) }
-    val cellH = remember(paint) { CellMetrics.cellHeightPx(paint.fontSpacing) }
-    val ascent = remember(paint) { paint.fontMetrics.ascent }
 
     // Termux mTopRow: 0 = live screen, negative = scrolled into transcript.
     var topRow by remember { mutableIntStateOf(0) }
@@ -632,6 +638,33 @@ private fun android.graphics.Paint.configureGridPaint() {
     letterSpacing = 0f
     textScaleX = 1f
     isSubpixelText = true
+}
+
+/** Integer grid metrics of an already-configured paint (Phase 19.2). */
+private class GridFit(val cellW: Int, val cellH: Int, val ascent: Float)
+
+/**
+ * Phase 19.2 device-round fix: snap [paint]'s textSize so its monospace
+ * advance is a whole pixel (CellMetrics.fitSizeToGrid), then derive the
+ * integer grid from it. Afterwards cellW EQUALS the font's own advance —
+ * the previous ceil() added up to a full pixel of tracking per letter
+ * ("letters have a noticeable gap between them", owner device report
+ * 2026-08-31).
+ */
+private fun fitGridPaint(paint: android.graphics.Paint): GridFit {
+    val fit = CellMetrics.fitSizeToGrid(paint.textSize) { size ->
+        val saved = paint.textSize
+        paint.textSize = size
+        val advance = paint.measureText("MMMMMMMMMM") / 10f
+        paint.textSize = saved
+        advance
+    }
+    paint.textSize = fit.textSizePx
+    return GridFit(
+        cellW = fit.cellWidthPx,
+        cellH = CellMetrics.cellHeightPx(paint.fontSpacing),
+        ascent = paint.fontMetrics.ascent
+    )
 }
 
 private fun packedColor(packed: Int): Color = Color(

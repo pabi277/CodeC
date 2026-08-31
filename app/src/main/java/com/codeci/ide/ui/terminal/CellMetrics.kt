@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.terminal
 
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -57,4 +58,88 @@ object CellMetrics {
 
     /** Exact pixel origin of a row — integer multiple, no drift. */
     fun rowY(row: Int, cellHeightPx: Int): Int = row * cellHeightPx
+
+    // ------------------------------------------------------------------
+    // Phase 19.2 device-round fix (2026-08-31): fit the FONT SIZE to the
+    // grid, not just the cell. Owner report: "letters have a noticeable
+    // gap between them". Cause: [cellWidthPx] CEILS the advance, so every
+    // cell was up to a full pixel wider than the glyph advance — uniform
+    // extra tracking (~4-5% at phone sizes). Fix: nudge the text size a
+    // hair so the advance IS a whole pixel; the integer cell then equals
+    // the font's own advance — still drift-free (every origin stays an
+    // integer multiple) but with no added spacing.
+    // ------------------------------------------------------------------
+
+    /** Snap tolerance: |advance − cell| at or below this is invisible. */
+    private const val FIT_EPS_PX = 0.05f
+
+    /** Never bend the user's requested size by more than this fraction. */
+    private const val FIT_MAX_DRIFT = 0.08f
+
+    /** Newton refinement steps; a linear monospace font converges in one. */
+    private const val FIT_MAX_STEPS = 4
+
+    /**
+     * A text size fitted to the pixel grid.
+     *
+     * @property textSizePx the (possibly nudged) size — set it as
+     *   `Paint.textSize`.
+     * @property cellWidthPx whole-pixel cell width; when [snapped] this
+     *   EQUALS the font's advance at [textSizePx] (within `FIT_EPS_PX`).
+     * @property snapped false = fitting was refused (degenerate metrics or
+     *   the nudge would exceed `FIT_MAX_DRIFT`); the cell is then the plain
+     *   ceil fallback and the requested size is kept untouched.
+     */
+    data class FontFit(
+        val textSizePx: Float,
+        val cellWidthPx: Int,
+        val snapped: Boolean
+    )
+
+    /**
+     * Nudge the requested text size so the measured monospace advance lands
+     * on a whole pixel, and return that pixel as the cell width.
+     *
+     * Example (the owner's device): advance 22.05 px → old cell = ceil = 23
+     * → +0.95 px tracking per letter. Here: size ×22/22.05 → advance 22.00
+     * → cell 22 → gap 0.00 px, size changed by 0.2%.
+     *
+     * Rounding DOWN is safe even though the cell may be a hair narrower than
+     * the advance: glyphs are drawn at `col * cellWidth`, never sequentially,
+     * so error cannot accumulate and is capped at `FIT_EPS_PX` per glyph.
+     *
+     * @param requestedSizePx the size in px the user asked for (setting or
+     *   live pinch).
+     * @param measure monospace advance in px at a given text size. The view
+     *   passes `Paint.measureText("MMMMMMMMMM") / 10f`; host tests inject a
+     *   synthetic font model.
+     */
+    fun fitSizeToGrid(
+        requestedSizePx: Float,
+        measure: (textSizePx: Float) -> Float
+    ): FontFit {
+        val size = requestedSizePx.coerceAtLeast(1f)
+        val a0 = measure(size)
+        fun fallback() = FontFit(size, cellWidthPx(a0), snapped = false)
+        if (!a0.isFinite() || a0 < 1f) return fallback()
+
+        val target = (a0 + 0.5f).toInt().coerceAtLeast(1)
+        if (abs(target - a0) <= FIT_EPS_PX) return FontFit(size, target, snapped = true)
+        if (abs(target / a0 - 1f) > FIT_MAX_DRIFT) return fallback()
+
+        var fitted = size * target / a0
+        var step = 0
+        while (step < FIT_MAX_STEPS) {
+            if (!fitted.isFinite()) return fallback()
+            if (fitted > size * (1f + FIT_MAX_DRIFT) || fitted < size * (1f - FIT_MAX_DRIFT)) {
+                return fallback()
+            }
+            val a = measure(fitted)
+            if (!a.isFinite() || a <= 0f) return fallback()
+            if (abs(a - target) <= FIT_EPS_PX) return FontFit(fitted, target, snapped = true)
+            fitted *= target / a
+            step++
+        }
+        return fallback()
+    }
 }

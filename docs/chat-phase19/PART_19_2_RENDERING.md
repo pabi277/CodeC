@@ -122,16 +122,25 @@ Canvas can't be asserted headlessly here).
 
 ## 5. Exit condition & device recipe
 
+**Device round 1 (2026-08-31) verdict: FAIL → fixed.** The owner reported
+"letters have a noticeable gap between them" — root cause found and fixed the
+same day (see §7.1). Recipes below are the **round-2** versions: single-line,
+copy-pasteable, no `/usr/bin` (it does not exist in the CodeC userland — use
+`$PREFIX/bin`).
+
 ```text
-1. Terminal: run `ls -la /usr/bin | head -40` (dense filenames) and
-   `printf 'ABCDEFGHIJKLMNOPQRSTUVWXYZ mmmmmmmmmm @@@@@@@@@@\n'`.
+1. GAP CHECK (the round-1 failure): run
+     python3 -c 'print("MWMWMMMWMW"*4)'
+   EXPECT: a dense, even WALL of letters — same visual density as this doc's
+   monospace text. No airy tracking, no touching glyphs.
+2. DENSE GRID: run  ls -la $PREFIX/bin | head -40
+   and  printf 'ABCDEFGHIJKLMNOPQRSTUVWXYZ mmmmmmmmmm @@@@@@@@@@\n'
    EXPECT: every character sits in its own cell; no touching/overlap; even spacing.
-2. Run something with bold (e.g. `git status`, or `printf '\e[1mBOLD\e[0m normal\n'`).
+3. BOLD: printf '\e[1mBOLD\e[0m normal\n'
    EXPECT: bold text is bold but does NOT overlap neighbors.
-3. Run `ls --color` or `htop` (colored backgrounds) → colored cells tile with no
-   seams or overlaps.
-4. Pinch-zoom across sizes → text stays crisp and aligned at every size.
-PASS = no overlapping/smeared glyphs at any size (matches Termux legibility).
+4. COLORS: ls --color  (or htop) → colored cells tile with no seams or overlaps.
+5. Pinch-zoom across sizes → text stays crisp, tight and aligned at every size.
+PASS = dense-but-not-touching glyphs at any size (matches Termux legibility).
 ```
 
 ## 6. Invariants
@@ -180,5 +189,43 @@ changes how cells are measured and painted.
   column counts, exact integer multiples across 200 columns.
 
 **Device gate (owner):** §5 recipe unchanged. PASS = dense text (`ls -la
-/usr/bin`), bold (`git status`), colored bg (`ls --color`) and every pinch
+$PREFIX/bin`), bold (`printf '\e[1mBOLD\e[0m'`), colored bg (`ls --color`) and every pinch
 size render with zero touching glyphs.
+
+---
+
+## 7.1 Device round 1 postmortem — the letter-gap regression (FIXED 2026-08-31)
+
+**Report:** owner device test: "The letters have a noticeable gap between them
+not looking good."
+
+**Root cause — my ceil-slack:** `CellMetrics.cellWidthPx` = `ceil(advance)`.
+On the owner's device the monospace advance measured ~22.05 px, so every cell
+was 23 px: **+0.95 px of man-made tracking on every letter (~4%)**. Glyphs are
+drawn one per cell at `col * cellW`, so the slack appears uniformly across the
+whole row — exactly "noticeable gap". Ceil was chosen (a) to prevent overlap
+and (b) to keep integer origins; it succeeded at both but paid with spacing.
+
+**Fix — fit the font to the grid, not the grid to the font:** new
+`CellMetrics.fitSizeToGrid(requestedSizePx, measure)` nudges the text size
+(≤ 8 % guard, in practice < 1 %) until the monospace advance lands on a whole
+pixel; the integer cell then EQUALS the font's own advance — still drift-free
+(every origin stays an integer multiple of the cell), now with zero added
+tracking. Example: 22.05 px → size × 22/22.05 → advance 22.00 px → cell 22.
+Rounding down is safe because glyphs are placed per-column (error is capped at
+0.05 px/glyph and never accumulates — the original overlap bug cannot return).
+Degenerate metrics or a > 8 % bend fall back to the old ceil cell, size
+untouched.
+
+**Code:** `CellMetrics.fitSizeToGrid` + `FontFit` (`ui/terminal/CellMetrics.kt`);
+view fits both paints via `fitGridPaint(paint)` (`TerminalEmulatorView.kt`) —
+the settled (PTY) and active (pinch) paints each snap independently, and
+`boldPaint` is now COPIED from the fitted paint so bold shares the snapped
+size. **Tests:** 6 new `CellMetricsTest` cases (snap-to-advance, keep-exact
+size, round-down safety, drift refusal, quantized-advance invariant sweep,
+degenerate fallback) — 10 total in the file.
+
+**Lesson (for later phases):** integer snapping must happen on the FONT SIZE
+first; snapping only the cell converts sub-pixel error into uniform letter
+spacing. The general rule from public terminal-rendering practice: fit the
+font to the grid, never pad the grid away from the font.

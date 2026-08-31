@@ -135,19 +135,23 @@ unchanged).
 
 ## 5. Exit condition & device recipe
 
+**Device round 1 note (2026-08-31):** the original recipe below was a
+MULTI-LINE `python3 -c` paste, which the phone IME mangles — the owner
+collapsed it to `python3 -c "…\r…%"` (literal ellipsis → `SyntaxError:
+U+2026`), so 19.3 has NOT been exercised on a device yet. Round-2 recipes are
+single-line and verified on the host:
+
 ```text
-1. Terminal: pkg install something sizable, or:
-     python3 -c "import time,sys
-     for i in range(0,101,2):
-         sys.stdout.write('\rDownloading %3d%%' % i); sys.stdout.flush(); time.sleep(0.05)
-     print()"
+1. PROGRESS BAR (one line, copy-paste whole):
+   python3 -c 'import time;[(print("\r%3d%%"%i,end="",flush=True),time.sleep(0.03)) for i in range(101)];print()'
    EXPECT: the percentage counts up SMOOTHLY on one line in real time
-   (not a single jump to 100% at the end).
-2. Run `yes | head -100000` or `cat /usr/bin/large` → output streams smoothly;
-   UI stays responsive; no freeze; ends on the correct final screen.
-3. Run `apt update` / a real download → progress/percentages animate live.
-4. top/htop refresh smoothly at their interval.
-PASS = streaming output and progress bars animate live like Termux (step 1 & 3).
+   (not a single jump to 100% at the end). Takes ~3 s.
+2. BULK STREAM: yes | head -100000   → output streams smoothly; UI stays
+   responsive; no freeze; ends on the correct final screen.
+   (was "cat /usr/bin/large" — /usr/bin does not exist in the CodeC userland)
+3. top  (or htop) → refreshes smoothly at its interval, digits animate live.
+4. A real  pkg install  → download percentages animate live.
+PASS = steps 1 & 3 animate live like Termux.
 ```
 
 ## 6. Invariants

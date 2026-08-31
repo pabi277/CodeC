@@ -108,10 +108,13 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 1. **Merge PR #33** (docs for Phases 15–19) if the owner says so — it is
    docs-only and CI-green. Do not merge without the literal command.
-2. **Phase 19 device round, then PR on the owner's word.** Phase 19 is
-   implemented & CI-green on `arena/01a056aa-codec`; the owner runs the
-   per-part device recipes (`docs/chat-phase19/PART_19_*.md` §5), then says
-   the word to open/merge the PR.
+2. **Phase 19 device round 2, then PR on the owner's word.** Round 1
+   (2026-08-31) found ONE regression — 19.2 letter gaps from ceil slack —
+   FIXED via `CellMetrics.fitSizeToGrid` (fit font size to the grid; see
+   `docs/chat-phase19/PART_19_2_RENDERING.md` §7.1); recipes are now
+   single-line copy-pasteable. The owner re-runs the §5 recipes on the new
+   APK (`gh run download <latest-green> -n CodeC-IDE`), then says the word
+   to open/merge the PR.
 3. **Then the next planned phase.** The owner picks:
    - **Phases 15 → 16 → 17 (Spck clone)** — run in order; reuse Phase 8/9/11/
      13/14 engines; UI/UX parity + gap fill, not a rewrite.
