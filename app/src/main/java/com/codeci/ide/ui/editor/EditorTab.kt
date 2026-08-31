@@ -13,7 +13,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 data class EditorTab(
     val relativePath: String,
     val buffer: TextFieldValue,
-    val savedText: String
+    val savedText: String,
+    /** Phase 16 — the file's native ending ([LineEndings.LF]/[LineEndings.CRLF]); the buffer is always LF. */
+    val lineEnding: String = LineEndings.LF
 ) {
     val displayName: String get() = relativePath.substringAfterLast('/')
 }

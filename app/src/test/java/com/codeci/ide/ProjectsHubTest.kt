@@ -6,6 +6,7 @@ import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubFilter
 import com.codeci.ide.ui.projects.ProjectHubKind
 import com.codeci.ide.ui.projects.ProjectHubStats
+import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.ProjectsHub
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -340,5 +341,22 @@ class ProjectsHubTest {
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    // ---- Phase 16: editor drawer tree letters ----
+
+    @Test
+    fun `fileBadges maps paths to porcelain letters with first change winning`() {
+        val files = listOf(
+            GitFileChange('M', ' ', "a.c"),
+            GitFileChange(' ', 'D', "b.c"),
+            GitFileChange('A', 'M', "a.c"),
+            GitFileChange('?', '?', "new.txt")
+        )
+        assertEquals(
+            mapOf("a.c" to "M", "b.c" to "D", "new.txt" to "?"),
+            ProjectsHub.fileBadges(files)
+        )
+        assertTrue(ProjectsHub.fileBadges(emptyList()).isEmpty())
     }
 }

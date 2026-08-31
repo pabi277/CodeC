@@ -1,12 +1,12 @@
 package com.codeci.ide.ui.screens
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -32,12 +32,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
@@ -50,7 +52,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,6 +75,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -84,10 +90,13 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -104,13 +113,17 @@ import com.codeci.ide.ui.components.EditorStatusBar
 import com.codeci.ide.ui.components.EditorTabBar
 import com.codeci.ide.ui.components.EditorTabUi
 import com.codeci.ide.ui.components.FindReplaceBar
+import com.codeci.ide.ui.components.EditorKeysRow
+import com.codeci.ide.ui.components.EditorProjectDrawer
 import com.codeci.ide.ui.components.OutputPanelView
-import com.codeci.ide.ui.components.SymbolBar
 import com.codeci.ide.ui.editor.CodeCompletionEngine
 import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
+import com.codeci.ide.ui.editor.EditorShellUi
+import com.codeci.ide.ui.editor.FileTreeCollapse
+import com.codeci.ide.ui.editor.FontSizeZoom
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -127,6 +140,7 @@ import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 import java.io.File
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /** Tap-anchor for the inline diagnostic tooltip. */
@@ -145,6 +159,8 @@ fun EditorScreen(
     onOpenPreview: (String) -> Unit = {},
     /** Phase 14 — open Web Preview on a live server URL detected by RUN ▶. */
     onOpenPreviewUrl: (String) -> Unit = {},
+    /** Phase 16 — the drawer footer jumps to the app Settings screen. */
+    onOpenSettings: () -> Unit = {},
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -196,15 +212,44 @@ fun EditorScreen(
     val openTabs by viewModel.openTabs.collectAsState()
     val activeTabPath by viewModel.activeTabPath.collectAsState()
     val currentProject by viewModel.projectName.collectAsState()
+    // Phase 16 — drawer + shell state.
+    val collapsedDirs by viewModel.collapsedDirs.collectAsState()
+    val gitBranch by viewModel.gitBranch.collectAsState()
+    val gitBadges by viewModel.gitBadges.collectAsState()
+    val gitChangeCount by viewModel.gitChangeCount.collectAsState()
+    val launchDefault by viewModel.launchDefault.collectAsState()
+    val activeLineEnding by viewModel.activeLineEnding.collectAsState()
+    val fileEntries by viewModel.fileEntries.collectAsState()
+    val customSnippets by settingsManager.editorCustomSnippetsFlow.collectAsState(initial = "")
+
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val uiScope = rememberCoroutineScope()
+    val clipboard = LocalClipboardManager.current
+    val fontSizeState = rememberUpdatedState(fontSize)
+
+    val visibleEntries = remember(fileEntries, collapsedDirs) {
+        FileTreeCollapse.visible(fileEntries, collapsedDirs)
+    }
+    val allCollapsed = remember(fileEntries, collapsedDirs) {
+        val dirs = FileTreeCollapse.allDirs(fileEntries)
+        dirs.isNotEmpty() && collapsedDirs.containsAll(dirs)
+    }
 
     var showUnsavedDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
-    var showFilesSheet by remember { mutableStateOf(false) }
     var showSaveToProject by remember { mutableStateOf(false) }
     var showContextPicker by remember { mutableStateOf(false) }
-    var showNewFileDialog by remember { mutableStateOf(false) }
-    var newFileName by remember { mutableStateOf("main.c") }
+    // Phase 16 — drawer dialogs: create entry (parent, isFolder), per-row rename,
+    // delete confirm, go-to-line and the git sheet for the footer row.
+    var pendingCreate by remember { mutableStateOf<Pair<String?, Boolean>?>(null) }
+    var entryName by remember { mutableStateOf("") }
+    var pendingRenameEntry by remember { mutableStateOf<EditorFileEntry?>(null) }
+    var pendingDelete by remember { mutableStateOf<EditorFileEntry?>(null) }
+    var showGoToLineDialog by remember { mutableStateOf(false) }
+    var goToLineText by remember { mutableStateOf("") }
+    var gitSheetRoot by remember { mutableStateOf<File?>(null) }
+    var keysRowVisible by remember { mutableStateOf(true) }
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
     var popup by remember { mutableStateOf<EditorPopupAnchor?>(null) }
@@ -254,15 +299,31 @@ fun EditorScreen(
         return TerminalHandoff.projectRunCommand(info.root.absolutePath, info.config)
     }
 
+    // Phase 16 — the preview/Launch target: Spck's "Launch default" wins over
+    // the config entry; a `web` project still falls back to its entry, and RUN
+    // ▶ keeps its Phase 11/14 behavior (this only refines WHICH page opens).
     fun webDefaultEntryOrNull(): String? {
         val project = projectName ?: return null
         if (!viewModel.saveFile(context)) return null
         val info = ProjectManager(context).project(project) ?: return null
-        if (!info.config.type.equals("web", ignoreCase = true)) return null
-        val entry = ProjectPathUtils.sanitizeRelativePath(info.config.entry) ?: return null
+        val isWeb = info.config.type.equals("web", ignoreCase = true)
+        val candidate = launchDefault ?: info.config.entry.takeIf { isWeb } ?: return null
+        val entry = ProjectPathUtils.sanitizeRelativePath(candidate) ?: return null
         val target = ProjectPathUtils.resolveInside(info.root, entry) ?: return null
         return entry.takeIf { target.isFile && WebFileSupport.isHtml(target.name) }
     }
+
+    /** The file the 👁 button previews: the active HTML file, else the project default. */
+    fun previewEntryOrNull(): String? {
+        val name = viewModel.fileName.value
+        return if (WebFileSupport.isHtml(name)) {
+            if (viewModel.saveFile(context)) name else null
+        } else {
+            webDefaultEntryOrNull()
+        }
+    }
+    val showPreviewAction = WebFileSupport.isHtml(currentFileName) ||
+        launchDefault != null || isWebProject
 
     LaunchedEffect(userMessage) {
         val message = userMessage
@@ -293,12 +354,12 @@ fun EditorScreen(
 
     val tabViews = remember(openTabs, activeTabPath, codeText, isDirty) {
         openTabs.map { tab ->
-            val dirty = if (tab.relativePath == activeTabPath) {
-                isDirty
+            if (tab.relativePath == activeTabPath) {
+                // The active tab's truth is the live buffer + VM dirtiness.
+                EditorTabUi(tab.relativePath, tab.displayName, isDirty)
             } else {
-                tab.buffer.text != tab.savedText
+                EditorShellUi.tabModel(tab.relativePath, tab.buffer.text, tab.savedText)
             }
-            EditorTabUi(tab.relativePath, tab.displayName, dirty)
         }
     }
 
@@ -314,6 +375,18 @@ fun EditorScreen(
     LaunchedEffect(Unit) {
         viewModel.setServerReadyHandler { url -> openPreviewUrlState.value(url) }
         viewModel.setWebPreviewHandler { entry -> openPreviewState.value(entry) }
+    }
+
+    // Phase 16 — the drawer tree + git meta refresh on open (and the tree once
+    // per folder switch so the launch-default marker is live even when closed).
+    LaunchedEffect(currentProject) {
+        viewModel.refreshFileEntries(context)
+    }
+    LaunchedEffect(drawerState.currentValue, currentProject) {
+        if (drawerState.currentValue == DrawerValue.Open) {
+            viewModel.refreshFileEntries(context)
+            viewModel.refreshGitMeta(context)
+        }
     }
 
     BackHandler(enabled = isDirty) {
@@ -482,40 +555,341 @@ fun EditorScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                EditorProjectDrawer(
+                    projectName = currentProject,
+                    branch = gitBranch,
+                    changeCount = gitChangeCount,
+                    entries = visibleEntries,
+                    collapsedDirs = collapsedDirs,
+                    selectedPath = activeTabPath ?: currentFileName,
+                    launchDefault = launchDefault,
+                    gitBadges = gitBadges,
+                    allCollapsed = allCollapsed,
+                    onSwitchProject = {
+                        uiScope.launch { drawerState.close() }
+                        showContextPicker = true
+                    },
+                    onSourceControl = {
+                        val root = currentProject?.let {
+                            runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+                        }
+                        if (root != null) gitSheetRoot = root else Toast.makeText(
+                            context,
+                            context.getString(R.string.editor_scratch_mode),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    onSwitchBranch = {
+                        Toast.makeText(
+                            context,
+                            R.string.editor_drawer_branch_soon,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    onOpenSettings = {
+                        uiScope.launch { drawerState.close() }
+                        onOpenSettings()
+                    },
+                    onNewFile = { parent ->
+                        entryName = "main.c"
+                        pendingCreate = parent to false
+                    },
+                    onNewFolder = { parent ->
+                        entryName = ""
+                        pendingCreate = parent to true
+                    },
+                    onRefresh = {
+                        viewModel.refreshFileEntries(context)
+                        viewModel.refreshGitMeta(context)
+                    },
+                    onToggleCollapseAll = {
+                        if (allCollapsed) viewModel.expandAllDirectories() else viewModel.collapseAllDirectories()
+                    },
+                    onOpenEntry = { entry ->
+                        if (entry.isDirectory) {
+                            viewModel.toggleDirectory(entry.relativePath)
+                        } else {
+                            viewModel.openFile(context, entry.projectName, entry.relativePath)
+                            uiScope.launch { drawerState.close() }
+                        }
+                    },
+                    onRenameEntry = { pendingRenameEntry = it },
+                    onDeleteEntry = { pendingDelete = it },
+                    onRunInTerminal = { entry ->
+                        val rootDir = if (entry.projectName != null) {
+                            runCatching { ProjectManager(context).project(entry.projectName)?.root }.getOrNull()
+                        } else {
+                            runCatching { FileManager(context).getProjectDir() }.getOrNull()
+                        }
+                        val command = if (rootDir == null) null else if (entry.projectName != null) {
+                            TerminalHandoff.projectFileRunCommand(rootDir, entry.relativePath)
+                        } else {
+                            TerminalHandoff.compileAndRunCommand(
+                                File(rootDir, entry.relativePath).absolutePath
+                            )
+                        }
+                        if (command != null) {
+                            uiScope.launch { drawerState.close() }
+                            onOpenInTerminal(command)
+                        }
+                    },
+                    onLaunchEntry = { entry ->
+                        uiScope.launch { drawerState.close() }
+                        onOpenPreview(entry.relativePath)
+                    },
+                    onSetLaunchDefault = { viewModel.setLaunchDefault(context, it.relativePath) },
+                    onClearLaunchDefault = { viewModel.setLaunchDefault(context, null) },
+                    onCopyPath = { entry ->
+                        val path = runCatching {
+                            val root = entry.projectName?.let {
+                                runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+                            } ?: runCatching { FileManager(context).getProjectDir() }.getOrNull()
+                            if (root != null) File(root, entry.relativePath).absolutePath else entry.relativePath
+                        }.getOrDefault(entry.relativePath)
+                        clipboard.setText(AnnotatedString(path))
+                        Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
                 title = {
-                    Text(
-                        text = currentFileName.substringAfterLast('/') + if (isDirty) " *" else "",
-                        modifier = Modifier.clickable { showRenameDialog = true },
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    if (tabViews.isEmpty()) {
+                        Text(
+                            text = currentFileName.substringAfterLast('/') + if (isDirty) " *" else "",
+                            modifier = Modifier.clickable { showRenameDialog = true },
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    } else {
+                        EditorTabBar(
+                            tabs = tabViews,
+                            activePath = activeTabPath,
+                            onSelect = { path -> viewModel.selectTab(path) },
+                            onClose = { path ->
+                                val dirty = if (path == activeTabPath) {
+                                    isDirty
+                                } else {
+                                    openTabs.firstOrNull { it.relativePath == path }
+                                        ?.let { it.buffer.text != it.savedText } == true
+                                }
+                                if (dirty) {
+                                    pendingCloseTab = path
+                                } else {
+                                    viewModel.closeTab(context, path, saveFirst = false)
+                                }
+                            },
+                            onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
+                            onCloseAll = { viewModel.closeAllTabs(context) },
+                            onCopyPath = { path ->
+                                clipboard.setText(AnnotatedString(path))
+                                Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (isDirty) showUnsavedDialog = true else onNavigateBack()
+                        uiScope.launch {
+                            if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
+                        }
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.project_files))
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showFilesSheet = true }) {
-                        Icon(
-                            Icons.Default.FolderOpen,
-                            contentDescription = stringResource(R.string.project_files)
-                        )
+                    IconButton(onClick = {
+                        if (findState.visible) viewModel.hideFind() else viewModel.showFind()
+                    }) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.find))
                     }
-                    if (WebFileSupport.isHtml(currentFileName)) {
+                    if (showPreviewAction) {
                         IconButton(onClick = {
-                            if (viewModel.saveFile(context)) {
-                                onOpenPreview(viewModel.fileName.value)
+                            val entry = previewEntryOrNull()
+                            if (entry != null) {
+                                onOpenPreview(entry)
                             } else {
-                                Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.file_save_failed),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }) {
                             Icon(
                                 Icons.Default.Visibility,
                                 contentDescription = stringResource(R.string.preview)
+                            )
+                        }
+                    }
+                    Box {
+                        IconButton(onClick = { showMoreMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
+                        }
+                        DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.save)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    if (viewModel.saveFile(context)) {
+                                        Toast.makeText(context, context.getString(R.string.file_saved), Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.save_all)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.saveAllTabs(context)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.rename_file)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showRenameDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.reload_from_disk)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.reloadActiveTab(context)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.format)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.formatCode(context, tabSize)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.jump_to_line)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    goToLineText = cursorPos.line.toString()
+                                    showGoToLineDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.find)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    if (findState.visible) viewModel.hideFind() else viewModel.showFind()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.diagnostics)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showDiagnosticsDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.line_endings, activeLineEnding)) },
+                                enabled = currentProject != null && activeTabPath != null,
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.toggleLineEnding(context)
+                                }
+                            )
+                            if (currentProject != null) {
+                                if (WebFileSupport.isHtml(currentFileName) && launchDefault != currentFileName) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.editor_drawer_set_default)) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            viewModel.setLaunchDefault(context, viewModel.fileName.value)
+                                        }
+                                    )
+                                }
+                                if (launchDefault != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.editor_drawer_clear_default)) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            viewModel.setLaunchDefault(context, null)
+                                        }
+                                    )
+                                }
+                            }
+                            if (!isWebProject) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.run_in_terminal)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        val command = projectRunCommandOrNull()
+                                            ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
+                                        if (command != null) {
+                                            onOpenInTerminal(command)
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.file_save_failed),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.save_to_project)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showSaveToProject = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.share_file)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    val send = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, currentFileName.substringAfterLast('/'))
+                                        putExtra(Intent.EXTRA_TEXT, codeText.text)
+                                    }
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent.createChooser(send, context.getString(R.string.share_file))
+                                        )
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.close_file)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    val path = activeTabPath
+                                    if (path != null) {
+                                        val dirty = isDirty
+                                        if (dirty) pendingCloseTab = path
+                                        else viewModel.closeTab(context, path, saveFirst = false)
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                enabled = diagnostics.isNotEmpty(),
+                                text = {
+                                    Text(
+                                        stringResource(R.string.clear_diagnostics),
+                                        color = if (diagnostics.isEmpty()) {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.clearDiagnostics()
+                                }
                             )
                         }
                     }
@@ -553,49 +927,7 @@ fun EditorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { showFilesSheet = true }
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = (currentProject ?: "Single files") + "  >  " +
-                        currentFileName.replace("/", "  >  ") + "   ▾",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            EditorTabBar(
-                tabs = tabViews,
-                activePath = activeTabPath,
-                onSelect = { path -> viewModel.selectTab(path) },
-                onClose = { path ->
-                    val dirty = if (path == activeTabPath) {
-                        isDirty
-                    } else {
-                        openTabs.firstOrNull { it.relativePath == path }
-                            ?.let { it.buffer.text != it.savedText } == true
-                    }
-                    if (dirty) {
-                        pendingCloseTab = path
-                    } else {
-                        viewModel.closeTab(context, path, saveFirst = false)
-                    }
-                },
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(top = 2.dp)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { viewModel.undo() }) {
@@ -627,84 +959,26 @@ fun EditorScreen(
                         Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
                     }
                 }) { Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save)) }
+                IconButton(onClick = {
+                    viewModel.formatCode(context, tabSize)
+                }) {
+                    Icon(
+                        Icons.Default.AutoFixHigh,
+                        contentDescription = stringResource(R.string.format),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 Spacer(modifier = Modifier.weight(1f))
-                Box {
-                    IconButton(onClick = { showMoreMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
-                    }
-                    DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.save_all)) },
-                            onClick = {
-                                showMoreMenu = false
-                                viewModel.saveAllTabs(context)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.reload_from_disk)) },
-                            onClick = {
-                                showMoreMenu = false
-                                viewModel.reloadActiveTab(context)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.save_to_project)) },
-                            onClick = {
-                                showMoreMenu = false
-                                showSaveToProject = true
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.format)) },
-                            onClick = {
-                                showMoreMenu = false
-                                viewModel.formatCode(context, tabSize)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.find)) },
-                            onClick = {
-                                showMoreMenu = false
-                                if (findState.visible) viewModel.hideFind() else viewModel.showFind()
-                            }
-                        )
-                        if (!isWebProject) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.run_in_terminal)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    val command = projectRunCommandOrNull()
-                                        ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
-                                    if (command != null) {
-                                        onOpenInTerminal(command)
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.file_save_failed),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
-                            )
+                IconButton(onClick = { keysRowVisible = !keysRowVisible }) {
+                    Icon(
+                        if (keysRowVisible) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = stringResource(R.string.editor_keys_row_toggle),
+                        tint = if (keysRowVisible) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
                         }
-                        DropdownMenuItem(
-                            enabled = diagnostics.isNotEmpty(),
-                            text = {
-                                Text(
-                                    stringResource(R.string.clear_diagnostics),
-                                    color = if (diagnostics.isEmpty()) {
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    }
-                                )
-                            },
-                            onClick = {
-                                showMoreMenu = false
-                                viewModel.clearDiagnostics()
-                            }
-                        )
-                    }
+                    )
                 }
             }
 
@@ -734,6 +1008,45 @@ fun EditorScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .background(editorColors.background)
+                    .pointerInput(Unit) {
+                        // Phase 16 — pinch to zoom the editor font (Spck §2.3,
+                        // the terminal's reactive pinch rebuilt on Compose
+                        // pointer input). Two-finger only: taps keep placing
+                        // the caret and the scroll views keep single-finger
+                        // drags; once the pinch is real both pointers consume.
+                        awaitEachGesture {
+                            val first = awaitFirstDown(requireUnconsumed = false)
+                            var secondId: PointerId? = null
+                            while (true) {
+                                val e = awaitPointerEvent()
+                                val other = e.changes.firstOrNull { it.id != first.id && it.pressed }
+                                if (other != null) {
+                                    secondId = other.id
+                                    break
+                                }
+                                val cur = e.changes.firstOrNull { it.id == first.id }
+                                if (cur == null || !cur.pressed || cur.isConsumed) return@awaitEachGesture
+                            }
+                            val id2 = secondId ?: return@awaitEachGesture
+                            var prevSpan = 0f
+                            while (true) {
+                                val e = awaitPointerEvent()
+                                val a = e.changes.firstOrNull { it.id == first.id } ?: break
+                                val b = e.changes.firstOrNull { it.id == id2 } ?: break
+                                if (!a.pressed || !b.pressed || a.isConsumed || b.isConsumed) break
+                                val span = (a.position - b.position).getDistance()
+                                if (prevSpan > 0f && span > 0f) {
+                                    val next = FontSizeZoom.applyZoom(fontSizeState.value, span / prevSpan)
+                                    if (next != fontSizeState.value) {
+                                        uiScope.launch { settingsManager.setFontSize(next) }
+                                    }
+                                }
+                                prevSpan = span
+                                a.consume()
+                                b.consume()
+                            }
+                        }
+                    }
                     .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
                         // Phase 12 — autocomplete keys while the popup is up:
                         // TAB/ENTER insert the highlighted suggestion, arrows
@@ -940,21 +1253,39 @@ fun EditorScreen(
                 }
             }
 
+            // Phase 16 — Spck bottom order: the snippet/keys row docks ABOVE
+            // the status bar (the old SymbolBar sat below it); the toolbar
+            // chevron toggles the row when it would crowd small screens.
+            if (keysRowVisible) {
+                EditorKeysRow(
+                    textFieldValue = codeText,
+                    onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
+                    tabSize = tabSize,
+                    language = language,
+                    customSnippets = customSnippets
+                )
+            }
+
             EditorStatusBar(
                 line = cursorPos.line,
                 column = cursorPos.column,
                 selectionLength = cursorPos.selectionLength,
                 tabSize = tabSize,
-                errorCount = diagnostics.count { it.severity == DiagnosticSeverity.ERROR },
-                warningCount = diagnostics.count { it.severity == DiagnosticSeverity.WARNING },
-                onDiagnosticsClick = { showDiagnosticsDialog = true }
-            )
-
-            SymbolBar(
-                textFieldValue = codeText,
-                onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
-                tabSize = tabSize,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                errorCount = EditorShellUi.errorCount(diagnostics),
+                warningCount = EditorShellUi.warningCount(diagnostics),
+                onDiagnosticsClick = {
+                    // Phase 16 — the errors badge taps to the first error
+                    // (Spck's jump); warnings-only still opens the review.
+                    val target = EditorShellUi.firstError(diagnostics)
+                    if (target != null) viewModel.jumpToDiagnostic(target) else showDiagnosticsDialog = true
+                },
+                languageLabel = language.label,
+                lineEnding = activeLineEnding,
+                onLineEndingClick = if (currentProject != null && activeTabPath != null) {
+                    { viewModel.toggleLineEnding(context) }
+                } else {
+                    null
+                }
             )
 
             // Phase 11: split-screen Output Panel. Expanded = draggable
@@ -997,6 +1328,7 @@ fun EditorScreen(
                 )
             }
         }
+        }
 
         if (isRenaming) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -1008,175 +1340,133 @@ fun EditorScreen(
                 .padding(16.dp)
         )
 
-        // Phase 9.2: the single hub for files and folders. Lists the current
-        // folder (project or single files), switches folders, creates files,
-        // and long-press runs or deletes — everything the owner asked to have
-        // without leaving the editor.
-        if (showFilesSheet) {
-            val fileEntries by viewModel.fileEntries.collectAsState()
-            var rowMenuFor by remember { mutableStateOf<EditorFileEntry?>(null) }
-            var pendingDelete by remember { mutableStateOf<EditorFileEntry?>(null) }
-            LaunchedEffect(Unit) { viewModel.refreshFileEntries(context) }
-            ModalBottomSheet(onDismissRequest = { showFilesSheet = false }) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = currentProject ?: "Single files",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "Tap a file to open it · long-press for Run / Delete",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        TextButton(onClick = { showContextPicker = true }) {
-                            Text("Change")
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                }
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
-                        .heightIn(max = 380.dp)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 8.dp)
-                ) {
-                    if (fileEntries.isEmpty()) {
+        // Phase 16 — the drawer replaced the files bottom-sheet; its dialogs
+        // (create entry, per-row rename, delete confirm) live here now.
+        pendingCreate?.let { (parent, isFolder) ->
+            AlertDialog(
+                onDismissRequest = { pendingCreate = null },
+                title = { Text(stringResource(if (isFolder) R.string.new_folder else R.string.new_file)) },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = entryName,
+                            onValueChange = { entryName = it },
+                            label = { Text(stringResource(if (isFolder) R.string.new_folder else R.string.file_name)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(6.dp))
                         Text(
-                            text = if (currentProject != null) "This project has no files yet."
-                                   else "No single files yet — create one below.",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-                            style = MaterialTheme.typography.bodyMedium
+                            "Created in: " + (parent ?: (currentProject ?: stringResource(R.string.editor_scratch_mode))),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    fileEntries.forEach { entry ->
-                        val active = entry.projectName == currentProject &&
-                            entry.relativePath == activeTabPath
-                        Box {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            if (!entry.isDirectory) {
-                                                viewModel.openFile(context, entry.projectName, entry.relativePath)
-                                                showFilesSheet = false
-                                            }
-                                        },
-                                        onLongClick = {
-                                            if (!entry.isDirectory) rowMenuFor = entry
-                                        }
-                                    )
-                                    .padding(
-                                        start = (12 + entry.depth * 18).dp,
-                                        end = 8.dp,
-                                        top = 8.dp,
-                                        bottom = 8.dp
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (entry.isDirectory) "▸ ${entry.name}" else entry.name,
-                                    style = if (entry.isDirectory) {
-                                        MaterialTheme.typography.labelLarge
-                                    } else {
-                                        MaterialTheme.typography.bodyMedium
-                                    },
-                                    color = when {
-                                        entry.isDirectory || active -> MaterialTheme.colorScheme.primary
-                                        else -> MaterialTheme.colorScheme.onSurface
-                                    },
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                if (!entry.isDirectory && active && isDirty) {
-                                    Text("●", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
-                                }
-                            }
-                            DropdownMenu(
-                                expanded = rowMenuFor == entry,
-                                onDismissRequest = { rowMenuFor = null }
-                            ) {
-                                if (entry.name.endsWith(".c", ignoreCase = true)) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.run_in_terminal)) },
-                                        onClick = {
-                                            rowMenuFor = null
-                                            val rootDir = if (entry.projectName != null) {
-                                                ProjectManager(context).project(entry.projectName)?.root
-                                            } else {
-                                                runCatching { FileManager(context).getProjectDir() }.getOrNull()
-                                            }
-                                            val command = if (rootDir == null) null else if (entry.projectName != null) {
-                                                TerminalHandoff.projectFileRunCommand(rootDir, entry.relativePath)
-                                            } else {
-                                                TerminalHandoff.compileAndRunCommand(
-                                                    File(rootDir, entry.relativePath).absolutePath
-                                                )
-                                            }
-                                            if (command != null) {
-                                                showFilesSheet = false
-                                                onOpenInTerminal(command)
-                                            }
-                                        }
-                                    )
-                                }
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.delete)) },
-                                    onClick = {
-                                        rowMenuFor = null
-                                        pendingDelete = entry
-                                    }
-                                )
-                            }
-                        }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pendingCreate = null
+                        val name = entryName
+                        entryName = ""
+                        if (isFolder) viewModel.createFolderEntry(context, name, parent)
+                        else viewModel.createAndOpenFile(context, name, parent)
+                    }) { Text(stringResource(R.string.create)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingCreate = null }) {
+                        Text(stringResource(R.string.cancel))
                     }
                 }
-                HorizontalDivider()
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = { showNewFileDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.new_file))
-                    }
-                    if (currentProject == null) {
-                        TextButton(onClick = { showSaveToProject = true }) {
-                            Text(stringResource(R.string.save_to_project))
+            )
+        }
+
+        pendingRenameEntry?.let { target ->
+            var renameValue by remember(target) { mutableStateOf(target.name) }
+            AlertDialog(
+                onDismissRequest = { pendingRenameEntry = null },
+                title = { Text(stringResource(R.string.rename_file)) },
+                text = {
+                    OutlinedTextField(
+                        value = renameValue,
+                        onValueChange = { renameValue = it },
+                        label = { Text(stringResource(R.string.file_name)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (renameValue.isNotBlank()) {
+                            viewModel.renameFileEntry(context, target, renameValue)
                         }
+                        pendingRenameEntry = null
+                    }) { Text(stringResource(R.string.rename)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingRenameEntry = null }) {
+                        Text(stringResource(R.string.cancel))
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-            }
-            if (pendingDelete != null) {
-                AlertDialog(
-                    onDismissRequest = { pendingDelete = null },
-                    title = { Text("Delete ${pendingDelete?.name ?: ""}?") },
-                    text = { Text("The file is removed from disk. This cannot be undone.") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            pendingDelete?.let { viewModel.deleteFileEntry(context, it) }
-                            pendingDelete = null
-                        }) {
-                            Text(stringResource(R.string.delete))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { pendingDelete = null }) {
-                            Text(stringResource(R.string.cancel))
-                        }
+            )
+        }
+
+        if (pendingDelete != null) {
+            AlertDialog(
+                onDismissRequest = { pendingDelete = null },
+                title = { Text("Delete ${pendingDelete?.name ?: ""}?") },
+                text = { Text("The entry is removed from disk. This cannot be undone.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pendingDelete?.let { viewModel.deleteFileEntry(context, it) }
+                        pendingDelete = null
+                    }) { Text(stringResource(R.string.delete)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingDelete = null }) {
+                        Text(stringResource(R.string.cancel))
                     }
-                )
-            }
+                }
+            )
+        }
+
+        if (showGoToLineDialog) {
+            AlertDialog(
+                onDismissRequest = { showGoToLineDialog = false },
+                title = { Text(stringResource(R.string.jump_to_line)) },
+                text = {
+                    Column {
+                        Text(
+                            stringResource(R.string.go_to_line_prompt),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = goToLineText,
+                            onValueChange = { raw -> goToLineText = raw.filter { it.isDigit() }.take(7) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = goToLineText.toIntOrNull() != null,
+                        onClick = {
+                            showGoToLineDialog = false
+                            goToLineText.toIntOrNull()?.let { viewModel.jumpToLine(it) }
+                        }
+                    ) { Text(stringResource(R.string.jump_to_line)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showGoToLineDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        gitSheetRoot?.let { root ->
+            GitControlSheet(projectRoot = root, onDismiss = { gitSheetRoot = null })
         }
 
         // Phase 9.2: open a project folder (or back to single files) without
@@ -1234,43 +1524,6 @@ fun EditorScreen(
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showContextPicker = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                }
-            )
-        }
-
-        if (showNewFileDialog) {
-            AlertDialog(
-                onDismissRequest = { showNewFileDialog = false },
-                title = { Text(stringResource(R.string.new_file)) },
-                text = {
-                    Column {
-                        OutlinedTextField(
-                            value = newFileName,
-                            onValueChange = { newFileName = it },
-                            label = { Text("File name") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "Created in: ${currentProject ?: "Single files"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showNewFileDialog = false
-                        viewModel.createAndOpenFile(context, newFileName)
-                    }) {
-                        Text("Create")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showNewFileDialog = false }) {
                         Text(stringResource(R.string.cancel))
                     }
                 }

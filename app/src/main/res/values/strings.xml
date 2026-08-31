@@ -309,4 +309,30 @@
     <string name="invalid_project_name">Invalid project name</string>
     <string name="project_name_taken">A project with that name already exists</string>
     <string name="rename_project">Rename Project</string>
+    <!-- Phase 16: Spck-style editor shell -->
+    <string name="open">Open</string>
+    <string name="refresh">Refresh</string>
+    <string name="close_file">Close file</string>
+    <string name="line_endings">Line endings: %1$s</string>
+    <string name="tab_close_others">Close others</string>
+    <string name="tab_close_all">Close all</string>
+    <string name="tab_copy_path">Copy path</string>
+    <string name="editor_scratch_mode">Single files</string>
+    <string name="editor_drawer_switch_hint">Tap to switch folder</string>
+    <string name="editor_drawer_source_control">Source Control</string>
+    <string name="editor_drawer_switch_branch">Switch Branch</string>
+    <string name="editor_drawer_branch_soon">Branch switching ships with the source-control phase</string>
+    <string name="editor_drawer_expand_all">Expand All</string>
+    <string name="editor_drawer_collapse_all">Collapse All</string>
+    <string name="editor_drawer_empty">This folder has no files yet.</string>
+    <string name="editor_drawer_settings">Editor Settings</string>
+    <string name="editor_drawer_launch">Launch</string>
+    <string name="editor_drawer_set_default">Set as launch default</string>
+    <string name="editor_drawer_clear_default">Clear launch default</string>
+    <string name="editor_drawer_copy_path">Copy path</string>
+    <string name="editor_drawer_launch_default">Launch default file</string>
+    <string name="go_to_line_prompt">Enter a line number to jump to</string>
+    <string name="path_copied">Path copied</string>
+    <string name="editor_keys_row_toggle">Toggle snippet row</string>
 </resources>
+

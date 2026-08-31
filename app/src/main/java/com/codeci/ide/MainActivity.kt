@@ -375,6 +375,13 @@ fun MainApp() {
                         navController.navigate(Screen.Preview.createRoute(projectName = projectName, url = url)) {
                             launchSingleTop = true
                         }
+                    },
+                    // Phase 16 — the editor drawer's footer jumps to Settings.
+                    onOpenSettings = {
+                        navController.navigate(Screen.Settings.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }

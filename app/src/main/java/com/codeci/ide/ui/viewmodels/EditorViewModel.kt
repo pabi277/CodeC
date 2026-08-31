@@ -14,19 +14,23 @@ import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorTab
 import com.codeci.ide.ui.editor.EditorUndoManager
+import com.codeci.ide.ui.editor.FileTreeCollapse
 import com.codeci.ide.ui.editor.FindOptions
 import com.codeci.ide.ui.editor.FindOutcome
 import com.codeci.ide.ui.editor.FindReplaceEngine
+import com.codeci.ide.ui.editor.LineEndings
 import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.projects.AutoRunPlan
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
+import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.ProjectConfig
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.ProjectRunDetector
+import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.ExecutionRunner
 import com.codeci.ide.ui.services.InteractiveRunSession
@@ -162,6 +166,26 @@ class EditorViewModel : ViewModel() {
 
     private val _activeTabPath = MutableStateFlow<String?>(null)
     val activeTabPath: StateFlow<String?> = _activeTabPath.asStateFlow()
+
+    // ---- Phase 16: drawer collapse, line endings, git meta, launch default ----
+
+    private val _activeLineEnding = MutableStateFlow(LineEndings.LF)
+    val activeLineEnding: StateFlow<String> = _activeLineEnding.asStateFlow()
+
+    private val _collapsedDirs = MutableStateFlow<Set<String>>(emptySet())
+    val collapsedDirs: StateFlow<Set<String>> = _collapsedDirs.asStateFlow()
+
+    private val _gitBranch = MutableStateFlow<String?>(null)
+    val gitBranch: StateFlow<String?> = _gitBranch.asStateFlow()
+
+    private val _gitBadges = MutableStateFlow<Map<String, String>>(emptyMap())
+    val gitBadges: StateFlow<Map<String, String>> = _gitBadges.asStateFlow()
+
+    private val _gitChangeCount = MutableStateFlow(0)
+    val gitChangeCount: StateFlow<Int> = _gitChangeCount.asStateFlow()
+
+    private val _launchDefault = MutableStateFlow<String?>(null)
+    val launchDefault: StateFlow<String?> = _launchDefault.asStateFlow()
 
     // ---- Phase 9: undo/redo --------------------------------------------
 
@@ -361,13 +385,18 @@ class EditorViewModel : ViewModel() {
         val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return
         if (!file.isFile || !file.canRead()) return
         val content = runCatching { file.readText() }.getOrNull() ?: return
+        // Phase 16: the buffer always lives in LF; the file's native ending is
+        // remembered on the tab and re-expanded on save (Spck-style, no reflow).
+        val ending = LineEndings.detect(content)
+        val normalized = LineEndings.normalizeToLf(content)
         stashActiveTabBuffer(_codeText.value)
-        val tab = EditorTab(safe, TextFieldValue(content), content)
+        val tab = EditorTab(safe, TextFieldValue(normalized), normalized, ending)
         _openTabs.value = trimTabs(_openTabs.value.filterNot { it.relativePath == safe } + tab)
         _activeTabPath.value = safe
         _projectName.value = info.name
         _fileName.value = safe
         _codeText.value = tab.buffer
+        _activeLineEnding.value = ending
         _isDirty.value = false
         bootstrapRemainingTabs(context, info.root, _openTabs.value)
         resetDecorationsForNewBuffer()
@@ -383,8 +412,12 @@ class EditorViewModel : ViewModel() {
         _projectName.value = null
         _activeTabPath.value = null
         _fileName.value = safe
-        _codeText.value = TextFieldValue(content)
-        scratchSavedText = content
+        // Phase 16: scratch files display normalized too, but they always
+        // save LF (the single-files folder has no config to carry an ending).
+        val normalized = LineEndings.normalizeToLf(content)
+        _codeText.value = TextFieldValue(normalized)
+        scratchSavedText = normalized
+        _activeLineEnding.value = LineEndings.LF
         _isDirty.value = false
         resetDecorationsForNewBuffer()
         syncUndoFlags(undoManager())
@@ -408,7 +441,9 @@ class EditorViewModel : ViewModel() {
         if (candidates.isEmpty()) return
         val loaded = candidates.mapNotNull { leaf ->
             val content = runCatching { leaf.file.readText() }.getOrNull() ?: return@mapNotNull null
-            EditorTab(leaf.relativePath, TextFieldValue(content), content)
+            val ending = LineEndings.detect(content)
+            val normalized = LineEndings.normalizeToLf(content)
+            EditorTab(leaf.relativePath, TextFieldValue(normalized), normalized, ending)
         }
         if (loaded.isEmpty()) return
         _openTabs.value = trimTabs(currentTabs + loaded)
@@ -444,6 +479,7 @@ class EditorViewModel : ViewModel() {
         _activeTabPath.value = tab.relativePath
         _fileName.value = tab.relativePath
         _codeText.value = tab.buffer
+        _activeLineEnding.value = tab.lineEnding
         _isDirty.value = tab.buffer.text != tab.savedText
         resetDecorationsForNewBuffer()
         syncUndoFlags(undoManager())
@@ -475,9 +511,37 @@ class EditorViewModel : ViewModel() {
             _activeTabPath.value = next.relativePath
             _fileName.value = next.relativePath
             _codeText.value = next.buffer
+            _activeLineEnding.value = next.lineEnding
             _isDirty.value = next.buffer.text != next.savedText
             resetDecorationsForNewBuffer()
             syncUndoFlags(undoManager())
+        }
+    }
+
+    /**
+     * Phase 16 — tab long-press "Close others": every other tab goes through
+     * the regular close (dirty buffers are saved first; a failed save keeps
+     * that tab open with a message — we never drop edits silently).
+     */
+    fun closeOtherTabs(context: Context, keepPath: String) {
+        val appContext = context.applicationContext
+        _openTabs.value.map { it.relativePath }.filter { it != keepPath }.forEach {
+            closeTab(appContext, it, saveFirst = true)
+        }
+        selectTab(keepPath)
+    }
+
+    /**
+     * Phase 16 — "Close all": save everything first, then close every tab but
+     * the last one — the editor always keeps a buffer alive (its "no last tab
+     * to close" invariant), so closing all means closing all-but-active.
+     */
+    fun closeAllTabs(context: Context) {
+        val appContext = context.applicationContext
+        stashActiveTabBuffer(_codeText.value)
+        saveAllTabs(appContext)
+        _openTabs.value.map { it.relativePath }.filter { it != _activeTabPath.value }.forEach {
+            closeTab(appContext, it, saveFirst = true)
         }
     }
 
@@ -620,7 +684,11 @@ class EditorViewModel : ViewModel() {
         val appContext = context.applicationContext
         val project = _projectName.value
         val entries = if (project != null) {
-            val root = runCatching { ProjectManager(appContext).project(project)?.root }.getOrNull()
+            val info = runCatching { ProjectManager(appContext).project(project) }.getOrNull()
+            // Phase 16 — the drawer header shows this config's launch default
+            // marker, so refresh it in the same single pass as the tree.
+            _launchDefault.value = info?.config?.launchDefault
+            val root = info?.root
             if (root == null) {
                 emptyList()
             } else {
@@ -629,6 +697,7 @@ class EditorViewModel : ViewModel() {
                     .map { it.copy(projectName = project) }
             }
         } else {
+            _launchDefault.value = null
             runCatching {
                 FileManager(appContext).getProjectDir()
                     .listFiles()
@@ -678,6 +747,13 @@ class EditorViewModel : ViewModel() {
         _openTabs.value = emptyList()
         undoManagers.clear()
         _activeTabPath.value = null
+        // Phase 16 — the drawer belongs to the folder we are leaving.
+        _collapsedDirs.value = emptySet()
+        _gitBranch.value = null
+        _gitBadges.value = emptyMap()
+        _gitChangeCount.value = 0
+        _launchDefault.value = null
+        _activeLineEnding.value = LineEndings.LF
         if (projectName != null) {
             val info = runCatching { ProjectManager(appContext).project(projectName) }.getOrNull()
             if (info == null) {
@@ -726,7 +802,7 @@ class EditorViewModel : ViewModel() {
      * single-files folder when no project is open — and open it as a tab.
      * This is the single-file path: a file, no project required.
      */
-    fun createAndOpenFile(context: Context, rawName: String) {
+    fun createAndOpenFile(context: Context, rawName: String, parent: String? = null) {
         val appContext = context.applicationContext
         val base = FileNameUtils.sanitizeFileName(rawName.trim())
         if (base == null) {
@@ -740,14 +816,23 @@ class EditorViewModel : ViewModel() {
                 _userMessage.value = "Project '$project' is gone"
                 return
             }
+            // Phase 16 — "New file here" from a tree row creates inside that
+            // folder; the toolbar keeps the root behaviour (parent == null).
+            val target = if (parent.isNullOrBlank()) base else
+                ProjectPathUtils.sanitizeRelativePath("$parent/$base")
+            if (target == null) {
+                _userMessage.value = "Invalid folder path"
+                return
+            }
             val exists = runCatching {
-                ProjectPathUtils.resolveInside(info.root, base)?.isFile == true
+                ProjectPathUtils.resolveInside(info.root, target)?.isFile == true
             }.getOrDefault(false)
-            if (!exists && !writeProjectFile(appContext, project, base, "")) {
+            if (!exists && !writeProjectFile(appContext, project, target, "")) {
                 _userMessage.value = "Could not create $base"
                 return
             }
-            openFile(appContext, project, base)
+            if (!parent.isNullOrBlank()) expandAncestors(parent)
+            openFile(appContext, project, target)
         } else {
             val fm = FileManager(appContext)
             val exists = fm.loadFile(base) != null
@@ -784,13 +869,222 @@ class EditorViewModel : ViewModel() {
         _userMessage.value = "Deleted ${entry.name}"
     }
 
-    private fun writeProjectFile(context: Context, project: String, relativePath: String, text: String): Boolean {
+    // ---- Phase 16: drawer collapse + row actions -------------------------
+
+    /** Chevron toggle on a folder row. */
+    fun toggleDirectory(path: String) {
+        _collapsedDirs.value = _collapsedDirs.value.toMutableSet().apply {
+            if (!add(path)) remove(path)
+        }
+    }
+
+    /** Drawer toolbar "Collapse All": hides everything below the top level. */
+    fun collapseAllDirectories() {
+        _collapsedDirs.value = FileTreeCollapse.allDirs(_fileEntries.value)
+    }
+
+    fun expandAllDirectories() {
+        _collapsedDirs.value = emptySet()
+    }
+
+    private fun expandAncestors(parentRelative: String) {
+        if (parentRelative.isBlank()) return
+        var current = parentRelative
+        val set = _collapsedDirs.value.toMutableSet()
+        while (current.isNotEmpty()) {
+            set.remove(current)
+            current = current.substringBeforeLast('/', "")
+        }
+        _collapsedDirs.value = set
+    }
+
+    /** Toolbar / "New folder here" row action. */
+    fun createFolderEntry(context: Context, rawName: String, parent: String? = null) {
+        val appContext = context.applicationContext
+        val base = ProjectPathUtils.sanitizeSegment(rawName.trim())
+        if (base == null) {
+            _userMessage.value = "Invalid folder name"
+            return
+        }
+        val project = _projectName.value
+        if (project != null) {
+            val info = ProjectManager(appContext).project(project) ?: return
+            val result = FileTreeRepository.createDirectory(info.root, parent.orEmpty(), base)
+            if (result.isSuccess) {
+                if (!parent.isNullOrBlank()) expandAncestors(parent)
+                _userMessage.value = "Created folder $base"
+            } else {
+                _userMessage.value = "Could not create folder"
+            }
+        } else {
+            val root = runCatching { FileManager(appContext).getProjectDir() }.getOrNull() ?: return
+            val ok = runCatching { File(root, base).mkdirs() }.getOrDefault(false)
+            _userMessage.value = if (ok) "Created folder $base" else "Could not create folder"
+        }
+        refreshFileEntries(appContext)
+    }
+
+    /**
+     * Rename a drawer row (file OR folder). Open tabs keep following their
+     * file — a folder rename re-prefixes every tab underneath it, undo
+     * history included — so the buffer never points at a dead path.
+     */
+    fun renameFileEntry(context: Context, entry: EditorFileEntry, rawNewName: String) {
+        val appContext = context.applicationContext
+        val newName = ProjectPathUtils.sanitizeSegment(rawNewName.trim())
+        if (newName == null) {
+            _userMessage.value = appContext.getString(R.string.invalid_file_name)
+            return
+        }
+        if (newName == entry.name) return
+        val oldPath = entry.relativePath
+        val project = entry.projectName
+        if (project == null) {
+            if (entry.isDirectory) {
+                _userMessage.value = "Folders live inside projects"
+                return
+            }
+            val ok = runCatching {
+                FileManager(appContext).renameFile(oldPath, newName)
+            }.getOrDefault(false)
+            if (!ok) {
+                _userMessage.value = appContext.getString(R.string.rename_failed)
+                return
+            }
+            if (_activeTabPath.value == null && _fileName.value == oldPath) _fileName.value = newName
+            refreshFileEntries(appContext)
+            _userMessage.value = appContext.getString(R.string.rename_success)
+            return
+        }
+        val info = ProjectManager(appContext).project(project) ?: return
+        val newPath = FileTreeRepository.rename(info.root, oldPath, newName).getOrNull()
+        if (newPath == null) {
+            _userMessage.value = appContext.getString(R.string.rename_failed)
+            return
+        }
+        fun remap(path: String): String? = when {
+            path == oldPath -> newPath
+            path.startsWith("$oldPath/") -> newPath + path.removePrefix(oldPath)
+            else -> null
+        }
+        _openTabs.value = _openTabs.value.mapNotNull { tab ->
+            remap(tab.relativePath)?.let { tab.copy(relativePath = it) } ?: tab
+        }
+        val remappedUndo = HashMap(undoManagers)
+        undoManagers.clear()
+        remappedUndo.forEach { (key, value) ->
+            undoManagers[remap(key) ?: key] = value
+        }
+        _activeTabPath.value?.let { _activeTabPath.value = remap(it) ?: it }
+        _fileName.value = remap(_fileName.value) ?: _fileName.value
+        _launchDefault.value?.let { _launchDefault.value = remap(it) ?: it }
+        runCatching { SettingsManager(appContext).replaceRecentFile(oldPath, newPath) }
+        refreshFileEntries(appContext)
+        _userMessage.value = appContext.getString(R.string.rename_success)
+    }
+
+    // ---- Phase 16: line endings + launch default --------------------------
+
+    /**
+     * LF ⇄ CRLF for the active project file: the in-memory buffer stays LF,
+     * the tab's saved copy is rewritten on disk immediately (what "changing
+     * line endings" means in every desktop editor), and the status-bar chip
+     * reflects the new ending.
+     */
+    fun toggleLineEnding(context: Context) {
+        val appContext = context.applicationContext
+        val next = LineEndings.toggle(_activeLineEnding.value)
+        _activeLineEnding.value = next
+        val path = _activeTabPath.value
+        val project = _projectName.value
+        if (path == null || project == null) return
+        updateTab(path) { it.copy(lineEnding = next) }
+        val tab = _openTabs.value.firstOrNull { it.relativePath == path } ?: return
+        if (!writeProjectFile(appContext, project, path, tab.savedText, next)) {
+            _userMessage.value = appContext.getString(R.string.file_save_failed)
+        }
+    }
+
+    /**
+     * Phase 16 — Spck's "Launch default": persist the preview/Launch target in
+     * the project config. Null clears it (the field is then omitted from the
+     * JSON, keeping pre-Phase-16 config files byte-identical).
+     */
+    fun setLaunchDefault(context: Context, relativePath: String?) {
+        val appContext = context.applicationContext
+        val project = _projectName.value
+        if (project == null) {
+            _userMessage.value = "Launch default works inside a project — save this file into one first."
+            return
+        }
+        val info = ProjectManager(appContext).project(project) ?: return
+        val safe = if (relativePath == null) null else ProjectPathUtils.sanitizeRelativePath(relativePath)
+        if (relativePath != null && safe == null) {
+            _userMessage.value = "Invalid path"
+            return
+        }
+        val result = runCatching { ProjectManager(appContext).writeConfig(info.root, info.config.copy(launchDefault = safe)) }
+        if (result.isFailure) {
+            _userMessage.value = "Could not update the project config"
+            return
+        }
+        _launchDefault.value = safe
+        _userMessage.value = if (safe == null) "Launch default cleared" else "Launch default: $safe"
+        refreshFileEntries(appContext)
+    }
+
+    // ---- Phase 16: drawer git metadata ------------------------------------
+
+    /**
+     * Branch chip + M/A/D/? tree letters + change count for the drawer, read
+     * best-effort off the main thread: the branch comes straight from
+     * `.git/HEAD` (no process), the porcelain status only runs while the
+     * packaged git is available — the same guardrail as the Projects hub.
+     */
+    fun refreshGitMeta(context: Context) {
+        val appContext = context.applicationContext
+        val project = _projectName.value
+        if (project == null) {
+            _gitBranch.value = null
+            _gitBadges.value = emptyMap()
+            _gitChangeCount.value = 0
+            return
+        }
+        viewModelScope.launch {
+            val meta = withContext(Dispatchers.IO) {
+                runCatching {
+                    val root = ProjectManager(appContext).project(project)?.root ?: return@runCatching null
+                    val gitDir = File(root, ".git")
+                    if (!gitDir.exists()) return@runCatching null
+                    val branch = runCatching {
+                        ProjectsHub.branchFromHeadFile(
+                            File(gitDir, "HEAD").takeIf { it.isFile }?.readText()
+                        )
+                    }.getOrNull()
+                    val files = runCatching { GitContext(appContext).manager()?.status(root)?.files }.getOrNull()
+                    Triple(branch, files?.let(ProjectsHub::fileBadges), files?.size)
+                }.getOrNull()
+            }
+            if (_projectName.value != project) return@launch
+            _gitBranch.value = meta?.first
+            _gitBadges.value = meta?.second ?: emptyMap()
+            _gitChangeCount.value = meta?.third ?: 0
+        }
+    }
+
+    private fun writeProjectFile(
+        context: Context,
+        project: String,
+        relativePath: String,
+        text: String,
+        lineEnding: String = LineEndings.LF
+    ): Boolean {
         val info = ProjectManager(context).project(project) ?: return false
         val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return false
         val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return false
         return runCatching {
             file.parentFile?.mkdirs()
-            file.writeText(text)
+            file.writeText(LineEndings.toNative(text, lineEnding))
         }.isSuccess
     }
 
@@ -799,10 +1093,10 @@ class EditorViewModel : ViewModel() {
         val project = _projectName.value
         if (project != null) {
             val safe = ProjectPathUtils.sanitizeRelativePath(_fileName.value) ?: return false
-            if (!writeProjectFile(context, project, safe, text)) return false
+            if (!writeProjectFile(context, project, safe, text, _activeLineEnding.value)) return false
             _fileName.value = safe
             if (_activeTabPath.value == safe) {
-                updateTab(safe) { it.copy(savedText = text) }
+                updateTab(safe) { it.copy(savedText = text, lineEnding = _activeLineEnding.value) }
             }
             _isDirty.value = false
             return true
@@ -847,7 +1141,7 @@ class EditorViewModel : ViewModel() {
         _openTabs.value = _openTabs.value.map { tab ->
             when {
                 tab.buffer.text == tab.savedText -> tab
-                writeProjectFile(context, project, tab.relativePath, tab.buffer.text) ->
+                writeProjectFile(context, project, tab.relativePath, tab.buffer.text, tab.lineEnding) ->
                     tab.copy(savedText = tab.buffer.text)
                 else -> { failures++; tab }
             }
@@ -1058,6 +1352,16 @@ class EditorViewModel : ViewModel() {
         val text = _codeText.value.text
         val lineStart = CodeFormatter.lineStartOffset(text, diagnostic.line)
         val offset = (lineStart + (diagnostic.column - 1)).coerceIn(0, text.length)
+        selectRegion(offset, offset)
+    }
+
+    /** Phase 16 — "Go to line" from the overflow menu: moves the caret to the
+     * start of [line] (clamped to the buffer), same select-then-highlight
+     * path the diagnostics jump uses. */
+    fun jumpToLine(line: Int) {
+        val text = _codeText.value.text
+        val target = line.coerceIn(1, text.count { it == '\n' } + 1)
+        val offset = CodeFormatter.lineStartOffset(text, target)
         selectRegion(offset, offset)
     }
 

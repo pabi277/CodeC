@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,8 +21,11 @@ import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
 
 /**
- * Phase 9 — editor status bar: line/column, encoding, indent size, selection
- * length, and the diagnostics chip (tap to review reported problems).
+ * Phase 9 status bar, Phase 16 Spck additions: the language label sits
+ * between encoding and indent (`UTF-8 · C · Spaces: 4`), the LF/CRLF chip
+ * toggles the active file's ending on tap (null [onLineEndingClick] — scratch
+ * buffers — renders it inert), and the diagnostics chip keeps doubling as the
+ * errors badge (counts live in it; tap reviews and jumps).
  */
 @Composable
 fun EditorStatusBar(
@@ -31,6 +36,9 @@ fun EditorStatusBar(
     errorCount: Int,
     warningCount: Int,
     onDiagnosticsClick: () -> Unit,
+    languageLabel: String? = null,
+    lineEnding: String = "LF",
+    onLineEndingClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -51,10 +59,36 @@ fun EditorStatusBar(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (languageLabel != null) {
+            Text(
+                text = languageLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(
             text = stringResource(R.string.status_spaces, tabSize),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = lineEnding + if (onLineEndingClick != null) " ▾" else "",
+            style = MaterialTheme.typography.labelSmall,
+            color = if (onLineEndingClick != null) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            },
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .then(
+                    if (onLineEndingClick != null) {
+                        Modifier.clickable { onLineEndingClick() }
+                    } else {
+                        Modifier
+                    }
+                )
+                .padding(horizontal = 6.dp, vertical = 2.dp)
         )
         if (selectionLength > 0) {
             Text(
