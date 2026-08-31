@@ -169,17 +169,62 @@ class GitManager(
      * `git clone <url> <dest>` — [url] must be HTTP(S) ([isCloneableUrl]) and
      * [dest] must not exist (the caller picks a unique name inside the
      * projects root).
+     *
+     * Phase 15 — the Projects Hub clone dialog adds two optional arguments
+     * while the historical caller keeps identical behavior (D5):
+     *  - [shallow] `--depth 1` (Spck-style: fetch only the latest tree —
+     *    mobile bandwidth first),
+     *  - [branch] `--branch <name>` after `ProjectsHub.isValidBranchName`.
      */
-    fun clone(url: String, dest: File) {
+    fun clone(url: String, dest: File, shallow: Boolean = false, branch: String? = null) {
         require(isCloneableUrl(url)) { "Only http(s) repository URLs can be cloned" }
         require(!dest.exists()) { "Destination already exists: ${dest.name}" }
+        if (branch != null) {
+            require(ProjectsHub.isValidBranchName(branch)) { "Invalid branch name" }
+        }
         dest.parentFile?.mkdirs()
+        val args = mutableListOf("clone")
+        if (shallow) {
+            args += "--depth"
+            args += "1"
+        }
+        branch?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            args += "--branch"
+            args += it
+        }
+        args += url.trim()
+        args += dest.absolutePath
         exec(
             workingDir = dest.parentFile ?: error("clone destination has no parent"),
-            args = listOf("clone", url.trim(), dest.absolutePath),
+            args = args,
             timeoutSeconds = networkTimeoutSeconds,
             failureMessage = "git clone failed"
         )
+    }
+
+    /**
+     * Phase 15 — branch list for the clone dialog's Advanced dropdown:
+     * `git ls-remote --heads <url>`, parsed by
+     * [ProjectsHub.branchNamesFromLsRemote]. Output already passes through
+     * [GitRedactor]; a failure (offline, private repo without a token)
+     * throws [GitCommandException] and the dialog falls back to free text.
+     */
+    fun listRemoteBranches(url: String): List<String> {
+        require(isCloneableUrl(url)) { "Only http(s) repository URLs can be queried" }
+        val result = runGit(
+            workingDir = null,
+            args = listOf("ls-remote", "--heads", url.trim()),
+            timeoutSeconds = networkTimeoutSeconds
+        )
+        if (result.exitCode != 0) {
+            val detail = redactor.redact((result.stderr + result.stdout).joinToString("\n").trim())
+            throw GitCommandException(
+                listOf("git ls-remote failed", detail).filter { it.isNotEmpty() }.joinToString(": "),
+                result.exitCode,
+                redactor.redactAll(result.stdout + result.stderr)
+            )
+        }
+        return ProjectsHub.branchNamesFromLsRemote(result.stdout)
     }
 
     private fun exec(

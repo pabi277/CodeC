@@ -1,14 +1,15 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-31 · **State:** Phases 3–14 ✅ complete & merged
-(`main` at `8dd961a2` = PR #33 merge, docs for Phases 15–19). **Phase 19
-(Terminal Parity + Unicode/protocol parity) is COMPLETE & DEVICE-ACCEPTED on
-`arena/01a056aa-codec`** — CI-green run `33378705305`; 4 device rounds, final
-owner word 2026-08-31: "All ok now"; **PR #34 OPEN (on the owner's "create a
-pr") — merge only on the owner's literal command.**
-**Phase 15 (Spck clone) ACTIVE — owner directed the start 2026-08-31.**
-See item 18 and [`chat-phase19/`](chat-phase19/). **Phase 14 (Mixed-Language,
-Server WebViews & Long-Tail Ecosystem) was merged in PR #32** — client-only, no `[repo-build]`; `Build APK`
+**Last updated:** 2026-08-31 · **State:** Phases 3–14 ✅ complete & merged.
+**Phase 19 (Terminal Parity + Unicode/protocol parity) is COMPLETE,
+DEVICE-ACCEPTED and MERGED — PR #34 merged to `main` at `b869ce6`
+(2026-08-31T09:55:36Z)**, so `main` = `b869ce6` now (the previously cited
+`8dd961a2` = PR #33 is its ancestor). CI on `main` green after the merge
+(`Build APK` `33380041937`).
+**Phase 15 (Spck clone — Projects Hub & Unified Import) is IMPLEMENTED
+(2026-08-31, `arena/01a05743-codec`) — CI + device verification pending** —
+see item 19 and [`chat-phase15/`](chat-phase15/).
+**Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) was merged in PR #32** — client-only, no `[repo-build]`; `Build APK`
 `33352164172` green (assemble + unit tests + lint); **device recipe pending
 (owner)**. See item 17 below and [`chat-phase14/`](chat-phase14/).
 **Phase 4 (Parts 4.1–4.8) ✅ complete** — 4.7 and 4.8 both device-verified
@@ -649,3 +650,5 @@ complete**. The remaining work is Phase 4 polish, broken into ordered parts in
     - **RUN ▶ & Web Preview:** server projects build (if any) then run in the background; on the bind line the Output Panel summary shows the URL, **auto-opens Web Preview** on it (`Preview` route gains `url`), Output Panel gets an **Open Preview** action, stdin row hidden for servers; Web Preview live mode shows a **● live address bar** and watches the project's `index.html` (auto-reload); static preview unchanged.
     - **Tests:** `ServerPortDetectorTest` (10), `ServerRunnerTest` (7, real `/bin/sh` processes: ready/stream/exit/failure/timeout-warning/stop), `ProjectScaffoldTest` (7), `ProjectConfigTest` (+7: presets, round-trip, legacy JSON, URL fallback), and `ServerScaffoldE2ETest` (3 — green on CI `33355693242`): builds/runs each preset via the exact `ProjectConfig` commands through `ServerRunner`, fetches the page over loopback HTTP, edits `index.html` and re-fetches (hot-read, no restart), stops cleanly.
     - **Invariants:** no `.` on PATH; TCC `-o` last; `cc`/bash untouched; nothing in `$PREFIX/bin`; no official Termux packages; **no `[repo-build]`** (Flask/FastAPI are pip packages; C server = embedded TCC). Design D1–D8 + follow-ups: `PART_14_IMPLEMENTATION.md` §2.
+
+19. **Phase 15 — Projects Hub & Unified Import (Spck clone, 15 of 15–17)** 🚧 **IMPLEMENTED & awaiting CI/device (2026-08-31, `arena/01a05743-codec`, on the owner's "Start phase 15").** The Files tab became Spck's **Projects Hub**: card list (type square from `ProjectConfig`/auto-detect, `⌥ branch · N files · relative age`, yellow `M` badge for uncommitted work), single-select filter chips (All/Git/C/Python/Web), inline name search, and ONE `+` bottom sheet — **New Project / Clone Git Repository / Import ZIP / Open Folder** — the unified import entry the owner asked for. Per-project `⋮`: Open, Source Control / Pull / Switch Branch / Copy remote URL (git repos), Rename, Export ZIP, Delete. New Clone dialog: URL → auto project name → Advanced (branch free-text or `ls-remote` chips, shallow `--depth 1` default on) + token hint → Settings. Bottom nav is now Home · **Projects** · Editor · Terminal · Settings (Packages stays on Home). New pure engine `ui/projects/ProjectsHub.kt` (+`ProjectHubStats` scan) and `FileManagerViewModel.hubEntries` (IO-built; branch via `.git/HEAD`, no git process; `git status` only when git installed — D3); `GitManager.clone` extended (defaulted `shallow`/`branch`, Phase 13 argv unchanged — D5) + `listRemoteBranches`. `[client-only]`, clean-room (Spck behavior mirrored, zero code/assets copied). Tests: `ProjectsHubTest` ×13 + `GitManagerTest` ×5 new (fake-git argv proofs incl. reject-before-exec). Decisions D1–D9 + research notes: `docs/chat-phase15/PART_15_PROJECTS_HUB.md` §6. **Next: CI green on this branch → owner's §4 device recipe.**

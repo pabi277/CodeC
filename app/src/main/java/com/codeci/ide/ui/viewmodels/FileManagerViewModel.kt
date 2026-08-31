@@ -11,9 +11,13 @@ import com.codeci.ide.ui.projects.FileTreeRepository
 import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectConfig
+import com.codeci.ide.ui.projects.ProjectHubEntry
+import com.codeci.ide.ui.projects.ProjectHubStats
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.ProjectRunDetector
+import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.projects.ProjectTransfer
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.utils.WebFileSupport
@@ -31,6 +35,15 @@ import kotlinx.coroutines.withContext
 class FileManagerViewModel : ViewModel() {
     private val _projects = MutableStateFlow<List<ProjectInfo>>(emptyList())
     val projects: StateFlow<List<ProjectInfo>> = _projects.asStateFlow()
+
+    /**
+     * Phase 15 — the Projects Hub card list (Spck-style). Built off the main
+     * thread with [ProjectHubStats] scans and cheap git metadata reads;
+     * `hasChanges` uses `git status` only when git is installed (D3), and
+     * every per-project failure degrades the card instead of the list.
+     */
+    private val _hubEntries = MutableStateFlow<List<ProjectHubEntry>>(emptyList())
+    val hubEntries: StateFlow<List<ProjectHubEntry>> = _hubEntries.asStateFlow()
 
     private val _activeProject = MutableStateFlow<ProjectInfo?>(null)
     val activeProject: StateFlow<ProjectInfo?> = _activeProject.asStateFlow()
@@ -55,12 +68,78 @@ class FileManagerViewModel : ViewModel() {
             val manager = ProjectManager(context)
             val loaded = withContext(Dispatchers.IO) { manager.listProjects() }
             _projects.value = loaded
+            _hubEntries.value = buildHubEntries(context, loaded)
             val current = _activeProject.value
             if (current != null) {
                 _activeProject.value = loaded.firstOrNull { it.name == current.name }
                 refreshTree()
             }
         }
+    }
+
+    /**
+     * Phase 15 — assembles the hub card model for every project: kind from
+     * the declared config (or the Phase 14 detector for `auto`), a bounded
+     * file scan, the branch read straight from `.git/HEAD` (no git process),
+     * and `hasChanges` from a porcelain status — the latter only while the
+     * packaged git is available, per the "no blocking git calls" guardrail.
+     */
+    private suspend fun buildHubEntries(
+        context: Context,
+        projects: List<ProjectInfo>
+    ): List<ProjectHubEntry> = withContext(Dispatchers.IO) {
+        val app = context.applicationContext
+        val git = runCatching { GitContext(app).manager() }.getOrNull()
+        projects.map { project ->
+            val scan = ProjectHubStats.scan(project.root)
+            val gitDir = File(project.root, ".git")
+            val isGit = gitDir.exists()
+            val branch = if (isGit) readBranchQuietly(project.root, gitDir) else null
+            val hasChanges = if (isGit && git != null) {
+                runCatching { git.status(project.root).files.isNotEmpty() }.getOrNull()
+            } else {
+                null
+            }
+            val autoPlan = if (project.config.type.trim().lowercase() == "auto") {
+                runCatching { ProjectRunDetector.detect(project.root, null) }.getOrNull()
+            } else {
+                null
+            }
+            ProjectHubEntry(
+                name = project.name,
+                kind = ProjectsHub.kindFor(project.config, autoPlan),
+                isGit = isGit,
+                branch = branch,
+                fileCount = scan.fileCount,
+                lastModified = scan.lastModified,
+                hasChanges = hasChanges
+            )
+        }
+    }
+
+    /**
+     * `.git/HEAD` for a normal repository; for a `.git` FILE (worktree/linked
+     * gitdir) follows `gitdir:` one hop. Null on any read failure — the card
+     * simply omits the branch chip.
+     */
+    private fun readBranchQuietly(projectRoot: File, gitEntry: File): String? = try {
+        val headFile = when {
+            gitEntry.isDirectory -> File(gitEntry, "HEAD")
+            gitEntry.isFile -> {
+                val pointer = gitEntry.readText().trim()
+                val dir = pointer.removePrefix("gitdir:").trim()
+                when {
+                    dir.isEmpty() -> null
+                    else -> File(File(dir).takeIf { File(dir).isAbsolute } ?: File(projectRoot, dir), "HEAD")
+                }
+            }
+            else -> null
+        }
+        headFile?.takeIf { it.isFile }?.let {
+            ProjectsHub.branchFromHeadFile(runCatching { it.readText() }.getOrNull())
+        }
+    } catch (_: Exception) {
+        null
     }
 
     fun openProject(context: Context, name: String) {
@@ -109,13 +188,53 @@ class FileManagerViewModel : ViewModel() {
             context = context,
             operation = { ProjectManager(context).createProject(name, type).getOrThrow() },
             onSuccess = { project ->
-                _projects.value = ProjectManager(context).listProjects()
+                val manager = ProjectManager(context)
+                _projects.value = manager.listProjects()
+                _hubEntries.value = buildHubEntries(context, _projects.value)
                 _activeProject.value = project
                 refreshTree()
                 StatsManager(context).incrementFilesCreated()
                 onCreated(project)
             }
         )
+    }
+
+    /**
+     * Phase 15 — rename a project folder (hub card ⋮ → Rename). Guards mirror
+     * [ProjectManager.createProject]: sanitized name, no existing target,
+     * target must stay a direct child of the projects root. The config's
+     * display name is rewritten after the move so metadata stays truthful.
+     */
+    fun renameProject(context: Context, oldName: String, newName: String, onRenamed: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val manager = ProjectManager(context)
+                val result = withContext(Dispatchers.IO) {
+                    val old = manager.project(oldName)
+                        ?: error(context.getString(R.string.project_missing))
+                    val safe = ProjectPathUtils.sanitizeProjectName(newName)
+                        ?: error(context.getString(R.string.invalid_project_name))
+                    if (safe == old.name) return@withContext old.name
+                    val target = File(manager.projectsRoot(), safe)
+                    if (target.exists()) error(context.getString(R.string.project_name_taken))
+                    if (!old.root.renameTo(target)) error(context.getString(R.string.rename_failed))
+                    manager.project(safe)?.let { moved ->
+                        runCatching { manager.writeConfig(moved.root, moved.config.copy(name = safe)) }
+                    }
+                    safe
+                }
+                if (_activeProject.value?.name == oldName) {
+                    _activeProject.value = withContext(Dispatchers.IO) { manager.project(result) }
+                }
+                loadProjects(context)
+                onRenamed(result)
+            } catch (e: Exception) {
+                _userMessage.value = e.message ?: context.getString(R.string.rename_failed)
+            } finally {
+                _isBusy.value = false
+            }
+        }
     }
 
     fun createFolder(context: Context, parentPath: String, name: String) {
@@ -214,7 +333,7 @@ class FileManagerViewModel : ViewModel() {
                 }
                 result.getOrThrow()
                 ensureImportedConfig(manager, project)
-                finishImport(manager, project, onImported)
+                finishImport(context, manager, project, onImported)
             } catch (e: Exception) {
                 _userMessage.value = "Import failed: ${e.message ?: "unknown error"}"
             } finally {
@@ -239,7 +358,7 @@ class FileManagerViewModel : ViewModel() {
                         active.root
                     ).getOrThrow()
                 }
-                finishImport(ProjectManager(context), active, onImported)
+                finishImport(context, ProjectManager(context), active, onImported)
             } catch (e: Exception) {
                 _userMessage.value = "Import failed: ${e.message ?: "unknown error"}"
             } finally {
@@ -285,7 +404,7 @@ class FileManagerViewModel : ViewModel() {
                     withContext(Dispatchers.IO) { manager.deleteProject(project.name) }
                     throw e
                 }
-                finishImport(manager, project, onImported)
+                finishImport(context, manager, project, onImported)
             } catch (e: Exception) {
                 _userMessage.value = "ZIP import failed: ${e.message ?: "unknown error"}"
             } finally {
@@ -300,11 +419,17 @@ class FileManagerViewModel : ViewModel() {
      * (same flow as the Phase 8 ZIP import) and open it. Partial clones are
      * cleaned up on failure. Public repositories clone without credentials;
      * a stored token (Settings → GitHub Account) is used automatically.
+     *
+     * Phase 15 — the Projects Hub clone dialog adds the optional [branch]
+     * (`--branch`) and [shallow] (`--depth 1`) arguments; with the defaults
+     * the Phase 13 behavior is bit-for-bit unchanged.
      */
     fun cloneFromGitHub(
         context: Context,
         url: String,
         requestedName: String,
+        branch: String? = null,
+        shallow: Boolean = false,
         onCloned: (ProjectInfo) -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -315,23 +440,27 @@ class FileManagerViewModel : ViewModel() {
                 if (!GitManager.isCloneableUrl(url.trim())) {
                     error(context.getString(R.string.clone_invalid_url))
                 }
+                val selectedBranch = branch?.trim()?.takeIf { it.isNotEmpty() }
+                if (selectedBranch != null && !ProjectsHub.isValidBranchName(selectedBranch)) {
+                    error(context.getString(R.string.clone_invalid_branch))
+                }
                 val manager = ProjectManager(context)
                 val baseName = requestedName.trim().ifBlank {
                     GitManager.repoNameFromUrl(url.trim()) ?: "cloned_repo"
                 }
-                val name = run {
-                    val base = ProjectPathUtils.sanitizeProjectName(baseName) ?: "cloned_repo"
-                    var candidate = base
-                    var suffix = 2
-                    while (File(manager.projectsRoot(), candidate).exists()) {
-                        candidate = "${base}_$suffix"
-                        suffix++
-                    }
-                    candidate
+                val name = withContext(Dispatchers.IO) {
+                    val existing = manager.projectsRoot().listFiles()
+                        ?.filter { it.isDirectory }
+                        ?.map { it.name }
+                        ?.toSet()
+                        .orEmpty()
+                    ProjectsHub.uniqueProjectName(baseName, existing)
                 }
                 val dest = File(manager.projectsRoot(), name)
                 try {
-                    withContext(Dispatchers.IO) { git.clone(url.trim(), dest) }
+                    withContext(Dispatchers.IO) {
+                        git.clone(url.trim(), dest, shallow = shallow, branch = selectedBranch)
+                    }
                 } catch (e: Exception) {
                     withContext(Dispatchers.IO) { dest.deleteRecursively() }
                     throw e
@@ -342,7 +471,7 @@ class FileManagerViewModel : ViewModel() {
                         manager.writeConfig(dest, ProjectConfig.defaultFor(name))
                     }
                 }
-                finishImport(manager, manager.project(name) ?: ProjectInfo(name, dest, ProjectConfig.defaultFor(name)), onCloned)
+                finishImport(context, manager, manager.project(name) ?: ProjectInfo(name, dest, ProjectConfig.defaultFor(name)), onCloned)
                 _userMessage.value = context.getString(R.string.clone_success, name)
             } catch (e: Exception) {
                 _userMessage.value = context.getString(
@@ -352,6 +481,92 @@ class FileManagerViewModel : ViewModel() {
             } finally {
                 _isBusy.value = false
             }
+        }
+    }
+
+    /**
+     * Phase 15 — populate the clone dialog's branch selector:
+     * `git ls-remote --heads` through the same engine (redaction, timeouts,
+     * askpass). A failure is returned, not thrown: the dialog falls back to
+     * free-text branch entry (offline, private repo without token, …).
+     */
+    fun fetchRemoteBranches(
+        context: Context,
+        url: String,
+        onResult: (Result<List<String>>) -> Unit
+    ) {
+        viewModelScope.launch {
+            val trimmed = url.trim()
+            if (!GitManager.isCloneableUrl(trimmed)) {
+                onResult(Result.failure(IllegalArgumentException(
+                    context.getString(R.string.clone_invalid_url)
+                )))
+                return@launch
+            }
+            try {
+                val git = GitContext(context.applicationContext).manager()
+                    ?: error(context.getString(R.string.git_not_installed_message))
+                val branches = withContext(Dispatchers.IO) { git.listRemoteBranches(trimmed) }
+                onResult(Result.success(branches))
+            } catch (e: Exception) {
+                onResult(Result.failure(e))
+            }
+        }
+    }
+
+    /**
+     * Phase 15 — hub card ⋮ → Pull. Runs `git pull` on the project through
+     * the Phase 13 engine (network timeout, redaction) and refreshes the hub
+     * so the M badge and branch chip reflect the new state.
+     */
+    fun pullProject(context: Context, projectName: String, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val manager = ProjectManager(context)
+                val project = withContext(Dispatchers.IO) { manager.project(projectName) }
+                    ?: error(context.getString(R.string.project_missing))
+                val git = GitContext(context.applicationContext).manager()
+                    ?: error(context.getString(R.string.git_not_installed_message))
+                withContext(Dispatchers.IO) { git.pull(project.root) }
+                loadProjects(context)
+                if (_activeProject.value?.name == projectName) refreshTree()
+                _userMessage.value = context.getString(R.string.hub_pull_success, projectName)
+                onDone()
+            } catch (e: Exception) {
+                _userMessage.value = context.getString(
+                    R.string.hub_pull_failed,
+                    e.message ?: context.getString(R.string.create_failed)
+                )
+            } finally {
+                _isBusy.value = false
+            }
+        }
+    }
+
+    /**
+     * Phase 15 — hub card ⋮ → Copy remote URL. Reads `.git/config` directly
+     * (no git process — works offline and before `pkg install git`); the
+     * parser prefers `[remote "origin"]`.
+     */
+    fun remoteUrlFor(context: Context, projectName: String, onFound: (String?) -> Unit) {
+        viewModelScope.launch {
+            val url = withContext(Dispatchers.IO) {
+                runCatching {
+                    val root = ProjectManager(context).project(projectName)?.root ?: return@runCatching null
+                    val config = File(root, ".git/config")
+                    if (!config.isFile) return@runCatching null
+                    // .git/config is a few KB at most; the 256 KiB read cap
+                    // keeps a pathological file from hanging the read.
+                    val text = config.bufferedReader().use { reader ->
+                        val chars = CharArray(256 * 1024)
+                        val n = reader.read(chars)
+                        if (n <= 0) "" else String(chars, 0, n)
+                    }
+                    ProjectsHub.remoteUrlFromConfig(text)
+                }.getOrNull()
+            }
+            onFound(url)
         }
     }
 
@@ -381,6 +596,7 @@ class FileManagerViewModel : ViewModel() {
                     )
                 }
                 _projects.value = withContext(Dispatchers.IO) { manager.listProjects() }
+                _hubEntries.value = buildHubEntries(context, _projects.value)
                 _activeProject.value = withContext(Dispatchers.IO) { manager.project(project.name) }
                 refreshTree()
                 _userMessage.value = context.getString(R.string.default_run_page_set, safePath)
@@ -439,13 +655,15 @@ class FileManagerViewModel : ViewModel() {
         _tree.value = FileTreeRepository.flattenVisible(root)
     }
 
-    private fun finishImport(
+    private suspend fun finishImport(
+        context: Context,
         manager: ProjectManager,
         project: ProjectInfo,
         onImported: (ProjectInfo) -> Unit
     ) {
-        _projects.value = manager.listProjects()
-        val refreshed = manager.project(project.name) ?: project
+        _projects.value = withContext(Dispatchers.IO) { manager.listProjects() }
+        _hubEntries.value = buildHubEntries(context, _projects.value)
+        val refreshed = withContext(Dispatchers.IO) { manager.project(project.name) } ?: project
         _activeProject.value = refreshed
         expandAllDirectories(refreshed.root)
         refreshTree()

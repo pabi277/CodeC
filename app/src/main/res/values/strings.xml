@@ -270,4 +270,43 @@
     <string name="git_renamed_from">renamed from %1$s</string>
     <string name="git_diff_title">Changes</string>
     <string name="git_diff_empty">No textual differences (binary file, mode change, or empty diff).</string>
+
+    <!-- Phase 15: Projects Hub & Unified Import (Spck-style) -->
+    <string name="hub_search_hint">Search projects</string>
+    <string name="hub_filter_all">All</string>
+    <string name="hub_filter_git">Git</string>
+    <string name="hub_filter_c">C</string>
+    <string name="hub_filter_python">Python</string>
+    <string name="hub_filter_web">Web</string>
+    <string name="hub_no_match">No projects match this filter</string>
+    <string name="hub_create_first">Create your first project</string>
+    <string name="hub_sheet_title">New Project</string>
+    <string name="hub_sheet_new">New Project</string>
+    <string name="hub_sheet_new_subtitle">Start from a template</string>
+    <string name="hub_sheet_clone">Clone Git Repository</string>
+    <string name="hub_sheet_clone_subtitle">Import from GitHub, GitLab, Bitbucket</string>
+    <string name="hub_sheet_zip_subtitle">From device storage</string>
+    <string name="hub_sheet_folder">Open Folder</string>
+    <string name="hub_sheet_folder_subtitle">Pick an existing folder</string>
+    <string name="clone_title">Clone Git Repository</string>
+    <string name="clone_advanced">Advanced</string>
+    <string name="clone_branch_label">Branch</string>
+    <string name="clone_shallow">Shallow clone (latest commit only)</string>
+    <string name="clone_fetch_branches">Fetch branches</string>
+    <string name="clone_no_branches_found">No branches listed — type a name instead</string>
+    <string name="clone_invalid_branch">Invalid branch name</string>
+    <string name="clone_token_hint">Private repos need a token — add it in Settings</string>
+    <string name="hub_open_action">Open</string>
+    <string name="hub_rename_project">Rename Project</string>
+    <string name="hub_copy_remote_url">Copy remote URL</string>
+    <string name="hub_remote_url_copied">Remote URL copied</string>
+    <string name="hub_no_remote_url">No remote URL configured</string>
+    <string name="hub_switch_branch">Switch Branch</string>
+    <string name="hub_switch_branch_soon">Branch switching arrives with Source Control (Phase 17)</string>
+    <string name="hub_pull_success">Pulled %1$s</string>
+    <string name="hub_pull_failed">Pull failed: %1$s</string>
+    <string name="project_missing">Project is no longer available</string>
+    <string name="invalid_project_name">Invalid project name</string>
+    <string name="project_name_taken">A project with that name already exists</string>
+    <string name="rename_project">Rename Project</string>
 </resources>
