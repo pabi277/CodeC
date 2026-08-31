@@ -1,8 +1,8 @@
 package com.codeci.ide.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,12 +15,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -28,10 +31,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,27 +44,35 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.DiffOp
 import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.GitFileState
+import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.GitControlViewModel
 import java.io.File
 
 /**
- * Phase 13 — the Source Control bottom sheet for an open project: branch
- * badge, change list with porcelain status letters, inline diff viewer,
- * pull, and one-tap COMMIT & PUSH against the packaged `git` binary.
+ * Phase 13 Source Control sheet, re-skinned mockup-exact (design:
+ * mockups/source-control.png, Phase 17 spec §2.1): "Source Control" title
+ * with an outlined `⌥ branch ▾` chip, a multiline commit-message box, the
+ * full-width filled COMMIT & PUSH button, a "Changes N" list where each row
+ * carries a typed file icon, its folder path, the porcelain letter and a
+ * per-file +/− stage toggle, and the PULL / REFRESH outlined button pair.
+ * Engine and diff viewer are the unchanged Phase 13 `GitManager`/`DiffEngine`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,20 +91,51 @@ fun GitControlSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            // ---- header: title + branch chip -----------------------------
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
             ) {
                 Text(
                     text = stringResource(R.string.source_control_title),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(
-                    onClick = { viewModel.refresh(context, projectRoot) },
-                    enabled = !state.busy && !state.loading
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.git_refresh))
+                state.status?.branch?.let { branch ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                SpckIcons.GitBranch,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = branch,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                Icons.Default.ExpandMore,
+                                contentDescription = stringResource(R.string.editor_drawer_switch_branch),
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
 
@@ -112,7 +154,7 @@ fun GitControlSheet(
                 state.loading || state.busy -> {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(28.dp))
                     }
@@ -124,44 +166,70 @@ fun GitControlSheet(
                     SheetGuidance(stringResource(R.string.git_not_a_repo_message))
                 }
                 else -> {
-                    val status = state.status
-                    if (status != null) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    // ---- commit message + COMMIT & PUSH --------------------
+                    OutlinedTextField(
+                        value = commitMessage,
+                        onValueChange = { commitMessage = it },
+                        placeholder = {
+                            Text(stringResource(R.string.git_commit_message_placeholder))
+                        },
+                        minLines = 3,
+                        maxLines = 5,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    )
+                    // Mockup-exact: light-lavender fill with dark text
+                    // (not the default primary/white button).
+                    Button(
+                        onClick = {
+                            viewModel.commitAndPush(context, projectRoot, commitMessage)
+                            commitMessage = ""
+                        },
+                        enabled = !state.busy && !state.loading &&
+                            state.isRepo && commitMessage.isNotBlank() &&
+                            !state.status?.files.isNullOrEmpty(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFC3A1F5),
+                            contentColor = Color(0xFF221A3E),
+                            disabledContainerColor = Color(0xFFC3A1F5).copy(alpha = 0.4f),
+                            disabledContentColor = Color(0xFF221A3E).copy(alpha = 0.6f)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .padding(top = 10.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.git_commit_push),
+                            letterSpacing = 1.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(top = 14.dp))
+
+                    // ---- changes list --------------------------------------
+                    val files = state.status?.files.orEmpty()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.git_changes_header),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
-                            Text(
-                                text = status.branch ?: stringResource(R.string.git_detached_head),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontFamily = FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (status.ahead > 0 || status.behind > 0) {
-                                Text(
-                                    text = buildString {
-                                        if (status.ahead > 0) append("↑${status.ahead} ")
-                                        if (status.behind > 0) append("↓${status.behind}")
-                                    },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                            TextButton(
-                                onClick = { viewModel.pull(context, projectRoot) },
-                                enabled = !state.busy
-                            ) {
-                                Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.git_pull))
-                            }
+                            Text(files.size.toString(), style = MaterialTheme.typography.labelMedium)
                         }
                     }
 
-                    HorizontalDivider()
-
-                    val files = state.status?.files.orEmpty()
                     if (files.isEmpty()) {
                         Text(
                             text = stringResource(R.string.git_working_tree_clean),
@@ -173,41 +241,70 @@ fun GitControlSheet(
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 340.dp)
-                                .padding(vertical = 4.dp)
+                                .heightIn(max = 320.dp)
+                                .padding(vertical = 2.dp)
                         ) {
-                            items(files, key = { it.path }) { change ->
-                                GitChangeRow(change) {
-                                    viewModel.openDiff(context, projectRoot, change.path)
+                            itemsIndexed(files, key = { _, change -> change.path }) { index, change ->
+                                GitChangeRow(
+                                    change = change,
+                                    projectFolderName = projectRoot.name,
+                                    onOpenDiff = {
+                                        viewModel.openDiff(context, projectRoot, change.path)
+                                    },
+                                    onToggleStage = {
+                                        viewModel.toggleStage(context, projectRoot, change)
+                                    }
+                                )
+                                // Mockup: a hairline between every change row.
+                                if (index < files.lastIndex) {
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    )
                                 }
                             }
                         }
                     }
 
                     HorizontalDivider()
-                    Spacer(modifier = Modifier.height(8.dp))
 
-                    OutlinedTextField(
-                        value = commitMessage,
-                        onValueChange = { commitMessage = it },
-                        label = { Text(stringResource(R.string.git_commit_hint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    // ---- PULL / REFRESH -------------------------------------
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.End
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                viewModel.commitAndPush(context, projectRoot, commitMessage)
-                                commitMessage = ""
-                            },
-                            enabled = !state.busy && !state.loading &&
-                                state.isRepo && commitMessage.isNotBlank() &&
-                                !state.status?.files.isNullOrEmpty()
+                        OutlinedButton(
+                            onClick = { viewModel.pull(context, projectRoot) },
+                            enabled = !state.busy && !state.loading,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
                         ) {
-                            Text(stringResource(R.string.git_commit_push))
+                            // Mockup: the pull mark is the download arrow (↓ over a line).
+                            Icon(
+                                Icons.Default.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.git_pull), letterSpacing = 0.8.sp)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.refresh(context, projectRoot) },
+                            enabled = !state.busy && !state.loading,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.refresh), letterSpacing = 0.8.sp)
                         }
                     }
                 }
@@ -236,33 +333,58 @@ private fun SheetGuidance(text: String) {
     )
 }
 
+/** Typed icon per extension — Spck marks python/html files distinctly. */
 @Composable
-private fun GitChangeRow(change: GitFileChange, onClick: () -> Unit) {
+private fun GitFileIcon(name: String) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    when {
+        name.endsWith(".py", ignoreCase = true) ->
+            Icon(SpckIcons.PythonLogo, contentDescription = null, modifier = Modifier.size(24.dp))
+        WebFileSupport.isHtml(name) ->
+            Icon(SpckIcons.HtmlShield, contentDescription = null, modifier = Modifier.size(24.dp))
+        else ->
+            Icon(SpckIcons.FileLine, contentDescription = null, modifier = Modifier.size(24.dp), tint = muted)
+    }
+}
+
+@Composable
+private fun GitChangeRow(
+    change: GitFileChange,
+    projectFolderName: String,
+    onOpenDiff: () -> Unit,
+    onToggleStage: () -> Unit
+) {
     val accent = badgeColor(change.state)
+    val staged = change.x != ' '
+    val fileName = change.path.substringAfterLast('/')
+    val parent = change.path.substringBeforeLast('/', "")
+    val folderPath = if (parent.isEmpty()) "/$projectFolderName" else "/$projectFolderName/$parent"
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp)
+            .clickable(onClick = onOpenDiff)
+            .padding(vertical = 8.dp, horizontal = 4.dp)
     ) {
         Box(
             modifier = Modifier
-                .background(accent.copy(alpha = 0.18f), RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .size(30.dp)
+                .padding(end = 10.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = change.badge,
-                color = accent,
-                style = MaterialTheme.typography.labelLarge,
-                fontFamily = FontFamily.Monospace
-            )
+            GitFileIcon(fileName)
         }
-        Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = change.path,
+                text = fileName,
                 style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = folderPath,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -275,6 +397,37 @@ private fun GitChangeRow(change: GitFileChange, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+        Text(
+            text = change.badge,
+            color = accent,
+            style = MaterialTheme.typography.labelLarge,
+            fontSize = 16.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(end = 12.dp)
+        )
+        // Per-file stage/unstage toggle (+/−), mockup-exact outlined square.
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                    shape = RoundedCornerShape(10.dp)
+                )
+                .clickable(onClick = onToggleStage),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                SpckIcons.PlusMinus,
+                contentDescription = stringResource(
+                    if (staged) R.string.git_unstage else R.string.git_stage
+                ),
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -316,7 +469,7 @@ private fun GitDiffDialog(
                 if (loading) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(28.dp))
                     }
@@ -366,7 +519,7 @@ private val DiffAddColor = Color(0xFF66BB6A)
 private val DiffRemoveColor = Color(0xFFEF5350)
 
 private fun badgeColor(state: GitFileState): Color = when (state) {
-    GitFileState.MODIFIED -> Color(0xFFFFB74D)
+    GitFileState.MODIFIED -> Color(0xFFE6B33C)
     GitFileState.ADDED -> DiffAddColor
     GitFileState.DELETED -> DiffRemoveColor
     GitFileState.UNTRACKED -> Color(0xFF9E9E9E)
