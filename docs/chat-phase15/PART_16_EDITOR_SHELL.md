@@ -308,3 +308,38 @@ Tests: `PythonCacheIgnoreTest` ×10 (policy + real temp-dir IO incl.
 idempotent re-run, user-gitignore skip, pointer-file follow, append
 preservation). CI green first try: run `33392053258` @ `435c5f4` (device APK
 = artifact `CodeC-IDE` of that run).
+
+**Device round 2 (2026-08-31, owner: "something is off about the ui … I want
+exactly same ui") — mockup-exact re-skin of the editor shell** (mockups:
+`editor-screen.png`, `editor-drawer.png`):
+
+- *Top bar:* now exactly `☰ + tab strip + 🔍 + ⋮ + ▶ RUN`. The former second
+  toolbar row (undo/redo/save/format + keys-row toggle) is **gone** — Undo /
+  Redo and Show/Hide keys row live in the ⋮ overflow; the Phase 14 preview eye
+  moved into the overflow as "Preview". RUN is a ghost green `▶ RUN`
+  (no filled button chrome). App bar sits on `surface`.
+- *Tabs:* bold active label + a **3dp accent underline anchored to the app
+  bar's bottom edge** (tab boxes fill the bar height; labels stay centered);
+  ✕ on every tab (the mockups show it even on a single tab); ● dirty dot and
+  long-press menu unchanged.
+- *Code surface:* the line-number gutter gained the mockup's hairline vertical
+  divider at its right edge (total gutter width unchanged → completion-popup
+  anchor math untouched).
+- *Keys row:* keycap style per the mockup — 40dp tall, 10dp radius, hairline
+  border, 44dp min width (56dp TAB), 8dp gaps on `surfaceVariant`.
+- *Status bar:* one muted line of ` · `-separated segments
+  (`Ln x, Col y · UTF-8 · <lang> · Spaces: n`), tappable LF/CRLF chip,
+  selection count and the errors badge only when present (no "Diagnostics"
+  placeholder when clean).
+- *Drawer:* project name (bold `titleLarge`) with the purple branch glyph
+  (badge = change count) on the right; outlined `⌥ branch ▾` chip below;
+  four equal tree-toolbar columns (NoteAdd / CreateNewFolder / Refresh /
+  custom CollapseAll glyph); tree rows with `›`/`⌄` chevrons, outline folder
+  mark, **typed file icons** (Python logo / HTML shield / book / generic
+  document), white text on the 26%-purple selected-row highlight, launch
+  default as a small blue dot, M/A/D/? letters; footer = **Source Control**
+  (badge) + **Switch Branch** (the old header "Switch Branch" bolt button and
+  "Editor Settings" row are gone — Settings is one bottom-nav tap away).
+- No engine changes; `EditorKeySet`/`FileTreeCollapse`/line-endings/launch
+  default logic and their tests untouched. All new glyphs live in
+  `ui/components/SpckIcons.kt` (clean-room, hand-drawn).

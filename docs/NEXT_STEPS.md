@@ -463,12 +463,24 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 
 ## Phases 15–17 — Spck-style Editor & Project Experience (PLANNED, design/spec only)
 
-📋 **Phase 15 device round 1 closed on `83ba499` (CI green `33385105931`) —
-owner re-test of the two fixes outstanding** (record: [`chat-phase15/PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md)
+📋 **Phase 15 device round 1 closed on `83ba499` (CI green `33385105931`)** (record: [`chat-phase15/PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md)
 §6). **Phase 16 IMPLEMENTED & CI-GREEN (2026-08-31, same branch; device round 1:
 python `__pycache__` git-noise fixed via `PythonCacheIgnore`, CI green
-`33392053258` @ `435c5f4` — device re-check pending)** (record: [`chat-phase15/PART_16_EDITOR_SHELL.md`](chat-phase15/PART_16_EDITOR_SHELL.md)
-§6). **Phase 17 remains spec-only.** Started on the owner's instructions
+`33392053258` @ `435c5f4`)** (record: [`chat-phase15/PART_16_EDITOR_SHELL.md`](chat-phase15/PART_16_EDITOR_SHELL.md)
+§6). **Device round 2 (2026-08-31, owner: "something is off about the ui — I
+want exactly same ui") — mockup-exact re-skin of the Phase 15/16 UI:** flat
+5-tab bar (Home·Projects·Editor·Terminal·Settings, the mockup's exact set),
+pill filter chips, 16dp cards with 56dp type squares + the Python logo mark,
+mockup-color `+` sheet, clone dialog rebuilt (labels above fields, QR icon,
+branch dropdown, Settings link), editor top bar reduced to `☰ tabs  ⋮ ▶ RUN`
+(second toolbar row → overflow), 3dp tab underline on the bar's bottom edge,
+keycap keys row, dot-separated status bar, gutter divider, drawer re-skin
+(branch chip, 4-column toolbar, typed file icons, purple selected row,
+Source Control + Switch Branch footer), and the Source Control sheet rebuilt
+to `mockups/source-control.png` incl. per-file stage toggle
+(`GitManager.stageFile`/`unstageFile`, +2 host tests). Hand-drawn glyphs in
+`ui/components/SpckIcons.kt` (clean-room — public mockups only, no copied
+assets). **Phase 17 remains spec-only.** Started on the owner's instructions
 ("i going to start phase 15" → "Start phase 15"). Originally
 added 2026-08-31 on the owner's request to clone the
 [Spck Editor / Git Client](https://play.google.com/store/apps/details?id=io.spck)
