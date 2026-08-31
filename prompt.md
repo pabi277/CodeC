@@ -129,10 +129,10 @@ of assuming one.
    `index.html` watch/auto-reload); Output Panel Open Preview action. Host
    tests: `ServerPortDetectorTest` (10), `ServerRunnerTest` (7),
    `ProjectScaffoldTest` (8), `ProjectConfigTest` (+8),
-   `ServerScaffoldE2ETest` (4 — auto→Flask included),
-   `DemoProjectSeedTest` (4), `ProjectRunDetectorTest` (13).
-   **`Build APK` GREEN** (latest: `33358083232`; auto-detect run pending).
-   Plan + design decisions D1–D10 + device recipe:
+   `ServerScaffoldE2ETest` (4 — auto→Flask on port 5099, isolated from the
+   exact-5000 preset test), `DemoProjectSeedTest` (4),
+   `ProjectRunDetectorTest` (13). **`Build APK` GREEN** — tip run
+   `33360571874`. Plan + design decisions D1–D10 + device recipe:
    `docs/chat-phase14/PART_14_IMPLEMENTATION.md`. **Remaining: the owner's
    device round (§5 recipe) — then, on the owner's explicit word, the PR.**
 3. Phase 15 (CodeCApi device capabilities): `docs/chat-phase15/` (skeleton,

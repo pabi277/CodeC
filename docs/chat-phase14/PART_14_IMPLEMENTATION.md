@@ -170,8 +170,15 @@ way (step 4–6 only; C needs a RUN again after editing `server.c`).
 
 ## 6. CI
 
-`Build APK` **GREEN — run `33352164172`** (assemble `:app:assembleDebug` +
-`:app:testDebugUnitTest` + `:app:lintDebug` via the gradle-bootstrap bridge).
+`Build APK` **GREEN — runs `33352164172`**, **`33358083232`** (bundled demo,
+D9) and **`33360571874`** (Auto projects, D10 — the current tip: assemble
+`:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` via the
+gradle-bootstrap bridge). E2E note: the auto-detection E2E test patches its
+temp Flask copy to port **5099** so it can never collide with the exact-5000
+preset test (two CI rounds failed with `Connection refused` on 5000 — a
+port/socket race between the two tests, not a product bug; the template's
+bind-line format detection is unchanged and still verified on 5000 by the
+preset test).
 Four earlier rounds failed, each caught by CI and fixed (evidence-first, as
 recorded here):
 

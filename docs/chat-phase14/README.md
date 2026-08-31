@@ -10,9 +10,10 @@ presets with runnable-out-of-the-box scaffold (stdlib fallback, page served from
 auto-open Web Preview, live address bar + auto-reload. **No `[repo-build]`**
 (Flask/FastAPI are pip packages; the C server uses the embedded TCC).
 `Build APK` green: `33352164172` (four CI-caught bugs fixed along the way —
-see the implementation record), and **`33355693242`** adds
-`ServerScaffoldE2ETest` — the presets' real build/run commands + `ServerRunner`
-+ loopback HTTP + edit-index.html-hot-read, all verified on CI. The app now
+see the implementation record); `33355693242` adds `ServerScaffoldE2ETest` —
+the presets' real build/run commands + `ServerRunner` + loopback HTTP +
+edit-index.html-hot-read, all verified on CI; **tip `33360571874` green with
+Auto (detect) + bundled demo**. The app now
 also **ships a bundled `demo_flask` project** in the Files tab (D9 — one-time
 seed, never overwrites; `DemoProjectSeedTest`: 4) and the **New Project
 wizard defaults to Auto (detect)** (D10, owner request 2026-08-31): no type
