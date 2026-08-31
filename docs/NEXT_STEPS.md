@@ -461,6 +461,54 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 
 ---
 
+## Phases 15–17 — Spck-style Editor & Project Experience (PLANNED, design/spec only)
+
+📋 **Planned (no code yet), added 2026-08-31 on the owner's request** to clone the
+[Spck Editor / Git Client](https://play.google.com/store/apps/details?id=io.spck)
+project & editor experience (import git project, project list, full editor look &
+feel). Client-only; reuses the Phase 8/9/11/13/14 engines — a UI/UX parity + gap
+fill, not a rewrite. Spec + phone mockups in [`chat-phase15/`](chat-phase15/).
+
+- **Phase 15 — Projects Hub & Unified Import.** Redesigned Projects screen (card
+  list, filter chips, search) + one `+` sheet: **New Project / Clone Git Repo /
+  Import ZIP / Open Folder**, per-project git overflow actions.
+  [`PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md).
+- **Phase 16 — Spck-style Editor Shell.** Nav drawer file tree with git status,
+  refined tabs, snippet/extra-keys keyboard row, readability controls,
+  launch-default HTML preview, errors badge.
+  [`PART_16_EDITOR_SHELL.md`](chat-phase15/PART_16_EDITOR_SHELL.md).
+- **Phase 17 — In-editor Source Control & Branching.** Source Control sheet,
+  in-tree M/A/D/? status letters, tap-to-diff, Switch Branch (+stash), Pull/Push
+  menu items, merge-conflict marking.
+  [`PART_17_SOURCE_CONTROL.md`](chat-phase15/PART_17_SOURCE_CONTROL.md).
+- **Phase 18 — CodeCApi Device Capabilities** (was Phase 15) moved to the end:
+  [`chat-phase18/`](chat-phase18/).
+
+> Standing rule still applies: no PR/merge without the owner's explicit command.
+
+---
+
+## Phase 19 — Terminal Parity (Termux-quality terminal) (PLANNED, design/spec only)
+
+📋 **Planned (no code yet), added 2026-08-31 on the owner's report** that the
+terminal (a) prints downloads only at the end, (b) overlaps letters, and (c)
+doesn't reflow on zoom-out. Re-implements Termux-quality behavior in CodeC's own
+clean-room emulator (⚖️ **not** copying GPLv3 Termux code). Client-only, pure
+Kotlin/Compose, host-testable. Spec + before/after mockup in
+[`chat-phase19/`](chat-phase19/).
+
+- **Phase 19.1 — Scrollback & screen reflow on resize/zoom** (fixes zoom-out not
+  refilling). [`PART_19_1_REFLOW.md`](chat-phase19/PART_19_1_REFLOW.md).
+- **Phase 19.2 — Integer-cell crisp rendering** (fixes letter overlap).
+  [`PART_19_2_RENDERING.md`](chat-phase19/PART_19_2_RENDERING.md).
+- **Phase 19.3 — Live render cadence & streaming output** (fixes "prints at the
+  end"). [`PART_19_3_LIVE_OUTPUT.md`](chat-phase19/PART_19_3_LIVE_OUTPUT.md).
+
+> Independent of Phases 15–18; can be scheduled first. No PR/merge without the
+> owner's explicit command.
+
+---
+
 ## Phase 10 — Package & Command Hub (Modules Screen Upgrade)
 
 ✅ **IMPLEMENTED (2026-08-28 on `arena/01a0482c-codec`).**

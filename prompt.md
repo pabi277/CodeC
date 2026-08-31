@@ -11,132 +11,109 @@ Read `docs/JOURNEY.md` and `docs/NEXT_STEPS.md` first, **before doing anything
 else**, then report back what you found and the current git/PR/CI state before
 making any change.
 
-You are continuing **CodeC** (an Android C IDE). Each chat session gets its own
+You are continuing **CodeC** (an Android C / multi-language IDE with its own
+Termux-style terminal + signed package repo). Each chat session gets its own
 `arena/*` session branch — verify the actual branch with `git status` instead
-of assuming one.
+of assuming one. Commit and push to the SESSION branch only; never push to
+`main` or any other branch.
 
 **WHERE THINGS STAND (2026-08-31):**
 
-- **Phases 3–11 (incl. the Package Hub, Phase 10) are all COMPLETE and
-  device-accepted. Do not redo, re-debug or "improve" any of them** unless the
-  identical symptom reappears AND you have regression evidence:
-  - Phase 3 (repo/bootstrap/signing) ✅ device-complete (PR #15). Parts A–D.
-  - Phase 4 (storage, install UX, trust channel, settings parity, catalog,
-    clipboard, notifications) ✅ device-verified 2026-08-26.
-  - Phase 5 (KI fixes, web preview, capabilities, file share) ✅ merged PR #23.
-  - Phase 6 (terminal UX) + Phase 10 (Package & Command Hub) ✅ merged PR #25.
-  - Phase 7 (multi-terminal sessions) ✅ merged PR #26, device-verified.
-  - Phase 8 (Projects & file tree, ZIP round trip, web run) ✅ merged PR #27
-    at `348eb03` after the owner confirmed the export → re-import round trip.
-  - **Phase 9 (Editor Foundation: tabs, undo/redo, find/replace, format,
-    bracket matching, compiler squiggles, status bar) + device rounds 9.1
-    (in-editor file drawer, Save-to-project, per-file Run-in-terminal, loopback
-    HTTP preview server) and 9.2 (simpler toolbar, open-folder-from-editor
-    sheet, single files as a first-class context)** ✅ CI green
-    (`33239651690`, `33241237168`, `33243620762`), owner device rounds passed
-    ("Good working" → "Yes working"), closed 2026-08-29 by the owner's
-    finalization instruction → **PR #28 MERGED to `main` at `961e942`** — main
-    has everything through Phase 9.2. Records: `docs/chat-phase9/` (device
-    recipes = regression checklist).
-  - **Phase 11 (Output Panel & Integrated Run) — ✅ COMPLETE & DEVICE-ACCEPTED
-    2026-08-30, MERGED via PR #29 at `771f58f`** (owner: "Ok start phase 11";
-    CI green through `33293358085`; all device rounds passed; owner's final
-    word: "All of the check passed"; merged on the owner's command "Please
-    merge the pull request"). Split-screen Output Panel + draggable
-    splitter; RUN ▶ builds/executes via the real `cc` toolchain (project.json
-    build/run, or `cc <file> -o a.out && ./a.out` for single files) with
-    streaming, Stop, Copy/Clear, auto-scroll, clickable `file:line:col:` error
-    lines → editor jump + Phase 9 squiggles, and an Open-in-Terminal escape
-    hatch. **Interactive runs on a real PTY** (D9, `InteractiveRunSession`
-    over PtyNative/PtySession: per-prompt output, one input per scanf, echo,
-    no timeout — Stop kills; piped fallback); one-tap **Add missing ;** Apply
-    fix (D6, incl. TCC no-column parsing + brace-line fallback); honest
-    timeout wording (D7); panel input row + terminal escape (D8). New:
-    `ExecutionRunner`, `OutputLineParser`, `OutputPanelView`,
-    `InteractiveRunSession` (+`PtyLineBuffer`, `decodeExitStatus`);
-    `TerminalHandoff.compileParts`/`projectRunParts`; ~30 new/updated host
-    unit tests. Legacy in-editor `runCode`/`CompilerService` pipeline removed
-    (D1 — editor RUN now matches the terminal's `cc`; the Settings "Compiler
-    Engine" picker's editor effect is superseded, flagged as a follow-up).
-    **PR #29 MERGED to `main` at `771f58f` (2026-08-30).**
-  - **Phase 12 (Multi-Language Support, Python & Code Intelligence) ✅
-    COMPLETE & DEVICE-ACCEPTED — PR #30 MERGED to `main` at `260d8b6`
-    (2026-08-30). Main has everything through Phase 12.** Multi-language
-    highlighter, autocomplete popup, python/python-pip in the repo (device:
-    "Now python is solved"), python RUN path. See item 1 of NEXT UP and
-    `docs/chat-phase12/`.
-  - **Phase 13 (GitHub & Git Integration) ✅ COMPLETE, DEVICE-ACCEPTED &
-    MERGED — PR #31 merged to `main` at `006515a` (2026-08-31).** Main now
-    has everything through Phase 13. Acceptance record:
-    `PART_13_GITHUB.md` §8.
-  - **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) 🚧
-    IMPLEMENTED & CI-GREEN on `arena/01a05421-codec` (2026-08-31, on the
-    owner's "You have to work on phase 14")** — client-only, **no
-    `[repo-build]`** (Flask/FastAPI are pip packages; the C server uses the
-    embedded TCC). `Build APK` `33352164172` green (assemble + unit tests +
-    lint; four CI-caught bugs fixed along the way — see the implementation
-    record). Server Runner + port monitor, Web Preview live mode,
-    Flask/FastAPI/C-microservice presets serving `index.html` per request
-    (stdlib fallback, out-of-the-box), templates picker, a **bundled
-    `demo_flask` project ships in Files** (D9 — one-time seed, never
-    overwrites), and the wizard defaults to **Auto (detect)** (D10: no type
-    selection — RUN ▶ infers Flask/FastAPI/C-microservice/static-web/Python/C
-    from the project's files). **Device recipe pending (owner):**
-    `PART_14_IMPLEMENTATION.md` §5.
-- **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
-  `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
-  fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`
-  does not exist in Compose BOM 2024.09.00; `ProcessBuilder.redirect*(File)`
-  needs API 26 vs minSdk 24 → use daemon-thread stream pumps). The local
-  sandbox has **no Java runtime**; CI is the only test executor. Run the
-  editor suites locally-purposely via:
-  `./gradlew :app:testDebugUnitTest --tests 'com.codeci.ide.EditorUndoManagerTest'`
-  (…`FindReplaceTest`, `BracketMatcherTest`, `CodeFormatterTest`,
-  `CompilerDiagnosticsTest`, `TerminalHandoffTest`, `WebPreviewServerTest`).
-- **Sandbox quirk (hit twice):** the Arena sandbox can reset the checkout so
-  HEAD sits on the base/main commit while the working files keep newer
-  content. If `git log` disagrees with the files, realign WITHOUT touching
-  the worktree: `git fetch origin <session-branch> && git reset --mixed
-  FETCH_HEAD`, then `git diff --stat` to confirm what actually differs.
-  Never `reset --hard`.
+- **Phases 3–14 are all COMPLETE, DEVICE-ACCEPTED and MERGED to `main`. Do not
+  redo, re-debug or "improve" any of them** unless the identical symptom
+  reappears AND you have regression evidence. Merged PRs and the `main` tip:
+  - Phase 3 (repo/bootstrap/signing) ✅ PR #15. Parts A–D device-verified.
+  - Phase 4 (storage, install UX, trust, settings, catalog, clipboard,
+    notifications) ✅ device-verified 2026-08-26.
+  - Phase 5 (KI fixes, web preview, capabilities) ✅ PR #23.
+  - Phase 6 (terminal UX) + Phase 10 (Package & Command Hub) ✅ PR #25.
+  - Phase 7 (multi-terminal sessions) ✅ PR #26.
+  - Phase 8 (projects, folder tree, ZIP round trip, web run) ✅ PR #27.
+  - Phase 9 (editor foundation + 9.1/9.2) ✅ PR #28 at `961e942`.
+  - Phase 11 (Output panel & integrated run) ✅ PR #29 at `771f58f`.
+  - Phase 12 (multi-language, Python, code intelligence) ✅ PR #30 at
+    `260d8b6` (published python 3.14.6-1 + python-pip 26.2.1).
+  - Phase 13 (GitHub & Git integration) ✅ PR #31 at `006515a`.
+  - **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) ✅
+    MERGED — PR #32 at `main` = `0b591e2` (2026-08-31).** Server Runner +
+    port monitor, Web Preview live mode, Flask/FastAPI/C-microservice presets,
+    bundled `demo_flask`, Auto (detect) projects (D10). `[client-only]` — no
+    `[repo-build]`. Record: `docs/chat-phase14/PART_14_IMPLEMENTATION.md`.
+- **`main` is at `0b591e2` and current through Phase 14.**
+
+- **Phases 15–19 are PLANNED — design/spec + phone mockups ONLY, NO code yet.**
+  They live under `docs/chat-phase15/` and `docs/chat-phase19/` and are tracked
+  in **PR #33 (docs-only, OPEN on `arena/01a05668-codec`)** — awaiting the
+  owner's word to merge. Two owner requests drove them:
+  - **Phases 15–17 — Spck Editor clone** (make CodeC's project + editor UX
+    mirror **Spck Editor / Git Client**): 15 = Projects Hub & Unified Import
+    (card list, filter chips, search, one `+` sheet → New Project / Clone Git
+    Repo / Import ZIP / Open Folder, per-project git actions); 16 = Spck-style
+    Editor Shell (nav drawer file tree with git status, refined tabs, snippet/
+    extra-keys keyboard row, readability controls, launch-default HTML preview,
+    errors badge); 17 = In-editor Source Control & Branching (SC sheet, in-tree
+    M/A/D/? status letters, tap-to-diff, Switch Branch + stash, Pull/Push,
+    merge-conflict marking). Docs: `docs/chat-phase15/` (README +
+    PART_15/16/17 + `mockups/`).
+  - **Phase 18 — CodeCApi Device Capabilities** (WAS Phase 15) renumbered and
+    moved to the end: `docs/chat-phase18/PART_18_CODEAPI.md`.
+  - **Phase 19 — Terminal Parity (Termux-quality terminal)**: fixes three
+    owner-reported bugs, root-caused from the current code — 19.1 scrollback/
+    screen **reflow on zoom/resize** (`TerminalBuffer.resize` only does a
+    rectangular copy today, no reflow); 19.2 **integer-cell crisp rendering**
+    (fractional `cellW` + fake-bold cause glyph overlap); 19.3 **live render
+    cadence** (conflating `StateFlow` + per-chunk `publish()` drop progress
+    frames → output appears only at the end). Docs: `docs/chat-phase19/`
+    (README + PART_19_1/2/3 + before/after mockup). Independent of 15–18;
+    can be implemented first.
+
+- **CLEAN-ROOM LAW (owner, 2026-08-31) — replicate FEATURES, never COPY code.**
+  When a phase clones another app (Spck's UX in 15–17, Termux's terminal
+  quality in 19), build the same screens/files/flows/behaviors as **original
+  code** in CodeC's own Kotlin/Compose, reusing CodeC's existing engines.
+  - Closed-source apps (Spck): match visible behavior only (mockups + public
+    docs); never decompile or lift assets/code.
+  - GPL/copyleft (Termux is GPLv3): read public specs and learn the TECHNIQUE
+    (VT100/xterm/ECMA-48, reflow, render cadence) and re-implement; **never
+    paste GPL source** — it would relicense CodeC and breaks the no-`com.termux`
+    invariant. Same rule is recorded in `docs/TERMINAL_PLAN.md` §B.10.
+- **RESEARCH WHEN NEEDED (owner, 2026-08-31).** The phase docs are a starting
+  point, not the final word. Before/while implementing, do additional research
+  if anything is unclear (re-check the app's public docs, Material 3 / Compose
+  patterns, public terminal specs, coroutine patterns, and the CodeC engine you
+  build on), record findings as a short "Research notes" block in the part, and
+  resolve open questions with a linked source before marking it done. Recorded
+  in `docs/TERMINAL_PLAN.md` §B.11.
+
+- **Unit tests:** `Build APK` CI runs `:app:assembleDebug` +
+  `:app:testDebugUnitTest` + `:app:lintDebug` via the gradle-bootstrap bridge —
+  a failing test or a lint ERROR fails the run. **The local sandbox has NO Java
+  runtime; CI is the only test executor.** Write host-unit-testable, Android-free
+  logic (the pattern for `TerminalBuffer`, `AnsiParser`, `GitManager`,
+  `ServerPortDetector`, etc.) so CI can verify it.
+- **Sandbox quirk (hit before):** the Arena sandbox can reset the checkout so
+  HEAD sits on the base/main commit while the working files keep newer content.
+  If `git log` disagrees with the files, realign WITHOUT touching the worktree:
+  `git fetch origin <session-branch> && git reset --mixed FETCH_HEAD`, then
+  `git diff --stat`. **Never `reset --hard`.**
 - **Device APK:** artifact `CodeC-IDE` of the latest green `Build APK` run
-  (`gh run download <run-id> -n CodeC-IDE`). The sandbox cannot install or
-  test on device — the owner runs recipes and pastes transcripts.
+  (`gh run download <run-id> -n CodeC-IDE`). The sandbox cannot install or test
+  on device — the owner runs the recipes and pastes transcripts.
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phases 11–13 are all COMPLETE, DEVICE-ACCEPTED, and MERGED**
-   (PR #29 → `main` at `771f58f`; **PR #30 (Phase 12) → `main` at `260d8b6`**;
-   **PR #31 (Phase 13) → `main` at `006515a`, 2026-08-31**). Nothing pending
-   on any of them. Phase 12's record:
-   implemented on `arena/01a05221-codec` (python + python-pip in
-   `CODEC_REPOSITORY_PACKAGES` with tk/tkinter (X11) recipe override,
-   multi-language highlighter, autocomplete popup, python run path, 27 host
-   tests; `[repo-build]` published python 3.14.6-1 + python-pip 26.2.1;
-   device recipe FULLY PASSED — owner: "Now python is solved" / "Worked
-   properly" / "Both working"), then merged as PR #30 on the owner's
-   explicit command.
-2. **Phase 14 (Mixed-Language, Server WebViews & Long-Tail Ecosystem) is
-   IMPLEMENTED & CI-GREEN on `arena/01a05421-codec`** (2026-08-31, on the
-   owner's "You have to work on phase 14"): background `ServerRunner` +
-   `ServerPortDetector` bind-line recognition; `ProjectConfig` v1 with
-   optional `port`/`previewUrl` + presets `python-flask` (5000),
-   `python-fastapi` (8000), `c-microservice` (8080); `ProjectScaffold`
-   templates — Flask/FastAPI preferred real framework else stdlib
-   `http.server` fallback, page = `index.html` read per request; C socket
-   server (TCC); Files New Project template picker; RUN ▶ → background
-   server → Output summary URL → Web Preview auto-open (live address bar,
-   `index.html` watch/auto-reload); Output Panel Open Preview action. Host
-   tests: `ServerPortDetectorTest` (10), `ServerRunnerTest` (7),
-   `ProjectScaffoldTest` (8), `ProjectConfigTest` (+8),
-   `ServerScaffoldE2ETest` (4 — auto→Flask on port 5099, isolated from the
-   exact-5000 preset test), `DemoProjectSeedTest` (4),
-   `ProjectRunDetectorTest` (13). **`Build APK` GREEN** — tip run
-   `33360571874`. Plan + design decisions D1–D10 + device recipe:
-   `docs/chat-phase14/PART_14_IMPLEMENTATION.md`. **Remaining: the owner's
-   device round (§5 recipe) — then, on the owner's explicit word, the PR.**
-3. Phase 15 (CodeCApi device capabilities): `docs/chat-phase15/` (skeleton,
-   not started).
+1. **Merge PR #33** (docs for Phases 15–19) if the owner says so — it is
+   docs-only and CI-green. Do not merge without the literal command.
+2. **Implement a planned phase.** The owner picks. Recommended entry points:
+   - **Phase 19 (Terminal Parity)** — fixes real, reported terminal bugs;
+     `[client-only]`, pure Kotlin/Compose, independent of 15–18; each of 19.1/
+     19.2/19.3 is separately shippable and host-testable.
+   - **Phases 15 → 16 → 17 (Spck clone)** — run in order; reuse Phase 8/9/11/
+     13/14 engines; UI/UX parity + gap fill, not a rewrite.
+   - **Phase 18 (CodeCApi tail)** — last.
+   Re-verify each plan against the current code before writing anything, follow
+   the CLEAN-ROOM LAW and RESEARCH-WHEN-NEEDED rule, and record design
+   decisions (D1, D2, …) in the part doc as you go.
 
 **SELF-DISTRUST PROTOCOL — follow strictly:**
 
@@ -145,16 +122,18 @@ of assuming one.
 2. **Evidence before hypothesis.** Reproduce/observe first (device output, CI
    log, file contents), *then* diagnose. Never commit a fix on a guess.
 3. **Do not redo or re-debug anything marked COMPLETE / ✅** in the docs.
-4. **Never trigger an expensive action** (CodeC package repo build ~60–100
-   min, release, destructive device test, force-push) without explicit user
+4. **Never trigger an expensive action** (CodeC package repo build ~60–100 min,
+   release, destructive device test, force-push) without explicit user
    confirmation; check `gh run list` first.
 5. **Honor the invariants (they are law):** no `.` on `PATH`; never
    `build-package.sh -I`; never overwrite `cc` or real ELF `bash` with a shim;
    keep the TCC link order with `-o` last; never use official `com.termux`
    packages or repositories; never bundle the bootstrap in the APK; repository
-   metadata must stay signed (`signed-by=`, no `trusted=yes`). Full list:
+   metadata must stay signed (`signed-by=`, no `trusted=yes`); **clean-room —
+   replicate features, never copy others' code.** Full list:
    `chat-phase1/SOLUTIONS.md`, `chat-phase2/SOLUTIONS.md`,
-   `chat-phase3/PHASE3_PLAN.md`, `chat-phase3/REPOSITORY_SIGNING.md`.
+   `chat-phase3/PHASE3_PLAN.md`, `chat-phase3/REPOSITORY_SIGNING.md`,
+   `docs/TERMINAL_PLAN.md` §B and §J.
 6. **One PR at a time, from the current state.**
 7. **NEVER create, open, or merge a PR, and never merge/push to `main`,
    without the owner explicitly commanding it in chat.** Coding, committing to
@@ -164,26 +143,23 @@ of assuming one.
 8. **Know the sandbox limits:** the agent sandbox reaches `api.github.com`
    only — no CI-log/release/artifact downloads, no on-device testing. Gradle
    build/lint/test only happen on CI. For logs use the check-runs annotations
-   API (`/repos/:owner/:code/actions/...` / `/check-runs/<id>/annotations`);
-   the log-zip endpoint is blocked.
+   API; the log-zip endpoint is blocked.
 
 **ORDER OF WORK:**
 
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
    `gh release list`) before acting.
-2. Phases 3–13 are closed (PR #15/#23/#25/#26/#27/#28/#29/#30/#31 merged;
-   main at `006515a` is current). Phase 14 is implemented & CI-green on
-   `arena/01a05421-codec` — the owner's next gate is the device recipe
-   (`PART_14_IMPLEMENTATION.md` §5), not more code. If the owner commands
-   the next phase, pick Phase 15 from `docs/chat-phase15/` and re-verify
-   the plan against current code before implementing. Never open/merge a PR
-   without the owner's explicit word.
+2. Phases 3–14 are closed (PRs #15/#23/#25/#26/#27/#28/#29/#30/#31/#32 merged;
+   `main` at `0b591e2`). Phases 15–19 are spec'd (docs only, PR #33 open). If
+   the owner commands a phase, re-verify its plan against current code, then
+   implement it host-testably, commit + push the session branch, and let CI
+   run. Never open/merge a PR without the owner's explicit word.
 3. A part is complete only when its "Exit condition" is met and verified
    (device evidence from the owner for device gates), not merely when code is
    written.
-4. Keep `docs/JOURNEY.md`, `docs/NEXT_STEPS.md` and this `prompt.md` updated
-   as each gate closes — the next chat trusts only what is written there and
-   verified in git/CI.
+4. Keep `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`, `docs/TERMINAL_PLAN.md` and
+   this `prompt.md` updated as each gate closes — the next chat trusts only what
+   is written there and verified in git/CI.
 
-**Before each change, state:** what you are changing, which Part and exit
+**Before each change, state:** what you are changing, which Phase/Part and exit
 condition it serves, and which invariant (if any) it could affect.

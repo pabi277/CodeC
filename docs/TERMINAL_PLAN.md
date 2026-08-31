@@ -312,6 +312,24 @@ as equals — every new feature works both ways, nothing is GUI-only.
    The terminal stays source-of-truth; GUI never invents new behavior.
 9. PRIVACY BY DEFAULT — import = copy-in; export = explicit tap only;
    GitHub token = app-private Settings; nothing auto-public.
+10. CLEAN-ROOM LAW — replicate the FEATURES/EXPERIENCE, never COPY the code.
+    When a phase clones another app's UX (e.g. Spck Editor project/import
+    flows in Phases 15–17) or another app's behavior (e.g. Termux terminal
+    quality in Phase 19), we build the same screens, files, flows and
+    behaviors as ORIGINAL code in CodeC's own Kotlin/Compose, reusing CodeC's
+    existing engines. Same features, our code.
+    - Closed-source apps (Spck): match the visible behavior only (mockups +
+      public docs); never decompile or lift assets/code.
+    - GPL/copyleft apps (Termux is GPLv3): read public specs and learn the
+      TECHNIQUE (VT100/xterm/ECMA-48, reflow, render cadence) and re-implement;
+      never paste GPL source — doing so would relicense CodeC and breaks the
+      no-`com.termux` invariant.
+11. RESEARCH WHEN NEEDED — these docs are a starting point, not the final
+    word. Before/while implementing a part, do additional research if anything
+    is unclear (re-check the referenced app docs, Material 3 / Compose
+    patterns, public terminal specs, coroutine patterns, and the CodeC engine
+    being built on), and record findings as a short "Research notes" block +
+    resolve open questions (linked source) before marking the part done.
 
 ## C. DECISIONS LOCKED (delegated by owner, 2026-08-26)
 
@@ -358,6 +376,25 @@ All of the above are captured in the Phase 6–9 plan.
 | **14** | Mixed-language & long-tail: Flask/FastAPI local server (Project type: server); web project opens in WebView (already have `codec-open-url`); add Go / Node / Rust to repo and catalog only when needed (each = [repo-build] on demand); generic meta run (user-defined command) | [repo-build] on demand | 12 (Python proven) + 8 | Device: Python Flask project, run, open `http://127.0.0.1:5000` in WebView; add Go package to repo on request only; run-config supports custom command. |
 | **15** | CodeCApi tail + deferred: sensors / camera / intents capabilities over bridge; any remaining 5.3 gaps; terminal session persistence across restart (optional, matches Termux); final polish (font settings discoverability, theme parity) | [client-only] | 7 (multi-session defines routing) + 6 | Device: `codec-sensor` reads accelerometer; `codec-camera` takes photo; `codec-intent` opens other apps; all over per-session bridge; no regression in clipboard/notify/toast/share/open/URL/vibrate. |
 
+### E.1 NEW PHASES ADDED 2026-08-31 (owner requests) — spec/design only
+
+Added on the owner's explicit request; **docs + phone mockups only, no code
+yet** (see `docs/chat-phase15/` and `docs/chat-phase19/`). All `[client-only]`,
+all governed by the CLEAN-ROOM LAW (B.10) and the RESEARCH-WHEN-NEEDED rule
+(B.11). The pre-existing "Phase 15 (CodeCApi tail)" in the table above is
+**renumbered to Phase 18** and moved to the end (`docs/chat-phase18/`).
+
+| Phase | Deliverable | Cost | Depends on | Status / Exit condition |
+|---|---|---|---|---|
+| **15** | Projects Hub & Unified Import — Spck-style project list (cards, filter chips, search) + one `+` sheet: New Project / Clone Git Repo / Import ZIP / Open Folder; per-project git overflow actions | [client-only] | 8, 13, 14 | 📋 Planned — `docs/chat-phase15/PART_15_PROJECTS_HUB.md`. Device recipe = §4 there. |
+| **16** | Spck-style Editor Shell — nav drawer file tree with git status, refined tabs, snippet/extra-keys keyboard row, readability controls, launch-default HTML preview, errors badge | [client-only] | 9, 11, 14, 15 | 📋 Planned — `docs/chat-phase15/PART_16_EDITOR_SHELL.md`. |
+| **17** | In-editor Source Control & Branching (Spck git parity) — SC sheet, in-tree M/A/D/? status letters, tap-to-diff, Switch Branch (+stash), Pull/Push menu items, merge-conflict marking | [client-only] | 13, 15, 16 | 📋 Planned — `docs/chat-phase15/PART_17_SOURCE_CONTROL.md`. |
+| **18** | CodeCApi tail + deferred (WAS Phase 15) — sensors/camera/intents/battery/TTS over the bridge; session persistence (optional); final polish | [client-only] | 7 + 6 | 📋 Planned — `docs/chat-phase18/PART_18_CODEAPI.md`. |
+| **19** | Terminal Parity (Termux-quality) — 19.1 scrollback/screen reflow on zoom/resize; 19.2 integer-cell crisp rendering (no glyph overlap); 19.3 live render cadence / streaming output. Clean-room (no GPL Termux code). | [client-only] | 6, 7 | 📋 Planned — `docs/chat-phase19/` (3 parts). Independent of 15–18; can go first. |
+
+Recommended: Phase 19 can be scheduled at any time (fixes owner-reported
+terminal bugs). Phases 15→16→17 run in order; 18 last.
+
 ## F. DEPENDENCY GRAPH (compact — pick a leaf, all prerequisites known)
 
 ```
@@ -371,10 +408,21 @@ All of the above are captured in the Phase 6–9 plan.
   │                 ├─► 10 (pkg catalog UI)
   │                 │     └─► 12 (Python + intelligence) ◄── ONE build
   │                 │           └─► 14 (mixed / long-tail, builds on demand)
-  │                 └─► 15 (CodeCApi tail / polish)
+  │                 └─► 15 (CodeCApi tail / polish → renumbered to 18)
+  │
+  └─► 19 (terminal parity — reflow / rendering / live output;
+          depends on 6+7 only; can be scheduled any time)
+
+NEW (2026-08-31, spec/design only):
+  15 (Projects Hub) ──► 16 (Editor Shell) ──► 17 (Source Control & Branching)
+        (build on 8/9/11/13/14)
+  18 (CodeCApi tail / polish) — last
 ```
 
-Rule: never start a phase whose prerequisites aren't verified. Phase 8 is now implemented in PR #27; complete its final export/re-import device gate before treating it as fully closed. Phase 9 is the next client-only phase and then feeds Phase 11.
+Rule: never start a phase whose prerequisites aren't verified. Phases 8–14 are
+now merged to `main`. Phases 15–19 are spec'd (`docs/chat-phase15/`,
+`docs/chat-phase19/`), design-only. Phase 19 (terminal parity) is independent of
+15–18 and can be picked first.
 
 ## G. ORDER RECOMMENDATION (matches user's priorities from 2026-08-26)
 
