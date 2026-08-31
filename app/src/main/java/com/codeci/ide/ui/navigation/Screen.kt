@@ -55,7 +55,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
             }
         }
     }
-    object FileManager : Screen("file_manager", "Files", Icons.Default.Folder)
+    // Phase 15 — the Files screen became the Projects Hub (Spck-style); the
+    // route keeps its historical name so deep links and saved state survive.
+    object FileManager : Screen("file_manager", "Projects", Icons.Default.Folder)
     object Templates : Screen("templates", "Templates", Icons.Default.AutoAwesomeMosaic)
     object Modules : Screen("modules", "Packages", Icons.Default.Download)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)

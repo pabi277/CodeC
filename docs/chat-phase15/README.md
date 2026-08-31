@@ -1,6 +1,6 @@
 # CodeC Phases 15–17 — Spck-style Editor & Project Experience
 
-**Status:** Planned (design/spec only — no code written) · **Cost:** `[client-only]`
+**Status:** Phase 15 IMPLEMENTED 2026-08-31 on `arena/01a05743-codec` (CI + device pending); Phases 16–17 still planned (spec only) · **Cost:** `[client-only]`
 · **Depends on:** Phase 8 (Projects & folder tree), Phase 9 (Editor foundation),
 Phase 11 (Output panel), Phase 13 (Git integration), Phase 14 (Web preview)
 

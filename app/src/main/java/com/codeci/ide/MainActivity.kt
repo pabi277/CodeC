@@ -235,11 +235,13 @@ fun MainApp() {
     val terminalViewModel: TerminalViewModel = viewModel(viewModelStoreOwner = activity)
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
+    // Phase 15 — Projects is a first-class destination (Spck's Projects tab).
+    // Packages (Modules) stays reachable from the Home screen's action card.
     val screens = listOf(
         Screen.Home,
+        Screen.FileManager,
         Screen.Editor,
         Screen.Terminal,
-        Screen.Modules,
         Screen.Settings
     )
 
@@ -421,6 +423,14 @@ fun MainApp() {
                     onPreviewFile = { name ->
                         navController.navigate(Screen.Preview.createRoute(name)) {
                             launchSingleTop = true
+                        }
+                    },
+                    // Phase 15 — the clone dialog's token hint jumps to
+                    // Settings → GitHub Account (the Phase 13 card).
+                    onOpenSettings = {
+                        navController.navigate(Screen.Settings.route) {
+                            launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 )

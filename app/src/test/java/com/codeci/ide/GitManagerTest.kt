@@ -64,8 +64,17 @@ class GitManagerTest {
                 exit "${'$'}{FAKE_PUSH_EXIT:-0}"
                 ;;
               clone)
-                if [ -n "${'$'}3" ]; then mkdir -p "${'$'}3"; fi
+                # Destination is the final argument (flags like --depth 1
+                # --branch x shift the positional ones). POSIX sh only.
+                last=""
+                for a in "${'$'}@"; do last="${'$'}a"; done
+                if [ -n "${'$'}last" ]; then mkdir -p "${'$'}last"; fi
                 exit "${'$'}{FAKE_CLONE_EXIT:-0}"
+                ;;
+              ls-remote)
+                if [ -n "${'$'}FAKE_LSREMOTE_OUT" ]; then printf '%b\n' "${'$'}FAKE_LSREMOTE_OUT"; fi
+                if [ -n "${'$'}FAKE_LSREMOTE_ERR" ]; then printf '%b\n' "${'$'}FAKE_LSREMOTE_ERR" >&2; fi
+                exit "${'$'}{FAKE_LSREMOTE_EXIT:-0}"
                 ;;
             esac
             exit "${'$'}{FAKE_EXIT:-0}"
@@ -268,6 +277,113 @@ class GitManagerTest {
             assertTrue(last.contains("[clone]"))
             assertTrue(last.contains("[https://github.com/u/ClonedRepo.git]"))
             assertTrue(last.contains("[${dest.absolutePath}]"))
+        }
+    }
+
+    // --- clone flags (Phase 15) ---
+
+    @Test
+    fun `clone with defaults sends no extra flags`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val dest = File(dir, "plain")
+            manager(dir, env).clone("https://github.com/u/r.git", dest)
+            val last = loggedCommands(File(env["FAKE_LOG"]!!)).last()
+            assertEquals("CMD [clone] [https://github.com/u/r.git] [${dest.absolutePath}]", last)
+        }
+    }
+
+    @Test
+    fun `clone shallow and branch prepend --depth and --branch before the url`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val dest = File(dir, "dev")
+            manager(dir, env).clone(
+                "https://github.com/u/r.git",
+                dest,
+                shallow = true,
+                branch = "dev"
+            )
+            val last = loggedCommands(File(env["FAKE_LOG"]!!)).last()
+            assertEquals(
+                "CMD [clone] [--depth] [1] [--branch] [dev] [https://github.com/u/r.git] [${dest.absolutePath}]",
+                last
+            )
+            assertTrue(dest.isDirectory)
+        }
+    }
+
+    @Test
+    fun `clone rejects an invalid branch name before running git`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val git = manager(dir, env)
+            for (bad in listOf("--upload-pack=evil", "a b", "x..y", "refs/heads/main", "")) {
+                try {
+                    git.clone("https://github.com/u/r.git", File(dir, "no-dest-$bad.length"), branch = bad)
+                    fail("expected invalid branch: $bad")
+                } catch (_: IllegalArgumentException) {
+                }
+            }
+            // Nothing was ever executed: the log file was not created.
+            assertFalse(File(env["FAKE_LOG"]!!).exists())
+        }
+    }
+
+    // --- ls-remote (Phase 15) ---
+
+    @Test
+    fun `listRemoteBranches builds the command and parses heads`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(
+                dir,
+                extra = mapOf(
+                    "FAKE_LSREMOTE_OUT" to
+                        "aaaa\\trefs/heads/main\\nbbbb\\trefs/heads/dev\\ncccc\\trefs/tags/v1\\n"
+                )
+            )
+            val branches = manager(dir, env).listRemoteBranches("https://github.com/u/r.git")
+            assertEquals(listOf("main", "dev"), branches)
+            val last = loggedCommands(File(env["FAKE_LOG"]!!)).last()
+            assertTrue(last.contains("[ls-remote]"))
+            assertTrue(last.contains("[--heads]"))
+        }
+    }
+
+    @Test
+    fun `listRemoteBranches surfaces a redacted failure`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(
+                dir,
+                extra = mapOf(
+                    "FAKE_LSREMOTE_ERR" to "fatal: could not read Username for 'https://github.com'",
+                    "FAKE_LSREMOTE_EXIT" to "128"
+                )
+            )
+            try {
+                manager(dir, env).listRemoteBranches("https://github.com/u/private.git")
+                fail("expected GitCommandException")
+            } catch (e: GitManager.GitCommandException) {
+                assertEquals(128, e.exitCode)
+                assertTrue(e.message!!.contains("git ls-remote failed"))
+            }
+        }
+    }
+
+    @Test
+    fun `listRemoteBranches rejects non-http urls`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            try {
+                manager(dir, baseEnv(dir)).listRemoteBranches("git@github.com:u/r.git")
+                fail("expected IllegalArgumentException")
+            } catch (_: IllegalArgumentException) {
+            }
         }
     }
 

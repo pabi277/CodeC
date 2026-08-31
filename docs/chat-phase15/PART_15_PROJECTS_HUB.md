@@ -1,6 +1,6 @@
 # CodeC Phase 15 — Projects Hub & Unified Import (Spck-style project list)
 
-**Status:** Planned (design/spec only) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED 2026-08-31 (see §6; CI + device pending) · **Cost:** `[client-only]`
 · **Depends on:** Phase 8 (Projects & folder tree), Phase 13 (Git clone),
 Phase 14 (project types / auto-detect)
 · **Target files (anticipated):** `ui/screens/FileManagerScreen.kt` (or a new
@@ -259,3 +259,84 @@ PASS = steps 1–9 succeed without manual fixes; step 10 leaves the app healthy.
 - **Out of scope (later/stretch):** QR-scan URL entry, `git init` for non-git
   projects, in-file search across projects, project duplicate. Note them; don't
   block the phase on them.
+
+---
+
+## 6. Implementation record (2026-08-31, `arena/01a05743-codec`)
+
+**Status: IMPLEMENTED — CI pending.** Started on the owner's "Start phase 15".
+`[client-only]`, no `[repo-build]`; all engines reused (Phases 8/9/13/14).
+
+**Research notes** (RESEARCH-WHEN-NEEDED rule):
+- Spck's public docs describe its "Projects" list as an Open File/Folder +
+  "New Folder" + GitHub import entry flow ([docs.spck.io](https://docs.spck.io)).
+  Per the CLEAN-ROOM LAW only the visible behavior was cloned (mockups +
+  public docs); no Spck code/assets were consulted or copied.
+- `.git/HEAD` (plain text) is the standard cheap branch read — Termux-adjacent
+  tools document the same trick; avoids a `git rev-parse` process per card.
+  Worktree-style `.git` **files** (`gitdir:` pointers) are followed one hop.
+- `git ls-remote --heads <url>` output (`<sha>\trefs/heads/<name>`) is
+  documented in the public git man page; used verbatim for the branch picker.
+- M3 `ModalBottomSheet`/`FilterChip`/`Switch` are stable at Compose BOM
+  2024.09.00 (`@OptIn(ExperimentalMaterial3Api::class)` only for the sheet).
+
+**Files touched:**
+- **NEW** `ui/projects/ProjectsHub.kt` — pure, host-tested engine:
+  `ProjectHubEntry` (kind/icon/filters), `ProjectsHub` (kind mapping from
+  `ProjectConfig.type` or the Phase 14 detector for `auto`, chip+search
+  filtering, subtitle/relative-age formatting, `.git/HEAD` parser,
+  `ls-remote` parser, `.git/config` remote-URL parser, unique-name dedup,
+  branch-name gate, porcelain-changes check) and `ProjectHubStats`
+  (bounded tree scan: file count + newest mtime, skipping `.git`/`.codec`).
+- `ui/projects/GitManager.kt` — `clone(url, dest, shallow, branch)`
+  (defaults = Phase 13 argv verbatim) + `listRemoteBranches(url)`
+  (`ls-remote --heads`, redacted, network timeout). New argv +
+  reject-before-exec tests in `GitManagerTest` (5 added).
+- `ui/viewmodels/FileManagerViewModel.kt` — `hubEntries` StateFlow built on
+  `Dispatchers.IO` (scan + `.git/HEAD` + lazy `git status` only when git is
+  installed); `renameProject`, `pullProject`, `remoteUrlFor`,
+  `fetchRemoteBranches`; `cloneFromGitHub` gains `branch`/`shallow` params.
+- `ui/screens/FileManagerScreen.kt` — the list half became the Projects Hub:
+  filter chips (All/Git/C/Python/Web), inline search, Spck-style cards
+  (type square, `⌥ branch · N files · age`, yellow `M` badge), per-project
+  git-aware `⋮` menu, FAB → unified 4-row bottom sheet, new Clone dialog
+  (URL → auto name, Advanced: branch + Fetch-branches chips + shallow,
+  token hint → Settings). File-tree mode untouched (Phase 8 intact).
+- `ui/navigation/Screen.kt` + `MainActivity.kt` — bottom nav is the mockup's
+  five tabs **Home · Projects · Editor · Terminal · Settings** (Packages
+  stays one tap away on Home); `FileManager.title` is "Projects" (route
+  `file_manager` preserved). Clone dialog `onOpenSettings` wired.
+- `res/values/strings.xml` — 34 new hub/dialog strings.
+- **Tests** (host JVM, CI-executed): `ProjectsHubTest` (13 new — mapping,
+  filters/search, subtitles, age buckets, HEAD/ls-remote/config parsers,
+  dedup, branch gate, porcelain, scan) + `GitManagerTest` (5 new clone-flags
+  / ls-remote tests; fake-git updated to be POSIX-sh safe).
+
+**Design decisions:**
+- **D1** — Card kind is hub-only decoration derived from `ProjectConfig.type`
+  / `ProjectRunDetector` (auto), so hub, wizard and RUN ▶ can never disagree.
+- **D2** — Hub list order: newest-touched first, name as tiebreak
+  (deterministic for CI + matches "appears at the top" in the recipe).
+- **D3** — `hasChanges` is fetched during refresh only (no auto-polling),
+  only when the packaged `git` exists; failure → badge omitted (graceful).
+  Branch chips never spawn git (pure `.git/HEAD` read).
+- **D4** — Branch names are argv-safety-gated (`ProjectsHub.isValidBranchName`:
+  no flag lead, no spaces/control chars, no `..`, no `refs/` prefix,
+  ≤200 chars) — belt-and-braces over ProcessBuilder's shell-free exec.
+- **D5** — `GitManager.clone` extended with defaulted params instead of a new
+  method: Phase 13 call sites keep bit-identical argv (regression safety).
+- **D6** — The old Files-menu import entries (Import Folder/ZIP, Clone) were
+  folded into the unified `+` sheet; the app-bar `⋮` keeps only "New Project"
+  (opens the sheet) and "Refresh". Nothing is lost: same launchers, same VM
+  flows. Tree-mode menu untouched.
+- **D7** — Search matches project names only (spec §2.2); in-file search
+  stays deferred. QR URL entry, Duplicate, and Initialize-Git remain the
+  recorded stretch items — deliberately not blocking the phase.
+- **D8** — Switch Branch is a present-but-informed menu entry (snackbar
+  pointing at Phase 17), keeping the Spck-shaped menu structure per spec.
+- **D9** — Shallow (`--depth 1`) defaults ON in the new dialog (Spck parity,
+  mobile bandwidth); terminal `git clone` behavior unchanged.
+
+**CI:** first run pending on this branch (see the next chat's `gh run list`).
+**Device:** §4 recipe unchanged — run it against the artifact `CodeC-IDE` of
+the latest green `Build APK` run for `arena/01a05743-codec`.

@@ -463,9 +463,10 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 
 ## Phases 15–17 — Spck-style Editor & Project Experience (PLANNED, design/spec only)
 
-📋 **Planned; **Phase 15 ACTIVE per the owner's instruction (2026-08-31:
-"i going to start phase 15")** — start with
-[`PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md).** Originally
+📋 **Phase 15 IMPLEMENTED (2026-08-31, `arena/01a05743-codec`) — CI +
+device pending** (record: [`chat-phase15/PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md)
+§6). **Phases 16–17 remain spec-only.** Started on the owner's instructions
+("i going to start phase 15" → "Start phase 15"). Originally
 added 2026-08-31 on the owner's request to clone the
 [Spck Editor / Git Client](https://play.google.com/store/apps/details?id=io.spck)
 project & editor experience (import git project, project list, full editor look &
@@ -519,7 +520,8 @@ run-batched drawing, gesture detectors no longer restart every output
 frame, pixel-smooth sub-row scrolling, IME retry loop (PART_19_3 §9).
 **Round 4 (2026-08-31): PASS — owner: "All ok now".**
 Phase 19 CLOSED: CI `33377713289`, 4 device rounds, ~70 new host tests.
-**PR #34 is OPEN (2026-08-31, on the owner's "create a pr") — merge only on the owner's literal command.**
+**PR #34 MERGED to `main` at `b869ce6` (2026-08-31) — Phase 19 is fully
+closed; post-merge CI on `main` green (`33380041937`).**
 
 Phase 19 was specced 2026-08-31 on the owner's report that the terminal
 (a) prints downloads only at the end, (b) overlaps letters, and (c)
