@@ -6,6 +6,7 @@ import android.provider.DocumentsContract
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.R
+import com.codeci.ide.ui.projects.BuildArtifactIgnore
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
 import com.codeci.ide.ui.projects.GitContext
@@ -100,6 +101,8 @@ class FileManagerViewModel : ViewModel() {
                 // Device round fix 2026-08-31: stray __pycache__ from a python
                 // run must not light up the card badge / push offer either.
                 runCatching { PythonCacheIgnore.ensure(project.root) }
+                // Build outputs (a.out, bin/*.out, …) stay out of the badge too.
+                runCatching { BuildArtifactIgnore.ensure(project.root) }
                 runCatching { git.status(project.root).files.isNotEmpty() }.getOrNull()
             } else {
                 null

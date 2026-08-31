@@ -22,6 +22,8 @@ import com.codeci.ide.ui.editor.LineEndings
 import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.projects.AutoRunPlan
+import com.codeci.ide.ui.projects.BuildArtifactIgnore
+import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
 import com.codeci.ide.ui.projects.GitContext
@@ -125,6 +127,8 @@ class EditorViewModel : ViewModel() {
     companion object {
         const val MAX_OPEN_TABS = 12
         const val MAX_TAB_FILE_BYTES = 256_000L
+        /** Idle time after the last keystroke before the buffer is auto-saved. */
+        private const val AUTO_SAVE_DELAY_MS = 2_000L
         private const val SCRATCH_KEY = "\u0000scratch"
         private val INITIAL_CODE = """
             #include <stdio.h>
@@ -158,6 +162,35 @@ class EditorViewModel : ViewModel() {
     val isRenaming: StateFlow<Boolean> = _isRenaming.asStateFlow()
 
     private val _userMessage = MutableStateFlow<String?>(null)
+
+    // Auto-save (2026-08-31): the editor is the app's home now, so edits must
+    // survive without a manual SAVE. [appContext] is captured from the first
+    // context any public method receives (the VM is a plain ViewModel and
+    // gets contexts per call, like the rest of this codebase).
+    private var appContext: Context? = null
+    private var autoSaveJob: Job? = null
+
+    private fun captureContext(context: Context) {
+        if (appContext == null) appContext = context.applicationContext
+    }
+
+    /** Debounced auto-save: called after every buffer mutation. */
+    fun scheduleAutoSave() {
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch {
+            delay(AUTO_SAVE_DELAY_MS)
+            flushAutoSave()
+        }
+    }
+
+    /** Immediate auto-save (screen dispose / before running). Silent on success. */
+    fun flushAutoSave() {
+        autoSaveJob?.cancel()
+        autoSaveJob = null
+        val ctx = appContext ?: return
+        if (!_isDirty.value) return
+        runCatching { saveFile(ctx) }
+    }
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
 
     // ---- Phase 9: multi-file tabs --------------------------------------
@@ -294,6 +327,7 @@ class EditorViewModel : ViewModel() {
             _codeText.value = next
             _isDirty.value = computeDirty(next.text)
             stashActiveTabBuffer(next)
+            scheduleAutoSave()
         } else if (next.selection != old.selection) {
             _codeText.value = next
         } else {
@@ -310,6 +344,7 @@ class EditorViewModel : ViewModel() {
         stashActiveTabBuffer(target)
         syncUndoFlags(manager)
         refreshDecorationsNow()
+        scheduleAutoSave()
     }
 
     fun redo() {
@@ -320,6 +355,7 @@ class EditorViewModel : ViewModel() {
         stashActiveTabBuffer(target)
         syncUndoFlags(manager)
         refreshDecorationsNow()
+        scheduleAutoSave()
     }
 
     private fun applyBufferEdit(before: TextFieldValue, after: TextFieldValue) {
@@ -335,6 +371,7 @@ class EditorViewModel : ViewModel() {
         _isDirty.value = computeDirty(after.text)
         stashActiveTabBuffer(after)
         refreshDecorationsNow()
+        scheduleAutoSave()
     }
 
     private fun isSingleNewlineInsert(old: TextFieldValue, newValue: TextFieldValue): Boolean {
@@ -367,6 +404,7 @@ class EditorViewModel : ViewModel() {
 
     fun openFile(context: Context, projectName: String?, fileName: String?) {
         if (fileName == null) return
+        captureContext(context)
         if (projectName != null) {
             openProjectFile(context, projectName, fileName)
         } else {
@@ -402,6 +440,8 @@ class EditorViewModel : ViewModel() {
         bootstrapRemainingTabs(context, info.root, _openTabs.value)
         resetDecorationsForNewBuffer()
         syncUndoFlags(undoManager())
+        // "Open where I left off": this file becomes the app's launch point.
+        EditorLaunchState.save(context, info.name, safe)
     }
 
     private fun openScratchFile(context: Context, name: String) {
@@ -484,6 +524,17 @@ class EditorViewModel : ViewModel() {
         _isDirty.value = tab.buffer.text != tab.savedText
         resetDecorationsForNewBuffer()
         syncUndoFlags(undoManager())
+        rememberLaunchPoint(tab.relativePath)
+    }
+
+    /**
+     * "Open where I left off": move the launch pointer to [relativePath]
+     * (project tabs only — scratch buffers have no stable project to land in).
+     */
+    private fun rememberLaunchPoint(relativePath: String) {
+        val project = _projectName.value ?: return
+        val ctx = appContext ?: return
+        EditorLaunchState.save(ctx, project, relativePath)
     }
 
     /**
@@ -516,6 +567,7 @@ class EditorViewModel : ViewModel() {
             _isDirty.value = next.buffer.text != next.savedText
             resetDecorationsForNewBuffer()
             syncUndoFlags(undoManager())
+            rememberLaunchPoint(next.relativePath)
         }
     }
 
@@ -1065,6 +1117,7 @@ class EditorViewModel : ViewModel() {
                         )
                     }.getOrNull()
                     runCatching { PythonCacheIgnore.ensure(root) }
+                    runCatching { BuildArtifactIgnore.ensure(root) }
                     val files = runCatching { GitContext(appContext).manager()?.status(root)?.files }.getOrNull()
                     Triple(branch, files?.let(ProjectsHub::fileBadges), files?.size)
                 }.getOrNull()
@@ -1093,6 +1146,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun saveFile(context: Context): Boolean {
+        captureContext(context)
         val text = _codeText.value.text
         val project = _projectName.value
         if (project != null) {
@@ -1469,6 +1523,11 @@ class EditorViewModel : ViewModel() {
             if (info == null) {
                 _userMessage.value = "Project '$project' is gone"
                 return
+            }
+            // Keep build outputs (a.out, bin/*.out, …) out of git before a
+            // run creates them — same repo-local policy as the python cache.
+            viewModelScope.launch(Dispatchers.IO) {
+                runCatching { BuildArtifactIgnore.ensure(info.root) }
             }
             // Web projects are handled by the preview flow, not the panel.
             if (info.config.type.equals("web", ignoreCase = true)) return
