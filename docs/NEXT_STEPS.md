@@ -463,8 +463,8 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 
 ## Phases 15–17 — Spck-style Editor & Project Experience (PLANNED, design/spec only)
 
-📋 **Phase 15 IMPLEMENTED (2026-08-31, `arena/01a05743-codec`) — CI +
-device pending** (record: [`chat-phase15/PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md)
+📋 **Phase 15 IMPLEMENTED & CI-GREEN (2026-08-31, `arena/01a05743-codec`,
+run `33383946165`) — device recipe pending** (record: [`chat-phase15/PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md)
 §6). **Phases 16–17 remain spec-only.** Started on the owner's instructions
 ("i going to start phase 15" → "Start phase 15"). Originally
 added 2026-08-31 on the owner's request to clone the
