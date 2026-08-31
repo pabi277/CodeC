@@ -147,6 +147,13 @@ recorded here):
 | `33351751134` | test compile: missing `assertTrue` import | import added |
 | `33351961497` | 5 unit-test failures | (a) templates printed bind URLs with `%d` — now the literal URLs (matches the device recipe); (b) `server exit` test raced the fast process exit — stay-alive sleep added; (c) disk test grepped `app.py` for the page text — page lives in `index.html` |
 
-New host tests: `ServerPortDetectorTest` (10), `ServerRunnerTest` (7, real
-processes via `/bin/sh`), `ProjectScaffoldTest` (7), `ProjectConfigTest` (+7).
-Device recipe §5 is now the only open gate; the owner runs it on aarch64.
+Host tests: `ServerPortDetectorTest` (10), `ServerRunnerTest` (7, real
+processes via `/bin/sh`), `ProjectScaffoldTest` (7), `ProjectConfigTest` (+7),
+plus **`ServerScaffoldE2ETest` (3)** — green on `33355693242`: writes the exact
+scaffold bytes, runs the preset `build`/`run` commands from `ProjectConfig`
+through `ServerRunner`, fetches `http://127.0.0.1:<port>/` over loopback HTTP
+(200 + page text), **edits `index.html` and fetches again — new content without
+restart**, then Stop → no live process. That automates the server half of the
+recipe (§5 steps 3–7) on CI. The only acceptance step a runner cannot do is
+the Compose UI itself (auto-open, ● live badge, Save → reload) — that stays
+in the owner's device round on aarch64.

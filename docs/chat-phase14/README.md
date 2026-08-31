@@ -10,8 +10,12 @@ presets with runnable-out-of-the-box scaffold (stdlib fallback, page served from
 auto-open Web Preview, live address bar + auto-reload. **No `[repo-build]`**
 (Flask/FastAPI are pip packages; the C server uses the embedded TCC).
 `Build APK` green: `33352164172` (four CI-caught bugs fixed along the way —
-see the implementation record). **Device recipe pending (owner).** Long-tail
-toolchains (Node/Lua/Go/Rust) remain deferred until the owner requests one.
+see the implementation record), and **`33355693242`** adds
+`ServerScaffoldE2ETest` — the presets' real build/run commands + `ServerRunner`
++ loopback HTTP + edit-index.html-hot-read, all verified on CI. Only the
+Compose WebView part of the recipe (§5) still needs the owner's device round.
+Long-tail toolchains (Node/Lua/Go/Rust) remain deferred until the owner
+requests one.
 
 ## Contents & References
 - **[Part 14.1 — Server Runner, Port Monitor & Web Preview Integration](PART_14_MIXED.md)** — the plan
