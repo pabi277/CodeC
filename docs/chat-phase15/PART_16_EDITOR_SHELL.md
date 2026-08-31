@@ -306,4 +306,5 @@ cards' `hasChanges` scan, and the Python branch of RUN ▶ (before the run,
 fire-and-forget on IO). `.git` handled as dir AND `gitdir:` pointer file.
 Tests: `PythonCacheIgnoreTest` ×10 (policy + real temp-dir IO incl.
 idempotent re-run, user-gitignore skip, pointer-file follow, append
-preservation).
+preservation). CI green first try: run `33392053258` @ `435c5f4` (device APK
+= artifact `CodeC-IDE` of that run).

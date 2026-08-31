@@ -466,8 +466,8 @@ See `docs/chat-phase6/PART_6_TERMINAL_UX.md`.
 📋 **Phase 15 device round 1 closed on `83ba499` (CI green `33385105931`) —
 owner re-test of the two fixes outstanding** (record: [`chat-phase15/PART_15_PROJECTS_HUB.md`](chat-phase15/PART_15_PROJECTS_HUB.md)
 §6). **Phase 16 IMPLEMENTED & CI-GREEN (2026-08-31, same branch; device round 1:
-python `__pycache__` git-noise fixed via `PythonCacheIgnore` — new CI run
-pending, then device recipe)** (record: [`chat-phase15/PART_16_EDITOR_SHELL.md`](chat-phase15/PART_16_EDITOR_SHELL.md)
+python `__pycache__` git-noise fixed via `PythonCacheIgnore`, CI green
+`33392053258` @ `435c5f4` — device re-check pending)** (record: [`chat-phase15/PART_16_EDITOR_SHELL.md`](chat-phase15/PART_16_EDITOR_SHELL.md)
 §6). **Phase 17 remains spec-only.** Started on the owner's instructions
 ("i going to start phase 15" → "Start phase 15"). Originally
 added 2026-08-31 on the owner's request to clone the
