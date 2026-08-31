@@ -275,10 +275,9 @@ fun TerminalEmulatorView(
                             onTap = { pos ->
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
                                 val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
-                                val lineIndex = snapshot.scrollbackCount + topRow + row
-                                val transcript = snapshot.scrollbackLines + snapshot.lines
-                                val url = if (lineIndex in transcript.indices) {
-                                    findUrlAt(transcript[lineIndex].text, col)
+                                val line = snapshot.lineAt(topRow + row)
+                                val url = if (line != null) {
+                                    findUrlAt(line.text, col)
                                 } else null
 
                                 if (url != null) {
@@ -293,10 +292,9 @@ fun TerminalEmulatorView(
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
                                 val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
                                 val y = topRow + row
-                                val lineIndex = snapshot.scrollbackCount + y
-                                val transcript = snapshot.scrollbackLines + snapshot.lines
-                                val (wStart, wEnd) = if (lineIndex in transcript.indices) {
-                                    findWordBoundaries(transcript[lineIndex].text, col)
+                                val line = snapshot.lineAt(y)
+                                val (wStart, wEnd) = if (line != null) {
+                                    findWordBoundaries(line.text, col)
                                 } else col to col
                                 selection = GridSelection(wStart, y, wEnd, y)
                                 selecting = true
@@ -339,13 +337,9 @@ fun TerminalEmulatorView(
                     }
             ) {
                 drawRect(theme.background)
-                val transcript = snapshot.scrollbackLines + snapshot.lines
-                val origin = snapshot.scrollbackCount
                 for (screenY in 0 until rows) {
                     val extY = topRow + screenY
-                    val lineIndex = origin + extY
-                    if (lineIndex !in transcript.indices) continue
-                    val line = transcript[lineIndex]
+                    val line = snapshot.lineAt(extY) ?: continue
                     val isCursorRow = snapshot.cursorVisible &&
                         topRow == 0 &&
                         extY == snapshot.cursorY
@@ -493,24 +487,30 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
         // Phase 19.2: character-by-character drawing at exact INTEGER cell
         // origins — (start + i) * cellW is a whole pixel, so there is no
         // accumulated rounding drift and glyphs can never collide.
+        // Phase 19.4: draws the base+marks CLUSTER when present (Indic and
+        // combining marks render as one glyph run) and gives a double-width
+        // lead cell a two-cell slot; continuation cells are blanks and draw
+        // nothing here.
+        val clusters = line.clusters
         drawIntoCanvas { canvas ->
             for (i in 0 until (sliceEnd - sliceStart)) {
                 val charCol = sliceStart + i
-                val ch = text[charCol].toString()
-                if (ch != " ") {
+                val glyph = clusters?.get(charCol) ?: text[charCol].toString()
+                if (glyph.isNotEmpty() && glyph != " ") {
+                    val wide = run.flags and CellFlags.WIDE_LEAD != 0 && charCol < cols - 1
+                    val slot = if (wide) cellW * 2 else cellW
                     val x = CellMetrics.columnX(start + i, cellW).toFloat()
                     val baseline = CellMetrics.rowY(y, cellH) - ascent
-                    val advance = glyphPaint.measureText(ch)
-                    if (advance > cellW) {
-                        // Fallback-font glyph wider than the cell (e.g. a
-                        // non-monospace face): squeeze it into its slot so it
-                        // cannot bleed into the neighbour.
+                    val advance = glyphPaint.measureText(glyph)
+                    if (advance > slot) {
+                        // Fallback-font glyph or cluster wider than its slot:
+                        // squeeze it in so it cannot bleed into the neighbour.
                         val savedScale = glyphPaint.textScaleX
-                        glyphPaint.textScaleX = savedScale * (cellW / advance)
-                        canvas.nativeCanvas.drawText(ch, x, baseline, glyphPaint)
+                        glyphPaint.textScaleX = savedScale * (slot / advance)
+                        canvas.nativeCanvas.drawText(glyph, x, baseline, glyphPaint)
                         glyphPaint.textScaleX = savedScale
                     } else {
-                        canvas.nativeCanvas.drawText(ch, x, baseline, glyphPaint)
+                        canvas.nativeCanvas.drawText(glyph, x, baseline, glyphPaint)
                     }
                 }
             }
@@ -574,21 +574,40 @@ private fun GridSelection.normalized(): GridSelection {
 
 fun TerminalSnapshot.selectedText(sel: GridSelection): String {
     val n = sel.normalized()
-    val transcript = scrollbackLines + lines
-    val origin = scrollbackCount
     return buildString {
         for (y in n.y1..n.y2) {
-            val idx = origin + y
-            if (idx !in transcript.indices) continue
-            val line = transcript[idx].text
+            val line = lineAt(y) ?: continue
+            val text = line.text
             val start = if (y == n.y1) n.x1.coerceAtLeast(0) else 0
-            val end = if (y == n.y2) (n.x2 + 1).coerceAtMost(line.length) else line.length
-            if (start < end && start < line.length) {
-                append(line.substring(start, end.coerceAtMost(line.length)).trimEnd())
+            val end = if (y == n.y2) (n.x2 + 1).coerceAtMost(text.length) else text.length
+            if (start < end && start < text.length) {
+                val sb = StringBuilder()
+                for (col in start until end.coerceAtMost(text.length)) {
+                    // Phase 19.4: join wide pairs and expand clusters.
+                    if (line.columnIsContinuation(col)) continue
+                    val cluster = line.clusters?.get(col)
+                    if (cluster != null) sb.append(cluster) else sb.append(text[col])
+                }
+                append(sb.toString().trimEnd())
             }
             if (y != n.y2) append('\n')
         }
     }.trimEnd()
+}
+
+/**
+ * Transcript row for an extended Y coordinate (0 = top live row, negative =
+ * scrolled into history) without concatenating the two lists.
+ */
+fun TerminalSnapshot.lineAt(extY: Int): TerminalLine? {
+    val idx = scrollbackCount + extY
+    if (idx < 0) return null
+    return if (idx < scrollbackLines.size) {
+        scrollbackLines[idx]
+    } else {
+        val live = idx - scrollbackLines.size
+        if (live in lines.indices) lines[live] else null
+    }
 }
 
 private suspend fun PointerInputScope.detectScrollOrSelect(

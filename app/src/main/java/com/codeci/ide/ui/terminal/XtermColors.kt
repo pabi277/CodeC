@@ -73,4 +73,9 @@ object CellFlags {
     const val INVERSE = 32
     const val INVISIBLE = 64
     const val STRIKE = 128
+
+    /** Phase 19.4: lead cell of a double-width glyph (occupies 2 columns). */
+    const val WIDE_LEAD = 256
+    /** Phase 19.4: right half of a double-width glyph (renders nothing). */
+    const val WIDE_CONT = 512
 }
