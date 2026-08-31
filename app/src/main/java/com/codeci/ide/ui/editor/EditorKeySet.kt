@@ -18,8 +18,9 @@ sealed class EditorKey {
     data class Insert(val text: String) : EditorKey()
 
     /** Move the caret; selection collapses toward the movement. */
-    enum class Move { LEFT, RIGHT, UP, DOWN }
-    data class Caret(val move: Move) : EditorKey()
+    data class Caret(val move: Move) : EditorKey() {
+        enum class Move { LEFT, RIGHT, UP, DOWN }
+    }
 
     /** Insert the configured indent run (tabSize spaces). */
     object Tab : EditorKey()

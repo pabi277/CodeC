@@ -29,7 +29,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SourceControl
+import androidx.compose.material.icons.automirrored.filled.CallMerge
 import androidx.compose.material.icons.filled.Web
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -143,7 +143,7 @@ fun EditorProjectDrawer(
                 Spacer(Modifier.width(6.dp))
             }
             IconButtonTinted(
-                icon = Icons.Default.SourceControl,
+                icon = Icons.AutoMirrored.Filled.CallMerge,
                 description = stringResource(R.string.editor_drawer_source_control),
                 badge = changeCount,
                 onClick = onSourceControl
@@ -238,7 +238,7 @@ fun EditorProjectDrawer(
 
         // ---- footer ----------------------------------------------------------
         DrawerFooterRow(
-            icon = Icons.Default.SourceControl,
+            icon = Icons.AutoMirrored.Filled.CallMerge,
             label = stringResource(R.string.editor_drawer_source_control),
             badge = changeCount,
             onClick = onSourceControl
