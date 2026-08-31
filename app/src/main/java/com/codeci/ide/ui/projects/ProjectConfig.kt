@@ -8,7 +8,11 @@ data class ProjectConfig(
     val entry: String = "main.c",
     val build: String = "mkdir -p bin && cc main.c -o bin/app",
     val run: String = "./bin/app",
-    val clean: String = "rm -rf bin/app"
+    val clean: String = "rm -rf bin/app",
+    /** Phase 14 — the port a server-type project binds to (null for plain projects). */
+    val port: Int? = null,
+    /** Phase 14 — the exact local URL to open in Web Preview (defaults to http://127.0.0.1:<port>). */
+    val previewUrl: String? = null
 ) {
     /**
      * Avoid Android's nullable/stubbed JSONObject string methods in JVM tests;
@@ -23,8 +27,20 @@ data class ProjectConfig(
         append(",\"build\":").append(jsonString(build))
         append(",\"run\":").append(jsonString(run))
         append(",\"clean\":").append(jsonString(clean))
+        port?.let { append(",\"port\":").append(it) }
+        previewUrl?.let { append(",\"previewUrl\":").append(jsonString(it)) }
         append('}')
     }
+
+    /**
+     * Phase 14 — the loopback URL a server-type project previews at, or null
+     * when the project is not a server and no URL was configured.
+     */
+    fun serverPreviewUrl(): String? =
+        previewUrl ?: port?.let { "http://127.0.0.1:$it" }
+
+    /** True for Phase 14 server presets (their RUN ▶ starts a background server). */
+    fun isServerType(): Boolean = type.trim().lowercase() in SERVER_TYPES
 
     private fun jsonString(value: String): String = buildString(value.length + 2) {
         append('"')
@@ -48,6 +64,9 @@ data class ProjectConfig(
     companion object {
         const val CURRENT_VERSION = 1
 
+        /** Project types whose RUN ▶ starts a long-lived local server and opens Web Preview. */
+        val SERVER_TYPES: Set<String> = setOf("python-flask", "python-fastapi", "c-microservice")
+
         fun defaultFor(name: String, type: String = "c"): ProjectConfig {
             val projectType = type.trim().ifEmpty { "c" }.lowercase()
             return when (projectType) {
@@ -67,6 +86,36 @@ data class ProjectConfig(
                     run = "python3 main.py",
                     clean = ""
                 )
+                "python-flask" -> ProjectConfig(
+                    name = name,
+                    type = "python-flask",
+                    entry = "app.py",
+                    build = "",
+                    run = "python3 app.py",
+                    clean = "",
+                    port = 5000,
+                    previewUrl = "http://127.0.0.1:5000"
+                )
+                "python-fastapi" -> ProjectConfig(
+                    name = name,
+                    type = "python-fastapi",
+                    entry = "main.py",
+                    build = "",
+                    run = "python3 main.py",
+                    clean = "",
+                    port = 8000,
+                    previewUrl = "http://127.0.0.1:8000"
+                )
+                "c-microservice" -> ProjectConfig(
+                    name = name,
+                    type = "c-microservice",
+                    entry = "server.c",
+                    build = "mkdir -p bin && cc server.c -o bin/server",
+                    run = "./bin/server",
+                    clean = "rm -rf bin/server",
+                    port = 8080,
+                    previewUrl = "http://127.0.0.1:8080"
+                )
                 else -> ProjectConfig(name = name)
             }
         }
@@ -83,7 +132,9 @@ data class ProjectConfig(
                 entry = fields["entry"] ?: "main.c",
                 build = fields["build"] ?: "mkdir -p bin && cc main.c -o bin/app",
                 run = fields["run"] ?: "./bin/app",
-                clean = fields["clean"] ?: "rm -rf bin/app"
+                clean = fields["clean"] ?: "rm -rf bin/app",
+                port = fields["port"]?.toIntOrNull(),
+                previewUrl = fields["previewUrl"]
             )
         }
 

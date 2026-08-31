@@ -21,6 +21,7 @@ import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
+import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.services.CompilerSettings
@@ -29,6 +30,8 @@ import com.codeci.ide.ui.services.InteractiveRunSession
 import com.codeci.ide.ui.services.RunEvent
 import com.codeci.ide.ui.services.RunPhase
 import com.codeci.ide.ui.services.RunSpec
+import com.codeci.ide.ui.services.ServerEvent
+import com.codeci.ide.ui.services.ServerRunner
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.ShellBootstrap
@@ -88,7 +91,11 @@ data class OutputRunState(
     val runDurationMs: Long? = null,
     val busy: Boolean = false,
     val summary: String? = null,
-    val lastTerminalCommand: String? = null
+    val lastTerminalCommand: String? = null,
+    /** Phase 14 — the live loopback URL of a running server project (Open Preview). */
+    val serverUrl: String? = null,
+    /** Phase 14 — true while the panel is attached to a long-lived server, not a batch run. */
+    val serverRun: Boolean = false
 )
 
 /** Phase 9 — cursor readout for the editor status bar. */
@@ -192,6 +199,27 @@ class EditorViewModel : ViewModel() {
     private var activeRunner: ExecutionRunner? = null
     private var interactiveRun: InteractiveRunSession? = null
     private var buildOutputBuffer = StringBuilder()
+
+    // ---- Phase 14: background server pipeline -----------------------------
+
+    private var serverRunJob: Job? = null
+    private var activeServer: ServerRunner? = null
+    private var serverReadyHandler: ((String) -> Unit)? = null
+
+    /**
+     * Phase 14 — the Editor wires this to navigation: when a server project's
+     * RUN ▶ detects its port line, the handler receives the loopback URL and
+     * MainActivity opens Web Preview on it.
+     */
+    fun setServerReadyHandler(handler: (String) -> Unit) {
+        serverReadyHandler = handler
+    }
+
+    override fun onCleared() {
+        activeServer?.stop()
+        activeServer = null
+        super.onCleared()
+    }
 
     /**
      * Phase 11 — forward a typed line to the running program's stdin. The
@@ -1065,6 +1093,10 @@ class EditorViewModel : ViewModel() {
         activeRunner = null
         interactiveRun?.stop()
         interactiveRun = null
+        serverRunJob?.cancel()
+        serverRunJob = null
+        activeServer?.stop()
+        activeServer = null
         _outputState.value = OutputRunState(phase = OutputPhase.IDLE)
     }
 
@@ -1075,6 +1107,10 @@ class EditorViewModel : ViewModel() {
         activeRunner = null
         interactiveRun?.stop()
         interactiveRun = null
+        serverRunJob?.cancel()
+        serverRunJob = null
+        activeServer?.stop()
+        activeServer = null
         val current = _outputState.value
         if (current.busy) {
             _outputState.value = current.copy(
@@ -1115,6 +1151,12 @@ class EditorViewModel : ViewModel() {
             }
             // Web projects are handled by the preview flow, not the panel.
             if (info.config.type.equals("web", ignoreCase = true)) return
+            // Phase 14 — server presets: build once, then run as a long-lived
+            // background server and auto-open Web Preview on the detected URL.
+            if (info.config.isServerType()) {
+                startServerRun(appContext, info)
+                return
+            }
             workDir = info.root
             // Phase 12 (device-found): RUN ▶ executes the ACTIVE file, not
             // the project's configured main. A .py active file runs with
@@ -1311,6 +1353,156 @@ class EditorViewModel : ViewModel() {
                 failRun(appContext, e.message ?: "Run failed")
             }
         }
+    }
+
+    /**
+     * Phase 14 — RUN ▶ for server-type projects. Builds when a build step is
+     * configured (c-microservice), then starts the run command as a long-lived
+     * background process via [ServerRunner] and streams its output into the
+     * Output Panel. When the server prints its bind line the panel summary
+     * updates and the [serverReadyHandler] opens Web Preview on that URL.
+     * Stop kills the server; the Open-in-Terminal escape hatch stays.
+     */
+    private fun startServerRun(context: Context, info: ProjectInfo) {
+        val config = info.config
+        val buildCommand = config.build.trim().takeIf { it.isNotEmpty() }
+        val runCommand = config.run.trim().takeIf { it.isNotEmpty() }
+        if (buildCommand == null && runCommand == null) {
+            _userMessage.value = context.getString(R.string.output_no_command)
+            return
+        }
+        _outputExpanded.value = true
+        buildOutputBuffer = StringBuilder()
+        val startLines = buildList {
+            buildCommand?.let { add(OutputLine("$ $it", OutputLineKind.COMMAND)) }
+            runCommand?.let { add(OutputLine("$ $it", OutputLineKind.COMMAND)) }
+        }
+        _outputState.value = OutputRunState(
+            phase = if (buildCommand != null) OutputPhase.BUILDING else OutputPhase.RUNNING,
+            busy = true,
+            serverRun = true,
+            lines = startLines,
+            summary = context.getString(
+                if (buildCommand != null) R.string.output_compiling else R.string.output_starting_server
+            ),
+            lastTerminalCommand = TerminalHandoff.projectRunCommand(info.root.absolutePath, config)
+        )
+        serverRunJob = viewModelScope.launch {
+            StatsManager(context).incrementRuns()
+            val settings = compilerSettingsFrom(SettingsManager(context))
+            val prepared = withContext(Dispatchers.IO) {
+                ShellBootstrap(context).prepare(settings)
+            }
+            try {
+                // 1) Optional build phase — identical to the normal pipeline.
+                if (buildCommand != null) {
+                    val runner = ExecutionRunner(prepared.shell, prepared.env)
+                    var failed = false
+                    runner.run(RunSpec(info.root, buildCommand, null)).collect { event ->
+                        when (event) {
+                            is RunEvent.PhaseChanged -> {
+                                _outputState.value = _outputState.value.copy(
+                                    phase = OutputPhase.BUILDING,
+                                    summary = context.getString(R.string.output_compiling)
+                                )
+                            }
+                            is RunEvent.Output -> {
+                                buildOutputBuffer.append(event.line).append('\n')
+                                appendOutputLine(OutputLine(event.line, OutputLineKind.BUILD))
+                            }
+                            is RunEvent.BuildFinished -> {
+                                _outputState.value = _outputState.value.copy(
+                                    buildExitCode = event.exitCode,
+                                    buildDurationMs = event.durationMs
+                                )
+                                if (event.exitCode != 0) {
+                                    failed = true
+                                    finishFailedBuild(context, event.exitCode, event.durationMs, event.timedOut)
+                                } else {
+                                    appendOutputLine(
+                                        OutputLine(
+                                            context.getString(R.string.output_build_ok_time, event.durationMs),
+                                            OutputLineKind.STATS
+                                        )
+                                    )
+                                }
+                            }
+                            is RunEvent.Failed -> {
+                                failed = true
+                                failRun(context, event.message)
+                            }
+                            else -> Unit
+                        }
+                    }
+                    if (failed || _outputState.value.buildExitCode != 0) return@launch
+                }
+
+                // 2) Server phase — long-lived; the flow completes only when
+                //    the child exits (or the user cancels the collection).
+                _outputState.value = _outputState.value.copy(
+                    phase = OutputPhase.RUNNING,
+                    summary = context.getString(R.string.output_starting_server)
+                )
+                val server = ServerRunner(
+                    shell = prepared.shell,
+                    environment = prepared.env,
+                    command = runCommand.orEmpty(),
+                    workDir = info.root
+                )
+                activeServer = server
+                server.start().collect { event ->
+                    when (event) {
+                        is ServerEvent.Output -> appendOutputLine(
+                            OutputLine(event.line, OutputLineKind.OUTPUT)
+                        )
+                        is ServerEvent.Ready -> {
+                            _outputState.value = _outputState.value.copy(
+                                serverUrl = event.url,
+                                summary = context.getString(R.string.output_server_running_at, event.url)
+                            )
+                            serverReadyHandler?.invoke(event.url)
+                        }
+                        is ServerEvent.ReadyTimeout -> {
+                            _outputState.value = _outputState.value.copy(
+                                serverUrl = _outputState.value.serverUrl ?: config.serverPreviewUrl(),
+                                summary = context.getString(
+                                    R.string.output_server_no_url,
+                                    event.message
+                                )
+                            )
+                        }
+                        is ServerEvent.Exited -> finishServerExit(context, event.exitCode)
+                        is ServerEvent.Failed -> failRun(context, event.message)
+                    }
+                }
+            } catch (e: CancellationException) {
+                // Stop pressed: stopRun() already updated the state; kill the
+                // server process, then propagate.
+                activeServer?.stop()
+                activeServer = null
+                throw e
+            } catch (e: Exception) {
+                failRun(context, e.message ?: "Server run failed")
+            } finally {
+                activeServer = null
+                serverRunJob = null
+            }
+        }
+    }
+
+    /** Phase 14 — a background server ended on its own. Honest summary per exit code. */
+    private fun finishServerExit(context: Context, exitCode: Int) {
+        val ok = exitCode == 0
+        _outputState.value = _outputState.value.copy(
+            phase = if (ok) OutputPhase.DONE else OutputPhase.FAILED,
+            busy = false,
+            serverUrl = _outputState.value.serverUrl,
+            summary = context.getString(R.string.output_server_exited, exitCode),
+            lines = _outputState.value.lines + OutputLine(
+                "Server exited with code $exitCode",
+                if (ok) OutputLineKind.STATS else OutputLineKind.ERROR
+            )
+        )
     }
 
     /** Appends a line, replacing a trailing partial prompt when it updates. */

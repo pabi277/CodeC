@@ -51,13 +51,15 @@ class ProjectManager(context: Context) {
             if (!root.mkdirs()) return Result.failure(IllegalStateException("Could not create project"))
             val config = ProjectConfig.defaultFor(safe, type)
             writeConfig(root, config)
-            if (includeStarter && config.type == "c") {
-                FileTreeRepository.createFile(
-                    root,
-                    "",
-                    "main.c",
-                    "#include <stdio.h>\n\nint main(void) {\n    printf(\"Hello, CodeC!\\n\");\n    return 0;\n}\n"
-                ).getOrThrow()
+            if (includeStarter) {
+                ProjectScaffold.filesFor(config.type).forEach { file ->
+                    FileTreeRepository.createFile(
+                        root,
+                        file.relativePath.substringBeforeLast('/', ""),
+                        file.relativePath.substringAfterLast('/'),
+                        file.content
+                    ).getOrThrow()
+                }
             }
             Result.success(ProjectInfo(safe, root, config))
         } catch (e: Exception) {

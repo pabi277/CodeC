@@ -365,6 +365,11 @@ fun MainApp() {
                         navController.navigate(Screen.Preview.createRoute(name, projectName)) {
                             launchSingleTop = true
                         }
+                    },
+                    onOpenPreviewUrl = { url ->
+                        navController.navigate(Screen.Preview.createRoute(projectName = projectName, url = url)) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -424,14 +429,17 @@ fun MainApp() {
                 route = Screen.Preview.route,
                 arguments = listOf(
                     navArgument("projectName") { nullable = true },
-                    navArgument("fileName") { nullable = true }
+                    navArgument("fileName") { nullable = true },
+                    navArgument("url") { nullable = true }
                 )
             ) { backStackEntry ->
                 val previewProjectName = backStackEntry.arguments?.getString("projectName")
                 val previewFileName = backStackEntry.arguments?.getString("fileName")
+                val previewUrl = backStackEntry.arguments?.getString("url")
                 WebPreviewScreen(
                     projectName = previewProjectName,
                     fileName = previewFileName,
+                    customUrl = previewUrl,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
