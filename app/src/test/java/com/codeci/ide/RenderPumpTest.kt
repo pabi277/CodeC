@@ -2,7 +2,7 @@ package com.codeci.ide
 
 import com.codeci.ide.ui.terminal.RenderPump
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -58,7 +58,9 @@ class RenderPumpTest {
         advanceTimeBy(16)
         state = 100
         pump.markDirty()
-        advanceUntilIdle()
+        // The buffered signal resumes the parked receiver without needing
+        // virtual time to advance, so the task is queued for "now".
+        runCurrent()
 
         // Every frame carries the state as it was at that moment — the
         // pre-fix behavior collapsed this to a single 100.
@@ -92,7 +94,7 @@ class RenderPumpTest {
         pump.markDirty()
         state = 3
         pump.markDirty()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf(1, 3), seen)
     }
@@ -106,7 +108,7 @@ class RenderPumpTest {
         assertEquals(0, publishes)
 
         pump.start(backgroundScope)
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(1, publishes)
     }

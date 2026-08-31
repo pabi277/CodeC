@@ -1,6 +1,6 @@
 # CodeC Phase 19.2 — Integer-cell crisp rendering (no glyph overlap)
 
-**Status:** Planned (design/spec only) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — host tests written, CI pending · **Cost:** `[client-only]`
 · **Depends on:** none (independent; pairs well with 19.1)
 · **Fixes bug #2:** *"letters overlapping, not visuals good."*
 · **Primary target file:** `ui/components/TerminalEmulatorView.kt`
@@ -139,3 +139,46 @@ PASS = no overlapping/smeared glyphs at any size (matches Termux legibility).
 Client-only; Compose/Canvas + Paint only; no native/PTY/emulator-logic changes;
 no `.` on PATH. Font family/size settings (Phase 4.4/6) still honored — this only
 changes how cells are measured and painted.
+
+
+---
+
+## 7. Research notes (2026-08-31)
+
+* Android `Paint.measureText` returns a FLOAT advance; per-glyph origins
+  computed as `col * cellW` with a fractional `cellW` accumulate error, and
+  each `drawText` snaps to the pixel grid independently — the overlap the
+  owner photographed. Rounding UP (ceil) guarantees cell ≥ font advance, so
+  glyph-wide collisions become impossible at the cost of ≤1 px letter
+  spacing.
+* `Paint.isFakeBoldText` widens strokes beyond the advance (Android docs:
+  it applies a "fake bold" effect); `Typeface.create(base, BOLD)` prefers a
+  real bold face, and where none exists the per-glyph squeeze-to-slot guard
+  (below) keeps even synthesized bold inside its cell.
+* `Paint.letterSpacing`/`textScaleX` must be pinned (0 / 1) or the font's
+  own advance silently diverges from the cell; `isSubpixelText` positions
+  glyphs with subpixel precision without changing advances.
+
+## 8. Implementation record (2026-08-31, commit 3b1986d)
+
+* **New `CellMetrics.kt`** (pure): `cellWidthPx` (ceil of the
+  average-of-ten-'M' advance, ≥1), `cellHeightPx` (ceil of
+  `fontSpacing`), `columnsForWidth`/`rowsForHeight` (floor, ≥1), and
+  `columnX`/`rowY` exact integer origins. Both the **settled** (PTY sizing)
+  and **active** (pinch-visual) paints now derive INTEGER cells from it, so
+  the render grid and the PTY grid agree exactly.
+* **`TerminalEmulatorView`**: `cellW`/`cellH` are `Int`; glyph x =
+  `columnX(col, cellW)`, baseline = `rowY(y, cellH) - ascent`; background,
+  selection and cursor rects all use the same integer metrics (kills the
+  fractional seams). New `boldPaint` (`Typeface.create(typeface, BOLD)`)
+  replaces `isFakeBoldText`. Per-glyph guard: if the measured glyph
+  (fallback font, cluster, anything) exceeds its slot, `textScaleX` is
+  scaled for that single draw and restored — nothing can bleed into the
+  neighbour. `configureGridPaint()` pins `letterSpacing = 0`,
+  `textScaleX = 1`, `isSubpixelText = true` on every grid paint.
+* **Tests** — `CellMetricsTest` (4): ceil/never-below-1 semantics, floor
+  column counts, exact integer multiples across 200 columns.
+
+**Device gate (owner):** §5 recipe unchanged. PASS = dense text (`ls -la
+/usr/bin`), bold (`git status`), colored bg (`ls --color`) and every pinch
+size render with zero touching glyphs.

@@ -50,7 +50,9 @@ class ReflowTest {
 
         buf.resize(8, 2)
 
-        assertEquals("ab\ncd", buf.visibleText())
+        // Two separate logical lines (the trailing LF scrolled "ab" into
+        // history, so assert over the whole transcript, not just the screen).
+        assertEquals("ab\ncd", buf.snapshot().transcriptText())
     }
 
     @Test
@@ -118,7 +120,9 @@ class ReflowTest {
         line(buf, "aa")
         line(buf, "bb")
         line(buf, "cc")
-        line(buf, "dd")
+        // Fill the last row WITHOUT a trailing LF (an LF would scroll "aa"
+        // into scrollback before the resize even starts).
+        "dd".forEach { buf.print(it.code) }
 
         buf.resize(4, 2)
 

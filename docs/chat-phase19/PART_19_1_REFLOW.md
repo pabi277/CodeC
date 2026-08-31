@@ -1,6 +1,6 @@
 # CodeC Phase 19.1 — Scrollback & screen reflow on resize / zoom
 
-**Status:** Planned (design/spec only) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — host tests written, CI pending · **Cost:** `[client-only]`
 · **Depends on:** Phase 6 (Terminal UX — pinch-zoom), Phase 7 (`resizeKey`)
 · **Fixes bug #3:** *"if I zoom out the terminal the previous commands don't get
 full screen, they remain as they were."*
@@ -156,3 +156,61 @@ PASS = steps 2–5 behave like Termux.
 Client-only; pure Kotlin; no native/PTY changes; alt-screen apps still get
 `SIGWINCH` via the unchanged `setWindowSize`. No `.` on PATH; Phase 7
 multi-session + `resizeKey` untouched.
+
+
+---
+
+## 7. Research notes (2026-08-31)
+
+* **Soft-wrap flag semantics** — a row's `wrapped=true` means "this visual
+  row continued onto the next by auto-wrap (DECAWM), not a hard LF" — is
+  the model used by mature terminals' resize ("transcript resize"): rejoin
+  wrapped fragments into logical lines, re-split at the new width, push
+  overflow into scrollback. The xterm/ECMA-48 auto-wrap model (the cursor
+  parks at the right margin and the next print wraps) is what generates the
+  flag.
+* **Rows-only resize**: when only the height changes there is nothing to
+  re-wrap — grow by restoring rows from scrollback (content moves DOWN, so
+  the cursor follows it down), shrink by overflowing the top rows into
+  scrollback (cursor follows up). This matches how full terminals behave
+  when a window gains height (prompt stays with its output).
+* **Alt screen**: full-screen apps repaint on SIGWINCH; a rectangular copy
+  (with cursor clamp) is the correct behavior — reflowing would fight the
+  app's own repaint (and the phase docs already specified this).
+* **Wide glyphs** (from 19.4): UAX #11 wide characters occupy two columns;
+  a re-wrap boundary must never split a lead/continuation pair — the
+  fragment shortens by one (blank padding) and the pair moves down intact.
+
+## 8. Implementation record (2026-08-31, commit 843a274)
+
+* **Row storage** — `TerminalBuffer` internals moved from
+  `Array<Array<Cell>>` to `Array<Row>` where `Row(cells, wrapped)`;
+  scrollback became `ArrayDeque<Row>`. All shift/copy/clone/erase paths
+  carry the flag; `clearRow`/`eraseInLine(2)` reset it; rows scrolled into
+  history keep it (cloned at push — the live row is about to be
+  overwritten).
+* **`print()` sets the wrap flag BEFORE `lineFeed()`** — if the feed
+  scrolls at the bottom margin, the row's clone must already carry
+  `wrapped=true` into scrollback. (Setting it after was a caught-and-fixed
+  aliasing bug: the pushed clone would have kept `false` while the flag
+  landed on the wrong live row.)
+* **New `Reflow.kt`** (pure): logical-line rejoin (trailing *default*
+  blanks trimmed so full-width lines don't spawn phantom rows) → re-split
+  at the new width (all but last fragment `wrapped=true`; wide pairs never
+  split) → cursor mapped through (logical offset → fragment row/col,
+  boundary ties to the earlier fragment's end, clamped). `resize()` runs it
+  over scrollback+screen, repartitions (bottom rows = screen, overflow →
+  scrollback, oldest beyond the limit dropped), and restores the cursor.
+* **Rows-only path** (`resizeRowsOnly`): grow pulls scrollback rows back
+  (cursor follows down), shrink overflows top rows (cursor follows up,
+  clamped). **Alt screen**: unchanged rectangular `resizeGrid` for both
+  dimensions.
+* **Tests** — `ReflowTest` (14): widen rejoins / narrow re-wraps / hard LF
+  never rejoined / cursor maps through widen & narrow / scrollback limit
+  honored / rows-only grow+shrink / cursor-follows-content on shrink /
+  alt rectangular / wrapped-into-history rejoins on later widen / wide pair
+  never split at a boundary / wide pair wraps whole at the right margin.
+
+**Device gate (owner):** §5 recipe unchanged. PASS = zoom-out refills the
+width, zoom-in wraps (nothing truncated), `vi`/`htop` repaint cleanly on
+zoom, scrolled history sits at the new width.

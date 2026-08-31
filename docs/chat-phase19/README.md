@@ -1,6 +1,6 @@
 # CodeC Phase 19 — Terminal Parity (Termux-quality terminal)
 
-**Status:** Planned (design/spec only — no code written) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED on `arena/01a056aa-codec` (2026-08-31, owner: "Ok start phase 19 … fix the bugs mentioned and also try to find other things that Termux better than CodeC terminal and fix it") — all five parts coded, host tests written, CI + device gates pending · **Cost:** `[client-only]`
 · **Depends on:** Phase 6 (Terminal UX), Phase 7 (Multi-terminal sessions)
 
 > Goal: make CodeC's terminal behave like **Termux** — smooth live output,
@@ -68,18 +68,22 @@ part:
 - **TODO for the implementer:** if a device round reveals behavior the doc didn't
   predict, research the cause, note it, and adjust the part before calling it done.
 
-## The three parts
+## The five parts (three planned + two from the parity audit)
 
 | Part | Fixes | Bug | Doc |
 |---|---|---|---|
 | **19.1** | **Scrollback + screen reflow on resize/zoom** | #3 (zoom-out doesn't refill) | [PART_19_1_REFLOW.md](PART_19_1_REFLOW.md) |
 | **19.2** | **Integer-cell crisp rendering** (no overlap) | #2 (letters overlap) | [PART_19_2_RENDERING.md](PART_19_2_RENDERING.md) |
 | **19.3** | **Live render cadence & streaming output** | #1 (prints only at end) | [PART_19_3_LIVE_OUTPUT.md](PART_19_3_LIVE_OUTPUT.md) |
+| **19.4** | **Unicode column widths** — CJK/emoji double-width, Indic clusters (non-ASCII overlap + smear) | parity audit gap #1 | [PART_19_4_UNICODE_WIDTH.md](PART_19_4_UNICODE_WIDTH.md) |
+| **19.5** | **Protocol & interaction parity** — DA1/DA2, OSC 52 clipboard, xterm mouse reporting with Termux-style touch mapping, Ctrl+arrows, Copy All/Share/Reset | parity audit gaps #2–5 | [PART_19_5_PROTOCOL_PARITY.md](PART_19_5_PROTOCOL_PARITY.md) |
 
-Each part is independently implementable and testable; recommended order is
-**19.3 → 19.2 → 19.1** (quickest visible win first, hardest last) — but 19.1 is
-the owner's clearest complaint, so it may be done first if preferred. Each doc
-states its own dependencies.
+19.4 and 19.5 were added on 2026-08-31 by the parity audit the owner
+requested ("find other things Termux does better and fix it"); the audit
+table lives in PART_19_4 §1. Implementation order used: **19.3 → 19.2 →
+19.4 → 19.1 → 19.5** (19.1+19.4 share the `TerminalBuffer` rewrite, so
+they landed as one commit). All parts are host-unit-tested; CI is the only
+test executor (no JDK in the agent sandbox).
 
 ## Standing rules (unchanged)
 

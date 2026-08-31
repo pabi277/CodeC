@@ -61,8 +61,9 @@ class MouseEncodingTest {
 
     @Test
     fun `legacy wheel and out-of-range coordinates`() {
+        // Cb=64 -> char(32+64) = '`' (U+0060), not 'p'.
         assertEquals(
-            "\u001b[Mp\u0021\u0021",
+            "\u001b[M\u0060\u0021\u0021",
             MouseEncoding.wheel(MouseEncoding.WHEEL_UP, 1, 1, sgr = false)
         )
         assertNull(MouseEncoding.press(0, 300, 1, sgr = false))

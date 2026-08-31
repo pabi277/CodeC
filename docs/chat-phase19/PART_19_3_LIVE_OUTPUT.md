@@ -1,6 +1,6 @@
 # CodeC Phase 19.3 — Live render cadence & streaming output
 
-**Status:** Planned (design/spec only) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a056aa-codec`) — host tests written, CI pending · **Cost:** `[client-only]`
 · **Depends on:** none (independent; safe to do first)
 · **Fixes bug #1:** *"if I download something it prints everything after the
 download"* — progress bars / streaming output only appear at the end.
@@ -155,3 +155,48 @@ PASS = streaming output and progress bars animate live like Termux (step 1 & 3).
 Client-only; Kotlin coroutines only; no native/PTY/parser changes; Phase 7
 multi-session routing, bell/CodecApi channels, and wake-lock behavior preserved.
 No `.` on PATH.
+
+
+---
+
+## 7. Research notes (2026-08-31)
+
+* Confirmed the conflation mechanism against kotlinx.coroutines docs:
+  `MutableStateFlow` "conflates … updates always update the value and are
+  not coalesced" — intermediate values are skipped for slow collectors, so
+  the reader MUST NOT be the publisher during a burst.
+  (kotlinx.coroutines StateFlow documentation.)
+* The paced-emitter pattern used (`Channel(CONFLATED)` as a dirty signal +
+  `receive()` → `publish()` → `delay(frameIntervalMs)` loop) is the standard
+  frame-coalescer shape: conflated signals arriving during the `delay` are
+  absorbed by the next `receive()`, so each published value carries the
+  LATEST state while guaranteeing one publication per frame.
+* `runTest` virtual time (`advanceTimeBy`/`advanceUntilIdle`,
+  kotlinx-coroutines-test 1.10.2) exercises the cadence without real time.
+
+## 8. Implementation record (2026-08-31, commits 865fa79)
+
+* **New `RenderPump.kt`** (pure Kotlin): `markDirty()` never blocks; a
+  single coroutine parks on `receive()`, publishes, sleeps
+  `DEFAULT_FRAME_INTERVAL_MS = 16` (~60 fps), and repeats. Idle cost: zero.
+* **`TerminalSession`**: the read loop now calls `renderPump.markDirty()`
+  after `emulator.feed(...)`; a per-session render job is started in
+  `start()` and cancelled in `stopLocked()`. **Immediate publishes are kept
+  for low-frequency, user-visible events** — `resize()`, `notice()`,
+  `resetEmulator()`, the start-failure path, and the reader's `finally`
+  block (the true final state must land even mid-frame) — exactly the
+  design in §2.4. Phase 7 multi-session routing is untouched (one pump per
+  `TerminalSession`; the ViewModel still `flatMapLatest`es the active
+  session's `StateFlow`).
+* **Tests** — `RenderPumpTest` (6, `runTest` virtual time): burst-in-one-
+  frame → 1 publish; bursts across M frames → M publishes; intermediate
+  states `[10, 50, 100]` are all observed (the pre-fix behavior collapsed
+  them to a single 100); idle publishes nothing; newest state wins inside a
+  busy window; a pre-start dirty mark publishes once started.
+* **Perf note:** while touching the view, the per-frame
+  `snapshot.scrollbackLines + snapshot.lines` concatenation (an O(2000)
+  list copy every draw at 60 fps) was replaced by a `lineAt(extY)` index
+  helper (draw loop, tap, long-press, `selectedText`).
+
+**Device gate (owner):** §5 recipe unchanged. PASS = progress bars count up
+smoothly (steps 1 & 3) and `yes | head -100000` stays responsive.
