@@ -1,12 +1,15 @@
 package com.codeci.ide.ui.projects
 
+import java.io.File
+
 /** One starter file written into a freshly created project. */
 data class ScaffoldFile(val relativePath: String, val content: String)
 
 /**
  * Phase 14 — starter files for the project types the Files-tab wizard can
  * create. Pure and host-testable: [filesFor] returns the exact bytes to write
- * and ProjectManager writes them through the confined FileTreeRepository.
+ * and [writeFiles] writes them through the confined FileTreeRepository
+ * (ProjectManager and the bundled demo project both use it).
  *
  * The Python server templates deliberately have a dual path: when the real
  * framework (Flask / FastAPI+uvicorn) is installed via `pip` it runs it;
@@ -35,6 +38,23 @@ object ProjectScaffold {
         )
         "c-microservice" -> listOf(ScaffoldFile("server.c", C_SERVER))
         else -> emptyList()
+    }
+
+    /**
+     * Writes every scaffold file for [type] inside [root], the same way
+     * ProjectManager creates a fresh project (confined FileTreeRepository,
+     * one call per file, so multi-file templates like Flask/FastAPI land in
+     * one place).
+     */
+    fun writeFiles(type: String, root: File) {
+        filesFor(type).forEach { file ->
+            FileTreeRepository.createFile(
+                root,
+                file.relativePath.substringBeforeLast('/', ""),
+                file.relativePath.substringAfterLast('/'),
+                file.content
+            ).getOrThrow()
+        }
     }
 
     // Byte-identical to the Phase 1 starter ProjectManager used to write.

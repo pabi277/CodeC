@@ -12,8 +12,10 @@ auto-open Web Preview, live address bar + auto-reload. **No `[repo-build]`**
 `Build APK` green: `33352164172` (four CI-caught bugs fixed along the way —
 see the implementation record), and **`33355693242`** adds
 `ServerScaffoldE2ETest` — the presets' real build/run commands + `ServerRunner`
-+ loopback HTTP + edit-index.html-hot-read, all verified on CI. Only the
-Compose WebView part of the recipe (§5) still needs the owner's device round.
++ loopback HTTP + edit-index.html-hot-read, all verified on CI. The app now
+also **ships a bundled `demo_flask` project** in the Files tab (D9 — one-time
+seed, never overwrites; `DemoProjectSeedTest`: 4). Only the Compose WebView
+part of the recipe (§5) still needs the owner's device round.
 Long-tail toolchains (Node/Lua/Go/Rust) remain deferred until the owner
 requests one.
 

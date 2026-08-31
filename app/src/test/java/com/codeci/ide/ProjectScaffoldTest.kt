@@ -79,11 +79,7 @@ class ProjectScaffoldTest {
             delete()
             mkdirs()
         }
-        for (scaffold in ProjectScaffold.filesFor("python-flask")) {
-            val file = File(root, scaffold.relativePath)
-            file.parentFile?.mkdirs()
-            file.writeText(scaffold.content)
-        }
+        ProjectScaffold.writeFiles("python-flask", root)
         assertTrue(File(root, "app.py").isFile)
         assertTrue(File(root, "index.html").isFile)
         assertTrue(File(root, "index.html").readText().contains("Welcome to CodeC Flask App!"))

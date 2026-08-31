@@ -19,6 +19,7 @@ class ProjectManager(context: Context) {
     }
 
     fun listProjects(): List<ProjectInfo> {
+        DemoProjects.ensure(projectsRoot())
         migrateLegacyFiles()
         return projectsRoot().listFiles()
             ?.asSequence()
@@ -52,14 +53,7 @@ class ProjectManager(context: Context) {
             val config = ProjectConfig.defaultFor(safe, type)
             writeConfig(root, config)
             if (includeStarter) {
-                ProjectScaffold.filesFor(config.type).forEach { file ->
-                    FileTreeRepository.createFile(
-                        root,
-                        file.relativePath.substringBeforeLast('/', ""),
-                        file.relativePath.substringAfterLast('/'),
-                        file.content
-                    ).getOrThrow()
-                }
+                ProjectScaffold.writeFiles(config.type, root)
             }
             Result.success(ProjectInfo(safe, root, config))
         } catch (e: Exception) {

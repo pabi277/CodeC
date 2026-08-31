@@ -67,6 +67,13 @@ Delivered (all client-only — **no `[repo-build]` dispatch**):
   viewport toggle in Web Preview (plan §2.2 bullet), per-project server
   autostart on app open, and the long-tail toolchains (Node/Lua/Go/Rust) —
   the last requires the owner's explicit request and a `[repo-build]` dispatch.
+- **D9 — Bundled demo project (owner request, 2026-08-31):** the app ships a
+  ready `demo_flask` project (Flask preset + README.md) in the Files tab so it
+  can be opened and RUN ▶ immediately — no wizard steps. Seeding is pure and
+  host-tested (`DemoProjects.ensure`): runs once per app install (marker
+  `.demo-flask-seeded-v1`), never overwrites a user's `demo_flask`, and
+  deleting it does not make it reappear. `ProjectScaffold.writeFiles` is now
+  the single write path for ProjectManager, the wizard and the demo.
 
 ## 3. Invariants
 
@@ -95,37 +102,38 @@ app/src/main/java/com/codeci/ide/ui/screens/WebPreviewScreen.kt     (live mode +
 app/src/main/java/com/codeci/ide/ui/services/ServerRunner.kt        (NEW)
 app/src/main/java/com/codeci/ide/ui/viewmodels/EditorViewModel.kt   (server pipeline)
 app/src/main/java/com/codeci/ide/ui/viewmodels/FileManagerViewModel.kt (createProject(type))
-app/src/main/res/values/strings.xml                                 (server strings)
+app/src/main/java/com/codeci/ide/ui/projects/DemoProjects.kt        (NEW — bundled demo_flask, D9)
 app/src/test/java/com/codeci/ide/ServerPortDetectorTest.kt          (NEW)
 app/src/test/java/com/codeci/ide/ServerRunnerTest.kt                (NEW)
-app/src/test/java/com/codeci/ide/ProjectScaffoldTest.kt             (NEW)
+app/src/test/java/com/codeci/ide/ProjectScaffoldTest.kt             (NEW + writeFiles)
 app/src/test/java/com/codeci/ide/ProjectConfigTest.kt               (extended)
+app/src/test/java/com/codeci/ide/DemoProjectSeedTest.kt             (NEW — D9)
 ```
 
 ## 5. Device recipe (owner, aarch64, latest green `Build APK` APK)
 
 ```sh
-# 0. Install the APK (fresh or in-place), open Files → “+ New Project”
-# 1. Name it e.g. `demo_flask`, choose “Flask Web Server”, create.
-#    → .codec/project.json has type python-flask, port 5000, previewUrl
-#    → files: app.py + index.html
-# 2. Open app.py (observe the dual-path Flask/fallback code).
-# 3. Ensure python3 is installed:  pkg install -y python   (Phase 12 package)
-# 4. Tap RUN ▶ in the editor toolbar.
+# 0. Install the APK (fresh or in-place), open the Files tab.
+#    → `demo_flask` is ALREADY there (bundled, D9): app.py + index.html +
+#      README.md + .codec/project.json (type python-flask, port 5000).
+#    (Alternative: “+ New Project” → name + “Flask Web Server”.)
+# 1. Open app.py (observe the dual-path Flask/fallback code).
+# 2. Ensure python3 is installed:  pkg install -y python   (Phase 12 package)
+# 3. Tap RUN ▶ in the editor toolbar.
 #    EXPECTED (Output Panel):
 #      $ python3 app.py
 #      * Running on http://127.0.0.1:5000/ (CodeC stdlib fallback; …)
 #      summary: “Server running at http://127.0.0.1:5000”
 #    then the app navigates to Web Preview automatically,
 #    address bar shows “● live http://127.0.0.1:5000”.
-# 5. Web Preview shows “Welcome to CodeC Flask App!”.
-# 6. Edit index.html (e.g. change h1 text) in the editor → Save.
+# 4. Web Preview shows “Welcome to CodeC Flask App!”.
+# 5. Edit index.html (e.g. change h1 text) in the editor → Save.
 #    → Web Preview auto-reloads (or tap the Refresh icon) → updated text.
-# 7. Tap the Output Panel’s green preview icon (from the editor) → preview reopens.
-# 8. Optional: pkg install -y python-pip && pip install flask →
+# 6. Tap the Output Panel’s green preview icon (from the editor) → preview reopens.
+# 7. Optional: pkg install -y python-pip && pip install flask →
 #    app.py logs “(CodeC Flask)”; /api/hello returns JSON.
-# 9. Tap Stop — the server dies; Run again starts it fresh.
-# PASS = steps 1–7.
+# 8. Tap Stop — the server dies; Run again starts it fresh.
+# PASS = steps 0–6.
 ```
 
 FastAPI (`python-fastapi`, port 8000; page = index.html; Swagger at `/docs` with
