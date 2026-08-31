@@ -2,11 +2,12 @@ package com.codeci.ide.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -20,12 +21,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
 
+private val ErrorRed = Color(0xFFFF5555)
+private val WarningAmber = Color(0xFFFFB347)
+
 /**
- * Phase 9 status bar, Phase 16 Spck additions: the language label sits
- * between encoding and indent (`UTF-8 · C · Spaces: 4`), the LF/CRLF chip
- * toggles the active file's ending on tap (null [onLineEndingClick] — scratch
- * buffers — renders it inert), and the diagnostics chip keeps doubling as the
- * errors badge (counts live in it; tap reviews and jumps).
+ * Phase 16 (mockup-exact) status bar: one muted line of dot-separated
+ * segments — `Ln 12, Col 4 · UTF-8 · C · Spaces: 4 · LF` — the line ending
+ * being a plain (still-tappable) segment, with the selection count and the
+ * errors/warnings badges appearing only when present (tap jumps to the
+ * first diagnostic).
  */
 @Composable
 fun EditorStatusBar(
@@ -41,94 +45,99 @@ fun EditorStatusBar(
     onLineEndingClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(start = 12.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = stringResource(R.string.status_ln_col, line, column),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "UTF-8",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        StatusSegment(stringResource(R.string.status_ln_col, line, column))
+        StatusDot()
+        StatusSegment("UTF-8")
         if (languageLabel != null) {
-            Text(
-                text = languageLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            StatusDot()
+            StatusSegment(languageLabel)
         }
-        Text(
-            text = stringResource(R.string.status_spaces, tabSize),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = lineEnding + if (onLineEndingClick != null) " ▾" else "",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (onLineEndingClick != null) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            },
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .then(
-                    if (onLineEndingClick != null) {
-                        Modifier.clickable { onLineEndingClick() }
-                    } else {
-                        Modifier
-                    }
-                )
-                .padding(horizontal = 6.dp, vertical = 2.dp)
-        )
+        StatusDot()
+        StatusSegment(stringResource(R.string.status_spaces, tabSize))
         if (selectionLength > 0) {
+            StatusDot()
             Text(
                 text = stringResource(R.string.status_selection, selectionLength),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary
             )
         }
-        Row(
-            modifier = Modifier
-                .clickable(enabled = errorCount + warningCount > 0, onClick = onDiagnosticsClick)
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            if (errorCount > 0) {
-                DiagnosticsDot(color = Color(0xFFFF5555))
+        // Mockup-exact: the line ending reads as a plain muted segment of
+        // the same dot-separated line (no pill); it is still tappable to
+        // toggle LF ⇄ CRLF (scratch buffers are inert).
+        StatusDot()
+        Text(
+            text = lineEnding,
+            style = MaterialTheme.typography.labelSmall,
+            color = muted.copy(alpha = 0.7f),
+            modifier = if (onLineEndingClick != null) {
+                Modifier.clickable { onLineEndingClick() }
+            } else {
+                Modifier
+            }
+        )
+        Spacer(Modifier.weight(1f))
+        if (errorCount > 0) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(onClick = onDiagnosticsClick)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DiagnosticsDot(color = ErrorRed)
+                Spacer(Modifier.width(4.dp))
                 Text(
                     text = "✕ $errorCount",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFFF5555)
+                    color = ErrorRed
                 )
             }
-            if (warningCount > 0) {
-                DiagnosticsDot(color = Color(0xFFFFB347))
+        }
+        if (warningCount > 0) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(onClick = onDiagnosticsClick)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DiagnosticsDot(color = WarningAmber)
+                Spacer(Modifier.width(4.dp))
                 Text(
                     text = "⚠ $warningCount",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFFFB347)
-                )
-            }
-            if (errorCount == 0 && warningCount == 0) {
-                Text(
-                    text = stringResource(R.string.diagnostics),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    color = WarningAmber
                 )
             }
         }
     }
+}
+
+@Composable
+private fun StatusSegment(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
+private fun StatusDot() {
+    Text(
+        text = "  ·  ",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    )
 }
 
 @Composable
