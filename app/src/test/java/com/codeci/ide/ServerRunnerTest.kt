@@ -57,9 +57,12 @@ class ServerRunnerTest {
     @Test
     fun `server exit is reported with its exit code`() = runBlocking {
         val dir = tempDir()
-        val events = runner("echo 'Uvicorn running on http://127.0.0.1:8000'; exit 7", dir)
-            .start()
-            .toList()
+        // Brief stay-alive so the reader thread drains the bind line before
+        // the process exits (otherwise Ready/Output can race the Exited event).
+        val events = runner(
+            "echo 'Uvicorn running on http://127.0.0.1:8000'; sleep 1; exit 7",
+            dir
+        ).start().toList()
         assertTrue(events.any { it is ServerEvent.Ready })
         val exited = events.filterIsInstance<ServerEvent.Exited>().single()
         assertEquals(7, exited.exitCode)

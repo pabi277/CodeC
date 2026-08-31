@@ -84,9 +84,9 @@ class ProjectScaffoldTest {
             file.parentFile?.mkdirs()
             file.writeText(scaffold.content)
         }
-        val app = File(root, "app.py")
-        assertTrue(app.isFile)
-        assertTrue(app.readText().contains("Welcome to CodeC Flask App!"))
+        assertTrue(File(root, "app.py").isFile)
+        assertTrue(File(root, "index.html").isFile)
+        assertTrue(File(root, "index.html").readText().contains("Welcome to CodeC Flask App!"))
         root.deleteRecursively()
     }
 

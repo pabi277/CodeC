@@ -107,7 +107,7 @@ try:
         return jsonify(message="Hello from CodeC Flask!")
 
     if __name__ == "__main__":
-        print(" * Running on http://127.0.0.1:%d/ (CodeC Flask)" % PORT, flush=True)
+        print(" * Running on http://127.0.0.1:5000/ (CodeC Flask)", flush=True)
         app.run(host="127.0.0.1", port=PORT, debug=False, use_reloader=False)
 except ImportError:
     from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -126,8 +126,8 @@ except ImportError:
 
     if __name__ == "__main__":
         print(
-            " * Running on http://127.0.0.1:%d/ (CodeC stdlib fallback; install flask via: %s flask)"
-            % (PORT, "$PYTHON_PIP_HINT"),
+            " * Running on http://127.0.0.1:5000/ (CodeC stdlib fallback; install flask via: %s)"
+            % "$PYTHON_PIP_HINT",
             flush=True,
         )
         HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
@@ -192,7 +192,7 @@ try:
         return {"message": "Hello from CodeC FastAPI!"}
 
     if __name__ == "__main__":
-        print("Uvicorn running on http://127.0.0.1:%d/ (CodeC FastAPI)" % PORT, flush=True)
+        print("Uvicorn running on http://127.0.0.1:8000/ (CodeC FastAPI)", flush=True)
         uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="info")
 except ImportError:
     from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -211,8 +211,8 @@ except ImportError:
 
     if __name__ == "__main__":
         print(
-            "Uvicorn running on http://127.0.0.1:%d/ (CodeC stdlib fallback; install fastapi via: %s fastapi uvicorn)"
-            % (PORT, "$PYTHON_PIP_HINT"),
+            "Uvicorn running on http://127.0.0.1:8000/ (CodeC stdlib fallback; install fastapi via: %s)"
+            % "$PYTHON_PIP_HINT",
             flush=True,
         )
         HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
@@ -306,7 +306,7 @@ int main(void) {
         close(server);
         return 1;
     }
-    printf("CodeC server listening on http://127.0.0.1:%d\n", PORT);
+    printf("CodeC server listening on http://127.0.0.1:8080\n");
     fflush(stdout);
 
     for (;;) {
