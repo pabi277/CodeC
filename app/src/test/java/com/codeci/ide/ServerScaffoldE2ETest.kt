@@ -85,6 +85,23 @@ class ServerScaffoldE2ETest {
     }
 
     /**
+     * The bind line is printed before the listener socket finishes binding, so
+     * the very first GET can race the socket — retry briefly (CI-safe).
+     */
+    private fun awaitHttp(url: String): Pair<Int, String> {
+        var last: Exception? = null
+        repeat(30) {
+            try {
+                return httpGet(url)
+            } catch (e: Exception) {
+                last = e
+                Thread.sleep(100)
+            }
+        }
+        throw AssertionError("HTTP never became reachable at $url; last error: $last")
+    }
+
+    /**
      * Starts the preset server, waits for the bind line via [ServerRunner],
      * runs [verify] against the project dir + live events, then stops and
      * asserts cleanup. Fails fast with the captured output on any early exit.
@@ -133,7 +150,7 @@ class ServerScaffoldE2ETest {
     @Test
     fun `flask scaffold starts via preset run, serves the live index and hot-reads edits`() {
         serverRoundTrip("python-flask", 5000) { dir, events ->
-            val (code, body) = httpGet("http://127.0.0.1:5000/")
+            val (code, body) = awaitHttp("http://127.0.0.1:5000/")
             assertEquals(200, code)
             assertTrue(body.contains("Welcome to CodeC Flask App!"))
             assertTrue(
@@ -147,7 +164,7 @@ class ServerScaffoldE2ETest {
             val index = File(dir, "index.html")
             assertTrue(index.isFile)
             index.writeText("<!doctype html><html><body><h1>Edited on the fly</h1></body></html>")
-            val (code2, body2) = httpGet("http://127.0.0.1:5000/")
+            val (code2, body2) = awaitHttp("http://127.0.0.1:5000/")
             assertEquals(200, code2)
             assertTrue(body2.contains("Edited on the fly"))
         }
@@ -156,7 +173,7 @@ class ServerScaffoldE2ETest {
     @Test
     fun `fastapi scaffold starts via preset run and serves the live index`() {
         serverRoundTrip("python-fastapi", 8000) { dir, events ->
-            val (code, body) = httpGet("http://127.0.0.1:8000/")
+            val (code, body) = awaitHttp("http://127.0.0.1:8000/")
             assertEquals(200, code)
             assertTrue(body.contains("Welcome to CodeC FastAPI App!"))
             assertTrue(
@@ -168,7 +185,7 @@ class ServerScaffoldE2ETest {
             val index = File(dir, "index.html")
             assertTrue(index.isFile)
             index.writeText("<!doctype html><html><body><h1>FastAPI edited</h1></body></html>")
-            val (code2, body2) = httpGet("http://127.0.0.1:8000/")
+            val (code2, body2) = awaitHttp("http://127.0.0.1:8000/")
             assertEquals(200, code2)
             assertTrue(body2.contains("FastAPI edited"))
         }
@@ -177,7 +194,7 @@ class ServerScaffoldE2ETest {
     @Test
     fun `c microservice preset builds with cc, starts and serves 8080`() {
         serverRoundTrip("c-microservice", 8080) { _, events ->
-            val (code, body) = httpGet("http://127.0.0.1:8080/")
+            val (code, body) = awaitHttp("http://127.0.0.1:8080/")
             assertEquals(200, code)
             assertTrue(body.contains("Welcome to CodeC C Microservice!"))
             assertTrue(
@@ -222,7 +239,7 @@ class ServerScaffoldE2ETest {
                 }
                 val ready = events.filterIsInstance<ServerEvent.Ready>().first()
                 assertEquals("http://127.0.0.1:5000", ready.url)
-                val (code, body) = httpGet("${ready.url}/")
+                val (code, body) = awaitHttp("${ready.url}/")
                 assertEquals(200, code)
                 assertTrue(body.contains("Welcome to CodeC Flask App!"))
             } finally {
