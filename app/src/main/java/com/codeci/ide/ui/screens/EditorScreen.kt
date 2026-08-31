@@ -81,7 +81,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
@@ -142,6 +145,9 @@ import com.codeci.ide.ui.viewmodels.EditorViewModel
 import java.io.File
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+/** Mockup-exact RUN affordance green (Spck's run action color). */
+private val RunGreen = Color(0xFF3DDC84)
 
 /** Tap-anchor for the inline diagnostic tooltip. */
 internal data class EditorPopupAnchor(val x: Float, val y: Float, val diagnostic: EditorDiagnostic)
@@ -589,10 +595,6 @@ fun EditorScreen(
                             Toast.LENGTH_SHORT
                         ).show()
                     },
-                    onOpenSettings = {
-                        uiScope.launch { drawerState.close() }
-                        onOpenSettings()
-                    },
                     onNewFile = { parent ->
                         entryName = "main.c"
                         pendingCreate = parent to false
@@ -707,30 +709,51 @@ fun EditorScreen(
                     }) {
                         Icon(Icons.Default.Search, contentDescription = stringResource(R.string.find))
                     }
-                    if (showPreviewAction) {
-                        IconButton(onClick = {
-                            val entry = previewEntryOrNull()
-                            if (entry != null) {
-                                onOpenPreview(entry)
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.file_save_failed),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }) {
-                            Icon(
-                                Icons.Default.Visibility,
-                                contentDescription = stringResource(R.string.preview)
-                            )
-                        }
-                    }
                     Box {
                         IconButton(onClick = { showMoreMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
                         }
                         DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                            // Phase 16 mockup-exact: the former second toolbar
+                            // row (undo/redo/save/format + keys toggle) now
+                            // lives here; the top bar stays ☰ tabs 🔍  RUN.
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.undo)) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null) },
+                                enabled = canUndo,
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.undo()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.redo)) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null) },
+                                enabled = canRedo,
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.redo()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(
+                                            if (keysRowVisible) R.string.editor_hide_keys_row else R.string.editor_show_keys_row
+                                        )
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        if (keysRowVisible) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = {
+                                    showMoreMenu = false
+                                    keysRowVisible = !keysRowVisible
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.save)) },
                                 onClick = {
@@ -820,6 +843,27 @@ fun EditorScreen(
                                     )
                                 }
                             }
+                            if (showPreviewAction) {
+                                // The mockup top bar has no preview eye; the
+                                // Phase 14 preview action lives in the menu.
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.preview)) },
+                                    leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        val entry = previewEntryOrNull()
+                                        if (entry != null) {
+                                            onOpenPreview(entry)
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.file_save_failed),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                )
+                            }
                             if (!isWebProject) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.run_in_terminal)) },
@@ -893,94 +937,53 @@ fun EditorScreen(
                             )
                         }
                     }
-                    Button(
-                        onClick = {
-                            if (isWebProject) {
-                                val entry = webDefaultEntryOrNull()
-                                if (entry != null) {
-                                    onOpenPreview(entry)
+                    // Mockup-exact RUN: green ▶ + green "RUN" text, no filled
+                    // button chrome (Spck's run affordance).
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                if (isWebProject) {
+                                    val entry = webDefaultEntryOrNull()
+                                    if (entry != null) {
+                                        onOpenPreview(entry)
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.default_run_page_missing),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 } else {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.default_run_page_missing),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    viewModel.runActiveFile(context)
                                 }
-                            } else {
-                                viewModel.runActiveFile(context)
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                        modifier = Modifier.padding(end = 8.dp),
-                        shape = RoundedCornerShape(8.dp)
+                            .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.run), modifier = Modifier.padding(end = 4.dp))
-                        Text(stringResource(R.string.run))
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = stringResource(R.string.run),
+                            tint = RunGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Text(
+                            stringResource(R.string.run),
+                            color = RunGreen,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { viewModel.undo() }) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Undo,
-                        contentDescription = stringResource(R.string.undo),
-                        tint = if (canUndo) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        }
-                    )
-                }
-                IconButton(onClick = { viewModel.redo() }) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Redo,
-                        contentDescription = stringResource(R.string.redo),
-                        tint = if (canRedo) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        }
-                    )
-                }
-                IconButton(onClick = {
-                    if (viewModel.saveFile(context)) {
-                        Toast.makeText(context, context.getString(R.string.file_saved), Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
-                    }
-                }) { Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save)) }
-                IconButton(onClick = {
-                    viewModel.formatCode(context, tabSize)
-                }) {
-                    Icon(
-                        Icons.Default.AutoFixHigh,
-                        contentDescription = stringResource(R.string.format),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = { keysRowVisible = !keysRowVisible }) {
-                    Icon(
-                        if (keysRowVisible) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = stringResource(R.string.editor_keys_row_toggle),
-                        tint = if (keysRowVisible) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
-            }
+            // Phase 16 mockup-exact: no second toolbar row — the top bar is
+            // exactly ☰ + tabs + 🔍 +  + ▶ RUN. Undo/Redo and the keys-row
+            // toggle moved into the ⋮ overflow (below).
 
             AnimatedVisibility(visible = findState.visible) {
                 FindReplaceBar(
@@ -1087,18 +1090,33 @@ fun EditorScreen(
                     if (showLineNumbers) {
                         val lineCount = codeText.text.count { it == '\n' } + 1
                         val lineNumbers = (1..lineCount).joinToString("\n")
-                        Text(
-                            text = lineNumbers,
-                            style = TextStyle(
-                                fontFamily = editorFont,
-                                fontSize = fontSize.sp,
-                                color = Color(0xFF858585),
-                                textAlign = TextAlign.End
-                            ),
+                        // Mockup-exact gutter: right-aligned muted numbers with
+                        // a hairline vertical divider at the gutter edge.
+                        Box(
                             modifier = Modifier
-                                .width(40.dp)
-                                .padding(end = 8.dp)
-                        )
+                                .width(48.dp)
+                                .drawBehind {
+                                    drawLine(
+                                        color = editorColors.text.copy(alpha = 0.14f),
+                                        start = Offset(size.width - 0.5f, 0f),
+                                        stop = Offset(size.width - 0.5f, size.height),
+                                        strokeWidth = 1f
+                                    )
+                                }
+                        ) {
+                            Text(
+                                text = lineNumbers,
+                                style = TextStyle(
+                                    fontFamily = editorFont,
+                                    fontSize = fontSize.sp,
+                                    color = Color(0xFF858585),
+                                    textAlign = TextAlign.End
+                                ),
+                                modifier = Modifier
+                                    .width(40.dp)
+                                    .padding(end = 8.dp)
+                            )
+                        }
                     }
                     BasicTextField(
                         value = codeText,
