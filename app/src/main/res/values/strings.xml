@@ -252,7 +252,7 @@
 
     <!-- Phase 13: GitHub & Git source control -->
     <string name="clone_from_github">Clone from GitHub</string>
-    <string name="clone_url_label">Repository URL (https://…)</string>
+    <string name="clone_url_label">Repository URL</string>
     <string name="clone_name_label">Project name</string>
     <string name="clone_action">Clone</string>
     <string name="clone_invalid_url">Enter an https:// GitHub repository URL</string>
@@ -295,7 +295,9 @@
     <string name="clone_fetch_branches">Fetch branches</string>
     <string name="clone_no_branches_found">No branches listed — type a name instead</string>
     <string name="clone_invalid_branch">Invalid branch name</string>
-    <string name="clone_token_hint">Private repos need a token — add it in Settings</string>
+    <string name="clone_token_hint">Private repos need a token — add it in</string>
+    <string name="clone_qr">Scan repository QR code</string>
+    <string name="clone_fetching_branches">Fetching branches…</string>
     <string name="hub_open_action">Open</string>
     <string name="hub_rename_project">Rename Project</string>
     <string name="hub_copy_remote_url">Copy remote URL</string>
@@ -334,5 +336,12 @@
     <string name="go_to_line_prompt">Enter a line number to jump to</string>
     <string name="path_copied">Path copied</string>
     <string name="editor_keys_row_toggle">Toggle snippet row</string>
+    <string name="editor_show_keys_row">Show keys row</string>
+    <string name="editor_hide_keys_row">Hide keys row</string>
+    <!-- Phase 15/16 mockup-exact: source-control sheet -->
+    <string name="git_commit_message_placeholder">Message (Ctrl+Enter to commit)</string>
+    <string name="git_changes_header">Changes</string>
+    <string name="git_stage">Stage file</string>
+    <string name="git_unstage">Unstage file</string>
 </resources>
 
