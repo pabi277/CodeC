@@ -38,7 +38,7 @@ class GitBranchManagerTest {
             {
               printf 'CMD'
               for a in "${'$'}@"; do printf ' [%s]' "${'$'}a"; done
-              printf '\\n'
+              printf '\n'
             } >> "${'$'}FAKE_LOG"
             case "${'$'}1" in
               --version)
@@ -46,25 +46,25 @@ class GitBranchManagerTest {
                 exit 0
                 ;;
               branch)
-                if [ -n "${'$'}FAKE_BRANCH_OUT" ]; then printf '%b\\n' "${'$'}FAKE_BRANCH_OUT"; fi
+                if [ -n "${'$'}FAKE_BRANCH_OUT" ]; then printf '%b\n' "${'$'}FAKE_BRANCH_OUT"; fi
                 exit "${'$'}{FAKE_BRANCH_EXIT:-0}"
                 ;;
               rev-parse)
-                if [ -n "${'$'}FAKE_REVPARSE_OUT" ]; then printf '%b\\n' "${'$'}FAKE_REVPARSE_OUT"; fi
+                if [ -n "${'$'}FAKE_REVPARSE_OUT" ]; then printf '%b\n' "${'$'}FAKE_REVPARSE_OUT"; fi
                 exit "${'$'}{FAKE_REVPARSE_EXIT:-0}"
                 ;;
               checkout)
-                if [ -n "${'$'}FAKE_CHECKOUT_OUT" ]; then printf '%b\\n' "${'$'}FAKE_CHECKOUT_OUT"; fi
+                if [ -n "${'$'}FAKE_CHECKOUT_OUT" ]; then printf '%b\n' "${'$'}FAKE_CHECKOUT_OUT"; fi
                 exit "${'$'}{FAKE_CHECKOUT_EXIT:-0}"
                 ;;
               stash)
                 case "${'$'}2" in
                   list)
-                    if [ -n "${'$'}FAKE_STASH_OUT" ]; then printf '%b\\n' "${'$'}FAKE_STASH_OUT"; fi
+                    if [ -n "${'$'}FAKE_STASH_OUT" ]; then printf '%b\n' "${'$'}FAKE_STASH_OUT"; fi
                     exit 0
                     ;;
                   push)
-                    if [ -n "${'$'}FAKE_STASH_PUSH_OUT" ]; then printf '%b\\n' "${'$'}FAKE_STASH_PUSH_OUT"; fi
+                    if [ -n "${'$'}FAKE_STASH_PUSH_OUT" ]; then printf '%b\n' "${'$'}FAKE_STASH_PUSH_OUT"; fi
                     exit "${'$'}{FAKE_STASH_PUSH_EXIT:-0}"
                     ;;
                   pop)
@@ -74,7 +74,7 @@ class GitBranchManagerTest {
                 exit 0
                 ;;
               status)
-                if [ -n "${'$'}FAKE_STATUS_OUT" ]; then printf '%b\\n' "${'$'}FAKE_STATUS_OUT"; fi
+                if [ -n "${'$'}FAKE_STATUS_OUT" ]; then printf '%b\n' "${'$'}FAKE_STATUS_OUT"; fi
                 exit "${'$'}{FAKE_STATUS_EXIT:-0}"
                 ;;
             esac
@@ -113,7 +113,7 @@ class GitBranchManagerTest {
                 dir,
                 mapOf(
                     "FAKE_BRANCH_OUT" to
-                        "  feature/x\\n* main\\n  remotes/origin/HEAD -> origin/main\\n  remotes/origin/develop"
+                        "  feature/x\n* main\n  remotes/origin/HEAD -> origin/main\n  remotes/origin/develop"
                 )
             )
             val list = manager(dir, e).listBranches(repo(dir))
@@ -214,7 +214,7 @@ class GitBranchManagerTest {
             val dir = tempDir()
             val e = env(
                 dir,
-                mapOf("FAKE_STATUS_OUT" to "## main...origin/main\\n M src/app.py\\n?? notes.txt")
+                mapOf("FAKE_STATUS_OUT" to "## main...origin/main\n M src/app.py\n?? notes.txt")
             )
             val result = manager(dir, e).switchBranch(
                 repo(dir),
@@ -240,7 +240,7 @@ class GitBranchManagerTest {
             val e = env(
                 dir,
                 mapOf(
-                    "FAKE_STATUS_OUT" to "## main...origin/main\\n M src/app.py",
+                    "FAKE_STATUS_OUT" to "## main...origin/main\n M src/app.py",
                     "FAKE_STASH_OUT" to "stash@{0}: On feature: codec-switch: feature"
                 )
             )
@@ -265,7 +265,7 @@ class GitBranchManagerTest {
             val e = env(
                 dir,
                 mapOf(
-                    "FAKE_STATUS_OUT" to "## main...origin/main\\n M src/app.py",
+                    "FAKE_STATUS_OUT" to "## main...origin/main\n M src/app.py",
                     "FAKE_STASH_OUT" to "stash@{0}: WIP on feature: 1a2b3c4 unrelated work"
                 )
             )
@@ -301,7 +301,7 @@ class GitBranchManagerTest {
             val e = env(
                 dir,
                 mapOf(
-                    "FAKE_STATUS_OUT" to "## main...origin/main\\n M src/app.py",
+                    "FAKE_STATUS_OUT" to "## main...origin/main\n M src/app.py",
                     "FAKE_CHECKOUT_EXIT" to "1",
                     "FAKE_CHECKOUT_OUT" to "error: pathspec 'feature' did not match"
                 )
@@ -327,7 +327,7 @@ class GitBranchManagerTest {
             val e = env(
                 dir,
                 mapOf(
-                    "FAKE_STATUS_OUT" to "## main...origin/main\\n M src/app.py",
+                    "FAKE_STATUS_OUT" to "## main...origin/main\n M src/app.py",
                     "FAKE_STASH_OUT" to "stash@{0}: On feature: codec-switch: feature",
                     "FAKE_STASH_POP_EXIT" to "1"
                 )
@@ -348,7 +348,7 @@ class GitBranchManagerTest {
     fun `switchBranch with stashChanges off never touches the stash`() = runBlocking {
         withTimeout(20_000) {
             val dir = tempDir()
-            val e = env(dir, mapOf("FAKE_STATUS_OUT" to "## main...origin/main\\n M src/app.py"))
+            val e = env(dir, mapOf("FAKE_STATUS_OUT" to "## main...origin/main\n M src/app.py"))
             manager(dir, e).switchBranch(
                 repo(dir),
                 BranchTarget("feature", BranchTargetKind.LOCAL),
@@ -398,7 +398,7 @@ class GitBranchManagerTest {
                 dir,
                 mapOf(
                     "FAKE_STATUS_OUT" to "## main...origin/main",
-                    "FAKE_BRANCH_OUT" to "* main\\n  develop\\n  remotes/origin/develop"
+                    "FAKE_BRANCH_OUT" to "* main\n  develop\n  remotes/origin/develop"
                 )
             )
             manager(dir, e).switchBranch(
