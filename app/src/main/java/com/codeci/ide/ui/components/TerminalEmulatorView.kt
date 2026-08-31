@@ -55,6 +55,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.R
 import com.codeci.ide.ui.terminal.CellFlags
 import com.codeci.ide.ui.terminal.CellMetrics
+import com.codeci.ide.ui.terminal.MouseEncoding
+import com.codeci.ide.ui.terminal.MouseModes
 import com.codeci.ide.ui.terminal.StyleRun
 import com.codeci.ide.ui.terminal.TerminalLine
 import com.codeci.ide.ui.terminal.TerminalSnapshot
@@ -152,6 +154,10 @@ fun TerminalEmulatorView(
     bellTrigger: Long = 0L,
     onSelectionChanged: (String?) -> Unit = {},
     onUrlClick: (String) -> Unit = {},
+    /** Phase 19.5: raw mouse-reporting bytes for the running program. */
+    onMouseEvent: (String) -> Unit = {},
+    /** Phase 19.5: terminal RESET (RIS) from the context menu. */
+    onReset: () -> Unit = {},
     /** Re-fires [onResize] when this key changes (e.g. active session id, Phase 7). */
     resizeKey: Any? = null
 ) {
@@ -209,6 +215,7 @@ fun TerminalEmulatorView(
 
     // Termux mTopRow: 0 = live screen, negative = scrolled into transcript.
     var topRow by remember { mutableIntStateOf(0) }
+    var wheelRemainder by remember { mutableFloatStateOf(0f) }
     var selection by remember { mutableStateOf<GridSelection?>(null) }
     var menu by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(IntOffset.Zero) }
@@ -275,6 +282,14 @@ fun TerminalEmulatorView(
                             onTap = { pos ->
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
                                 val row = (pos.y / cellH).toInt().coerceIn(0, rows - 1)
+                                if (snapshot.mouseMode and MouseModes.CAPTURE_MASK != 0) {
+                                    // Phase 19.5: the app owns the mouse —
+                                    // a tap is a left click at that cell.
+                                    val sgr = snapshot.mouseMode and MouseModes.SGR_EXT != 0
+                                    MouseEncoding.press(0, col + 1, row + 1, sgr)?.let(onMouseEvent)
+                                    MouseEncoding.release(0, col + 1, row + 1, sgr)?.let(onMouseEvent)
+                                    return@detectTapGestures
+                                }
                                 val line = snapshot.lineAt(topRow + row)
                                 val url = if (line != null) {
                                     findUrlAt(line.text, col)
@@ -303,17 +318,43 @@ fun TerminalEmulatorView(
                             }
                         )
                     }
-                    .pointerInput(cellH, snapshot.scrollbackCount, selecting) {
+                    .pointerInput(
+                        cellW,
+                        cellH,
+                        snapshot.scrollbackCount,
+                        snapshot.mouseMode,
+                        selecting
+                    ) {
                         detectScrollOrSelect(
                             cellW = cellW,
                             cellH = cellH,
                             cols = cols,
                             rows = rows,
                             selecting = { selecting },
-                            onScroll = { dy ->
-                                val deltaRows = (dy / cellH).toInt()
-                                if (deltaRows != 0) {
-                                    topRow = (topRow + deltaRows).coerceIn(-snapshot.scrollbackCount, 0)
+                            onScroll = { dy, x, y ->
+                                if (snapshot.mouseMode and MouseModes.CAPTURE_MASK != 0) {
+                                    // Termux-style touch mapping: while the app
+                                    // reports the mouse, swipes act as the
+                                    // WHEEL (buttons 64/65), so htop/vim/tmux
+                                    // scroll instead of the local scrollback.
+                                    wheelRemainder += dy
+                                    val units = (wheelRemainder / cellH).toInt()
+                                    if (units != 0) {
+                                        wheelRemainder -= units * cellH
+                                        val sgr = snapshot.mouseMode and MouseModes.SGR_EXT != 0
+                                        val col = (x / cellW).toInt().coerceIn(0, cols - 1)
+                                        val row = (y / cellH).toInt().coerceIn(0, rows - 1)
+                                        val dir = if (units > 0) MouseEncoding.WHEEL_DOWN else MouseEncoding.WHEEL_UP
+                                        repeat(kotlin.math.abs(units)) {
+                                            MouseEncoding.wheel(dir, col + 1, row + 1, sgr)?.let(onMouseEvent)
+                                        }
+                                    }
+                                } else {
+                                    wheelRemainder = 0f
+                                    val deltaRows = (dy / cellH).toInt()
+                                    if (deltaRows != 0) {
+                                        topRow = (topRow + deltaRows).coerceIn(-snapshot.scrollbackCount, 0)
+                                    }
                                 }
                             },
                             onSelectMove = { col, row ->
@@ -400,6 +441,38 @@ fun TerminalEmulatorView(
                             0, -snapshot.scrollbackCount,
                             cols - 1, snapshot.rows - 1
                         )
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Copy All") },
+                    onClick = {
+                        menu = false
+                        onCopyText(snapshot.transcriptText())
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Share") },
+                    onClick = {
+                        menu = false
+                        val text = selectedText ?: snapshot.transcriptText()
+                        runCatching {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(
+                                Intent.createChooser(intent, "Share terminal text")
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Reset") },
+                    onClick = {
+                        menu = false
+                        onReset()
                     }
                 )
                 DropdownMenuItem(
@@ -616,7 +689,7 @@ private suspend fun PointerInputScope.detectScrollOrSelect(
     cols: Int,
     rows: Int,
     selecting: () -> Boolean,
-    onScroll: (Float) -> Unit,
+    onScroll: (Float, Float, Float) -> Unit,
     onSelectMove: (Int, Int) -> Unit
 ) {
     awaitEachGesture {
@@ -635,7 +708,7 @@ private suspend fun PointerInputScope.detectScrollOrSelect(
                 onSelectMove(col, row)
                 change.consume()
             } else if (dragged) {
-                onScroll(-dy)
+                onScroll(-dy, change.position.x, change.position.y)
                 lastY = change.position.y
                 change.consume()
             }
@@ -698,19 +771,19 @@ private fun handleHardwareKey(
             return true
         }
         Key.DirectionUp -> {
-            onInput(cursorSequence('A'))
+            onInput(if (ctrl) "\u001b[1;5A" else cursorSequence('A'))
             return true
         }
         Key.DirectionDown -> {
-            onInput(cursorSequence('B'))
+            onInput(if (ctrl) "\u001b[1;5B" else cursorSequence('B'))
             return true
         }
         Key.DirectionRight -> {
-            onInput(cursorSequence('C'))
+            onInput(if (ctrl) "\u001b[1;5C" else cursorSequence('C'))
             return true
         }
         Key.DirectionLeft -> {
-            onInput(cursorSequence('D'))
+            onInput(if (ctrl) "\u001b[1;5D" else cursorSequence('D'))
             return true
         }
         Key.MoveHome, Key.Home -> {

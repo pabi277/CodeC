@@ -195,6 +195,20 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             },
             viewModelScope.launch(Dispatchers.IO) {
                 item.session.bellEvents.collect { _bellEvents.tryEmit(it) }
+            },
+            // Phase 19.5: OSC 52 — a program asked to set the clipboard.
+            viewModelScope.launch(Dispatchers.IO) {
+                item.session.clipboardWrites.collect { text ->
+                    runCatching {
+                        val cm = app.getSystemService(Context.CLIPBOARD_SERVICE)
+                            as? android.content.ClipboardManager
+                        cm?.setPrimaryClip(
+                            android.content.ClipData.newPlainText("terminal", text)
+                        )
+                    }.onFailure { e ->
+                        AppLogger.e("TerminalViewModel", "OSC 52 clipboard write failed", e)
+                    }
+                }
             }
         )
         synchronized(jobsLock) { sessionJobs[item.id] = jobs }

@@ -55,6 +55,10 @@ class TerminalSession(
     private val _bellEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
     val bellEvents: SharedFlow<Unit> = _bellEvents.asSharedFlow()
 
+    /** Phase 19.5: OSC 52 clipboard-write requests from the running program. */
+    private val _clipboardWrites = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val clipboardWrites: SharedFlow<String> = _clipboardWrites.asSharedFlow()
+
     init {
         emulator.onStoragePermissionRequested = {
             _storagePermissionRequests.tryEmit(Unit)
@@ -64,6 +68,9 @@ class TerminalSession(
         }
         emulator.onBell = {
             _bellEvents.tryEmit(Unit)
+        }
+        emulator.onClipboardWrite = { text ->
+            _clipboardWrites.tryEmit(text)
         }
     }
 

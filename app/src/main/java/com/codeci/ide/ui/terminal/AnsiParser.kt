@@ -226,7 +226,11 @@ class AnsiParser(private val host: Host) {
 
     companion object {
         const val MAX_PARAMS = 16
-        const val MAX_OSC = 1024
+
+        /** Phase 19.5: raised so OSC 52 clipboard payloads (base64) survive;
+         *  8192 chars ≈ 6 KB of decoded clip — enough for editor yanks while
+         *  still bounding a runaway unterminated OSC string. */
+        const val MAX_OSC = 8192
 
         fun param(params: IntArray, count: Int, index: Int, default: Int = 0): Int {
             if (index >= count) return default

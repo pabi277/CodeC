@@ -139,7 +139,9 @@ data class TerminalSnapshot(
     val cursorY: Int,
     val cursorVisible: Boolean,
     val title: String,
-    val generation: Long
+    val generation: Long,
+    /** Phase 19.5: active mouse-reporting modes ([MouseModes] bits). */
+    val mouseMode: Int = 0
 ) {
     val scrollbackCount: Int get() = scrollbackLines.size
 
@@ -200,6 +202,9 @@ class TerminalBuffer(
     var bracketedPaste: Boolean = false
     var title: String = "Terminal"
 
+    /** Phase 19.5: active xterm mouse-reporting modes ([MouseModes] bits). */
+    var mouseMode: Int = 0
+
     val style: CellStyle = CellStyle()
 
     private var usingAlt: Boolean = false
@@ -232,6 +237,7 @@ class TerminalBuffer(
         reverseVideo = false
         applicationCursorKeys = false
         bracketedPaste = false
+        mouseMode = 0
         title = "Terminal"
         style.reset()
         usingAlt = false
@@ -679,7 +685,8 @@ class TerminalBuffer(
             cursorY = cursorY.coerceIn(0, rows - 1),
             cursorVisible = cursorVisible,
             title = title,
-            generation = generation
+            generation = generation,
+            mouseMode = mouseMode
         )
     }
 
