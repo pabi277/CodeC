@@ -7,6 +7,7 @@ import com.codeci.ide.ui.projects.DiffEngine
 import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitContext
+import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.GitStatus
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -122,6 +123,30 @@ class GitControlViewModel : ViewModel() {
                     "Committed ✓ — push failed: ${failure.message ?: "unknown error"}"
                 }
             )
+        }
+    }
+
+    /**
+     * Phase 15/16 — per-file stage/unstage (the mockup's +/− row button):
+     * staged rows unstage (`git reset -- <path>`), unstaged rows stage
+     * (`git add -- <path>`). The porcelain `x` column tells us the side the
+     * file is currently on.
+     */
+    fun toggleStage(context: Context, projectRoot: File, change: GitFileChange) {
+        val staged = change.x != ' '
+        val name = change.path.substringAfterLast('/')
+        runGitOperation(
+            context,
+            projectRoot,
+            if (staged) "Unstaging $name…" else "Staging $name…"
+        ) { git ->
+            if (staged) {
+                git.unstageFile(projectRoot, change.path)
+                "Unstaged $name"
+            } else {
+                git.stageFile(projectRoot, change.path)
+                "Staged $name"
+            }
         }
     }
 
