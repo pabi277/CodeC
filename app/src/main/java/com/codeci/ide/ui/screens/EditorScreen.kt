@@ -1099,7 +1099,7 @@ fun EditorScreen(
                                     drawLine(
                                         color = editorColors.text.copy(alpha = 0.14f),
                                         start = Offset(size.width - 0.5f, 0f),
-                                        stop = Offset(size.width - 0.5f, size.height),
+                                        end = Offset(size.width - 0.5f, size.height),
                                         strokeWidth = 1f
                                     )
                                 }
