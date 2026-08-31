@@ -77,8 +77,10 @@ of assuming one.
     lint; four CI-caught bugs fixed along the way — see the implementation
     record). Server Runner + port monitor, Web Preview live mode,
     Flask/FastAPI/C-microservice presets serving `index.html` per request
-    (stdlib fallback, out-of-the-box), templates picker. **Device recipe
-    pending (owner):** `PART_14_IMPLEMENTATION.md` §5.
+    (stdlib fallback, out-of-the-box), templates picker, and a **bundled
+    `demo_flask` project ships in Files** (D9, owner request 2026-08-31 —
+    one-time seed, never overwrites). **Device recipe pending (owner):**
+    `PART_14_IMPLEMENTATION.md` §5.
 - **Unit tests:** `Build APK` CI runs `:app:testDebugUnitTest` **and**
   `:app:lintDebug` inside the assemble chain — a failing test or a lint ERROR
   fails the run (Phase 9 caught real API-compat bugs this way: `SpanStyle.drawStyle`
@@ -124,8 +126,11 @@ of assuming one.
    server → Output summary URL → Web Preview auto-open (live address bar,
    `index.html` watch/auto-reload); Output Panel Open Preview action. Host
    tests: `ServerPortDetectorTest` (10), `ServerRunnerTest` (7),
-   `ProjectScaffoldTest` (7), `ProjectConfigTest` (+7). **`Build APK`
-   `33352164172` GREEN.** Plan + design decisions D1–D8 + device recipe:
+   `ProjectScaffoldTest` (7), `ProjectConfigTest` (+7),
+   `ServerScaffoldE2ETest` (3 — CI `33355693242`),
+   `DemoProjectSeedTest` (4 — CI `33358083232` for the bundled demo).
+   **`Build APK` `33352164172`/`33358083232` GREEN.** Plan + design
+   decisions D1–D9 + device recipe:
    `docs/chat-phase14/PART_14_IMPLEMENTATION.md`. **Remaining: the owner's
    device round (§5 recipe) — then, on the owner's explicit word, the PR.**
 3. Phase 15 (CodeCApi device capabilities): `docs/chat-phase15/` (skeleton,
