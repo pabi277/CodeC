@@ -2,6 +2,7 @@ package com.codeci.ide.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,28 +17,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CreateNewFolder
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.CallMerge
-import androidx.compose.material.icons.filled.Web
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,11 +53,15 @@ import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 
 /**
- * Phase 16 — the Spck-style navigation drawer for the editor: project header
- * (name / branch chip / source-control badge), the tree toolbar, the Phase 8
- * `FileTreeRepository` entries with git letters and a per-row long-press
- * menu, and the footer rows. The screen owns all actions; this is pure
- * presentation over [EditorFileEntry] + the ViewModel state it is fed.
+ * Phase 16 (mockup-exact) — the Spck-style navigation drawer: project name
+ * with a purple source-control glyph, an outlined `⌥ branch ▾` chip, the
+ * four-column tree toolbar (New File / New Folder / Refresh / Collapse All),
+ * the Phase 8 `FileTreeRepository` entries with typed file icons, git
+ * M/A/D/? letters and the purple selected-row highlight, and the two footer
+ * rows (Source Control with change badge, Switch Branch).
+ *
+ * Pure presentation over [EditorFileEntry] + the state its screen feeds in;
+ * all actions and IO live in the screen / ViewModel.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -74,10 +74,9 @@ fun EditorProjectDrawer(
     selectedPath: String?,
     launchDefault: String?,
     gitBadges: Map<String, String>,
-    onSwitchProject: () -> Unit,
     onSourceControl: () -> Unit,
     onSwitchBranch: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onSwitchProject: () -> Unit,
     onNewFile: (String?) -> Unit,
     onNewFolder: (String?) -> Unit,
     onRefresh: () -> Unit,
@@ -99,105 +98,122 @@ fun EditorProjectDrawer(
             .background(MaterialTheme.colorScheme.surface)
             .padding(top = 24.dp)
     ) {
-        // ---- header: project + branch + source control -------------------
+        // ---- header: project name + source-control glyph ------------------
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onSwitchProject)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.FolderOpen,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = projectName ?: stringResource(R.string.editor_scratch_mode),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = stringResource(R.string.editor_drawer_switch_hint),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
-            if (branch != null) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onSourceControl),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.BadgedBox(
+                    badge = { if (changeCount > 0) Badge { Text(changeCount.toString()) } }
                 ) {
-                    Text(
-                        text = "⌥ $branch",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    // Mockup-exact: the same purple branch glyph as the chip.
+                    Icon(
+                        SpckIcons.GitBranch,
+                        contentDescription = stringResource(R.string.editor_drawer_source_control),
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                Spacer(Modifier.width(6.dp))
             }
-            IconButtonTinted(
-                icon = Icons.AutoMirrored.Filled.CallMerge,
-                description = stringResource(R.string.editor_drawer_source_control),
-                badge = changeCount,
-                onClick = onSourceControl
-            )
         }
-        if (projectName != null) {
-            TextButton(
-                onClick = onSwitchBranch,
-                modifier = Modifier.padding(start = 12.dp)
-            ) {
-                Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.editor_drawer_switch_branch),
-                    style = MaterialTheme.typography.labelMedium
-                )
+
+        // ---- branch chip ----------------------------------------------------
+        if (branch != null) {
+            Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp)) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                            shape = RoundedCornerShape(50)
+                        )
+                        .clickable(onClick = onSwitchBranch)
+                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            SpckIcons.GitBranch,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = branch,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Default.ExpandMore,
+                            contentDescription = stringResource(R.string.editor_drawer_switch_branch),
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
         HorizontalDivider()
 
-        // ---- tree toolbar --------------------------------------------------
+        // ---- tree toolbar (four equal columns) ------------------------------
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             DrawerToolAction(
-                icon = Icons.Default.Add,
+                icon = Icons.Default.NoteAdd,
                 label = stringResource(R.string.new_file),
-                onClick = { onNewFile(null) }
+                onClick = { onNewFile(null) },
+                modifier = Modifier.weight(1f)
             )
             DrawerToolAction(
                 icon = Icons.Default.CreateNewFolder,
                 label = stringResource(R.string.new_folder),
-                onClick = { onNewFolder(null) }
+                onClick = { onNewFolder(null) },
+                modifier = Modifier.weight(1f)
             )
             DrawerToolAction(
                 icon = Icons.Default.Refresh,
                 label = stringResource(R.string.refresh),
-                onClick = onRefresh
+                onClick = onRefresh,
+                modifier = Modifier.weight(1f)
             )
             DrawerToolAction(
-                icon = if (allCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                icon = SpckIcons.CollapseAll,
                 label = stringResource(
                     if (allCollapsed) R.string.editor_drawer_expand_all else R.string.editor_drawer_collapse_all
                 ),
-                onClick = onToggleCollapseAll
+                onClick = onToggleCollapseAll,
+                modifier = Modifier.weight(1f)
             )
         }
         HorizontalDivider()
 
-        // ---- the tree --------------------------------------------------------
+        // ---- the tree ---------------------------------------------------------
         if (entries.isEmpty()) {
             Text(
                 text = stringResource(R.string.editor_drawer_empty),
@@ -206,7 +222,13 @@ fun EditorProjectDrawer(
                 modifier = Modifier.padding(16.dp)
             )
         } else {
-            LazyColumn(modifier = Modifier.weight(1f, fill = false).fillMaxWidth()) {
+            LazyColumn(
+                modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 6.dp,
+                    vertical = 4.dp
+                )
+            ) {
                 items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
                     DrawerRow(
                         entry = entry,
@@ -236,24 +258,46 @@ fun EditorProjectDrawer(
         }
         HorizontalDivider()
 
-        // ---- footer ----------------------------------------------------------
+        // ---- footer -----------------------------------------------------------
         DrawerFooterRow(
-            icon = Icons.AutoMirrored.Filled.CallMerge,
+            icon = SpckIcons.GitBranch,
             label = stringResource(R.string.editor_drawer_source_control),
             badge = changeCount,
             onClick = onSourceControl
         )
         DrawerFooterRow(
-            icon = Icons.Default.Settings,
-            label = stringResource(R.string.editor_drawer_settings),
-            onClick = onOpenSettings
+            icon = SpckIcons.GitBranch,
+            label = stringResource(R.string.editor_drawer_switch_branch),
+            badge = 0,
+            onClick = onSwitchBranch
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
     }
 }
 
 private enum class RowAction {
     Open, Rename, Delete, Run, Launch, SetDefault, ClearDefault, CopyPath, NewFileHere, NewFolderHere
+}
+
+/** Extension → the drawer's typed file icon (Spck shows a mark per language). */
+@Composable
+private fun FileTypeIcon(name: String, isLaunchDefault: Boolean, tint: Color) {
+    when {
+        name.endsWith(".py", ignoreCase = true) ->
+            Icon(SpckIcons.PythonLogo, contentDescription = null, modifier = Modifier.size(18.dp))
+        WebFileSupport.isHtml(name) ->
+            Icon(SpckIcons.HtmlShield, contentDescription = null, modifier = Modifier.size(18.dp))
+        name.endsWith(".md", ignoreCase = true) || name.endsWith(".txt", ignoreCase = true) ->
+            // Mockup: the book mark is white, not grey.
+            Icon(
+                SpckIcons.BookLine,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        else ->
+            Icon(SpckIcons.FileLine, contentDescription = null, modifier = Modifier.size(18.dp), tint = tint)
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -269,15 +313,17 @@ private fun DrawerRow(
     onAction: (RowAction) -> Unit
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Box {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 6.dp, vertical = 1.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .background(
                     if (selected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                        // Mockup: a clearly visible mid-purple row highlight.
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                     } else {
                         Color.Transparent
                     }
@@ -286,81 +332,65 @@ private fun DrawerRow(
                     onClick = onOpenOrToggle,
                     onLongClick = { menuOpen = true }
                 )
-                .padding(
-                    start = (8 + entry.depth * 14).dp,
-                    end = 8.dp,
-                    top = 7.dp,
-                    bottom = 7.dp
-                ),
+                .padding(start = 10.dp, end = 10.dp, top = 7.dp, bottom = 7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (entry.isDirectory) {
                 Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                    imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.KeyboardArrowRight,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = muted
                 )
                 Spacer(Modifier.width(4.dp))
                 Icon(
-                    imageVector = if (expanded) Icons.Default.FolderOpen else Icons.Default.Folder,
+                    imageVector = SpckIcons.FolderLine,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             } else {
                 Spacer(Modifier.width(22.dp))
-                Icon(
-                    imageVector = if (WebFileSupport.isHtml(entry.name)) Icons.Default.Web else Icons.Default.Description,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = when {
-                        isLaunchDefault -> Color(0xFF42A5F5) // Spck marks the launch file blue
-                        WebFileSupport.isHtml(entry.name) -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+                FileTypeIcon(
+                    name = entry.name,
+                    isLaunchDefault = isLaunchDefault,
+                    tint = muted
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(10.dp))
             Text(
                 text = entry.name,
-                style = if (entry.isDirectory) {
-                    MaterialTheme.typography.labelLarge
-                } else {
-                    MaterialTheme.typography.bodyMedium
-                },
-                color = when {
-                    selected -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.onSurface
-                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
+            if (isLaunchDefault) {
+                // Spck marks the launch-default file with a blue mark.
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(8.dp)
+                        .background(LaunchDefaultBlue, CircleShape)
+                )
+            }
             if (badge != null) {
                 Text(
                     text = badge,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = when (badge) {
-                        "M" -> Color(0xFFFFB347)
+                        "M" -> Color(0xFFE6B33C)
                         "A" -> Color(0xFF66BB6A)
                         "D" -> Color(0xFFFF5555)
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        else -> muted.copy(alpha = 0.8f)
                     },
                     modifier = Modifier.padding(end = 4.dp)
                 )
             }
-            if (isLaunchDefault) {
-                Icon(
-                    Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.editor_drawer_launch_default),
-                    modifier = Modifier.size(14.dp),
-                    tint = Color(0xFF42A5F5)
-                )
-            }
         }
-        androidx.compose.material3.DropdownMenu(
+        DropdownMenu(
             expanded = menuOpen,
             onDismissRequest = { menuOpen = false }
         ) {
@@ -376,6 +406,8 @@ private fun DrawerRow(
     }
 }
 
+private val LaunchDefaultBlue = Color(0xFF42A5F5)
+
 @Composable
 private fun DrawerEntryMenu(
     entry: EditorFileEntry,
@@ -383,72 +415,83 @@ private fun DrawerEntryMenu(
     onAction: (RowAction) -> Unit
 ) {
     if (!entry.isDirectory) {
-        androidx.compose.material3.DropdownMenuItem(
+        DropdownMenuItem(
             text = { Text(stringResource(R.string.open)) },
             onClick = { onAction(RowAction.Open) }
         )
     }
-    androidx.compose.material3.DropdownMenuItem(
-        text = { Text(stringResource(R.string.rename)) },
-        onClick = { onAction(RowAction.Rename) }
-    )
-    androidx.compose.material3.DropdownMenuItem(
-        text = { Text(stringResource(R.string.delete)) },
-        onClick = { onAction(RowAction.Delete) }
-    )
     if (entry.isDirectory) {
-        androidx.compose.material3.DropdownMenuItem(
+        DropdownMenuItem(
             text = { Text(stringResource(R.string.new_file)) },
             onClick = { onAction(RowAction.NewFileHere) }
         )
-        androidx.compose.material3.DropdownMenuItem(
+        DropdownMenuItem(
             text = { Text(stringResource(R.string.new_folder)) },
             onClick = { onAction(RowAction.NewFolderHere) }
         )
     } else {
         if (entry.name.endsWith(".c", ignoreCase = true)) {
-            androidx.compose.material3.DropdownMenuItem(
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.run_in_terminal)) },
                 onClick = { onAction(RowAction.Run) }
             )
         }
         if (WebFileSupport.isHtml(entry.name)) {
-            androidx.compose.material3.DropdownMenuItem(
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.editor_drawer_launch)) },
                 onClick = { onAction(RowAction.Launch) }
             )
         }
         if (entry.projectName != null) {
-            androidx.compose.material3.DropdownMenuItem(
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.editor_drawer_set_default)) },
                 onClick = { onAction(RowAction.SetDefault) }
             )
             if (hasLaunchDefault) {
-                androidx.compose.material3.DropdownMenuItem(
+                DropdownMenuItem(
                     text = { Text(stringResource(R.string.editor_drawer_clear_default)) },
                     onClick = { onAction(RowAction.ClearDefault) }
                 )
             }
         }
-        androidx.compose.material3.DropdownMenuItem(
-            text = { Text(stringResource(R.string.editor_drawer_copy_path)) },
-            onClick = { onAction(RowAction.CopyPath) }
-        )
     }
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.rename)) },
+        onClick = { onAction(RowAction.Rename) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.delete)) },
+        onClick = { onAction(RowAction.Delete) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.editor_drawer_copy_path)) },
+        onClick = { onAction(RowAction.CopyPath) }
+    )
 }
 
 @Composable
-private fun DrawerToolAction(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun DrawerToolAction(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .padding(horizontal = 4.dp, vertical = 8.dp)
     ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.height(2.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall)
+        Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp))
+        Spacer(Modifier.height(3.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -456,8 +499,8 @@ private fun DrawerToolAction(icon: ImageVector, label: String, onClick: () -> Un
 private fun DrawerFooterRow(
     icon: ImageVector,
     label: String,
-    onClick: () -> Unit,
-    badge: Int = 0
+    badge: Int,
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -466,12 +509,17 @@ private fun DrawerFooterRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
         Spacer(Modifier.width(12.dp))
         Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         if (badge > 0) {
             Badge { Text(badge.toString()) }
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
         }
         Icon(
             Icons.AutoMirrored.Filled.ArrowForwardIos,
@@ -479,22 +527,5 @@ private fun DrawerFooterRow(
             modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-private fun IconButtonTinted(icon: ImageVector, description: String, badge: Int, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        BadgedBox(
-            badge = { if (badge > 0) Badge { Text(badge.toString()) } }
-        ) {
-            Icon(icon, contentDescription = description, modifier = Modifier.size(20.dp))
-        }
     }
 }

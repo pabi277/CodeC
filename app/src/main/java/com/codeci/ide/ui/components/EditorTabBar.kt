@@ -2,22 +2,16 @@ package com.codeci.ide.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,10 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,11 +38,11 @@ data class EditorTabUi(
 )
 
 /**
- * Phase 9 tab strip, re-skinned for Phase 16 Spck style: the active tab gets
- * a bold label + accent underline drawn behind the row (no chip fill, which
- * survives the scrollable Row's infinite width constraints), dirty tabs carry
- * a ●, every tab past the first keeps its ✕, and a long-press opens
- * Close others / Close all / Copy path — Spck's tab menu, kept compact.
+ * Phase 16 (mockup-exact) tab strip: horizontally scrollable file tabs in the
+ * top bar title slot — plain bold/regular labels, the active one with a 3dp
+ * accent underline on the bar's bottom edge and a ● dirty dot. No per-tab ✕
+ * (the mockups show none): long-press offers Close tab / Close others /
+ * Close all / Copy path, and the top-bar overflow keeps "Close file".
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -66,9 +59,13 @@ fun EditorTabBar(
     if (tabs.isEmpty()) return
     var menuPath by remember { mutableStateOf<String?>(null) }
     val underlineColor = MaterialTheme.colorScheme.primary
+    // fillMaxHeight stretches the strip to the app-bar's full height so the
+    // 3dp underline lands on the bar's bottom edge (mockup-exact), while the
+    // tab labels stay vertically centered.
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .background(MaterialTheme.colorScheme.surface)
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 4.dp),
@@ -76,20 +73,20 @@ fun EditorTabBar(
     ) {
         tabs.forEach { tab ->
             val active = tab.path == activePath
-            Box {
+            // Full-height tab box: the label stays centered while the 3dp
+            // accent underline is anchored to the app bar's bottom edge.
+            Box(
+                modifier = Modifier.fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
                         .drawBehind {
                             if (active) {
-                                val inset = 8.dp.toPx()
                                 drawRect(
                                     color = underlineColor,
-                                    topLeft = Offset(inset, size.height - 2.dp.toPx()),
-                                    size = androidx.compose.ui.geometry.Size(
-                                        (size.width - inset * 2f).coerceAtLeast(0f),
-                                        2.dp.toPx()
-                                    )
+                                    topLeft = Offset(0f, size.height - 3.dp.toPx()),
+                                    size = Size(size.width, 3.dp.toPx())
                                 )
                             }
                         }
@@ -97,13 +94,12 @@ fun EditorTabBar(
                             onClick = { onSelect(tab.path) },
                             onLongClick = { menuPath = tab.path }
                         )
-                        .padding(horizontal = 10.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = tab.name + if (tab.isDirty) " ●" else "",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                         color = if (active) {
                             MaterialTheme.colorScheme.onSurface
@@ -113,31 +109,18 @@ fun EditorTabBar(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (tabs.size > 1) {
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { onClose(tab.path) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.close_tab),
-                                modifier = Modifier.size(14.dp),
-                                tint = if (active) {
-                                    MaterialTheme.colorScheme.onSurface
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                        }
-                    }
                 }
                 DropdownMenu(
                     expanded = menuPath == tab.path,
                     onDismissRequest = { menuPath = null }
                 ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.close_tab)) },
+                        onClick = {
+                            menuPath = null
+                            onClose(tab.path)
+                        }
+                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.tab_close_others)) },
                         onClick = {

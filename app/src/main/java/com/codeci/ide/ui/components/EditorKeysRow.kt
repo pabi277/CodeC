@@ -25,11 +25,12 @@ import com.codeci.ide.ui.editor.EditorKeySet
 import com.codeci.ide.ui.utils.LanguageType
 
 /**
- * Phase 16 — the snippet / extra-keys row docked above the status bar
- * (Spck's signature row). Data-driven from [EditorKeySet.keysFor]: general
- * keys, a small per-language tail, then the user's custom snippets. The keys
- * are a little taller than the old buttons and shaped like keycaps; the row
- * scrolls horizontally so growth stays safe on phones.
+ * Phase 16 — the snippet / extra-keys row docked directly above the status
+ * bar (Spck's signature row, mockup-exact): flat keycaps — 40dp tall, 10dp
+ * radius, a slightly lighter fill, NO border — on the editor's own
+ * background, horizontally scrollable. Data-driven from
+ * [EditorKeySet.keysFor]: general keys, a small per-language tail, then the
+ * user's custom snippets.
  */
 @Composable
 fun EditorKeysRow(
@@ -46,10 +47,9 @@ fun EditorKeysRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         keys.forEach { def ->
@@ -62,11 +62,12 @@ fun EditorKeysRow(
 
 @Composable
 private fun EditorKeyCap(def: EditorKeyDef, onClick: () -> Unit) {
+    val radius = RoundedCornerShape(10.dp)
     Box(
         modifier = Modifier
-            .defaultMinSize(minWidth = if (def.wide) 52.dp else 38.dp, minHeight = 36.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .defaultMinSize(minWidth = if (def.wide) 56.dp else 44.dp, minHeight = 40.dp)
+            .clip(radius)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -74,7 +75,7 @@ private fun EditorKeyCap(def: EditorKeyDef, onClick: () -> Unit) {
             text = def.label,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier.padding(horizontal = 6.dp)
         )
     }
 }
