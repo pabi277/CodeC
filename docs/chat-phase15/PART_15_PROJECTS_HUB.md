@@ -337,6 +337,12 @@ PASS = steps 1–9 succeed without manual fixes; step 10 leaves the app healthy.
 - **D9** — Shallow (`--depth 1`) defaults ON in the new dialog (Spck parity,
   mobile bandwidth); terminal `git clone` behavior unchanged.
 
-**CI:** first run pending on this branch (see the next chat's `gh run list`).
+**CI rounds:**
+- Round 1 (`33383507560`, red): `ProjectsHubTest` caught a REAL production
+  bug — `ProjectHubEntry.filters` used one `when`, which runs only its first
+  matching arm, so `PY_SERVER`/`C_SERVER` lost WEB chip membership. Fixed
+  with two explicit arms (`a31b66d`→round 2); membership test also proves
+  it. One test-only math bug (3 h asserting "2 hours ago") was fixed too.
+  Lesson recorded: pure logic first means CI *finds* the bugs, as designed.
 **Device:** §4 recipe unchanged — run it against the artifact `CodeC-IDE` of
 the latest green `Build APK` run for `arena/01a05743-codec`.
