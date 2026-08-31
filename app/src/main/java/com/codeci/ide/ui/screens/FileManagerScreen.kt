@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -40,6 +41,8 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileOpen
@@ -100,6 +103,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectHubEntry
@@ -228,7 +232,13 @@ fun FileManagerScreen(
                                 )
                             )
                         } else {
-                            Text(stringResource(R.string.projects_title))
+                            // Mockup-exact: a large bold screen title, not a
+                            // small app-bar caption.
+                            Text(
+                                stringResource(R.string.projects_title),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     } else {
                         Column {
@@ -338,15 +348,28 @@ fun FileManagerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = Color.Transparent
                 )
             )
         },
         floatingActionButton = {
             if (activeProject == null) {
-                // Phase 15 — one obvious `+`: the unified create/import sheet.
-                FloatingActionButton(onClick = { showHubSheet = true }) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_project))
+                // Mockup-exact `+`: a large flat purple circle, not a raised
+                // M3 FAB.
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .clickable(onClick = { showHubSheet = true }),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = stringResource(R.string.new_project),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
         }
@@ -640,43 +663,90 @@ fun FileManagerScreen(
     }
 
     if (showCloneDialog) {
-        // Phase 15 — the Spck-shaped clone dialog: URL → auto name (until
-        // edited) → Advanced (branch + shallow). Same GitManager engine as
-        // Phase 13; only presentation and the two optional clone args are new.
+        // Phase 15 (mockup-exact) — the Spck clone dialog: "Repository URL"
+        // with a trailing QR-scan icon, auto-filled "Project name", a
+        // chevron-collapsed "Advanced" section holding a Branch dropdown
+        // (ls-remote fed, free-text fallback) and the shallow toggle, the
+        // token hint with a Settings link, and CANCEL / CLONE.
         var cloneUrl by remember { mutableStateOf("") }
         var cloneName by remember { mutableStateOf("") }
         var nameEdited by remember { mutableStateOf(false) }
-        var cloneAdvancedOpen by remember { mutableStateOf(false) }
+        var cloneAdvancedOpen by remember { mutableStateOf(true) }
         var cloneBranch by remember { mutableStateOf("") }
         var cloneShallow by remember { mutableStateOf(true) }
         var cloneBranches by remember { mutableStateOf<List<String>>(emptyList()) }
+        var cloneBranchesLoaded by remember { mutableStateOf(false) }
         var cloneBranchNote by remember { mutableStateOf<String?>(null) }
         var fetchingBranches by remember { mutableStateOf(false) }
+        var branchMenuOpen by remember { mutableStateOf(false) }
+
+        fun fetchBranches(url: String) {
+            fetchingBranches = true
+            cloneBranchNote = null
+            viewModel.fetchRemoteBranches(context, url) { result ->
+                fetchingBranches = false
+                val branches = result.getOrNull()
+                cloneBranches = branches.orEmpty()
+                cloneBranchesLoaded = true
+                cloneBranchNote = if (branches != null && branches.isEmpty()) {
+                    context.getString(R.string.clone_no_branches_found)
+                } else if (result.isFailure) {
+                    result.exceptionOrNull()?.message
+                } else {
+                    null
+                }
+            }
+        }
+
         AlertDialog(
             onDismissRequest = { showCloneDialog = false },
-            title = { Text(stringResource(R.string.clone_title)) },
+            title = {
+                Text(
+                    stringResource(R.string.clone_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        stringResource(R.string.clone_url_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
                     OutlinedTextField(
                         value = cloneUrl,
                         onValueChange = {
                             cloneUrl = it
                             if (!nameEdited) cloneName = GitManager.repoNameFromUrl(it) ?: ""
                         },
-                        label = { Text(stringResource(R.string.clone_url_label)) },
                         placeholder = { Text("https://github.com/user/repo.git") },
+                        trailingIcon = {
+                            Icon(
+                                SpckIcons.QrScan,
+                                contentDescription = stringResource(R.string.clone_qr),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
                         singleLine = true
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.clone_name_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
                     OutlinedTextField(
                         value = cloneName,
                         onValueChange = {
                             cloneName = it
                             nameEdited = true
                         },
-                        label = { Text(stringResource(R.string.clone_name_label)) },
                         singleLine = true
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -685,12 +755,12 @@ fun FileManagerScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = if (cloneAdvancedOpen) Icons.Default.Close else Icons.Default.Add,
+                            imageVector = if (cloneAdvancedOpen) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text(
                             stringResource(R.string.clone_advanced),
                             color = MaterialTheme.colorScheme.primary,
@@ -698,68 +768,93 @@ fun FileManagerScreen(
                         )
                     }
                     if (cloneAdvancedOpen) {
-                        OutlinedTextField(
-                            value = cloneBranch,
-                            onValueChange = { cloneBranch = it },
-                            label = { Text(stringResource(R.string.clone_branch_label)) },
-                            placeholder = { Text("main") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                        Text(
+                            stringResource(R.string.clone_branch_label),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 6.dp)
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(
-                                enabled = !fetchingBranches && GitManager.isCloneableUrl(cloneUrl.trim()),
-                                onClick = {
-                                    fetchingBranches = true
-                                    viewModel.fetchRemoteBranches(context, cloneUrl.trim()) { result ->
-                                        fetchingBranches = false
-                                        val branches = result.getOrNull()
-                                        cloneBranches = branches.orEmpty()
-                                        cloneBranchNote = if (branches != null && branches.isEmpty()) {
-                                            context.getString(R.string.clone_no_branches_found)
-                                        } else if (result.isFailure) {
-                                            result.exceptionOrNull()?.message
-                                        } else {
-                                            null
+                        Box {
+                            OutlinedTextField(
+                                value = cloneBranch,
+                                onValueChange = { cloneBranch = it },
+                                placeholder = { Text("main") },
+                                trailingIcon = {
+                                    Icon(
+                                        Icons.Default.ExpandMore,
+                                        contentDescription = stringResource(R.string.clone_branch_label),
+                                        modifier = Modifier
+                                            .padding(end = 4.dp)
+                                            .clickable {
+                                                val url = cloneUrl.trim()
+                                                if (!GitManager.isCloneableUrl(url)) {
+                                                    cloneBranchNote = context.getString(R.string.clone_invalid_url)
+                                                } else {
+                                                    branchMenuOpen = true
+                                                    if (!cloneBranchesLoaded && !fetchingBranches) {
+                                                        fetchBranches(url)
+                                                    }
+                                                }
+                                            }
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            DropdownMenu(
+                                expanded = branchMenuOpen,
+                                onDismissRequest = { branchMenuOpen = false }
+                            ) {
+                                when {
+                                    fetchingBranches -> {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(Modifier.width(10.dp))
+                                            Text(stringResource(R.string.clone_fetching_branches))
+                                        }
+                                    }
+                                    cloneBranches.isEmpty() -> {
+                                        Text(
+                                            stringResource(R.string.clone_no_branches_found),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                        )
+                                    }
+                                    else -> {
+                                        cloneBranches.forEach { branch ->
+                                            DropdownMenuItem(
+                                                text = { Text(branch, maxLines = 1) },
+                                                onClick = {
+                                                    cloneBranch = branch
+                                                    branchMenuOpen = false
+                                                }
+                                            )
                                         }
                                     }
                                 }
-                            ) {
-                                if (fetchingBranches) {
-                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                                    Spacer(Modifier.width(8.dp))
-                                }
-                                Text(stringResource(R.string.clone_fetch_branches))
                             }
-                        }
-                        if (cloneBranches.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                cloneBranches.forEach { branch ->
-                                    AssistChip(
-                                        onClick = { cloneBranch = branch },
-                                        label = { Text(branch, maxLines = 1) }
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(4.dp))
                         }
                         cloneBranchNote?.let { note ->
                             Text(
                                 note,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(top = 4.dp)
                             )
                         }
+                        Spacer(modifier = Modifier.height(6.dp))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { cloneShallow = !cloneShallow }
-                                .padding(vertical = 6.dp),
+                                .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
@@ -770,6 +865,7 @@ fun FileManagerScreen(
                             }
                             Switch(checked = cloneShallow, onCheckedChange = { cloneShallow = it })
                         }
+                        Spacer(modifier = Modifier.height(6.dp))
                     }
                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -777,7 +873,7 @@ fun FileManagerScreen(
                             Icons.Default.Info,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
@@ -786,15 +882,21 @@ fun FileManagerScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = {
-                            showCloneDialog = false
-                            onOpenSettings()
-                        }) { Text(stringResource(R.string.settings_title)) }
+                        Text(
+                            stringResource(R.string.settings_title),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable {
+                                showCloneDialog = false
+                                onOpenSettings()
+                            }
+                        )
                     }
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         val branchArg = cloneBranch.trim().takeIf { it.isNotEmpty() }
                         viewModel.cloneFromGitHub(
@@ -904,7 +1006,7 @@ private fun ProjectsHubList(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             HubFilterChip(ProjectHubFilter.ALL, filter, stringResource(R.string.hub_filter_all), null, onFilterSelected)
-            HubFilterChip(ProjectHubFilter.GIT, filter, stringResource(R.string.hub_filter_git), Icons.Default.CallSplit, onFilterSelected)
+            HubFilterChip(ProjectHubFilter.GIT, filter, stringResource(R.string.hub_filter_git), SpckIcons.GitBranch, onFilterSelected)
             HubFilterChip(ProjectHubFilter.C, filter, stringResource(R.string.hub_filter_c), null, onFilterSelected)
             HubFilterChip(ProjectHubFilter.PYTHON, filter, stringResource(R.string.hub_filter_python), null, onFilterSelected)
             HubFilterChip(ProjectHubFilter.WEB, filter, stringResource(R.string.hub_filter_web), null, onFilterSelected)
@@ -941,6 +1043,11 @@ private fun ProjectsHubList(
     }
 }
 
+/**
+ * Mockup-exact filter chip: a flat pill — filled purple with white text when
+ * selected, dark surface with a hairline outline otherwise; the Git chip
+ * carries the branch glyph.
+ */
 @Composable
 private fun HubFilterChip(
     value: ProjectHubFilter,
@@ -949,12 +1056,57 @@ private fun HubFilterChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
     onSelect: (ProjectHubFilter) -> Unit
 ) {
-    androidx.compose.material3.FilterChip(
-        selected = value == selected,
-        onClick = { onSelect(value) },
-        label = { Text(label) },
-        leadingIcon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(16.dp)) } }
-    )
+    val isSelected = value == selected
+    val shape = RoundedCornerShape(50)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(
+                if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
+            .then(
+                if (isSelected) {
+                    Modifier
+                } else {
+                    Modifier.border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
+                        shape = shape
+                    )
+                }
+            )
+            .clickable { onSelect(value) }
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        icon?.let {
+            Icon(
+                it,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+            )
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+        )
+    }
 }
 
 /**
@@ -971,11 +1123,12 @@ private fun ProjectHubCard(
     var menuOpen by remember(entry.name) { mutableStateOf(false) }
     Card(
         onClick = { onAction(entry, HubCardAction.OPEN) },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             HubTypeIcon(entry)
@@ -991,15 +1144,16 @@ private fun ProjectHubCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (entry.isGit) {
                         Icon(
-                            Icons.Default.CallSplit,
+                            SpckIcons.GitBranch,
                             contentDescription = null,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(13.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(5.dp))
                     }
                     Text(
-                        ProjectsHub.subtitleSegments(entry, System.currentTimeMillis()).joinToString("  ·  "),
+                        // Mockup-exact separator: single " · " between segments.
+                        ProjectsHub.subtitleSegments(entry, System.currentTimeMillis()).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -1008,18 +1162,19 @@ private fun ProjectHubCard(
                 }
             }
             if (entry.hasChanges == true) {
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color.Transparent,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, HubBadgeYellow),
-                    modifier = Modifier.padding(end = 4.dp)
+                // Mockup-exact `M` pill: small yellow-outlined square before ⋮.
+                Box(
+                    modifier = Modifier
+                        .padding(end = 10.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(5.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         "M",
                         color = HubBadgeYellow,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                        style = MaterialTheme.typography.labelMedium
                     )
                 }
             }
@@ -1078,29 +1233,34 @@ private fun ProjectHubCard(
 
 @Composable
 private fun HubTypeIcon(entry: ProjectHubEntry) {
+    // Mockup-exact: 56dp rounded square, 14dp radius, brand colors from the
+    // design (orange C, blue Python, purple web framework, green static web).
     val background = when (entry.icon) {
-        HubIconToken.C_ORANGE -> Color(0xFFE07B39)
-        HubIconToken.PY_BLUE -> Color(0xFF3C6FB5)
+        HubIconToken.C_ORANGE -> Color(0xFFF0863C)
+        HubIconToken.PY_BLUE -> Color(0xFF3E7CC1)
         HubIconToken.SERVER_PURPLE -> Color(0xFF8B5CF6)
-        HubIconToken.WEB_GREEN -> Color(0xFF43A047)
+        HubIconToken.WEB_GREEN -> Color(0xFF4CAF50)
         HubIconToken.GENERIC_GRAY -> Color(0xFF6B7280)
     }
     Box(
         modifier = Modifier
-            .size(52.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .size(56.dp)
+            .clip(RoundedCornerShape(14.dp))
             .background(background),
         contentAlignment = Alignment.Center
     ) {
-        if (entry.icon == HubIconToken.WEB_GREEN) {
-            Icon(Icons.Default.Language, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-        } else {
-            Text(
-                entry.iconLabel.ifEmpty { entry.name.take(1).uppercase() },
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+        when (entry.icon) {
+            HubIconToken.WEB_GREEN ->
+                Icon(SpckIcons.Globe, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+            HubIconToken.PY_BLUE ->
+                Icon(SpckIcons.PythonLogo, contentDescription = null, modifier = Modifier.size(34.dp))
+            else ->
+                Text(
+                    entry.iconLabel.ifEmpty { entry.name.take(1).uppercase() },
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
         }
     }
 }
@@ -1123,36 +1283,47 @@ private fun ProjectsHubAddSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
-        Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp)) {
+        // Mockup-exact: "New Project" headline + four rows with large colored
+        // circular icons (lavender / indigo / blue / green).
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, bottom = 32.dp, top = 4.dp)
+        ) {
             Text(
                 stringResource(R.string.hub_sheet_title),
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 12.dp)
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 14.dp)
             )
             HubSheetRow(
                 color = Color(0xFFA78BFA),
-                icon = Icons.Default.NoteAdd,
+                iconTint = Color(0xFF241A4F),
+                icon = SpckIcons.FilePlus,
                 title = stringResource(R.string.hub_sheet_new),
                 subtitle = stringResource(R.string.hub_sheet_new_subtitle),
                 onClick = onNewProject
             )
             HubSheetRow(
-                color = Color(0xFF5C6CFF),
-                icon = Icons.Default.CallSplit,
+                color = Color(0xFF6366F1),
+                iconTint = Color.White,
+                icon = SpckIcons.CloneRepo,
                 title = stringResource(R.string.hub_sheet_clone),
                 subtitle = stringResource(R.string.hub_sheet_clone_subtitle),
                 onClick = onCloneGit
             )
             HubSheetRow(
                 color = Color(0xFF3B82F6),
-                icon = Icons.Default.Archive,
+                iconTint = Color.White,
+                icon = SpckIcons.ZipFile,
                 title = stringResource(R.string.import_zip),
                 subtitle = stringResource(R.string.hub_sheet_zip_subtitle),
                 onClick = onImportZip
             )
             HubSheetRow(
                 color = Color(0xFF4CAF50),
-                icon = Icons.Default.FolderOpen,
+                iconTint = Color.White,
+                icon = SpckIcons.FolderLine,
                 title = stringResource(R.string.hub_sheet_folder),
                 subtitle = stringResource(R.string.hub_sheet_folder_subtitle),
                 onClick = onOpenFolder
@@ -1164,6 +1335,7 @@ private fun ProjectsHubAddSheet(
 @Composable
 private fun HubSheetRow(
     color: Color,
+    iconTint: Color,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
@@ -1172,21 +1344,21 @@ private fun HubSheetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(58.dp)
                 .clip(CircleShape)
                 .background(color),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(30.dp))
         }
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(18.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(

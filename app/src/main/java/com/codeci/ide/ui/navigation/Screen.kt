@@ -3,6 +3,7 @@ package com.codeci.ide.ui.navigation
 import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesomeMosaic
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
@@ -17,7 +18,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Editor : Screen(
         "editor?projectName={projectName}&fileName={fileName}",
         "Editor",
-        Icons.Default.Code
+        Icons.Default.Create
     ) {
         fun createRoute(fileName: String? = null, projectName: String? = null): String {
             val args = buildList {
@@ -45,7 +46,8 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
             return if (args.isEmpty()) "preview" else "preview?${args.joinToString("&")}"
         }
     }
-    object Terminal : Screen("terminal?cmd={cmd}&nonce={nonce}", "Term", Icons.Default.Terminal) {
+    // Mockup-exact label: the bar shows "Terminal" (not the old "Term").
+    object Terminal : Screen("terminal?cmd={cmd}&nonce={nonce}", "Terminal", Icons.Default.Terminal) {
         fun createRoute(cmd: String? = null): String {
             val nonce = System.currentTimeMillis().toString()
             return if (cmd.isNullOrEmpty()) {
