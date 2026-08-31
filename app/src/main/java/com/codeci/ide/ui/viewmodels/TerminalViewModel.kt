@@ -100,7 +100,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     val fontSizeSp: StateFlow<Float> = settings.terminalFontSizeFlow
-        .stateIn(viewModelScope, SharingStarted.Eagerly, 14f)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 12f)
 
     val fontFamily: StateFlow<String> = settings.terminalFontFamilyFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, "Monospace")

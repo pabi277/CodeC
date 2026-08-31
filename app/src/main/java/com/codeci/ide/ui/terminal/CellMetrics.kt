@@ -39,7 +39,25 @@ object CellMetrics {
      * into the row below.
      */
     fun cellHeightPx(fontSpacingPx: Float): Int =
-        ceil(fontSpacingPx.coerceAtLeast(1f)).toInt().coerceAtLeast(1)
+        cellHeightPx(fontSpacingPx, 1f)
+
+    /**
+     * Cell height with a terminal [lineFactor] (< 1 tightens the row pitch).
+     *
+     * Phase 19.2 device round 2: JetBrains Mono ships an editor-roomy 1.32 em
+     * line (ascent 1020 + descent 300 per 1000 em, verified by parsing the
+     * TTF hhea table) — drawn as-is the terminal gets ~33 rows where Termux
+     * fits 39 ("rows too airy", owner). Terminals classically run ~1.17-1.20
+     * em; [TERMINAL_LINE_FACTOR] brings JBM to ~1.19 em ≈ ratio 2.0 × the
+     * 0.6 em advance — Termux-class density while keeping ascender/descender
+     * ink clearance (JBM's actual descender ink is well inside 0.3 em).
+     */
+    fun cellHeightPx(fontSpacingPx: Float, lineFactor: Float): Int =
+        ceil(fontSpacingPx.coerceAtLeast(1f) * lineFactor.coerceIn(0.5f, 2f))
+            .toInt().coerceAtLeast(1)
+
+    /** Row pitch tightening for the bundled JetBrains Mono (see above). */
+    const val TERMINAL_LINE_FACTOR = 0.9f
 
     /** Columns that fit [widthPx]; at least one. */
     fun columnsForWidth(widthPx: Float, cellWidthPx: Int): Int {

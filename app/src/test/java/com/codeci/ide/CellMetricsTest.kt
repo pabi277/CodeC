@@ -133,4 +133,31 @@ class CellMetricsTest {
             assertEquals(1, it.cellWidthPx)
         }
     }
+
+    // ------------------------------------------------------------------
+    // Phase 19.2 device round 2 — terminal row pitch. Owner: rows "too
+    // airy" (Termux fits 39 rows where CodeC fit 32). JetBrains Mono
+    // ships a 1.32em line; TERMINAL_LINE_FACTOR tightens it to ~1.19em.
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `line factor tightens the row pitch to terminal density`() {
+        // JBM at 12sp on a 3x display: fontSpacing = 1.32em * 36px = 47.52px.
+        val spacing = 1.32f * 36f
+        val tightened = CellMetrics.cellHeightPx(spacing, CellMetrics.TERMINAL_LINE_FACTOR)
+        // 47.52 * 0.9 = 42.768 -> 43px (ratio 43 / (0.6*36) = 43/21.6 ≈ 2.0x cell).
+        assertEquals(43, tightened)
+        // The un-factored height (old behavior) is unchanged for callers
+        // that pass no factor.
+        assertEquals(48, CellMetrics.cellHeightPx(spacing))
+    }
+
+    @Test
+    fun `line factor is clamped and never collapses a row`() {
+        // Factor is clamped to [0.5, 2]; height never below 1px.
+        assertEquals(10, CellMetrics.cellHeightPx(20f, 0.01f)) // clamped to 0.5
+        assertEquals(10, CellMetrics.cellHeightPx(20f, 0.5f)) // max tightening
+        assertEquals(40, CellMetrics.cellHeightPx(20f, 2f)) // max loosening
+        assertEquals(40, CellMetrics.cellHeightPx(20f, 99f)) // clamped to 2
+    }
 }

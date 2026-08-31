@@ -229,3 +229,50 @@ degenerate fallback) — 10 total in the file.
 first; snapping only the cell converts sub-pixel error into uniform letter
 spacing. The general rule from public terminal-rendering practice: fit the
 font to the grid, never pad the grid away from the font.
+
+---
+
+## 7.2 Device round 2 postmortem — density & weight (the `stty size` data) — FIXED 2026-08-31
+
+**Owner's side-by-side screenshots (CodeC vs Termux) + answers:**
+letters still too far apart (a), **thinner/lighter** than Termux (a), rows
+**airier** (a), letters **much bigger** — "very obvious; much more text fits
+on the Termux screen" (a); both sharp (b). Plus the objective numbers:
+
+| | CodeC | Termux |
+|---|---|---|
+| `stty size` | **32 rows × 60 cols** | **39 rows × 71 cols** |
+
+Termux fit ~44% more text on the same screen. Root causes (both mine):
+
+1. **Default terminal font size was 14sp** — a UI-editor default, not a
+   terminal default. Columns scale inversely with size, so 60 cols ×
+   (14/12) = **70** and 32 rows scale by the same factor → **~37**: a 12sp
+   default lands on Termux-class density. Changed in `SettingsManager`
+   (+ the `stateIn`/`collectAsState` initials in VM & SettingsScreen).
+2. **The font itself**: stock Android `Typeface.MONOSPACE` (Droid Sans Mono)
+   is light-stroked with wide sidebearings — the "thin / gaps / stretched"
+   look. The app now BUNDLES **JetBrains Mono** (SIL OFL 1.1, notice at
+   `app/src/main/assets/licenses/JETBRAINS_MONO_OFL.txt`): **Medium** as the
+   normal face and **Bold** for ANSI-bold runs (real faces, distinct from
+   each other; fallback to MONOSPACE if loading fails). New default family
+   "JetBrains Mono"; Monospace/Courier/Sans/Serif remain selectable.
+3. **Row pitch**: parsed the TTF (hhea) — JBM ships a roomy **1.32 em** line
+   (ascent 1020/descent 300 per 1000 em, advance 0.600 em). Drawn as-is that
+   is only ~33 rows. New `CellMetrics.TERMINAL_LINE_FACTOR = 0.9` tightens
+   the row to ~1.19 em ≈ 2.0 × the 0.6 em advance — the classic terminal
+   ratio (Termux similarly tightens its font's metrics; clean-room: general
+   font-metrics practice, no Termux assets/code). **Predicted result at 12sp:
+   ~70 cols × ~36–38 rows** vs Termux's 71 × 39.
+
+**Code:** `SettingsManager` (12sp + "JetBrains Mono" defaults),
+`TerminalViewModel`/`SettingsScreen` initials + options list + preview,
+`TerminalEmulatorView` (`ResourcesCompat.getFont(R.font.jetbrainsmono_medium/bold)`,
+bold runs use the real Bold face), `CellMetrics.cellHeightPx(spacing,
+lineFactor)` + `TERMINAL_LINE_FACTOR` (clamped [0.5, 2], never < 1px;
+1-arg overload unchanged). **Tests:** +2 `CellMetricsTest` (tightened pitch
+math, clamp). Assets: `res/font/jetbrainsmono_{medium,bold}.ttf` (~544 KB).
+
+**Round-3 recipe (objective):** after install, `stty size` should report
+≈ **70 cols / 36–38 rows** (was 32/60; Termux reference 39/71), and the
+MWMW wall should look dense and dark next to Termux.

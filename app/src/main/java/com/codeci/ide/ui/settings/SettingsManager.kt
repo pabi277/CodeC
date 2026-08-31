@@ -49,10 +49,14 @@ class SettingsManager(private val context: Context) {
         it[COMPILER_BACKEND] ?: "auto"
     }
     val terminalFontSizeFlow: Flow<Float> = context.dataStore.data.map {
-        it[TERMINAL_FONT_SIZE] ?: 14f
+        // Phase 19.2 device round 2: 14sp gave 60x32 on the owner's phone
+        // where Termux fits 71x39 — 12sp lands on ~70x37 (Termux density).
+        it[TERMINAL_FONT_SIZE] ?: 12f
     }
     val terminalFontFamilyFlow: Flow<String> = context.dataStore.data.map {
-        it[TERMINAL_FONT_FAMILY] ?: "Monospace"
+        // Bundled JetBrains Mono Medium (OFL) — stock Droid Sans Mono looks
+        // light and wide-tracked next to Termux's custom font.
+        it[TERMINAL_FONT_FAMILY] ?: "JetBrains Mono"
     }
     val terminalExtraKeysMacrosFlow: Flow<String> = context.dataStore.data.map {
         it[TERMINAL_EXTRA_KEYS_MACROS] ?: ""

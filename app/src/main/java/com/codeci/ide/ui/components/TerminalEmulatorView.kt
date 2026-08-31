@@ -168,12 +168,30 @@ fun TerminalEmulatorView(
     // Reactive local font size for instant smooth pinch-to-zoom
     var activeFontSizeSp by remember(fontSizeSp) { mutableFloatStateOf(fontSizeSp) }
 
+    // Phase 19.2 device round 2 (2026-08-31): default family is the BUNDLED
+    // JetBrains Mono (Medium weight) — Android's stock Droid Sans Mono is
+    // light-stroked with wide sidebearings, which the owner saw as "thin,
+    // letters far apart, stretched" next to Termux's custom font. Bold runs
+    // use the real Bold face so ANSI bold stays distinct from Medium.
     val typeface = remember(fontFamily) {
         when (fontFamily) {
+            "JetBrains Mono" ->
+                androidx.core.content.res.ResourcesCompat.getFont(
+                    context, com.codeci.ide.R.font.jetbrainsmono_medium
+                ) ?: Typeface.MONOSPACE
             "Courier" -> Typeface.MONOSPACE
             "Sans Serif" -> Typeface.SANS_SERIF
             "Serif" -> Typeface.SERIF
             else -> Typeface.MONOSPACE
+        }
+    }
+    val boldTypeface = remember(fontFamily, typeface) {
+        if (fontFamily == "JetBrains Mono") {
+            androidx.core.content.res.ResourcesCompat.getFont(
+                context, com.codeci.ide.R.font.jetbrainsmono_bold
+            ) ?: Typeface.create(typeface, Typeface.BOLD)
+        } else {
+            Typeface.create(typeface, Typeface.BOLD)
         }
     }
 
@@ -213,11 +231,11 @@ fun TerminalEmulatorView(
 
     // Real bold face (keeps the monospace advance when available) instead of
     // isFakeBoldText, whose stroke thickening pushes past the cell edge.
-    val boldPaint = remember(paint, typeface) {
+    val boldPaint = remember(paint, boldTypeface) {
         android.graphics.Paint(paint).apply {
-            // `this.` — the bare name would resolve to the OUTER val
-            // typeface (the family face local), a reassignment error.
-            this.typeface = Typeface.create(typeface, Typeface.BOLD)
+            // `this.` — the bare name would resolve to an OUTER val, a
+            // reassignment error.
+            this.typeface = boldTypeface
         }
     }
 
@@ -664,7 +682,7 @@ private fun fitGridPaint(paint: android.graphics.Paint): GridFit {
     paint.textSize = fit.textSizePx
     return GridFit(
         cellW = fit.cellWidthPx,
-        cellH = CellMetrics.cellHeightPx(paint.fontSpacing),
+        cellH = CellMetrics.cellHeightPx(paint.fontSpacing, CellMetrics.TERMINAL_LINE_FACTOR),
         ascent = paint.fontMetrics.ascent
     )
 }

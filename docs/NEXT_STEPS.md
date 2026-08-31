@@ -507,8 +507,11 @@ whole pixel, so the integer cell equals the font's advance — crisp AND tight;
 postmortem in `chat-phase19/PART_19_2_RENDERING.md` §7.1). Round-1 recipes
 were also unusable on-device (multi-line paste, nonexistent `/usr/bin`) — all
 round-2 recipes are single-line copy-pasteable. Round-1 positives: soft-wrap
-of long lines ✓, Bengali/CJK/emoji echo ran clean. **Next: round 2 of the
-recipes on the new APK.**
+of long lines ✓, Bengali/CJK/emoji echo ran clean. **Round 2 (same day,
+owner screenshots + answers + `stty size` 32×60 vs Termux 39×71): density &
+weight — fixed via default 12sp + bundled JetBrains Mono Medium/Bold (OFL) +
+0.9 row-pitch factor (`fitSizeToGrid` kept; PART_19_2 §7.2). Next: round 3 —
+objective check `stty size` ≈ 70 cols × 36–38 rows, then the §5 recipes.**
 
 Phase 19 was specced 2026-08-31 on the owner's report that the terminal
 (a) prints downloads only at the end, (b) overlaps letters, and (c)
