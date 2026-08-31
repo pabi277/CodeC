@@ -1,42 +1,60 @@
 package com.codeci.ide
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathNode
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /**
- * TEMPORARY compile probe (to be deleted): the CI log host is unreachable
- * from the agent sandbox, so the exact `ImageVector.Builder.addPath`
- * signature of the pinned ui-graphics is probed with one candidate per val.
- * A val that compiles without error is a valid API shape.
+ * TEMPORARY compile probe (to be deleted), round 2. Round 1 established:
+ * - the first parameter is `pathData: List<PathNode>` (string overloads gone)
+ * - `stroke` is a real parameter of type `Brush?`
+ * - neither `color` nor `fillColor` is a parameter
+ * This round pins down: the PathNode string factory, the fill parameter
+ * name/acceptance, and the stroke width/cap/join parameter names.
  */
 @Suppress("unused")
 object ApiProbe {
     private fun builder(name: String) =
         ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
 
-    /** C1: string pathData + fillColor (AAPT2-generated code convention). */
-    val C1: ImageVector = builder("c1").apply {
-        addPath(pathData = "M0,0 H10", fillColor = Color.White)
+    private val nodes: List<PathNode> = PathNode.path("M0,0 H10")
+
+    /** D1: fill named `fill`, solid Brush. */
+    val D1: ImageVector = builder("d1").apply {
+        addPath(pathData = nodes, fill = Brush.solid(Color.White))
     }.build()
 
-    /** C2: string pathData + color. */
-    val C2: ImageVector = builder("c2").apply {
-        addPath(pathData = "M0,0 H10", color = Color.White)
+    /** D2: fill named `fill`, plain Color (Color is-a Brush). */
+    val D2: ImageVector = builder("d2").apply {
+        addPath(pathData = nodes, fill = Color.White)
     }.build()
 
-    /** C3: drawscope Stroke + explicit Unspecified fill. */
-    val C3: ImageVector = builder("c3").apply {
+    /** D3: stroke + `strokeLineWidth`. */
+    val D3: ImageVector = builder("d3").apply {
+        addPath(pathData = nodes, stroke = Brush.solid(Color.White), strokeLineWidth = 2f)
+    }.build()
+
+    /** D4: stroke Color + `strokeLineCap`. */
+    val D4: ImageVector = builder("d4").apply {
         addPath(
-            pathData = "M0,0 H10",
-            fillColor = Color.Unspecified,
-            stroke = Stroke(width = 2f)
+            pathData = nodes,
+            stroke = Color.White,
+            strokeLineWidth = 2f,
+            strokeLineCap = StrokeCap.Round
         )
     }.build()
 
-    /** C4: drawscope Stroke, no fill argument. */
-    val C4: ImageVector = builder("c4").apply {
-        addPath(pathData = "M0,0 H10", stroke = Stroke(width = 2f))
+    /** D5: stroke + `strokeLineJoin`. */
+    val D5: ImageVector = builder("d5").apply {
+        addPath(
+            pathData = nodes,
+            stroke = Brush.solid(Color.White),
+            strokeLineWidth = 2f,
+            strokeLineJoin = StrokeJoin.Round
+        )
     }.build()
 }
