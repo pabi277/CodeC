@@ -128,7 +128,7 @@ does not begin a lifecycle on its own (§1).
 - **Never `build-package.sh -I`** (installs official `com.termux` debs).
 - **Never overwrite `cc` or the real ELF `bash` with a shim.**
 - **TCC link order with `-o` last.** *(This invariant is retired automatically
-  when Phase D.4 removes TCC entirely — it will be struck from this list and
+  when Phase 21.4 removes TCC entirely — it will be struck from this list and
   from `prompt.md` in that commit. Until D.4 is complete it still applies.)*
 - **Never use official `com.termux` packages or repositories.**
 - **Never bundle the bootstrap in the APK.**
@@ -174,13 +174,13 @@ Every update updates the docs **in the same commit**:
   local clone is shallow, so `git log` alone is not proof of history.
 - **Phases 3–17 & 19: merged. Phase 18: COMPLETE & DEVICE-ACCEPTED — merged
   to `main` via PR #38 (2026-09-01).**
-- **New phases planned (2026-09-01, owner direction):** Phases A, B, C, D, E
-  are fully spec'd in `docs/chat-phaseA/` through `docs/chat-phaseE/` and
+- **New phases planned (2026-09-01, owner direction):** Phases 20-24
+  are fully spec'd in `docs/chat-phase20/` through `docs/chat-phase24/` and
   summarised in `docs/RESEARCH_NEXT_PHASES.md`. No code written yet.
-  Recommended order: C (CI/packages) → D (retire TCC, LanguageRunProfile) →
-  A (editor smoothness, IME keys) → B (inline PTY input) → E (polish batch).
-  C and A can run in parallel (C is CI-only; A is client-only).
-  **Owner starts a phase by saying "Start Phase X" in chat.**
+  Recommended order: 20 (CI/packages) → 21 (retire TCC, LanguageRunProfile) →
+  22 (editor smoothness, IME keys) → 23 (inline PTY input) → 24 (polish batch).
+  20 and 22 can run in parallel (20 is CI-only; 22 is client-only).
+  **Owner starts a phase by saying "Start Phase 20" (or 21/22/23/24) in chat.**
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
   a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
   device round.

@@ -1,14 +1,14 @@
-# CodeC Phase D.3 — Device Acceptance: gcc compiles C/C++ end-to-end
+# CodeC Phase 21.3 — Device Acceptance: gcc compiles C/C++ end-to-end
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]` (device-gated)
-· **Depends on:** Phase D.1 (registry wired), Phase D.2 (auto-install gate), Phase C.1 (gcc in repo)
+· **Depends on:** Phase 21.1 (registry wired), Phase 21.2 (auto-install gate), Phase 20.1 (gcc in repo)
 · **Target files:** none new — this is the device acceptance pass for D.1 + D.2
 
 ---
 
 ## 1. Purpose
 
-Phase D.3 is the **device acceptance gate** for the entire compiler redesign.
+Phase 21.3 is the **device acceptance gate** for the entire compiler redesign.
 D.4 (TCC removal — irreversible) must not run until D.3 passes. The owner
 runs the recipe below on their aarch64 device, confirms each step, and signals
 acceptance. Only then does D.4 begin.
@@ -18,9 +18,9 @@ acceptance. Only then does D.4 begin.
 ## 2. Pre-conditions
 
 Before the owner runs this recipe:
-1. Phase C.1 CI must be green and the package repo must be published (i.e.
+1. Phase 20.1 CI must be green and the package repo must be published (i.e.
    `pkg install gcc` resolves to a real package).
-2. Phase D.1 + D.2 `Build APK` CI must be green.
+2. Phase 21.1 + D.2 `Build APK` CI must be green.
 3. The APK from the latest green CI run must be installed on the device.
 4. The owner's device must have the CodeC userland installed (bootstrap present).
 
@@ -116,7 +116,7 @@ gcc --version
 
 **D.3 is DONE when:** the owner reports "PASS" or equivalent confirmation
 (a transcript of the output, or explicit "All working") for steps 1–8. Only
-then does the agent begin Phase D.4.
+then does the agent begin Phase 21.4.
 
 **If any step fails:** report the exact failure output; the agent diagnoses
 and fixes before re-running D.3. Do not skip to D.4 on a partial pass.

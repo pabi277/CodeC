@@ -1,7 +1,7 @@
-# CodeC Phase D.4 — Remove TCC Entirely
+# CodeC Phase 21.4 — Remove TCC Entirely
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
-· **Depends on:** Phase D.3 device acceptance (CONFIRMED by owner) — **irreversible, do not start early**
+· **Depends on:** Phase 21.3 device acceptance (CONFIRMED by owner) — **irreversible, do not start early**
 · **Target files:** `app/src/main/assets/tcc/` (delete), `app/src/main/jniLibs/` (remove libtcc.so),
   `app/src/main/java/com/codeci/ide/ui/services/EmbeddedCompiler.kt` (delete),
   `app/build.gradle.kts` (remove TCC abiFilters/jniLibs if present),
@@ -109,7 +109,7 @@ rm scripts/build-tcc.sh
 
 ## 5. Non-goals & invariants
 
-- **Phase D.4 does NOT remove `TermuxCompiler.kt`** (the Termux-Clang bridge)
+- **Phase 21.4 does NOT remove `TermuxCompiler.kt`** (the Termux-Clang bridge)
   unless the owner explicitly requests it — it is a separate optional engine
   that some users with Termux installed may rely on.
 - The PTY library (`libcodec-pty.so`) is **not touched** — it is unrelated to TCC.
@@ -143,6 +143,6 @@ After D.4 is merged:
 - **`rule.md` §6 invariants:** remove "TCC link order with `-o` last" (no longer
   applicable). Record that D.4 is complete.
 - **`prompt.md` STANDING RULES:** remove the TCC link-order bullet.
-- **`docs/JOURNEY.md`:** append item "Phase D — TCC retired, LanguageRunProfile
-  registry, gcc/g++ via userland, Phase C packages."
+- **`docs/JOURNEY.md`:** append item "Phase 21 — TCC retired, LanguageRunProfile
+  registry, gcc/g++ via userland, Phase 20 packages."
 - **`docs/NEXT_STEPS.md`:** update head state line.

@@ -64,14 +64,14 @@ gate, invariants, docs policy) — follow it.
   problem, solve it. No self-initiated work.
 
 **NEW PLANNED PHASES (2026-09-01, owner direction):**
-Phases A/B/C/D/E are fully spec'd — no code written yet.
-- **Phase A** (editor smoothness + IME-anchored keys) — `docs/chat-phaseA/`
-- **Phase B** (inline PTY input, remove Output Panel input box) — `docs/chat-phaseB/`
-- **Phase C** (gcc/clang/nodejs/etc. in package repo — CI only) — `docs/chat-phaseC/`
-- **Phase D** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — `docs/chat-phaseD/`
-- **Phase E** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phaseE/`
-Recommended order: C → D → A → B → E (C and A can run in parallel).
-**Owner starts a phase by saying "Start Phase X" in chat.**
+Phases 20/21/22/23/24 are fully spec'd — no code written yet.
+- **Phase 22** (editor smoothness + IME-anchored keys) — `docs/chat-phase22/`
+- **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
+- **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — `docs/chat-phase20/`
+- **Phase 21** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — `docs/chat-phase21/`
+- **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
+Recommended order: 20 → 21 → 22 → 23 → 24 (C and A can run in parallel).
+**Owner starts a phase by saying "Start Phase 20" (or 21/22/23/24) in chat.**
 
 **FUTURE-UPDATE MODE (owner, 2026-09-01):** Phases A–E are planned but not
 started. The agent **waits for the owner to say "Start Phase X"** — it does

@@ -1,7 +1,7 @@
-# CodeC Phase D.2 — Auto-install Gate (prompt + install before first RUN)
+# CodeC Phase 21.2 — Auto-install Gate (prompt + install before first RUN)
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
-· **Depends on:** Phase D.1 (`LanguageRegistry` and `requiredPackage` field exist)
+· **Depends on:** Phase 21.1 (`LanguageRegistry` and `requiredPackage` field exist)
 · **Target files:** `ui/viewmodels/EditorViewModel.kt`,
   `ui/screens/EditorScreen.kt` (install prompt dialog/sheet),
   `ui/services/ModuleInstaller.kt` (reuse `pkg install` flow)

@@ -64,7 +64,7 @@ research is grounded in (verified in `app/src/main/...` and `codec-packages/`):
 >
 > "take ideas 3, 4, 5 now (the feasible / low-cost ones)"
 
-This reshapes the plan and adds **Phase D** (compiler) and **Phase E** (the
+This reshapes the plan and adds **Phase 21** (compiler) and **Phase 24** (the
 feasible picks from groups 3-5). In short:
 - **TCC is retired.** C/C++ compile with a **userland `gcc`/`g++` toolchain**
   delivered like Python today (a package in the CodeC repo, installed on demand,
@@ -81,15 +81,15 @@ feasible picks from groups 3-5). In short:
   so adding languages later is configuration, not new code ("as per need").
 - **Feasible polish from groups 3-5** (auto-install on import, hardware
   shortcuts, project-zip share, per-language formatters, background-run
-  notification, tablet two-pane, test-runner UI) is pulled into **Phase E** now.
+  notification, tablet two-pane, test-runner UI) is pulled into **Phase 24** now.
 - **CI:** `scripts/build-tcc.sh` is dropped; the C/C++ toolchain comes from the
-  package-repository build (Phase C). The "fully static musl executables" property
+  package-repository build (Phase 20). The "fully static musl executables" property
   is intentionally given up (programs run dynamically under `$PREFIX`, like
   Termux/Python).
 
 ---
 
-## Phase A - Editor touch smoothness & keyboard-anchored shortcuts
+## Phase 22 - Editor touch smoothness & keyboard-anchored shortcuts
 
 ### A.0 Why (owner signal)
 > "the editor smoothness because it not good at touch, feels like stuck, the
@@ -186,7 +186,7 @@ Grounded in `EditorScreen.kt`:
 
 ---
 
-## Phase D - Compiler engine redesign: drop TCC, adopt userland gcc/g++ + generic multi-language run model
+## Phase 21 - Compiler engine redesign: drop TCC, adopt userland gcc/g++ + generic multi-language run model
 
 ### D.0 Why (owner decision, 2026-09-01)
 > "remove tcc and use gcc like python and extend it's scope with other languages
@@ -203,7 +203,7 @@ Translation into architecture:
 - **Retire TCC entirely:** delete `app/src/main/assets/tcc/*`, `scripts/build-tcc.sh`,
   the TCC-first "Auto" engine branch, and the `EmbeddedCompiler` TCC path. Keep
   "Bundled Clang"/Termux-Clang only as an optional alternative compiler if validated.
-- **gcc/g++ as a userland package** (see Phase C, core toolchains). C compiles via
+- **gcc/g++ as a userland package** (see Phase 20, core toolchains). C compiles via
   `gcc $SRC -o $OUT` (Termux-style: dynamic against Bionic, run under `$PREFIX`
   like Python). First RUN of a C file with a missing toolchain auto-installs `gcc`
   (pkg) then runs - reuse the Packages-tab 1-tap install logic.
@@ -370,7 +370,7 @@ Key points:
   `EditorViewModel` checks `$PREFIX/bin/<tool>` exists; if not, it prompts
   "Install `gcc` to run C files?" and calls the existing pkg install flow before
   continuing. This is identical to how Python installation was handled in Phase 12.
-- **`formatterTemplate`** is the hook for Phase E's per-language formatter
+- **`formatterTemplate`** is the hook for Phase 24's per-language formatter
   (currently only activated from the `⋮ → Format` menu).
 - The registry is a `val` list - adding a new language is a one-line entry, no
   new classes, no new branches in `runActiveFile`.
@@ -405,33 +405,33 @@ clang         # the actual LLVM/Clang toolchain it wraps
 
 The migration must not break existing users who have files open. Phased:
 
-1. **Phase D-1:** Add `gcc` + `clang` to `CODEC_REPOSITORY_PACKAGES` and rebuild
+1. **Phase 21-1:** Add `gcc` + `clang` to `CODEC_REPOSITORY_PACKAGES` and rebuild
    the package repo (CI `package-repository.yml`). No app code change yet.
-2. **Phase D-2:** Implement `LanguageRegistry` + `LanguageRunProfile`; wire
+2. **Phase 21-2:** Implement `LanguageRegistry` + `LanguageRunProfile`; wire
    `EditorViewModel.runActiveFile` through the registry instead of the current
    TCC-first switch. The TCC path stays as a fallback under a feature flag
    (`SettingsManager.useLegacyTcc`).
-3. **Phase D-3:** Device acceptance: owner runs C file → auto-install prompt →
+3. **Phase 21-3:** Device acceptance: owner runs C file → auto-install prompt →
    `gcc` compiles → `./a.out` runs. If OK, flip the default to registry; TCC
    fallback still available in Settings for one release.
-4. **Phase D-4:** Remove `EmbeddedCompiler` TCC code, `assets/tcc/`, the TCC
+4. **Phase 21-4:** Remove `EmbeddedCompiler` TCC code, `assets/tcc/`, the TCC
    native lib from `jniLibs`, and the `useLegacyTcc` flag. APK shrinks by ~3 MB.
 
 ### D.4 Acceptance
 - `gcc main.c -o main && ./main` in the Output Panel produces the same output as
   the old TCC path on a fresh device (auto-install prompt → tap Install → runs).
-- `g++ hello.cpp -o hello && ./hello` works (Phase D proves C++ parity).
+- `g++ hello.cpp -o hello && ./hello` works (Phase 21 proves C++ parity).
 - Adding a new language to `LanguageRegistry` and pressing RUN on a file of that
   extension shows the auto-install prompt and runs correctly - no Kotlin changes
   outside the registry entry.
-- APK size drops after Phase D-4 (TCC assets removed).
+- APK size drops after Phase 21-4 (TCC assets removed).
 - No regression: Python, HTML preview, shell scripts, terminal, git.
 
 ---
 
-## Phase C - Package toolchain expansion (gcc/g++ + language packages in CI)
+## Phase 20 - Package toolchain expansion (gcc/g++ + language packages in CI)
 
-> This is the **CI / package-repo side** of Phase D. It is a separate phase
+> This is the **CI / package-repo side** of Phase 21. It is a separate phase
 > because it touches `codec-packages/` and CI only, no app Kotlin code.
 
 ### C.1 Packages to add to `CODEC_REPOSITORY_PACKAGES`
@@ -461,7 +461,7 @@ The migration must not break existing users who have files open. Phased:
   `nodejs`, `php`, `ruby`, `lua54` adds ~30-60 min to CI (these are moderate
   recipes; clang is the heavy one at ~120 min). Go and Rust are opt-in: guarded
   by a separate `[repo-build-heavy]` commit tag so they don't run on every push.
-- `build-tcc.sh` is **deleted** in Phase D-4 (the TCC build is no longer needed).
+- `build-tcc.sh` is **deleted** in Phase 21-4 (the TCC build is no longer needed).
 
 ### C.3 Acceptance
 - `pkg install gcc` on device installs `gcc` + `clang` from the CodeC repo (no
@@ -471,7 +471,7 @@ The migration must not break existing users who have files open. Phased:
 
 ---
 
-## Phase E - Feasible polish from groups 3-5
+## Phase 24 - Feasible polish from groups 3-5
 
 > Owner: "take ideas 3, 4, 5 now (the feasible / low-cost ones)". This phase
 > pulls the **low-cost, high-value** items from the original research groups
@@ -494,9 +494,9 @@ The migration must not break existing users who have files open. Phased:
 | X11 / SDL / Qt GUI packages | 5 | ❌ | No X11 server; explicit policy exclusion |
 | Kivy / PyQt Android binding | 5 | ❌ | Requires X11 or Wayland; rabbit hole |
 | Root-based acceleration | 5 | ❌ | Out of scope by policy |
-| Full Termux catalog mirror | 5 | ❌ | Cardinality; not before Phase C settles |
+| Full Termux catalog mirror | 5 | ❌ | Cardinality; not before Phase 20 settles |
 
-### E.1 Auto-install on first RUN (covered by Phase D.2)
+### E.1 Auto-install on first RUN (covered by Phase 21.2)
 
 Integrated into `EditorViewModel`: before running, check `$PREFIX/bin/<tool>`.
 If missing, show a bottom sheet: "This file needs **gcc** — install now? (offline
@@ -548,7 +548,7 @@ already handles some via `EditorKeySet`. Expand:
 
 Implementation: `EditorScreen` already receives `KeyEvent` from `BasicTextField`.
 Add a `handleHardwareKey(event: KeyEvent): Boolean` function in `EditorViewModel`
-and dispatch in `onKeyEvent` modifier. The extra-keys strip (Phase A) already maps
+and dispatch in `onKeyEvent` modifier. The extra-keys strip (Phase 22) already maps
 virtual key presses to editor actions - hardware shortcuts reuse the same action
 functions.
 
@@ -613,7 +613,7 @@ Compose and picks `DarkTheme` / `LightTheme` accordingly. The theme switches liv
 when the user pulls the system quick-settings shade. One-line change in the theme
 resolution function.
 
-### E.10 Phase E acceptance
+### E.10 Phase 24 acceptance
 - Auto-install prompt appears when running a C file on a device without `gcc`;
   program runs after install.
 - Format menu item visible for C/C++/Python/Go; formats in-place without
@@ -628,7 +628,7 @@ resolution function.
 
 ---
 
-## Phase B - Interactive run UX: remove the input box, use PTY input inline
+## Phase 23 - Interactive run UX: remove the input box, use PTY input inline
 
 ### B.0 Why (owner signal)
 > "remove the input box [from the Output Panel] - when program asks for input,
@@ -651,7 +651,7 @@ column that calls `session.sendLine(text)`.
   row** (a lightweight `BasicTextField` with no box/border, styled as plain
   terminal text). The user types at the bottom of the output; pressing Enter
   sends the line to the PTY and the inline field clears.
-- The IME-anchored extra-keys strip (Phase A) shows `↵ Enter`, `Ctrl+C`, `Tab`
+- The IME-anchored extra-keys strip (Phase 22) shows `↵ Enter`, `Ctrl+C`, `Tab`
   above the keyboard when the Output Panel is in input mode.
 - **No change for non-interactive runs** (the inline field is hidden; the panel
   is read-only).
@@ -674,21 +674,21 @@ here for the next planning cycle.
 
 | # | Idea | Origin | Effort est. |
 |---|---|---|---|
-| 4.1 | **Haptic feedback on editor key presses** (light vibrate on bracket completion, error pulse) | Phase A research | XS |
-| 4.2 | **Language-adaptive keycap row** (C: `{}();`, Python: `:` + `def`/`print`, Go: `:=`) | Phase A.5 | S |
-| 4.3 | **OLED-tuned caret** (slightly slower blink rate, pure-black background on dark theme) | Phase A.5 | XS |
-| 4.4 | **Predictive-back support** (intercept gesture-back from editor without losing unsaved edits) | Phase A | S |
-| 4.5 | **Incremental syntax highlighting** (token-diff from last snapshot, O(changed lines) not O(file)) | Phase A.2.2 | M |
+| 4.1 | **Haptic feedback on editor key presses** (light vibrate on bracket completion, error pulse) | Phase 22 research | XS |
+| 4.2 | **Language-adaptive keycap row** (C: `{}();`, Python: `:` + `def`/`print`, Go: `:=`) | Phase 22.5 | S |
+| 4.3 | **OLED-tuned caret** (slightly slower blink rate, pure-black background on dark theme) | Phase 22.5 | XS |
+| 4.4 | **Predictive-back support** (intercept gesture-back from editor without losing unsaved edits) | Phase 22 | S |
+| 4.5 | **Incremental syntax highlighting** (token-diff from last snapshot, O(changed lines) not O(file)) | Phase 22.2.2 | M |
 | 4.6 | **LSP-lite autocomplete** (Tree-sitter grammar → scope-based symbols; no language server process) | IDEA_BACKLOG B.3 | M |
-| 4.7 | **`go test` / `pytest` inline annotations** (tap failed test → jump to line) | Phase E.7 | S |
-| 4.8 | **Project templates for new languages** (Go module, Rust `cargo new`, Node `npm init`) | Phase D registry | S |
-| 4.9 | **Offline docs viewer** (bundled `man` pages via `man-db` package; `man printf` in a panel) | Phase C | M |
-| 4.10 | **REPL mode** (run Python/Node/Lua in REPL in the Terminal tab, not the Output Panel) | Phase B | S |
-| 4.11 | **Run history** (last 10 runs with timestamp, exit code, duration; tap to re-run) | Phase E | S |
+| 4.7 | **`go test` / `pytest` inline annotations** (tap failed test → jump to line) | Phase 24.7 | S |
+| 4.8 | **Project templates for new languages** (Go module, Rust `cargo new`, Node `npm init`) | Phase 21 registry | S |
+| 4.9 | **Offline docs viewer** (bundled `man` pages via `man-db` package; `man printf` in a panel) | Phase 20 | M |
+| 4.10 | **REPL mode** (run Python/Node/Lua in REPL in the Terminal tab, not the Output Panel) | Phase 23 | S |
+| 4.11 | **Run history** (last 10 runs with timestamp, exit code, duration; tap to re-run) | Phase 24 | S |
 | 4.12 | **Spell-check in comments** (highlight misspelt words in `//` / `#` / `/* */` only) | editor | M |
 | 4.13 | **Multiple cursors** (Ctrl+click adds a cursor; bulk edit) | editor | L |
 | 4.14 | **Code minimap** (right-side scrollbar showing file structure) | editor | M |
-| 4.15 | **Per-project `.codec.json` run config** (override the registry template for a project) | Phase D | S |
+| 4.15 | **Per-project `.codec.json` run config** (override the registry template for a project) | Phase 21 | S |
 
 ---
 

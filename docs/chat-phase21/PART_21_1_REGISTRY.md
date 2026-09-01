@@ -1,7 +1,7 @@
-# CodeC Phase D.1 — `LanguageRunProfile` Registry + Wire into EditorViewModel
+# CodeC Phase 21.1 — `LanguageRunProfile` Registry + Wire into EditorViewModel
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
-· **Depends on:** Phase C.1 (gcc in the repo — needed for device acceptance in D.3,
+· **Depends on:** Phase 20.1 (gcc in the repo — needed for device acceptance in D.3,
   not for D.1 to compile)
 · **Target files:** `ui/services/LanguageRegistry.kt` (new),
   `ui/viewmodels/EditorViewModel.kt`, `ui/services/ExecutionRunner.kt` (minor),

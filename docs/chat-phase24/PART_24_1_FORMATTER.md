@@ -1,7 +1,7 @@
-# CodeC Phase E.1 — Per-language Code Formatter (Format menu item)
+# CodeC Phase 24.1 — Per-language Code Formatter (Format menu item)
 
 **Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** XS
-· **Depends on:** Phase D.1 (`formatterTemplate` field in `LanguageRunProfile`)
+· **Depends on:** Phase 21.1 (`formatterTemplate` field in `LanguageRunProfile`)
 · **Target files:** `ui/screens/EditorScreen.kt` (overflow menu),
   `ui/viewmodels/EditorViewModel.kt` (`formatActiveFile`)
 

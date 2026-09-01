@@ -1,4 +1,4 @@
-# CodeC Phase E.8 — Adaptive Theme (Auto Follow System Dark/Light)
+# CodeC Phase 24.8 — Adaptive Theme (Auto Follow System Dark/Light)
 
 **Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** XS
 · **Depends on:** nothing (ThemeManager already exists)

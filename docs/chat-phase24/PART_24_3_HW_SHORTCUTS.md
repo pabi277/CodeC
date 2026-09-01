@@ -1,7 +1,7 @@
-# CodeC Phase E.3 — Hardware Keyboard Shortcuts
+# CodeC Phase 24.3 — Hardware Keyboard Shortcuts
 
 **Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** S
-· **Depends on:** Phase A.1 (editor is the keyboard target; scroll model fixed)
+· **Depends on:** Phase 22.1 (editor is the keyboard target; scroll model fixed)
 · **Target files:** `ui/screens/EditorScreen.kt`,
   `ui/editor/EditorKeySet.kt` (extend), `ui/viewmodels/EditorViewModel.kt`
 

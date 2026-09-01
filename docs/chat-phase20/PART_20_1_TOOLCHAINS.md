@@ -1,8 +1,8 @@
-# CodeC Phase C.1 — Core toolchains + interpreted languages
+# CodeC Phase 20.1 — Core toolchains + interpreted languages
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[repo-build]`
 · **Depends on:** nothing
-· **Blocks:** Phase D (D.2 needs `gcc` in the repo)
+· **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)
 · **CI workflow:** `.github/workflows/package-repository.yml`
 
@@ -11,7 +11,7 @@
 ## 1. Context & motivation
 
 The CodeC package repository today ships Python and a handful of CLI tools.
-Phase D's `LanguageRunProfile` registry will invoke `gcc`, `node`, `php`,
+Phase 21's `LanguageRunProfile` registry will invoke `gcc`, `node`, `php`,
 `ruby`, and `lua` for their respective languages — but `pkg install gcc` must
 work first. This part adds those toolchain packages to `CODEC_REPOSITORY_PACKAGES`
 and verifies they build and install correctly.
@@ -28,9 +28,9 @@ and verifies they build and install correctly.
 | `lua54` | Lua 5.4 interpreter | ~3 MB | |
 
 > **Note on `clang`:** "Bundled Clang" today is downloaded separately as a module
-> (`ModuleCatalog`). After Phase C.1, `clang` is a proper `pkg` package from the
+> (`ModuleCatalog`). After Phase 20.1, `clang` is a proper `pkg` package from the
 > CodeC repo, installed via `pkg install gcc` (since `gcc` declares `Depends: clang`).
-> The old "Bundled Clang" module path may be deprecated in Phase D.
+> The old "Bundled Clang" module path may be deprecated in Phase 21.
 
 ---
 
@@ -105,7 +105,7 @@ Record any new overrides added in §7.
 
 ### Step 4 — Commit and request CI build
 
-Commit message: `[repo-build] Phase C.1: add gcc/clang/nodejs/php/ruby/lua54 to CODEC_REPOSITORY_PACKAGES`
+Commit message: `[repo-build] Phase 20.1: add gcc/clang/nodejs/php/ruby/lua54 to CODEC_REPOSITORY_PACKAGES`
 
 > **⚠ WARNING:** Do NOT trigger `package-repository.yml` without explicit owner
 > confirmation. Committing is fine; running the build workflow is not. After
@@ -192,14 +192,14 @@ should appear).
   to every Termux device; users get the `gcc` UX; the compiler is Clang.
   No genuine GNU GCC attempt.
 - **D2 — clang as a `pkg` package, not a module:** The "Bundled Clang" module
-  (`ModuleCatalog`) predates the package repo. After Phase C.1, `clang` lives
+  (`ModuleCatalog`) predates the package repo. After Phase 20.1, `clang` lives
   in the package repo (installed as a `gcc` dependency). The module path is
-  superseded but not actively removed yet (Phase D.4 will clean it up).
+  superseded but not actively removed yet (Phase 21.4 will clean it up).
 - **D3 — one `[repo-build]` trigger for all six:** Build all six in one CI run
   to minimize CI-time consumption. If one fails, remove it from the list and
   re-trigger for the remainder; do not hold the others hostage.
 - **D4 — no bootstrap change:** Tools install on demand. A fresh device without
-  userland still works (Phase A/B only need the app code; no userland required
+  userland still works (Phase 22/B only need the app code; no userland required
   for the editor smoothness or IME keys fix).
 
 ---

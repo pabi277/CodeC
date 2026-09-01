@@ -1,4 +1,4 @@
-# CodeC Phase B.1 — Remove OutputInputRow; Add Inline Input in OutputPanelView
+# CodeC Phase 23.1 — Remove OutputInputRow; Add Inline Input in OutputPanelView
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
 · **Depends on:** nothing (standalone UI change to the Output Panel)

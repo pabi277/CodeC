@@ -1,4 +1,4 @@
-# CodeC Phase E.5 — Tablet Two-Pane Layout (WindowSizeClass)
+# CodeC Phase 24.5 — Tablet Two-Pane Layout (WindowSizeClass)
 
 **Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** nothing

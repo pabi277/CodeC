@@ -1,4 +1,4 @@
-# CodeC Phase E.4 — Project ZIP Share (Export + Share Intent)
+# CodeC Phase 24.4 — Project ZIP Share (Export + Share Intent)
 
 **Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** XS
 · **Depends on:** Phase 8 (`ProjectTransfer.exportZip` already exists)

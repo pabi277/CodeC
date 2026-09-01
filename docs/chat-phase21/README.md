@@ -1,15 +1,15 @@
-# CodeC Phase D — Compiler Engine Redesign: Drop TCC, LanguageRunProfile Registry
+# CodeC Phase 21 — Compiler Engine Redesign: Drop TCC, LanguageRunProfile Registry
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase D" command.
+**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 21" command.
 · **Cost:** `[client-only]` — app Kotlin code only; no new `[repo-build]`
-· **Depends on:** Phase C.1 (gcc/clang in the CodeC repo so `pkg install gcc` works on-device)
-· **Blocks:** Phase E (E.2 formatter uses `formatterTemplate` from the registry)
+· **Depends on:** Phase 20.1 (gcc/clang in the CodeC repo so `pkg install gcc` works on-device)
+· **Blocks:** Phase 24 (E.2 formatter uses `formatterTemplate` from the registry)
 
 > **Owner decision (2026-09-01):** "remove tcc and use gcc like python and extend it's
 > scope with other languages as per need - make the plan future proof."
 >
 > Full research & design rationale: [`docs/RESEARCH_NEXT_PHASES.md`](../RESEARCH_NEXT_PHASES.md)
-> §Phase D. The `LanguageRunProfile` Kotlin design (with registry code) is in that doc §D.2.
+> §Phase 21. The `LanguageRunProfile` Kotlin design (with registry code) is in that doc §D.2.
 
 ---
 
@@ -33,10 +33,10 @@ a list — not new Kotlin code, not a new branch in `runActiveFile`.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **D.1** | `LanguageRunProfile` registry + wire into `EditorViewModel` | The data model + registry; `runActiveFile` dispatches through it; TCC path stays as a feature-flag fallback | [PART_D1_REGISTRY.md](PART_D1_REGISTRY.md) |
-| **D.2** | Auto-install gate | Before first RUN of a file whose `requiredPackage` is missing, show "Install X?" prompt and install; same flow as Python Phase 12 | [PART_D2_AUTOINSTALL.md](PART_D2_AUTOINSTALL.md) |
-| **D.3** | Device acceptance: gcc compiles C/C++ end-to-end | Owner runs a C file and a C++ file through the new path on device; TCC fallback still in Settings | [PART_D3_ACCEPTANCE.md](PART_D3_ACCEPTANCE.md) |
-| **D.4** | Remove TCC entirely | Delete `assets/tcc/`, `EmbeddedCompiler` TCC path, `scripts/build-tcc.sh`, `useLegacyTcc` flag; APK shrinks | [PART_D4_REMOVE_TCC.md](PART_D4_REMOVE_TCC.md) |
+| **D.1** | `LanguageRunProfile` registry + wire into `EditorViewModel` | The data model + registry; `runActiveFile` dispatches through it; TCC path stays as a feature-flag fallback | [PART_21_1_REGISTRY.md](PART_21_1_REGISTRY.md) |
+| **D.2** | Auto-install gate | Before first RUN of a file whose `requiredPackage` is missing, show "Install X?" prompt and install; same flow as Python Phase 12 | [PART_21_2_AUTOINSTALL.md](PART_21_2_AUTOINSTALL.md) |
+| **D.3** | Device acceptance: gcc compiles C/C++ end-to-end | Owner runs a C file and a C++ file through the new path on device; TCC fallback still in Settings | [PART_21_3_ACCEPTANCE.md](PART_21_3_ACCEPTANCE.md) |
+| **D.4** | Remove TCC entirely | Delete `assets/tcc/`, `EmbeddedCompiler` TCC path, `scripts/build-tcc.sh`, `useLegacyTcc` flag; APK shrinks | [PART_21_4_REMOVE_TCC.md](PART_21_4_REMOVE_TCC.md) |
 
 ---
 
@@ -47,11 +47,11 @@ a list — not new Kotlin code, not a new branch in `runActiveFile`.
   or any other closed-source app.
 - **No PR/merge and no push to `main` without the owner's explicit command.**
 - **Client-only (D.1–D.4):** no `[repo-build]`, no bootstrap changes. The packages
-  come from Phase C; D only changes the Kotlin app code.
+  come from Phase 20; D only changes the Kotlin app code.
 - All new logic must be **Android-free and host-unit-testable** (pattern:
   `LanguageRegistry` is a pure Kotlin object; `EditorViewModel` injects the
   shell path and environment from `ShellEnvironment`).
-- **Phase D.4 (TCC removal) is irreversible** — do not run it until D.3 device
+- **Phase 21.4 (TCC removal) is irreversible** — do not run it until D.3 device
   acceptance is confirmed by the owner.
 
 ## 🔎 Research prompts

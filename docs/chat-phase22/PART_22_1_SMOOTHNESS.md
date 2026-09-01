@@ -1,4 +1,4 @@
-# CodeC Phase A.1 — Scroll + Recomposition Decoupling (fix the "stuck" feeling)
+# CodeC Phase 22.1 — Scroll + Recomposition Decoupling (fix the "stuck" feeling)
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
 · **Depends on:** nothing

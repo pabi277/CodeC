@@ -1,13 +1,13 @@
-# CodeC Phase B — Interactive Run UX: Inline PTY Input (remove the input box)
+# CodeC Phase 23 — Interactive Run UX: Inline PTY Input (remove the input box)
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase B" command.
+**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 23" command.
 · **Cost:** `[client-only]` — pure Kotlin/Compose; no `[repo-build]`, no native changes
-· **Depends on:** Phase A.2 (IME-anchored keys strip — the `↵ Enter` / `Ctrl+C` keys
+· **Depends on:** Phase 22.2 (IME-anchored keys strip — the `↵ Enter` / `Ctrl+C` keys
   that appear above the keyboard during interactive runs come from A.2's infrastructure)
 · **Blocks:** nothing
 
 > Full research & design rationale:
-> [`docs/RESEARCH_NEXT_PHASES.md`](../RESEARCH_NEXT_PHASES.md) §Phase B.
+> [`docs/RESEARCH_NEXT_PHASES.md`](../RESEARCH_NEXT_PHASES.md) §Phase 23.
 
 ---
 
@@ -30,8 +30,8 @@ is sent to the program's stdin. No separate input row.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **B.1** | Remove `OutputInputRow`; add inline input at the bottom of `OutputPanelView` | The last "line" in the Output Panel becomes an editable field when an interactive program is running; Enter sends the line to PTY | [PART_B1_INLINE_INPUT.md](PART_B1_INLINE_INPUT.md) |
-| **B.2** | Extra-keys integration for interactive runs | When the Output Panel is in input mode, the IME-anchored keys strip (Phase A.2) shows `↵ Enter`, `Ctrl+C`, `Tab` instead of editor keys | [PART_B2_RUN_KEYS.md](PART_B2_RUN_KEYS.md) |
+| **B.1** | Remove `OutputInputRow`; add inline input at the bottom of `OutputPanelView` | The last "line" in the Output Panel becomes an editable field when an interactive program is running; Enter sends the line to PTY | [PART_23_1_INLINE_INPUT.md](PART_23_1_INLINE_INPUT.md) |
+| **B.2** | Extra-keys integration for interactive runs | When the Output Panel is in input mode, the IME-anchored keys strip (Phase 22.2) shows `↵ Enter`, `Ctrl+C`, `Tab` instead of editor keys | [PART_23_2_RUN_KEYS.md](PART_23_2_RUN_KEYS.md) |
 
 ---
 
@@ -42,7 +42,7 @@ is sent to the program's stdin. No separate input row.
 - **No PR/merge and no push to `main` without the owner's explicit command.**
 - **Client-only:** no `[repo-build]`, no bootstrap changes, no PTY/JNI contract
   changes. The `InteractiveRunSession.sendLine()` call is reused unchanged.
-- Phase B is **additive**: non-interactive runs (programs that don't read stdin)
+- Phase 23 is **additive**: non-interactive runs (programs that don't read stdin)
   are completely unaffected. The inline field only appears when `interactive = true`
   and the program is running.
 

@@ -1,7 +1,7 @@
-# CodeC Phase A.3 — IME Insets + Caret Visibility
+# CodeC Phase 22.3 — IME Insets + Caret Visibility
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
-· **Depends on:** Phase A.1 (scroll model fixed), Phase A.2 (keys strip placed)
+· **Depends on:** Phase 22.1 (scroll model fixed), Phase 22.2 (keys strip placed)
 · **Primary target files:** `ui/screens/EditorScreen.kt`, `MainActivity.kt`
 
 ---

@@ -1,7 +1,7 @@
-# CodeC Phase C.2 — Optional heavy compilers (Go, Rust — on-demand)
+# CodeC Phase 20.2 — Optional heavy compilers (Go, Rust — on-demand)
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[repo-build-heavy]` (guarded)
-· **Depends on:** Phase C.1 (CI pipeline established, repo healthy)
+· **Depends on:** Phase 20.1 (CI pipeline established, repo healthy)
 · **Target files:** `codec-packages/properties.codec.sh`
 · **CI workflow:** `.github/workflows/package-repository.yml` (with `[repo-build-heavy]` tag)
 
@@ -13,7 +13,7 @@ Go and Rust are large (Go ~80 MB compressed, Rust ~200 MB+) and infrequently
 needed on a phone. Including them in the normal `[repo-build]` CI path would
 add 60–120 min to every build. This part adds them as **opt-in packages** —
 available in the CodeC repo, never auto-installed, always behind a user
-confirmation when Phase D's auto-install gate fires.
+confirmation when Phase 21's auto-install gate fires.
 
 **Packages:**
 
@@ -29,7 +29,7 @@ confirmation when Phase D's auto-install gate fires.
 ### Step 1 — Guard the build with `[repo-build-heavy]`
 
 Modify `package-repository.yml` to split the build into two jobs:
-- **`build-core`**: triggered on every `[repo-build]` commit — the Phase C.1
+- **`build-core`**: triggered on every `[repo-build]` commit — the Phase 20.1
   packages + Python.
 - **`build-heavy`**: triggered only when the commit message contains
   `[repo-build-heavy]` — runs `golang` and `rust` builds.
@@ -55,9 +55,9 @@ build-heavy:
 They are commented out by default. When the owner wants Go or Rust support,
 uncomment, commit with `[repo-build-heavy]`, and trigger the heavy build job.
 
-### Step 3 — Size warnings in the auto-install prompt (app side, Phase D hook)
+### Step 3 — Size warnings in the auto-install prompt (app side, Phase 21 hook)
 
-Phase D's auto-install gate in `EditorViewModel` already shows "Install X to
+Phase 21's auto-install gate in `EditorViewModel` already shows "Install X to
 run Y files?" When `requiredPackage` is `golang` or `rust`, the prompt must
 include the size warning:
 
@@ -68,7 +68,7 @@ This downloads once and works offline after that.
 ```
 
 The size string is a field in `LanguageRunProfile.installSizeHint: String?`
-(added in Phase D). Phase C.2 just documents the requirement; Phase D implements it.
+(added in Phase 21). Phase 20.2 just documents the requirement; Phase 21 implements it.
 
 ---
 
@@ -102,7 +102,7 @@ rustc /tmp/hello.rs -o /tmp/hello && /tmp/hello
 
 - **Not in C.2:** app code (→ D); the `installSizeHint` field (→ D.2).
 - Go and Rust are **never auto-installed without the user seeing the size
-  warning** (Phase D guarantees this via `installSizeHint`).
+  warning** (Phase 21 guarantees this via `installSizeHint`).
 - **Never include in the bootstrap seed** — these are pure opt-in packages.
 
 ---

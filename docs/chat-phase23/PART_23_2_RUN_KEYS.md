@@ -1,8 +1,8 @@
-# CodeC Phase B.2 — Extra-Keys Integration for Interactive Runs
+# CodeC Phase 23.2 — Extra-Keys Integration for Interactive Runs
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
-· **Depends on:** Phase A.2 (IME-anchored keys strip infrastructure),
-  Phase B.1 (inline input and `waitingForInput` state)
+· **Depends on:** Phase 22.2 (IME-anchored keys strip infrastructure),
+  Phase 23.1 (inline input and `waitingForInput` state)
 · **Primary target files:** `ui/components/EditorKeysRow.kt`,
   `ui/screens/EditorScreen.kt`, `ui/viewmodels/EditorViewModel.kt`
 
@@ -17,7 +17,7 @@ at the bottom of the Output Panel. But they still need quick access to:
 - **Tab** — some CLI programs use Tab completion.
 - **↑ / ↓** — some programs (like Python REPL) support history navigation.
 
-These should appear in the **IME-anchored keys strip** (Phase A.2) when the
+These should appear in the **IME-anchored keys strip** (Phase 22.2) when the
 Output Panel's inline input is focused — replacing the editor keys that appear
 when the editor is focused.
 
@@ -27,7 +27,7 @@ when the editor is focused.
 
 ### 2.1 Context-aware keys strip
 
-The `EditorKeysRow` (Phase A.2) already receives an `activeLanguage` parameter
+The `EditorKeysRow` (Phase 22.2) already receives an `activeLanguage` parameter
 to select the key set. Extend it with a `context` parameter:
 
 ```kotlin

@@ -1,28 +1,28 @@
-# CodeC Phase C — Package Toolchain Expansion (gcc/g++ + language packages in CI)
+# CodeC Phase 20 — Package Toolchain Expansion (gcc/g++ + language packages in CI)
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase C" command.
+**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 20" command.
 · **Cost:** `[repo-build]` — CI `package-repository.yml` only; **zero app Kotlin code changes**
-· **Depends on:** nothing (CI/packages side only; can run in parallel with Phase A)
-· **Blocks:** Phase D (D needs `gcc` in the repo before wiring the app)
+· **Depends on:** nothing (CI/packages side only; can run in parallel with Phase 22)
+· **Blocks:** Phase 21 (D needs `gcc` in the repo before wiring the app)
 
 > This phase is the **CI / package-repo side of the compiler redesign**. It adds
-> the language toolchains that Phase D's `LanguageRunProfile` registry will invoke —
+> the language toolchains that Phase 21's `LanguageRunProfile` registry will invoke —
 > starting with `gcc`/`g++` (which resolve to Clang/LLVM wrappers in the Termux/CodeC
 > userland) and expanding to `nodejs`, `php`, `ruby`, `lua54`, and optional heavy
 > compilers (`golang`, `rust`) on demand. **No Kotlin code is written in this phase.**
 >
 > Full research & design rationale: [`docs/RESEARCH_NEXT_PHASES.md`](../RESEARCH_NEXT_PHASES.md)
-> §Phase C and §D.2.1 (the "gcc = Clang wrapper" reality gate).
+> §Phase 20 and §D.2.1 (the "gcc = Clang wrapper" reality gate).
 
 ---
 
 ## Why this exists
 
-Phase D retires TCC and wires C/C++ through a userland `gcc`/`g++` command —
+Phase 21 retires TCC and wires C/C++ through a userland `gcc`/`g++` command —
 but those commands must first exist in the CodeC package repository so
 `pkg install gcc` works on-device. The existing Python path (Phase 12) proved the
 model: add the package to `CODEC_REPOSITORY_PACKAGES`, build it in CI,
-publish it, and the app's auto-install gate handles the rest. Phase C does
+publish it, and the app's auto-install gate handles the rest. Phase 20 does
 the same for C/C++ and every other language the `LanguageRunProfile` registry
 will support.
 
@@ -30,7 +30,7 @@ will support.
 real GNU GCC. It is a compatibility wrapper / symlink pointing at
 Clang/LLVM. This is intentional — NDK dropped GCC in r18 (2018) and Termux
 followed. A genuine GNU GCC for Android/Bionic exists only in fragile
-third-party overlays. **Phase C adds the Termux `gcc` package**, which gives
+third-party overlays. **Phase 20 adds the Termux `gcc` package**, which gives
 users the `gcc foo.c -o foo` UX they expect while actually running Clang.
 This is correct, battle-tested, and matches every Termux user's experience.
 See `RESEARCH_NEXT_PHASES.md` §D.2.1 for the full gate.
@@ -41,8 +41,8 @@ See `RESEARCH_NEXT_PHASES.md` §D.2.1 for the full gate.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **C.1** | Core toolchains + interpreted languages | `gcc`, `clang`, `nodejs`, `php`, `ruby`, `lua54` in the CodeC repo; CI green, device `pkg install` verified | [PART_C1_TOOLCHAINS.md](PART_C1_TOOLCHAINS.md) |
-| **C.2** | Optional heavy compilers (on-demand) | `golang`, `rust` guarded by `[repo-build-heavy]` commit tag; size warnings wired into the auto-install prompt | [PART_C2_HEAVY.md](PART_C2_HEAVY.md) |
+| **C.1** | Core toolchains + interpreted languages | `gcc`, `clang`, `nodejs`, `php`, `ruby`, `lua54` in the CodeC repo; CI green, device `pkg install` verified | [PART_20_1_TOOLCHAINS.md](PART_20_1_TOOLCHAINS.md) |
+| **C.2** | Optional heavy compilers (on-demand) | `golang`, `rust` guarded by `[repo-build-heavy]` commit tag; size warnings wired into the auto-install prompt | [PART_20_2_HEAVY.md](PART_20_2_HEAVY.md) |
 
 ---
 
@@ -67,7 +67,7 @@ Before implementing each part:
   pinned ref (it is — but verify before writing docs).
 - Confirm `clang-format` is a sub-package of `clang` at the pinned ref.
 - For `golang` and `rust`, check CI artifact sizes at the pinned ref and record
-  them in `PART_C2_HEAVY.md` §1.
+  them in `PART_20_2_HEAVY.md` §1.
 
 ## Standing rules (unchanged)
 

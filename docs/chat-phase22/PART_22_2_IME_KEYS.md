@@ -1,7 +1,7 @@
-# CodeC Phase A.2 — IME-Anchored Editor Keys Strip (fix "not above keyboard")
+# CodeC Phase 22.2 — IME-Anchored Editor Keys Strip (fix "not above keyboard")
 
 **Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
-· **Depends on:** Phase A.3 (`imePadding()` / `WindowInsets.ime` wired in A.3,
+· **Depends on:** Phase 22.3 (`imePadding()` / `WindowInsets.ime` wired in A.3,
   but A.2 can be implemented concurrently — just needs the inset to be readable)
 · **Primary target files:** `ui/screens/EditorScreen.kt`,
   `ui/components/EditorKeysRow.kt` (exists; to be reimplemented as IME-pinned),

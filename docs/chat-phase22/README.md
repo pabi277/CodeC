@@ -1,15 +1,15 @@
-# CodeC Phase A — Editor Touch Smoothness & Keyboard-Anchored Shortcuts
+# CodeC Phase 22 — Editor Touch Smoothness & Keyboard-Anchored Shortcuts
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase A" command.
+**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 22" command.
 · **Cost:** `[client-only]` — pure Kotlin/Compose; no `[repo-build]`, no native changes
-· **Depends on:** nothing (can start in parallel with Phase C)
-· **Blocks:** Phase B (Phase B's inline PTY input builds on the IME inset work from A.2.4)
+· **Depends on:** nothing (can start in parallel with Phase 20)
+· **Blocks:** Phase 23 (Phase 23's inline PTY input builds on the IME inset work from Phase 22.2)
 
 > **Owner signal:** "the editor smoothness because it not good at touch, feels like
 > stuck, the shortcuts key are not above the keyboard etc"
 >
 > Full research & design rationale:
-> [`docs/RESEARCH_NEXT_PHASES.md`](../RESEARCH_NEXT_PHASES.md) §Phase A.
+> [`docs/RESEARCH_NEXT_PHASES.md`](../RESEARCH_NEXT_PHASES.md) §Phase 22.
 
 ---
 
@@ -34,9 +34,9 @@ but the measurement target is a mid-range phone in release mode.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **A.1** | Scroll + recomposition decoupling (fix the "stuck" feeling) | `BasicTextField` owns scrolling; debounced off-thread highlight; narrowed `remember` keys; baseline profile | [PART_A1_SMOOTHNESS.md](PART_A1_SMOOTHNESS.md) |
-| **A.2** | IME-anchored editor keys strip (fix "not above keyboard") | Keys strip pinned to `WindowInsets.ime`; language-adaptive key set; user-editable; only visible when IME is open | [PART_A2_IME_KEYS.md](PART_A2_IME_KEYS.md) |
-| **A.3** | IME insets + caret visibility | `imePadding()` / `WindowCompat.setDecorFitsSystemWindows`; caret never hidden; orientation + predictive-back safe | [PART_A3_INSETS.md](PART_A3_INSETS.md) |
+| **A.1** | Scroll + recomposition decoupling (fix the "stuck" feeling) | `BasicTextField` owns scrolling; debounced off-thread highlight; narrowed `remember` keys; baseline profile | [PART_22_1_SMOOTHNESS.md](PART_22_1_SMOOTHNESS.md) |
+| **A.2** | IME-anchored editor keys strip (fix "not above keyboard") | Keys strip pinned to `WindowInsets.ime`; language-adaptive key set; user-editable; only visible when IME is open | [PART_22_2_IME_KEYS.md](PART_22_2_IME_KEYS.md) |
+| **A.3** | IME insets + caret visibility | `imePadding()` / `WindowCompat.setDecorFitsSystemWindows`; caret never hidden; orientation + predictive-back safe | [PART_22_3_INSETS.md](PART_22_3_INSETS.md) |
 
 ---
 
@@ -59,7 +59,7 @@ but the measurement target is a mid-range phone in release mode.
   (migration may require a Compose BOM bump). Check the current BOM version in
   `app/build.gradle.kts`. If the BOM version does not include `TextFieldState`,
   the A.1 fix targets the `scrollState` param of the existing `BasicTextField`
-  overload instead. Record the BOM version in `PART_A1_SMOOTHNESS.md` §7.
+  overload instead. Record the BOM version in `PART_22_1_SMOOTHNESS.md` §7.
 - **A.1 — highlight cost:** Look up `derivedStateOf` vs `remember(key)` in the
   Compose performance guide before auditing `EditorScreen`. These are two different
   tools with different semantics; the audit may find places where both are wrong.

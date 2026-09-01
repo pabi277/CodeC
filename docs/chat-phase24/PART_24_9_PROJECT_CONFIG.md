@@ -1,7 +1,7 @@
-# CodeC Phase E.9 — Per-project `.codec.json` Run-Config Override
+# CodeC Phase 24.9 — Per-project `.codec.json` Run-Config Override
 
 **Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** S
-· **Depends on:** Phase D.1 (`LanguageRunProfile` registry exists)
+· **Depends on:** Phase 21.1 (`LanguageRunProfile` registry exists)
 · **Target files:** `ui/projects/ProjectConfig.kt`, `ui/viewmodels/EditorViewModel.kt`
 
 ---
@@ -9,7 +9,7 @@
 ## 1. Design
 
 `ProjectConfig` (`.codec/project.json`) already stores `type`, `build`, `run`.
-Phase D's `LanguageRunProfile` registry provides defaults based on file extension.
+Phase 21's `LanguageRunProfile` registry provides defaults based on file extension.
 
 The owner may want a **per-project override** — e.g. a C project that needs
 `gcc main.c utils.c -o app -lm` instead of the single-file `gcc $SRC -o $OUT`.

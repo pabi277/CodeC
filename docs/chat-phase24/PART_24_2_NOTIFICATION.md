@@ -1,4 +1,4 @@
-# CodeC Phase E.2 — Background-Run Notification (Foreground Service)
+# CodeC Phase 24.2 — Background-Run Notification (Foreground Service)
 
 **Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** nothing (Phase 4.8 already declared `POST_NOTIFICATIONS`)
