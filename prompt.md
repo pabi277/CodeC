@@ -17,7 +17,7 @@ Termux-style terminal + signed package repo). Each chat session gets its own
 of assuming one. Commit and push to the SESSION branch only; never push to
 `main` or any other branch.
 
-**WHERE THINGS STAND (2026-08-31):**
+**WHERE THINGS STAND (2026-09-01):**
 
 - **Phases 3–14 are all COMPLETE, DEVICE-ACCEPTED and MERGED to `main`. Do not
   redo, re-debug or "improve" any of them** unless the identical symptom
@@ -100,6 +100,21 @@ of assuming one. Commit and push to the SESSION branch only; never push to
     `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §6.2. **Do not redo these.** **Open gate: the
     owner's §4 device recipe steps 5–8** — do not re-implement; only fix on
     device evidence.
+  - **Phase 18 — CodeCApi Device Capabilities ✅ IMPLEMENTED & CI-GREEN
+    (2026-09-01, `arena/01a05b12-codec`, `4460306`, `Build APK`
+    `33468442063`; one red round fixed a lint ERROR).** Five CLI scripts +
+    wire ops on the existing OSC 1337 CodeCApi bridge: `codec-battery` (sticky
+    `ACTION_BATTERY_CHANGED` → JSON), `codec-sensor` (accelerometer/
+    gyroscope/light), `codec-tts` (app-lifetime TextToSpeech), `codec-camera`
+    (runtime CAMERA park/resume + `TakePicture` via FileProvider → photo in
+    `$PREFIX/tmp/codec-api/camera/`), `codec-intent` (implicit view/dial/send
+    + URI-scheme allow-list — never an explicit component). `BOOTSTRAP_VERSION`
+    26 → 27; manifest gained `CAMERA` (+`uses-feature required=false`) and
+    TTS/IMAGE_CAPTURE queries. Android-free `DeviceApiOps` keeps the core
+    host-testable: `CodecApiBridgeFullTest` ×22 + protocol/script additions.
+    Record: `docs/chat-phase18/PART_18_CODEAPI.md` §5 (D1–D9 + research
+    notes). **Device recipe (§4) pending (owner)** — 4 commands + optional
+    camera step. Clean-room, client-only, no `[repo-build]`.
   - **Vector-API compile saga (round 2/3 of the re-skin, resolved
     2026-08-31, `253201e`):** the resolved `ui-graphics` is far newer than the
     BOM number suggests — the old string-path `addPath` API is gone. Verified
@@ -168,10 +183,12 @@ of assuming one. Commit and push to the SESSION branch only; never push to
   (`gh run download <run-id> -n CodeC-IDE`). The sandbox cannot install or test
   on device — the owner runs the recipes and pastes transcripts.
 
-**NEXT UP (only on the owner's explicit instruction):**
+**NEXT UP:**
 
-1. **Phase 18 — CodeCApi Device Capabilities** (the tail phase, the only
-   spec'd work left): `docs/chat-phase18/PART_18_CODEAPI.md`.
+1. **Phase 18 device recipe** (`docs/chat-phase18/PART_18_CODEAPI.md` §4 —
+   owner runs the four commands + optional camera step on the green
+   `Build APK` artifact). All spec'd implementation work is now DONE; no
+   further code unless the recipe finds something.
 2. **Phases 15–17 remain open to owner device feedback** on the merged build.
    Phase 17 has had one device round (push bugs fixed, §6.2); the optional
    conflict recipe (`PART_17_SOURCE_CONTROL.md` §4 step 8) has not been
@@ -221,11 +238,13 @@ of assuming one. Commit and push to the SESSION branch only; never push to
    `gh release list`) before acting.
 2. Phases 3–14 + 19 are closed (PRs #15/#23/#25/#26/#27/#28/#29/#30/#31/#32/#34
    merged). **Phases 15–17 are implemented + device-rounded and merged**
-   (15/16 from `arena/01a057e0-codec`, PR #36; 17 from `arena/01a05878-codec`);
-   Phase 18 is spec'd and is the only planned work left.
-   If the owner commands a phase, re-verify its plan against current code, then
-   implement it host-testably, commit + push the session branch, and let CI
-   run. Never open/merge a PR without the owner's explicit word.
+   (15/16 from `arena/01a057e0-codec`, PR #36; 17 from `arena/01a05878-codec`).
+   **Phase 18 is implemented + CI-green on `arena/01a05b12-codec` (`4460306`,
+   run `33468442063`) and awaits the owner's device recipe — the last spec'd
+   work; no remaining planned implementation.** If the owner commands new
+   work, re-verify its plan against current code, then implement it
+   host-testably, commit + push the session branch, and let CI run. Never
+   open/merge a PR without the owner's explicit word.
 3. A part is complete only when its "Exit condition" is met and verified
    (device evidence from the owner for device gates), not merely when code is
    written.

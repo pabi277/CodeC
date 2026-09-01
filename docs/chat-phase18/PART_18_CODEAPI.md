@@ -1,6 +1,6 @@
 # CodeC Phase 18 — CodeCApi Device Capabilities & Final System Polish
 
-**Status:** ⚙️ IMPLEMENTED (2026-09-01, `arena/01a05b12-codec`) — code, scripts, tests committed; **CI + device recipe pending.** · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
+**Status:** ✅ IMPLEMENTED & CI-GREEN (2026-09-01, `arena/01a05b12-codec` `4460306`, `Build APK` `33468442063` — assemble + unit tests + lint; one red round fixed a lint ERROR with `uses-feature`). **Device recipe §4 pending (owner).** · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
 **Target Files:** `CodecApiBridge.kt`, `CodecApiProtocol.kt`, `ShellEnvironment.kt`, `MainActivity.kt`, `AndroidManifest.xml`
 
 ---
@@ -160,9 +160,12 @@ Wire ops (protocol): `battery.status`, `sensor.read`, `tts.speak`,
 
 ### 5.5 Exit-condition status
 
-- Implemented, host-test-only so far: **CI pending** (`Build APK` on the
-  session branch). Device recipe §4 steps 1–4 (+optional step 5) **pending
-  owner** after the artifact is green.
+- **CI GREEN:** `Build APK` `33468442063` on `4460306` (assemble +
+  `testDebugUnitTest` + `lintDebug`; the first round `33468153580` failed only
+  on the lint ERROR `PermissionImpliesUnsupportedChromeOsHardware` — fixed by
+  `<uses-feature android:name="android.hardware.camera" android:required="false"/>`).
+- Device recipe §4 steps 1–4 (+optional step 5) **pending owner** on the
+  green artifact.
 - Invariants: client-only; no `.` on PATH; nothing in `$PREFIX/bin` that is
   not an app-written `codec-*` script; no `com.termux` identity; no new
   packages/repository changes.

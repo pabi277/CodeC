@@ -1,13 +1,28 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-08-31 · **State:** Phases 3–14 ✅ complete & merged.
+**Last updated:** 2026-09-01 · **State:** Phases 3–14 ✅ complete & merged.
 **Phases 15–17 (Spck clone) ✅ COMPLETE and MERGED to `main` (2026-08-31,
 PR #36 for 15/16 and the Phase 17 PR from `arena/01a05878-codec`).** Phase 17
 closed the last Spck git gaps: Switch Branch (stash/auto-restore + New
 branch), merge-conflict grouping + Mark Resolved, and honest push state
 (upstream publishing, sticky "NOT pushed" + PUSH retry, amber ↑N badge) — see
-items 24–25. **Remaining roadmap: Phase 18 (CodeCApi device capabilities,
-spec'd in `docs/chat-phase18/`), plus owner device feedback.**
+items 24–25.
+**Phase 18 (CodeCApi Device Capabilities) ⚙️ IMPLEMENTED & CI-GREEN
+(2026-09-01, `arena/01a05b12-codec`, `4460306`, run `33468442063`) — the last
+spec'd work; the §4 device recipe is awaiting the owner.** Five CLI scripts +
+wire ops over the existing OSC 1337 CodeCApi bridge: `codec-battery`
+(sticky `ACTION_BATTERY_CHANGED` → JSON), `codec-sensor`
+(accelerometer/gyroscope/light one-sample), `codec-tts` (app-lifetime
+TextToSpeech, QUEUE_FLUSH, 32 KiB cap), `codec-camera` (runtime CAMERA
+park/resume — same Phase 4.8 pattern — + `TakePicture` via FileProvider,
+sanitized name under `$PREFIX/tmp/codec-api/camera/`, `OK:<path>`/`ERR`),
+`codec-intent` (implicit view/dial/send only + URI-scheme allow-list; never
+an explicit component). `BOOTSTRAP_VERSION` 26 → 27; manifest: `CAMERA` +
+`uses-feature required=false` (lint) + TTS/IMAGE_CAPTURE queries. Pure
+host-testable core via android-free `DeviceApiOps` — `CodecApiBridgeFullTest`
+×22 + protocol/script additions; the one red CI round was the lint ERROR,
+fixed same commit set. Record: `docs/chat-phase18/PART_18_CODEAPI.md` §5
+(design D1–D9, research notes with sources, files, exit status).
 **Phase 19 (Terminal Parity + Unicode/protocol parity) is COMPLETE,
 DEVICE-ACCEPTED and MERGED — PR #34 merged to `main` at `b869ce6`
 (2026-08-31T09:55:36Z)**, so `main` = `b869ce6` now (the previously cited
