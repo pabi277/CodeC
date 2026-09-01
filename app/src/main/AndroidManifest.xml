@@ -16,6 +16,9 @@
     <!-- Phase 18: runtime permission for codec-camera (requested from the
          activity once, at first camera.capture; dialog → grant → TakePicture). -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Lint: CAMERA permission implies camera hardware; keep the app
+         installable on camera-less devices (codec-camera reports ERR there). -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Lets CodeC run commands (compile/run C) inside Termux when Android
          blocks the bundled downloaded compiler. The user grants this in
          App Info -> Permissions -> Additional permissions. -->
