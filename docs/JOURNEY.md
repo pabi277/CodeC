@@ -7,9 +7,9 @@ closed the last Spck git gaps: Switch Branch (stash/auto-restore + New
 branch), merge-conflict grouping + Mark Resolved, and honest push state
 (upstream publishing, sticky "NOT pushed" + PUSH retry, amber ↑N badge) — see
 items 24–25.
-**Phase 18 (CodeCApi Device Capabilities) ⚙️ IMPLEMENTED & CI-GREEN
-(2026-09-01, `arena/01a05b12-codec`, `4460306`, run `33468442063`) — the last
-spec'd work; the §4 device recipe is awaiting the owner.** Five CLI scripts +
+**Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE & DEVICE-ACCEPTED
+(2026-09-01, `arena/01a05b12-codec`, `4460306`, CI `33468442063`, owner §4
+recipe PASSED) — the last spec'd work; Phase 18 is CLOSED.** Five CLI scripts +
 wire ops over the existing OSC 1337 CodeCApi bridge: `codec-battery`
 (sticky `ACTION_BATTERY_CHANGED` → JSON), `codec-sensor`
 (accelerometer/gyroscope/light one-sample), `codec-tts` (app-lifetime
@@ -22,7 +22,8 @@ an explicit component). `BOOTSTRAP_VERSION` 26 → 27; manifest: `CAMERA` +
 host-testable core via android-free `DeviceApiOps` — `CodecApiBridgeFullTest`
 ×22 + protocol/script additions; the one red CI round was the lint ERROR,
 fixed same commit set. Record: `docs/chat-phase18/PART_18_CODEAPI.md` §5
-(design D1–D9, research notes with sources, files, exit status).
+(design D1–D9, research notes with sources, files, exit status) + §5.6
+(device acceptance transcript).
 **Phase 19 (Terminal Parity + Unicode/protocol parity) is COMPLETE,
 DEVICE-ACCEPTED and MERGED — PR #34 merged to `main` at `b869ce6`
 (2026-08-31T09:55:36Z)**, so `main` = `b869ce6` now (the previously cited

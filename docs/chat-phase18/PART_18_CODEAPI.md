@@ -1,6 +1,6 @@
 # CodeC Phase 18 — CodeCApi Device Capabilities & Final System Polish
 
-**Status:** ✅ IMPLEMENTED & CI-GREEN (2026-09-01, `arena/01a05b12-codec` `4460306`, `Build APK` `33468442063` — assemble + unit tests + lint; one red round fixed a lint ERROR with `uses-feature`). **Device recipe §4 pending (owner).** · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
+**Status:** ✅ **COMPLETE & DEVICE-ACCEPTED** (implemented 2026-09-01 on `arena/01a05b12-codec`; CI green `33468442063` @ `4460306`; **owner §4 recipe PASSED on device 2026-09-01** — see §5.6). · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
 **Target Files:** `CodecApiBridge.kt`, `CodecApiProtocol.kt`, `ShellEnvironment.kt`, `MainActivity.kt`, `AndroidManifest.xml`
 
 ---
@@ -164,8 +164,47 @@ Wire ops (protocol): `battery.status`, `sensor.read`, `tts.speak`,
   `testDebugUnitTest` + `lintDebug`; the first round `33468153580` failed only
   on the lint ERROR `PermissionImpliesUnsupportedChromeOsHardware` — fixed by
   `<uses-feature android:name="android.hardware.camera" android:required="false"/>`).
-- Device recipe §4 steps 1–4 (+optional step 5) **pending owner** on the
-  green artifact.
+- **DEVICE PASS (2026-09-01, owner transcript):** every §4 step verified
+  end-to-end, including the optional runtime-permission camera step. The exit
+  condition is met and Phase 18 is closed.
+
+### 5.6 Device acceptance record (2026-09-01)
+
+Owner transcript (fresh APK on the device; userland `userland-v2-dev` already
+installed):
+
+```
+codec $ codec-battery
+{"percentage":99,"status":"discharging","temperature":35.7,"health":"good",
+"voltage":4299,"plugged":"unknown"}          ✓ JSON shape + live values (line wrap is terminal width)
+
+codec $ codec-sensor accelerometer
+{"type":"accelerometer","x":0.491,"y":2.983,"z":9.349}   ✓ sensor sample
+
+codec $ codec-tts "Hello from CodeC terminal"
+OK                                                ✓ audio spoken (engine OK)
+
+codec $ codec-intent view "geo:0,0?q=restaurants"
+OK                                                ✓ implicit ACTION_VIEW launched
+
+codec $ codec-camera shot.jpg
+Android camera permission: allow it in the dialog (CodeC > Camera)
+Taking photo... (open the camera app and confirm)
+OK:/data/user/0/com.codeci.ide/files/usr/tmp/codec-api/camera/shot.jpg   ✓
+```
+
+The camera leg exercised the full park/resume chain: `NEED_PERMISSION:...`
+hint → runtime dialog grant → `CAPTURING:` hint → `TakePicture` → photo
+written at `$PREFIX/tmp/codec-api/camera/shot.jpg` → final `OK:<path>`.
+
+**Non-blocking observation (no code change):** the transcript shows two
+`bash: status: command not found` lines around the sensor command — a
+terminal input/echo artifact from the typed command, not a CodeCApi defect
+(the intended `codec-sensor accelerometer` ran and returned the sample). It
+belongs to the Phase 19 IME/echo class already closed; record-keeping only.
+
+**Phase 18 CLOSED — do not redo, re-debug or "improve" it unless the
+identical symptom reappears AND there is regression evidence.**
 - Invariants: client-only; no `.` on PATH; nothing in `$PREFIX/bin` that is
   not an app-written `codec-*` script; no `com.termux` identity; no new
   packages/repository changes.
