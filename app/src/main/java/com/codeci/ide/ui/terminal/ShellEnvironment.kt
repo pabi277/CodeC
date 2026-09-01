@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * Script bodies are pure strings so they are unit-tested.
  */
 object ShellEnvironment {
-    const val BOOTSTRAP_VERSION = "26"
+    const val BOOTSTRAP_VERSION = "27"
     const val PREFIX_NAME = "usr"
     const val HOME_NAME = "home"
     const val PACKAGE_REPOSITORY_URL = "https://pabi277.github.io/CodeC/dev"
@@ -1382,6 +1382,379 @@ HELP
         printf '%s\n' "${'$'}out"
     """.trimIndent() + "\n"
 
+    /**
+     * Phase 18: `codec-battery` — battery status JSON via the same
+     * [CodecApiProtocol] in-band bridge. No payload; no permission.
+     */
+    fun batteryScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-battery — battery status via the CodeC terminal bridge.
+        # Usage: codec-battery
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-battery" >&2
+          exit 2
+        }
+
+        [ "${'$'}#" -eq 0 ] || usage
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-battery: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-battery: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        if { printf '\033]1337;CodeCApi:battery.status:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:battery.status:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-battery: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
+    /**
+     * Phase 18: `codec-sensor` — one sample of a device sensor via the
+     * bridge. The requested sensor type rides in the request file (the only
+     * payload): `accelerometer` | `gyroscope` | `light`.
+     */
+    fun sensorScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-sensor — sensor sample via the CodeC terminal bridge.
+        # Usage: codec-sensor [accelerometer|gyroscope|light]   (default accelerometer)
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-sensor [accelerometer|gyroscope|light]" >&2
+          exit 2
+        }
+
+        type="${'$'}{1:-accelerometer}"
+        case "${'$'}type" in
+          accelerometer|gyroscope|light) ;;
+          *) usage ;;
+        esac
+        [ "${'$'}#" -le 2 ] || usage
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-sensor: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-sensor: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        printf '%s' "${'$'}type" > "${'$'}req"
+
+        if { printf '\033]1337;CodeCApi:sensor.read:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:sensor.read:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-sensor: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
+    /**
+     * Phase 18: `codec-tts` — speak text aloud through the Android
+     * TextToSpeech engine via the bridge. The text is the joined argv.
+     */
+    fun ttsScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-tts — speak text via the CodeC terminal bridge.
+        # Usage: codec-tts TEXT [TEXT ...]   (argv joined with spaces)
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-tts TEXT [TEXT ...]" >&2
+          exit 2
+        }
+
+        [ "${'$'}#" -ge 1 ] || usage
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-tts: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-tts: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        printf '%s' "${'$'}*" > "${'$'}req"
+
+        if { printf '\033]1337;CodeCApi:tts.speak:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:tts.speak:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-tts: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
+    /**
+     * Phase 18: `codec-camera` — capture a photo via the runtime CAMERA
+     * permission flow. The output file name rides in the request file; the
+     * app writes the photo under `$API_DIR/camera/` and answers
+     * `OK:<path>` (the CLI prints it) or `ERR:`.
+     */
+    fun cameraScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-camera — photo capture via the CodeC terminal bridge.
+        # Usage: codec-camera [OUTFILE]   (default photo-<epoch>.jpg; .jpg/.jpeg/.png)
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-camera [OUTFILE]   (.jpg/.jpeg/.png only)" >&2
+          exit 2
+        }
+
+        name="${'$'}{1:-photo-$('date' +%s 2>/dev/null || echo 0).jpg}"
+        case "${'$'}name" in
+          *".."*|*/*|"") usage ;;
+          *.jpg|*.jpeg|*.png) ;;
+          *) usage ;;
+        esac
+        [ "${'$'}#" -le 2 ] || usage
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-camera: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-camera: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        printf '%s' "${'$'}name" > "${'$'}req"
+
+        if { printf '\033]1337;CodeCApi:camera.capture:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:camera.capture:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        # The CAMERA runtime dialog and the photo capture can take a while:
+        # poll up to 60s, printing each hint once (permission first, then the
+        # capture itself), and stop as soon as the app replaces the marker
+        # with the real outcome.
+        i=0
+        perm_hint=0
+        cap_hint=0
+        while :; do
+          if [ -e "${'$'}res" ]; then
+            preview="$(cat "${'$'}res" 2>/dev/null || true)"
+            case "${'$'}preview" in
+              NEED_PERMISSION:*)
+                if [ "${'$'}perm_hint" -eq 0 ]; then
+                  echo "Android camera permission: allow it in the dialog (CodeC > Camera)" >&2
+                  perm_hint=1
+                fi
+                ;;
+              CAPTURING:*)
+                if [ "${'$'}cap_hint" -eq 0 ]; then
+                  echo "Taking photo... (open the camera app and confirm)" >&2
+                  cap_hint=1
+                fi
+                ;;
+              *)
+                break
+                ;;
+            esac
+          fi
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 1200 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-camera: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          NEED_PERMISSION:*)
+            echo "codec-camera: camera permission was not answered (open the app and retry)" >&2
+            exit 3
+            ;;
+          CAPTURING:*)
+            echo "codec-camera: photo capture did not complete (open the app and retry)" >&2
+            exit 3
+            ;;
+        esac
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
+    /**
+     * Phase 18: `codec-intent` — dispatch a validated implicit Android
+     * intent. Payload = first line action (view|dial|send), remainder data.
+     */
+    fun intentScript(): String = """
+        #!/system/bin/sh
+        # CodeC codec-intent — Android intent dispatch via the CodeC terminal bridge.
+        # Usage:
+        #   codec-intent view URI   open a URI (http/https/geo/mailto/tel/sms/market)
+        #   codec-intent dial URI   open the dialer
+        #   codec-intent send TEXT  share TEXT via the Android share sheet
+        set -u
+
+        PREFIX="${'$'}{PREFIX:-$(cd "${'$'}{0%/*}/.." 2>/dev/null && pwd)}"
+        API_DIR="${'$'}PREFIX/tmp/codec-api"
+
+        usage() {
+          echo "usage: codec-intent view|dial|send DATA [DATA ...]" >&2
+          exit 2
+        }
+
+        action="${'$'}{1:-}"
+        case "${'$'}action" in
+          view|dial|send) ;;
+          *) usage ;;
+        esac
+        [ "${'$'}#" -ge 2 ] || usage
+        shift
+        data="${'$'}*"
+
+        mkdir -p "${'$'}API_DIR" 2>/dev/null || {
+          echo "codec-intent: cannot create ${'$'}API_DIR (is this a CodeC userland?)" >&2
+          exit 1
+        }
+        chmod 700 "${'$'}API_DIR" 2>/dev/null || true
+
+        req="$(mktemp "${'$'}API_DIR/req.XXXXXX" 2>/dev/null)" || {
+          echo "codec-intent: mktemp failed (need mktemp in PATH)" >&2
+          exit 1
+        }
+        res="${'$'}{req}.out"
+        trap 'rm -f "${'$'}req" "${'$'}res" "${'$'}{res}.partial"' EXIT HUP INT TERM
+
+        printf '%s\n%s' "${'$'}action" "${'$'}data" > "${'$'}req"
+
+        if { printf '\033]1337;CodeCApi:intent.send:%s:%s\007' "${'$'}req" "${'$'}res" >/dev/tty; } 2>/dev/null; then
+          :
+        else
+          printf '\033]1337;CodeCApi:intent.send:%s:%s\007' "${'$'}req" "${'$'}res"
+        fi
+
+        i=0
+        while [ ! -e "${'$'}res" ]; do
+          i=${'$'}((i + 1))
+          [ "${'$'}i" -ge 50 ] && break
+          sleep 0.05
+        done
+
+        if [ ! -e "${'$'}res" ]; then
+          echo "codec-intent: no response from CodeC (is the terminal open and the app foreground?)" >&2
+          exit 3
+        fi
+
+        out="$(cat "${'$'}res")"
+        case "${'$'}out" in
+          ERR:*)
+            echo "${'$'}{out#ERR:}" >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "${'$'}out"
+    """.trimIndent() + "\n"
+
     fun codecApiDir(prefix: File): File = File(prefix, "tmp/${CodecApiProtocol.API_DIR_NAME}")
 
     data class StorageLink(val name: String, val target: File)
@@ -1763,6 +2136,11 @@ class ShellBootstrap(private val context: Context) {
         writeExecutable(File(bin, "codec-share"), ShellEnvironment.shareScript())
         writeExecutable(File(bin, "codec-open-url"), ShellEnvironment.openUrlScript())
         writeExecutable(File(bin, "codec-vibrate"), ShellEnvironment.vibrateScript())
+        writeExecutable(File(bin, "codec-battery"), ShellEnvironment.batteryScript())
+        writeExecutable(File(bin, "codec-sensor"), ShellEnvironment.sensorScript())
+        writeExecutable(File(bin, "codec-tts"), ShellEnvironment.ttsScript())
+        writeExecutable(File(bin, "codec-camera"), ShellEnvironment.cameraScript())
+        writeExecutable(File(bin, "codec-intent"), ShellEnvironment.intentScript())
         val bash = File(bin, "bash")
         if (!ShellEnvironment.isElf(bash)) {
             writeExecutable(bash, ShellEnvironment.bashShim())

@@ -51,7 +51,28 @@ object CodecApiProtocol {
     const val MAX_VIBRATE_MS = 10_000L
     const val DEFAULT_VIBRATE_MS = 500L
 
+    /** Upper bound for a `tts.speak` text payload. */
+    const val MAX_TTS_BYTES = 32 * 1024
+
+    /** Upper bound for an `intent.send` payload (action + data). */
+    const val MAX_INTENT_BYTES = 64 * 1024
+
+    /** Upper bound for a `camera.capture` output file name. */
+    const val MAX_CAMERA_NAME_BYTES = 256
+
+    /** Upper bound for a `sensor.read` sensor-type payload. */
+    const val MAX_SENSOR_TYPE_BYTES = 64
+
     const val ERR_PREFIX = "ERR:"
+
+    /**
+     * Response marker the app writes between the permission grant and the
+     * photo actually being taken: the CLI prints a one-shot "taking photo…"
+     * hint and keeps polling until [CodecApiBridge] replaces the file with
+     * `OK:<path>` or `ERR:` (the same replacement discipline as
+     * [NEED_PERMISSION_PREFIX]).
+     */
+    const val CAPTURE_PREFIX = "CAPTURING:"
 
     /**
      * Response marker the app writes while a runtime permission is pending;
@@ -71,13 +92,30 @@ object CodecApiProtocol {
         TOAST_SHOW("toast.show"),
         SHARE_TEXT("share.text"),
         OPEN_URL("url.open"),
-        VIBRATE("vibrate");
+        VIBRATE("vibrate"),
+        BATTERY_STATUS("battery.status"),
+        SENSOR_READ("sensor.read"),
+        TTS_SPEAK("tts.speak"),
+        CAMERA_CAPTURE("camera.capture"),
+        INTENT_SEND("intent.send");
 
         val isNotifyOperation: Boolean
             get() = this == NOTIFY_SEND || this == NOTIFY_CLEAR || this == NOTIFY_STATUS
 
         val isTermuxApiOperation: Boolean
             get() = this == TOAST_SHOW || this == SHARE_TEXT || this == OPEN_URL || this == VIBRATE
+
+        /**
+         * Phase 18 device capabilities that need no runtime permission.
+         * [CAMERA_CAPTURE] is intentionally excluded: like [NOTIFY_SEND] it
+         * is a runtime-permission operation parked by the activity flow.
+         */
+        val isDeviceApiOperation: Boolean
+            get() = this == BATTERY_STATUS || this == SENSOR_READ ||
+                this == TTS_SPEAK || this == INTENT_SEND
+
+        val requiresRuntimePermission: Boolean
+            get() = this == NOTIFY_SEND || this == CAMERA_CAPTURE
 
         companion object {
             fun fromWire(value: String): Op? = entries.firstOrNull { it.wire == value }
@@ -113,6 +151,9 @@ object CodecApiProtocol {
 
     /** Body of the `NEED_PERMISSION` response sent to the CLI. */
     fun permissionNotice(permission: String): String = "$NEED_PERMISSION_PREFIX$permission"
+
+    /** Body of the interim `CAPTURING` response sent to the CLI while the photo is being taken. */
+    fun capturePending(name: String = ""): String = "$CAPTURE_PREFIX$name"
 
     /**
      * Android's `/data/user/0/` is the user-emulation alias of the canonical

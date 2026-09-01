@@ -2,12 +2,15 @@ package com.codeci.ide
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -86,14 +89,22 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private var storagePermissionLauncher: ActivityResultLauncher<Array<String>>? = null
     private var notificationPermissionLauncher: ActivityResultLauncher<String>? = null
+    private var cameraPermissionLauncher: ActivityResultLauncher<String>? = null
+    private var cameraCaptureLauncher: ActivityResultLauncher<Uri>? = null
 
     /** CodeCApi notify request parked while the Android 13+ dialog is up. */
     private var pendingNotificationRequest: CodecApiProtocol.Request? = null
     private var pendingNotificationApiDir: File? = null
+
+    /** CodeCApi camera.capture request parked while permission + photo run. */
+    private var pendingCameraRequest: CodecApiProtocol.Request? = null
+    private var pendingCameraApiDir: File? = null
+    private var pendingCameraTarget: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,6 +128,20 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.RequestPermission()
         ) { granted ->
             completeNotificationPermission(granted)
+        }
+
+        // Phase 18 — camera.capture (runtime CAMERA). The bridge parks the
+        // CodeCApi request; the permission launcher answers the dialog, and
+        // the TakePicture contract drives the actual photo (via FileProvider).
+        cameraPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            completeCameraPermission(granted)
+        }
+        cameraCaptureLauncher = registerForActivityResult(
+            ActivityResultContracts.TakePicture()
+        ) { success ->
+            completeCameraCapture(success)
         }
 
         handleStoragePermissionIntent(intent)
@@ -235,6 +260,102 @@ class MainActivity : ComponentActivity() {
         // outcome; the CLI prints the result and exits.
         lifecycleScope.launch {
             CodecApiBridge.resumeAfterPermission(this@MainActivity, request, apiDir, granted)
+        }
+    }
+
+    /**
+     * Phase 18: drives the parked `camera.capture` request. When CAMERA is
+     * already held, the bridge already wrote the interim `CAPTURING:` marker
+     * and this starts the photo capture directly; otherwise the runtime
+     * dialog is shown first.
+     */
+    fun requestCameraPermission(request: CodecApiProtocol.Request) {
+        pendingCameraRequest = request
+        pendingCameraApiDir =
+            ShellEnvironment.codecApiDir(ShellEnvironment.prefixDir(filesDir))
+        pendingCameraTarget = null
+        if (cameraPermissionGranted()) {
+            startCameraCapture()
+        } else {
+            cameraPermissionLauncher?.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun cameraPermissionGranted(): Boolean =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+
+    private fun completeCameraPermission(granted: Boolean) {
+        val request = pendingCameraRequest ?: return
+        val apiDir = pendingCameraApiDir ?: return
+        if (!granted) {
+            // Denied: write the actionable error and un-park (the CLI exits).
+            pendingCameraRequest = null
+            pendingCameraApiDir = null
+            lifecycleScope.launch(Dispatchers.IO) {
+                CodecApiBridge.resumeAfterPermission(this@MainActivity, request, apiDir, granted = false)
+            }
+            return
+        }
+        // Granted: replace NEED_PERMISSION with the CAPTURING marker (the CLI
+        // keeps polling), then start the photo capture on the main thread.
+        lifecycleScope.launch(Dispatchers.IO) {
+            CodecApiBridge.resumeAfterPermission(this@MainActivity, request, apiDir, granted = true)
+            withContext(Dispatchers.Main) { startCameraCapture() }
+        }
+    }
+
+    /**
+     * Validates the requested output file name and launches the system
+     * camera via the TakePicture contract. The photo lands in
+     * `$PREFIX/tmp/codec-api/camera/<name>` (FileProvider `files-path`), so
+     * the CLI can read it back from the same prefix; the response file only
+     * receives `OK:<path>` / `ERR:` once the capture returns.
+     */
+    private fun startCameraCapture() {
+        val request = pendingCameraRequest ?: return
+        val apiDir = pendingCameraApiDir ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val name = CodecApiBridge.cameraTargetName(request, apiDir)
+            withContext(Dispatchers.Main) {
+                if (name == null) {
+                    val req = pendingCameraRequest
+                    val dir = pendingCameraApiDir
+                    pendingCameraRequest = null
+                    pendingCameraApiDir = null
+                    if (req != null && dir != null) {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            CodecApiBridge.completeCameraCapture(req, dir, success = false, output = null)
+                        }
+                    }
+                    return@withContext
+                }
+                val cameraDir = File(apiDir, CodecApiBridge.CAMERA_DIR_NAME)
+                cameraDir.mkdirs()
+                val target = File(cameraDir, name)
+                // A stale photo must never look like a fresh capture.
+                target.delete()
+                pendingCameraTarget = target
+                val uri = FileProvider.getUriForFile(
+                    this@MainActivity, "$packageName.fileprovider", target
+                )
+                cameraCaptureLauncher?.launch(uri)
+            }
+        }
+    }
+
+    private fun completeCameraCapture(success: Boolean) {
+        val request = pendingCameraRequest ?: return
+        val apiDir = pendingCameraApiDir
+        val target = pendingCameraTarget
+        pendingCameraRequest = null
+        pendingCameraApiDir = null
+        pendingCameraTarget = null
+        if (apiDir == null) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            CodecApiBridge.completeCameraCapture(
+                request, apiDir, success = success && target != null, output = if (success) target else null
+            )
         }
     }
 

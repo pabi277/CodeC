@@ -118,8 +118,13 @@ fun TerminalScreen(
         }
     }
     LaunchedEffect(Unit) {
-        viewModel.notificationPermissionRequests.collect { request ->
-            (context as? MainActivity)?.requestNotificationPermission(request)
+        viewModel.permissionRequests.collect { request ->
+            val activity = context as? MainActivity ?: return@collect
+            if (request.op == com.codeci.ide.ui.terminal.CodecApiProtocol.Op.CAMERA_CAPTURE) {
+                activity.requestCameraPermission(request)
+            } else {
+                activity.requestNotificationPermission(request)
+            }
         }
     }
     LaunchedEffect(Unit) {
