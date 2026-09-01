@@ -84,11 +84,15 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private val _bellEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     val bellEvents: SharedFlow<Unit> = _bellEvents.asSharedFlow()
 
-    /** Requests that need the Android 13+ notification permission before they can run. */
-    private val _notificationPermissionRequests =
+    /**
+     * CodeCApi requests parked on a runtime permission — `notify.send`
+     * (POST_NOTIFICATIONS, Phase 4.8) and `camera.capture` (CAMERA,
+     * Phase 18). The screen dispatches to the matching activity launcher.
+     */
+    private val _permissionRequests =
         MutableSharedFlow<CodecApiProtocol.Request>(extraBufferCapacity = 16)
-    val notificationPermissionRequests: SharedFlow<CodecApiProtocol.Request> =
-        _notificationPermissionRequests.asSharedFlow()
+    val permissionRequests: SharedFlow<CodecApiProtocol.Request> =
+        _permissionRequests.asSharedFlow()
 
     /** Emitted when "+" is tapped at the session cap (UI shows a toast). */
     private val _sessionLimitEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -183,7 +187,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                         payload,
                         codecApiDir,
                         onPermissionRequired = { request, _ ->
-                            _notificationPermissionRequests.tryEmit(request)
+                            _permissionRequests.tryEmit(request)
                         }
                     )
                 }

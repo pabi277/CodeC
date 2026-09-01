@@ -13,6 +13,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Normal (install-time) permission for codec-vibrate; no runtime dialog. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Phase 18: runtime permission for codec-camera (requested from the
+         activity once, at first camera.capture; dialog → grant → TakePicture). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Lint: CAMERA permission implies camera hardware; keep the app
+         installable on camera-less devices (codec-camera reports ERR there). -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Lets CodeC run commands (compile/run C) inside Termux when Android
          blocks the bundled downloaded compiler. The user grants this in
          App Info -> Permissions -> Additional permissions. -->
@@ -20,6 +26,14 @@
 
     <queries>
         <package android:name="com.termux" />
+        <!-- Phase 18: codec-tts (TextToSpeech engine binding) and
+             codec-camera (system camera) need package visibility on 11+. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
     </queries>
 
     <application

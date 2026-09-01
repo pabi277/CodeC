@@ -10,6 +10,10 @@ open-folder-from-editor sheet, single files as a first-class context).
 **Phase 9 is CLOSED: on 2026-08-29 the owner directed finalization + PR creation →
 PR #28.** The 9.1/9.2 device recipes below remain the regression checklist.
 See [PART_9_IMPLEMENTATION.md](PART_9_IMPLEMENTATION.md).
+**Follow-up (2026-09-01):** Web Preview `File not found` after an in-editor
+folder switch — root-caused and fixed at `d49ac47` (CI `33471103959`);
+recorded in [PART_9_IMPLEMENTATION.md](PART_9_IMPLEMENTATION.md) as a
+"Phase 9.2 follow-up" section.
 
 Phase 9 implements all foundational editor capabilities (`[client-only]`) in Jetpack Compose:
 - **Undo / Redo:** Full history stack with snapshot debouncing.

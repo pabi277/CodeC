@@ -1088,6 +1088,33 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `phase 18 codec scripts use the in-band CodeCApi bridge and no termux identity`() {
+        val scripts = mapOf(
+            ShellEnvironment.batteryScript() to "battery.status",
+            ShellEnvironment.sensorScript() to "sensor.read",
+            ShellEnvironment.ttsScript() to "tts.speak",
+            ShellEnvironment.cameraScript() to "camera.capture",
+            ShellEnvironment.intentScript() to "intent.send"
+        )
+        for ((script, wire) in scripts) {
+            assertTrue(script.startsWith("#!/system/bin/sh"))
+            assertTrue("script must emit $wire", script.contains("CodeCApi:$wire"))
+            assertTrue(script.contains("tmp/codec-api"))
+            assertTrue(script.contains("mktemp"))
+            assertTrue(script.contains("/dev/tty"))
+            assertFalse("no official Termux identity", script.contains("com.termux"))
+        }
+        // The camera CLI must understand both interim markers of the
+        // permission/capture flow and poll longer than the simple commands.
+        val camera = ShellEnvironment.cameraScript()
+        assertTrue(camera.contains("NEED_PERMISSION:*"))
+        assertTrue(camera.contains("CAPTURING:*"))
+        assertTrue(camera.contains("1200"))
+        // The intent CLI maps action + data into the two-line payload format.
+        assertTrue(ShellEnvironment.intentScript().contains("printf '%s\\n%s'"))
+    }
+
+    @Test
     fun `getRepositoryTrustInfo inspects active keyring and signing metadata`() {
         val base = File(System.getProperty("java.io.tmpdir"), "codec-trust-${System.nanoTime()}")
         try {

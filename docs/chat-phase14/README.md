@@ -3,7 +3,8 @@
 Phase 14 connects local servers (Python Flask/FastAPI, Node.js, C microservers) directly to the in-app Web Preview screen and provides on-demand long-tail toolchain expansion.
 
 ## Status (2026-09-01)
-**IMPLEMENTED & CI-GREEN on `arena/01a05421-codec`** — background `ServerRunner`
+**MERGED to `main` — PR #32 @ `0b591e2` (2026-08-31).** Implemented on
+`arena/01a05421-codec` — background `ServerRunner`
 + port detector, `port`/`previewUrl` project schema, Flask/FastAPI/C-microservice
 presets with runnable-out-of-the-box scaffold (stdlib fallback, page served from
 `index.html` per request), Files-tab project wizard, RUN ▶ → stream → Ready →
@@ -19,8 +20,9 @@ seed, never overwrites; `DemoProjectSeedTest`: 4) and the **New Project
 wizard defaults to Auto (detect)** (D10, owner request 2026-08-31): no type
 selection — RUN ▶ infers Flask/FastAPI/C-microservice/static-web/Python/C
 from the project's files (`ProjectRunDetectorTest`: 13 + E2E auto→Flask).
-Only the Compose WebView part of the recipe (§5) still needs the owner's
-device round.
+Only the Compose WebView part of the recipe (§5) was never given a dedicated
+owner device round before the merge — open item, not a blocker. (Header
+updated 2026-09-01 — previously still read "implemented & CI-green".)
 Long-tail toolchains (Node/Lua/Go/Rust) remain deferred until the owner
 requests one.
 

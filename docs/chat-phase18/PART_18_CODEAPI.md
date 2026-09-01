@@ -1,7 +1,7 @@
 # CodeC Phase 18 — CodeCApi Device Capabilities & Final System Polish
 
-**Status:** Planned · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
-**Target Files:** `CodecApiBridge.kt`, `CodecApiProtocol.kt`, `ShellEnvironment.kt`, `MainActivity.kt`
+**Status:** ✅ **COMPLETE & DEVICE-ACCEPTED & MERGED — PR #38 (2026-09-01)** (implemented 2026-09-01 on `arena/01a05b12-codec`; CI green `33468442063` @ `4460306`; **owner §4 recipe PASSED on device 2026-09-01** — see §5.6; merged on the owner's "Create pr and marge"). · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
+**Target Files:** `CodecApiBridge.kt`, `CodecApiProtocol.kt`, `ShellEnvironment.kt`, `MainActivity.kt`, `AndroidManifest.xml`
 
 ---
 
@@ -52,3 +52,159 @@ A fresh APK passes the following recipe on device:
 # 4. In terminal: codec-intent view "geo:0,0?q=restaurants" -> Verify maps app opens.
 # PASS
 ```
+
+Optional runtime-permission check (not in the original recipe; needs a dialog + camera):
+
+```sh
+# 5. codec-camera shot.jpg -> grant CAMERA in the dialog -> confirm in the
+#    camera app -> Verify: OK:<prefix>/tmp/codec-api/camera/shot.jpg and the
+#    file exists (cat, or open it via web preview / file manager).
+```
+
+---
+
+## 5. Implementation record (2026-09-01)
+
+**Implemented on `arena/01a05b12-codec`** (owner: "Start 18"), client-only,
+no `[repo-build]`, no package-repository changes, no official Termux anything.
+Clean-room: battery/sensor/TTS/camera/intent are standard Android framework
+APIs (no Termux:API source).
+
+### 5.1 Delivered (spec §3 steps 1–4)
+
+| Spec step | What shipped |
+|---|---|
+| Step 1 — CLI scripts | `codec-battery`, `codec-sensor`, `codec-tts`, `codec-camera`, `codec-intent` in `ShellEnvironment.kt`, written by `ShellBootstrap.prepare()`; `BOOTSTRAP_VERSION` 26 → 27. Same poll discipline as `codec-clipboard` (50 ms × 50; camera: 50 ms × 1200 + one-shot permission/capture hints). |
+| Step 2 — bridge handlers | `BatterySnapshot`, `SensorReading`, `DeviceApiOps` (android-free adapters), `battery.status`/`sensor.read`/`tts.speak`/`camera.capture`/`intent.send` in `CodecApiBridge.execute`; camera park/resume via `handle` → activity → `completeCameraCapture`. |
+| Step 3 — activity | `MainActivity`: `RequestPermission(CAMERA)` launcher + `TakePicture` launcher, parked-request state, `requestCameraPermission`/`completeCameraPermission`/`startCameraCapture`/`completeCameraCapture`; `TerminalViewModel.permissionRequests` relay now dispatches by op in `TerminalScreen`. |
+| Step 4 — tests | New `app/src/test/java/com/codeci/ide/CodecApiBridgeFullTest.kt` (22 tests) + Phase 18 additions to `CodecApiProtocolTest` (3) and `ShellEnvironmentTest` (1). |
+
+Wire ops (protocol): `battery.status`, `sensor.read`, `tts.speak`,
+`camera.capture`, `intent.send`; new caps `MAX_TTS_BYTES` (32 KiB),
+`MAX_INTENT_BYTES` (64 KiB), `MAX_CAMERA_NAME_BYTES` (256),
+`MAX_SENSOR_TYPE_BYTES` (64); new interim marker `CAPTURING:`.
+
+### 5.2 Design decisions
+
+- **D1 — extend, do not fork:** the five capabilities ride the existing
+  Phase 4.7 in-band OSC 1337 `CodeCApi:` bridge and the existing
+  `$PREFIX/tmp/codec-api` file/atomic-rename discipline; no new channel.
+- **D2 — android-free core:** `DeviceApiOps` mirrors `TermuxApiOps`/`NotifyOps`.
+  Validation (payload caps, filename sanitization, action/scheme allow-lists)
+  and JSON formatting (`batteryResponse`, `sensorResponse`, `formatDouble`)
+  live in `CodecApiBridge` so host tests prove them; the lambdas only touch the
+  device.
+- **D3 — intent is never explicit:** only implicit `view`/`dial`/`send` are
+  allowed; no component/class targeting (a terminal script must not be able to
+  start another app's private activity). `view`/`dial` URIs are restricted to
+  `http, https, geo, mailto, tel, sms, market`; `send` carries plain text.
+  `intent.send` payload = first line action, remainder data (CLI writes it).
+- **D4 — sensors:** `accelerometer` (x,y,z), `gyroscope` (x,y,z), `light`
+  (lux). One sample via `SensorEventListener` + `SENSOR_DELAY_UI` on the main
+  looper, bounded wait 1.5 s, then unregister. No permission needed.
+- **D5 — battery:** the sticky `ACTION_BATTERY_CHANGED` broadcast (no
+  `BATTERY_STATS`, which is signature-protected). JSON:
+  `percentage`, `status`, `temperature` (°C, 1 decimal), `health`, `voltage`
+  (mV), `plugged`; unknown fields → `null`/`"unknown"`.
+- **D6 — TTS is app-lifetime:** one `TextToSpeech` instance held by
+  `CodecApiBridge` (a local instance would release its engine binding and cut
+  speech off when the request handler returns), `QUEUE_FLUSH`, 3 s init wait,
+  32 KiB cap, blank text rejected before any engine call.
+- **D7 — camera = second runtime-permission op (mirrors Phase 4.8):**
+  `handle` parks with `NEED_PERMISSION:android.permission.CAMERA` (or
+  `CAPTURING:` when already granted), the activity's `RequestPermission`
+  launcher answers, `resumeAfterPermission` writes the interim `CAPTURING:`
+  marker, and the `TakePicture` contract drives the photo; `completeCameraCapture`
+  writes the final `OK:<path>`/`ERR:`. Denial → actionable `ERR:` (no loop).
+- **D8 — camera output is prefix-confined:** the CLI passes a *file name*
+  (never a path); the app sanitizes it (`[A-Za-z0-9._-]`, `.jpg/.jpeg/.png`
+  only, no `..`/`/`), writes under `$PREFIX/tmp/codec-api/camera/`, and serves
+  it to the camera app through the existing `FileProvider` (`files-path`).
+  The CLI prints `OK:<abs path>`; the photo is readable from the same prefix.
+- **D9 — bridge surface unchanged:** `execute()` gained only a defaulted
+  `deviceApi` parameter; existing callers and all Phase 4.7/4.8/5.3 tests are
+  untouched. `TerminalViewModel._notificationPermissionRequests` generalized
+  to `permissionRequests` (the flow already carried the generic `Request`).
+
+### 5.3 Research notes (linked sources)
+
+- **Battery reading without permissions:** `BatteryManager` extras come from
+  the sticky `ACTION_BATTERY_CHANGED` broadcast; registering with a `null`
+  receiver needs no permission and is the documented pattern
+  (developer.android.com/reference/android/os/BatteryManager). `EXTRA_TEMPERATURE`
+  is tenths of °C.
+- **Sensor sampling:** `SensorManager.getDefaultSensor` +
+  `registerListener(listener, sensor, SENSOR_DELAY_UI, handler)`; values are
+  raw floats (developer.android.com/guide/topics/sensors/sensors_overview).
+- **TextToSpeech:** engine binding lives on the `TextToSpeech` object, init is
+  async (`OnInitListener`), `speak(CharSequence, int, Bundle?, String?)` is
+  API 21+; Android 11+ package visibility needs the
+  `android.intent.action.TTS_SERVICE` query for engine enumeration
+  (developer.android.com/reference/android/speech/tts/TextToSpeech).
+- **Camera via `ActivityResultContracts.TakePicture`:** the contract creates
+  an `ACTION_IMAGE_CAPTURE` intent and grants write access to the FileProvider
+  URI; declaring `CAMERA` without holding it can make the intent throw on
+  M+, so the runtime dialog *must* come first
+  (developer.android.com/training/camera/photobasics, androidx.activity docs).
+- **UI parity:** the empty-request-file, derived-response-name and
+  `/dev/tty`-with-stdout-fallback patterns are the Phase 4.7 conventions
+  (verified in `codec-clipboard`/`codec-notify`); camera reuses notify's
+  long-poll + one-shot-hint pattern so the CLI never depends on terminal echo.
+
+### 5.4 Files changed
+
+`CodecApiProtocol.kt`, `CodecApiBridge.kt`, `ShellEnvironment.kt`,
+`MainActivity.kt`, `TerminalViewModel.kt`, `TerminalScreen.kt`,
+`AndroidManifest.xml`; tests in `CodecApiBridgeFullTest.kt` (new),
+`CodecApiProtocolTest.kt`, `ShellEnvironmentTest.kt`.
+
+### 5.5 Exit-condition status
+
+- **CI GREEN:** `Build APK` `33468442063` on `4460306` (assemble +
+  `testDebugUnitTest` + `lintDebug`; the first round `33468153580` failed only
+  on the lint ERROR `PermissionImpliesUnsupportedChromeOsHardware` — fixed by
+  `<uses-feature android:name="android.hardware.camera" android:required="false"/>`).
+- **DEVICE PASS (2026-09-01, owner transcript):** every §4 step verified
+  end-to-end, including the optional runtime-permission camera step. The exit
+  condition is met and Phase 18 is closed.
+
+### 5.6 Device acceptance record (2026-09-01)
+
+Owner transcript (fresh APK on the device; userland `userland-v2-dev` already
+installed):
+
+```
+codec $ codec-battery
+{"percentage":99,"status":"discharging","temperature":35.7,"health":"good",
+"voltage":4299,"plugged":"unknown"}          ✓ JSON shape + live values (line wrap is terminal width)
+
+codec $ codec-sensor accelerometer
+{"type":"accelerometer","x":0.491,"y":2.983,"z":9.349}   ✓ sensor sample
+
+codec $ codec-tts "Hello from CodeC terminal"
+OK                                                ✓ audio spoken (engine OK)
+
+codec $ codec-intent view "geo:0,0?q=restaurants"
+OK                                                ✓ implicit ACTION_VIEW launched
+
+codec $ codec-camera shot.jpg
+Android camera permission: allow it in the dialog (CodeC > Camera)
+Taking photo... (open the camera app and confirm)
+OK:/data/user/0/com.codeci.ide/files/usr/tmp/codec-api/camera/shot.jpg   ✓
+```
+
+The camera leg exercised the full park/resume chain: `NEED_PERMISSION:...`
+hint → runtime dialog grant → `CAPTURING:` hint → `TakePicture` → photo
+written at `$PREFIX/tmp/codec-api/camera/shot.jpg` → final `OK:<path>`.
+
+**Non-blocking observation (no code change):** the transcript shows two
+`bash: status: command not found` lines around the sensor command — a
+terminal input/echo artifact from the typed command, not a CodeCApi defect
+(the intended `codec-sensor accelerometer` ran and returned the sample). It
+belongs to the Phase 19 IME/echo class already closed; record-keeping only.
+
+**Phase 18 CLOSED — do not redo, re-debug or "improve" it unless the
+identical symptom reappears AND there is regression evidence.**
+- Invariants: client-only; no `.` on PATH; nothing in `$PREFIX/bin` that is
+  not an app-written `codec-*` script; no `com.termux` identity; no new
+  packages/repository changes.

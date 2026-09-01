@@ -88,6 +88,45 @@ class CodecApiProtocolTest {
     }
 
     @Test
+    fun `parse accepts the phase 18 device ops`() {
+        val cases = mapOf(
+            "battery.status" to CodecApiProtocol.Op.BATTERY_STATUS,
+            "sensor.read" to CodecApiProtocol.Op.SENSOR_READ,
+            "tts.speak" to CodecApiProtocol.Op.TTS_SPEAK,
+            "camera.capture" to CodecApiProtocol.Op.CAMERA_CAPTURE,
+            "intent.send" to CodecApiProtocol.Op.INTENT_SEND
+        )
+        for ((wire, op) in cases) {
+            val req = CodecApiProtocol.parse("CodeCApi:$wire:/p/tmp/codec-api/req.a:/p/tmp/codec-api/res.b")
+            requireNotNull(req)
+            assertEquals(op, req.op)
+        }
+    }
+
+    @Test
+    fun `phase 18 op flags distinguish device and runtime-permission ops`() {
+        assertTrue(CodecApiProtocol.Op.BATTERY_STATUS.isDeviceApiOperation)
+        assertTrue(CodecApiProtocol.Op.SENSOR_READ.isDeviceApiOperation)
+        assertTrue(CodecApiProtocol.Op.TTS_SPEAK.isDeviceApiOperation)
+        assertTrue(CodecApiProtocol.Op.INTENT_SEND.isDeviceApiOperation)
+        assertFalse(CodecApiProtocol.Op.CAMERA_CAPTURE.isDeviceApiOperation)
+
+        assertTrue(CodecApiProtocol.Op.NOTIFY_SEND.requiresRuntimePermission)
+        assertTrue(CodecApiProtocol.Op.CAMERA_CAPTURE.requiresRuntimePermission)
+        assertFalse(CodecApiProtocol.Op.BATTERY_STATUS.requiresRuntimePermission)
+        assertFalse(CodecApiProtocol.Op.TTS_SPEAK.requiresRuntimePermission)
+    }
+
+    @Test
+    fun `capture pending marker is a protocol constant`() {
+        assertEquals("CAPTURING:", CodecApiProtocol.capturePending())
+        assertEquals("CAPTURING:photo.jpg", CodecApiProtocol.capturePending("photo.jpg"))
+        assertTrue(
+            CodecApiProtocol.capturePending("x").startsWith(CodecApiProtocol.CAPTURE_PREFIX)
+        )
+    }
+
+    @Test
     fun `termux-api ops are flagged but notify ops are not`() {
         assertTrue(CodecApiProtocol.Op.TOAST_SHOW.isTermuxApiOperation)
         assertTrue(CodecApiProtocol.Op.SHARE_TEXT.isTermuxApiOperation)

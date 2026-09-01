@@ -8,6 +8,10 @@ preview served by a local loopback server.
 > **not open a PR or merge anything without the owner's explicit command** in
 > chat. Committing to and pushing the session branch is fine; PR creation and
 > merging wait for the owner.
+>
+> **Future updates (owner, 2026-09-01):** the owner no longer runs
+> phase-by-phase work and merges to `main`; the operating manual for any
+> post-Phase-18 change is [`rule.md`](rule.md) — start there.
 
 ## Install the APK from GitHub
 

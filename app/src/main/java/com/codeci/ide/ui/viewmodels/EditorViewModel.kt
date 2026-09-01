@@ -265,24 +265,27 @@ class EditorViewModel : ViewModel() {
 
     private var serverRunJob: Job? = null
     private var activeServer: ServerRunner? = null
-    private var serverReadyHandler: ((String) -> Unit)? = null
-    private var webPreviewHandler: ((String) -> Unit)? = null
+    private var serverReadyHandler: ((String?, String) -> Unit)? = null
+    private var webPreviewHandler: ((String?, String) -> Unit)? = null
 
     /**
      * Phase 14 — the Editor wires this to navigation: when a server project's
      * RUN ▶ detects its port line, the handler receives the loopback URL and
-     * MainActivity opens Web Preview on it.
+     * MainActivity opens Web Preview on it. The project name travels with the
+     * URL because the editor's Nav route argument can be stale after an
+     * in-editor folder switch (Phase 9.2) — the VM's project is authoritative.
      */
-    fun setServerReadyHandler(handler: (String) -> Unit) {
+    fun setServerReadyHandler(handler: (String?, String) -> Unit) {
         serverReadyHandler = handler
     }
 
     /**
      * Phase 14 — Auto projects detected as static web (index.html) have no
      * server; the Editor wires this to the same preview navigation used by
-     * `web` projects so RUN ▶ just opens the preview.
+     * `web` projects so RUN ▶ just opens the preview. The project name is
+     * carried for the same reason as [setServerReadyHandler].
      */
-    fun setWebPreviewHandler(handler: (String) -> Unit) {
+    fun setWebPreviewHandler(handler: (String?, String) -> Unit) {
         webPreviewHandler = handler
     }
 
@@ -1551,7 +1554,7 @@ class EditorViewModel : ViewModel() {
                         return
                     }
                     is AutoRunPlan.Web -> {
-                        webPreviewHandler?.invoke(plan.entry)
+                        webPreviewHandler?.invoke(info.name, plan.entry)
                         return
                     }
                     is AutoRunPlan.Project -> config = ProjectConfig.defaultFor(info.name, plan.type)
@@ -1868,7 +1871,7 @@ class EditorViewModel : ViewModel() {
                                 serverUrl = event.url,
                                 summary = context.getString(R.string.output_server_running_at, event.url)
                             )
-                            serverReadyHandler?.invoke(event.url)
+                            serverReadyHandler?.invoke(info.name, event.url)
                         }
                         is ServerEvent.ReadyTimeout -> {
                             _outputState.value = _outputState.value.copy(
