@@ -598,26 +598,23 @@ else
   echo "recipe-overrides: libllvm clang subpackage not found; skipping bin/cc strip" >&2
 fi
 
-# ---- libllvm build-time trim (recovery only; see D10 in PART_20_1 §6) ----
-# GATED: active only when the first marker line below carries the string
-# "CodeC: LLVM trim ACTIVE". Kept inactive for the initial round-4 build so
-# the published repo corresponds to the upstream-shaped recipe; activated by
-# flipping MARKER_ACTIVE to "1" below when re-dispatching after a 360-min
-# timeout. Upstream builds every LLVM backend (-DLLVM_TARGETS_TO_BUILD=all
-# plus experimental ARC;CSKY;M68k;VE) and the full project set including
-# lldb/mlir/polly. CodeC devices are aarch64/x86_64 only and the Phase 21
-# language profiles need clang (+clang-format/tools-extra), lld, llvm,
-# compiler-rt and openmp — never lldb, mlir, or polly — so the trim builds
-# just the two device backends and drops lldb/mlir/polly (their subpackages
-# are excluded for CodeC arches). The matching subpackage include lines that
-# only exist with those backends are removed too (wasm-ld needs the
-# WebAssembly target; amdgpu-arch/nvptx-arch their GPU backends; offload-arch
-# follows libomptarget, configured OFF upstream) — a stale include line for a
-# missing file fails subpackage creation, and the removal direction is always
-# safe (a present-but-unclaimed file just lands in the main libllvm deb).
-# Activating = one-commit flip of CODEC_LLVM_TRIM_ACTIVE below.
-CODEC_LLVM_TRIM_ACTIVE="${CODEC_LLVM_TRIM_ACTIVE:-0}"
-if [[ "$CODEC_LLVM_TRIM_ACTIVE" == "1" && -f "$TREE/packages/libllvm/build.sh" ]]; then
+# ---- libllvm build-time trim (D10, PERMANENT) ----
+# Round-4 build 33506104710 (2026-09-01) was killed at the 360-minute
+# per-job ceiling after 6h01m inside the monolithic build step: upstream
+# compiles every LLVM backend (-DLLVM_TARGETS_TO_BUILD=all plus experimental
+# ARC;CSKY;M68k;VE) and the full project set including lldb/mlir/polly, and
+# GitHub-hosted runners cannot raise that ceiling. CodeC devices are
+# aarch64/x86_64 only and the Phase 21 language profiles need clang
+# (+clang-format/tools-extra), lld, llvm, compiler-rt and openmp — never
+# lldb, mlir, or polly — so the recipe ALWAYS builds just the two device
+# backends, drops lldb/mlir/polly (their subpackages are excluded for CodeC
+# arches), drops the now-dangling target-coupled include lines that would
+# otherwise fail subpackage creation (wasm-ld needs the WebAssembly target;
+# amdgpu-arch/nvptx-arch their GPU backends; offload-arch follows
+# libomptarget, configured OFF upstream), and shrinks the host tblgen build
+# to the tools the target tree still uses. Removal direction is always safe:
+# a present-but-unclaimed file just lands in the main libllvm deb.
+if [[ -f "$TREE/packages/libllvm/build.sh" ]]; then
   LIBLLVM_BUILD="$TREE/packages/libllvm/build.sh"
   # 1. two device backends only
   if ! grep -qF -- '-DLLVM_TARGETS_TO_BUILD=all' "$LIBLLVM_BUILD"; then
@@ -683,11 +680,9 @@ if [[ "$CODEC_LLVM_TRIM_ACTIVE" == "1" && -f "$TREE/packages/libllvm/build.sh" ]
     grep -vxF "$line" "$subfile" > "$subfile.codec-tmp"
     mv "$subfile.codec-tmp" "$subfile"
   done
-  echo "recipe-overrides: libllvm trimmed to AArch64/X86 backends without lldb/mlir/polly (build-time recovery)"
-elif [[ ! -f "$TREE/packages/libllvm/build.sh" ]]; then
-  echo "recipe-overrides: libllvm recipe not found; skipping the build-time trim" >&2
+  echo "recipe-overrides: libllvm trimmed to AArch64/X86 backends without lldb/mlir/polly (D10: 360-min ceiling recovery)"
 else
-  echo "recipe-overrides: libllvm build-time trim staged but INACTIVE (CODEC_LLVM_TRIM_ACTIVE=0)"
+  echo "recipe-overrides: libllvm recipe not found; skipping the build-time trim" >&2
 fi
 
 # The nodejs recipe (26.4.0-1 at the pinned revision) defines its own

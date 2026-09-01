@@ -31,7 +31,7 @@ and verifies they build and install correctly.
 
 | Root recipe | What ships | Notes |
 |---|---|---|
-| `libllvm` | LLVM 21.1.8 toolchain: subpackages `clang` (incl. `bin/clang*`, `bin/clang-format` **and** the `gcc`/`g++`/`c++`/`cpp` driver symlinks), `lld`, `llvm`, `llvm-tools`, `lldb`, `mlir`, `libcompiler-rt`, `libpolly` | The actual compiler; there is **no** `gcc` or `clang` recipe at the pinned ref. CodeC strips `bin/cc` from the clang subpackage (cc invariant — see D5). |
+| `libllvm` | LLVM 21.1.8 toolchain: subpackages `clang` (incl. `bin/clang*`, `bin/clang-format` **and** the `gcc`/`g++`/`c++`/`cpp` driver symlinks), `lld`, `llvm`, `llvm-tools`, `libcompiler-rt` (+`lldb`/`mlir`/`libpolly` excluded — build-time trim, D10, after the 360-min timeout of run `33506104710`) | The actual compiler; there is **no** `gcc` or `clang` recipe at the pinned ref. CodeC strips `bin/cc` from the clang subpackage (cc invariant — see D5). |
 | `nodejs` | `node` 26.4.0-1 | No X11 deps; upstream preinst notice neutralized (D6) |
 | `npm` | npm/npx 11.19.0 | Split out of nodejs upstream at 25.3.0-1; own root, postinst neutralized (D6) |
 | `php` | PHP 8.5.1 CLI + `php-fpm`, `php-sodium` | **Trimmed:** apache/ldap/pgsql/gd extensions and their build/runtime closures removed (D7); `php-apache*`, `php-ldap`, `php-pgsql`, `php-gd` subpackages excluded |
@@ -115,7 +115,7 @@ Six roots appended (round-4 comment block explains each):
 
 Every new override follows the existing conventions: exact-line drift checks
 that **fail loudly** on pinned-revision changes, marker-guarded appends.
-Hermetic tests: +8 cases in `codec-packages/tests/test_recipe_overrides.py`
+Hermetic tests: +10 cases in `codec-packages/tests/test_recipe_overrides.py`
 (fixture trees run through the real override script: cc strip + drift,
 nodejs/npm debscripts, php trim + drift, lua54 alternatives + drift).
 
@@ -271,19 +271,22 @@ should appear).
   approach or exceed it. If a timeout red happens, the recovery is D10's
   LLVM trim. (Raising `timeout-minutes` is pointless: 360 min is GitHub's
   per-job ceiling for hosted runners.)
-- **D10 — staged LLVM build-time trim (timeout recovery):** if the round-4
-  build exceeds the 360-min job ceiling, `apply-recipe-overrides.sh` carries
-  a gated trim (`CODEC_LLVM_TRIM_ACTIVE`, default **0/off** so a green
-  upstream-shaped build is never shadow-changed). Activated it builds only
-  the two device backends (`AArch64;X86` instead of `all` + experimental
-  ARC/CSKY/M68k/VE), drops `lldb`/`mlir`/`polly` from
-  `LLVM_ENABLE_PROJECTS` and excludes their subpackages (CodeC run profiles
+- **D10 — LLVM build-time trim (PERMANENT since the 2026-09-01 timeout):**
+  round-4 build `33506104710` was killed at the 360-minute per-job ceiling
+  after 6h01m inside the monolithic build step (GitHub-hosted runners cannot
+  raise that ceiling — splitting lists across dispatches would publish an
+  incomplete repo, since `publish-dev` merges artifacts from a single run).
+  `apply-recipe-overrides.sh` therefore permanently trims libllvm: only the
+  two device backends are built (`AArch64;X86` instead of `all` + the
+  experimental ARC/CSKY/M68k/VE), `lldb`/`mlir`/`polly` leave
+  `LLVM_ENABLE_PROJECTS` and are excluded as subpackages (CodeC run profiles
   need clang/clang-format, lld, llvm, compiler-rt — never lldb, mlir or
-  polly), and removes the now-dangling target-coupled subpackage include
-  lines (`bin/wasm-ld`, `bin/amdgpu-arch`, `bin/nvptx-arch`,
-  `bin/offload-arch`) so subpackage creation cannot fail on missing files.
-  Evidence of the trigger: owner-dispatched build `33506104710` running the
-  full round at 5h+ in a 360-min job (2026-09-01).
+  polly), the host tblgen build shrinks to the still-needed tools, and the
+  target-coupled subpackage include lines that no longer exist after the
+  backend trim are removed (`bin/wasm-ld`, `bin/amdgpu-arch`,
+  `bin/nvptx-arch`, `bin/offload-arch`) so subpackage creation cannot fail
+  on missing files. Everything fails loudly on pinned-recipe drift, same as
+  every other override.
 
 ---
 
@@ -341,7 +344,7 @@ should appear).
   fail.
 - **New `apply-recipe-overrides.sh` entries:** clang `bin/cc` strip, nodejs
   debscripts no-op, npm debscripts no-op, php trim, lua54 alternatives
-  removal + symlink step. (+8 hermetic tests; full suite 93 green locally.)
+  removal + symlink step. (+10 hermetic tests; full suite 95 green locally.)
 - **Sizes:** measured post-build (the repo metadata gets the exact numbers);
   rough expectations: clang/lld/llvm ~80–120 MB/arch combined, nodejs ~30 MB,
   php ~15 MB, ruby ~20 MB, lua54 ~3 MB.

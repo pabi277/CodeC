@@ -959,59 +959,21 @@ class RecipeOverrideTest(unittest.TestCase):
             )
         return lib_dir
 
-    def test_libllvm_trim_inactive_by_default(self) -> None:
-        """The build-time trim is STAGED but INACTIVE while the round-4
-        build is live: a default run must leave libllvm byte-identical
-        (the published repo must correspond to the merged recipes) and only
-        announce that the trim exists."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            lib_dir = self._write_libllvm_full_fixture(tree)
-            before = (lib_dir / "build.sh").read_bytes()
-            clang_before = (lib_dir / "clang.subpackage.sh").read_bytes()
-
-            result = subprocess.run(
-                [str(OVERRIDES), str(tree)], check=True, text=True, capture_output=True
-            )
-
-            self.assertEqual((lib_dir / "build.sh").read_bytes(), before)
-            # The trim is off, so the ONLY change vs the fixture is the
-            # always-on bin/cc invariant strip verified below:
-            self.assertEqual(
-                clang_before.replace(b"bin/cc\n", b""),
-                (lib_dir / "clang.subpackage.sh").read_bytes(),
-            )
-            # Target-coupled lines must SURVIVE when the trim is inactive:
-            for kept in ("bin/amdgpu-arch", "bin/nvptx-arch", "bin/offload-arch"):
-                self.assertIn(
-                    kept, (lib_dir / "clang.subpackage.sh").read_text().splitlines()
-                )
-            self.assertIn(
-                "bin/wasm-ld", (lib_dir / "lld.subpackage.sh").read_text()
-            )
-            self.assertIn("build-time trim staged but INACTIVE", result.stdout)
-            # The cc-invariant strip above the trim applies regardless.
-            self.assertNotIn(
-                "bin/cc", (lib_dir / "clang.subpackage.sh").read_text().splitlines()
-            )
-
-    def test_libllvm_trim_active_when_enabled(self) -> None:
-        """With CODEC_LLVM_TRIM_ACTIVE=1 (the timeout-recovery flip): two
-        device backends only, no experimental targets, lldb/mlir/polly out
-        of the project set and excluded as subpackages, and the
-        target-coupled include lines removed so packaging cannot fail."""
-        import os
-
+    def test_libllvm_trim_applied_by_default(self) -> None:
+        """After the round-4 build hit the 360-minute job ceiling (run
+        33506104710, killed at 6h01m), the libllvm recipe is ALWAYS trimmed
+        for CodeC: two device backends only, no experimental targets,
+        lldb/mlir/polly out of the project set and excluded as subpackages,
+        and the target-coupled include lines removed so subpackage creation
+        cannot fail on files that only exist with the dropped backends."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture_only(tree)
             lib_dir = self._write_libllvm_full_fixture(tree)
 
-            env = dict(os.environ, CODEC_LLVM_TRIM_ACTIVE="1")
             subprocess.run(
                 [str(OVERRIDES), str(tree)], check=True, text=True,
-                capture_output=True, env=env,
+                capture_output=True,
             )
 
             build_text = (lib_dir / "build.sh").read_text()
@@ -1032,6 +994,7 @@ class RecipeOverrideTest(unittest.TestCase):
             for gone in ("bin/amdgpu-arch", "bin/nvptx-arch", "bin/offload-arch"):
                 self.assertNotIn(gone, clang_lines)
             self.assertIn("bin/gcc", clang_lines)
+            self.assertNotIn("bin/cc", clang_lines)
             self.assertNotIn(
                 "bin/wasm-ld",
                 (lib_dir / "lld.subpackage.sh").read_text().splitlines(),
@@ -1044,10 +1007,8 @@ class RecipeOverrideTest(unittest.TestCase):
                 )
 
     def test_libllvm_trim_fails_loud_on_drift(self) -> None:
-        """Active trim + a drifted recipe (no all-targets line) must abort
-        for re-review, never silently build the wrong thing."""
-        import os
-
+        """If the pinned libllvm recipe changed shape (no all-targets line),
+        the build aborts for re-review — never silently build untrimmed."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture_only(tree)
@@ -1058,10 +1019,8 @@ class RecipeOverrideTest(unittest.TestCase):
                 'TERMUX_PKG_DESCRIPTION="recipe shape changed upstream"\n'
             )
 
-            env = dict(os.environ, CODEC_LLVM_TRIM_ACTIVE="1")
             result = subprocess.run(
-                [str(OVERRIDES), str(tree)], text=True, capture_output=True,
-                env=env,
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("re-review the trim", result.stderr)

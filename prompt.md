@@ -34,10 +34,10 @@ gate, invariants, docs policy) — follow it.
   apache/ldap/pgsql/gd), `ruby`, `lua54` (plain symlinks instead of the
   allowlist-blocked alternatives postinst). Five new fail-loud
   `apply-recipe-overrides.sh` blocks incl. the **`bin/cc` strip (cc
-  invariant)**; +8 hermetic tests, repo suite 93 green. **The `[repo-build]`
-  CI dispatch + publish are the remaining gate — the owner triggers them
-  explicitly** (README "Ground rules"; ~3.5–4.5 h expected, D9 timeout risk
-  noted). Record: `docs/chat-phase20/`.
+  invariant)**; +8 hermetic tests, repo suite 93 green. First dispatch `33506104710`
+  was killed at the 360-min job ceiling (6h01m) → the D10 libllvm backend
+  trim is now permanent and the trimmed round was re-dispatched by the agent
+  (owner granted workflow permission); publish auto-follows on green. Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
   Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
   **COMPLETE, DEVICE-ACCEPTED (where gated) and MERGED**.
