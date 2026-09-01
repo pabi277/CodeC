@@ -1,7 +1,22 @@
 # CodeC Phase 20.1 — Core toolchains + interpreted languages
 
-**Status:** 🚧 **IMPLEMENTED (2026-09-01, `arena/01a05cb9-codec`) — host tests green (93 total);
-`[repo-build]` dispatch pending owner confirmation** · **Cost:** `[repo-build]`
+**Status:** 🚧 **IMPLEMENTED (2026-09-01, `arena/01a05cb9-codec` @ `49d8d81`) — host tests green (95 total);
+round-4 repo build re-dispatching (2nd attempt) after two documented build-round fixes** · **Cost:** `[repo-build]`
+
+> **Build-round log (CI dispatches):**
+> 1. `33506104710` — **killed at the 360-min job ceiling** (6h01m, both arches
+>    "cancelled"). → D9 fired; the D10 libllvm build-time trim (AArch64/X86
+>    backends only, lldb/mlir/polly dropped) became the permanent recipe state.
+> 2. `33544558167` — **aborted at ~3.5 min** by the trim's own fail-loud guard:
+>    my synthetic test fixture had flattened two real upstream shapes (the host
+>    `ninja` tblgen command is two continued lines; `termux_step_host_build`
+>    has its own `-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lldb;mlir'`
+>    line, which the broad `lldb;mlir` post-check then false-matched); a
+>    subsequent edit also introduced CRLF line endings that broke bash parsing.
+>    All fixed in `49d8d81`, verified by a rehearsal applying the override
+>    script to the **real fetched recipe files** (16/16 checks OK) — fixtures
+>    now carry the exact upstream bytes. Lesson applied: fail-loud + real-byte
+>    rehearsal before re-dispatch.
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)
