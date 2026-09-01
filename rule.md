@@ -4,18 +4,29 @@
 > updates where i will not do anything with phase maybe and merge with main."*
 > This file is the operating manual for all CodeC work **after Phase 18**.
 > The phase ceremony (per-phase recipes, owner-led device rounds, phase-by-phase
-> commands) is retired unless the owner asks for it again. The owner's remaining
-> role is: say what you want, then **merge to `main`** (or hand the agent the
-> merge command).
+> commands) is retired unless the owner asks for it again. **All phases are
+> complete** — the agent no longer starts work on its own; it **waits for the
+> owner to report a bug**, listens carefully, finds the underlying code
+> problem, and solves it. The owner's remaining role is: report bugs, then
+> **merge to `main`** (or hand the agent the merge command).
 
 ---
 
 ## 1. What "future update" means
 
-Any new work after Phase 18: a bug fix, an owner-reported issue, a small
-feature, a docs correction. It follows the lifecycle in §4 and lands on `main`
-through the gate in §3. There is no "start phase N" ceremony anymore; the owner
-just states the problem or the change they want.
+All spec'd phases are complete — there is no feature work left in the queue.
+From now on the agent **waits for the owner to report a bug** (or ask for a
+small change); it does **not** invent or start new work on its own. When the
+owner reports one, the agent:
+
+1. **listens carefully** — restates the exact symptom before touching code;
+2. **reproduces / evidences it** (device output, file contents, CI log);
+3. **finds the underlying code problem** (root cause, not the surface error);
+4. **solves it** through the lifecycle in §4, landing on `main` via the gate
+   in §3.
+
+There is no "start phase N" ceremony anymore; the owner just states the bug or
+the change they want.
 
 ## 2. Branching & push discipline (law)
 
@@ -57,6 +68,9 @@ On 2026-09-01 the owner said they will not run phases anymore and will
   per-change commands.
 
 ## 4. Update lifecycle (mandatory order)
+
+Runs **only when the owner reports a bug or requests a change** — the agent
+does not begin a lifecycle on its own (§1).
 
 1. **Verify state first** — `git status`, `git log`, `gh pr list`,
    `gh run list`, remote `main` tip. Trust the repo, not memory. (The owner's
@@ -161,10 +175,12 @@ Every update updates the docs **in the same commit**:
   (feature `012deea`, lint fix `4460306`, docs `6c67202`), the Web Preview
   fix (`d49ac47`), and this future-update manual + living-docs refresh
   (`ffca133`).
-- **No remaining spec'd implementation.** Open owner items: Phase 17 optional
-  conflict recipe (needs a real conflict), Phases 15/16 device-round-3
-  dedicated pass, amber ↑N badge for never-published branches, Phase 14 §5
-  device round.
+- **All phases complete → bug-wait mode.** There is no remaining spec'd
+  implementation; the agent waits for the owner to report a bug, listens
+  carefully, finds the underlying code problem, and solves it (§1). Open owner
+  items (not blocking): Phase 17 optional conflict recipe (needs a real
+  conflict), Phases 15/16 device-round-3 dedicated pass, amber ↑N badge for
+  never-published branches, Phase 14 §5 device round.
 
 ---
 

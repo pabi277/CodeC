@@ -59,13 +59,17 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
+- **ALL PHASES COMPLETE.** No spec'd implementation remains. The agent waits
+  for the owner to report a bug — listen carefully, find the underlying code
+  problem, solve it. No self-initiated work.
 
-**FUTURE-UPDATE MODE (owner, 2026-09-01):** the owner will not run phases /
-per-phase recipes anymore; they state the change they want and **merge to
-`main`** themselves (or hand the merge command). Every future change follows
-`rule.md`: verify → evidence → research → host-testable implementation +
-tests → docs → commit/push → CI green → report → STOP at the merge gate.
-No "start phase N" ceremony.
+**FUTURE-UPDATE MODE (owner, 2026-09-01):** **all phases are complete.** The
+agent **waits for the owner to report a bug** — it does not start new work on
+its own. When the owner reports a bug, the agent **listens carefully, finds
+the underlying code problem, and solves it**. Every fix follows `rule.md`:
+verify → evidence → research → host-testable implementation + tests → docs →
+commit/push → CI green → report → STOP at the merge gate. The owner merges to
+`main` themselves (or hands the merge command). No "start phase N" ceremony.
 
 **STANDING RULES (law):**
 
@@ -128,9 +132,10 @@ No "start phase N" ceremony.
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. All spec'd phases are done; Phase 18 is on the session branch awaiting the
-   owner's merge. New work starts from `rule.md`'s update lifecycle; there is
-   no phase queue to follow.
+2. All spec'd phases are done and merged. The agent is in **bug-wait mode**:
+   do nothing until the owner reports a bug, then listen carefully, find the
+   code problem, and solve it via `rule.md`'s update lifecycle. No phase
+   queue; no self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,

@@ -1,5 +1,9 @@
 # CodeC — "Compiler blocked / Permission denied" & the Termux way
 
+> **Bug-report mode (2026-09-01):** all phases are complete. Report a bug with
+> the exact symptom and device output; the agent listens carefully, finds the
+> underlying code problem, and solves it — see [`rule.md`](../rule.md).
+
 > In-app **Term** tab (`cc` / `./a.out` / scanf): see
 > [docs/chat-phase1/README.md](chat-phase1/README.md) for the Phase 1 problem list
 > and what a new chat must not regress.

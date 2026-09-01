@@ -15,7 +15,9 @@
 > device-accepted) all spec'd work is complete; **Phase 18 merged to `main`
 > via PR #38 at `dc68eee` (2026-09-01)** — `main` no longer sits at
 > `f868e10`. Post-Phase-18 work follows the owner's operating manual:
-> [`rule.md`](rule.md).
+> [`rule.md`](rule.md) — **all phases are complete, so the agent waits for the
+> owner to report a bug, listens carefully, finds the code problem, and solves
+> it (no self-initiated work).**
 
 ---
 

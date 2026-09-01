@@ -10,8 +10,9 @@ merged 2026-09-01 on the owner's "Create pr and marge"; verify with
 DEVICE-ACCEPTED and MERGED via PR #38** (from `arena/01a05b12-codec` @
 `ffca133`; CI green `33468442063` / `33468793012` / `33471103959` /
 `33472175072`). **No remaining spec'd implementation — the owner's
-future-update mode is defined in [`rule.md`](../rule.md) (owner will not run
-phases anymore and merges to `main`).**
+future-update mode is defined in [`rule.md`](../rule.md): all phases are
+complete, so the agent waits for the owner to report a bug, listens carefully,
+finds the underlying code problem, and solves it (owner merges to `main`).**
 **Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE & DEVICE-ACCEPTED
 (2026-09-01, `arena/01a05b12-codec`, `4460306`, CI `33468442063`, owner §4
 recipe PASSED) — the last spec'd work; Phase 18 is CLOSED.** Five CLI scripts +
