@@ -268,10 +268,22 @@ should appear).
   hostbuild), nodejs, php, ruby to the same dispatch that rebuilds the
   existing 33 roots on both arches; round 2 alone took 1h53m. The
   `package-repository.yml` `build` job allows 360 min/arch — this round may
-  approach or exceed it. If a timeout red happens, the recovery is D3's
-  rule: move `libllvm` (the long pole) to a second dispatch of its own.
-  (Raising `timeout-minutes` needs a workflow edit, which the agent's token
-  cannot push — the owner would do it in the browser.)
+  approach or exceed it. If a timeout red happens, the recovery is D10's
+  LLVM trim. (Raising `timeout-minutes` is pointless: 360 min is GitHub's
+  per-job ceiling for hosted runners.)
+- **D10 — staged LLVM build-time trim (timeout recovery):** if the round-4
+  build exceeds the 360-min job ceiling, `apply-recipe-overrides.sh` carries
+  a gated trim (`CODEC_LLVM_TRIM_ACTIVE`, default **0/off** so a green
+  upstream-shaped build is never shadow-changed). Activated it builds only
+  the two device backends (`AArch64;X86` instead of `all` + experimental
+  ARC/CSKY/M68k/VE), drops `lldb`/`mlir`/`polly` from
+  `LLVM_ENABLE_PROJECTS` and excludes their subpackages (CodeC run profiles
+  need clang/clang-format, lld, llvm, compiler-rt — never lldb, mlir or
+  polly), and removes the now-dangling target-coupled subpackage include
+  lines (`bin/wasm-ld`, `bin/amdgpu-arch`, `bin/nvptx-arch`,
+  `bin/offload-arch`) so subpackage creation cannot fail on missing files.
+  Evidence of the trigger: owner-dispatched build `33506104710` running the
+  full round at 5h+ in a 360-min job (2026-09-01).
 
 ---
 

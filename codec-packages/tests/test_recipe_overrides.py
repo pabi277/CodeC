@@ -919,6 +919,153 @@ class RecipeOverrideTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("lua54.alternatives missing", result.stderr)
 
+    def _write_libllvm_full_fixture(self, tree: Path) -> Path:
+        """libllvm fixture carrying every line the build-time trim targets:
+        all-targets + experimental backends, the full project set, the host
+        ninja tool list, and the target-coupled subpackage include lines."""
+        lib_dir = tree / "packages" / "libllvm"
+        lib_dir.mkdir(parents=True, exist_ok=True)
+        (lib_dir / "build.sh").write_text(
+            'TERMUX_PKG_VERSION="21.1.8"\n'
+            "TERMUX_PKG_EXTRA_CONFIGURE_ARGS=\"\n"
+            "-DLLVM_ENABLE_PIC=ON\n"
+            "-DLLVM_TARGETS_TO_BUILD=all\n"
+            "-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=ARC;CSKY;M68k;VE\n"
+            "\"\n"
+            "\n"
+            "termux_step_host_build() {\n"
+            "\tninja -j \"$TERMUX_PKG_MAKE_PROCESSES\" clang-tblgen "
+            "clang-tidy-confusable-chars-gen lldb-tblgen llvm-tblgen "
+            "mlir-tblgen mlir-linalg-ods-yaml-gen\n"
+            "}\n"
+            "\n"
+            "termux_step_pre_configure() {\n"
+            "\tlocal llvm_projects=\"clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly\"\n"
+            "\tTERMUX_PKG_EXTRA_CONFIGURE_ARGS+=\" -DLLVM_ENABLE_PROJECTS=$llvm_projects\"\n"
+            "}\n"
+        )
+        self._write_libllvm_clang_fixture(tree)
+        clang_subpkg = lib_dir / "clang.subpackage.sh"
+        clang_subpkg.write_text(
+            clang_subpkg.read_text()
+            .replace("bin/clang*\n", "bin/clang*\nbin/amdgpu-arch\nbin/nvptx-arch\nbin/offload-arch\n")
+        )
+        (lib_dir / "lld.subpackage.sh").write_text(
+            "TERMUX_SUBPKG_INCLUDE=\"\nbin/lld\nbin/wasm-ld\n\"\n"
+        )
+        for sub in ("lldb", "mlir", "libpolly"):
+            (lib_dir / f"{sub}.subpackage.sh").write_text(
+                f'TERMUX_SUBPKG_DESCRIPTION="{sub}"\n'
+            )
+        return lib_dir
+
+    def test_libllvm_trim_inactive_by_default(self) -> None:
+        """The build-time trim is STAGED but INACTIVE while the round-4
+        build is live: a default run must leave libllvm byte-identical
+        (the published repo must correspond to the merged recipes) and only
+        announce that the trim exists."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lib_dir = self._write_libllvm_full_fixture(tree)
+            before = (lib_dir / "build.sh").read_bytes()
+            clang_before = (lib_dir / "clang.subpackage.sh").read_bytes()
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], check=True, text=True, capture_output=True
+            )
+
+            self.assertEqual((lib_dir / "build.sh").read_bytes(), before)
+            # The trim is off, so the ONLY change vs the fixture is the
+            # always-on bin/cc invariant strip verified below:
+            self.assertEqual(
+                clang_before.replace(b"bin/cc\n", b""),
+                (lib_dir / "clang.subpackage.sh").read_bytes(),
+            )
+            # Target-coupled lines must SURVIVE when the trim is inactive:
+            for kept in ("bin/amdgpu-arch", "bin/nvptx-arch", "bin/offload-arch"):
+                self.assertIn(
+                    kept, (lib_dir / "clang.subpackage.sh").read_text().splitlines()
+                )
+            self.assertIn(
+                "bin/wasm-ld", (lib_dir / "lld.subpackage.sh").read_text()
+            )
+            self.assertIn("build-time trim staged but INACTIVE", result.stdout)
+            # The cc-invariant strip above the trim applies regardless.
+            self.assertNotIn(
+                "bin/cc", (lib_dir / "clang.subpackage.sh").read_text().splitlines()
+            )
+
+    def test_libllvm_trim_active_when_enabled(self) -> None:
+        """With CODEC_LLVM_TRIM_ACTIVE=1 (the timeout-recovery flip): two
+        device backends only, no experimental targets, lldb/mlir/polly out
+        of the project set and excluded as subpackages, and the
+        target-coupled include lines removed so packaging cannot fail."""
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lib_dir = self._write_libllvm_full_fixture(tree)
+
+            env = dict(os.environ, CODEC_LLVM_TRIM_ACTIVE="1")
+            subprocess.run(
+                [str(OVERRIDES), str(tree)], check=True, text=True,
+                capture_output=True, env=env,
+            )
+
+            build_text = (lib_dir / "build.sh").read_text()
+            self.assertIn("-DLLVM_TARGETS_TO_BUILD=AArch64;X86", build_text)
+            self.assertNotIn("-DLLVM_TARGETS_TO_BUILD=all", build_text)
+            self.assertNotIn("LLVM_EXPERIMENTAL_TARGETS_TO_BUILD", build_text)
+            self.assertIn(
+                '"clang;clang-tools-extra;compiler-rt;lld;openmp"', build_text
+            )
+            self.assertNotIn("lldb;mlir", build_text)
+            self.assertIn(
+                "ninja -j \"$TERMUX_PKG_MAKE_PROCESSES\" "
+                "clang-tblgen clang-tidy-confusable-chars-gen llvm-tblgen",
+                build_text,
+            )
+            self.assertNotIn("mlir-linalg-ods-yaml-gen", build_text)
+            clang_lines = (lib_dir / "clang.subpackage.sh").read_text().splitlines()
+            for gone in ("bin/amdgpu-arch", "bin/nvptx-arch", "bin/offload-arch"):
+                self.assertNotIn(gone, clang_lines)
+            self.assertIn("bin/gcc", clang_lines)
+            self.assertNotIn(
+                "bin/wasm-ld",
+                (lib_dir / "lld.subpackage.sh").read_text().splitlines(),
+            )
+            for sub in ("lldb", "mlir", "libpolly"):
+                first = (lib_dir / f"{sub}.subpackage.sh").read_text().splitlines()[0]
+                self.assertTrue(
+                    first.startswith('TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"'),
+                    f"{sub} must be excluded for CodeC arches when trimmed",
+                )
+
+    def test_libllvm_trim_fails_loud_on_drift(self) -> None:
+        """Active trim + a drifted recipe (no all-targets line) must abort
+        for re-review, never silently build the wrong thing."""
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lib_dir = tree / "packages" / "libllvm"
+            lib_dir.mkdir(parents=True)
+            self._write_libllvm_clang_fixture(tree)
+            (lib_dir / "build.sh").write_text(
+                'TERMUX_PKG_DESCRIPTION="recipe shape changed upstream"\n'
+            )
+
+            env = dict(os.environ, CODEC_LLVM_TRIM_ACTIVE="1")
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True,
+                env=env,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("re-review the trim", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -598,6 +598,98 @@ else
   echo "recipe-overrides: libllvm clang subpackage not found; skipping bin/cc strip" >&2
 fi
 
+# ---- libllvm build-time trim (recovery only; see D10 in PART_20_1 §6) ----
+# GATED: active only when the first marker line below carries the string
+# "CodeC: LLVM trim ACTIVE". Kept inactive for the initial round-4 build so
+# the published repo corresponds to the upstream-shaped recipe; activated by
+# flipping MARKER_ACTIVE to "1" below when re-dispatching after a 360-min
+# timeout. Upstream builds every LLVM backend (-DLLVM_TARGETS_TO_BUILD=all
+# plus experimental ARC;CSKY;M68k;VE) and the full project set including
+# lldb/mlir/polly. CodeC devices are aarch64/x86_64 only and the Phase 21
+# language profiles need clang (+clang-format/tools-extra), lld, llvm,
+# compiler-rt and openmp — never lldb, mlir, or polly — so the trim builds
+# just the two device backends and drops lldb/mlir/polly (their subpackages
+# are excluded for CodeC arches). The matching subpackage include lines that
+# only exist with those backends are removed too (wasm-ld needs the
+# WebAssembly target; amdgpu-arch/nvptx-arch their GPU backends; offload-arch
+# follows libomptarget, configured OFF upstream) — a stale include line for a
+# missing file fails subpackage creation, and the removal direction is always
+# safe (a present-but-unclaimed file just lands in the main libllvm deb).
+# Activating = one-commit flip of CODEC_LLVM_TRIM_ACTIVE below.
+CODEC_LLVM_TRIM_ACTIVE="${CODEC_LLVM_TRIM_ACTIVE:-0}"
+if [[ "$CODEC_LLVM_TRIM_ACTIVE" == "1" && -f "$TREE/packages/libllvm/build.sh" ]]; then
+  LIBLLVM_BUILD="$TREE/packages/libllvm/build.sh"
+  # 1. two device backends only
+  if ! grep -qF -- '-DLLVM_TARGETS_TO_BUILD=all' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: libllvm targets line drifted (expected -DLLVM_TARGETS_TO_BUILD=all) — re-review the trim" >&2
+    exit 1
+  fi
+  sed -i 's#-DLLVM_TARGETS_TO_BUILD=all#-DLLVM_TARGETS_TO_BUILD=AArch64;X86#' "$LIBLLVM_BUILD"
+  if grep -qF -- '-DLLVM_TARGETS_TO_BUILD=all' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: failed to trim LLVM targets" >&2
+    exit 1
+  fi
+  # 2. no experimental backends
+  if ! grep -qF -- '-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=ARC;CSKY;M68k;VE' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: libllvm experimental-targets line drifted — re-review the trim" >&2
+    exit 1
+  fi
+  grep -vF -- '-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=ARC;CSKY;M68k;VE' "$LIBLLVM_BUILD" > "$LIBLLVM_BUILD.codec-tmp"
+  mv "$LIBLLVM_BUILD.codec-tmp" "$LIBLLVM_BUILD"
+  # 3. drop lldb/mlir/polly from the project set (compiler-rt/lld/openmp stay)
+  if ! grep -qF 'local llvm_projects="clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly"' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: libllvm project set drifted — re-review the trim" >&2
+    exit 1
+  fi
+  sed -i 's#clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly#clang;clang-tools-extra;compiler-rt;lld;openmp#' "$LIBLLVM_BUILD"
+  if grep -qF 'lldb;mlir' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: failed to trim the libllvm project set" >&2
+    exit 1
+  fi
+  # 4. host build only needs the clang/llvm tablegen tools now
+  if ! grep -qF 'ninja -j "$TERMUX_PKG_MAKE_PROCESSES" clang-tblgen clang-tidy-confusable-chars-gen lldb-tblgen llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: libllvm host ninja line drifted — re-review the trim" >&2
+    exit 1
+  fi
+  sed -i 's#clang-tblgen clang-tidy-confusable-chars-gen lldb-tblgen llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen#clang-tblgen clang-tidy-confusable-chars-gen llvm-tblgen#' "$LIBLLVM_BUILD"
+  # 5. exclude the lldb/mlir/libpolly subpackages for CodeC arches
+  for sub in lldb mlir libpolly; do
+    subfile="$TREE/packages/libllvm/$sub.subpackage.sh"
+    if [[ ! -f "$subfile" ]]; then
+      echo "recipe-overrides: libllvm subpackage file missing (pinned-revision drift): $subfile" >&2
+      exit 1
+    fi
+    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$subfile"; then
+      sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: lldb/mlir/polly are not built (build-time trim)' "$subfile"
+    fi
+    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$subfile"; then
+      echo "recipe-overrides: failed to exclude libllvm subpackage: $sub" >&2
+      exit 1
+    fi
+  done
+  # 6. remove target-coupled include lines that no longer exist after the
+  #    backend trim (kept lines for missing files fail subpackage creation)
+  for pair in "clang.subpackage.sh bin/amdgpu-arch" "clang.subpackage.sh bin/nvptx-arch" "clang.subpackage.sh bin/offload-arch" "lld.subpackage.sh bin/wasm-ld"; do
+    subfile="$TREE/packages/libllvm/${pair%% *}"
+    line="${pair#* }"
+    if [[ ! -f "$subfile" ]]; then
+      echo "recipe-overrides: libllvm subpackage file missing (pinned-revision drift): $subfile" >&2
+      exit 1
+    fi
+    if ! grep -qxF "$line" "$subfile"; then
+      echo "recipe-overrides: $subfile no longer lists '$line' (pinned-revision drift) — re-review the trim" >&2
+      exit 1
+    fi
+    grep -vxF "$line" "$subfile" > "$subfile.codec-tmp"
+    mv "$subfile.codec-tmp" "$subfile"
+  done
+  echo "recipe-overrides: libllvm trimmed to AArch64/X86 backends without lldb/mlir/polly (build-time recovery)"
+elif [[ ! -f "$TREE/packages/libllvm/build.sh" ]]; then
+  echo "recipe-overrides: libllvm recipe not found; skipping the build-time trim" >&2
+else
+  echo "recipe-overrides: libllvm build-time trim staged but INACTIVE (CODEC_LLVM_TRIM_ACTIVE=0)"
+fi
+
 # The nodejs recipe (26.4.0-1 at the pinned revision) defines its own
 # termux_step_create_debscripts() that emits a preinst notice (npm split out
 # of nodejs at 25.3.0-1). CodeC policy forbids maintainer scripts for EVERY
