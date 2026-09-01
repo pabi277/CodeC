@@ -1,0 +1,69 @@
+# CodeC Phase E — Polish Batch: Feasible Items from Groups 3-5
+
+**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase E" command.
+· **Cost:** `[client-only]` — all items are pure Kotlin/Compose; no `[repo-build]`
+  (except E.2 formatter, which needs the tools from Phase C to be installed)
+· **Depends on:** Phase D (registry with `formatterTemplate`); Phase A (IME keys infrastructure
+  for E.5); Phase C.1 (language tools installed for E.2 formatter to work on-device)
+· **Blocks:** nothing
+
+> **Owner:** "take ideas 3, 4, 5 now (the feasible / low-cost ones)"
+>
+> Full research & design rationale:
+> [`docs/RESEARCH_NEXT_PHASES.md`](../RESEARCH_NEXT_PHASES.md) §Phase E.
+
+---
+
+## Why this exists
+
+After the compiler redesign (Phase D) and editor smoothness (Phase A), a batch
+of low-cost, high-value polish items improves daily usability significantly.
+These were researched in `RESEARCH_NEXT_PHASES.md` and classified as feasible
+(no X11, no root, no new native code required).
+
+---
+
+## The nine parts
+
+| Part | Title | Effort | Doc |
+|---|---|---|---|
+| **E.1** | Per-language code formatter (Format menu) | XS | [PART_E1_FORMATTER.md](PART_E1_FORMATTER.md) |
+| **E.2** | Background-run notification (foreground service) | S | [PART_E2_NOTIFICATION.md](PART_E2_NOTIFICATION.md) |
+| **E.3** | Hardware keyboard shortcuts | S | [PART_E3_HW_SHORTCUTS.md](PART_E3_HW_SHORTCUTS.md) |
+| **E.4** | Project ZIP share (Export + Share intent) | XS | [PART_E4_ZIP_SHARE.md](PART_E4_ZIP_SHARE.md) |
+| **E.5** | Tablet two-pane layout (`WindowSizeClass`) | S | [PART_E5_TABLET.md](PART_E5_TABLET.md) |
+| **E.6** | Test-runner UI (pytest / go test output tab) | S | [PART_E6_TEST_RUNNER.md](PART_E6_TEST_RUNNER.md) |
+| **E.7** | "Open with CodeC" intent filter | XS | [PART_E7_OPEN_WITH.md](PART_E7_OPEN_WITH.md) |
+| **E.8** | Adaptive theme (auto follow system dark/light) | XS | [PART_E8_ADAPTIVE_THEME.md](PART_E8_ADAPTIVE_THEME.md) |
+| **E.9** | Per-project `.codec.json` run-config override | S | [PART_E9_PROJECT_CONFIG.md](PART_E9_PROJECT_CONFIG.md) |
+
+---
+
+## ⚖️ Ground rules
+
+- **Phone-first:** all parts must work well on a phone before being optimised
+  for tablet (E.5 is the one exception, which targets tablets explicitly but
+  must not regress on phones).
+- **No PR/merge and no push to `main` without the owner's explicit command.**
+- **Client-only** for all nine parts: no `[repo-build]`, no bootstrap changes.
+  E.2 (notification) uses `POST_NOTIFICATIONS` which is already declared (Phase 4.8).
+- Each part is **independently shippable** — they can be done in any order or
+  batched into one commit. Decide at implementation time based on CI capacity.
+- All new logic must be **host-unit-testable** where possible.
+
+## ⚠️ Deferred items (not in Phase E, for the record)
+
+| Item | Why deferred |
+|---|---|
+| X11 / SDL / Qt GUI packages | No X11 server; explicit policy exclusion |
+| Kivy / PyQt Android binding | Requires X11 or Wayland; rabbit hole |
+| Root-based acceleration | Out of scope by policy |
+| Full Termux catalog mirror | Cardinality; wait for Phase C to settle |
+| REPL mode (B.2 ↑/↓ history) | Tracked in `RESEARCH_NEXT_PHASES.md` §4.10 |
+| Multiple cursors | L effort; `RESEARCH_NEXT_PHASES.md` §4.13 |
+
+## Standing rules (unchanged)
+
+- CI (`Build APK`) = assemble + unit tests + lint — the only test executor.
+- Verify state before acting; a part is done only when device-verified.
+- No regression to any completed phase.

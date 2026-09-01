@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-01, verified against GitHub):**
+**WHERE THINGS STAND (2026-09-01, updated for new phases):**
 
 - **`main` = `dc68eee` — Phase 18 via PR #38** (merged 2026-09-01 on the
   owner's "Create pr and marge"); `f868e10` = PR #37 (Phase 17), `a0e7dc3` =
@@ -63,15 +63,26 @@ gate, invariants, docs policy) — follow it.
   for the owner to report a bug — listen carefully, find the underlying code
   problem, solve it. No self-initiated work.
 
-**FUTURE-UPDATE MODE (owner, 2026-09-01):** **all phases are complete.** The
-agent **waits for the owner to report a bug** — it does not start new work on
-its own. When the owner reports a bug, the agent **listens carefully, finds
-the underlying code problem, and solves it**. Every fix follows `rule.md`:
-verify → evidence → research → host-testable implementation + tests → docs →
-commit/push → CI green → report → STOP at the merge gate. The owner merges to
-`main` themselves (or hands the merge command). No "start phase N" ceremony.
+**NEW PLANNED PHASES (2026-09-01, owner direction):**
+Phases A/B/C/D/E are fully spec'd — no code written yet.
+- **Phase A** (editor smoothness + IME-anchored keys) — `docs/chat-phaseA/`
+- **Phase B** (inline PTY input, remove Output Panel input box) — `docs/chat-phaseB/`
+- **Phase C** (gcc/clang/nodejs/etc. in package repo — CI only) — `docs/chat-phaseC/`
+- **Phase D** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — `docs/chat-phaseD/`
+- **Phase E** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phaseE/`
+Recommended order: C → D → A → B → E (C and A can run in parallel).
+**Owner starts a phase by saying "Start Phase X" in chat.**
 
-**STANDING RULES (law):**
+**FUTURE-UPDATE MODE (owner, 2026-09-01):** Phases A–E are planned but not
+started. The agent **waits for the owner to say "Start Phase X"** — it does
+not begin implementation on its own. For bugs between phases, the agent
+**listens carefully, finds the underlying code problem, and solves it**.
+Every fix or phase follows `rule.md`: verify → evidence → research →
+host-testable implementation + tests → docs → commit/push → CI green →
+report → STOP at the merge gate. The owner merges to `main` themselves
+(or hands the merge command).
+
+**STANDING RULES (law — read before acting):**
 
 - **No PR/merge without the owner's literal command in chat** (owner
   2026-08-26; reinforced by `rule.md` §3). Committing to and pushing the
