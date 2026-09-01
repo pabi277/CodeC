@@ -54,7 +54,7 @@ listing and [Spck docs](https://spck-code-editor.readthedocs.io/en/latest/gettin
 
 Slides from the left (see [`mockups/editor-drawer.png`](mockups/editor-drawer.png)):
 - **Project header** — project name + a **branch chip** (`⌥ main`) + a
-  source-control icon with a change-count badge (→ Phase 17). Tapping the header
+  source-control icon with a change-count badge (→ Phase 17, **shipped**). Tapping the header
   offers "Switch project" (back to the Projects Hub, Phase 15).
 - **Tree toolbar** — icons: New File, New Folder, Refresh, Collapse All.
 - **File tree** — the Phase 8 `FileTreeRepository` tree with folder chevrons,
@@ -65,7 +65,7 @@ Slides from the left (see [`mockups/editor-drawer.png`](mockups/editor-drawer.pn
   Delete, New File/Folder here, **Run in terminal** (Phase 9.1), **Launch
   Default** for HTML (§2.5), Copy path.
 - **Drawer footer** — quick rows: **Source Control** (badge), **Switch Branch**
-  (both → Phase 17), **Settings**.
+  (both → Phase 17, **shipped 2026-08-31**), **Settings**.
 
 ### 2.3 Code surface
 

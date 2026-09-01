@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandMore
@@ -84,6 +85,8 @@ fun GitControlSheet(
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     var commitMessage by remember { mutableStateOf("") }
+    // Phase 17 — the branch chip opens the Switch Branch dialog.
+    var showBranchSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(projectRoot) {
         viewModel.refresh(context, projectRoot)
@@ -106,6 +109,7 @@ fun GitControlSheet(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
+                            .clickable { showBranchSheet = true }
                             .border(
                                 width = 1.dp,
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
@@ -166,6 +170,12 @@ fun GitControlSheet(
                     SheetGuidance(stringResource(R.string.git_not_a_repo_message))
                 }
                 else -> {
+                    // Phase 17 §2.5 — conflicts get their own group and block
+                    // the commit; everything else stays in "Changes".
+                    val files = state.status?.files.orEmpty()
+                    val conflicts = files.filter { it.isConflict }
+                    val others = files.filterNot { it.isConflict }
+
                     // ---- commit message + COMMIT & PUSH --------------------
                     OutlinedTextField(
                         value = commitMessage,
@@ -186,7 +196,10 @@ fun GitControlSheet(
                         },
                         enabled = !state.busy && !state.loading &&
                             state.isRepo && commitMessage.isNotBlank() &&
-                            !state.status?.files.isNullOrEmpty(),
+                            !state.status?.files.isNullOrEmpty() &&
+                            // Phase 17 §2.5 — Spck blocks commits while a
+                            // merge conflict is open.
+                            conflicts.isEmpty(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFC3A1F5),
                             contentColor = Color(0xFF221A3E),
@@ -205,11 +218,75 @@ fun GitControlSheet(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                    // Phase 17 §2.5 — say WHY the button is dead (Spck rule:
+                    // no commit while a conflict is open).
+                    if (conflicts.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.git_commit_blocked),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ConflictPurple,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                        )
+                    }
 
                     HorizontalDivider(modifier = Modifier.padding(top = 14.dp))
 
+                    // ---- conflicts (Phase 17 §2.5) -------------------------
+                    if (conflicts.isNotEmpty()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.git_conflicts_header),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = ConflictPurple
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(ConflictPurple.copy(alpha = 0.18f))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    conflicts.size.toString(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = ConflictPurple
+                                )
+                            }
+                        }
+                        Text(
+                            text = stringResource(R.string.git_conflict_hint),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            conflicts.forEachIndexed { index, change ->
+                                GitChangeRow(
+                                    change = change,
+                                    projectFolderName = projectRoot.name,
+                                    onOpenDiff = {
+                                        viewModel.openDiff(context, projectRoot, change.path)
+                                    },
+                                    onToggleStage = {
+                                        viewModel.markResolved(context, projectRoot, change)
+                                    },
+                                    markResolvedMode = true
+                                )
+                                if (index < conflicts.lastIndex) {
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    )
+                                }
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+
                     // ---- changes list --------------------------------------
-                    val files = state.status?.files.orEmpty()
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
@@ -226,13 +303,20 @@ fun GitControlSheet(
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
-                            Text(files.size.toString(), style = MaterialTheme.typography.labelMedium)
+                            Text(others.size.toString(), style = MaterialTheme.typography.labelMedium)
                         }
                     }
 
                     if (files.isEmpty()) {
                         Text(
                             text = stringResource(R.string.git_working_tree_clean),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
+                        )
+                    } else if (others.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.git_no_other_changes),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
@@ -244,7 +328,7 @@ fun GitControlSheet(
                                 .heightIn(max = 320.dp)
                                 .padding(vertical = 2.dp)
                         ) {
-                            itemsIndexed(files, key = { _, change -> change.path }) { index, change ->
+                            itemsIndexed(others, key = { _, change -> change.path }) { index, change ->
                                 GitChangeRow(
                                     change = change,
                                     projectFolderName = projectRoot.name,
@@ -256,7 +340,7 @@ fun GitControlSheet(
                                     }
                                 )
                                 // Mockup: a hairline between every change row.
-                                if (index < files.lastIndex) {
+                                if (index < others.lastIndex) {
                                     HorizontalDivider(
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                                     )
@@ -307,6 +391,69 @@ fun GitControlSheet(
                             Text(stringResource(R.string.refresh), letterSpacing = 0.8.sp)
                         }
                     }
+
+                    // ---- honest push state (Phase 17 device fix) -----------
+                    // A commit clears the change list, so a FAILED push used
+                    // to look exactly like a successful one. Whenever the
+                    // branch is ahead of its remote (or a push failed), say so
+                    // and offer a retry.
+                    val ahead = state.status?.ahead ?: 0
+                    // A branch that tracks nothing has no "ahead" figure at
+                    // all — it simply is not published yet, which is exactly
+                    // the case the owner hit with a freshly created branch.
+                    val unpublished = state.status?.upstream == null &&
+                        state.status?.detached != true &&
+                        state.status?.branch != null
+                    if (ahead > 0 || state.pushError != null || unpublished) {
+                        HorizontalDivider()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = "↑",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = UnpushedAmber
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = when {
+                                        ahead > 0 ->
+                                            stringResource(R.string.git_unpushed_count, ahead)
+                                        state.pushError != null ->
+                                            stringResource(R.string.git_unpushed_unknown)
+                                        else -> stringResource(
+                                            R.string.git_unpushed_new_branch,
+                                            state.status?.branch ?: ""
+                                        )
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = UnpushedAmber
+                                )
+                                state.pushError?.let { error ->
+                                    Text(
+                                        text = error,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.push(context, projectRoot) },
+                                enabled = !state.busy && !state.loading,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.height(42.dp)
+                            ) {
+                                Text(stringResource(R.string.git_push_action), letterSpacing = 0.8.sp)
+                            }
+                        }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -319,6 +466,14 @@ fun GitControlSheet(
             loading = state.diffLoading,
             lines = state.diffLines,
             onClose = { viewModel.closeDiff() }
+        )
+    }
+
+    // Phase 17 — Switch Branch, opened from the branch chip.
+    if (showBranchSheet) {
+        BranchSwitchSheet(
+            projectRoot = projectRoot,
+            onDismiss = { showBranchSheet = false }
         )
     }
 }
@@ -347,12 +502,17 @@ private fun GitFileIcon(name: String) {
     }
 }
 
+/**
+ * One change row. The trailing button is the Phase 16 +/− stage toggle, or —
+ * for a conflicted file ([markResolvedMode]) — Spck's ✓ "Mark Resolved".
+ */
 @Composable
 private fun GitChangeRow(
     change: GitFileChange,
     projectFolderName: String,
     onOpenDiff: () -> Unit,
-    onToggleStage: () -> Unit
+    onToggleStage: () -> Unit,
+    markResolvedMode: Boolean = false
 ) {
     val accent = badgeColor(change.state)
     val staged = change.x != ' '
@@ -407,26 +567,39 @@ private fun GitChangeRow(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(end = 12.dp)
         )
-        // Per-file stage/unstage toggle (+/−), mockup-exact outlined square.
+        // Per-file stage/unstage toggle (+/−), mockup-exact outlined square —
+        // or the Phase 17 ✓ "Mark Resolved" for a conflicted path.
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .border(
                     width = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                    color = if (markResolvedMode) {
+                        ConflictPurple.copy(alpha = 0.6f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                    },
                     shape = RoundedCornerShape(10.dp)
                 )
                 .clickable(onClick = onToggleStage),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                SpckIcons.PlusMinus,
+                if (markResolvedMode) Icons.Default.Check else SpckIcons.PlusMinus,
                 contentDescription = stringResource(
-                    if (staged) R.string.git_unstage else R.string.git_stage
+                    when {
+                        markResolvedMode -> R.string.git_mark_resolved
+                        staged -> R.string.git_unstage
+                        else -> R.string.git_stage
+                    }
                 ),
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = if (markResolvedMode) {
+                    ConflictPurple
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
         }
     }
@@ -517,6 +690,12 @@ private fun GitDiffDialog(
 
 private val DiffAddColor = Color(0xFF66BB6A)
 private val DiffRemoveColor = Color(0xFFEF5350)
+
+/** Spck marks merge conflicts purple (Phase 17 §2.5). */
+private val ConflictPurple = Color(0xFFBA68C8)
+
+/** "Not pushed yet" — amber, so it reads as a warning, not an error. */
+private val UnpushedAmber = Color(0xFFE6B33C)
 
 private fun badgeColor(state: GitFileState): Color = when (state) {
     GitFileState.MODIFIED -> Color(0xFFE6B33C)

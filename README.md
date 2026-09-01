@@ -77,17 +77,25 @@ The extra-keys row (ESC, TAB, CTRL, ALT, arrows) and custom macros in Settings m
 ## Editor, Projects & Web preview
 
 Since Phases 8–9 (all device-accepted, 2026-08-29) CodeC is a full little IDE around that
-terminal — and since Phases 15–16 (device-accepted, 2026-08-31) it wears a
+terminal — and since Phases 15–17 (device-accepted, merged 2026-08-31) it wears a
 Spck-grade skin:
 
 - **Projects Hub**: the Projects tab is a card list (type mark, `⌥ branch · N
-  files · age`, change badge) with filter chips + search and ONE `+` sheet —
+  files · age`, change badge, amber **↑N** when commits never reached the
+  remote) with filter chips + search and ONE `+` sheet —
   New Project / Clone Git Repo / Import ZIP / Open Folder.
 - **Spck-style editor**: nav-drawer file tree with in-tree git status letters,
   tabs in the app bar (dirty dot, close), a snippet/extra-keys row above the
   status bar, and a Source Control sheet with per-file stage toggle. The app
   **opens straight into the file you left in** (first launch → Projects hub),
   and edits **autosave** ~2 s after you stop typing.
+- **Switch Branch**: branch list (local + remote, plus **New branch…**) with
+  Spck's promise — dirty work is stashed and restored when you come back.
+- **Honest git**: conflicts are grouped in purple with **Mark Resolved** and
+  block the commit; a branch with no upstream is published on first push
+  (`--set-upstream`); and a failed push never looks like a successful one —
+  the sheet says **"Committed locally ✓ — NOT pushed: …"** and offers a
+  **PUSH** retry.
 - **Bottom bar**: Projects · Editor · **Terminal (middle)** · Packages ·
   Settings.
 - **RUN ▶** builds & runs C/Python (or launches your web page); on an HTML

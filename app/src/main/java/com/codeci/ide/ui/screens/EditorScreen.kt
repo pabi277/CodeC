@@ -255,6 +255,8 @@ fun EditorScreen(
     var showGoToLineDialog by remember { mutableStateOf(false) }
     var goToLineText by remember { mutableStateOf("") }
     var gitSheetRoot by remember { mutableStateOf<File?>(null) }
+    // Phase 17 — Switch Branch, opened from the drawer footer.
+    var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
     var keysRowVisible by remember { mutableStateOf(true) }
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
@@ -592,9 +594,12 @@ fun EditorScreen(
                         ).show()
                     },
                     onSwitchBranch = {
-                        Toast.makeText(
+                        val root = currentProject?.let {
+                            runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+                        }
+                        if (root != null) gitBranchSheetRoot = root else Toast.makeText(
                             context,
-                            R.string.editor_drawer_branch_soon,
+                            context.getString(R.string.editor_scratch_mode),
                             Toast.LENGTH_SHORT
                         ).show()
                     },
@@ -1481,6 +1486,18 @@ fun EditorScreen(
 
         gitSheetRoot?.let { root ->
             GitControlSheet(projectRoot = root, onDismiss = { gitSheetRoot = null })
+        }
+
+        // Phase 17 — Switch Branch from the drawer footer: closing refreshes
+        // the drawer's branch chip and status letters.
+        gitBranchSheetRoot?.let { root ->
+            BranchSwitchSheet(
+                projectRoot = root,
+                onDismiss = {
+                    gitBranchSheetRoot = null
+                    viewModel.refreshGitMeta(context)
+                }
+            )
         }
 
         // Phase 9.2: open a project folder (or back to single files) without

@@ -153,13 +153,14 @@ Always: **Open**, **Rename**, **Duplicate** (stretch), **Export ZIP**
 (Phase 8), **Delete** (confirm dialog).
 
 Git repos additionally: **Source Control** (→ Phase 17 sheet), **Pull**,
-**Switch Branch** (→ Phase 17), **Copy remote URL**. Non-git projects show
-**Initialize Git** (stretch — `git init`) instead.
+**Switch Branch** (→ Phase 17), **Copy remote URL**, **Push Changes**. Non-git
+projects show **Initialize Git** (stretch — `git init`) instead.
 
-> Pull / Switch Branch / Source Control items are *wired* here but *implemented*
-> in Phase 17; in Phase 15 they can route to the existing Phase 13 clone/commit
-> plumbing or be disabled with a "coming in Source Control" affordance. Keep the
-> menu structure Spck-shaped from the start.
+> Pull / Switch Branch / Source Control items were *wired* here but *implemented*
+> in Phase 17. **All of them now work** (Phase 17 merged 2026-08-31): the card ⋮
+> opens the real Source Control sheet and the real Switch Branch dialog, Pull and
+> Push run through `GitManager`, and the amber **↑N** badge marks commits that
+> never reached the remote (`PART_17_SOURCE_CONTROL.md` §6.1–6.2).
 
 ### 2.5 Visual system
 
@@ -334,6 +335,8 @@ PASS = steps 1–9 succeed without manual fixes; step 10 leaves the app healthy.
   recorded stretch items — deliberately not blocking the phase.
 - **D8** — Switch Branch is a present-but-informed menu entry (snackbar
   pointing at Phase 17), keeping the Spck-shaped menu structure per spec.
+  **Superseded 2026-08-31:** Phase 17 replaced the snackbar with the real
+  `BranchSwitchSheet` dialog.
 - **D9** — Shallow (`--depth 1`) defaults ON in the new dialog (Spck parity,
   mobile bandwidth); terminal `git clone` behavior unchanged.
 

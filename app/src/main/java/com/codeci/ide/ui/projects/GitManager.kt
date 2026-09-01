@@ -207,9 +207,54 @@ class GitManager(
         exec(root, args, localTimeoutSeconds, "git commit failed")
     }
 
-    /** `git push` — needs an upstream (clone sets it) and, for private remotes, a token. */
-    fun push(root: File) {
-        exec(root, listOf("push"), networkTimeoutSeconds, "git push failed")
+    /**
+     * `git push` — needs an upstream (clone sets it) and, for private remotes,
+     * a token.
+     *
+     * Phase 17 device fix (owner, 2026-08-31): a branch created in the app
+     * (New branch…, `git checkout -b`, or the first push of a local repo) has
+     * **no upstream**, so a plain `git push` dies with
+     * `fatal: The current branch <name> has no upstream branch`. Pass
+     * [setUpstream] to publish it instead:
+     * `git push --set-upstream <remote> HEAD`, which pushes HEAD to the
+     * same-named branch on the remote and remembers the tracking link, so
+     * later pushes are plain again. Use [pushHandlingUpstream] to decide
+     * automatically.
+     */
+    fun push(root: File, setUpstream: Boolean = false) {
+        if (!setUpstream) {
+            exec(root, listOf("push"), networkTimeoutSeconds, "git push failed")
+            return
+        }
+        // `origin` is what CodeC's clone creates; `git remote` covers repos
+        // that were renamed or initialised by hand.
+        val remote = firstRemote(root) ?: "origin"
+        exec(
+            root,
+            listOf("push", "--set-upstream", remote, "HEAD"),
+            networkTimeoutSeconds,
+            "git push failed"
+        )
+    }
+
+    /** First configured remote (`git remote`), or null when the command fails. */
+    fun firstRemote(root: File): String? {
+        val result = runGit(root, listOf("remote"), localTimeoutSeconds)
+        if (result.exitCode != 0) return null
+        return result.stdout.map { it.trim() }.firstOrNull { it.isNotEmpty() }
+    }
+
+    /**
+     * Pushes, setting the upstream first when the current branch has none.
+     *
+     * `git status --porcelain=v1 -b` prints `## main...origin/main` only once
+     * a branch tracks something, so a missing upstream is detectable without
+     * another process — and the extra `status` call is the one CodeC already
+     * makes for the Source Control sheet.
+     */
+    fun pushHandlingUpstream(root: File) {
+        val upstream = runCatching { status(root) }.getOrNull()?.upstream
+        push(root, setUpstream = upstream == null)
     }
 
     /** `git pull` — merge auto-edit disabled so no editor can ever block. */
@@ -278,6 +323,216 @@ class GitManager(
         }
         return ProjectsHub.branchNamesFromLsRemote(result.stdout)
     }
+
+    // ---------------------------------------------------------------------
+    // Phase 17 — branches, stash and merge conflicts
+    // ---------------------------------------------------------------------
+
+    /**
+     * `git branch --all --no-color` → local + remote branches with the current
+     * one flagged (parsed by [GitBranchParser]). `--no-color` keeps a user
+     * `color.branch=always` config from polluting the output with escapes.
+     */
+    fun listBranches(root: File): GitBranchList {
+        val result = runGit(
+            workingDir = root,
+            args = listOf("branch", "--all", "--no-color"),
+            timeoutSeconds = localTimeoutSeconds
+        )
+        if (result.exitCode != 0) {
+            throw GitCommandException(
+                redactOrFallback(result, "git branch failed"),
+                result.exitCode,
+                redactor.redactAll(result.stdout + result.stderr)
+            )
+        }
+        return GitBranchParser.parse(result.stdout)
+    }
+
+    /**
+     * `git rev-parse --abbrev-ref HEAD` — the checked-out branch, or null when
+     * HEAD is detached (git prints the literal `HEAD`) or the command fails.
+     */
+    fun currentBranch(root: File): String? {
+        val result = runGit(
+            workingDir = root,
+            args = listOf("rev-parse", "--abbrev-ref", "HEAD"),
+            timeoutSeconds = localTimeoutSeconds
+        )
+        if (result.exitCode != 0) return null
+        val value = result.stdout.firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+        return value.takeIf { it.isNotEmpty() && it != "HEAD" }
+    }
+
+    /** `git checkout <branch>` for a branch that already exists locally. */
+    fun checkout(root: File, branch: String) {
+        val safe = branch.trim()
+        require(GitBranchOps.isSafeExistingBranch(safe)) { "Invalid branch name" }
+        exec(root, listOf("checkout", safe), localTimeoutSeconds, "git checkout failed")
+    }
+
+    /**
+     * `git checkout -b <name>` — creates the branch at the current HEAD and
+     * switches to it (Spck cannot create branches; CodeC can, offered as a
+     * bonus row in the Switch Branch dialog).
+     */
+    fun checkoutNew(root: File, name: String) {
+        val safe = name.trim()
+        require(ProjectsHub.isValidBranchName(safe)) { "Invalid branch name" }
+        exec(root, listOf("checkout", "-b", safe), localTimeoutSeconds, "git checkout failed")
+    }
+
+    /**
+     * `git checkout -b <local> --track <remote>` for a remote-only branch.
+     *
+     * Checking the remote-tracking ref out directly would detach HEAD, so a
+     * local tracking branch is created from it instead; when a local branch of
+     * the same name already exists, the caller (see [switchBranch]) checks
+     * that one out instead of failing here.
+     */
+    fun checkoutRemote(root: File, remoteRef: String) {
+        val safe = remoteRef.trim()
+        require(GitBranchOps.isSafeExistingBranch(safe)) { "Invalid branch name" }
+        val local = safe.substringAfter('/', "")
+        require(local.isNotEmpty() && ProjectsHub.isValidBranchName(local)) { "Invalid branch name" }
+        exec(
+            root,
+            listOf("checkout", "-b", local, "--track", safe),
+            localTimeoutSeconds,
+            "git checkout failed"
+        )
+    }
+
+    /**
+     * `git stash push [-u] -m <message>` — parks the working tree so a branch
+     * switch cannot lose it. `-u` (untracked included) is the default because
+     * Spck's promise covers new files too. Returns false when git reports
+     * there was nothing to save.
+     */
+    fun stashPush(root: File, message: String, includeUntracked: Boolean = true): Boolean {
+        val args = mutableListOf("stash", "push")
+        if (includeUntracked) args += "-u"
+        args += "-m"
+        args += message
+        val result = runGit(root, args, localTimeoutSeconds)
+        if (result.exitCode != 0) {
+            throw GitCommandException(
+                redactOrFallback(result, "git stash failed"),
+                result.exitCode,
+                redactor.redactAll(result.stdout + result.stderr)
+            )
+        }
+        val nothing = (result.stdout + result.stderr).any { it.contains("No local changes") }
+        return !nothing
+    }
+
+    /**
+     * `git stash pop [stash@{N}]` — restores (and, on success, drops) the top
+     * stash entry by default. A conflicting pop leaves the entry on the stack,
+     * so a failed pop never destroys the user's work; the caller reports it.
+     */
+    fun stashPop(root: File, ref: String = "stash@{0}") {
+        val safe = ref.trim()
+        require(safe.isNotEmpty() && !safe.startsWith("-")) { "Invalid stash reference" }
+        exec(root, listOf("stash", "pop", safe), localTimeoutSeconds, "git stash pop failed")
+    }
+
+    /** `git stash list` — newest first; empty when the command fails. */
+    fun stashList(root: File): List<GitStashEntry> {
+        val result = runGit(root, listOf("stash", "list"), localTimeoutSeconds)
+        if (result.exitCode != 0) return emptyList()
+        return GitStashParser.parse(result.stdout)
+    }
+
+    /**
+     * Phase 17 — the whole Switch Branch flow, in the order the user expects:
+     *
+     * 1. if the tree is dirty and [stashChanges] is on, stash it (marked with
+     *    the branch it came from, [GitBranchOps.StashMarker]);
+     * 2. check out the target (local → `checkout`, remote → `checkout -b
+     *    --track`, new → `checkout -b`); if that fails **after** we stashed,
+     *    pop the stash straight back so nothing is left in limbo;
+     * 3. if a CodeC stash entry exists for the branch we just landed on, pop
+     *    it (auto-restore). A conflicting pop keeps the entry on the stack and
+     *    is reported through [SwitchBranchResult.stashPending].
+     *
+     * Every step is argv-only and runs through the Phase 13 private env, so no
+     * token can leak and no shell is involved.
+     */
+    fun switchBranch(
+        root: File,
+        target: BranchTarget,
+        stashChanges: Boolean = true
+    ): SwitchBranchResult {
+        val before = runCatching { status(root) }.getOrNull()
+        val fromBranch = before?.branch
+        val dirty = before?.files?.isNotEmpty() == true
+
+        var stashed = false
+        if (stashChanges && dirty) {
+            stashed = stashPush(
+                root = root,
+                message = GitBranchOps.StashMarker.message(fromBranch ?: "HEAD"),
+                includeUntracked = true
+            )
+        }
+
+        val landed = try {
+            checkoutTarget(root, target)
+        } catch (e: Exception) {
+            if (stashed) runCatching { stashPop(root) }
+            throw e
+        }
+
+        var restored = false
+        var pending = false
+        if (stashChanges) {
+            val mine = runCatching { stashList(root) }.getOrDefault(emptyList())
+                .firstOrNull { it.codecBranch == landed }
+            if (mine != null) {
+                runCatching { stashPop(root, mine.ref) }
+                    .onSuccess { restored = true }
+                    .onFailure { pending = true }
+            }
+        }
+        return SwitchBranchResult(
+            branch = landed,
+            stashed = stashed,
+            restored = restored,
+            stashPending = pending
+        )
+    }
+
+    /** Resolves a [BranchTarget] to the argv checkout that matches it. */
+    private fun checkoutTarget(root: File, target: BranchTarget): String {
+        val name = target.name.trim()
+        return when (target.kind) {
+            BranchTargetKind.NEW -> {
+                checkoutNew(root, name)
+                name
+            }
+            BranchTargetKind.REMOTE -> {
+                val local = name.substringAfter('/', "")
+                val alreadyLocal = runCatching { listBranches(root) }.getOrNull()
+                    ?.local?.any { it.name == local } == true
+                if (alreadyLocal) {
+                    checkout(root, local)
+                    local
+                } else {
+                    checkoutRemote(root, name)
+                    local.ifEmpty { name }
+                }
+            }
+            BranchTargetKind.LOCAL -> {
+                checkout(root, name)
+                name
+            }
+        }
+    }
+
+    private fun redactOrFallback(result: GitResult, fallback: String): String =
+        redactor.redact((result.stderr + result.stdout).joinToString("\n").trim())
+            .ifEmpty { fallback }
 
     private fun exec(
         workingDir: File?,
@@ -551,7 +806,17 @@ data class GitFileChange(
     val path: String,
     val oldPath: String? = null
 ) {
+    /**
+     * Phase 17 — true for an unmerged (merge-conflicted) path. Git marks
+     * conflicts with the seven XY pairs `DD AU UD UA DU AA UU`
+     * ([GitBranchOps.isConflict] records the sources); `AA`/`DD` carry no `U`
+     * at all, and `AD` (staged addition removed from the work tree) is NOT a
+     * conflict, so the pair set is tested exactly rather than by column.
+     */
+    val isConflict: Boolean = GitBranchOps.isConflict(x, y)
+
     val state: GitFileState = when {
+        isConflict -> GitFileState.UNMERGED
         x == '?' && y == '?' -> GitFileState.UNTRACKED
         x == 'U' || y == 'U' -> GitFileState.UNMERGED
         x == 'A' || y == 'A' -> GitFileState.ADDED
@@ -561,9 +826,10 @@ data class GitFileChange(
     }
 
     /** Single-letter badge shown in the pane (porcelain letter; `?` for untracked). */
-    val badge: String = when (state) {
-        GitFileState.UNTRACKED -> "?"
-        GitFileState.UNMERGED -> "U"
+    val badge: String = when {
+        isConflict -> "U"
+        state == GitFileState.UNTRACKED -> "?"
+        state == GitFileState.UNMERGED -> "U"
         else -> (if (x != ' ') x else y).toString()
     }
 }

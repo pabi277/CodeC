@@ -45,9 +45,12 @@ of assuming one. Commit and push to the SESSION branch only; never push to
   + device-round branch (`arena/01a057e0-codec`, branch tip `4db8c72` or
   later) into `main` — verify the actual tip with `git log` before acting.**
 
-- **Phases 15–17 (Spck clone) are IMPLEMENTED on that branch — CI green +
-  three device rounds done.** They live under `docs/chat-phase15/`
-  (README + PART_15/16/17 + `mockups/`):
+- **Phases 15–17 (Spck clone) are all IMPLEMENTED, device-rounded and MERGED
+  to `main` (2026-08-31).** PR #36 (15/16, from `arena/01a057e0-codec`) and
+  the Phase 17 PR (from `arena/01a05878-codec`) are both merged; **do not redo
+  or re-debug them** unless the identical symptom reappears AND you have
+  regression evidence. Post-merge `main` tip: verify with `git log` before
+  acting (it moved past `b869ce6` when PR #36 landed at `a0e7dc3`).
   - **Phase 15 — Projects Hub & Unified Import:** implemented, device round 1
     (clone re-detect + Packages tab fixes, `83ba499`) AND round 2 (mockup-exact
     re-skin of hub, clone dialog, import sheet — `95cd554`) done.
@@ -75,11 +78,28 @@ of assuming one. Commit and push to the SESSION branch only; never push to
       (`GitManager.trackedFiles`/`rmCached`) so they stop traveling at push.
     - **RUN ▶ is the HTML preview:** an open `.html` file makes RUN ▶ save +
       open Web Preview; the separate "Preview" overflow item is deleted.
-  - **Phase 17 — Source Control:** PARTIALLY implemented — the mockup-exact
-    SC sheet + in-tree M/A/D/? letters + tap-to-diff + **per-file +/− stage
-    toggle** (`GitManager.stageFile`/`unstageFile`) shipped in the re-skin;
-    **Switch Branch (checkout/stash dialog) and merge-conflict UI are still
-    PENDING** (drawer/chip show a "coming soon" toast).
+  - **Phase 17 — Source Control:** now **fully IMPLEMENTED on
+    `arena/01a05878-codec` (2026-08-31)** — the mockup-exact SC sheet +
+    in-tree M/A/D/? letters + tap-to-diff + **per-file +/− stage toggle**
+    (`GitManager.stageFile`/`unstageFile`) from the re-skin, **plus** the
+    Switch Branch dialog (checkout/stash/auto-restore + bonus New branch) and
+    the merge-conflict UI (Conflicts group, purple `U`, Mark Resolved, commit
+    blocked). Both "coming soon" toasts are gone. Record + decisions D1–D8:
+    `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §6.1.
+    **Device round 1 (2026-08-31) — two owner-reported bugs FIXED:** (a) a
+    branch created in the app had no upstream, so every push died with
+    `fatal: The current branch X has no upstream branch` → `pushHandlingUpstream()`
+    now runs `git push --set-upstream <remote> HEAD` when the status branch
+    line has no `...origin/x`, plain `git push` otherwise; (b) a failed push
+    was indistinguishable from a successful one (a commit clears the change
+    list) → the sheet now reports **"Committed locally ✓ — NOT pushed: …"**,
+    keeps the failure sticky, shows an amber **"N commit(s) not pushed yet"**
+    row with a **PUSH** retry (also for a never-published branch), the
+    Projects card shows an amber **↑N** badge, and git ops re-read status
+    after failures. CI green `33421815293` @ `1c01f84`. Record:
+    `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §6.2. **Do not redo these.** **Open gate: the
+    owner's §4 device recipe steps 5–8** — do not re-implement; only fix on
+    device evidence.
   - **Vector-API compile saga (round 2/3 of the re-skin, resolved
     2026-08-31, `253201e`):** the resolved `ui-graphics` is far newer than the
     BOM number suggests — the old string-path `addPath` API is gone. Verified
@@ -150,17 +170,17 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 
 **NEXT UP (only on the owner's explicit instruction):**
 
-1. **Phase 17 remainder — Switch Branch + merge-conflict UI.** The SC sheet,
-   in-tree status letters, tap-to-diff and per-file stage toggle are already
-   in; what's left is the branch checkout/stash dialog (the drawer footer +
-   SC chip currently toast "coming soon") and conflict marking per
-   `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` §4 recipe. Reuse Phase 13
-   `GitManager` — add `checkout`/`stash` argv methods the same way.
-2. **Phase 18 — CodeCApi Device Capabilities** (the tail phase):
-   `docs/chat-phase18/PART_18_CODEAPI.md`.
-3. Phases 15–16 remain open to **owner device feedback** on the merged build
-   (the bar/autosave/launch-restore/.out/RUN-html changes of device round 3
-   have not had a dedicated device pass yet — the owner is reviewing).
+1. **Phase 18 — CodeCApi Device Capabilities** (the tail phase, the only
+   spec'd work left): `docs/chat-phase18/PART_18_CODEAPI.md`.
+2. **Phases 15–17 remain open to owner device feedback** on the merged build.
+   Phase 17 has had one device round (push bugs fixed, §6.2); the optional
+   conflict recipe (`PART_17_SOURCE_CONTROL.md` §4 step 8) has not been
+   exercised on a real conflict yet, and the bar/autosave/launch-restore/
+   .out/RUN-html changes of the Phase 15/16 device round 3 still have no
+   dedicated pass.
+3. Small known gap, owner's call: the Projects-card amber **↑N** badge counts
+   only commits git knows are ahead (`git status -b`); a branch that was
+   never published shows the in-sheet warning but no card badge.
    Re-verify any plan against the current code before writing anything,
    follow the CLEAN-ROOM LAW and RESEARCH-WHEN-NEEDED rule, and record design
    decisions (D1, D2, …) in the part doc as you go.
@@ -200,9 +220,9 @@ of assuming one. Commit and push to the SESSION branch only; never push to
 1. Verify current state (`gh pr list`, `git status`, `gh run list`,
    `gh release list`) before acting.
 2. Phases 3–14 + 19 are closed (PRs #15/#23/#25/#26/#27/#28/#29/#30/#31/#32/#34
-   merged). Phases 15–16 are implemented + device-rounded and merged
-   (2026-08-31, from `arena/01a057e0-codec`); Phase 17 is partial (SC sheet +
-   stage toggle done; Switch Branch + conflicts pending); Phase 18 is spec'd.
+   merged). **Phases 15–17 are implemented + device-rounded and merged**
+   (15/16 from `arena/01a057e0-codec`, PR #36; 17 from `arena/01a05878-codec`);
+   Phase 18 is spec'd and is the only planned work left.
    If the owner commands a phase, re-verify its plan against current code, then
    implement it host-testably, commit + push the session branch, and let CI
    run. Never open/merge a PR without the owner's explicit word.

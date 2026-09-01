@@ -97,16 +97,17 @@ class FileManagerViewModel : ViewModel() {
             val gitDir = File(project.root, ".git")
             val isGit = gitDir.exists()
             val branch = if (isGit) readBranchQuietly(project.root, gitDir) else null
-            val hasChanges = if (isGit && git != null) {
+            val status = if (isGit && git != null) {
                 // Device round fix 2026-08-31: stray __pycache__ from a python
                 // run must not light up the card badge / push offer either.
                 runCatching { PythonCacheIgnore.ensure(project.root) }
                 // Build outputs (a.out, bin/*.out, …) stay out of the badge too.
                 runCatching { BuildArtifactIgnore.ensure(project.root) }
-                runCatching { git.status(project.root).files.isNotEmpty() }.getOrNull()
+                runCatching { git.status(project.root) }.getOrNull()
             } else {
                 null
             }
+            val hasChanges = status?.files?.isNotEmpty()
             // Phase 15 device round 1 fix: run the detector for auto AND for
             // stale "c" placeholders (entry file missing — e.g. clones from
             // before the clone-defaults-to-auto change).
@@ -125,7 +126,9 @@ class FileManagerViewModel : ViewModel() {
                 branch = branch,
                 fileCount = scan.fileCount,
                 lastModified = scan.lastModified,
-                hasChanges = hasChanges
+                hasChanges = hasChanges,
+                // Phase 17 device fix: commits that never reached the remote.
+                unpushed = status?.ahead ?: 0
             )
         }
     }
@@ -527,6 +530,37 @@ class FileManagerViewModel : ViewModel() {
                 onResult(Result.success(branches))
             } catch (e: Exception) {
                 onResult(Result.failure(e))
+            }
+        }
+    }
+
+    /**
+     * Phase 17 §2.4 — hub card ⋮ → Push. Pushes the active branch (needs an
+     * upstream and, for a private remote, the stored token). Mirrors
+     * [pullProject] so both menu items behave the same way.
+     */
+    fun pushProject(context: Context, projectName: String, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val manager = ProjectManager(context)
+                val project = withContext(Dispatchers.IO) { manager.project(projectName) }
+                    ?: error(context.getString(R.string.project_missing))
+                val git = GitContext(context.applicationContext).manager()
+                    ?: error(context.getString(R.string.git_not_installed_message))
+                // Phase 17 device fix: a branch created in the app has no
+                // upstream, so publish it instead of failing.
+                withContext(Dispatchers.IO) { git.pushHandlingUpstream(project.root) }
+                loadProjects(context)
+                _userMessage.value = context.getString(R.string.hub_push_success, projectName)
+                onDone()
+            } catch (e: Exception) {
+                _userMessage.value = context.getString(
+                    R.string.hub_push_failed,
+                    e.message ?: context.getString(R.string.create_failed)
+                )
+            } finally {
+                _isBusy.value = false
             }
         }
     }

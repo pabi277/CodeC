@@ -155,6 +155,8 @@ fun FileManagerScreen(
     var showActionsMenu by remember { mutableStateOf(false) }
     var showCloneDialog by remember { mutableStateOf(false) }
     var gitSheetProject by remember { mutableStateOf<ProjectInfo?>(null) }
+    // Phase 17 — Switch Branch, opened from the Projects card ⋮.
+    var branchSheetProject by remember { mutableStateOf<ProjectInfo?>(null) }
     // Phase 15 — Projects Hub presentation state.
     var hubFilter by remember { mutableStateOf(ProjectHubFilter.ALL) }
     var searchOpen by remember { mutableStateOf(false) }
@@ -403,11 +405,8 @@ fun FileManagerScreen(
                                     }
                                 }
                             }
-                            HubCardAction.SWITCH_BRANCH -> scope.launch {
-                                // Phase 15 wires the Spck-shaped menu; the
-                                // switcher itself ships with Phase 17 (spec §2.4).
-                                snackbarHostState.showSnackbar(context.getString(R.string.hub_switch_branch_soon))
-                            }
+                            HubCardAction.SWITCH_BRANCH -> branchSheetProject = project
+                            HubCardAction.PUSH -> viewModel.pushProject(context, project.name)
                         }
                     },
                     onCreate = { showHubSheet = true },
@@ -926,6 +925,17 @@ fun FileManagerScreen(
         )
     }
 
+    // Phase 17 — Switch Branch from the Projects card ⋮.
+    branchSheetProject?.let { project ->
+        BranchSwitchSheet(
+            projectRoot = project.root,
+            onDismiss = {
+                branchSheetProject = null
+                viewModel.loadProjects(context)
+            }
+        )
+    }
+
     if (showHubSheet) {
         ProjectsHubAddSheet(
             onDismiss = { showHubSheet = false },
@@ -979,7 +989,7 @@ fun FileManagerScreen(
 
 /** Per-project overflow actions (spec §2.4). */
 private enum class HubCardAction {
-    OPEN, RENAME, EXPORT, DELETE, SOURCE_CONTROL, PULL, COPY_REMOTE_URL, SWITCH_BRANCH
+    OPEN, RENAME, EXPORT, DELETE, SOURCE_CONTROL, PULL, PUSH, COPY_REMOTE_URL, SWITCH_BRANCH
 }
 
 @Composable
@@ -1178,6 +1188,24 @@ private fun ProjectHubCard(
                     )
                 }
             }
+            if (entry.unpushed > 0) {
+                // Phase 17 device fix — amber "not pushed" pill: a failed push
+                // must never look like an uploaded project.
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(5.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        "↑${entry.unpushed}",
+                        color = HubBadgeYellow,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
@@ -1198,6 +1226,11 @@ private fun ProjectHubCard(
                             text = { Text(stringResource(R.string.git_pull)) },
                             leadingIcon = { Icon(Icons.Default.CloudDownload, contentDescription = null) },
                             onClick = { menuOpen = false; onAction(entry, HubCardAction.PULL) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.hub_push)) },
+                            leadingIcon = { Icon(Icons.Default.UploadFile, contentDescription = null) },
+                            onClick = { menuOpen = false; onAction(entry, HubCardAction.PUSH) }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.hub_switch_branch)) },

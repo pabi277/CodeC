@@ -1,6 +1,9 @@
 # CodeC Phase 17 — In-editor Source Control & Branching (Spck git parity)
 
-**Status:** Planned (design/spec only) · **Cost:** `[client-only]`
+**Status:** IMPLEMENTED (2026-08-31, `arena/01a05878-codec`) — Switch Branch
+(checkout/stash/auto-restore + New branch), merge-conflict grouping and Mark
+Resolved all shipped; **device gate (§4 steps 5–8) pending owner run** ·
+**Cost:** `[client-only]`
 · **Depends on:** Phase 13 (Git engine: clone/status/diff/commit/push/pull,
 credential store, redaction), Phase 15 (Projects Hub git actions), Phase 16
 (editor drawer + in-tree git status letters)
@@ -189,7 +192,42 @@ PASS = steps 1–7 succeed without manual fixes; step 9 stays clean. Step 8 pass
 if a conflict is reproducible on the day.
 ```
 
----
+### 4.1 Quick device checks for the Switch Branch + conflict work (2026-08-31)
+
+Entry points to exercise (all three must open the SAME dialog):
+**Projects tab → card ⋮ → Switch Branch**, **editor → ☰ → footer Switch
+Branch**, **editor → ☰ → Source Control → the `⌥ branch ▾` chip**.
+
+| # | Do this | Expect |
+|---|---|---|
+| 1 | Open a git project → ☰ → Switch Branch | Dialog titled *Switch Branch* with the project name, a **Branches** list (current one tagged `current`), a **Remote** group, a **New branch…** row, and the stash checkbox |
+| 2 | (Clean tree) pick another branch → SWITCH | Spinner → **"Switched to \<branch\>"** → Close; the drawer's `⌥` chip shows the new branch |
+| 3 | Edit a file, wait for autosave (dirty dot clears) → Switch Branch | Checkbox reads **"N uncommitted change(s) will be saved and restored"** |
+| 4 | Keep the checkbox on → switch away → switch back to the first branch | Away: *"your changes are stashed…"*; back: **"— your stashed changes were restored"** and the edit is back in the file |
+| 5 | Switch Branch → **Remote** → tap `origin/<x>` | **"Switched to \<x\>"** (a local tracking branch is created — *not* a detached HEAD) |
+| 6 | Switch Branch → **New branch…** → `feature/test` → SWITCH | **"Switched to feature/test"**; drawer chip follows |
+| 7 | Projects tab → card ⋮ → **Push Changes** | **"Pushed \<project\>"**, or an honest failure (no upstream / offline / bad token) |
+| 8 | Force a conflict (see below) → open the project | Drawer tree shows a **purple `U`** on the file; the SC sheet shows a **Conflicts N** group *above* Changes |
+| 9 | In the SC sheet, try COMMIT & PUSH with a conflict open | Button is disabled and **"Resolve the conflicts below before committing."** is shown |
+| 10 | Edit the file to remove `<<<<<<< ======= >>>>>>>` → tap the **✓** on its row | **"Marked resolved: \<file\>"**, purple `U` clears, COMMIT & PUSH becomes enabled |
+
+Forcing a conflict on-device (CodeC terminal, one command per line, from the
+project folder — it merges a divergent branch into itself):
+```text
+git checkout -b conflict-test
+(echo edit A > conflict.txt) && git add -A && git commit -m a
+git checkout main
+(echo edit B > conflict.txt) && git add -A && git commit -m b
+git merge conflict-test
+```
+`git merge` reports the conflict; the tree and the SC sheet should then behave
+as rows 8–10. Afterwards: `git merge --abort` (or resolve + commit) and delete
+the scratch branch with `git branch -D conflict-test`.
+
+Security regression (Phase 13, unchanged engine): `env | grep -i token` in the
+CodeC terminal prints nothing, `.git/config` holds no token, and Settings →
+Logs shows no token after a failed push.
+```
 
 ## 5. Invariants & scope guard
 
@@ -234,3 +272,159 @@ checkout/stash dialog (drawer footer + SC chip currently toast "coming
 soon" — `hub_switch_branch_soon` / `editor_drawer_branch_soon` strings),
 "New branch…" bonus, and merge-conflict marking (purple/U grouping,
 COMMIT blocked, Mark Resolved).
+
+### 6.1 Switch Branch + merge conflicts — IMPLEMENTED (2026-08-31, `arena/01a05878-codec`)
+
+**Status: IMPLEMENTED, `[client-only]`, CI-GREEN (2026-08-31, `Build APK`
+`33417811422` @ `3a2846f`, assemble + unit tests + lint).**
+Everything the §4 recipe needs for steps 5–8 is in place; the device gate is
+the owner's run of that recipe.
+
+**CI rounds (all three red rounds were real, for-cause, and none of them
+touched product behaviour):**
+1. `33416562391` — `Unresolved reference 'CloudUpload'`: the resolved
+   `material-icons-extended` no longer ships that icon.
+2. `33416826771` — `Unresolved reference 'Send'`: `Icons.Default.<name>` only
+   resolves when the matching `androidx.compose.material.icons.filled.<name>`
+   extension is imported (that's why `ModulesScreen` imports `filled.Send`);
+   `Icons.Default.UploadFile` is imported in `FileManagerScreen` already.
+3. `33417133821` — 6 test failures, all from my harness: the fake-git script
+   was written with `printf '\\n'` (two backslashes), so `sh` printed a
+   literal `\n`; every command landed on one log line and canned output
+   carried a trailing `\n` (so the stash marker never matched). Aligned with
+   the Phase 13 harness's single backslash. **The product code was never at
+   fault** — evidence: `expected:<CMD [checkout] [main][]> but
+   was:<…[main][\n]>`.
+4. `33417811422` — green.
+
+**Research notes (recorded before writing code, owner's
+RESEARCH-WHEN-NEEDED rule):**
+
+1. **Conflict codes.** git-status(1) "Short Format"
+   ([manpage](https://manpages.debian.org/testing/git-man/git-status.1.en.html),
+   [discussion](https://stackoverflow.com/questions/44573213/parsing-git-status))
+   lists exactly seven unmerged XY pairs: `DD AU UD UA DU AA UU`. Two carry
+   no `U` at all, so "either column is U" would miss them, while "both
+   columns ∈ {A,D,U}" false-positives on `AD` (staged addition deleted in the
+   work tree). The exact set is hard-coded in `GitBranchOps.isConflict`.
+2. **Branch listing.** `git branch -a` prints a remote symref line
+   (`remotes/origin/HEAD -> origin/main`) that is not a branch, and a detached
+   HEAD prints `* (HEAD detached at <sha>)` / `* (no branch)` in the current
+   slot. Both are handled by `GitBranchParser`.
+3. **Remote checkouts.** `git checkout origin/x` detaches HEAD
+   ([ref](https://stackoverflow.com/questions/74626663/how-can-i-fix-head-detached-at-origin-development-when-i-have-2-remotes));
+   the correct form is `git checkout -b <local> --track <remote>/<local>`.
+4. **Stash.** `git stash push -u -m <msg>` covers untracked files;
+   `git stash list` prints `stash@{N}: WIP on <branch>: <sha> <subject>` or
+   `stash@{N}: On <branch>: <message>` when `-m` was used
+   ([ref](https://linuxcapable.com/git-stash-command/)); and **`git stash pop`
+   only drops the entry when the apply succeeds**, so a conflicting pop loses
+   nothing — the UI can honestly say "your changes are still saved".
+
+**What shipped:**
+
+| Piece | Where |
+|---|---|
+| Pure branch/stash/conflict logic (no Android, no process) | `ui/projects/GitBranchOps.kt` (new) |
+| `listBranches` / `currentBranch` / `checkout` / `checkoutNew` / `checkoutRemote` / `stashPush` / `stashPop` / `stashList` / `switchBranch` | `ui/projects/GitManager.kt` |
+| `isConflict` (AA/DD included), purple `U` badge | `GitFileChange` in `GitManager.kt` |
+| Branch loading, switch flow, Mark Resolved, commit guard | `ui/viewmodels/GitControlViewModel.kt` |
+| Switch Branch dialog (local + remote + New branch) | `ui/screens/BranchSwitchSheet.kt` (new) |
+| Conflicts group, Mark Resolved ✓, blocked COMMIT, clickable branch chip | `ui/screens/GitControlView.kt` |
+| Entry points: SC chip, editor drawer footer, Projects card ⋮ | `EditorScreen.kt`, `FileManagerScreen.kt` |
+| Push Changes menu item | `FileManagerViewModel.pushProject`, hub card ⋮ |
+| Purple `U` in the drawer tree | `ui/components/EditorProjectDrawer.kt` |
+
+**Tests (host, run by CI):** `GitBranchOpsTest` ×17 (branch/stash parsing,
+detached HEAD, conflict set, name safety, marker round-trip) and
+`GitBranchManagerTest` ×16 (fake-git argv proofs: `branch --all --no-color`,
+`checkout -b … --track …`, `stash push -u -m codec-switch: main`, the
+dirty→stash→checkout ordering, pop-back on a failed checkout, auto-restore
+only for CodeC-marked stashes belonging to the target branch, no-op on a
+clean tree, `stashChanges = false`, and rejection of an option-shaped name
+before git ever runs).
+
+**Decisions:**
+
+- **D1 — branch list is `git branch --all --no-color`.** One call covers
+  local + remote; `--no-color` blocks a user `color.branch=always` config
+  from injecting escapes. Symref (`origin/HEAD -> …`) and detached-HEAD rows
+  are dropped; detached-ness is reported to the UI instead.
+- **D2 — remote branches become local tracking branches.** Never
+  `checkout origin/x` (detaches HEAD); always
+  `git checkout -b <name> --track <remote>` — and if a local branch of that
+  name already exists, the plain local checkout is used so the command cannot
+  fail with "a branch named 'x' already exists".
+- **D3 — stash message marker `codec-switch: <branch>`.** Auto-restore only
+  ever pops entries carrying *our* marker *and* naming the branch we just
+  landed on, so a user's own stashes are never touched (proved by test).
+- **D4 — failure handling is honest and loss-free.** A failed checkout after
+  a stash pops the stash straight back; a conflicting pop leaves the entry on
+  the stack and the dialog says the changes are still saved.
+- **D5 — `-u` (include untracked) by default**, because Spck's promise is
+  "your uncommitted changes" — new files included. The dialog's checkbox
+  defaults to on and can be turned off.
+- **D6 — Mark Resolved = `git add -- <path>`** (the Phase 16 argv-safe
+  `stageFile`), exactly what git needs to end the unmerged state. Commits
+  stay blocked until no `U` remains (both in the UI and in the ViewModel).
+- **D7 — the editor menu does NOT gain Pull/Push rows.** The drawer footer is
+  mockup-exact (owner's Phase 16 device round 2 requirement) and the editor
+  ⋮ is already long; Pull/Push are reachable from the drawer's Source Control
+  sheet and from the Projects card ⋮, which gained **Push Changes**. Recorded
+  here as a deliberate deviation from §2.4 — say the word and it moves.
+- **D8 — no new credential path, no new process rules.** Everything reuses
+  the Phase 13 `GitManager` argv/environment/redaction model; branch names
+  and stash refs are validated before exec (`isSafeExistingBranch`,
+  `ProjectsHub.isValidBranchName`), and nothing is written to `$PREFIX/bin`,
+  `.git/config` or the terminal environment.
+
+### 6.2 Device round 1 (2026-08-31) — two real push bugs, both fixed
+
+The owner's first run of the Switch Branch work surfaced two genuine defects
+(transcript-quoted, so both are evidence, not guesses):
+
+**Bug 1 — "The current branch test has no upstream branch."**
+```
+Committed - push failed: git push failed: fatal: The current branch test has
+no upstream branch. To push the current branch and set the remote as upstream,
+use git push --set-upstream origin test
+```
+A branch created inside the app (the new **New branch…** row, `checkout -b` in
+the terminal, or the first push of a local repo) has no tracking branch, so
+the Phase 13 `git push` could never work. **Fix:** `GitManager.push(root,
+setUpstream)` now runs `git push --set-upstream <remote> HEAD` (remote from
+`git remote`, falling back to `origin` — `HEAD` makes git use the current
+branch's own name), and `pushHandlingUpstream()` picks the right form by
+reading the status branch line: `## test` (no `...origin/test`) → publish,
+`## main...origin/main` → plain push. Wired into commit-and-push, the new
+in-sheet PUSH retry and the Projects card **Push Changes**.
+
+**Bug 2 — "If something upload failed it doesn't return the changes in app —
+it stay updated but never go to github."**
+A successful commit clears the change list, so a *failed* push looked exactly
+like a successful one: clean tree, no `M` badge, no hint that the commit was
+still only on the phone. **Fix — make the state honest:**
+- the sheet reports **"Committed locally ✓ — NOT pushed: \<reason\>"**;
+- the failure text is **sticky** (`pushError`) until a push succeeds;
+- an amber **"N commit(s) not pushed yet"** row with a **PUSH** retry button
+  appears whenever the branch is ahead, a push failed, **or the branch is not
+  published at all** — a new branch has no `ahead` figure at all, so that case
+  needed its own wording ("Branch \"x\" is not on the remote yet — the first
+  push publishes it");
+- the Projects card shows an amber **↑N** badge for commits that never left
+  the device (`ProjectHubEntry.unpushed`, from `git status -b` ahead);
+- git operations now re-read `status` **after** a failure too, so the ahead
+  count on screen is real instead of stale.
+
+**CI:** green at `33421815293` @ `1c01f84` (assemble + unit tests + lint),
+with +5 fake-git argv proofs: plain `push`, `push --set-upstream origin HEAD`,
+`origin` fallback when `git remote` fails, upstream detection both ways, and
+`firstRemote`. The fake-git harness was also rewritten so it contains **no**
+`printf '…\n'` at all — the double-escaped newline that broke CI round 3 of
+§6.1 cannot recur.
+
+**Still open:** the Devices-card ↑N badge only counts commits git knows are
+ahead (`git status -b`); a branch that was never published shows no hub badge
+(the in-sheet row covers it) — say the word to extend it.
+
+---

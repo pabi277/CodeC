@@ -1,9 +1,13 @@
 # CodeC Phases 15–17 — Spck-style Editor & Project Experience
 
-**Status (2026-08-31):** Phases 15 + 16 IMPLEMENTED, mockup-exact re-skinned,
-3 device rounds done, **MERGED to `main`** (session branch
-`arena/01a057e0-codec`); Phase 17 PARTIAL — SC sheet + per-file stage toggle
-shipped in the re-skin, Switch Branch + conflict UI pending · **Cost:**
+**Status (2026-08-31):** Phases 15–17 all IMPLEMENTED and **MERGED to `main`**
+— 15 + 16 mockup-exact re-skinned with 3 device rounds (session branch
+`arena/01a057e0-codec`, PR #36); **Phase 17 from `arena/01a05878-codec`** —
+Switch Branch (stash/auto-restore + New branch), merge-conflict grouping,
+Mark Resolved, commit blocking, plus the device-round-1 push fixes (upstream
+publishing on first push; sticky "NOT pushed" + PUSH retry; amber ↑N badge on
+the hub card). Device round 1 done; the optional conflict recipe (§4 step 8)
+is the only untested path · **Cost:**
 `[client-only]` · **Depends on:** Phase 8 (Projects & folder tree), Phase 9
 (Editor foundation), Phase 11 (Output panel), Phase 13 (Git integration),
 Phase 14 (Web preview)
@@ -33,7 +37,7 @@ implementable, CI-green, and device-verifiable on the owner's aarch64 hardware.
 |---|---|---|---|
 | **15** | Projects Hub & Unified Import (Spck-style project list) | Redesigned Projects screen: card list, filter chips, search, one `+` sheet with **New Project / Clone Git Repo / Import ZIP / Open Folder**, per-project overflow git actions | [PART_15_PROJECTS_HUB.md](PART_15_PROJECTS_HUB.md) |
 | **16** | Spck-style Editor Shell (drawer, tabs, snippets keyboard, launch preview) | Editor screen re-skin: nav drawer file tree with git status, refined tab bar, snippet/extra-keys row, minimap-lite, launch-default HTML preview, per-file actions | [PART_16_EDITOR_SHELL.md](PART_16_EDITOR_SHELL.md) |
-| **17** | In-editor Source Control & Branching (Spck git parity) | Source Control bottom sheet, in-tree M/A/D/? status letters, tap-to-diff, **Switch Branch**, Pull/Push, merge-conflict marking — matching Spck's git UX | [PART_17_SOURCE_CONTROL.md](PART_17_SOURCE_CONTROL.md) |
+| **17** | In-editor Source Control & Branching (Spck git parity) | Source Control bottom sheet, in-tree M/A/D/? status letters, tap-to-diff, **Switch Branch**, Pull/Push, merge-conflict marking — matching Spck's git UX — **DONE & MERGED** | [PART_17_SOURCE_CONTROL.md](PART_17_SOURCE_CONTROL.md) |
 
 > **Phase 18 (was Phase 15) — CodeCApi Device Capabilities** moved to the end
 > of the roadmap: [`../chat-phase18/`](../chat-phase18/). It is unaffected by

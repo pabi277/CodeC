@@ -50,7 +50,13 @@ data class ProjectHubEntry(
     val branch: String?,
     val fileCount: Int,
     val lastModified: Long,
-    val hasChanges: Boolean?
+    val hasChanges: Boolean?,
+    /**
+     * Phase 17 device fix — commits sitting on the device that were never
+     * pushed (`git status -b` "ahead N"). Shown as an amber `↑N` badge so a
+     * failed push can never masquerade as an uploaded project.
+     */
+    val unpushed: Int = 0
 ) {
     /** Icon token for the card's leading square. */
     val icon: HubIconToken
