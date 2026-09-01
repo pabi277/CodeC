@@ -12,9 +12,10 @@
 > [prompt.md](prompt.md).
 >
 > **Addendum 2026-09-01:** through Phase 18 (CodeCApi device capabilities,
-> device-accepted) all spec'd work is complete; `main` = `f868e10` and Phase 18
-> awaits merge on `arena/01a05b12-codec` (`d49ac47`). Post-Phase-18 work follows
-> the owner's operating manual: [`rule.md`](rule.md).
+> device-accepted) all spec'd work is complete; **Phase 18 merged to `main`
+> via PR #38 at `dc68eee` (2026-09-01)** — `main` no longer sits at
+> `f868e10`. Post-Phase-18 work follows the owner's operating manual:
+> [`rule.md`](rule.md).
 
 ---
 

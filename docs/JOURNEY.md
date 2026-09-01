@@ -1,8 +1,9 @@
 # CodeC — the full journey
 
 **Last updated:** 2026-09-01 · **State:** **✅ ALL PHASES MERGED — `main` =
-`f868e10` + PR #38** (Phase 18 + Web Preview fix + `rule.md`, merged 2026-09-01
-on the owner's "Create pr and marge"; verify the tip with `git log`). Phases
+`dc68eee` (Phase 18 via PR #38)** (Phase 18 + Web Preview fix + `rule.md`,
+merged 2026-09-01 on the owner's "Create pr and marge"; verify with
+`git ls-remote origin main` — the local clone is shallow). Phases
 3–14 ✅ complete & merged, **Phases 15–17 (Spck clone) ✅ COMPLETE and MERGED**
 (PR #36 @ `a0e7dc3`, PR #37 @ `f868e10`), Phase 19 ✅ merged (PR #34 @
 `b869ce6`), **Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE &

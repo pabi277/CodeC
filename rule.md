@@ -41,8 +41,15 @@ On 2026-09-01 the owner said they will not run phases anymore and will
 
 - The agent does everything up to **CI green + docs + pushed session branch +
   a short report**, then stops.
-- **The owner merges** — either by typing the merge command in chat (then the
-  agent opens the PR and merges it) or by merging the PR themselves.
+- **The owner merges.** Two ways, both fine — no terminal needed for either:
+  - **Tell the agent in chat** — e.g. *"create pr and merge"* / *"merge it"*.
+    The agent then opens the PR from the `arena/*` branch and merges it.
+  - **Do it yourself in the browser** (about 30 seconds, no `git`/`gh`):
+    1. Open the repo on github.com → **Pull requests** → click the PR for
+       this change (it is always opened from the current `arena/*` branch).
+    2. Confirm every check is green (✓ **Build APK**), then click
+       **Merge pull request** → **Confirm merge**.
+    3. (Optional) click **Delete branch** on the merged-PR page.
 - If the owner ever wants the agent to open **and merge** PRs automatically
   when CI is green, the owner must say so with a phrase like
   *"auto-merge when CI is green"* — that phrase, once typed, updates section
@@ -52,7 +59,9 @@ On 2026-09-01 the owner said they will not run phases anymore and will
 ## 4. Update lifecycle (mandatory order)
 
 1. **Verify state first** — `git status`, `git log`, `gh pr list`,
-   `gh run list`, remote `main` tip. Trust the repo, not memory.
+   `gh run list`, remote `main` tip. Trust the repo, not memory. (The owner's
+   browser equivalents are the repo's **Code / Pull requests / Actions**
+   tabs — see §10.)
 2. **Reproduce / evidence before hypothesis.** No fix on a guess: get the
    exact symptom (device output, file contents, CI annotation).
 3. **Research when needed**; record "Research notes" with sources in the
@@ -67,21 +76,37 @@ On 2026-09-01 the owner said they will not run phases anymore and will
 8. **Report** state (run id, tip sha, what changed) and stop at the merge gate
    (§3).
 
+> **Owner's browser view (no terminal).** The owner can follow everything at
+> github.com: **Actions** (the `Build APK` check + its log), **Pull requests**
+> (the PR), **Code** (the branch and its tip sha). The agent still reports the
+> run id and tip sha, but the owner never has to type a `git`/`gh` command —
+> §10 is the click-path ↔ command cheat sheet.
+
 ## 5. CI & device policy
 
-- `Build APK` runs `:app:assembleDebug`, `:app:testDebugUnitTest`,
-  `:app:lintDebug`. A failing test or lint ERROR fails the run.
-- The agent sandbox cannot reach CI logs/artifacts/releases (only
-  `api.github.com`); on-device testing is impossible. Device transcripts come
-  from the owner.
+- **`Build APK` = assemble + unit tests + lint.** Net effect: the run fails on
+  any compile error, failing unit test, or lint ERROR. (Under the hood the
+  workflow file lists only `:app:assembleDebug`; the `gradle-bootstrap` shim
+  re-points `:app` for the legacy Gradle 9.0.0 invocation and delegates to the
+  checked-in `./gradlew` (Gradle 9.3.1) for
+  `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, converting test
+  and lint failures into readable GitHub annotations. **Known simplification
+  candidate:** call `./gradlew` from the workflow directly and delete the
+  shim — left as-is for now because the shim is what emits the readable
+  `::error` annotations; see §10.)
+- **Owner reads CI in the browser:** repo → **Actions** → the `Build APK`
+  run → its log; a green ✓ means all three gates passed. (The agent sandbox
+  cannot reach CI logs/artifacts/releases — only `api.github.com` — so the
+  owner's browser is the log viewer. On-device testing is likewise impossible
+  here; device transcripts come from the owner.)
 - The owner is **not** running per-phase recipes anymore. Work that genuinely
   needs a device pass must be marked **"device pass required"** in the report;
   the owner decides when (or whether) to run it. Never claim device acceptance
   without a transcript.
 - Never trigger expensive actions without explicit confirmation: CodeC package
   repo build (~60–100 min), release/publication, destructive device tests,
-  force-push. Check `gh run list` first — never double-dispatch an existing
-  run.
+  force-push. Check for an existing run first (github.com **Actions** tab or
+  `gh run list`) — never double-dispatch an existing run.
 
 ## 6. Invariants that are law (do not break, ever)
 
@@ -126,11 +151,13 @@ Every update updates the docs **in the same commit**:
 
 ## 9. State snapshot (2026-09-01)
 
-- **`main` = `f868e10`** (Phase 17 via PR #37 on `a0e7dc3` = PR #36
-  Phases 15/16, on `b869ce6` = PR #34 Phase 19).
+- **`main` = `dc68eee`** — Phase 18 via **PR #38** (merged 2026-09-01,
+  owner's command "Create pr and marge"). Chain: `dc68eee` ← `f868e10`
+  (PR #37 Phase 17) ← `a0e7dc3` (PR #36 Phases 15/16) ← `b869ce6` (PR #34
+  Phase 19). Verify with `git ls-remote origin main` / the GitHub API — the
+  local clone is shallow, so `git log` alone is not proof of history.
 - **Phases 3–17 & 19: merged. Phase 18: COMPLETE & DEVICE-ACCEPTED — merged
-  to `main` via PR #38 (2026-09-01, owner's command "Create pr and marge");
-  verify the tip with `git log`/GitHub.** The PR carried Phase 18
+  to `main` via PR #38 (2026-09-01).** The PR carried Phase 18
   (feature `012deea`, lint fix `4460306`, docs `6c67202`), the Web Preview
   fix (`d49ac47`), and this future-update manual + living-docs refresh
   (`ffca133`).
@@ -138,3 +165,42 @@ Every update updates the docs **in the same commit**:
   conflict recipe (needs a real conflict), Phases 15/16 device-round-3
   dedicated pass, amber ↑N badge for never-published branches, Phase 14 §5
   device round.
+
+---
+
+## 10. GitHub without a terminal (cheat sheet)
+
+Everything the owner may want to do has a github.com click path. The `gh`
+commands the agent uses are just the terminal spelling of the same buttons.
+
+| You want to… | On github.com (click) | Terminal equivalent (agent) |
+|---|---|---|
+| See the latest commit on `main` | **Code** tab → branch dropdown → `main` → the commit sha | `git ls-remote origin main` |
+| See open / past PRs | **Pull requests** tab | `gh pr list` |
+| See CI / build status | **Actions** tab → `Build APK` run → green ✓ / red ✗ | `gh run list` / `gh run view` |
+| Read a failed CI log | **Actions** → the run → the job → expand the failing step | (sandbox cannot — the owner's browser is the viewer) |
+| Re-run a failed build | **Actions** → the run → **Re-run jobs** | `gh run rerun <id>` |
+| Merge a change to `main` | **Pull requests** → the PR → **Merge pull request** → **Confirm merge** | `gh pr merge <n> --merge` |
+| Open the PR for this session | **Pull requests** → **New pull request** → base `main` ← `arena/*` | `gh pr create` |
+| Run the package-repository workflow | **Actions** → **CodeC package repository** → **Run workflow** (set `publish`, `source_run_id`) | `gh workflow run "CodeC package repository"` |
+| Publish the bootstrap release | **Actions** → **Publish CodeC bootstrap release** → **Run workflow** (`source_run_id`, `release_tag`) | `gh workflow run "Publish CodeC bootstrap release"` |
+| Download the APK | **Actions** → latest green `Build APK` → **Artifacts** → `CodeC-IDE` | (sandbox cannot) |
+
+Notes:
+
+- The **"Run workflow"** button is the GUI for everything `gh workflow run`
+  does — the owner never needs `gh` installed.
+- The package-repository build is expensive (~60–100 min): only press
+  **Run workflow** when you mean it, and check **Actions** first so you don't
+  start a second one.
+- The app already has a visual GitHub UI (Phase 13): Settings → **GitHub
+  Account**, Files → ⋮ → **Clone from GitHub**, the **Source Control** pane,
+  and **COMMIT & PUSH**. On-device, prefer those buttons over the terminal for
+  everyday git work.
+
+**Known simplification candidate (not done yet):** `build-apk.yml` still
+provisions Gradle 9.0.0 and routes through the `gradle-bootstrap` shim
+(AGP 9.1.1 needs Gradle 9.3.1). Moving the workflow to the checked-in
+`./gradlew` and listing `:app:assembleDebug :app:testDebugUnitTest
+:app:lintDebug` explicitly would delete the shim — but only once the readable
+`::error` annotations the shim produces today are preserved.

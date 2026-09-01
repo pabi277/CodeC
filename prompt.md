@@ -20,12 +20,13 @@ gate, invariants, docs policy) — follow it.
 
 **WHERE THINGS STAND (2026-09-01, verified against GitHub):**
 
-- **`main` = `f868e10` + PR #38 (Phase 18 + Web Preview fix + rule.md,
-  merged 2026-09-01 on the owner's "Create pr and marge") — verify the tip
-  with `git log` / the GitHub API.** Phases 3–14, 19 (PR #34 @ `b869ce6`),
-  Phases 15/16 (PR #36 @ `a0e7dc3`), Phase 17 (PR #37 @ `f868e10`) and
-  **Phase 18 (PR #38)** are all **COMPLETE, DEVICE-ACCEPTED (where gated)
-  and MERGED**.
+- **`main` = `dc68eee` — Phase 18 via PR #38** (merged 2026-09-01 on the
+  owner's "Create pr and marge"); `f868e10` = PR #37 (Phase 17), `a0e7dc3` =
+  PR #36 (Phases 15/16), `b869ce6` = PR #34 (Phase 19) — verify the tip with
+  `git ls-remote origin main` / the GitHub API (the local clone is shallow).
+  Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
+  Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
+  **COMPLETE, DEVICE-ACCEPTED (where gated) and MERGED**.
 - **Phase 18 (CodeCApi Device Capabilities) is COMPLETE, DEVICE-ACCEPTED
   (2026-09-01) and MERGED via PR #38.** Session branch
   `arena/01a05b12-codec` @ `ffca133`: feature `012deea`, lint fix
@@ -72,6 +73,10 @@ No "start phase N" ceremony.
   2026-08-26; reinforced by `rule.md` §3). Committing to and pushing the
   session branch is fine; PR creation and any merge wait. Only an explicit
   phrase like "auto-merge when CI is green" changes this — don't infer it.
+- **The owner is browser-first.** Every GitHub action has a github.com click
+  path (merge a PR, re-run CI, run a workflow, download the APK) — `rule.md`
+  §10 is the cheat sheet. The `gh` commands are only the agent's spelling of
+  the same buttons.
 - **CLEAN-ROOM LAW (2026-08-31):** replicate FEATURES, never COPY code —
   closed-source (Spck): match visible behavior from mockups/public docs only,
   never decompile; GPL/copyleft (Termux): read public specs, re-implement,
@@ -86,7 +91,8 @@ No "start phase N" ceremony.
   `docs/chat-phase1/SOLUTIONS.md`, `docs/chat-phase3/REPOSITORY_SIGNING.md`.
 - **CI is the only test executor** — the sandbox has no Java runtime;
   `Build APK` runs `:app:assembleDebug` + `:app:testDebugUnitTest` +
-  `:app:lintDebug`. Write host-unit-testable, Android-free logic (pattern:
+  `:app:lintDebug` (via the `gradle-bootstrap` shim — see `rule.md` §5/§10).
+  Write host-unit-testable, Android-free logic (pattern:
   `TerminalBuffer`, `AnsiParser`, `GitManager`, `WebPreviewServer`,
   `DeviceApiOps` …).
 - **Sandbox limits:** reach `api.github.com` only — no CI logs/releases/
