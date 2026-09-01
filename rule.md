@@ -127,7 +127,9 @@ does not begin a lifecycle on its own (§1).
 - **No `.` on `PATH`.**
 - **Never `build-package.sh -I`** (installs official `com.termux` debs).
 - **Never overwrite `cc` or the real ELF `bash` with a shim.**
-- **TCC link order with `-o` last.**
+- **TCC link order with `-o` last.** *(This invariant is retired automatically
+  when Phase 21.4 removes TCC entirely — it will be struck from this list and
+  from `prompt.md` in that commit. Until D.4 is complete it still applies.)*
 - **Never use official `com.termux` packages or repositories.**
 - **Never bundle the bootstrap in the APK.**
 - **Repository metadata stays signed** (`signed-by=`, no `trusted=yes`).
@@ -163,7 +165,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-01)
+## 9. State snapshot (2026-09-01, updated for new phases)
 
 - **`main` = `dc68eee`** — Phase 18 via **PR #38** (merged 2026-09-01,
   owner's command "Create pr and marge"). Chain: `dc68eee` ← `f868e10`
@@ -171,16 +173,17 @@ Every update updates the docs **in the same commit**:
   Phase 19). Verify with `git ls-remote origin main` / the GitHub API — the
   local clone is shallow, so `git log` alone is not proof of history.
 - **Phases 3–17 & 19: merged. Phase 18: COMPLETE & DEVICE-ACCEPTED — merged
-  to `main` via PR #38 (2026-09-01).** The PR carried Phase 18
-  (feature `012deea`, lint fix `4460306`, docs `6c67202`), the Web Preview
-  fix (`d49ac47`), and this future-update manual + living-docs refresh
-  (`ffca133`).
-- **All phases complete → bug-wait mode.** There is no remaining spec'd
-  implementation; the agent waits for the owner to report a bug, listens
-  carefully, finds the underlying code problem, and solves it (§1). Open owner
-  items (not blocking): Phase 17 optional conflict recipe (needs a real
-  conflict), Phases 15/16 device-round-3 dedicated pass, amber ↑N badge for
-  never-published branches, Phase 14 §5 device round.
+  to `main` via PR #38 (2026-09-01).**
+- **New phases planned (2026-09-01, owner direction):** Phases 20-24
+  are fully spec'd in `docs/chat-phase20/` through `docs/chat-phase24/` and
+  summarised in `docs/RESEARCH_NEXT_PHASES.md`. No code written yet.
+  Recommended order: 20 (CI/packages) → 21 (retire TCC, LanguageRunProfile) →
+  22 (editor smoothness, IME keys) → 23 (inline PTY input) → 24 (polish batch).
+  20 and 22 can run in parallel (20 is CI-only; 22 is client-only).
+  **Owner starts a phase by saying "Start Phase 20" (or 21/22/23/24) in chat.**
+- **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
+  a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
+  device round.
 
 ---
 
