@@ -1,5 +1,7 @@
 package com.codeci.ide.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -401,9 +403,7 @@ fun GitControlSheet(
                     // A branch that tracks nothing has no "ahead" figure at
                     // all — it simply is not published yet, which is exactly
                     // the case the owner hit with a freshly created branch.
-                    val unpublished = state.status?.upstream == null &&
-                        state.status?.detached != true &&
-                        state.status?.branch != null
+                    val unpublished = state.status?.unpublished == true
                     if (ahead > 0 || state.pushError != null || unpublished) {
                         HorizontalDivider()
                         Row(
@@ -441,6 +441,12 @@ fun GitControlSheet(
                                         color = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.padding(top = 2.dp)
                                     )
+                                }
+                                // Phase 17 follow-up — a tappable help link
+                                // (the GitHub token page) when the failure has
+                                // one, so "no token" is one tap from the fix.
+                                state.pushHelpUrl?.let { url ->
+                                    GitHelpLink(url)
                                 }
                             }
                             Spacer(Modifier.width(10.dp))
@@ -485,6 +491,32 @@ private fun SheetGuidance(text: String) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
+    )
+}
+
+/**
+ * A tappable "Create a GitHub token ↗" link, opened in the browser via an
+ * ACTION_VIEW intent (the app has no in-app browser; this is the same
+ * approach the Settings screen uses for its GitHub links).
+ */
+@Composable
+private fun GitHelpLink(url: String) {
+    val context = LocalContext.current
+    Text(
+        text = "Create a GitHub token ↗",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .clickable {
+                runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }
+            }
+            .padding(vertical = 2.dp)
     )
 }
 

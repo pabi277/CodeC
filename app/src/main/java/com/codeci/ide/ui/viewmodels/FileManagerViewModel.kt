@@ -10,6 +10,7 @@ import com.codeci.ide.ui.projects.BuildArtifactIgnore
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
 import com.codeci.ide.ui.projects.GitContext
+import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectConfig
 import com.codeci.ide.ui.projects.PythonCacheIgnore
@@ -128,7 +129,9 @@ class FileManagerViewModel : ViewModel() {
                 lastModified = scan.lastModified,
                 hasChanges = hasChanges,
                 // Phase 17 device fix: commits that never reached the remote.
-                unpushed = status?.ahead ?: 0
+                unpushed = status?.ahead ?: 0,
+                // Phase 17 follow-up: a branch with commits but no remote.
+                unpublished = status?.unpublished == true
             )
         }
     }
@@ -450,8 +453,9 @@ class FileManagerViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             _isBusy.value = true
+            var git: GitManager? = null
             try {
-                val git = GitContext(context.applicationContext).manager()
+                git = GitContext(context.applicationContext).manager()
                     ?: error(context.getString(R.string.git_not_installed_message))
                 if (!GitManager.isCloneableUrl(url.trim())) {
                     error(context.getString(R.string.clone_invalid_url))
@@ -475,7 +479,8 @@ class FileManagerViewModel : ViewModel() {
                 val dest = File(manager.projectsRoot(), name)
                 try {
                     withContext(Dispatchers.IO) {
-                        git.clone(url.trim(), dest, shallow = shallow, branch = selectedBranch)
+                        git?.clone(url.trim(), dest, shallow = shallow, branch = selectedBranch)
+                            ?: error(context.getString(R.string.git_not_installed_message))
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.IO) { dest.deleteRecursively() }
@@ -496,7 +501,7 @@ class FileManagerViewModel : ViewModel() {
             } catch (e: Exception) {
                 _userMessage.value = context.getString(
                     R.string.clone_failed,
-                    e.message ?: context.getString(R.string.create_failed)
+                    friendlyGitMessage(e, git)
                 )
             } finally {
                 _isBusy.value = false
@@ -542,22 +547,23 @@ class FileManagerViewModel : ViewModel() {
     fun pushProject(context: Context, projectName: String, onDone: () -> Unit = {}) {
         viewModelScope.launch {
             _isBusy.value = true
+            var git: GitManager? = null
             try {
                 val manager = ProjectManager(context)
                 val project = withContext(Dispatchers.IO) { manager.project(projectName) }
                     ?: error(context.getString(R.string.project_missing))
-                val git = GitContext(context.applicationContext).manager()
+                git = GitContext(context.applicationContext).manager()
                     ?: error(context.getString(R.string.git_not_installed_message))
                 // Phase 17 device fix: a branch created in the app has no
                 // upstream, so publish it instead of failing.
-                withContext(Dispatchers.IO) { git.pushHandlingUpstream(project.root) }
+                withContext(Dispatchers.IO) { git?.pushHandlingUpstream(project.root) }
                 loadProjects(context)
                 _userMessage.value = context.getString(R.string.hub_push_success, projectName)
                 onDone()
             } catch (e: Exception) {
                 _userMessage.value = context.getString(
                     R.string.hub_push_failed,
-                    e.message ?: context.getString(R.string.create_failed)
+                    friendlyGitMessage(e, git)
                 )
             } finally {
                 _isBusy.value = false
@@ -573,13 +579,14 @@ class FileManagerViewModel : ViewModel() {
     fun pullProject(context: Context, projectName: String, onDone: () -> Unit = {}) {
         viewModelScope.launch {
             _isBusy.value = true
+            var git: GitManager? = null
             try {
                 val manager = ProjectManager(context)
                 val project = withContext(Dispatchers.IO) { manager.project(projectName) }
                     ?: error(context.getString(R.string.project_missing))
-                val git = GitContext(context.applicationContext).manager()
+                git = GitContext(context.applicationContext).manager()
                     ?: error(context.getString(R.string.git_not_installed_message))
-                withContext(Dispatchers.IO) { git.pull(project.root) }
+                withContext(Dispatchers.IO) { git?.pull(project.root) }
                 loadProjects(context)
                 if (_activeProject.value?.name == projectName) refreshTree()
                 _userMessage.value = context.getString(R.string.hub_pull_success, projectName)
@@ -587,7 +594,7 @@ class FileManagerViewModel : ViewModel() {
             } catch (e: Exception) {
                 _userMessage.value = context.getString(
                     R.string.hub_pull_failed,
-                    e.message ?: context.getString(R.string.create_failed)
+                    friendlyGitMessage(e, git)
                 )
             } finally {
                 _isBusy.value = false
@@ -754,6 +761,19 @@ class FileManagerViewModel : ViewModel() {
         }
         return candidate
     }
+
+    /**
+     * Friendly git failure text for hub operations: real git process failures
+     * are classified (offline / no token / rejected / …) with a help link;
+     * validation messages pass through unchanged.
+     */
+    private fun friendlyGitMessage(e: Throwable, git: GitManager?): String =
+        if (e is GitManager.GitCommandException) {
+            GitErrors.classify(e.message, e.exitCode, hasToken = git?.hasCredentials == true)
+                .display()
+        } else {
+            e.message ?: "Git is unavailable"
+        }
 
     private fun queryDisplayName(context: Context, uri: Uri): String? {
         if (DocumentsContract.isTreeUri(uri)) {

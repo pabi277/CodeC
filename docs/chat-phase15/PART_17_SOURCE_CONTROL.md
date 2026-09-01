@@ -428,3 +428,87 @@ ahead (`git status -b`); a branch that was never published shows no hub badge
 (the in-sheet row covers it) — say the word to extend it.
 
 ---
+
+### 6.3 Follow-up (2026-09-01) — new branches never reach GitHub; local commits looked pushed
+
+**Owner report:** *"Known bugs — create a new branch don't add in github, locally
+commit cannot be pushed."*
+
+**Symptom.** Two faces of the same gap:
+1. **Create a new branch** (Switch Branch → New branch…) created the branch
+   *locally only* (`git checkout -b <name>`); nothing published it, so it never
+   appeared on GitHub.
+2. **A commit on a never-published branch looked uploaded** — `git status -b`
+   reports no `ahead` count for a branch with no upstream, so the Projects card
+   showed no amber badge and the work silently stayed on the device.
+
+**Root cause.**
+- `GitManager.switchBranch` → `checkoutTarget` → `BranchTargetKind.NEW` only ran
+  `checkoutNew`; the publish step was missing entirely.
+- `push(setUpstream=true)` used the refspec `HEAD` instead of the branch's own
+  name (fragile when HEAD resolution is ambiguous).
+- `ProjectHubEntry.unpushed = status.ahead` is `0` for an unpublished branch
+  (no upstream to compare against), so the hub badge could not express
+  "branch not on GitHub"; `GitStatus` had no notion of a committed-but-
+  unpublished branch.
+
+**Fix (`[client-only]`, host-testable):**
+- `GitManager.push(..., branchName)` now pushes the explicit branch name
+  (`git push --set-upstream <remote> <branch>`, git's own guidance); `HEAD` is
+  only the fallback. `pushHandlingUpstream` passes `status.branch`.
+- `GitManager.switchBranch` **publishes a NEW branch on creation** (best-effort).
+  The result carries `published`/`publishError`, and the Switch Branch dialog
+  says "· published to GitHub" or "· not on GitHub yet: <reason>".
+- `GitStatus` gained `noCommits` (from `## No commits yet on <branch>`) and a
+  computed `unpublished` (branch exists, has commits, tracks nothing). The
+  Source Control sheet and the Projects card both use it.
+- The Projects card now shows a bare amber **↑** pill for a branch that is not
+  on the remote yet (the `↑N` pill keeps its ahead-count meaning).
+
+**Tests:** `GitBranchManagerTest` +4 (publish-on-create argv, honest publish
+failure, no publish for LOCAL/REMOTE, HEAD fallback) and `pushHandlingUpstream`
+asserts the branch name; `GitStatusParserTest` +3 (`noCommits`, `unpublished`,
+tracking/detached negatives).
+
+**CI:** green at `33476150534` (`Build APK`, assemble + unit tests + lint,
+4m6s). **Device pass required** for the owner's own new-branch → GitHub round
+trip (no device in the agent sandbox).
+
+### 6.4 Follow-up (2026-09-01) — clear, user-friendly git error messages
+
+**Owner report:** *"Add clear error messages like git is not installed, no token
+available, a guide to get a new token with proper link, and other things that
+will be user friendly."*
+
+**Problem.** A failed push/clone/switch showed raw, redacted git text (e.g.
+`fatal: could not read Username for 'https://github.com'`), which is not
+actionable for a phone user and gave no path to fix it.
+
+**Fix (`[client-only]`, host-testable):**
+- New Android-free classifier `GitErrors` (`ui/projects/GitErrors.kt`) maps
+  already-redacted git text + exit code + token-availability into a
+  `GitFriendlyError` (`kind`, one-sentence `message`, optional `helpUrl`,
+  `detail` kept only for logs). Kinds: `NOT_INSTALLED`, `NOT_A_REPOSITORY`,
+  `NO_TOKEN`, `TOKEN_PERMISSION`, `AUTH_FAILED`, `OFFLINE`, `REJECTED`,
+  `NO_UPSTREAM`, `BRANCH_EXISTS`, `CONFLICT`, `TIMEOUT`, `GENERIC`.
+- `GitErrors.TOKEN_HELP_URL` = GitHub's fine-grained PAT page
+  (`https://github.com/settings/personal-access-tokens/new`); token/permission
+  failures carry it as a help link.
+- Wired into every user-visible git failure: `GitControlViewModel`
+  (commit & push, retry push, pull, branch switch, status refresh),
+  `FileManagerViewModel` (clone, hub push, hub pull) and the switch-branch
+  auto-publish path in `GitManager` (whose `SwitchBranchResult.publishError`
+  is now friendly too).
+- The Source Control sheet renders a tappable **"Create a GitHub token ↗"** link
+  next to a sticky push error (`GitControlView`), and Settings → GitHub Account
+  gained the same one-tap link (`SettingsScreen`) so "no token" is always one
+  tap from the fix. Non-git validation messages ("Enter a commit message",
+  "Invalid branch name") still pass through unchanged.
+
+**Tests:** new `GitErrorsTest` (23 cases: every failure class, case-insensitive
+match, helpers, `display()` URL appending); `GitBranchManagerTest` updated to
+expect the friendly publish-failure message.
+
+**CI:** green at `33479410194` (`Build APK`, assemble + unit tests + lint,
+~4m). Two earlier red runs were the same one-line test-expectation gap
+(`notInstalled` wording) — fixed in a follow-up test commit.

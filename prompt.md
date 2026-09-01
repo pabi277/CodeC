@@ -20,12 +20,13 @@ gate, invariants, docs policy) — follow it.
 
 **WHERE THINGS STAND (2026-09-01, verified against GitHub):**
 
-- **`main` = `f868e10` + PR #38 (Phase 18 + Web Preview fix + rule.md,
-  merged 2026-09-01 on the owner's "Create pr and marge") — verify the tip
-  with `git log` / the GitHub API.** Phases 3–14, 19 (PR #34 @ `b869ce6`),
-  Phases 15/16 (PR #36 @ `a0e7dc3`), Phase 17 (PR #37 @ `f868e10`) and
-  **Phase 18 (PR #38)** are all **COMPLETE, DEVICE-ACCEPTED (where gated)
-  and MERGED**.
+- **`main` = `dc68eee` — Phase 18 via PR #38** (merged 2026-09-01 on the
+  owner's "Create pr and marge"); `f868e10` = PR #37 (Phase 17), `a0e7dc3` =
+  PR #36 (Phases 15/16), `b869ce6` = PR #34 (Phase 19) — verify the tip with
+  `git ls-remote origin main` / the GitHub API (the local clone is shallow).
+  Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
+  Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
+  **COMPLETE, DEVICE-ACCEPTED (where gated) and MERGED**.
 - **Phase 18 (CodeCApi Device Capabilities) is COMPLETE, DEVICE-ACCEPTED
   (2026-09-01) and MERGED via PR #38.** Session branch
   `arena/01a05b12-codec` @ `ffca133`: feature `012deea`, lint fix
@@ -58,13 +59,17 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
+- **ALL PHASES COMPLETE.** No spec'd implementation remains. The agent waits
+  for the owner to report a bug — listen carefully, find the underlying code
+  problem, solve it. No self-initiated work.
 
-**FUTURE-UPDATE MODE (owner, 2026-09-01):** the owner will not run phases /
-per-phase recipes anymore; they state the change they want and **merge to
-`main`** themselves (or hand the merge command). Every future change follows
-`rule.md`: verify → evidence → research → host-testable implementation +
-tests → docs → commit/push → CI green → report → STOP at the merge gate.
-No "start phase N" ceremony.
+**FUTURE-UPDATE MODE (owner, 2026-09-01):** **all phases are complete.** The
+agent **waits for the owner to report a bug** — it does not start new work on
+its own. When the owner reports a bug, the agent **listens carefully, finds
+the underlying code problem, and solves it**. Every fix follows `rule.md`:
+verify → evidence → research → host-testable implementation + tests → docs →
+commit/push → CI green → report → STOP at the merge gate. The owner merges to
+`main` themselves (or hands the merge command). No "start phase N" ceremony.
 
 **STANDING RULES (law):**
 
@@ -72,6 +77,10 @@ No "start phase N" ceremony.
   2026-08-26; reinforced by `rule.md` §3). Committing to and pushing the
   session branch is fine; PR creation and any merge wait. Only an explicit
   phrase like "auto-merge when CI is green" changes this — don't infer it.
+- **The owner is browser-first.** Every GitHub action has a github.com click
+  path (merge a PR, re-run CI, run a workflow, download the APK) — `rule.md`
+  §10 is the cheat sheet. The `gh` commands are only the agent's spelling of
+  the same buttons.
 - **CLEAN-ROOM LAW (2026-08-31):** replicate FEATURES, never COPY code —
   closed-source (Spck): match visible behavior from mockups/public docs only,
   never decompile; GPL/copyleft (Termux): read public specs, re-implement,
@@ -86,7 +95,8 @@ No "start phase N" ceremony.
   `docs/chat-phase1/SOLUTIONS.md`, `docs/chat-phase3/REPOSITORY_SIGNING.md`.
 - **CI is the only test executor** — the sandbox has no Java runtime;
   `Build APK` runs `:app:assembleDebug` + `:app:testDebugUnitTest` +
-  `:app:lintDebug`. Write host-unit-testable, Android-free logic (pattern:
+  `:app:lintDebug` (via the `gradle-bootstrap` shim — see `rule.md` §5/§10).
+  Write host-unit-testable, Android-free logic (pattern:
   `TerminalBuffer`, `AnsiParser`, `GitManager`, `WebPreviewServer`,
   `DeviceApiOps` …).
 - **Sandbox limits:** reach `api.github.com` only — no CI logs/releases/
@@ -122,9 +132,10 @@ No "start phase N" ceremony.
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. All spec'd phases are done; Phase 18 is on the session branch awaiting the
-   owner's merge. New work starts from `rule.md`'s update lifecycle; there is
-   no phase queue to follow.
+2. All spec'd phases are done and merged. The agent is in **bug-wait mode**:
+   do nothing until the owner reports a bug, then listen carefully, find the
+   code problem, and solve it via `rule.md`'s update lifecycle. No phase
+   queue; no self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,

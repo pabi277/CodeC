@@ -1205,6 +1205,24 @@ private fun ProjectHubCard(
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
+            } else if (entry.unpublished) {
+                // Phase 17 follow-up — the branch itself is not on the remote
+                // yet (a fresh branch has no "ahead" count), so show a bare ↑
+                // so a local-only branch is never mistaken for an uploaded one.
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(5.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        "↑",
+                        color = HubBadgeYellow,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
             Box {
                 IconButton(onClick = { menuOpen = true }) {

@@ -1,16 +1,36 @@
 # CodeC — the full journey
 
 **Last updated:** 2026-09-01 · **State:** **✅ ALL PHASES MERGED — `main` =
-`f868e10` + PR #38** (Phase 18 + Web Preview fix + `rule.md`, merged 2026-09-01
-on the owner's "Create pr and marge"; verify the tip with `git log`). Phases
+`dc68eee` (Phase 18 via PR #38)** (Phase 18 + Web Preview fix + `rule.md`,
+merged 2026-09-01 on the owner's "Create pr and marge"; verify with
+`git ls-remote origin main` — the local clone is shallow). Phases
 3–14 ✅ complete & merged, **Phases 15–17 (Spck clone) ✅ COMPLETE and MERGED**
 (PR #36 @ `a0e7dc3`, PR #37 @ `f868e10`), Phase 19 ✅ merged (PR #34 @
 `b869ce6`), **Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE &
 DEVICE-ACCEPTED and MERGED via PR #38** (from `arena/01a05b12-codec` @
 `ffca133`; CI green `33468442063` / `33468793012` / `33471103959` /
 `33472175072`). **No remaining spec'd implementation — the owner's
-future-update mode is defined in [`rule.md`](../rule.md) (owner will not run
-phases anymore and merges to `main`).**
+future-update mode is defined in [`rule.md`](../rule.md): all phases are
+complete, so the agent waits for the owner to report a bug, listens carefully,
+finds the underlying code problem, and solves it (owner merges to `main`).**
+**First bug report in the new mode (2026-09-01):** *"create a new branch don't
+add in github, locally commit cannot be pushed"* — new branches were never
+published (now published on creation) and an unpublished branch showed no
+"not pushed" badge (now an amber `↑` pill). CI green `33476150534`; owner
+device pass pending. Record:
+[`chat-phase15/PART_17_SOURCE_CONTROL.md`](chat-phase15/PART_17_SOURCE_CONTROL.md)
+§6.3.
+
+**Second bug report in the new mode (2026-09-01):** *"add clear error messages
+like git is not installed, no token available, a guide to get a new token with
+proper link, and other things that will be user friendly."* — every git failure
+now ends in an actionable sentence instead of raw git text, via a new
+Android-free `GitErrors` classifier (+ `GitErrorsTest` 23 host tests); token
+failures carry GitHub's fine-grained PAT page as a tappable
+"Create a GitHub token ↗" link in the Source Control sheet and Settings →
+GitHub Account. CI green `33479410194`; owner device pass pending. Record:
+[`chat-phase15/PART_17_SOURCE_CONTROL.md`](chat-phase15/PART_17_SOURCE_CONTROL.md)
+§6.4.
 **Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE & DEVICE-ACCEPTED
 (2026-09-01, `arena/01a05b12-codec`, `4460306`, CI `33468442063`, owner §4
 recipe PASSED) — the last spec'd work; Phase 18 is CLOSED.** Five CLI scripts +
