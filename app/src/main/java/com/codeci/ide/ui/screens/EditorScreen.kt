@@ -162,9 +162,14 @@ fun EditorScreen(
     onFileRenamed: (String) -> Unit = {},
     onProjectSelected: (ProjectInfo) -> Unit = {},
     onOpenInTerminal: (String?) -> Unit = {},
-    onOpenPreview: (String) -> Unit = {},
+    /**
+     * Opens the static Web Preview. The project travels with the file because
+     * the Nav route argument can be stale after an in-editor folder switch
+     * (Phase 9.2) — the caller supplies the file's real project instead.
+     */
+    onOpenPreview: (projectName: String?, fileName: String) -> Unit = { _, _ -> },
     /** Phase 14 — open Web Preview on a live server URL detected by RUN ▶. */
-    onOpenPreviewUrl: (String) -> Unit = {},
+    onOpenPreviewUrl: (projectName: String?, url: String) -> Unit = { _, _ -> },
     /** Phase 16 — the drawer footer jumps to the app Settings screen. */
     onOpenSettings: () -> Unit = {},
     viewModel: EditorViewModel = viewModel()
@@ -293,14 +298,14 @@ fun EditorScreen(
         viewModel.updateCode(TextFieldValue(newText, selection = TextRange(caret)))
     }
 
-    val isWebProject = remember(projectName) {
-        projectName?.let { name ->
+    val isWebProject = remember(currentProject) {
+        currentProject?.let { name ->
             ProjectManager(context).project(name)?.config?.type?.equals("web", ignoreCase = true)
         } == true
     }
 
     fun projectRunCommandOrNull(): String? {
-        val project = projectName ?: return null
+        val project = currentProject ?: return null
         if (!viewModel.saveFile(context)) return null
         val info = ProjectManager(context).project(project) ?: return null
         if (info.config.type.equals("web", ignoreCase = true)) return null
@@ -311,7 +316,7 @@ fun EditorScreen(
     // the config entry; a `web` project still falls back to its entry, and RUN
     // ▶ keeps its Phase 11/14 behavior (this only refines WHICH page opens).
     fun webDefaultEntryOrNull(): String? {
-        val project = projectName ?: return null
+        val project = currentProject ?: return null
         if (!viewModel.saveFile(context)) return null
         val info = ProjectManager(context).project(project) ?: return null
         val isWeb = info.config.type.equals("web", ignoreCase = true)
@@ -384,8 +389,8 @@ fun EditorScreen(
     val openPreviewUrlState = rememberUpdatedState(onOpenPreviewUrl)
     val openPreviewState = rememberUpdatedState(onOpenPreview)
     LaunchedEffect(Unit) {
-        viewModel.setServerReadyHandler { url -> openPreviewUrlState.value(url) }
-        viewModel.setWebPreviewHandler { entry -> openPreviewState.value(entry) }
+        viewModel.setServerReadyHandler { project, url -> openPreviewUrlState.value(project, url) }
+        viewModel.setWebPreviewHandler { project, entry -> openPreviewState.value(project, entry) }
     }
 
     // Phase 16 — the drawer tree + git meta refresh on open (and the tree once
@@ -648,7 +653,7 @@ fun EditorScreen(
                     },
                     onLaunchEntry = { entry ->
                         uiScope.launch { drawerState.close() }
-                        onOpenPreview(entry.relativePath)
+                        onOpenPreview(entry.projectName, entry.relativePath)
                     },
                     onSetLaunchDefault = { viewModel.setLaunchDefault(context, it.relativePath) },
                     onClearLaunchDefault = { viewModel.setLaunchDefault(context, null) },
@@ -936,7 +941,10 @@ fun EditorScreen(
                                     // No separate preview affordance.
                                     val entry = previewEntryOrNull()
                                     if (entry != null) {
-                                        onOpenPreview(entry)
+                                        // The VM project is authoritative: the
+                                        // Nav route's projectName can be stale
+                                        // after an in-editor folder switch.
+                                        onOpenPreview(currentProject, entry)
                                     } else {
                                         Toast.makeText(
                                             context,
@@ -947,7 +955,7 @@ fun EditorScreen(
                                 } else if (isWebProject) {
                                     val entry = webDefaultEntryOrNull()
                                     if (entry != null) {
-                                        onOpenPreview(entry)
+                                        onOpenPreview(currentProject, entry)
                                     } else {
                                         Toast.makeText(
                                             context,
@@ -1328,7 +1336,9 @@ fun EditorScreen(
                     onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
                     onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
                     onSendInput = { viewModel.sendInputToRun(it) },
-                    onOpenPreviewUrl = onOpenPreviewUrl,
+                    // The Output Panel's "open URL" button carries the same
+                    // authoritative project as the RUN ▶ preview path.
+                    onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     modifier = Modifier.height(outputPanelHeight.dp)
                 )
             } else {
@@ -1342,7 +1352,7 @@ fun EditorScreen(
                     onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
                     onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
                     onSendInput = { viewModel.sendInputToRun(it) },
-                    onOpenPreviewUrl = onOpenPreviewUrl,
+                    onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     modifier = Modifier.height(64.dp)
                 )
             }

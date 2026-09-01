@@ -128,3 +128,40 @@ unit tests; the existing suites guard regressions. CI: run `33243620762` green.
 3. Switch to "Single files" → + New file → `hello.c` → type a `main()`, Run button
    compiles it; or long-press the row → Run in terminal → `cc hello.c -o a.out && ./a.out`
    executes in the terminal tab. Long-press → Delete removes the file.
+
+## Phase 9.2 follow-up — Web Preview "File not found" after a folder switch (owner report 2026-09-01)
+
+**Symptom:** an HTML file (imported/copied from storage) opened from the editor
+shows `File not found: <name>` in the Web Preview when opened via the drawer's
+launch/👁 action or the RUN ▶ button.
+
+**Root cause:** the editor opens the preview through the Nav route's
+`projectName` argument. Phase 9.2's in-editor *Open folder* picker (and Phase
+9.1's *Save to project…*) switch the editor's working folder inside
+`EditorViewModel` (`_projectName`) **without re-creating the Nav route**, so
+the route argument stays the stale original project (or `null`). The preview
+then resolved the HTML inside the wrong project — e.g. a file living in
+`CodeC/projects/<imported>/index.html` was looked up in the projects root or in
+the previously open project — and reported `File not found`.
+
+**Fix (same commit):** the preview navigation now carries the **authoritative
+project identity** instead of the route argument:
+
+- `EditorScreen.onOpenPreview` / `onOpenPreviewUrl` take
+  `(projectName: String?, fileName|url)`; the drawer's launch action passes the
+  entry's own `entry.projectName`, and RUN ▶ passes `currentProject` (the VM's
+  project, mirroring `runActiveFile`).
+- `EditorViewModel`'s `serverReadyHandler` / `webPreviewHandler` now deliver
+  `(projectName, value)`; the server/URL path emits `info.name` (the project the
+  runner was started for), so the live-server preview and its `index.html`
+  live-reload watch also track the right project.
+- The same stale-argument reads in `isWebProject`, `webDefaultEntryOrNull()` and
+  `projectRunCommandOrNull()` now use `currentProject` (VM) too.
+- `MainActivity` renders the Preview route with the carried project; the Nav
+  route argument is no longer used for preview resolution.
+
+Files: `MainActivity.kt`, `EditorScreen.kt`, `EditorViewModel.kt`. No pure
+function surface changed → no new unit tests; CI (compile + existing host
+suites) is the executor. Once built, the owner's repro — import an HTML file,
+open the editor, switch folder (or Save to project…) into the imported project,
+then launch/run it — must open the preview and render the page.

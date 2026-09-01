@@ -459,13 +459,18 @@ fun MainApp() {
                             restoreState = true
                         }
                     },
-                    onOpenPreview = { name ->
-                        navController.navigate(Screen.Preview.createRoute(name, projectName)) {
+                    onOpenPreview = { previewProject, name ->
+                        // The project comes from the editor's current context
+                        // (or the drawer entry), never from the route argument:
+                        // after an in-editor folder switch the route arg can
+                        // point at a different project and the preview would
+                        // report "File not found".
+                        navController.navigate(Screen.Preview.createRoute(name, previewProject)) {
                             launchSingleTop = true
                         }
                     },
-                    onOpenPreviewUrl = { url ->
-                        navController.navigate(Screen.Preview.createRoute(projectName = projectName, url = url)) {
+                    onOpenPreviewUrl = { previewProject, url ->
+                        navController.navigate(Screen.Preview.createRoute(projectName = previewProject, url = url)) {
                             launchSingleTop = true
                         }
                     },
