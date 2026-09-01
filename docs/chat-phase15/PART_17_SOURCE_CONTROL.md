@@ -473,3 +473,42 @@ tracking/detached negatives).
 **CI:** green at `33476150534` (`Build APK`, assemble + unit tests + lint,
 4m6s). **Device pass required** for the owner's own new-branch → GitHub round
 trip (no device in the agent sandbox).
+
+### 6.4 Follow-up (2026-09-01) — clear, user-friendly git error messages
+
+**Owner report:** *"Add clear error messages like git is not installed, no token
+available, a guide to get a new token with proper link, and other things that
+will be user friendly."*
+
+**Problem.** A failed push/clone/switch showed raw, redacted git text (e.g.
+`fatal: could not read Username for 'https://github.com'`), which is not
+actionable for a phone user and gave no path to fix it.
+
+**Fix (`[client-only]`, host-testable):**
+- New Android-free classifier `GitErrors` (`ui/projects/GitErrors.kt`) maps
+  already-redacted git text + exit code + token-availability into a
+  `GitFriendlyError` (`kind`, one-sentence `message`, optional `helpUrl`,
+  `detail` kept only for logs). Kinds: `NOT_INSTALLED`, `NOT_A_REPOSITORY`,
+  `NO_TOKEN`, `TOKEN_PERMISSION`, `AUTH_FAILED`, `OFFLINE`, `REJECTED`,
+  `NO_UPSTREAM`, `BRANCH_EXISTS`, `CONFLICT`, `TIMEOUT`, `GENERIC`.
+- `GitErrors.TOKEN_HELP_URL` = GitHub's fine-grained PAT page
+  (`https://github.com/settings/personal-access-tokens/new`); token/permission
+  failures carry it as a help link.
+- Wired into every user-visible git failure: `GitControlViewModel`
+  (commit & push, retry push, pull, branch switch, status refresh),
+  `FileManagerViewModel` (clone, hub push, hub pull) and the switch-branch
+  auto-publish path in `GitManager` (whose `SwitchBranchResult.publishError`
+  is now friendly too).
+- The Source Control sheet renders a tappable **"Create a GitHub token ↗"** link
+  next to a sticky push error (`GitControlView`), and Settings → GitHub Account
+  gained the same one-tap link (`SettingsScreen`) so "no token" is always one
+  tap from the fix. Non-git validation messages ("Enter a commit message",
+  "Invalid branch name") still pass through unchanged.
+
+**Tests:** new `GitErrorsTest` (23 cases: every failure class, case-insensitive
+match, helpers, `display()` URL appending); `GitBranchManagerTest` updated to
+expect the friendly publish-failure message.
+
+**CI:** green at `33479410194` (`Build APK`, assemble + unit tests + lint,
+~4m). Two earlier red runs were the same one-line test-expectation gap
+(`notInstalled` wording) — fixed in a follow-up test commit.

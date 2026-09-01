@@ -20,6 +20,17 @@ published (now published on creation) and an unpublished branch showed no
 device pass pending. Record:
 [`chat-phase15/PART_17_SOURCE_CONTROL.md`](chat-phase15/PART_17_SOURCE_CONTROL.md)
 §6.3.
+
+**Second bug report in the new mode (2026-09-01):** *"add clear error messages
+like git is not installed, no token available, a guide to get a new token with
+proper link, and other things that will be user friendly."* — every git failure
+now ends in an actionable sentence instead of raw git text, via a new
+Android-free `GitErrors` classifier (+ `GitErrorsTest` 23 host tests); token
+failures carry GitHub's fine-grained PAT page as a tappable
+"Create a GitHub token ↗" link in the Source Control sheet and Settings →
+GitHub Account. CI green `33479410194`; owner device pass pending. Record:
+[`chat-phase15/PART_17_SOURCE_CONTROL.md`](chat-phase15/PART_17_SOURCE_CONTROL.md)
+§6.4.
 **Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE & DEVICE-ACCEPTED
 (2026-09-01, `arena/01a05b12-codec`, `4460306`, CI `33468442063`, owner §4
 recipe PASSED) — the last spec'd work; Phase 18 is CLOSED.** Five CLI scripts +
