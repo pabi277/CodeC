@@ -1,6 +1,13 @@
 # CodeC — the full journey
 
 **Last updated:** 2026-08-31 · **State:** Phases 3–14 ✅ complete & merged.
+**Phases 15–17 (Spck clone) ✅ COMPLETE and MERGED to `main` (2026-08-31,
+PR #36 for 15/16 and the Phase 17 PR from `arena/01a05878-codec`).** Phase 17
+closed the last Spck git gaps: Switch Branch (stash/auto-restore + New
+branch), merge-conflict grouping + Mark Resolved, and honest push state
+(upstream publishing, sticky "NOT pushed" + PUSH retry, amber ↑N badge) — see
+items 24–25. **Remaining roadmap: Phase 18 (CodeCApi device capabilities,
+spec'd in `docs/chat-phase18/`), plus owner device feedback.**
 **Phase 19 (Terminal Parity + Unicode/protocol parity) is COMPLETE,
 DEVICE-ACCEPTED and MERGED — PR #34 merged to `main` at `b869ce6`
 (2026-08-31T09:55:36Z)**, so `main` = `b869ce6` now (the previously cited
