@@ -2,6 +2,7 @@ package com.codeci.ide
 
 import com.codeci.ide.ui.projects.BranchTarget
 import com.codeci.ide.ui.projects.BranchTargetKind
+import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.GitStatusParser
 import java.io.File
@@ -437,10 +438,13 @@ class GitBranchManagerTest {
                 BranchTarget("feature/x", BranchTargetKind.NEW)
             )
             // The branch still exists locally; only the publish failed, and
-            // that must be reported, not silently swallowed.
+            // that must be reported, not silently swallowed. The message is
+            // the friendly, actionable one (no token → "No GitHub token…"),
+            // not raw git output.
             assertEquals("feature/x", result.branch)
             assertFalse(result.published)
-            assertTrue(result.publishError!!.contains("could not read Username"))
+            assertTrue(result.publishError!!.contains("No GitHub token"))
+            assertTrue(result.publishError!!.contains(GitErrors.TOKEN_HELP_URL))
         }
     }
 
