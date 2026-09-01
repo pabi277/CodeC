@@ -934,9 +934,14 @@ class RecipeOverrideTest(unittest.TestCase):
             "\"\n"
             "\n"
             "termux_step_host_build() {\n"
-            "\tninja -j \"$TERMUX_PKG_MAKE_PROCESSES\" clang-tblgen "
-            "clang-tidy-confusable-chars-gen lldb-tblgen llvm-tblgen "
-            "mlir-tblgen mlir-linalg-ods-yaml-gen\n"
+            # Exact upstream bytes: cmake line, then a TWO-LINE ninja command
+            # (backslash continuation, tab then tab-tab indent). An earlier
+            # single-line fixture hid this layout and dispatch 33544558167
+            # aborting at ~3.5 min is how we found out — keep it verbatim.
+            "\tcmake -G Ninja -DCMAKE_BUILD_TYPE=Release \\\n"
+            "\t\t-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lldb;mlir' \"$TERMUX_PKG_SRCDIR/llvm\"\n"
+            "\tninja -j \"$TERMUX_PKG_MAKE_PROCESSES\" clang-tblgen clang-tidy-confusable-chars-gen \\\n"
+            "\t\tlldb-tblgen llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen\n"
             "}\n"
             "\n"
             "termux_step_pre_configure() {\n"

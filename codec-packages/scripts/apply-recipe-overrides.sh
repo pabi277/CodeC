@@ -633,22 +633,61 @@ if [[ -f "$TREE/packages/libllvm/build.sh" ]]; then
   fi
   grep -vF -- '-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=ARC;CSKY;M68k;VE' "$LIBLLVM_BUILD" > "$LIBLLVM_BUILD.codec-tmp"
   mv "$LIBLLVM_BUILD.codec-tmp" "$LIBLLVM_BUILD"
-  # 3. drop lldb/mlir/polly from the project set (compiler-rt/lld/openmp stay)
-  if ! grep -qF 'local llvm_projects="clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly"' "$LIBLLVM_BUILD"; then
-    echo "recipe-overrides: libllvm project set drifted — re-review the trim" >&2
+  # 3-4. drop lldb/mlir/polly from the target project set, and trim the
+  #      HOST build in kind (its own -DLLVM_ENABLE_PROJECTS='clang;lldb;mlir'
+  #      line and the multi-line ninja tblgen list). The upstream ninja
+  #      region is TWO physical lines (backslash continuation + tab-tab
+  #      indent) and the cmake string differs from the target one — two
+  #      fixture-hidden mismatches proven by dispatch 33544558167 aborting
+  #      at ~3.5 min; one python block now edits all three byte-exactly.
+  python3 - "$LIBLLVM_BUILD" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+# All old-byte strings verbatim from the pinned upstream revision
+# (termux-packages @ 1bbe66903526df2e8af51e704316bc68ede72603,
+# packages/libllvm/build.sh): termux_step_pre_configure's project list, and
+# termux_step_host_build's cmake + ninja lines (tab indentation as upstream).
+edits = [
+    (
+        "target project set",
+        'local llvm_projects="clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly"',
+        'local llvm_projects="clang;clang-tools-extra;compiler-rt;lld;openmp"',
+    ),
+    (
+        "host cmake project set",
+        "-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lldb;mlir'",
+        "-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra'",
+    ),
+    (
+        "host ninja tblgen list",
+        '\tninja -j "$TERMUX_PKG_MAKE_PROCESSES" clang-tblgen clang-tidy-confusable-chars-gen \\\n'
+        '\t\tlldb-tblgen llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen\n',
+        '\tninja -j "$TERMUX_PKG_MAKE_PROCESSES" clang-tblgen clang-tidy-confusable-chars-gen llvm-tblgen\n',
+    ),
+]
+for label, old, new in edits:
+    if old not in text:
+        print(
+            f"recipe-overrides: libllvm {label} drifted — re-review the trim",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    text = text.replace(old, new, 1)
+path.write_text(text)
+print("recipe-overrides: libllvm project sets and host tblgen list trimmed")
+PY
+  if grep -qF 'lld;lldb;mlir;openmp;polly' "$LIBLLVM_BUILD" || grep -qF "clang;clang-tools-extra;lldb;mlir" "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: failed to trim the libllvm project sets" >&2
     exit 1
   fi
-  sed -i 's#clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly#clang;clang-tools-extra;compiler-rt;lld;openmp#' "$LIBLLVM_BUILD"
-  if grep -qF 'lldb;mlir' "$LIBLLVM_BUILD"; then
-    echo "recipe-overrides: failed to trim the libllvm project set" >&2
+  if grep -q 'mlir-linalg-ods-yaml-gen' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: failed to trim the libllvm host tblgen list" >&2
     exit 1
   fi
-  # 4. host build only needs the clang/llvm tablegen tools now
-  if ! grep -qF 'ninja -j "$TERMUX_PKG_MAKE_PROCESSES" clang-tblgen clang-tidy-confusable-chars-gen lldb-tblgen llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen' "$LIBLLVM_BUILD"; then
-    echo "recipe-overrides: libllvm host ninja line drifted — re-review the trim" >&2
-    exit 1
-  fi
-  sed -i 's#clang-tblgen clang-tidy-confusable-chars-gen lldb-tblgen llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen#clang-tblgen clang-tidy-confusable-chars-gen llvm-tblgen#' "$LIBLLVM_BUILD"
   # 5. exclude the lldb/mlir/libpolly subpackages for CodeC arches
   for sub in lldb mlir libpolly; do
     subfile="$TREE/packages/libllvm/$sub.subpackage.sh"
