@@ -165,22 +165,27 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-01, updated for new phases)
+## 9. State snapshot (2026-09-01, Phase 20 started)
 
-- **`main` = `dc68eee`** — Phase 18 via **PR #38** (merged 2026-09-01,
-  owner's command "Create pr and marge"). Chain: `dc68eee` ← `f868e10`
-  (PR #37 Phase 17) ← `a0e7dc3` (PR #36 Phases 15/16) ← `b869ce6` (PR #34
-  Phase 19). Verify with `git ls-remote origin main` / the GitHub API — the
-  local clone is shallow, so `git log` alone is not proof of history.
-- **Phases 3–17 & 19: merged. Phase 18: COMPLETE & DEVICE-ACCEPTED — merged
-  to `main` via PR #38 (2026-09-01).**
-- **New phases planned (2026-09-01, owner direction):** Phases 20-24
-  are fully spec'd in `docs/chat-phase20/` through `docs/chat-phase24/` and
-  summarised in `docs/RESEARCH_NEXT_PHASES.md`. No code written yet.
+- **`main` = `54ae06a`** — Phases 20–24 design docs via **PR #40** (merged
+  2026-09-01). Chain: `54ae06a` ← PR #39 (git branch-publishing + clear-error
+  fixes) ← `dc68eee` (PR #38 Phase 18) ← `f868e10` (PR #37 Phase 17) ←
+  `a0e7dc3` (PR #36 Phases 15/16) ← `b869ce6` (PR #34 Phase 19). Verify with
+  `git ls-remote origin main` / the GitHub API — the local clone is shallow,
+  so `git log` alone is not proof of history.
+- **Phases 3–19: merged. Phase 20: STARTED (owner's "Phase 20 start")** —
+  20.1 implemented on `arena/01a05cb9-codec` (round-4 toolchain roots +
+  overrides + tests; host suite green), **`[repo-build]` dispatch pending the
+  owner's explicit confirmation**. Phase 20.2's commit-tag guard needs a
+  re-design (the workflow is dispatch-only — see PART_20_2 §6).
+- **New phases planned (2026-09-01, owner direction):** Phases 21-24
+  are fully spec'd in `docs/chat-phase21/` through `docs/chat-phase24/` and
+  summarised in `docs/RESEARCH_NEXT_PHASES.md` (Phase 20 in progress; its
+  spec live-updated in `docs/chat-phase20/`).
   Recommended order: 20 (CI/packages) → 21 (retire TCC, LanguageRunProfile) →
   22 (editor smoothness, IME keys) → 23 (inline PTY input) → 24 (polish batch).
   20 and 22 can run in parallel (20 is CI-only; 22 is client-only).
-  **Owner starts a phase by saying "Start Phase 20" (or 21/22/23/24) in chat.**
+  **Owner starts a phase by saying "Start Phase 21" (or 22/23/24) in chat.**
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
   a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
   device round.

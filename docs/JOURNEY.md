@@ -1,15 +1,21 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-09-01 · **State:** **✅ ALL PHASES MERGED — `main` =
-`dc68eee` (Phase 18 via PR #38)** (Phase 18 + Web Preview fix + `rule.md`,
-merged 2026-09-01 on the owner's "Create pr and marge"; verify with
-`git ls-remote origin main` — the local clone is shallow). Phases
-3–14 ✅ complete & merged, **Phases 15–17 (Spck clone) ✅ COMPLETE and MERGED**
-(PR #36 @ `a0e7dc3`, PR #37 @ `f868e10`), Phase 19 ✅ merged (PR #34 @
-`b869ce6`), **Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE &
-DEVICE-ACCEPTED and MERGED via PR #38** (from `arena/01a05b12-codec` @
-`ffca133`; CI green `33468442063` / `33468793012` / `33471103959` /
-`33472175072`). **No remaining spec'd implementation — the owner's
+**Last updated:** 2026-09-01 · **State:** `main` = **`54ae06a`** (Phases 20–24
+research/design docs via **PR #40**, merged 2026-09-01; chain: `54ae06a` ←
+PR #39 `arena/01a05b6c-codec` git-branch-publishing + clear-error fixes ←
+PR #38 Phase 18 ← PR #37 ← PR #36 …; verify with `git ls-remote origin main` —
+the local clone is shallow). Phases 3–19 all complete/merged;
+**Phase 20.1 (package toolchain round 4: libllvm/clang + nodejs/npm + php +
+ruby + lua54) 🚧 IMPLEMENTED on `arena/01a05cb9-codec` (owner: "Phase 20
+start")** — host suite 93 green (8 new override tests); five new
+`apply-recipe-overrides.sh` blocks (clang `bin/cc` strip protecting the
+invariant, nodejs/npm debscripts no-ops, php heavy-extension trim, lua54
+alternatives→symlinks); **`[repo-build]` CI dispatch awaits the owner's
+explicit confirmation** (dispatch-only since round 1; pushes never trigger).
+Research corrections recorded in `docs/chat-phase20/PART_20_1_TOOLCHAINS.md`
+§7 — at the pinned ref there is no `gcc`/`clang` recipe: `libllvm` is the
+root and its clang subpackage ships the `gcc`/`g++` driver symlinks; `npm`
+is a separate recipe since nodejs 25.3.0-1. **No remaining spec'd implementation — the owner's
 future-update mode is defined in [`rule.md`](../rule.md): all phases are
 complete, so the agent waits for the owner to report a bug, listens carefully,
 finds the underlying code problem, and solves it (owner merges to `main`).**
@@ -739,4 +745,5 @@ recipe (steps 1–8).**
     - **Phase 20** (package toolchain): C.1 add `gcc`/`clang`/`nodejs`/`php`/`ruby`/`lua54` to `CODEC_REPOSITORY_PACKAGES` (CI `[repo-build]`); C.2 optional Go/Rust behind `[repo-build-heavy]` guard. `docs/chat-phase20/`.
     - **Phase 21** (retire TCC, generic run model): D.1 `LanguageRunProfile` + `LanguageRegistry` (12 languages, host-testable); D.2 auto-install gate (prompt + `pkg install` before first RUN); D.3 device acceptance; D.4 delete `assets/tcc/`, `EmbeddedCompiler`, `build-tcc.sh` — APK shrinks. `docs/chat-phase21/`.
     - **Phase 24** (polish batch): E.1 formatter menu; E.2 background-run notification; E.3 hardware shortcuts; E.4 ZIP share; E.5 tablet two-pane; E.6 test-runner UI; E.7 "Open with CodeC" intent; E.8 adaptive theme; E.9 per-project `.codec.json` override. `docs/chat-phase24/`.
-    Updated: `rule.md` §6 (TCC invariant retirement note), `rule.md` §9 (new phases), `prompt.md` (new phases block), `docs/NEXT_STEPS.md` (head state line). Commit `37096a1` (research doc) + this commit on `arena/01a05c74-codec`.
+    Updated: `rule.md` §6 (TCC invariant retirement note), `rule.md` §9 (new phases), `prompt.md` (new phases block), `docs/NEXT_STEPS.md` (head state line). Commit `37096a1` (research doc) + this commit on `arena/01a05c74-codec`. **Merged to `main` via PR #40 (2026-09-01) → `main` = `54ae06a`** (PR #39 — the git branch-publishing + clear-error fix from `arena/01a05b6c-codec` — landed just before it, closing the two "bug-wait mode" fixes recorded in items at the top of this file and in NEXT_STEPS).
+30. **Phase 20.1 — package toolchain round 4 (2026-09-01, `arena/01a05cb9-codec`, owner: "Phase 20 start").** CI/package-repo side of the compiler redesign — six new roots in `CODEC_REPOSITORY_PACKAGES`: **`libllvm`** (LLVM/Clang 21.1.8 — the actual compiler), `nodejs` 26.4.0-1, `npm` 11.19.0, `php` 8.5.1 (trimmed), `ruby` 3.4.1-2, `lua54` 5.4.8-10. Research against the live pinned tree invalidated two plan assumptions: there is **no `packages/gcc` or `packages/clang` recipe** at the pinned ref (clang is a `libllvm` subpackage whose include list already ships `bin/gcc`/`bin/g++`/`bin/c++`/`bin/cpp` driver symlinks — and `bin/cc`, which **CodeC strips** because `$PREFIX/bin/cc` is the app's own TCC frontend; invariant preserved, Phase 21.4 will revisit), and **npm was split out of nodejs** upstream (25.3.0-1) so it is its own root. New `apply-recipe-overrides.sh` blocks (all fail-loud, idempotent-marker style): clang `bin/cc` strip; nodejs `preinst` + npm `postinst` neutralized (last-definition-wins no-ops, python-pip precedent — maintainer scripts stay forbidden outside the five reviewed alternatives packages); **php trim** (apache/ldap/pgsql/gd configure flags + `postgresql` build-dep removed, `php-apache{,-ldap,-pgsql,-sodium}`/`php-ldap`/`php-pgsql`/`php-gd` subpackages excluded, `termux_step_post_make_install` replaced with a sodium-only twin — otherwise php would drag the apache2/openldap/postgresql/libgd source closures into the round); **lua54** `.alternatives` postinst replaced by plain relative `bin/lua`/`bin/luac` symlinks (repository validator allowlists only coreutils/less/nano/bat/util-linux). Ruby needed nothing. Tests: +8 hermetic cases in `test_recipe_overrides.py`; full repo suite **93 green locally**. Bootstrap seed/manager roots untouched → published bootstrap stays byte-identical. **Gate state:** `[repo-build]` dispatch + publish await the owner's explicit command (D9 records the 360-min timeout risk with LLVM as long pole; recovery = split libllvm into its own dispatch). C.2 ([repo-build-heavy] golang/rust) not started — its commit-message guard can't work on a dispatch-only workflow; design pivot noted in PART_20_2 §6. Record: `docs/chat-phase20/` (README + PART_20_1 §3/§6/§7 as implemented).

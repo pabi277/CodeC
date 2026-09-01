@@ -568,3 +568,300 @@ SH
 else
   echo "recipe-overrides: python-pip recipe not found; skipping debscripts neutralization" >&2
 fi
+
+# ============================ Phase 20.1 overrides ============================
+
+# CodeC invariant: never overwrite cc. $PREFIX/bin/cc is the app's own TCC
+# frontend written by ShellEnvironment; a package must never shadow it
+# (docs/TERMINAL_PLAN.md §B/§J). At the pinned revision there is no standalone
+# packages/gcc recipe — upstream removed it — and clang is a subpackage of
+# packages/libllvm. The clang subpackage's include list ships compatibility
+# symlinks bin/cc, bin/gcc, bin/g++, bin/c++, bin/cpp -> clang-<major>
+# (created in libllvm's termux_step_post_make_install). Keep gcc/g++/c++/cpp
+# (nothing in the CodeC userland owns them) but strip exactly the standalone
+# `bin/cc` line so `pkg install clang` can never clobber the app frontend.
+# Phase 21.4 revisits cc wiring when TCC is retired. Fail loudly if the line
+# disappears — a reworded include glob would need a fresh invariant review.
+CLANG_SUBPKG="$TREE/packages/libllvm/clang.subpackage.sh"
+if [[ -f "$CLANG_SUBPKG" ]]; then
+  if ! grep -qx 'bin/cc' "$CLANG_SUBPKG"; then
+    echo "recipe-overrides: clang subpackage include list no longer has a standalone bin/cc line (pinned-revision drift) — re-review the cc invariant" >&2
+    exit 1
+  fi
+  sed -i '/^bin\/cc$/d' "$CLANG_SUBPKG"
+  if grep -qx 'bin/cc' "$CLANG_SUBPKG"; then
+    echo "recipe-overrides: failed to strip bin/cc from the clang subpackage" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: clang subpackage never ships bin/cc (cc stays the app frontend; gcc/g++ kept)"
+else
+  echo "recipe-overrides: libllvm clang subpackage not found; skipping bin/cc strip" >&2
+fi
+
+# The nodejs recipe (26.4.0-1 at the pinned revision) defines its own
+# termux_step_create_debscripts() that emits a preinst notice (npm split out
+# of nodejs at 25.3.0-1). CodeC policy forbids maintainer scripts for EVERY
+# package (the five approved update-alternatives packages are the only
+# exception), and the shared debscripts stub cannot help here: the recipe is
+# sourced AFTER the step scripts, so a per-recipe definition overrides the
+# stub and the deb ships with DEBIAN/preinst — which generate-repository
+# rejects ("maintainer scripts are not allowed"). Same pattern as the
+# python/python-pip neutralization: append a last-defined no-op. Fail loudly
+# on pinned-revision drift.
+NODEJS_BUILD="$TREE/packages/nodejs/build.sh"
+if [[ -f "$NODEJS_BUILD" ]]; then
+  if ! grep -q '^termux_step_create_debscripts()' "$NODEJS_BUILD"; then
+    echo "recipe-overrides: nodejs recipe no longer defines its own termux_step_create_debscripts (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for nodejs' "$NODEJS_BUILD"; then
+    cat <<'SH' >> "$NODEJS_BUILD"
+
+# CodeC: no maintainer scripts for nodejs — maintainer scripts are forbidden
+# for every package. This recipe's own termux_step_create_debscripts (preinst
+# npm-split notice) overrides the shared stub because recipes are sourced
+# after the step scripts; neutralize it — appended last so this definition
+# wins (bash last-definition-wins).
+termux_step_create_debscripts() { :; }
+SH
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for nodejs' "$NODEJS_BUILD"; then
+    echo "recipe-overrides: failed to append nodejs debscripts override" >&2
+    exit 1
+  fi
+  if tail -n 8 "$NODEJS_BUILD" | grep -q 'PREINST_EOF\|cat <<-'; then
+    echo "recipe-overrides: nodejs recipe still emits a preinst after the override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: nodejs ships without maintainer scripts"
+else
+  echo "recipe-overrides: nodejs recipe not found; skipping debscripts neutralization" >&2
+fi
+
+# The npm recipe (standalone since nodejs 25.3.0-1; 11.19.0 at the pinned
+# revision) defines its own termux_step_create_debscripts() that emits a
+# postinst notice (foreground-scripts config hint). Same CodeC policy and the
+# same last-definition-wins no-op as nodejs/python-pip above. Fail loudly on
+# pinned-revision drift.
+NPM_BUILD="$TREE/packages/npm/build.sh"
+if [[ -f "$NPM_BUILD" ]]; then
+  if ! grep -q '^termux_step_create_debscripts()' "$NPM_BUILD"; then
+    echo "recipe-overrides: npm recipe no longer defines its own termux_step_create_debscripts (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for npm' "$NPM_BUILD"; then
+    cat <<'SH' >> "$NPM_BUILD"
+
+# CodeC: no maintainer scripts for npm — maintainer scripts are forbidden for
+# every package. This recipe's own termux_step_create_debscripts (postinst
+# foreground-scripts notice) overrides the shared stub because recipes are
+# sourced after the step scripts; neutralize it — appended last so this
+# definition wins (bash last-definition-wins).
+termux_step_create_debscripts() { :; }
+SH
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for npm' "$NPM_BUILD"; then
+    echo "recipe-overrides: failed to append npm debscripts override" >&2
+    exit 1
+  fi
+  if tail -n 8 "$NPM_BUILD" | grep -q 'POSTINST_EOF\|cat <<-'; then
+    echo "recipe-overrides: npm recipe still emits a postinst after the override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: npm ships without maintainer scripts"
+else
+  echo "recipe-overrides: npm recipe not found; skipping debscripts neutralization" >&2
+fi
+
+# The php recipe (8.5.1 at the pinned revision) builds every extension a
+# desktop distro wants — and prices them into the source-build closure:
+#   --with-ldap{,-sasl}   -> openldap
+#   --with-pgsql/--with-pdo-pgsql (+ TERMUX_PKG_BUILD_DEPENDS="postgresql")
+#                         -> postgresql
+#   --with-apxs2          -> apache2 (apxs is referenced in the MAIN configure;
+#                         post_make_install also patchelf's extension .so's
+#                         against libexec/apache2)
+#   --enable-gd --with-external-gd -> libgd (+ libpng/freetype/jpeg/webp/avif)
+# A phone IDE runs `php` and `php -S` — none of those extensions. Trim the
+# flags (the "shared" extensions then never build), drop the postgresql build
+# dependency, exclude the apache/ldap/pgsql/gd subpackages for CodeC arches
+# (python-tkinter pattern), and replace termux_step_post_make_install with a
+# trimmed twin that skips the php-apache assembly and writes conf.d entries
+# only for the extensions that still ship (sodium). php-fpm/php-sodium stay.
+# Every removal verifies an exact upstream line first and fails loudly on
+# pinned-revision drift.
+PHP_DIR="$TREE/packages/php"
+if [[ -d "$PHP_DIR" ]]; then
+  PHP_BUILD="$PHP_DIR/build.sh"
+  if [[ ! -f "$PHP_BUILD" ]]; then
+    echo "recipe-overrides: php recipe build.sh missing (pinned-revision drift)" >&2
+    exit 1
+  fi
+  # Exact lines from the pinned revision (termux-packages @
+  # 1bbe66903526df2e8af51e704316bc68ede72603, packages/php/build.sh
+  # TERMUX_PKG_EXTRA_CONFIGURE_ARGS). The gd php_cv_* cache lines stay: with
+  # --enable-gd removed they are inert, and keeping them shrinks the diff.
+  # Removal is a whole-line fixed-string filter (grep -vxF): no regex
+  # escaping games — the flags contain '/', '$' and '.'.
+  for flag in \
+    '--with-ldap=shared,$TERMUX_PREFIX' \
+    '--with-ldap-sasl' \
+    '--with-pgsql=shared,$TERMUX_PREFIX' \
+    '--with-pdo-pgsql=shared,$TERMUX_PREFIX' \
+    '--with-apxs2=$TERMUX_PKG_TMPDIR/apxs-wrapper.sh' \
+    '--enable-gd=shared,$TERMUX_PREFIX' \
+    '--with-external-gd' \
+  ; do
+    if ! grep -qxF -- "$flag" "$PHP_BUILD"; then
+      echo "recipe-overrides: php recipe no longer has the expected configure flag '$flag' (pinned-revision drift) — re-review the php trim" >&2
+      exit 1
+    fi
+    grep -vxF -- "$flag" "$PHP_BUILD" > "$PHP_BUILD.codec-tmp"
+    mv "$PHP_BUILD.codec-tmp" "$PHP_BUILD"
+    if grep -qxF -- "$flag" "$PHP_BUILD"; then
+      echo "recipe-overrides: failed to remove php configure flag '$flag'" >&2
+      exit 1
+    fi
+  done
+  echo "recipe-overrides: php trimmed apache/ldap/pgsql/gd configure flags"
+  if ! grep -q '^TERMUX_PKG_BUILD_DEPENDS="postgresql"$' "$PHP_BUILD"; then
+    echo "recipe-overrides: php recipe build-depends no longer has the expected postgresql line (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  sed -i '/^TERMUX_PKG_BUILD_DEPENDS="postgresql"$/d' "$PHP_BUILD"
+  if grep -q '^TERMUX_PKG_BUILD_DEPENDS=' "$PHP_BUILD"; then
+    echo "recipe-overrides: failed to remove the postgresql build dependency from php" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: php builds without the postgresql build dependency"
+  if ! grep -q '^termux_step_post_make_install()' "$PHP_BUILD"; then
+    echo "recipe-overrides: php recipe no longer defines termux_step_post_make_install (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: php trimmed post_make_install' "$PHP_BUILD"; then
+    cat <<'SH' >> "$PHP_BUILD"
+
+# CodeC: php trimmed post_make_install — the trimmed build has no shared
+# ldap/pgsql/gd extensions and no apache, so the upstream function (which
+# assembles apache-specific extension copies and relinks them) can never
+# pass. This twin keeps the remaining behavior: php-fpm config, the
+# php.ini templates, conf.d entries only for extensions that still ship
+# (sodium), and the phpize SED fix. Appended last so this definition wins
+# (bash last-definition-wins).
+termux_step_post_make_install() {
+	mkdir -p $TERMUX_PREFIX/etc/php-fpm.d
+	cp sapi/fpm/php-fpm.conf $TERMUX_PREFIX/etc/
+	cp sapi/fpm/www.conf $TERMUX_PREFIX/etc/php-fpm.d/
+
+	docdir=$TERMUX_PREFIX/share/doc/php
+	mkdir -p $docdir
+	for suffix in development production; do
+		cp $TERMUX_PKG_SRCDIR/php.ini-$suffix $docdir/
+	done
+
+	# CodeC: conf.d entries only for extensions still built (sodium).
+	local extdir="$TERMUX_PREFIX/etc/$TERMUX_PKG_NAME/conf.d"
+	mkdir -p "$extdir"
+	for ext in sodium; do
+		echo "extension=$ext" > "$extdir/$ext.ini"
+	done
+
+	sed -i 's/SED=.*/SED=sed/' $TERMUX_PREFIX/bin/phpize
+}
+SH
+  fi
+  if ! grep -q 'CodeC: php trimmed post_make_install' "$PHP_BUILD"; then
+    echo "recipe-overrides: failed to append php trimmed post_make_install" >&2
+    exit 1
+  fi
+  # Only the winning (appended) definition may be scanned — the upstream
+  # function above it legitimately still carries the apache assembly — and
+  # comment lines are stripped so descriptive text can never false-trigger.
+  if sed -n '/CodeC: php trimmed post_make_install/,$p' "$PHP_BUILD" | grep -v '^\s*#' | grep -qE 'patchelf --set-rpath|lib/php-apache'; then
+    echo "recipe-overrides: php trimmed post_make_install still contains the apache assembly block" >&2
+    exit 1
+  fi
+  if ! sed -n '/CodeC: php trimmed post_make_install/,$p' "$PHP_BUILD" | grep -v '^\s*#' | grep -q 'for ext in sodium; do'; then
+    echo "recipe-overrides: php trimmed post_make_install lost the sodium-only conf.d loop" >&2
+    exit 1
+  fi
+  for sub in php-apache php-apache-ldap php-apache-pgsql php-apache-sodium php-ldap php-pgsql php-gd; do
+    subfile="$PHP_DIR/$sub.subpackage.sh"
+    if [[ ! -f "$subfile" ]]; then
+      echo "recipe-overrides: php subpackage file missing (pinned-revision drift): $subfile" >&2
+      exit 1
+    fi
+    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$subfile"; then
+      sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: no apache/openldap/postgresql/libgd closures in the userland' "$subfile"
+    fi
+    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$subfile"; then
+      echo "recipe-overrides: failed to exclude php subpackage: $sub" >&2
+      exit 1
+    fi
+    echo "recipe-overrides: php subpackage $sub excluded for CodeC arches"
+  done
+else
+  echo "recipe-overrides: php recipe not found; skipping the php trim" >&2
+fi
+
+# The lua54 recipe (5.4.8-10 at the pinned revision) registers bin/lua and
+# bin/luac through the update-alternatives postinst generated from
+# lua54.alternatives. CodeC's repository validator approves maintainer
+# scripts only for the five reviewed alternatives packages (coreutils, less,
+# nano, bat, util-linux); lua54 is not among them, so the generated deb would
+# be rejected. A phone IDE never needs a second Lua version, so instead of
+# reviewing/extending the allowlist: remove the .alternatives file (the
+# alternatives step then emits nothing) and ship plain RELATIVE symlinks in
+# termux_step_post_massage — bin/lua -> lua5.4, bin/luac -> luac5.4, and the
+# matching renamed man pages (the recipe renames them pre-massage; massage
+# compresses them, so the .gz targets exist when post_massage runs). Relative
+# targets keep the massage symlink-relativizer a no-op. Fail loudly if the
+# alternatives file vanishes or changes shape (a re-review is then due).
+LUA54_DIR="$TREE/packages/lua54"
+if [[ -d "$LUA54_DIR" ]]; then
+  LUA54_ALT="$LUA54_DIR/lua54.alternatives"
+  LUA54_BUILD="$LUA54_DIR/build.sh"
+  if [[ ! -f "$LUA54_ALT" ]]; then
+    echo "recipe-overrides: lua54.alternatives missing (pinned-revision drift) — re-review: bin/lua may now be provided differently" >&2
+    exit 1
+  fi
+  if ! grep -q '^Alternative: bin/lua5.4$' "$LUA54_ALT" || ! grep -q '^Alternative: bin/luac5.4$' "$LUA54_ALT"; then
+    echo "recipe-overrides: lua54.alternatives no longer registers lua5.4/luac5.4 (pinned-revision drift) — re-review the symlink override" >&2
+    exit 1
+  fi
+  if [[ ! -f "$LUA54_BUILD" ]]; then
+    echo "recipe-overrides: lua54 recipe build.sh missing (pinned-revision drift)" >&2
+    exit 1
+  fi
+  rm -f "$LUA54_ALT"
+  if [[ -e "$LUA54_ALT" ]]; then
+    echo "recipe-overrides: failed to remove lua54.alternatives" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: lua/luac plain symlinks' "$LUA54_BUILD"; then
+    cat <<'SH' >> "$LUA54_BUILD"
+
+# CodeC: lua/luac plain symlinks — the upstream .alternatives postinst is
+# removed (maintainer scripts are approved only for the five reviewed
+# packages), so provide the same links as plain relative symlinks in the
+# package payload instead.
+termux_step_post_massage() {
+	ln -sf lua5.4 "$TERMUX_PREFIX/bin/lua"
+	ln -sf luac5.4 "$TERMUX_PREFIX/bin/luac"
+	if [ -f "$TERMUX_PREFIX/share/man/man1/lua5.4.1.gz" ]; then
+		ln -sf lua5.4.1.gz "$TERMUX_PREFIX/share/man/man1/lua.1.gz"
+	fi
+	if [ -f "$TERMUX_PREFIX/share/man/man1/luac5.4.1.gz" ]; then
+		ln -sf luac5.4.1.gz "$TERMUX_PREFIX/share/man/man1/luac.1.gz"
+	fi
+}
+SH
+  fi
+  if ! grep -q 'CodeC: lua/luac plain symlinks' "$LUA54_BUILD"; then
+    echo "recipe-overrides: failed to append lua54 symlink override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: lua54 ships bin/lua and bin/luac as plain symlinks (no .alternatives postinst)"
+else
+  echo "recipe-overrides: lua54 recipe not found; skipping alternatives removal" >&2
+fi

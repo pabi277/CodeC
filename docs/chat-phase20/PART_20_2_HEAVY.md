@@ -123,11 +123,19 @@ rustc /tmp/hello.rs -o /tmp/hello && /tmp/hello
 
 ## 6. Research notes (fill in before implementing)
 
-> **TODO for the implementer:**
+> **Partial finding from C.1 (2026-09-01):** the `[repo-build-heavy]`
+> commit-message guard **cannot work as sketched** — `package-repository.yml`'s
+> `build` job fires only on `workflow_dispatch` (never on push), and
+> `github.event.head_commit.message` is null for dispatch events. The heavy
+> guard must instead be a `workflow_dispatch` input (e.g. `heavy: boolean`)
+> gating a second job, or simply the documented "uncomment + dispatch"
+> procedure (D1). Decide when C.2 starts; note the agent token cannot push
+> workflow-file edits — a workflow change here is an owner browser edit or a
+> PR-review item.
+>
+> **TODO for the implementer (C.2 start):**
 > - Check the exact Termux recipe sizes for `golang` and `rust` at the pinned ref.
 > - Verify `gofmt` is bundled with `golang` (not a separate sub-package).
 > - Verify `rustfmt` is bundled with `rust` (or check `rustup` alternative).
-> - Confirm the `package-repository.yml` job structure supports a second job
->   with the `[repo-build-heavy]` condition without breaking the existing
->   `build-core` trigger.
+> - Pick the heavy-guard mechanism given the dispatch-only reality above.
 > - Record sizes: golang compressed ___ MB, rust compressed ___ MB.

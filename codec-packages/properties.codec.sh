@@ -114,6 +114,37 @@ curl
 # and drops tk from python's build-depends (tk would pull the whole X11
 # closure; CodeC has no X11 use for Tkinter — same rationale as the git
 # round-2 override).
+#
+# Round 4 (Phase 20.1, 2026-09-01): language toolchains for the Phase 21
+# LanguageRunProfile registry. Research was done against the pinned
+# TERMUX_PACKAGES_REF before adding anything — full record in
+# docs/chat-phase20/PART_20_1_TOOLCHAINS.md §7:
+#   libllvm  — root recipe for Clang 21 (there is no packages/gcc or
+#              packages/clang at the pinned revision: upstream removed the
+#              old gcc shim recipe, and clang is a subpackage of libllvm).
+#              The clang subpackage ships bin/clang/clang++ AND the driver
+#              symlinks bin/gcc, bin/g++, bin/c++, bin/cpp — so
+#              `pkg install clang` gives users the `gcc foo.c -o foo` UX.
+#              bin/cc is deliberately stripped from the subpackage by
+#              apply-recipe-overrides.sh: $PREFIX/bin/cc is the app's own
+#              TCC frontend until Phase 21.4 (invariant: never overwrite cc).
+#   nodejs   — Node.js 26 runtime (deps: libc++, openssl, c-ares, libicu,
+#              libsqlite, zlib, libffi — no X11).
+#   npm      — split out of nodejs upstream at 25.3.0-1; added explicitly so
+#              `pkg install nodejs npm` gives a package-manager-capable node.
+#   php      — PHP 8.5 CLI, trimmed by apply-recipe-overrides.sh: no
+#              apache/ldap/pgsql/gd closures (the upstream recipe would
+#              otherwise build postgresql, openldap, apache2 and libgd just
+#              for extensions a phone IDE never uses). php-fpm/php-sodium
+#              subpackages are kept.
+#   ruby     — Ruby 3.4 (clean closure: libffi, libgmp, libyaml, openssl…).
+#   lua54    — Lua 5.4; the upstream lua54.alternatives postinst is NOT one
+#              of the five reviewed allowlisted alternatives packages, so
+#              apply-recipe-overrides.sh removes the .alternatives file and
+#              ships plain relative bin/lua/bin/luac symlinks instead.
+# Repository-only: CODEC_PACKAGE_MANAGER_BOOTSTRAP_PACKAGES and
+# CODEC_BOOTSTRAP_SEED_PACKAGES are unchanged, so the published bootstrap
+# archives stay byte-identical (CI verifies the digest).
 CODEC_REPOSITORY_PACKAGES="
 nano
 less
@@ -142,6 +173,12 @@ automake
 libtool
 python
 python-pip
+libllvm
+nodejs
+npm
+php
+ruby
+lua54
 "
 
 # Development channel URL. CI/release automation may override this; the app

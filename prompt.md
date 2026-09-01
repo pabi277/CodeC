@@ -18,12 +18,26 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-01, updated for new phases):**
+**WHERE THINGS STAND (2026-09-01, Phase 20.1 in progress):**
 
-- **`main` = `dc68eee` — Phase 18 via PR #38** (merged 2026-09-01 on the
-  owner's "Create pr and marge"); `f868e10` = PR #37 (Phase 17), `a0e7dc3` =
-  PR #36 (Phases 15/16), `b869ce6` = PR #34 (Phase 19) — verify the tip with
+- **`main` = `54ae06a` — Phases 20–24 design docs via PR #40** (merged
+  2026-09-01); the chain is `54ae06a` ← **PR #39** (git branch-publishing +
+  clear-error fixes, `arena/01a05b6c-codec`) ← `dc68eee` = PR #38 (Phase 18),
+  `f868e10` = PR #37 (Phase 17), `a0e7dc3` = PR #36 (Phases 15/16),
+  `b869ce6` = PR #34 (Phase 19) — verify the tip with
   `git ls-remote origin main` / the GitHub API (the local clone is shallow).
+- **Phase 20.1 (package toolchain round 4) is 🚧 IMPLEMENTED on
+  `arena/01a05cb9-codec`** (owner's "Phase 20 start", 2026-09-01): six new
+  `CODEC_REPOSITORY_PACKAGES` roots — `libllvm` (clang 21.1.8 + the
+  `gcc`/`g++` driver symlinks; no `gcc`/`clang` recipe exists at the pinned
+  ref), `nodejs`, `npm` (split from nodejs upstream), `php` (trimmed of
+  apache/ldap/pgsql/gd), `ruby`, `lua54` (plain symlinks instead of the
+  allowlist-blocked alternatives postinst). Five new fail-loud
+  `apply-recipe-overrides.sh` blocks incl. the **`bin/cc` strip (cc
+  invariant)**; +8 hermetic tests, repo suite 93 green. **The `[repo-build]`
+  CI dispatch + publish are the remaining gate — the owner triggers them
+  explicitly** (README "Ground rules"; ~3.5–4.5 h expected, D9 timeout risk
+  noted). Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
   Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
   **COMPLETE, DEVICE-ACCEPTED (where gated) and MERGED**.
@@ -64,10 +78,11 @@ gate, invariants, docs policy) — follow it.
   problem, solve it. No self-initiated work.
 
 **NEW PLANNED PHASES (2026-09-01, owner direction):**
-Phases 20/21/22/23/24 are fully spec'd — no code written yet.
+Phases 21/22/23/24 are fully spec'd — no code written yet; **Phase 20 started
+(20.1 implemented, awaiting `[repo-build]` dispatch)**.
 - **Phase 22** (editor smoothness + IME-anchored keys) — `docs/chat-phase22/`
 - **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
-- **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — `docs/chat-phase20/`
+- **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — 🚧 20.1 in progress — `docs/chat-phase20/`
 - **Phase 21** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — `docs/chat-phase21/`
 - **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
 Recommended order: 20 → 21 → 22 → 23 → 24 (C and A can run in parallel).

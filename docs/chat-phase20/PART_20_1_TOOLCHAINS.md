@@ -1,10 +1,20 @@
 # CodeC Phase 20.1 — Core toolchains + interpreted languages
 
-**Status:** 📋 **PLANNED** — not yet started · **Cost:** `[repo-build]`
+**Status:** 🚧 **IMPLEMENTED (2026-09-01, `arena/01a05cb9-codec`) — host tests green (93 total);
+`[repo-build]` dispatch pending owner confirmation** · **Cost:** `[repo-build]`
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)
 · **CI workflow:** `.github/workflows/package-repository.yml`
+
+> **Implementation corrections (found during §3 Step 1 research, 2026-09-01):**
+> the pinned upstream ref has **no `packages/gcc` and no `packages/clang` at
+> all**. The compile root is **`libllvm`** whose `clang` subpackage already
+> ships `bin/gcc`, `bin/g++`, `bin/c++`, `bin/cpp` driver symlinks (see §7) —
+> so users install **`clang`** (`pkg install clang`) and get the `gcc` UX for
+> free. Also: `npm` was split out of `nodejs` upstream (since 25.3.0-1), so
+> `npm` is its own root. Six **roots** added: `libllvm`, `nodejs`, `npm`,
+> `php`, `ruby`, `lua54`.
 
 ---
 
@@ -16,16 +26,17 @@ Phase 21's `LanguageRunProfile` registry will invoke `gcc`, `node`, `php`,
 work first. This part adds those toolchain packages to `CODEC_REPOSITORY_PACKAGES`
 and verifies they build and install correctly.
 
-**Packages to add** (Termux recipe names at the pinned `TERMUX_PACKAGES_REF`):
+**Packages to add** (Termux recipe names at the pinned `TERMUX_PACKAGES_REF`
+— **as verified against the real tree**, see §7):
 
-| Package | What ships | Approx size | Notes |
-|---|---|---|---|
-| `gcc` | `gcc`/`g++` Clang wrappers | ~0.5 MB | Termux recipe: symlinks to clang; NOT real GNU GCC (see §2) |
-| `clang` | LLVM/Clang toolchain, `clang-format` sub-package | ~80 MB | The actual compiler; `gcc` depends on it |
-| `nodejs` | `node`, `npm` | ~30 MB | JavaScript / TypeScript runtime |
-| `php` | PHP CLI | ~15 MB | |
-| `ruby` | Ruby runtime, `gem` | ~20 MB | |
-| `lua54` | Lua 5.4 interpreter | ~3 MB | |
+| Root recipe | What ships | Notes |
+|---|---|---|
+| `libllvm` | LLVM 21.1.8 toolchain: subpackages `clang` (incl. `bin/clang*`, `bin/clang-format` **and** the `gcc`/`g++`/`c++`/`cpp` driver symlinks), `lld`, `llvm`, `llvm-tools`, `lldb`, `mlir`, `libcompiler-rt`, `libpolly` | The actual compiler; there is **no** `gcc` or `clang` recipe at the pinned ref. CodeC strips `bin/cc` from the clang subpackage (cc invariant — see D5). |
+| `nodejs` | `node` 26.4.0-1 | No X11 deps; upstream preinst notice neutralized (D6) |
+| `npm` | npm/npx 11.19.0 | Split out of nodejs upstream at 25.3.0-1; own root, postinst neutralized (D6) |
+| `php` | PHP 8.5.1 CLI + `php-fpm`, `php-sodium` | **Trimmed:** apache/ldap/pgsql/gd extensions and their build/runtime closures removed (D7); `php-apache*`, `php-ldap`, `php-pgsql`, `php-gd` subpackages excluded |
+| `ruby` | Ruby 3.4.1-2 + `gem` | Clean closure, no override needed |
+| `lua54` | Lua 5.4.8-10 as `lua`/`luac` | `.alternatives` postinst replaced by plain symlinks (D8) |
 
 > **Note on `clang`:** "Bundled Clang" today is downloaded separately as a module
 > (`ModuleCatalog`). After Phase 20.1, `clang` is a proper `pkg` package from the
@@ -36,19 +47,30 @@ and verifies they build and install correctly.
 
 ## 2. The "gcc = Clang" hard reality (read before implementing)
 
-> **In the CodeC/Termux userland, `gcc` is NOT real GNU GCC.**
+> **In the CodeC/Termux userland, `gcc` is NOT real GNU GCC — and at the
+> pinned revision it is not even a package.** Upstream Termux removed the old
+> `packages/gcc` shim recipe entirely (verified: no `packages/gcc`, no
+> `packages/gcc-defaults`, no `packages/clang`, no `packages/llvm` at
+> `1bbe66903526df2e8af51e704316bc68ede72603` — full-tree API listing). The
+> compiler is the `libllvm` recipe; its `clang` subpackage creates the
+> compatibility symlinks in `termux_step_post_make_install`:
+> `for tool in clang clang++ cc c++ cpp gcc g++; ln -f -s clang-<major> $tool`.
+> So `bin/gcc` is a symlink into Clang — same behavior the plan anticipated,
+> just delivered by the `clang` deb itself, not by a separate `gcc` deb.
 >
-> The Termux `gcc` package provides a set of compatibility shim scripts:
-> `gcc` → `clang`, `g++` → `clang++`, `cc` → `clang`, `c++` → `clang++`.
-> This is correct behavior — the Android NDK dropped real GCC in r18 (2018)
+> **⇒ Users run `pkg install clang`** and then `gcc foo.c -o foo` works.
+>
+> Why there is no real GNU GCC: the Android NDK dropped GCC in r18 (2018)
 > because GCC cannot properly target Android/Bionic (crtbegin/crtend,
-> in-libc threading, lld linker incompatibilities). Termux followed.
+> in-libc threading, lld linker incompatibilities). Termux followed, and
+> eventually deleted even the shim recipe — Clang's own driver-mode symlinks
+> (`gcc`, `g++`, `c++`, `cpp` → `clang-<major>`) made it redundant.
 >
-> **Consequence for this phase:** adding the `gcc` Termux recipe gives users
-> `gcc foo.c -o foo` at the shell — it compiles with Clang. The UX is identical
-> to every Linux machine where `gcc` is installed; the underlying compiler is
-> Clang. This is the correct, battle-tested choice and what every Termux user
-> already experiences.
+> **Consequence for this phase:** adding the `libllvm` root gives users
+> `gcc foo.c -o foo` at the shell — it compiles with Clang. The UX is
+> identical to every Linux machine where `gcc` is installed; the underlying
+> compiler is Clang. This is the correct, battle-tested choice and what every
+> Termux user already experiences.
 >
 > A genuine GNU GCC for Android/Bionic exists only in the `tur-repo`
 > third-party overlay and is fragile. It is **out of scope** for CodeC.
@@ -59,53 +81,51 @@ and verifies they build and install correctly.
 
 ## 3. Implementation steps
 
-### Step 1 — Verify the pinned ref
+### Step 1 — Verify the pinned ref ✅ DONE (2026-09-01)
 
-Before touching any file, run:
-```sh
-# In the codec-packages/ subdir; read TERMUX_PACKAGES_REF from properties.codec.sh
-grep TERMUX_PACKAGES_REF codec-packages/properties.codec.sh
-# Then check: does packages/gcc/build.sh exist at that ref? Is it the shim?
-# Does clang have a clang-format.subpackage.sh at that ref?
-```
-Record the answers as **Research notes** in §7 of this doc before proceeding.
+Findings recorded in §7 below (the package table had to be corrected from
+the research — the `gcc`/`clang` recipes do not exist at the pinned ref).
 
-### Step 2 — Add packages to `CODEC_REPOSITORY_PACKAGES`
+### Step 2 — Add packages to `CODEC_REPOSITORY_PACKAGES` ✅ DONE
 
-In `codec-packages/properties.codec.sh`, append to the `CODEC_REPOSITORY_PACKAGES`
-block (maintaining the existing alphabetical order within logical groups):
-
-```sh
-# C/C++ toolchain (gcc is the Clang-shim wrapper; clang is the actual compiler)
-gcc
-clang
-# Interpreted language runtimes
-nodejs
-php
-ruby
-lua54
-```
+Six roots appended (round-4 comment block explains each):
+`libllvm`, `nodejs`, `npm`, `php`, `ruby`, `lua54`.
 
 > **Do not add `golang` or `rust` here** — they are C.2 (heavy, opt-in).
 
-### Step 3 — Check for recipe overrides needed
+### Step 3 — Recipe overrides ✅ DONE (all in `apply-recipe-overrides.sh`)
 
-Review each recipe at the pinned ref for known Android/CodeC patching needs:
-- `gcc`: expect no patch needed (it is just a `postinst` that creates symlinks).
-- `clang`: the largest and most-patched; check if the existing CodeC
-  `apply-recipe-overrides.sh` already handles it (Phase 3 used Clang for the
-  manager bootstrap — if so, no new override needed).
-- `nodejs`: check for any `TERMUX_PKG_EXTRA_CONFIGURE_ARGS` that reference
-  `TERMUX_PREFIX`; these should resolve automatically via the overlay.
-- `php`, `ruby`, `lua54`: typically lightweight; scan for X11/Tk/GUI build-depends
-  (if any, exclude the sub-package via the same `apply-recipe-overrides.sh`
-  pattern used for `python-tkinter`).
+- **libllvm/clang:** strip exactly `bin/cc` from the clang subpackage include
+  list (cc invariant; D5); keep `gcc`/`g++`/`c++`/`cpp`.
+- **nodejs:** neutralize the recipe's own `termux_step_create_debscripts`
+  (upstream `preinst` npm-split notice) — last-defined no-op, python-pip
+  pattern.
+- **npm:** same neutralization (upstream `postinst` notice).
+- **php:** trim apache/ldap/pgsql/gd configure flags + `postgresql`
+  build-dep, replace `termux_step_post_make_install` (no apache assembly,
+  conf.d for sodium only), exclude `php-apache{,-ldap,-pgsql,-sodium}`,
+  `php-ldap`, `php-pgsql`, `php-gd` subpackages. `php-fpm`/`php-sodium` stay.
+- **ruby:** no override needed (clean closure, no maintainer scripts).
+- **lua54:** remove `lua54.alternatives` (postinst not allowlisted), append
+  `termux_step_post_massage` creating relative `bin/lua`/`bin/luac` (+man)
+  symlinks.
+- **ruby/nodejs/php X11 scan:** none of the five recipes has X11/GUI
+  build-depends at the pinned ref (checked each `TERMUX_PKG_DEPENDS` /
+  `TERMUX_PKG_BUILD_DEPENDS` line).
 
-Record any new overrides added in §7.
+Every new override follows the existing conventions: exact-line drift checks
+that **fail loudly** on pinned-revision changes, marker-guarded appends.
+Hermetic tests: +8 cases in `codec-packages/tests/test_recipe_overrides.py`
+(fixture trees run through the real override script: cc strip + drift,
+nodejs/npm debscripts, php trim + drift, lua54 alternatives + drift).
 
 ### Step 4 — Commit and request CI build
 
-Commit message: `[repo-build] Phase 20.1: add gcc/clang/nodejs/php/ruby/lua54 to CODEC_REPOSITORY_PACKAGES`
+Commit message: `[repo-build] Phase 20.1: add libllvm/clang nodejs npm php ruby lua54 toolchains to CODEC_REPOSITORY_PACKAGES`
+
+(The `[repo-build]` tag is informational: `package-repository.yml`'s build job
+runs only on manual `workflow_dispatch` — pushes never trigger it, so
+committing is always safe; dispatching waits for explicit owner confirmation.)
 
 > **⚠ WARNING:** Do NOT trigger `package-repository.yml` without explicit owner
 > confirmation. Committing is fine; running the build workflow is not. After
@@ -129,12 +149,18 @@ The part is **done** when all of the following pass:
 # On the owner's device, with the new APK installed:
 
 # 1. C compiler
-pkg install gcc          # Should install gcc + clang from the CodeC repo
-gcc --version            # Should print: ... clang version ... (Clang-based — expected)
+pkg update
+pkg install clang        # There is NO gcc package at the pinned ref — the
+                         # clang deb ships the gcc/g++ driver symlinks
+gcc --version            # EXPECT: ... clang version 21.x ... (Clang-based — correct)
 echo '#include<stdio.h>
 int main(){printf("Hello gcc\n");}' > /tmp/t.c
 gcc /tmp/t.c -o /tmp/t && /tmp/t
 # EXPECT: Hello gcc
+
+# 1b. cc invariant — the app's own frontend MUST survive the clang install:
+which cc && head -c 60 "$(command -v cc)"
+# EXPECT: $PREFIX/bin/cc is still the CodeC/TCC frontend script (NOT a link to clang)
 
 # 2. C++
 g++ --version            # Should also print Clang-based version
@@ -144,10 +170,11 @@ g++ /tmp/t.cpp -o /tmp/t && /tmp/t
 # EXPECT: Hello g++
 
 # 3. Node
-pkg install nodejs
-node --version           # Should print: v2x.x.x
+pkg install nodejs npm   # npm was split out of nodejs upstream at 25.3.0-1
+node --version           # Should print: v26.x.x
 node -e "console.log('Hello Node')"
 # EXPECT: Hello Node
+npm --version            # EXPECT: 11.x.x
 
 # 4. PHP
 pkg install php
@@ -201,17 +228,110 @@ should appear).
 - **D4 — no bootstrap change:** Tools install on demand. A fresh device without
   userland still works (Phase 22/B only need the app code; no userland required
   for the editor smoothness or IME keys fix).
+- **D5 — `bin/cc` stripped from the clang subpackage (cc invariant):** the
+  upstream clang deb ships `bin/cc`→`clang-21` along with the other driver
+  symlinks. In CodeC, `$PREFIX/bin/cc` is the app's own TCC frontend written
+  by `ShellEnvironment`; letting a deb overwrite it would silently rewire
+  every existing compile path the moment a user installs clang, and the
+  states could flip-flop with app starts. The override removes exactly the
+  `bin/cc` include line (fail-loud on drift); `gcc`/`g++`/`c++`/`cpp` are
+  kept — nothing in the userland owns those names. Phase 21.4 revisits `cc`
+  when TCC is retired.
+- **D6 — nodejs/npm maintainer scripts neutralized:** both recipes define
+  their own `termux_step_create_debscripts` (preinst/postinst notices).
+  Maintainer scripts are forbidden for every package except the five reviewed
+  alternatives packages; per-recipe definitions override the shared stub, so
+  each recipe gets the appended last-definition-wins no-op (the exact
+  python/python-pip precedent from CI repo-build 33308884424).
+- **D7 — php trimmed to the CLI reality of a phone IDE:** upstream php's
+  default configure flags pull apache2 (apxs in the MAIN configure +
+  patchelf assembly), openldap, postgresql (configure + build-dep) and
+  libgd (png/freetype/jpeg/webp/avif) into the source-build closure. None of
+  that serves `php file.php` / `php -S`. Removed flags: `--with-ldap{,-sasl}`,
+  `--with-pgsql=shared` / `--with-pdo-pgsql=shared`, `--with-apxs2`,
+  `--enable-gd=shared` / `--with-external-gd`, and
+  `TERMUX_PKG_BUILD_DEPENDS="postgresql"`; excluded subpackages
+  `php-apache{,-ldap,-pgsql,-sodium}`, `php-ldap`, `php-pgsql`, `php-gd`;
+  replaced `termux_step_post_make_install` with a trimmed twin (fpm conf,
+  php.ini templates, sodium-only conf.d, phpize fix). Kept: mysqli/pdo-mysql
+  (mysqlnd — zero closure cost), fpm, sodium, intl, curl, sqlite, mbstring…
+- **D8 — lua54 `lua`/`luac` as plain symlinks, not alternatives:** the
+  upstream `lua54.alternatives` would generate an update-alternatives
+  postinst — and the repository validator approves maintainer scripts only
+  for coreutils/less/nano/bat/util-linux. Rather than extending the review
+  surface for a phone that will never carry two Lua versions, the override
+  removes the `.alternatives` file and ships relative
+  `bin/lua`→`lua5.4`, `bin/luac`→`luac5.4` symlinks (plus the renamed man
+  pages) from `termux_step_post_massage`. Bonus: `lua` works even if the
+  device's alternatives DB is ever damaged.
+- **D9 — timeout risk accepted and recorded:** round 4 adds LLVM 21 (with
+  hostbuild), nodejs, php, ruby to the same dispatch that rebuilds the
+  existing 33 roots on both arches; round 2 alone took 1h53m. The
+  `package-repository.yml` `build` job allows 360 min/arch — this round may
+  approach or exceed it. If a timeout red happens, the recovery is D3's
+  rule: move `libllvm` (the long pole) to a second dispatch of its own.
+  (Raising `timeout-minutes` needs a workflow edit, which the agent's token
+  cannot push — the owner would do it in the browser.)
 
 ---
 
-## 7. Research notes (fill in before implementing)
+## 7. Research notes (measured 2026-09-01 against the live pinned tree)
 
-> **TODO for the implementer:** Run the verifications in §3 Step 1 before touching
-> any file. Record findings here:
->
-> - `TERMUX_PACKAGES_REF` = ___________________
-> - Does `packages/gcc/build.sh` exist at that ref? Is it the Clang-shim? ___
-> - Does `packages/clang/clang-format.subpackage.sh` exist? ___
-> - Does `packages/nodejs/build.sh` have any X11/GUI build-depends? ___
-> - Any new `apply-recipe-overrides.sh` entries needed? ___
-> - Estimated sizes at the pinned ref: gcc ___ MB, clang ___ MB, nodejs ___ MB
+> Sources: GitHub API full-tree listing of `termux/termux-packages` at
+> `1bbe66903526df2e8af51e704316bc68ede72603` (10,197 blobs) + raw recipe
+> files fetched via `api.github.com` contents API. `TERMUX_PACKAGES_REF` =
+> `1bbe66903526df2e8af51e704316bc68ede72603`
+> (`codec-packages/properties.codec.sh`, pinned for Phase 3 on 2026-08-20).
+
+- **`packages/gcc/build.sh` exists?** **NO.** Neither does `packages/clang`,
+  `packages/llvm`, or `packages/gcc-defaults`. The only matches for "gcc" in
+  the whole tree are unrelated patches and `mingw-w64-gcc-libs`. The old gcc
+  shim recipe was deleted upstream; `libllvm/build.sh` even carries
+  `TERMUX_PKG_CONFLICTS="gcc, …"` + `TERMUX_PKG_REPLACES="gcc, …"` noting
+  "Replace gcc since gcc is deprecated by google on android".
+- **Where do `gcc`/`g++` come from then?** `packages/libllvm/build.sh`
+  `termux_step_post_make_install`: `for tool in clang clang++ cc c++ cpp gcc
+  g++; ln -f -s "clang-${TERMUX_PKG_VERSION%%.*}" "$tool"`. The
+  `clang.subpackage.sh` include list contains these names — including
+  *triplet-prefixed* `*-linux-android*-gcc` wrappers. Version: LLVM 21.1.8-3.
+- **`packages/clang/clang-format.subpackage.sh` exists?** **NO.** There is
+  no `clang-format` subpackage anywhere in the tree; `clang-format` ships
+  inside the `clang` subpackage via the `bin/clang*` include glob
+  (clang-tools-extra is in `LLVM_ENABLE_PROJECTS`).
+- **clang subpackage runtime deps:** `libcompiler-rt, lld, llvm, ndk-sysroot`;
+  libllvm parent deps: `libc++, libffi, libxml2, ncurses, zlib, zstd`. All
+  source-built in-closure by the existing pipeline. **No maintainer scripts**
+  in libllvm or any of its 8 subpackages (audited every `*.subpackage.sh`).
+- **nodejs/build.sh X11/GUI build-depends?** **None.** `TERMUX_PKG_DEPENDS=
+  "libc++, openssl, c-ares, libicu, libsqlite, zlib, libffi"`. It *does*
+  define its own `termux_step_create_debscripts` → `preinst` (npm-unbundled
+  notice) → neutralized (D6). Version 26.4.0-1.
+- **npm is a separate recipe** (`packages/npm`, 11.19.0,
+  `TERMUX_PKG_PLATFORM_INDEPENDENT=true`, `TERMUX_PKG_DEPENDS="nodejs |
+  nodejs-lts"`) since nodejs 25.3.0-1 — npm is NOT bundled with nodejs at
+  the pinned ref, so `npm` was added as its own root. It also has its own
+  `postinst` notice → neutralized (D6).
+- **php 8.5.1:** runtime deps include `libcurl, libxml2, libxslt, libzip,
+  oniguruma, openssl, pcre2, tidy, capstone, libicu` — no X11. BUT the
+  configure flags + `TERMUX_PKG_BUILD_DEPENDS="postgresql"` would pull
+  **apache2, openldap, postgresql, libgd** into the build just for extension
+  modules (ldap, pgsql, gd, apache SAPI) and `termux_step_post_make_install`
+  assembles php-apache extension copies with patchelf → trimmed (D7). All 9
+  php subpackage files audited: scriptless.
+- **ruby 3.4.1-2:** deps `libandroid-execinfo, libandroid-support, libffi,
+  libgmp, readline, openssl, libyaml, zlib` — no X11, no debscripts, no
+  override.
+- **lua54 5.4.8-10:** build-deps `readline` only; BUT ships
+  `lua54.alternatives` (`lua → lua5.4`, `luac → luac5.4`, priority 140, with
+  man-page dependents) — a maintainer script outside the reviewed allowlist
+  → replaced by plain symlinks (D8). Without either mechanism, the upstream
+  deb would ship only `lua5.4` and the device recipe's `lua --version` would
+  fail.
+- **New `apply-recipe-overrides.sh` entries:** clang `bin/cc` strip, nodejs
+  debscripts no-op, npm debscripts no-op, php trim, lua54 alternatives
+  removal + symlink step. (+8 hermetic tests; full suite 93 green locally.)
+- **Sizes:** measured post-build (the repo metadata gets the exact numbers);
+  rough expectations: clang/lld/llvm ~80–120 MB/arch combined, nodejs ~30 MB,
+  php ~15 MB, ruby ~20 MB, lua54 ~3 MB.
+- **CI timeout risk:** recorded as D9 — LLVM is the long pole; if the 360-min
+  job limit is hit, split `libllvm` into its own dispatch (D3 rule).

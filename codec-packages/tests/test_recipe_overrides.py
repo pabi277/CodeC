@@ -621,6 +621,304 @@ class RecipeOverrideTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("termux_step_create_debscripts", result.stderr)
 
+    # ---------------------------- Phase 20.1 ----------------------------
+
+    def _write_libllvm_clang_fixture(self, tree: Path) -> Path:
+        """clang subpackage shaping exactly like the pinned revision: the
+        include list carries the driver-compat symlinks bin/cc, bin/gcc,
+        bin/g++, bin/c++, bin/cpp next to the real clang binaries."""
+        clang_dir = tree / "packages" / "libllvm"
+        clang_dir.mkdir(parents=True, exist_ok=True)
+        subpkg = clang_dir / "clang.subpackage.sh"
+        subpkg.write_text(
+            "TERMUX_SUBPKG_INCLUDE=\"\n"
+            "bin/c++\n"
+            "bin/cc\n"
+            "bin/clang*\n"
+            "bin/cpp\n"
+            "bin/g++\n"
+            "bin/gcc\n"
+            "include/clang*\n"
+            "\"\n"
+            'TERMUX_SUBPKG_DESCRIPTION="C language frontend for LLVM"\n'
+            'TERMUX_SUBPKG_DEPENDS="libcompiler-rt, lld, llvm, ndk-sysroot"\n'
+        )
+        return subpkg
+
+    def test_clang_subpackage_never_ships_cc(self) -> None:
+        """The clang subpackage must lose exactly `bin/cc` (the app's own
+        $PREFIX/bin/cc TCC frontend owns that name — invariant: never
+        overwrite cc) while keeping the gcc/g++/c++/cpp compat symlinks
+        that give users the familiar `gcc hello.c -o hello` UX."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            subpkg = self._write_libllvm_clang_fixture(tree)
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            lines = subpkg.read_text().splitlines()
+            self.assertNotIn("bin/cc", lines)
+            self.assertIn("bin/gcc", lines)
+            self.assertIn("bin/g++", lines)
+            self.assertIn("bin/c++", lines)
+            self.assertIn("bin/clang*", lines)
+
+    def test_clang_cc_override_fails_loud_on_drift(self) -> None:
+        """If the pinned recipe stops listing a standalone `bin/cc` line
+        (e.g. a reworded glob), the build must abort for a fresh invariant
+        review instead of silently letting cc slip back in."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            clang_dir = tree / "packages" / "libllvm"
+            clang_dir.mkdir(parents=True)
+            (clang_dir / "clang.subpackage.sh").write_text(
+                "TERMUX_SUBPKG_INCLUDE=\"\nbin/clang*\nbin/*cc*\n\"\n"
+            )
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("cc invariant", result.stderr)
+
+    def test_nodejs_debscripts_neutralized(self) -> None:
+        """nodejs (26.4.0-1 at the pinned revision) defines its own
+        termux_step_create_debscripts emitting a preinst notice; the
+        override must append a last-defined no-op so the published deb has
+        no maintainer scripts (python-pip precedent, CI 33308884424)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            node_dir = tree / "packages" / "nodejs"
+            node_dir.mkdir(parents=True)
+            (node_dir / "build.sh").write_text(
+                'TERMUX_PKG_VERSION="26.4.0"\n'
+                'TERMUX_PKG_DEPENDS="libc++, openssl, c-ares"\n'
+                "\n"
+                "termux_step_create_debscripts() {\n"
+                "\tcat <<- EOF > ./preinst\n"
+                "\t#!$TERMUX_PREFIX/bin/sh\n"
+                "\techo \"npm is no longer bundled\"\n"
+                "\tEOF\n"
+                "}\n"
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            build_text = (node_dir / "build.sh").read_text()
+            self.assertIn("CodeC: no maintainer scripts for nodejs", build_text)
+            self.assertTrue(
+                build_text.rstrip().endswith(
+                    "termux_step_create_debscripts() { :; }"
+                )
+            )
+
+    def test_npm_debscripts_neutralized(self) -> None:
+        """npm (standalone package since nodejs 25.3.0-1) defines its own
+        termux_step_create_debscripts emitting a postinst notice; neutralize
+        it with the same last-defined no-op pattern."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            npm_dir = tree / "packages" / "npm"
+            npm_dir.mkdir(parents=True)
+            (npm_dir / "build.sh").write_text(
+                'TERMUX_PKG_VERSION="11.19.0"\n'
+                'TERMUX_PKG_DEPENDS="nodejs | nodejs-lts"\n'
+                "\n"
+                "termux_step_create_debscripts() {\n"
+                "\tcat <<- POSTINST_EOF > ./postinst\n"
+                "\t#!$TERMUX_PREFIX/bin/sh\n"
+                "\techo \"foreground-scripts notice\"\n"
+                "\tPOSTINST_EOF\n"
+                "}\n"
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            build_text = (npm_dir / "build.sh").read_text()
+            self.assertIn("CodeC: no maintainer scripts for npm", build_text)
+            self.assertTrue(
+                build_text.rstrip().endswith(
+                    "termux_step_create_debscripts() { :; }"
+                )
+            )
+
+    def _write_php_fixture(self, tree: Path) -> Path:
+        """php recipe fixture carrying the exact upstream lines the trim
+        targets (pinned revision 1bbe66903526df2e8af51e704316bc68ede72603):
+        postgresql build-dep, ldap/pgsql/apache/gd configure flags, the
+        upstream post_make_install, and the seven subpackage files."""
+        php_dir = tree / "packages" / "php"
+        php_dir.mkdir(parents=True, exist_ok=True)
+        (php_dir / "build.sh").write_text(
+            'TERMUX_PKG_VERSION="8.5.1"\n'
+            'TERMUX_PKG_DEPENDS="capstone, libcurl, libxml2, openssl, pcre2, zlib"\n'
+            'TERMUX_PKG_BUILD_DEPENDS="postgresql"\n'
+            "TERMUX_PKG_EXTRA_CONFIGURE_ARGS=\"\n"
+            "--with-capstone\n"
+            "--with-ldap=shared,$TERMUX_PREFIX\n"
+            "--with-ldap-sasl\n"
+            "--with-pgsql=shared,$TERMUX_PREFIX\n"
+            "--with-pdo-pgsql=shared,$TERMUX_PREFIX\n"
+            "--with-apxs2=$TERMUX_PKG_TMPDIR/apxs-wrapper.sh\n"
+            "--enable-fpm\n"
+            "--enable-gd=shared,$TERMUX_PREFIX\n"
+            "--with-external-gd\n"
+            "--with-sodium=shared,$TERMUX_PREFIX\n"
+            "\"\n"
+            "\n"
+            "termux_step_post_make_install() {\n"
+            "\tmkdir -p $TERMUX_PREFIX/etc/php-fpm.d\n"
+            "\tmkdir -p $TERMUX_PREFIX/lib/php-apache\n"
+            "\tpatchelf --set-rpath $TERMUX_PREFIX/libexec/apache2 x.so\n"
+            "}\n"
+        )
+        for sub in (
+            "php-apache", "php-apache-ldap", "php-apache-pgsql",
+            "php-apache-sodium", "php-ldap", "php-pgsql", "php-gd",
+            "php-fpm", "php-sodium",
+        ):
+            (php_dir / f"{sub}.subpackage.sh").write_text(
+                f'TERMXUX_PKG_DESC="{sub}"\n'
+            )
+        return php_dir
+
+    def test_php_trimmed_of_apache_ldap_pgsql_gd(self) -> None:
+        """php must build without the apache2/openldap/postgresql/libgd
+        closures: the configure flags and the postgresql build dependency
+        are removed, the seven extension subpackages are excluded for CodeC
+        arches, and post_make_install is replaced by the trimmed twin (no
+        php-apache assembly, conf.d ini for sodium only). php-fpm and
+        php-sodium subpackages stay."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            php_dir = self._write_php_fixture(tree)
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            build_text = (php_dir / "build.sh").read_text()
+            for flag in (
+                "--with-ldap=shared,$TERMUX_PREFIX",
+                "--with-ldap-sasl",
+                "--with-pgsql=shared,$TERMUX_PREFIX",
+                "--with-pdo-pgsql=shared,$TERMUX_PREFIX",
+                "--with-apxs2=$TERMUX_PKG_TMPDIR/apxs-wrapper.sh",
+                "--enable-gd=shared,$TERMUX_PREFIX",
+                "--with-external-gd",
+            ):
+                self.assertNotIn(flag, build_text)
+            self.assertNotIn("TERMUX_PKG_BUILD_DEPENDS", build_text)
+            self.assertIn("--enable-fpm", build_text)
+            self.assertIn("--with-sodium=shared,$TERMUX_PREFIX", build_text)
+            self.assertIn("CodeC: php trimmed post_make_install", build_text)
+            replaced = build_text[build_text.index("CodeC: php trimmed post_make_install"):]
+            self.assertNotIn("patchelf --set-rpath", replaced.split("termux_step_post_make_install")[1])
+            self.assertNotIn(
+                "mkdir -p $TERMUX_PREFIX/lib/php-apache",
+                replaced.split("termux_step_post_make_install")[1],
+            )
+            for sub in (
+                "php-apache", "php-apache-ldap", "php-apache-pgsql",
+                "php-apache-sodium", "php-ldap", "php-pgsql", "php-gd",
+            ):
+                first = (php_dir / f"{sub}.subpackage.sh").read_text().splitlines()[0]
+                self.assertTrue(
+                    first.startswith('TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"'),
+                    f"{sub} must be excluded for CodeC arches",
+                )
+            for sub in ("php-fpm", "php-sodium"):
+                self.assertNotIn(
+                    "TERMUX_SUBPKG_EXCLUDED_ARCHES",
+                    (php_dir / f"{sub}.subpackage.sh").read_text(),
+                    f"{sub} must stay in the repository",
+                )
+
+    def test_php_trim_fails_loud_on_drift(self) -> None:
+        """A php recipe without the expected configure flags must abort the
+        build for a re-review, not silently ship the apache/pgsql closure."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            php_dir = tree / "packages" / "php"
+            php_dir.mkdir(parents=True)
+            (php_dir / "build.sh").write_text(
+                'TERMUX_PKG_BUILD_DEPENDS="postgresql"\n'
+                'TERMUX_PKG_EXTRA_CONFIGURE_ARGS="--with-readline=$PREFIX"\n'
+                "\n"
+                "termux_step_post_make_install() { :; }\n"
+            )
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("re-review the php trim", result.stderr)
+
+    def test_lua54_alternatives_replaced_by_plain_symlinks(self) -> None:
+        """lua54 ships bin/lua and bin/luac via an update-alternatives
+        postinst that CodeC's validator rejects (only the five reviewed
+        alternatives packages are allowlisted). The override removes the
+        .alternatives file and appends a post_massage step creating plain
+        relative symlinks instead — so `lua --version` works right after
+        `pkg install lua54` with zero maintainer scripts."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lua_dir = tree / "packages" / "lua54"
+            lua_dir.mkdir(parents=True)
+            (lua_dir / "lua54.alternatives").write_text(
+                "Name: lua\n"
+                "Link: bin/lua\n"
+                "Alternative: bin/lua5.4\n"
+                "Dependents:\n"
+                "  share/man/man1/lua.1.gz lua.1.gz share/man/man1/lua5.4.1.gz\n"
+                "Priority: 140\n"
+                "\n"
+                "Name: luac\n"
+                "Link: bin/luac\n"
+                "Alternative: bin/luac5.4\n"
+                "Dependents:\n\n"
+                "Priority: 140\n"
+            )
+            (lua_dir / "build.sh").write_text(
+                'TERMUX_PKG_VERSION=5.4.8\n'
+                'TERMUX_PKG_DEPENDS="readline"\n'
+                "\n"
+                "termux_step_post_make_install() { :; }\n"
+            )
+
+            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
+
+            self.assertFalse((lua_dir / "lua54.alternatives").exists())
+            build_text = (lua_dir / "build.sh").read_text()
+            self.assertIn("CodeC: lua/luac plain symlinks", build_text)
+            self.assertIn('ln -sf lua5.4 "$TERMUX_PREFIX/bin/lua"', build_text)
+            self.assertIn('ln -sf luac5.4 "$TERMUX_PREFIX/bin/luac"', build_text)
+            # The upstream post_make_install must be preserved (the override
+            # appends a NEW post_massage step, it does not shadow anything).
+            self.assertIn("termux_step_post_make_install() { :; }", build_text)
+
+    def test_lua54_override_fails_loud_on_drift(self) -> None:
+        """If the pinned lua54 recipe drops the alternatives file (bin/lua
+        would then come from somewhere else), the build aborts for a
+        re-review instead of silently shipping a lua54 without `lua`."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lua_dir = tree / "packages" / "lua54"
+            lua_dir.mkdir(parents=True)
+            (lua_dir / "build.sh").write_text('TERMUX_PKG_VERSION=5.4.8\n')
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("lua54.alternatives missing", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
