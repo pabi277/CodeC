@@ -10,6 +10,9 @@ import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitBranchList
 import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitFileChange
+import com.codeci.ide.ui.projects.GitErrorKind
+import com.codeci.ide.ui.projects.GitFriendlyError
+import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.GitStatus
 import com.codeci.ide.ui.projects.SwitchBranchResult
@@ -52,7 +55,12 @@ class GitControlViewModel : ViewModel() {
          * exactly like a successful one (the commit clears the change list),
          * so the app silently claimed work was on GitHub when it was not.
          */
-        val pushError: String? = null
+        val pushError: String? = null,
+        /**
+         * Phase 17 follow-up — a help link to show next to [pushError] (the
+         * GitHub token page for auth failures), or null when not applicable.
+         */
+        val pushHelpUrl: String? = null
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -61,6 +69,22 @@ class GitControlViewModel : ViewModel() {
     /** Conflicted paths of the loaded status (empty when nothing is in conflict). */
     private fun conflictsOf(): List<GitFileChange> =
         _state.value.status?.files?.filter { it.isConflict }.orEmpty()
+
+    /**
+     * Maps a git failure to a friendly, actionable message. Only real git
+     * process failures ([GitManager.GitCommandException]) are classified;
+     * validation errors ("Invalid branch name", "Enter a commit message")
+     * pass through unchanged.
+     */
+    private fun friendly(e: Throwable, hasToken: Boolean): GitFriendlyError =
+        if (e is GitManager.GitCommandException) {
+            GitErrors.classify(e.message, e.exitCode, hasToken)
+        } else {
+            GitFriendlyError(
+                kind = GitErrorKind.GENERIC,
+                message = e.message ?: "Git operation failed"
+            )
+        }
 
     fun consumeMessage() {
         _state.value = _state.value.copy(message = null)
@@ -72,21 +96,21 @@ class GitControlViewModel : ViewModel() {
     fun loadBranches(context: Context, projectRoot: File) {
         viewModelScope.launch {
             _state.value = _state.value.copy(branchesLoading = true, branchError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    branchesLoading = false,
+                    branchError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
             try {
-                val git = gitContext(context).manager()
-                if (git == null) {
-                    _state.value = _state.value.copy(
-                        branchesLoading = false,
-                        branchError = "git is not installed"
-                    )
-                    return@launch
-                }
                 val list = withContext(Dispatchers.IO) { git.listBranches(projectRoot) }
                 _state.value = _state.value.copy(branchesLoading = false, branches = list)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     branchesLoading = false,
-                    branchError = e.message ?: "Could not read branches"
+                    branchError = friendly(e, git.hasCredentials).display()
                 )
             }
         }
@@ -111,9 +135,15 @@ class GitControlViewModel : ViewModel() {
                 branchResult = null,
                 branchError = null
             )
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    branchBusy = false,
+                    branchError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
             try {
-                val git = gitContext(context).manager()
-                    ?: error("git is not installed")
                 val result = withContext(Dispatchers.IO) {
                     git.switchBranch(projectRoot, target, stashChanges)
                 }
@@ -125,7 +155,7 @@ class GitControlViewModel : ViewModel() {
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     branchBusy = false,
-                    branchError = e.message ?: "Branch switch failed"
+                    branchError = friendly(e, git.hasCredentials).display()
                 )
             }
         }
@@ -214,10 +244,12 @@ class GitControlViewModel : ViewModel() {
                     message = finalMessage
                 )
             } catch (e: Exception) {
+                // `git status` never authenticates, so a token check is moot;
+                // classify to turn "not a git repository" etc. into guidance.
                 _state.value = _state.value.copy(
                     loading = false,
                     gitInstalled = true,
-                    message = e.message ?: "git status failed"
+                    message = friendly(e, hasToken = false).display()
                 )
             }
         }
@@ -267,12 +299,17 @@ class GitControlViewModel : ViewModel() {
             val pushFailure = runCatching { git.pushHandlingUpstream(projectRoot) }
                 .exceptionOrNull()
             if (pushFailure == null) {
-                _state.value = _state.value.copy(pushError = null)
+                _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
                 "Committed & pushed ✓"
             } else {
-                val detail = pushFailure.message ?: "unknown error"
-                _state.value = _state.value.copy(pushError = detail)
-                "Committed locally ✓ — NOT pushed: $detail"
+                // Phase 17 follow-up: a friendly, actionable reason + token
+                // link instead of raw git output.
+                val friendly = friendly(pushFailure, git.hasCredentials)
+                _state.value = _state.value.copy(
+                    pushError = friendly.message,
+                    pushHelpUrl = friendly.helpUrl
+                )
+                "Committed locally ✓ — NOT pushed: ${friendly.message}"
             }
         }
     }
@@ -286,17 +323,22 @@ class GitControlViewModel : ViewModel() {
             context,
             projectRoot,
             "Pushing…",
-            onError = { failure -> _state.value = _state.value.copy(pushError = failure) }
+            onError = { failure ->
+                _state.value = _state.value.copy(
+                    pushError = failure.message,
+                    pushHelpUrl = failure.helpUrl
+                )
+            }
         ) { git ->
             git.pushHandlingUpstream(projectRoot)
-            _state.value = _state.value.copy(pushError = null)
+            _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
             "Pushed ✓"
         }
     }
 
     /** Dismisses the sticky "not pushed" explanation. */
     fun dismissPushError() {
-        _state.value = _state.value.copy(pushError = null)
+        _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
     }
 
     /**
@@ -359,25 +401,34 @@ class GitControlViewModel : ViewModel() {
         context: Context,
         projectRoot: File,
         busyLabel: String,
-        onError: ((String) -> Unit)? = null,
+        onError: ((GitFriendlyError) -> Unit)? = null,
         operation: suspend (GitManager) -> String
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(busy = true, message = busyLabel)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                val notInstalled = GitErrors.notInstalled()
+                onError?.invoke(notInstalled)
+                _state.value = _state.value.copy(
+                    busy = false,
+                    gitInstalled = false,
+                    message = notInstalled.display()
+                )
+                return@launch
+            }
             try {
-                val git = gitContext(context).manager()
-                    ?: error("git is not installed")
                 val result = withContext(Dispatchers.IO) { operation(git) }
                 _state.value = _state.value.copy(busy = false)
                 refresh(context, projectRoot, finalMessage = result)
             } catch (e: Exception) {
-                val failure = e.message ?: "git operation failed"
+                val failure = friendly(e, git.hasCredentials)
                 onError?.invoke(failure)
-                _state.value = _state.value.copy(busy = false, message = failure)
+                _state.value = _state.value.copy(busy = false, message = failure.display())
                 // Phase 17 device fix: re-read the repository after a failure
                 // too, so the "N commit(s) ahead" figure on screen is real —
                 // a failed push must not look like a clean, pushed tree.
-                refresh(context, projectRoot, finalMessage = failure)
+                refresh(context, projectRoot, finalMessage = failure.display())
             }
         }
     }

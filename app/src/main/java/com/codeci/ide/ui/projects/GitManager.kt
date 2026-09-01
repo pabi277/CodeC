@@ -87,6 +87,9 @@ class GitManager(
 
     private val redactor = GitRedactor(auth?.token)
 
+    /** True when a GitHub token is configured and available to git children. */
+    val hasCredentials: Boolean get() = auth != null
+
     /** Best-effort capability check: binary present, executable, and runs. */
     fun isAvailable(): Boolean {
         if (!gitBinary.isFile || !gitBinary.canExecute()) return false
@@ -511,7 +514,16 @@ class GitManager(
         if (target.kind == BranchTargetKind.NEW) {
             runCatching { push(root, setUpstream = true, branchName = landed) }
                 .onSuccess { published = true }
-                .onFailure { publishError = it.message ?: "publish failed" }
+                .onFailure {
+                    // Phase 17 follow-up — the same friendly, actionable
+                    // wording as every other git failure (offline / no token /
+                    // rejected), not raw git output.
+                    publishError = GitErrors.classify(
+                        raw = it.message,
+                        exitCode = (it as? GitCommandException)?.exitCode,
+                        hasToken = hasCredentials
+                    ).display()
+                }
         }
 
         var restored = false
