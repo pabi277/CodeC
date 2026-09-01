@@ -209,5 +209,12 @@ data class SwitchBranchResult(
     val branch: String,
     val stashed: Boolean = false,
     val restored: Boolean = false,
-    val stashPending: Boolean = false
+    val stashPending: Boolean = false,
+    /**
+     * Phase 17 follow-up — true when a NEW branch was pushed to the remote
+     * right after creation. [publishError] carries the honest reason when the
+     * publish failed and the branch stayed local-only.
+     */
+    val published: Boolean = false,
+    val publishError: String? = null
 )

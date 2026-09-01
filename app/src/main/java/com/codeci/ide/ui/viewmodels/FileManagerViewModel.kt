@@ -128,7 +128,9 @@ class FileManagerViewModel : ViewModel() {
                 lastModified = scan.lastModified,
                 hasChanges = hasChanges,
                 // Phase 17 device fix: commits that never reached the remote.
-                unpushed = status?.ahead ?: 0
+                unpushed = status?.ahead ?: 0,
+                // Phase 17 follow-up: a branch with commits but no remote.
+                unpublished = status?.unpublished == true
             )
         }
     }

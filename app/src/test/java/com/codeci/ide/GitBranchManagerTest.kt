@@ -77,6 +77,10 @@ class GitBranchManagerTest {
                 if [ -n "${'$'}FAKE_REMOTE_OUT" ]; then printf '%b' "${'$'}FAKE_REMOTE_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_REMOTE_EXIT:-0}"
                 ;;
+              push)
+                if [ -n "${'$'}FAKE_PUSH_ERR" ]; then printf '%b' "${'$'}FAKE_PUSH_ERR" >&2; echo "" >&2; fi
+                exit "${'$'}{FAKE_PUSH_EXIT:-0}"
+                ;;
               status)
                 if [ -n "${'$'}FAKE_STATUS_OUT" ]; then printf '%b' "${'$'}FAKE_STATUS_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_STATUS_EXIT:-0}"
@@ -395,6 +399,67 @@ class GitBranchManagerTest {
     }
 
     @Test
+    fun `switchBranch publishes a newly created branch to the remote`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(
+                dir,
+                mapOf("FAKE_STATUS_OUT" to "## main...origin/main", "FAKE_REMOTE_OUT" to "origin")
+            )
+            val result = manager(dir, e).switchBranch(
+                repo(dir),
+                BranchTarget("feature/x", BranchTargetKind.NEW)
+            )
+            val commands = log(e)
+            assertEquals("CMD [checkout] [-b] [feature/x]", commands[1])
+            assertEquals("CMD [remote]", commands[2])
+            assertEquals("CMD [push] [--set-upstream] [origin] [feature/x]", commands[3])
+            assertEquals("feature/x", result.branch)
+            assertTrue(result.published)
+            assertNull(result.publishError)
+        }
+    }
+
+    @Test
+    fun `switchBranch reports honestly when a new branch cannot be published`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_STATUS_OUT" to "## main...origin/main",
+                    "FAKE_PUSH_EXIT" to "128",
+                    "FAKE_PUSH_ERR" to "fatal: could not read Username for 'https://github.com'"
+                )
+            )
+            val result = manager(dir, e).switchBranch(
+                repo(dir),
+                BranchTarget("feature/x", BranchTargetKind.NEW)
+            )
+            // The branch still exists locally; only the publish failed, and
+            // that must be reported, not silently swallowed.
+            assertEquals("feature/x", result.branch)
+            assertFalse(result.published)
+            assertTrue(result.publishError!!.contains("could not read Username"))
+        }
+    }
+
+    @Test
+    fun `switchBranch does not publish a local or remote checkout`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_STATUS_OUT" to "## main...origin/main"))
+            val result = manager(dir, e).switchBranch(
+                repo(dir),
+                BranchTarget("feature", BranchTargetKind.LOCAL)
+            )
+            assertFalse(result.published)
+            assertNull(result.publishError)
+            assertTrue(log(e).none { it.contains("[push]") })
+        }
+    }
+
+    @Test
     fun `switchBranch reuses an existing local branch for a remote selection`() = runBlocking {
         withTimeout(20_000) {
             val dir = tempDir()
@@ -434,10 +499,20 @@ class GitBranchManagerTest {
         withTimeout(20_000) {
             val dir = tempDir()
             val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
-            manager(dir, e).push(repo(dir), setUpstream = true)
+            manager(dir, e).push(repo(dir), setUpstream = true, branchName = "test")
             val commands = log(e)
             assertEquals("CMD [remote]", commands[0])
-            assertEquals("CMD [push] [--set-upstream] [origin] [HEAD]", commands[1])
+            assertEquals("CMD [push] [--set-upstream] [origin] [test]", commands[1])
+        }
+    }
+
+    @Test
+    fun `push with setUpstream and no branch name falls back to HEAD`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
+            manager(dir, e).push(repo(dir), setUpstream = true)
+            assertEquals("CMD [push] [--set-upstream] [origin] [HEAD]", log(e).last())
         }
     }
 
@@ -462,7 +537,7 @@ class GitBranchManagerTest {
                 mapOf("FAKE_STATUS_OUT" to "## test", "FAKE_REMOTE_OUT" to "origin")
             )
             manager(fresh, freshEnv).pushHandlingUpstream(repo(fresh))
-            assertEquals("CMD [push] [--set-upstream] [origin] [HEAD]", log(freshEnv).last())
+            assertEquals("CMD [push] [--set-upstream] [origin] [test]", log(freshEnv).last())
 
             // A cloned branch already tracks its remote: keep the plain push.
             val tracking = tempDir()

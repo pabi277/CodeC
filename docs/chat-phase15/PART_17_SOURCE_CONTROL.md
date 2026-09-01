@@ -428,3 +428,48 @@ ahead (`git status -b`); a branch that was never published shows no hub badge
 (the in-sheet row covers it) — say the word to extend it.
 
 ---
+
+### 6.3 Follow-up (2026-09-01) — new branches never reach GitHub; local commits looked pushed
+
+**Owner report:** *"Known bugs — create a new branch don't add in github, locally
+commit cannot be pushed."*
+
+**Symptom.** Two faces of the same gap:
+1. **Create a new branch** (Switch Branch → New branch…) created the branch
+   *locally only* (`git checkout -b <name>`); nothing published it, so it never
+   appeared on GitHub.
+2. **A commit on a never-published branch looked uploaded** — `git status -b`
+   reports no `ahead` count for a branch with no upstream, so the Projects card
+   showed no amber badge and the work silently stayed on the device.
+
+**Root cause.**
+- `GitManager.switchBranch` → `checkoutTarget` → `BranchTargetKind.NEW` only ran
+  `checkoutNew`; the publish step was missing entirely.
+- `push(setUpstream=true)` used the refspec `HEAD` instead of the branch's own
+  name (fragile when HEAD resolution is ambiguous).
+- `ProjectHubEntry.unpushed = status.ahead` is `0` for an unpublished branch
+  (no upstream to compare against), so the hub badge could not express
+  "branch not on GitHub"; `GitStatus` had no notion of a committed-but-
+  unpublished branch.
+
+**Fix (`[client-only]`, host-testable):**
+- `GitManager.push(..., branchName)` now pushes the explicit branch name
+  (`git push --set-upstream <remote> <branch>`, git's own guidance); `HEAD` is
+  only the fallback. `pushHandlingUpstream` passes `status.branch`.
+- `GitManager.switchBranch` **publishes a NEW branch on creation** (best-effort).
+  The result carries `published`/`publishError`, and the Switch Branch dialog
+  says "· published to GitHub" or "· not on GitHub yet: <reason>".
+- `GitStatus` gained `noCommits` (from `## No commits yet on <branch>`) and a
+  computed `unpublished` (branch exists, has commits, tracks nothing). The
+  Source Control sheet and the Projects card both use it.
+- The Projects card now shows a bare amber **↑** pill for a branch that is not
+  on the remote yet (the `↑N` pill keeps its ahead-count meaning).
+
+**Tests:** `GitBranchManagerTest` +4 (publish-on-create argv, honest publish
+failure, no publish for LOCAL/REMOTE, HEAD fallback) and `pushHandlingUpstream`
+asserts the branch name; `GitStatusParserTest` +3 (`noCommits`, `unpublished`,
+tracking/detached negatives).
+
+**CI:** pending the `Build APK` run (assemble + unit tests + lint) — run id
+recorded in the report. **Device pass required** for the owner's own
+new-branch → GitHub round trip (no device in the agent sandbox).

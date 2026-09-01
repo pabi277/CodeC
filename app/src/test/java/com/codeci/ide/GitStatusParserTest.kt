@@ -48,6 +48,33 @@ class GitStatusParserTest {
         val status = GitStatusParser.parse(listOf("## No commits yet on main"))
         assertEquals("main", status.branch)
         assertNull(status.upstream)
+        assertTrue(status.noCommits)
+        // An empty repo has nothing to push — it is not "unpublished".
+        assertFalse(status.unpublished)
+    }
+
+    @Test
+    fun `branch without upstream and with commits is unpublished`() {
+        // A branch created in the app (`git checkout -b test`) prints `## test`
+        // with no `...origin/...` tracking suffix.
+        val status = GitStatusParser.parse(listOf("## test", "M main.c"))
+        assertEquals("test", status.branch)
+        assertNull(status.upstream)
+        assertFalse(status.noCommits)
+        assertTrue(status.unpublished)
+    }
+
+    @Test
+    fun `tracking branch is not unpublished`() {
+        val status = GitStatusParser.parse(listOf("## main...origin/main"))
+        assertFalse(status.unpublished)
+        assertFalse(status.noCommits)
+    }
+
+    @Test
+    fun `detached head is not unpublished`() {
+        val status = GitStatusParser.parse(listOf("## HEAD (no branch)"))
+        assertFalse(status.unpublished)
     }
 
     @Test

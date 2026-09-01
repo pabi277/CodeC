@@ -401,9 +401,7 @@ fun GitControlSheet(
                     // A branch that tracks nothing has no "ahead" figure at
                     // all — it simply is not published yet, which is exactly
                     // the case the owner hit with a freshly created branch.
-                    val unpublished = state.status?.upstream == null &&
-                        state.status?.detached != true &&
-                        state.status?.branch != null
+                    val unpublished = state.status?.unpublished == true
                     if (ahead > 0 || state.pushError != null || unpublished) {
                         HorizontalDivider()
                         Row(

@@ -216,12 +216,18 @@ class GitManager(
      * **no upstream**, so a plain `git push` dies with
      * `fatal: The current branch <name> has no upstream branch`. Pass
      * [setUpstream] to publish it instead:
-     * `git push --set-upstream <remote> HEAD`, which pushes HEAD to the
-     * same-named branch on the remote and remembers the tracking link, so
+     * `git push --set-upstream <remote> <branch>`, which pushes the branch to
+     * the same-named branch on the remote and remembers the tracking link, so
      * later pushes are plain again. Use [pushHandlingUpstream] to decide
      * automatically.
+     *
+     * Phase 17 follow-up (owner, 2026-09-01): the ref is now the explicit
+     * branch NAME ([branchName]) rather than `HEAD`, so a freshly created
+     * branch always publishes under its own name (git's own suggested
+     * `git push --set-upstream origin <branch>`). `HEAD` remains the fallback
+     * when no branch name is known.
      */
-    fun push(root: File, setUpstream: Boolean = false) {
+    fun push(root: File, setUpstream: Boolean = false, branchName: String? = null) {
         if (!setUpstream) {
             exec(root, listOf("push"), networkTimeoutSeconds, "git push failed")
             return
@@ -229,9 +235,12 @@ class GitManager(
         // `origin` is what CodeC's clone creates; `git remote` covers repos
         // that were renamed or initialised by hand.
         val remote = firstRemote(root) ?: "origin"
+        val ref = branchName?.trim()
+            ?.takeIf { GitBranchOps.isSafeExistingBranch(it) }
+            ?: "HEAD"
         exec(
             root,
-            listOf("push", "--set-upstream", remote, "HEAD"),
+            listOf("push", "--set-upstream", remote, ref),
             networkTimeoutSeconds,
             "git push failed"
         )
@@ -253,8 +262,12 @@ class GitManager(
      * makes for the Source Control sheet.
      */
     fun pushHandlingUpstream(root: File) {
-        val upstream = runCatching { status(root) }.getOrNull()?.upstream
-        push(root, setUpstream = upstream == null)
+        val status = runCatching { status(root) }.getOrNull()
+        push(
+            root,
+            setUpstream = status?.upstream == null,
+            branchName = status?.branch
+        )
     }
 
     /** `git pull` — merge auto-edit disabled so no editor can ever block. */
@@ -455,6 +468,9 @@ class GitManager(
      * 3. if a CodeC stash entry exists for the branch we just landed on, pop
      *    it (auto-restore). A conflicting pop keeps the entry on the stack and
      *    is reported through [SwitchBranchResult.stashPending].
+     * 4. a NEW branch is published to the remote right after creation
+     *    (best-effort — [SwitchBranchResult.published]/[publishError] report
+     *    the honest outcome).
      *
      * Every step is argv-only and runs through the Phase 13 private env, so no
      * token can leak and no shell is involved.
@@ -484,6 +500,20 @@ class GitManager(
             throw e
         }
 
+        // Phase 17 follow-up (owner, 2026-09-01: "create a new branch don't
+        // add in github") — a NEW branch is published to the remote as soon as
+        // it is created. `checkout -b` always leaves HEAD at a real commit, so
+        // the push simply creates the same-named remote branch. Best-effort:
+        // offline / no token keeps the branch local, the dialog says so
+        // honestly, and the Source Control sheet offers the PUSH retry.
+        var published = false
+        var publishError: String? = null
+        if (target.kind == BranchTargetKind.NEW) {
+            runCatching { push(root, setUpstream = true, branchName = landed) }
+                .onSuccess { published = true }
+                .onFailure { publishError = it.message ?: "publish failed" }
+        }
+
         var restored = false
         var pending = false
         if (stashChanges) {
@@ -499,7 +529,9 @@ class GitManager(
             branch = landed,
             stashed = stashed,
             restored = restored,
-            stashPending = pending
+            stashPending = pending,
+            published = published,
+            publishError = publishError
         )
     }
 
@@ -700,6 +732,7 @@ object GitStatusParser {
         var upstream: String? = null
         var ahead = 0
         var behind = 0
+        var noCommits = false
         val files = mutableListOf<GitFileChange>()
 
         for (raw in lines) {
@@ -711,6 +744,7 @@ object GitStatusParser {
                         detached = true
                     } else if (head.startsWith("No commits yet on ")) {
                         branch = head.removePrefix("No commits yet on ").trim()
+                        noCommits = true
                     } else {
                         val tracking = head.split("...", limit = 2)
                         branch = tracking[0].trim().ifEmpty { null }
@@ -753,7 +787,8 @@ object GitStatusParser {
             upstream = upstream,
             ahead = ahead,
             behind = behind,
-            files = files
+            files = files,
+            noCommits = noCommits
         )
     }
 
@@ -842,8 +877,20 @@ data class GitStatus(
     val upstream: String? = null,
     val ahead: Int = 0,
     val behind: Int = 0,
-    val files: List<GitFileChange> = emptyList()
-)
+    val files: List<GitFileChange> = emptyList(),
+    /** True for `## No commits yet on <branch>` (an empty repository). */
+    val noCommits: Boolean = false
+) {
+    /**
+     * Phase 17 follow-up (owner, 2026-09-01: "locally commit cannot be
+     * pushed") — the branch exists, has commits, but tracks no remote branch:
+     * its commits live only on this device and the first push must publish
+     * the branch itself. A fresh repo with zero commits is NOT unpublished
+     * (there is nothing to push), and a detached HEAD is not either.
+     */
+    val unpublished: Boolean
+        get() = branch != null && !detached && upstream == null && !noCommits
+}
 
 /**
  * Scrubs secrets from git output before it can reach the UI or the log

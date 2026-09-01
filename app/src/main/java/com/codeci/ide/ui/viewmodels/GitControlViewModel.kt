@@ -143,6 +143,13 @@ class GitControlViewModel : ViewModel() {
             result.stashPending ->
                 append(" — your stashed changes are still saved (they could not be applied cleanly)")
         }
+        // Phase 17 follow-up: a NEW branch is published on creation; say
+        // exactly what happened so "not on GitHub" is never silent.
+        when {
+            result.published -> append(" · published to GitHub")
+            result.publishError != null ->
+                append(" · not on GitHub yet: ").append(result.publishError)
+        }
     }
 
     fun clearBranchResult() {
@@ -255,7 +262,7 @@ class GitControlViewModel : ViewModel() {
             git.stageAll(projectRoot)
             git.commit(projectRoot, trimmed)
             // Phase 17 device fix: publish a branch that has no upstream yet
-            // (`git push --set-upstream <remote> HEAD`) instead of failing
+            // (`git push --set-upstream <remote> <branch>`) instead of failing
             // with "has no upstream branch" — and never claim a push worked.
             val pushFailure = runCatching { git.pushHandlingUpstream(projectRoot) }
                 .exceptionOrNull()

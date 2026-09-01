@@ -56,7 +56,15 @@ data class ProjectHubEntry(
      * pushed (`git status -b` "ahead N"). Shown as an amber `↑N` badge so a
      * failed push can never masquerade as an uploaded project.
      */
-    val unpushed: Int = 0
+    val unpushed: Int = 0,
+    /**
+     * Phase 17 follow-up (owner, 2026-09-01) — the checked-out branch has
+     * commits but no remote branch at all (created in the app, or the first
+     * commit of a fresh repo). `ahead` is 0 in that case (no upstream to
+     * compare against), so this flag carries the "not on GitHub yet" state
+     * the `↑N` badge cannot express; the card shows a bare amber `↑`.
+     */
+    val unpublished: Boolean = false
 ) {
     /** Icon token for the card's leading square. */
     val icon: HubIconToken

@@ -13,6 +13,12 @@ DEVICE-ACCEPTED and MERGED via PR #38** (from `arena/01a05b12-codec` @
 future-update mode is defined in [`rule.md`](../rule.md): all phases are
 complete, so the agent waits for the owner to report a bug, listens carefully,
 finds the underlying code problem, and solves it (owner merges to `main`).**
+**First bug report in the new mode (2026-09-01):** *"create a new branch don't
+add in github, locally commit cannot be pushed"* — new branches were never
+published (now published on creation) and an unpublished branch showed no
+"not pushed" badge (now an amber `↑` pill). Record:
+[`chat-phase15/PART_17_SOURCE_CONTROL.md`](chat-phase15/PART_17_SOURCE_CONTROL.md)
+§6.3.
 **Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE & DEVICE-ACCEPTED
 (2026-09-01, `arena/01a05b12-codec`, `4460306`, CI `33468442063`, owner §4
 recipe PASSED) — the last spec'd work; Phase 18 is CLOSED.** Five CLI scripts +
