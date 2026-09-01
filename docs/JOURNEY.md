@@ -16,7 +16,8 @@ finds the underlying code problem, and solves it (owner merges to `main`).**
 **First bug report in the new mode (2026-09-01):** *"create a new branch don't
 add in github, locally commit cannot be pushed"* — new branches were never
 published (now published on creation) and an unpublished branch showed no
-"not pushed" badge (now an amber `↑` pill). Record:
+"not pushed" badge (now an amber `↑` pill). CI green `33476150534`; owner
+device pass pending. Record:
 [`chat-phase15/PART_17_SOURCE_CONTROL.md`](chat-phase15/PART_17_SOURCE_CONTROL.md)
 §6.3.
 **Phase 18 (CodeCApi Device Capabilities) ✅ COMPLETE & DEVICE-ACCEPTED

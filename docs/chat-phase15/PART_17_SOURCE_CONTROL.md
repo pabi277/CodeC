@@ -470,6 +470,6 @@ failure, no publish for LOCAL/REMOTE, HEAD fallback) and `pushHandlingUpstream`
 asserts the branch name; `GitStatusParserTest` +3 (`noCommits`, `unpublished`,
 tracking/detached negatives).
 
-**CI:** pending the `Build APK` run (assemble + unit tests + lint) — run id
-recorded in the report. **Device pass required** for the owner's own
-new-branch → GitHub round trip (no device in the agent sandbox).
+**CI:** green at `33476150534` (`Build APK`, assemble + unit tests + lint,
+4m6s). **Device pass required** for the owner's own new-branch → GitHub round
+trip (no device in the agent sandbox).
