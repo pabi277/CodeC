@@ -199,5 +199,6 @@ Owner device rounds on aarch64 (scratch repo `pabi277/T` for pushes; the real
   (`git add -A`), so clones commit CodeC's `.codec/` metadata folder —
   candidate: skip `.codec/` or seed a `.gitignore`; no partial staging UI (D3).
 
-Phase 13 exit condition MET. PR awaits the owner's explicit word (standing
-rule).
+Phase 13 exit condition MET. **PR #31 merged to `main` at `006515a`
+(2026-08-30) — Phase 13 is closed.** (Updated 2026-09-01; this line
+previously read "PR awaits the owner's explicit word".)

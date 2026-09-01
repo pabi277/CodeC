@@ -1,6 +1,6 @@
 # CodeC Phase 18 — CodeCApi Device Capabilities & Final System Polish
 
-**Status:** ✅ **COMPLETE & DEVICE-ACCEPTED** (implemented 2026-09-01 on `arena/01a05b12-codec`; CI green `33468442063` @ `4460306`; **owner §4 recipe PASSED on device 2026-09-01** — see §5.6). · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
+**Status:** ✅ **COMPLETE & DEVICE-ACCEPTED** (implemented 2026-09-01 on `arena/01a05b12-codec`; CI green `33468442063` @ `4460306`; **owner §4 recipe PASSED on device 2026-09-01** — see §5.6). · **Merge state:** NOT merged — awaits the owner (`main` = `f868e10`; session branch tip `d49ac47` also carries the 2026-09-01 Web Preview fix). · **Cost:** `[client-only]` · **Depends on:** Phase 7 (Multi-Terminal Routing) + Phase 6 (Terminal UX)  
 **Target Files:** `CodecApiBridge.kt`, `CodecApiProtocol.kt`, `ShellEnvironment.kt`, `MainActivity.kt`, `AndroidManifest.xml`
 
 ---

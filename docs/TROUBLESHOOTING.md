@@ -235,3 +235,29 @@ approach.
 - Termux wiki (RUN_COMMAND API used by the Termux engine):
   https://github.com/termux/termux-app/wiki/RUN_COMMAND-Intent
 - Termux FAQ: https://github.com/termux/termux-packages/wiki/FAQ
+
+---
+
+## 8. Web Preview says "File not found: <name>" (2026-09-01, fixed `d49ac47`)
+
+**Symptom:** an HTML file opened in the editor (typically imported/copied from
+storage) shows **`File not found: <name>`** in the Web Preview when launched
+with the 👁/launch action or the RUN ▶ button.
+
+**Cause (fixed):** the preview resolved the file inside the project named by
+the **editor's Nav route argument**, which becomes stale when you switch the
+editor's working folder in-place — via the folder button → *Open folder*
+picker, or *Save to project…*. The imported HTML lived in the new project
+folder (e.g. `CodeC/projects/<imported>/index.html`) but the preview looked in
+the projects root (or the previously open project) and reported it missing.
+
+**Fix:** preview navigation now carries the real project — the drawer's launch
+action passes the file entry's own project, RUN ▶ passes the editor's current
+project, and live-server/auto-web previews carry the project they were started
+for. Installed in the build from run `33471103959`.
+
+**If it still happens:** tell us *where the file actually lives* (`ls` in the
+terminal from the folder it was created in) — the preview only serves files
+inside app-managed projects under `files/CodeC/projects/<project>/`; a file
+created in the terminal's `$HOME` (or with a stray `cp` into the projects
+root) is not inside a project folder and must be moved/saved into one first.
