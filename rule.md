@@ -128,11 +128,13 @@ Every update updates the docs **in the same commit**:
 
 - **`main` = `f868e10`** (Phase 17 via PR #37 on `a0e7dc3` = PR #36
   Phases 15/16, on `b869ce6` = PR #34 Phase 19).
-- **Phases 3–17 & 19: merged. Phase 18: COMPLETE & DEVICE-ACCEPTED, NOT
-  merged** — `arena/01a05b12-codec` @ `d49ac47`
-  (feature `012deea`, lint fix `4460306`, docs `6c67202`,
-  Web-Preview fix `d49ac47`; green `33471103959`).
+- **Phases 3–17 & 19: merged. Phase 18: COMPLETE & DEVICE-ACCEPTED — merged
+  to `main` via PR #38 (2026-09-01, owner's command "Create pr and marge");
+  verify the tip with `git log`/GitHub.** The PR carried Phase 18
+  (feature `012deea`, lint fix `4460306`, docs `6c67202`), the Web Preview
+  fix (`d49ac47`), and this future-update manual + living-docs refresh
+  (`ffca133`).
 - **No remaining spec'd implementation.** Open owner items: Phase 17 optional
   conflict recipe (needs a real conflict), Phases 15/16 device-round-3
-  dedicated pass, amber ↑N badge for never-published branches, and —
-  after this docs update — merging Phase 18 to `main`.
+  dedicated pass, amber ↑N badge for never-published branches, Phase 14 §5
+  device round.

@@ -20,16 +20,20 @@ gate, invariants, docs policy) — follow it.
 
 **WHERE THINGS STAND (2026-09-01, verified against GitHub):**
 
-- **`main` = `f868e10`** — Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16
-  (PR #36 @ `a0e7dc3`) and Phase 17 (PR #37 @ `f868e10`) are all
-  **COMPLETE, DEVICE-ACCEPTED (where gated) and MERGED**. Verify the tip with
-  `git log` / the GitHub API before acting — never assume.
-- **Phase 18 (CodeCApi Device Capabilities) is COMPLETE & DEVICE-ACCEPTED
-  (2026-09-01) but NOT merged.** It sits on the session branch
-  `arena/01a05b12-codec` @ **`d49ac47`**: feature `012deea`, lint fix
-  `4460306` (CAMERA `uses-feature required=false`), docs `6c67202`, then the
-  2026-09-01 Web Preview fix `d49ac47`. CI green:
-  `33468442063` (feature), `33468793012` (docs), `33471103959` (fix).
+- **`main` = `f868e10` + PR #38 (Phase 18 + Web Preview fix + rule.md,
+  merged 2026-09-01 on the owner's "Create pr and marge") — verify the tip
+  with `git log` / the GitHub API.** Phases 3–14, 19 (PR #34 @ `b869ce6`),
+  Phases 15/16 (PR #36 @ `a0e7dc3`), Phase 17 (PR #37 @ `f868e10`) and
+  **Phase 18 (PR #38)** are all **COMPLETE, DEVICE-ACCEPTED (where gated)
+  and MERGED**.
+- **Phase 18 (CodeCApi Device Capabilities) is COMPLETE, DEVICE-ACCEPTED
+  (2026-09-01) and MERGED via PR #38.** Session branch
+  `arena/01a05b12-codec` @ `ffca133`: feature `012deea`, lint fix
+  `4460306` (CAMERA `uses-feature required=false`), docs `6c67202`, the
+  2026-09-01 Web Preview fix `d49ac47` (see below), then `ffca133`
+  (rule.md + living docs). CI green:
+  `33468442063` (feature), `33468793012` (docs), `33471103959` (fix),
+  `33472175072` (docs).
   Five CLI scripts + wire ops on the OSC 1337 CodeCApi bridge:
   `codec-battery` (sticky `ACTION_BATTERY_CHANGED` → JSON), `codec-sensor`
   (accelerometer/gyroscope/light), `codec-tts` (app-lifetime TextToSpeech,
@@ -51,8 +55,9 @@ gate, invariants, docs policy) — follow it.
   `onOpenPreviewUrl` and the server/auto-web handlers. Record:
   `docs/chat-phase9/PART_9_IMPLEMENTATION.md` (Phase 9.2 follow-up). Owner
   may want to re-verify the imported-HTML flow on device.
-- **No PR is open for Phase 18** — per the standing rule, and per `rule.md`
-  §3, the agent stops at CI green + docs and the owner merges to `main`.
+- **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
+  rule still applies to everything new: the agent stops at CI green + docs and
+  the owner merges to `main` (or hands the merge command).
 
 **FUTURE-UPDATE MODE (owner, 2026-09-01):** the owner will not run phases /
 per-phase recipes anymore; they state the change they want and **merge to
