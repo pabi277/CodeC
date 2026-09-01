@@ -248,7 +248,8 @@ class GitErrorsTest {
     fun `notInstalled points at the git install step`() {
         val err = GitErrors.notInstalled()
         assertEquals(GitErrorKind.NOT_INSTALLED, err.kind)
-        assertTrue(err.message.contains("not installed", ignoreCase = true))
+        assertTrue(err.message.contains("installed", ignoreCase = true))
+        assertTrue(err.message.contains("pkg install git"))
     }
 
     @Test
