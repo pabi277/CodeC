@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Getting started with CodeC — first hour</title>
+  <meta name="description" content="Your first hour in CodeC: compile hello.c with one tap, learn the terminal loop, run programs that read input, install a package, and preview a web page — all on the phone.">
+  <meta name="theme-color" content="#0B0F14">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ================= SHARED CHROME: header (copy byte-identical to every page; see web_docs/chat-web2/SUMMARY.md) ================= -->
+  <header class="site-header">
+    <div class="container-wide header-inner">
+      <a class="wordmark" href="index.html"><span class="prompt">&gt;_</span> CodeC</a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true">
+      <label for="nav-toggle" class="nav-burger" aria-label="Toggle navigation"><span></span></label>
+      <nav class="site-nav" aria-label="Site">
+        <a href="index.html">Home</a>
+        <a href="install.html">Install</a>
+        <a href="start.html" aria-current="page">Start</a>
+        <a href="engines.html">Engines</a>
+        <a href="packages.html">Packages</a>
+        <a href="learn.html">Learn</a>
+        <a href="faq.html">FAQ</a>
+        <a href="about.html">About</a>
+        <a class="nav-github" href="https://github.com/pabi277/CodeC" aria-label="CodeC on GitHub" title="CodeC on GitHub">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+
+      <section class="hero">
+        <p class="hero-kicker">$ first hour</p>
+        <h1>Your first hour with CodeC.</h1>
+        <p class="lede">Assumes the app is installed (<a href="install.html">get the APK here</a>). Everything
+          below happens <strong>on your phone, offline</strong> — you'll compile C, drive a real terminal,
+          install a package, and preview a web page.</p>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Step 1 — Your first compile (one tap)</h2>
+        <p>Create a new file, name it <code>hello.c</code>, and type the program every C programmer
+          starts with:</p>
+        <pre class="code-block"><code>#include &lt;stdio.h&gt;
+
+int main(void) {
+    printf("Hello, CodeC!\n");
+    return 0;
+}</code></pre>
+        <p>Tap <strong>RUN &#9654;</strong>. The output appears right under the editor. What just happened:
+          CodeC's <strong>built-in TCC compiler</strong> — embedded in the APK — compiled your program to a
+          static executable <strong>instantly and offline</strong>. No Termux, no downloads, no setup.</p>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Step 2 — The terminal loop</h2>
+        <p>The editor's RUN button is the quick path; the terminal is the craft. Open the
+          <strong>Term</strong> tab (or tap the terminal icon in the editor toolbar) — a real
+          VT/ANSI terminal starts. Type <strong>one command per line</strong>, Enter after each:</p>
+        <pre class="code-block"><code>cc hello.c -o a.out</code></pre>
+        <pre class="code-block"><code>./a.out</code></pre>
+        <p><code>cc</code> is the built-in TCC. The <code>./</code> is not decoration —
+          <strong>the current directory is not on <code>PATH</code></strong>, so <code>./a.out</code> is how
+          you say &ldquo;the file I just built, right here&rdquo;. Projects live in app-private storage,
+          which is exactly why <code>./a.out</code> is executable.</p>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Step 3 — Programs that read input</h2>
+        <p>Programs that wait for you — <code>scanf</code>, <code>getchar</code> — must run in
+          <strong>Term</strong>, not the RUN button (RUN has no keyboard into the process). Try this
+          variant:</p>
+        <pre class="code-block"><code>#include &lt;stdio.h&gt;
+
+int main(void) {
+    char name[64];
+    printf("Your name: ");
+    scanf("%63s", name);
+    printf("Hello, %s!\n", name);
+    return 0;
+}</code></pre>
+        <p>Compile with <code>cc hello.c -o a.out</code>, then run <code>./a.out</code> in Term and type
+          your name when it asks. (If you RUN it from the editor instead, it hits the 10&nbsp;second
+          execution cap — that's the app waiting for input, not a bug.)</p>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Step 4 — Install a package (1 tap)</h2>
+        <p>Open the <strong>Packages</strong> tab: a visual package hub with live status badges
+          (<code>INSTALLED ✓</code> / <code>AVAILABLE</code>). Find <strong>nano</strong> (a terminal text
+          editor) or <strong>ripgrep</strong>, tap <strong>INSTALL</strong>, watch the badge flip, then tap
+          <strong>RUN</strong> to start it right in the terminal. There are 25+ signed packages —
+          <code>git</code>, <code>python</code>, <code>clang</code>, <code>make</code>, <code>tmux</code> and
+          more. The full tour: <a href="packages.html">Packages &rarr;</a></p>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Step 5 — Preview a web page</h2>
+        <p>Create an <code>index.html</code> and tap <strong>RUN &#9654;</strong> — on an HTML file, RUN
+          <em>is</em> the preview. The page is served by a local loopback server over your whole project
+          folder, so relative CSS/JS, <code>fetch("data.json")</code> and ES modules just work. Edit &rarr;
+          save &rarr; the preview <strong>live-reloads</strong>; console output shows under the page.</p>
+      </section>
+
+      <section class="section" aria-label="Where things live">
+        <h2 class="section-title">Where things live (the bottom bar)</h2>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Tab</th><th>What it is</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">Projects</td><td>The hub: project cards, one <code>+</code> sheet — New Project / Clone Git Repo / Import ZIP / Open Folder.</td></tr>
+              <tr><td class="mono">Editor</td><td>Tabs, file tree, autosave, find &amp; replace, error squiggles — and <strong>RUN &#9654;</strong>.</td></tr>
+              <tr><td class="mono">Terminal <em>(middle)</em></td><td>The VT/ANSI terminal — where <code>cc</code>, <code>./a.out</code> and input programs live.</td></tr>
+              <tr><td class="mono">Packages</td><td>1-tap package manager: install, run, quick actions (<code>pkg update</code>, <code>pkg heal</code>, …).</td></tr>
+              <tr><td class="mono">Settings</td><td>Compiler engine, extra-keys macros, themes, the in-app updater, Logs.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Cross-links">
+        <h2 class="section-title">Where next?</h2>
+        <p><strong>The full course &rarr;</strong> <a href="learn.html">Master CodeC from Zero to Advanced</a>
+          &nbsp;·&nbsp; <strong>Chapter 1 &rarr;</strong> <a href="ch-01.html">Getting Started</a><br>
+          <strong>Which compiler engine? &rarr;</strong> <a href="engines.html">Engines</a>
+          &nbsp;·&nbsp; <strong>Stuck? &rarr;</strong> <a href="faq.html">FAQ &amp; troubleshooting</a></p>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ================= SHARED CHROME: footer (copy byte-identical to every page) ================= -->
+  <footer class="site-footer">
+    <div class="container-wide">
+      <p class="footer-tagline">CodeC — free &amp; open source C IDE for Android</p>
+      <nav class="footer-links" aria-label="Project links">
+        <a href="https://github.com/pabi277/CodeC">Repo</a>
+        <a href="https://github.com/pabi277/CodeC#readme">README</a>
+        <a href="https://github.com/pabi277/CodeC/releases">Releases</a>
+        <a href="https://github.com/pabi277/CodeC/issues">Issues</a>
+        <a href="https://github.com/pabi277/CodeC/blob/main/docs/JOURNEY.md">JOURNEY</a>
+      </nav>
+      <p class="footer-source">Site source: this repo — <code>website/</code></p>
+    </div>
+  </footer>
+</body>
+</html>

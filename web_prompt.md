@@ -31,7 +31,7 @@ invariants, docs policy) — follow it for the website work too.
 
 - **Planning (W0 + W0.1 + W0.2) is complete AND merged (PR #41 → `main`,
   `9b3669e`). W1 (scaffold + Home) is COMPLETE — the site now exists.**
-- **What exists in `website/` (created 2026-09-02 by the W1 session):**
+- **What exists in `website/` (as of W2, 2026-09-02):**
   - `style.css` — the one stylesheet: design tokens (near-black `#0B0F14`,
     surface `#11161D`, text `#E6EDF3`, muted `#8B949E`, accent green
     `#3FB950` + amber `#D29922`, system font stacks) + every component
@@ -43,18 +43,26 @@ invariants, docs policy) — follow it for the website work too.
   - `index.html` — shared chrome + the Home page (hero → CTA row
     ["Get the APK on GitHub" → Releases, "Read the README"] → 6 feature
     cards → learning banner → footnote strip).
+  - `install.html` (W2) — 3 GitHub-only APK paths (Actions artifact /
+    Release / in-app updater), allow-unknown-apps note, device-support
+    table, optional Termux engine (README's exact setup block; the two
+    README Termux links are the site's only non-github externals).
+  - `start.html` (W2) — the first hour: RUN ▶ first compile → terminal
+    loop (`./` rule) → scanf-in-Term rule → 1-tap package install → web
+    preview → bottom-bar map → cross-links to /learn, ch-01, /engines,
+    /faq.
 - **W2–W6 must copy the chrome byte-identical** — the documented copy-paste
   pattern + the full style reference + every Home card's README source
   line live in `web_docs/chat-web2/SUMMARY.md`. Internal links are
   **relative `*.html`** (works under the GitHub Pages subpath; root-
   relative `/install` would break — W1 note in `chat-web2/`).
-- Still to build (they 404 until their phase): install, start, engines,
-  packages, faq, about, learn + ch-01…ch-17 (19 pages). **Not deployed —
-  and the early deploy (D14) was reversed by the owner (D15, 2026-09-02):
-  the website deploys at W6.7 only, per the original plan.** Key fact for
-  W6.7 (research note in `web-phase6/README.md`): the repo's ONE Pages
-  site already serves the package repo (`/dev`, `/keys`) — the W6 deploy
-  must carry website + package repo together.
+- Still to build (they 404 until their phase): engines, packages, faq,
+  about, learn + ch-01…ch-17 (18 pages). **Not deployed — the early deploy
+  (D14) was reversed by the owner (D15, 2026-09-02): the website deploys
+  at W6.7 only, per the original plan.** Key fact for W6.7 (research note
+  in `web-phase6/README.md`): the repo's ONE Pages site already serves
+  the package repo (`/dev`, `/keys`) — the W6 deploy must carry website +
+  package repo together.
 - **PR #41 (W0 planning docs) was MERGED 2026-09-02** (squash `9b3669e`).
   The W1 session ran on a new branch; its own merge awaits the owner at
   the gate.
@@ -62,16 +70,16 @@ invariants, docs policy) — follow it for the website work too.
 **WHAT THE OWNER MUST SAY TO PROCEED:**
 
 Implementation runs one phase at a time, each started only by the owner's
-command in chat — **"Start W2"** … **"Start W6"** ("Start W1" / "Build the
-website" was the first trigger; W1 is done). Each phase is executed
+command in chat — **"Start W3"** … **"Start W6"** ("Start W1" / "Build the
+website" and "Start W2" are done). Each phase is executed
 **strictly per its spec folder** `web_docs/web-phaseN/` (phase README +
-PART docs, one phase at a time, in order W2 → W6), building the 25-page
-site inside the existing `website/` chrome: W2 Install + Getting Started →
-W3 Engines + Packages + FAQ + About → W4 **verification gate first**, then
-course home + chapters 01–06 → W5 chapters 07–12 (ch-08 device pass) → W6
-chapters 13–17 + polish + GitHub Pages deploy + verification (P1+P5 device
-pass). Only `website/` + the web living docs are written; every page
-copies the W1 chrome byte-identical (pattern in `web_docs/chat-web2/`).
+PART docs, one phase at a time, in order W3 → W6), building the 25-page
+site inside the existing `website/` chrome: W3 Engines + Packages + FAQ +
+About → W4 **verification gate first**, then course home + chapters 01–06
+→ W5 chapters 07–12 (ch-08 device pass) → W6 chapters 13–17 + polish +
+GitHub Pages deploy + verification (P1+P5 device pass). Only `website/` +
+the web living docs are written; every page copies the W1 chrome
+byte-identical (pattern in `web_docs/chat-web2/`).
 
 **LAW (inherits the app project, no exceptions):**
 

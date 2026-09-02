@@ -24,7 +24,8 @@ handoff file (the website's `prompt.md`).
 `chat-web1/` is the planning session (2026-09-02) that created this folder
 — **including the phase specs** (W0.2). `chat-web2/` is the W1 build
 session (2026-09-02, scaffold + Home — contains the byte-identical chrome
-pattern all later pages copy). Naming split: `chat-webN` = session
+pattern all later pages copy). `chat-web3/` is the W2 build session
+(2026-09-02, install + start). Naming split: `chat-webN` = session
 records (what happened), `web-phaseN` = planned phases (what will be built).
 
 ## How this mirrors the app project

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install CodeC — APK from GitHub</title>
+  <meta name="description" content="Three ways to get the CodeC APK: a CI build artifact, a GitHub release, or the in-app updater — plus device support and the optional Termux engine setup.">
+  <meta name="theme-color" content="#0B0F14">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ================= SHARED CHROME: header (copy byte-identical to every page; see web_docs/chat-web2/SUMMARY.md) ================= -->
+  <header class="site-header">
+    <div class="container-wide header-inner">
+      <a class="wordmark" href="index.html"><span class="prompt">&gt;_</span> CodeC</a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true">
+      <label for="nav-toggle" class="nav-burger" aria-label="Toggle navigation"><span></span></label>
+      <nav class="site-nav" aria-label="Site">
+        <a href="index.html">Home</a>
+        <a href="install.html" aria-current="page">Install</a>
+        <a href="start.html">Start</a>
+        <a href="engines.html">Engines</a>
+        <a href="packages.html">Packages</a>
+        <a href="learn.html">Learn</a>
+        <a href="faq.html">FAQ</a>
+        <a href="about.html">About</a>
+        <a class="nav-github" href="https://github.com/pabi277/CodeC" aria-label="CodeC on GitHub" title="CodeC on GitHub">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+
+      <section class="hero">
+        <p class="hero-kicker">$ install</p>
+        <h1>Get the CodeC APK.</h1>
+        <p class="lede">CodeC is distributed <strong>from GitHub only</strong> — there is no Play Store or
+          F-Droid listing. Three ways to get it, in order of freshness.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/pabi277/CodeC/releases">Go to Releases</a>
+          <a class="btn btn-secondary" href="start.html">Already installed? Start here</a>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Three ways to install">
+        <h2 class="section-title">Three ways to get the APK</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>1. Latest build (GitHub Actions)</h3>
+            <p>Every green <code>Build APK</code> run produces a fresh APK. Open the
+              <a href="https://github.com/pabi277/CodeC/actions">Actions tab</a> &rarr; the latest green
+              <code>Build APK</code> run &rarr; <strong>Artifacts</strong> &rarr; download
+              <code>CodeC-IDE</code>. That zip contains the APK.</p>
+          </div>
+          <div class="card">
+            <h3>2. A release</h3>
+            <p>Open the <a href="https://github.com/pabi277/CodeC/releases">Releases page</a> and download
+              the APK attached to the release. Releases are tagged builds — handy when you want a
+              version you can come back to.</p>
+          </div>
+          <div class="card">
+            <h3>3. In the app (updates)</h3>
+            <p>Already have CodeC? Update without leaving it: <strong>Settings &rarr; Install APK from
+              GitHub</strong> downloads the latest release APK and opens the installer for you.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-label="First install note">
+        <h2 class="section-title">First install: allow the installer once</h2>
+        <p>Android installs apps from outside a store only after you allow it for the app you downloaded
+          with (your browser, for example). On first install: open the downloaded APK &rarr; Android asks to
+          allow <strong>Install unknown apps</strong> for your browser &rarr; allow it once &rarr; continue the
+          install. You only do this once per browser.</p>
+      </section>
+
+      <section class="section" aria-label="Device support">
+        <h2 class="section-title">Will it work on my device?</h2>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Device</th><th>Experience</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">arm64 phone / tablet</td><td><strong>Best.</strong> The built-in TCC compiler ships for arm64-v8a — every engine is available.</td></tr>
+              <tr><td class="mono">x86_64 emulator</td><td><strong>Good.</strong> The built-in TCC covers x86_64 automatically. The bundled Clang module is arm64-only, so it can't run there — TCC picks up the slack.</td></tr>
+              <tr><td class="mono">32-bit device</td><td><strong>Termux engine recommended.</strong> The built-in compiler can't run on 32-bit; switch to the Termux engine in Settings (below).</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Optional Termux engine">
+        <h2 class="section-title">Optional: the Termux engine</h2>
+        <p>CodeC works fully standalone — Termux is <em>never</em> required. But you can add it as a fourth
+          compiler engine for <strong>full C11/C17 via Clang</strong> or as a fallback if a toolchain is ever
+          blocked on your device. You need <strong>Termux 0.109+</strong> from
+          <a href="https://f-droid.org/packages/com.termux/">F-Droid</a> or
+          <a href="https://github.com/termux/termux-app/releases">GitHub</a> (the Play Store version is
+          outdated and does not support this). Then, in Termux:</p>
+        <pre class="code-block"><code>echo "allow-external-apps=true" >> ~/.termux/termux.properties
+termux-reload-settings
+pkg update &amp;&amp; pkg install clang</code></pre>
+        <p>…and grant CodeC the <strong>&ldquo;Run commands in Termux environment&rdquo;</strong> permission
+          (Android Settings &rarr; Apps &rarr; CodeC IDE &rarr; Permissions &rarr; Additional permissions).
+          Verify the whole chain with <strong>Settings &rarr; Compiler Engine &rarr; CHECK BRIDGE</strong>.
+          The engines compared: <a href="engines.html">Engines</a>.</p>
+      </section>
+
+      <section class="section" aria-label="Links">
+        <h2 class="section-title">Links</h2>
+        <p><a href="https://github.com/pabi277/CodeC/releases">Releases page</a> ·
+           <a href="https://github.com/pabi277/CodeC/actions">Actions tab</a> ·
+           in-app: <strong>Settings &rarr; Install APK from GitHub</strong></p>
+        <p class="muted">Installed? Your first compile is one tap away — <a href="start.html">Getting
+          started &rarr;</a></p>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ================= SHARED CHROME: footer (copy byte-identical to every page) ================= -->
+  <footer class="site-footer">
+    <div class="container-wide">
+      <p class="footer-tagline">CodeC — free &amp; open source C IDE for Android</p>
+      <nav class="footer-links" aria-label="Project links">
+        <a href="https://github.com/pabi277/CodeC">Repo</a>
+        <a href="https://github.com/pabi277/CodeC#readme">README</a>
+        <a href="https://github.com/pabi277/CodeC/releases">Releases</a>
+        <a href="https://github.com/pabi277/CodeC/issues">Issues</a>
+        <a href="https://github.com/pabi277/CodeC/blob/main/docs/JOURNEY.md">JOURNEY</a>
+      </nav>
+      <p class="footer-source">Site source: this repo — <code>website/</code></p>
+    </div>
+  </footer>
+</body>
+</html>

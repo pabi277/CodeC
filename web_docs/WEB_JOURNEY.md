@@ -150,7 +150,7 @@ merged, continue" applies.
 
 ---
 
-*Next entry: W2 (Install + Getting Started) — on the owner's "Start W2" command.*
+*Next entry: W3 (Engines + Packages + FAQ + About) — on the owner's "Start W3" command.*
 
 ## W1 — Scaffold + Home (2026-09-02)
 
@@ -246,5 +246,42 @@ with **D15** recording the reversal; entry 22 stays as history (this
 entry corrects it). **Deploy returns to W6.7 only.** The W6 research note
 (Pages = one site per repo; package-repo coexistence) remains — it is a
 fact about the repo that W6.7 must design around.
+
+---
+
+## W2 — Install + Getting Started (2026-09-02)
+
+**24. "Start w2" (2026-09-02).** Same session, owner commands the next
+phase. Executed strictly per `web-phase2/` (README + PART_2_1 + PART_2_2):
+
+- **`install.html`** — "Get the CodeC APK." Three numbered paths in README
+  order (Actions artifact on a green `Build APK` run; a tagged Release;
+  in-app Settings → Install APK from GitHub), the allow-"Install unknown
+  apps" note, the device-support table (arm64 best / x86_64 emulator via
+  built-in TCC / 32-bit → Termux engine), and the optional Termux engine
+  section with the README's exact 3-line setup block (diffed — verbatim)
+  and the two README-mandated Termux links (the site's only non-github
+  externals, per plan §5.2). D9 held: no store listing implied — the page
+  *says* GitHub-only.
+- **`start.html`** — the first-hour path in five steps: hello.c + RUN ▶
+  (built-in TCC, instant, offline) → the terminal loop (`cc hello.c -o
+  a.out` → `./a.out`, with the `./` rule explained: cwd is not on PATH;
+  app-private storage makes it executable) → the scanf-in-Term rule (RUN
+  has no keyboard into the process; 10 s cap = waiting for input) → 1-tap
+  package install (badges `INSTALLED ✓`) → web preview (RUN on HTML *is*
+  the preview, live reload, loopback, console) — then the bottom-bar map
+  (Projects · Editor · Terminal (middle) · Packages · Settings) and the
+  cross-links strip (/learn, ch-01, /engines, /faq).
+
+**Verification:** chrome diff-identical on both pages (only `aria-current`
+moves); §5.5 sweeps PASS; external-href inventory = github.com + the two
+allowed Termux links; f-droid.org unreachable **from the sandbox**
+(network-blocked, like pabi277.github.io — noted for the W6 link sweep,
+which runs from CI/browser); HTML parse clean; served 200; no new CSS
+(only W1.1 components consumed). Living docs updated in the same commit
+(this entry, NEXT_STEPS, web_prompt, web_docs/README).
+
+**W2 closed.** Stopped at the merge gate. Next: "Start W3" (engines,
+packages + build-config package list with sha, faq, about).
 
 ---
