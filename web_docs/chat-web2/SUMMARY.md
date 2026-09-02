@@ -70,6 +70,7 @@ this order for the CSS `~` selector):
       <a href="about.html">About</a>
       <a class="nav-github" href="https://github.com/pabi277/CodeC" aria-label="CodeC on GitHub" title="CodeC on GitHub">
         <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="…octicon mark-github path, see index.html…"/></svg>
+        <span>GitHub</span>
       </a>
     </nav>
   </div>
@@ -211,3 +212,18 @@ Owner says **"Start W2"** → `/install` + `/start` per
 `web_docs/web-phase2/` inside this chrome. (Living docs updated in the same
 commit: `web_prompt.md`, `NEXT_STEPS.md`, `WEB_JOURNEY.md`,
 `web_docs/README.md`.)
+
+---
+
+## Follow-up (2026-09-02, same session) — owner feedback: GitHub link not findable
+
+**Owner:** "I could not find can you add the link to github." The header's
+GitHub link was icon-only — too easy to miss. **Change:** the nav GitHub
+link now carries a visible **"GitHub"** text label next to the octicon
+(`<span>GitHub</span>` inside `.nav-github`; CSS gains `gap: 0.45rem;
+font-size: 0.95rem`). The header snippet above is updated to match — W2–W6
+copy THIS version. GitHub now appears 4× on Home: header (icon + "GitHub"),
+hero CTA ("Get the APK on GitHub" → Releases, "Read the README" → repo),
+footnote strip ("Source on GitHub"), footer link row ("Repo"). Sweep
+re-checked: still zero external resources (label is text, icon is inline
+SVG). Chrome pattern rev: 2.
