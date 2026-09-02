@@ -136,6 +136,13 @@ end**: 25 pages, 6 phases, 35 spec docs, zero code — the strict rule held
 through every step. The owner's only remaining move before anything is
 built: **"Start W1"** (or "Build the website").
 
+**15. PR #41 opened (2026-09-02).** The owner commanded: "Please open a
+pull request for the changes on this branch." Agent opened
+[PR #41](https://github.com/pabi277/CodeC/pull/41)
+(`arena/01a06270-codec` → `main`, tip `626719a` at open) with the full W0
+summary. **Not merged** — the merge gate applies; the owner merges (or
+hands the command).
+
 ---
 
 *Next entry: W1 (scaffold + Home) — after the owner's implementation command.*

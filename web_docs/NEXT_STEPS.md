@@ -11,6 +11,8 @@
 > per part; W4.2 verification gate runs first in W4; device passes due in
 > W5 ch-08 and W6 P1+P5; W6.7 verifies before the site goes live).
 > Nothing is built, nothing is deployed, there is no `website/` folder.
+> **PR #41 opened 2026-09-02** (owner command in chat) — awaiting the
+> owner's merge; after merge, "Start W1" begins the build.
 
 ## What the owner says next
 

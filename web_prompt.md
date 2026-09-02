@@ -59,6 +59,10 @@ invariants, docs policy) — follow it for the website work too.
 - **Nothing is built, nothing is deployed, there is no `website/` folder
   yet.** If you see website HTML/CSS/JS anywhere that this session did not
   create, verify where it came from before touching it.
+- **PR #41 (2026-09-02, owner command)** carries the W0 planning docs
+  (`arena/01a06270-codec` → `main`). Check its state (`gh pr view 41`) —
+  if it's already merged, continue; the merge is the owner's to give
+  (standing rule).
 
 **WHAT THE OWNER MUST SAY TO PROCEED:**
 
