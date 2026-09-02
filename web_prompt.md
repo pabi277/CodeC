@@ -59,10 +59,10 @@ invariants, docs policy) — follow it for the website work too.
 - **Nothing is built, nothing is deployed, there is no `website/` folder
   yet.** If you see website HTML/CSS/JS anywhere that this session did not
   create, verify where it came from before touching it.
-- **PR #41 (2026-09-02, owner command)** carries the W0 planning docs
-  (`arena/01a06270-codec` → `main`). Check its state (`gh pr view 41`) —
-  if it's already merged, continue; the merge is the owner's to give
-  (standing rule).
+- **PR #41 (2026-09-02) is MERGED** — the W0 planning docs landed on
+  `main` as squash commit `9b3669e` (owner command "Please merge the pull
+  request"). Verify with `git ls-remote origin main`. The website is fully
+  spec'd on `main` and waiting for the owner's **"Start W1"** command.
 
 **WHAT THE OWNER MUST SAY TO PROCEED:**
 

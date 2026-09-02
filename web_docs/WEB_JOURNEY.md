@@ -136,12 +136,16 @@ end**: 25 pages, 6 phases, 35 spec docs, zero code — the strict rule held
 through every step. The owner's only remaining move before anything is
 built: **"Start W1"** (or "Build the website").
 
-**15. PR #41 opened (2026-09-02).** The owner commanded: "Please open a
-pull request for the changes on this branch." Agent opened
+**15. PR #41 opened + MERGED (2026-09-02).** The owner commanded: "Please
+open a pull request for the changes on this branch." Agent opened
 [PR #41](https://github.com/pabi277/CodeC/pull/41)
-(`arena/01a06270-codec` → `main`, tip `626719a` at open) with the full W0
-summary. **Not merged** — the merge gate applies; the owner merges (or
-hands the command).
+(`arena/01a06270-codec` → `main`). Then the owner commanded: "Please merge
+the pull request." Agent verified state (mergeable CLEAN, both build checks
+green) and **squash-merged** per the repo's established convention (past
+merges are 1-parent squash commits) — **`main` = `9b3669e`**
+(2026-09-02T16:27:01Z; verified with `git ls-remote origin main`). The W0
+planning docs (42 markdown files) are now on `main`. W0 is fully closed;
+the website is fully spec'd and waiting for **"Start W1"**.
 
 ---
 
