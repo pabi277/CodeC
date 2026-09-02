@@ -1,26 +1,31 @@
 # NEXT_STEPS.md — website head state
 
-> **HEAD STATE (2026-09-02): W0 (planning) COMPLETE — zero website code
-> exists.** The website is fully spec'd in `WEBSITE_PLAN.md` (7 pages, static
-> HTML/CSS, GitHub Pages, phases W1–W5). Nothing is built, nothing is
-> deployed, there is no `website/` folder.
+> **HEAD STATE (2026-09-02, v2): W0 (planning) COMPLETE — zero website code
+> exists.** The website is fully spec'd in `WEBSITE_PLAN.md` v2: **two
+> wings** — product site (7 pages) + **learning wing** ("Master CodeC from
+> Zero to Advanced", 17 chapters, modelled on the owner's Termux-Mastery),
+> **fully self-dependent** (zero external resources, offline-complete,
+> course completable without the repo). Stack: static HTML/CSS, GitHub
+> Pages, phases W1–W6. Nothing is built, nothing is deployed, there is no
+> `website/` folder.
 
 ## What the owner says next
 
 | Owner says in chat | Agent does |
 |---|---|
-| **"Build the website"** / "start W1" | Begin W1 (scaffold + Home) strictly per `WEBSITE_PLAN.md` §9: create `website/`, shared chrome, stylesheet, Home page; record in `web_docs/chat-web2/`; update living docs; commit + push; report; stop at the merge gate. |
+| **"Build the website"** / "start W1" | Begin W1 (scaffold + Home) strictly per `WEBSITE_PLAN.md` §9: create `website/`, shared chrome (incl. Learn nav item), stylesheet, Home page with learning banner; self-dependent rule (§5) in force from the first file; record in `web_docs/chat-web2/`; update living docs; commit + push; report; stop at the merge gate. |
 | "Change page X / the design / the stack" | Update `WEBSITE_PLAN.md` + `DECISIONS.md` in the same commit — still no code until implementation is commanded. |
 | (answers O1–O5) | Record the answer in `DECISIONS.md` (close the open item), adjust the plan if needed. |
 | "Create PR and merge" | Open/merge the PR for the current session branch per `rule.md` §3 — **only on this exact class of command.** |
 
 ## Phase queue (implementation — not started)
 
-- [ ] **W1** — scaffold `website/` + Home page
+- [ ] **W1** — scaffold `website/` + Home (product hero + learning banner)
 - [ ] **W2** — Install + Getting Started
-- [ ] **W3** — Engines + Packages
-- [ ] **W4** — FAQ + About
-- [ ] **W5** — polish + GitHub Pages deploy + README link + link sweep
+- [ ] **W3** — Engines + Packages + FAQ + About
+- [ ] **W4** — `/learn` course home + chapters 01–06 (+ package/engine re-verification, locks O6)
+- [ ] **W5** — chapters 07–12 (Editor, C Basics, Scripting, Python, Git, Networking)
+- [ ] **W6** — chapters 13–17 + polish + GitHub Pages deploy + README link + link sweep + self-dependency verification (§5)
 
 ## Verification before any implementation session
 

@@ -56,8 +56,46 @@
 
 O1 screenshots · O2 domain · O3 copy tone · O4 phase order · O5 in-app link.
 
+## Follow-up (2026-09-02, same session) — learning wing + self-dependent
+
+**Owner added two commands (strict no-code rule unchanged):**
+
+> "I want it to be learning page also see this website
+> https://pabitra27706-oss.github.io/Termux-Mastery/ — Make it fully proper
+> self dependent"
+
+**What changed (plan v2, no code):**
+
+1. **Learning wing added (D10):** the site now has a course —
+   **"Master CodeC from Zero to Advanced"** — modelled on the owner's own
+   Termux-Mastery (same owner → structure freely mirrored; content written
+   fresh for CodeC from CodeC's docs): `/learn` course home + 17 proposed
+   chapters `ch-01…ch-17`, fixed self-contained chapter template (goals →
+   steps → try-it → common mistakes → prev/next), hands-on projects
+   chapter, troubleshooting chapter. CodeC twists: chapter 04 (4 compiler
+   engines), chapter 13 (CodeCApi device APIs — CodeC's Termux-API answer),
+   chapter 14 (web projects + live preview).
+2. **Fully self-dependent = law (D11, plan §5):** zero fetched external
+   resources (no CDN, no external fonts/JS/CSS/images, no analytics; system
+   font stack); outbound hyperlinks allowed; every page renders fully
+   offline; the course is completable without ever opening the repo.
+   Verified in W6: grep sweep (no external `src`/`<link>`/`@import`/`url()`),
+   offline render check, full link sweep.
+3. **Phases restructured (D12):** W1 scaffold+Home → W2 Install+Start →
+   W3 Engines+Packages+FAQ+About → W4 course home+ch 01–06 → W5 ch 07–12 →
+   W6 ch 13–17+polish+deploy+verification. 25 pages total at the end.
+4. **Open items added:** O6 (chapter set confirmation, locked at W4) and
+   O7 (course content license — repo default vs MIT).
+5. **Living docs updated:** `WEBSITE_PLAN.md` → v2, `DECISIONS.md` D10–D12 +
+   O6/O7, `NEXT_STEPS.md` head state v2 + phase queue, `WEB_JOURNEY.md`
+   W0.1, `web_prompt.md` (facts + phases).
+
+**Evidence:** still markdown-only; no `website/` folder; no app code,
+`docs/` file, or workflow touched.
+
 ## Next step
 
-**W0 is closed.** The agent waits for the owner's implementation command —
-"Build the website" / "start W1" — then begins W1 per
-`WEBSITE_PLAN.md` §9 (scaffold `website/` + Home page).
+**W0 (+W0.1) is closed.** The agent waits for the owner's implementation
+command — "Build the website" / "start W1" — then begins W1 per
+`WEBSITE_PLAN.md` v2 §9 (scaffold `website/` + Home with learning banner;
+self-dependent rule in force from the first file).

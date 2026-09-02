@@ -13,24 +13,33 @@ and **`rule.md`** first, before doing anything else, then report what you found
 and the current git/PR/CI state before making any change.
 
 You are continuing the **CodeC website** — a public website for the CodeC
-Android C IDE, modelled on the Termux site (`termux.dev`): a landing page with
-install buttons, feature callouts, an install guide, a getting-started guide,
-FAQ/troubleshooting, and an About page. Each chat session gets its own
-`arena/*` session branch — verify with `git status`; commit and push to the
-SESSION branch only, never `main` or any other branch. `rule.md` is the
-operating manual (branching, merge gate, invariants, docs policy) — follow it
-for the website work too.
+Android C IDE with **two wings** (plan v2, 2026-09-02):
+1. **Product wing** — modelled on the Termux site (`termux.dev`): landing
+   page with install CTA, feature callouts, install guide, getting-started
+   guide, compiler engines, packages, FAQ/troubleshooting, About.
+2. **Learning wing** — modelled on the owner's own **Termux-Mastery** site
+   (`pabitra27706-oss.github.io/Termux-Mastery`): a book-like course
+   **"Master CodeC from Zero to Advanced"** — `/learn` course home + 17
+   numbered chapters (`ch-01` … `ch-17`) with hands-on exercises.
+The whole site must be **fully self-dependent** (see law below). Each chat
+session gets its own `arena/*` session branch — verify with `git status`;
+commit and push to the SESSION branch only, never `main` or any other
+branch. `rule.md` is the operating manual (branching, merge gate,
+invariants, docs policy) — follow it for the website work too.
 
-**WHERE THE WEBSITE STANDS (2026-09-02):**
+**WHERE THE WEBSITE STANDS (2026-09-02, plan v2):**
 
-- **WEBSITE PHASE W0 (planning) is COMPLETE. NO WEBSITE CODE EXISTS YET.**
-  The owner's strict rule for the planning session (2026-09-02) was:
+- **WEBSITE PHASE W0 + W0.1 (planning) are COMPLETE. NO WEBSITE CODE EXISTS
+  YET.** The owner's strict rule for the planning session (2026-09-02) was:
   **no code of any kind** — this workstream started with documentation only,
-  exactly like `docs/` + `prompt.md` started the app project.
+  exactly like `docs/` + `prompt.md` started the app project. Plan v2 adds
+  the learning wing (owner command) and the self-dependent requirement
+  (owner command) — see `web_docs/DECISIONS.md` D10–D12.
 - What exists now:
   - `web_docs/` — the website's history & planning folder (the website's
     equivalent of `docs/`): `README.md` (index), `WEBSITE_PLAN.md` (the
-    master spec — pages, content, design, stack, deployment, phases W1–W5),
+    master spec v2 — two wings (product + 17-chapter learning course),
+    per-page content, design, stack, deployment, phases W1–W6),
     `DECISIONS.md` (decision log), `NEXT_STEPS.md` (head state),
     `WEB_JOURNEY.md` (narrative), `chat-web1/SUMMARY.md` (session record).
   - `web_prompt.md` — this file.
@@ -42,11 +51,13 @@ for the website work too.
 
 The implementation phase starts only when the owner commands it in chat —
 e.g. **"Build the website"** (or "start W1"). Then the agent implements
-strictly per `web_docs/WEBSITE_PLAN.md`, in the phase order W1 → W5 (scaffold
-+ Home → Install + Getting Started → Engines + Packages → FAQ + About →
-polish + deploy), writing the site into a new top-level `website/` folder.
-Only then is writing HTML/CSS/JS allowed. Until that command: planning
-edits only, still no code.
+strictly per `web_docs/WEBSITE_PLAN.md` (v2), in the phase order W1 → W6:
+W1 scaffold + Home → W2 Install + Getting Started → W3 Engines + Packages +
+FAQ + About → W4 course home + chapters 01–06 → W5 chapters 07–12 → W6
+chapters 13–17 + polish + GitHub Pages deploy + self-dependency
+verification — writing the site (25 pages) into a new top-level `website/`
+folder. Only then is writing HTML/CSS/JS allowed. Until that command:
+planning edits only, still no code.
 
 **LAW (inherits the app project, no exceptions):**
 
@@ -76,6 +87,27 @@ edits only, still no code.
   CMS, no database**. Served by **GitHub Pages** from the `website/` folder
   in this same repo (see `web_docs/DECISIONS.md` D3/D7). Reopening this
   requires the owner's explicit command.
+- **SELF-DEPENDENT = LAW (owner command 2026-09-02, D11):** zero fetched
+  external resources — **no CDN, no external fonts** (system font stack),
+  **no external JS/CSS/images, no analytics, no third-party embeds**. Every
+  file the browser loads must live in this repo's `website/`. Outbound
+  hyperlinks are fine (github.com repo/README/Releases/Issues, the package
+  repo URL, F-Droid/GitHub only where the README points to Termux). Every
+  page must render **fully offline**. The learning course must be
+  **completable without ever opening the repo** (repo links are optional
+  "go deeper" footnotes). Verified in W6 per plan §5: grep sweep (no
+  external `src=`/`<link href=`/`@import`/`url(`), offline render check,
+  full link sweep — recorded in `web_docs/chat-web6/`.
+- **Learning wing (D10):** "Master CodeC from Zero to Advanced" — `/learn`
+  course home + 17 chapters `ch-01…ch-17`, fixed chapter template (goals →
+  steps → try-it → common mistakes → prev/next). Chapters teach **only what
+  CodeC ships today** (final set locked at W4 against the verified package
+  list, plan §3.2); CodeC twists: ch-04 the 4 compiler engines, ch-13
+  CodeCApi (CodeC's Termux-API answer: battery/sensor/TTS/camera/intent),
+  ch-14 web projects + live preview. Structure mirrors the owner's own
+  Termux-Mastery (same owner — clean-room safe; its content is NOT reused).
+  Total site at completion: **25 pages** (7 product + course home + 17
+  chapters).
 - **Content source of truth is the repo itself** — `README.md` first, then
   `docs/TROUBLESHOOTING.md`, `docs/JOURNEY.md`. The site never states
   anything the repo files don't support (feature claims, package list,
@@ -103,7 +135,7 @@ edits only, still no code.
    questions, refine the plan in `web_docs/` only (no code), update the
    living web docs, commit + push, report, stop at the merge gate.
 3. If the owner **has** commanded implementation: work the current phase
-   (W1–W5) strictly per `web_docs/WEBSITE_PLAN.md`, one phase at a time,
+   (W1–W6) strictly per `web_docs/WEBSITE_PLAN.md` (v2), one phase at a time,
    record the phase in `web_docs/chat-webN/`, update `web_prompt.md` /
    `web_docs/NEXT_STEPS.md` / `web_docs/WEB_JOURNEY.md` in the same commit,
    push, report, stop at the merge gate.

@@ -14,7 +14,7 @@ handoff file (the website's `prompt.md`).
 | File | What it is | Update when… |
 |---|---|---|
 | [`README.md`](README.md) | This index — what the folder is, how it works | the folder's structure changes |
-| [`WEBSITE_PLAN.md`](WEBSITE_PLAN.md) | **The master spec**: goals, page structure & content per page, design direction, stack, repo layout, deployment, implementation phases W1–W5, acceptance criteria | the owner changes scope/design/stack |
+| [`WEBSITE_PLAN.md`](WEBSITE_PLAN.md) | **The master spec (v2)**: two wings — product site (7 pages) + learning wing ("Master CodeC from Zero to Advanced", `/learn` + 17 chapters) — per-page content, self-dependent rules, design, stack, repo layout, deployment, phases W1–W6, acceptance criteria | the owner changes scope/design/stack |
 | [`DECISIONS.md`](DECISIONS.md) | Decision log (numbered D1, D2, …) with date, owner/agent attribution, and rationale | any decision is made or reversed |
 | [`NEXT_STEPS.md`](NEXT_STEPS.md) | Head state line + what happens next (what the owner says to move) | every session that closes a gate |
 | [`WEB_JOURNEY.md`](WEB_JOURNEY.md) | Narrative timeline of all website work (numbered entries, like `docs/JOURNEY.md`) | every session that closed something |

@@ -41,6 +41,50 @@ owner's strict rule honoured: the only new files are markdown. The website
 now waits for the owner's implementation command ("Build the website" /
 "start W1").
 
+## W0.1 — Learning wing + self-dependent requirement (2026-09-02)
+
+**6. Owner expands the scope (2026-09-02).** Same session, same strict no-code
+rule. Two new owner commands:
+1. **"I want it to be learning page also"** — the site must include a
+   learning course, with the owner's own Termux-Mastery site
+   (`pabitra27706-oss.github.io/Termux-Mastery`) as the structural
+   reference: "Master Termux from zero to advanced", 15 numbered chapters,
+   read-like-a-book, hands-on projects, course structure table, disclaimer,
+   MIT license.
+2. **"Make it fully proper self dependent"** — the site must stand alone:
+   no external dependencies of any kind.
+
+**7. Reference study (2026-09-02).** The agent fetched and studied the
+public structure of Termux-Mastery: course home (about / why learn / how to
+use / 15-chapter table / getting started / contributions / roadmap /
+disclaimer / license) + numbered chapter folders. Since it is the owner's
+own project, mirroring its structure is clean-room-safe; its content will
+not be reused (the chapters are written fresh for CodeC from CodeC's own
+docs).
+
+**8. Plan v2 written (2026-09-02).** `WEBSITE_PLAN.md` rewritten to v2:
+- **Two wings:** product (7 pages, unchanged in intent) + learning wing —
+  `/learn` course home + **17 proposed chapters** (`ch-01` Getting Started
+  → `ch-17` Troubleshooting), each on a fixed self-contained template
+  (goals → steps → try-it → common mistakes → prev/next). CodeC-specific
+  twists: chapter 04 (4 compiler engines), chapter 13 (CodeCApi = the
+  CodeC answer to Termux API), chapter 14 (web projects + live preview).
+  Chapters teach only what CodeC ships today; final set locked at W4.
+- **Self-dependent = law (plan §5):** zero fetched external resources (no
+  CDN/fonts/JS/images from outside, system font stack), outbound links
+  fine, offline-complete rendering, course completable without the repo;
+  W6 verifies via grep sweep + offline render + link sweep.
+- **Phases restructured W1→W6** (D12): product wing first (W1–W3), course
+  second (W4–W6 content), deploy + verification last (W6).
+- Decision log: **D10** (learning wing), **D11** (self-dependent), **D12**
+  (phases); open items **O6** (chapter set) and **O7** (course license)
+  added.
+- `web_prompt.md` updated (facts + phase list), `NEXT_STEPS.md` head state
+  v2 + new phase queue.
+
+**9. W0.1 closed (2026-09-02).** Planning v2 complete. Still **zero code** —
+the strict rule stands. Waiting for the owner's implementation command.
+
 ---
 
 *Next entry: W1 (scaffold + Home) — after the owner's implementation command.*
