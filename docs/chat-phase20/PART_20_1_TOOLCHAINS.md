@@ -1,7 +1,6 @@
 # CodeC Phase 20.1 — Core toolchains + interpreted languages
 
-**Status:** 🚧 **IMPLEMENTED (2026-09-01, `arena/01a05cb9-codec`) — host tests green (100 total);
-round-4 repo build awaiting owner re-dispatch (3rd attempt = split into base/llvm/langs parallel legs)** · **Cost:** `[repo-build]`
+**Status:** ✅ **PUBLISHED to the dev channel (2026-09-02, run `33639310638` rerun-after-env-fix) — all 14 round-4 packages live, trim guarantees verified in the published index; device recipe (§4) pending** · **Cost:** `[repo-build]`
 
 > **Build-round log (CI dispatches):**
 > 1. `33506104710` — **killed at the 360-min job ceiling** (6h01m, both arches
@@ -66,6 +65,18 @@ round-4 repo build awaiting owner re-dispatch (3rd attempt = split into base/llv
 >    check: nano/clang/nodejs present for BOTH arches — a partial merge
 >    fails before release, never after). publish-bootstrap-release needs no
 >    change: dispatch it at `source_run_id=33598824226`.
+> 8. `33639310638` (salvage dispatch, `groups=langs` +
+>    `reuse_run_id=33598824226`) — plan + **both langs legs GREEN**, then
+>    publish-dev died at the very last step: "Branch arena/01a05cb9-codec is
+>    not allowed to deploy to github-pages due to environment protection
+>    rules". The github-pages environment carries a literal branch allowlist
+>    (previous sessions added theirs); owner added `arena/01a05cb9-codec`
+>    via deployment-branch-policies API → rerun-failed-jobs →
+>    **PUBLISH GREEN**. Live Packages index (aarch64) verified by direct
+>    read: all 14 round-4 names present (clang/lld/llvm/llvm-tools/
+>    libllvm/libllvm-static/libcompiler-rt 21.1.8-3, nodejs 26.4.0-1,
+>    npm 11.19.0, php 8.5.1 + php-fpm + php-sodium, ruby 3.4.1-2, lua54
+>    5.4.8-10); lldb/mlir/libpolly/libmlir absent (sort-order gaps closed).
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)

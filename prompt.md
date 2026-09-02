@@ -48,9 +48,12 @@ gate, invariants, docs policy) — follow it.
   `33625141182`). Owner directed SALVAGE (D14): rebuild only the langs legs
   and merge the 4 green legs of `33598824226` via new workflow inputs
   `groups=langs` + `reuse_run_id=33598824226` (per-arch nano/clang/nodejs
-  marker gate before signing), then bootstrap-release at
-  source_run_id=33598824226
-  (agent dispatch is 403: no actions:write); publish auto-follows on green. Record: `docs/chat-phase20/`.
+  marker gate before signing). Salvage dispatch `33639310638`: langs green,
+  publish blocked by the github-pages env branch allowlist → owner added
+  `arena/01a05cb9-codec` → rerun-failed → **DEV REPO PUBLISHED** (all 14
+  names verified live; lldb/mlir/libpolly absent). Next: bootstrap-release
+  at source_run_id=33598824226 (owner), §4 device recipe, owner merge.
+  Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
   Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
   **COMPLETE, DEVICE-ACCEPTED (where gated) and MERGED**.
