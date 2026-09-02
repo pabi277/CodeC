@@ -1,7 +1,7 @@
 # CodeC Phase 20.1 — Core toolchains + interpreted languages
 
-**Status:** 🚧 **IMPLEMENTED (2026-09-01, `arena/01a05cb9-codec` @ `49d8d81`) — host tests green (95 total);
-round-4 repo build re-dispatching (2nd attempt) after two documented build-round fixes** · **Cost:** `[repo-build]`
+**Status:** 🚧 **IMPLEMENTED (2026-09-01, `arena/01a05cb9-codec`) — host tests green (100 total);
+round-4 repo build awaiting owner re-dispatch (3rd attempt = split into base/llvm/langs parallel legs)** · **Cost:** `[repo-build]`
 
 > **Build-round log (CI dispatches):**
 > 1. `33506104710` — **killed at the 360-min job ceiling** (6h01m, both arches
@@ -13,10 +13,22 @@ round-4 repo build re-dispatching (2nd attempt) after two documented build-round
 >    has its own `-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lldb;mlir'`
 >    line, which the broad `lldb;mlir` post-check then false-matched); a
 >    subsequent edit also introduced CRLF line endings that broke bash parsing.
->    All fixed in `49d8d81`, verified by a rehearsal applying the override
->    script to the **real fetched recipe files** (16/16 checks OK) — fixtures
->    now carry the exact upstream bytes. Lesson applied: fail-loud + real-byte
->    rehearsal before re-dispatch.
+>    Fixed in `49d8d81` and verified by a rehearsal applying the override
+>    script to the **real fetched recipe files** (16/16 checks OK) — the
+>    committed fixtures now carry the exact upstream bytes.
+> 3. `33547475854` — **killed at the 360-min ceiling again** (6h00m): even the
+>    trimmed round doesn't fit one job. → **D11 split:** the build job now
+>    fans out per arch into three parallel group legs — `base` (the round 1–3
+>    catalog + the Phase 3 bootstrap), `llvm` (libllvm alone), `langs`
+>    (nodejs/npm/php/ruby/lua54). Groups are resolved from
+>    `CODEC_REPOSITORY_GROUP_*` in `properties.codec.sh` (single source of
+>    truth; a host tripwire test asserts they're an exact partition of the
+>    full list and that the workflow's matrix/artifact/publish references
+>    agree). publish-dev pattern-merges the legs' artifacts
+>    (`codec-repository-<arch>-*` + `merge-multiple: true`) — its existing
+>    "harvest all debs + regenerate metadata" merge needed no change.
+>    `publish-bootstrap-release.yml` now reads the `-base` artifacts (the
+>    bootstrap builds only in that leg).
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)
@@ -302,6 +314,22 @@ should appear).
   `bin/nvptx-arch`, `bin/offload-arch`) so subpackage creation cannot fail
   on missing files. Everything fails loudly on pinned-recipe drift, same as
   every other override.
+- **D11 — build job split into parallel group legs (after the second 360-min
+  kill, run `33547475854`):** a 6h-capped job cannot compile the whole round
+  even trimmed, and the ceiling cannot be raised. The build job fans out per
+  arch into **base / llvm / langs** legs; each leg resolves its roots via
+  `build-package-repository.sh <arch> <group>` from `CODEC_REPOSITORY_GROUP_*`
+  in `properties.codec.sh` (single source of truth; `CODEC_REPO_DRY_RUN=1`
+  makes resolution host-testable — the only dry path, before any mkdir or
+  clone). The Phase 3 bootstrap builds/validates/uploads only in `base`.
+  Artifacts are group-suffixed and publish-dev pattern-merges them
+  (`codec-repository-<arch>-*`, `merge-multiple: true`) — its raw-deb
+  harvest + regenerate step already performed exactly this merge, so the
+  published repo shape is unchanged. Consistency is tripwired in
+  `test_ci_guardrails.py`: exact partition (no missed/duplicated root),
+  workflow matrix/artifact/publish references agree, and
+  `publish-bootstrap-release.yml` reads the `-base` artifacts. Calling the
+  script without a group keeps the legacy one-shot behavior for local runs.
 
 ---
 
@@ -363,5 +391,7 @@ should appear).
 - **Sizes:** measured post-build (the repo metadata gets the exact numbers);
   rough expectations: clang/lld/llvm ~80–120 MB/arch combined, nodejs ~30 MB,
   php ~15 MB, ruby ~20 MB, lua54 ~3 MB.
-- **CI timeout risk:** recorded as D9 — LLVM is the long pole; if the 360-min
-  job limit is hit, split `libllvm` into its own dispatch (D3 rule).
+- **CI timeout:** recorded as D9, fired twice (build-round log above);
+  D10 trims the recipe, D11 split the job — group legs are the shipped
+  mechanism (a per-dispatch libllvm split would publish an incomplete repo,
+  since publish-dev merges artifacts from a single run).

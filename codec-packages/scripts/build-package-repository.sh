@@ -9,15 +9,53 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/properties.codec.sh"
 
 ARCH="${1:-aarch64}"
-WORK="${CODEC_REPO_WORK:-$ROOT/.work/repository-$ARCH}"
-SRC="$WORK/termux-packages"
-DIST="$ROOT/dist/repository-$ARCH"
-mkdir -p "$WORK" "$ROOT/dist"
+# Optional second argument (Phase 20.1 CI split): a package GROUP name from
+# properties.codec.sh (base / llvm / langs — CODEC_REPOSITORY_GROUP_* vars).
+# Without it the full CODEC_REPOSITORY_PACKAGES union is built, byte-identical
+# behavior to pre-split rounds (local runs, future single-leg debugging).
+GROUP="${2:-}"
 
 case "$ARCH" in
   aarch64|x86_64) ;;
   *) echo "build-package-repository: unsupported architecture: $ARCH" >&2; exit 2 ;;
 esac
+
+# Resolve the root list FIRST — with no filesystem side effects — so
+# CODEC_REPO_DRY_RUN=1 can exercise group resolution in the host suite
+# without touching the network, docker, git, or the worktree.
+if [[ -n "$GROUP" ]]; then
+  group_var="CODEC_REPOSITORY_GROUP_$(printf '%s' "$GROUP" | tr '[:lower:]' '[:upper:]')"
+  group_list="${!group_var:-}"
+  if [[ -z "$group_list" ]]; then
+    echo "build-package-repository: unknown package group: $GROUP" >&2
+    echo "known groups: $(compgen -v CODEC_REPOSITORY_GROUP_ | sed 's/^CODEC_REPOSITORY_GROUP_//' | tr 'A-Z' 'a-z' | tr '\n' ' ')" >&2
+    exit 2
+  fi
+  PACKAGES=$(printf '%s\n' "$group_list" | awk 'NF { print $1 }')
+else
+  PACKAGES=$(printf '%s\n' "$CODEC_REPOSITORY_PACKAGES" | awk 'NF { print $1 }')
+fi
+if [[ -z "$PACKAGES" ]]; then
+  echo "build-package-repository: no repository packages configured" >&2
+  exit 2
+fi
+
+echo "CodeC repository roots ($ARCH${GROUP:+, group=$GROUP}):"
+printf '  %s\n' $PACKAGES
+
+# Testability hook: with CODEC_REPO_DRY_RUN=1 the script stops here, before
+# any clone/build — the host suite exercises group resolution this way
+# (rehearsals proved why: a flattened fixture once hid the real recipe
+# shape from CI until the fail-loud guards tripped mid-dispatch).
+if [[ "${CODEC_REPO_DRY_RUN:-0}" == "1" ]]; then
+  echo "build-package-repository: dry run, stopping before clone/build"
+  exit 0
+fi
+
+WORK="${CODEC_REPO_WORK:-$ROOT/.work/repository-$ARCH}"
+SRC="$WORK/termux-packages"
+DIST="$ROOT/dist/repository-$ARCH"
+mkdir -p "$WORK" "$ROOT/dist"
 
 if [[ ! -d "$SRC/.git" ]]; then
   git clone --filter=blob:none --no-checkout "$TERMUX_PACKAGES_REPO" "$SRC"
@@ -27,15 +65,6 @@ fi
 
 "$ROOT/scripts/apply-prefix.sh" "$SRC"
 "$ROOT/scripts/apply-recipe-overrides.sh" "$SRC"
-
-PACKAGES=$(printf '%s\n' "$CODEC_REPOSITORY_PACKAGES" | awk 'NF { print $1 }')
-if [[ -z "$PACKAGES" ]]; then
-  echo "build-package-repository: no repository packages configured" >&2
-  exit 2
-fi
-
-echo "CodeC repository roots ($ARCH):"
-printf '  %s\n' $PACKAGES
 
 # Keep the build output limited to this architecture. The package builder will
 # still place the complete source-built dependency closure in output/.

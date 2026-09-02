@@ -181,6 +181,63 @@ ruby
 lua54
 "
 
+# Build-job split (Phase 20.1, after the 360-minute job ceiling killed
+# dispatches 33506104710 and 33547475854): one 6h-capped GitHub job cannot
+# compile all roots any more, so the workflow matrix fans out into one leg
+# per GROUP (arch x group). These three groups are the single source of
+# truth — build-package-repository.sh resolves the matrix group name through
+# them, and codec-packages/tests/test_ci_guardrails.py guards that their
+# union is exactly CODEC_REPOSITORY_PACKAGES with empty pairwise overlap;
+# the workflow's matrix lists the group NAMES only.
+#
+#   base  — the round 1–3 catalog (fits easily: round 3 measured ~2h) and
+#           the only leg that also builds/validates/uploads the Phase 3
+#           bootstrap archive.
+#   llvm  — libllvm alone: the long pole even after the D10 backend trim.
+#   langs — the round-4 language runtimes sharing one closure (libicu is
+#           built once for nodejs+php here; npm is arch-independent).
+CODEC_REPOSITORY_GROUP_BASE="
+nano
+less
+coreutils
+grep
+sed
+gawk
+gzip
+tar
+make
+libmagic
+git
+wget
+bat
+ripgrep
+fd
+htop
+tmux
+tree
+patch
+diffutils
+zstd
+m4
+autoconf
+automake
+libtool
+python
+python-pip
+"
+
+CODEC_REPOSITORY_GROUP_LLVM="
+libllvm
+"
+
+CODEC_REPOSITORY_GROUP_LANGS="
+nodejs
+npm
+php
+ruby
+lua54
+"
+
 # Development channel URL. CI/release automation may override this; the app
 # never falls back to an official Termux repository.
 CODEC_PACKAGE_REPOSITORY_URL="${CODEC_PACKAGE_REPOSITORY_URL:-https://pabi277.github.io/CodeC/dev}"

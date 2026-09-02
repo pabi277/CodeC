@@ -36,7 +36,7 @@ jobs:
 
   build:
     if: ${{ github.event_name == 'workflow_dispatch' && (inputs.publish == false || inputs.source_run_id == '') }}
-    name: Build CodeC packages (${{ matrix.arch }})
+    name: Build CodeC packages (${{ matrix.arch }}/${{ matrix.group }})
     needs: host-tests
     runs-on: ubuntu-latest
     timeout-minutes: 360
@@ -44,8 +44,17 @@ jobs:
       fail-fast: false
       matrix:
         arch: [aarch64, x86_64]
+        # 360 min is GitHub's per-job ceiling; the monolithic round-4 build
+        # exceeded it twice (runs 33506104710, 33547475854). The build now
+        # fans out to one leg per package group; each leg resolves its roots
+        # from CODEC_REPOSITORY_GROUP_<NAME> in codec-packages/properties.codec.sh
+        # (single source of truth; group/union consistency is guarded by
+        # codec-packages/tests/test_ci_guardrails.py). Legs run in parallel
+        # and publish-dev pattern-merges their artifacts below.
+        group: [base, llvm, langs]
     env:
       ARCH: ${{ matrix.arch }}
+      GROUP: ${{ matrix.group }}
       CODEC_USE_DOCKER: "1"
       SOURCE_DATE_EPOCH: "0"
 
@@ -86,9 +95,10 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x codec-packages/scripts/*.sh codec-packages/scripts/*.py
-          codec-packages/scripts/build-package-repository.sh "$ARCH"
+          codec-packages/scripts/build-package-repository.sh "$ARCH" "$GROUP"
 
       - name: Build Phase 3 package-manager bootstrap
+        if: ${{ matrix.group == 'base' }}
         run: |
           set -euo pipefail
           codec-packages/scripts/build-package-manager-bootstrap.sh "$ARCH"
@@ -120,20 +130,32 @@ jobs:
           fi
 
       - name: Validate Phase 3 bootstrap archive
+        if: ${{ matrix.group == 'base' }}
         run: |
           set -euo pipefail
           python3 codec-packages/scripts/validate-bootstrap.py \
             "codec-packages/dist/bootstrap-phase3-${ARCH}.tar.gz" 
 
-      - name: Upload repository artifact
+      - name: Upload repository + bootstrap artifacts (base leg)
+        if: ${{ matrix.group == 'base' }}
         uses: actions/upload-artifact@v4
         with:
-          name: codec-repository-${{ matrix.arch }}
+          name: codec-repository-${{ matrix.arch }}-${{ matrix.group }}
           path: |
             codec-packages/dist/repository-${{ matrix.arch }}
             codec-packages/dist/bootstrap-phase3-${{ matrix.arch }}.tar.gz
             codec-packages/dist/bootstrap-phase3-${{ matrix.arch }}.tar.gz.sha256
             bootstrap-phase3-contents.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload repository artifact (non-base legs)
+        if: ${{ matrix.group != 'base' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: codec-repository-${{ matrix.arch }}-${{ matrix.group }}
+          path: |
+            codec-packages/dist/repository-${{ matrix.arch }}
           if-no-files-found: error
           retention-days: 14
 
@@ -156,18 +178,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download aarch64 repository
+      - name: Download aarch64 repository (all group legs)
         uses: actions/download-artifact@v4
         with:
-          name: codec-repository-aarch64
+          pattern: codec-repository-aarch64-*
+          merge-multiple: true
           path: input/aarch64
           run-id: ${{ inputs.source_run_id || github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download x86_64 repository
+      - name: Download x86_64 repository (all group legs)
         uses: actions/download-artifact@v4
         with:
-          name: codec-repository-x86_64
+          pattern: codec-repository-x86_64-*
+          merge-multiple: true
           path: input/x86_64
           run-id: ${{ inputs.source_run_id || github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
