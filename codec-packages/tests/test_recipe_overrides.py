@@ -958,6 +958,50 @@ class RecipeOverrideTest(unittest.TestCase):
         (lib_dir / "lld.subpackage.sh").write_text(
             "TERMUX_SUBPKG_INCLUDE=\"\nbin/lld\nbin/wasm-ld\n\"\n"
         )
+        # Exact upstream bytes (pinned revision) for
+        # libcompiler-rt.subpackage.sh — the only libllvm subpackage that
+        # defines its own termux_step_create_subpkg_debscripts(); the
+        # generated postinst/prerm are pure ndk-multilib interop, rejected
+        # by the repository validator (run 33585242675 llvm legs).
+        (lib_dir / "libcompiler-rt.subpackage.sh").write_text(
+            'TERMUX_SUBPKG_DESCRIPTION="Compiler runtime libraries for clang"\n'
+            'TERMUX_SUBPKG_INCLUDE="\n'
+            "include/fuzzer/FuzzedDataProvider.h\n"
+            "include/orc/\n"
+            "include/profile/\n"
+            "include/sanitizer/\n"
+            "include/xray/\n"
+            "lib/clang/*/bin/asan_device_setup\n"
+            "lib/clang/*/lib/linux/\n"
+            "share/libalpm/hooks/update-libcompiler-rt.hook\n"
+            "share/libalpm/scripts/update-libcompiler-rt\n"
+            '"\n'
+            "TERMUX_SUBPKG_DEPEND_ON_PARENT=false\n"
+            "TERMUX_SUBPKG_DEPENDS=libc++\n"
+            "\n"
+            "termux_step_create_subpkg_debscripts() {\n"
+            '\tlocal RT_OPT_DIR="$TERMUX_PREFIX/opt/ndk-multilib/cross-compiler-rt"\n'
+            '\tlocal RT_PATH="$TERMUX_PREFIX/lib/clang/${TERMUX_PKG_VERSION%%.*}/lib/linux"\n'
+            "\n"
+            "\tcat <<- EOF > ./triggers\n"
+            "\tinterest-noawait $RT_OPT_DIR\n"
+            "\tEOF\n"
+            "\n"
+            "\tcat <<- EOF > ./postinst\n"
+            '\t#!$TERMUX_PREFIX/bin/bash\n'
+            '\tif [[ -e "$RT_OPT_DIR" ]]; then\n'
+            '\t    find $RT_OPT_DIR -type f ! -name "lib*-$TERMUX_ARCH-*" -exec ln -sf "{}" $RT_PATH \\;\n'
+            "\tfi\n"
+            "\texit 0\n"
+            "\tEOF\n"
+            "\n"
+            "\tcat <<- EOF > ./prerm\n"
+            '\t#!$TERMUX_PREFIX/bin/sh\n'
+            '\tfind $RT_PATH -type l ! -name "lib*-$TERMUX_ARCH-*" -exec rm -rf "{}" \\;\n'
+            "\texit 0\n"
+            "\tEOF\n"
+            "}\n"
+        )
         for sub in ("lldb", "mlir", "libpolly"):
             (lib_dir / f"{sub}.subpackage.sh").write_text(
                 f'TERMUX_SUBPKG_DESCRIPTION="{sub}"\n'
@@ -1010,6 +1054,53 @@ class RecipeOverrideTest(unittest.TestCase):
                     first.startswith('TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"'),
                     f"{sub} must be excluded for CodeC arches when trimmed",
                 )
+
+    def test_libcompiler_rt_debscripts_neutralized(self) -> None:
+        """libcompiler-rt is the one libllvm subpackage that ships
+        postinst/prerm/triggers — pure ndk-multilib interop CodeC never
+        carries. The override appends a last-definition-wins no-op to the
+        subpackage file so the validator accepts the deb (run 33585242675
+        failed on exactly this)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lib_dir = self._write_libllvm_full_fixture(tree)
+
+            subprocess.run(
+                [str(OVERRIDES), str(tree)], check=True, text=True,
+                capture_output=True,
+            )
+
+            crt = (lib_dir / "libcompiler-rt.subpackage.sh").read_text()
+            self.assertIn("CodeC: no maintainer scripts for libcompiler-rt", crt)
+            # The upstream definition stays (harmless: shadowed), the no-op
+            # is the LAST definition in the file so it wins.
+            self.assertIn("termux_step_create_subpkg_debscripts() {", crt)
+            stripped = crt.rstrip()
+            self.assertTrue(
+                stripped.endswith(
+                    "termux_step_create_subpkg_debscripts() { :; }"
+                )
+            )
+
+    def test_libcompiler_rt_neutralization_fails_loud_on_drift(self) -> None:
+        """If upstream drops its termux_step_create_subpkg_debscripts from
+        libcompiler-rt, the build aborts for re-review rather than silently
+        trusting the shared stub (same convention as python/python-pip)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            self._write_libllvm_full_fixture(tree)
+            lib_dir = tree / "packages" / "libllvm"
+            (lib_dir / "libcompiler-rt.subpackage.sh").write_text(
+                'TERMUX_SUBPKG_DESCRIPTION="recipe shape changed upstream"\n'
+            )
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("re-review", result.stderr)
 
     def test_libllvm_trim_fails_loud_on_drift(self) -> None:
         """If the pinned libllvm recipe changed shape (no all-targets line),

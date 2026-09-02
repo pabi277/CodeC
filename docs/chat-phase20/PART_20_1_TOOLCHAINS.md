@@ -29,6 +29,16 @@ round-4 repo build awaiting owner re-dispatch (3rd attempt = split into base/llv
 >    "harvest all debs + regenerate metadata" merge needed no change.
 >    `publish-bootstrap-release.yml` now reads the `-base` artifacts (the
 >    bootstrap builds only in that leg).
+> 4. `33585242675` — **the split worked**: base (both arches) succeeded,
+>    langs running, but **both llvm legs failed at repository validation**:
+>    `libcompiler-rt_21.1.8-3` ships postinst/prerm (upstream
+>    `libcompiler-rt.subpackage.sh` defines its own
+>    `termux_step_create_subpkg_debscripts()` — pure ndk-multilib interop
+>    that CodeC never needs). Audited every other subpackage file in the
+>    round-4 closures: only `php-apache` has the same hook and is already
+>    excluded (D7). Fix = same last-defined-wins no-op appended to the
+>    subpackage file (D12). Full re-dispatch required: "re-run failed jobs"
+>    would reuse the unfixed commit.
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)
@@ -330,6 +340,21 @@ should appear).
   workflow matrix/artifact/publish references agree, and
   `publish-bootstrap-release.yml` reads the `-base` artifacts. Calling the
   script without a group keeps the legacy one-shot behavior for local runs.
+- **D12 — libcompiler-rt maintainer scripts neutralized (after run
+  `33585242675`):** run 33585242675 proved the split itself (base legs green)
+  but failed both llvm legs at repository validation:
+  `libcompiler-rt` ships postinst/prerm/triggers because upstream
+  `libcompiler-rt.subpackage.sh` defines its own
+  `termux_step_create_subpkg_debscripts()` — its only purpose is interop
+  with Termux's `ndk-multilib` package (symlinking foreign-arch compiler-rt
+  runtimes into the clang resource dir). CodeC never ships ndk-multilib, so
+  the scripts are dead code; the shared debscripts stub doesn't help because
+  a recipe-level definition shadows it. Fix follows the established
+  python/python-pip precedent at SUBPACKAGE level: append the no-op
+  `termux_step_create_subpkg_debscripts() { :; }` as the last definition in
+  `libcompiler-rt.subpackage.sh`, fail loudly on pinned-revision drift.
+  Audit at the pinned ref: the only other subpackage hook in any round-4
+  closure is `php/php-apache` — already excluded by D7, so never validated.
 
 ---
 

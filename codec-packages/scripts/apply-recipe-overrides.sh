@@ -598,6 +598,42 @@ else
   echo "recipe-overrides: libllvm clang subpackage not found; skipping bin/cc strip" >&2
 fi
 
+# libcompiler-rt maintainer scripts neutralized (codeciide/package-repository
+# validator forbids maintainer scripts outside the reviewed alternatives
+# allowlist). The subpackage defines its own
+# termux_step_create_subpkg_debscripts() writing a dpkg trigger + postinst +
+# prerm whose ONLY purpose is interop with Termux's ndk-multilib package
+# (symlinking cross-compiler runtimes from $PREFIX/opt/ndk-multilib into
+# lib/clang/<major>/lib/linux). CodeC never ships ndk-multilib (on-device
+# native arch only), so the scripts are pure dead code here — but the deb
+# still carries them and the validator rejects it (run 33585242675 llvm
+# legs). The shared debscripts stub does not help: a recipe-level definition
+# shadows it, so same as python/python-pip append a last-defined-wins no-op
+# to the SUBPACKAGE file itself. Fail loudly on pinned-revision drift.
+CRT_SUBPKG="$TREE/packages/libllvm/libcompiler-rt.subpackage.sh"
+if [[ -f "$CRT_SUBPKG" ]]; then
+  if ! grep -q '^termux_step_create_subpkg_debscripts()' "$CRT_SUBPKG"; then
+    echo "recipe-overrides: libcompiler-rt subpackage no longer defines its own termux_step_create_subpkg_debscripts (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for libcompiler-rt' "$CRT_SUBPKG"; then
+    cat >> "$CRT_SUBPKG" <<'EOF'
+
+# CodeC: no maintainer scripts for libcompiler-rt — the upstream
+# postinst/prerm/triggers only serve Termux's ndk-multilib cross-compiler
+# symlinks, which CodeC never ships. Last definition wins.
+termux_step_create_subpkg_debscripts() { :; }
+EOF
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for libcompiler-rt' "$CRT_SUBPKG"; then
+    echo "recipe-overrides: failed to append libcompiler-rt debscripts override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: libcompiler-rt ships without maintainer scripts (ndk-multilib interop is dead code in CodeC)"
+else
+  echo "recipe-overrides: libllvm libcompiler-rt subpackage not found; skipping debscripts neutralization" >&2
+fi
+
 # ---- libllvm build-time trim (D10, PERMANENT) ----
 # Round-4 build 33506104710 (2026-09-01) was killed at the 360-minute
 # per-job ceiling after 6h01m inside the monolithic build step: upstream

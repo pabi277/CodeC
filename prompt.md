@@ -37,7 +37,10 @@ gate, invariants, docs policy) — follow it.
   invariant)**; +8 hermetic tests, repo suite 93 green. Two dispatches died at the
   360-min job ceiling (`33506104710`, `33547475854`) → D10 backend trim +
   **D11 split: the build job now fans out into base/llvm/langs parallel
-  legs**; third dispatch awaits the owner's Termux `gh workflow run` command
+  legs**; third dispatch `33585242675` proved the split (base green) but
+  failed both llvm legs at validation: libcompiler-rt's upstream
+  subpkg-level postinst/prerm (ndk-multilib interop) → D12 no-op append.
+  Fourth FULL dispatch awaits the owner's Termux `gh workflow run` command
   (agent dispatch is 403: no actions:write); publish auto-follows on green. Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
   Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
