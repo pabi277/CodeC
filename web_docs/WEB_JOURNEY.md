@@ -232,3 +232,19 @@ The site goes live at `https://pabi277.github.io/CodeC/` (W1 content) on
 merge / deploy run, `dev/` untouched beside it.
 
 ---
+
+## Reversal — owner command (2026-09-02)
+
+**23. D14 undone (2026-09-02).** The owner commanded: "Undu the previous
+on this command 'Deploy the website to Pages now'." Facts at undo time:
+**nothing had deployed** — `pages.yml` could not run before the branch
+merged (dispatch 404 was expected), so GitHub Pages, `/dev` and `/keys`
+were never touched. On the branch: `pages.yml` deleted;
+`package-repository.yml` restored byte-identical to `main` (diff vs
+`origin/main` = 0 lines). Docs law held: D14 remains in `DECISIONS.md`
+with **D15** recording the reversal; entry 22 stays as history (this
+entry corrects it). **Deploy returns to W6.7 only.** The W6 research note
+(Pages = one site per repo; package-repo coexistence) remains — it is a
+fact about the repo that W6.7 must design around.
+
+---

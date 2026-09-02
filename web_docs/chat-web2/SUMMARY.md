@@ -254,3 +254,18 @@ Pages deploy replaces the whole site — so coexistence was engineered
 
 Deploy target: `https://pabi277.github.io/CodeC/` (W1 content live now;
 W6.7 still the final verified deploy of the full 25-page site).
+
+## Follow-up (2026-09-02, same session) — owner command: UNDO the early deploy
+
+**Owner:** "Undu the previous on this command 'Deploy the website to Pages
+now'." → recorded as **D15** (reverses D14). Nothing had deployed (the
+workflow couldn't run pre-merge), so GitHub Pages was never touched.
+Reverted: `.github/workflows/pages.yml` deleted;
+`package-repository.yml` restored byte-identical to `main` (verified:
+`git diff origin/main` on that file = 0 lines). The chrome pattern, the
+W1 build, and all W1 exit conditions are **unaffected** — this undo only
+removed the deploy engineering. **Deploy back at W6.7** (which must still
+solve coexistence — see the research note in `web-phase6/README.md`).
+Docs-law note: D14 remains in `DECISIONS.md`/`WEB_JOURNEY.md` (entry 22)
+with D15 + journey entry 23 recording the reversal — history is never
+rewritten.

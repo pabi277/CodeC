@@ -1,18 +1,18 @@
 # NEXT_STEPS.md — website head state
 
-> **HEAD STATE (2026-09-02, W1 COMPLETE + EARLY PAGES DEPLOY): the website
-> EXISTS and is going live at `https://pabi277.github.io/CodeC/`.** W1
-> (2026-09-02, owner command "Build the website") created `website/` per
-> `web-phase1/`: `style.css` (tokens + all components, system fonts only),
-> `favicon.svg` (local mark), `index.html` (shared chrome + Home: hero →
-> CTA → 6 cards → learn banner → footnote). **D14 (owner command "Deploy
-> the website to Pages now")** added `.github/workflows/pages.yml` + a
-> coexistence edit in `package-repository.yml` — every deploy carries the
-> site AND the package repo (`/dev`, `/keys`) together (one Pages site per
-> repo!). Fully self-dependent from the first byte (§5.5 sweeps PASS,
-> `chat-web2/`); no JavaScript; relative `*.html` internal links; chrome
-> copy-paste pattern in `web_docs/chat-web2/SUMMARY.md`. W6.7 remains the
-> final verified deploy. 21 pages remain (404 until built, expected).
+> **HEAD STATE (2026-09-02, W1 COMPLETE — early deploy UNDONE): the website
+> EXISTS; deploy returns to W6.7.** W1 (2026-09-02, owner command "Build
+> the website") created `website/` per `web-phase1/`: `style.css` (tokens +
+> all components, system fonts only), `favicon.svg` (local mark),
+> `index.html` (shared chrome + Home: hero → CTA → 6 cards → learn banner
+> → footnote). The owner-commanded early Pages deploy (D14) was **reversed
+> by the owner** (D15, same day) before anything ran — no workflow changes
+> remain; GitHub Pages still serves only the package repo (`/dev`,
+> `/keys`). **The site deploys at W6.7 as originally planned.** Fully
+> self-dependent (§5.5 sweeps PASS, `chat-web2/`); no JavaScript; relative
+> `*.html` links; chrome copy-paste pattern in
+> `web_docs/chat-web2/SUMMARY.md`. 21 pages remain (404 until built,
+> expected).
 
 ## What the owner says next
 
