@@ -59,3 +59,35 @@ live URL.
 - Session branch only; merge gate; verify state first.
 - Living docs updated in the same commit; session record →
   `web_docs/chat-web6/` (includes the verification records).
+
+---
+
+## 🔎 Research note (2026-09-02, W1 session) — Pages is ALREADY the package repo
+
+Verified while answering the owner's "can you create a link / direct link"
+question: **this repo's GitHub Pages site already exists** — it is the
+**signed CodeC package repository**. `.github/workflows/package-repository.yml`
+(`publish-dev` job) uploads `packages/` (`dev/` + `keys/`) via
+`actions/upload-pages-artifact` + `actions/deploy-pages` to the
+`github-pages` environment. That is what serves
+`https://pabi277.github.io/CodeC/dev` (the app's apt source — an app
+invariant) and `/CodeC/keys` (the keyring).
+
+**Consequence for W6.7 (hard constraint):** a Pages deploy of `website/`
+**replaces the whole site** (one Pages site per repo; actions-deploy
+swaps the entire artifact). A naive website deploy would **wipe `/dev` and
+`/keys`**, breaking every installed app's package source — and the next
+package-repo publish would in turn wipe the website. The W6.7 design must
+make them **coexist**, e.g.:
+
+- the deploy step fetches the currently-published Pages content (or the
+  latest `codec-repository-*` artifacts / re-runs `generate+sign`) and
+  uploads **`website/` + `dev/` + `keys/` together** as one artifact; and
+- `package-repository.yml`'s publish job gets the mirror change (include
+  the site) — note: touching that workflow is app-side and therefore
+  **requires the owner's explicit command** (beyond D7's pages.yml + README
+  line), so the choice must be recorded in `DECISIONS.md` at W6 start.
+
+Also verified 2026-09-02: the sandbox cannot reach
+`pabi277.github.io` (TLS blocked), so W6.7's live-link checks happen from
+CI or the owner's browser, not the sandbox.
