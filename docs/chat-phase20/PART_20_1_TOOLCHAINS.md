@@ -57,6 +57,15 @@ round-4 repo build awaiting owner re-dispatch (3rd attempt = split into base/llv
 >    (no closure edges), TERMUX_SUBPKG_EXCLUDED_ARCHES kept (no deb),
 >    file kept (graph stays whole), and php-apache's own
 >    termux_step_create_subpkg_debscripts gets the last-wins no-op.
+> 7. Owner call (2026-09-02): rather than re-running all six legs again,
+>    **reuse the four green legs** of `33598824226` (base/llvm,
+>    retention-pinned 14d). → **D14 salvage mode:** the workflow learned
+>    `groups=<csv>` (plan job filters the matrix, fail-loud on unknown
+>    names) and `reuse_run_id=<run>` (publish-dev pattern-merges that run's
+>    leg artifacts into the pool before signing, gated by a per-arch marker
+>    check: nano/clang/nodejs present for BOTH arches — a partial merge
+>    fails before release, never after). publish-bootstrap-release needs no
+>    change: dispatch it at `source_run_id=33598824226`.
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)

@@ -69,8 +69,12 @@ class PackageGroupSplitTest(unittest.TestCase):
 
     def test_workflow_split_references_are_consistent(self) -> None:
         wf = (REPO_ROOT / ".github" / "workflows" / "package-repository.yml").read_text()
-        # Matrix carries exactly the group names (single fan-out point).
-        self.assertRegex(wf, r"group:\s*\[base, llvm, langs\]")
+        # Matrix is fed by the plan job (the groups dispatch input filters
+        # which legs rebuild); the known set must still be exactly the three
+        # group names from properties.codec.sh.
+        self.assertIn("group: ${{ fromJSON(needs.plan.outputs.groups) }}", wf)
+        self.assertIn('default: "base,llvm,langs"', wf)
+        self.assertIn("base|llvm|langs)", wf)
         # Per-leg artifact names are group-suffixed.
         self.assertIn("codec-repository-${{ matrix.arch }}-${{ matrix.group }}", wf)
         # The time-heavy bootstrap steps run only in the base leg.
@@ -86,6 +90,14 @@ class PackageGroupSplitTest(unittest.TestCase):
         self.assertIn("pattern: codec-repository-aarch64-*", wf)
         self.assertIn("pattern: codec-repository-x86_64-*", wf)
         self.assertIn("merge-multiple: true", wf)
+        # Salvage wiring: green legs from a partial-failure run merge via
+        # reuse_run_id; it conflicts with source_run_id and is gated by the
+        # per-arch marker check before signing.
+        self.assertIn("reuse_run_id:", wf)
+        self.assertIn("run-id: ${{ inputs.reuse_run_id }}", wf)
+        self.assertIn("mutually exclusive", wf)
+        self.assertIn("nano clang nodejs", wf)
+        self.assertIn("missing marker package", wf)
         # The old exact-name artifacts must be gone from this workflow.
         self.assertNotIn("name: codec-repository-aarch64\n", wf)
         self.assertNotIn("name: codec-repository-x86_64\n", wf)

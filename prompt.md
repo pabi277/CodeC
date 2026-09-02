@@ -45,8 +45,11 @@ gate, invariants, docs policy) — follow it.
   buildorder closure (gdk-pixbuf validator-trip / dead x264 URL) → D13:
   neuter phantom subpackages IN PLACE (strip dep edges + arch-skip + no-op
   scripts — outright deletion orphaned phpmyadmin's graph edge in
-  `33625141182`). Sixth FULL dispatch awaits the
-  owner's Termux `gh workflow run` command
+  `33625141182`). Owner directed SALVAGE (D14): rebuild only the langs legs
+  and merge the 4 green legs of `33598824226` via new workflow inputs
+  `groups=langs` + `reuse_run_id=33598824226` (per-arch nano/clang/nodejs
+  marker gate before signing), then bootstrap-release at
+  source_run_id=33598824226
   (agent dispatch is 403: no actions:write); publish auto-follows on green. Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
   Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
