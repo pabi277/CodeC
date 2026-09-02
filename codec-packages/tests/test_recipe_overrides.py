@@ -792,7 +792,11 @@ class RecipeOverrideTest(unittest.TestCase):
         are removed, the seven extension subpackages are excluded for CodeC
         arches, and post_make_install is replaced by the trimmed twin (no
         php-apache assembly, conf.d ini for sodium only). php-fpm and
-        php-sodium subpackages stay."""
+        php-sodium subpackages stay. The subpackage files are DELETED (not
+        arch-excluded): termux's buildorder is arch-neutral and keeps
+        collecting TERMUX_SUBPKG_DEPENDS of excluded subpackages into the
+        build closure — run 33598824226 proved it when php-gd's libgd edge
+        dragged gdk-pixbuf/libde265/libx264 into the langs legs."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture_only(tree)
@@ -825,10 +829,11 @@ class RecipeOverrideTest(unittest.TestCase):
                 "php-apache", "php-apache-ldap", "php-apache-pgsql",
                 "php-apache-sodium", "php-ldap", "php-pgsql", "php-gd",
             ):
-                first = (php_dir / f"{sub}.subpackage.sh").read_text().splitlines()[0]
-                self.assertTrue(
-                    first.startswith('TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"'),
-                    f"{sub} must be excluded for CodeC arches",
+                self.assertFalse(
+                    (php_dir / f"{sub}.subpackage.sh").exists(),
+                    f"{sub}.subpackage.sh must be deleted — exclusion alone "
+                    "cannot keep its TERMUX_SUBPKG_DEPENDS out of the "
+                    "arch-neutral buildorder closure",
                 )
             for sub in ("php-fpm", "php-sodium"):
                 self.assertNotIn(

@@ -37,8 +37,17 @@ round-4 repo build awaiting owner re-dispatch (3rd attempt = split into base/llv
 >    that CodeC never needs). Audited every other subpackage file in the
 >    round-4 closures: only `php-apache` has the same hook and is already
 >    excluded (D7). Fix = same last-defined-wins no-op appended to the
->    subpackage file (D12). Full re-dispatch required: "re-run failed jobs"
->    would reuse the unfixed commit.
+> 5. `33598824226` — base and **llvm legs all green**; both **langs** legs
+>    red, different symptoms, one root: D7 *excluded* php-gd (arch-skip) but
+>    termux's arch-neutral buildorder still collects excluded subpackages'
+>    TERMUX_SUBPKG_DEPENDS into the build closure → php-gd's `libgd` edge
+>    pulled libheif → gdk-pixbuf (its postinst tripped the validator on
+>    aarch64) +libde265 +libx264 (videolan source URL 404-rot killed
+>    x86_64). php-apache's `apache2, apr-util` edge bloats the closure the
+>    same way. **D13: excluded subpackages are DELETED outright** — same
+>    fail-loud-on-drift guards — removing them from both packaging and
+>    dependency resolution. Remaining langs closure audited against every
+>    tree-wide debscripts hook: only nodejs/npm (already D6-neutralized).
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)
@@ -71,7 +80,7 @@ and verifies they build and install correctly.
 | `libllvm` | LLVM 21.1.8 toolchain: subpackages `clang` (incl. `bin/clang*`, `bin/clang-format` **and** the `gcc`/`g++`/`c++`/`cpp` driver symlinks), `lld`, `llvm`, `llvm-tools`, `libcompiler-rt` (+`lldb`/`mlir`/`libpolly` excluded — build-time trim, D10, after the 360-min timeout of run `33506104710`) | The actual compiler; there is **no** `gcc` or `clang` recipe at the pinned ref. CodeC strips `bin/cc` from the clang subpackage (cc invariant — see D5). |
 | `nodejs` | `node` 26.4.0-1 | No X11 deps; upstream preinst notice neutralized (D6) |
 | `npm` | npm/npx 11.19.0 | Split out of nodejs upstream at 25.3.0-1; own root, postinst neutralized (D6) |
-| `php` | PHP 8.5.1 CLI + `php-fpm`, `php-sodium` | **Trimmed:** apache/ldap/pgsql/gd extensions and their build/runtime closures removed (D7); `php-apache*`, `php-ldap`, `php-pgsql`, `php-gd` subpackages excluded |
+| `php` | PHP 8.5.1 CLI + `php-fpm`, `php-sodium` | **Trimmed:** apache/ldap/pgsql/gd extensions and their build/runtime closures removed (D7); `php-apache*`, `php-ldap`, `php-pgsql`, `php-gd` subpackage files deleted (D13) |
 | `ruby` | Ruby 3.4.1-2 + `gem` | Clean closure, no override needed |
 | `lua54` | Lua 5.4.8-10 as `lua`/`luac` | `.alternatives` postinst replaced by plain symlinks (D8) |
 
@@ -140,8 +149,8 @@ Six roots appended (round-4 comment block explains each):
 - **npm:** same neutralization (upstream `postinst` notice).
 - **php:** trim apache/ldap/pgsql/gd configure flags + `postgresql`
   build-dep, replace `termux_step_post_make_install` (no apache assembly,
-  conf.d for sodium only), exclude `php-apache{,-ldap,-pgsql,-sodium}`,
-  `php-ldap`, `php-pgsql`, `php-gd` subpackages. `php-fpm`/`php-sodium` stay.
+  conf.d for sodium only), delete the `php-apache{,-ldap,-pgsql,-sodium}`,
+  `php-ldap`, `php-pgsql`, `php-gd` subpackage files. `php-fpm`/`php-sodium` stay.
 - **ruby:** no override needed (clean closure, no maintainer scripts).
 - **lua54:** remove `lua54.alternatives` (postinst not allowlisted), append
   `termux_step_post_massage` creating relative `bin/lua`/`bin/luac` (+man)
@@ -280,15 +289,17 @@ should appear).
   alternatives packages; per-recipe definitions override the shared stub, so
   each recipe gets the appended last-definition-wins no-op (the exact
   python/python-pip precedent from CI repo-build 33308884424).
-- **D7 — php trimmed to the CLI reality of a phone IDE:** upstream php's
+- **D7 — php trimmed to the CLI reality of a phone IDE (amended by D13):** upstream php's
   default configure flags pull apache2 (apxs in the MAIN configure +
   patchelf assembly), openldap, postgresql (configure + build-dep) and
   libgd (png/freetype/jpeg/webp/avif) into the source-build closure. None of
   that serves `php file.php` / `php -S`. Removed flags: `--with-ldap{,-sasl}`,
   `--with-pgsql=shared` / `--with-pdo-pgsql=shared`, `--with-apxs2`,
   `--enable-gd=shared` / `--with-external-gd`, and
-  `TERMUX_PKG_BUILD_DEPENDS="postgresql"`; excluded subpackages
-  `php-apache{,-ldap,-pgsql,-sodium}`, `php-ldap`, `php-pgsql`, `php-gd`;
+  `TERMUX_PKG_BUILD_DEPENDS="postgresql"`; subpackage files of
+  `php-apache{,-ldap,-pgsql,-sodium}`, `php-ldap`, `php-pgsql`, `php-gd`
+  DELETED (D13 — exclusion can't stop arch-neutral buildorder from
+  resolving their TERMUX_SUBPKG_DEPENDS; proven by run 33598824226);
   replaced `termux_step_post_make_install` with a trimmed twin (fpm conf,
   php.ini templates, sodium-only conf.d, phpize fix). Kept: mysqli/pdo-mysql
   (mysqlnd — zero closure cost), fpm, sodium, intl, curl, sqlite, mbstring…

@@ -846,10 +846,13 @@ fi
 #   --enable-gd --with-external-gd -> libgd (+ libpng/freetype/jpeg/webp/avif)
 # A phone IDE runs `php` and `php -S` — none of those extensions. Trim the
 # flags (the "shared" extensions then never build), drop the postgresql build
-# dependency, exclude the apache/ldap/pgsql/gd subpackages for CodeC arches
-# (python-tkinter pattern), and replace termux_step_post_make_install with a
-# trimmed twin that skips the php-apache assembly and writes conf.d entries
-# only for the extensions that still ship (sodium). php-fpm/php-sodium stay.
+# dependency, DELETE the apache/ldap/pgsql/gd subpackage files (see below:
+# exclusion can't keep their TERMUX_SUBPKG_DEPENDS out of the arch-neutral
+# buildorder closure — the libgd file alone dragged libheif/gdk-pixbuf/
+# libx264 into the langs legs of run 33598824226), and replace
+# termux_step_post_make_install with a trimmed twin that skips the php-apache
+# assembly and writes conf.d entries only for the extensions that still ship
+# (sodium). php-fpm/php-sodium stay.
 # Every removal verifies an exact upstream line first and fails loudly on
 # pinned-revision drift.
 PHP_DIR="$TREE/packages/php"
@@ -947,20 +950,29 @@ SH
     echo "recipe-overrides: php trimmed post_make_install lost the sodium-only conf.d loop" >&2
     exit 1
   fi
+  # The excluded subpackages must be DELETED, not merely arch-skipped:
+  # TERMUX_SUBPKG_EXCLUDED_ARCHES only suppresses deb *creation* — the
+  # arch-neutral buildorder resolver still scans every *.subpackage.sh
+  # TERMUX_SUBPKG_DEPENDS when computing the build closure, so exclusion
+  # alone silently builds the entire phantom closure anyway (run
+  # 33598824226: php-gd's TERMUX_SUBPKG_DEPENDS="libgd" dragged in
+  # libgd → libheif → gdk-pixbuf + libde265 + libx264 — gdk-pixbuf's
+  # upstream postinst failed the repo validator and libx264's videolan
+  # source URL is dead upstream). Deleting the files removes them from both
+  # packaging AND dependency resolution. Fail loudly on drift, as before —
+  # a missing file means the pinned revision restructured php packaging.
   for sub in php-apache php-apache-ldap php-apache-pgsql php-apache-sodium php-ldap php-pgsql php-gd; do
     subfile="$PHP_DIR/$sub.subpackage.sh"
     if [[ ! -f "$subfile" ]]; then
       echo "recipe-overrides: php subpackage file missing (pinned-revision drift): $subfile" >&2
       exit 1
     fi
-    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$subfile"; then
-      sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: no apache/openldap/postgresql/libgd closures in the userland' "$subfile"
-    fi
-    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$subfile"; then
-      echo "recipe-overrides: failed to exclude php subpackage: $sub" >&2
+    rm "$subfile"
+    if [[ -e "$subfile" ]]; then
+      echo "recipe-overrides: failed to delete php subpackage: $sub" >&2
       exit 1
     fi
-    echo "recipe-overrides: php subpackage $sub excluded for CodeC arches"
+    echo "recipe-overrides: php subpackage $sub deleted (no apache/openldap/postgresql/libgd closures in the userland — exclusion alone cannot keep them out of the build closure)"
   done
 else
   echo "recipe-overrides: php recipe not found; skipping the php trim" >&2

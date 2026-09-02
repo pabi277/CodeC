@@ -40,7 +40,11 @@ gate, invariants, docs policy) — follow it.
   legs**; third dispatch `33585242675` proved the split (base green) but
   failed both llvm legs at validation: libcompiler-rt's upstream
   subpkg-level postinst/prerm (ndk-multilib interop) → D12 no-op append.
-  Fourth FULL dispatch awaits the owner's Termux `gh workflow run` command
+  Fourth dispatch `33598824226`: base+llvm all green; langs legs red —
+  php-gd's excluded-subpackage deps still entered the arch-neutral
+  buildorder closure (gdk-pixbuf validator-trip / dead x264 URL) → D13
+  deletes phantom subpackage files outright. Fifth FULL dispatch awaits the
+  owner's Termux `gh workflow run` command
   (agent dispatch is 403: no actions:write); publish auto-follows on green. Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
   Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
