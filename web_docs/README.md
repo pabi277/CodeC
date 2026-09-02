@@ -22,7 +22,10 @@ handoff file (the website's `prompt.md`).
 | [`web-phase1/` … `web-phase6/`](web-phase1/README.md) | **The fully spec'd implementation phases W1–W6** (2026-09-02): each folder = phase README (status, cost, depends/blocks, parts table, ground rules) + one `PART_*` doc per page/chapter (design, implementation steps, exit condition) — the website's `docs/chat-phase20…24` equivalent. Owner starts one by saying **"Start W1"** … **"Start W6"**. | a phase's scope changes (update the part docs; record in DECISIONS.md) |
 
 `chat-web1/` is the planning session (2026-09-02) that created this folder
-— **including the phase specs** (W0.2). Naming split: `chat-webN` = session
+— **including the phase specs** (W0.2). `chat-web2/` is the W1 build
+session (2026-09-02, scaffold + Home — contains the byte-identical chrome
+pattern all later pages copy). `chat-web3/` is the W2 build session
+(2026-09-02, install + start). Naming split: `chat-webN` = session
 records (what happened), `web-phaseN` = planned phases (what will be built).
 
 ## How this mirrors the app project

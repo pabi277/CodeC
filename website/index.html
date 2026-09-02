@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CodeC — C programming IDE for Android</title>
+  <meta name="description" content="A C programming IDE for Android: built-in offline compiler, a real terminal, 25+ signed packages and an in-app web preview. Free &amp; open source.">
+  <meta name="theme-color" content="#0B0F14">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ================= SHARED CHROME: header (copy byte-identical to every page; see web_docs/chat-web2/SUMMARY.md) ================= -->
+  <header class="site-header">
+    <div class="container-wide header-inner">
+      <a class="wordmark" href="index.html"><span class="prompt">&gt;_</span> CodeC</a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true">
+      <label for="nav-toggle" class="nav-burger" aria-label="Toggle navigation"><span></span></label>
+      <nav class="site-nav" aria-label="Site">
+        <a href="index.html" aria-current="page">Home</a>
+        <a href="install.html">Install</a>
+        <a href="start.html">Start</a>
+        <a href="engines.html">Engines</a>
+        <a href="packages.html">Packages</a>
+        <a href="learn.html">Learn</a>
+        <a href="faq.html">FAQ</a>
+        <a href="about.html">About</a>
+        <a class="nav-github" href="https://github.com/pabi277/CodeC" aria-label="CodeC on GitHub" title="CodeC on GitHub">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ================= W1.2: HOME ================= -->
+    <div class="container-wide">
+
+      <section class="hero">
+        <p class="hero-kicker">$ free &amp; open source — built for Android</p>
+        <h1>CodeC — a <span class="accent">C programming IDE</span> for your Android phone.</h1>
+        <p class="lede">Write C in projects or as single files and tap <strong>RUN</strong> — the built-in TCC compiler works
+          offline and instantly, with no Termux and no setup. Or open a real VT/ANSI terminal, type
+          <code>cc hello.c -o a.out</code> and run <code>./a.out</code>, and install from a hub of 25+ signed
+          packages — <code>git</code>, <code>python</code>, <code>clang</code> and more. HTML projects even get an
+          in-app web preview with live reload.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/pabi277/CodeC/releases">Get the APK on GitHub</a>
+          <a class="btn btn-secondary" href="https://github.com/pabi277/CodeC">Read the README</a>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Features">
+        <h2 class="section-title">What&rsquo;s inside</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Built-in compiler</h3>
+            <p>A static musl TCC toolchain ships inside the APK. Compiling works offline and instantly —
+              no downloads, no Termux, no setup — on arm64-v8a phones and x86_64 emulators.</p>
+            <a class="card-link" href="engines.html">How the four engines work</a>
+          </div>
+          <div class="card">
+            <h3>Real terminal</h3>
+            <p>A genuine VT/ANSI terminal (PTY) — a mini Termux in your pocket. Type
+              <code>cc hello.c -o a.out</code>, then <code>./a.out</code>; input programs
+              (<code>scanf</code>) run here too.</p>
+            <a class="card-link" href="start.html">Your first compile</a>
+          </div>
+          <div class="card">
+            <h3>Package hub</h3>
+            <p>25+ signed packages from CodeC&rsquo;s own repository: <code>git</code>, <code>python</code>,
+              <code>clang</code>, <code>nano</code>, <code>make</code>, <code>ripgrep</code>,
+              <code>tmux</code> and more — 1-tap install, live status badges.</p>
+            <a class="card-link" href="packages.html">Browse the package hub</a>
+          </div>
+          <div class="card">
+            <h3>Spck-grade editor</h3>
+            <p>A projects hub with file tree, tabs with dirty state, autosave, find &amp; replace, error
+              squiggles — and honest git: staged commits, conflict flow, pushes that never fake success.</p>
+            <a class="card-link" href="about.html">See the full tour</a>
+          </div>
+          <div class="card">
+            <h3>Web preview</h3>
+            <p>Preview HTML projects in-app, served over a local loopback server — relative CSS/JS,
+              <code>fetch</code>, ES modules and live reload on save, with console output under the page.</p>
+            <a class="card-link" href="start.html">Try it in the first hour</a>
+          </div>
+          <div class="card">
+            <h3>Always updatable</h3>
+            <p>Update without leaving the app: Settings &rarr; Install APK from GitHub downloads the latest
+              release APK and opens the installer. New builds come straight from CI.</p>
+            <a class="card-link" href="install.html">How to install</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="learning-banner" aria-label="Learn course">
+        <p class="banner-text"><span class="banner-title"><strong>New to the command line — or to C?</strong></span><br>
+          <em>Master CodeC from Zero to Advanced</em> — 17 hands-on chapters that take you from your first
+          <code>hello.c</code> to real projects. Free, right on this site.</p>
+        <a class="btn btn-primary" href="learn.html">Start the course</a>
+      </section>
+
+      <p class="footnote-strip">
+        <span>Free &amp; open source <span class="dot">&middot;</span> Built-in compiler <span class="dot">&middot;</span> No Termux required</span>
+        <a href="https://github.com/pabi277/CodeC">Source on GitHub</a>
+      </p>
+
+    </div>
+  </main>
+
+  <!-- ================= SHARED CHROME: footer (copy byte-identical to every page) ================= -->
+  <footer class="site-footer">
+    <div class="container-wide">
+      <p class="footer-tagline">CodeC — free &amp; open source C IDE for Android</p>
+      <nav class="footer-links" aria-label="Project links">
+        <a href="https://github.com/pabi277/CodeC">Repo</a>
+        <a href="https://github.com/pabi277/CodeC#readme">README</a>
+        <a href="https://github.com/pabi277/CodeC/releases">Releases</a>
+        <a href="https://github.com/pabi277/CodeC/issues">Issues</a>
+        <a href="https://github.com/pabi277/CodeC/blob/main/docs/JOURNEY.md">JOURNEY</a>
+      </nav>
+      <p class="footer-source">Site source: this repo — <code>website/</code></p>
+    </div>
+  </footer>
+</body>
+</html>

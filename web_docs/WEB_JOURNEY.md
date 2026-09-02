@@ -143,6 +143,157 @@ pull request for the changes on this branch." Agent opened
 summary. **Not merged** — the merge gate applies; the owner merges (or
 hands the command).
 
+**16. PR #41 merged (2026-09-02).** The owner merged W0 planning to `main`
+(squash → `9b3669e`); `Build APK` green on the merge run. `main` and the
+planning branch tip became identical — the handoff's "if it's already
+merged, continue" applies.
+
+
+
+## W1 — Scaffold + Home (2026-09-02)
+
+**17. "Build the website" — W1 begins (2026-09-02).** New session, new
+branch `arena/01a062f7-codec` (verified first: clean at `9b3669e` == remote
+`main`, PR #41 merged, CI green). The owner's message was exactly the
+implementation trigger from the handoff: "Build the website" = "Start W1".
+The strict no-code era ended by the owner's own command; W0's documents
+became the working spec.
+
+**18. W1.1 — the scaffold (2026-09-02).** `website/` created with exactly
+the PART_1_1 files: `style.css` (the only stylesheet — tokens: near-black
+`#0B0F14`, surface `#11161D`, text `#E6EDF3`, muted `#8B949E`, accent green
+`#3FB950` + amber `#D29922`, system font stacks; every component from the
+spec defined: header/footer chrome, containers, cards, buttons, code
+blocks, tables, chapter boxes, learning banner, FAQ items), `favicon.svg`
+(hand-drawn `>_` prompt mark), and the chrome half of `index.html`. The
+mobile nav collapses with **zero JavaScript** (checkbox pattern). The
+byte-identical chrome pattern is documented in `chat-web2/SUMMARY.md` for
+W2–W6 to copy.
+
+**19. W1.2 — the Home page (2026-09-02).** Hero ("CodeC — a C programming
+IDE for your Android phone."), the single honest CTA ("Get the APK on
+GitHub" → Releases — D9; secondary "Read the README"), six feature cards
+(built-in compiler, real terminal, package hub, Spck-grade editor, web
+preview, always updatable — each claim's README source line recorded in
+`chat-web2/`), the learning banner ("Master CodeC from Zero to Advanced" →
+`learn.html`), and the footnote strip.
+
+**20. Verification (2026-09-02).** First self-dependent grep sweep (plan
+§5.5): zero external `src=` / `<link href=` / `@import` / `url(`; every
+`http(s)` on the page lives in `<a href>` (one declared exception: the SVG
+`xmlns` namespace identifier in the favicon — never fetched). Outbound
+links curl-verified 200 (releases, repo, issues, JOURNEY). HTML parse
+check clean. Served locally: `/`, `style.css`, `favicon.svg` all 200; the
+not-yet-built pages 404 exactly as the spec expects until W2–W4 build
+them. Visual check at 360/1440 px: no browser in the sandbox — exposed to
+the owner as a live preview; CSS is mobile-first per spec breakpoints.
+
+**21. W1 closed (2026-09-02).** Living docs updated in the same commit
+(this file, `NEXT_STEPS.md`, `web_prompt.md`, `web_docs/README.md`).
+Nothing outside `website/` + `web_docs/` + `web_prompt.md` was touched.
+W1 note recorded in `chat-web2/`: internal links are relative `*.html`
+(the only mechanism that resolves to the final URLs under the GitHub
+Pages subpath). Stopped at the merge gate — the owner merges, or commands
+the next phase ("Start W2").
+
 ---
 
-*Next entry: W1 (scaffold + Home) — after the owner's implementation command.*
+## Early deploy — owner command (2026-09-02)
+
+**22. "Deploy the website to Pages now" (2026-09-02).** Same session as
+W1. The owner asked for a direct link; the honest answer was: the real
+link (`https://pabi277.github.io/CodeC/`) needs a deploy, and the repo's
+ONE Pages site is already the signed package repository (`/dev`, `/keys`
+— `package-repository.yml` `publish-dev`). The owner then commanded the
+deploy explicitly. Recorded as **D14**. Engineering before go-live:
+
+- Research note appended to `web-phase6/README.md`: naive website deploys
+  would wipe the package repo (and vice versa) — one Pages site per repo,
+  every deploy replaces everything.
+- **`.github/workflows/pages.yml`** created: the website deploy downloads
+  the newest live `github-pages` artifact (the package repo), unions
+  `dev/` + `keys/` under `website/`, sanity-checks
+  `dev/CODEC-REPOSITORY` + `site/index.html`, then deploys. Fails loudly
+  instead of publishing a site without `/dev`. Shared `pages` concurrency
+  group with the package workflow.
+- **`package-repository.yml` `publish-dev`** (app-side, covered by the
+  owner's explicit command) mirrored: sparse-checkouts `website/` from
+  `main` into the upload; same concurrency group — a package publish now
+  re-publishes the site too.
+- Verified locally: YAML parse (both files) + full simulation of the
+  union steps against a fake artifact (SIMULATION-PASS). One YAML bug
+  (colon in a plain step name) caught and fixed pre-push.
+- **W6.7 is unchanged** — the full-site deploy still happens only after
+  the §5 self-dependent sweep + offline render + link sweep.
+
+The site goes live at `https://pabi277.github.io/CodeC/` (W1 content) on
+merge / deploy run, `dev/` untouched beside it.
+
+---
+
+## Reversal — owner command (2026-09-02)
+
+**23. D14 undone (2026-09-02).** The owner commanded: "Undu the previous
+on this command 'Deploy the website to Pages now'." Facts at undo time:
+**nothing had deployed** — `pages.yml` could not run before the branch
+merged (dispatch 404 was expected), so GitHub Pages, `/dev` and `/keys`
+were never touched. On the branch: `pages.yml` deleted;
+`package-repository.yml` restored byte-identical to `main` (diff vs
+`origin/main` = 0 lines). Docs law held: D14 remains in `DECISIONS.md`
+with **D15** recording the reversal; entry 22 stays as history (this
+entry corrects it). **Deploy returns to W6.7 only.** The W6 research note
+(Pages = one site per repo; package-repo coexistence) remains — it is a
+fact about the repo that W6.7 must design around.
+
+---
+
+## W2 — Install + Getting Started (2026-09-02)
+
+**24. "Start w2" (2026-09-02).** Same session, owner commands the next
+phase. Executed strictly per `web-phase2/` (README + PART_2_1 + PART_2_2):
+
+- **`install.html`** — "Get the CodeC APK." Three numbered paths in README
+  order (Actions artifact on a green `Build APK` run; a tagged Release;
+  in-app Settings → Install APK from GitHub), the allow-"Install unknown
+  apps" note, the device-support table (arm64 best / x86_64 emulator via
+  built-in TCC / 32-bit → Termux engine), and the optional Termux engine
+  section with the README's exact 3-line setup block (diffed — verbatim)
+  and the two README-mandated Termux links (the site's only non-github
+  externals, per plan §5.2). D9 held: no store listing implied — the page
+  *says* GitHub-only.
+- **`start.html`** — the first-hour path in five steps: hello.c + RUN ▶
+  (built-in TCC, instant, offline) → the terminal loop (`cc hello.c -o
+  a.out` → `./a.out`, with the `./` rule explained: cwd is not on PATH;
+  app-private storage makes it executable) → the scanf-in-Term rule (RUN
+  has no keyboard into the process; 10 s cap = waiting for input) → 1-tap
+  package install (badges `INSTALLED ✓`) → web preview (RUN on HTML *is*
+  the preview, live reload, loopback, console) — then the bottom-bar map
+  (Projects · Editor · Terminal (middle) · Packages · Settings) and the
+  cross-links strip (/learn, ch-01, /engines, /faq).
+
+**Verification:** chrome diff-identical on both pages (only `aria-current`
+moves); §5.5 sweeps PASS; external-href inventory = github.com + the two
+allowed Termux links; f-droid.org unreachable **from the sandbox**
+(network-blocked, like pabi277.github.io — noted for the W6 link sweep,
+which runs from CI/browser); HTML parse clean; served 200; no new CSS
+(only W1.1 components consumed). Living docs updated in the same commit
+(this entry, NEXT_STEPS, web_prompt, web_docs/README).
+
+**W2 closed.** Stopped at the merge gate. Next: "Start W3" (engines,
+packages + build-config package list with sha, faq, about).
+
+---
+
+**25. PR #42 opened (2026-09-02).** The owner commanded: "Please open a
+pull request for the changes on this branch." Agent opened
+[PR #42](https://github.com/pabi277/CodeC/pull/42)
+(`arena/01a062f7-codec` → `main`, tip `cc38848` at open): W1 scaffold +
+Home, the GitHub-label follow-up, the D14/D15 detour (net zero), and W2
+install + start — full summaries in the PR body. **Not merged** — the
+merge gate applies; the owner merges (or hands the command).
+
+---
+
+---
+
+*Next entry: W3 (Engines + Packages + FAQ + About) — on the owner's "Start W3" command (or the owner's merge of PR #42).*

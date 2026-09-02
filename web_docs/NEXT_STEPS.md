@@ -1,33 +1,33 @@
 # NEXT_STEPS.md — website head state
 
-> **HEAD STATE (2026-09-02, v2.1): W0 (planning) COMPLETE — zero website
-> code exists, ALL PHASES FULLY SPEC'D.** The website is spec'd in
-> `WEBSITE_PLAN.md` v2.1: **two wings** — product site (7 pages) +
-> **learning wing** ("Master CodeC from Zero to Advanced", 17 chapters,
-> modelled on the owner's Termux-Mastery), **fully self-dependent** (zero
-> external resources, offline-complete, course completable without the
-> repo). Stack: static HTML/CSS, GitHub Pages. **Phases W1–W6 are fully
-> spec'd** in `web-phase1/` … `web-phase6/` (35 docs with exit conditions
-> per part; W4.2 verification gate runs first in W4; device passes due in
-> W5 ch-08 and W6 P1+P5; W6.7 verifies before the site goes live).
-> Nothing is built, nothing is deployed, there is no `website/` folder.
-> **PR #41 opened 2026-09-02** (owner command in chat) — awaiting the
-> owner's merge; after merge, "Start W1" begins the build.
+> **HEAD STATE (2026-09-02, W2 COMPLETE — deploy returns to W6.7): 3 of 25
+> pages exist.** W1 (scaffold + Home) and **W2 (2026-09-02, owner command
+> "Start w2") are done**: `website/` now has `install.html` (3 GitHub-only
+> APK paths, device-support table, optional Termux engine) and `start.html`
+> (first hour: RUN ▶ → terminal loop + `./` rule → scanf-in-Term rule →
+> 1-tap package install → web preview → bottom-bar map). Chrome
+> byte-identical (diff-verified); §5.5 sweeps PASS; command blocks match
+> README exactly; records + source lines in `web_docs/chat-web3/`. The
+> early-deploy detour (D14) was reversed by the owner (D15) — **the site
+> deploys at W6.7 only**; GitHub Pages still serves only the package repo
+> (`/dev`, `/keys`). Remaining 18 pages: engines, packages, faq, about,
+> learn + ch-01…ch-17 (404 until built, expected).
 
 ## What the owner says next
 
 | Owner says in chat | Agent does |
 |---|---|
-| **"Build the website"** / **"Start W1"** | Begin W1 strictly per `web_docs/web-phase1/` (README + PART_1_1 + PART_1_2): create `website/`, shared chrome (incl. Learn nav item), stylesheet, Home page with learning banner; self-dependent rule (§5) in force from the first file; record in `web_docs/chat-web2/`; update living docs; commit + push; report; stop at the merge gate. |
-| **"Start W2"** … **"Start W6"** | Execute that phase strictly per its `web_docs/web-phaseN/` folder — one phase at a time, in order (W4.2 verification gate runs first inside W4); phase records in `chat-webN+1/`; device passes (W5 ch-08, W6 P1+P5) reported as **device pass required** with the owner's transcript. |
+| **"Start W3"** | Execute W3 strictly per `web_docs/web-phase3/` (README + 4 PART docs): `engines.html`, `packages.html` (package list from the `codec-packages/` build config, sha recorded), `faq.html`, `about.html`; record in `web_docs/chat-web4/`; update living docs; commit + push; report; stop at the merge gate. |
+| **"Start W3"** … **"Start W6"** | Execute that phase strictly per its `web_docs/web-phaseN/` folder — one phase at a time, in order (W4.2 verification gate runs first inside W4); phase records in `chat-webN+1/`; device passes (W5 ch-08, W6 P1+P5) reported as **device pass required** with the owner's transcript. |
 | "Change page X / the design / the stack" | Update `WEBSITE_PLAN.md` + the affected `web-phaseN/` part docs + `DECISIONS.md` in the same commit — still no code until implementation is commanded. |
 | (answers O1–O7) | Record the answer in `DECISIONS.md` (close the open item), adjust the plan/part docs if needed. |
 | "Create PR and merge" | Open/merge the PR for the current session branch per `rule.md` §3 — **only on this exact class of command.** |
 
-## Phase queue (implementation — not started)
+## Phase queue (implementation)
 
-- [ ] **W1** — scaffold + Home · spec: [`web-phase1/`](web-phase1/README.md)
-- [ ] **W2** — Install + Getting Started · spec: [`web-phase2/`](web-phase2/README.md)
+- [x] **W1** — scaffold + Home · **COMPLETE 2026-09-02** · record: [`chat-web2/`](chat-web2/SUMMARY.md)
+- [x] **W2** — Install + Getting Started · **COMPLETE 2026-09-02** · record: [`chat-web3/`](chat-web3/SUMMARY.md)
+- [ ] **W3** — Engines + Packages + FAQ + About · spec: [`web-phase3/`](web-phase3/README.md)
 - [ ] **W3** — Engines + Packages + FAQ + About · spec: [`web-phase3/`](web-phase3/README.md)
 - [ ] **W4** — verification gate → course home + ch 01–06 · spec: [`web-phase4/`](web-phase4/README.md)
 - [ ] **W5** — ch 07–12 (Editor, C Basics, Scripting, Python, Git, Networking) · spec: [`web-phase5/`](web-phase5/README.md) · device pass: ch-08
@@ -44,4 +44,6 @@
 ## History pointer
 
 Full narrative: [`WEB_JOURNEY.md`](WEB_JOURNEY.md). Session records:
-`chat-web1/` (W0 planning, 2026-09-02).
+`chat-web1/` (W0 planning, 2026-09-02) · `chat-web2/` (W1 scaffold + Home,
+2026-09-02 — includes the byte-identical chrome pattern + card source
+lines) · `chat-web3/` (W2 install + start, 2026-09-02).
