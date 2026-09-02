@@ -950,30 +950,72 @@ SH
     echo "recipe-overrides: php trimmed post_make_install lost the sodium-only conf.d loop" >&2
     exit 1
   fi
-  # The excluded subpackages must be DELETED, not merely arch-skipped:
-  # TERMUX_SUBPKG_EXCLUDED_ARCHES only suppresses deb *creation* — the
-  # arch-neutral buildorder resolver still scans every *.subpackage.sh
-  # TERMUX_SUBPKG_DEPENDS when computing the build closure, so exclusion
-  # alone silently builds the entire phantom closure anyway (run
-  # 33598824226: php-gd's TERMUX_SUBPKG_DEPENDS="libgd" dragged in
-  # libgd → libheif → gdk-pixbuf + libde265 + libx264 — gdk-pixbuf's
-  # upstream postinst failed the repo validator and libx264's videolan
-  # source URL is dead upstream). Deleting the files removes them from both
-  # packaging AND dependency resolution. Fail loudly on drift, as before —
-  # a missing file means the pinned revision restructured php packaging.
+  # The excluded subpackages must be NEUTERED IN PLACE — neither plain
+  # exclusion nor file deletion is sufficient:
+  #  * TERMUX_SUBPKG_EXCLUDED_ARCHES alone only suppresses deb *creation*:
+  #    the arch-neutral buildorder resolver still collects excluded
+  #    subpackages' TERMUX_SUBPKG_DEPENDS into the build closure (run
+  #    33598824226: php-gd's "libgd" edge dragged libheif → gdk-pixbuf +
+  #    libde265 + libx264 into the langs legs — gdk-pixbuf's postinst
+  #    tripped the repo validator, libx264's videolan URL is 404-rotten),
+  #    and php-apache's "apache2, apr-util" edge bloats the same way.
+  #  * DELETING the files orphans graph edges: phpmyadmin depends on the
+  #    php-apache package and buildorder validates the whole tree on every
+  #    invocation (run 33625141182: all six legs died at "Package
+  #    phpmyadmin depends on non-existing package php-apache").
+  # So per file: strip the TERMUX_SUBPKG_DEPENDS line (no closure edges),
+  # keep the arch-exclusion marker (no deb is produced), keep the file
+  # itself. Fail loudly on drift — either a missing file or a missing
+  # depends line means the pinned revision restructured php packaging.
   for sub in php-apache php-apache-ldap php-apache-pgsql php-apache-sodium php-ldap php-pgsql php-gd; do
     subfile="$PHP_DIR/$sub.subpackage.sh"
     if [[ ! -f "$subfile" ]]; then
       echo "recipe-overrides: php subpackage file missing (pinned-revision drift): $subfile" >&2
       exit 1
     fi
-    rm "$subfile"
-    if [[ -e "$subfile" ]]; then
-      echo "recipe-overrides: failed to delete php subpackage: $sub" >&2
+    if grep -q '^TERMUX_SUBPKG_DEPENDS=' "$subfile"; then
+      grep -v '^TERMUX_SUBPKG_DEPENDS=' "$subfile" > "$subfile.codec-tmp"
+      mv "$subfile.codec-tmp" "$subfile"
+      if grep -q '^TERMUX_SUBPKG_DEPENDS=' "$subfile"; then
+        echo "recipe-overrides: failed to strip TERMUX_SUBPKG_DEPENDS from php subpackage: $sub" >&2
+        exit 1
+      fi
+    elif ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$subfile"; then
+      echo "recipe-overrides: php subpackage $sub lost its TERMUX_SUBPKG_DEPENDS line without a prior pass (pinned-revision drift) — re-review" >&2
       exit 1
     fi
-    echo "recipe-overrides: php subpackage $sub deleted (no apache/openldap/postgresql/libgd closures in the userland — exclusion alone cannot keep them out of the build closure)"
+    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES=' "$subfile"; then
+      sed -i '1i TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64" # CodeC: no apache/openldap/postgresql/libgd closures in the userland (dep edges stripped below in this file)' "$subfile"
+    fi
+    if ! grep -q '^TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"' "$subfile"; then
+      echo "recipe-overrides: failed to exclude php subpackage: $sub" >&2
+      exit 1
+    fi
+    echo "recipe-overrides: php subpackage $sub excluded AND dependency edge stripped (buildorder drags nothing from it)"
   done
+  # php-apache additionally defines its own termux_step_create_subpkg_debscripts
+  # (a notice postinst). Excluded arches already prevent its deb, but
+  # neutralize anyway — the debscripts path must never survive a future
+  # re-enable. Same last-defined-wins no-op convention as python-pip.
+  PHP_APACHE_SUBPKG="$PHP_DIR/php-apache.subpackage.sh"
+  if ! grep -q '^termux_step_create_subpkg_debscripts()' "$PHP_APACHE_SUBPKG"; then
+    echo "recipe-overrides: php-apache subpackage no longer defines its own termux_step_create_subpkg_debscripts (pinned-revision drift) — re-review" >&2
+    exit 1
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for php-apache' "$PHP_APACHE_SUBPKG"; then
+    cat >> "$PHP_APACHE_SUBPKG" <<'EOF'
+
+# CodeC: no maintainer scripts for php-apache — the subpackage never ships
+# (excluded arches + stripped depends); belt and braces for any future
+# re-enable. Last definition wins.
+termux_step_create_subpkg_debscripts() { :; }
+EOF
+  fi
+  if ! grep -q 'CodeC: no maintainer scripts for php-apache' "$PHP_APACHE_SUBPKG"; then
+    echo "recipe-overrides: failed to append php-apache debscripts override" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: php-apache ships without maintainer scripts"
 else
   echo "recipe-overrides: php recipe not found; skipping the php trim" >&2
 fi

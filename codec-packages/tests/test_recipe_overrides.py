@@ -776,13 +776,37 @@ class RecipeOverrideTest(unittest.TestCase):
             "\tpatchelf --set-rpath $TERMUX_PREFIX/libexec/apache2 x.so\n"
             "}\n"
         )
-        for sub in (
-            "php-apache", "php-apache-ldap", "php-apache-pgsql",
-            "php-apache-sodium", "php-ldap", "php-pgsql", "php-gd",
-            "php-fpm", "php-sodium",
-        ):
-            (php_dir / f"{sub}.subpackage.sh").write_text(
+        # Exact pinned TERMUX_SUBPKG_DEPENDS lines — the phantom-closure
+        # edges the neutering strips (buildorder is arch-neutral and
+        # collects excluded subpackages' deps: run 33598824226).
+        php_subpkg = {
+            "php-apache": "apache2, apr-util",
+            "php-apache-ldap": "openldap, php-apache",
+            "php-apache-pgsql": "php-apache, postgresql",
+            "php-apache-sodium": "libsodium, php-apache",
+            "php-ldap": "openldap",
+            "php-pgsql": "postgresql",
+            "php-gd": "libgd",
+        }
+        for sub, deps in php_subpkg.items():
+            body = (
                 f'TERMXUX_PKG_DESC="{sub}"\n'
+                f'TERMUX_SUBPKG_DEPENDS="{deps}"\n'
+            )
+            if sub == "php-apache":
+                body += (
+                    "\n"
+                    "termux_step_create_subpkg_debscripts() {\n"
+                    "\tcat <<- EOF > ./postinst\n"
+                    '\t#!$TERMUX_PREFIX/bin/sh\n'
+                    "\techo notice\n"
+                    "\tEOF\n"
+                    "}\n"
+                )
+            (php_dir / f"{sub}.subpackage.sh").write_text(body)
+        for sub in ("php-fpm", "php-sodium"):
+            (php_dir / f"{sub}.subpackage.sh").write_text(
+                f'TERMXUX_PKG_DESC="{sub}"\nTERMUX_SUBPKG_DEPENDS="php"\n'
             )
         return php_dir
 
@@ -792,11 +816,11 @@ class RecipeOverrideTest(unittest.TestCase):
         are removed, the seven extension subpackages are excluded for CodeC
         arches, and post_make_install is replaced by the trimmed twin (no
         php-apache assembly, conf.d ini for sodium only). php-fpm and
-        php-sodium subpackages stay. The subpackage files are DELETED (not
-        arch-excluded): termux's buildorder is arch-neutral and keeps
-        collecting TERMUX_SUBPKG_DEPENDS of excluded subpackages into the
-        build closure — run 33598824226 proved it when php-gd's libgd edge
-        dragged gdk-pixbuf/libde265/libx264 into the langs legs."""
+        php-sodium subpackages stay. The dead subpackage files are NEUTERED
+        in place — depends edge stripped (buildorder is arch-neutral and
+        collects excluded subpackages' deps: run 33598824226), arch-excluded
+        (no deb), file kept (deleting orphans phpmyadmin's graph edge: run
+        33625141182), php-apache's debscripts no-op'd."""
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)
             self._write_apt_fixture_only(tree)
@@ -829,18 +853,51 @@ class RecipeOverrideTest(unittest.TestCase):
                 "php-apache", "php-apache-ldap", "php-apache-pgsql",
                 "php-apache-sodium", "php-ldap", "php-pgsql", "php-gd",
             ):
-                self.assertFalse(
-                    (php_dir / f"{sub}.subpackage.sh").exists(),
-                    f"{sub}.subpackage.sh must be deleted — exclusion alone "
-                    "cannot keep its TERMUX_SUBPKG_DEPENDS out of the "
-                    "arch-neutral buildorder closure",
+                subpkg = php_dir / f"{sub}.subpackage.sh"
+                self.assertTrue(subpkg.exists(),
+                    f"{sub}.subpackage.sh must stay — deleting it orphans "
+                    "phpmyadmin's buildorder edge")
+                text = subpkg.read_text()
+                self.assertTrue(
+                    text.splitlines()[0].startswith(
+                        'TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"'),
+                    f"{sub} must be arch-excluded",
                 )
+                self.assertNotIn(
+                    "TERMUX_SUBPKG_DEPENDS=", text,
+                    f"{sub}'s dep edge must be stripped — exclusion alone "
+                    "cannot keep it out of the buildorder closure",
+                )
+            apache = (php_dir / "php-apache.subpackage.sh").read_text().rstrip()
+            self.assertIn("CodeC: no maintainer scripts for php-apache", apache)
+            self.assertTrue(
+                apache.endswith("termux_step_create_subpkg_debscripts() { :; }"),
+                "php-apache debscripts must end in the last-wins no-op",
+            )
             for sub in ("php-fpm", "php-sodium"):
                 self.assertNotIn(
                     "TERMUX_SUBPKG_EXCLUDED_ARCHES",
                     (php_dir / f"{sub}.subpackage.sh").read_text(),
                     f"{sub} must stay in the repository",
                 )
+
+    def test_php_neuter_fails_loud_when_depends_line_gone(self) -> None:
+        """If the pinned php subpackages lose their TERMUX_SUBPKG_DEPENDS
+        (upstream restructure), the override must abort for re-review —
+        the arch-marker check distinguishes that from a re-run."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            php_dir = self._write_php_fixture(tree)
+            (php_dir / "php-gd.subpackage.sh").write_text(
+                'TERMXUX_PKG_DESC="php-gd"\n'
+            )
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("re-review", result.stderr)
 
     def test_php_trim_fails_loud_on_drift(self) -> None:
         """A php recipe without the expected configure flags must abort the

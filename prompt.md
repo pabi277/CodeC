@@ -42,8 +42,10 @@ gate, invariants, docs policy) — follow it.
   subpkg-level postinst/prerm (ndk-multilib interop) → D12 no-op append.
   Fourth dispatch `33598824226`: base+llvm all green; langs legs red —
   php-gd's excluded-subpackage deps still entered the arch-neutral
-  buildorder closure (gdk-pixbuf validator-trip / dead x264 URL) → D13
-  deletes phantom subpackage files outright. Fifth FULL dispatch awaits the
+  buildorder closure (gdk-pixbuf validator-trip / dead x264 URL) → D13:
+  neuter phantom subpackages IN PLACE (strip dep edges + arch-skip + no-op
+  scripts — outright deletion orphaned phpmyadmin's graph edge in
+  `33625141182`). Sixth FULL dispatch awaits the
   owner's Termux `gh workflow run` command
   (agent dispatch is 403: no actions:write); publish auto-follows on green. Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
