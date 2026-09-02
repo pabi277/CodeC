@@ -77,6 +77,20 @@
 >    libllvm/libllvm-static/libcompiler-rt 21.1.8-3, nodejs 26.4.0-1,
 >    npm 11.19.0, php 8.5.1 + php-fpm + php-sodium, ruby 3.4.1-2, lua54
 >    5.4.8-10); lldb/mlir/libpolly/libmlir absent (sort-order gaps closed).
+> 9. **Device verification** (PART §4 run): 5/6 toolchains pass end-to-end,
+>    but two content-level defects surfaced that CI structurally cannot see:
+>    (a) `bin/cc` turned out to be the clang-21 SYMLINK — the D5 include
+>    strip made the file unclaimed, and massage sweeps unclaimed files into
+>    the MAIN libllvm deb → **D15: remove `cc` from libllvm's
+>    post_make_install symlink loop entirely** (exact pinned bytes, fail
+>    loud); (b) `lua: command not found` — the D8 post_massage wrote
+>    links into `$TERMUX_PREFIX` (build staging), not
+>    `$TERMUX_PKG_MASSAGEDIR` (the deb payload tree) → **D16: massage-dir
+>    paths**. Salvage machinery hardened in kind: reuse now downloads ONLY
+>    the complement legs (a rebuilt leg must never be shadowed by its
+>    stale same-named artifact — versions don't change on override fixes).
+>    New dispatch: `groups=llvm,langs` + `reuse_run_id=33598824226`; the
+>    marker gate keeps nano/clang/nodejs coverage proofed per arch.
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)
@@ -303,6 +317,14 @@ should appear).
 - **D4 — no bootstrap change:** Tools install on demand. A fresh device without
   userland still works (Phase 22/B only need the app code; no userland required
   for the editor smoothness or IME keys fix).
+- **D15 amendment (device-verified):** see D5 — the include strip alone left
+  the cc symlink unclaimed and it was swept into the main libllvm deb;
+  the loop token is now removed too, so nothing creates `bin/cc` at all.
+- **D16 — post_massage edits live under `$TERMUX_PKG_MASSAGEDIR`:** D8's
+  lua/luac symlinks went to the build staging prefix, not the payload; the
+  deb installed without them (`lua: command not found`). Paths corrected.
+  **Rule for future overrides:** at massage time, the device tree is always
+  `$TERMUX_PKG_MASSAGEDIR/$TERMUX_PREFIX`, never bare `$TERMUX_PREFIX`.
 - **D5 — `bin/cc` stripped from the clang subpackage (cc invariant):** the
   upstream clang deb ships `bin/cc`→`clang-21` along with the other driver
   symlinks. In CodeC, `$PREFIX/bin/cc` is the app's own TCC frontend written

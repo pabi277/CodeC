@@ -91,10 +91,15 @@ class PackageGroupSplitTest(unittest.TestCase):
         self.assertIn("pattern: codec-repository-x86_64-*", wf)
         self.assertIn("merge-multiple: true", wf)
         # Salvage wiring: green legs from a partial-failure run merge via
-        # reuse_run_id; it conflicts with source_run_id and is gated by the
-        # per-arch marker check before signing.
+        # reuse_run_id — but ONLY the complement legs (a leg being rebuilt
+        # must never be shadowed by its stale same-named artifact from the
+        # reused run; the round-4 llvm/lua54 fixes share the version).
         self.assertIn("reuse_run_id:", wf)
-        self.assertIn("run-id: ${{ inputs.reuse_run_id }}", wf)
+        self.assertIn("reuse_names", wf)
+        self.assertIn('gh run download "${{ inputs.reuse_run_id }}"', wf)
+        self.assertIn("no complement legs to salvage", wf)
+        # it conflicts with source_run_id and is gated by the per-arch
+        # marker check before signing.
         self.assertIn("mutually exclusive", wf)
         self.assertIn("nano clang nodejs", wf)
         self.assertIn("missing marker package", wf)

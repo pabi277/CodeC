@@ -626,380 +626,43 @@ class RecipeOverrideTest(unittest.TestCase):
     def _write_libllvm_clang_fixture(self, tree: Path) -> Path:
         """clang subpackage shaping exactly like the pinned revision: the
         include list carries the driver-compat symlinks bin/cc, bin/gcc,
-        bin/g++, bin/c++, bin/cpp next to the real clang binaries."""
-        clang_dir = tree / "packages" / "libllvm"
-        clang_dir.mkdir(parents=True, exist_ok=True)
-        subpkg = clang_dir / "clang.subpackage.sh"
-        subpkg.write_text(
-            "TERMUX_SUBPKG_INCLUDE=\"\n"
-            "bin/c++\n"
-            "bin/cc\n"
-            "bin/clang*\n"
-            "bin/cpp\n"
-            "bin/g++\n"
-            "bin/gcc\n"
-            "include/clang*\n"
-            "\"\n"
-            'TERMUX_SUBPKG_DESCRIPTION="C language frontend for LLVM"\n'
-            'TERMUX_SUBPKG_DEPENDS="libcompiler-rt, lld, llvm, ndk-sysroot"\n'
-        )
-        return subpkg
-
-    def test_clang_subpackage_never_ships_cc(self) -> None:
-        """The clang subpackage must lose exactly `bin/cc` (the app's own
-        $PREFIX/bin/cc TCC frontend owns that name — invariant: never
-        overwrite cc) while keeping the gcc/g++/c++/cpp compat symlinks
-        that give users the familiar `gcc hello.c -o hello` UX."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            subpkg = self._write_libllvm_clang_fixture(tree)
-
-            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
-
-            lines = subpkg.read_text().splitlines()
-            self.assertNotIn("bin/cc", lines)
-            self.assertIn("bin/gcc", lines)
-            self.assertIn("bin/g++", lines)
-            self.assertIn("bin/c++", lines)
-            self.assertIn("bin/clang*", lines)
-
-    def test_clang_cc_override_fails_loud_on_drift(self) -> None:
-        """If the pinned recipe stops listing a standalone `bin/cc` line
-        (e.g. a reworded glob), the build must abort for a fresh invariant
-        review instead of silently letting cc slip back in."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            clang_dir = tree / "packages" / "libllvm"
-            clang_dir.mkdir(parents=True)
-            (clang_dir / "clang.subpackage.sh").write_text(
-                "TERMUX_SUBPKG_INCLUDE=\"\nbin/clang*\nbin/*cc*\n\"\n"
-            )
-
-            result = subprocess.run(
-                [str(OVERRIDES), str(tree)], text=True, capture_output=True
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("cc invariant", result.stderr)
-
-    def test_nodejs_debscripts_neutralized(self) -> None:
-        """nodejs (26.4.0-1 at the pinned revision) defines its own
-        termux_step_create_debscripts emitting a preinst notice; the
-        override must append a last-defined no-op so the published deb has
-        no maintainer scripts (python-pip precedent, CI 33308884424)."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            node_dir = tree / "packages" / "nodejs"
-            node_dir.mkdir(parents=True)
-            (node_dir / "build.sh").write_text(
-                'TERMUX_PKG_VERSION="26.4.0"\n'
-                'TERMUX_PKG_DEPENDS="libc++, openssl, c-ares"\n'
-                "\n"
-                "termux_step_create_debscripts() {\n"
-                "\tcat <<- EOF > ./preinst\n"
-                "\t#!$TERMUX_PREFIX/bin/sh\n"
-                "\techo \"npm is no longer bundled\"\n"
-                "\tEOF\n"
-                "}\n"
-            )
-
-            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
-
-            build_text = (node_dir / "build.sh").read_text()
-            self.assertIn("CodeC: no maintainer scripts for nodejs", build_text)
-            self.assertTrue(
-                build_text.rstrip().endswith(
-                    "termux_step_create_debscripts() { :; }"
-                )
-            )
-
-    def test_npm_debscripts_neutralized(self) -> None:
-        """npm (standalone package since nodejs 25.3.0-1) defines its own
-        termux_step_create_debscripts emitting a postinst notice; neutralize
-        it with the same last-defined no-op pattern."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            npm_dir = tree / "packages" / "npm"
-            npm_dir.mkdir(parents=True)
-            (npm_dir / "build.sh").write_text(
-                'TERMUX_PKG_VERSION="11.19.0"\n'
-                'TERMUX_PKG_DEPENDS="nodejs | nodejs-lts"\n'
-                "\n"
-                "termux_step_create_debscripts() {\n"
-                "\tcat <<- POSTINST_EOF > ./postinst\n"
-                "\t#!$TERMUX_PREFIX/bin/sh\n"
-                "\techo \"foreground-scripts notice\"\n"
-                "\tPOSTINST_EOF\n"
-                "}\n"
-            )
-
-            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
-
-            build_text = (npm_dir / "build.sh").read_text()
-            self.assertIn("CodeC: no maintainer scripts for npm", build_text)
-            self.assertTrue(
-                build_text.rstrip().endswith(
-                    "termux_step_create_debscripts() { :; }"
-                )
-            )
-
-    def _write_php_fixture(self, tree: Path) -> Path:
-        """php recipe fixture carrying the exact upstream lines the trim
-        targets (pinned revision 1bbe66903526df2e8af51e704316bc68ede72603):
-        postgresql build-dep, ldap/pgsql/apache/gd configure flags, the
-        upstream post_make_install, and the seven subpackage files."""
-        php_dir = tree / "packages" / "php"
-        php_dir.mkdir(parents=True, exist_ok=True)
-        (php_dir / "build.sh").write_text(
-            'TERMUX_PKG_VERSION="8.5.1"\n'
-            'TERMUX_PKG_DEPENDS="capstone, libcurl, libxml2, openssl, pcre2, zlib"\n'
-            'TERMUX_PKG_BUILD_DEPENDS="postgresql"\n'
-            "TERMUX_PKG_EXTRA_CONFIGURE_ARGS=\"\n"
-            "--with-capstone\n"
-            "--with-ldap=shared,$TERMUX_PREFIX\n"
-            "--with-ldap-sasl\n"
-            "--with-pgsql=shared,$TERMUX_PREFIX\n"
-            "--with-pdo-pgsql=shared,$TERMUX_PREFIX\n"
-            "--with-apxs2=$TERMUX_PKG_TMPDIR/apxs-wrapper.sh\n"
-            "--enable-fpm\n"
-            "--enable-gd=shared,$TERMUX_PREFIX\n"
-            "--with-external-gd\n"
-            "--with-sodium=shared,$TERMUX_PREFIX\n"
-            "\"\n"
-            "\n"
-            "termux_step_post_make_install() {\n"
-            "\tmkdir -p $TERMUX_PREFIX/etc/php-fpm.d\n"
-            "\tmkdir -p $TERMUX_PREFIX/lib/php-apache\n"
-            "\tpatchelf --set-rpath $TERMUX_PREFIX/libexec/apache2 x.so\n"
-            "}\n"
-        )
-        # Exact pinned TERMUX_SUBPKG_DEPENDS lines — the phantom-closure
-        # edges the neutering strips (buildorder is arch-neutral and
-        # collects excluded subpackages' deps: run 33598824226).
-        php_subpkg = {
-            "php-apache": "apache2, apr-util",
-            "php-apache-ldap": "openldap, php-apache",
-            "php-apache-pgsql": "php-apache, postgresql",
-            "php-apache-sodium": "libsodium, php-apache",
-            "php-ldap": "openldap",
-            "php-pgsql": "postgresql",
-            "php-gd": "libgd",
-        }
-        for sub, deps in php_subpkg.items():
-            body = (
-                f'TERMXUX_PKG_DESC="{sub}"\n'
-                f'TERMUX_SUBPKG_DEPENDS="{deps}"\n'
-            )
-            if sub == "php-apache":
-                body += (
-                    "\n"
-                    "termux_step_create_subpkg_debscripts() {\n"
-                    "\tcat <<- EOF > ./postinst\n"
-                    '\t#!$TERMUX_PREFIX/bin/sh\n'
-                    "\techo notice\n"
-                    "\tEOF\n"
-                    "}\n"
-                )
-            (php_dir / f"{sub}.subpackage.sh").write_text(body)
-        for sub in ("php-fpm", "php-sodium"):
-            (php_dir / f"{sub}.subpackage.sh").write_text(
-                f'TERMXUX_PKG_DESC="{sub}"\nTERMUX_SUBPKG_DEPENDS="php"\n'
-            )
-        return php_dir
-
-    def test_php_trimmed_of_apache_ldap_pgsql_gd(self) -> None:
-        """php must build without the apache2/openldap/postgresql/libgd
-        closures: the configure flags and the postgresql build dependency
-        are removed, the seven extension subpackages are excluded for CodeC
-        arches, and post_make_install is replaced by the trimmed twin (no
-        php-apache assembly, conf.d ini for sodium only). php-fpm and
-        php-sodium subpackages stay. The dead subpackage files are NEUTERED
-        in place — depends edge stripped (buildorder is arch-neutral and
-        collects excluded subpackages' deps: run 33598824226), arch-excluded
-        (no deb), file kept (deleting orphans phpmyadmin's graph edge: run
-        33625141182), php-apache's debscripts no-op'd."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            php_dir = self._write_php_fixture(tree)
-
-            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
-
-            build_text = (php_dir / "build.sh").read_text()
-            for flag in (
-                "--with-ldap=shared,$TERMUX_PREFIX",
-                "--with-ldap-sasl",
-                "--with-pgsql=shared,$TERMUX_PREFIX",
-                "--with-pdo-pgsql=shared,$TERMUX_PREFIX",
-                "--with-apxs2=$TERMUX_PKG_TMPDIR/apxs-wrapper.sh",
-                "--enable-gd=shared,$TERMUX_PREFIX",
-                "--with-external-gd",
-            ):
-                self.assertNotIn(flag, build_text)
-            self.assertNotIn("TERMUX_PKG_BUILD_DEPENDS", build_text)
-            self.assertIn("--enable-fpm", build_text)
-            self.assertIn("--with-sodium=shared,$TERMUX_PREFIX", build_text)
-            self.assertIn("CodeC: php trimmed post_make_install", build_text)
-            replaced = build_text[build_text.index("CodeC: php trimmed post_make_install"):]
-            self.assertNotIn("patchelf --set-rpath", replaced.split("termux_step_post_make_install")[1])
-            self.assertNotIn(
-                "mkdir -p $TERMUX_PREFIX/lib/php-apache",
-                replaced.split("termux_step_post_make_install")[1],
-            )
-            for sub in (
-                "php-apache", "php-apache-ldap", "php-apache-pgsql",
-                "php-apache-sodium", "php-ldap", "php-pgsql", "php-gd",
-            ):
-                subpkg = php_dir / f"{sub}.subpackage.sh"
-                self.assertTrue(subpkg.exists(),
-                    f"{sub}.subpackage.sh must stay — deleting it orphans "
-                    "phpmyadmin's buildorder edge")
-                text = subpkg.read_text()
-                self.assertTrue(
-                    text.splitlines()[0].startswith(
-                        'TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"'),
-                    f"{sub} must be arch-excluded",
-                )
-                self.assertNotIn(
-                    "TERMUX_SUBPKG_DEPENDS=", text,
-                    f"{sub}'s dep edge must be stripped — exclusion alone "
-                    "cannot keep it out of the buildorder closure",
-                )
-            apache = (php_dir / "php-apache.subpackage.sh").read_text().rstrip()
-            self.assertIn("CodeC: no maintainer scripts for php-apache", apache)
-            self.assertTrue(
-                apache.endswith("termux_step_create_subpkg_debscripts() { :; }"),
-                "php-apache debscripts must end in the last-wins no-op",
-            )
-            for sub in ("php-fpm", "php-sodium"):
-                self.assertNotIn(
-                    "TERMUX_SUBPKG_EXCLUDED_ARCHES",
-                    (php_dir / f"{sub}.subpackage.sh").read_text(),
-                    f"{sub} must stay in the repository",
-                )
-
-    def test_php_neuter_fails_loud_when_depends_line_gone(self) -> None:
-        """If the pinned php subpackages lose their TERMUX_SUBPKG_DEPENDS
-        (upstream restructure), the override must abort for re-review —
-        the arch-marker check distinguishes that from a re-run."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            php_dir = self._write_php_fixture(tree)
-            (php_dir / "php-gd.subpackage.sh").write_text(
-                'TERMXUX_PKG_DESC="php-gd"\n'
-            )
-
-            result = subprocess.run(
-                [str(OVERRIDES), str(tree)], text=True, capture_output=True
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("re-review", result.stderr)
-
-    def test_php_trim_fails_loud_on_drift(self) -> None:
-        """A php recipe without the expected configure flags must abort the
-        build for a re-review, not silently ship the apache/pgsql closure."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            php_dir = tree / "packages" / "php"
-            php_dir.mkdir(parents=True)
-            (php_dir / "build.sh").write_text(
-                'TERMUX_PKG_BUILD_DEPENDS="postgresql"\n'
-                'TERMUX_PKG_EXTRA_CONFIGURE_ARGS="--with-readline=$PREFIX"\n'
-                "\n"
-                "termux_step_post_make_install() { :; }\n"
-            )
-
-            result = subprocess.run(
-                [str(OVERRIDES), str(tree)], text=True, capture_output=True
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("re-review the php trim", result.stderr)
-
-    def test_lua54_alternatives_replaced_by_plain_symlinks(self) -> None:
-        """lua54 ships bin/lua and bin/luac via an update-alternatives
-        postinst that CodeC's validator rejects (only the five reviewed
-        alternatives packages are allowlisted). The override removes the
-        .alternatives file and appends a post_massage step creating plain
-        relative symlinks instead — so `lua --version` works right after
-        `pkg install lua54` with zero maintainer scripts."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            lua_dir = tree / "packages" / "lua54"
-            lua_dir.mkdir(parents=True)
-            (lua_dir / "lua54.alternatives").write_text(
-                "Name: lua\n"
-                "Link: bin/lua\n"
-                "Alternative: bin/lua5.4\n"
-                "Dependents:\n"
-                "  share/man/man1/lua.1.gz lua.1.gz share/man/man1/lua5.4.1.gz\n"
-                "Priority: 140\n"
-                "\n"
-                "Name: luac\n"
-                "Link: bin/luac\n"
-                "Alternative: bin/luac5.4\n"
-                "Dependents:\n\n"
-                "Priority: 140\n"
-            )
-            (lua_dir / "build.sh").write_text(
-                'TERMUX_PKG_VERSION=5.4.8\n'
-                'TERMUX_PKG_DEPENDS="readline"\n'
-                "\n"
-                "termux_step_post_make_install() { :; }\n"
-            )
-
-            subprocess.run([str(OVERRIDES), str(tree)], check=True, text=True)
-
-            self.assertFalse((lua_dir / "lua54.alternatives").exists())
-            build_text = (lua_dir / "build.sh").read_text()
-            self.assertIn("CodeC: lua/luac plain symlinks", build_text)
-            self.assertIn('ln -sf lua5.4 "$TERMUX_PREFIX/bin/lua"', build_text)
-            self.assertIn('ln -sf luac5.4 "$TERMUX_PREFIX/bin/luac"', build_text)
-            # The upstream post_make_install must be preserved (the override
-            # appends a NEW post_massage step, it does not shadow anything).
-            self.assertIn("termux_step_post_make_install() { :; }", build_text)
-
-    def test_lua54_override_fails_loud_on_drift(self) -> None:
-        """If the pinned lua54 recipe drops the alternatives file (bin/lua
-        would then come from somewhere else), the build aborts for a
-        re-review instead of silently shipping a lua54 without `lua`."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp)
-            self._write_apt_fixture_only(tree)
-            lua_dir = tree / "packages" / "lua54"
-            lua_dir.mkdir(parents=True)
-            (lua_dir / "build.sh").write_text('TERMUX_PKG_VERSION=5.4.8\n')
-
-            result = subprocess.run(
-                [str(OVERRIDES), str(tree)], text=True, capture_output=True
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("lua54.alternatives missing", result.stderr)
+        bin/g++, bin/c++, bin/cpp next to the real clang binaries. With the
+        round-4 device-verified cc-loop fix the overrides also edit
+        libllvm/build.sh AND (D10) the lldb/mlir/libpolly subpackage files,
+        so the pinned tree is incomplete without them — delegate to the
+        full fixture and return the clang subpackage path."""
+        lib_dir = self._write_libllvm_full_fixture(tree)
+        return lib_dir / "clang.subpackage.sh"
 
     def _write_libllvm_full_fixture(self, tree: Path) -> Path:
-        """libllvm fixture carrying every line the build-time trim targets:
+        """libllvm fixture carrying every line the overrides target, all
+        byte-exact from the pinned revision
+        (termux-packages @ 1bbe66903526df2e8af51e704316bc68ede72603):
         all-targets + experimental backends, the full project set, the host
-        ninja tool list, and the target-coupled subpackage include lines."""
+        ninja tool list (TWO continued lines — a single-line fixture hid
+        this layout and dispatch 33544558167 found out at ~3.5 min), the
+        post_make_install symlink loop (cc invariant — round-4 device
+        verification), the target-coupled subpackage include lines, and the
+        libcompiler-rt subpkg debscripts hook (run 33585242675)."""
         lib_dir = tree / "packages" / "libllvm"
         lib_dir.mkdir(parents=True, exist_ok=True)
         (lib_dir / "build.sh").write_text(
             'TERMUX_PKG_VERSION="21.1.8"\n'
+            'TERMUX_PKG_DESCRIPTION="Modular compiler and toolchain technologies library"\n'
             "TERMUX_PKG_EXTRA_CONFIGURE_ARGS=\"\n"
             "-DLLVM_ENABLE_PIC=ON\n"
             "-DLLVM_TARGETS_TO_BUILD=all\n"
             "-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=ARC;CSKY;M68k;VE\n"
             "\"\n"
             "\n"
+            "termux_step_post_make_install() {\n"
+            "\tcd \"$TERMUX_PREFIX/bin\" || termux_error_exit\n"
+            "\tfor tool in clang clang++ cc c++ cpp gcc g++; do\n"
+            '\t\tln -f -s "clang-${TERMUX_PKG_VERSION%%.*}" "$tool"\n'
+            "\tdone\n"
+            "}\n"
+            "\n"
             "termux_step_host_build() {\n"
-            # Exact upstream bytes: cmake line, then a TWO-LINE ninja command
-            # (backslash continuation, tab then tab-tab indent). An earlier
-            # single-line fixture hid this layout and dispatch 33544558167
-            # aborting at ~3.5 min is how we found out — keep it verbatim.
             "\tcmake -G Ninja -DCMAKE_BUILD_TYPE=Release \\\n"
             "\t\t-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lldb;mlir' \"$TERMUX_PKG_SRCDIR/llvm\"\n"
             "\tninja -j \"$TERMUX_PKG_MAKE_PROCESSES\" clang-tblgen clang-tidy-confusable-chars-gen \\\n"
@@ -1011,20 +674,30 @@ class RecipeOverrideTest(unittest.TestCase):
             "\tTERMUX_PKG_EXTRA_CONFIGURE_ARGS+=\" -DLLVM_ENABLE_PROJECTS=$llvm_projects\"\n"
             "}\n"
         )
-        self._write_libllvm_clang_fixture(tree)
-        clang_subpkg = lib_dir / "clang.subpackage.sh"
-        clang_subpkg.write_text(
-            clang_subpkg.read_text()
-            .replace("bin/clang*\n", "bin/clang*\nbin/amdgpu-arch\nbin/nvptx-arch\nbin/offload-arch\n")
+        (lib_dir / "clang.subpackage.sh").write_text(
+            "TERMUX_SUBPKG_INCLUDE=\"\n"
+            "bin/c++\n"
+            "bin/cc\n"
+            "bin/clang*\n"
+            "bin/amdgpu-arch\n"
+            "bin/nvptx-arch\n"
+            "bin/offload-arch\n"
+            "bin/cpp\n"
+            "bin/g++\n"
+            "bin/gcc\n"
+            "include/clang*\n"
+            "\"\n"
+            'TERMUX_SUBPKG_DESCRIPTION="C language frontend for LLVM"\n'
+            'TERMUX_SUBPKG_DEPENDS="libcompiler-rt, lld, llvm, ndk-sysroot"\n'
         )
         (lib_dir / "lld.subpackage.sh").write_text(
             "TERMUX_SUBPKG_INCLUDE=\"\nbin/lld\nbin/wasm-ld\n\"\n"
         )
-        # Exact upstream bytes (pinned revision) for
-        # libcompiler-rt.subpackage.sh — the only libllvm subpackage that
-        # defines its own termux_step_create_subpkg_debscripts(); the
-        # generated postinst/prerm are pure ndk-multilib interop, rejected
-        # by the repository validator (run 33585242675 llvm legs).
+        # Exact upstream bytes for libcompiler-rt.subpackage.sh — the only
+        # libllvm subpackage that defines its own
+        # termux_step_create_subpkg_debscripts(); the generated
+        # postinst/prerm are pure ndk-multilib interop, rejected by the
+        # repository validator (run 33585242675 llvm legs).
         (lib_dir / "libcompiler-rt.subpackage.sh").write_text(
             'TERMUX_SUBPKG_DESCRIPTION="Compiler runtime libraries for clang"\n'
             'TERMUX_SUBPKG_INCLUDE="\n'
@@ -1101,6 +774,11 @@ class RecipeOverrideTest(unittest.TestCase):
                 build_text,
             )
             self.assertNotIn("mlir-linalg-ods-yaml-gen", build_text)
+            build_text_now = (lib_dir / "build.sh").read_text()
+            self.assertIn(
+                "for tool in clang clang++ c++ cpp gcc g++; do", build_text_now,
+                "the symlink loop must no longer create bin/cc",
+            )
             clang_lines = (lib_dir / "clang.subpackage.sh").read_text().splitlines()
             for gone in ("bin/amdgpu-arch", "bin/nvptx-arch", "bin/offload-arch"):
                 self.assertNotIn(gone, clang_lines)
@@ -1175,6 +853,11 @@ class RecipeOverrideTest(unittest.TestCase):
             self._write_libllvm_clang_fixture(tree)
             (lib_dir / "build.sh").write_text(
                 'TERMUX_PKG_DESCRIPTION="recipe shape changed upstream"\n'
+                "termux_step_post_make_install() {\n"
+                "\tfor tool in clang clang++ cc c++ cpp gcc g++; do\n"
+                "\t\tln -f -s clang-21 cc\n"
+                "\tdone\n"
+                "}\n"
             )
 
             result = subprocess.run(

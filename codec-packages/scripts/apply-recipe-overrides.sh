@@ -593,7 +593,30 @@ if [[ -f "$CLANG_SUBPKG" ]]; then
     echo "recipe-overrides: failed to strip bin/cc from the clang subpackage" >&2
     exit 1
   fi
-  echo "recipe-overrides: clang subpackage never ships bin/cc (cc stays the app frontend; gcc/g++ kept)"
+  # Stripping the include line only declared the clang deb cc-free: the
+  # symlink was still created in staging and, unclaimed by any subpackage,
+  # got swept into the MAIN libllvm deb — on-device head -c 60 cc showed ELF
+  # bytes = clang-21 through the link (round-4 device verification after
+  # run 33639310638). So the loop must stop CREATING bin/cc too.
+  LIBLLVM_BUILD="$TREE/packages/libllvm/build.sh"
+  if [[ ! -f "$LIBLLVM_BUILD" ]]; then
+    echo "recipe-overrides: libllvm build.sh missing (pinned-revision drift) — re-review the cc invariant" >&2
+    exit 1
+  fi
+  if ! grep -qF 'for tool in clang clang++ cc c++ cpp gcc g++; do' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: libllvm post_make_install symlink loop lost the cc entry (pinned-revision drift) — re-review the cc invariant" >&2
+    exit 1
+  fi
+  sed -i 's#for tool in clang clang++ cc c++ cpp gcc g++; do#for tool in clang clang++ c++ cpp gcc g++; do#' "$LIBLLVM_BUILD"
+  if grep -qF 'for tool in clang clang++ cc c++ cpp gcc g++; do' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: failed to remove cc from the libllvm symlink loop" >&2
+    exit 1
+  fi
+  if ! grep -qF 'for tool in clang clang++ c++ cpp gcc g++; do' "$LIBLLVM_BUILD"; then
+    echo "recipe-overrides: libllvm symlink loop came out wrong (expected no-cc variant)" >&2
+    exit 1
+  fi
+  echo "recipe-overrides: clang never ships bin/cc AND libllvm never creates it (cc stays the app frontend; gcc/g++ kept)"
 else
   echo "recipe-overrides: libllvm clang subpackage not found; skipping bin/cc strip" >&2
 fi
@@ -1060,15 +1083,18 @@ if [[ -d "$LUA54_DIR" ]]; then
 # CodeC: lua/luac plain symlinks — the upstream .alternatives postinst is
 # removed (maintainer scripts are approved only for the five reviewed
 # packages), so provide the same links as plain relative symlinks in the
-# package payload instead.
+# package payload instead. At post_massage time the deb payload lives under
+# $TERMUX_PKG_MASSAGEDIR — writing to plain $TERMUX_PREFIX (as the first
+# version did) creates the links in the build staging only and the deb
+# ships without them (device verified: `lua: command not found`).
 termux_step_post_massage() {
-	ln -sf lua5.4 "$TERMUX_PREFIX/bin/lua"
-	ln -sf luac5.4 "$TERMUX_PREFIX/bin/luac"
-	if [ -f "$TERMUX_PREFIX/share/man/man1/lua5.4.1.gz" ]; then
-		ln -sf lua5.4.1.gz "$TERMUX_PREFIX/share/man/man1/lua.1.gz"
+	ln -sf lua5.4 "$TERMUX_PKG_MASSAGEDIR/$TERMUX_PREFIX/bin/lua"
+	ln -sf luac5.4 "$TERMUX_PKG_MASSAGEDIR/$TERMUX_PREFIX/bin/luac"
+	if [ -f "$TERMUX_PKG_MASSAGEDIR/$TERMUX_PREFIX/share/man/man1/lua5.4.1.gz" ]; then
+		ln -sf lua5.4.1.gz "$TERMUX_PKG_MASSAGEDIR/$TERMUX_PREFIX/share/man/man1/lua.1.gz"
 	fi
-	if [ -f "$TERMUX_PREFIX/share/man/man1/luac5.4.1.gz" ]; then
-		ln -sf luac5.4.1.gz "$TERMUX_PREFIX/share/man/man1/luac.1.gz"
+	if [ -f "$TERMUX_PKG_MASSAGEDIR/$TERMUX_PREFIX/share/man/man1/luac5.4.1.gz" ]; then
+		ln -sf luac5.4.1.gz "$TERMUX_PKG_MASSAGEDIR/$TERMUX_PREFIX/share/man/man1/luac.1.gz"
 	fi
 }
 SH

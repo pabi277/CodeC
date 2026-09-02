@@ -44,6 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       groups: ${{ steps.resolve.outputs.groups }}
+      reuse_names: ${{ steps.resolve.outputs.reuse_names }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,6 +85,22 @@ jobs:
           json="[$(IFS=,; echo "${out[*]}")]"
           echo "groups=$json" >> "$GITHUB_OUTPUT"
           echo "building group legs: $json"
+          # Salvage mode downloads only the COMPLEMENT legs — a leg being
+          # rebuilt must never be shadowed by its stale artifact from the
+          # reused run (round-4 llvm fix: same version, same deb name — the
+          # pattern-merge order cannot distinguish them).
+          known=(base llvm langs)
+          reuse_names=""
+          for arch in aarch64 x86_64; do
+            for k in "${known[@]}"; do
+              case " ${selected[*]} " in
+                *" $k "*) ;;
+                *) reuse_names="$reuse_names codec-repository-$arch-$k" ;;
+              esac
+            done
+          done
+          echo "reuse_names=${reuse_names# }" >> "$GITHUB_OUTPUT"
+          echo "salvage (complement) artifacts: ${reuse_names# }"
 
   host-tests:
     name: Repository security and metadata tests
@@ -247,25 +264,25 @@ jobs:
       # this scenario: langs red, base/llvm green — those artifacts are
       # immutable and retention-pinned). The marker gate below proves full
       # coverage before anything is published.
-      - name: Salvage aarch64 legs from run ${{ inputs.reuse_run_id }}
+      - name: Salvage green legs (complement) from run ${{ inputs.reuse_run_id }}
         if: ${{ inputs.reuse_run_id != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          pattern: codec-repository-aarch64-*
-          merge-multiple: true
-          path: input/aarch64
-          run-id: ${{ inputs.reuse_run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Salvage x86_64 legs from run ${{ inputs.reuse_run_id }}
-        if: ${{ inputs.reuse_run_id != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          pattern: codec-repository-x86_64-*
-          merge-multiple: true
-          path: input/x86_64
-          run-id: ${{ inputs.reuse_run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REUSE_NAMES: ${{ needs.plan.outputs.reuse_names }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${REUSE_NAMES// }" ]]; then
+            echo "no complement legs to salvage (all groups rebuilt this run)"
+            exit 0
+          fi
+          for name in $REUSE_NAMES; do
+            arch="${name#codec-repository-}"
+            arch="${arch%%-*}"
+            echo "salvaging $name -> input/$arch"
+            gh run download "${{ inputs.reuse_run_id }}" -n "$name" -D "reuse-stage/$name"
+            mkdir -p "input/$arch"
+            cp -rn "reuse-stage/$name/." "input/$arch/"
+          done
 
       - name: Download aarch64 repository (all group legs)
         uses: actions/download-artifact@v4

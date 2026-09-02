@@ -51,8 +51,12 @@ gate, invariants, docs policy) — follow it.
   marker gate before signing). Salvage dispatch `33639310638`: langs green,
   publish blocked by the github-pages env branch allowlist → owner added
   `arena/01a05cb9-codec` → rerun-failed → **DEV REPO PUBLISHED** (all 14
-  names verified live; lldb/mlir/libpolly absent). Next: bootstrap-release
-  at source_run_id=33598824226 (owner), §4 device recipe, owner merge.
+  names verified live; lldb/mlir/libpolly absent). §4 device run: 5/6 OK,
+  two content bugs found — cc clobbered (unclaimed symlink swept into
+  main libllvm deb → D15 drops cc from the loop) + no `lua` (post_massage
+  wrote to staging, not MASSAGEDIR → D16); salvage now downloads
+  complement legs only. Owner: rerun `groups=llvm,langs` +
+  reuse_run_id=33598824226, reinstall libllvm+lua54, merge.
   Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
   Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
