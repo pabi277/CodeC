@@ -1,32 +1,32 @@
 # NEXT_STEPS.md — website head state
 
-> **HEAD STATE (2026-09-02, v2.1): W0 (planning) COMPLETE — zero website
-> code exists, ALL PHASES FULLY SPEC'D.** The website is spec'd in
-> `WEBSITE_PLAN.md` v2.1: **two wings** — product site (7 pages) +
-> **learning wing** ("Master CodeC from Zero to Advanced", 17 chapters,
-> modelled on the owner's Termux-Mastery), **fully self-dependent** (zero
-> external resources, offline-complete, course completable without the
-> repo). Stack: static HTML/CSS, GitHub Pages. **Phases W1–W6 are fully
-> spec'd** in `web-phase1/` … `web-phase6/` (35 docs with exit conditions
-> per part; W4.2 verification gate runs first in W4; device passes due in
-> W5 ch-08 and W6 P1+P5; W6.7 verifies before the site goes live).
-> Nothing is built, nothing is deployed, there is no `website/` folder.
-> **PR #41 opened 2026-09-02** (owner command in chat) — awaiting the
-> owner's merge; after merge, "Start W1" begins the build.
+> **HEAD STATE (2026-09-02, W1 COMPLETE): the website EXISTS — scaffold +
+> Home built, W2 is next.** W1 (2026-09-02, owner command "Build the
+> website") created `website/` per `web-phase1/`: `style.css` (tokens + all
+> components, system fonts only), `favicon.svg` (local mark), `index.html`
+> (shared chrome + Home: hero → CTA → 6 cards → learn banner → footnote).
+> Fully self-dependent from the first byte (first §5.5 sweep PASS, recorded
+> in `chat-web2/`); no JavaScript; mobile nav = checkbox pattern; internal
+> links are **relative `*.html`** (works under the Pages subpath — recorded
+> in `chat-web2/`). The chrome copy-paste pattern lives in
+> `web_docs/chat-web2/SUMMARY.md` — W2–W6 copy it byte-identical. Still
+> zero: no app-code touches, no deploy, no Pages workflow (that's W6).
+> 21 pages remain: install, start, engines, packages, faq, about, learn +
+> ch-01…ch-17 (they 404 until built — expected).
 
 ## What the owner says next
 
 | Owner says in chat | Agent does |
 |---|---|
-| **"Build the website"** / **"Start W1"** | Begin W1 strictly per `web_docs/web-phase1/` (README + PART_1_1 + PART_1_2): create `website/`, shared chrome (incl. Learn nav item), stylesheet, Home page with learning banner; self-dependent rule (§5) in force from the first file; record in `web_docs/chat-web2/`; update living docs; commit + push; report; stop at the merge gate. |
-| **"Start W2"** … **"Start W6"** | Execute that phase strictly per its `web_docs/web-phaseN/` folder — one phase at a time, in order (W4.2 verification gate runs first inside W4); phase records in `chat-webN+1/`; device passes (W5 ch-08, W6 P1+P5) reported as **device pass required** with the owner's transcript. |
+| **"Start W2"** | Execute W2 strictly per `web_docs/web-phase2/` (README + PART_2_1 + PART_2_2): `website/install.html` + `website/start.html` (full content per plan §3.1) inside the W1 chrome, record in `web_docs/chat-web3/`, update living docs, commit + push, report, stop at the merge gate. |
+| **"Start W3"** … **"Start W6"** | Execute that phase strictly per its `web_docs/web-phaseN/` folder — one phase at a time, in order (W4.2 verification gate runs first inside W4); phase records in `chat-webN+1/`; device passes (W5 ch-08, W6 P1+P5) reported as **device pass required** with the owner's transcript. |
 | "Change page X / the design / the stack" | Update `WEBSITE_PLAN.md` + the affected `web-phaseN/` part docs + `DECISIONS.md` in the same commit — still no code until implementation is commanded. |
 | (answers O1–O7) | Record the answer in `DECISIONS.md` (close the open item), adjust the plan/part docs if needed. |
 | "Create PR and merge" | Open/merge the PR for the current session branch per `rule.md` §3 — **only on this exact class of command.** |
 
-## Phase queue (implementation — not started)
+## Phase queue (implementation)
 
-- [ ] **W1** — scaffold + Home · spec: [`web-phase1/`](web-phase1/README.md)
+- [x] **W1** — scaffold + Home · **COMPLETE 2026-09-02** · record: [`chat-web2/`](chat-web2/SUMMARY.md)
 - [ ] **W2** — Install + Getting Started · spec: [`web-phase2/`](web-phase2/README.md)
 - [ ] **W3** — Engines + Packages + FAQ + About · spec: [`web-phase3/`](web-phase3/README.md)
 - [ ] **W4** — verification gate → course home + ch 01–06 · spec: [`web-phase4/`](web-phase4/README.md)
@@ -44,4 +44,6 @@
 ## History pointer
 
 Full narrative: [`WEB_JOURNEY.md`](WEB_JOURNEY.md). Session records:
-`chat-web1/` (W0 planning, 2026-09-02).
+`chat-web1/` (W0 planning, 2026-09-02) · `chat-web2/` (W1 scaffold + Home,
+2026-09-02 — includes the byte-identical chrome pattern + card source
+lines).

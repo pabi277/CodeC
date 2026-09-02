@@ -143,6 +143,59 @@ pull request for the changes on this branch." Agent opened
 summary. **Not merged** — the merge gate applies; the owner merges (or
 hands the command).
 
+**16. PR #41 merged (2026-09-02).** The owner merged W0 planning to `main`
+(squash → `9b3669e`); `Build APK` green on the merge run. `main` and the
+planning branch tip became identical — the handoff's "if it's already
+merged, continue" applies.
+
 ---
 
-*Next entry: W1 (scaffold + Home) — after the owner's implementation command.*
+*Next entry: W2 (Install + Getting Started) — on the owner's "Start W2" command.*
+
+## W1 — Scaffold + Home (2026-09-02)
+
+**17. "Build the website" — W1 begins (2026-09-02).** New session, new
+branch `arena/01a062f7-codec` (verified first: clean at `9b3669e` == remote
+`main`, PR #41 merged, CI green). The owner's message was exactly the
+implementation trigger from the handoff: "Build the website" = "Start W1".
+The strict no-code era ended by the owner's own command; W0's documents
+became the working spec.
+
+**18. W1.1 — the scaffold (2026-09-02).** `website/` created with exactly
+the PART_1_1 files: `style.css` (the only stylesheet — tokens: near-black
+`#0B0F14`, surface `#11161D`, text `#E6EDF3`, muted `#8B949E`, accent green
+`#3FB950` + amber `#D29922`, system font stacks; every component from the
+spec defined: header/footer chrome, containers, cards, buttons, code
+blocks, tables, chapter boxes, learning banner, FAQ items), `favicon.svg`
+(hand-drawn `>_` prompt mark), and the chrome half of `index.html`. The
+mobile nav collapses with **zero JavaScript** (checkbox pattern). The
+byte-identical chrome pattern is documented in `chat-web2/SUMMARY.md` for
+W2–W6 to copy.
+
+**19. W1.2 — the Home page (2026-09-02).** Hero ("CodeC — a C programming
+IDE for your Android phone."), the single honest CTA ("Get the APK on
+GitHub" → Releases — D9; secondary "Read the README"), six feature cards
+(built-in compiler, real terminal, package hub, Spck-grade editor, web
+preview, always updatable — each claim's README source line recorded in
+`chat-web2/`), the learning banner ("Master CodeC from Zero to Advanced" →
+`learn.html`), and the footnote strip.
+
+**20. Verification (2026-09-02).** First self-dependent grep sweep (plan
+§5.5): zero external `src=` / `<link href=` / `@import` / `url(`; every
+`http(s)` on the page lives in `<a href>` (one declared exception: the SVG
+`xmlns` namespace identifier in the favicon — never fetched). Outbound
+links curl-verified 200 (releases, repo, issues, JOURNEY). HTML parse
+check clean. Served locally: `/`, `style.css`, `favicon.svg` all 200; the
+not-yet-built pages 404 exactly as the spec expects until W2–W4 build
+them. Visual check at 360/1440 px: no browser in the sandbox — exposed to
+the owner as a live preview; CSS is mobile-first per spec breakpoints.
+
+**21. W1 closed (2026-09-02).** Living docs updated in the same commit
+(this file, `NEXT_STEPS.md`, `web_prompt.md`, `web_docs/README.md`).
+Nothing outside `website/` + `web_docs/` + `web_prompt.md` was touched.
+W1 note recorded in `chat-web2/`: internal links are relative `*.html`
+(the only mechanism that resolves to the final URLs under the GitHub
+Pages subpath). Stopped at the merge gate — the owner merges, or commands
+the next phase ("Start W2").
+
+---

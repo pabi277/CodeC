@@ -27,56 +27,47 @@ commit and push to the SESSION branch only, never `main` or any other
 branch. `rule.md` is the operating manual (branching, merge gate,
 invariants, docs policy) — follow it for the website work too.
 
-**WHERE THE WEBSITE STANDS (2026-09-02, plan v2.1):**
+**WHERE THE WEBSITE STANDS (2026-09-02, W1 COMPLETE):**
 
-- **WEBSITE PHASES W0 + W0.1 + W0.2 (planning) are COMPLETE. NO WEBSITE
-  CODE EXISTS YET, BUT THE SITE IS FULLY SPEC'D END TO END.** The owner's
-  strict rule for the planning session (2026-09-02) was: **no code of any
-  kind** — this workstream started with documentation only, exactly like
-  `docs/` + `prompt.md` started the app project. Plan v2 added the
-  learning wing (owner command); v2.1 added **fully spec'd implementation
-  phases** (owner command "Can you create phases") — see
-  `web_docs/DECISIONS.md` D10–D13.
-- **The phase specs (the website's `docs/chat-phase20…24` equivalent):**
-  `web_docs/web-phase1/` … `web_docs/web-phase6/` — 35 docs (6 phase
-  READMEs + 29 PART docs), each part with design, implementation steps and
-  a numbered exit condition. Phase laws baked into the specs: **W4.2 is a
-  verification gate that runs FIRST inside W4** (re-verifies README +
-  `codec-packages/` build config into a committed Verified Facts Table,
-  locks the 17-chapter set, closes O6); **ch-08 (W5) and P1+P5 (W6) carry
-  device passes** (owner transcripts — same convention as app phases);
-  **W6.7 verifies before the site goes live** (self-dependent sweep +
-  offline render + full link sweep, recorded in `chat-web6/`).
-- What exists now:
-  - `web_docs/` — the website's history & planning folder (the website's
-    equivalent of `docs/`): `README.md` (index), `WEBSITE_PLAN.md` (the
-    master spec v2.1 — two wings (product + 17-chapter learning course),
-    per-page content, design, stack, deployment, phases W1–W6),
-    `web-phase1/` … `web-phase6/` (the fully spec'd phases — 35 docs),
-    `DECISIONS.md` (decision log), `NEXT_STEPS.md` (head state),
-    `WEB_JOURNEY.md` (narrative), `chat-web1/SUMMARY.md` (session record).
-  - `web_prompt.md` — this file.
-- **Nothing is built, nothing is deployed, there is no `website/` folder
-  yet.** If you see website HTML/CSS/JS anywhere that this session did not
-  create, verify where it came from before touching it.
-- **PR #41 (2026-09-02, owner command)** carries the W0 planning docs
-  (`arena/01a06270-codec` → `main`). Check its state (`gh pr view 41`) —
-  if it's already merged, continue; the merge is the owner's to give
-  (standing rule).
+- **Planning (W0 + W0.1 + W0.2) is complete AND merged (PR #41 → `main`,
+  `9b3669e`). W1 (scaffold + Home) is COMPLETE — the site now exists.**
+- **What exists in `website/` (created 2026-09-02 by the W1 session):**
+  - `style.css` — the one stylesheet: design tokens (near-black `#0B0F14`,
+    surface `#11161D`, text `#E6EDF3`, muted `#8B949E`, accent green
+    `#3FB950` + amber `#D29922`, system font stacks) + every component
+    (chrome, containers 760/1040, cards, buttons, code blocks, tables,
+    chapter-crumb/prev-next, goal/try-it/mistake boxes, learning banner,
+    FAQ items). No JavaScript anywhere on the site; mobile nav = checkbox
+    pattern.
+  - `favicon.svg` — local hand-drawn `>_` prompt mark.
+  - `index.html` — shared chrome + the Home page (hero → CTA row
+    ["Get the APK on GitHub" → Releases, "Read the README"] → 6 feature
+    cards → learning banner → footnote strip).
+- **W2–W6 must copy the chrome byte-identical** — the documented copy-paste
+  pattern + the full style reference + every Home card's README source
+  line live in `web_docs/chat-web2/SUMMARY.md`. Internal links are
+  **relative `*.html`** (works under the GitHub Pages subpath; root-
+  relative `/install` would break — W1 note in `chat-web2/`).
+- Still to build (they 404 until their phase): install, start, engines,
+  packages, faq, about, learn + ch-01…ch-17 (19 pages). Nothing is
+  deployed; no Pages workflow yet (that is W6).
+- **PR #41 (W0 planning docs) was MERGED 2026-09-02** (squash `9b3669e`).
+  The W1 session ran on a new branch; its own merge awaits the owner at
+  the gate.
 
 **WHAT THE OWNER MUST SAY TO PROCEED:**
 
-Implementation starts only when the owner commands a phase in chat —
-**"Start W1"** … **"Start W6"** (or "Build the website" = Start W1). Each
-phase is executed **strictly per its spec folder** `web_docs/web-phaseN/`
-(phase README + PART docs, one phase at a time, in order W1 → W6), writing
-the site (25 pages) into a new top-level `website/` folder: W1 scaffold +
-Home → W2 Install + Getting Started → W3 Engines + Packages + FAQ + About →
-W4 **verification gate first**, then course home + chapters 01–06 → W5
-chapters 07–12 (ch-08 device pass) → W6 chapters 13–17 + polish + GitHub
-Pages deploy + verification (P1+P5 device pass). Only from W1 onward is
-writing HTML/CSS/JS allowed. Until a phase is commanded: planning edits
-only, still no code.
+Implementation runs one phase at a time, each started only by the owner's
+command in chat — **"Start W2"** … **"Start W6"** ("Start W1" / "Build the
+website" was the first trigger; W1 is done). Each phase is executed
+**strictly per its spec folder** `web_docs/web-phaseN/` (phase README +
+PART docs, one phase at a time, in order W2 → W6), building the 25-page
+site inside the existing `website/` chrome: W2 Install + Getting Started →
+W3 Engines + Packages + FAQ + About → W4 **verification gate first**, then
+course home + chapters 01–06 → W5 chapters 07–12 (ch-08 device pass) → W6
+chapters 13–17 + polish + GitHub Pages deploy + verification (P1+P5 device
+pass). Only `website/` + the web living docs are written; every page
+copies the W1 chrome byte-identical (pattern in `web_docs/chat-web2/`).
 
 **LAW (inherits the app project, no exceptions):**
 
@@ -150,15 +141,16 @@ only, still no code.
 **ORDER OF WORK:**
 
 1. Verify state (`git status`, `gh pr list`, `gh run list`) before acting.
-2. If the owner has **not** commanded implementation: stay in W0 — answer
-   questions, refine the plan in `web_docs/` only (no code), update the
-   living web docs, commit + push, report, stop at the merge gate.
-3. If the owner **has** commanded implementation: work the current phase
-   (W1–W6) strictly per its spec folder `web_docs/web-phaseN/`, one phase
-   at a time, record the phase in `web_docs/chat-webN/`, update
-   `web_prompt.md` / `web_docs/NEXT_STEPS.md` / `web_docs/WEB_JOURNEY.md`
-   in the same commit, push, report (including any **device pass required**
-   items: W5 ch-08, W6 P1+P5), stop at the merge gate.
+2. If the owner has **not** commanded a phase: answer questions, refine the
+   plan/specs in `web_docs/` only, update the living web docs, commit +
+   push, report, stop at the merge gate. (Website code exists from W1 on —
+   but never touch it outside a commanded phase.)
+3. If the owner **has** commanded a phase: work that phase (W2–W6) strictly
+   per its spec folder `web_docs/web-phaseN/`, one phase at a time, record
+   the phase in `web_docs/chat-webN+1/`, update `web_prompt.md` /
+   `web_docs/NEXT_STEPS.md` / `web_docs/WEB_JOURNEY.md` in the same commit,
+   push, report (including any **device pass required** items: W5 ch-08,
+   W6 P1+P5), stop at the merge gate.
 4. Keep this file and the `web_docs/` living docs updated as gates close.
 
 **Before each change, state:** what you are changing, which existing feature
