@@ -148,9 +148,7 @@ hands the command).
 planning branch tip became identical — the handoff's "if it's already
 merged, continue" applies.
 
----
 
-*Next entry: W3 (Engines + Packages + FAQ + About) — on the owner's "Start W3" command.*
 
 ## W1 — Scaffold + Home (2026-09-02)
 
@@ -285,3 +283,17 @@ which runs from CI/browser); HTML parse clean; served 200; no new CSS
 packages + build-config package list with sha, faq, about).
 
 ---
+
+**25. PR #42 opened (2026-09-02).** The owner commanded: "Please open a
+pull request for the changes on this branch." Agent opened
+[PR #42](https://github.com/pabi277/CodeC/pull/42)
+(`arena/01a062f7-codec` → `main`, tip `cc38848` at open): W1 scaffold +
+Home, the GitHub-label follow-up, the D14/D15 detour (net zero), and W2
+install + start — full summaries in the PR body. **Not merged** — the
+merge gate applies; the owner merges (or hands the command).
+
+---
+
+---
+
+*Next entry: W3 (Engines + Packages + FAQ + About) — on the owner's "Start W3" command (or the owner's merge of PR #42).*
