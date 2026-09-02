@@ -93,9 +93,38 @@ O1 screenshots · O2 domain · O3 copy tone · O4 phase order · O5 in-app link.
 **Evidence:** still markdown-only; no `website/` folder; no app code,
 `docs/` file, or workflow touched.
 
+## Follow-up (2026-09-02, same session) — "Can you create phases"
+
+**Owner command:** create the website's implementation phases as fully
+spec'd docs (mirroring the app project's pre-code phase docs
+`docs/chat-phase20/` … `docs/chat-phase24/`). No code — rule unchanged.
+
+**What was created (35 docs, markdown only):**
+
+| Folder | Parts | Highlights |
+|---|---|---|
+| `web_docs/web-phase1/` | 2 | Shared scaffold pattern documented once (byte-identical across all 25 pages); first self-dependent sweep in W1.1 |
+| `web_docs/web-phase2/` | 2 | `/install` (GitHub-only, D9), `/start` (first-hour path) |
+| `web_docs/web-phase3/` | 4 | `/engines` (verbatim table), `/packages` (**package list from the `codec-packages/` build config, sha recorded**), `/faq` (9 blocks, traceable), `/about` |
+| `web_docs/web-phase4/` | 8 | **W4.2 verification gate runs first** (Verified Facts Table committed → locks the 17-chapter set, closes O6) → `/learn` course home → chapters 01–06; canonical chapter template defined here |
+| `web_docs/web-phase5/` | 6 | ch-07 editor; ch-08 C Basics (**TCC-safe law + snippet review + device pass**); ch-09 scripting; ch-10 Python; ch-11 git/GitHub; ch-12 networking (variant A/B decided by W4.2's tool list) |
+| `web_docs/web-phase6/` | 7 | ch-13 CodeCApi; ch-14 web projects; ch-15 custom/advanced (planned app phases ≤ 1 "coming" line); ch-16 five real-world projects (+ device pass P1+P5); ch-17 troubleshooting; W6.6 polish; **W6.7 deploy verifies BEFORE live** (self-dependent sweep + offline render + link sweep) |
+
+Each phase README carries status/cost/depends/blocks + parts table + ground
+rules; each PART doc carries design, implementation steps, numbered exit
+conditions — the `chat-phase24` format. Naming split recorded:
+`chat-webN` = session records, `web-phaseN` = planned phases.
+
+**Evidence:** `find web_docs/web-phase* -name '*.md' | wc -l` = 35; still
+no `website/` folder; no app code, `docs/` file, or workflow touched.
+
+**Living docs:** plan → v2.1, DECISIONS D13, NEXT_STEPS head state + queue,
+`web_docs/README.md` file map, `web_prompt.md`, `WEB_JOURNEY.md` W0.2.
+
 ## Next step
 
-**W0 (+W0.1) is closed.** The agent waits for the owner's implementation
-command — "Build the website" / "start W1" — then begins W1 per
-`WEBSITE_PLAN.md` v2 §9 (scaffold `website/` + Home with learning banner;
-self-dependent rule in force from the first file).
+**W0 (+W0.1+W0.2) is closed — the site is fully spec'd end to end.** The
+agent waits for the owner's implementation command — **"Start W1"** (or
+"Build the website") — then executes W1 strictly per
+`web_docs/web-phase1/` (scaffold + Home; self-dependent rule in force from
+the first file), and later phases one at a time per their folders.

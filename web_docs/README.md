@@ -19,8 +19,11 @@ handoff file (the website's `prompt.md`).
 | [`NEXT_STEPS.md`](NEXT_STEPS.md) | Head state line + what happens next (what the owner says to move) | every session that closes a gate |
 | [`WEB_JOURNEY.md`](WEB_JOURNEY.md) | Narrative timeline of all website work (numbered entries, like `docs/JOURNEY.md`) | every session that closed something |
 | `chat-webN/` | One folder per chat session on the website: what was asked, what was decided, what was done, evidence, next step (like `docs/chat-phaseN/`) | every session, before it ends |
+| [`web-phase1/` … `web-phase6/`](web-phase1/README.md) | **The fully spec'd implementation phases W1–W6** (2026-09-02): each folder = phase README (status, cost, depends/blocks, parts table, ground rules) + one `PART_*` doc per page/chapter (design, implementation steps, exit condition) — the website's `docs/chat-phase20…24` equivalent. Owner starts one by saying **"Start W1"** … **"Start W6"**. | a phase's scope changes (update the part docs; record in DECISIONS.md) |
 
-`chat-web1/` is the planning session (2026-09-02) that created this folder.
+`chat-web1/` is the planning session (2026-09-02) that created this folder
+— **including the phase specs** (W0.2). Naming split: `chat-webN` = session
+records (what happened), `web-phaseN` = planned phases (what will be built).
 
 ## How this mirrors the app project
 

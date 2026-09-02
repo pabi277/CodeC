@@ -85,6 +85,57 @@ docs).
 **9. W0.1 closed (2026-09-02).** Planning v2 complete. Still **zero code** —
 the strict rule stands. Waiting for the owner's implementation command.
 
+## W0.2 — All phases fully spec'd (2026-09-02)
+
+**10. Owner asks for the phases (2026-09-02).** Same session, same strict
+no-code rule: *"Can you create phases"* — the website's implementation
+phases should exist as fully spec'd docs, the way the app project's
+Phases 20–24 exist as `docs/chat-phase20/` … `docs/chat-phase24/` before a
+single line of code.
+
+**11. Reference format studied (2026-09-02).** The agent read
+`docs/chat-phase24/` (README: status/cost/depends/blocks, parts table,
+ground rules; PART docs: design, implementation steps, numbered exit
+conditions) and `docs/chat-phase20/README.md` (cost tags like
+`[client-only]`/`[repo-build]`, owner blockquote, "hard constraint" callouts)
+and mirrored the format for the website.
+
+**12. Six phase folders created (2026-09-02).** `web_docs/web-phase1/` …
+`web_docs/web-phase6/` — **35 docs** (6 phase READMEs + 29 PART docs), each
+part with design, implementation steps and a numbered exit condition:
+- **W1** (scaffold + Home): the shared-chrome pattern is documented once
+  and copied byte-identical by all later phases; first self-dependent
+  sweep runs in W1.1.
+- **W2** (install + start), **W3** (engines, packages, FAQ, about): product
+  wing complete; W3.2 pulls the **authoritative package list from the
+  `codec-packages/` build config** (sha recorded) instead of trusting
+  memory.
+- **W4** (verification gate → course home → ch 01–06): **W4.2 runs first**
+  in the phase — it re-verifies the README + package config into a
+  committed Verified Facts Table, then **locks the 17-chapter set (closes
+  O6)**; the canonical chapter template (crumb / goal box / steps /
+  try-it / mistakes / prev-next) is defined in the phase README and every
+  chapter part builds on it.
+- **W5** (ch 07–12): ch-08 C Basics carries the **TCC-safe law** (ANSI C
+  only, no C11 constructs) + a snippet-review checklist + a **device pass**
+  (owner transcript); ch-12 has variant A/B decided by W4.2's tool list.
+- **W6** (ch 13–17 + polish + deploy): ch-15 may mention planned app phases
+  only as one "coming" line; W6.7 **verifies before live** (self-dependent
+  sweep + offline render + full link sweep, all recorded) and is the only
+  part allowed to touch outside `website/` (the Pages workflow + the
+  one-line README link, D7).
+
+**13. Living docs updated (2026-09-02).** Plan → v2.1 (phase table now
+links the spec folders), `DECISIONS.md` D13, `NEXT_STEPS.md` head state +
+phase queue + new "Start W2…W6" command row, `web_docs/README.md` file map
+(naming split: `chat-webN` = session records, `web-phaseN` = planned
+phases), `web_prompt.md` (state + commands).
+
+**14. W0.2 closed (2026-09-02).** The website is now **fully spec'd end to
+end**: 25 pages, 6 phases, 35 spec docs, zero code — the strict rule held
+through every step. The owner's only remaining move before anything is
+built: **"Start W1"** (or "Build the website").
+
 ---
 
 *Next entry: W1 (scaffold + Home) — after the owner's implementation command.*

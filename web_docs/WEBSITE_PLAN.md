@@ -1,12 +1,15 @@
 # WEBSITE_PLAN.md — master spec for the CodeC website
 
-> **Status (2026-09-02, v2): PLANNED — nothing built yet.** v2 adds the
-> **learning wing** (owner's own Termux-Mastery as structural reference) and
-> the **fully self-dependent** requirement (owner command 2026-09-02).
-> Implementation starts only when the owner commands it in chat ("Build the
-> website" / "start W1"), phase by phase (W1 → W6). Stack, pages and
-> deployment are **decided** (see `DECISIONS.md`) — changing them needs the
-> owner's explicit command.
+> **Status (2026-09-02, v2.1): PLANNED — nothing built yet, all phases
+> fully spec'd.** v2 added the **learning wing** (owner's own Termux-Mastery
+> as structural reference) and the **fully self-dependent** requirement
+> (owner commands 2026-09-02). v2.1: every phase W1–W6 now has a full spec
+> folder — `web_docs/web-phase1/` … `web_docs/web-phase6/` (35 docs: design,
+> implementation steps, exit conditions per part).
+> Implementation starts only when the owner commands it in chat —
+> **"Start W1"** … **"Start W6"** (or "Build the website" = Start W1).
+> Stack, pages and deployment are **decided** (see `DECISIONS.md`) —
+> changing them needs the owner's explicit command.
 
 ---
 
@@ -314,14 +317,20 @@ website/                 ← the ENTIRE website (new top-level folder, created i
 
 ## 9. Implementation phases (owner commands one at a time; product wing first, course second, deploy last)
 
-| Phase | Scope | Exit condition |
-|---|---|---|
-| **W1** | Scaffold `website/`: shared chrome (header/footer incl. Learn item), stylesheet, self-dependent asset rule in force from day one; Home page (product hero + learning banner). | Home renders at 360 px & 1440 px; all footer links valid; zero external resources (first §5 sweep). |
-| **W2** | `/install` + `/start` (full content per §3.1). | Both pages in the scaffold; content matches README facts. |
-| **W3** | `/engines` + `/packages` + `/faq` + `/about` (full content per §3.1). | Tables match README; package list = README list in scope; every FAQ answer traceable to a repo doc. |
-| **W4** | `/learn` course home + chapters 01–06 (per §3.2 template); **package list & engine facts re-verified against README** and recorded in `chat-web4/` (locks the final chapter set, closes O6). | Course home + 6 chapters render; chapter template consistent; verification notes recorded. |
-| **W5** | Chapters 07–12 (Editor, C Basics, Scripting, Python, Git, Networking). | All snippets verified runnable on built-in TCC / as shipped; every chapter self-sufficient (no "open the repo" requirement). |
-| **W6** | Chapters 13–17 (Device APIs, Web Projects, Custom/Advanced, Real Projects, Troubleshooting) + polish pass + GitHub Pages deploy + README link + full link sweep + §5 self-dependency verification. | 25 pages live (7 product + learn + 17 chapters); Pages build green; all links verified; offline check passed; report with URL. |
+**Fully spec'd (2026-09-02):** each phase has its own folder of
+implementation docs — `web_docs/web-phase1/` … `web_docs/web-phase6/`
+(phase README + one PART doc per page/chapter, with design, implementation
+steps and exit conditions). The owner starts one by saying
+**"Start W1"** … **"Start W6"** (or "Build the website" = Start W1).
+
+| Phase | Scope | Spec | Exit condition |
+|---|---|---|---|
+| **W1** | Scaffold `website/`: shared chrome (header/footer incl. Learn item), stylesheet, self-dependent rule in force from day one; Home page (hero + learning banner). | [web-phase1/](web-phase1/README.md) | Home renders at 360 px & 1440 px; all footer links valid; zero external resources (first §5 sweep). |
+| **W2** | `/install` + `/start` (full content per §3.1). | [web-phase2/](web-phase2/README.md) | Both pages in the scaffold; content matches README facts. |
+| **W3** | `/engines` + `/packages` + `/faq` + `/about` (full content per §3.1). | [web-phase3/](web-phase3/README.md) | Tables match README; package list = repo build-config list (recorded with sha); every FAQ answer traceable to a repo doc. |
+| **W4** | **Verification gate first** (re-verify README + package config, lock the 17-chapter set, close O6) → `/learn` course home + chapters 01–06. | [web-phase4/](web-phase4/README.md) | Verified-facts table committed; O6 closed; course home + 6 chapters render on the canonical chapter template. |
+| **W5** | Chapters 07–12 (Editor, C Basics, Scripting, Python, Git, Networking). | [web-phase5/](web-phase5/README.md) | All snippets TCC-safe / as-shipped (review recorded); ch-08 **device pass** (owner transcript); every chapter self-sufficient. |
+| **W6** | Chapters 13–17 (Device APIs, Web Projects, Custom/Advanced, Real Projects, Troubleshooting) + polish + GitHub Pages deploy + README link + §5 verification. | [web-phase6/](web-phase6/README.md) | 25 pages live; Pages build green; pre-flight sweeps (self-dependent + offline + link) green **before** live; report with URL. |
 
 Each phase: one `web_docs/chat-webN/` record + living docs update + commit +
 push + report + stop at the merge gate. Owner may re-scope or re-order —
