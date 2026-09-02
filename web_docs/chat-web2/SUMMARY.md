@@ -227,3 +227,30 @@ hero CTA ("Get the APK on GitHub" → Releases, "Read the README" → repo),
 footnote strip ("Source on GitHub"), footer link row ("Repo"). Sweep
 re-checked: still zero external resources (label is text, icon is inline
 SVG). Chrome pattern rev: 2.
+
+## Follow-up (2026-09-02, same session) — owner command: "Deploy the website to Pages now"
+
+Early deploy, deviating from W6-first (recorded as **D14**). Discovery
+(see the research note in `web-phase6/README.md`): the repo's ONE Pages
+site already serves the signed package repo (`/dev`, `/keys`), and every
+Pages deploy replaces the whole site — so coexistence was engineered
+**before** deploying:
+
+1. **New `.github/workflows/pages.yml`** — on push to `main`
+   (`website/**`) or dispatch: finds the newest live `github-pages`
+   artifact (i.e. the last package-repo publish), downloads it cross-run,
+   unpacks `dev/` + `keys/`, unions `website/` on top, uploads + deploys.
+   Sanity-checks `dev/CODEC-REPOSITORY` and `site/index.html`. Shared
+   `pages` concurrency group with the package workflow. Fails loudly (no
+   deploy) if no live package-repo artifact exists — never wipes `/dev`.
+2. **Mirror edit in `package-repository.yml` `publish-dev`** (app-side,
+   explicitly covered by the owner's command): adds `website/` from
+   `main` (sparse checkout) to the `packages/` upload + same concurrency
+   group — so a package publish re-publishes the site alongside `/dev`.
+3. **Verified locally:** both files YAML-parse (PyYAML); the exact union
+   shell steps were simulated against a fake `artifact.tar` (dev/ + keys/
+   + website → site root correct). First YAML attempt had a colon-in-plain-
+   scalar step name — caught by the parse, fixed before push.
+
+Deploy target: `https://pabi277.github.io/CodeC/` (W1 content live now;
+W6.7 still the final verified deploy of the full 25-page site).

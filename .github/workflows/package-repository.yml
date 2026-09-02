@@ -148,6 +148,15 @@ jobs:
       pages: write
       id-token: write
 
+    # Pages coexistence (D14, 2026-09-02): the website shares this one Pages
+    # site. Keep both deploys in the same concurrency group so a package
+    # publish and a website deploy never interleave, and include website/
+    # (from main) in the upload below so the package publish never wipes
+    # the site (mirrors .github/workflows/pages.yml).
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -238,6 +247,23 @@ jobs:
           test -f packages/dev/CODEC-REPOSITORY
           test -s packages/dev/dists/stable/InRelease
           test -s packages/dev/dists/stable/Release.gpg
+
+      - name: Checkout website from main (Pages coexistence, D14)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: site-checkout
+          sparse-checkout: website
+
+      - name: Include website in the Pages upload (one site with /dev and /keys)
+        run: |
+          set -euo pipefail
+          if [ -f site-checkout/website/index.html ]; then
+            cp -a site-checkout/website/. packages/
+            echo "website included: $(find site-checkout/website -type f | wc -l) files"
+          else
+            echo "WARNING: no website/ on main - publishing package repo only" >&2
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

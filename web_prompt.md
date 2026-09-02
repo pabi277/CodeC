@@ -49,8 +49,11 @@ invariants, docs policy) — follow it for the website work too.
   **relative `*.html`** (works under the GitHub Pages subpath; root-
   relative `/install` would break — W1 note in `chat-web2/`).
 - Still to build (they 404 until their phase): install, start, engines,
-  packages, faq, about, learn + ch-01…ch-17 (19 pages). Nothing is
-  deployed; no Pages workflow yet (that is W6).
+  packages, faq, about, learn + ch-01…ch-17 (19 pages). **Deployed early
+  by owner command (D14, 2026-09-02):** `.github/workflows/pages.yml`
+  publishes the site at `https://pabi277.github.io/CodeC/` together with
+  the package repo (`/dev`, `/keys`) — one Pages site, coexistence law.
+  W6.7 remains the final verified deploy of the full 25-page site.
 - **PR #41 (W0 planning docs) was MERGED 2026-09-02** (squash `9b3669e`).
   The W1 session ran on a new branch; its own merge awaits the owner at
   the gate.

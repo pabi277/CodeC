@@ -199,3 +199,36 @@ Pages subpath). Stopped at the merge gate — the owner merges, or commands
 the next phase ("Start W2").
 
 ---
+
+## Early deploy — owner command (2026-09-02)
+
+**22. "Deploy the website to Pages now" (2026-09-02).** Same session as
+W1. The owner asked for a direct link; the honest answer was: the real
+link (`https://pabi277.github.io/CodeC/`) needs a deploy, and the repo's
+ONE Pages site is already the signed package repository (`/dev`, `/keys`
+— `package-repository.yml` `publish-dev`). The owner then commanded the
+deploy explicitly. Recorded as **D14**. Engineering before go-live:
+
+- Research note appended to `web-phase6/README.md`: naive website deploys
+  would wipe the package repo (and vice versa) — one Pages site per repo,
+  every deploy replaces everything.
+- **`.github/workflows/pages.yml`** created: the website deploy downloads
+  the newest live `github-pages` artifact (the package repo), unions
+  `dev/` + `keys/` under `website/`, sanity-checks
+  `dev/CODEC-REPOSITORY` + `site/index.html`, then deploys. Fails loudly
+  instead of publishing a site without `/dev`. Shared `pages` concurrency
+  group with the package workflow.
+- **`package-repository.yml` `publish-dev`** (app-side, covered by the
+  owner's explicit command) mirrored: sparse-checkouts `website/` from
+  `main` into the upload; same concurrency group — a package publish now
+  re-publishes the site too.
+- Verified locally: YAML parse (both files) + full simulation of the
+  union steps against a fake artifact (SIMULATION-PASS). One YAML bug
+  (colon in a plain step name) caught and fixed pre-push.
+- **W6.7 is unchanged** — the full-site deploy still happens only after
+  the §5 self-dependent sweep + offline render + link sweep.
+
+The site goes live at `https://pabi277.github.io/CodeC/` (W1 content) on
+merge / deploy run, `dev/` untouched beside it.
+
+---
