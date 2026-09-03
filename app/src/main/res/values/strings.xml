@@ -274,7 +274,6 @@
     <string name="run_config_saved">Run config saved</string>
     <string name="run_config_failed">Could not save run config</string>
     <string name="share_as_zip">Share as ZIP</string>
-    <string name="share_failed">Could not share project</string>
     <string name="foreground_run_title">Running: %1$s</string>
     <string name="foreground_run_body">%1$d second(s) — tap to return</string>
     <string name="foreground_run_starting">Running…</string>
