@@ -51,8 +51,11 @@ import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalHandoff
+import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import com.codeci.ide.ui.utils.HighlightedCode
+import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -63,6 +66,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -133,6 +139,13 @@ class EditorViewModel : ViewModel() {
         const val MAX_TAB_FILE_BYTES = 256_000L
         /** Idle time after the last keystroke before the buffer is auto-saved. */
         private const val AUTO_SAVE_DELAY_MS = 2_000L
+        /**
+         * Phase 22.1 — idle time after the last keystroke before the O(n)
+         * full-file tokenizer runs (off the main thread). 80 ms is well under
+         * the ~150 ms visual-change perception threshold but long enough to
+         * collapse a burst of key events into a single highlight pass.
+         */
+        const val HIGHLIGHT_DEBOUNCE_MS = 80L
         /** Phase 21.1 — project-relative directory compiled binaries land in. */
         const val PROJECT_BUILD_DIR = "bin"
         /** Phase 21.2 — a toolchain download may legitimately take minutes. */
@@ -261,6 +274,51 @@ class EditorViewModel : ViewModel() {
     val cursorPos: StateFlow<EditorCursorPos> = _cursorPos.asStateFlow()
 
     private var decorationJob: Job? = null
+
+    // ---- Phase 22.1: debounced off-thread syntax highlighting -------------
+
+    /**
+     * The theme + language the editor is currently rendering with. The screen
+     * pushes it through [setHighlightContext]; the highlight pipeline combines
+     * it with the buffer so a theme or language switch re-tokenizes too.
+     */
+    private val _highlightContext =
+        MutableStateFlow(EditorThemeType.DRACULA to LanguageType.C)
+
+    private val _highlighted = MutableStateFlow<HighlightedCode?>(null)
+
+    /**
+     * Phase 22.1 — the pre-built highlight for the last settled buffer. The
+     * editor hands it to `SyntaxVisualTransformation`, which reuses it instead
+     * of tokenizing the whole file on the main thread for every keystroke.
+     * Null (or stale) simply means the transformation highlights inline for a
+     * frame — correctness never depends on this cache.
+     */
+    val highlighted: StateFlow<HighlightedCode?> = _highlighted.asStateFlow()
+
+    private var highlightJob: Job? = null
+
+    init {
+        highlightJob = viewModelScope.launch {
+            combine(_codeText, _highlightContext) { value, context ->
+                Triple(value.text, context.first, context.second)
+            }
+                .distinctUntilChanged()
+                .debounce(HIGHLIGHT_DEBOUNCE_MS)
+                .collect { (text, theme, language) ->
+                    val built = withContext(Dispatchers.Default) {
+                        HighlightedCode.of(text, theme, language)
+                    }
+                    // Drop a result the buffer already moved past.
+                    if (built.text == _codeText.value.text) _highlighted.value = built
+                }
+        }
+    }
+
+    /** Called by the editor whenever the active theme or language changes. */
+    fun setHighlightContext(theme: EditorThemeType, language: LanguageType) {
+        _highlightContext.value = theme to language
+    }
 
     // ---- Phase 11: Output Panel run pipeline -----------------------------
 

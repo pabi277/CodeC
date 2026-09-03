@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -72,6 +75,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -235,6 +239,11 @@ fun EditorScreen(
     val fileEntries by viewModel.fileEntries.collectAsState()
     val customSnippets by settingsManager.editorCustomSnippetsFlow.collectAsState(initial = "")
 
+    // Phase 22.2 — "is the soft keyboard up?". WindowInsets.ime animates, so
+    // the bottom inset is > 0 for the whole show/hide animation; that is
+    // exactly the window during which the keys row must ride the keyboard.
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val uiScope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
@@ -278,13 +287,18 @@ fun EditorScreen(
     val language = remember(activeTabPath, currentFileName) {
         LanguageType.fromFileName(activeTabPath ?: currentFileName)
     }
-    val completionItems = remember(codeText, language) {
-        val sel = codeText.selection
-        CodeCompletionEngine.completions(
-            codeText.text,
-            sel.end.coerceAtLeast(sel.start),
-            language
-        )
+    // Phase 22.1 — the completion list is derived, not remembered per
+    // keystroke: derivedStateOf recomputes only when the values it actually
+    // reads change, and only when something is reading `completionItems`.
+    val completionItems by remember(language) {
+        derivedStateOf {
+            val sel = codeText.selection
+            CodeCompletionEngine.completions(
+                codeText.text,
+                sel.end.coerceAtLeast(sel.start),
+                language
+            )
+        }
     }
     var completionDismissed by remember(codeText.text) { mutableStateOf(false) }
     var completionIndex by remember(completionItems) { mutableStateOf(0) }
@@ -366,11 +380,23 @@ fun EditorScreen(
             diagnostics = diagnostics
         )
     }
-    val transformation = remember(currentEditorTheme, decorations, language) {
-        SyntaxVisualTransformation(currentEditorTheme, decorations, language)
+    // Phase 22.1 — the O(n) tokenizer runs debounced on Dispatchers.Default in
+    // the VM; the transformation reuses that snapshot and only layers the
+    // cheap decoration spans (current line, brackets, find, diagnostics) on
+    // the main thread. A stale snapshot just means one inline highlight pass,
+    // never wrong colors.
+    val highlighted by viewModel.highlighted.collectAsState()
+    LaunchedEffect(currentEditorTheme, language) {
+        viewModel.setHighlightContext(currentEditorTheme, language)
+    }
+    val transformation = remember(currentEditorTheme, decorations, language, highlighted) {
+        SyntaxVisualTransformation(currentEditorTheme, decorations, language, highlighted)
     }
 
-    val tabViews = remember(openTabs, activeTabPath, codeText, isDirty) {
+    // Phase 22.1 — narrowed keys: the tab strip only depends on the tab list,
+    // which tab is active, and the active tab's dirty flag. Keying it on the
+    // live buffer rebuilt every tab model on every keystroke.
+    val tabViews = remember(openTabs, activeTabPath, isDirty) {
         openTabs.map { tab ->
             if (tab.relativePath == activeTabPath) {
                 // The active tab's truth is the live buffer + VM dirtiness.
@@ -704,7 +730,19 @@ fun EditorScreen(
                 )
             }
         ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // Phase 22.3 — the editor owns its IME inset. MainActivity already
+        // opted into edge-to-edge (`enableEdgeToEdge()` =
+        // `setDecorFitsSystemWindows(false)`), so the keyboard no longer
+        // resizes the window by itself; `imePadding()` reserves exactly the
+        // keyboard's height at the bottom of the editor column. That both
+        // keeps the caret visible and lets the keys row (Phase 22.2) ride
+        // directly on top of the keyboard. Only EditorScreen is padded —
+        // Terminal/Settings keep their own inset handling.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+        ) {
             TopAppBar(
                 title = {
                     if (tabViews.isEmpty()) {
@@ -1131,8 +1169,13 @@ fun EditorScreen(
                         .padding(vertical = 8.dp)
                 ) {
                     if (showLineNumbers) {
+                        // Phase 22.1 — the gutter string is only rebuilt when
+                        // the line count actually changes (it used to allocate
+                        // a whole new string on every keystroke).
                         val lineCount = codeText.text.count { it == '\n' } + 1
-                        val lineNumbers = (1..lineCount).joinToString("\n")
+                        val lineNumbers = remember(lineCount) {
+                            (1..lineCount).joinToString("\n")
+                        }
                         // Mockup-exact gutter: right-aligned muted numbers with
                         // a hairline vertical divider at the gutter edge.
                         Box(
@@ -1317,7 +1360,11 @@ fun EditorScreen(
             // Phase 16 — Spck bottom order: the snippet/keys row docks ABOVE
             // the status bar (the old SymbolBar sat below it); the toolbar
             // chevron toggles the row when it would crowd small screens.
-            if (keysRowVisible) {
+            // Phase 22.2 — while the soft keyboard is up the row moves to the
+            // very bottom of the column instead, so with `imePadding()` above
+            // it lands DIRECTLY on top of the keyboard (Termux's extra-keys
+            // behavior) rather than being stranded mid-screen.
+            if (keysRowVisible && !imeVisible) {
                 EditorKeysRow(
                     textFieldValue = codeText,
                     onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
@@ -1388,6 +1435,22 @@ fun EditorScreen(
                     onSendInput = { viewModel.sendInputToRun(it) },
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     modifier = Modifier.height(64.dp)
+                )
+            }
+
+            // Phase 22.2 — the IME-anchored position. This is the last child
+            // of the imePadding()'d column, so it sits flush on top of the
+            // soft keyboard. Same composable, same key set, same actions as
+            // the docked row above — only the position changes, so nothing
+            // about find/replace, autocomplete or the status bar is affected.
+            if (keysRowVisible && imeVisible) {
+                EditorKeysRow(
+                    textFieldValue = codeText,
+                    onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
+                    tabSize = tabSize,
+                    language = language,
+                    customSnippets = customSnippets,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 )
             }
         }

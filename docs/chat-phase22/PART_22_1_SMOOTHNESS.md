@@ -227,3 +227,85 @@ PASS = steps 1–4 feel smooth; step 6 has zero regression.
 >   is the only thing to remove).
 > - Check the `windowSoftInputMode` setting in `AndroidManifest.xml` for
 >   `MainActivity` — needed to confirm the IME resize mode (used in A.3).
+
+---
+
+## 7. Research notes (filled in 2026-09-03 — implementation round)
+
+**Compose BOM:** `composeBom = "2024.09.00"` (`gradle/libs.versions.toml:12`),
+i.e. Compose Foundation **1.7.x**. Kotlin `2.2.10`, coroutines `1.10.2`.
+
+**`BasicTextField(scrollState = …)`:** at 1.7 the `scrollState` parameter exists
+**only on the `TextFieldState` overload** — the `TextFieldValue`/`onValueChange`
+overload CodeC uses (value, onValueChange, …, cursorBrush, decorationBox) has no
+`scrollState` parameter at all. Migrating to `TextFieldState` would mean
+rewriting the whole editing pipeline (undo manager, auto-indent, tab buffers,
+find/replace, quick-fixes all speak `TextFieldValue`), which is far outside a
+smoothness round and would touch every Phase 9/11/12 invariant.
+**Decision: the double-scroll wrapper is KEPT** (`verticalScroll` +
+conditional `horizontalScroll`), and §2.3 is deferred as a known limitation.
+The three allocation-level fixes below are the ones that ship.
+
+**`remember(codeText, …)` audit in `EditorScreen.kt` (before the fix):**
+
+| Block | Old key set | Action |
+|---|---|---|
+| `completionItems` | `remember(codeText, language)` | → `derivedStateOf` keyed on `language` (recomputes only when a reader actually reads it) |
+| `completionDismissed` | `remember(codeText.text)` | kept — it is a per-edit reset, that IS the intent |
+| `tabViews` | `remember(openTabs, activeTabPath, codeText, isDirty)` | `codeText` key **dropped**; the buffer was only read for the active tab, whose truth is already `isDirty` |
+| `transformation` | `remember(currentEditorTheme, decorations, language)` | now also keyed on the debounced `highlighted` snapshot |
+| gutter `lineNumbers` | *(not remembered at all)* | → `remember(lineCount)` |
+
+**`completionItems` in the VM:** `EditorViewModel` does **not** expose a
+`completionItems` StateFlow (Phase 12 left it in the composable). Rather than
+add another debounced flow, the composable now uses `derivedStateOf`, which is
+the right tool here: the completion popup is the only reader, and
+`derivedStateOf` skips the work entirely on frames where nothing reads it.
+
+**`windowSoftInputMode`:** `AndroidManifest.xml:64` already sets
+`adjustResize` on `MainActivity`; `MainActivity.onCreate` already calls
+`enableEdgeToEdge()` (which is `WindowCompat.setDecorFitsSystemWindows(window,
+false)` plus the transparent system bars). So A.3's step 1 was a no-op — see
+`PART_22_3_INSETS.md` §7.
+
+**Baseline profile (§2.5):** still optional and **not done** — it needs a
+Macrobenchmark run on a connected device, which this sandbox cannot do.
+
+---
+
+## 8. What shipped
+
+1. **Debounced off-thread highlight (§2.1, adapted).** New pure data class
+   `HighlightedCode` (in `MultiLanguageSyntaxHighlighter.kt`): a tokenized
+   `AnnotatedString` tagged with the exact `(text, theme, language)` it was
+   built from, plus `matches(...)`. `EditorViewModel` runs one long-lived
+   collector — `combine(codeText, highlightContext)` →
+   `distinctUntilChanged()` → `debounce(80 ms)` →
+   `withContext(Dispatchers.Default) { HighlightedCode.of(...) }` — and
+   publishes it as `highlighted: StateFlow<HighlightedCode?>`. A result whose
+   text the buffer already moved past is discarded.
+
+   Rather than the spec's `StaticTransformation`, `SyntaxVisualTransformation`
+   gained a fourth `cached: HighlightedCode?` parameter: it reuses the snapshot
+   when it matches and **falls back to inline tokenizing when it is stale**.
+   This is strictly safer than a static wrapper — during the 80 ms window the
+   text is still colored correctly instead of showing colors for the previous
+   buffer, and the cache is a pure optimization with no correctness role.
+2. **Decoration fast path.** `EditorDecorations.isEmpty()`; when there is no
+   current-line tint, bracket match, find match or diagnostic, the
+   transformation returns the cached `AnnotatedString` directly with **zero**
+   `buildAnnotatedString` allocation per frame.
+3. **Narrowed keys (§2.2).** `tabViews` lost its `codeText` key;
+   `completionItems` became a `derivedStateOf`.
+4. **Gutter cache (§2.4).** `remember(lineCount)` around the
+   `(1..lineCount).joinToString("\n")`.
+5. **Scroll model (§2.3): deferred** — see the BOM research note above.
+
+**Tests:** `app/src/test/java/com/codeci/ide/EditorHighlightCacheTest.kt`
+(8 host tests) — snapshot match/stale on text, theme and language; a cached
+render equals the inline render span-for-span (with and without decorations);
+a stale cache never leaks the wrong colors; offsets stay identity-mapped;
+`EditorDecorations.isEmpty()` across all five layers.
+
+**Still open / device-gated:** the horizontal+vertical double scroll wrapper
+(needs the `TextFieldState` migration), and the baseline profile.

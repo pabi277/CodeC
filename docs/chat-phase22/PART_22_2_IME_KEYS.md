@@ -201,3 +201,57 @@ PASS = all 9 steps behave as described.
 > - Check whether `WindowInsets.ime.getBottom(density) > 0` is the right test
 >   for "keyboard is open" in the current Compose version, or whether
 >   `WindowInsetsCompat.isVisible(WindowInsetsCompat.Type.ime())` is needed.
+
+---
+
+## 8. Research notes + what shipped (2026-09-03)
+
+**Manifest:** `AndroidManifest.xml:64` already had
+`android:windowSoftInputMode="adjustResize"` on `MainActivity`, and
+`MainActivity.onCreate` already calls `enableEdgeToEdge()`. With
+edge-to-edge on, the window is **not** resized by the IME any more — the
+keyboard arrives purely as `WindowInsets.ime`, which is exactly the signal
+this part needs. No manifest change was required.
+
+**"Is the keyboard open?"** `WindowInsets.ime.getBottom(density) > 0` is
+correct at Compose Foundation 1.7 and is what `MainActivity` itself already
+uses (`MainActivity.kt:373`, to hide the bottom nav bar while typing).
+`WindowInsetsCompat.isVisible(Type.ime())` is the View-world equivalent and is
+not needed here. Because the inset animates, the predicate is true for the
+whole show/hide animation — the row rides the keyboard up and down instead of
+popping.
+
+**`EditorKeysRow` was already parameterized** exactly the way §2.5/D1
+prescribes: `(textFieldValue, onValueChange, tabSize, language, customSnippets)`
+with the pure `EditorKeySet.apply()` doing the caret/insert math, and it is
+already language-adaptive via `EditorKeySet.languageTail()` (C `->`, C++ `->`
+`::`, Python `:`/`self`, JS `` ` ``/`=>`, Shell `$`, HTML `</>`) on top of the
+shared TAB `{ } ( ) ; < > / = " '` + arrows set. So §2.3 and §2.4 needed **no
+code**: the key content was already right — only the *position* was wrong.
+
+**What shipped (the actual fix):** the row is now rendered in one of two
+positions depending on `imeVisible`:
+
+- **keyboard closed** → the Phase 16 docked position, above `EditorStatusBar`
+  (unchanged behavior);
+- **keyboard open** → as the **last child of the `imePadding()`'d root
+  column** (Phase 22.3), i.e. flush on top of the keyboard, below the status
+  bar and the Output Panel strip, with a `surface` background so it reads as
+  part of the keyboard furniture.
+
+This is Termux's sibling-of-the-content layout expressed in Compose insets. It
+deliberately avoids `AnimatedVisibility` (D2): the IME inset already animates,
+so the row's position animates with it — stacking a second slide animation on
+top made it lag the keyboard by a frame or two.
+
+The `⋮ → show/hide keys row` toggle still gates **both** positions
+(`keysRowVisible && imeVisible` / `keysRowVisible && !imeVisible`), so the
+manual override is preserved.
+
+**Deferred:** §2.4 user-editable keys (long-press to edit) remains a stretch
+goal — the `EditorKeySet.parseCustomSnippets` data model already exists and the
+Settings string already feeds the row, so the remaining work is a Settings
+editing UI, recorded as a Phase 24 follow-up.
+
+**Device gate:** the §4 recipe (steps 1–9) is **required** and not yet run —
+no device in the agent sandbox.

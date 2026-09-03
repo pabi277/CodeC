@@ -1,6 +1,10 @@
 # CodeC Phase 22 — Editor Touch Smoothness & Keyboard-Anchored Shortcuts
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 22" command.
+**Status:** 🟡 **IMPLEMENTED — awaiting CI green + owner device pass** (started
+2026-09-03 on owner command "start phase 22"; branch `arena/01a065a0-codec`).
+A.1 shipped minus the scroll-model rewrite (deferred — the `scrollState`
+parameter does not exist on the `TextFieldValue` overload of `BasicTextField`
+at Compose BOM 2024.09.00); A.2 and A.3 shipped in full.
 · **Cost:** `[client-only]` — pure Kotlin/Compose; no `[repo-build]`, no native changes
 · **Depends on:** nothing (can start in parallel with Phase 20)
 · **Blocks:** Phase 23 (Phase 23's inline PTY input builds on the IME inset work from Phase 22.2)
@@ -34,9 +38,9 @@ but the measurement target is a mid-range phone in release mode.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **A.1** | Scroll + recomposition decoupling (fix the "stuck" feeling) | `BasicTextField` owns scrolling; debounced off-thread highlight; narrowed `remember` keys; baseline profile | [PART_22_1_SMOOTHNESS.md](PART_22_1_SMOOTHNESS.md) |
-| **A.2** | IME-anchored editor keys strip (fix "not above keyboard") | Keys strip pinned to `WindowInsets.ime`; language-adaptive key set; user-editable; only visible when IME is open | [PART_22_2_IME_KEYS.md](PART_22_2_IME_KEYS.md) |
-| **A.3** | IME insets + caret visibility | `imePadding()` / `WindowCompat.setDecorFitsSystemWindows`; caret never hidden; orientation + predictive-back safe | [PART_22_3_INSETS.md](PART_22_3_INSETS.md) |
+| **A.1** ✅* | Scroll + recomposition decoupling (fix the "stuck" feeling) | `BasicTextField` owns scrolling; debounced off-thread highlight; narrowed `remember` keys; baseline profile | [PART_22_1_SMOOTHNESS.md](PART_22_1_SMOOTHNESS.md) |
+| **A.2** ✅ | IME-anchored editor keys strip (fix "not above keyboard") | Keys strip pinned to `WindowInsets.ime`; language-adaptive key set; user-editable; only visible when IME is open | [PART_22_2_IME_KEYS.md](PART_22_2_IME_KEYS.md) |
+| **A.3** ✅ | IME insets + caret visibility | `imePadding()` / `WindowCompat.setDecorFitsSystemWindows`; caret never hidden; orientation + predictive-back safe | [PART_22_3_INSETS.md](PART_22_3_INSETS.md) |
 
 ---
 
@@ -78,3 +82,19 @@ but the measurement target is a mid-range phone in release mode.
 - Verify state (`git status`, `gh run list`) before acting.
 - Honor all Phase 6/7/9/11 invariants (PTY contract, multi-session routing,
   editor undo history, output panel, find/replace).
+
+---
+
+## Round 1 outcome (2026-09-03)
+
+| Part | State | Notes |
+|---|---|---|
+| A.1 | ✅ partial | Debounced (80 ms) off-thread highlight via `HighlightedCode` + `EditorViewModel.highlighted`; decoration fast path; `tabViews`/`completionItems` keys narrowed; gutter cached. **Deferred:** the double-scroll rewrite (needs a `TextFieldState` migration) and the baseline profile (needs a device Macrobenchmark run). |
+| A.2 | ✅ | Keys row is now the last child of the `imePadding()`'d column while the IME is open, so it rides flush on the keyboard; docked Phase 16 position when the keyboard is closed. Key sets were already language-adaptive. |
+| A.3 | ✅ | `imePadding()` on `EditorScreen`'s root column only. `enableEdgeToEdge()` and `adjustResize` were already in place. |
+
+**New tests:** `EditorHighlightCacheTest` (8 host tests).
+
+**Device pass required** before this phase can be called complete — run
+`PART_22_1_SMOOTHNESS.md` §4, `PART_22_2_IME_KEYS.md` §4 and
+`PART_22_3_INSETS.md` §4 (the last one includes the Terminal regression check).

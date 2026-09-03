@@ -326,25 +326,83 @@ object MultiLanguageSyntaxHighlighter {
  * highlighting. All ranges are offsets into the (untransformed) buffer text;
  * the transformation is identity-mapped so indices match directly.
  */
+/**
+ * Phase 22.1 — a pre-built, off-thread syntax highlight for one exact buffer
+ * snapshot. `EditorViewModel` debounces keystrokes, builds this on
+ * `Dispatchers.Default` and publishes it; `SyntaxVisualTransformation` reuses
+ * it verbatim when [matches] is true, so the O(n) tokenizer never runs on the
+ * main thread during typing.
+ */
+data class HighlightedCode(
+    val text: String,
+    val theme: EditorThemeType,
+    val language: LanguageType,
+    val annotated: AnnotatedString
+) {
+    /** True when this snapshot is still the truth for the given inputs. */
+    fun matches(text: String, theme: EditorThemeType, language: LanguageType): Boolean =
+        this.theme == theme && this.language == language && this.text == text
+
+    companion object {
+        /** Tokenize [text] once (call off the main thread). */
+        fun of(text: String, theme: EditorThemeType, language: LanguageType): HighlightedCode =
+            HighlightedCode(
+                text = text,
+                theme = theme,
+                language = language,
+                annotated = MultiLanguageSyntaxHighlighter.highlight(
+                    text,
+                    getEditorTheme(theme),
+                    language
+                )
+            )
+    }
+}
+
 data class EditorDecorations(
     val currentLineRange: IntRange? = null,
     val findMatches: List<IntRange> = emptyList(),
     val activeFindMatch: IntRange? = null,
     val bracketRanges: List<IntRange> = emptyList(),
     val diagnostics: List<EditorDiagnostic> = emptyList()
-)
+) {
+    /** True when there is nothing to layer on top of the syntax colors. */
+    fun isEmpty(): Boolean =
+        currentLineRange == null &&
+            findMatches.isEmpty() &&
+            activeFindMatch == null &&
+            bracketRanges.isEmpty() &&
+            diagnostics.isEmpty()
+}
 
 class SyntaxVisualTransformation(
     private val theme: EditorThemeType = EditorThemeType.DRACULA,
     private val decorations: EditorDecorations = EditorDecorations(),
-    private val language: LanguageType = LanguageType.C
+    private val language: LanguageType = LanguageType.C,
+    /**
+     * Phase 22.1 — the debounced, off-thread highlight for the buffer the
+     * editor is about to draw. When it matches the incoming text the O(n)
+     * tokenizer is skipped entirely (only the cheap decoration spans are
+     * layered on); when it is stale (the first frames after a keystroke) the
+     * transformation falls back to highlighting inline so text is never
+     * mis-colored.
+     */
+    private val cached: HighlightedCode? = null
 ) : VisualTransformation {
 
     override fun filter(text: AnnotatedString): TransformedText {
+        val base = cached
+            ?.takeIf { it.matches(text.text, theme, language) }
+            ?.annotated
+            ?: MultiLanguageSyntaxHighlighter.highlight(text.text, getEditorTheme(theme), language)
         return TransformedText(
-            text = buildAnnotatedString {
-                append(MultiLanguageSyntaxHighlighter.highlight(text.text, getEditorTheme(theme), language))
-                addDecorations(text.text)
+            text = if (decorations.isEmpty()) {
+                base
+            } else {
+                buildAnnotatedString {
+                    append(base)
+                    addDecorations(text.text)
+                }
             },
             offsetMapping = OffsetMapping.Identity
         )
