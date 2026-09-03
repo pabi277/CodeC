@@ -33,8 +33,19 @@ gate, invariants, docs policy) — follow it.
   Output Panel (900 s timeout) and auto-continues the run. `TerminalHandoff`
   emits `gcc`/`g++ … -lm` and routes scratch files through the registry.
   +33 host tests. The spec's `useLegacyTcc` flag was intentionally skipped —
-  see the record for why. Record:
-  `docs/chat-phase21/PART_21_IMPLEMENTATION.md`.
+  see the record for why.
+  **Device round 1 (2026-09-03) FAILED at the install gate and is fixed:**
+  D17 — C/C++ `requiredPackage` was `gcc`, but **there is no `gcc` package**
+  (apt itself replied "the following packages replace it: libllvm"); Phase
+  20.1 publishes **`clang`**, whose deb ships the `gcc`/`g++` driver symlinks,
+  so the registry now installs `clang` and probes `gcc`/`g++`. D18 — `golang`
+  and `rust` were never published; they are flagged `inRepository = false` and
+  RUN ▶ reports that honestly. D19 — the gate now runs
+  `pkg update && pkg install -y <pkg>` (a stale catalog made the first attempt
+  unrecoverable). Guard tests pin every installable name to what
+  `codec-packages/properties.codec.sh` actually publishes.
+  **D.3 device pass still required.** Record:
+  `docs/chat-phase21/PART_21_IMPLEMENTATION.md` §7.
 - **Phase 20.1 background (COMPLETE & merged):**
 
 - **`main` includes Phase 20.1** — the toolchain round merged from

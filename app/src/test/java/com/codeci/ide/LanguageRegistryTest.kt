@@ -166,6 +166,16 @@ class LanguageRegistryTest {
     }
 
     @Test
+    fun c_and_cpp_install_clang_and_probe_the_gcc_symlinks() {
+        val c = LanguageRegistry.forExtension("c")!!
+        assertEquals("clang", c.requiredPackage)
+        assertEquals("gcc", c.probeBinary)
+        val cpp = LanguageRegistry.forExtension("cpp")!!
+        assertEquals("clang", cpp.requiredPackage)
+        assertEquals("g++", cpp.probeBinary)
+    }
+
+    @Test
     fun tcc_is_not_referenced_by_any_profile() {
         // Phase 21 retires TCC: no profile may compile through the `cc` shim.
         LanguageRegistry.profiles.forEach {

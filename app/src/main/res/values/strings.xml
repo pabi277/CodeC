@@ -164,8 +164,9 @@
     <string name="output_installing">Installing %1$s…</string>
     <string name="output_install_ok">%1$s installed — continuing the run</string>
     <string name="output_install_failed">Could not install %1$s</string>
+    <string name="output_language_unavailable">%1$s is not in the CodeC package repository yet</string>
     <string name="install_prompt_title">Install %1$s?</string>
-    <string name="install_prompt_body">%1$s is required to run this file. It downloads once and works offline afterwards.</string>
+    <string name="install_prompt_body">The %1$s package is required to run this file. It downloads once and works offline afterwards.</string>
     <string name="install_prompt_size">Download size: %1$s</string>
     <string name="install_prompt_confirm">Install</string>
     <string name="install_prompt_cancel">Cancel</string>

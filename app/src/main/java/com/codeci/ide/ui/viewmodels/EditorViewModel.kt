@@ -1704,6 +1704,12 @@ class EditorViewModel : ViewModel() {
                     promptInstall(decision)
                     return
                 }
+                is RunDecision.Unavailable -> {
+                    _userMessage.value = appContext.getString(
+                        R.string.output_language_unavailable, decision.profile.displayName
+                    )
+                    return
+                }
                 is RunDecision.Execute -> {
                     if (decision.profile.displayName == "Python") {
                         // Device round fix 2026-08-31: python writes
@@ -1742,6 +1748,12 @@ class EditorViewModel : ViewModel() {
                 }
                 is RunDecision.NeedsInstall -> {
                     promptInstall(decision)
+                    return
+                }
+                is RunDecision.Unavailable -> {
+                    _userMessage.value = appContext.getString(
+                        R.string.output_language_unavailable, decision.profile.displayName
+                    )
                     return
                 }
                 is RunDecision.Execute -> {

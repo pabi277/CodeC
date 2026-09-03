@@ -222,3 +222,85 @@ command strings now pin the gcc/g++ ones, plus two new tests
   `PART_21_3_ACCEPTANCE.md` recipe (a C file and a C++ file end-to-end through
   gcc, plus the install gate on a device without `gcc`).
 - Stop at the merge gate — the owner merges to `main`.
+
+---
+
+## 7. Device round 1 (2026-09-03) — install gate FAILED, two defects fixed
+
+**Owner transcript (RUN ▶ on a `.c` file, install gate accepted):**
+
+```
+$ pkg install -y gcc
+E: Unable to locate package gcc
+pkg: package not found; run 'pkg update' first to refresh the package catalog.
+Could not install C
+```
+
+then, after the owner ran `pkg update` manually:
+
+```
+$ pkg install -y gcc
+Package gcc is not available, but is referred to by another package.
+However the following packages replace it:
+  libllvm
+E: Package 'gcc' has no installation candidate
+```
+
+Owner's read — *"i think gcc is wrong i am using clang"* — is correct.
+
+### D17 — `requiredPackage` for C/C++ was `gcc`; there is no such package
+
+**Root cause.** I took `requiredPackage = "gcc"` from the Phase 21 spec
+(`PART_21_1_REGISTRY.md` §2.2), which was written *before* Phase 20.1 landed.
+Phase 20.1's own record says the opposite in three places —
+`PART_20_1_TOOLCHAINS.md` §2 ("**⇒ Users run `pkg install clang`**"), the §1
+package table, and `prompt.md` ("no `gcc`/`clang` recipe exists at the pinned
+ref"). At the pinned upstream ref there is no `packages/gcc` recipe at all:
+the compile root is **`libllvm`**, and its **`clang` subpackage** creates the
+`gcc`/`g++`/`c++`/`cpp` driver symlinks in `termux_step_post_make_install`.
+So `gcc` is a *binary shipped by the clang deb*, never an installable name.
+This is precisely the failure `rule.md` §4.1 exists to prevent (trust the
+repo, not a doc) — the ground truth was two files away and I did not check it.
+
+**Fix.** C and C++ profiles: `requiredPackage` `gcc` → **`clang`**.
+`probeBinary` stays `gcc`/`g++` — those *are* the right binaries to test for,
+because the clang deb provides them. Verified against
+`codec-packages/properties.codec.sh` `CODEC_REPOSITORY_PACKAGES` and the live
+dev-index names recorded in `PART_20_1_TOOLCHAINS.md` build-log entry 8.
+
+New standing guards so this cannot drift again:
+- `no_profile_ever_tries_to_install_a_package_named_gcc`
+- `every_installable_package_is_one_phase_20_1_actually_published` — every
+  installable `requiredPackage` must be in the set actually published
+  (`clang`, `lld`, `llvm`, `llvm-tools`, `libllvm`, `libcompiler-rt`,
+  `nodejs`, `npm`, `php`, `ruby`, `lua54`, `python`, `python-pip`).
+- `c_and_cpp_install_clang_and_probe_the_gcc_symlinks`
+
+### D18 — Go and Rust were guaranteed-to-fail installs
+
+The same audit caught two more landmines: `golang` and `rust` are in the
+registry but were **never published** by Phase 20.1 (the langs group is
+`nodejs npm php ruby lua54`). Tapping RUN ▶ on a `.go` file would have
+reproduced the identical dead end.
+
+**Fix.** New `LanguageRunProfile.inRepository` flag (default `true`), `false`
+for Go and Rust, and a new `RunDecision.Unavailable` case. RUN ▶ now says
+"Go is not in the CodeC package repository yet" instead of firing an install
+that cannot succeed. The profiles stay in the registry so the day those roots
+are published it is a one-word change. Test:
+`go_and_rust_report_unavailable_instead_of_a_doomed_install`.
+
+### D19 — the gate must refresh the catalog first
+
+The owner's *first* error was a different bug from the second: a device whose
+apt lists predated the Phase 20.1 publish cannot install anything new, and the
+gate offered no way out — the user had to know to run `pkg update` by hand.
+
+**Fix.** `installCommand` is now `pkg update && pkg install -y <pkg>`.
+Idempotent, and negligible next to the ~90 MB download that follows. Test:
+`install_command_refreshes_the_catalog_before_installing`.
+
+### Status
+
+D.3 device acceptance is **still open** — this round found gate bugs before
+any C code was compiled. The next device pass should re-run the same recipe.

@@ -20,6 +20,12 @@ data class LanguageRunProfile(
     val requiredPackage: String?,
     /** Binary that proves [requiredPackage] is installed (`$PREFIX/bin/<binary>`). */
     val probeBinary: String? = null,
+    /**
+     * False when [requiredPackage] is NOT published in the CodeC package
+     * repository yet. RUN ▶ then explains that instead of firing a
+     * `pkg install` that is guaranteed to fail (device round 1, 2026-09-03).
+     */
+    val inRepository: Boolean = true,
     /** Human-readable size hint shown in the install prompt ("~80 MB"). */
     val installSizeHint: String? = null,
     /** Build command template, null for interpreted languages. */
@@ -82,7 +88,11 @@ object LanguageRegistry {
         LanguageRunProfile(
             displayName = "C",
             extensions = listOf("c"),
-            requiredPackage = "gcc",
+            // Phase 21 device round 1: there is NO `gcc` package. The compile
+            // root is `libllvm`; its `clang` SUBPACKAGE ships the
+            // gcc/g++/c++/cpp driver symlinks, so `pkg install clang` is what
+            // gives you a working `gcc`. See PART_20_1_TOOLCHAINS.md §2.
+            requiredPackage = "clang",
             probeBinary = "gcc",
             installSizeHint = "~90 MB",
             buildTemplate = "gcc \$SRC -o \$OUT -lm",
@@ -93,7 +103,7 @@ object LanguageRegistry {
         LanguageRunProfile(
             displayName = "C++",
             extensions = listOf("cpp", "cc", "cxx"),
-            requiredPackage = "gcc",
+            requiredPackage = "clang",
             probeBinary = "g++",
             installSizeHint = "~90 MB",
             buildTemplate = "g++ \$SRC -o \$OUT -lm",
@@ -132,8 +142,11 @@ object LanguageRegistry {
         LanguageRunProfile(
             displayName = "Go",
             extensions = listOf("go"),
+            // Not published by Phase 20.1 — the gate says so honestly instead
+            // of running a `pkg install` that cannot succeed.
             requiredPackage = "golang",
             probeBinary = "go",
+            inRepository = false,
             installSizeHint = "~80 MB",
             buildTemplate = null,
             runTemplate = "go run \$SRC",
@@ -145,6 +158,7 @@ object LanguageRegistry {
             extensions = listOf("rs"),
             requiredPackage = "rust",
             probeBinary = "rustc",
+            inRepository = false,
             installSizeHint = "~200 MB",
             buildTemplate = "rustc \$SRC -o \$OUT",
             runTemplate = "./\$OUT",

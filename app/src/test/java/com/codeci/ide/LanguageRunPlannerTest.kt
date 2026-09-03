@@ -1,5 +1,6 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.services.LanguageRegistry
 import com.codeci.ide.ui.services.LanguageRunPlanner
 import com.codeci.ide.ui.services.LanguageToolProbe
 import com.codeci.ide.ui.services.RunDecision
@@ -33,10 +34,49 @@ class LanguageRunPlannerTest {
     }
 
     @Test
-    fun c_file_without_gcc_asks_to_install_gcc() {
+    fun c_file_without_a_compiler_installs_clang_not_gcc() {
+        // Device round 1 (2026-09-03): `pkg install gcc` fails — apt itself
+        // says "the following packages replace it: libllvm". Phase 20.1
+        // publishes `clang` (a libllvm subpackage) which SHIPS the gcc/g++
+        // driver symlinks. Probe gcc, install clang.
         val decision = LanguageRunPlanner.decide("main.c", "/p/demo", "bin", noneInstalled)
         assertTrue(decision is RunDecision.NeedsInstall)
-        assertEquals("gcc", (decision as RunDecision.NeedsInstall).packageName)
+        assertEquals("clang", (decision as RunDecision.NeedsInstall).packageName)
+    }
+
+    @Test
+    fun no_profile_ever_tries_to_install_a_package_named_gcc() {
+        // Standing guard: `gcc` is a binary in the clang deb, never a package.
+        LanguageRegistry.profiles.forEach {
+            assertFalse("${it.displayName} must not install 'gcc'", it.requiredPackage == "gcc")
+        }
+    }
+
+    @Test
+    fun every_installable_package_is_one_phase_20_1_actually_published() {
+        // CODEC_REPOSITORY_PACKAGES (codec-packages/properties.codec.sh) plus
+        // the libllvm subpackage names verified live in the dev index.
+        val published = setOf(
+            "clang", "lld", "llvm", "llvm-tools", "libllvm", "libcompiler-rt",
+            "nodejs", "npm", "php", "ruby", "lua54", "python", "python-pip"
+        )
+        LanguageRegistry.profiles
+            .filter { it.requiredPackage != null && it.inRepository }
+            .forEach {
+                assertTrue(
+                    "${it.displayName} wants '${it.requiredPackage}', which is not published",
+                    it.requiredPackage in published
+                )
+            }
+    }
+
+    @Test
+    fun go_and_rust_report_unavailable_instead_of_a_doomed_install() {
+        val go = LanguageRunPlanner.decide("m.go", "/p", null, noneInstalled)
+        assertTrue(go is RunDecision.Unavailable)
+        assertEquals("golang", (go as RunDecision.Unavailable).packageName)
+        assertTrue(LanguageRunPlanner.decide("m.rs", "/p", null, noneInstalled)
+            is RunDecision.Unavailable)
     }
 
     @Test
@@ -44,7 +84,7 @@ class LanguageRunPlannerTest {
         val probed = mutableListOf<String>()
         val decision = LanguageRunPlanner.decide("m.cpp", "/p", null) { probed += it; false }
         assertEquals(listOf("g++"), probed)
-        assertEquals("gcc", (decision as RunDecision.NeedsInstall).packageName)
+        assertEquals("clang", (decision as RunDecision.NeedsInstall).packageName)
     }
 
     @Test
@@ -91,8 +131,13 @@ class LanguageRunPlannerTest {
     }
 
     @Test
-    fun install_command_is_non_interactive_pkg_install() {
-        assertEquals("pkg install -y gcc", LanguageRunPlanner.installCommand("gcc"))
+    fun install_command_refreshes_the_catalog_before_installing() {
+        // Device round 1: a stale catalog produced "E: Unable to locate
+        // package" on a device that had never run `pkg update`.
+        assertEquals(
+            "pkg update && pkg install -y clang",
+            LanguageRunPlanner.installCommand("clang")
+        )
     }
 
     @Test

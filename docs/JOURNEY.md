@@ -19,6 +19,19 @@ registry, fixing a real pre-existing bug where "Run in terminal" fed a `.rb`
 or `.lua` file to a C compiler. +33 host tests (`LanguageRegistryTest`,
 `LanguageRunPlannerTest`) plus the updated `TerminalHandoffTest`. **D.3 device
 pass required** (C and C++ end-to-end through gcc, plus the install gate)
+**Device round 1 (2026-09-03) failed at the gate and was fixed the same day:**
+`pkg install -y gcc` → *"E: Unable to locate package"*, then after a manual
+`pkg update` → *"the following packages replace it: **libllvm**"*. The owner
+called it — *"i think gcc is wrong i am using clang"*. Root cause: I lifted
+`requiredPackage = "gcc"` from the Phase 21 spec, which predates Phase 20.1;
+at the pinned ref there is no `packages/gcc` recipe at all — `libllvm`'s
+`clang` subpackage creates the `gcc`/`g++`/`c++`/`cpp` driver symlinks, so
+`gcc` is a binary, never an installable name. Fixed to install `clang` while
+still probing `gcc`/`g++`, plus two neighbours the audit caught: Go and Rust
+were never published (now `inRepository = false` → an honest "not in the
+repository yet" instead of a doomed install), and the gate now runs
+`pkg update &&` first so a stale catalog is self-healing. Guard tests pin every
+installable name to `codec-packages/properties.codec.sh`. D.3 must be re-run
 before D.4 deletes `assets/tcc/`, `EmbeddedCompiler`'s TCC path and
 `scripts/build-tcc.sh`; the Settings → Compiler Engine TCC backend is
 untouched so the removal stays reversible. Note: the spec's `useLegacyTcc`

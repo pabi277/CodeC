@@ -27,6 +27,16 @@ sealed class RunDecision {
 
     /** No profile claims this file extension. */
     data class Unsupported(val extension: String) : RunDecision()
+
+    /**
+     * The language is known but its package is not in the CodeC repository
+     * yet (Go, Rust). Better an honest message than a `pkg install` that
+     * cannot succeed — device round 1, 2026-09-03.
+     */
+    data class Unavailable(
+        val profile: LanguageRunProfile,
+        val packageName: String,
+    ) : RunDecision()
 }
 
 object LanguageRunPlanner {
@@ -59,13 +69,27 @@ object LanguageRunPlanner {
         if (profile.isWebPreview) return RunDecision.WebPreview(profile)
         val probe = probeBinaryFor(profile)
         if (probe != null && !toolInstalled(probe)) {
-            return RunDecision.NeedsInstall(profile, profile.requiredPackage!!)
+            val pkg = profile.requiredPackage!!
+            return if (profile.inRepository) {
+                RunDecision.NeedsInstall(profile, pkg)
+            } else {
+                RunDecision.Unavailable(profile, pkg)
+            }
         }
         val plan = LanguageRegistry.planFor(profile, workDir, sourceRef, outputDir)
             ?: return RunDecision.WebPreview(profile)
         return RunDecision.Execute(profile, plan)
     }
 
-    /** The `pkg install` command the install gate runs. */
-    fun installCommand(packageName: String): String = "pkg install -y $packageName"
+    /**
+     * The command the install gate runs.
+     *
+     * Device round 1 (2026-09-03) hit "E: Unable to locate package" on a
+     * device whose apt catalog predated the Phase 20.1 publish: the gate must
+     * refresh the lists first, otherwise a brand-new install can never
+     * succeed. `pkg update` is idempotent and cheap next to the download that
+     * follows.
+     */
+    fun installCommand(packageName: String): String =
+        "pkg update && pkg install -y $packageName"
 }
