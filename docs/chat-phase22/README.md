@@ -98,3 +98,18 @@ but the measurement target is a mid-range phone in release mode.
 **Device pass required** before this phase can be called complete — run
 `PART_22_1_SMOOTHNESS.md` §4, `PART_22_2_IME_KEYS.md` §4 and
 `PART_22_3_INSETS.md` §4 (the last one includes the Terminal regression check).
+
+---
+
+## Device round 1 (2026-09-03) — owner: *"still lacks when i open keyboard, typing not good, terminal blocks the editor"*
+
+Fixed in `1417642` (CI `33720029914`) — full analysis in
+[`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §9.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| D5 | Keyboard-open lags | `filter()` runs per **layout**, and the IME animation relayouts every frame → the whole decorated string was rebuilt 30–60× during the slide. The 22.1 debounce couldn't help: the text never changed. | Single-entry memo in `SyntaxVisualTransformation`, keyed on the buffer text. |
+| D6 | Typing still not good | The gutter's enclosing scope still read `codeText.text` to get `lineCount`, so every keystroke invalidated it — `remember(lineCount)` only saved the string, not the recomposition/measure/draw. | `derivedStateOf` line count: the scope invalidates only when the count changes. |
+| D7 | "Terminal" blocks the editor | The collapsed Output Panel strip was an unconditional fixed `64.dp`, reserved before anything had ever run. | New pure `OutputRunState.hasContent()` gates it; strip **and** status bar also hidden while the IME is up. The **expanded** panel is left alone. |
+
+**New tests:** `OutputPanelVisibilityTest` ×5, plus 2 memo cases in `EditorHighlightCacheTest`.

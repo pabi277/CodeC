@@ -309,3 +309,72 @@ a stale cache never leaks the wrong colors; offsets stay identity-mapped;
 
 **Still open / device-gated:** the horizontal+vertical double scroll wrapper
 (needs the `TextFieldState` migration), and the baseline profile.
+
+---
+
+## 9. Device round 1 — owner feedback (2026-09-03)
+
+> Owner: *"Better than before but still when i open keyboard it's lacks also
+> typing not good and why terminal is showing its blocks the editor it's a
+> phone app so space matters most"*
+
+Three separate causes; the first two are the residual jank, the third is the
+space complaint. All fixed in `1417642` (CI `33720029914`).
+
+### D5 — `filter()` runs per LAYOUT, not per edit (the keyboard-open lag)
+
+This is the one §8 missed. `VisualTransformation.filter()` is called on every
+**layout** pass of the text field, not only when the text changes — and the
+soft keyboard's slide animation relayouts the field on **every frame** of that
+animation. So opening the keyboard on a large file ran the full decorated
+`buildAnnotatedString` (an O(n) copy of the whole buffer) 30–60 times in a row,
+while the IME animation was already competing for the frame budget. The Phase
+22.1 debounce could not help: the *text* never changed, so the cache always
+matched — the cost was the per-frame **decoration re-application**, not
+tokenizing.
+
+Fix: a single-entry memo inside `SyntaxVisualTransformation`, keyed on the
+buffer text. The instance is already `remember`ed on
+`(theme, decorations, language, cached)`, so a surviving memo can only mean
+"same inputs" — the text key is belt-and-braces. Every frame of the keyboard
+animation after the first now returns the identical `TransformedText`.
+
+### D6 — the gutter recomposed on every keystroke
+
+§8 cached the gutter *string* (`remember(lineCount)`), but the enclosing scope
+still read `codeText.text` to compute `lineCount`, so **the composable scope
+itself** was invalidated by every keystroke — the `remember` only saved the
+`joinToString`, not the recomposition, the `Text` measure or the `drawBehind`.
+Now the count comes from a `derivedStateOf`: the cheap newline scan still runs,
+but the scope is only invalidated when the count actually **changes**, so
+typing within a line does not touch the gutter at all.
+
+### D7 — vertical space on a phone
+
+The "terminal" the owner sees is the **collapsed Output Panel strip**, which
+was rendered unconditionally at a fixed `64.dp` — reserved from the moment the
+editor opened, before anything had ever been run, showing nothing. Fixes:
+
+- New pure `OutputRunState.hasContent()` (`phase != IDLE || lines.isNotEmpty()`)
+  gates the collapsed strip. A fresh session shows no strip; the strip appears
+  the instant RUN ▶ flips the phase to `BUILDING` (so a run is never invisible)
+  and `clearOutput()` — which assigns exactly `OutputRunState(phase = IDLE)` —
+  hides it again.
+- With the keyboard up, the collapsed strip **and** the status bar are hidden.
+  Ln/Col is a glance-value readout, not something consulted mid-keystroke, and
+  between them they were ~104dp of chrome held above the keyboard on the most
+  space-starved screen the app has.
+- **The EXPANDED panel is deliberately untouched** by the IME rule — if the
+  user opened it on purpose (e.g. to answer an interactive prompt, Phase 23's
+  whole premise) it must stay visible while they type.
+
+**Tests:** `OutputPanelVisibilityTest` ×5 (fresh session hidden; BUILDING and
+RUNNING visible; DONE/FAILED/CANCELLED stay; lines alone suffice; the exact
+`clearOutput()` value hides it) + 2 memo cases in `EditorHighlightCacheTest`
+(`assertSame` across repeated `filter` calls; the memo never serves a result
+for different text).
+
+**Still not addressed** (unchanged from §7): the double-scroll wrapper, which
+needs the `TextFieldState` migration, and the baseline profile. If typing still
+feels heavy after this round, the scroll wrapper is the prime remaining
+suspect and that migration becomes the next piece of work.
