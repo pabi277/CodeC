@@ -25,6 +25,15 @@ object CodeCompletionEngine {
 
     const val MAX_ITEMS = 8
 
+    /**
+     * How far either side of the caret the buffer-identifier scan looks.
+     * Bounds the per-keystroke cost to a constant instead of the file size.
+     */
+    const val SCAN_WINDOW = 20_000
+
+    /** Compiled once — it used to be rebuilt on every keystroke. */
+    private val IDENTIFIER = Regex("\\b[A-Za-z_][A-Za-z0-9_]*\\b")
+
     /** Offset where the word under [cursorOffset] begins. */
     fun prefixStart(text: String, cursorOffset: Int): Int {
         val cursor = cursorOffset.coerceIn(0, text.length)
@@ -51,8 +60,7 @@ object CodeCompletionEngine {
             snippets(language)
                 .filter { snippetMatches(it.label, prefix) }
                 .forEach { items += it }
-            identifiers(text, prefix, keywords)
-                .take(3)
+            identifiers(text, prefix, keywords, cursor, limit = 3)
                 .forEach { items += CompletionItem(it, it, CompletionKind.IDENTIFIER, "buffer") }
             keywords
                 .filter { it.startsWith(prefix) }
@@ -80,13 +88,39 @@ object CodeCompletionEngine {
         return label.split(Regex("[^A-Za-z0-9_]+")).any { it.startsWith(prefix) }
     }
 
-    private fun identifiers(text: String, prefix: String, keywords: Set<String>): List<String> {
-        val words = Regex("\\b[A-Za-z_][A-Za-z0-9_]*\\b").findAll(text)
-            .map { it.value }
-            .filter { it.length > prefix.length && it.startsWith(prefix) && it !in keywords }
-            .distinct()
-            .toList()
-        return words.sorted()
+    /**
+     * Phase 22.6 — the identifier scan is the single most expensive thing the
+     * editor did per keystroke, so it is bounded twice over.
+     *
+     * It used to compile a `Regex` and run it across the WHOLE buffer on
+     * every character (then `distinct()` + `sorted()` the result). On a long
+     * file that is a full-file regex sweep per keypress, on the main thread.
+     *
+     * Now: the pattern is compiled once (see [IDENTIFIER]), the scan is
+     * limited to a window around the caret ([SCAN_WINDOW] characters either
+     * side — identifiers you are likely to reuse are near where you are
+     * typing), and it stops as soon as it has enough distinct matches.
+     */
+    private fun identifiers(
+        text: String,
+        prefix: String,
+        keywords: Set<String>,
+        cursor: Int,
+        limit: Int
+    ): List<String> {
+        val from = (cursor - SCAN_WINDOW).coerceAtLeast(0)
+        val to = (cursor + SCAN_WINDOW).coerceAtMost(text.length)
+        if (from >= to) return emptyList()
+        val found = LinkedHashSet<String>()
+        for (match in IDENTIFIER.findAll(text, from)) {
+            if (match.range.first >= to) break
+            val word = match.value
+            if (word.length > prefix.length && word.startsWith(prefix) && word !in keywords) {
+                found += word
+                if (found.size >= limit * 4) break
+            }
+        }
+        return found.sorted().take(limit)
     }
 
     private fun lastToken(text: String, cursor: Int): String {
@@ -139,10 +173,48 @@ object CodeCompletionEngine {
             snippet("while ...; do ... done", "while condition; do\n    \ndone"),
             snippet("case \$x in ... esac", "case \$x in\n    pattern) ;;\nesac"),
             snippet("function name() {", "function name() {\n    \n}"),
-            snippet("echo ...", "echo ")
+            snippet("echo ...", "echo "),
+            snippet("#!/data/data/com.codeci.ide/files/usr/bin/sh", "#!/data/data/com.codeci.ide/files/usr/bin/sh\n"),
+            snippet("read -r var", "read -r var")
+        )
+        // Phase 22.6 — HTML/CSS and Markdown had NO suggestions at all; a
+        // `.html` or `.md` file fell through to `emptyList()` and the popup
+        // never appeared. Both are first-class in CodeC (Web Preview runs
+        // HTML directly), so both get a snippet set.
+        LanguageType.HTML_CSS -> listOf(
+            snippet("<!DOCTYPE html> skeleton", HTML_SKELETON),
+            snippet("<div class=\"\">", "<div class=\"\">\n    \n</div>"),
+            snippet("<a href=\"\">", "<a href=\"\"></a>"),
+            snippet("<img src=\"\" alt=\"\">", "<img src=\"\" alt=\"\">"),
+            snippet("<ul><li>", "<ul>\n    <li></li>\n</ul>"),
+            snippet("<script src=\"\">", "<script src=\"\"></script>"),
+            snippet("<link rel=\"stylesheet\">", "<link rel=\"stylesheet\" href=\"\">"),
+            snippet("<style> ... </style>", "<style>\n    \n</style>"),
+            snippet("selector { }", "selector {\n    \n}"),
+            snippet("@media (max-width: 600px)", "@media (max-width: 600px) {\n    \n}"),
+            snippet("display: flex;", "display: flex;")
+        )
+        LanguageType.MARKDOWN -> listOf(
+            snippet("# Heading", "# "),
+            snippet("## Subheading", "## "),
+            snippet("**bold**", "**bold**"),
+            snippet("_italic_", "_italic_"),
+            snippet("[link](url)", "[text](url)"),
+            snippet("![image](path)", "![alt](path)"),
+            snippet("- bullet list", "- "),
+            snippet("1. numbered list", "1. "),
+            snippet("> blockquote", "> "),
+            snippet("``` code fence ```", "```\n\n```"),
+            snippet("| table |", "| Column | Column |\n| --- | --- |\n|  |  |")
         )
         else -> emptyList()
     }
+
+    private val HTML_SKELETON =
+        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n" +
+            "    <meta charset=\"utf-8\">\n" +
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+            "    <title>Page</title>\n</head>\n<body>\n    \n</body>\n</html>\n"
 
     private fun snippetTriggers(language: LanguageType): Set<String> = when (language) {
         LanguageType.PYTHON -> setOf(
@@ -159,6 +231,11 @@ object CodeCompletionEngine {
             "catch", "import", "export", "return", "switch", "case"
         )
         LanguageType.SHELL -> setOf("if", "for", "while", "case", "function", "do", "then", "echo")
+        LanguageType.HTML_CSS -> setOf(
+            "html", "head", "body", "div", "span", "a", "img", "ul", "li", "p",
+            "script", "link", "style", "meta", "table", "form", "input", "button"
+        )
+        LanguageType.MARKDOWN -> emptySet()
         else -> emptySet()
     }
 }

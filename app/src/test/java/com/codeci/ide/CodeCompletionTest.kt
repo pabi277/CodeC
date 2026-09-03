@@ -86,6 +86,59 @@ class CodeCompletionTest {
         assertTrue(CodeCompletionEngine.completions("{\"a\": 1}", 8, LanguageType.JSON).isEmpty())
     }
 
+    // ---- Phase 22.6: language coverage + bounded scan ---------------------
+
+    @Test
+    fun `html gets a skeleton and element snippets`() {
+        val items = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML_CSS)
+        assertTrue(items.any { it.kind == CompletionKind.SNIPPET && it.label.contains("DOCTYPE") })
+        val div = CodeCompletionEngine.completions("<div", 4, LanguageType.HTML_CSS)
+        assertTrue(div.any { it.kind == CompletionKind.SNIPPET && it.label.contains("div") })
+    }
+
+    @Test
+    fun `css rule and media query are offered on an html or css buffer`() {
+        val media = CodeCompletionEngine.completions("@med", 4, LanguageType.HTML_CSS)
+        assertTrue(media.any { it.kind == CompletionKind.SNIPPET && it.label.contains("@media") })
+    }
+
+    @Test
+    fun `markdown gets its own snippets`() {
+        val items = CodeCompletionEngine.completions("head", 4, LanguageType.MARKDOWN)
+        assertTrue(items.any { it.kind == CompletionKind.SNIPPET && it.label.contains("Heading") })
+        val table = CodeCompletionEngine.completions("tabl", 4, LanguageType.MARKDOWN)
+        assertTrue(table.any { it.kind == CompletionKind.SNIPPET && it.label.contains("table") })
+    }
+
+    @Test
+    fun `html and markdown used to return nothing at all`() {
+        // Regression guard for the Phase 22.6 gap: both fell through to the
+        // `else -> emptyList()` branch, so the popup never appeared on a
+        // .html or .md file even though Web Preview runs HTML directly.
+        assertTrue(CodeCompletionEngine.completions("<ul", 3, LanguageType.HTML_CSS).isNotEmpty())
+        assertTrue(CodeCompletionEngine.completions("bold", 4, LanguageType.MARKDOWN).isNotEmpty())
+    }
+
+    @Test
+    fun `identifier scan stays near the caret on a very long buffer`() {
+        // Phase 22.6 — the scan is windowed so the per-keystroke cost is
+        // bounded by SCAN_WINDOW, not by the file size. An identifier far
+        // outside the window must not be offered...
+        val filler = "x".repeat(CodeCompletionEngine.SCAN_WINDOW * 2)
+        val text = "farAwayIdentifier = 1\n$filler\nfar"
+        val items = CodeCompletionEngine.completions(text, text.length, LanguageType.PYTHON)
+        assertTrue(items.none { it.label == "farAwayIdentifier" })
+    }
+
+    @Test
+    fun `identifier scan still finds nearby symbols in a long buffer`() {
+        // ...while a symbol just above the caret still is.
+        val filler = "y".repeat(CodeCompletionEngine.SCAN_WINDOW * 2)
+        val text = "$filler\nnearbyIdentifier = 1\nnear"
+        val items = CodeCompletionEngine.completions(text, text.length, LanguageType.PYTHON)
+        assertTrue(items.any { it.label == "nearbyIdentifier" })
+    }
+
     @Test
     fun `completions are capped`() {
         val text = "aab aac aad aae aaf aag aah aai aaj aak aal aam aaan aao aap"

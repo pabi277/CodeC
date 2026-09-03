@@ -79,6 +79,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -147,11 +148,22 @@ import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** Mockup-exact RUN affordance green (Spck's run action color). */
 private val RunGreen = Color(0xFF3DDC84)
+
+/**
+ * Phase 22.6 — idle time after the last keystroke before the completion scan
+ * runs (off the main thread). Slightly longer than the highlight debounce:
+ * suggestions appearing a beat after you pause reads as intentional, whereas
+ * a flickering popup mid-word is noise.
+ */
+private const val COMPLETION_DEBOUNCE_MS = 120L
 
 /** Tap-anchor for the inline diagnostic tooltip. */
 internal data class EditorPopupAnchor(val x: Float, val y: Float, val diagnostic: EditorDiagnostic)
@@ -287,14 +299,29 @@ fun EditorScreen(
     val language = remember(activeTabPath, currentFileName) {
         LanguageType.fromFileName(activeTabPath ?: currentFileName)
     }
-    // Phase 22.1 — the completion list is derived, not remembered per
-    // keystroke: derivedStateOf recomputes only when the values it actually
-    // reads change, and only when something is reading `completionItems`.
-    val completionItems by remember(language) {
-        derivedStateOf {
-            val sel = codeText.selection
+    // Phase 22.6 — completions are computed OFF the main thread, debounced.
+    //
+    // The Phase 22.1 `derivedStateOf` here was a mistake: it reads
+    // `codeText`, which changes on every keystroke, so the derivation was
+    // invalidated every keystroke and — because the popup reads it in the
+    // same frame — recomputed every keystroke, synchronously, on the main
+    // thread. `derivedStateOf` only helps when the derived VALUE changes
+    // less often than its inputs; here it changes just as often, so it
+    // bought nothing while looking like a fix.
+    val completionItems by produceState(
+        initialValue = emptyList<CompletionItem>(),
+        key1 = codeText.text,
+        key2 = codeText.selection,
+        key3 = language
+    ) {
+        // Same debounce as the highlighter: a burst of keystrokes collapses
+        // into one scan, and no scan at all happens while you type fast.
+        delay(COMPLETION_DEBOUNCE_MS)
+        val text = codeText.text
+        val sel = codeText.selection
+        value = withContext(Dispatchers.Default) {
             CodeCompletionEngine.completions(
-                codeText.text,
+                text,
                 sel.end.coerceAtLeast(sel.start),
                 language
             )
@@ -1177,13 +1204,17 @@ fun EditorScreen(
                 ) {
                     if (showLineNumbers) {
                         // Phase 22.1 / 22.4 — the gutter is driven by a
-                        // derived line COUNT, not by the buffer. Reading
-                        // `codeText` here made every keystroke recompose the
-                        // gutter; `derivedStateOf` re-runs the cheap newline
-                        // count but only invalidates this scope when the
-                        // count actually changes, so typing inside a line is
-                        // free and the string is rebuilt only on line add or
-                        // remove.
+                        // derived line COUNT. `derivedStateOf` does NOT stop
+                        // the count from running per keystroke (it re-runs
+                        // whenever `codeText` changes); what it stops is the
+                        // RECOMPOSITION of this scope and the gutter `Text`
+                        // when the count is unchanged. That is the win here,
+                        // and it is worth having: a plain `count {}` over the
+                        // buffer is a few microseconds even on a large file,
+                        // whereas re-measuring and redrawing the gutter is
+                        // not. (Contrast the completion list, where the work
+                        // itself was expensive — that one had to move off the
+                        // main thread entirely; see §296.)
                         val lineCount by remember {
                             derivedStateOf { codeText.text.count { it == '\n' } + 1 }
                         }
