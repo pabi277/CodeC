@@ -1,11 +1,14 @@
 # CodeC — the full journey
 
-**2026-09-03 — Phase 21 STARTED (owner: "start phase 21"), D.1 + D.2
-implemented on `arena/01a064e0-codec` (base `main` = `3fa71ab`).** The
-compiler engine redesign: TCC is retired from every *run path* and the
-hard-coded `when (LanguageType)` in `EditorViewModel.runActiveFile` is
-replaced by a generic `LanguageRunProfile` registry — adding a language is now
-one entry in a list. Four new Android-free files carry the whole design:
+**2026-09-03 — Phase 21 COMPLETE, device-accepted and MERGED to `main`**
+(owner: "start phase 21" → "Pass" → "marge it"; `arena/01a064e0-codec`, base
+`3fa71ab`). The compiler engine redesign — though **not** the one the spec
+described. The hard-coded `when (LanguageType)` in
+`EditorViewModel.runActiveFile` is replaced by a generic
+`LanguageRunProfile` registry, so adding a language is now one entry in a
+list. But **TCC was not retired**: the owner's mid-phase direction made it the
+*default* C compiler (see the end of this entry), so `.c` still compiles with
+the built-in `cc` and only C++/other languages reach for the userland. Four new Android-free files carry the whole design:
 `LanguageRegistry` (12 profiles: C, C++, Python, JS, TS, Go, Rust, PHP, Ruby,
 Lua, Shell, HTML + `$SRC`/`$OUT` templating and POSIX quoting),
 `LanguageRunPlanner` (a sealed `RunDecision`: WebPreview | NeedsInstall |
@@ -57,11 +60,10 @@ flag was deliberately *not* added — there was never a distinct TCC branch to
 gate, only the `cc` string. Record:
 [`chat-phase21/PART_21_IMPLEMENTATION.md`](chat-phase21/PART_21_IMPLEMENTATION.md).
 
-**Last updated:** 2026-09-01 · **State:** `main` = **`54ae06a`** (Phases 20–24
-research/design docs via **PR #40**, merged 2026-09-01; chain: `54ae06a` ←
-PR #39 `arena/01a05b6c-codec` git-branch-publishing + clear-error fixes ←
-PR #38 Phase 18 ← PR #37 ← PR #36 …; verify with `git ls-remote origin main` —
-the local clone is shallow). Phases 3–19 all complete/merged;
+**Last updated:** 2026-09-03 · **State:** **Phase 21 MERGED to `main` by owner
+command** (2026-09-03, from `arena/01a064e0-codec`; base `3fa71ab` = Phase
+20.1 via PR #43). Verify the tip with `git ls-remote origin main` — the local
+clone is shallow. Phases 3–19 all complete/merged;
 **Phase 20.1 (package toolchain round 4: libllvm/clang + nodejs/npm + php +
 ruby + lua54) 🚧 IMPLEMENTED on `arena/01a05cb9-codec` (owner: "Phase 20
 start")** — host suite 95 green (10 new override tests — incl. the D10 LLVM build-time trim, now PERMANENT); five new

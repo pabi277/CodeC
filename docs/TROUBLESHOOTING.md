@@ -34,7 +34,11 @@ downloaded Clang module and Termux are only optional fallbacks for advanced code
 - Compiled programs are **fully static** (no libc dependency), so they run on any
   Android version.
 - TCC covers ANSI C and most of C99 (a C99-focused subset of C11). If you need stricter
-  C11/C17 or more warnings, switch **Settings → Compiler Engine → Bundled Clang** (needs
+  C11/C17, **C++**, or more warnings, install the full LLVM toolchain — **Packages →
+  Clang / LLVM**, or `pkg install clang` in the terminal. Since Phase 21 (2026-09-03)
+  RUN ▶ offers that install automatically the first time you run a `.cpp` file, and a
+  plain `.c` file keeps using the built-in TCC with no download at all.
+  *(Historical note: older builds also had a downloadable Clang module — needs
   the module download) or **→ Termux**.
 
 How the bundles are built: `scripts/build-tcc.sh` (tinycc "mob" branch at the same commit
@@ -101,7 +105,13 @@ On a stock Android 10–15 phone this makes the bundled compiler work exactly li
 
 ## 3. Fix B — Termux engine inside CodeC (recommended fallback)
 
-The new builds have a **Compiler Engine** setting:
+> **⚠️ Changed in Phase 21 (2026-09-03):** the **Settings → Compiler Engine**
+> dropdown no longer exists. TCC is always the default C compiler and CodeC
+> falls back internally (built-in → downloaded Clang → Termux) without asking.
+> Steps 1–3 below still apply if you want the Termux bridge available; step 4
+> is obsolete — there is nothing to select.
+
+The Termux bridge setup:
 
 1. Install **Termux 0.109+**:
    - F-Droid: https://f-droid.org/packages/com.termux/  (recommended)
@@ -117,10 +127,9 @@ The new builds have a **Compiler Engine** setting:
 
 3. Grant CodeC the permission **"Run commands in Termux environment"**:
    Android Settings → Apps → CodeC IDE → Permissions → Additional permissions.
-4. In CodeC: **Settings → Compiler Engine** →
-   - **Auto** — keep the bundled Clang, fall back to Termux automatically when blocked, or
-   - **Termux** — always use Termux's Clang (also makes x86_64 emulators work).
-5. Tap **CHECK BRIDGE** — it should say "Ready ✓".
+4. In CodeC: **Settings → Termux Engine** → tap **CHECK BRIDGE** — it should say
+   "Ready ✓". CodeC uses Termux's Clang automatically when its own engines are
+   blocked (this is also what makes x86_64 emulators work).
 
 How it works: CodeC sends the source code to Termux through Termux's documented
 `RUN_COMMAND` intent, Termux compiles it with its own Clang inside its own storage (which
