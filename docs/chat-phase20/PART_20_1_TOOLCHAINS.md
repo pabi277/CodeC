@@ -1,6 +1,6 @@
 # CodeC Phase 20.1 — Core toolchains + interpreted languages
 
-**Status:** ✅ **PUBLISHED to the dev channel (2026-09-02, run `33639310638` rerun-after-env-fix) — all 14 round-4 packages live, trim guarantees verified in the published index; device recipe (§4) pending** · **Cost:** `[repo-build]`
+**Status:** ✅ **COMPLETE (2026-09-03) — round-5 republish (run `33669069048`) carries the D15/D16 fixes live; §4 device recipe PASSED 6/6 end-to-end (`cc` → tcc 0.9.27 frontend after one app restart, `lua -v` → Lua 5.4.8, `gcc` compiles `Hello gcc`); bootstrap release `userland-v2-dev` refreshed (run `33669089783`); MERGED to `main` by owner command** · **Cost:** `[repo-build]`
 
 > **Build-round log (CI dispatches):**
 > 1. `33506104710` — **killed at the 360-min job ceiling** (6h01m, both arches
@@ -91,6 +91,34 @@
 >    stale same-named artifact — versions don't change on override fixes).
 >    New dispatch: `groups=llvm,langs` + `reuse_run_id=33598824226`; the
 >    marker gate keeps nano/clang/nodejs coverage proofed per arch.
+> 10. `33669069048` (salvage round 2, dispatch at `fac3ac5`, `groups=llvm,langs`
+>    + `reuse_run_id=33598824226`) — **GREEN end-to-end in ~3h04m** (plan,
+>    host-tests, all four build legs `aarch64| x86_64 / llvm| langs`,
+>    publish-dev): the complement-only reuse hardening held — only the `base`
+>    legs were merged from the reused run, and the stale same-named llvm/langs
+>    artifacts of `33598824226` were NOT downloaded, so the fixed debs could
+>    not be shadowed. Live Packages index re-verified by direct read: same 14
+>    names, new digests — `libllvm 21.1.8-3` SHA256 `abe38f14…`
+>    (21,553,716 B), `lua54 5.4.8-10` SHA256 `01cf611c…` (161,684 B).
+> 11. `33669089783` — bootstrap release GREEN in ~68s
+>    (`source_run_id=33598824226`, dispatched with the mandatory
+>    `--ref arena/01a05cb9-codec`): `userland-v2-dev` refreshed —
+>    `bootstrap-phase3-aarch64.tar.gz` (23,928,183 B, sha256 `33b2718b…`) +
+>    `bootstrap-phase3-x86_64.tar.gz` (23,825,068 B, sha256 `bd669950…`),
+>    built from the untouched green base legs.
+> 12. **Device verification round 2 — 6/6 PASS, phase COMPLETE (2026-09-03):**
+>    `pkg reinstall libllvm lua54` (same versions 21.1.8-3 / 5.4.8-10 —
+>    override fixes don't bump versions, so reinstall is how the device picks
+>    up the rebuilt bytes; downloaded sizes matched the new index exactly).
+>    `lua` now resolves: `lua -v` → `Lua 5.4.8` (note: Lua 5.4 has **no
+>    `--version` flag** — `-v` is the flag; the first attempt printed the
+>    usage block, which itself proved the command exists). The new libllvm deb
+>    no longer carries `bin/cc` → `ls -l "$PREFIX/bin/cc"` silent, and after
+>    ONE full app restart (the frontend regenerates on app start)
+>    `command -v cc` → `$PREFIX/bin/cc`, `cc --version` → **tcc 0.9.27** —
+>    the CodeC frontend invariant (D5/D15) holds end-to-end. `gcc
+>    "$HOME/t.c"` → `Hello gcc`. (Device quirk kept from round 1: `/tmp` is
+>    not writable — device recipes must use `$HOME`.)
 · **Depends on:** nothing
 · **Blocks:** Phase 21 (D.2 needs `gcc` in the repo)
 · **Target files:** `codec-packages/properties.codec.sh` (`CODEC_REPOSITORY_PACKAGES`)
@@ -317,6 +345,16 @@ should appear).
 - **D4 — no bootstrap change:** Tools install on demand. A fresh device without
   userland still works (Phase 22/B only need the app code; no userland required
   for the editor smoothness or IME keys fix).
+- **D14 — salvage mode (owner driver: "main focus may be in the failed 2
+  without damaging the successful 4"):** the workflow learned `groups=<csv>`
+  (plan filters the build matrix, fail-loud on unknown names) and
+  `reuse_run_id=<run>` (publish-dev merges that run's leg artifacts into the
+  pool before signing, gated by a per-arch marker check — nano/clang/nodejs
+  must be present for BOTH arches, so a partial merge fails before release,
+  never after). Hardened at `fac3ac5`: reuse downloads **only the complement
+  legs** — a freshly rebuilt leg must never be shadowed by its stale
+  same-named artifact from the reused run, because override fixes (D15/D16)
+  don't bump package versions. Proven by salvage round 2 (`33669069048`).
 - **D15 amendment (device-verified):** see D5 — the include strip alone left
   the cc symlink unclaimed and it was swept into the main libllvm deb;
   the loop token is now removed too, so nothing creates `bin/cc` at all.

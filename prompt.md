@@ -18,16 +18,16 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-01, Phase 20.1 in progress):**
+**WHERE THINGS STAND (2026-09-03, Phase 20.1 COMPLETE & merged):**
 
-- **`main` = `54ae06a` — Phases 20–24 design docs via PR #40** (merged
-  2026-09-01); the chain is `54ae06a` ← **PR #39** (git branch-publishing +
-  clear-error fixes, `arena/01a05b6c-codec`) ← `dc68eee` = PR #38 (Phase 18),
-  `f868e10` = PR #37 (Phase 17), `a0e7dc3` = PR #36 (Phases 15/16),
-  `b869ce6` = PR #34 (Phase 19) — verify the tip with
+- **`main` includes Phase 20.1** — the toolchain round merged from
+  `arena/01a05cb9-codec` by owner command (2026-09-03; before that `main` =
+  `9b3669e` Website W0 docs via PR #41, `54ae06a` Phases 20–24 design docs via
+  PR #40, PR #39 git fixes, PR #38 Phase 18 — verify the tip with
   `git ls-remote origin main` / the GitHub API (the local clone is shallow).
-- **Phase 20.1 (package toolchain round 4) is 🚧 IMPLEMENTED on
-  `arena/01a05cb9-codec`** (owner's "Phase 20 start", 2026-09-01): six new
+- **Phase 20.1 (package toolchain round 4) is ✅ COMPLETE, DEVICE-VERIFIED
+  6/6 and MERGED to `main` (2026-09-03, `arena/01a05cb9-codec`)** (owner's
+  "Phase 20 start", 2026-09-01): six new
   `CODEC_REPOSITORY_PACKAGES` roots — `libllvm` (clang 21.1.8 + the
   `gcc`/`g++` driver symlinks; no `gcc`/`clang` recipe exists at the pinned
   ref), `nodejs`, `npm` (split from nodejs upstream), `php` (trimmed of
@@ -55,8 +55,13 @@ gate, invariants, docs policy) — follow it.
   two content bugs found — cc clobbered (unclaimed symlink swept into
   main libllvm deb → D15 drops cc from the loop) + no `lua` (post_massage
   wrote to staging, not MASSAGEDIR → D16); salvage now downloads
-  complement legs only. Owner: rerun `groups=llvm,langs` +
-  reuse_run_id=33598824226, reinstall libllvm+lua54, merge.
+  complement legs only. **End state: salvage round 2 `33669069048` GREEN
+  (~3h04m, complement-only reuse proven), live repo carries the fixes
+  (libllvm `abe38f14…`, lua54 `01cf611c…`); bootstrap release `33669089783`
+  refreshed `userland-v2-dev` (aarch64 `33b2718b…`, x86_64 `bd669950…`);
+  device re-verify 6/6 — `lua -v` → Lua 5.4.8 (5.4 has no `--version`
+  flag), `cc` gone from the libllvm deb → after one app restart
+  `command -v cc` → tcc 0.9.27, `gcc $HOME/t.c` → `Hello gcc`.**
   Record: `docs/chat-phase20/`.
   Phases 3–14, 19 (PR #34 @ `b869ce6`), Phases 15/16 (PR #36 @ `a0e7dc3`),
   Phase 17 (PR #37 @ `f868e10`) and **Phase 18 (PR #38)** are all
@@ -98,14 +103,15 @@ gate, invariants, docs policy) — follow it.
   problem, solve it. No self-initiated work.
 
 **NEW PLANNED PHASES (2026-09-01, owner direction):**
-Phases 21/22/23/24 are fully spec'd — no code written yet; **Phase 20 started
-(20.1 implemented, awaiting `[repo-build]` dispatch)**.
+Phases 21/22/23/24 are fully spec'd — no code written yet; **Phase 20.1 is
+COMPLETE and merged (20.2 heavy roots behind `[repo-build-heavy]` remains a
+design pivot, not started)**.
 - **Phase 22** (editor smoothness + IME-anchored keys) — `docs/chat-phase22/`
 - **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
-- **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — 🚧 20.1 in progress — `docs/chat-phase20/`
+- **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
 - **Phase 21** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — `docs/chat-phase21/`
 - **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
-Recommended order: 20 → 21 → 22 → 23 → 24 (C and A can run in parallel).
+Recommended order: 21 → 22 → 23 → 24 (21 and 22 can run in parallel).
 **Owner starts a phase by saying "Start Phase 20" (or 21/22/23/24) in chat.**
 
 **FUTURE-UPDATE MODE (owner, 2026-09-01):** Phases A–E are planned but not
