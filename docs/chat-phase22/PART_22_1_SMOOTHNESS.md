@@ -378,3 +378,78 @@ for different text).
 needs the `TextFieldState` migration, and the baseline profile. If typing still
 feels heavy after this round, the scroll wrapper is the prime remaining
 suspect and that migration becomes the next piece of work.
+
+---
+
+## 10. Device round 2 — owner feedback (2026-09-03)
+
+> Owner: *"Most of the problems solved but still in a long file it lags. And
+> the quick keys make pare in single key like (),[],<>,{} etc"*
+
+Fixed in `a751cf4` (CI `33722090650`).
+
+### D8 — the tab stash made every keystroke cost O(file)
+
+**This was the long-file lag, and it was never in the rendering layer at all**
+— which is why rounds 1 and 2 (both render-side) improved things without
+curing it.
+
+`EditorViewModel.updateCode` called `stashActiveTabBuffer(next)` on **every
+character**. That function does:
+
+```kotlin
+_openTabs.value = _openTabs.value.map { … it.copy(buffer = buffer) … }
+```
+
+Three compounding costs per keystroke, all scaling with the **file**, not the
+edit:
+1. the whole `List<EditorTab>` is rebuilt and a new `EditorTab` allocated;
+2. `EditorTab` holds the entire `TextFieldValue`, so the copy carries the full
+   buffer reference through a fresh data-class instance;
+3. `_openTabs` is a `StateFlow`, so a **new list identity** is published on
+   every character — waking every collector (the tab strip, the drawer's dirty
+   marks) and invalidating their recomposition scopes, on top of the edit
+   itself.
+
+The fix is to stop doing it. The active tab's truth already lives in
+`_codeText`; the stash exists to hand the buffer **to the tab record when you
+leave it**, which is exactly what `stashActiveTabBuffer`'s own KDoc says
+("the ACTIVE tab's live buffer lives in the ViewModel and is stashed into this
+record on switch/close"). The per-keystroke call was contradicting the
+documented design. The stash still runs at all seven real boundaries (tab
+switch, open, close, close-all, save-all, context switch, undo/redo — the
+latter are discrete, so they stay).
+
+Audited every reader of `tab.buffer` for staleness; two touch the active tab
+and both were already correct (`tabViews` and the tab-close dirty check use
+the VM's `isDirty` for the active path), and `trimTabs` only ever considers
+non-active tabs. Comments added at all three so the invariant is not
+re-broken.
+
+### D9 — the caret readout copied the whole prefix per keystroke
+
+`refreshDecorationsNow` computed the line number as:
+
+```kotlin
+val line = current.text.take(cursor).count { it == '\n' } + 1
+```
+
+`take(cursor)` **allocates a copy of the entire prefix** purely to count
+newlines in it. With the caret near the end of a long file that is a full-file
+copy for every character typed — then `lineStartOffset` rescanned the text
+again for the line start. Replaced with one in-place loop that produces the
+line number and the line start together, no allocation.
+
+`EditorCursorMathTest` pins the arithmetic against the original implementation
+as an oracle, probing every line start, midpoint and end of a 500-line file.
+
+### D10 — paired bracket keys
+
+New `EditorKey.Pair(open, close)`: `()`, `{}`, `[]`, `<>`, `""`, `''` and JS
+template backticks are now single caps. Empty caret → both halves inserted
+with the caret **between** them; non-empty selection → the pair **surrounds**
+the selection and the selection is preserved inside it (standard editor
+surround). The row is also shorter than before — six pair caps replace ten
+single-character caps, leaving more room on a phone.
+
+The HTML `</>` tail was left as-is (it is a fragment marker, not a pair).

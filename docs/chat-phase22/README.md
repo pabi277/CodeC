@@ -113,3 +113,23 @@ Fixed in `1417642` (CI `33720029914`) — full analysis in
 | D7 | "Terminal" blocks the editor | The collapsed Output Panel strip was an unconditional fixed `64.dp`, reserved before anything had ever run. | New pure `OutputRunState.hasContent()` gates it; strip **and** status bar also hidden while the IME is up. The **expanded** panel is left alone. |
 
 **New tests:** `OutputPanelVisibilityTest` ×5, plus 2 memo cases in `EditorHighlightCacheTest`.
+
+---
+
+## Device round 2 (2026-09-03) — owner: *"still in a long file it lags"* + *"quick keys make pare in single key"*
+
+Fixed in `a751cf4` (CI `33722090650`) — full analysis in
+[`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §10.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| D8 | Long files still lag | **Not a rendering bug** — `updateCode` stashed the active buffer into `_openTabs` on every character, rebuilding the whole tab list, re-copying a data class that holds the entire `TextFieldValue`, and publishing a new `StateFlow` identity that woke every tab collector. Cost scaled with the FILE, not the edit. | Stash only at the real boundaries (switch/open/close/save/context), as `stashActiveTabBuffer`'s own KDoc always described. All `tab.buffer` readers audited for staleness. |
+| D9 | (same) | `refreshDecorationsNow` built the caret line with `text.take(cursor).count { … }` — a copy of the entire prefix per keystroke — then rescanned for the line start. | One in-place pass yields line **and** line start, no allocation. Pinned by `EditorCursorMathTest` against the old code as an oracle. |
+| D10 | Quick keys insert one character | Each bracket half was its own cap. | New `EditorKey.Pair`: `()`, `{}`, `[]`, `<>`, `""`, `''`, JS `` `` `` — caret lands between, or the pair surrounds the selection. Also frees row space. |
+
+**New tests:** `EditorCursorMathTest` ×6 (incl. a 500-line oracle comparison), 4 new pair cases in `EditorKeySetTest`.
+
+> **Why rounds 1–2 didn't fix the lag:** both were render-side (highlight
+> memo, gutter scope). D8/D9 are in the **ViewModel's edit path** — work done
+> before a frame is even requested. Worth remembering if long-file lag ever
+> resurfaces: measure the edit path, not just recomposition.
