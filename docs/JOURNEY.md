@@ -1,10 +1,69 @@
 # CodeC — the full journey
 
-**Last updated:** 2026-09-01 · **State:** `main` = **`54ae06a`** (Phases 20–24
-research/design docs via **PR #40**, merged 2026-09-01; chain: `54ae06a` ←
-PR #39 `arena/01a05b6c-codec` git-branch-publishing + clear-error fixes ←
-PR #38 Phase 18 ← PR #37 ← PR #36 …; verify with `git ls-remote origin main` —
-the local clone is shallow). Phases 3–19 all complete/merged;
+**2026-09-03 — Phase 21 COMPLETE, device-accepted and MERGED to `main`**
+(owner: "start phase 21" → "Pass" → "marge it"; `arena/01a064e0-codec`, base
+`3fa71ab`). The compiler engine redesign — though **not** the one the spec
+described. The hard-coded `when (LanguageType)` in
+`EditorViewModel.runActiveFile` is replaced by a generic
+`LanguageRunProfile` registry, so adding a language is now one entry in a
+list. But **TCC was not retired**: the owner's mid-phase direction made it the
+*default* C compiler (see the end of this entry), so `.c` still compiles with
+the built-in `cc` and only C++/other languages reach for the userland. Four new Android-free files carry the whole design:
+`LanguageRegistry` (12 profiles: C, C++, Python, JS, TS, Go, Rust, PHP, Ruby,
+Lua, Shell, HTML + `$SRC`/`$OUT` templating and POSIX quoting),
+`LanguageRunPlanner` (a sealed `RunDecision`: WebPreview | NeedsInstall |
+Execute | Unsupported), `LanguageToolProbe` (`$PREFIX/bin/<binary>` exists —
+no `pkg` query per RUN tap) and `InstallPromptState`. D.2's gate asks
+"Install <language>?" before the first RUN of a file whose toolchain is
+missing, streams `pkg install -y <pkg>` into the Output Panel with a 900 s
+timeout, and re-enters the run automatically on exit 0. `TerminalHandoff` now
+emits `gcc`/`g++ … -lm` and — new — dispatches scratch files through the
+registry, fixing a real pre-existing bug where "Run in terminal" fed a `.rb`
+or `.lua` file to a C compiler. +33 host tests (`LanguageRegistryTest`,
+`LanguageRunPlannerTest`) plus the updated `TerminalHandoffTest`. **D.3 device
+pass required** (C and C++ end-to-end through gcc, plus the install gate)
+**Device round 1 (2026-09-03) failed at the gate and was fixed the same day:**
+`pkg install -y gcc` → *"E: Unable to locate package"*, then after a manual
+`pkg update` → *"the following packages replace it: **libllvm**"*. The owner
+called it — *"i think gcc is wrong i am using clang"*. Root cause: I lifted
+`requiredPackage = "gcc"` from the Phase 21 spec, which predates Phase 20.1;
+at the pinned ref there is no `packages/gcc` recipe at all — `libllvm`'s
+`clang` subpackage creates the `gcc`/`g++`/`c++`/`cpp` driver symlinks, so
+`gcc` is a binary, never an installable name. Fixed to install `clang` while
+still probing `gcc`/`g++`, plus two neighbours the audit caught: Go and Rust
+were never published (now `inRepository = false` → an honest "not in the
+repository yet" instead of a doomed install), and the gate now runs
+`pkg update &&` first so a stale catalog is self-healing. Guard tests pin every
+installable name to `codec-packages/properties.codec.sh`. **Device round 2 the same day** exposed a deeper miss: *"python3: command not
+found / Server exited with code 127"*. The D.2 gate only ever covered the
+active-file path — server-type projects and custom `project.json` build/run
+pairs execute their configured command verbatim and never consult the
+registry. Fixed with `toolchainForCommands`, which gates any raw command
+string by the leading program of each `&&`/`;`/`|` segment (so `./bin/server`
+and `echo node` never prompt), plus `pendingServerProject` so a successful
+install resumes the server rather than the active file; the `c-microservice`
+preset's leftover `cc server.c` became `gcc`. The lesson for D.4: CodeC has
+**five** run paths (active file, project file, project config, server preset,
+terminal handoff) and the Phase 21 spec described only one. **D.3 then PASSED (owner: "Pass") — and D.4 was CANCELLED.** Beginning the
+TCC deletion surfaced what the spec never modelled: `cc` is CodeC's *own TCC
+frontend*, and Phase 20.1 deliberately strips `bin/cc` from the clang deb to
+protect it, so deleting the assets would have broken `cc` in the terminal and
+every `project.json` already on disk. Raised rather than executed — and the
+owner redirected: *"remove the option of compiler Setting and make the tcc
+default but if need user can install gcc"*. So TCC is not legacy, it is the
+**default C compiler**: the Settings → Compiler Engine picker and the
+`COMPILER_BACKEND` preference are gone (D22), a `.c` file compiles with the
+built-in `cc` and is **never** gated behind a download (D23), `.cpp` still
+installs clang because TCC cannot build C++, and the `-o`-last link-order
+invariant is now PERMANENT. Note: the spec's `useLegacyTcc`
+flag was deliberately *not* added — there was never a distinct TCC branch to
+gate, only the `cc` string. Record:
+[`chat-phase21/PART_21_IMPLEMENTATION.md`](chat-phase21/PART_21_IMPLEMENTATION.md).
+
+**Last updated:** 2026-09-03 · **State:** **Phase 21 MERGED to `main` by owner
+command** (2026-09-03, from `arena/01a064e0-codec`; base `3fa71ab` = Phase
+20.1 via PR #43). Verify the tip with `git ls-remote origin main` — the local
+clone is shallow. Phases 3–19 all complete/merged;
 **Phase 20.1 (package toolchain round 4: libllvm/clang + nodejs/npm + php +
 ruby + lua54) 🚧 IMPLEMENTED on `arena/01a05cb9-codec` (owner: "Phase 20
 start")** — host suite 95 green (10 new override tests — incl. the D10 LLVM build-time trim, now PERMANENT); five new

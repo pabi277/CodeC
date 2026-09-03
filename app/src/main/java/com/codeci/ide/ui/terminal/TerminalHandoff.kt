@@ -1,11 +1,17 @@
 package com.codeci.ide.ui.terminal
 
 import com.codeci.ide.ui.projects.ProjectConfig
+import com.codeci.ide.ui.services.LanguageRegistry
 import java.io.File
 
 /**
- * Editor → terminal handoff. Builds the shell command that compiles the
- * current file with the embedded TCC (`cc`) and runs the result.
+ * Editor → terminal handoff. Builds the shell command that compiles and runs
+ * the current file.
+ *
+ * Phase 21.1: the per-language commands now come from [LanguageRegistry] —
+ * `gcc`/`g++`/`python3`/… instead of the retired TCC `cc` shim. This object
+ * keeps the quoting rules and the "join into one `cd … && …` line" shape the
+ * terminal handoff needs; the registry owns *what* is run.
  *
  * Pure functions so the quoting rules are unit-tested.
  */
@@ -13,46 +19,50 @@ object TerminalHandoff {
 
     const val DEFAULT_OUTPUT = "a.out"
 
+    /** Phase 21.1 — project-relative directory compiled binaries land in. */
+    const val PROJECT_BUILD_DIR = "bin"
+
     /**
      * POSIX-safe single-argument quoting. Unquoted when the string is a
      * conservative identifier; otherwise wrapped in single quotes with
      * embedded quotes escaped the usual `'\''` way.
      */
-    fun shellEscape(value: String): String {
-        if (value.isEmpty()) return "''"
-        val safe = value.all { ch ->
-            ch.isLetterOrDigit() || ch in "._-/=:@+,%"
-        }
-        if (safe) return value
-        return buildString(value.length + 8) {
-            append('\'')
-            for (ch in value) {
-                if (ch == '\'') append("'\\''") else append(ch)
-            }
-            append('\'')
-        }
-    }
+    fun shellEscape(value: String): String = LanguageRegistry.shellEscape(value)
 
     /**
      * Phase 11 — split [compileAndRunCommand] into its build and run halves so
-     * the Output Panel can report each phase separately. [build] compiles the
-     * saved source with the `cc` frontend; [run] executes the result in the
-     * source's directory.
+     * the Output Panel can report each phase separately.
+     *
+     * Phase 21 (owner, 2026-09-03): C compiles with `cc` — CodeC's built-in
+     * TCC frontend, the default engine — so `-o` stays LAST (the TCC link
+     * order invariant). C++ is not something TCC can build, so it uses g++
+     * from the installed LLVM toolchain.
      */
     fun compileParts(sourcePath: String, outputName: String = DEFAULT_OUTPUT): Pair<String, String> {
-        val source = File(sourcePath)
-        val build = "cc ${shellEscape(sourcePath)} -o ${shellEscape(outputName)}"
+        val isC = sourcePath.substringAfterLast('.', "").lowercase() == "c"
+        val build = if (isC) {
+            "cc ${shellEscape(sourcePath)} -o ${shellEscape(outputName)}"
+        } else {
+            "g++ ${shellEscape(sourcePath)} -o ${shellEscape(outputName)} -lm"
+        }
         val run = "./${shellEscape(outputName)}"
         return build to run
     }
 
     /**
-     * `cd` to the source directory, compile with `cc`, run `./a.out`.
-     * [sourcePath] should be an absolute path to a saved `.c` file.
+     * `cd` to the source directory, build (when the language needs it) and
+     * run the file. Phase 21.1: dispatches through [LanguageRegistry] for
+     * every language it knows, so a scratch `.py`/`.js`/`.rb` file opened in
+     * the terminal runs with its own interpreter instead of being fed to a
+     * C compiler. Falls back to the C/C++ compile line for anything else.
      */
     fun compileAndRunCommand(sourcePath: String, outputName: String = DEFAULT_OUTPUT): String {
         val source = File(sourcePath)
         val dir = source.parent ?: "."
+        val profile = LanguageRegistry.forFile(sourcePath)
+        if (profile != null && !profile.isWebPreview) {
+            LanguageRegistry.planFor(profile, dir, sourcePath, null)?.let { return it.terminal }
+        }
         val (build, run) = compileParts(sourcePath, outputName)
         return listOf(
             "cd ${shellEscape(dir)}",
@@ -104,10 +114,11 @@ object TerminalHandoff {
     /**
      * Phase 12 — split a project-file run into its build/run halves (or a
      * fallback terminal command when nothing is selected). Mirrors
-     * [projectFileRunCommand] exactly: a `.py` file has no build step and
-     * runs with python3; a C/C++ file compiles with `cc` into `<dir>/bin`
-     * and runs from there (the source tree stays clean). The Output Panel
-     * needs the halves separately; the terminal needs them joined.
+     * [projectFileRunCommand] exactly. Phase 21.1: the per-language shape
+     * comes from [LanguageRegistry] — interpreted files have no build step,
+     * compiled files build into `<dir>/bin` so the source tree stays clean.
+     * The Output Panel needs the halves separately; the terminal needs them
+     * joined.
      */
     fun projectFileParts(projectDirectory: File, relativePath: String): Triple<String?, String?, String> {
         val dir = projectDirectory.absolutePath
@@ -115,10 +126,15 @@ object TerminalHandoff {
         if (rel.isBlank()) {
             return Triple(null, null, "cd ${shellEscape(dir)} && echo 'run: no file selected'")
         }
-        val leaf = rel.substringAfterLast('/')
-        if (leaf.endsWith(".py", ignoreCase = true)) {
-            return Triple(null, "python3 ${shellEscape(rel)}", "cd ${shellEscape(dir)} && python3 ${shellEscape(rel)}")
+        // Phase 21.1 — every language the registry knows (C, C++, Python,
+        // Node, Go, Rust, PHP, Ruby, Lua, shell) runs through its profile;
+        // compiled output still lands in `<project>/bin` so the tree stays clean.
+        val profile = LanguageRegistry.forFile(rel)
+        if (profile != null && !profile.isWebPreview) {
+            val plan = LanguageRegistry.planFor(profile, dir, rel, PROJECT_BUILD_DIR)
+            if (plan != null) return Triple(plan.build, plan.run, plan.terminal)
         }
+        val leaf = rel.substringAfterLast('/')
         val out = (leaf.substringBeforeLast('.', leaf).ifBlank { "main" } + ".out")
             .replace(Regex("[^A-Za-z0-9._-]"), "_")
         val build = "mkdir -p bin && cc ${shellEscape(rel)} -o bin/$out"

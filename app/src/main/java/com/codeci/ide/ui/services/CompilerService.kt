@@ -72,7 +72,10 @@ class CompilerService(private val context: Context) {
         const val COMPILE_TIMEOUT_SECONDS = 30L
         const val EXECUTE_TIMEOUT_SECONDS = 10L
 
-        // Compiler engine selection (see Settings -> Compiler Engine).
+        // Phase 21 (owner, 2026-09-03): the Settings "Compiler Engine" picker
+        // was removed — TCC is the default and users install clang from
+        // Packages when they need it. These constants stay as the internal
+        // fallback chain; [BACKEND_AUTO] is now the only value callers pass.
         const val BACKEND_AUTO = "auto"
         const val BACKEND_EMBEDDED = "embedded"
         const val BACKEND_BUNDLED = "bundled"
@@ -89,22 +92,22 @@ class CompilerService(private val context: Context) {
                 "apps targeting API 29+, and some emulators/cloud phones mount app storage as " +
                 "non-executable). Fixes: 1) Update CodeC to the latest APK — new builds use the " +
                 "API 28 compatibility mode (the same one Termux uses); if it still fails, " +
-                "uninstall and reinstall the app once. 2) Or switch the compiler engine: " +
-                "Settings → Compiler Engine → Termux (install Termux from F-Droid/GitHub, run " +
+                "uninstall and reinstall the app once. 2) Or install the full toolchain: " +
+                "Packages → Clang / LLVM (or \"pkg install clang\" in the terminal). " +
+                "3) Or use Termux (install it from F-Droid/GitHub, run " +
                 "\"echo allow-external-apps=true >> ~/.termux/termux.properties && " +
                 "termux-reload-settings\", then grant CodeC the 'Run commands in Termux " +
-                "environment' permission). 3) Or compile in Termux directly — see the " +
-                "troubleshooting guide in the repo README."
+                "environment' permission). See the troubleshooting guide in the repo README."
         const val ARCH_MISMATCH =
             "The compiler can't run on this device's CPU (binary format not supported). CodeC " +
                 "ships an ARM64 compiler, so x86 emulators and 32-bit devices can't run it " +
                 "directly. On a real ARM64 phone, uninstall the module and download it again. " +
-                "Alternatively switch Settings → Compiler Engine → Termux — Termux ships a " +
-                "native Clang for your CPU (x86_64 and 32-bit ARM included)."
+                "Alternatively install clang from Packages — the CodeC repository ships a " +
+                "native build for your CPU."
         const val TOOLCHAIN_INCOMPLETE =
             "The compiler's runtime libraries are missing or corrupted. Open Modules, uninstall " +
-                "the compiler and download it again, or switch Settings → Compiler Engine → " +
-                "Termux to compile with Termux's Clang."
+                "the compiler and download it again, or install clang from Packages " +
+                "(\"pkg install clang\")."
         const val TERMUX_CLANG_MISSING =
             "Termux's Clang is not installed. Open Termux and run: pkg update && pkg install clang"
         const val TERMUX_NOT_INSTALLED =
@@ -178,10 +181,12 @@ class CompilerService(private val context: Context) {
      *  - [BACKEND_EMBEDDED]: the built-in TCC compiler shipped in the APK.
      *  - [BACKEND_BUNDLED]: the Clang downloaded in Modules.
      *  - [BACKEND_TERMUX]:  Termux's Clang.
-     *  - [BACKEND_AUTO] (default): built-in TCC first (works offline, no
-     *    download, on any ABI we ship); when it is unavailable, the bundled
-     *    Clang; when Android blocks that (W^X policy, noexec mounts, CPU
-     *    mismatch or broken toolchain) and Termux is installed, Termux.
+     *  - [BACKEND_AUTO] (default, and the only value the app passes since
+     *    Phase 21 removed the Settings picker): built-in TCC first (works
+     *    offline, no download, on any ABI we ship); when it is unavailable,
+     *    the bundled Clang; when Android blocks that (W^X policy, noexec
+     *    mounts, CPU mismatch or broken toolchain) and Termux is installed,
+     *    Termux.
      */
     suspend fun compile(
         code: String,

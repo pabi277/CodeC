@@ -22,13 +22,31 @@ class TerminalHandoffTest {
     }
 
     @Test
-    fun `compile and run uses cc then a out`() {
+    fun `compile and run uses the builtin cc then the out binary`() {
+        // Phase 21 (owner): TCC stays the default C compiler, so `cc` drives
+        // the C compile line and `-o` remains LAST (link-order invariant).
         val cmd = TerminalHandoff.compileAndRunCommand("/data/data/com.codeci.ide/files/CodeC/projects/main.c")
         assertEquals(
             "cd /data/data/com.codeci.ide/files/CodeC/projects && " +
-                "cc /data/data/com.codeci.ide/files/CodeC/projects/main.c -o a.out && " +
-                "./a.out",
+                "cc /data/data/com.codeci.ide/files/CodeC/projects/main.c -o main.out && " +
+                "./main.out",
             cmd
+        )
+    }
+
+    @Test
+    fun `compile and run dispatches interpreted languages to their interpreter`() {
+        assertEquals(
+            "cd /tmp/s && python3 /tmp/s/app.py",
+            TerminalHandoff.compileAndRunCommand("/tmp/s/app.py")
+        )
+        assertEquals(
+            "cd /tmp/s && node /tmp/s/app.js",
+            TerminalHandoff.compileAndRunCommand("/tmp/s/app.js")
+        )
+        assertEquals(
+            "cd /tmp/s && g++ /tmp/s/app.cpp -o app.out -lm && ./app.out",
+            TerminalHandoff.compileAndRunCommand("/tmp/s/app.cpp")
         )
     }
 
@@ -58,9 +76,11 @@ class TerminalHandoffTest {
 
     @Test
     fun `custom output name is escaped`() {
-        val cmd = TerminalHandoff.compileAndRunCommand("/tmp/x.c", "my prog")
-        assertTrue(cmd.contains("-o 'my prog'"))
-        assertTrue(cmd.endsWith("./'my prog'"))
+        // The registry-driven path names the binary after the source; the
+        // custom-name override still applies to the legacy compileParts form.
+        val (build, run) = TerminalHandoff.compileParts("/tmp/x.c", "my prog")
+        assertTrue(build.contains("-o 'my prog'"))
+        assertEquals("./'my prog'", run)
     }
 
     @Test
@@ -173,7 +193,8 @@ class TerminalHandoffTest {
         assertEquals("mkdir -p bin && cc src/tool.c -o bin/tool.out", build)
         assertEquals("./bin/tool.out", run)
         assertEquals(
-            "cd /data/CodeC/projects/p1 && mkdir -p bin && cc src/tool.c -o bin/tool.out && ./bin/tool.out",
+            "cd /data/CodeC/projects/p1 && mkdir -p bin && cc src/tool.c -o bin/tool.out && " +
+                "./bin/tool.out",
             terminal
         )
     }
@@ -185,6 +206,15 @@ class TerminalHandoffTest {
         assertEquals(null, build)
         assertEquals("python3 main.py", run)
         assertEquals("cd /tmp/p && python3 main.py", terminal)
+    }
+
+    @Test
+    fun `project file parts route every registry language`() {
+        val dir = java.io.File("/tmp/p")
+        assertEquals("ruby s.rb", TerminalHandoff.projectFileParts(dir, "s.rb").second)
+        assertEquals("lua s.lua", TerminalHandoff.projectFileParts(dir, "s.lua").second)
+        assertEquals("php s.php", TerminalHandoff.projectFileParts(dir, "s.php").second)
+        assertEquals("bash s.sh", TerminalHandoff.projectFileParts(dir, "s.sh").second)
     }
 
     @Test

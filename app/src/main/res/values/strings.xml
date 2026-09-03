@@ -159,6 +159,17 @@
     <string name="output_timed_out_input_hint">If it is waiting for input (scanf/gets), tap the terminal icon to run it interactively.</string>
     <string name="output_failed">Run failed: %1$s</string>
     <string name="output_no_command">No build or run command for this file</string>
+    <!-- Phase 21: LanguageRunProfile registry + toolchain auto-install gate -->
+    <string name="output_no_run_profile">CodeC has no run profile for this file type yet</string>
+    <string name="output_installing">Installing %1$s…</string>
+    <string name="output_install_ok">%1$s installed — continuing the run</string>
+    <string name="output_install_failed">Could not install %1$s</string>
+    <string name="output_language_unavailable">%1$s is not in the CodeC package repository yet</string>
+    <string name="install_prompt_title">Install %1$s?</string>
+    <string name="install_prompt_body">The %1$s package is required to run this file. It downloads once and works offline afterwards.</string>
+    <string name="install_prompt_size">Download size: %1$s</string>
+    <string name="install_prompt_confirm">Install</string>
+    <string name="install_prompt_cancel">Cancel</string>
     <!-- Phase 14: background server presets -->
     <string name="output_starting_server">Starting server…</string>
     <string name="output_server_running_at">Server running at %1$s</string>

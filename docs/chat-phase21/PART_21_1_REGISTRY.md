@@ -1,6 +1,6 @@
 # CodeC Phase 21.1 — `LanguageRunProfile` Registry + Wire into EditorViewModel
 
-**Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
+**Status:** ✅ **IMPLEMENTED** (2026-09-03, `arena/01a064e0-codec` — see [`PART_21_IMPLEMENTATION.md`](PART_21_IMPLEMENTATION.md) §3.1–3.5; §2.4 `useLegacyTcc` intentionally not added, rationale in §3.7) · **Cost:** `[client-only]`
 · **Depends on:** Phase 20.1 (gcc in the repo — needed for device acceptance in D.3,
   not for D.1 to compile)
 · **Target files:** `ui/services/LanguageRegistry.kt` (new),

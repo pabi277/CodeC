@@ -265,7 +265,7 @@ except ImportError:
     private const val C_SERVER = """/*
  * CodeC C microservice starter — Phase 14.
  * A tiny single-threaded HTTP server on http://127.0.0.1:8080, written to
- * compile with the embedded TCC (no external libraries):
+ * compile with the built-in TCC (no external libraries):
  *     cc server.c -o bin/server
  */
 #include <arpa/inet.h>

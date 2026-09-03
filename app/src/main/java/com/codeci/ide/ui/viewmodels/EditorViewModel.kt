@@ -36,7 +36,11 @@ import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.ExecutionRunner
+import com.codeci.ide.ui.services.InstallPromptState
 import com.codeci.ide.ui.services.InteractiveRunSession
+import com.codeci.ide.ui.services.LanguageRunPlanner
+import com.codeci.ide.ui.services.LanguageToolProbe
+import com.codeci.ide.ui.services.RunDecision
 import com.codeci.ide.ui.services.RunEvent
 import com.codeci.ide.ui.services.RunPhase
 import com.codeci.ide.ui.services.RunSpec
@@ -45,10 +49,10 @@ import com.codeci.ide.ui.services.ServerRunner
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.ShellBootstrap
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
-import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -129,6 +133,10 @@ class EditorViewModel : ViewModel() {
         const val MAX_TAB_FILE_BYTES = 256_000L
         /** Idle time after the last keystroke before the buffer is auto-saved. */
         private const val AUTO_SAVE_DELAY_MS = 2_000L
+        /** Phase 21.1 — project-relative directory compiled binaries land in. */
+        const val PROJECT_BUILD_DIR = "bin"
+        /** Phase 21.2 — a toolchain download may legitimately take minutes. */
+        private const val INSTALL_TIMEOUT_SECONDS = 900L
         private const val SCRATCH_KEY = "\u0000scratch"
         private val INITIAL_CODE = """
             #include <stdio.h>
@@ -287,6 +295,119 @@ class EditorViewModel : ViewModel() {
      */
     fun setWebPreviewHandler(handler: (String?, String) -> Unit) {
         webPreviewHandler = handler
+    }
+
+    // ---- Phase 21.2: language toolchain auto-install gate ------------------
+
+    private val _installPrompt = MutableStateFlow<InstallPromptState?>(null)
+
+    /**
+     * Set when the install gate fired for a SERVER project, so a successful
+     * install resumes the server instead of the active-file run path.
+     */
+    private var pendingServerProject: String? = null
+
+    /** Non-null while the "Install <tool>?" sheet is showing. */
+    val installPrompt: StateFlow<InstallPromptState?> = _installPrompt.asStateFlow()
+
+    /**
+     * Phase 21.2 — is the tool behind a language profile present under the
+     * CodeC userland prefix? A plain file-exists check on `$PREFIX/bin/<bin>`:
+     * fast, synchronous, no process spawn per RUN tap.
+     */
+    private fun isToolInstalled(binary: String): Boolean {
+        val ctx = appContext ?: return true // no context yet: never block the run
+        return LanguageToolProbe.isInstalled(ShellEnvironment.prefixDir(ctx.filesDir), binary)
+    }
+
+    private fun promptInstall(decision: RunDecision.NeedsInstall) {
+        _installPrompt.value = InstallPromptState(
+            packageName = decision.packageName,
+            displayName = decision.profile.displayName,
+            sizeHint = decision.profile.installSizeHint,
+        )
+    }
+
+    /** Cancel on the install sheet: dismiss, run nothing. */
+    fun dismissInstall() {
+        _installPrompt.value = null
+        pendingServerProject = null
+    }
+
+    /**
+     * Install on the sheet: streams `pkg install -y <pkg>` into the Output
+     * Panel through the same [ExecutionRunner] the run pipeline uses, then —
+     * on exit code 0 — re-enters [runActiveFile] so the user does not have to
+     * tap RUN ▶ twice. On failure the error stays in the panel; no retry loop.
+     */
+    fun confirmInstall(context: Context) {
+        val prompt = _installPrompt.value ?: return
+        _installPrompt.value = null
+        if (_outputState.value.busy) return
+        val ctx = context.applicationContext
+        captureContext(ctx)
+        val command = LanguageRunPlanner.installCommand(prompt.packageName)
+        _outputExpanded.value = true
+        _outputState.value = OutputRunState(
+            phase = OutputPhase.BUILDING,
+            busy = true,
+            lines = listOf(OutputLine("$ $command", OutputLineKind.COMMAND)),
+            summary = ctx.getString(R.string.output_installing, prompt.displayName),
+            lastTerminalCommand = command
+        )
+        runJob = viewModelScope.launch {
+            val settings = compilerSettingsFrom(SettingsManager(ctx))
+            val prepared = withContext(Dispatchers.IO) { ShellBootstrap(ctx).prepare(settings) }
+            val runner = ExecutionRunner(
+                prepared.shell,
+                prepared.env,
+                buildTimeoutSeconds = INSTALL_TIMEOUT_SECONDS
+            )
+            var installExit = -1
+            try {
+                val home = File(prepared.env["HOME"] ?: ctx.filesDir.absolutePath)
+                runner.run(RunSpec(home, command, null)).collect { event ->
+                    when (event) {
+                        is RunEvent.Output ->
+                            appendOutputLine(OutputLine(event.line, OutputLineKind.BUILD))
+                        is RunEvent.BuildFinished -> installExit = event.exitCode
+                        is RunEvent.Failed -> failRun(ctx, event.message)
+                        else -> Unit
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                failRun(ctx, e.message ?: "Install failed")
+                return@launch
+            }
+            if (installExit == 0) {
+                _outputState.value = _outputState.value.copy(
+                    busy = false,
+                    lines = _outputState.value.lines + OutputLine(
+                        ctx.getString(R.string.output_install_ok, prompt.displayName),
+                        OutputLineKind.STATS
+                    )
+                )
+                val serverProject = pendingServerProject
+                pendingServerProject = null
+                if (serverProject != null) {
+                    ProjectManager(ctx).project(serverProject)?.let { startServerRun(ctx, it) }
+                } else {
+                    runActiveFile(ctx)
+                }
+            } else {
+                _outputState.value = _outputState.value.copy(
+                    phase = OutputPhase.FAILED,
+                    busy = false,
+                    summary = ctx.getString(R.string.output_install_failed, prompt.displayName),
+                    lines = _outputState.value.lines + OutputLine(
+                        ctx.getString(R.string.output_install_failed, prompt.displayName),
+                        OutputLineKind.ERROR
+                    )
+                )
+            }
+        }
     }
 
     override fun onCleared() {
@@ -1510,6 +1631,7 @@ class EditorViewModel : ViewModel() {
     fun runActiveFile(context: Context) {
         if (_outputState.value.busy) return
         val appContext = context.applicationContext
+        captureContext(appContext)
         if (!saveFile(appContext)) {
             _userMessage.value = appContext.getString(R.string.file_save_failed)
             return
@@ -1521,6 +1643,8 @@ class EditorViewModel : ViewModel() {
         val buildCommand: String?
         val runCommand: String?
         val terminalCommand: String
+        // Phase 21.1 — the registry says whether the program wants a PTY.
+        var preferInteractive = true
         if (project != null) {
             val info = ProjectManager(appContext).project(project)
             if (info == null) {
@@ -1572,45 +1696,96 @@ class EditorViewModel : ViewModel() {
             // The project.json build/run still drives everything else
             // (headers, text, custom multi-file builds).
             val activeRel = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
-            val activeLang = activeRel?.let { LanguageType.fromFileName(it) }
-            val activeFile = activeRel?.let { ProjectPathUtils.resolveInside(info.root, it) }
-            if (activeLang == LanguageType.PYTHON && activeFile != null) {
-                // Device round fix 2026-08-31: python writes __pycache__ and
-                // `git add -A` used to stage it — exclude it repo-locally
-                // BEFORE the run so the git panel never offers cache files.
-                viewModelScope.launch(Dispatchers.IO) { PythonCacheIgnore.ensure(info.root) }
-                val (build, run) = TerminalHandoff.interpretedParts(activeFile.absolutePath)
-                buildCommand = build
-                runCommand = run
-                terminalCommand = TerminalHandoff.interpretedRunCommand(activeFile.absolutePath)
-            } else if ((activeLang == LanguageType.C || activeLang == LanguageType.CPP) && activeRel != null) {
-                val (build, run, terminal) = TerminalHandoff.projectFileParts(info.root, activeRel)
-                buildCommand = build
-                runCommand = run
-                terminalCommand = terminal
-            } else {
-                val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, config)
-                buildCommand = build
-                runCommand = run
-                terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, config)
+            // Phase 21.1 — one generic dispatch through LanguageRegistry
+            // replaces the old per-language `when` (python / c / cpp / else).
+            // A file the registry does not claim still falls back to the
+            // project.json build/run configuration.
+            val decision = activeRel?.let {
+                LanguageRunPlanner.decide(
+                    sourceRef = it,
+                    workDir = info.root.absolutePath,
+                    outputDir = PROJECT_BUILD_DIR,
+                    toolInstalled = ::isToolInstalled,
+                )
+            }
+            when (decision) {
+                is RunDecision.WebPreview -> {
+                    webPreviewHandler?.invoke(info.name, activeRel!!)
+                    return
+                }
+                is RunDecision.NeedsInstall -> {
+                    promptInstall(decision)
+                    return
+                }
+                is RunDecision.Unavailable -> {
+                    _userMessage.value = appContext.getString(
+                        R.string.output_language_unavailable, decision.profile.displayName
+                    )
+                    return
+                }
+                is RunDecision.Execute -> {
+                    if (decision.profile.displayName == "Python") {
+                        // Device round fix 2026-08-31: python writes
+                        // __pycache__ and `git add -A` used to stage it —
+                        // exclude it repo-locally BEFORE the run.
+                        viewModelScope.launch(Dispatchers.IO) { PythonCacheIgnore.ensure(info.root) }
+                    }
+                    buildCommand = decision.plan.build
+                    runCommand = decision.plan.run
+                    terminalCommand = decision.plan.terminal
+                    preferInteractive = decision.profile.interactive
+                }
+                else -> {
+                    val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, config)
+                    // Same gate for a custom project.json build/run pair.
+                    LanguageRunPlanner.toolchainForCommands(
+                        listOf(build, run), ::isToolInstalled
+                    )?.let { needed ->
+                        promptInstall(needed)
+                        return
+                    }
+                    buildCommand = build
+                    runCommand = run
+                    terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, config)
+                }
             }
         } else {
             val path = saveAndAbsolutePath(appContext) ?: return
             val source = File(path)
             workDir = source.parentFile ?: File(appContext.filesDir, "CodeC/projects")
-            // Phase 12: script files (.py) run directly with python3 — there
-            // is no compile step, so the panel reports RUNNING immediately.
-            val isPython = LanguageType.fromFileName(source.name) == LanguageType.PYTHON
-            if (isPython) {
-                val (build, run) = TerminalHandoff.interpretedParts(path)
-                buildCommand = build
-                runCommand = run
-                terminalCommand = TerminalHandoff.interpretedRunCommand(path)
-            } else {
-                val (build, run) = TerminalHandoff.compileParts(path)
-                buildCommand = build
-                runCommand = run
-                terminalCommand = TerminalHandoff.compileAndRunCommand(path)
+            // Phase 21.1 — scratch files dispatch through the same registry.
+            when (
+                val decision = LanguageRunPlanner.decide(
+                    sourceRef = path,
+                    workDir = workDir.absolutePath,
+                    outputDir = null,
+                    toolInstalled = ::isToolInstalled,
+                )
+            ) {
+                is RunDecision.WebPreview -> {
+                    webPreviewHandler?.invoke(null, source.name)
+                    return
+                }
+                is RunDecision.NeedsInstall -> {
+                    promptInstall(decision)
+                    return
+                }
+                is RunDecision.Unavailable -> {
+                    _userMessage.value = appContext.getString(
+                        R.string.output_language_unavailable, decision.profile.displayName
+                    )
+                    return
+                }
+                is RunDecision.Execute -> {
+                    buildCommand = decision.plan.build
+                    runCommand = decision.plan.run
+                    terminalCommand = decision.plan.terminal
+                    preferInteractive = decision.profile.interactive
+                }
+                is RunDecision.Unsupported -> {
+                    _userMessage.value = appContext.getString(R.string.output_no_run_profile)
+                    return
+                }
             }
         }
         if (buildCommand.isNullOrBlank() && runCommand.isNullOrBlank()) {
@@ -1707,7 +1882,7 @@ class EditorViewModel : ViewModel() {
                     summary = appContext.getString(R.string.output_running)
                 )
                 val runStart = System.currentTimeMillis()
-                val interactive = InteractiveRunSession.start(
+                val interactive = if (!preferInteractive) null else InteractiveRunSession.start(
                     command = runCommand,
                     workDir = workDir,
                     env = prepared.env,
@@ -1780,6 +1955,18 @@ class EditorViewModel : ViewModel() {
         val runCommand = config.run.trim().takeIf { it.isNotEmpty() }
         if (buildCommand == null && runCommand == null) {
             _userMessage.value = context.getString(R.string.output_no_command)
+            return
+        }
+        // Phase 21 device round 2: a server preset runs its configured command
+        // verbatim and never touched the registry, so a device without
+        // python3 got a bare "command not found" / exit 127 instead of the
+        // install gate. Gate on the programs the commands actually invoke.
+        captureContext(context)
+        LanguageRunPlanner.toolchainForCommands(
+            listOf(buildCommand, runCommand), ::isToolInstalled
+        )?.let { needed ->
+            pendingServerProject = info.name
+            promptInstall(needed)
             return
         }
         _outputExpanded.value = true

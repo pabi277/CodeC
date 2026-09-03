@@ -1,7 +1,18 @@
 # CodeC Phase 21.4 — Remove TCC Entirely
 
-**Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
-· **Depends on:** Phase 21.3 device acceptance (CONFIRMED by owner) — **irreversible, do not start early**
+**Status:** ❌ **CANCELLED (2026-09-03, owner direction)** — TCC is **not**
+being removed. The owner's decision after D.3 passed: *"remove the option of
+compiler Setting and make the tcc default but if need user can install gcc"*.
+TCC is the default C compiler; clang is installed on demand for C++/C11.
+Rationale and what shipped instead (D22/D23) are in
+[`PART_21_IMPLEMENTATION.md`](PART_21_IMPLEMENTATION.md) §9.
+
+> ⚠️ **Do not execute the checklist below.** It is retained only as the record
+> of what was planned. `cc` is CodeC's own TCC frontend and is protected by the
+> cc invariant (Phase 20.1 D5/D15); the TCC link-order invariant (`-o` last)
+> **remains in force**.
+
+· **Cost:** `[client-only]`
 · **Target files:** `app/src/main/assets/tcc/` (delete), `app/src/main/jniLibs/` (remove libtcc.so),
   `app/src/main/java/com/codeci/ide/ui/services/EmbeddedCompiler.kt` (delete),
   `app/build.gradle.kts` (remove TCC abiFilters/jniLibs if present),

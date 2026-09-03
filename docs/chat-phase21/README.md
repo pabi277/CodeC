@@ -1,6 +1,6 @@
 # CodeC Phase 21 — Compiler Engine Redesign: Drop TCC, LanguageRunProfile Registry
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 21" command.
+**Status:** ✅ **COMPLETE (2026-09-03, `arena/01a064e0-codec`)** — D.1 + D.2 implemented, **D.3 device PASSED**, **D.4 CANCELLED by owner** (TCC stays as the default C compiler; the Settings engine picker was removed instead — D22/D23). Implementation record: [`PART_21_IMPLEMENTATION.md`](PART_21_IMPLEMENTATION.md).
 · **Cost:** `[client-only]` — app Kotlin code only; no new `[repo-build]`
 · **Depends on:** Phase 20.1 (gcc/clang in the CodeC repo so `pkg install gcc` works on-device)
 · **Blocks:** Phase 24 (E.2 formatter uses `formatterTemplate` from the registry)
@@ -33,10 +33,10 @@ a list — not new Kotlin code, not a new branch in `runActiveFile`.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **D.1** | `LanguageRunProfile` registry + wire into `EditorViewModel` | The data model + registry; `runActiveFile` dispatches through it; TCC path stays as a feature-flag fallback | [PART_21_1_REGISTRY.md](PART_21_1_REGISTRY.md) |
-| **D.2** | Auto-install gate | Before first RUN of a file whose `requiredPackage` is missing, show "Install X?" prompt and install; same flow as Python Phase 12 | [PART_21_2_AUTOINSTALL.md](PART_21_2_AUTOINSTALL.md) |
-| **D.3** | Device acceptance: gcc compiles C/C++ end-to-end | Owner runs a C file and a C++ file through the new path on device; TCC fallback still in Settings | [PART_21_3_ACCEPTANCE.md](PART_21_3_ACCEPTANCE.md) |
-| **D.4** | Remove TCC entirely | Delete `assets/tcc/`, `EmbeddedCompiler` TCC path, `scripts/build-tcc.sh`, `useLegacyTcc` flag; APK shrinks | [PART_21_4_REMOVE_TCC.md](PART_21_4_REMOVE_TCC.md) |
+| **D.1** ✅ | `LanguageRunProfile` registry + wire into `EditorViewModel` | The data model + registry; `runActiveFile` dispatches through it; TCC path stays as a feature-flag fallback | [PART_21_1_REGISTRY.md](PART_21_1_REGISTRY.md) |
+| **D.2** ✅ | Auto-install gate | Before first RUN of a file whose `requiredPackage` is missing, show "Install X?" prompt and install; same flow as Python Phase 12 | [PART_21_2_AUTOINSTALL.md](PART_21_2_AUTOINSTALL.md) |
+| **D.3** ✅ | Device acceptance: gcc compiles C/C++ end-to-end | Owner runs a C file and a C++ file through the new path on device; TCC fallback still in Settings | [PART_21_3_ACCEPTANCE.md](PART_21_3_ACCEPTANCE.md) |
+| **D.4** ❌ | ~~Remove TCC entirely~~ **CANCELLED** | Delete `assets/tcc/`, `EmbeddedCompiler` TCC path, `scripts/build-tcc.sh`, `useLegacyTcc` flag; APK shrinks | [PART_21_4_REMOVE_TCC.md](PART_21_4_REMOVE_TCC.md) |
 
 ---
 

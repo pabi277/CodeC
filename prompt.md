@@ -18,7 +18,59 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-03, Phase 20.1 COMPLETE & merged):**
+**WHERE THINGS STAND (2026-09-03, Phase 21 COMPLETE & MERGED to `main`):**
+
+- **Phase 21 (`LanguageRunProfile` registry + generic multi-language run) is
+  ✅ COMPLETE, DEVICE-ACCEPTED and MERGED to `main`** by owner command
+  (2026-09-03, from `arena/01a064e0-codec`; base was `3fa71ab`). Verify the
+  new tip with `git ls-remote origin main` — the local clone is shallow.
+  **⚠️ The headline is the opposite of what the Phase 21 spec says: TCC was
+  NOT removed. It is the DEFAULT C compiler.** Read
+  `docs/chat-phase21/PART_21_IMPLEMENTATION.md` §9 before touching anything
+  compiler-related; `PART_21_4_REMOVE_TCC.md` is marked ❌ CANCELLED — do not
+  execute its checklist.
+  - **What shipped (D.1/D.2):** four Android-free, host-testable files —
+    `LanguageRegistry` (12 profiles: C, C++, Python, JS, TS, Go, Rust, PHP,
+    Ruby, Lua, Shell, HTML; `$SRC`/`$OUT` templating; `shellEscape` moved here
+    from `TerminalHandoff`, which now delegates), `LanguageRunPlanner`
+    (sealed `RunDecision`: WebPreview | NeedsInstall | Unavailable | Execute |
+    Unsupported), `LanguageToolProbe` (`$PREFIX/bin/<binary>` exists — no
+    `pkg` query per RUN tap), `InstallPromptState`.
+    `EditorViewModel.runActiveFile` no longer switches on `LanguageType`;
+    **adding a language is one entry in `LanguageRegistry.profiles`.**
+  - **Auto-install gate (D.2):** a missing toolchain prompts
+    "Install <language>?" (size hint only for heavy roots), streams
+    `pkg update && pkg install -y <pkg>` into the Output Panel via
+    `ExecutionRunner` (900 s timeout), then resumes the run automatically on
+    exit 0. Server projects resume via `pendingServerProject`.
+  - **TCC is the default (D22/D23, owner direction):** the Settings →
+    Compiler Engine picker (Auto/TCC/Bundled/Termux) and the
+    `COMPILER_BACKEND` preference are **deleted** — one read-only "Compiler"
+    line replaces them; `CompilerService` keeps `BACKEND_*` as its internal
+    fallback chain with `BACKEND_AUTO` the only value any caller passes.
+    A `.c` file compiles with the built-in **`cc`** frontend and has **no
+    install gate at all** (offline, instant, no download). `.cpp` keeps its
+    `clang` gate because TCC cannot build C++.
+  - **Three device rounds** (all owner-found, all fixed): D17 — there is **no
+    `gcc` package**; Phase 20.1 publishes **`clang`**, whose deb ships the
+    `gcc`/`g++` driver symlinks (apt itself said "the following packages
+    replace it: libllvm"). D18 — `golang`/`rust` were never published →
+    `inRepository = false` → an honest "not in the repository yet" instead of
+    a doomed install. D19 — the gate must `pkg update` first. D20 — the gate
+    only covered the active-file path; **server presets and custom
+    `project.json` build/run pairs execute verbatim** → new
+    `toolchainForCommands` gates raw command strings by the leading program of
+    each `&&`/`;`/`|` segment. D21 — the `c-microservice` preset's compiler.
+  - **⚠️ CodeC has FIVE run paths**, not one — active file, project file,
+    project config, server preset, terminal handoff. The Phase 21 spec
+    described only the first, and that assumption caused both gate bugs. Check
+    all five for any future run-related change.
+  - CI green: `33704697218`, `33706730106`, `33710216905`, `33712841947`.
+    Record: `docs/chat-phase21/PART_21_IMPLEMENTATION.md` §1–§9.
+- **Post-merge device sanity check the owner may still want:** a `.c` file
+  should run with **no** install prompt, and Settings should show a single
+  read-only "Compiler" line (no engine dropdown).
+- **Phase 20.1 background (COMPLETE & merged):**
 
 - **`main` includes Phase 20.1** — the toolchain round merged from
   `arena/01a05cb9-codec` by owner command (2026-09-03; before that `main` =
@@ -98,21 +150,25 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
-- **ALL PHASES COMPLETE.** No spec'd implementation remains. The agent waits
-  for the owner to report a bug — listen carefully, find the underlying code
-  problem, solve it. No self-initiated work.
+- **Phase 21 is COMPLETE, device-accepted and MERGED.** No spec'd
+  implementation work is in flight. **Phases 22, 23 and 24 remain PLANNED and
+  fully spec'd — the agent does NOT start one until the owner says "Start
+  Phase 22" (or 23/24).** Between phases the agent waits for the owner to
+  report a bug — listen carefully, find the underlying code problem, solve it.
+  No self-initiated work.
 
-**NEW PLANNED PHASES (2026-09-01, owner direction):**
-Phases 21/22/23/24 are fully spec'd — no code written yet; **Phase 20.1 is
-COMPLETE and merged (20.2 heavy roots behind `[repo-build-heavy]` remains a
-design pivot, not started)**.
+**PHASE STATUS (updated 2026-09-03):**
+Phases 22/23/24 are fully spec'd, no code written yet. **Phase 20.1 and
+Phase 21 are COMPLETE and merged** (20.2 heavy roots behind
+`[repo-build-heavy]` remains a design pivot, not started).
 - **Phase 22** (editor smoothness + IME-anchored keys) — `docs/chat-phase22/`
 - **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
 - **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
-- **Phase 21** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — `docs/chat-phase21/`
+- **Phase 21** (`LanguageRunProfile` registry, generic multi-language run; TCC KEPT as the default C compiler) — ✅ COMPLETE (D.1/D.2/D.3 done, D.4 cancelled, D22/D23 shipped) — `docs/chat-phase21/`
 - **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
-Recommended order: 21 → 22 → 23 → 24 (21 and 22 can run in parallel).
-**Owner starts a phase by saying "Start Phase 20" (or 21/22/23/24) in chat.**
+Recommended order for what remains: **22 → 23 → 24** (22 and 23 both touch the
+editor/terminal — do not run them in parallel).
+**Owner starts a phase by saying "Start Phase 22" (or 23/24) in chat.**
 
 **FUTURE-UPDATE MODE (owner, 2026-09-01):** Phases A–E are planned but not
 started. The agent **waits for the owner to say "Start Phase X"** — it does
@@ -140,8 +196,10 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 - **RESEARCH WHEN NEEDED (2026-08-31):** phase docs are a starting point;
   research open questions, record "Research notes" with linked sources.
 - **Invariants (law):** no `.` on `PATH`; never `build-package.sh -I`; never
-  overwrite `cc` or real ELF `bash` with a shim; TCC link order with `-o`
-  last; never official `com.termux` packages/repos; never bundle the
+  overwrite `cc` or real ELF `bash` with a shim (`cc` is CodeC's own TCC
+  frontend — Phase 20.1 strips `bin/cc` from the clang deb to protect it);
+  TCC link order with `-o` last (**PERMANENT** — D.4 cancelled 2026-09-03,
+  TCC is the DEFAULT C compiler); never official `com.termux` packages/repos; never bundle the
   bootstrap in the APK; repository metadata stays signed (`signed-by=`, no
   `trusted=yes`); clean-room. Full list: `docs/TERMINAL_PLAN.md` §B/§J,
   `docs/chat-phase1/SOLUTIONS.md`, `docs/chat-phase3/REPOSITORY_SIGNING.md`.
