@@ -134,7 +134,8 @@ class LanguageRunPlannerTest {
         val decision = LanguageRunPlanner.decide(
             "/files/CodeC/projects/hello.c", "/files/CodeC/projects", null, allInstalled
         ) as RunDecision.Execute
-        assertEquals("gcc /files/CodeC/projects/hello.c -o hello.out -lm", decision.plan.build)
+        // Built-in TCC frontend, -o last (link-order invariant).
+        assertEquals("cc /files/CodeC/projects/hello.c -o hello.out", decision.plan.build)
         assertEquals("./hello.out", decision.plan.run)
     }
 
