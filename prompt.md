@@ -18,12 +18,12 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-03, Phase 22 MERGED — Phase 23 COMPLETE & DEVICE-ACCEPTED, awaiting merge):**
+**WHERE THINGS STAND (2026-09-03, Phases 22 & 23 both MERGED to `main`):**
 
-- **Phase 23 (Interactive Run UX) is ✅ COMPLETE & DEVICE-ACCEPTED on
-  `arena/01a06662-codec` (`Build APK` `33735687876`; owner: "Start Phase 23"
-  → "Phone test passed").** Two client-only parts, both done and both §4
-  device recipes passed on device:
+- **Phase 23 (Interactive Run UX) is ✅ COMPLETE, DEVICE-ACCEPTED & MERGED
+  to `main` via PR #46 (`e867777`, 2026-09-03) from `arena/01a06662-codec`
+  (`Build APK` `33735687876`; owner: "Start Phase 23" → "Phone test passed").
+  Two client-only parts, both done and both §4 device recipes passed on device:
   - **B.1 — inline PTY input:** the Output Panel's separate input row
     (`OutputInputRow`) is **deleted**; an `InlineInputRow` renders as the last
     `LazyColumn` item of the panel whenever `OutputRunState.waitingForInput`
@@ -56,9 +56,8 @@ gate, invariants, docs policy) — follow it.
     Ctrl+C killed the program, and the editor keys returned after the run.
     One for-cause red CI round (`33735482625`, missing
     `kotlinx.coroutines.flow.update` import) was fixed before the green run.
-  - **NEXT ACTION: owner merges** (agent opens PR + merges on the owner's
-    command, per `rule.md` §3). Do **not** start Phase 24 until the owner
-    says "Start Phase 24".
+  - **Merged to `main` via PR #46 at `e867777` (2026-09-03 13:36 UTC).** Do
+    **not** start Phase 24 until the owner says "Start Phase 24".
 
 - **Phase 22 (editor smoothness + IME-anchored keys) is ✅ MERGED to `main`
   via PR #45 (2026-09-03; `main` tip `7173494`, post-merge CI
@@ -245,23 +244,23 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
-- **Phase 22 is MERGED to `main` (PR #45).** **Phase 23 is ✅ COMPLETE &
-  DEVICE-ACCEPTED on `arena/01a06662-codec` (`33735687876`; owner:
-  "Phone test passed") — awaiting only the merge command. Phase 24 remains
-  PLANNED and fully spec'd — the agent does NOT start it until the owner says
-  "Start Phase 24".** Between phases the agent waits for the owner to report a
-  bug — listen carefully, find the underlying code problem, solve it. No
-  self-initiated work.
+- **Phase 22 is MERGED to `main` (PR #45).** **Phase 23 is ✅ COMPLETE,
+  DEVICE-ACCEPTED & MERGED to `main` (PR #46 @ `e867777`) from
+  `arena/01a06662-codec` (`33735687876`; owner: "Phone test passed").
+  Phase 24 remains PLANNED and fully spec'd — the agent does NOT start it
+  until the owner says "Start Phase 24".** Between phases the agent waits for
+  the owner to report a bug — listen carefully, find the underlying code
+  problem, solve it. No self-initiated work.
 
 **PHASE STATUS (updated 2026-09-03):**
 Phase 22 is ✅ MERGED to `main` (PR #45, tip `7173494`). **Phase 23 is ✅
-COMPLETE & DEVICE-ACCEPTED on `arena/01a06662-codec` (owner: "Start Phase
-23" → "Phone test passed"; `Build APK` `33735687876`); awaiting the owner's
-merge command.** Phase 24 is fully spec'd, no code written yet. **Phase 20.1 and
+COMPLETE, DEVICE-ACCEPTED & MERGED to `main` (PR #46 @ `e867777`) from
+`arena/01a06662-codec` (owner: "Start Phase 23" → "Phone test passed";
+`Build APK` `33735687876`).** Phase 24 is fully spec'd, no code written yet. **Phase 20.1 and
 Phase 21 are COMPLETE and merged** (20.2 heavy roots behind
 `[repo-build-heavy]` remains a design pivot, not started).
 - **Phase 22** (editor smoothness + IME-anchored keys) — ✅ MERGED via PR #45 (2026-09-03) — `docs/chat-phase22/`
-- **Phase 23** (inline PTY input + run keys; remove Output Panel input box) — ✅ COMPLETE & DEVICE-ACCEPTED, awaiting merge — `docs/chat-phase23/`
+- **Phase 23** (inline PTY input + run keys; remove Output Panel input box) — ✅ COMPLETE, DEVICE-ACCEPTED & MERGED via PR #46 — `docs/chat-phase23/`
 - **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
 - **Phase 21** (`LanguageRunProfile` registry, generic multi-language run; TCC KEPT as the default C compiler) — ✅ COMPLETE (D.1/D.2/D.3 done, D.4 cancelled, D22/D23 shipped) — `docs/chat-phase21/`
 - **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
@@ -340,12 +339,10 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. Phase 22 is **merged to `main` (PR #45)**. Phase 23 is **COMPLETE &
-   DEVICE-ACCEPTED on `arena/01a06662-codec` (`33735687876`; owner:
-   "Phone test passed") — awaiting only the owner's merge command.** Phase 24
-   must not start until the owner says "Start Phase 24". Otherwise the agent
-   is in **bug-wait mode**: do nothing until the owner reports a bug or says
-   "Start Phase 24". No self-initiated work.
+2. Phases 22 and 23 are **both merged to `main`** (PR #45, PR #46 @
+   `e867777`). Phase 24 must not start until the owner says "Start Phase 24".
+   Otherwise the agent is in **bug-wait mode**: do nothing until the owner
+   reports a bug or says "Start Phase 24". No self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,

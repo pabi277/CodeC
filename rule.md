@@ -171,9 +171,10 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-03, Phase 23 device-accepted)
+## 9. State snapshot (2026-09-03, Phase 23 merged)
 
-- **`main` = `7173494`** — Phase 22 via **PR #45** (merged 2026-09-03).
+- **`main` = `e867777`** — Phase 23 via **PR #46** (merged 2026-09-03) over
+  `7173494` = Phase 22 via **PR #45** (merged 2026-09-03).
   Before that: PR #43 Phase 21, PR #41 Website W0, PR #40 Phases 20–24 design
   docs, PR #39 git fixes, PR #38 Phase 18, PR #37 Phase 17, PR #36 Phases
   15/16, PR #34 Phase 19, PR #32 Phase 14, PR #30 Phase 12, PR #29 Phase 11.
@@ -183,11 +184,11 @@ Every update updates the docs **in the same commit**:
   DEVICE-VERIFIED 6/6 and merged. **Phase 21** (LanguageRunProfile; TCC KEPT
   as the default C compiler) COMPLETE, DEVICE-ACCEPTED and merged. **Phase 22**
   (editor smoothness + IME keys) MERGED via PR #45.
-- **Phase 23 (Interactive Run UX) ✅ COMPLETE & DEVICE-ACCEPTED** on
-  `arena/01a06662-codec` (`Build APK` `33735687876`; owner: "Start Phase 23"
-  → "Phone test passed"). B.1 inline PTY input (remove `OutputInputRow`) +
-  B.2 run keys (`↵ Enter`/`Ctrl+C`/`Tab`/history). Awaiting the owner's merge
-  command (this session's PR). Record: `docs/chat-phase23/`.
+- **Phase 23 (Interactive Run UX) ✅ COMPLETE, DEVICE-ACCEPTED & MERGED** via
+  **PR #46** (`e867777`) from `arena/01a06662-codec` (`Build APK`
+  `33735687876`; owner: "Start Phase 23" → "Phone test passed"). B.1 inline
+  PTY input (remove `OutputInputRow`) + B.2 run keys
+  (`↵ Enter`/`Ctrl+C`/`Tab`/history). Record: `docs/chat-phase23/`.
 - **Phase 24 remains PLANNED** (fully spec'd in `docs/chat-phase24/`) — the
   agent does **not** start it until the owner says "Start Phase 24".
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
