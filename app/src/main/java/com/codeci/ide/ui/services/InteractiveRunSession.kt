@@ -74,6 +74,19 @@ class InteractiveRunSession private constructor(
         }
     }
 
+    /**
+     * Phase 23.2 — deliver a signal to the running program. Ctrl+C (SIGINT)
+     * is the run-keys use case; `PtyNative.kill` already targets the child's
+     * process group, so the shell and the program both receive it.
+     */
+    fun sendSignal(signal: Int) {
+        if (stopped) return
+        try {
+            PtyNative.kill(session.pid, signal)
+        } catch (_: Exception) {
+        }
+    }
+
     /** Kills the program and frees the PTY. */
     fun stop() {
         if (stopped) return

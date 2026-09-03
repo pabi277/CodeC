@@ -18,14 +18,47 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-03, Phase 22 IMPLEMENTED — owner stopped testing, awaiting merge):**
+**WHERE THINGS STAND (2026-09-03, Phase 22 MERGED — Phase 23 IMPLEMENTED, CI pending):**
 
-- **Phase 22 (editor smoothness + IME-anchored keys) is 🟡 IMPLEMENTED and
-  CI-GREEN on `arena/01a065a0-codec` (head `a39a5d6`, run `33728936911`) —
-  NOT merged.** Owner started it with "start phase 22", then ran **five
-  device-feedback rounds** and closed with *"Ok i will no check any more
-  leave as it is now"* — i.e. **testing has stopped and the current state is
-  accepted; the only remaining move is the owner's merge command.**
+- **Phase 23 (Interactive Run UX) is 🟡 IMPLEMENTED on `arena/01a06662-codec`
+  (owner: "Start Phase 23") — CI pending.** Two client-only parts, both done:
+  - **B.1 — inline PTY input:** the Output Panel's separate input row
+    (`OutputInputRow`) is **deleted**; an `InlineInputRow` renders as the last
+    `LazyColumn` item of the panel whenever `OutputRunState.waitingForInput`
+    is set (only while a PTY interactive run is live). `singleLine` +
+    `ImeAction.Send` + `KeyboardActions(onSend)` (the same shape the old row
+    used) submits via `InteractiveRunSession.sendLine`; the `↵` icon stays.
+    `waitingForInput` is set when `InteractiveRunSession.start` returns
+    non-null and cleared in every terminal transition (`finishRun`/`failRun`/
+    `stopRun`/`finishFailedBuild`/`finishServerExit`); each run starts with a
+    fresh `inputBuffer`. Auto-scroll now keys on `(lines.size,
+    waitingForInput)` and pins the field while waiting.
+  - **B.2 — run keys in the IME strip:** while an interactive run waits for
+    input, the Phase 22.2 strip shows `↵ Enter` / `Ctrl+C` / `Tab` / `↑` /
+    `↓` instead of the editor keys (editor keys restore when the run ends).
+    Strip choice derives from `outputState.waitingForInput` alone
+    (`KeysContext.InteractiveRun` vs `KeysContext.Editor(language)`).
+    `↵ Enter` → `submitInput()`; `Ctrl+C` → `interruptRun()` →
+    `InteractiveRunSession.sendSignal(SIGINT)` → the **existing**
+    `PtyNative.kill` (child process group) — **no JNI/native change**; `Tab`
+    → `appendInput("\t")`; `↑`/`↓` are placeholders (REPL history later).
+  - **New pure code:** `ui/editor/RunKeySet.kt`, `ui/editor/KeysContext.kt`,
+    `ui/services/InteractiveInputBuffer.kt`; `EditorKeysRow` refactored to a
+    precomputed-keys signature + shared `KeyCap` (`RunKeysRow` added);
+    `OutputPanelView` signature `onSendInput` → `onInputChange`/
+    `onSubmitInput`. Host tests: `RunKeySetTest` ×8,
+    `InteractiveInputBufferTest` ×7.
+  - **NEXT ACTION: CI must go green, then the owner runs the two §4 device
+    recipes in `docs/chat-phase23/`** (B.1 scanf → "Hello, Alice!"; B.2 run
+    keys above the keyboard + Ctrl+C → "Killed"/130 + editor keys restore),
+    then merges. Do **not** start Phase 24 before 23 is accepted.
+
+- **Phase 22 (editor smoothness + IME-anchored keys) is ✅ MERGED to `main`
+  via PR #45 (2026-09-03; `main` tip `7173494`, post-merge CI
+  `33730937920` green).** It was implemented on `arena/01a065a0-codec`
+  (head `a39a5d6`, run `33728936911`), went through **five device-feedback
+  rounds**, and the owner closed with *"Ok i will no check any more leave as
+  it is now"*, then commanded the merge.
   - **⚠️ READ FIRST — the long-file lag was a documented Compose limitation,
     not a CodeC bug.** JetBrains `compose-multiplatform#4023` → `CMP-4023`,
     closed **not planned**: `BasicTextField` is **not lazy** and its layout
@@ -207,26 +240,27 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
-- **Phase 22 is in flight** (implemented, CI-green; owner has **stopped
-  device-testing and accepted the state** — awaiting only the merge command). **Phases 23 and 24 remain PLANNED and fully spec'd —
-  the agent does NOT start one until the owner says "Start Phase 23" (or 24),
-  and 23 must wait for 22 to land because both touch the editor/terminal.** Between phases the agent waits for the owner to
+- **Phase 22 is MERGED to `main` (PR #45).** **Phase 23 is IMPLEMENTED on
+  `arena/01a06662-codec` (CI pending; device recipes not yet run). Phase 24
+  remains PLANNED and fully spec'd — the agent does NOT start it until the
+  owner says "Start Phase 24", and 23 must be accepted first because both
+  touch the editor/terminal.** Between phases the agent waits for the owner to
   report a bug — listen carefully, find the underlying code problem, solve it.
   No self-initiated work.
 
 **PHASE STATUS (updated 2026-09-03):**
-Phase 22 is IMPLEMENTED & CI-green on the session branch (owner stopped
-testing and accepted it; **not merged** — merge is the owner's call). Phases 23/24 are fully spec'd, no code written yet. **Phase 20.1 and
+Phase 22 is ✅ MERGED to `main` (PR #45, tip `7173494`). **Phase 23 is 🟡
+IMPLEMENTED on `arena/01a06662-codec` (owner: "Start Phase 23") — CI pending;
+device recipes not yet run.** Phase 24 is fully spec'd, no code written yet. **Phase 20.1 and
 Phase 21 are COMPLETE and merged** (20.2 heavy roots behind
 `[repo-build-heavy]` remains a design pivot, not started).
-- **Phase 22** (editor smoothness + IME-anchored keys) — 🟡 IMPLEMENTED & CI-green on `arena/01a065a0-codec`, **owner stopped testing & accepted; awaiting merge** — `docs/chat-phase22/`
-- **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
+- **Phase 22** (editor smoothness + IME-anchored keys) — ✅ MERGED via PR #45 (2026-09-03) — `docs/chat-phase22/`
+- **Phase 23** (inline PTY input + run keys; remove Output Panel input box) — 🟡 IMPLEMENTED, CI pending — `docs/chat-phase23/`
 - **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
 - **Phase 21** (`LanguageRunProfile` registry, generic multi-language run; TCC KEPT as the default C compiler) — ✅ COMPLETE (D.1/D.2/D.3 done, D.4 cancelled, D22/D23 shipped) — `docs/chat-phase21/`
 - **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
-Recommended order for what remains: **22 → 23 → 24** (22 and 23 both touch the
-editor/terminal — do not run them in parallel).
-**Owner starts a phase by saying "Start Phase 22" (or 23/24) in chat.**
+Recommended order for what remains: **23 → 24** (both touch the editor/terminal — do not run them in parallel).
+**Owner starts a phase by saying "Start Phase 24" in chat.**
 
 **FUTURE-UPDATE MODE (owner, 2026-09-01):** Phases A–E are planned but not
 started. The agent **waits for the owner to say "Start Phase X"** — it does
@@ -300,11 +334,13 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. Phase 22 is implemented and CI-green on `arena/01a065a0-codec` but is
-   **not merged** — the owner ended the device rounds with "leave as it is
-   now", so the only remaining move is the owner's merge command. Otherwise
-   the agent is in **bug-wait mode**: do nothing until the owner reports a bug or says
-   "Start Phase 23"/"Start Phase 24". No self-initiated work.
+2. Phase 22 is **merged to `main` (PR #45)**. Phase 23 is implemented on
+   `arena/01a06662-codec` with **CI pending** — push it, wait for green, then
+   hand the owner the two `docs/chat-phase23/` §4 device recipes (do not
+   claim device acceptance without the owner's transcript). Phase 24 must not
+   start until 23 is accepted. Otherwise the agent is in **bug-wait mode**: do
+   nothing until the owner reports a bug or says "Start Phase 24". No
+   self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,

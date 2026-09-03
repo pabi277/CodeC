@@ -37,6 +37,7 @@ import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.ExecutionRunner
 import com.codeci.ide.ui.services.InstallPromptState
+import com.codeci.ide.ui.services.InteractiveInputBuffer
 import com.codeci.ide.ui.services.InteractiveRunSession
 import com.codeci.ide.ui.services.LanguageRunPlanner
 import com.codeci.ide.ui.services.LanguageToolProbe
@@ -48,6 +49,7 @@ import com.codeci.ide.ui.services.ServerEvent
 import com.codeci.ide.ui.services.ServerRunner
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
+import com.codeci.ide.ui.terminal.PtyNative
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalHandoff
@@ -115,7 +117,16 @@ data class OutputRunState(
     /** Phase 14 — the live loopback URL of a running server project (Open Preview). */
     val serverUrl: String? = null,
     /** Phase 14 — true while the panel is attached to a long-lived server, not a batch run. */
-    val serverRun: Boolean = false
+    val serverRun: Boolean = false,
+    /**
+     * Phase 23.1 — true while a program is running AND interactive (PTY
+     * mode): the Output Panel shows its inline stdin field. Piped
+     * `ExecutionRunner` runs and servers never set this (they are batch
+     * processes, not prompt-driven).
+     */
+    val waitingForInput: Boolean = false,
+    /** Phase 23.1 — the inline stdin line the user is typing. */
+    val inputBuffer: String = ""
 ) {
     /**
      * Phase 22.4 — has this panel got anything to say yet? A fresh editor
@@ -355,6 +366,10 @@ class EditorViewModel : ViewModel() {
     private var interactiveRun: InteractiveRunSession? = null
     private var buildOutputBuffer = StringBuilder()
 
+    // Phase 23.1 — the inline stdin line, mirrored into OutputRunState so the
+    // panel observes one flow and the buffer survives recomposition/scroll.
+    private val inputBuffer = InteractiveInputBuffer()
+
     // ---- Phase 14: background server pipeline -----------------------------
 
     private var serverRunJob: Job? = null
@@ -514,6 +529,34 @@ class EditorViewModel : ViewModel() {
         } else {
             activeRunner?.sendInput(text)
         }
+    }
+
+    /** Phase 23.1 — the inline stdin line changed (a keystroke or run-key). */
+    fun onInputChange(text: String) {
+        inputBuffer.onChange(text)
+        _outputState.update { it.copy(inputBuffer = text) }
+    }
+
+    /** Phase 23.1 — Enter / send icon: forward the typed line and clear it. */
+    fun submitInput() {
+        val line = inputBuffer.submit() ?: return
+        _outputState.update { it.copy(inputBuffer = "") }
+        sendInputToRun(line)
+    }
+
+    /** Phase 23.2 — append a character (e.g. Tab) to the inline input line. */
+    fun appendInput(text: String) {
+        onInputChange(_outputState.value.inputBuffer + text)
+    }
+
+    /** Phase 23.2 — deliver a signal to the interactive run (Ctrl+C → SIGINT). */
+    fun sendSignal(signal: Int) {
+        interactiveRun?.sendSignal(signal)
+    }
+
+    /** Phase 23.2 — the run-keys Ctrl+C cap. */
+    fun interruptRun() {
+        sendSignal(PtyNative.SIGINT)
     }
 
     fun consumeMessage() {
@@ -1717,6 +1760,8 @@ class EditorViewModel : ViewModel() {
                 phase = OutputPhase.CANCELLED,
                 busy = false,
                 summary = "Stopped",
+                waitingForInput = false,
+                inputBuffer = "",
                 lines = current.lines + OutputLine("Stopped by user", OutputLineKind.SYSTEM)
             )
         }
@@ -1995,6 +2040,9 @@ class EditorViewModel : ViewModel() {
                 )
                 if (interactive != null) {
                     interactiveRun = interactive
+                    // Phase 23.1 — a real PTY run is prompt-driven: surface
+                    // the inline stdin field until the program exits.
+                    _outputState.value = _outputState.value.copy(waitingForInput = true)
                     val exitCode = runFinished.await()
                     interactiveRun = null
                     finishRun(appContext, exitCode, System.currentTimeMillis() - runStart, timedOut = false)
@@ -2197,6 +2245,8 @@ class EditorViewModel : ViewModel() {
             busy = false,
             serverUrl = _outputState.value.serverUrl,
             summary = context.getString(R.string.output_server_exited, exitCode),
+            waitingForInput = false,
+            inputBuffer = "",
             lines = _outputState.value.lines + OutputLine(
                 "Server exited with code $exitCode",
                 if (ok) OutputLineKind.STATS else OutputLineKind.ERROR
@@ -2221,6 +2271,8 @@ class EditorViewModel : ViewModel() {
             phase = OutputPhase.FAILED,
             busy = false,
             summary = context.getString(R.string.output_failed, message),
+            waitingForInput = false,
+            inputBuffer = "",
             lines = _outputState.value.lines + OutputLine(message, OutputLineKind.ERROR)
         )
     }
@@ -2257,6 +2309,8 @@ class EditorViewModel : ViewModel() {
             runExitCode = exitCode,
             runDurationMs = durationMs,
             summary = summary,
+            waitingForInput = false,
+            inputBuffer = "",
             lines = _outputState.value.lines + finalLines
         )
     }
@@ -2283,6 +2337,8 @@ class EditorViewModel : ViewModel() {
             phase = OutputPhase.DONE,
             busy = false,
             summary = summary,
+            waitingForInput = false,
+            inputBuffer = "",
             lines = reColored + OutputLine(summary, OutputLineKind.ERROR)
         )
         _diagnostics.value = CompilerDiagnostics.parse(

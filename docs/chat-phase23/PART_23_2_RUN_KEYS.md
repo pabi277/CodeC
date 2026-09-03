@@ -1,6 +1,6 @@
 # CodeC Phase 23.2 — Extra-Keys Integration for Interactive Runs
 
-**Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
+**Status:** 🟡 **IMPLEMENTED** (CI pending) · **Cost:** `[client-only]`
 · **Depends on:** Phase 22.2 (IME-anchored keys strip infrastructure),
   Phase 23.1 (inline input and `waitingForInput` state)
 · **Primary target files:** `ui/components/EditorKeysRow.kt`,
@@ -144,10 +144,64 @@ PASS = steps 1–5 behave as described.
 - **D3 — `sendSignal` through `InteractiveRunSession`, not a raw `kill`:** keeps
   the signal path through the same session object that manages the PTY; avoids
   race conditions with process exit.
+- **D4 (as implemented) — run keys are a distinct `RunKey` type, not `EditorKey`s:**
+  `EditorKey` is a buffer edit (insert/pair/caret/tab); the run keys are VM
+  *actions* (submit a line, send SIGINT, append a tab), so they cannot be
+  `EditorKey`s. The context → keys mapping lives in a pure
+  `keysForContext(context) : KeysForContext` (`None` | `EditorKeys(defs)` |
+  `RunKeys(defs)`) that the screen renders from; the editor key set itself is
+  untouched (`EditorKeySet.keysFor`).
+- **D5 (as implemented) — one shared keycap renderer:** `EditorKeysRow` now takes
+  a precomputed `keys: List<EditorKeyDef>`; a new `RunKeysRow(onKeyAction)` and
+  both rows draw through a single private `KeyCap`. Same 40dp/10dp/hairline
+  keycaps, so the run strip is visually identical to the editor strip.
+- **D6 (as implemented) — no `editorFocused` tracking:** the screen derives
+  `keysContext` from `outputState.waitingForInput` alone (`InteractiveRun` when
+  true, else `Editor(language)`), so there is no focus plumbing to get wrong.
+  `KeysContext.Idle` exists for the sealed class's three states; the strip's
+  on/off visibility is still the existing `keysRowVisible` chevron, and the
+  screen renders `None` for Idle.
+- **D7 (as implemented) — no JNI change:** `pty.c` already exposes
+  `nativeKill(pid, signal)` (signalling the child's **process group** first,
+  then the pid) and `PtyNative.kill(pid, signal)` wraps it — the spec's "add
+  `kill()` if not present" TODO was a non-issue. `InteractiveRunSession`
+  gained `sendSignal(signal)` delegating to `PtyNative.kill(session.pid, signal)`
+  (the wrapped `PtySession` already exposes its public `pid`).
 
 ---
 
-## 7. Research notes (fill in before implementing)
+## 7. Research notes (filled in at implementation)
+
+- **`kill()` already exists:** `app/src/main/cpp/pty.c` →
+  `Java_com_codeci_ide_ui_terminal_PtyNative_nativeKill` calls `kill(-pid, sig)`
+  then falls back to `kill(pid, sig)`; `PtyNative.kill(pid, signal = SIGHUP)` is
+  the Kotlin wrapper (with `SIGINT = 2`). **No native change was needed.**
+- **`pid` is reachable:** `InteractiveRunSession` holds `private val session:
+  PtySession`, and `PtySession.pid` is public — `sendSignal` delegates through
+  the session, so no new `pid` property was required.
+- **`editorFocused`:** not tracked (see D6) — `waitingForInput` is the only
+  signal needed to switch strips; the editor keys already show whenever the
+  strip is visible and no interactive run is active.
+
+---
+
+## 8. What shipped
+
+- Pure `ui/editor/RunKeySet.kt` (`RunKey` enum + `RunKeyDef` + 5-cap `RunKeySet`).
+- Pure `ui/editor/KeysContext.kt` (`KeysContext` + `KeysForContext` +
+  `keysForContext`).
+- `ui/components/EditorKeysRow.kt`: `EditorKeysRow(keys, …)` + new `RunKeysRow`
+  + shared `KeyCap`.
+- `EditorViewModel`: `sendSignal(signal)`, `interruptRun()` (SIGINT),
+  `appendInput("\t")`; `InteractiveRunSession.sendSignal(signal)`.
+- `EditorScreen`: `keysContext`/`resolvedKeys`/`handleRunKey`; both strip
+  positions (docked + IME-anchored) now render through a `KeysStrip` that shows
+  the run keys while an interactive program waits for input and the editor keys
+  otherwise.
+- Host tests: `RunKeySetTest` (×8 — run-set content/order/labels + the three-way
+  `keysForContext` mapping). Editor keys stay covered by the existing
+  `EditorKeySetTest` (asserts `{}` pair caps).
+- CI: `Build APK` — **run id recorded after green** (assemble + unit tests + lint).
 
 > **TODO for the implementer:**
 > - Check `pty.c` (the JNI shim) for a `kill()` wrapper. If it doesn't exist,

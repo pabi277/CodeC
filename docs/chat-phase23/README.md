@@ -1,6 +1,6 @@
 # CodeC Phase 23 — Interactive Run UX: Inline PTY Input (remove the input box)
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 23" command.
+**Status:** 🟡 **IMPLEMENTED** — B.1 (inline input) + B.2 (run keys) done, CI pending.
 · **Cost:** `[client-only]` — pure Kotlin/Compose; no `[repo-build]`, no native changes
 · **Depends on:** Phase 22.2 (IME-anchored keys strip — the `↵ Enter` / `Ctrl+C` keys
   that appear above the keyboard during interactive runs come from A.2's infrastructure)
@@ -30,8 +30,8 @@ is sent to the program's stdin. No separate input row.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **B.1** | Remove `OutputInputRow`; add inline input at the bottom of `OutputPanelView` | The last "line" in the Output Panel becomes an editable field when an interactive program is running; Enter sends the line to PTY | [PART_23_1_INLINE_INPUT.md](PART_23_1_INLINE_INPUT.md) |
-| **B.2** | Extra-keys integration for interactive runs | When the Output Panel is in input mode, the IME-anchored keys strip (Phase 22.2) shows `↵ Enter`, `Ctrl+C`, `Tab` instead of editor keys | [PART_23_2_RUN_KEYS.md](PART_23_2_RUN_KEYS.md) |
+| **B.1** ✅ | Remove `OutputInputRow`; add inline input at the bottom of `OutputPanelView` | The last "line" in the Output Panel becomes an editable field when an interactive program is running; Enter sends the line to PTY | [PART_23_1_INLINE_INPUT.md](PART_23_1_INLINE_INPUT.md) |
+| **B.2** ✅ | Extra-keys integration for interactive runs | When the Output Panel is in input mode, the IME-anchored keys strip (Phase 22.2) shows `↵ Enter`, `Ctrl+C`, `Tab` instead of editor keys | [PART_23_2_RUN_KEYS.md](PART_23_2_RUN_KEYS.md) |
 
 ---
 
