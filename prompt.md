@@ -18,7 +18,24 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-03, Phase 20.1 COMPLETE & merged):**
+**WHERE THINGS STAND (2026-09-03, Phase 21 D.1+D.2 implemented):**
+
+- **Phase 21 (retire TCC, `LanguageRunProfile` registry) is STARTED** (owner:
+  "start phase 21", 2026-09-03) on `arena/01a064e0-codec`, base `main` =
+  `3fa71ab`. **D.1 + D.2 are IMPLEMENTED; D.3 needs a DEVICE PASS; D.4 (delete
+  `assets/tcc/` + `EmbeddedCompiler` TCC path + `scripts/build-tcc.sh`) is
+  BLOCKED until the owner confirms D.3.** Four new Android-free files —
+  `LanguageRegistry` (12 language profiles + `$SRC`/`$OUT` templating +
+  `shellEscape`, moved here from `TerminalHandoff`), `LanguageRunPlanner`
+  (sealed `RunDecision`), `LanguageToolProbe` (`$PREFIX/bin/<binary>` exists),
+  `InstallPromptState`. `EditorViewModel.runActiveFile` no longer switches on
+  `LanguageType`; the install gate streams `pkg install -y <pkg>` into the
+  Output Panel (900 s timeout) and auto-continues the run. `TerminalHandoff`
+  emits `gcc`/`g++ … -lm` and routes scratch files through the registry.
+  +33 host tests. The spec's `useLegacyTcc` flag was intentionally skipped —
+  see the record for why. Record:
+  `docs/chat-phase21/PART_21_IMPLEMENTATION.md`.
+- **Phase 20.1 background (COMPLETE & merged):**
 
 - **`main` includes Phase 20.1** — the toolchain round merged from
   `arena/01a05cb9-codec` by owner command (2026-09-03; before that `main` =
@@ -98,7 +115,7 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
-- **ALL PHASES COMPLETE.** No spec'd implementation remains. The agent waits
+- **Phase 21 is IN PROGRESS (D.3 device pass required).** Otherwise the agent waits
   for the owner to report a bug — listen carefully, find the underlying code
   problem, solve it. No self-initiated work.
 
@@ -109,9 +126,9 @@ design pivot, not started)**.
 - **Phase 22** (editor smoothness + IME-anchored keys) — `docs/chat-phase22/`
 - **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
 - **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
-- **Phase 21** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — `docs/chat-phase21/`
+- **Phase 21** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — 🚧 D.1+D.2 DONE, D.3 device pass required, D.4 blocked — `docs/chat-phase21/`
 - **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
-Recommended order: 21 → 22 → 23 → 24 (21 and 22 can run in parallel).
+Recommended order: 21 (in progress) → 22 → 23 → 24 (21 and 22 can run in parallel).
 **Owner starts a phase by saying "Start Phase 20" (or 21/22/23/24) in chat.**
 
 **FUTURE-UPDATE MODE (owner, 2026-09-01):** Phases A–E are planned but not

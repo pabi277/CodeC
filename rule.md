@@ -127,7 +127,10 @@ does not begin a lifecycle on its own (§1).
 - **No `.` on `PATH`.**
 - **Never `build-package.sh -I`** (installs official `com.termux` debs).
 - **Never overwrite `cc` or the real ELF `bash` with a shim.**
-- **TCC link order with `-o` last.** *(This invariant is retired automatically
+- **TCC link order with `-o` last.** *(Still in force: Phase 21 D.1/D.2
+  (2026-09-03) removed `cc` from the RUN ▶ / terminal-handoff command builders,
+  but `EmbeddedCompiler`, `CompilerService` and the Settings → Compiler Engine
+  TCC backend are untouched. This invariant is retired automatically
   when Phase 21.4 removes TCC entirely — it will be struck from this list and
   from `prompt.md` in that commit. Until D.4 is complete it still applies.)*
 - **Never use official `com.termux` packages or repositories.**

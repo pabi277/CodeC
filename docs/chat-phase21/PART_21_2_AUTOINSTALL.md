@@ -1,6 +1,6 @@
 # CodeC Phase 21.2 — Auto-install Gate (prompt + install before first RUN)
 
-**Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
+**Status:** ✅ **IMPLEMENTED** (2026-09-03, `arena/01a064e0-codec` — see [`PART_21_IMPLEMENTATION.md`](PART_21_IMPLEMENTATION.md) §3.3/§3.4/§3.6; an `AlertDialog` is used instead of `ModalBottomSheet`, rationale in §2 note 5) · **Cost:** `[client-only]`
 · **Depends on:** Phase 21.1 (`LanguageRegistry` and `requiredPackage` field exist)
 · **Target files:** `ui/viewmodels/EditorViewModel.kt`,
   `ui/screens/EditorScreen.kt` (install prompt dialog/sheet),

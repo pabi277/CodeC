@@ -212,6 +212,8 @@ fun EditorScreen(
     val isDirty by viewModel.isDirty.collectAsState()
     val isRenaming by viewModel.isRenaming.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
+    // Phase 21.2 — toolchain auto-install gate.
+    val installPrompt by viewModel.installPrompt.collectAsState()
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
     val findState by viewModel.find.collectAsState()
@@ -407,6 +409,38 @@ fun EditorScreen(
 
     BackHandler(enabled = isDirty) {
         showUnsavedDialog = true
+    }
+
+    // Phase 21.2 — RUN ▶ on a file whose toolchain package is missing asks
+    // before downloading anything; Install streams `pkg install -y <pkg>` into
+    // the Output Panel and then continues the run automatically.
+    installPrompt?.let { prompt ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissInstall() },
+            title = { Text(stringResource(R.string.install_prompt_title, prompt.displayName)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.install_prompt_body, prompt.packageName))
+                    prompt.sizeHint?.let {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.install_prompt_size, it),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmInstall(context) }) {
+                    Text(stringResource(R.string.install_prompt_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissInstall() }) {
+                    Text(stringResource(R.string.install_prompt_cancel))
+                }
+            }
+        )
     }
 
     if (showRenameDialog) {

@@ -1,5 +1,31 @@
 # CodeC — the full journey
 
+**2026-09-03 — Phase 21 STARTED (owner: "start phase 21"), D.1 + D.2
+implemented on `arena/01a064e0-codec` (base `main` = `3fa71ab`).** The
+compiler engine redesign: TCC is retired from every *run path* and the
+hard-coded `when (LanguageType)` in `EditorViewModel.runActiveFile` is
+replaced by a generic `LanguageRunProfile` registry — adding a language is now
+one entry in a list. Four new Android-free files carry the whole design:
+`LanguageRegistry` (12 profiles: C, C++, Python, JS, TS, Go, Rust, PHP, Ruby,
+Lua, Shell, HTML + `$SRC`/`$OUT` templating and POSIX quoting),
+`LanguageRunPlanner` (a sealed `RunDecision`: WebPreview | NeedsInstall |
+Execute | Unsupported), `LanguageToolProbe` (`$PREFIX/bin/<binary>` exists —
+no `pkg` query per RUN tap) and `InstallPromptState`. D.2's gate asks
+"Install <language>?" before the first RUN of a file whose toolchain is
+missing, streams `pkg install -y <pkg>` into the Output Panel with a 900 s
+timeout, and re-enters the run automatically on exit 0. `TerminalHandoff` now
+emits `gcc`/`g++ … -lm` and — new — dispatches scratch files through the
+registry, fixing a real pre-existing bug where "Run in terminal" fed a `.rb`
+or `.lua` file to a C compiler. +33 host tests (`LanguageRegistryTest`,
+`LanguageRunPlannerTest`) plus the updated `TerminalHandoffTest`. **D.3 device
+pass required** (C and C++ end-to-end through gcc, plus the install gate)
+before D.4 deletes `assets/tcc/`, `EmbeddedCompiler`'s TCC path and
+`scripts/build-tcc.sh`; the Settings → Compiler Engine TCC backend is
+untouched so the removal stays reversible. Note: the spec's `useLegacyTcc`
+flag was deliberately *not* added — there was never a distinct TCC branch to
+gate, only the `cc` string. Record:
+[`chat-phase21/PART_21_IMPLEMENTATION.md`](chat-phase21/PART_21_IMPLEMENTATION.md).
+
 **Last updated:** 2026-09-01 · **State:** `main` = **`54ae06a`** (Phases 20–24
 research/design docs via **PR #40**, merged 2026-09-01; chain: `54ae06a` ←
 PR #39 `arena/01a05b6c-codec` git-branch-publishing + clear-error fixes ←
