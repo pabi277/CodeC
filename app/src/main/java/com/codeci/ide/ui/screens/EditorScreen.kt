@@ -124,6 +124,7 @@ import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
 import com.codeci.ide.ui.components.OutputPanelView
+import com.codeci.ide.ui.components.RunKeysRow
 import com.codeci.ide.ui.editor.CodeCompletionEngine
 import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompilerDiagnostics
@@ -132,6 +133,10 @@ import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorShellUi
 import com.codeci.ide.ui.editor.FileTreeCollapse
 import com.codeci.ide.ui.editor.FontSizeZoom
+import com.codeci.ide.ui.editor.KeysContext
+import com.codeci.ide.ui.editor.KeysForContext
+import com.codeci.ide.ui.editor.RunKey
+import com.codeci.ide.ui.editor.keysForContext
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -299,6 +304,30 @@ fun EditorScreen(
     // new suggestions, and ESC dismisses it until the next edit.
     val language = remember(activeTabPath, currentFileName) {
         LanguageType.fromFileName(activeTabPath ?: currentFileName)
+    }
+    // Phase 23.2 — which strip to show. An interactive run waiting for stdin
+    // swaps the editor keys for the run keys (Enter / Ctrl+C / Tab / arrows);
+    // otherwise the editor's per-language keys are shown (as before). Idle is
+    // never produced here — the existing `keysRowVisible` toggle governs
+    // whether the strip appears at all.
+    val keysContext = if (outputState.waitingForInput) {
+        KeysContext.InteractiveRun
+    } else {
+        KeysContext.Editor(language)
+    }
+    val resolvedKeys = remember(keysContext, customSnippets) {
+        keysForContext(keysContext, customSnippets)
+    }
+    // Phase 23.2 — the run keys are VM actions, not editor buffer edits.
+    val handleRunKey: (RunKey) -> Unit = { action ->
+        when (action) {
+            RunKey.SUBMIT -> viewModel.submitInput()
+            RunKey.INTERRUPT -> viewModel.interruptRun()
+            RunKey.TAB -> viewModel.appendInput("\t")
+            // D2 — REPL history is a future enhancement; the caps show the
+            // slot but do nothing yet.
+            RunKey.HISTORY_UP, RunKey.HISTORY_DOWN -> Unit
+        }
     }
     // Phase 22.6 — completions are computed OFF the main thread, debounced.
     //
@@ -1424,12 +1453,12 @@ fun EditorScreen(
             // it lands DIRECTLY on top of the keyboard (Termux's extra-keys
             // behavior) rather than being stranded mid-screen.
             if (keysRowVisible && !imeVisible) {
-                EditorKeysRow(
+                KeysStrip(
+                    resolved = resolvedKeys,
                     textFieldValue = codeText,
-                    onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
+                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
                     tabSize = tabSize,
-                    language = language,
-                    customSnippets = customSnippets
+                    onRunKey = handleRunKey
                 )
             }
 
@@ -1482,7 +1511,8 @@ fun EditorScreen(
                     onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
                     onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
                     onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
-                    onSendInput = { viewModel.sendInputToRun(it) },
+                    onInputChange = { viewModel.onInputChange(it) },
+                    onSubmitInput = { viewModel.submitInput() },
                     // The Output Panel's "open URL" button carries the same
                     // authoritative project as the RUN ▶ preview path.
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
@@ -1505,7 +1535,8 @@ fun EditorScreen(
                     onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
                     onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
                     onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
-                    onSendInput = { viewModel.sendInputToRun(it) },
+                    onInputChange = { viewModel.onInputChange(it) },
+                    onSubmitInput = { viewModel.submitInput() },
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     modifier = Modifier.height(64.dp)
                 )
@@ -1517,12 +1548,12 @@ fun EditorScreen(
             // the docked row above — only the position changes, so nothing
             // about find/replace, autocomplete or the status bar is affected.
             if (keysRowVisible && imeVisible) {
-                EditorKeysRow(
+                KeysStrip(
+                    resolved = resolvedKeys,
                     textFieldValue = codeText,
-                    onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
+                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
                     tabSize = tabSize,
-                    language = language,
-                    customSnippets = customSnippets,
+                    onRunKey = handleRunKey,
                     modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 )
             }
@@ -1816,6 +1847,34 @@ internal fun Modifier.pointerInputDiagnosticsTap(
         val diagnostic = diagnosticsProvider().firstOrNull { it.line == line } ?: return@awaitEachGesture
         up.consume()
         onDiagnosticHit(up.position, diagnostic)
+    }
+}
+
+/**
+ * Phase 23.2 — one strip, two key sets. Renders whichever keys the current
+ * context resolved to: the editor's per-language keys (buffer edits) or the
+ * interactive-run keys (VM actions). [KeysForContext.None] renders nothing —
+ * the strip's visibility is still governed by the existing chevron toggle.
+ */
+@Composable
+private fun KeysStrip(
+    resolved: KeysForContext,
+    textFieldValue: TextFieldValue,
+    onEditorValueChange: (TextFieldValue) -> Unit,
+    tabSize: Int,
+    onRunKey: (RunKey) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    when (resolved) {
+        is KeysForContext.None -> Unit
+        is KeysForContext.EditorKeys -> EditorKeysRow(
+            keys = resolved.defs,
+            textFieldValue = textFieldValue,
+            onValueChange = onEditorValueChange,
+            tabSize = tabSize,
+            modifier = modifier
+        )
+        is KeysForContext.RunKeys -> RunKeysRow(onKeyAction = onRunKey, modifier = modifier)
     }
 }
 

@@ -39,10 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,7 +62,6 @@ import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.viewmodels.OutputLine
 import com.codeci.ide.ui.viewmodels.OutputLineKind
-import com.codeci.ide.ui.viewmodels.OutputPhase
 import com.codeci.ide.ui.viewmodels.OutputRunState
 
 // Phase 6.1: URL detection helper for terminal text
@@ -100,7 +96,10 @@ fun OutputPanelView(
     onOpenInTerminal: () -> Unit,
     onDiagnosticTap: (OutputDiagnostic) -> Unit,
     onApplyFix: (OutputDiagnostic) -> Unit = {},
-    onSendInput: (String) -> Unit = {},
+    /** Phase 23.1 — the inline stdin line changed (mirrored into the VM). */
+    onInputChange: (String) -> Unit = {},
+    /** Phase 23.1 — Enter / the send icon: submit the inline stdin line. */
+    onSubmitInput: () -> Unit = {},
     /** Phase 14 — a running server project: open the Web Preview at state.serverUrl. */
     onOpenPreviewUrl: (String) -> Unit = {},
     modifier: Modifier = Modifier
@@ -108,8 +107,15 @@ fun OutputPanelView(
     val context = LocalContext.current
     val listState = rememberLazyListState()
 
-    LaunchedEffect(state.lines.size) {
-        if (state.lines.isNotEmpty() && isExpanded) {
+    // Phase 23.1 — auto-scroll to the newest content. While a program is
+    // waiting for input the last item IS the inline input row (index
+    // `lines.size`), so it stays pinned at the bottom under fresh output;
+    // otherwise the last output line is the target.
+    LaunchedEffect(state.lines.size, state.waitingForInput) {
+        if (!isExpanded) return@LaunchedEffect
+        if (state.waitingForInput) {
+            listState.animateScrollToItem(state.lines.size)
+        } else if (state.lines.isNotEmpty()) {
             listState.animateScrollToItem(state.lines.size - 1)
         }
     }
@@ -249,14 +255,21 @@ fun OutputPanelView(
                         onApplyFix = onApplyFix
                     )
                 }
-            }
-            // Phase 11 (owner decision 2026-08-30): interactive programs
-            // (scanf/gets) get an input field while they run — typed lines go
-            // to the program's stdin; the Open-in-Terminal icon stays for the
-            // full PTY experience. Phase 14: a background server is not
-            // interactive — the stdin row would be a dead input.
-            if (state.phase == OutputPhase.RUNNING && !state.serverRun) {
-                OutputInputRow(onSendInput = onSendInput)
+                // Phase 23.1 — inline input: the last "line" of the panel is
+                // an editable field while an interactive program is running
+                // (waitingForInput), so the user types directly into the
+                // output area (C4droid/Pydroid feel). Enter (or the send
+                // icon) submits the line to the program's stdin. There is no
+                // separate input row anymore.
+                if (state.waitingForInput) {
+                    item(key = "inline-input") {
+                        InlineInputRow(
+                            buffer = state.inputBuffer,
+                            onInputChange = onInputChange,
+                            onSubmit = onSubmitInput
+                        )
+                    }
+                }
             }
         } else {
             // Collapsed strip: preview the last line.
@@ -347,18 +360,19 @@ private fun OutputLineItem(
 }
 
 /**
- * Phase 11 — the interactive-input row. Visible while a program is running;
- * Enter (or the send icon) writes the line to the program's stdin.
+ * Phase 23.1 — the inline stdin field. Rendered as the last item of the
+ * Output Panel's line list while an interactive program is running, styled
+ * as terminal text (no border/box) so the cursor reads as part of the
+ * output stream. Enter submits via the soft keyboard's Send action (or the
+ * `↵`-equivalent send icon for touch users); `singleLine` + `ImeAction.Send`
+ * is the same proven wiring the old input row used.
  */
 @Composable
-private fun OutputInputRow(onSendInput: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
-    fun send() {
-        if (text.isNotBlank()) {
-            onSendInput(text)
-            text = ""
-        }
-    }
+private fun InlineInputRow(
+    buffer: String,
+    onInputChange: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -367,8 +381,8 @@ private fun OutputInputRow(onSendInput: (String) -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         BasicTextField(
-            value = text,
-            onValueChange = { text = it },
+            value = buffer,
+            onValueChange = onInputChange,
             singleLine = true,
             textStyle = TextStyle(
                 color = Color.White,
@@ -377,9 +391,9 @@ private fun OutputInputRow(onSendInput: (String) -> Unit) {
             ),
             cursorBrush = SolidColor(Color.White),
             decorationBox = { innerTextField ->
-                if (text.isEmpty()) {
+                if (buffer.isEmpty()) {
                     Text(
-                        text = "Input for the program (Enter sends)",
+                        text = "Type here — Enter sends",
                         color = Color(0xFF666666),
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace
@@ -388,12 +402,12 @@ private fun OutputInputRow(onSendInput: (String) -> Unit) {
                 innerTextField()
             },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(onSend = { send() }),
+            keyboardActions = KeyboardActions(onSend = { onSubmit() }),
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 4.dp, vertical = 4.dp)
         )
-        IconButton(onClick = { send() }, modifier = Modifier.size(32.dp)) {
+        IconButton(onClick = onSubmit, modifier = Modifier.size(32.dp)) {
             Icon(
                 Icons.Default.Send,
                 contentDescription = "Send input",

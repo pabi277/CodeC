@@ -1,6 +1,6 @@
 # CodeC Phase 23.1 — Remove OutputInputRow; Add Inline Input in OutputPanelView
 
-**Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]`
+**Status:** ✅ **COMPLETE & DEVICE-ACCEPTED** (2026-09-03, owner: "Phone test passed") · **Cost:** `[client-only]`
 · **Depends on:** nothing (standalone UI change to the Output Panel)
 · **Primary target files:** `ui/components/OutputPanelView.kt`,
   `ui/viewmodels/EditorViewModel.kt` (output state),
@@ -171,6 +171,11 @@ LaunchedEffect(state.waitingForInput, state.lines.size) {
 PASS = steps 1–5 behave as described.
 ```
 
+**Device acceptance (2026-09-03): PASSED** — the owner ran the recipe on
+device and reported *"Phone test passed"*: the scanf program prompted in the
+panel with the inline cursor and **no** separate input row, "Alice" submitted
+as **"Hello, Alice!"**, and the row vanished when the run exited.
+
 ---
 
 ## 5. Non-goals & invariants
@@ -197,16 +202,59 @@ PASS = steps 1–5 behave as described.
   can also read stdin (via `sendInput`), but they are batch programs; forcing
   interactive-input UI on them is misleading. Only PTY (`InteractiveRunSession`)
   runs get the inline field.
+- **D5 (as implemented) — submit goes through `singleLine` + `ImeAction.Send` +
+  `KeyboardActions(onSend)`, not `onPreviewKeyEvent`:** that is the exact,
+  device-proven wiring the old `OutputInputRow` used (Phase 11 device-accepted),
+  and it covers both soft and hardware Enter without the double-submit risk of
+  layering a preview-key handler on top. The `↵` send icon stays for touch users.
+- **D6 (as implemented) — a pure `InteractiveInputBuffer` backs the buffer:**
+  the ViewModel mirrors it into `OutputRunState.inputBuffer` (single flow for the
+  panel) but delegates the submit semantics (send the line, clear it, send
+  nothing for an empty line) to a tiny Android-free class, so those semantics
+  are host-tested instead of left in the ViewModel (which needs a Main dispatcher
+  to instantiate and is not unit-tested in this repo).
+- **D7 (as implemented) — `waitingForInput` = "PTY session started":** it is set
+  the moment `InteractiveRunSession.start` returns non-null and cleared in every
+  terminal state (`finishRun` / `failRun` / `stopRun` / `finishFailedBuild` /
+  `finishServerExit`), so the field appears for the whole interactive run (a
+  `scanf` prompt with no newline still shows a live cursor) and is guaranteed
+  gone the instant the program stops. Every run start resets `inputBuffer` too
+  (a fresh `OutputRunState`), so an unsubmitted line never leaks into the next run.
 
 ---
 
-## 7. Research notes (fill in before implementing)
+## 7. Research notes (filled in at implementation)
 
-> **TODO for the implementer:**
-> - Find the exact location of `OutputInputRow` (is it in `OutputPanelView.kt`
->   or in `EditorScreen.kt`?) and list all call sites.
-> - Confirm `InteractiveRunSession.sendLine()` signature and whether it suspends
->   or is fire-and-forget (affects how `submitInput()` is written).
-> - Check whether `LazyColumn` + `animateScrollToItem` behaves correctly when
->   the new item is added at the END (vs. appended mid-list) — verify scroll
->   doesn't bounce on every output line.
+- **`OutputInputRow` location:** it lived in `ui/components/OutputPanelView.kt`
+  as a `private` composable, with a **single** call site inside
+  `OutputPanelView` itself (`if (state.phase == RUNNING && !state.serverRun)`),
+  wired from `EditorScreen` only through the `onSendInput` lambda. It is now
+  deleted; `OutputPanelView` gained `onInputChange` + `onSubmitInput` instead.
+- **`InteractiveRunSession.sendLine(text)`:** fire-and-forget — it synchronously
+  writes `text + "\r"` to the PTY master (no suspension). `submitInput()` can
+  therefore be a plain synchronous call with no coroutine.
+- **Scroll behaviour:** the inline field is the LAST item of the `LazyColumn`
+  (key `"inline-input"`), and the existing auto-scroll `LaunchedEffect` now keys
+  on `(lines.size, waitingForInput)`: while waiting for input it scrolls to
+  index `lines.size` (the field stays pinned under fresh output); otherwise it
+  scrolls to `lines.size - 1` as before. No bounce on ordinary output lines —
+  the scroll target only moves when a new line arrives, exactly as before.
+
+---
+
+## 8. What shipped
+
+- `OutputRunState` gained `waitingForInput: Boolean` and `inputBuffer: String`.
+- `EditorViewModel`: `onInputChange`, `submitInput`, `appendInput` + the pure
+  `InteractiveInputBuffer` (new, `ui/services/`).
+- `InteractiveRunSession` unchanged for `sendLine`; the PTY start path now flips
+  `waitingForInput = true` and every terminal state clears it (and the buffer).
+- `OutputPanelView`: `OutputInputRow` deleted; inline `InlineInputRow` rendered
+  as the last `LazyColumn` item when `waitingForInput`.
+- `EditorScreen`: both `OutputPanelView` call sites now pass
+  `onInputChange`/`onSubmitInput`.
+- Host tests: `InteractiveInputBufferTest` (×7 — defaults, onChange, submit,
+  empty-submit, whitespace, copy-preserves-waitingForInput).
+- CI: `Build APK` **`33735687876` GREEN** (assemble + unit tests + lint; one
+  for-cause red round `33735482625` — a missing `kotlinx.coroutines.flow.update`
+  import in `EditorViewModel` — fixed in the same commit set).

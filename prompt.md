@@ -18,14 +18,54 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-03, Phase 22 IMPLEMENTED — owner stopped testing, awaiting merge):**
+**WHERE THINGS STAND (2026-09-03, Phase 22 MERGED — Phase 23 COMPLETE & DEVICE-ACCEPTED, awaiting merge):**
 
-- **Phase 22 (editor smoothness + IME-anchored keys) is 🟡 IMPLEMENTED and
-  CI-GREEN on `arena/01a065a0-codec` (head `a39a5d6`, run `33728936911`) —
-  NOT merged.** Owner started it with "start phase 22", then ran **five
-  device-feedback rounds** and closed with *"Ok i will no check any more
-  leave as it is now"* — i.e. **testing has stopped and the current state is
-  accepted; the only remaining move is the owner's merge command.**
+- **Phase 23 (Interactive Run UX) is ✅ COMPLETE & DEVICE-ACCEPTED on
+  `arena/01a06662-codec` (`Build APK` `33735687876`; owner: "Start Phase 23"
+  → "Phone test passed").** Two client-only parts, both done and both §4
+  device recipes passed on device:
+  - **B.1 — inline PTY input:** the Output Panel's separate input row
+    (`OutputInputRow`) is **deleted**; an `InlineInputRow` renders as the last
+    `LazyColumn` item of the panel whenever `OutputRunState.waitingForInput`
+    is set (only while a PTY interactive run is live). `singleLine` +
+    `ImeAction.Send` + `KeyboardActions(onSend)` (the same shape the old row
+    used) submits via `InteractiveRunSession.sendLine`; the `↵` icon stays.
+    `waitingForInput` is set when `InteractiveRunSession.start` returns
+    non-null and cleared in every terminal transition (`finishRun`/`failRun`/
+    `stopRun`/`finishFailedBuild`/`finishServerExit`); each run starts with a
+    fresh `inputBuffer`. Auto-scroll now keys on `(lines.size,
+    waitingForInput)` and pins the field while waiting.
+  - **B.2 — run keys in the IME strip:** while an interactive run waits for
+    input, the Phase 22.2 strip shows `↵ Enter` / `Ctrl+C` / `Tab` / `↑` /
+    `↓` instead of the editor keys (editor keys restore when the run ends).
+    Strip choice derives from `outputState.waitingForInput` alone
+    (`KeysContext.InteractiveRun` vs `KeysContext.Editor(language)`).
+    `↵ Enter` → `submitInput()`; `Ctrl+C` → `interruptRun()` →
+    `InteractiveRunSession.sendSignal(SIGINT)` → the **existing**
+    `PtyNative.kill` (child process group) — **no JNI/native change**; `Tab`
+    → `appendInput("\t")`; `↑`/`↓` are placeholders (REPL history later).
+  - **New pure code:** `ui/editor/RunKeySet.kt`, `ui/editor/KeysContext.kt`,
+    `ui/services/InteractiveInputBuffer.kt`; `EditorKeysRow` refactored to a
+    precomputed-keys signature + shared `KeyCap` (`RunKeysRow` added);
+    `OutputPanelView` signature `onSendInput` → `onInputChange`/
+    `onSubmitInput`. Host tests: `RunKeySetTest` ×8,
+    `InteractiveInputBufferTest` ×7.
+  - **Device acceptance 2026-09-03: PASSED** — owner: *"Phone test passed"*.
+    B.1: scanf prompted inline with **no** separate input row and "Alice" →
+    "Hello, Alice!"; B.2: `↵ Enter`/`Ctrl+C`/`Tab` shown above the keyboard,
+    Ctrl+C killed the program, and the editor keys returned after the run.
+    One for-cause red CI round (`33735482625`, missing
+    `kotlinx.coroutines.flow.update` import) was fixed before the green run.
+  - **NEXT ACTION: owner merges** (agent opens PR + merges on the owner's
+    command, per `rule.md` §3). Do **not** start Phase 24 until the owner
+    says "Start Phase 24".
+
+- **Phase 22 (editor smoothness + IME-anchored keys) is ✅ MERGED to `main`
+  via PR #45 (2026-09-03; `main` tip `7173494`, post-merge CI
+  `33730937920` green).** It was implemented on `arena/01a065a0-codec`
+  (head `a39a5d6`, run `33728936911`), went through **five device-feedback
+  rounds**, and the owner closed with *"Ok i will no check any more leave as
+  it is now"*, then commanded the merge.
   - **⚠️ READ FIRST — the long-file lag was a documented Compose limitation,
     not a CodeC bug.** JetBrains `compose-multiplatform#4023` → `CMP-4023`,
     closed **not planned**: `BasicTextField` is **not lazy** and its layout
@@ -69,11 +109,9 @@ gate, invariants, docs policy) — follow it.
     `enableEdgeToEdge()` and `adjustResize` were already in place;
     `adjustResize` was deliberately left alone.
   - **Tests:** `EditorHighlightCacheTest` ×8.
-  - **NEXT ACTION: the owner runs the three §4 device recipes in
-    `docs/chat-phase22/`** (typing/fling/pinch smoothness; keys-above-keyboard
-    steps 1–9; caret visibility + the **Terminal no-white-strip regression
-    check**), then merges. Phase 23 must not start first — 22 and 23 both
-    touch the editor/terminal.
+  - **Merged via PR #45 (2026-09-03).** The §4 device recipes were exercised
+    across the owner's five feedback rounds; Phase 23 then built on A.2's IME
+    keys strip. (The Phase 22 §4 recipes are no longer a pending gate.)
 
 **PHASE 21 (COMPLETE & MERGED to `main`):**
 
@@ -207,26 +245,28 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
-- **Phase 22 is in flight** (implemented, CI-green; owner has **stopped
-  device-testing and accepted the state** — awaiting only the merge command). **Phases 23 and 24 remain PLANNED and fully spec'd —
-  the agent does NOT start one until the owner says "Start Phase 23" (or 24),
-  and 23 must wait for 22 to land because both touch the editor/terminal.** Between phases the agent waits for the owner to
-  report a bug — listen carefully, find the underlying code problem, solve it.
-  No self-initiated work.
+- **Phase 22 is MERGED to `main` (PR #45).** **Phase 23 is ✅ COMPLETE &
+  DEVICE-ACCEPTED on `arena/01a06662-codec` (`33735687876`; owner:
+  "Phone test passed") — awaiting only the merge command. Phase 24 remains
+  PLANNED and fully spec'd — the agent does NOT start it until the owner says
+  "Start Phase 24".** Between phases the agent waits for the owner to report a
+  bug — listen carefully, find the underlying code problem, solve it. No
+  self-initiated work.
 
 **PHASE STATUS (updated 2026-09-03):**
-Phase 22 is IMPLEMENTED & CI-green on the session branch (owner stopped
-testing and accepted it; **not merged** — merge is the owner's call). Phases 23/24 are fully spec'd, no code written yet. **Phase 20.1 and
+Phase 22 is ✅ MERGED to `main` (PR #45, tip `7173494`). **Phase 23 is ✅
+COMPLETE & DEVICE-ACCEPTED on `arena/01a06662-codec` (owner: "Start Phase
+23" → "Phone test passed"; `Build APK` `33735687876`); awaiting the owner's
+merge command.** Phase 24 is fully spec'd, no code written yet. **Phase 20.1 and
 Phase 21 are COMPLETE and merged** (20.2 heavy roots behind
 `[repo-build-heavy]` remains a design pivot, not started).
-- **Phase 22** (editor smoothness + IME-anchored keys) — 🟡 IMPLEMENTED & CI-green on `arena/01a065a0-codec`, **owner stopped testing & accepted; awaiting merge** — `docs/chat-phase22/`
-- **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
+- **Phase 22** (editor smoothness + IME-anchored keys) — ✅ MERGED via PR #45 (2026-09-03) — `docs/chat-phase22/`
+- **Phase 23** (inline PTY input + run keys; remove Output Panel input box) — ✅ COMPLETE & DEVICE-ACCEPTED, awaiting merge — `docs/chat-phase23/`
 - **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
 - **Phase 21** (`LanguageRunProfile` registry, generic multi-language run; TCC KEPT as the default C compiler) — ✅ COMPLETE (D.1/D.2/D.3 done, D.4 cancelled, D22/D23 shipped) — `docs/chat-phase21/`
 - **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
-Recommended order for what remains: **22 → 23 → 24** (22 and 23 both touch the
-editor/terminal — do not run them in parallel).
-**Owner starts a phase by saying "Start Phase 22" (or 23/24) in chat.**
+Recommended order for what remains: **24** (touches the editor/terminal — start only on the owner's word).
+**Owner starts a phase by saying "Start Phase 24" in chat.**
 
 **FUTURE-UPDATE MODE (owner, 2026-09-01):** Phases A–E are planned but not
 started. The agent **waits for the owner to say "Start Phase X"** — it does
@@ -300,11 +340,12 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. Phase 22 is implemented and CI-green on `arena/01a065a0-codec` but is
-   **not merged** — the owner ended the device rounds with "leave as it is
-   now", so the only remaining move is the owner's merge command. Otherwise
-   the agent is in **bug-wait mode**: do nothing until the owner reports a bug or says
-   "Start Phase 23"/"Start Phase 24". No self-initiated work.
+2. Phase 22 is **merged to `main` (PR #45)**. Phase 23 is **COMPLETE &
+   DEVICE-ACCEPTED on `arena/01a06662-codec` (`33735687876`; owner:
+   "Phone test passed") — awaiting only the owner's merge command.** Phase 24
+   must not start until the owner says "Start Phase 24". Otherwise the agent
+   is in **bug-wait mode**: do nothing until the owner reports a bug or says
+   "Start Phase 24". No self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,
