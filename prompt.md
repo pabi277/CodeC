@@ -44,8 +44,19 @@ gate, invariants, docs policy) — follow it.
   `pkg update && pkg install -y <pkg>` (a stale catalog made the first attempt
   unrecoverable). Guard tests pin every installable name to what
   `codec-packages/properties.codec.sh` actually publishes.
-  **D.3 device pass still required.** Record:
-  `docs/chat-phase21/PART_21_IMPLEMENTATION.md` §7.
+  **Device round 2 (2026-09-03) also FAILED and is fixed:** D20 — the D.2 gate
+  only covered the active-file path; SERVER-type projects (`python-flask`,
+  `python-fastapi`, `c-microservice`) and custom `project.json` build/run
+  pairs run their command **verbatim**, so `python3 app.py` on a device
+  without python died with `command not found` / exit 127 and no prompt at
+  all. New `LanguageRunPlanner.toolchainForCommands` gates raw command strings
+  by the leading program of each `&&`/`;`/`|` segment; a successful install
+  resumes the server via `pendingServerProject`. D21 — the `c-microservice`
+  preset still emitted `cc server.c`; now `gcc`.
+  **⚠️ For D.4: there are FIVE run paths, not one** — active file, project
+  file, project config, server preset, terminal handoff. The Phase 21 spec
+  only described the first. **D.3 device pass still required.** Record:
+  `docs/chat-phase21/PART_21_IMPLEMENTATION.md` §7–§8.
 - **Phase 20.1 background (COMPLETE & merged):**
 
 - **`main` includes Phase 20.1** — the toolchain round merged from

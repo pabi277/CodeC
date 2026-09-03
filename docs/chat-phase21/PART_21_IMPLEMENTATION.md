@@ -304,3 +304,70 @@ Idempotent, and negligible next to the ~90 MB download that follows. Test:
 
 D.3 device acceptance is **still open** — this round found gate bugs before
 any C code was compiled. The next device pass should re-run the same recipe.
+
+---
+
+## 8. Device round 2 (2026-09-03) — server presets bypassed the gate entirely
+
+**Owner transcript (RUN ▶ on a Flask/`app.py` server project):**
+
+```
+$ python3 app.py
+/data/user/0/com.codeci.ide/files/usr/bin/bash: line 1: python3: command not found
+Server exited with code 127
+```
+
+The tell is **"Server exited with code 127"** — this is `startServerRun`, not
+`runActiveFile`. A completely different code path from the one D.2 gated.
+
+### D20 — the install gate only covered the active-file run path
+
+**Root cause.** `runActiveFile` short-circuits to `startServerRun` for any
+`SERVER_TYPES` project (`python-flask`, `python-fastapi`, `c-microservice`)
+*before* the registry is ever consulted, and `startServerRun` executes
+`config.build`/`config.run` **verbatim**. The same hole existed in the
+`else ->` fallback of my own registry dispatch, which runs a custom
+`project.json` build/run pair verbatim too. So D.2's gate only ever protected
+single files and registry-claimed project files — exactly the narrow case I
+tested against, and I never asked what *else* reaches a shell.
+
+**Fix.** New `LanguageRunPlanner.toolchainForCommands(commands, probe)`:
+splits each command on `&&`/`;`/`|`, takes the **leading token of each
+segment** (the program actually being invoked), maps it back through
+`profileProviding()` to the profile whose `probeBinary` it is, and returns a
+`NeedsInstall` when it is missing. Wired into both uncovered paths.
+
+Only the leading token is inspected, deliberately — `./bin/server`,
+`mkdir -p bin` and `echo node ruby` must never trigger a prompt.
+
+Because the gate can now fire for a server project, a successful install has
+to resume the *server*, not the active file: `pendingServerProject` records
+which project asked, `confirmInstall` restarts `startServerRun` for it, and
+`dismissInstall` clears it.
+
+### D21 — the `c-microservice` preset still compiled with `cc`
+
+Found while auditing the server presets. `ProjectConfig.defaultFor(
+"c-microservice")` emitted `mkdir -p bin && cc server.c -o bin/server`, and
+the scaffold's header comment still said "compile with the embedded TCC".
+Both now use `gcc` (clang's driver symlink), consistent with §3.5 and with the
+new gate, which can then recognise the compiler and offer `clang`.
+
+`ProjectConfig`'s generic default (`cc main.c -o bin/app`) is still deliberately
+untouched — see §3.5 for why it moves in D.4 rather than now.
+
+### Tests
+
+Seven new cases in `LanguageRunPlannerTest`: server run line → install python;
+silent when present; `c-microservice` build line → clang; `./bin/server` and
+`cd x && ls` never prompt; `echo node ruby php` never prompts (argument, not
+program); an unpublished toolchain (`go run`) never produces a doomed prompt;
+first missing toolchain in a pipeline wins. Plus `ProjectConfigTest` /
+`ProjectScaffoldTest` updated to the `gcc` preset.
+
+### Status
+
+D.3 still open. Two device rounds have now found gate bugs *before* any user
+code compiled — worth noting for D.4: the run paths are more numerous than the
+Phase 21 spec assumed (active file, project file, project config, server
+preset, terminal handoff), and TCC removal must account for all five.

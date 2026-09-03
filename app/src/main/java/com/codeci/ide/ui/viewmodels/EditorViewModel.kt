@@ -301,6 +301,12 @@ class EditorViewModel : ViewModel() {
 
     private val _installPrompt = MutableStateFlow<InstallPromptState?>(null)
 
+    /**
+     * Set when the install gate fired for a SERVER project, so a successful
+     * install resumes the server instead of the active-file run path.
+     */
+    private var pendingServerProject: String? = null
+
     /** Non-null while the "Install <tool>?" sheet is showing. */
     val installPrompt: StateFlow<InstallPromptState?> = _installPrompt.asStateFlow()
 
@@ -325,6 +331,7 @@ class EditorViewModel : ViewModel() {
     /** Cancel on the install sheet: dismiss, run nothing. */
     fun dismissInstall() {
         _installPrompt.value = null
+        pendingServerProject = null
     }
 
     /**
@@ -382,7 +389,13 @@ class EditorViewModel : ViewModel() {
                         OutputLineKind.STATS
                     )
                 )
-                runActiveFile(ctx)
+                val serverProject = pendingServerProject
+                pendingServerProject = null
+                if (serverProject != null) {
+                    ProjectManager(ctx).project(serverProject)?.let { startServerRun(ctx, it) }
+                } else {
+                    runActiveFile(ctx)
+                }
             } else {
                 _outputState.value = _outputState.value.copy(
                     phase = OutputPhase.FAILED,
@@ -1724,6 +1737,13 @@ class EditorViewModel : ViewModel() {
                 }
                 else -> {
                     val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, config)
+                    // Same gate for a custom project.json build/run pair.
+                    LanguageRunPlanner.toolchainForCommands(
+                        listOf(build, run), ::isToolInstalled
+                    )?.let { needed ->
+                        promptInstall(needed)
+                        return
+                    }
                     buildCommand = build
                     runCommand = run
                     terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, config)
@@ -1935,6 +1955,18 @@ class EditorViewModel : ViewModel() {
         val runCommand = config.run.trim().takeIf { it.isNotEmpty() }
         if (buildCommand == null && runCommand == null) {
             _userMessage.value = context.getString(R.string.output_no_command)
+            return
+        }
+        // Phase 21 device round 2: a server preset runs its configured command
+        // verbatim and never touched the registry, so a device without
+        // python3 got a bare "command not found" / exit 127 instead of the
+        // install gate. Gate on the programs the commands actually invoke.
+        captureContext(context)
+        LanguageRunPlanner.toolchainForCommands(
+            listOf(buildCommand, runCommand), ::isToolInstalled
+        )?.let { needed ->
+            pendingServerProject = info.name
+            promptInstall(needed)
             return
         }
         _outputExpanded.value = true

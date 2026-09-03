@@ -82,6 +82,45 @@ object LanguageRunPlanner {
     }
 
     /**
+     * Phase 21 device round 2 (2026-09-03) — the toolchain a raw command
+     * string needs, or null when nothing known is missing.
+     *
+     * Server-type projects and custom `project.json` build/run strings never
+     * pass through [decide]: they execute their configured command verbatim,
+     * so a device without python3 got a bare `python3: command not found`
+     * and exit 127 with no install gate at all. This inspects the FIRST word
+     * of each command (the program actually being invoked) and maps it back
+     * to the profile that provides it.
+     *
+     * Only the leading token is considered on purpose: `./bin/server`,
+     * `cd x && …` and shell builtins must not be mistaken for toolchains.
+     */
+    fun toolchainForCommands(
+        commands: List<String?>,
+        toolInstalled: (String) -> Boolean,
+    ): RunDecision.NeedsInstall? {
+        commands.filterNotNull().forEach { raw ->
+            raw.split("&&", ";", "|")
+                .mapNotNull { segment -> segment.trim().split(Regex("\\s+")).firstOrNull() }
+                .filter { it.isNotBlank() }
+                .forEach { program ->
+                    val profile = profileProviding(program) ?: return@forEach
+                    if (!profile.inRepository) return@forEach
+                    if (!toolInstalled(program)) {
+                        return RunDecision.NeedsInstall(profile, profile.requiredPackage!!)
+                    }
+                }
+        }
+        return null
+    }
+
+    /** The profile whose package ships [program] as its probe binary. */
+    fun profileProviding(program: String): LanguageRunProfile? =
+        LanguageRegistry.profiles.firstOrNull {
+            it.requiredPackage != null && it.probeBinary == program
+        }
+
+    /**
      * The command the install gate runs.
      *
      * Device round 1 (2026-09-03) hit "E: Unable to locate package" on a

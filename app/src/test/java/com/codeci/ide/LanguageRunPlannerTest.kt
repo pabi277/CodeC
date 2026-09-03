@@ -7,6 +7,7 @@ import com.codeci.ide.ui.services.RunDecision
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -138,6 +139,67 @@ class LanguageRunPlannerTest {
             "pkg update && pkg install -y clang",
             LanguageRunPlanner.installCommand("clang")
         )
+    }
+
+    // --- Phase 21 device round 2: raw command strings (server presets and
+    // custom project.json build/run pairs) never pass through decide().
+
+    @Test
+    fun server_preset_run_command_without_python3_asks_to_install_python() {
+        val needed = LanguageRunPlanner.toolchainForCommands(
+            listOf(null, "python3 app.py"), noneInstalled
+        )
+        assertEquals("python", needed?.packageName)
+        assertEquals("Python", needed?.profile?.displayName)
+    }
+
+    @Test
+    fun server_preset_is_silent_when_the_toolchain_is_present() {
+        assertNull(
+            LanguageRunPlanner.toolchainForCommands(listOf(null, "python3 app.py"), allInstalled)
+        )
+    }
+
+    @Test
+    fun c_microservice_build_line_asks_for_clang() {
+        val needed = LanguageRunPlanner.toolchainForCommands(
+            listOf("mkdir -p bin && gcc server.c -o bin/server", "./bin/server"), noneInstalled
+        )
+        assertEquals("clang", needed?.packageName)
+    }
+
+    @Test
+    fun a_compiled_binary_is_never_mistaken_for_a_toolchain() {
+        // `./bin/server` and plain shell verbs must not trigger a prompt.
+        assertNull(
+            LanguageRunPlanner.toolchainForCommands(
+                listOf("mkdir -p bin", "./bin/server"), noneInstalled
+            )
+        )
+        assertNull(LanguageRunPlanner.toolchainForCommands(listOf("cd x && ls"), noneInstalled))
+    }
+
+    @Test
+    fun only_the_leading_program_of_each_segment_counts() {
+        // "node" appears as an ARGUMENT here, not as the program being run.
+        assertNull(
+            LanguageRunPlanner.toolchainForCommands(listOf("echo node ruby php"), noneInstalled)
+        )
+    }
+
+    @Test
+    fun unavailable_toolchains_do_not_produce_a_doomed_prompt() {
+        // Go is not published — a custom run line using it must not offer an
+        // install that cannot succeed.
+        assertNull(LanguageRunPlanner.toolchainForCommands(listOf("go run main.go"), noneInstalled))
+    }
+
+    @Test
+    fun the_first_missing_toolchain_in_a_pipeline_wins() {
+        val needed = LanguageRunPlanner.toolchainForCommands(
+            listOf("ruby gen.rb && node build.js"), noneInstalled
+        )
+        assertEquals("ruby", needed?.packageName)
     }
 
     @Test

@@ -31,7 +31,17 @@ still probing `gcc`/`g++`, plus two neighbours the audit caught: Go and Rust
 were never published (now `inRepository = false` → an honest "not in the
 repository yet" instead of a doomed install), and the gate now runs
 `pkg update &&` first so a stale catalog is self-healing. Guard tests pin every
-installable name to `codec-packages/properties.codec.sh`. D.3 must be re-run
+installable name to `codec-packages/properties.codec.sh`. **Device round 2 the same day** exposed a deeper miss: *"python3: command not
+found / Server exited with code 127"*. The D.2 gate only ever covered the
+active-file path — server-type projects and custom `project.json` build/run
+pairs execute their configured command verbatim and never consult the
+registry. Fixed with `toolchainForCommands`, which gates any raw command
+string by the leading program of each `&&`/`;`/`|` segment (so `./bin/server`
+and `echo node` never prompt), plus `pendingServerProject` so a successful
+install resumes the server rather than the active file; the `c-microservice`
+preset's leftover `cc server.c` became `gcc`. The lesson for D.4: CodeC has
+**five** run paths (active file, project file, project config, server preset,
+terminal handoff) and the Phase 21 spec described only one. D.3 must be re-run
 before D.4 deletes `assets/tcc/`, `EmbeddedCompiler`'s TCC path and
 `scripts/build-tcc.sh`; the Settings → Compiler Engine TCC backend is
 untouched so the removal stays reversible. Note: the spec's `useLegacyTcc`
