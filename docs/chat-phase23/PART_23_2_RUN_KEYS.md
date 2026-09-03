@@ -1,6 +1,6 @@
 # CodeC Phase 23.2 — Extra-Keys Integration for Interactive Runs
 
-**Status:** 🟡 **IMPLEMENTED & CI-GREEN** (`33735687876`) · **Cost:** `[client-only]`
+**Status:** ✅ **COMPLETE & DEVICE-ACCEPTED** (2026-09-03, owner: "Phone test passed") · **Cost:** `[client-only]`
 · **Depends on:** Phase 22.2 (IME-anchored keys strip infrastructure),
   Phase 23.1 (inline input and `waitingForInput` state)
 · **Primary target files:** `ui/components/EditorKeysRow.kt`,
@@ -121,6 +121,12 @@ is a one-liner through the existing `PtyNative` JNI shim (which already calls
    the keyboard when the editor is focused.
 PASS = steps 1–5 behave as described.
 ```
+
+**Device acceptance (2026-09-03): PASSED** — the owner ran the recipe on
+device and reported *"Phone test passed"*: while the interactive run waited
+for input the strip showed `↵ Enter` / `Ctrl+C` / `Tab` (not the C editor
+keys), Enter submitted the line, Ctrl+C terminated the program, and the
+editor key strip returned once the run was over.
 
 ---
 

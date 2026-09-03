@@ -1,6 +1,6 @@
 # CodeC Phase 23.1 — Remove OutputInputRow; Add Inline Input in OutputPanelView
 
-**Status:** 🟡 **IMPLEMENTED & CI-GREEN** (`33735687876`) · **Cost:** `[client-only]`
+**Status:** ✅ **COMPLETE & DEVICE-ACCEPTED** (2026-09-03, owner: "Phone test passed") · **Cost:** `[client-only]`
 · **Depends on:** nothing (standalone UI change to the Output Panel)
 · **Primary target files:** `ui/components/OutputPanelView.kt`,
   `ui/viewmodels/EditorViewModel.kt` (output state),
@@ -170,6 +170,11 @@ LaunchedEffect(state.waitingForInput, state.lines.size) {
    EXPECT: no input row appears at any point during the run.
 PASS = steps 1–5 behave as described.
 ```
+
+**Device acceptance (2026-09-03): PASSED** — the owner ran the recipe on
+device and reported *"Phone test passed"*: the scanf program prompted in the
+panel with the inline cursor and **no** separate input row, "Alice" submitted
+as **"Hello, Alice!"**, and the row vanished when the run exited.
 
 ---
 
