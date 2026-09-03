@@ -517,7 +517,19 @@ class EditorViewModel : ViewModel() {
             syncUndoFlags(manager)
             _codeText.value = next
             _isDirty.value = computeDirty(next.text)
-            stashActiveTabBuffer(next)
+            // Phase 22.5 — the active tab's buffer is NOT stashed per
+            // keystroke. `_openTabs` is a StateFlow of a list of data
+            // classes: stashing rebuilt the whole list and emitted a new
+            // identity on every character, waking every tab-list collector
+            // (the tab strip, the drawer's dirty marks) and — because
+            // `EditorTab` holds the full `TextFieldValue` — making the
+            // per-keystroke cost scale with the FILE, not the edit. That is
+            // the long-file lag. The active tab's truth already lives in
+            // `_codeText`; every reader of `tab.buffer` for the ACTIVE tab
+            // now consults `_codeText` instead, and the stash still happens
+            // at the real boundaries (tab switch, close, save, context
+            // switch), which is exactly what `stashActiveTabBuffer`'s own
+            // KDoc always promised.
             scheduleAutoSave()
         } else if (next.selection != old.selection) {
             _codeText.value = next
@@ -694,6 +706,9 @@ class EditorViewModel : ViewModel() {
     private fun trimTabs(tabs: List<EditorTab>): List<EditorTab> {
         if (tabs.size <= MAX_OPEN_TABS) return tabs
         val active = _activeTabPath.value
+        // Phase 22.5 — only NON-active tabs are eviction candidates, and a
+        // non-active tab's stash is always current, so `buffer` is the truth
+        // here. (The active tab is excluded by the same predicate.)
         val victim = tabs.firstOrNull { it.relativePath != active && it.buffer.text == it.savedText }
             ?: tabs.firstOrNull { it.relativePath != active }
             ?: return tabs.takeLast(MAX_OPEN_TABS)
@@ -2383,8 +2398,18 @@ class EditorViewModel : ViewModel() {
     private fun refreshDecorationsNow() {
         val current = _codeText.value
         val cursor = current.selection.min.coerceIn(0, current.text.length)
-        val line = current.text.take(cursor).count { it == '\n' } + 1
-        val lineStart = CodeFormatter.lineStartOffset(current.text, line)
+        // Phase 22.5 — count newlines in place. `take(cursor)` ALLOCATED a
+        // copy of the entire prefix (up to the whole file) on every caret
+        // move and every keystroke, purely to count '\n' in it; at the end of
+        // a long file that is a full-file copy per character typed.
+        var line = 1
+        var lineStart = 0
+        for (i in 0 until cursor) {
+            if (current.text[i] == '\n') {
+                line++
+                lineStart = i + 1
+            }
+        }
         _cursorPos.value = EditorCursorPos(line, cursor - lineStart + 1, current.selection.length)
         _currentLineRange.value = CodeFormatter.lineBounds(current.text, line)?.takeIf { !it.isEmpty() }
         _bracketRanges.value = if (

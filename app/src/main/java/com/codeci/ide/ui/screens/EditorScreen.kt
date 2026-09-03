@@ -399,7 +399,9 @@ fun EditorScreen(
     val tabViews = remember(openTabs, activeTabPath, isDirty) {
         openTabs.map { tab ->
             if (tab.relativePath == activeTabPath) {
-                // The active tab's truth is the live buffer + VM dirtiness.
+                // The active tab's truth is the live buffer + VM dirtiness
+                // (Phase 22.5: its `buffer` stash is deliberately stale
+                // between boundaries, so it must NOT be read here).
                 EditorTabUi(tab.relativePath, tab.displayName, isDirty)
             } else {
                 EditorShellUi.tabModel(tab.relativePath, tab.buffer.text, tab.savedText)
@@ -757,6 +759,11 @@ fun EditorScreen(
                             activePath = activeTabPath,
                             onSelect = { path -> viewModel.selectTab(path) },
                             onClose = { path ->
+                                // Phase 22.5 — the ACTIVE tab's dirtiness comes
+                                // from the VM flag (its stash is intentionally
+                                // not updated per keystroke); other tabs are
+                                // stashed at their boundaries, so their buffer
+                                // is current.
                                 val dirty = if (path == activeTabPath) {
                                     isDirty
                                 } else {

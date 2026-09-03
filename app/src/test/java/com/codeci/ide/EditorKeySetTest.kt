@@ -126,10 +126,38 @@ class EditorKeySetTest {
     // ---- keysFor / custom snippets ----------------------------------------
 
     @Test
-    fun `general set matches the spec list and starts with TAB`() {
+    fun `general set starts with TAB and offers brackets as pairs`() {
+        // Phase 22.5 — the four bracket families and both quote styles are
+        // single PAIR caps now (owner: "make pair in single key"), so the
+        // row is shorter and each tap yields a balanced construct.
         val labels = EditorKeySet.keysFor(null).map { it.label }
         assertEquals("TAB", labels.first())
-        assertTrue(labels.containsAll(listOf("{", "}", "(", ")", ";", "<", ">", "/", "=", "\"", "'", "←", "→")))
+        assertTrue(labels.containsAll(listOf("()", "{}", "[]", "<>", "\"\"", "''", ";", "/", "=", "←", "→", "↑", "↓")))
+    }
+
+    @Test
+    fun `a pair key inserts both halves and lands the caret between them`() {
+        val out = EditorKeySet.apply(EditorKey.Pair("(", ")"), TextFieldValue("ab", TextRange(1)), tabSize = 4)
+        assertEquals("a()b", out.text)
+        assertEquals(TextRange(2), out.selection)
+        assertTrue(out.selection.collapsed)
+    }
+
+    @Test
+    fun `a pair key surrounds a selection and keeps it selected`() {
+        val value = TextFieldValue("say hello there", TextRange(4, 9))
+        val out = EditorKeySet.apply(EditorKey.Pair("\"", "\""), value, tabSize = 4)
+        assertEquals("say \"hello\" there", out.text)
+        // The original word stays selected, now inside the quotes.
+        assertEquals("hello", out.text.substring(out.selection.start, out.selection.end))
+    }
+
+    @Test
+    fun `every bracket family is available as a pair`() {
+        val pairs = EditorKeySet.keysFor(null)
+            .mapNotNull { it.key as? EditorKey.Pair }
+            .map { it.open to it.close }
+        assertTrue(pairs.containsAll(listOf("(" to ")", "{" to "}", "[" to "]", "<" to ">")))
     }
 
     @Test
@@ -141,6 +169,13 @@ class EditorKeySetTest {
         assertEquals("->", c.last().label)
         assertEquals(base + 2, py.size)
         assertEquals(":", py[base].label)
+    }
+
+    @Test
+    fun `the JS template literal tail is a pair`() {
+        val js = EditorKeySet.keysFor(LanguageType.JAVASCRIPT)
+        val backtick = js.first { it.label == "``" }
+        assertEquals(EditorKey.Pair("`", "`"), backtick.key)
     }
 
     @Test
