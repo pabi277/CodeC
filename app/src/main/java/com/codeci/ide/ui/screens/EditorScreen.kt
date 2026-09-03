@@ -143,6 +143,7 @@ import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.utils.EditorDecorations
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.LanguageType
+import com.codeci.ide.ui.utils.HighlightedCode
 import com.codeci.ide.ui.utils.SyntaxVisualTransformation
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
@@ -416,8 +417,21 @@ fun EditorScreen(
     LaunchedEffect(currentEditorTheme, language) {
         viewModel.setHighlightContext(currentEditorTheme, language)
     }
-    val transformation = remember(currentEditorTheme, decorations, language, highlighted) {
-        SyntaxVisualTransformation(currentEditorTheme, decorations, language, highlighted)
+    // Phase 22.7 — the caret only feeds the INLINE FALLBACK's window, and it
+    // is bucketed the same way the VM buckets it, so ordinary typing does not
+    // rebuild the transformation (which would throw away its memo every
+    // keystroke).
+    val caretBucket = codeText.selection.min.coerceAtLeast(0) / (HighlightedCode.WINDOW / 4)
+    val transformation = remember(
+        currentEditorTheme, decorations, language, highlighted, caretBucket
+    ) {
+        SyntaxVisualTransformation(
+            currentEditorTheme,
+            decorations,
+            language,
+            highlighted,
+            caretBucket * (HighlightedCode.WINDOW / 4)
+        )
     }
 
     // Phase 22.1 — narrowed keys: the tab strip only depends on the tab list,

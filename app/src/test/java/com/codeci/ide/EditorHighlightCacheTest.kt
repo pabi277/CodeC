@@ -4,9 +4,11 @@ import androidx.compose.ui.text.AnnotatedString
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.theme.EditorThemeType
+import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.utils.EditorDecorations
 import com.codeci.ide.ui.utils.HighlightedCode
 import com.codeci.ide.ui.utils.LanguageType
+import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
 import com.codeci.ide.ui.utils.SyntaxVisualTransformation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -85,6 +87,79 @@ class EditorHighlightCacheTest {
         ).filter(AnnotatedString(source))
         assertEquals(7, out.offsetMapping.originalToTransformed(7))
         assertEquals(7, out.offsetMapping.transformedToOriginal(7))
+    }
+
+    // ---- Phase 22.7: span windowing ---------------------------------------
+
+    @Test
+    fun `windowing collapses the span count on a long file`() {
+        // The real cause of the long-file lag: BasicTextField's layout cost
+        // scales with the SPAN count, not the character count
+        // (compose-multiplatform#4023 / CMP-4023, closed WONTFIX). A 500-line
+        // C file produced thousands of spans, all handed to the field on every
+        // layout pass.
+        val longFile = (1..500).joinToString("\n") {
+            "int compute_$it(int a, int b) { return (a * $it) + b; } // note"
+        }
+        val full = MultiLanguageSyntaxHighlighter.highlight(
+            longFile, getEditorTheme(EditorThemeType.DRACULA), LanguageType.C
+        )
+        val windowed = HighlightedCode.of(longFile, EditorThemeType.DRACULA, LanguageType.C, caret = 0)
+        assertTrue(
+            "windowed=${windowed.annotated.spanStyles.size} full=${full.spanStyles.size}",
+            windowed.annotated.spanStyles.size < full.spanStyles.size
+        )
+    }
+
+    @Test
+    fun `the text itself is never truncated by windowing`() {
+        val longFile = (1..500).joinToString("\n") { "int value_$it = $it;" }
+        val windowed = HighlightedCode.of(longFile, EditorThemeType.DRACULA, LanguageType.C, caret = 0)
+        assertEquals(longFile, windowed.annotated.text)
+    }
+
+    @Test
+    fun `colours inside the window match a full-file highlight exactly`() {
+        // Windowing must be invisible where the user is looking: scanning
+        // still starts at offset 0 so multi-line constructs keep their
+        // context, and only span EMISSION is bounded.
+        val source = "/* block */\nint main() { return 0; }\n" + "// filler\n".repeat(200)
+        val full = MultiLanguageSyntaxHighlighter.highlight(
+            source, getEditorTheme(EditorThemeType.DRACULA), LanguageType.C
+        )
+        val windowed = MultiLanguageSyntaxHighlighter.highlight(
+            source, getEditorTheme(EditorThemeType.DRACULA), LanguageType.C, from = 0, to = 40
+        )
+        // Compare token spans only: both outputs also carry one base-colour
+        // span covering the whole text, which is not a token.
+        val tokensIn = { a: AnnotatedString ->
+            a.spanStyles.filter { it.end - it.start < source.length && it.start < 40 }
+        }
+        assertEquals(tokensIn(full), tokensIn(windowed))
+        assertTrue(tokensIn(windowed).isNotEmpty())
+    }
+
+    @Test
+    fun `a snapshot is stale once the caret leaves its window`() {
+        val text = "x".repeat(HighlightedCode.WINDOW * 3)
+        val snapshot = HighlightedCode.of(text, EditorThemeType.DRACULA, LanguageType.C, caret = 0)
+        // Still valid where it was built...
+        assertTrue(snapshot.matches(text, EditorThemeType.DRACULA, LanguageType.C, 0, 10))
+        // ...but not for a window far past its end.
+        assertFalse(
+            snapshot.matches(
+                text, EditorThemeType.DRACULA, LanguageType.C,
+                text.length - 10, text.length
+            )
+        )
+    }
+
+    @Test
+    fun `the window follows the caret`() {
+        val text = "y".repeat(HighlightedCode.WINDOW * 3)
+        val atEnd = HighlightedCode.of(text, EditorThemeType.DRACULA, LanguageType.C, caret = text.length)
+        assertTrue(atEnd.from > 0)
+        assertEquals(text.length, atEnd.to)
     }
 
     @Test

@@ -72,7 +72,21 @@ object MultiLanguageSyntaxHighlighter {
      * keywords, functions, and operators (the classic single-pass approach —
      * content inside a comment or string is never re-tokenized).
      */
-    fun tokenize(text: String, language: LanguageType): List<TokenSpan> {
+    /**
+     * Tokenize [text], keeping only spans that intersect `[from, to)`.
+     *
+     * Scanning still starts at the beginning of the buffer so that multi-line
+     * constructs (block comments, multi-line strings) are classified with the
+     * same context they always were — only the *emitted* spans are windowed,
+     * so colours inside the window are identical to a full-file highlight.
+     */
+    @JvmOverloads
+    fun tokenize(
+        text: String,
+        language: LanguageType,
+        from: Int = 0,
+        to: Int = text.length
+    ): List<TokenSpan> {
         if (text.isEmpty() || language == LanguageType.TEXT) return emptyList()
         val compiled = pattern(language) ?: return emptyList()
         // Named group lookup via MatchGroupCollection.get(String) calls
@@ -84,6 +98,10 @@ object MultiLanguageSyntaxHighlighter {
         val groupKinds = tokenGroupKinds(language)
         val spans = mutableListOf<TokenSpan>()
         for (match in compiled.regex.findAll(text)) {
+            // Past the window: nothing later can intersect it.
+            if (match.range.first >= to) break
+            // Before the window: keep scanning for context, emit nothing.
+            if (match.range.last + 1 <= from) continue
             val kind = groupKinds.firstNotNullOfOrNull { (name, tokenKind) ->
                 val index = indexByName[name] ?: return@firstNotNullOfOrNull null
                 if (match.groups[index] != null) tokenKind else null
@@ -143,12 +161,42 @@ object MultiLanguageSyntaxHighlighter {
     }
 
     /** Build the styled [AnnotatedString] the editor transformation shows. */
-    fun highlight(text: String, colors: EditorThemeColors, language: LanguageType): AnnotatedString {
+    /**
+     * Build the styled [AnnotatedString] the editor shows.
+     *
+     * **Phase 22.7 — [from]/[to] bound the number of SPAN STYLES, and that is
+     * the whole point.** `BasicTextField` is not lazy: it measures and lays
+     * out the entire text, and its cost is dominated by the span count, not
+     * the character count. JetBrains confirmed this as a known, WONTFIX
+     * limitation of `TextField` (compose-multiplatform#4023 → CMP-4023): a
+     * `VisualTransformation` returning tens of thousands of spans freezes the
+     * UI, and the maintainer's answer was "TextField was not meant to be used
+     * with such a large amount of styled text".
+     *
+     * A 500-line C file produces roughly 4 500 token spans. Those were all
+     * handed to the field on every layout pass — which is why every previous
+     * optimization (moving tokenizing off-thread, memoizing, debouncing) left
+     * the typing lag untouched: the expensive work was never the tokenizer,
+     * it was the field laying out thousands of spans.
+     *
+     * So we colour only the window the user can actually see. The text is
+     * always complete and offsets stay identity-mapped — only the decoration
+     * is windowed, which is invisible to the user and to every caller.
+     */
+    fun highlight(
+        text: String,
+        colors: EditorThemeColors,
+        language: LanguageType,
+        from: Int = 0,
+        to: Int = text.length
+    ): AnnotatedString {
         return buildAnnotatedString {
             append(text)
             if (text.isEmpty()) return@buildAnnotatedString
             addStyle(SpanStyle(color = colors.text), 0, text.length)
-            for (span in tokenize(text, language)) {
+            val start = from.coerceIn(0, text.length)
+            val end = to.coerceIn(start, text.length)
+            for (span in tokenize(text, language, start, end)) {
                 addStyle(SpanStyle(color = span.kind.color(colors)), span.start, span.end)
             }
         }
@@ -337,25 +385,67 @@ data class HighlightedCode(
     val text: String,
     val theme: EditorThemeType,
     val language: LanguageType,
-    val annotated: AnnotatedString
+    val annotated: AnnotatedString,
+    /** Phase 22.7 — the character window whose tokens are actually coloured. */
+    val from: Int = 0,
+    val to: Int = text.length
 ) {
-    /** True when this snapshot is still the truth for the given inputs. */
-    fun matches(text: String, theme: EditorThemeType, language: LanguageType): Boolean =
-        this.theme == theme && this.language == language && this.text == text
+    /**
+     * True when this snapshot is still the truth for the given inputs.
+     *
+     * Phase 22.7 — the caret window must also still be covered. A snapshot
+     * built for a window the user has since scrolled away from is stale even
+     * though its text is unchanged.
+     */
+    fun matches(
+        text: String,
+        theme: EditorThemeType,
+        language: LanguageType,
+        from: Int = this.from,
+        to: Int = this.to
+    ): Boolean =
+        this.theme == theme &&
+            this.language == language &&
+            this.text == text &&
+            from >= this.from &&
+            to <= this.to
 
     companion object {
-        /** Tokenize [text] once (call off the main thread). */
-        fun of(text: String, theme: EditorThemeType, language: LanguageType): HighlightedCode =
-            HighlightedCode(
+        /**
+         * Phase 22.7 — how many characters either side of the caret get
+         * coloured. `BasicTextField`'s layout cost scales with the SPAN
+         * count (compose-multiplatform#4023 / CMP-4023, WONTFIX), so this is
+         * the knob that actually bounds typing cost on a long file. ~40 k
+         * characters is far more than a phone screen shows, so the user
+         * never reaches an uncoloured edge in normal scrolling, while a
+         * 500-line file drops from ~4 500 spans to a small constant.
+         */
+        const val WINDOW = 20_000
+
+        /** Tokenize [text] once, colouring only around [caret]. Call off the main thread. */
+        fun of(
+            text: String,
+            theme: EditorThemeType,
+            language: LanguageType,
+            caret: Int = 0
+        ): HighlightedCode {
+            val from = (caret - WINDOW).coerceIn(0, text.length.coerceAtLeast(0))
+            val to = (caret + WINDOW).coerceIn(from, text.length)
+            return HighlightedCode(
                 text = text,
                 theme = theme,
                 language = language,
                 annotated = MultiLanguageSyntaxHighlighter.highlight(
                     text,
                     getEditorTheme(theme),
-                    language
-                )
+                    language,
+                    from,
+                    to
+                ),
+                from = from,
+                to = to
             )
+        }
     }
 }
 
@@ -387,7 +477,12 @@ class SyntaxVisualTransformation(
      * transformation falls back to highlighting inline so text is never
      * mis-colored.
      */
-    private val cached: HighlightedCode? = null
+    private val cached: HighlightedCode? = null,
+    /**
+     * Phase 22.7 — where the user is, so the inline fallback colours the
+     * right window. Defaults to the top of the file.
+     */
+    private val caret: Int = 0
 ) : VisualTransformation {
 
     /**
@@ -408,10 +503,14 @@ class SyntaxVisualTransformation(
     override fun filter(text: AnnotatedString): TransformedText {
         memoValue?.let { if (memoKey == text.text) return it }
 
+        // Phase 22.7 — the inline fallback is windowed too. It used to colour
+        // the WHOLE buffer, so on the frames before the debounced snapshot
+        // arrived it handed the field thousands of spans — exactly the cost
+        // the windowing exists to avoid.
         val base = cached
             ?.takeIf { it.matches(text.text, theme, language) }
             ?.annotated
-            ?: MultiLanguageSyntaxHighlighter.highlight(text.text, getEditorTheme(theme), language)
+            ?: HighlightedCode.of(text.text, theme, language, caret).annotated
         val result = TransformedText(
             text = if (decorations.isEmpty()) {
                 base

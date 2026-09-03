@@ -310,19 +310,38 @@ class EditorViewModel : ViewModel() {
     init {
         highlightJob = viewModelScope.launch {
             combine(_codeText, _highlightContext) { value, context ->
-                Triple(value.text, context.first, context.second)
+                // Phase 22.7 — the caret is part of the key: the coloured
+                // window follows the user. Quantized to WINDOW/4 so ordinary
+                // typing and short scrolls do NOT re-tokenize; only moving a
+                // meaningful distance through the file does.
+                val caret = value.selection.min.coerceAtLeast(0)
+                HighlightRequest(
+                    text = value.text,
+                    theme = context.first,
+                    language = context.second,
+                    caretBucket = caret / (HighlightedCode.WINDOW / 4)
+                )
             }
                 .distinctUntilChanged()
                 .debounce(HIGHLIGHT_DEBOUNCE_MS)
-                .collect { (text, theme, language) ->
+                .collect { request ->
+                    val caret = _codeText.value.selection.min.coerceAtLeast(0)
                     val built = withContext(Dispatchers.Default) {
-                        HighlightedCode.of(text, theme, language)
+                        HighlightedCode.of(request.text, request.theme, request.language, caret)
                     }
                     // Drop a result the buffer already moved past.
                     if (built.text == _codeText.value.text) _highlighted.value = built
                 }
         }
     }
+
+    /** Phase 22.7 — the identity of one highlight job (see the collector above). */
+    private data class HighlightRequest(
+        val text: String,
+        val theme: EditorThemeType,
+        val language: LanguageType,
+        val caretBucket: Int
+    )
 
     /** Called by the editor whenever the active theme or language changes. */
     fun setHighlightContext(theme: EditorThemeType, language: LanguageType) {
