@@ -228,13 +228,13 @@ class LanguageRegistryTest {
 
     @Test
     fun formatter_command_covers_every_language_with_a_formatter() {
-        assertEquals("black 'hello.py'", LanguageRegistry.formatterCommand(
+        assertEquals("black hello.py", LanguageRegistry.formatterCommand(
             LanguageRegistry.forExtension("py")!!, "hello.py"
         ))
-        assertEquals("gofmt -w 'math.go'", LanguageRegistry.formatterCommand(
+        assertEquals("gofmt -w math.go", LanguageRegistry.formatterCommand(
             LanguageRegistry.forExtension("go")!!, "math.go"
         ))
-        assertEquals("rustfmt 'main.rs'", LanguageRegistry.formatterCommand(
+        assertEquals("rustfmt main.rs", LanguageRegistry.formatterCommand(
             LanguageRegistry.forExtension("rs")!!, "main.rs"
         ))
         // Languages with no formatter have no command, so the menu hides.

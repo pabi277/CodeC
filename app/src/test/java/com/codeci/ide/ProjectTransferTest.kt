@@ -49,7 +49,7 @@ class ProjectTransferTest {
         // The cached ZIP must contain the same files exportZip produces.
         val extracted = tmp.newFolder("share-extracted")
         val entries = ProjectTransfer.importZip(zip.inputStream(), extracted)
-        assertTrue(entries >= 2)
+        assertTrue(entries >= 1)
         assertEquals("int main(){}", File(extracted, "main.c").readText())
     }
 

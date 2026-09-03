@@ -27,6 +27,13 @@ class EditorLineOpsTest {
     fun `toggle adds slash comment to single line`() {
         val before = TextFieldValue("int main() {\n  return 0;\n}", TextRange(10))
         val after = EditorLineOps.toggleLineComment(before, "//")
+        assertEquals("//int main() {\n  return 0;\n}", after?.text)
+    }
+
+    @Test
+    fun `toggle comments every line a multi-line selection touches`() {
+        val before = TextFieldValue("int main() {\n  return 0;\n}", TextRange(0, 29))
+        val after = EditorLineOps.toggleLineComment(before, "//")
         assertEquals("//int main() {\n//  return 0;\n//}", after?.text)
     }
 
@@ -41,7 +48,7 @@ class EditorLineOpsTest {
     fun `toggle removes existing slash prefix`() {
         val before = TextFieldValue("//int main() {\n//  return 0;\n//}", TextRange(5))
         val after = EditorLineOps.toggleLineComment(before, "//")
-        assertEquals("int main() {\n  return 0;\n}", after?.text)
+        assertEquals("int main() {\n//  return 0;\n//}", after?.text)
     }
 
     @Test
