@@ -88,7 +88,14 @@ object CodecJsonParser {
     }
 
     /** Parses a flat JSON object of string values; null on malformed input. */
-    private fun parseObject(text: String): Map<String, String>? = runCatching {
+    private fun parseObject(text: String): Map<String, String>? =
+        try {
+            parseObjectOrThrow(text)
+        } catch (_: Exception) {
+            null
+        }
+
+    private fun parseObjectOrThrow(text: String): Map<String, String> {
         var index = 0
         val fields = linkedMapOf<String, String>()
 
@@ -143,7 +150,7 @@ object CodecJsonParser {
             index++
             skipWhitespace()
             if (index != text.length) error("Invalid .codec.json")
-            return@runCatching fields
+            return fields
         }
         while (true) {
             if (index >= text.length || text[index] != '"') error("Invalid .codec.json key")
@@ -171,10 +178,12 @@ object CodecJsonParser {
                     index++
                     skipWhitespace()
                     if (index != text.length) error("Invalid .codec.json")
-                    return@runCatching fields
+                    return fields
                 }
                 else -> error("Invalid .codec.json")
             }
         }
-    }.getOrNull()
+        @Suppress("UNREACHABLE_CODE")
+        return fields
+    }
 }

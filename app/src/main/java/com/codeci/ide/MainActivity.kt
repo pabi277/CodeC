@@ -240,19 +240,20 @@ class MainActivity : ComponentActivity() {
     /** Phase 24.7 — "Open with CodeC": import a shared file/ZIP and open it. */
     private fun handleIncomingIntent(intent: Intent?) {
         val action = intent?.action ?: return
-        val uri: Uri? = when (action) {
+        val uri = when (action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(
                 intent, Intent.EXTRA_STREAM, Uri::class.java
             )
             else -> null
         } ?: return
-        val mime = intent.type ?: contentResolver.getType(uri) ?: uri.toString()
+        val resolvedUri: Uri = uri
+        val mime = intent.type ?: contentResolver.getType(resolvedUri) ?: resolvedUri.toString()
         val isZip = mime.equals("application/zip", ignoreCase = true) ||
             mime.contains("zip", ignoreCase = true) ||
-            uri.toString().substringBefore('?').endsWith(".zip", ignoreCase = true)
-        val imported = if (isZip) IncomingImportBridge.importZip(this, uri)
-        else IncomingImportBridge.importFile(this, uri, mime)
+            resolvedUri.toString().substringBefore('?').endsWith(".zip", ignoreCase = true)
+        val imported = if (isZip) IncomingImportBridge.importZip(this, resolvedUri)
+        else IncomingImportBridge.importFile(this, resolvedUri, mime)
         if (imported != null) {
             IncomingImportBridge.offer(imported)
             Toast.makeText(this, "Imported ${imported.fileName}", Toast.LENGTH_SHORT).show()
