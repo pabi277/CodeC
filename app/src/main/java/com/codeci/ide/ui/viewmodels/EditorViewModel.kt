@@ -51,8 +51,11 @@ import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalHandoff
+import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import com.codeci.ide.ui.utils.HighlightedCode
+import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -63,6 +66,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -110,7 +116,16 @@ data class OutputRunState(
     val serverUrl: String? = null,
     /** Phase 14 — true while the panel is attached to a long-lived server, not a batch run. */
     val serverRun: Boolean = false
-)
+) {
+    /**
+     * Phase 22.4 — has this panel got anything to say yet? A fresh editor
+     * session has never run anything, so the collapsed strip is pure wasted
+     * height on a phone. The panel earns its space the moment a run starts
+     * (or has produced any output), and `clearOutput()` resets it to IDLE
+     * with no lines, which hides the strip again.
+     */
+    fun hasContent(): Boolean = phase != OutputPhase.IDLE || lines.isNotEmpty()
+}
 
 /** Phase 9 — cursor readout for the editor status bar. */
 data class EditorCursorPos(val line: Int, val column: Int, val selectionLength: Int)
@@ -133,6 +148,13 @@ class EditorViewModel : ViewModel() {
         const val MAX_TAB_FILE_BYTES = 256_000L
         /** Idle time after the last keystroke before the buffer is auto-saved. */
         private const val AUTO_SAVE_DELAY_MS = 2_000L
+        /**
+         * Phase 22.1 — idle time after the last keystroke before the O(n)
+         * full-file tokenizer runs (off the main thread). 80 ms is well under
+         * the ~150 ms visual-change perception threshold but long enough to
+         * collapse a burst of key events into a single highlight pass.
+         */
+        const val HIGHLIGHT_DEBOUNCE_MS = 80L
         /** Phase 21.1 — project-relative directory compiled binaries land in. */
         const val PROJECT_BUILD_DIR = "bin"
         /** Phase 21.2 — a toolchain download may legitimately take minutes. */
@@ -261,6 +283,70 @@ class EditorViewModel : ViewModel() {
     val cursorPos: StateFlow<EditorCursorPos> = _cursorPos.asStateFlow()
 
     private var decorationJob: Job? = null
+
+    // ---- Phase 22.1: debounced off-thread syntax highlighting -------------
+
+    /**
+     * The theme + language the editor is currently rendering with. The screen
+     * pushes it through [setHighlightContext]; the highlight pipeline combines
+     * it with the buffer so a theme or language switch re-tokenizes too.
+     */
+    private val _highlightContext =
+        MutableStateFlow(EditorThemeType.DRACULA to LanguageType.C)
+
+    private val _highlighted = MutableStateFlow<HighlightedCode?>(null)
+
+    /**
+     * Phase 22.1 — the pre-built highlight for the last settled buffer. The
+     * editor hands it to `SyntaxVisualTransformation`, which reuses it instead
+     * of tokenizing the whole file on the main thread for every keystroke.
+     * Null (or stale) simply means the transformation highlights inline for a
+     * frame — correctness never depends on this cache.
+     */
+    val highlighted: StateFlow<HighlightedCode?> = _highlighted.asStateFlow()
+
+    private var highlightJob: Job? = null
+
+    init {
+        highlightJob = viewModelScope.launch {
+            combine(_codeText, _highlightContext) { value, context ->
+                // Phase 22.7 — the caret is part of the key: the coloured
+                // window follows the user. Quantized to WINDOW/4 so ordinary
+                // typing and short scrolls do NOT re-tokenize; only moving a
+                // meaningful distance through the file does.
+                val caret = value.selection.min.coerceAtLeast(0)
+                HighlightRequest(
+                    text = value.text,
+                    theme = context.first,
+                    language = context.second,
+                    caretBucket = caret / (HighlightedCode.WINDOW / 4)
+                )
+            }
+                .distinctUntilChanged()
+                .debounce(HIGHLIGHT_DEBOUNCE_MS)
+                .collect { request ->
+                    val caret = _codeText.value.selection.min.coerceAtLeast(0)
+                    val built = withContext(Dispatchers.Default) {
+                        HighlightedCode.of(request.text, request.theme, request.language, caret)
+                    }
+                    // Drop a result the buffer already moved past.
+                    if (built.text == _codeText.value.text) _highlighted.value = built
+                }
+        }
+    }
+
+    /** Phase 22.7 — the identity of one highlight job (see the collector above). */
+    private data class HighlightRequest(
+        val text: String,
+        val theme: EditorThemeType,
+        val language: LanguageType,
+        val caretBucket: Int
+    )
+
+    /** Called by the editor whenever the active theme or language changes. */
+    fun setHighlightContext(theme: EditorThemeType, language: LanguageType) {
+        _highlightContext.value = theme to language
+    }
 
     // ---- Phase 11: Output Panel run pipeline -----------------------------
 
@@ -450,7 +536,19 @@ class EditorViewModel : ViewModel() {
             syncUndoFlags(manager)
             _codeText.value = next
             _isDirty.value = computeDirty(next.text)
-            stashActiveTabBuffer(next)
+            // Phase 22.5 — the active tab's buffer is NOT stashed per
+            // keystroke. `_openTabs` is a StateFlow of a list of data
+            // classes: stashing rebuilt the whole list and emitted a new
+            // identity on every character, waking every tab-list collector
+            // (the tab strip, the drawer's dirty marks) and — because
+            // `EditorTab` holds the full `TextFieldValue` — making the
+            // per-keystroke cost scale with the FILE, not the edit. That is
+            // the long-file lag. The active tab's truth already lives in
+            // `_codeText`; every reader of `tab.buffer` for the ACTIVE tab
+            // now consults `_codeText` instead, and the stash still happens
+            // at the real boundaries (tab switch, close, save, context
+            // switch), which is exactly what `stashActiveTabBuffer`'s own
+            // KDoc always promised.
             scheduleAutoSave()
         } else if (next.selection != old.selection) {
             _codeText.value = next
@@ -627,6 +725,9 @@ class EditorViewModel : ViewModel() {
     private fun trimTabs(tabs: List<EditorTab>): List<EditorTab> {
         if (tabs.size <= MAX_OPEN_TABS) return tabs
         val active = _activeTabPath.value
+        // Phase 22.5 — only NON-active tabs are eviction candidates, and a
+        // non-active tab's stash is always current, so `buffer` is the truth
+        // here. (The active tab is excluded by the same predicate.)
         val victim = tabs.firstOrNull { it.relativePath != active && it.buffer.text == it.savedText }
             ?: tabs.firstOrNull { it.relativePath != active }
             ?: return tabs.takeLast(MAX_OPEN_TABS)
@@ -2316,8 +2417,18 @@ class EditorViewModel : ViewModel() {
     private fun refreshDecorationsNow() {
         val current = _codeText.value
         val cursor = current.selection.min.coerceIn(0, current.text.length)
-        val line = current.text.take(cursor).count { it == '\n' } + 1
-        val lineStart = CodeFormatter.lineStartOffset(current.text, line)
+        // Phase 22.5 — count newlines in place. `take(cursor)` ALLOCATED a
+        // copy of the entire prefix (up to the whole file) on every caret
+        // move and every keystroke, purely to count '\n' in it; at the end of
+        // a long file that is a full-file copy per character typed.
+        var line = 1
+        var lineStart = 0
+        for (i in 0 until cursor) {
+            if (current.text[i] == '\n') {
+                line++
+                lineStart = i + 1
+            }
+        }
         _cursorPos.value = EditorCursorPos(line, cursor - lineStart + 1, current.selection.length)
         _currentLineRange.value = CodeFormatter.lineBounds(current.text, line)?.takeIf { !it.isEmpty() }
         _bracketRanges.value = if (

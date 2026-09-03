@@ -24,6 +24,16 @@ sealed class EditorKey {
 
     /** Insert the configured indent run (tabSize spaces). */
     object Tab : EditorKey()
+
+    /**
+     * Phase 22.5 — a bracket/quote PAIR on one keycap. Typing `(` on a phone
+     * almost always means "I want `()`", and the closer is the character that
+     * is most awkward to reach on a soft keyboard. Tapping the cap inserts
+     * [open] + [close] and lands the caret BETWEEN them; with a selection it
+     * wraps the selection instead (and keeps it selected), which is the
+     * standard editor behavior for surround.
+     */
+    data class Pair(val open: String, val close: String) : EditorKey()
 }
 
 /** One rendered keycap. */
@@ -43,17 +53,17 @@ object EditorKeySet {
     /** The shared keycap list: Spck's set — TAB { } ( ) ; < > / = " ' arrows. */
     private val GENERAL: List<EditorKeyDef> = listOf(
         EditorKeyDef("TAB", EditorKey.Tab, wide = true),
-        EditorKeyDef("{", EditorKey.Insert("{")),
-        EditorKeyDef("}", EditorKey.Insert("}")),
-        EditorKeyDef("(", EditorKey.Insert("(")),
-        EditorKeyDef(")", EditorKey.Insert(")")),
+        // Phase 22.5 — pairs on one cap (owner request). The label shows the
+        // pair so what you tap is what you get; the caret lands inside.
+        EditorKeyDef("()", EditorKey.Pair("(", ")")),
+        EditorKeyDef("{}", EditorKey.Pair("{", "}")),
+        EditorKeyDef("[]", EditorKey.Pair("[", "]")),
+        EditorKeyDef("<>", EditorKey.Pair("<", ">")),
+        EditorKeyDef("\"\"", EditorKey.Pair("\"", "\"")),
+        EditorKeyDef("''", EditorKey.Pair("'", "'")),
         EditorKeyDef(";", EditorKey.Insert(";")),
-        EditorKeyDef("<", EditorKey.Insert("<")),
-        EditorKeyDef(">", EditorKey.Insert(">")),
         EditorKeyDef("/", EditorKey.Insert("/")),
         EditorKeyDef("=", EditorKey.Insert("=")),
-        EditorKeyDef("\"", EditorKey.Insert("\"")),
-        EditorKeyDef("'", EditorKey.Insert("'")),
         EditorKeyDef("←", EditorKey.Caret(EditorKey.Caret.Move.LEFT)),
         EditorKeyDef("→", EditorKey.Caret(EditorKey.Caret.Move.RIGHT)),
         EditorKeyDef("↑", EditorKey.Caret(EditorKey.Caret.Move.UP)),
@@ -75,7 +85,8 @@ object EditorKeySet {
             EditorKeyDef("</>", EditorKey.Insert("</>"))
         )
         LanguageType.JAVASCRIPT -> listOf(
-            EditorKeyDef("`", EditorKey.Insert("`")),
+            // Backticks are a pair too — template literals.
+            EditorKeyDef("``", EditorKey.Pair("`", "`")),
             EditorKeyDef("=>", EditorKey.Insert("=>"))
         )
         LanguageType.SHELL -> listOf(
@@ -125,6 +136,21 @@ object EditorKeySet {
         val end = max(sel.start, sel.end).coerceIn(0, text.length)
         return when (key) {
             is EditorKey.Insert -> replaced(text, start, end, key.text, key.text.length)
+            is EditorKey.Pair -> {
+                val selected = text.substring(start, end)
+                val body = key.open + selected + key.close
+                val next = text.substring(0, start) + body + text.substring(end)
+                if (selected.isEmpty()) {
+                    // Empty caret: land it between the two characters.
+                    TextFieldValue(next, TextRange(start + key.open.length))
+                } else {
+                    // Surround: keep the original text selected inside the pair.
+                    TextFieldValue(
+                        next,
+                        TextRange(start + key.open.length, start + key.open.length + selected.length)
+                    )
+                }
+            }
             EditorKey.Tab -> {
                 val spaces = " ".repeat(tabSize.coerceIn(2, 8))
                 replaced(text, start, end, spaces, spaces.length)

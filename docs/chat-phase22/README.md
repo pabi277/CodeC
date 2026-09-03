@@ -1,6 +1,10 @@
 # CodeC Phase 22 — Editor Touch Smoothness & Keyboard-Anchored Shortcuts
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 22" command.
+**Status:** 🟡 **IMPLEMENTED — awaiting CI green + owner device pass** (started
+2026-09-03 on owner command "start phase 22"; branch `arena/01a065a0-codec`).
+A.1 shipped minus the scroll-model rewrite (deferred — the `scrollState`
+parameter does not exist on the `TextFieldValue` overload of `BasicTextField`
+at Compose BOM 2024.09.00); A.2 and A.3 shipped in full.
 · **Cost:** `[client-only]` — pure Kotlin/Compose; no `[repo-build]`, no native changes
 · **Depends on:** nothing (can start in parallel with Phase 20)
 · **Blocks:** Phase 23 (Phase 23's inline PTY input builds on the IME inset work from Phase 22.2)
@@ -34,9 +38,9 @@ but the measurement target is a mid-range phone in release mode.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **A.1** | Scroll + recomposition decoupling (fix the "stuck" feeling) | `BasicTextField` owns scrolling; debounced off-thread highlight; narrowed `remember` keys; baseline profile | [PART_22_1_SMOOTHNESS.md](PART_22_1_SMOOTHNESS.md) |
-| **A.2** | IME-anchored editor keys strip (fix "not above keyboard") | Keys strip pinned to `WindowInsets.ime`; language-adaptive key set; user-editable; only visible when IME is open | [PART_22_2_IME_KEYS.md](PART_22_2_IME_KEYS.md) |
-| **A.3** | IME insets + caret visibility | `imePadding()` / `WindowCompat.setDecorFitsSystemWindows`; caret never hidden; orientation + predictive-back safe | [PART_22_3_INSETS.md](PART_22_3_INSETS.md) |
+| **A.1** ✅* | Scroll + recomposition decoupling (fix the "stuck" feeling) | `BasicTextField` owns scrolling; debounced off-thread highlight; narrowed `remember` keys; baseline profile | [PART_22_1_SMOOTHNESS.md](PART_22_1_SMOOTHNESS.md) |
+| **A.2** ✅ | IME-anchored editor keys strip (fix "not above keyboard") | Keys strip pinned to `WindowInsets.ime`; language-adaptive key set; user-editable; only visible when IME is open | [PART_22_2_IME_KEYS.md](PART_22_2_IME_KEYS.md) |
+| **A.3** ✅ | IME insets + caret visibility | `imePadding()` / `WindowCompat.setDecorFitsSystemWindows`; caret never hidden; orientation + predictive-back safe | [PART_22_3_INSETS.md](PART_22_3_INSETS.md) |
 
 ---
 
@@ -78,3 +82,130 @@ but the measurement target is a mid-range phone in release mode.
 - Verify state (`git status`, `gh run list`) before acting.
 - Honor all Phase 6/7/9/11 invariants (PTY contract, multi-session routing,
   editor undo history, output panel, find/replace).
+
+---
+
+## Round 1 outcome (2026-09-03)
+
+| Part | State | Notes |
+|---|---|---|
+| A.1 | ✅ partial | Debounced (80 ms) off-thread highlight via `HighlightedCode` + `EditorViewModel.highlighted`; decoration fast path; `tabViews`/`completionItems` keys narrowed; gutter cached. **Deferred:** the double-scroll rewrite (needs a `TextFieldState` migration) and the baseline profile (needs a device Macrobenchmark run). |
+| A.2 | ✅ | Keys row is now the last child of the `imePadding()`'d column while the IME is open, so it rides flush on the keyboard; docked Phase 16 position when the keyboard is closed. Key sets were already language-adaptive. |
+| A.3 | ✅ | `imePadding()` on `EditorScreen`'s root column only. `enableEdgeToEdge()` and `adjustResize` were already in place. |
+
+**New tests:** `EditorHighlightCacheTest` (8 host tests).
+
+**Device pass required** before this phase can be called complete — run
+`PART_22_1_SMOOTHNESS.md` §4, `PART_22_2_IME_KEYS.md` §4 and
+`PART_22_3_INSETS.md` §4 (the last one includes the Terminal regression check).
+
+---
+
+## Device round 1 (2026-09-03) — owner: *"still lacks when i open keyboard, typing not good, terminal blocks the editor"*
+
+Fixed in `1417642` (CI `33720029914`) — full analysis in
+[`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §9.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| D5 | Keyboard-open lags | `filter()` runs per **layout**, and the IME animation relayouts every frame → the whole decorated string was rebuilt 30–60× during the slide. The 22.1 debounce couldn't help: the text never changed. | Single-entry memo in `SyntaxVisualTransformation`, keyed on the buffer text. |
+| D6 | Typing still not good | The gutter's enclosing scope still read `codeText.text` to get `lineCount`, so every keystroke invalidated it — `remember(lineCount)` only saved the string, not the recomposition/measure/draw. | `derivedStateOf` line count: the scope invalidates only when the count changes. |
+| D7 | "Terminal" blocks the editor | The collapsed Output Panel strip was an unconditional fixed `64.dp`, reserved before anything had ever run. | New pure `OutputRunState.hasContent()` gates it; strip **and** status bar also hidden while the IME is up. The **expanded** panel is left alone. |
+
+**New tests:** `OutputPanelVisibilityTest` ×5, plus 2 memo cases in `EditorHighlightCacheTest`.
+
+---
+
+## Device round 2 (2026-09-03) — owner: *"still in a long file it lags"* + *"quick keys make pare in single key"*
+
+Fixed in `a751cf4` (CI `33722090650`) — full analysis in
+[`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §10.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| D8 | Long files still lag | **Not a rendering bug** — `updateCode` stashed the active buffer into `_openTabs` on every character, rebuilding the whole tab list, re-copying a data class that holds the entire `TextFieldValue`, and publishing a new `StateFlow` identity that woke every tab collector. Cost scaled with the FILE, not the edit. | Stash only at the real boundaries (switch/open/close/save/context), as `stashActiveTabBuffer`'s own KDoc always described. All `tab.buffer` readers audited for staleness. |
+| D9 | (same) | `refreshDecorationsNow` built the caret line with `text.take(cursor).count { … }` — a copy of the entire prefix per keystroke — then rescanned for the line start. | One in-place pass yields line **and** line start, no allocation. Pinned by `EditorCursorMathTest` against the old code as an oracle. |
+| D10 | Quick keys insert one character | Each bracket half was its own cap. | New `EditorKey.Pair`: `()`, `{}`, `[]`, `<>`, `""`, `''`, JS `` `` `` — caret lands between, or the pair surrounds the selection. Also frees row space. |
+
+**New tests:** `EditorCursorMathTest` ×6 (incl. a 500-line oracle comparison), 4 new pair cases in `EditorKeySetTest`.
+
+> **Why rounds 1–2 didn't fix the lag:** both were render-side (highlight
+> memo, gutter scope). D8/D9 are in the **ViewModel's edit path** — work done
+> before a frame is even requested. Worth remembering if long-file lag ever
+> resurfaces: measure the edit path, not just recomposition.
+
+---
+
+## Device round 3 (2026-09-03) — owner: *"still lags and not even less lag then before"* + *"add different quick suggestions accordingly to the language"*
+
+Fixed in `1b06dec` + `ba81bf0` (CI `33724364238`) — full analysis in
+[`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §11.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| D11 | Still lags, no better | **`CodeCompletionEngine.completions()` ran synchronously on the main thread every keystroke**, compiling a fresh `Regex` and sweeping the WHOLE buffer for identifiers. Dwarfed everything rounds 1–3 touched. | `produceState` + 120 ms debounce + `Dispatchers.Default`; `Regex` compiled once; scan windowed to `SCAN_WINDOW` around the caret. |
+| D12 | No suggestions on some files | `snippets()` had no HTML/CSS or Markdown branch — both hit `else -> emptyList()`. | Full HTML/CSS + Markdown snippet sets, HTML trigger words, Shell shebang/`read -r`. |
+| D13 | (found by CI) | `snippetMatches` was case-sensitive — lowercase `doc` missed `<!DOCTYPE html>`. | Case-insensitive matching; word-split `Regex` hoisted to a constant. |
+
+### ⚠️ Correction to the Phase 22.1 record
+
+§8 claimed the completion cost was fixed by converting `remember(codeText, …)`
+to `derivedStateOf`. **That was wrong.** `derivedStateOf` only helps when the
+derived *value* changes less often than the state it reads; this derivation
+reads `codeText` and is read by the popup in the same frame, so it recomputed
+every keystroke anyway. It looked like a fix in the diff and did nothing at
+runtime. The same overclaim was corrected in the gutter comment (there
+`derivedStateOf` does help — but by skipping *recomposition*, not the count).
+
+**New tests:** 7 in `CodeCompletionTest`.
+
+---
+
+## Device round 4 (2026-09-03) — *"still writing strucs… search online, don't just guess"*
+
+Fixed in `f3c1c3a` (CI `33726485432`). Research-led; full sources and analysis
+in [`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §12.
+
+**Root cause — a documented Compose limitation, not a CodeC bug.** JetBrains
+[`compose-multiplatform#4023`](https://github.com/JetBrains/compose-multiplatform/issues/4023)
+(→ `CMP-4023`), closed **not planned**: a `VisualTransformation` returning many
+span styles freezes the UI, because `BasicTextField` is **not lazy** — it lays
+out the entire text and its cost is dominated by the **span count**, not the
+character count. The reporter confirmed the same text is fine with the
+transformation removed.
+
+Measured on our tokenizer: **a 500-line C file = ~4 500 spans**, handed to the
+field on *every layout pass*.
+
+**Why rounds 1–3 missed it:** 22.1 moved tokenizing off-thread, 22.4 memoized
+`filter()`, 22.5/22.6 removed per-keystroke O(file) work. All real wins — none
+touched the dominant term, because the tokenizer was never the expensive part.
+
+**Fix:** colour only a `±20 000`-char window around the caret. Scanning still
+starts at 0 so multi-line comments/strings keep their context (colours in the
+window are byte-identical to a full highlight); the window is quantized so
+typing never re-tokenizes; the inline fallback is windowed too.
+
+**Ceiling:** this bounds steady-state cost but cannot make `BasicTextField`
+lazy. Going further means replacing the field (`bigtext`-style, or
+`TextFieldState` + a viewport-driven window) — its own phase, owner's call.
+
+---
+
+## Device round 5 (2026-09-03) — *"still lags, it's a 517 lines html code"*
+
+Fixed in `f718e10` (CI `33728499748`). Details in
+[`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §13.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| D16 | Round 4 changed nothing for this file | A 517-line HTML file is ~25 000 chars; `WINDOW` was 20 000, so ±20 000 covered the **whole file**. The window never engaged. Right diagnosis in §12, wrong constant — chosen without measuring the owner's actual file. | `WINDOW = 3_000` (±3 000 ≫ a ~2 000-char phone screenful). Measured: 1 753 spans → **409**. Test fails if it is raised above 5 000. |
+| D17 | Lag independent of the window | `tokenize()` scanned from offset 0 for multi-line context — an O(file) regex sweep, running **on the main thread** via the inline fallback on every keystroke. | Scan starts at a *safe anchor*: 4 000 chars back, snapped to a blank line (impossible inside a string ⇒ reliable resync). Bounded by `LOOKBEHIND + 2*WINDOW`. |
+| D18 | (correctness) | `filter()`'s memo was keyed on text alone, so it could serve a snapshot coloured for a window the user had scrolled away from. | Keyed on `(text, caret)`. |
+
+> **HTML is the worst case for span density** — every tag name, attribute
+> string and numeric literal is a token. "Big file" for this editor means
+> *many spans*, not many lines.
+
+**New tests:** 6 (517-line HTML fixture provably windowed, `WINDOW` size
+guard, 4 × `safeAnchor`).

@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -72,9 +75,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -138,16 +143,28 @@ import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.utils.EditorDecorations
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.LanguageType
+import com.codeci.ide.ui.utils.HighlightedCode
 import com.codeci.ide.ui.utils.SyntaxVisualTransformation
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** Mockup-exact RUN affordance green (Spck's run action color). */
 private val RunGreen = Color(0xFF3DDC84)
+
+/**
+ * Phase 22.6 — idle time after the last keystroke before the completion scan
+ * runs (off the main thread). Slightly longer than the highlight debounce:
+ * suggestions appearing a beat after you pause reads as intentional, whereas
+ * a flickering popup mid-word is noise.
+ */
+private const val COMPLETION_DEBOUNCE_MS = 120L
 
 /** Tap-anchor for the inline diagnostic tooltip. */
 internal data class EditorPopupAnchor(val x: Float, val y: Float, val diagnostic: EditorDiagnostic)
@@ -235,6 +252,11 @@ fun EditorScreen(
     val fileEntries by viewModel.fileEntries.collectAsState()
     val customSnippets by settingsManager.editorCustomSnippetsFlow.collectAsState(initial = "")
 
+    // Phase 22.2 — "is the soft keyboard up?". WindowInsets.ime animates, so
+    // the bottom inset is > 0 for the whole show/hide animation; that is
+    // exactly the window during which the keys row must ride the keyboard.
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val uiScope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
@@ -278,13 +300,33 @@ fun EditorScreen(
     val language = remember(activeTabPath, currentFileName) {
         LanguageType.fromFileName(activeTabPath ?: currentFileName)
     }
-    val completionItems = remember(codeText, language) {
+    // Phase 22.6 — completions are computed OFF the main thread, debounced.
+    //
+    // The Phase 22.1 `derivedStateOf` here was a mistake: it reads
+    // `codeText`, which changes on every keystroke, so the derivation was
+    // invalidated every keystroke and — because the popup reads it in the
+    // same frame — recomputed every keystroke, synchronously, on the main
+    // thread. `derivedStateOf` only helps when the derived VALUE changes
+    // less often than its inputs; here it changes just as often, so it
+    // bought nothing while looking like a fix.
+    val completionItems by produceState(
+        initialValue = emptyList<CompletionItem>(),
+        key1 = codeText.text,
+        key2 = codeText.selection,
+        key3 = language
+    ) {
+        // Same debounce as the highlighter: a burst of keystrokes collapses
+        // into one scan, and no scan at all happens while you type fast.
+        delay(COMPLETION_DEBOUNCE_MS)
+        val text = codeText.text
         val sel = codeText.selection
-        CodeCompletionEngine.completions(
-            codeText.text,
-            sel.end.coerceAtLeast(sel.start),
-            language
-        )
+        value = withContext(Dispatchers.Default) {
+            CodeCompletionEngine.completions(
+                text,
+                sel.end.coerceAtLeast(sel.start),
+                language
+            )
+        }
     }
     var completionDismissed by remember(codeText.text) { mutableStateOf(false) }
     var completionIndex by remember(completionItems) { mutableStateOf(0) }
@@ -366,14 +408,41 @@ fun EditorScreen(
             diagnostics = diagnostics
         )
     }
-    val transformation = remember(currentEditorTheme, decorations, language) {
-        SyntaxVisualTransformation(currentEditorTheme, decorations, language)
+    // Phase 22.1 — the O(n) tokenizer runs debounced on Dispatchers.Default in
+    // the VM; the transformation reuses that snapshot and only layers the
+    // cheap decoration spans (current line, brackets, find, diagnostics) on
+    // the main thread. A stale snapshot just means one inline highlight pass,
+    // never wrong colors.
+    val highlighted by viewModel.highlighted.collectAsState()
+    LaunchedEffect(currentEditorTheme, language) {
+        viewModel.setHighlightContext(currentEditorTheme, language)
+    }
+    // Phase 22.7 — the caret only feeds the INLINE FALLBACK's window, and it
+    // is bucketed the same way the VM buckets it, so ordinary typing does not
+    // rebuild the transformation (which would throw away its memo every
+    // keystroke).
+    val caretBucket = codeText.selection.min.coerceAtLeast(0) / (HighlightedCode.WINDOW / 4)
+    val transformation = remember(
+        currentEditorTheme, decorations, language, highlighted, caretBucket
+    ) {
+        SyntaxVisualTransformation(
+            currentEditorTheme,
+            decorations,
+            language,
+            highlighted,
+            caretBucket * (HighlightedCode.WINDOW / 4)
+        )
     }
 
-    val tabViews = remember(openTabs, activeTabPath, codeText, isDirty) {
+    // Phase 22.1 — narrowed keys: the tab strip only depends on the tab list,
+    // which tab is active, and the active tab's dirty flag. Keying it on the
+    // live buffer rebuilt every tab model on every keystroke.
+    val tabViews = remember(openTabs, activeTabPath, isDirty) {
         openTabs.map { tab ->
             if (tab.relativePath == activeTabPath) {
-                // The active tab's truth is the live buffer + VM dirtiness.
+                // The active tab's truth is the live buffer + VM dirtiness
+                // (Phase 22.5: its `buffer` stash is deliberately stale
+                // between boundaries, so it must NOT be read here).
                 EditorTabUi(tab.relativePath, tab.displayName, isDirty)
             } else {
                 EditorShellUi.tabModel(tab.relativePath, tab.buffer.text, tab.savedText)
@@ -704,7 +773,19 @@ fun EditorScreen(
                 )
             }
         ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // Phase 22.3 — the editor owns its IME inset. MainActivity already
+        // opted into edge-to-edge (`enableEdgeToEdge()` =
+        // `setDecorFitsSystemWindows(false)`), so the keyboard no longer
+        // resizes the window by itself; `imePadding()` reserves exactly the
+        // keyboard's height at the bottom of the editor column. That both
+        // keeps the caret visible and lets the keys row (Phase 22.2) ride
+        // directly on top of the keyboard. Only EditorScreen is padded —
+        // Terminal/Settings keep their own inset handling.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+        ) {
             TopAppBar(
                 title = {
                     if (tabViews.isEmpty()) {
@@ -719,6 +800,11 @@ fun EditorScreen(
                             activePath = activeTabPath,
                             onSelect = { path -> viewModel.selectTab(path) },
                             onClose = { path ->
+                                // Phase 22.5 — the ACTIVE tab's dirtiness comes
+                                // from the VM flag (its stash is intentionally
+                                // not updated per keystroke); other tabs are
+                                // stashed at their boundaries, so their buffer
+                                // is current.
                                 val dirty = if (path == activeTabPath) {
                                     isDirty
                                 } else {
@@ -1131,8 +1217,24 @@ fun EditorScreen(
                         .padding(vertical = 8.dp)
                 ) {
                     if (showLineNumbers) {
-                        val lineCount = codeText.text.count { it == '\n' } + 1
-                        val lineNumbers = (1..lineCount).joinToString("\n")
+                        // Phase 22.1 / 22.4 — the gutter is driven by a
+                        // derived line COUNT. `derivedStateOf` does NOT stop
+                        // the count from running per keystroke (it re-runs
+                        // whenever `codeText` changes); what it stops is the
+                        // RECOMPOSITION of this scope and the gutter `Text`
+                        // when the count is unchanged. That is the win here,
+                        // and it is worth having: a plain `count {}` over the
+                        // buffer is a few microseconds even on a large file,
+                        // whereas re-measuring and redrawing the gutter is
+                        // not. (Contrast the completion list, where the work
+                        // itself was expensive — that one had to move off the
+                        // main thread entirely; see §296.)
+                        val lineCount by remember {
+                            derivedStateOf { codeText.text.count { it == '\n' } + 1 }
+                        }
+                        val lineNumbers = remember(lineCount) {
+                            (1..lineCount).joinToString("\n")
+                        }
                         // Mockup-exact gutter: right-aligned muted numbers with
                         // a hairline vertical divider at the gutter edge.
                         Box(
@@ -1317,7 +1419,11 @@ fun EditorScreen(
             // Phase 16 — Spck bottom order: the snippet/keys row docks ABOVE
             // the status bar (the old SymbolBar sat below it); the toolbar
             // chevron toggles the row when it would crowd small screens.
-            if (keysRowVisible) {
+            // Phase 22.2 — while the soft keyboard is up the row moves to the
+            // very bottom of the column instead, so with `imePadding()` above
+            // it lands DIRECTLY on top of the keyboard (Termux's extra-keys
+            // behavior) rather than being stranded mid-screen.
+            if (keysRowVisible && !imeVisible) {
                 EditorKeysRow(
                     textFieldValue = codeText,
                     onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
@@ -1327,27 +1433,34 @@ fun EditorScreen(
                 )
             }
 
-            EditorStatusBar(
-                line = cursorPos.line,
-                column = cursorPos.column,
-                selectionLength = cursorPos.selectionLength,
-                tabSize = tabSize,
-                errorCount = EditorShellUi.errorCount(diagnostics),
-                warningCount = EditorShellUi.warningCount(diagnostics),
-                onDiagnosticsClick = {
-                    // Phase 16 — the errors badge taps to the first error
-                    // (Spck's jump); warnings-only still opens the review.
-                    val target = EditorShellUi.firstError(diagnostics)
-                    if (target != null) viewModel.jumpToDiagnostic(target) else showDiagnosticsDialog = true
-                },
-                languageLabel = language.label,
-                lineEnding = activeLineEnding,
-                onLineEndingClick = if (currentProject != null && activeTabPath != null) {
-                    { viewModel.toggleLineEnding(context) }
-                } else {
-                    null
-                }
-            )
+            // Phase 22.4 — while the keyboard is up the status bar yields its
+            // row to the editor. Ln/Col is a glance-value readout, not
+            // something you consult mid-keystroke, and on a phone this is a
+            // whole extra line of code kept visible above the keyboard. It
+            // returns the moment the keyboard closes.
+            if (!imeVisible) {
+                EditorStatusBar(
+                    line = cursorPos.line,
+                    column = cursorPos.column,
+                    selectionLength = cursorPos.selectionLength,
+                    tabSize = tabSize,
+                    errorCount = EditorShellUi.errorCount(diagnostics),
+                    warningCount = EditorShellUi.warningCount(diagnostics),
+                    onDiagnosticsClick = {
+                        // Phase 16 — the errors badge taps to the first error
+                        // (Spck's jump); warnings-only still opens the review.
+                        val target = EditorShellUi.firstError(diagnostics)
+                        if (target != null) viewModel.jumpToDiagnostic(target) else showDiagnosticsDialog = true
+                    },
+                    languageLabel = language.label,
+                    lineEnding = activeLineEnding,
+                    onLineEndingClick = if (currentProject != null && activeTabPath != null) {
+                        { viewModel.toggleLineEnding(context) }
+                    } else {
+                        null
+                    }
+                )
+            }
 
             // Phase 11: split-screen Output Panel. Expanded = draggable
             // splitter + panel; collapsed = one-line strip (tap to expand).
@@ -1375,7 +1488,14 @@ fun EditorScreen(
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     modifier = Modifier.height(outputPanelHeight.dp)
                 )
-            } else {
+            } else if (outputState.hasContent() && !imeVisible) {
+                // Phase 22.4 — the collapsed strip only exists once there IS
+                // output, and never while you are typing. Before the first
+                // RUN it was 64dp of permanently reserved height showing
+                // nothing, which on a phone is a real chunk of the editor.
+                // `clearOutput()` hides it again. The EXPANDED panel is left
+                // alone even with the keyboard up — if you deliberately
+                // opened it (e.g. to answer a prompt) it must stay.
                 OutputPanelView(
                     state = outputState,
                     isExpanded = false,
@@ -1388,6 +1508,22 @@ fun EditorScreen(
                     onSendInput = { viewModel.sendInputToRun(it) },
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     modifier = Modifier.height(64.dp)
+                )
+            }
+
+            // Phase 22.2 — the IME-anchored position. This is the last child
+            // of the imePadding()'d column, so it sits flush on top of the
+            // soft keyboard. Same composable, same key set, same actions as
+            // the docked row above — only the position changes, so nothing
+            // about find/replace, autocomplete or the status bar is affected.
+            if (keysRowVisible && imeVisible) {
+                EditorKeysRow(
+                    textFieldValue = codeText,
+                    onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
+                    tabSize = tabSize,
+                    language = language,
+                    customSnippets = customSnippets,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 )
             }
         }

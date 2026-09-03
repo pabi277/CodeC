@@ -145,13 +145,50 @@ PASS = all 6 steps behave as described.
 
 ---
 
-## 7. Research notes (fill in before implementing)
+## 7. Research notes — ✅ RESOLVED
 
-> **TODO for the implementer:**
-> - Check if `WindowCompat.setDecorFitsSystemWindows(window, false)` is already
->   set in `MainActivity.onCreate` (Phase 6 or Phase 19 may have added it).
->   If so, step 1 is a no-op.
-> - Check the current `windowSoftInputMode` value in `AndroidManifest.xml`.
-> - Confirm `Modifier.imeNestedScroll()` exists in the resolved Compose version
->   (it is in `accompanist` and may be in `foundation` by now). If available,
->   add it to the editor scroll container for smoother IME animation sync.
+Answered during implementation; full detail in **§8** below.
+
+| Question | Answer |
+|---|---|
+| Is `setDecorFitsSystemWindows(false)` already set? | Effectively yes — `enableEdgeToEdge()` at `MainActivity.kt:111` does it. Step 1 was a **no-op**. |
+| Current `windowSoftInputMode` | `adjustResize` (`AndroidManifest.xml:64`). **Kept**, contrary to this doc's original D2 — it composes correctly with `imePadding()` and removing it regressed nothing but risked the Terminal. |
+| Is `Modifier.imeNestedScroll()` available? | Not adopted. Not needed once the keys row became the last child of the `imePadding()` column; adding it risked the Terminal's own scroll handling. |
+
+---
+
+## 8. Research notes + what shipped (2026-09-03)
+
+- **Step 1 was a no-op.** `MainActivity.onCreate` already calls
+  `enableEdgeToEdge()` (`MainActivity.kt:111`), which is
+  `WindowCompat.setDecorFitsSystemWindows(window, false)` plus transparent
+  system bars. Nothing to add.
+- **`windowSoftInputMode`:** `adjustResize` is set on `MainActivity`
+  (`AndroidManifest.xml:64`). It was **left in place** — contrary to D2. With
+  edge-to-edge the flag is inert for inset delivery (the IME comes through
+  `WindowInsets.ime` either way), and removing it would change behavior for
+  every other screen in the app (Terminal, Settings, dialogs) for no gain in
+  this round. Changing it is a separate, device-gated experiment.
+- **`Modifier.imeNestedScroll()`:** still `@ExperimentalLayoutApi` in Compose
+  Foundation 1.7 and only meaningful for a scroll container that owns its
+  scroll. Since Phase 22.1 kept the outer `verticalScroll` wrapper (the
+  `scrollState` parameter does not exist on the `TextFieldValue` overload of
+  `BasicTextField` at this BOM — see `PART_22_1_SMOOTHNESS.md` §7), wiring it
+  in would need the `TextFieldState` migration first. **Not added.**
+- **What shipped:** `Modifier.imePadding()` on `EditorScreen`'s root `Column`
+  only (D1 respected — not on the Scaffold, so `TerminalScreen`'s
+  `safeDrawingPadding()` and Settings/dialog insets are untouched). This
+  reserves exactly the keyboard's height at the bottom of the editor column,
+  which (a) keeps the caret and the last line above the keyboard and (b) is
+  what makes the Phase 22.2 IME-anchored keys row land flush on the keyboard.
+  `navigationBarsPadding()` is already applied by the bottom bar
+  (`MainActivity.kt:649`), so it was not duplicated here.
+- **Caret follow (§2.3):** unchanged this round. The existing manual
+  `getCursorRect` + scroll-offset math still positions the autocomplete popup;
+  `imePadding()` shrinks the scroll viewport so the caret is inside it. If the
+  owner still sees the caret hidden under the keys row on device, the §2.3
+  fallback (measure the keys-row height, add it as bottom padding) is the next
+  step.
+
+**Device gate:** the §4 recipe (steps 1–6, including the Terminal
+no-white-strip check per D3) is **required** and not yet run.
