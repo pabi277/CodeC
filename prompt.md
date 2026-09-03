@@ -18,7 +18,43 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-03, Phase 21 COMPLETE & MERGED to `main`):**
+**WHERE THINGS STAND (2026-09-03, Phase 22 IMPLEMENTED — device pass required):**
+
+- **Phase 22 (editor smoothness + IME-anchored keys) is 🟡 IMPLEMENTED and
+  CI-GREEN on `arena/01a065a0-codec` (`f2cee13`, run `33717680783`) — NOT
+  merged, NOT device-accepted.** Owner started it with "start phase 22".
+  - **A.1 (partial):** new pure `HighlightedCode` (in
+    `MultiLanguageSyntaxHighlighter.kt`) + `EditorViewModel.highlighted`
+    (`combine` → `distinctUntilChanged` → `debounce(80 ms)` →
+    `Dispatchers.Default`); `SyntaxVisualTransformation` gained a fourth
+    `cached:` parameter and **falls back to inline tokenizing when the
+    snapshot is stale**, so the cache is a pure optimization with no
+    correctness role. Plus `EditorDecorations.isEmpty()` fast path,
+    `tabViews` lost its `codeText` key, `completionItems` → `derivedStateOf`,
+    gutter string `remember(lineCount)`d.
+  - **⚠️ A.1's scroll-model rewrite (spec §2.3) is DEFERRED, on purpose:** at
+    Compose BOM **2024.09.00** the `scrollState` parameter exists **only on
+    the `TextFieldState` overload** of `BasicTextField`; CodeC's
+    `TextFieldValue` overload has none. Migrating would rewrite the undo
+    manager, auto-indent, tab buffers, find/replace and quick-fixes (all
+    speak `TextFieldValue`). Do not "fix" this casually. Baseline profile
+    (§2.5) also not done — needs an on-device Macrobenchmark run.
+  - **A.2:** the keys row's *content* was already correct; only its
+    *position* was wrong. It now renders as the last child of the
+    `imePadding()`'d column while the IME is open (flush on the keyboard),
+    and in the docked Phase 16 position when it is closed. No
+    `AnimatedVisibility` — the inset already animates.
+  - **A.3:** `imePadding()` on `EditorScreen`'s root column **only**.
+    `enableEdgeToEdge()` and `adjustResize` were already in place;
+    `adjustResize` was deliberately left alone.
+  - **Tests:** `EditorHighlightCacheTest` ×8.
+  - **NEXT ACTION: the owner runs the three §4 device recipes in
+    `docs/chat-phase22/`** (typing/fling/pinch smoothness; keys-above-keyboard
+    steps 1–9; caret visibility + the **Terminal no-white-strip regression
+    check**), then merges. Phase 23 must not start first — 22 and 23 both
+    touch the editor/terminal.
+
+**PHASE 21 (COMPLETE & MERGED to `main`):**
 
 - **Phase 21 (`LanguageRunProfile` registry + generic multi-language run) is
   ✅ COMPLETE, DEVICE-ACCEPTED and MERGED to `main`** by owner command
@@ -150,18 +186,19 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
-- **Phase 21 is COMPLETE, device-accepted and MERGED.** No spec'd
-  implementation work is in flight. **Phases 22, 23 and 24 remain PLANNED and
-  fully spec'd — the agent does NOT start one until the owner says "Start
-  Phase 22" (or 23/24).** Between phases the agent waits for the owner to
+- **Phase 22 is in flight** (implemented, CI-green, awaiting the owner's
+  device pass and merge). **Phases 23 and 24 remain PLANNED and fully spec'd —
+  the agent does NOT start one until the owner says "Start Phase 23" (or 24),
+  and 23 must wait for 22 to land because both touch the editor/terminal.** Between phases the agent waits for the owner to
   report a bug — listen carefully, find the underlying code problem, solve it.
   No self-initiated work.
 
 **PHASE STATUS (updated 2026-09-03):**
-Phases 22/23/24 are fully spec'd, no code written yet. **Phase 20.1 and
+Phase 22 is IMPLEMENTED & CI-green on the session branch (device pass
+required, not merged). Phases 23/24 are fully spec'd, no code written yet. **Phase 20.1 and
 Phase 21 are COMPLETE and merged** (20.2 heavy roots behind
 `[repo-build-heavy]` remains a design pivot, not started).
-- **Phase 22** (editor smoothness + IME-anchored keys) — `docs/chat-phase22/`
+- **Phase 22** (editor smoothness + IME-anchored keys) — 🟡 IMPLEMENTED & CI-green on `arena/01a065a0-codec`, **device pass required** — `docs/chat-phase22/`
 - **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
 - **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
 - **Phase 21** (`LanguageRunProfile` registry, generic multi-language run; TCC KEPT as the default C compiler) — ✅ COMPLETE (D.1/D.2/D.3 done, D.4 cancelled, D22/D23 shipped) — `docs/chat-phase21/`
@@ -242,10 +279,11 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. All spec'd phases are done and merged. The agent is in **bug-wait mode**:
-   do nothing until the owner reports a bug, then listen carefully, find the
-   code problem, and solve it via `rule.md`'s update lifecycle. No phase
-   queue; no self-initiated work.
+2. Phase 22 is implemented and CI-green on `arena/01a065a0-codec` but is
+   **not merged and not device-accepted** — the next move is the owner's
+   (device recipes in `docs/chat-phase22/`, then merge). Otherwise the agent
+   is in **bug-wait mode**: do nothing until the owner reports a bug or says
+   "Start Phase 23"/"Start Phase 24". No self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,
