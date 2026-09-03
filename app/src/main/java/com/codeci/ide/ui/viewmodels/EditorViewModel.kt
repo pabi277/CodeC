@@ -116,7 +116,16 @@ data class OutputRunState(
     val serverUrl: String? = null,
     /** Phase 14 — true while the panel is attached to a long-lived server, not a batch run. */
     val serverRun: Boolean = false
-)
+) {
+    /**
+     * Phase 22.4 — has this panel got anything to say yet? A fresh editor
+     * session has never run anything, so the collapsed strip is pure wasted
+     * height on a phone. The panel earns its space the moment a run starts
+     * (or has produced any output), and `clearOutput()` resets it to IDLE
+     * with no lines, which hides the strip again.
+     */
+    fun hasContent(): Boolean = phase != OutputPhase.IDLE || lines.isNotEmpty()
+}
 
 /** Phase 9 — cursor readout for the editor status bar. */
 data class EditorCursorPos(val line: Int, val column: Int, val selectionLength: Int)

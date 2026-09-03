@@ -390,12 +390,29 @@ class SyntaxVisualTransformation(
     private val cached: HighlightedCode? = null
 ) : VisualTransformation {
 
+    /**
+     * Single-entry memo of the last [filter] result.
+     *
+     * `filter` is called on every *layout* pass, not just on every edit — and
+     * the soft keyboard's open/close animation relayouts the field on every
+     * frame of that animation. Without this memo each of those frames rebuilt
+     * the decorated `AnnotatedString` from scratch (an O(n) copy of the whole
+     * file), which is what made opening the keyboard stutter on a big file.
+     * The instance itself is `remember`ed on (theme, decorations, language,
+     * cached highlight), so a stale memo can only ever mean "same inputs,
+     * same text" — the entry is still keyed on the text to be safe.
+     */
+    private var memoKey: String? = null
+    private var memoValue: TransformedText? = null
+
     override fun filter(text: AnnotatedString): TransformedText {
+        memoValue?.let { if (memoKey == text.text) return it }
+
         val base = cached
             ?.takeIf { it.matches(text.text, theme, language) }
             ?.annotated
             ?: MultiLanguageSyntaxHighlighter.highlight(text.text, getEditorTheme(theme), language)
-        return TransformedText(
+        val result = TransformedText(
             text = if (decorations.isEmpty()) {
                 base
             } else {
@@ -406,6 +423,9 @@ class SyntaxVisualTransformation(
             },
             offsetMapping = OffsetMapping.Identity
         )
+        memoKey = text.text
+        memoValue = result
+        return result
     }
 
     /**

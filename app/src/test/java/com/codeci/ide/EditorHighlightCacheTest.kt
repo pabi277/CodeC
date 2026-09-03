@@ -11,6 +11,7 @@ import com.codeci.ide.ui.utils.SyntaxVisualTransformation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -84,6 +85,35 @@ class EditorHighlightCacheTest {
         ).filter(AnnotatedString(source))
         assertEquals(7, out.offsetMapping.originalToTransformed(7))
         assertEquals(7, out.offsetMapping.transformedToOriginal(7))
+    }
+
+    @Test
+    fun `repeated filter calls on the same text reuse one result`() {
+        // Phase 22.4 — filter() runs on every LAYOUT pass, and the soft
+        // keyboard's open/close animation relayouts every frame. The memo is
+        // what stops each of those frames rebuilding the whole decorated
+        // string; identity equality proves no rebuild happened.
+        val snapshot = HighlightedCode.of(source, EditorThemeType.DRACULA, LanguageType.C)
+        val transformation = SyntaxVisualTransformation(
+            EditorThemeType.DRACULA,
+            EditorDecorations(currentLineRange = 0..4),
+            LanguageType.C,
+            snapshot
+        )
+        val first = transformation.filter(AnnotatedString(source))
+        val second = transformation.filter(AnnotatedString(source))
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `the memo never serves a result for different text`() {
+        val transformation = SyntaxVisualTransformation(
+            EditorThemeType.DRACULA, EditorDecorations(), LanguageType.C, null
+        )
+        val first = transformation.filter(AnnotatedString(source))
+        val edited = transformation.filter(AnnotatedString("$source // tail"))
+        assertEquals(source, first.text.text)
+        assertEquals("$source // tail", edited.text.text)
     }
 
     @Test

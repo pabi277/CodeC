@@ -1169,10 +1169,17 @@ fun EditorScreen(
                         .padding(vertical = 8.dp)
                 ) {
                     if (showLineNumbers) {
-                        // Phase 22.1 — the gutter string is only rebuilt when
-                        // the line count actually changes (it used to allocate
-                        // a whole new string on every keystroke).
-                        val lineCount = codeText.text.count { it == '\n' } + 1
+                        // Phase 22.1 / 22.4 — the gutter is driven by a
+                        // derived line COUNT, not by the buffer. Reading
+                        // `codeText` here made every keystroke recompose the
+                        // gutter; `derivedStateOf` re-runs the cheap newline
+                        // count but only invalidates this scope when the
+                        // count actually changes, so typing inside a line is
+                        // free and the string is rebuilt only on line add or
+                        // remove.
+                        val lineCount by remember {
+                            derivedStateOf { codeText.text.count { it == '\n' } + 1 }
+                        }
                         val lineNumbers = remember(lineCount) {
                             (1..lineCount).joinToString("\n")
                         }
@@ -1374,27 +1381,34 @@ fun EditorScreen(
                 )
             }
 
-            EditorStatusBar(
-                line = cursorPos.line,
-                column = cursorPos.column,
-                selectionLength = cursorPos.selectionLength,
-                tabSize = tabSize,
-                errorCount = EditorShellUi.errorCount(diagnostics),
-                warningCount = EditorShellUi.warningCount(diagnostics),
-                onDiagnosticsClick = {
-                    // Phase 16 — the errors badge taps to the first error
-                    // (Spck's jump); warnings-only still opens the review.
-                    val target = EditorShellUi.firstError(diagnostics)
-                    if (target != null) viewModel.jumpToDiagnostic(target) else showDiagnosticsDialog = true
-                },
-                languageLabel = language.label,
-                lineEnding = activeLineEnding,
-                onLineEndingClick = if (currentProject != null && activeTabPath != null) {
-                    { viewModel.toggleLineEnding(context) }
-                } else {
-                    null
-                }
-            )
+            // Phase 22.4 — while the keyboard is up the status bar yields its
+            // row to the editor. Ln/Col is a glance-value readout, not
+            // something you consult mid-keystroke, and on a phone this is a
+            // whole extra line of code kept visible above the keyboard. It
+            // returns the moment the keyboard closes.
+            if (!imeVisible) {
+                EditorStatusBar(
+                    line = cursorPos.line,
+                    column = cursorPos.column,
+                    selectionLength = cursorPos.selectionLength,
+                    tabSize = tabSize,
+                    errorCount = EditorShellUi.errorCount(diagnostics),
+                    warningCount = EditorShellUi.warningCount(diagnostics),
+                    onDiagnosticsClick = {
+                        // Phase 16 — the errors badge taps to the first error
+                        // (Spck's jump); warnings-only still opens the review.
+                        val target = EditorShellUi.firstError(diagnostics)
+                        if (target != null) viewModel.jumpToDiagnostic(target) else showDiagnosticsDialog = true
+                    },
+                    languageLabel = language.label,
+                    lineEnding = activeLineEnding,
+                    onLineEndingClick = if (currentProject != null && activeTabPath != null) {
+                        { viewModel.toggleLineEnding(context) }
+                    } else {
+                        null
+                    }
+                )
+            }
 
             // Phase 11: split-screen Output Panel. Expanded = draggable
             // splitter + panel; collapsed = one-line strip (tap to expand).
@@ -1422,7 +1436,14 @@ fun EditorScreen(
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     modifier = Modifier.height(outputPanelHeight.dp)
                 )
-            } else {
+            } else if (outputState.hasContent() && !imeVisible) {
+                // Phase 22.4 — the collapsed strip only exists once there IS
+                // output, and never while you are typing. Before the first
+                // RUN it was 64dp of permanently reserved height showing
+                // nothing, which on a phone is a real chunk of the editor.
+                // `clearOutput()` hides it again. The EXPANDED panel is left
+                // alone even with the keyboard up — if you deliberately
+                // opened it (e.g. to answer a prompt) it must stay.
                 OutputPanelView(
                     state = outputState,
                     isExpanded = false,
