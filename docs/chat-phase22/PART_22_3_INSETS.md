@@ -145,16 +145,15 @@ PASS = all 6 steps behave as described.
 
 ---
 
-## 7. Research notes (fill in before implementing)
+## 7. Research notes — ✅ RESOLVED
 
-> **TODO for the implementer:**
-> - Check if `WindowCompat.setDecorFitsSystemWindows(window, false)` is already
->   set in `MainActivity.onCreate` (Phase 6 or Phase 19 may have added it).
->   If so, step 1 is a no-op.
-> - Check the current `windowSoftInputMode` value in `AndroidManifest.xml`.
-> - Confirm `Modifier.imeNestedScroll()` exists in the resolved Compose version
->   (it is in `accompanist` and may be in `foundation` by now). If available,
->   add it to the editor scroll container for smoother IME animation sync.
+Answered during implementation; full detail in **§8** below.
+
+| Question | Answer |
+|---|---|
+| Is `setDecorFitsSystemWindows(false)` already set? | Effectively yes — `enableEdgeToEdge()` at `MainActivity.kt:111` does it. Step 1 was a **no-op**. |
+| Current `windowSoftInputMode` | `adjustResize` (`AndroidManifest.xml:64`). **Kept**, contrary to this doc's original D2 — it composes correctly with `imePadding()` and removing it regressed nothing but risked the Terminal. |
+| Is `Modifier.imeNestedScroll()` available? | Not adopted. Not needed once the keys row became the last child of the `imePadding()` column; adding it risked the Terminal's own scroll handling. |
 
 ---
 

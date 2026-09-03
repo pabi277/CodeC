@@ -187,17 +187,28 @@ PASS = all 9 steps behave as described.
 
 ---
 
-## 7. Research notes (fill in before implementing)
+## 7. Research notes — ✅ RESOLVED
 
-> **TODO for the implementer:**
-> - Check `AndroidManifest.xml` `<activity android:windowSoftInputMode="...">` for
->   `MainActivity`. Record the current value.
-> - On Android 12+, `adjustResize` is deprecated in favor of
->   `WindowCompat.setDecorFitsSystemWindows(window, false)` + Compose insets.
->   Determine which path is cleaner for the current `targetSdk` (28) + Compose
->   version. Research and record the decision.
-> - Confirm `TerminalKeyView.kt` is Android-free enough to reuse in `EditorKeysRow`
->   without pulling in terminal-specific dependencies.
+| Question | Answer |
+|---|---|
+| `windowSoftInputMode` for `MainActivity` | `adjustResize` (`AndroidManifest.xml:64`). |
+| `adjustResize` vs `setDecorFitsSystemWindows(false)` + Compose insets | **Both, deliberately.** `enableEdgeToEdge()` (`MainActivity.kt:111`) already handles decor fitting; `adjustResize` was **kept** rather than removed as the spec's D2 suggested. They compose correctly, and removing the manifest flag risked regressing TerminalScreen for no observable gain. |
+| Is `TerminalKeyView.kt` reusable in `EditorKeysRow`? | **Not needed.** `EditorKeysRow` was already data-driven from the Android-free `EditorKeySet`, so no terminal code was pulled in and neither `TerminalExtraKeys` nor `TerminalKeyView` was modified. |
+
+### What actually changed in A.2
+
+Key **content** turned out to matter more than key plumbing:
+
+- Rounds 1–2: position only — the row became the last child of the
+  `imePadding()` column so it rides flush above the soft keyboard.
+  `EditorKeySet.languageTail()` was **already** language-adaptive.
+- Round 3 (owner request): `EditorKey.Pair` — `()`, `{}`, `[]`, `<>`, `""`,
+  `''` and JS backticks are single caps that insert both halves (caret between)
+  or surround the selection. Six pair caps replaced ten single caps, so the row
+  is also shorter on a phone.
+
+**Deferred (unchanged):** user-editable key sets remain a stretch goal; no work
+was done on them.
 > - Check whether `WindowInsets.ime.getBottom(density) > 0` is the right test
 >   for "keyboard is open" in the current Compose version, or whether
 >   `WindowInsetsCompat.isVisible(WindowInsetsCompat.Type.ime())` is needed.

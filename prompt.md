@@ -18,11 +18,32 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-03, Phase 22 IMPLEMENTED — device pass required):**
+**WHERE THINGS STAND (2026-09-03, Phase 22 IMPLEMENTED — owner stopped testing, awaiting merge):**
 
 - **Phase 22 (editor smoothness + IME-anchored keys) is 🟡 IMPLEMENTED and
-  CI-GREEN on `arena/01a065a0-codec` (`f2cee13`, run `33717680783`) — NOT
-  merged, NOT device-accepted.** Owner started it with "start phase 22".
+  CI-GREEN on `arena/01a065a0-codec` (head `a39a5d6`, run `33728936911`) —
+  NOT merged.** Owner started it with "start phase 22", then ran **five
+  device-feedback rounds** and closed with *"Ok i will no check any more
+  leave as it is now"* — i.e. **testing has stopped and the current state is
+  accepted; the only remaining move is the owner's merge command.**
+  - **⚠️ READ FIRST — the long-file lag was a documented Compose limitation,
+    not a CodeC bug.** JetBrains `compose-multiplatform#4023` → `CMP-4023`,
+    closed **not planned**: `BasicTextField` is **not lazy** and its layout
+    cost is dominated by the **SPAN COUNT**, not the character count. Four
+    rounds of plausible-looking fixes (off-thread tokenizing, memoization,
+    debouncing) failed because the tokenizer was never the expensive part.
+    **If editor lag is ever reported again: measure the span count first.**
+    HTML is the worst case (~1 753 spans for 517 lines — every tag name,
+    attribute string and number is a token). Full record with sources:
+    `docs/chat-phase22/PART_22_1_SMOOTHNESS.md` §12–§13.
+  - **Do NOT raise `HighlightedCode.WINDOW` (3 000).** It was 20 000, which
+    was *larger than the owner's ~25 000-char file*, so the windowing never
+    engaged. A unit test fails if it goes above 5 000.
+  - **A 22.1 claim in the older text below is WRONG and has been corrected in
+    the docs:** `completionItems` becoming a `derivedStateOf` was a **no-op**,
+    not a fix (it reads `codeText` and is read in the same frame, so it
+    recomputed every keystroke anyway). It is now `produceState` + 120 ms
+    debounce + `Dispatchers.Default`.
   - **A.1 (partial):** new pure `HighlightedCode` (in
     `MultiLanguageSyntaxHighlighter.kt`) + `EditorViewModel.highlighted`
     (`combine` → `distinctUntilChanged` → `debounce(80 ms)` →
@@ -186,19 +207,19 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
-- **Phase 22 is in flight** (implemented, CI-green, awaiting the owner's
-  device pass and merge). **Phases 23 and 24 remain PLANNED and fully spec'd —
+- **Phase 22 is in flight** (implemented, CI-green; owner has **stopped
+  device-testing and accepted the state** — awaiting only the merge command). **Phases 23 and 24 remain PLANNED and fully spec'd —
   the agent does NOT start one until the owner says "Start Phase 23" (or 24),
   and 23 must wait for 22 to land because both touch the editor/terminal.** Between phases the agent waits for the owner to
   report a bug — listen carefully, find the underlying code problem, solve it.
   No self-initiated work.
 
 **PHASE STATUS (updated 2026-09-03):**
-Phase 22 is IMPLEMENTED & CI-green on the session branch (device pass
-required, not merged). Phases 23/24 are fully spec'd, no code written yet. **Phase 20.1 and
+Phase 22 is IMPLEMENTED & CI-green on the session branch (owner stopped
+testing and accepted it; **not merged** — merge is the owner's call). Phases 23/24 are fully spec'd, no code written yet. **Phase 20.1 and
 Phase 21 are COMPLETE and merged** (20.2 heavy roots behind
 `[repo-build-heavy]` remains a design pivot, not started).
-- **Phase 22** (editor smoothness + IME-anchored keys) — 🟡 IMPLEMENTED & CI-green on `arena/01a065a0-codec`, **device pass required** — `docs/chat-phase22/`
+- **Phase 22** (editor smoothness + IME-anchored keys) — 🟡 IMPLEMENTED & CI-green on `arena/01a065a0-codec`, **owner stopped testing & accepted; awaiting merge** — `docs/chat-phase22/`
 - **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
 - **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
 - **Phase 21** (`LanguageRunProfile` registry, generic multi-language run; TCC KEPT as the default C compiler) — ✅ COMPLETE (D.1/D.2/D.3 done, D.4 cancelled, D22/D23 shipped) — `docs/chat-phase21/`
@@ -280,9 +301,9 @@ report → STOP at the merge gate. The owner merges to `main` themselves
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
 2. Phase 22 is implemented and CI-green on `arena/01a065a0-codec` but is
-   **not merged and not device-accepted** — the next move is the owner's
-   (device recipes in `docs/chat-phase22/`, then merge). Otherwise the agent
-   is in **bug-wait mode**: do nothing until the owner reports a bug or says
+   **not merged** — the owner ended the device rounds with "leave as it is
+   now", so the only remaining move is the owner's merge command. Otherwise
+   the agent is in **bug-wait mode**: do nothing until the owner reports a bug or says
    "Start Phase 23"/"Start Phase 24". No self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).

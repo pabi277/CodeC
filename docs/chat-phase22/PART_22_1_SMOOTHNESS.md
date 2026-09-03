@@ -215,22 +215,23 @@ PASS = steps 1–4 feel smooth; step 6 has zero regression.
 
 ---
 
-## 7. Research notes (fill in before implementing)
+## 7. Research notes — ✅ RESOLVED
 
-> **TODO for the implementer:**
-> - Record the Compose BOM version from `app/build.gradle.kts`.
-> - Confirm whether `BasicTextField(scrollState = ...)` is available at that BOM
->   and whether it supports horizontal scroll (or only vertical).
-> - List every `remember(codeText, ...)` block found in `EditorScreen.kt`.
-> - Confirm whether `EditorViewModel` already has a `completionItems` StateFlow
->   (Phase 12 may have moved it there; if so, the `remember()` in EditorScreen
->   is the only thing to remove).
-> - Check the `windowSoftInputMode` setting in `AndroidManifest.xml` for
->   `MainActivity` — needed to confirm the IME resize mode (used in A.3).
+Every question in this section was answered during implementation. The answers
+are in **§7 (filled in)** immediately below, and the device-round findings that
+superseded several of them are in §8–§13. Summary of the original checklist:
+
+| Question | Answer |
+|---|---|
+| Compose BOM version | `2024.09.00` (Foundation 1.7.x), Kotlin `2.2.10` |
+| Is `BasicTextField(scrollState = …)` available? | **Only on the `TextFieldState` overload**, not the `TextFieldValue` one we use. Scroll rewrite deferred — see §2.3 and the ceiling note in §12. |
+| Every `remember(codeText, …)` in `EditorScreen.kt` | Enumerated in §7 (filled in); all narrowed or removed across rounds 1–6. |
+| Does `EditorViewModel` already expose `completionItems`? | **No** — it lived in `EditorScreen`. Moved off the main thread in Phase 22.6 (§11, D11). |
+| `windowSoftInputMode` | `adjustResize` (`AndroidManifest.xml:64`); kept deliberately — see `PART_22_3_INSETS.md` §8. |
 
 ---
 
-## 7. Research notes (filled in 2026-09-03 — implementation round)
+### 7a. Research notes as gathered (2026-09-03 — implementation round)
 
 **Compose BOM:** `composeBom = "2024.09.00"` (`gradle/libs.versions.toml:12`),
 i.e. Compose Foundation **1.7.x**. Kotlin `2.2.10`, coroutines `1.10.2`.
