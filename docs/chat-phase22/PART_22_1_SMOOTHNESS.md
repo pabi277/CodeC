@@ -646,3 +646,76 @@ is in Compose's text layout, not ours. The genuine ceiling-raiser is replacing
 the field (the `bigtext` route, or a `TextFieldState` migration plus a
 viewport-driven window), which is a much larger piece of work and should be
 its own phase with the owner's go-ahead — not folded into a polish round.
+
+---
+
+## 13. Device round 5 — the window was too big to bite (2026-09-03)
+
+> Owner: *"Still lags it's a 517 lines html code do as much as you can to
+> fixed it"*
+
+Fixed in `f718e10` (CI `33728499748`).
+
+### D16 — Phase 22.7 never engaged for the owner's file
+
+The diagnosis in §12 was right; the **constant was wrong**, and I picked it
+without measuring the file the owner actually had.
+
+A 517-line HTML file is about **25 000 characters**. `WINDOW` was `20_000`,
+so the coloured window spanned ±20 000 = **40 000 characters — the entire
+file**. Windowing was a no-op for exactly the case being reported.
+
+Measured on a representative 517-line HTML fixture:
+
+| Window | Spans handed to `BasicTextField` |
+|---|---|
+| ±20 000 (Phase 22.7) | **1 753** — the whole file |
+| ±8 000 | 1 092 |
+| ±4 000 | 545 |
+| **±3 000 (now)** | **409** |
+
+`WINDOW` is now `3_000`. A phone shows roughly 40 lines ≈ 2 000 characters, so
+±3 000 is still more than a screenful in each direction. A unit test now fails
+if anyone raises it above 5 000.
+
+**HTML is the worst case for span density** — every tag name, every attribute
+string and every numeric literal is its own token, so a markup file generates
+far more spans per line than C or Python. Worth remembering when judging
+"how big is a big file" for this editor: it is spans, not lines.
+
+### D17 — the fallback still swept the whole file, on the main thread
+
+`tokenize()` deliberately scanned from offset 0 so multi-line constructs kept
+their context. That is fine on the ViewModel's debounced background pass — but
+the **inline fallback** in `SyntaxVisualTransformation.filter()` runs on the
+**main thread**, and it runs whenever the debounced snapshot is stale, which
+is *by definition* every keystroke. So an O(file) regex sweep sat on the
+typing path regardless of the window.
+
+Scanning now starts at a **safe anchor**: `LOOKBEHIND` (4 000) characters
+before the window, snapped forward to just after a blank line if one exists in
+that span. A blank line cannot appear inside a string in any grammar here, so
+it is a reliable resynchronisation point; near the top of a file we still scan
+from 0, so small files stay exact. Total scan cost is now bounded by
+`LOOKBEHIND + 2*WINDOW` ≈ 10 000 characters instead of by the file.
+
+### D18 — the memo ignored the caret
+
+`filter()`'s single-entry memo was keyed on the text only. Once the window
+became caret-dependent that was a **correctness bug**, not just a perf one: it
+could keep serving a snapshot coloured for a window the user had scrolled away
+from, showing visibly uncoloured text. Now keyed on `(text, caret)`.
+
+**Tests (6):** a 517-line HTML fixture is provably windowed (>2× fewer spans),
+a guard that `WINDOW` stays small, and four `safeAnchor` cases — top of file,
+exactly at `LOOKBEHIND`, deep in a buffer, and blank-line resync.
+
+### Where this leaves us
+
+Per-keystroke work on a 517-line HTML file is now bounded by a constant
+(~400 spans, ~10 000 chars scanned) rather than by the file. That is as far as
+this architecture goes. If it is *still* not smooth, the remaining cost is
+`BasicTextField` laying out the text itself, which we cannot reach from here —
+see the §12 ceiling note. The next real step is replacing the field
+(`bigtext`-style, or `TextFieldState` + viewport-driven windowing), which is
+its own phase and needs the owner's go-ahead.

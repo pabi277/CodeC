@@ -189,3 +189,23 @@ typing never re-tokenizes; the inline fallback is windowed too.
 **Ceiling:** this bounds steady-state cost but cannot make `BasicTextField`
 lazy. Going further means replacing the field (`bigtext`-style, or
 `TextFieldState` + a viewport-driven window) — its own phase, owner's call.
+
+---
+
+## Device round 5 (2026-09-03) — *"still lags, it's a 517 lines html code"*
+
+Fixed in `f718e10` (CI `33728499748`). Details in
+[`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §13.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| D16 | Round 4 changed nothing for this file | A 517-line HTML file is ~25 000 chars; `WINDOW` was 20 000, so ±20 000 covered the **whole file**. The window never engaged. Right diagnosis in §12, wrong constant — chosen without measuring the owner's actual file. | `WINDOW = 3_000` (±3 000 ≫ a ~2 000-char phone screenful). Measured: 1 753 spans → **409**. Test fails if it is raised above 5 000. |
+| D17 | Lag independent of the window | `tokenize()` scanned from offset 0 for multi-line context — an O(file) regex sweep, running **on the main thread** via the inline fallback on every keystroke. | Scan starts at a *safe anchor*: 4 000 chars back, snapped to a blank line (impossible inside a string ⇒ reliable resync). Bounded by `LOOKBEHIND + 2*WINDOW`. |
+| D18 | (correctness) | `filter()`'s memo was keyed on text alone, so it could serve a snapshot coloured for a window the user had scrolled away from. | Keyed on `(text, caret)`. |
+
+> **HTML is the worst case for span density** — every tag name, attribute
+> string and numeric literal is a token. "Big file" for this editor means
+> *many spans*, not many lines.
+
+**New tests:** 6 (517-line HTML fixture provably windowed, `WINDOW` size
+guard, 4 × `safeAnchor`).
