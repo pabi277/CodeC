@@ -88,14 +88,15 @@ object LanguageRegistry {
         LanguageRunProfile(
             displayName = "C",
             extensions = listOf("c"),
-            // Phase 21 device round 1: there is NO `gcc` package. The compile
-            // root is `libllvm`; its `clang` SUBPACKAGE ships the
-            // gcc/g++/c++/cpp driver symlinks, so `pkg install clang` is what
-            // gives you a working `gcc`. See PART_20_1_TOOLCHAINS.md §2.
-            requiredPackage = "clang",
-            probeBinary = "gcc",
-            installSizeHint = "~90 MB",
-            buildTemplate = "gcc \$SRC -o \$OUT -lm",
+            // Phase 21 (owner, 2026-09-03): TCC stays the DEFAULT C compiler —
+            // it ships in the APK, works offline and needs no download, so a
+            // .c file must never be gated behind a ~90 MB install. `cc` is
+            // CodeC's own TCC frontend (the cc invariant, Phase 20.1 D5/D15).
+            // Users who need C11/C17 install clang from Packages and can set
+            // a project.json build line that calls gcc/clang explicitly.
+            requiredPackage = null,
+            probeBinary = null,
+            buildTemplate = "cc \$SRC -o \$OUT",
             runTemplate = "./\$OUT",
             interactive = true,
             formatterTemplate = "clang-format -i \$SRC",
@@ -103,6 +104,8 @@ object LanguageRegistry {
         LanguageRunProfile(
             displayName = "C++",
             extensions = listOf("cpp", "cc", "cxx"),
+            // TCC is a C compiler only — C++ genuinely requires the LLVM
+            // toolchain, so this profile keeps its install gate.
             requiredPackage = "clang",
             probeBinary = "g++",
             installSizeHint = "~90 MB",

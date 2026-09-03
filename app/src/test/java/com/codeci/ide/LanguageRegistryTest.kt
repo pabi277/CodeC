@@ -97,10 +97,10 @@ class LanguageRegistryTest {
     fun planFor_compiled_language_in_a_project_builds_into_bin() {
         val profile = LanguageRegistry.forExtension("c")!!
         val plan = LanguageRegistry.planFor(profile, "/p/demo", "src/main.c", "bin")!!
-        assertEquals("mkdir -p bin && gcc src/main.c -o bin/main.out -lm", plan.build)
+        assertEquals("mkdir -p bin && cc src/main.c -o bin/main.out", plan.build)
         assertEquals("./bin/main.out", plan.run)
         assertEquals(
-            "cd /p/demo && mkdir -p bin && gcc src/main.c -o bin/main.out -lm && ./bin/main.out",
+            "cd /p/demo && mkdir -p bin && cc src/main.c -o bin/main.out && ./bin/main.out",
             plan.terminal
         )
     }
@@ -166,20 +166,53 @@ class LanguageRegistryTest {
     }
 
     @Test
-    fun c_and_cpp_install_clang_and_probe_the_gcc_symlinks() {
+    fun c_uses_the_builtin_tcc_and_is_never_gated_behind_an_install() {
+        // Owner decision 2026-09-03: TCC is the default C compiler. A .c file
+        // must run offline, out of the box, with no ~90 MB download.
         val c = LanguageRegistry.forExtension("c")!!
-        assertEquals("clang", c.requiredPackage)
-        assertEquals("gcc", c.probeBinary)
+        assertNull(c.requiredPackage)
+        assertNull(c.probeBinary)
+        assertEquals("cc \$SRC -o \$OUT", c.buildTemplate)
+    }
+
+    @Test
+    fun cpp_still_needs_clang_because_tcc_cannot_build_cpp() {
         val cpp = LanguageRegistry.forExtension("cpp")!!
         assertEquals("clang", cpp.requiredPackage)
         assertEquals("g++", cpp.probeBinary)
     }
 
     @Test
-    fun tcc_is_not_referenced_by_any_profile() {
-        // Phase 21 retires TCC: no profile may compile through the `cc` shim.
-        LanguageRegistry.profiles.forEach {
-            assertFalse(it.buildTemplate?.startsWith("cc ") == true)
+    fun the_c_build_line_keeps_the_tcc_link_order_with_o_last() {
+        // TCC link-order invariant: -o must be the FINAL argument.
+        val c = LanguageRegistry.forExtension("c")!!
+        assertTrue(c.buildTemplate!!.trimEnd().endsWith("\$OUT"))
+        val plan = LanguageRegistry.planFor(c, "/p", "main.c", "bin")!!
+        assertTrue(plan.build!!.trimEnd().endsWith("bin/main.out"))
+    }
+
+    @Test
+    fun only_the_c_profile_compiles_through_the_cc_frontend() {
+        // `cc` is CodeC's built-in TCC frontend and is C-only; no other
+        // language may route through it.
+        LanguageRegistry.profiles
+            .filter { it.displayName != "C" }
+            .forEach {
+                assertFalse(
+                    "${it.displayName} must not use the cc frontend",
+                    it.buildTemplate?.startsWith("cc ") == true
+                )
+            }
+    }
+
+    @Test
+    fun the_registry_never_gates_a_language_the_app_ships_itself() {
+        // C (TCC), Shell and HTML are always available — no install prompt.
+        listOf("c", "sh", "html").forEach { ext ->
+            assertNull(
+                "'.$ext' must not require a package",
+                LanguageRegistry.forExtension(ext)!!.requiredPackage
+            )
         }
     }
 

@@ -50,7 +50,7 @@ class ProjectConfigTest {
         assertTrue(fastapi.isServerType())
 
         val micro = ProjectConfig.defaultFor("svc", "c-microservice")
-        assertEquals("mkdir -p bin && gcc server.c -o bin/server", micro.build)
+        assertEquals("mkdir -p bin && cc server.c -o bin/server", micro.build)
         assertEquals("./bin/server", micro.run)
         assertEquals(8080, micro.port)
         assertTrue(micro.isServerType())

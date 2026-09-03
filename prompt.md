@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-03, Phase 21 D.1+D.2 implemented):**
+**WHERE THINGS STAND (2026-09-03, Phase 21 COMPLETE — awaiting owner merge):**
 
 - **Phase 21 (retire TCC, `LanguageRunProfile` registry) is STARTED** (owner:
   "start phase 21", 2026-09-03) on `arena/01a064e0-codec`, base `main` =
@@ -53,10 +53,23 @@ gate, invariants, docs policy) — follow it.
   by the leading program of each `&&`/`;`/`|` segment; a successful install
   resumes the server via `pendingServerProject`. D21 — the `c-microservice`
   preset still emitted `cc server.c`; now `gcc`.
-  **⚠️ For D.4: there are FIVE run paths, not one** — active file, project
-  file, project config, server preset, terminal handoff. The Phase 21 spec
-  only described the first. **D.3 device pass still required.** Record:
-  `docs/chat-phase21/PART_21_IMPLEMENTATION.md` §7–§8.
+  **D.3 device acceptance PASSED (owner: "Pass", 2026-09-03).**
+  **D.4 (Remove TCC Entirely) is CANCELLED by owner direction** — *"remove the
+  option of compiler Setting and make the tcc default but if need user can
+  install gcc"*. D.4 was stopped before deleting anything because `cc` is
+  CodeC's own TCC frontend (protected by the cc invariant, Phase 20.1
+  D5/D15), so deleting the assets would have broken `cc` in the terminal and
+  every existing `project.json`. What shipped instead: **D22** — the Settings
+  → Compiler Engine picker (Auto/TCC/Bundled/Termux) and the
+  `COMPILER_BACKEND` preference are **deleted**, replaced by one read-only
+  "Compiler" line; `BACKEND_AUTO` is now the only value any caller passes.
+  **D23** — the `.c` profile compiles with the built-in **`cc`** frontend and
+  has **no install gate at all** (offline, instant); `.cpp` keeps its clang
+  gate because TCC cannot build C++. `-o` is last again on every C line.
+  **Phase 21 is COMPLETE and ready for the owner's merge command.**
+  Note for future work: CodeC has FIVE run paths — active file, project file,
+  project config, server preset, terminal handoff. Record:
+  `docs/chat-phase21/PART_21_IMPLEMENTATION.md` §7–§9.
 - **Phase 20.1 background (COMPLETE & merged):**
 
 - **`main` includes Phase 20.1** — the toolchain round merged from
@@ -137,7 +150,7 @@ gate, invariants, docs policy) — follow it.
 - **Phase 18 was merged to `main` via PR #38 (2026-09-01)** — the standing
   rule still applies to everything new: the agent stops at CI green + docs and
   the owner merges to `main` (or hands the merge command).
-- **Phase 21 is IN PROGRESS (D.3 device pass required).** Otherwise the agent waits
+- **Phase 21 is COMPLETE (device-accepted; awaiting the owner's merge command).** Otherwise the agent waits
   for the owner to report a bug — listen carefully, find the underlying code
   problem, solve it. No self-initiated work.
 
@@ -148,7 +161,7 @@ design pivot, not started)**.
 - **Phase 22** (editor smoothness + IME-anchored keys) — `docs/chat-phase22/`
 - **Phase 23** (inline PTY input, remove Output Panel input box) — `docs/chat-phase23/`
 - **Phase 20** (gcc/clang/nodejs/etc. in package repo — CI only) — ✅ 20.1 COMPLETE & merged — `docs/chat-phase20/`
-- **Phase 21** (retire TCC, `LanguageRunProfile` registry, generic multi-language run) — 🚧 D.1+D.2 DONE, D.3 device pass required, D.4 blocked — `docs/chat-phase21/`
+- **Phase 21** (`LanguageRunProfile` registry, generic multi-language run; TCC KEPT as the default C compiler) — ✅ COMPLETE (D.1/D.2/D.3 done, D.4 cancelled, D22/D23 shipped) — `docs/chat-phase21/`
 - **Phase 24** (polish batch: formatter, notifications, HW shortcuts, ZIP share, tablet, test runner, Open-with, adaptive theme, per-project config) — `docs/chat-phase24/`
 Recommended order: 21 (in progress) → 22 → 23 → 24 (21 and 22 can run in parallel).
 **Owner starts a phase by saying "Start Phase 20" (or 21/22/23/24) in chat.**
@@ -179,8 +192,10 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 - **RESEARCH WHEN NEEDED (2026-08-31):** phase docs are a starting point;
   research open questions, record "Research notes" with linked sources.
 - **Invariants (law):** no `.` on `PATH`; never `build-package.sh -I`; never
-  overwrite `cc` or real ELF `bash` with a shim; TCC link order with `-o`
-  last; never official `com.termux` packages/repos; never bundle the
+  overwrite `cc` or real ELF `bash` with a shim (`cc` is CodeC's own TCC
+  frontend — Phase 20.1 strips `bin/cc` from the clang deb to protect it);
+  TCC link order with `-o` last (**PERMANENT** — D.4 cancelled 2026-09-03,
+  TCC is the DEFAULT C compiler); never official `com.termux` packages/repos; never bundle the
   bootstrap in the APK; repository metadata stays signed (`signed-by=`, no
   `trusted=yes`); clean-room. Full list: `docs/TERMINAL_PLAN.md` §B/§J,
   `docs/chat-phase1/SOLUTIONS.md`, `docs/chat-phase3/REPOSITORY_SIGNING.md`.

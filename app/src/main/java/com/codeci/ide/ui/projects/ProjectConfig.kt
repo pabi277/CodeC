@@ -126,7 +126,7 @@ data class ProjectConfig(
                     name = name,
                     type = "c-microservice",
                     entry = "server.c",
-                    build = "mkdir -p bin && gcc server.c -o bin/server",
+                    build = "mkdir -p bin && cc server.c -o bin/server",
                     run = "./bin/server",
                     clean = "rm -rf bin/server",
                     port = 8080,

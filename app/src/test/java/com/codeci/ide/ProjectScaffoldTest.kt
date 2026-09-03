@@ -65,7 +65,7 @@ class ProjectScaffoldTest {
         val content = files.single().content
         assertTrue(content.contains("CodeC server listening on http://127.0.0.1:8080"))
         assertTrue(content.contains("#include <sys/socket.h>"))
-        assertTrue(content.contains("gcc server.c -o bin/server"))
+        assertTrue(content.contains("cc server.c -o bin/server"))
     }
 
     @Test

@@ -114,7 +114,6 @@ fun SettingsScreen(
     val cStandard by settingsManager.cStandardFlow.collectAsState(initial = "C11")
     val warningLevel by settingsManager.warningLevelFlow.collectAsState(initial = "Standard")
     val optimizationLevel by settingsManager.optimizationLevelFlow.collectAsState(initial = "O0")
-    val compilerBackend by settingsManager.compilerBackendFlow.collectAsState(initial = "auto")
     val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 12f)
     val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "JetBrains Mono")
     val terminalExtraKeysMacros by settingsManager.terminalExtraKeysMacrosFlow.collectAsState(initial = "")
@@ -184,34 +183,12 @@ fun SettingsScreen(
                 onOptionSelected = { scope.launch { settingsManager.setOptimizationLevel(it) } }
             )
 
-            SettingsDropdown(
-                title = "Compiler Engine",
-                selectedOption = when (compilerBackend) {
-                    "termux" -> "Termux"
-                    "bundled" -> "Bundled Clang"
-                    "embedded" -> "Built-in (TCC)"
-                    else -> "Auto"
-                },
-                options = listOf("Auto", "Built-in (TCC)", "Bundled Clang", "Termux"),
-                onOptionSelected = { option ->
-                    scope.launch {
-                        settingsManager.setCompilerBackend(
-                            when (option) {
-                                "Built-in (TCC)" -> "embedded"
-                                "Bundled Clang" -> "bundled"
-                                "Termux" -> "termux"
-                                else -> "auto"
-                            }
-                        )
-                    }
-                }
-            )
             SettingsItem(
-                title = "Engine notes",
-                subtitle = "Auto: built-in TCC first (offline, instant), then the downloaded " +
-                    "Clang, then Termux when Android blocks both. Built-in (TCC): a full C " +
-                    "compiler inside the APK — works offline like Coding C, no downloads, no " +
-                    "Termux. TCC targets C99; use Bundled Clang for advanced C11/C17 code."
+                title = "Compiler",
+                subtitle = "C compiles with the built-in TCC by default — offline, instant, " +
+                    "no download. C++ and advanced C11/C17 code need the full LLVM " +
+                    "toolchain: install it from Packages (or run \"pkg install clang\" in " +
+                    "the terminal) and RUN \u25b6 offers it automatically when a file needs it."
             )
 
             // BUILT-IN COMPILER CARD
@@ -1052,7 +1029,7 @@ private fun buildTccStatusText(state: TccUiState): String = when {
         "Ready ✓ — a full C compiler inside the APK (${state.abi}). Offline, instant, no " +
             "downloads and no Termux needed for everyday C code."
     else ->
-        "Present but could not start. Reinstall the app, or use another Compiler Engine."
+        "Present but could not start. Reinstall the app, or install clang from Packages."
 }
 
 private data class TermuxUiState(
@@ -1074,8 +1051,8 @@ private fun buildTermuxStatusText(state: TermuxUiState, probing: Boolean): Strin
     if (probing) return "Checking the Termux bridge…"
     state.probeResult?.let { return it }
     return if (state.permissionGranted) {
-        "Installed, permission granted. Tap CHECK BRIDGE to verify, then pick \"Termux\" as the " +
-            "Compiler Engine above."
+        "Installed, permission granted. Tap CHECK BRIDGE to verify — CodeC can then use " +
+            "Termux's clang as a fallback engine."
     } else {
         "Installed, but CodeC is not allowed to run commands inside Termux yet. Grant the " +
             "\"Run commands in Termux environment\" permission (App Info → Permissions → " +

@@ -1,6 +1,6 @@
 # CodeC Phase 21.3 — Device Acceptance: gcc compiles C/C++ end-to-end
 
-**Status:** 📋 **PLANNED** — not yet started · **Cost:** `[client-only]` (device-gated)
+**Status:** ✅ **PASSED (2026-09-03, owner: "Pass")** — after two gate fixes (device rounds 1 and 2; see [`PART_21_IMPLEMENTATION.md`](PART_21_IMPLEMENTATION.md) §7–§8) · **Cost:** `[client-only]` (device-gated)
 · **Depends on:** Phase 21.1 (registry wired), Phase 21.2 (auto-install gate), Phase 20.1 (gcc in repo)
 · **Target files:** none new — this is the device acceptance pass for D.1 + D.2
 

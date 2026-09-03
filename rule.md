@@ -127,12 +127,15 @@ does not begin a lifecycle on its own (§1).
 - **No `.` on `PATH`.**
 - **Never `build-package.sh -I`** (installs official `com.termux` debs).
 - **Never overwrite `cc` or the real ELF `bash` with a shim.**
-- **TCC link order with `-o` last.** *(Still in force: Phase 21 D.1/D.2
-  (2026-09-03) removed `cc` from the RUN ▶ / terminal-handoff command builders,
-  but `EmbeddedCompiler`, `CompilerService` and the Settings → Compiler Engine
-  TCC backend are untouched. This invariant is retired automatically
-  when Phase 21.4 removes TCC entirely — it will be struck from this list and
-  from `prompt.md` in that commit. Until D.4 is complete it still applies.)*
+- **TCC link order with `-o` last.** *(PERMANENT. Phase 21.4 would have
+  retired this when TCC was deleted — but on 2026-09-03 the owner **cancelled**
+  D.4: TCC is the **default C compiler**, not legacy. The Settings engine
+  picker was removed instead, `.c` compiles with the built-in `cc` frontend
+  with no install gate, and clang is installed on demand for C++/C11. This
+  invariant therefore stands indefinitely.)*
+- **`cc` is CodeC's own TCC frontend — never a clang symlink.** Phase 20.1's
+  `apply-recipe-overrides.sh` strips `bin/cc` from the clang deb to protect
+  this (D5/D15); nothing may reintroduce it.
 - **Never use official `com.termux` packages or repositories.**
 - **Never bundle the bootstrap in the APK.**
 - **Repository metadata stays signed** (`signed-by=`, no `trusted=yes`).

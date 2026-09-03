@@ -25,22 +25,29 @@ class LanguageRunPlannerTest {
     private val noneInstalled: (String) -> Boolean = { false }
 
     @Test
-    fun c_file_with_gcc_present_produces_an_execute_decision() {
+    fun c_file_compiles_with_the_builtin_tcc_frontend() {
         val decision = LanguageRunPlanner.decide("main.c", "/p/demo", "bin", allInstalled)
         assertTrue(decision is RunDecision.Execute)
         val exec = decision as RunDecision.Execute
         assertEquals("C", exec.profile.displayName)
-        assertEquals("mkdir -p bin && gcc main.c -o bin/main.out -lm", exec.plan.build)
+        assertEquals("mkdir -p bin && cc main.c -o bin/main.out", exec.plan.build)
         assertEquals("./bin/main.out", exec.plan.run)
     }
 
     @Test
-    fun c_file_without_a_compiler_installs_clang_not_gcc() {
-        // Device round 1 (2026-09-03): `pkg install gcc` fails — apt itself
-        // says "the following packages replace it: libllvm". Phase 20.1
-        // publishes `clang` (a libllvm subpackage) which SHIPS the gcc/g++
-        // driver symlinks. Probe gcc, install clang.
+    fun a_c_file_runs_even_when_nothing_is_installed() {
+        // Owner decision 2026-09-03: TCC ships in the APK, so C must work
+        // offline out of the box — never an install prompt.
         val decision = LanguageRunPlanner.decide("main.c", "/p/demo", "bin", noneInstalled)
+        assertTrue(decision is RunDecision.Execute)
+    }
+
+    @Test
+    fun cpp_without_a_toolchain_installs_clang_not_gcc() {
+        // Device round 1: `pkg install gcc` fails — apt itself says "the
+        // following packages replace it: libllvm". Phase 20.1 publishes
+        // `clang`, whose deb SHIPS the gcc/g++ driver symlinks.
+        val decision = LanguageRunPlanner.decide("main.cpp", "/p/demo", "bin", noneInstalled)
         assertTrue(decision is RunDecision.NeedsInstall)
         assertEquals("clang", (decision as RunDecision.NeedsInstall).packageName)
     }
@@ -161,11 +168,21 @@ class LanguageRunPlannerTest {
     }
 
     @Test
-    fun c_microservice_build_line_asks_for_clang() {
+    fun a_cpp_build_line_asks_for_clang() {
         val needed = LanguageRunPlanner.toolchainForCommands(
-            listOf("mkdir -p bin && gcc server.c -o bin/server", "./bin/server"), noneInstalled
+            listOf("mkdir -p bin && g++ server.cpp -o bin/server", "./bin/server"), noneInstalled
         )
         assertEquals("clang", needed?.packageName)
+    }
+
+    @Test
+    fun the_cc_frontend_never_triggers_an_install_prompt() {
+        // `cc` is built in — the c-microservice preset must run untouched.
+        assertNull(
+            LanguageRunPlanner.toolchainForCommands(
+                listOf("mkdir -p bin && cc server.c -o bin/server", "./bin/server"), noneInstalled
+            )
+        )
     }
 
     @Test

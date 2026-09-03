@@ -41,10 +41,18 @@ and `echo node` never prompt), plus `pendingServerProject` so a successful
 install resumes the server rather than the active file; the `c-microservice`
 preset's leftover `cc server.c` became `gcc`. The lesson for D.4: CodeC has
 **five** run paths (active file, project file, project config, server preset,
-terminal handoff) and the Phase 21 spec described only one. D.3 must be re-run
-before D.4 deletes `assets/tcc/`, `EmbeddedCompiler`'s TCC path and
-`scripts/build-tcc.sh`; the Settings → Compiler Engine TCC backend is
-untouched so the removal stays reversible. Note: the spec's `useLegacyTcc`
+terminal handoff) and the Phase 21 spec described only one. **D.3 then PASSED (owner: "Pass") — and D.4 was CANCELLED.** Beginning the
+TCC deletion surfaced what the spec never modelled: `cc` is CodeC's *own TCC
+frontend*, and Phase 20.1 deliberately strips `bin/cc` from the clang deb to
+protect it, so deleting the assets would have broken `cc` in the terminal and
+every `project.json` already on disk. Raised rather than executed — and the
+owner redirected: *"remove the option of compiler Setting and make the tcc
+default but if need user can install gcc"*. So TCC is not legacy, it is the
+**default C compiler**: the Settings → Compiler Engine picker and the
+`COMPILER_BACKEND` preference are gone (D22), a `.c` file compiles with the
+built-in `cc` and is **never** gated behind a download (D23), `.cpp` still
+installs clang because TCC cannot build C++, and the `-o`-last link-order
+invariant is now PERMANENT. Note: the spec's `useLegacyTcc`
 flag was deliberately *not* added — there was never a distinct TCC branch to
 gate, only the `cc` string. Record:
 [`chat-phase21/PART_21_IMPLEMENTATION.md`](chat-phase21/PART_21_IMPLEMENTATION.md).

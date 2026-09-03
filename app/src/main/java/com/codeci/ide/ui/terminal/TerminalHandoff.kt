@@ -31,13 +31,20 @@ object TerminalHandoff {
 
     /**
      * Phase 11 — split [compileAndRunCommand] into its build and run halves so
-     * the Output Panel can report each phase separately. [build] compiles the
-     * saved source with gcc/g++ (Phase 21); [run] executes the result in the
-     * source's directory.
+     * the Output Panel can report each phase separately.
+     *
+     * Phase 21 (owner, 2026-09-03): C compiles with `cc` — CodeC's built-in
+     * TCC frontend, the default engine — so `-o` stays LAST (the TCC link
+     * order invariant). C++ is not something TCC can build, so it uses g++
+     * from the installed LLVM toolchain.
      */
     fun compileParts(sourcePath: String, outputName: String = DEFAULT_OUTPUT): Pair<String, String> {
-        val compiler = if (sourcePath.substringAfterLast('.', "").lowercase() == "c") "gcc" else "g++"
-        val build = "$compiler ${shellEscape(sourcePath)} -o ${shellEscape(outputName)} -lm"
+        val isC = sourcePath.substringAfterLast('.', "").lowercase() == "c"
+        val build = if (isC) {
+            "cc ${shellEscape(sourcePath)} -o ${shellEscape(outputName)}"
+        } else {
+            "g++ ${shellEscape(sourcePath)} -o ${shellEscape(outputName)} -lm"
+        }
         val run = "./${shellEscape(outputName)}"
         return build to run
     }
@@ -130,7 +137,7 @@ object TerminalHandoff {
         val leaf = rel.substringAfterLast('/')
         val out = (leaf.substringBeforeLast('.', leaf).ifBlank { "main" } + ".out")
             .replace(Regex("[^A-Za-z0-9._-]"), "_")
-        val build = "mkdir -p bin && gcc ${shellEscape(rel)} -o bin/$out -lm"
+        val build = "mkdir -p bin && cc ${shellEscape(rel)} -o bin/$out"
         val run = "./bin/$out"
         return Triple(build, run, "cd ${shellEscape(dir)} && $build && $run")
     }

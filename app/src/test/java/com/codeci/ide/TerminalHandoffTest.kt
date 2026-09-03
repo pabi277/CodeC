@@ -22,13 +22,13 @@ class TerminalHandoffTest {
     }
 
     @Test
-    fun `compile and run uses gcc then the out binary`() {
-        // Phase 21.1: the retired TCC `cc` shim is gone — the registry's gcc
-        // profile drives the compile line and names <leaf>.out.
+    fun `compile and run uses the builtin cc then the out binary`() {
+        // Phase 21 (owner): TCC stays the default C compiler, so `cc` drives
+        // the C compile line and `-o` remains LAST (link-order invariant).
         val cmd = TerminalHandoff.compileAndRunCommand("/data/data/com.codeci.ide/files/CodeC/projects/main.c")
         assertEquals(
             "cd /data/data/com.codeci.ide/files/CodeC/projects && " +
-                "gcc /data/data/com.codeci.ide/files/CodeC/projects/main.c -o main.out -lm && " +
+                "cc /data/data/com.codeci.ide/files/CodeC/projects/main.c -o main.out && " +
                 "./main.out",
             cmd
         )
@@ -90,7 +90,7 @@ class TerminalHandoffTest {
         )
         assertEquals(
             "cd /data/user/0/com.codeci.ide/files/CodeC/projects/portfolio-system3 && " +
-                "mkdir -p bin && gcc main.c -o bin/main.out -lm && ./bin/main.out",
+                "mkdir -p bin && cc main.c -o bin/main.out && ./bin/main.out",
             TerminalHandoff.projectFileRunCommand(dir, "main.c")
         )
     }
@@ -100,7 +100,7 @@ class TerminalHandoffTest {
         val dir = java.io.File("/data/CodeC/projects/my proj")
         val cmd = TerminalHandoff.projectFileRunCommand(dir, "src/my file.c")
         assertTrue(cmd.startsWith("cd '/data/CodeC/projects/my proj'"))
-        assertTrue(" gcc 'src/my file.c' -o bin/my_file.out -lm && ./bin/my_file.out" in cmd)
+        assertTrue(" cc 'src/my file.c' -o bin/my_file.out && ./bin/my_file.out" in cmd)
     }
 
     @Test
@@ -115,7 +115,7 @@ class TerminalHandoffTest {
             "/data/data/com.codeci.ide/files/CodeC/projects/main.c"
         )
         assertEquals(
-            "gcc /data/data/com.codeci.ide/files/CodeC/projects/main.c -o a.out -lm",
+            "cc /data/data/com.codeci.ide/files/CodeC/projects/main.c -o a.out",
             build
         )
         assertEquals("./a.out", run)
@@ -124,7 +124,7 @@ class TerminalHandoffTest {
     @Test
     fun `compile parts honor a custom output name`() {
         val (build, run) = TerminalHandoff.compileParts("/tmp/x.c", "my prog")
-        assertEquals("gcc /tmp/x.c -o 'my prog' -lm", build)
+        assertEquals("cc /tmp/x.c -o 'my prog'", build)
         assertEquals("./'my prog'", run)
     }
 
@@ -190,10 +190,10 @@ class TerminalHandoffTest {
     fun `project file parts split build and run for the output panel`() {
         val dir = java.io.File("/data/CodeC/projects/p1")
         val (build, run, terminal) = TerminalHandoff.projectFileParts(dir, "src/tool.c")
-        assertEquals("mkdir -p bin && gcc src/tool.c -o bin/tool.out -lm", build)
+        assertEquals("mkdir -p bin && cc src/tool.c -o bin/tool.out", build)
         assertEquals("./bin/tool.out", run)
         assertEquals(
-            "cd /data/CodeC/projects/p1 && mkdir -p bin && gcc src/tool.c -o bin/tool.out -lm && " +
+            "cd /data/CodeC/projects/p1 && mkdir -p bin && cc src/tool.c -o bin/tool.out && " +
                 "./bin/tool.out",
             terminal
         )
