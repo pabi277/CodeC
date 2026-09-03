@@ -158,3 +158,34 @@ runtime. The same overclaim was corrected in the gutter comment (there
 `derivedStateOf` does help — but by skipping *recomposition*, not the count).
 
 **New tests:** 7 in `CodeCompletionTest`.
+
+---
+
+## Device round 4 (2026-09-03) — *"still writing strucs… search online, don't just guess"*
+
+Fixed in `f3c1c3a` (CI `33726485432`). Research-led; full sources and analysis
+in [`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §12.
+
+**Root cause — a documented Compose limitation, not a CodeC bug.** JetBrains
+[`compose-multiplatform#4023`](https://github.com/JetBrains/compose-multiplatform/issues/4023)
+(→ `CMP-4023`), closed **not planned**: a `VisualTransformation` returning many
+span styles freezes the UI, because `BasicTextField` is **not lazy** — it lays
+out the entire text and its cost is dominated by the **span count**, not the
+character count. The reporter confirmed the same text is fine with the
+transformation removed.
+
+Measured on our tokenizer: **a 500-line C file = ~4 500 spans**, handed to the
+field on *every layout pass*.
+
+**Why rounds 1–3 missed it:** 22.1 moved tokenizing off-thread, 22.4 memoized
+`filter()`, 22.5/22.6 removed per-keystroke O(file) work. All real wins — none
+touched the dominant term, because the tokenizer was never the expensive part.
+
+**Fix:** colour only a `±20 000`-char window around the caret. Scanning still
+starts at 0 so multi-line comments/strings keep their context (colours in the
+window are byte-identical to a full highlight); the window is quantized so
+typing never re-tokenizes; the inline fallback is windowed too.
+
+**Ceiling:** this bounds steady-state cost but cannot make `BasicTextField`
+lazy. Going further means replacing the field (`bigtext`-style, or
+`TextFieldState` + a viewport-driven window) — its own phase, owner's call.

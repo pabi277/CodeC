@@ -545,3 +545,104 @@ That needs the `TextFieldValue` → `TextFieldState` migration (Compose BOM
 touches the undo manager, auto-indent, tab buffers, find/replace and
 quick-fixes. It is a real piece of work and should be its own round, with the
 owner's go-ahead — not folded into a polish batch.
+
+---
+
+## 12. Device round 4 — the actual root cause (2026-09-03)
+
+> Owner: *"Scroll is working better than before but still writing strucs.
+> Analysis the real problem search online, open sorce projects for solutions
+> don't just guess"*
+
+Fair criticism. Rounds 1–3 were inference. This round is research, and it
+found a cause none of the previous rounds could have reached by reading our
+own code — because **the bottleneck is in Compose, not in CodeC.**
+
+### Research notes (sources)
+
+1. **JetBrains, `compose-multiplatform#4023` — "VisualTransformation freezes
+   the UI when there are lots of span styles"**
+   <https://github.com/JetBrains/compose-multiplatform/issues/4023>
+   (moved to YouTrack `CMP-4023`). A `VisualTransformation` returning ~40 000
+   span styles froze the UI for **6 seconds**. Maintainer
+   (Alexander Maryanovsky) closed it **not planned**:
+   > *"I don't think `TextField` was meant to be used with such a large amount
+   > of text, much less styled text… You need a widget that will layout and
+   > render the text in a lazy fashion; `TextField` and `Text` aren't lazy."*
+
+   Crucially, the reporter noted the field does **not** freeze with the same
+   text when the transformation is removed — even at 10× the line count. **The
+   cost is the SPANS, not the characters.**
+2. **`r/Kotlin` — "Compose cannot be used for large amount of text"**
+   <https://www.reddit.com/r/Kotlin/comments/18fvj45/> — same conclusion, and
+   the reason: real editors use ropes/skip-lists and render only the viewport;
+   `TextField` does neither because it targets small UI inputs.
+3. **`sunny-chung/bigtext`** <https://github.com/sunny-chung/bigtext> — a
+   from-scratch replacement built precisely because of #4023. Its headline
+   claim ("does not freeze when a 300 K text **styled with text
+   transformation** is rendered") confirms styling is the axis, and its design
+   rule is *incremental/windowed transformation, never whole-buffer*.
+4. **`Qawaz/compose-code-editor`**, **`hossain-khan/android-compose-highlight`**
+   — both avoid handing a big styled buffer to one field (separate renderer /
+   off-thread highlight + caching).
+
+### D14 — the measurement that made it obvious
+
+Our tokenizer over a representative 500-line C file:
+
+```
+chars: 34 780   lines: 500   SPANS handed to BasicTextField: ~4 500
+```
+
+Every one of those spans was re-laid-out by `BasicTextField` on **every layout
+pass**. That is the "writing strucs" — and it explains why **rounds 1–3 all
+missed**:
+
+| Round | What it fixed | Why the lag survived |
+|---|---|---|
+| 22.1 | tokenize off-thread, debounced | the tokenizer was never the cost |
+| 22.4 | memoized `filter()` per layout | returned the same 4 500-span object faster |
+| 22.5 | tab-stash + prefix-copy per keystroke | real wins, but not this |
+| 22.6 | completion scan off-thread | real win, but not this |
+
+Each round removed real work and each made things *somewhat* better — which is
+exactly what the owner reported — while the dominant term went untouched.
+
+### D15 — the fix: window the spans, not the text
+
+`highlight()` and `tokenize()` now take `from`/`to` and emit token spans only
+inside that window:
+
+- **Scanning still starts at offset 0**, so multi-line constructs (block
+  comments, multi-line strings) are classified with the same context as
+  before. Only span **emission** is bounded, so colours inside the window are
+  byte-identical to a full-file highlight — proven by a test.
+- `HighlightedCode` carries its `from`/`to` and reports itself **stale when
+  the caret leaves the window**, so scrolling re-colours.
+- The window is `±20 000` chars around the caret — far more than a phone
+  screen shows, so the user never scrolls into an uncoloured edge in normal
+  use.
+- The window is **quantized to `WINDOW/4`** in both the VM's flow key and the
+  screen's `remember` key, so ordinary typing and short scrolls do **not**
+  re-tokenize or discard the transformation memo.
+- The **inline fallback** inside `SyntaxVisualTransformation` is windowed too
+  — it was colouring the whole buffer on the frames before the debounced
+  snapshot arrived, i.e. re-introducing the exact cost being removed.
+
+The text handed to the field is always complete and offsets stay
+identity-mapped, so selection, find/replace, diagnostics and quick-fixes are
+untouched.
+
+**Tests (5):** span count drops on a long file; text never truncated; colours
+inside the window match a full-file highlight exactly; a snapshot goes stale
+once the caret leaves its window; the window follows the caret.
+
+### Honest limits of this fix
+
+This bounds the **steady-state** cost. It does not make `BasicTextField`
+lazy — per JetBrains it never will be. A file large enough that even the
+*unstyled* text is expensive to lay out will still be slow, because that cost
+is in Compose's text layout, not ours. The genuine ceiling-raiser is replacing
+the field (the `bigtext` route, or a `TextFieldState` migration plus a
+viewport-driven window), which is a much larger piece of work and should be
+its own phase with the owner's go-ahead — not folded into a polish round.
