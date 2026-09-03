@@ -15,11 +15,141 @@ import re
 import unittest
 from pathlib import Path
 
-SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS_DIR = REPO_ROOT / "codec-packages" / "scripts"
 
 # Exact ERE from .github/workflows/package-repository.yml "Validate CodeC
 # overlay"; keep in sync with the workflow if it ever changes.
 forbidden = re.compile(r"build-package\.sh.*-[ \t]*I|build-package\.sh.*--install")
+
+
+class PackageGroupSplitTest(unittest.TestCase):
+    """The round-4 360-minute ceiling failures (dispatches 33506104710 and
+    33547475854) forced the build job to fan out into group legs. The split
+    introduces two seams that must never drift apart:
+      1. CODEC_REPOSITORY_GROUPS (base/llvm/langs) must partition
+         CODEC_REPOSITORY_PACKAGES exactly — any missed or duplicated root
+         silently drops or double-builds a package;
+      2. the workflow matrix group names, the per-leg artifact names, the
+         publish-dev pattern download, and the publish-bootstrap-release
+         download must all agree (a renamed artifact with a stale reference
+         fails only at publish/bootstrap-release time — hours later).
+    """
+
+    @classmethod
+    def _load_group_lists(cls) -> dict[str, list[str]]:
+        text = (REPO_ROOT / "codec-packages" / "properties.codec.sh").read_text()
+        lists: dict[str, list[str]] = {}
+        for match in re.finditer(
+            r'^(CODEC_REPOSITORY_PACKAGES|CODEC_REPOSITORY_GROUP_\w+)="([\s\S]*?)"',
+            text,
+            re.M,
+        ):
+            lists[match.group(1)] = match.group(2).split()
+        return lists
+
+    def test_groups_partition_the_full_package_list(self) -> None:
+        lists = self._load_group_lists()
+        full = set(lists["CODEC_REPOSITORY_PACKAGES"])
+        groups = {
+            key.removeprefix("CODEC_REPOSITORY_GROUP_").lower(): words
+            for key, words in lists.items()
+            if key.startswith("CODEC_REPOSITORY_GROUP_")
+        }
+        self.assertEqual(
+            {"base", "llvm", "langs"}, set(groups), "expected exact group names"
+        )
+        union = [pkg for words in groups.values() for pkg in words]
+        self.assertEqual(sorted(union), sorted(full), "group union != full list")
+        self.assertEqual(
+            len(union), len(set(union)), "a package appears in two groups"
+        )
+        # The long pole gets its own leg — the whole point of the split.
+        self.assertEqual(groups["llvm"], ["libllvm"])
+
+    def test_workflow_split_references_are_consistent(self) -> None:
+        wf = (REPO_ROOT / ".github" / "workflows" / "package-repository.yml").read_text()
+        # Matrix is fed by the plan job (the groups dispatch input filters
+        # which legs rebuild); the known set must still be exactly the three
+        # group names from properties.codec.sh.
+        self.assertIn("group: ${{ fromJSON(needs.plan.outputs.groups) }}", wf)
+        self.assertIn('default: "base,llvm,langs"', wf)
+        self.assertIn("base|llvm|langs)", wf)
+        # Per-leg artifact names are group-suffixed.
+        self.assertIn("codec-repository-${{ matrix.arch }}-${{ matrix.group }}", wf)
+        # The time-heavy bootstrap steps run only in the base leg.
+        self.assertRegex(
+            wf,
+            r"name: Build Phase 3 package-manager bootstrap\n\s+if: \$\{\{ matrix\.group == 'base' \}\}",
+        )
+        self.assertRegex(
+            wf,
+            r"name: Validate Phase 3 bootstrap archive\n\s+if: \$\{\{ matrix\.group == 'base' \}\}",
+        )
+        # publish-dev pattern-merges every leg's artifact per arch.
+        self.assertIn("pattern: codec-repository-aarch64-*", wf)
+        self.assertIn("pattern: codec-repository-x86_64-*", wf)
+        self.assertIn("merge-multiple: true", wf)
+        # Salvage wiring: green legs from a partial-failure run merge via
+        # reuse_run_id — but ONLY the complement legs (a leg being rebuilt
+        # must never be shadowed by its stale same-named artifact from the
+        # reused run; the round-4 llvm/lua54 fixes share the version).
+        self.assertIn("reuse_run_id:", wf)
+        self.assertIn("reuse_names", wf)
+        self.assertIn('gh run download "${{ inputs.reuse_run_id }}"', wf)
+        self.assertIn("no complement legs to salvage", wf)
+        # it conflicts with source_run_id and is gated by the per-arch
+        # marker check before signing.
+        self.assertIn("mutually exclusive", wf)
+        self.assertIn("nano clang nodejs", wf)
+        self.assertIn("missing marker package", wf)
+        # The old exact-name artifacts must be gone from this workflow.
+        self.assertNotIn("name: codec-repository-aarch64\n", wf)
+        self.assertNotIn("name: codec-repository-x86_64\n", wf)
+
+    def test_bootstrap_release_consumes_base_leg_artifacts(self) -> None:
+        wf = (REPO_ROOT / ".github" / "workflows" / "publish-bootstrap-release.yml").read_text()
+        self.assertIn("name: codec-repository-aarch64-base\n", wf)
+        self.assertIn("name: codec-repository-x86_64-base\n", wf)
+        self.assertNotIn("name: codec-repository-aarch64\n", wf)
+        self.assertNotIn("name: codec-repository-x86_64\n", wf)
+
+    def test_build_script_resolves_each_group_exactly(self) -> None:
+        """Dry-run the real script per group: the resolved root list must be
+        exactly the group variable's content (resolution lives in the script,
+        so test the script, not a copy of the mapping)."""
+        import subprocess
+
+        lists = self._load_group_lists()
+        script = REPO_ROOT / "codec-packages" / "scripts" / "build-package-repository.sh"
+        for group in ("base", "llvm", "langs"):
+            proc = subprocess.run(
+                ["bash", str(script), "aarch64", group],
+                env={"CODEC_REPO_DRY_RUN": "1", "PATH": "/usr/bin:/bin"},
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            resolved = [
+                line.strip()
+                for line in proc.stdout.splitlines()
+                if line.startswith("  ")
+            ]
+            expected = lists[f"CODEC_REPOSITORY_GROUP_{group.upper()}"]
+            self.assertEqual(expected, resolved, f"group {group} resolution drifted")
+
+    def test_build_script_rejects_unknown_group(self) -> None:
+        import subprocess
+
+        script = REPO_ROOT / "codec-packages" / "scripts" / "build-package-repository.sh"
+        proc = subprocess.run(
+            ["bash", str(script), "aarch64", "nonsense"],
+            env={"CODEC_REPO_DRY_RUN": "1", "PATH": "/usr/bin:/bin"},
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("unknown package group", proc.stderr)
 
 
 class NoForbiddenBuildFlagTest(unittest.TestCase):

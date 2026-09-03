@@ -621,6 +621,251 @@ class RecipeOverrideTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("termux_step_create_debscripts", result.stderr)
 
+    # ---------------------------- Phase 20.1 ----------------------------
+
+    def _write_libllvm_clang_fixture(self, tree: Path) -> Path:
+        """clang subpackage shaping exactly like the pinned revision: the
+        include list carries the driver-compat symlinks bin/cc, bin/gcc,
+        bin/g++, bin/c++, bin/cpp next to the real clang binaries. With the
+        round-4 device-verified cc-loop fix the overrides also edit
+        libllvm/build.sh AND (D10) the lldb/mlir/libpolly subpackage files,
+        so the pinned tree is incomplete without them — delegate to the
+        full fixture and return the clang subpackage path."""
+        lib_dir = self._write_libllvm_full_fixture(tree)
+        return lib_dir / "clang.subpackage.sh"
+
+    def _write_libllvm_full_fixture(self, tree: Path) -> Path:
+        """libllvm fixture carrying every line the overrides target, all
+        byte-exact from the pinned revision
+        (termux-packages @ 1bbe66903526df2e8af51e704316bc68ede72603):
+        all-targets + experimental backends, the full project set, the host
+        ninja tool list (TWO continued lines — a single-line fixture hid
+        this layout and dispatch 33544558167 found out at ~3.5 min), the
+        post_make_install symlink loop (cc invariant — round-4 device
+        verification), the target-coupled subpackage include lines, and the
+        libcompiler-rt subpkg debscripts hook (run 33585242675)."""
+        lib_dir = tree / "packages" / "libllvm"
+        lib_dir.mkdir(parents=True, exist_ok=True)
+        (lib_dir / "build.sh").write_text(
+            'TERMUX_PKG_VERSION="21.1.8"\n'
+            'TERMUX_PKG_DESCRIPTION="Modular compiler and toolchain technologies library"\n'
+            "TERMUX_PKG_EXTRA_CONFIGURE_ARGS=\"\n"
+            "-DLLVM_ENABLE_PIC=ON\n"
+            "-DLLVM_TARGETS_TO_BUILD=all\n"
+            "-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=ARC;CSKY;M68k;VE\n"
+            "\"\n"
+            "\n"
+            "termux_step_post_make_install() {\n"
+            "\tcd \"$TERMUX_PREFIX/bin\" || termux_error_exit\n"
+            "\tfor tool in clang clang++ cc c++ cpp gcc g++; do\n"
+            '\t\tln -f -s "clang-${TERMUX_PKG_VERSION%%.*}" "$tool"\n'
+            "\tdone\n"
+            "}\n"
+            "\n"
+            "termux_step_host_build() {\n"
+            "\tcmake -G Ninja -DCMAKE_BUILD_TYPE=Release \\\n"
+            "\t\t-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lldb;mlir' \"$TERMUX_PKG_SRCDIR/llvm\"\n"
+            "\tninja -j \"$TERMUX_PKG_MAKE_PROCESSES\" clang-tblgen clang-tidy-confusable-chars-gen \\\n"
+            "\t\tlldb-tblgen llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen\n"
+            "}\n"
+            "\n"
+            "termux_step_pre_configure() {\n"
+            "\tlocal llvm_projects=\"clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly\"\n"
+            "\tTERMUX_PKG_EXTRA_CONFIGURE_ARGS+=\" -DLLVM_ENABLE_PROJECTS=$llvm_projects\"\n"
+            "}\n"
+        )
+        (lib_dir / "clang.subpackage.sh").write_text(
+            "TERMUX_SUBPKG_INCLUDE=\"\n"
+            "bin/c++\n"
+            "bin/cc\n"
+            "bin/clang*\n"
+            "bin/amdgpu-arch\n"
+            "bin/nvptx-arch\n"
+            "bin/offload-arch\n"
+            "bin/cpp\n"
+            "bin/g++\n"
+            "bin/gcc\n"
+            "include/clang*\n"
+            "\"\n"
+            'TERMUX_SUBPKG_DESCRIPTION="C language frontend for LLVM"\n'
+            'TERMUX_SUBPKG_DEPENDS="libcompiler-rt, lld, llvm, ndk-sysroot"\n'
+        )
+        (lib_dir / "lld.subpackage.sh").write_text(
+            "TERMUX_SUBPKG_INCLUDE=\"\nbin/lld\nbin/wasm-ld\n\"\n"
+        )
+        # Exact upstream bytes for libcompiler-rt.subpackage.sh — the only
+        # libllvm subpackage that defines its own
+        # termux_step_create_subpkg_debscripts(); the generated
+        # postinst/prerm are pure ndk-multilib interop, rejected by the
+        # repository validator (run 33585242675 llvm legs).
+        (lib_dir / "libcompiler-rt.subpackage.sh").write_text(
+            'TERMUX_SUBPKG_DESCRIPTION="Compiler runtime libraries for clang"\n'
+            'TERMUX_SUBPKG_INCLUDE="\n'
+            "include/fuzzer/FuzzedDataProvider.h\n"
+            "include/orc/\n"
+            "include/profile/\n"
+            "include/sanitizer/\n"
+            "include/xray/\n"
+            "lib/clang/*/bin/asan_device_setup\n"
+            "lib/clang/*/lib/linux/\n"
+            "share/libalpm/hooks/update-libcompiler-rt.hook\n"
+            "share/libalpm/scripts/update-libcompiler-rt\n"
+            '"\n'
+            "TERMUX_SUBPKG_DEPEND_ON_PARENT=false\n"
+            "TERMUX_SUBPKG_DEPENDS=libc++\n"
+            "\n"
+            "termux_step_create_subpkg_debscripts() {\n"
+            '\tlocal RT_OPT_DIR="$TERMUX_PREFIX/opt/ndk-multilib/cross-compiler-rt"\n'
+            '\tlocal RT_PATH="$TERMUX_PREFIX/lib/clang/${TERMUX_PKG_VERSION%%.*}/lib/linux"\n'
+            "\n"
+            "\tcat <<- EOF > ./triggers\n"
+            "\tinterest-noawait $RT_OPT_DIR\n"
+            "\tEOF\n"
+            "\n"
+            "\tcat <<- EOF > ./postinst\n"
+            '\t#!$TERMUX_PREFIX/bin/bash\n'
+            '\tif [[ -e "$RT_OPT_DIR" ]]; then\n'
+            '\t    find $RT_OPT_DIR -type f ! -name "lib*-$TERMUX_ARCH-*" -exec ln -sf "{}" $RT_PATH \\;\n'
+            "\tfi\n"
+            "\texit 0\n"
+            "\tEOF\n"
+            "\n"
+            "\tcat <<- EOF > ./prerm\n"
+            '\t#!$TERMUX_PREFIX/bin/sh\n'
+            '\tfind $RT_PATH -type l ! -name "lib*-$TERMUX_ARCH-*" -exec rm -rf "{}" \\;\n'
+            "\texit 0\n"
+            "\tEOF\n"
+            "}\n"
+        )
+        for sub in ("lldb", "mlir", "libpolly"):
+            (lib_dir / f"{sub}.subpackage.sh").write_text(
+                f'TERMUX_SUBPKG_DESCRIPTION="{sub}"\n'
+            )
+        return lib_dir
+
+    def test_libllvm_trim_applied_by_default(self) -> None:
+        """After the round-4 build hit the 360-minute job ceiling (run
+        33506104710, killed at 6h01m), the libllvm recipe is ALWAYS trimmed
+        for CodeC: two device backends only, no experimental targets,
+        lldb/mlir/polly out of the project set and excluded as subpackages,
+        and the target-coupled include lines removed so subpackage creation
+        cannot fail on files that only exist with the dropped backends."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lib_dir = self._write_libllvm_full_fixture(tree)
+
+            subprocess.run(
+                [str(OVERRIDES), str(tree)], check=True, text=True,
+                capture_output=True,
+            )
+
+            build_text = (lib_dir / "build.sh").read_text()
+            self.assertIn("-DLLVM_TARGETS_TO_BUILD=AArch64;X86", build_text)
+            self.assertNotIn("-DLLVM_TARGETS_TO_BUILD=all", build_text)
+            self.assertNotIn("LLVM_EXPERIMENTAL_TARGETS_TO_BUILD", build_text)
+            self.assertIn(
+                '"clang;clang-tools-extra;compiler-rt;lld;openmp"', build_text
+            )
+            self.assertNotIn("lldb;mlir", build_text)
+            self.assertIn(
+                "ninja -j \"$TERMUX_PKG_MAKE_PROCESSES\" "
+                "clang-tblgen clang-tidy-confusable-chars-gen llvm-tblgen",
+                build_text,
+            )
+            self.assertNotIn("mlir-linalg-ods-yaml-gen", build_text)
+            build_text_now = (lib_dir / "build.sh").read_text()
+            self.assertIn(
+                "for tool in clang clang++ c++ cpp gcc g++; do", build_text_now,
+                "the symlink loop must no longer create bin/cc",
+            )
+            clang_lines = (lib_dir / "clang.subpackage.sh").read_text().splitlines()
+            for gone in ("bin/amdgpu-arch", "bin/nvptx-arch", "bin/offload-arch"):
+                self.assertNotIn(gone, clang_lines)
+            self.assertIn("bin/gcc", clang_lines)
+            self.assertNotIn("bin/cc", clang_lines)
+            self.assertNotIn(
+                "bin/wasm-ld",
+                (lib_dir / "lld.subpackage.sh").read_text().splitlines(),
+            )
+            for sub in ("lldb", "mlir", "libpolly"):
+                first = (lib_dir / f"{sub}.subpackage.sh").read_text().splitlines()[0]
+                self.assertTrue(
+                    first.startswith('TERMUX_SUBPKG_EXCLUDED_ARCHES="aarch64 x86_64"'),
+                    f"{sub} must be excluded for CodeC arches when trimmed",
+                )
+
+    def test_libcompiler_rt_debscripts_neutralized(self) -> None:
+        """libcompiler-rt is the one libllvm subpackage that ships
+        postinst/prerm/triggers — pure ndk-multilib interop CodeC never
+        carries. The override appends a last-definition-wins no-op to the
+        subpackage file so the validator accepts the deb (run 33585242675
+        failed on exactly this)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lib_dir = self._write_libllvm_full_fixture(tree)
+
+            subprocess.run(
+                [str(OVERRIDES), str(tree)], check=True, text=True,
+                capture_output=True,
+            )
+
+            crt = (lib_dir / "libcompiler-rt.subpackage.sh").read_text()
+            self.assertIn("CodeC: no maintainer scripts for libcompiler-rt", crt)
+            # The upstream definition stays (harmless: shadowed), the no-op
+            # is the LAST definition in the file so it wins.
+            self.assertIn("termux_step_create_subpkg_debscripts() {", crt)
+            stripped = crt.rstrip()
+            self.assertTrue(
+                stripped.endswith(
+                    "termux_step_create_subpkg_debscripts() { :; }"
+                )
+            )
+
+    def test_libcompiler_rt_neutralization_fails_loud_on_drift(self) -> None:
+        """If upstream drops its termux_step_create_subpkg_debscripts from
+        libcompiler-rt, the build aborts for re-review rather than silently
+        trusting the shared stub (same convention as python/python-pip)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            self._write_libllvm_full_fixture(tree)
+            lib_dir = tree / "packages" / "libllvm"
+            (lib_dir / "libcompiler-rt.subpackage.sh").write_text(
+                'TERMUX_SUBPKG_DESCRIPTION="recipe shape changed upstream"\n'
+            )
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("re-review", result.stderr)
+
+    def test_libllvm_trim_fails_loud_on_drift(self) -> None:
+        """If the pinned libllvm recipe changed shape (no all-targets line),
+        the build aborts for re-review — never silently build untrimmed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            self._write_apt_fixture_only(tree)
+            lib_dir = tree / "packages" / "libllvm"
+            lib_dir.mkdir(parents=True)
+            self._write_libllvm_clang_fixture(tree)
+            (lib_dir / "build.sh").write_text(
+                'TERMUX_PKG_DESCRIPTION="recipe shape changed upstream"\n'
+                "termux_step_post_make_install() {\n"
+                "\tfor tool in clang clang++ cc c++ cpp gcc g++; do\n"
+                "\t\tln -f -s clang-21 cc\n"
+                "\tdone\n"
+                "}\n"
+            )
+
+            result = subprocess.run(
+                [str(OVERRIDES), str(tree)], text=True, capture_output=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("re-review the trim", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

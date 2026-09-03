@@ -1,9 +1,21 @@
 # CodeC Phase 20 — Package Toolchain Expansion (gcc/g++ + language packages in CI)
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 20" command.
+**Status:** 🚧 **C.1 IMPLEMENTED (2026-09-01, `arena/01a05cb9-codec`)** — host tests green
+(93 total, +8 new); **`[repo-build]` CI dispatch + publish pending owner command**;
+C.2 not started (depends on C.1's pipeline run). Started on the owner's
+"Phase 20 start".
 · **Cost:** `[repo-build]` — CI `package-repository.yml` only; **zero app Kotlin code changes**
 · **Depends on:** nothing (CI/packages side only; can run in parallel with Phase 22)
 · **Blocks:** Phase 21 (D needs `gcc` in the repo before wiring the app)
+
+> **Research correction (2026-09-01):** at the pinned `TERMUX_PACKAGES_REF`
+> there is **no `gcc` or `clang` recipe** — the compiler arrives as the
+> **`libllvm`** root; its `clang` subpackage ships `bin/gcc`/`bin/g++`/
+> `bin/c++`/`bin/cpp` driver symlinks (CodeC strips `bin/cc` to protect the
+> app's own `cc` frontend until Phase 21.4). `npm` is a separate upstream
+> recipe since nodejs 25.3.0-1 and is added as its own root. Six roots
+> total: `libllvm nodejs npm php ruby lua54`. Details + full research notes:
+> [PART_20_1_TOOLCHAINS.md](PART_20_1_TOOLCHAINS.md) §7.
 
 > This phase is the **CI / package-repo side of the compiler redesign**. It adds
 > the language toolchains that Phase 21's `LanguageRunProfile` registry will invoke —
@@ -27,13 +39,13 @@ the same for C/C++ and every other language the `LanguageRunProfile` registry
 will support.
 
 **Hard constraint (must read):** In the Termux/CodeC userland `gcc` is NOT
-real GNU GCC. It is a compatibility wrapper / symlink pointing at
-Clang/LLVM. This is intentional — NDK dropped GCC in r18 (2018) and Termux
-followed. A genuine GNU GCC for Android/Bionic exists only in fragile
-third-party overlays. **Phase 20 adds the Termux `gcc` package**, which gives
-users the `gcc foo.c -o foo` UX they expect while actually running Clang.
-This is correct, battle-tested, and matches every Termux user's experience.
-See `RESEARCH_NEXT_PHASES.md` §D.2.1 for the full gate.
+real GNU GCC. It is a compatibility symlink pointing at Clang/LLVM — and at
+the pinned upstream revision even the old shim recipe is gone: the `clang`
+deb itself ships `bin/gcc`/`bin/g++`. **Phase 20 therefore adds the `libllvm`
+(clang) root**, which gives users the `gcc foo.c -o foo` UX they expect while
+actually running Clang. This is correct, battle-tested, and matches every
+Termux user's experience. See `RESEARCH_NEXT_PHASES.md` §D.2.1 for the full
+gate and PART_20_1 §2 for the as-built reality.
 
 ---
 
@@ -41,7 +53,7 @@ See `RESEARCH_NEXT_PHASES.md` §D.2.1 for the full gate.
 
 | Part | Title | What it delivers | Doc |
 |---|---|---|---|
-| **C.1** | Core toolchains + interpreted languages | `gcc`, `clang`, `nodejs`, `php`, `ruby`, `lua54` in the CodeC repo; CI green, device `pkg install` verified | [PART_20_1_TOOLCHAINS.md](PART_20_1_TOOLCHAINS.md) |
+| **C.1** | Core toolchains + interpreted languages | `libllvm`(clang + gcc/g++ symlinks), `nodejs`, `npm`, `php`, `ruby`, `lua54` in the CodeC repo; CI green, device `pkg install` verified | [PART_20_1_TOOLCHAINS.md](PART_20_1_TOOLCHAINS.md) |
 | **C.2** | Optional heavy compilers (on-demand) | `golang`, `rust` guarded by `[repo-build-heavy]` commit tag; size warnings wired into the auto-install prompt | [PART_20_2_HEAVY.md](PART_20_2_HEAVY.md) |
 
 ---
@@ -60,12 +72,16 @@ See `RESEARCH_NEXT_PHASES.md` §D.2.1 for the full gate.
 
 ## 🔎 Research prompts
 
-Before implementing each part:
+C.1's research is **done** — recorded in
+[PART_20_1_TOOLCHAINS.md](PART_20_1_TOOLCHAINS.md) §7 (verified against the
+live pinned tree 2026-09-01: no `gcc`/`clang` recipes exist; `libllvm` is the
+compile root; `clang-format`/`gcc`/`g++` ship *inside* the clang subpackage;
+npm is its own recipe; php needed a heavy-extension trim; lua54's
+alternatives postinst became plain symlinks).
+
+Before implementing C.2:
 - Check the pinned `TERMUX_PACKAGES_REF` in `codec-packages/properties.codec.sh`
-  for the recipe state of `gcc`, `clang`, `nodejs` at that exact commit.
-- Look up the `gcc` Termux recipe to confirm it is indeed a Clang wrapper at the
-  pinned ref (it is — but verify before writing docs).
-- Confirm `clang-format` is a sub-package of `clang` at the pinned ref.
+  for the recipe state of `golang`, `rust` at that exact commit.
 - For `golang` and `rust`, check CI artifact sizes at the pinned ref and record
   them in `PART_20_2_HEAVY.md` §1.
 

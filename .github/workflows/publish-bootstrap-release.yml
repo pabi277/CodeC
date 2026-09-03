@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       source_run_id:
-        description: Successful "CodeC package repository" run ID with codec-repository-aarch64 and codec-repository-x86_64 artifacts
+        description: Successful "CodeC package repository" run ID with codec-repository-aarch64-base and codec-repository-x86_64-base artifacts
         required: true
         default: ""
         type: string
@@ -59,10 +59,14 @@ jobs:
               ;;
           esac
 
+      # Artifact names carry the build group since the Phase 20.1 split:
+      # the Phase 3 bootstrap is built and validated only by the "base" leg
+      # of each arch (see package-repository.yml matrix + D11 of
+      # docs/chat-phase20/PART_20_1_TOOLCHAINS.md).
       - name: Download aarch64 bootstrap artifact
         uses: actions/download-artifact@v4
         with:
-          name: codec-repository-aarch64
+          name: codec-repository-aarch64-base
           path: input/aarch64
           run-id: ${{ inputs.source_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -70,7 +74,7 @@ jobs:
       - name: Download x86_64 bootstrap artifact
         uses: actions/download-artifact@v4
         with:
-          name: codec-repository-x86_64
+          name: codec-repository-x86_64-base
           path: input/x86_64
           run-id: ${{ inputs.source_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

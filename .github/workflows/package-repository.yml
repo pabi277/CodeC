@@ -13,6 +13,16 @@ on:
         required: false
         default: ""
         type: string
+      groups:
+        description: Comma-separated package groups to build (base,llvm,langs) — build only failed legs after a partial-failure run
+        required: false
+        default: "base,llvm,langs"
+        type: string
+      reuse_run_id:
+        description: Salvage merge — also pattern-merge the group-leg artifacts of this run ID (build only the legs that failed there)
+        required: false
+        default: ""
+        type: string
   push:
     branches: ["**"]
     paths:
@@ -24,6 +34,74 @@ permissions:
   contents: read
 
 jobs:
+  # Resolve the group matrix from the `groups` dispatch input. The known
+  # group names mirror CODEC_REPOSITORY_GROUP_* in
+  # codec-packages/properties.codec.sh — codec-packages/tests/
+  # test_ci_guardrails.py asserts the two stay in sync; an unknown group
+  # name fails here within seconds instead of hours into a build.
+  plan:
+    name: Resolve build groups
+    runs-on: ubuntu-latest
+    outputs:
+      groups: ${{ steps.resolve.outputs.groups }}
+      reuse_names: ${{ steps.resolve.outputs.reuse_names }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve and validate requested groups
+        id: resolve
+        env:
+          REQUESTED: ${{ inputs.groups || 'base,llvm,langs' }}
+          REUSE_RUN: ${{ inputs.reuse_run_id }}
+          SOURCE_RUN: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$SOURCE_RUN" && -n "$REUSE_RUN" ]]; then
+            echo "ERROR: source_run_id and reuse_run_id are mutually exclusive: source_run_id publishes one run's artifacts as-is, while reuse_run_id merges a previous run's green legs with this run's fresh ones" >&2
+            exit 1
+          fi
+          if [[ -n "$REUSE_RUN" && ! "$REUSE_RUN" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: reuse_run_id must be a GitHub Actions run ID (digits only), got: $REUSE_RUN" >&2
+            exit 1
+          fi
+          out=()
+          IFS=',' read -ra selected <<<"$REQUESTED"
+          for g in "${selected[@]}"; do
+            g="$(printf '%s' "$g" | tr -d '[:space:]')"
+            case "$g" in
+              base|llvm|langs) ;;
+              "")
+                echo "ERROR: empty group name in: $REQUESTED" >&2
+                exit 1
+                ;;
+              *)
+                echo "ERROR: unknown package group '$g' (known: base, llvm, langs — CODEC_REPOSITORY_GROUP_* in codec-packages/properties.codec.sh)" >&2
+                exit 1
+                ;;
+            esac
+            out+=("\"$g\"")
+          done
+          json="[$(IFS=,; echo "${out[*]}")]"
+          echo "groups=$json" >> "$GITHUB_OUTPUT"
+          echo "building group legs: $json"
+          # Salvage mode downloads only the COMPLEMENT legs — a leg being
+          # rebuilt must never be shadowed by its stale artifact from the
+          # reused run (round-4 llvm fix: same version, same deb name — the
+          # pattern-merge order cannot distinguish them).
+          known=(base llvm langs)
+          reuse_names=""
+          for arch in aarch64 x86_64; do
+            for k in "${known[@]}"; do
+              case " ${selected[*]} " in
+                *" $k "*) ;;
+                *) reuse_names="$reuse_names codec-repository-$arch-$k" ;;
+              esac
+            done
+          done
+          echo "reuse_names=${reuse_names# }" >> "$GITHUB_OUTPUT"
+          echo "salvage (complement) artifacts: ${reuse_names# }"
+
   host-tests:
     name: Repository security and metadata tests
     runs-on: ubuntu-latest
@@ -35,17 +113,28 @@ jobs:
         run: python3 -m unittest discover -s codec-packages/tests -p 'test_*.py' -v
 
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.publish == false || inputs.source_run_id == '') }}
-    name: Build CodeC packages (${{ matrix.arch }})
-    needs: host-tests
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.publish == false || inputs.source_run_id == '') && needs.plan.result == 'success' }}
+    name: Build CodeC packages (${{ matrix.arch }}/${{ matrix.group }})
+    needs: [host-tests, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
         arch: [aarch64, x86_64]
+        # 360 min is GitHub's per-job ceiling; the monolithic round-4 build
+        # exceeded it twice (runs 33506104710, 33547475854). The build now
+        # fans out to one leg per package group; each leg resolves its roots
+        # from CODEC_REPOSITORY_GROUP_<NAME> in codec-packages/properties.codec.sh
+        # (single source of truth; group/union consistency is guarded by
+        # codec-packages/tests/test_ci_guardrails.py). Legs run in parallel
+        # and publish-dev pattern-merges their artifacts below. The plan job
+        # filters the matrix so a salvage dispatch can rebuild ONLY the legs
+        # that failed and merge the green ones via reuse_run_id.
+        group: ${{ fromJSON(needs.plan.outputs.groups) }}
     env:
       ARCH: ${{ matrix.arch }}
+      GROUP: ${{ matrix.group }}
       CODEC_USE_DOCKER: "1"
       SOURCE_DATE_EPOCH: "0"
 
@@ -86,9 +175,10 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x codec-packages/scripts/*.sh codec-packages/scripts/*.py
-          codec-packages/scripts/build-package-repository.sh "$ARCH"
+          codec-packages/scripts/build-package-repository.sh "$ARCH" "$GROUP"
 
       - name: Build Phase 3 package-manager bootstrap
+        if: ${{ matrix.group == 'base' }}
         run: |
           set -euo pipefail
           codec-packages/scripts/build-package-manager-bootstrap.sh "$ARCH"
@@ -120,15 +210,17 @@ jobs:
           fi
 
       - name: Validate Phase 3 bootstrap archive
+        if: ${{ matrix.group == 'base' }}
         run: |
           set -euo pipefail
           python3 codec-packages/scripts/validate-bootstrap.py \
             "codec-packages/dist/bootstrap-phase3-${ARCH}.tar.gz" 
 
-      - name: Upload repository artifact
+      - name: Upload repository + bootstrap artifacts (base leg)
+        if: ${{ matrix.group == 'base' }}
         uses: actions/upload-artifact@v4
         with:
-          name: codec-repository-${{ matrix.arch }}
+          name: codec-repository-${{ matrix.arch }}-${{ matrix.group }}
           path: |
             codec-packages/dist/repository-${{ matrix.arch }}
             codec-packages/dist/bootstrap-phase3-${{ matrix.arch }}.tar.gz
@@ -137,10 +229,20 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload repository artifact (non-base legs)
+        if: ${{ matrix.group != 'base' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: codec-repository-${{ matrix.arch }}-${{ matrix.group }}
+          path: |
+            codec-packages/dist/repository-${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 14
+
   publish-dev:
     name: Publish development repository
-    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.publish == true && needs.host-tests.result == 'success' && (needs.build.result == 'success' || (inputs.source_run_id != '' && needs.build.result == 'skipped')) }}
-    needs: [host-tests, build]
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.publish == true && needs.plan.result == 'success' && needs.host-tests.result == 'success' && (needs.build.result == 'success' || (inputs.source_run_id != '' && needs.build.result == 'skipped')) }}
+    needs: [plan, host-tests, build]
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -156,18 +258,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download aarch64 repository
+      # Salvage path: when a run died on only some legs, dispatch again
+      # with groups=<failed legs> and reuse_run_id=<that run> so its green
+      # legs merge in place of a full rebuild (run 33629206153 was exactly
+      # this scenario: langs red, base/llvm green — those artifacts are
+      # immutable and retention-pinned). The marker gate below proves full
+      # coverage before anything is published.
+      - name: Salvage green legs (complement) from run ${{ inputs.reuse_run_id }}
+        if: ${{ inputs.reuse_run_id != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REUSE_NAMES: ${{ needs.plan.outputs.reuse_names }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${REUSE_NAMES// }" ]]; then
+            echo "no complement legs to salvage (all groups rebuilt this run)"
+            exit 0
+          fi
+          for name in $REUSE_NAMES; do
+            arch="${name#codec-repository-}"
+            arch="${arch%%-*}"
+            echo "salvaging $name -> input/$arch"
+            gh run download "${{ inputs.reuse_run_id }}" -n "$name" -D "reuse-stage/$name"
+            mkdir -p "input/$arch"
+            cp -rn "reuse-stage/$name/." "input/$arch/"
+          done
+
+      - name: Download aarch64 repository (all group legs)
         uses: actions/download-artifact@v4
         with:
-          name: codec-repository-aarch64
+          pattern: codec-repository-aarch64-*
+          merge-multiple: true
           path: input/aarch64
           run-id: ${{ inputs.source_run_id || github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download x86_64 repository
+      - name: Download x86_64 repository (all group legs)
         uses: actions/download-artifact@v4
         with:
-          name: codec-repository-x86_64
+          pattern: codec-repository-x86_64-*
+          merge-multiple: true
           path: input/x86_64
           run-id: ${{ inputs.source_run_id || github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -211,6 +341,21 @@ jobs:
           mkdir -p input/debs
           find input/aarch64 input/x86_64 -name '*.deb' \
             -exec cp -n {} input/debs/ \;
+
+          # Coverage gate: every group leg (freshly built or salvaged via
+          # reuse_run_id) must be represented in the merged pool before ANY
+          # signing/publishing happens — a partial merge must fail here,
+          # not after release. Markers: nano = base, clang = llvm,
+          # nodejs = langs (mirrors CODEC_REPOSITORY_GROUP_*; the guardrails
+          # test asserts these names stay wired).
+          for arch in aarch64 x86_64; do
+            for marker in nano clang nodejs; do
+              if ! ls input/debs/ | grep -qE "^${marker}_[^ ]*_${arch}\\.deb$"; then
+                echo "ERROR: missing marker package '${marker}' (${arch}) — incomplete leg coverage; rebuild that leg (groups=...) or set reuse_run_id" >&2
+                exit 1
+              fi
+            done
+          done
 
           rm -rf packages/dev packages/keys
           chmod +x codec-packages/scripts/*.py codec-packages/scripts/*.sh
