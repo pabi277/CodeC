@@ -141,7 +141,7 @@ class EditorHighlightCacheTest {
 
     @Test
     fun `a snapshot is stale once the caret leaves its window`() {
-        val text = "x".repeat(HighlightedCode.WINDOW * 3)
+        val text = "x".repeat(HighlightedCode.WINDOW * 6)
         val snapshot = HighlightedCode.of(text, EditorThemeType.DRACULA, LanguageType.C, caret = 0)
         // Still valid where it was built...
         assertTrue(snapshot.matches(text, EditorThemeType.DRACULA, LanguageType.C, 0, 10))
@@ -156,10 +156,76 @@ class EditorHighlightCacheTest {
 
     @Test
     fun `the window follows the caret`() {
-        val text = "y".repeat(HighlightedCode.WINDOW * 3)
+        val text = "y".repeat(HighlightedCode.WINDOW * 6)
         val atEnd = HighlightedCode.of(text, EditorThemeType.DRACULA, LanguageType.C, caret = text.length)
         assertTrue(atEnd.from > 0)
         assertEquals(text.length, atEnd.to)
+    }
+
+    // ---- Phase 22.8: window sized to a real file ---------------------------
+
+    @Test
+    fun `a 517-line html file is actually windowed`() {
+        // The Phase 22.7 window (20 000) was LARGER than the owner's real
+        // file (~25 000 chars), so windowing never engaged and the field
+        // still received every span. Guard that the window is small enough
+        // to bite on a file of this size.
+        val html = buildString {
+            append("<!DOCTYPE html>\n<html>\n")
+            repeat(103) {
+                append("  <div class=\"card\" id=\"item-$it\">\n")
+                append("    <h3 class=\"title\">Feature $it</h3>\n")
+                append("    <p class=\"desc\">Text for item $it here.</p>\n")
+                append("    <a href=\"https://example.com/$it\">Read more</a>\n")
+                append("  </div>\n")
+            }
+            append("</html>\n")
+        }
+        assertTrue("fixture should be ~517 lines", html.count { it == '\n' } in 480..560)
+
+        val full = MultiLanguageSyntaxHighlighter.highlight(
+            html, getEditorTheme(EditorThemeType.DRACULA), LanguageType.HTML_CSS
+        )
+        val windowed = HighlightedCode.of(
+            html, EditorThemeType.DRACULA, LanguageType.HTML_CSS, caret = html.length / 2
+        )
+        assertTrue(
+            "windowed=${windowed.annotated.spanStyles.size} full=${full.spanStyles.size}",
+            windowed.annotated.spanStyles.size * 2 < full.spanStyles.size
+        )
+    }
+
+    @Test
+    fun `the window is smaller than a typical long file`() {
+        // If someone raises WINDOW again, this fails loudly.
+        assertTrue(HighlightedCode.WINDOW <= 5_000)
+    }
+
+    @Test
+    fun `safeAnchor scans from the top near the start of a file`() {
+        val text = "x".repeat(100_000)
+        assertEquals(0, MultiLanguageSyntaxHighlighter.safeAnchor(text, 0))
+        assertEquals(
+            0,
+            MultiLanguageSyntaxHighlighter.safeAnchor(text, MultiLanguageSyntaxHighlighter.LOOKBEHIND)
+        )
+    }
+
+    @Test
+    fun `safeAnchor never scans the whole file deep in a buffer`() {
+        val text = "x".repeat(200_000)
+        val from = 150_000
+        val anchor = MultiLanguageSyntaxHighlighter.safeAnchor(text, from)
+        assertTrue(anchor > 0)
+        assertTrue(from - anchor <= MultiLanguageSyntaxHighlighter.LOOKBEHIND)
+    }
+
+    @Test
+    fun `safeAnchor prefers a blank line as a resync point`() {
+        val head = "a".repeat(10_000)
+        val text = head + "\n\n" + "b".repeat(10_000)
+        val from = head.length + 2 + 1_000
+        assertEquals(head.length + 2, MultiLanguageSyntaxHighlighter.safeAnchor(text, from))
     }
 
     @Test

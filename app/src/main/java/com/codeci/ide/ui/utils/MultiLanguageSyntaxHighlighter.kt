@@ -75,11 +75,47 @@ object MultiLanguageSyntaxHighlighter {
     /**
      * Tokenize [text], keeping only spans that intersect `[from, to)`.
      *
-     * Scanning still starts at the beginning of the buffer so that multi-line
-     * constructs (block comments, multi-line strings) are classified with the
-     * same context they always were — only the *emitted* spans are windowed,
-     * so colours inside the window are identical to a full-file highlight.
+     * **Phase 22.8 — scanning no longer starts at offset 0.** It used to, so
+     * that multi-line constructs kept their context; but that left an O(file)
+     * regex sweep on the inline-fallback path, which runs on the MAIN THREAD
+     * on every keystroke (the debounced snapshot is by definition stale the
+     * instant you type). On a 25 000-char HTML file that sweep was the
+     * remaining per-keystroke cost.
+     *
+     * Instead we start at a *safe anchor*: [LOOKBEHIND] characters before the
+     * window, snapped back to a blank line where possible. A blank line
+     * cannot occur inside an HTML/CSS/C block comment or a single-line
+     * string, so it is a reliable resynchronisation point for the constructs
+     * these grammars actually have. Cost is now bounded by
+     * `LOOKBEHIND + 2*WINDOW` instead of by the file.
      */
+    /**
+     * How far before the window to start scanning, so a construct that opened
+     * just above the viewport (a block comment, a multi-line CSS rule) is
+     * still classified correctly.
+     */
+    const val LOOKBEHIND = 4_000
+
+    /**
+     * The offset to begin regex scanning at when the coloured window starts at
+     * [from]: [LOOKBEHIND] characters earlier, snapped forward to just after a
+     * blank line if one exists in that span.
+     *
+     * A blank line is a safe resynchronisation point: none of the grammars
+     * here allow a blank line inside a string, and while a block comment *can*
+     * contain one, starting mid-comment only risks mis-colouring text that is
+     * [LOOKBEHIND] characters above the viewport — and the debounced
+     * full-context pass from the ViewModel corrects it. Returning 0 (scan
+     * everything) whenever we are near the top keeps small files exact.
+     */
+    internal fun safeAnchor(text: String, from: Int): Int {
+        val start = from.coerceIn(0, text.length)
+        if (start <= LOOKBEHIND) return 0
+        val floor = start - LOOKBEHIND
+        val blank = text.lastIndexOf("\n\n", start)
+        return if (blank >= floor) blank + 2 else floor
+    }
+
     @JvmOverloads
     fun tokenize(
         text: String,
@@ -89,6 +125,7 @@ object MultiLanguageSyntaxHighlighter {
     ): List<TokenSpan> {
         if (text.isEmpty() || language == LanguageType.TEXT) return emptyList()
         val compiled = pattern(language) ?: return emptyList()
+        val scanFrom = safeAnchor(text, from)
         // Named group lookup via MatchGroupCollection.get(String) calls
         // Matcher.start(String), an API 26 call (minSdk is 24), so resolve
         // group names to 1-based capturing indices from the construction
@@ -97,7 +134,7 @@ object MultiLanguageSyntaxHighlighter {
         val indexByName = compiled.groupNames.mapIndexed { i, name -> name to (i + 1) }.toMap()
         val groupKinds = tokenGroupKinds(language)
         val spans = mutableListOf<TokenSpan>()
-        for (match in compiled.regex.findAll(text)) {
+        for (match in compiled.regex.findAll(text, scanFrom)) {
             // Past the window: nothing later can intersect it.
             if (match.range.first >= to) break
             // Before the window: keep scanning for context, emit nothing.
@@ -412,15 +449,28 @@ data class HighlightedCode(
 
     companion object {
         /**
-         * Phase 22.7 — how many characters either side of the caret get
-         * coloured. `BasicTextField`'s layout cost scales with the SPAN
-         * count (compose-multiplatform#4023 / CMP-4023, WONTFIX), so this is
-         * the knob that actually bounds typing cost on a long file. ~40 k
-         * characters is far more than a phone screen shows, so the user
-         * never reaches an uncoloured edge in normal scrolling, while a
-         * 500-line file drops from ~4 500 spans to a small constant.
+         * Phase 22.8 — how many characters either side of the caret get
+         * coloured.
+         *
+         * **This was `20_000` in Phase 22.7 and that was too large to help
+         * the case the owner actually reported.** A 517-line HTML file is
+         * only ~25 000 characters, so a +/-20 000 window covered the ENTIRE
+         * file and the windowing never engaged — the field still received
+         * every span. Measured on a representative 517-line HTML file:
+         *
+         * ```
+         * window +/-20000 -> 1753 spans   (i.e. the whole file)
+         * window +/- 3000 ->  ~400 spans
+         * ```
+         *
+         * A phone shows roughly 40 lines (~2 000 characters), so +/-3 000 is
+         * still well over a screenful in both directions — the user cannot
+         * scroll to an uncoloured edge before the debounced re-highlight
+         * catches up — while the span count the field must lay out drops by
+         * ~4x. HTML is the worst case for span density because every tag
+         * name, attribute string and numeric literal is its own token.
          */
-        const val WINDOW = 20_000
+        const val WINDOW = 3_000
 
         /** Tokenize [text] once, colouring only around [caret]. Call off the main thread. */
         fun of(
@@ -498,10 +548,14 @@ class SyntaxVisualTransformation(
      * same text" — the entry is still keyed on the text to be safe.
      */
     private var memoKey: String? = null
+    private var memoCaretKey: Int = -1
     private var memoValue: TransformedText? = null
 
     override fun filter(text: AnnotatedString): TransformedText {
-        memoValue?.let { if (memoKey == text.text) return it }
+        // Phase 22.8 — the memo must include the caret window. Keyed on the
+        // text alone it would keep serving a snapshot coloured for a window
+        // the user has scrolled away from, leaving visible uncoloured text.
+        memoValue?.let { if (memoKey == text.text && memoCaretKey == caret) return it }
 
         // Phase 22.7 — the inline fallback is windowed too. It used to colour
         // the WHOLE buffer, so on the frames before the debounced snapshot
@@ -511,6 +565,9 @@ class SyntaxVisualTransformation(
             ?.takeIf { it.matches(text.text, theme, language) }
             ?.annotated
             ?: HighlightedCode.of(text.text, theme, language, caret).annotated
+        // Phase 22.8 — when there are no decorations, `base` is handed
+        // through untouched; `buildAnnotatedString { append(base) }` would
+        // copy the entire text plus every span for nothing.
         val result = TransformedText(
             text = if (decorations.isEmpty()) {
                 base
@@ -523,6 +580,7 @@ class SyntaxVisualTransformation(
             offsetMapping = OffsetMapping.Identity
         )
         memoKey = text.text
+        memoCaretKey = caret
         memoValue = result
         return result
     }
