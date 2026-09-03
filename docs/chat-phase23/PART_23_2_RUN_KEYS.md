@@ -1,6 +1,6 @@
 # CodeC Phase 23.2 — Extra-Keys Integration for Interactive Runs
 
-**Status:** 🟡 **IMPLEMENTED** (CI pending) · **Cost:** `[client-only]`
+**Status:** 🟡 **IMPLEMENTED & CI-GREEN** (`33735687876`) · **Cost:** `[client-only]`
 · **Depends on:** Phase 22.2 (IME-anchored keys strip infrastructure),
   Phase 23.1 (inline input and `waitingForInput` state)
 · **Primary target files:** `ui/components/EditorKeysRow.kt`,
@@ -201,7 +201,9 @@ PASS = steps 1–5 behave as described.
 - Host tests: `RunKeySetTest` (×8 — run-set content/order/labels + the three-way
   `keysForContext` mapping). Editor keys stay covered by the existing
   `EditorKeySetTest` (asserts `{}` pair caps).
-- CI: `Build APK` — **run id recorded after green** (assemble + unit tests + lint).
+- CI: `Build APK` **`33735687876` GREEN** (assemble + unit tests + lint; one
+  for-cause red round `33735482625` — a missing `kotlinx.coroutines.flow.update`
+  import in `EditorViewModel` — fixed in the same commit set).
 
 > **TODO for the implementer:**
 > - Check `pty.c` (the JNI shim) for a `kill()` wrapper. If it doesn't exist,

@@ -1,6 +1,6 @@
 # CodeC Phase 23.1 — Remove OutputInputRow; Add Inline Input in OutputPanelView
 
-**Status:** 🟡 **IMPLEMENTED** (CI pending) · **Cost:** `[client-only]`
+**Status:** 🟡 **IMPLEMENTED & CI-GREEN** (`33735687876`) · **Cost:** `[client-only]`
 · **Depends on:** nothing (standalone UI change to the Output Panel)
 · **Primary target files:** `ui/components/OutputPanelView.kt`,
   `ui/viewmodels/EditorViewModel.kt` (output state),
@@ -250,4 +250,6 @@ PASS = steps 1–5 behave as described.
   `onInputChange`/`onSubmitInput`.
 - Host tests: `InteractiveInputBufferTest` (×7 — defaults, onChange, submit,
   empty-submit, whitespace, copy-preserves-waitingForInput).
-- CI: `Build APK` — **run id recorded after green** (assemble + unit tests + lint).
+- CI: `Build APK` **`33735687876` GREEN** (assemble + unit tests + lint; one
+  for-cause red round `33735482625` — a missing `kotlinx.coroutines.flow.update`
+  import in `EditorViewModel` — fixed in the same commit set).

@@ -1,6 +1,6 @@
 # CodeC Phase 23 — Interactive Run UX: Inline PTY Input (remove the input box)
 
-**Status:** 🟡 **IMPLEMENTED** — B.1 (inline input) + B.2 (run keys) done, CI pending.
+**Status:** 🟡 **IMPLEMENTED & CI-GREEN** (`Build APK` `33735687876`) — B.1 (inline input) + B.2 (run keys) done; device recipes pending (owner).
 · **Cost:** `[client-only]` — pure Kotlin/Compose; no `[repo-build]`, no native changes
 · **Depends on:** Phase 22.2 (IME-anchored keys strip — the `↵ Enter` / `Ctrl+C` keys
   that appear above the keyboard during interactive runs come from A.2's infrastructure)
