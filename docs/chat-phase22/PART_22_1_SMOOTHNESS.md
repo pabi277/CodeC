@@ -453,3 +453,95 @@ surround). The row is also shorter than before — six pair caps replace ten
 single-character caps, leaving more room on a phone.
 
 The HTML `</>` tail was left as-is (it is a fragment marker, not a pair).
+
+---
+
+## 11. Device round 3 — owner feedback (2026-09-03)
+
+> Owner: *"Still lags and not even less lag then before. Also can you add
+> different quick suggestions accordingly to the language we are using"*
+
+Fixed in `1b06dec` + `ba81bf0` (CI `33724364238`).
+
+### D11 — the autocomplete scan, and a correction to the Phase 22.1 record
+
+**This is the lag.** `CodeCompletionEngine.completions()` ran **synchronously,
+on the main thread, for every keystroke**, and inside it `identifiers()`:
+
+```kotlin
+Regex("\\b[A-Za-z_][A-Za-z0-9_]*\\b").findAll(text)   // the WHOLE buffer
+    .map { … }.filter { … }.distinct().toList().sorted()
+```
+
+So every character typed **compiled a fresh `Regex` and swept the entire
+file**, then allocated a distinct + sorted list — in the frame, before the
+keystroke could be drawn. On a long file that dwarfs everything rounds 1–3
+touched, which is exactly why those rounds "didn't even make it less".
+
+**I have to correct my own §8 claim.** Phase 22.1 said it fixed this by
+converting the `remember(codeText, language)` into a `derivedStateOf`. That
+was wrong, and it is worth being precise about why, because the same mistake
+is easy to repeat:
+
+> `derivedStateOf` only helps when the derived **value** changes less often
+> than the state it reads. Here the derivation reads `codeText` (changes every
+> keystroke) and the popup reads the result **in the same frame**, so it was
+> invalidated and recomputed on every keystroke regardless. It looked like a
+> fix in the diff and did nothing at runtime.
+
+The actual fix has three parts:
+1. **Off the main thread + debounced** — `produceState` keyed on the text,
+   selection and language, `delay(120 ms)` then `withContext(Dispatchers.Default)`.
+   Type fast and the scan never runs at all.
+2. **Compile the `Regex` once** (`IDENTIFIER`), instead of per keystroke.
+3. **Window the scan** — `SCAN_WINDOW` (20 000 chars) either side of the
+   caret, with an early break once enough distinct matches are found. Cost is
+   now bounded by the window, not the file. Identifiers you want to reuse are
+   near where you are typing; both edges are covered by tests.
+
+I also corrected the overclaiming comment on the **gutter** `derivedStateOf`
+(§D6). It does not stop the newline count from running per keystroke — it
+stops the gutter *scope and `Text`* from recomposing when the count is
+unchanged. That is a genuine but much smaller win, and the comment now says
+so rather than implying the work is skipped.
+
+### D12 — language-aware suggestions (owner request)
+
+`snippets()` covered Python, C/C++, JavaScript and Shell; **HTML/CSS and
+Markdown fell through to `else -> emptyList()`**, so on a `.html` or `.md`
+file the popup never appeared at all — despite HTML being a first-class CodeC
+target (Web Preview runs it directly). Added:
+
+- **HTML/CSS** — full `<!DOCTYPE html>` skeleton (charset + viewport),
+  `<div>`, `<a>`, `<img>`, `<ul>/<li>`, `<script>`, `<link rel=stylesheet>`,
+  `<style>`, a bare CSS rule, `@media`, `display: flex;`, plus 18 element
+  trigger words so the snippet list also opens after `<div ` etc.
+- **Markdown** — headings, bold/italic, link, image, bullet and numbered
+  lists, blockquote, fenced code block, table skeleton.
+- **Shell** — the CodeC-correct shebang and `read -r`.
+
+### D13 — case-insensitive snippet matching (found by CI)
+
+Writing the D12 tests surfaced a real UX bug: `snippetMatches` used
+case-sensitive `startsWith`, so lowercase `doc` never matched
+`<!DOCTYPE html>` and `head` never matched `# Heading`. CI failed on my two
+new tests — **the tests were right and the product was wrong**. Matching is
+now case-insensitive (you type lowercase on a phone; guessing a snippet's
+capitalization defeats a prefix search), and the word-split `Regex` is a
+compiled constant instead of being rebuilt per candidate label.
+
+**Tests:** 7 new in `CodeCompletionTest` — HTML skeleton/element, CSS
+`@media`, Markdown heading/table, the "used to return nothing at all"
+regression guard, case-insensitivity both ways, and both edges of the scan
+window.
+
+### If it STILL lags
+
+Everything cheap is now done. The remaining structural suspect is the one
+thing untouched since the phase began: `BasicTextField` wrapped in
+`verticalScroll` + `horizontalScroll`, fighting the field's own scrolling.
+That needs the `TextFieldValue` → `TextFieldState` migration (Compose BOM
+2024.09.00 has `scrollState` only on the `TextFieldState` overload), which
+touches the undo manager, auto-indent, tab buffers, find/replace and
+quick-fixes. It is a real piece of work and should be its own round, with the
+owner's go-ahead — not folded into a polish batch.

@@ -133,3 +133,28 @@ Fixed in `a751cf4` (CI `33722090650`) — full analysis in
 > memo, gutter scope). D8/D9 are in the **ViewModel's edit path** — work done
 > before a frame is even requested. Worth remembering if long-file lag ever
 > resurfaces: measure the edit path, not just recomposition.
+
+---
+
+## Device round 3 (2026-09-03) — owner: *"still lags and not even less lag then before"* + *"add different quick suggestions accordingly to the language"*
+
+Fixed in `1b06dec` + `ba81bf0` (CI `33724364238`) — full analysis in
+[`PART_22_1_SMOOTHNESS.md`](PART_22_1_SMOOTHNESS.md) §11.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| D11 | Still lags, no better | **`CodeCompletionEngine.completions()` ran synchronously on the main thread every keystroke**, compiling a fresh `Regex` and sweeping the WHOLE buffer for identifiers. Dwarfed everything rounds 1–3 touched. | `produceState` + 120 ms debounce + `Dispatchers.Default`; `Regex` compiled once; scan windowed to `SCAN_WINDOW` around the caret. |
+| D12 | No suggestions on some files | `snippets()` had no HTML/CSS or Markdown branch — both hit `else -> emptyList()`. | Full HTML/CSS + Markdown snippet sets, HTML trigger words, Shell shebang/`read -r`. |
+| D13 | (found by CI) | `snippetMatches` was case-sensitive — lowercase `doc` missed `<!DOCTYPE html>`. | Case-insensitive matching; word-split `Regex` hoisted to a constant. |
+
+### ⚠️ Correction to the Phase 22.1 record
+
+§8 claimed the completion cost was fixed by converting `remember(codeText, …)`
+to `derivedStateOf`. **That was wrong.** `derivedStateOf` only helps when the
+derived *value* changes less often than the state it reads; this derivation
+reads `codeText` and is read by the popup in the same frame, so it recomputed
+every keystroke anyway. It looked like a fix in the diff and did nothing at
+runtime. The same overclaim was corrected in the gutter comment (there
+`derivedStateOf` does help — but by skipping *recomposition*, not the count).
+
+**New tests:** 7 in `CodeCompletionTest`.
