@@ -10,8 +10,12 @@ import com.codeci.ide.ui.editor.BracketMatcher
 import com.codeci.ide.ui.editor.ClangFormatBridge
 import com.codeci.ide.ui.editor.CodeFormatter
 import com.codeci.ide.ui.editor.CompilerDiagnostics
+import com.codeci.ide.ui.editor.TestLine
+import com.codeci.ide.ui.editor.TestLineKind
+import com.codeci.ide.ui.editor.TestOutputParser
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
+import com.codeci.ide.ui.editor.EditorLineOps
 import com.codeci.ide.ui.editor.EditorTab
 import com.codeci.ide.ui.editor.EditorUndoManager
 import com.codeci.ide.ui.editor.FileTreeCollapse
@@ -23,6 +27,8 @@ import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.projects.AutoRunPlan
 import com.codeci.ide.ui.projects.BuildArtifactIgnore
+import com.codeci.ide.ui.projects.CodecJsonParser
+import com.codeci.ide.ui.projects.CodecOverride
 import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
@@ -39,10 +45,13 @@ import com.codeci.ide.ui.services.ExecutionRunner
 import com.codeci.ide.ui.services.InstallPromptState
 import com.codeci.ide.ui.services.InteractiveInputBuffer
 import com.codeci.ide.ui.services.InteractiveRunSession
+import com.codeci.ide.ui.services.LanguageRegistry
 import com.codeci.ide.ui.services.LanguageRunPlanner
 import com.codeci.ide.ui.services.LanguageToolProbe
+import com.codeci.ide.ui.services.RunForegroundService
 import com.codeci.ide.ui.services.RunDecision
 import com.codeci.ide.ui.services.RunEvent
+import com.codeci.ide.ui.services.RunForegroundPolicy
 import com.codeci.ide.ui.services.RunPhase
 import com.codeci.ide.ui.services.RunSpec
 import com.codeci.ide.ui.services.ServerEvent
@@ -90,7 +99,11 @@ data class EditorFileEntry(
 
 enum class OutputPhase { IDLE, BUILDING, RUNNING, DONE, CANCELLED, FAILED }
 
-enum class OutputLineKind { COMMAND, BUILD, OUTPUT, ERROR, STATS, SYSTEM }
+enum class OutputLineKind {
+    COMMAND, BUILD, OUTPUT, ERROR, STATS, SYSTEM,
+    // Phase 24.6 — test-runner colouring (pytest / go test).
+    TEST_PASS, TEST_FAIL, TEST_ERROR, TEST_SUMMARY
+}
 
 /** One rendered line of the Phase 11 Output Panel. */
 data class OutputLine(
@@ -115,6 +128,8 @@ data class OutputRunState(
     val busy: Boolean = false,
     val summary: String? = null,
     val lastTerminalCommand: String? = null,
+    /** Phase 24.6 — true when the current output belongs to a Test ▷ run. */
+    val testRun: Boolean = false,
     /** Phase 14 — the live loopback URL of a running server project (Open Preview). */
     val serverUrl: String? = null,
     /** Phase 14 — true while the panel is attached to a long-lived server, not a batch run. */
@@ -366,6 +381,10 @@ class EditorViewModel : ViewModel() {
     private var activeRunner: ExecutionRunner? = null
     private var interactiveRun: InteractiveRunSession? = null
     private var buildOutputBuffer = StringBuilder()
+    /** Phase 24.2 — the 5-second timer that promotes a long run to foreground. */
+    private var foregroundNotifyJob: Job? = null
+    /** Phase 24.2 — true once the foreground service was actually started. */
+    private var foregroundServiceActive = false
 
     // Phase 23.1 — the inline stdin line, mirrored into OutputRunState so the
     // panel observes one flow and the buffer survives recomposition/scroll.
@@ -515,7 +534,43 @@ class EditorViewModel : ViewModel() {
     override fun onCleared() {
         activeServer?.stop()
         activeServer = null
+        foregroundNotifyJob?.cancel()
+        foregroundNotifyJob = null
+        foregroundServiceActive = false
+        RunForegroundService.stopCallback = null
         super.onCleared()
+    }
+
+    // ---- Phase 24.2: long-run foreground notification ---------------------
+
+    /**
+     * Phase 24.2 — after a run has been live for 5 seconds (short programs
+     * stay silent), promote the app process to a foreground service with a
+     * tappable, Stop-capable notification. Only while [OutputRunState.busy]
+     * is still true; the stop action routes back through [stopRun].
+     */
+    private fun scheduleForegroundRun(context: Context) {
+        foregroundNotifyJob?.cancel()
+        RunForegroundService.stopCallback = { stopRun() }
+        val ctx = context.applicationContext
+        foregroundNotifyJob = viewModelScope.launch {
+            delay(RunForegroundPolicy.THRESHOLD_MS)
+            if (_outputState.value.busy) {
+                val title = _fileName.value.substringAfterLast('/').ifBlank { "CodeC" }
+                foregroundServiceActive = true
+                RunForegroundService.start(ctx, title)
+            }
+        }
+    }
+
+    /** Cancels any scheduled/promoted foreground notification. */
+    private fun stopForegroundRun(context: Context) {
+        foregroundNotifyJob?.cancel()
+        foregroundNotifyJob = null
+        if (foregroundServiceActive) {
+            foregroundServiceActive = false
+            RunForegroundService.stop(context.applicationContext)
+        }
     }
 
     /**
@@ -665,6 +720,26 @@ class EditorViewModel : ViewModel() {
     }
 
     // ---------------------------------------------------------------------
+    // Phase 24.3: hardware-keyboard line operations (Ctrl+/ , Ctrl+D)
+    // ---------------------------------------------------------------------
+
+    /** Ctrl+/ — toggle a `//`/`#`/`--` comment on the selected line(s). */
+    fun toggleLineComment(language: LanguageType) {
+        val before = _codeText.value
+        val prefix = EditorLineOps.commentPrefixFor(language)
+        val after = EditorLineOps.toggleLineComment(before, prefix) ?: return
+        applyBufferEdit(before, after)
+    }
+
+    /** Ctrl+D — duplicate the current line (or the selected lines) below. */
+    fun duplicateLine() {
+        val before = _codeText.value
+        val after = EditorLineOps.duplicateLine(before)
+        if (after.text == before.text) return
+        applyBufferEdit(before, after)
+    }
+
+    // ---------------------------------------------------------------------
     // Tabs (project mode)
     // ---------------------------------------------------------------------
 
@@ -781,6 +856,39 @@ class EditorViewModel : ViewModel() {
     fun selectTab(path: String) {
         val tab = _openTabs.value.firstOrNull { it.relativePath == path } ?: return
         activateTab(tab)
+    }
+
+    /** Phase 24.3 — Ctrl+Tab: activate the next tab, wrapped at the ends. */
+    fun nextTab() {
+        val tabs = _openTabs.value
+        if (tabs.size < 2) return
+        val current = _activeTabPath.value
+        val index = tabs.indexOfFirst { it.relativePath == current }
+        activateTab(tabs[(index + 1).coerceAtLeast(0) % tabs.size])
+    }
+
+    /** Phase 24.3 — Ctrl+Shift+Tab: activate the previous tab, wrapped. */
+    fun prevTab() {
+        val tabs = _openTabs.value
+        if (tabs.size < 2) return
+        val current = _activeTabPath.value
+        val index = tabs.indexOfFirst { it.relativePath == current }.let { if (it < 0) 0 else it }
+        activateTab(tabs[(index - 1 + tabs.size) % tabs.size])
+    }
+
+    /**
+     * Phase 24.3 — Ctrl+W: close the active tab, saving first. Mirrors the
+     * tab-strip ✕ behaviour (a dirty buffer is saved; a failed save keeps it
+     * open with a message). No-op when only one tab remains.
+     */
+    fun closeActiveTab(context: Context) {
+        val path = _activeTabPath.value ?: return
+        if (_openTabs.value.size <= 1) return
+        if (!saveFile(context)) {
+            _userMessage.value = context.getString(R.string.file_save_failed)
+            return
+        }
+        closeTab(context, path, saveFirst = false)
     }
 
     private fun activateTab(tab: EditorTab) {
@@ -1357,6 +1465,39 @@ class EditorViewModel : ViewModel() {
         refreshFileEntries(appContext)
     }
 
+    // ---- Phase 24.9: per-project .codec.json run-config --------------------
+
+    /** The current project's `.codec.json` override, or null when absent/invalid. */
+    fun codecOverrideForActiveProject(context: Context): CodecOverride? {
+        val project = _projectName.value ?: return null
+        val info = ProjectManager(context).project(project) ?: return null
+        return CodecJsonParser.parse(File(info.root, ".codec.json"))
+    }
+
+    /** Writes (or clears) the project `.codec.json` build/run override. */
+    fun saveCodecRunConfig(context: Context, build: String?, run: String?): Boolean {
+        val project = _projectName.value ?: return false
+        val info = ProjectManager(context).project(project) ?: return false
+        val cleanBuild = build?.trim()?.takeIf { it.isNotEmpty() }
+        val cleanRun = run?.trim()?.takeIf { it.isNotEmpty() }
+        return if (cleanBuild == null && cleanRun == null) {
+            clearCodecRunConfig(context)
+        } else {
+            runCatching {
+                File(info.root, ".codec.json").writeText(
+                    CodecJsonParser.toJson(CodecOverride(cleanBuild, cleanRun, null))
+                )
+            }.isSuccess
+        }
+    }
+
+    /** Deletes `.codec.json` so RUN ▶ falls back to the registry/project config. */
+    fun clearCodecRunConfig(context: Context): Boolean {
+        val project = _projectName.value ?: return false
+        val info = ProjectManager(context).project(project) ?: return false
+        return runCatching { File(info.root, ".codec.json").delete() }.getOrDefault(false)
+    }
+
     // ---- Phase 16: drawer git metadata ------------------------------------
 
     /**
@@ -1534,6 +1675,230 @@ class EditorViewModel : ViewModel() {
             } finally {
                 _formatting.value = false
             }
+        }
+    }
+
+    /**
+     * Phase 24.1 — per-language Format action from the ⋮ menu. Uses the
+     * [LanguageRegistry] formatter template (`clang-format -i $SRC`, `black
+     * $SRC`, `gofmt -w $SRC`, …), saves the buffer, runs the formatter through
+     * the real userland toolchain, then reloads the rewriting result as ONE
+     * undo step. C/C++ keep the Phase 9 offline built-in indenter when
+     * clang-format is not installed (no 90 MB install just to format).
+     */
+    fun formatActiveFile(context: Context, tabSize: Int = 4) {
+        if (_formatting.value || _outputState.value.busy) return
+        val appContext = context.applicationContext
+        captureContext(appContext)
+        if (!saveFile(appContext)) {
+            _userMessage.value = appContext.getString(R.string.file_save_failed)
+            return
+        }
+        val profile = LanguageRegistry.forFile(_fileName.value)
+            ?: run { _userMessage.value = appContext.getString(R.string.no_formatter); return }
+        val template = profile.formatterTemplate
+            ?: run { _userMessage.value = appContext.getString(R.string.no_formatter); return }
+
+        // Phase 9 regression guard: a .c/.cpp file without clang-format keeps
+        // the always-available built-in indenter instead of prompting for a
+        // 90 MB toolchain just to format.
+        val isC = profile.extensions.any { it == "c" || it == "cpp" || it == "cc" || it == "cxx" }
+        if (isC && !ClangFormatBridge.isAvailable(appContext)) {
+            formatCode(appContext, tabSize)
+            return
+        }
+
+        val project = _projectName.value
+        val workDir: File
+        val sourceRef: String
+        if (project != null) {
+            val info = ProjectManager(appContext).project(project) ?: return
+            val rel = ProjectPathUtils.sanitizeRelativePath(_fileName.value) ?: return
+            workDir = info.root
+            sourceRef = rel
+        } else {
+            val path = saveAndAbsolutePath(appContext) ?: return
+            val source = File(path)
+            workDir = source.parentFile ?: File(appContext.filesDir, "CodeC/projects")
+            sourceRef = path
+        }
+        val command = LanguageRegistry.formatterCommand(profile, sourceRef)
+            ?: run { _userMessage.value = appContext.getString(R.string.no_formatter); return }
+
+        _formatting.value = true
+        _outputExpanded.value = true
+        _outputState.value = OutputRunState(
+            phase = OutputPhase.BUILDING,
+            busy = true,
+            lines = listOf(OutputLine("$ $command", OutputLineKind.COMMAND)),
+            summary = appContext.getString(R.string.output_formatting)
+        )
+        runJob = viewModelScope.launch {
+            try {
+                val settings = compilerSettingsFrom(SettingsManager(appContext))
+                val prepared = withContext(Dispatchers.IO) { ShellBootstrap(appContext).prepare(settings) }
+                val runner = ExecutionRunner(prepared.shell, prepared.env, buildTimeoutSeconds = 60L)
+                var exit = -1
+                runner.run(RunSpec(workDir, command, null)).collect { event ->
+                    when (event) {
+                        is RunEvent.Output -> {
+                            val test = TestOutputParser.parseLine(event.line).kind
+                            val kind = when (test) {
+                                TestLineKind.PASS -> OutputLineKind.TEST_PASS
+                                TestLineKind.FAIL -> OutputLineKind.TEST_FAIL
+                                TestLineKind.ERROR -> OutputLineKind.TEST_ERROR
+                                else -> OutputLineKind.BUILD
+                            }
+                            _outputState.value = _outputState.value.copy(
+                                lines = _outputState.value.lines + OutputLine(event.line, kind)
+                            )
+                        }
+                        is RunEvent.BuildFinished -> exit = event.exitCode
+                        is RunEvent.Failed -> failRun(appContext, event.message)
+                        else -> Unit
+                    }
+                }
+                _formatting.value = false
+                if (exit == 0) {
+                    reloadFormattedResult(appContext, workDir, sourceRef)
+                } else {
+                    _outputState.value = _outputState.value.copy(
+                        phase = OutputPhase.FAILED,
+                        busy = false,
+                        summary = appContext.getString(R.string.output_format_failed, exit)
+                    )
+                }
+            } catch (e: CancellationException) {
+                _formatting.value = false
+                throw e
+            } catch (e: Exception) {
+                _formatting.value = false
+                failRun(appContext, e.message ?: "Format failed")
+            }
+            runJob = null
+        }
+    }
+
+    /** Reloads a formatter-rewritten file into the buffer as one undo step. */
+    private fun reloadFormattedResult(context: Context, workDir: File, sourceRef: String) {
+        val file = if (sourceRef.startsWith('/')) File(sourceRef) else File(workDir, sourceRef)
+        val text = runCatching { file.readText() }.getOrNull() ?: return
+        val before = _codeText.value
+        val normalized = LineEndings.normalizeToLf(text)
+        if (normalized == before.text) {
+            _outputState.value = _outputState.value.copy(
+                phase = OutputPhase.DONE,
+                busy = false,
+                summary = context.getString(R.string.already_formatted)
+            )
+            return
+        }
+        val cursor = CodeFormatter.mapCursor(before.text, normalized, before.selection.min)
+        applyBufferEdit(before, TextFieldValue(normalized, TextRange(cursor.coerceIn(0, normalized.length))))
+        _outputState.value = _outputState.value.copy(
+            phase = OutputPhase.DONE,
+            busy = false,
+            summary = context.getString(R.string.formatted_per_language)
+        )
+    }
+
+    // ---------------------------------------------------------------------
+    // Phase 24.6: test-runner UI (pytest / go test)
+    // ---------------------------------------------------------------------
+
+    /** Test ▷ — run the test profile for the active file, streaming to the panel. */
+    fun runTests(context: Context) {
+        if (_outputState.value.busy) return
+        val appContext = context.applicationContext
+        captureContext(appContext)
+        if (!saveFile(appContext)) {
+            _userMessage.value = appContext.getString(R.string.file_save_failed)
+            return
+        }
+        val profile = LanguageRegistry.testProfileForFile(_fileName.value)
+            ?: run { _userMessage.value = appContext.getString(R.string.no_test_runner); return }
+
+        val project = _projectName.value
+        val workDir: File
+        val sourceRef: String
+        if (project != null) {
+            val info = ProjectManager(appContext).project(project) ?: return
+            val rel = ProjectPathUtils.sanitizeRelativePath(_fileName.value) ?: return
+            workDir = info.root
+            sourceRef = rel
+        } else {
+            val path = saveAndAbsolutePath(appContext) ?: return
+            val source = File(path)
+            workDir = source.parentFile ?: File(appContext.filesDir, "CodeC/projects")
+            sourceRef = path
+        }
+
+        val runCommand = LanguageRegistry.expandTemplate(
+            profile.runTemplate, LanguageRegistry.shellEscape(sourceRef), ""
+        )
+        _outputExpanded.value = true
+        _outputState.value = OutputRunState(
+            phase = OutputPhase.RUNNING,
+            busy = true,
+            lines = listOf(OutputLine("$ $runCommand", OutputLineKind.COMMAND)),
+            summary = appContext.getString(R.string.output_running_tests),
+            testRun = true
+        )
+        scheduleForegroundRun(appContext)
+        runJob = viewModelScope.launch {
+            try {
+                val settings = compilerSettingsFrom(SettingsManager(appContext))
+                val prepared = withContext(Dispatchers.IO) { ShellBootstrap(appContext).prepare(settings) }
+                val runner = ExecutionRunner(
+                    prepared.shell,
+                    prepared.env,
+                    buildTimeoutSeconds = 60L,
+                    runTimeoutSeconds = 120L,
+                )
+                var exit = -1
+                var timedOut = false
+                runner.run(RunSpec(workDir, null, runCommand)).collect { event ->
+                    when (event) {
+                        is RunEvent.PhaseChanged -> Unit
+                        is RunEvent.Output -> {
+                            val kind = when (TestOutputParser.parseLine(event.line).kind) {
+                                TestLineKind.PASS -> OutputLineKind.TEST_PASS
+                                TestLineKind.FAIL -> OutputLineKind.TEST_FAIL
+                                TestLineKind.ERROR -> OutputLineKind.TEST_ERROR
+                                TestLineKind.OK, TestLineKind.PLAIN -> OutputLineKind.TEST_SUMMARY
+                            }
+                            appendOutputLine(OutputLine(event.line, kind))
+                        }
+                        is RunEvent.RunFinished -> {
+                            exit = event.exitCode
+                            timedOut = event.timedOut
+                        }
+                        is RunEvent.Failed -> failRun(appContext, event.message)
+                        else -> Unit
+                    }
+                }
+                finishRun(appContext, exit, 0L, timedOut)
+                if (_outputState.value.phase == OutputPhase.DONE) {
+                    _outputState.value = _outputState.value.copy(
+                        summary = appContext.getString(
+                            if (exit == 0) R.string.output_tests_passed else R.string.output_tests_failed,
+                            exit
+                        ),
+                        lines = _outputState.value.lines + OutputLine(
+                            appContext.getString(
+                                if (exit == 0) R.string.output_tests_passed else R.string.output_tests_failed,
+                                exit
+                            ),
+                            if (exit == 0) OutputLineKind.TEST_PASS else OutputLineKind.TEST_FAIL
+                        )
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                failRun(appContext, e.message ?: "Tests failed")
+            }
+            runJob = null
         }
     }
 
@@ -1734,6 +2099,7 @@ class EditorViewModel : ViewModel() {
     fun clearOutput() {
         runJob?.cancel()
         runJob = null
+        appContext?.let { stopForegroundRun(it) }
         activeRunner = null
         interactiveRun?.stop()
         interactiveRun = null
@@ -1748,6 +2114,7 @@ class EditorViewModel : ViewModel() {
     fun stopRun() {
         runJob?.cancel()
         runJob = null
+        appContext?.let { stopForegroundRun(it) }
         activeRunner = null
         interactiveRun?.stop()
         interactiveRun = null
@@ -1843,57 +2210,85 @@ class EditorViewModel : ViewModel() {
             // The project.json build/run still drives everything else
             // (headers, text, custom multi-file builds).
             val activeRel = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
-            // Phase 21.1 — one generic dispatch through LanguageRegistry
-            // replaces the old per-language `when` (python / c / cpp / else).
-            // A file the registry does not claim still falls back to the
-            // project.json build/run configuration.
-            val decision = activeRel?.let {
-                LanguageRunPlanner.decide(
-                    sourceRef = it,
-                    workDir = info.root.absolutePath,
-                    outputDir = PROJECT_BUILD_DIR,
-                    toolInstalled = ::isToolInstalled,
-                )
+            // Phase 24.9 — a project-root `.codec.json` overrides the active
+            // file's build/run (highest priority). It is applied BEFORE the
+            // registry so a multi-file C project can say `gcc main.c utils.c
+            // -o app` and RUN ▶ compiles all of them.
+            val codecOverride = activeRel?.let {
+                CodecJsonParser.parse(File(info.root, ".codec.json"))
             }
-            when (decision) {
-                is RunDecision.WebPreview -> {
-                    webPreviewHandler?.invoke(info.name, activeRel!!)
+            if (codecOverride != null &&
+                (codecOverride.build != null || codecOverride.run != null)
+            ) {
+                // Same gate the project.json pair uses: gate the raw commands.
+                LanguageRunPlanner.toolchainForCommands(
+                    listOf(codecOverride.build, codecOverride.run), ::isToolInstalled
+                )?.let { needed ->
+                    promptInstall(needed)
                     return
                 }
-                is RunDecision.NeedsInstall -> {
-                    promptInstall(decision)
-                    return
+                buildCommand = codecOverride.build
+                runCommand = codecOverride.run
+                val steps = buildList {
+                    add("cd ${LanguageRegistry.shellEscape(info.root.absolutePath)}")
+                    buildCommand?.let { add(it) }
+                    runCommand?.let { add(it) }
                 }
-                is RunDecision.Unavailable -> {
-                    _userMessage.value = appContext.getString(
-                        R.string.output_language_unavailable, decision.profile.displayName
+                terminalCommand = steps.joinToString(" && ")
+                preferInteractive = LanguageRegistry.forFile(_fileName.value)?.interactive ?: true
+            } else {
+                // Phase 21.1 — one generic dispatch through LanguageRegistry
+                // replaces the old per-language `when` (python / c / cpp / else).
+                // A file the registry does not claim still falls back to the
+                // project.json build/run configuration.
+                val decision = activeRel?.let {
+                    LanguageRunPlanner.decide(
+                        sourceRef = it,
+                        workDir = info.root.absolutePath,
+                        outputDir = PROJECT_BUILD_DIR,
+                        toolInstalled = ::isToolInstalled,
                     )
-                    return
                 }
-                is RunDecision.Execute -> {
-                    if (decision.profile.displayName == "Python") {
-                        // Device round fix 2026-08-31: python writes
-                        // __pycache__ and `git add -A` used to stage it —
-                        // exclude it repo-locally BEFORE the run.
-                        viewModelScope.launch(Dispatchers.IO) { PythonCacheIgnore.ensure(info.root) }
-                    }
-                    buildCommand = decision.plan.build
-                    runCommand = decision.plan.run
-                    terminalCommand = decision.plan.terminal
-                    preferInteractive = decision.profile.interactive
-                }
-                else -> {
-                    val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, config)
-                    // Same gate for a custom project.json build/run pair.
-                    LanguageRunPlanner.toolchainForCommands(
-                        listOf(build, run), ::isToolInstalled
-                    )?.let { needed ->
-                        promptInstall(needed)
+                when (decision) {
+                    is RunDecision.WebPreview -> {
+                        webPreviewHandler?.invoke(info.name, activeRel!!)
                         return
                     }
-                    buildCommand = build
-                    runCommand = run
-                    terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, config)
+                    is RunDecision.NeedsInstall -> {
+                        promptInstall(decision)
+                        return
+                    }
+                    is RunDecision.Unavailable -> {
+                        _userMessage.value = appContext.getString(
+                            R.string.output_language_unavailable, decision.profile.displayName
+                        )
+                        return
+                    }
+                    is RunDecision.Execute -> {
+                        if (decision.profile.displayName == "Python") {
+                            // Device round fix 2026-08-31: python writes
+                            // __pycache__ and `git add -A` used to stage it —
+                            // exclude it repo-locally BEFORE the run.
+                            viewModelScope.launch(Dispatchers.IO) { PythonCacheIgnore.ensure(info.root) }
+                        }
+                        buildCommand = decision.plan.build
+                        runCommand = decision.plan.run
+                        terminalCommand = decision.plan.terminal
+                        preferInteractive = decision.profile.interactive
+                    }
+                    else -> {
+                        val (build, run) = TerminalHandoff.projectRunParts(workDir.absolutePath, config)
+                        // Same gate for a custom project.json build/run pair.
+                        LanguageRunPlanner.toolchainForCommands(
+                            listOf(build, run), ::isToolInstalled
+                        )?.let { needed ->
+                            promptInstall(needed)
+                            return
+                        }
+                        buildCommand = build
+                        runCommand = run
+                        terminalCommand = TerminalHandoff.projectRunCommand(workDir.absolutePath, config)
+                    }
                 }
             }
         } else {
@@ -1958,6 +2353,7 @@ class EditorViewModel : ViewModel() {
             ),
             lastTerminalCommand = terminalCommand
         )
+        scheduleForegroundRun(appContext)
         runJob = viewModelScope.launch {
             StatsManager(appContext).incrementRuns()
             val settings = compilerSettingsFrom(SettingsManager(appContext))
@@ -2135,6 +2531,7 @@ class EditorViewModel : ViewModel() {
             ),
             lastTerminalCommand = TerminalHandoff.projectRunCommand(info.root.absolutePath, config)
         )
+        scheduleForegroundRun(context)
         serverRunJob = viewModelScope.launch {
             StatsManager(context).incrementRuns()
             val settings = compilerSettingsFrom(SettingsManager(context))
@@ -2240,6 +2637,7 @@ class EditorViewModel : ViewModel() {
 
     /** Phase 14 — a background server ended on its own. Honest summary per exit code. */
     private fun finishServerExit(context: Context, exitCode: Int) {
+        stopForegroundRun(context)
         val ok = exitCode == 0
         _outputState.value = _outputState.value.copy(
             phase = if (ok) OutputPhase.DONE else OutputPhase.FAILED,
@@ -2268,6 +2666,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun failRun(context: Context, message: String) {
+        stopForegroundRun(context)
         _outputState.value = _outputState.value.copy(
             phase = OutputPhase.FAILED,
             busy = false,
@@ -2280,6 +2679,7 @@ class EditorViewModel : ViewModel() {
 
     /** Finalizes a finished run phase (interactive exit or piped fallback). */
     private fun finishRun(context: Context, exitCode: Int, durationMs: Long, timedOut: Boolean) {
+        stopForegroundRun(context)
         val summary = if (timedOut) {
             context.getString(R.string.output_timed_out)
         } else {
@@ -2321,6 +2721,7 @@ class EditorViewModel : ViewModel() {
      * and feed the squiggle layer with the diagnostics for the active file.
      */
     private fun finishFailedBuild(context: Context, exitCode: Int, durationMs: Long, timedOut: Boolean) {
+        stopForegroundRun(context)
         val current = _outputState.value
         val summary = if (timedOut) {
             context.getString(R.string.output_compile_timed_out)

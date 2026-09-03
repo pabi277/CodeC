@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -58,8 +59,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.core.content.IntentCompat
 import com.codeci.ide.ui.navigation.Screen
 import com.codeci.ide.ui.projects.EditorLaunchState
+import com.codeci.ide.ui.projects.IncomingImportBridge
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.screens.EditorScreen
@@ -145,6 +148,7 @@ class MainActivity : ComponentActivity() {
         }
 
         handleStoragePermissionIntent(intent)
+        handleIncomingIntent(intent)
 
         setContent {
             val context = LocalContext.current
@@ -153,11 +157,7 @@ class MainActivity : ComponentActivity() {
             val appTheme by themeManager.appThemeFlow.collectAsState(initial = AppThemeMode.SYSTEM)
             val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
 
-            val isDarkTheme = when (appTheme) {
-                AppThemeMode.LIGHT -> false
-                AppThemeMode.DARK -> true
-                AppThemeMode.SYSTEM -> isSystemInDarkTheme()
-            }
+            val isDarkTheme = ThemeManager.effectiveDark(appTheme, isSystemInDarkTheme())
 
             MyApplicationTheme(darkTheme = isDarkTheme, accentHex = accentColor) {
                 MainApp()
@@ -199,6 +199,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleStoragePermissionIntent(intent)
+        handleIncomingIntent(intent)
     }
 
     fun requestStoragePermissions() {
@@ -233,6 +234,30 @@ class MainActivity : ComponentActivity() {
     private fun handleStoragePermissionIntent(intent: Intent?) {
         if (intent?.action == ACTION_REQUEST_STORAGE_PERMISSION) {
             requestStoragePermissions()
+        }
+    }
+
+    /** Phase 24.7 — "Open with CodeC": import a shared file/ZIP and open it. */
+    private fun handleIncomingIntent(intent: Intent?) {
+        val action = intent?.action ?: return
+        val uri: Uri? = when (action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(
+                intent, Intent.EXTRA_STREAM, Uri::class.java
+            )
+            else -> null
+        } ?: return
+        val mime = intent.type ?: contentResolver.getType(uri) ?: uri.toString()
+        val isZip = mime.equals("application/zip", ignoreCase = true) ||
+            mime.contains("zip", ignoreCase = true) ||
+            uri.toString().substringBefore('?').endsWith(".zip", ignoreCase = true)
+        val imported = if (isZip) IncomingImportBridge.importZip(this, uri)
+        else IncomingImportBridge.importFile(this, uri, mime)
+        if (imported != null) {
+            IncomingImportBridge.offer(imported)
+            Toast.makeText(this, "Imported ${imported.fileName}", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Could not import the shared file", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -388,6 +413,20 @@ fun MainApp() {
     val startDestination = remember(launchState) {
         launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
             ?: Screen.FileManager.route
+    }
+
+    // Phase 24.7 — an "Open with CodeC" file/ZIP arrives outside navigation
+    // (onNewIntent); the bridge carries it in and the editor opens the import.
+    val incomingImport by IncomingImportBridge.state.collectAsState()
+    LaunchedEffect(incomingImport) {
+        incomingImport?.let { import ->
+            IncomingImportBridge.clear()
+            navController.navigate(
+                Screen.Editor.createRoute(import.fileName, import.projectName)
+            ) {
+                launchSingleTop = true
+            }
+        }
     }
 
     DisposableEffect(navController) {

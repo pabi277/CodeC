@@ -1,6 +1,6 @@
 # CodeC Phase 24 — Polish Batch: Feasible Items from Groups 3-5
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 24" command.
+**Status:** 🚧 **IN PROGRESS** — owner's "Start Phase 24" command received (2026-09-03); implementation is on `arena/01a06784-codec`. Eight parts implemented (E.1–E.4, E.6–E.9); **E.5 tablet two-pane is deferred**. Device recipes (§3 of each part) and CI are still pending.
 · **Cost:** `[client-only]` — all items are pure Kotlin/Compose; no `[repo-build]`
   (except E.2 formatter, which needs the tools from Phase 20 to be installed)
 · **Depends on:** Phase 21 (registry with `formatterTemplate`); Phase 22 (IME keys infrastructure

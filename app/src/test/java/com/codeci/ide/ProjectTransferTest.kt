@@ -37,6 +37,33 @@ class ProjectTransferTest {
     }
 
     @Test
+    fun `exportZipToCache writes a zip under the cache shares dir`() {
+        val source = tmp.newFolder("share-source")
+        File(source, "main.c").writeText("int main(){}")
+        val cache = tmp.newFolder("share-cache")
+        val zip = ProjectTransfer.exportZipToCache(source, cache, "share-source.zip")
+        assertTrue(zip.isFile)
+        assertEquals("share-source.zip", zip.name)
+        assertEquals(File(cache, "shares"), zip.parentFile)
+
+        // The cached ZIP must contain the same files exportZip produces.
+        val extracted = tmp.newFolder("share-extracted")
+        val entries = ProjectTransfer.importZip(zip.inputStream(), extracted)
+        assertTrue(entries >= 2)
+        assertEquals("int main(){}", File(extracted, "main.c").readText())
+    }
+
+    @Test
+    fun `exportZipToCache sanitises the zip file name`() {
+        val source = tmp.newFolder("share-unsafe")
+        File(source, "a.c").writeText("a")
+        val cache = tmp.newFolder("unsafe-cache")
+        val zip = ProjectTransfer.exportZipToCache(source, cache, "my/project?name.zip")
+        assertTrue(zip.name.matches(Regex("[A-Za-z0-9._-]+")))
+        assertTrue(zip.isFile)
+    }
+
+    @Test
     fun `zip import preserves every normal filename and nested structure`() {
         val archive = ByteArrayOutputStream()
         ZipOutputStream(archive).use { zip ->

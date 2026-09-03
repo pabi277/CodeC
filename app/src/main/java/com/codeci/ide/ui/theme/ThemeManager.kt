@@ -17,7 +17,18 @@ class ThemeManager(private val context: Context) {
         val APP_THEME_KEY = stringPreferencesKey("app_theme")
         val EDITOR_THEME_KEY = stringPreferencesKey("editor_theme")
         val TERMINAL_THEME_KEY = stringPreferencesKey("terminal_theme")
+
+        /**
+         * Phase 24.8 — the pure "is this theme dark" decision. AUTO follows the
+         * system; explicit DARK/LIGHT override it. Host-testable.
+         */
+        fun effectiveDark(mode: AppThemeMode, systemDark: Boolean): Boolean = when (mode) {
+            AppThemeMode.LIGHT -> false
+            AppThemeMode.DARK -> true
+            AppThemeMode.SYSTEM -> systemDark
+        }
     }
+
 
     val appThemeFlow: Flow<AppThemeMode> = context.dataStore.data.map { preferences ->
         val themeString = preferences[APP_THEME_KEY] ?: AppThemeMode.SYSTEM.name

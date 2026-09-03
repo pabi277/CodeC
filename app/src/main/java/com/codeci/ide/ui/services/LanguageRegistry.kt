@@ -226,6 +226,49 @@ object LanguageRegistry {
     }
 
     /**
+     * Phase 24.6 — is this file a test file CodeC can run through the Test ▷
+     * button? Recognises pytest-style Python (`test_*.py`, `*_test.py`) and
+     * Go test files (`*_test.go`). Pure filename logic, host-testable.
+     */
+    fun isTestFile(path: String): Boolean {
+        val leaf = path.substringAfterLast('/').substringAfterLast('\\')
+        val base = leaf.substringBeforeLast('.', leaf)
+        val ext = leaf.substringAfterLast('.', "").lowercase()
+        return when (ext) {
+            "py" -> base.startsWith("test_") || base.endsWith("_test")
+            "go" -> base.endsWith("_test")
+            else -> false
+        }
+    }
+
+    /**
+     * Phase 24.6 — the run profile for a test file, or null when the file is
+     * not a recognised test file. The returned profile keeps the parent
+     * language's package/probe (so the existing install gate still applies)
+     * but replaces the run template with the test runner; it is never
+     * interactive (tests stream their whole result instead of prompting).
+     */
+    fun testProfileForFile(path: String): LanguageRunProfile? {
+        if (!isTestFile(path)) return null
+        val profile = forFile(path) ?: return null
+        return when (profile.extensions.firstOrNull()?.lowercase()) {
+            "py" -> profile.copy(
+                displayName = "Python tests",
+                runTemplate = "python3 -m pytest \$SRC -v",
+                buildTemplate = null,
+                interactive = false,
+            )
+            "go" -> profile.copy(
+                displayName = "Go tests",
+                runTemplate = "go test ./...",
+                buildTemplate = null,
+                interactive = false,
+            )
+            else -> null
+        }
+    }
+
+    /**
      * Expand `$SRC` and `$OUT` in a template. Both tokens are read from the
      * template only — a replacement value that itself contains `$SRC`/`$OUT`
      * is never re-expanded (single pass, left to right).

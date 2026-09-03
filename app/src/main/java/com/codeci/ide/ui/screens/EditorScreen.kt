@@ -40,6 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Menu
@@ -140,6 +141,7 @@ import com.codeci.ide.ui.editor.keysForContext
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.services.LanguageRegistry
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
@@ -288,6 +290,8 @@ fun EditorScreen(
     var pendingDelete by remember { mutableStateOf<EditorFileEntry?>(null) }
     var showGoToLineDialog by remember { mutableStateOf(false) }
     var goToLineText by remember { mutableStateOf("") }
+    // Phase 24.9 — per-project .codec.json run-config editor.
+    var showCodecConfig by remember { mutableStateOf(false) }
     var gitSheetRoot by remember { mutableStateOf<File?>(null) }
     // Phase 17 — Switch Branch, opened from the drawer footer.
     var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
@@ -948,13 +952,15 @@ fun EditorScreen(
                                     viewModel.reloadActiveTab(context)
                                 }
                             )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.format)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.formatCode(context, tabSize)
-                                }
-                            )
+                            if (LanguageRegistry.forFile(currentFileName)?.formatterTemplate != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.format)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.formatActiveFile(context, tabSize)
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.jump_to_line)) },
                                 onClick = {
@@ -1004,6 +1010,14 @@ fun EditorScreen(
                                         }
                                     )
                                 }
+                                // Phase 24.9 — per-project `.codec.json` override.
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.edit_run_config)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        showCodecConfig = true
+                                    }
+                                )
                             }
                             if (!isWebProject) {
                                 DropdownMenuItem(
@@ -1075,6 +1089,30 @@ fun EditorScreen(
                                     showMoreMenu = false
                                     viewModel.clearDiagnostics()
                                 }
+                            )
+                        }
+                    }
+                    // Phase 24.6 — Test ▷ for pytest/go test files, alongside RUN.
+                    if (LanguageRegistry.testProfileForFile(currentFileName) != null) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { viewModel.runTests(context) }
+                                .padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = stringResource(R.string.run_tests),
+                                tint = RunGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                stringResource(R.string.run_tests),
+                                color = RunGreen,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -1230,6 +1268,35 @@ fun EditorScreen(
                                 Key.Escape -> {
                                     completionDismissed = true
                                     true
+                                }
+                                else -> false
+                            }
+                        } else if (event.type == KeyEventType.KeyDown) {
+                            // Phase 24.3 — hardware-keyboard shortcuts.
+                            when {
+                                event.isCtrlPressed && event.key == Key.R -> {
+                                    viewModel.runActiveFile(context); true
+                                }
+                                event.isCtrlPressed && event.key == Key.F -> {
+                                    if (findState.visible) viewModel.hideFind() else viewModel.showFind(); true
+                                }
+                                event.isCtrlPressed && event.key == Key.Slash -> {
+                                    viewModel.toggleLineComment(language); true
+                                }
+                                event.isCtrlPressed && event.key == Key.D -> {
+                                    viewModel.duplicateLine(); true
+                                }
+                                event.isCtrlPressed && event.key == Key.W -> {
+                                    viewModel.closeActiveTab(context); true
+                                }
+                                event.isCtrlPressed && !event.isShiftPressed && event.key == Key.Tab -> {
+                                    viewModel.nextTab(); true
+                                }
+                                event.isCtrlPressed && event.isShiftPressed && event.key == Key.Tab -> {
+                                    viewModel.prevTab(); true
+                                }
+                                event.key == Key.F5 -> {
+                                    viewModel.runActiveFile(context); true
                                 }
                                 else -> false
                             }
@@ -1814,6 +1881,60 @@ fun EditorScreen(
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showSaveToProject = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        // Phase 24.9 — per-project `.codec.json` build/run override editor.
+        if (showCodecConfig) {
+            val existing = remember { viewModel.codecOverrideForActiveProject(context) }
+            var buildText by remember(existing) { mutableStateOf(existing?.build ?: "") }
+            var runText by remember(existing) { mutableStateOf(existing?.run ?: "") }
+            AlertDialog(
+                onDismissRequest = { showCodecConfig = false },
+                title = { Text(stringResource(R.string.edit_run_config)) },
+                text = {
+                    Column {
+                        Text(
+                            stringResource(R.string.codec_config_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = buildText,
+                            onValueChange = { buildText = it },
+                            label = { Text(stringResource(R.string.build_command)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = runText,
+                            onValueChange = { runText = it },
+                            label = { Text(stringResource(R.string.run_command)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val saved = viewModel.saveCodecRunConfig(context, buildText, runText)
+                        showCodecConfig = false
+                        Toast.makeText(
+                            context,
+                            context.getString(
+                                if (saved) R.string.run_config_saved else R.string.run_config_failed
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }) { Text(stringResource(R.string.save)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCodecConfig = false }) {
                         Text(stringResource(R.string.cancel))
                     }
                 }
