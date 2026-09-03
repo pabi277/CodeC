@@ -120,6 +120,18 @@ class CodeCompletionTest {
     }
 
     @Test
+    fun `snippet matching ignores case`() {
+        // Phase 22.6 — found while writing the HTML tests: matching was
+        // case-SENSITIVE, so lowercase `doc` never surfaced `<!DOCTYPE html>`.
+        // On a phone keyboard you type lowercase; requiring the user to guess
+        // a snippet's capitalization defeats a prefix search.
+        val lower = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML_CSS)
+        val upper = CodeCompletionEngine.completions("<!DOC", 5, LanguageType.HTML_CSS)
+        assertTrue(lower.any { it.label.contains("DOCTYPE") })
+        assertTrue(upper.any { it.label.contains("DOCTYPE") })
+    }
+
+    @Test
     fun `identifier scan stays near the caret on a very long buffer`() {
         // Phase 22.6 — the scan is windowed so the per-keystroke cost is
         // bounded by SCAN_WINDOW, not by the file size. An identifier far

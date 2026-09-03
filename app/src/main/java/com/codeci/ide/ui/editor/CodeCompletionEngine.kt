@@ -34,6 +34,9 @@ object CodeCompletionEngine {
     /** Compiled once — it used to be rebuilt on every keystroke. */
     private val IDENTIFIER = Regex("\\b[A-Za-z_][A-Za-z0-9_]*\\b")
 
+    /** Compiled once; splits a snippet label into its searchable words. */
+    private val WORD_SEPARATOR = Regex("[^A-Za-z0-9_]+")
+
     /** Offset where the word under [cursorOffset] begins. */
     fun prefixStart(text: String, cursorOffset: Int): Int {
         val cursor = cursorOffset.coerceIn(0, text.length)
@@ -83,9 +86,16 @@ object CodeCompletionEngine {
      * any word inside it (so typing `mai` surfaces `int main(void) {` and
      * `inc` surfaces `#include <stdio.h>`).
      */
+    /**
+     * Phase 22.6 — matching is CASE-INSENSITIVE. It used to be case-sensitive,
+     * so typing `doc` never surfaced `<!DOCTYPE html>` and `head` never
+     * surfaced `# Heading` — you had to guess the snippet's capitalization,
+     * which defeats the point of a prefix search. Lowercase typing is the
+     * common case on a phone keyboard.
+     */
     private fun snippetMatches(label: String, prefix: String): Boolean {
-        if (label.startsWith(prefix)) return true
-        return label.split(Regex("[^A-Za-z0-9_]+")).any { it.startsWith(prefix) }
+        if (label.startsWith(prefix, ignoreCase = true)) return true
+        return label.split(WORD_SEPARATOR).any { it.startsWith(prefix, ignoreCase = true) }
     }
 
     /**
