@@ -48,6 +48,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true }
+    // assembleRelease runs fatal-only lint (lintVitalRelease), which trips on
+    // the same targetSdk-28 Google Play policy check :app's lint block
+    // disables ("CodeC is distributed from GitHub"). The bench is a throwaway
+    // harness — skip release lint entirely; the :app lintDebug gate in CI is
+    // unaffected.
+    lint { checkReleaseBuilds = false }
     // Pure-JVM unit tests; the flag keeps any accidental android.* stub call
     // returning a default instead of throwing "not mocked".
     testOptions { unitTests { isReturnDefaultValues = true } }
