@@ -292,7 +292,8 @@ the no-root debugging loop is now proven end-to-end.
 | 4 | `33859414468` | `8727941` | ❌ Kotlin: `return@subscribeEvent` — with SAM-constructor syntax the lambda label is the CONSTRUCTOR name (`return@EventReceiver`). |
 | 5 | `33860045301` | `08fb542` | ✅ **GREEN** — §4.1 fixes in (selection-echo guard, single-apply config, crash log). CodeC-IDE 21 855 224 B (20.84 MiB, delta +0.55 MiB vs 25.1 — unchanged). |
 | 6 | `33861505252` | `c1c7cb3` | ❌ §4.2 fixes: `val left/right` declarations lost in the clamp edit + missing `Modifier` import in the overlay. |
-| 7 | `33861977324` | `5298b00` | ✅ **GREEN** — in-app crash viewer + clamped selection push live. **This is the build for device round 2.** |
+| 7 | `33861977324` | `5298b00` | ✅ **GREEN** — in-app crash viewer + clamped selection push live. Device round 2 ran this; the overlay produced the §4.3 stack. |
+| 8 | `33863407938` | `fe7ae11` | ✅ **GREEN** — **THE crash fix** (`CodeCScheme.of()`, applyDefault override removed). **This is the build for device round 3.** |
 
 ## 5. Exit condition (unchanged from §3 above)
 
