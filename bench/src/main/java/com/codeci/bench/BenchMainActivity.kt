@@ -82,7 +82,7 @@ enum class CandidateId(val label: String, val blurb: String, val notes: String) 
 }
 
 /** Scenario families the runner reports differently. */
-private enum class ScenarioKind { TYPING, SCROLL, DRAG }
+enum class ScenarioKind { TYPING, SCROLL, DRAG }
 
 /** Scenario buttons (cold open is measured automatically on every screen open). */
 enum class Scenario(val label: String, val factory: () -> Script, val kind: ScenarioKind) {

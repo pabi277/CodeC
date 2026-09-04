@@ -57,7 +57,8 @@ fun SoraCandidate(text: String, harness: HarnessState) {
                 get() = editor
 
             override fun insertAtCaret(t: String) {
-                editor.text.insert(editor.cursor.left, t)
+                // The explicit line/column form of Content.insert.
+                editor.text.insert(editor.cursor.leftLine, editor.cursor.leftColumn, t)
             }
 
             override fun length(): Int = editor.text.length

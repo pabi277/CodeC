@@ -16,10 +16,13 @@ package com.codeci.bench.core
 data class NormPoint(val xFrac: Float, val yFrac: Float)
 
 sealed interface ScriptEvent {
-    data class TypeChar(val c: Char, val atMs: Long) : ScriptEvent
-    data class Touch(val action: TouchAction, val point: NormPoint, val atMs: Long) : ScriptEvent
+    /** Offset from the script start at which this event fires. */
+    val atMs: Long
+
+    data class TypeChar(val c: Char, override val atMs: Long) : ScriptEvent
+    data class Touch(val action: TouchAction, val point: NormPoint, override val atMs: Long) : ScriptEvent
     /** Marker fired between reps (e.g. "scroll back to the top now"). */
-    data class Command(val atMs: Long, val name: String) : ScriptEvent
+    data class Command(override val atMs: Long, val name: String) : ScriptEvent
 }
 
 enum class TouchAction { DOWN, MOVE, UP }

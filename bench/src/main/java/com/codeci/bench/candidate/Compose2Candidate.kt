@@ -93,6 +93,38 @@ class Compose2State(corpus: String, val language: LanguageType) {
         revision++
     }
 
+    /** Move the caret within the caret line (typing/selection updates). */
+    fun moveCaret(col: Int) {
+        caretCol = col.coerceIn(0, buffer.lineLength(caretLine))
+        revision++
+    }
+
+    /**
+     * Spike-scope line edit: rewrite the WHOLE caret line region as one
+     * delete+insert, retokenize just that line, and place the caret.
+     */
+    fun rewriteLine(line: Int, newText: String, newCaretCol: Int) {
+        val start = buffer.lineStart(line)
+        buffer.delete(start, start + buffer.lineLength(line))
+        val (first, untilLine) = buffer.insert(start, newText)
+        spans.invalidateLines(first, untilLine)
+        caretCol = newCaretCol.coerceIn(0, newText.length)
+        revision++
+    }
+
+    fun beginDrag(anchorLine: Int) {
+        selectionAnchorLine = anchorLine
+        dragMaxLine = anchorLine
+    }
+
+    fun extendDrag(line: Int) {
+        if (line > dragMaxLine) dragMaxLine = line
+    }
+
+    fun endDrag() {
+        selectionAnchorLine = -1
+    }
+
     fun scrollToTop() {
         caretLine = 0
         caretCol = 0
@@ -158,23 +190,22 @@ fun Compose2Candidate(text: String, language: LanguageType, harness: HarnessStat
                 .pointerInput(state) {
                     detectDragGestures(
                         onDragStart = { offset ->
-                            val line = lineAtPointer(offset.y)
-                            state.selectionAnchorLine = line
-                            state.dragMaxLine = line
+                            state.beginDrag(lineAtPointer(offset.y))
                         },
                         onDrag = { change, _ ->
                             change.consume()
-                            val line = lineAtPointer(change.position.y)
-                            if (line > state.dragMaxLine) state.dragMaxLine = line
+                            state.extendDrag(lineAtPointer(change.position.y))
                             // Auto-scroll while holding near the bottom edge —
                             // the behavior that lets a selection drag traverse
                             // the 500-line region.
                             if (change.position.y > listState.layoutInfo.viewportEndOffset - 40) {
-                                scope.launch { listState.scrollBy(14f) }
+                                scope.launch {
+                                    listState.scroll { scrollBy(14f) }
+                                }
                             }
                         },
-                        onDragEnd = { state.selectionAnchorLine = -1 },
-                        onDragCancel = { state.selectionAnchorLine = -1 }
+                        onDragEnd = { state.endDrag() },
+                        onDragCancel = { state.endDrag() }
                     )
                 }
         ) {
@@ -192,15 +223,16 @@ fun Compose2Candidate(text: String, language: LanguageType, harness: HarnessStat
                     BasicTextField(
                         value = fieldValue,
                         onValueChange = { value ->
-                            state.caretCol = value.selection.end.coerceIn(0, value.text.length)
                             if (value.text != lineText) {
                                 // Rewrite the whole line region (spike scope:
                                 // per-line edits only).
-                                val start = state.buffer.lineStart(line)
-                                state.buffer.delete(start, start + state.buffer.lineLength(line))
-                                val (first, untilLine) = state.buffer.insert(start, value.text)
-                                state.spans.invalidateLines(first, untilLine)
-                                state.revision++
+                                state.rewriteLine(
+                                    line,
+                                    value.text,
+                                    value.selection.end.coerceIn(0, value.text.length)
+                                )
+                            } else {
+                                state.moveCaret(value.selection.end)
                             }
                             fieldValue = value
                         },
