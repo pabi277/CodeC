@@ -81,14 +81,13 @@ class SmartTypingTest {
 
     @Test
     fun `autoIndent copies previous line indent`() {
-        val old = TextFieldValue("    x = 1;", TextRange(9)) // after ';'?
-        // Simulate newline insertion after line with indent 4 spaces
-        val old2 = TextFieldValue("    x = 1;\n", TextRange(11))
-        val newValue = TextFieldValue("    x = 1;\n\n", TextRange(12))
-        // previous line is "    x = 1;" indent 4 spaces -> next line indent 4
-        val res = SmartTyping.handleAutoIndent(old2, newValue, LanguageType.C, tabSize = 4, config = SmartTyping.Config())
-        // Should add 4 spaces
-        assertEquals(true, res?.text?.contains("    ") == true)
+        // Simulate pressing Enter after a line that starts with 4 spaces.
+        val old = TextFieldValue("    x = 1;", TextRange(10))
+        val newValue = TextFieldValue("    x = 1;\n", TextRange(11))
+        val res = SmartTyping.handleAutoIndent(old, newValue, LanguageType.C, tabSize = 4, config = SmartTyping.Config())
+        // Should indent the new line with the same 4 spaces.
+        assertEquals("    x = 1;\n    ", res?.text)
+        assertEquals(15, res?.selection?.start)
     }
 
     @Test
