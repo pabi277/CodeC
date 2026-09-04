@@ -34,7 +34,35 @@ jobs:
       # it from this run's artifacts and perform the device round. It is not
       # part of the shipped IDE; remove this step when Phase 25 closes.
       - name: Build bench spike APK (Phase 25.1, not shipped in the app)
-        run: ./gradlew :bench:assembleRelease :bench:testDebugUnitTest --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          log_file=".gradle/bench-build.log"
+          mkdir -p .gradle
+          if ./gradlew :bench:assembleRelease :bench:testDebugUnitTest \
+              --no-daemon --stacktrace 2>&1 | tee "$log_file"; then
+            exit 0
+          fi
+          # Same idea as the :app gradle-bootstrap shim: convert failures into
+          # readable GitHub annotations before failing the step.
+          python3 - "$log_file" <<'PY'
+          import re
+          import sys
+
+          text = open(sys.argv[1], errors="replace").read()
+          seen = set()
+          for m in re.finditer(r"^e: file:(.+?):(\d+):(\d+)\s+(.*)$", text, re.M):
+              line = f"::error file={m.group(1)},line={m.group(2)},col={m.group(3)}::{m.group(4)}"
+              if line not in seen:
+                  seen.add(line)
+                  print(line)
+          for m in re.finditer(r"^> Task :bench:(\S+)\s+FAILED", text, re.M):
+              print(f"::error::Task :bench:{m.group(1)} FAILED")
+          if not seen:
+              tail = [l for l in text.splitlines() if l.strip()][-12:]
+              for l in tail:
+                  print(f"::error::{l}")
+          sys.exit(1)
+          PY
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -81,14 +81,15 @@ enum class CandidateId(val label: String, val blurb: String, val notes: String) 
     )
 }
 
-/** Scenario buttons (cold open is measured automatically on every screen open). */
-enum class Scenario(val label: String, val factory: () -> Script, val kind: Kind) {
-    BURST("Type burst ×3 (60 keys @40 ms)", { InputScripts.burst60() }, Kind.TYPING),
-    FLING("Fling ×3 (~500 lines)", { InputScripts.fling() }, Kind.SCROLL),
-    CARET_DRAG("Caret drag ×3 (long-press → drag)", { InputScripts.caretDrag() }, Kind.DRAG),
-    COMPLETION("Completion churn ×3 (16 keys @220 ms)", { InputScripts.completionChurn() }, Kind.TYPING);
+/** Scenario families the runner reports differently. */
+private enum class ScenarioKind { TYPING, SCROLL, DRAG }
 
-    enum class Kind { TYPING, SCROLL, DRAG }
+/** Scenario buttons (cold open is measured automatically on every screen open). */
+enum class Scenario(val label: String, val factory: () -> Script, val kind: ScenarioKind) {
+    BURST("Type burst ×3 (60 keys @40 ms)", { InputScripts.burst60() }, ScenarioKind.TYPING),
+    FLING("Fling ×3 (~500 lines)", { InputScripts.fling() }, ScenarioKind.SCROLL),
+    CARET_DRAG("Caret drag ×3 (long-press → drag)", { InputScripts.caretDrag() }, ScenarioKind.DRAG),
+    COMPLETION("Completion churn ×3 (16 keys @220 ms)", { InputScripts.completionChurn() }, ScenarioKind.TYPING)
 }
 
 private sealed interface Screen {
@@ -282,7 +283,7 @@ private fun CandidateScreen(
                     val typed = ScriptRunner.run(scenario.factory(), target, mode)
                     val samples = capture?.stop() ?: LongArray(0)
                     val summary = FrameStats.summarize(samples)
-                    val traversed = if (scenario.kind == Scenario.Kind.DRAG) {
+                    val traversed = if (scenario.kind == ScenarioKind.DRAG) {
                         val endLine = target.firstVisibleLine()
                         if (startLine in 0..endLine) endLine - startLine else -1
                     } else {
@@ -291,7 +292,7 @@ private fun CandidateScreen(
                     reps += RepResult(
                         rep = rep,
                         summary = summary,
-                        typed = if (scenario.kind == Scenario.Kind.TYPING) typed else -1,
+                        typed = if (scenario.kind == ScenarioKind.TYPING) typed else -1,
                         linesTraversed = traversed
                     )
                     delay(2500) // battery/thermal cool-down between reps

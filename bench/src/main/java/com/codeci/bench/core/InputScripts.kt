@@ -42,7 +42,7 @@ object InputScripts {
      * punctuation — no newlines) at [BURST_INTERVAL_MS] cadence.
      */
     fun burst60(): Script {
-        val text = "int val = 0; for (int i = 0; i < 10; i++) { sum += va"
+        val text = "int val = 0; for (int i = 0; i < 10; i++) { sum += values; }"
         require(text.length == 60) { "burst must be exactly 60 keystrokes, is ${text.length}" }
         var t = 100L
         val events = text.map { c -> ScriptEvent.TypeChar(c, t.also { t += BURST_INTERVAL_MS }) }
