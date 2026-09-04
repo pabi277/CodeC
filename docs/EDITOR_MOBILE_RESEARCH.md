@@ -227,6 +227,7 @@ A single Settings toggle kills the whole feature (per the anti-pattern list).
 | [25](chat-phase25/README.md) | **Editor core: bench-marked decision & migration** | 25.1 spike+bench (three candidates, device budgets) · 25.2 Sora integration path · 25.3 Compose-rewrite fallback path · 25.4 caret/selection/magnifier | Phase 22's deferred item (now activated) |
 | [26](chat-phase26/README.md) | **Typing experience 2.0** | 26.1 key-strip 2.0 (long-press popups, swipe layers, user-editable sets) · 26.2 smart typing (auto-indent, pair type-over, wrap-selection) · 26.3 code-friendly IME guide panel | 25 (or the surviving editor core) |
 | [27](chat-phase27/README.md) | **Phone-native autocomplete** | 27.1 inline ghost text · 27.2 suggestion strip · 27.3 accept/dismiss rules + settings | 26.1 (strip exists), benefits from 25 but works on current core |
+| [28](chat-phase28/README.md) | **CodeC Keys — dedicated in-app code keyboard** (owner question 2026-09-04, see §9) | 28.1 IME-free input spike · 28.2 data-driven layout engine · 28.3 suggestions as keyboard row 0 · 28.4 prose escape hatch & parity | 26.1 key model; optional endgame after 25–27 prove budgets |
 
 Recommended order **25.1 → 27.2 → 27.1 → 26.1 → 25.2 → 26.2**: suggestion UX
 (the owner's loudest complaint ships first after the spike), engine migration
@@ -252,5 +253,66 @@ second behind its benchmark gate. Nothing here starts without the owner's
 8. Completion UX: [VS Code inline suggestions](https://code.visualstudio.com/docs/editing/ai-powered-suggestions) · [Smart Autocomplete AI-UX pattern](https://aiuxplayground.com/pattern/smart-autocomplete/) · [JupyterLab completer lazy-rendering PR #13663](https://github.com/jupyterlab/jupyterlab/pull/13663) · [react-ghost-text (accept/reject contract)](https://github.com/agdhruv/react-ghost-text)
 9. Market context: [best code editors for Android 2026](https://unstoreit.com/discover/best-code-editor-apps-android/) · [bestappsforandroid](https://bestappsforandroid.com/best-code-editor-apps-for-android/) · [Zapier editor roundup](https://zapier.com/blog/best-code-editor/) · [slant](https://www.slant.co/topics/1662/~best-code-editors-for-android)
 
-*Repo-internal grounding: `docs/NEXT_STEPS.md` (Phase 22 deferred rewrite),
-`docs/chat-phase22/`, `docs/JOURNEY.md`, `rule.md` §clean-room law.*
+---
+
+## 9. Addendum (2026-09-04): "Can the app have its **own keyboard** — only for code, dedicated to CodeC, not for other apps?"
+
+**Answer: yes — it is fully possible on Android, it never leaves the app, and
+it is a *different thing* from building an IME.** Three layers, three costs:
+
+| Layer | What "own keyboard" can mean | Works only inside CodeC? | Android cost |
+|---|---|---|---|
+| L0 (today + Phase 26) | Key **strip** above the system IME (`EditorKeysRow`) | inherently yes | done/learned |
+| **L1 (Phase 28)** | **Full in-app keyboard the app draws itself** — the system IME *never opens* in the editor; CodeC's own key grid (Compose-drawn) feeds text into the document | **yes, absolutely** — it's just UI inside the Activity | standard, documented Android pattern |
+| L2 (NOT recommended) | A system **IME service** other apps could pick up | no (system-wide by design), high policy/quality burden | months; users' trust; Play scrutiny |
+
+### Why L1 is technically cheap for CodeC specifically
+1. **The classical mechanism is documented Android**, not a hack: make the
+   editor field open without the soft IME (`rawInputType` + `textIsSelectable`,
+   or IME-off focus handling), take the field's `InputConnection` (or apply
+   edits to the document model directly), and feed it from a keyboard View the
+   app renders itself. The canonical pattern (custom keyboard view + direct
+   `InputConnection`) goes back to the platform's own answers
+   ([SO #9577304](https://stackoverflow.com/questions/9577304/how-can-you-make-a-custom-keyboard-in-android),
+   [SO #5419766](https://stackoverflow.com/questions/5419766/how-to-capture-soft-keyboard-input-in-a-view))
+   and modern Compose equivalents drive it through
+   `LocalSoftwareKeyboardController`/the VM. Both of CodeC's candidate cores
+   support it: **Compose core** — apply edits straight to the VM/document (the
+   strip already does exactly this through `EditorKeySet.apply`); **Sora
+   core** — `CodeEditor` exposes programmatic insert/commit used by its own
+   `SymbolInputView`, so keys bypass the IME the same way.
+2. **CodeC's architecture is already key-driven**: every strip key is a pure
+   `EditorKey` applied by a host-tested function. A full keyboard is *more
+   caps + a layout grid*, reusing the Phase 26.1 data model (tap/popup/
+   swipe layers) verbatim. No IME contract to re-implement for the happy path.
+3. **The autocomplete pain dies at its root**: predictions become **row 0 of
+   CodeC Keys** (Phase 27 strip as the keyboard's suggestion row — tap to
+   accept in a thumb zone we own 100 %, no IME competition for that space).
+
+### What it buys (and what it costs) — honesty table
+- ✅ Kills IME variance forever for code: no Gboard/Samsung/SwiftKey quirks in
+  the editor, no autocorrect storms, no composing-region bugs, no suggestion
+  occlusion, deterministic insets/resize behavior, real TAB/←→/HOME/END/PGUP
+  caps at full size, per-language layouts, swipe-to-symbol (Unexpected-density)
+  without asking users to install anything.
+- ✅ Privacy posture: editor text never transits a third-party IME.
+- ❌ **We inherit every user's typing expectations**: glide typing, haptic/
+  audio feedback timing, long-press accents, emoji, voice dictation,
+  clipboard/OTP surfaces, auto-space — all gone unless rebuilt. Mitigation:
+  the keyboard needs a letter layer good enough for code identifiers + a
+  one-tap **"summon system IME"** escape for prose (comments/commit messages/
+  search/passwords). That escape hatch is non-negotiable (it's the AI-UX
+  "always provide an off-switch" law at keyboard scale).
+- ❌ Accessibility (TalkBack key exploration, switch access) becomes *our*
+  job — budgeted in 28.4.
+- ❌ Hardware keyboards and IME-based assistants must still work — 28.4 keeps
+  the InputConnection/HW path live regardless of the on-screen keyboard.
+
+### Precedent (behavior-level)
+Full in-app code keyboards have shipped on mobile (historic Android editor
+Touchqode's dedicated keyboard; iOS's Pythonista/Textastic extended in-app
+keyboards are the same philosophy); Android's biggest terminal/editor apps
+mostly stopped at rows — a cost decision, not a capability limit. CodeC going
+L1 after Phases 25–27 is the *"make it best"* endgame, planned as
+[Phase 28](chat-phase28/README.md), and it is a **spike-gated option**, not a
+promise: 28.1 exists to prove feel/latency before any layout beauty is drawn.
