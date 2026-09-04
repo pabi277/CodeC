@@ -227,6 +227,31 @@ selection-only update → recomposition → both replay branches skip. No app
 code executes beyond a cheap selection push. If the crash reproduces, the
 crash-log file gives the stack.
 
+### 4.2 Device round 1 follow-up — crash log is UNREACHABLE without root
+
+Owner: still crashing (system dialog screenshot) and — correctly — cannot
+browse `Android/data` (no root; Android 11+ hides it from file managers).
+Fixes:
+
+1. **In-app crash viewer — `ui/crash/CrashReportOverlay.kt`.** The handler
+   now writes to `filesDir/crash-log.txt` (internal, always writable) and on
+   the NEXT launch the overlay opens before anything else with the last
+   report and COPY ALL / SHARE / CLEAR. No permissions, no root, no file
+   manager. The agent finally gets real stacks.
+2. **Selection push hardened.** Two residual poison cases in the receiver:
+   (a) indices clamped to the synced snapshot (a `TextFieldValue` whose
+   selection exceeds its text is undefined behavior downstream); (b) events
+   arriving BEFORE the first replay are dropped entirely — the synced
+   snapshot is still `""`, and pushing it would overwrite the VM's real file
+   text (data wipe + phantom undo).
+3. VM-side audit of every tap-path consumer: cursor readout clamps
+   (`selection.min.coerceIn`), completion engine coerces the cursor, popup
+   modulo guarded by `isNotEmpty` — all already safe; the bridge was the
+   only unclamped producer.
+
+NOTE: it is not yet confirmed the owner ran the round-1-fixed APK at all —
+the report may predate it. Either way round 2 is strictly additive.
+
 ### CI history
 
 | # | Run | Commit | Result |

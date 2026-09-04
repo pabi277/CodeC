@@ -143,12 +143,23 @@ fun SoraEditorHost(
                 // the VM back and ping-ponged replays — the 25.2 device
                 // crash. Same guard as pushToVm.
                 if (pushing[0]) return@EventReceiver
-                // Selection-only move: reuse the synced snapshot — no O(n) copy.
-                val left = event.left
-                val right = event.right
-                syncedSelection = TextRange(left.index, right.index)
+                if (soraHasText == null) {
+                    // First replay hasn't run: sora holds nothing meaningful
+                    // yet. Pushing now would overwrite the VM's real text
+                    // with the empty synced snapshot.
+                    return@EventReceiver
+                }
+                // Selection-only move: reuse the synced snapshot — no O(n)
+                // copy. Clamp against the snapshot: an event racing the
+                // first replay (or arriving between replays) can carry
+                // indices for text the VM has never seen — a TextFieldValue
+                // whose selection exceeds its text is poison downstream.
+                val base = syncedText
+                val startIdx = left.index.coerceIn(0, base.length)
+                val endIdx = right.index.coerceIn(0, base.length)
+                syncedSelection = TextRange(startIdx, endIdx)
                 viewModel.updateCode(
-                    TextFieldValue(syncedText, TextRange(left.index, right.index))
+                    TextFieldValue(base, TextRange(startIdx, endIdx))
                 )
             }
         )

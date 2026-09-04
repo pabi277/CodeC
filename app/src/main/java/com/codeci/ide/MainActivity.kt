@@ -111,17 +111,17 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Phase 25.2 device-round instrumentation: the sandbox has no JVM/device,
-     * so a field crash is invisible to the agent. Append every uncaught
-     * exception to a file the owner can read with any file manager
-     * (Android/data/com.codeci.ide/files/crash-log.txt) and then let the
+     * so a field crash is invisible to the agent, and the owner's device is
+     * NOT rooted (Android 11+ hides Android/data from file managers). Append
+     * every uncaught exception to filesDir/crash-log.txt — read back and
+     * shown IN-APP by `CrashReportOverlay` on the next launch — then let the
      * system handler run (dialog etc). Plain java.io — no CodeC internals.
      */
     private fun installCrashLog() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             runCatching {
-                val dir = getExternalFilesDir(null) ?: filesDir
-                java.io.File(dir, "crash-log.txt").appendText(
+                java.io.File(filesDir, "crash-log.txt").appendText(
                     buildString {
                         append("\n==== ")
                         append(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
@@ -190,6 +190,10 @@ class MainActivity : ComponentActivity() {
 
             MyApplicationTheme(darkTheme = isDarkTheme, accentHex = accentColor) {
                 MainApp()
+                // Phase 25.2 device-round instrumentation: if the previous
+                // run crashed, surface the report in-app (no root / file
+                // manager needed) before anything else.
+                com.codeci.ide.ui.crash.CrashReportOverlay()
             }
         }
     }
