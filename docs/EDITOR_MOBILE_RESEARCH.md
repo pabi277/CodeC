@@ -252,6 +252,7 @@ second behind its benchmark gate. Nothing here starts without the owner's
 7. Compose limits: [CMP-4023 BasicTextField not lazy (WONTFIX)](https://github.com/JetBrains/compose-multiplatform/issues/4023) · [#4021 getLineForOffset linear scan](https://github.com/JetBrains/compose-multiplatform/issues/4021) · [Qawaz/compose-code-editor](https://github.com/Qawaz/compose-code-editor) · [kaleidot725/text-editor-compose](https://github.com/kaleidot725/text-editor-compose)
 8. Completion UX: [VS Code inline suggestions](https://code.visualstudio.com/docs/editing/ai-powered-suggestions) · [Smart Autocomplete AI-UX pattern](https://aiuxplayground.com/pattern/smart-autocomplete/) · [JupyterLab completer lazy-rendering PR #13663](https://github.com/jupyterlab/jupyterlab/pull/13663) · [react-ghost-text (accept/reject contract)](https://github.com/agdhruv/react-ghost-text)
 9. Market context: [best code editors for Android 2026](https://unstoreit.com/discover/best-code-editor-apps-android/) · [bestappsforandroid](https://bestappsforandroid.com/best-code-editor-apps-for-android/) · [Zapier editor roundup](https://zapier.com/blog/best-code-editor/) · [slant](https://www.slant.co/topics/1662/~best-code-editors-for-android)
+10. §9 mechanisms/precedent: [SO #9577304 custom keyboard→InputConnection](https://stackoverflow.com/questions/9577304/how-can-you-make-a-custom-keyboard-in-android) · [SO #5419766 soft-input capture in a View](https://stackoverflow.com/questions/5419766/how-to-capture-soft-keyboard-input-in-a-view) · [Touchqode review](https://wpvkp.com/powerful-android-code-editors-for-app-developers/) · [Touchqode changelog](https://apkfab.com/touchqode/com.touchqode.editor)
 
 ---
 
@@ -309,10 +310,15 @@ it is a *different thing* from building an IME.** Three layers, three costs:
   the InputConnection/HW path live regardless of the on-screen keyboard.
 
 ### Precedent (behavior-level)
-Full in-app code keyboards have shipped on mobile (historic Android editor
-Touchqode's dedicated keyboard; iOS's Pythonista/Textastic extended in-app
-keyboards are the same philosophy); Android's biggest terminal/editor apps
-mostly stopped at rows — a cost decision, not a capability limit. CodeC going
-L1 after Phases 25–27 is the *"make it best"* endgame, planned as
-[Phase 28](chat-phase28/README.md), and it is a **spike-gated option**, not a
-promise: 28.1 exists to prove feel/latency before any layout beauty is drawn.
+Full/extensive in-app code keyboards have shipped on mobile — Android's
+historic **Touchqode** shipped a *built-in optional keyboard that "allows you
+to add all the characters that are commonly used in Android programming"*
+([contemporary review](https://wpvkp.com/powerful-android-code-editors-for-app-developers/);
+its changelog records the *"special key row (special chars above keyboard)"*
+evolution, [APK history](https://apkfab.com/touchqode/com.touchqode.editor));
+iOS's Pythonista/Textastic extended in-app keyboards are the same philosophy.
+Android's biggest terminal/editor apps mostly stopped at rows — a cost
+decision, not a capability limit. CodeC going L1 after Phases 25–27 is the
+*"make it best"* endgame, planned as [Phase 28](chat-phase28/README.md), and
+it is a **spike-gated option**, not a promise: 28.1 exists to prove
+feel/latency before any layout beauty is drawn.
