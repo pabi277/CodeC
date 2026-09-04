@@ -95,6 +95,37 @@ fallback if the spike shows Sora can't meet CodeC's budgets (§Phase 25.1 exit
 table). Option A is not viable for the owner's complaint; Option C is just B
 with procrastination.
 
+### 3.1 Phase 25.1 decision table — FILLED 2026-09-04 (owner device export)
+
+> **SHIPPED & DEVICE-ACCEPTED 2026-09-04:** the winning C-sora path is live
+> in the app (Phase 25.2, four device rounds, owner "All passed") —
+> `docs/chat-phase25/PART_25_2_SORA_PATH.md` §4–§5.
+
+> Measured by the bench spike (`bench/` module, artifact `CodeC-Bench`) on the
+> owner's device, release APK (R8), identical scripted input, median of 3 reps.
+> Runbook: `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.3; full analysis
+> §4.5. Corpus numbers are bench.c (5 000 lines / 175 kB); bench.html tracked
+> the same shape (see §4.5).
+
+| Metric (median of 3 reps, bench.c) | C-now | C-sora | C-compose2 | Budget |
+|---|---|---|---|---|
+| Keystroke burst p95 (60 keys @ 40 ms) | 404.2 ms | **14.5 ms** ✅ | 36.4 ms | ≤ 1 missed frame (16.7 ms) |
+| Fling holds 60 fps? (~500 lines) | ❌ 89 ms frames | **✅ ≤3.1 % jank, 0 bad** | ❌ 36 ms frames | yes |
+| Caret drag hitch (long-press drag + bottom-edge auto-scroll) | 149.6 ms frames | **14.1 ms ✅** (15 lines traversed) | 36.8 ms, 0 lines | none visible |
+| Completion refresh after keystroke | 491.2 ms | **19.7 ms ✅** | 36.6 ms | ≤ 2 frames (33.3 ms) |
+| Cold open bench.c | 1155–1215 ms ⚠️ | **56 ms ✅** | 40 ms | ≤ 800 ms |
+| APK size delta (MB) | — | **≈1.6–1.8 ✅** (bench artifact 1.3 MB zipped; exact delta at 25.2 merge) | — | ≤ +2 |
+
+⚠️ C-now bench.c cold open may include one-time process/app startup (warm
+html = 150–158 ms). Immaterial to the verdict.
+
+**Gate verdict (written 2026-09-04): C-SORA WINS — every budget passed on
+both corpora, while C-now misses every budget on bench.c (and the phase's
+premise — "~400 ms per keystroke on a big file" — is now measured evidence).
+Phase 25.2 (Sora Editor integration) is the chosen path; Phase 25.3 (Compose
+rewrite) is CANCELLED** (see the cancellation note at the top of
+`PART_25_3_COMPOSE_FALLBACK.md`). 25.2 starts only on the owner's word.
+
 ---
 
 ## 4. Deep dive: Sora Editor (the engine)

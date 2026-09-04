@@ -1,6 +1,18 @@
 # CodeC Phase 25.3 — Compose Rewrite Fallback (bigtext-style, contingency only)
 
-**Status:** 📋 PLANNED — **executes ONLY if 25.1's gate kills Sora** (e.g. LGPL
+**Status:** ❌ **CANCELLED 2026-09-04 — permanently dead.** The 25.1 device
+gate chose C-sora: every budget passed on both corpora (decision table:
+[`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md) §3.1; raw
+numbers: [`PART_25_1_SPIKE_BENCH.md`](PART_25_1_SPIKE_BENCH.md) §4.5), and the
+C-compose2 spike itself demonstrated the failure mode the research dossier
+predicted (whole-window recomposition storm: frames locked at ~36 ms at 100 %
+jank; drag auto-scroll dead). Do not execute this plan unless the owner
+re-opens the decision with NEW evidence (e.g. a licensing veto on sora-editor).
+The original spec text below is preserved for the record.
+
+---
+
+**Status (original):** 📋 PLANNED — **executes ONLY if 25.1's gate kills Sora** (e.g. LGPL
 declined by owner, or budgets missed). If 25.2 proceeds, this part is
 permanently CANCELLED and says so at the top.
 **Cost:** `[client-only]` · **Effort:** L (and highest risk of the phase)

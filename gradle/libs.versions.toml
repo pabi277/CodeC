@@ -31,6 +31,7 @@ roborazzi = "1.59.0"
 secretsGradlePlugin = "2.0.1"
 credentials = "1.5.0"
 googleid = "1.1.1"
+soraEditor = "0.24.6"
 
 
 [libraries]
@@ -75,6 +76,13 @@ roborazzi-junit-rule = { group = "io.github.takahirom.roborazzi", name = "robora
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+# Phase 25.1 bench spike — sora-editor, BINARY DEPENDENCY ONLY (LGPL-2.1).
+# Research note 2026-09-04: the spec pinned io.github.Rosemoe.sora-editor:0.23.6
+# (old coordinates); the project now publishes under io.github.rosemoe and the
+# newest stable verified on Maven Central is 0.24.6 — chosen so the 25.1
+# decision reflects the core a Phase 25.2 integration would adopt.
+sora-editor = { group = "io.github.rosemoe", name = "editor", version.ref = "soraEditor" }
+sora-editor-language-java = { group = "io.github.rosemoe", name = "language-java", version.ref = "soraEditor" }
 
 
 [plugins]
