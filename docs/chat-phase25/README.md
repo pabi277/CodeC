@@ -1,15 +1,19 @@
 # CodeC Phase 25 — Mobile-first Editor Core
 
-> **Status:** 🚧 **25.1 IMPLEMENTED — bench spike built, CI-gated, DEVICE
-> ROUND REQUIRED (owner).** The three candidates and the harness live in the
-> throwaway `:bench` module (separate APK, artifact `CodeC-Bench`); the
-> decision table in [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md)
-> §3.1 is EMPTY until the owner's device numbers land. 25.2/25.3 remain
-> PLANNED behind that gate. Implementation record:
-> [`PART_25_1_SPIKE_BENCH.md`](PART_25_1_SPIKE_BENCH.md) §4.
+> **Status:** ⭐ **25.1 COMPLETE — DEVICE GATE DECIDED (2026-09-04): C-SORA
+> WINS.** The owner's device export shows C-sora passing every budget on both
+> corpora (keystroke p95 14.5–16.6 ms, fling ≤3.1 % jank/0 bad, drag p95
+> ≤17.9 ms, completion p95 ≤22.5 ms, cold open ≤56 ms), while C-now misses
+> every bench.c budget (~400 ms keystrokes, 100 % jank) and C-compose2 hit
+> the predicted whole-window recomposition trap. **25.2 (Sora integration) is
+> the chosen path — starts on the owner's "Start Phase 25.2". 25.3 is
+> ❌ CANCELLED.** Decision table:
+> [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md) §3.1 ·
+> raw numbers + CI: [`PART_25_1_SPIKE_BENCH.md`](PART_25_1_SPIKE_BENCH.md)
+> §4.4–§4.6.
 > Research basis: [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md)
-> (GitHub-verified 2026-09-04). **Owner started this phase with "Start Phase 25";
-> no PR/merge without the owner's explicit command** (`rule.md` §3).
+> (GitHub-verified 2026-09-04). **No PR/merge without the owner's explicit
+> command** (`rule.md` §3).
 
 Owner brief (2026-09-04): *"the main problem is the editor … find the best
 optimized phone editor and also good typing experience … make it best."*

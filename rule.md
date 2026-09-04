@@ -192,15 +192,18 @@ Every update updates the docs **in the same commit**:
   (device-accepted). Phase 24 (polish batch E.1–E.4, E.6–E.9 device-passed;
   E.3 hardware shortcuts not device-verified — needs a BT keyboard; E.5
   tablet two-pane DEFERRED by design) merged via PR #47.
-- **Phase 25 (Mobile-first Editor Core) is IN PROGRESS** — owner: "Start
-  Phase 25" (2026-09-04). **25.1 (bench spike) IMPLEMENTED on
-  `arena/01a06b20-codec`**: throwaway `:bench` module (separate APK, artifact
-  `CodeC-Bench`), three candidates (C-now mirror / C-sora 0.24.6 binary dep /
-  C-compose2 sketch), platform-FrameMetrics harness, committed corpus, host
-  tests. **CI green `33849153135` (tip `9dd7922`, artifacts `CodeC-IDE` + `CodeC-Bench`).** **DEVICE ROUND REQUIRED** — the owner runs the bench and pastes the
-  Copy-all export; then the decision table (`docs/EDITOR_MOBILE_RESEARCH.md`
-  §3.1) is filled and the gate verdict stated in writing (25.2 / 25.3 /
-  stay-on-C-now). Record: `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4,
+- **Phase 25 (Mobile-first Editor Core): 25.1 COMPLETE, GATE DECIDED
+  (2026-09-04)** — owner: "Start Phase 25", bench built on
+  `arena/01a06b20-codec` (CI green `33849153135`, tip `9dd7922`, artifacts
+  `CodeC-IDE` + `CodeC-Bench`), owner ran the device round and exported the
+  full sheet. **C-SORA WINS every budget on both corpora** (keystroke p95
+  14.5–16.6 ms; fling ≤3.1 % jank/0 bad; drag p95 ≤17.9 ms; completion p95
+  ≤22.5 ms; cold open ≤56 ms); C-now misses every bench.c budget (~400 ms per
+  keystroke, 100 % jank — the owner's complaint, now measured); C-compose2
+  hit the whole-window recomposition trap. **Verdict in writing: 25.2 (Sora
+  integration) CHOSEN — starts only on the owner's "Start Phase 25.2";
+  25.3 ❌ CANCELLED.** Decision table `docs/EDITOR_MOBILE_RESEARCH.md` §3.1;
+  record `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.4–§4.6,
   `docs/JOURNEY.md` §34. Phases 26–28 remain PLANNED (spec'd in
   `docs/chat-phase26..28/`) — the agent does **not** start them until the
   owner says so.

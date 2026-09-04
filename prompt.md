@@ -25,55 +25,37 @@ gate, invariants, docs policy) — follow it.
   device-verified — needs a Bluetooth keyboard; E.5 tablet two-pane DEFERRED
   by design). **PR #48** added the mobile-editor research dossier and the
   Phase 25–28 plan docs. `main` tip = `5ebbc6e`.
-- **Phase 25 (Mobile-first Editor Core) — owner said "Start Phase 25"
-  (2026-09-04). 25.1 (candidate spike & device benchmark) is IMPLEMENTED on
-  `arena/01a06b20-codec`:**
-  - Throwaway **`:bench`** Gradle module — a SEPARATE APK
-    (`applicationId com.codeci.bench`, artifact **`CodeC-Bench`** uploaded by
-    CI); `:app` ships nothing from it. Release build with R8, signed with the
-    repo-pinned debug key so the owner sideloads it directly.
-  - **Three candidates:** C-now (faithful mirror of the production editor
-    stack — verbatim copies of our own highlighter/theme/undo/completion
-    files + the Phase 22 pipeline), C-sora (**sora-editor 0.24.6,
-    `io.github.rosemoe:editor` + `language-java`, LGPL-2.1 BINARY dependency
-    only** — the project moved groups since the 0.23.6 pin; research note in
-    `gradle/libs.versions.toml`), C-compose2 (visible-window sketch: pure
-    `DocumentBuffer` with a binary-search offset index, `VisibleWindow`,
-    per-line `LineSpanCache`; caret-line field editing at spike scope).
-  - **Harness:** platform `Window.addOnFrameMetricsAvailableListener` +
-    `FrameMetrics.TOTAL_DURATION` (androidx `FrameMetricsAggregator` was
-    REMOVED — spec deviation recorded); pure host-tested input scripts
-    (burst60 / completionChurn / fling500 / caretDrag); synthesized
-    KeyEvents via `KeyCharacterMap.VIRTUAL_KEYBOARD` + bounds-resolved
-    MotionEvents; per-run input mode (`keys` vs `direct`) recorded;
-    cold-open = read + compose + 2 frames; Copy-all markdown export.
-  - **Corpus committed to bench/ assets** (seeded generator
-    `bench/tools/generate_corpus.py`): `bench.c` 4 993 lines/175 kB;
-    `bench.html` exactly 517 lines/31 kB (generated stand-in for the owner's
-    sample — recorded).
-  - **CI:** `build-apk.yml` gained `./gradlew :bench:assembleRelease
-    :bench:testDebugUnitTest` + the `CodeC-Bench` artifact (remove when
-    Phase 25 closes). `settings.gradle.kts` includes `:bench` ONLY for real
-    (9.3.1) wrapper builds — the legacy 9.0.0 shim path must never configure
-    the module. Host tests: `FrameStatsTest` ×8, `InputScriptsTest` ×5,
-    `DocumentBufferTest` ×9 (10 000-op fuzz vs `StringBuilder` oracle),
-    `VisibleWindowAndSpansTest` ×6.
-  - **NEXT ACTION (device gate): the owner installs `CodeC-Bench` from the
-    green run's artifacts, runs the scenarios (runbook:
-    `docs/TROUBLESHOOTING.md` §9 / `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md`
-    §4.3), and pastes the Copy-all markdown. THEN the agent fills
-    `docs/EDITOR_MOBILE_RESEARCH.md` §3.1 and states the gate verdict in
-    writing: 25.2 (Sora) / 25.3 (Compose rewrite) / stay on C-now.**
+- **Phase 25.1 (bench spike) is ✅ COMPLETE & DEVICE-GATED — C-SORA WINS
+  (2026-09-04).** Owner: "Start Phase 25" → bench built on this branch (CI
+  green `33849153135`, artifacts `CodeC-IDE` + `CodeC-Bench`) → owner ran the
+  device round and exported the full sheet (cold open + 4 scenarios ×3 reps ×
+  3 candidates × bench.c/bench.html). Results:
+  - **C-now (today's core) misses every bench.c budget**: keystroke p95
+    **404 ms** (100 % jank — ≈24 missed frames per key), fling ~89 ms frames,
+    caret drag ~150–230 ms, completion ~490 ms; even windowed bench.html runs
+    ~90 ms keystrokes. The owner's complaint is now measured evidence.
+  - **C-sora passes EVERY budget on BOTH corpora**: keystroke p95 14.5–16.6 ms,
+    fling ≤3.1 % jank with 0 bad frames, caret-drag p95 ≤17.9 ms (auto-scroll
+    traversed 15 lines), completion p95 18–22.5 ms, cold open 35–56 ms;
+    `Typed=62` on a 60-key burst = SymbolPairMatch pairing `(`/`{` live.
+  - **C-compose2** locked at ~36 ms frames (100 % jank, whole-window
+    recomposition storm), drag traversal 0 — dead.
+  - **VERDICT (in writing): 25.2 (Sora Editor integration) is the chosen
+    path — starts ONLY on the owner's "Start Phase 25.2". 25.3 is ❌
+    CANCELLED** (note at the top of `PART_25_3_COMPOSE_FALLBACK.md`).
+    Decision table: `docs/EDITOR_MOBILE_RESEARCH.md` §3.1; raw numbers:
+    `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.5–§4.6; JOURNEY §34.
 - **Phases 26–28 are PLANNED and fully spec'd** (`docs/chat-phase26..28/`) —
   do not start them until the owner says so.
 
 **PHASE STATUS (updated 2026-09-04):**
-**Phase 25.1 is IMPLEMENTED, device round pending** (`docs/chat-phase25/`).
+**Phase 25.1 is COMPLETE — device gate decided: C-sora wins. 25.2 chosen
+(awaiting the owner's "Start Phase 25.2"); 25.3 CANCELLED** (`docs/chat-phase25/`).
 Phases 20.1, 21, 22, 23, 24 are COMPLETE and merged (24 via PR #47; 22/23 via
 PRs #45/#46; 21 via #44; 20.1 via #43). 25.2/25.3 are gated on the 25.1
 decision table; Phase 26 (symbol row + snippet UX), 27 (completion strip) and
 28 (CodeC Keys IME) are PLANNED specs only.
-- **Phase 25** (mobile-first editor core: bench spike → Sora/rewrite gate → caret layer) — 🚧 25.1 implemented, device round REQUIRED — `docs/chat-phase25/`
+- **Phase 25** (mobile-first editor core) — ⭐ 25.1 COMPLETE, gate: **C-sora**; 25.2 chosen & not started; 25.3 ❌ cancelled — `docs/chat-phase25/`
 - **Phase 24** (polish batch E.1–E.9) — ✅ MERGED via PR #47 (E.3 device pass pending BT keyboard; E.5 deferred) — `docs/chat-phase24/`
 - **Phase 23** (inline PTY input + run keys) — ✅ MERGED via PR #46 — `docs/chat-phase23/`
 - **Phase 22** (editor smoothness + IME-anchored keys) — ✅ MERGED via PR #45 — `docs/chat-phase22/`
@@ -153,11 +135,13 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. Phases 20.1–24 are MERGED. **Phase 25.1 is implemented on this branch and
-   waits for the owner's device round** (bench APK → run scenarios → paste
-   the Copy-all markdown). The gate verdict (25.2 / 25.3 / stay-on-C-now)
-   must be written down before any follow-on part starts. Phases 26–28 and
-   any other phase start only on the owner's word. Otherwise the agent is in
+2. Phases 20.1–24 are MERGED. **Phase 25.1 is COMPLETE and its gate verdict
+   is written: C-sora wins → 25.2 chosen, 25.3 cancelled.** 25.2 starts only
+   when the owner says "Start Phase 25.2" (it is an L-effort editor-core
+   swap: AndroidView host, highlighter adapter, completion provider adapter,
+   find/replace via Sora searcher, LGPL checklist — spec:
+   `docs/chat-phase25/PART_25_2_SORA_PATH.md`). Phases 26–28 and any other
+   phase also start only on the owner's word. Otherwise the agent is in
    **bug-wait mode**: do nothing until the owner reports a bug or names the
    next phase. No self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner

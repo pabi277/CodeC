@@ -179,32 +179,71 @@ sheet; identical scripted input per scenario):
 | 4 | `33848545357` | 🔴 `lintVitalRelease` (fatal release lint inside `assembleRelease`) trips the same targetSdk-28 Play-policy check `:app`'s lint block disables → `lint { checkReleaseBuilds = false }` on the throwaway harness |
 | **5** | **`33849153135`** | ✅ **GREEN — app assemble + tests + lint, bench assembleRelease + bench unit tests (incl. the 10 000-op `DocumentBuffer` fuzz), both artifacts uploaded** |
 
-### 4.5 Device round 1 — INTERIM (2026-09-04, owner's first export)
+### 4.5 Device round — COMPLETE (2026-09-04, owner on-device, release APK)
 
-The owner's first Copy-all export contains the six **cold_open** rows only;
-the four scenario families (burst/fling/drag/churn) are still pending. What
-the cold-open rows say:
+Owner exported the full sheet (cold open + all four scenario families ×3
+reps ×3 candidates ×2 corpora). Medians (p50/p95/p99 ms frame durations,
+janky/bad frame counts):
 
-| Candidate | bench.c | bench.html |
-|---|---|---|
-| C-now | **1155 ms** ⚠️ | 158 ms |
-| C-sora | 112 ms | 51 ms |
-| C-compose2 | 59 ms | 42 ms |
+**bench.c (5 000 lines / 175 kB):**
 
-**⚠️ Measurement caveat, recorded before anyone over-reads this:** the owner's
-screens were opened in home-screen order, so **C-now · bench.c was the FIRST
-open in a cold process** — its 1155 ms includes one-time app startup + Compose
-initialization, not just the file open. Every other number (including
-C-now · bench.html at 158 ms) is a warm-process measurement. A fair C-now
-bench.c number requires re-opening that screen once the process is warm;
-requested from the owner alongside the scenario runs. `frames=0` on these rows
-is by design (frame capture runs during scenario reps, not cold open).
+| Scenario | C-now | C-sora | C-compose2 |
+|---|---|---|---|
+| burst p95 (60 keys @ 40 ms) | **404.2 ms**, 100 % jank | **14.5 ms**, 0–2.4 % jank, 0 bad | 36.4 ms, 100 % jank (reps 2–3) |
+| fling p95 | 89.1 ms (100 % jank) | **11.7 ms**, ≤3.1 % jank, 0 bad | 35.9 ms, 100 % jank (reps 2–3) |
+| caret drag p95 | 149.6 ms, 100 % jank | **14.1 ms**, ≤3.1 % jank | 36.8 ms, 100 % jank (reps 2–3) |
+| completion p95 | 491.2 ms | **19.7 ms**, 8–13 % jank | 36.6 ms, 100 % jank (reps 2–3) |
+| cold open | 1155 / 1215 ms ⚠️ | 56 ms | 40 ms |
+
+**bench.html (517 lines / 31 kB):**
+
+| Scenario | C-now | C-sora | C-compose2 |
+|---|---|---|---|
+| burst p95 | 89.7 ms, 100 % jank | **16.4 ms**, 0 bad | 36.5 ms, 100 % jank (reps 2–3) |
+| fling p95 | 34.0 ms | **11.9 ms**, ≤1 % jank, 0 bad | 36.1 ms, 100 % jank (reps 2–3) |
+| caret drag p95 | 54.8 ms, 100 % jank | **17.1 ms**, ≤7.8 % jank | 36.5 ms, 100 % jank (reps 2–3) |
+| completion p95 | 64.1 ms, ~80 % jank | **19.8 ms**, ~11 % jank | 36.0 ms, 100 % jank (reps 2–3) |
+| cold open | 150–158 ms | 35–51 ms | 41–42 ms |
+
+Findings:
+
+1. **The phase's premise is now device-evidenced.** C-now on the 5 000-line
+   file: ~400 ms per keystroke (≈24 missed frames EVERY keystroke, 100 % of
+   frames janky), ~90 ms frames during fling, ~150–230 ms during caret drag,
+   ~490 ms completion refresh. Even the Phase 22-windowed HTML file runs
+   ~90 ms keystrokes (~5 missed frames). This is exactly the owner's
+   "main problem is the editor" complaint, now measured.
+2. **C-sora passes EVERY budget** on both corpora: keystroke p95 14.5–16.6 ms
+   (≤1 missed frame), fling ≤3.1 % jank with 0 bad frames (holds 60 fps),
+   caret drag p95 ≤17.9 ms with selection auto-scroll traversing 15 lines
+   during the bottom-edge wiggle, completion p95 18–22.5 ms (≈1.2–1.35
+   frames ≤ 2), cold open 35–56 ms (≤ 800).
+3. **typed=62 on C-sora burst** (60 dispatched keys): sora's
+   SymbolPairMatch auto-paired the burst's `(` and `{` — the paired-insert
+   behavior worked on device during the measurement itself.
+4. **C-compose2 is dead as a candidate**, honestly recorded: a naive
+   whole-window recomposition storm (rep 1 partly ~8–12 ms, then locked at
+   ~36 ms/frame at 100 % jank; drag auto-scroll broken — lines=0). It never
+   approached Sora on ANY row and only beat C-now's bench.c typing by being
+   windowed — the exact "naive per-edit whole-window invalidation" trap the
+   research dossier predicted for Compose-native rewrites.
+5. ⚠️ Cold-open caveat retained: both C-now bench.c takes (1155/1215 ms) may
+   include one-time process/app startup (the export shows a single row, so
+   results were cleared between takes). The warm C-now html number is
+   150–158 ms. Immaterial to the verdict — C-sora wins the table regardless.
+6. Harness gaps noted for honesty: the Copy-all export omits the APK-size
+   line (bench APK artifact = 1.3 MB zipped; sora adds ≈1.6–1.8 MB unpacked —
+   inside the ≤ +2 MB budget; exact in-app delta re-measured at the 25.2
+   merge). C-now's `Lines` column is `—` (BasicTextField exposes no scroll
+   position — recorded as a probe limitation, not a pass).
 
 ### 4.6 Exit condition status
 
-1. ⏳ Decision table filled from device runs — **waiting on the owner**.
-2. ⏳ JOURNEY entry records the winner + raw numbers (entry created; numbers
-   to be appended after the device round).
-3. ⏳ Follow-on part explicitly started or cancelled in writing — blocked by 1.
+1. ✅ Decision table filled from device runs —
+   `docs/EDITOR_MOBILE_RESEARCH.md` §3.1 (owner export 2026-09-04).
+2. ✅ JOURNEY §34 records the winner + raw numbers.
+3. ✅ Follow-on part explicitly started or cancelled in writing —
+   **C-sora wins → 25.2 CHOSEN; 25.3 CANCELLED** (top of PART_25_3).
+   25.2 itself starts only on the owner's word ("Start Phase 25.2").
 
 PASS = all three. The gate is evidence; "feels faster" is not a measurement.

@@ -1,10 +1,20 @@
 # CodeC Phase 25.2 — Sora Editor Integration (research-recommended path)
 
-**Status:** 📋 PLANNED — gated on 25.1 decision · **Cost:** `[client-only]` ·
-**Effort:** L · **Depends on:** PART 25.1 decision = C-sora
+**Status:** ⭐ **CHOSEN BY THE 25.1 GATE (2026-09-04)** — C-sora passed every
+device budget on both corpora (decision table:
+[`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md) §3.1; raw
+numbers: [`PART_25_1_SPIKE_BENCH.md`](PART_25_1_SPIKE_BENCH.md) §4.5). Awaits
+the owner's **"Start Phase 25.2"** — not started yet. **Cost:** `[client-only]` ·
+**Effort:** L · **Depends on:** PART 25.1 decision = C-sora ✅
 · **Target files:** `ui/screens/EditorScreen.kt`, `ui/viewmodels/EditorViewModel.kt`,
 `ui/editor/*` (adapters), `app/build.gradle.kts` (dependency only),
 About/licenses screen, host tests
+
+> 25.1 notes for this part: the spike pinned `io.github.rosemoe:editor:0.24.6`
+> + `language-java:0.24.6` (group moved since the 0.23.6 pin — research note
+> in `gradle/libs.versions.toml`); prefer `editor-bom` at integration. The
+> bench's `Typed=62` artifact (60 keys dispatched) already showed Sora's
+> SymbolPairMatch working on the owner's device.
 
 ---
 
