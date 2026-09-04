@@ -59,9 +59,10 @@ gate, invariants, docs policy) — follow it.
   `CodeCScheme.of()`. Drawer edge-swipe disabled over the editor (scroll
   conflict). Record: `docs/chat-phase25/PART_25_2_SORA_PATH.md` §4.
   **All gates satisfied: owner "Yes" (LGPL-2.1) + "Merge" → PR #49
-  (squash).** APK delta +0.55 MiB (budget ≤ +2 MB). The 25.1 bench CI
-  wrapper + `CodeC-Bench` artifact are removed with the merge (Phase 25
-  closed); `bench/` stays in-tree for future re-benchmarks.
+  (squash; `main` tip `101a560`, `main` CI `33869286080` green).** APK
+  delta +0.55 MiB (budget ≤ +2 MB). The 25.1 bench CI wrapper +
+  `CodeC-Bench` artifact are removed with the merge (Phase 25 closed);
+  `bench/` stays in-tree for future re-benchmarks.
 - **Phases 26–28 are PLANNED and fully spec'd** (`docs/chat-phase26..28/`) —
   do not start them until the owner says so.
 
