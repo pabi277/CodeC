@@ -197,7 +197,7 @@ Every update updates the docs **in the same commit**:
   `arena/01a06b20-codec`**: throwaway `:bench` module (separate APK, artifact
   `CodeC-Bench`), three candidates (C-now mirror / C-sora 0.24.6 binary dep /
   C-compose2 sketch), platform-FrameMetrics harness, committed corpus, host
-  tests. **DEVICE ROUND REQUIRED** — the owner runs the bench and pastes the
+  tests. **CI green `33849153135` (tip `9dd7922`, artifacts `CodeC-IDE` + `CodeC-Bench`).** **DEVICE ROUND REQUIRED** — the owner runs the bench and pastes the
   Copy-all export; then the decision table (`docs/EDITOR_MOBILE_RESEARCH.md`
   §3.1) is filled and the gate verdict stated in writing (25.2 / 25.3 /
   stay-on-C-now). Record: `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4,

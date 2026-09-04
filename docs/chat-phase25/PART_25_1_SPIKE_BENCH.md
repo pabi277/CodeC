@@ -169,7 +169,17 @@ sheet; identical scripted input per scenario):
    states the gate verdict in writing (25.2 / 25.3 / stay-on-C-now), and the
    follow-on part starts only after that.
 
-### 4.4 Exit condition status
+### 4.4 CI record (2026-09-04)
+
+| Round | Run | Outcome |
+|---|---|---|
+| 1 | `33846401954` | 🔴 app gates GREEN; bench step failed with no readable log → this round motivated the `::error` annotation emitter in the workflow step |
+| 2 | `33847120745` | 🔴 9 kotlin errors via annotations: `ScriptEvent.atMs` not on the sealed interface, Sora `Content.insert` overload, `Compose2State` private-set writes from the composable, `LazyListState.scrollBy` (doesn't exist → `scroll { scrollBy }`), `ScenarioKind` visibility |
+| 3 | `33847885679` | 🔴 main sources GREEN; test file missing `assertTrue` import |
+| 4 | `33848545357` | 🔴 `lintVitalRelease` (fatal release lint inside `assembleRelease`) trips the same targetSdk-28 Play-policy check `:app`'s lint block disables → `lint { checkReleaseBuilds = false }` on the throwaway harness |
+| **5** | **`33849153135`** | ✅ **GREEN — app assemble + tests + lint, bench assembleRelease + bench unit tests (incl. the 10 000-op `DocumentBuffer` fuzz), both artifacts uploaded** |
+
+### 4.5 Exit condition status
 
 1. ⏳ Decision table filled from device runs — **waiting on the owner**.
 2. ⏳ JOURNEY entry records the winner + raw numbers (entry created; numbers
