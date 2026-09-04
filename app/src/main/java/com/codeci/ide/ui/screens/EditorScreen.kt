@@ -17,14 +17,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,7 +73,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -102,7 +99,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
@@ -121,8 +117,6 @@ import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
 import com.codeci.ide.ui.components.OutputPanelView
 import com.codeci.ide.ui.components.RunKeysRow
-import com.codeci.ide.ui.editor.CodeCompletionEngine
-import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
@@ -149,22 +143,11 @@ import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 import java.io.File
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** Mockup-exact RUN affordance green (Spck's run action color). */
 private val RunGreen = Color(0xFF3DDC84)
-
-/**
- * Phase 22.6 — idle time after the last keystroke before the completion scan
- * runs (off the main thread). Slightly longer than the highlight debounce:
- * suggestions appearing a beat after you pause reads as intentional, whereas
- * a flickering popup mid-word is noise.
- */
-private const val COMPLETION_DEBOUNCE_MS = 120L
 
 /** Tap-anchor for the inline diagnostic tooltip. */
 
@@ -326,47 +309,11 @@ fun EditorScreen(
             RunKey.HISTORY_UP, RunKey.HISTORY_DOWN -> Unit
         }
     }
-    // Phase 22.6 — completions are computed OFF the main thread, debounced.
-    //
-    // The Phase 22.1 `derivedStateOf` here was a mistake: it reads
-    // `codeText`, which changes on every keystroke, so the derivation was
-    // invalidated every keystroke and — because the popup reads it in the
-    // same frame — recomputed every keystroke, synchronously, on the main
-    // thread. `derivedStateOf` only helps when the derived VALUE changes
-    // less often than its inputs; here it changes just as often, so it
-    // bought nothing while looking like a fix.
-    val completionItems by produceState(
-        initialValue = emptyList<CompletionItem>(),
-        key1 = codeText.text,
-        key2 = codeText.selection,
-        key3 = language
-    ) {
-        // Same debounce as the highlighter: a burst of keystrokes collapses
-        // into one scan, and no scan at all happens while you type fast.
-        delay(COMPLETION_DEBOUNCE_MS)
-        val text = codeText.text
-        val sel = codeText.selection
-        value = withContext(Dispatchers.Default) {
-            CodeCompletionEngine.completions(
-                text,
-                sel.end.coerceAtLeast(sel.start),
-                language
-            )
-        }
-    }
-    var completionDismissed by remember(codeText.text) { mutableStateOf(false) }
-    var completionIndex by remember(completionItems) { mutableStateOf(0) }
-    val showCompletion = completionItems.isNotEmpty() && !completionDismissed
-
-    fun insertCompletion(item: CompletionItem) {
-        val sel = codeText.selection
-        val cursor = sel.end.coerceAtLeast(sel.start)
-        val start = CodeCompletionEngine.prefixStart(codeText.text, cursor)
-        val newText = codeText.text.substring(0, start) + item.insertText +
-            codeText.text.substring(cursor)
-        val caret = start + item.insertText.length
-        viewModel.updateCode(TextFieldValue(newText, selection = TextRange(caret)))
-    }
+    // Phase 25.2 device-round 3 — completions are served by sora's NATIVE
+    // panel (CodeCLanguage.requireAutoComplete -> CodeCompletionEngine):
+    // positioned at the caret, typed prefix replaced on commit, sora-managed
+    // keyboard handling. The Phase 12/22 app popup (bottom-anchored, own
+    // hardware-key handling) is retired.
 
     val isWebProject = remember(currentProject) {
         currentProject?.let { name ->
@@ -686,6 +633,12 @@ fun EditorScreen(
     Box(modifier = modifier.fillMaxSize()) {
         ModalNavigationDrawer(
             drawerState = drawerState,
+            // Phase 25.2 device-round 3 (owner report): the edge-swipe zone
+            // covers the editor's line-number gutter, so vertical scrolls
+            // starting there (any slight horizontal drift) opened the file
+            // drawer mid-scroll. The gesture stays available only when no
+            // file is on screen; with a file open, use the folder button.
+            gesturesEnabled = activeTabPath == null && currentFileName.isEmpty(),
             drawerContent = {
                 EditorProjectDrawer(
                     projectName = currentProject,
@@ -1186,28 +1139,7 @@ fun EditorScreen(
                         // Phase 12 — autocomplete keys while the popup is up:
                         // TAB/ENTER insert the highlighted suggestion, arrows
                         // move the highlight, ESC dismisses until next edit.
-                        if (event.type == KeyEventType.KeyDown && showCompletion) {
-                            val size = completionItems.size
-                            when (event.key) {
-                                Key.Tab, Key.Enter, Key.NumPadEnter -> {
-                                    insertCompletion(completionItems[completionIndex % size])
-                                    true
-                                }
-                                Key.DirectionDown -> {
-                                    completionIndex = (completionIndex + 1) % size
-                                    true
-                                }
-                                Key.DirectionUp -> {
-                                    completionIndex = (completionIndex - 1 + size) % size
-                                    true
-                                }
-                                Key.Escape -> {
-                                    completionDismissed = true
-                                    true
-                                }
-                                else -> false
-                            }
-                        } else if (event.type == KeyEventType.KeyDown) {
+                        if (event.type == KeyEventType.KeyDown) {
                             // Phase 24.3 — hardware-keyboard shortcuts.
                             when {
                                 // Phase 25.2 — undo/redo stays on the VM's per-tab
@@ -1276,56 +1208,8 @@ fun EditorScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
 
-                // Phase 12/25.2 — floating autocomplete popup. With sora the
-                // popup anchors above the keys strip (bottom-start of the
-                // editor pane) instead of the old BasicTextField cursor rect.
-                if (showCompletion) {
-                    Surface(
-                        tonalElevation = 6.dp,
-                        shape = RoundedCornerShape(10.dp),
-                        shadowElevation = 8.dp,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(8.dp)
-                            .width(280.dp)
-                            .heightIn(max = 220.dp)
-                    ) {
-                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            itemsIndexed(completionItems) { index, item ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { insertCompletion(item) }
-                                        .background(
-                                            if (index == completionIndex % completionItems.size) {
-                                                Color(0x33FFFFFF)
-                                            } else {
-                                                Color.Transparent
-                                            }
-                                        )
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = item.label,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    item.detail?.let { detail ->
-                                        Text(
-                                            text = detail,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color(0x99FFFFFF),
-                                            modifier = Modifier.padding(start = 8.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // Phase 25.2 device-round 3 — completions render in sora's
+                // native panel at the caret; nothing to compose here.
             }
 
             // Phase 16 — Spck bottom order: the snippet/keys row docks ABOVE

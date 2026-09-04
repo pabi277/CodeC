@@ -1,13 +1,16 @@
 package com.codeci.ide.ui.editor.sora
 
 import android.os.Bundle
+import com.codeci.ide.ui.editor.CodeCompletionEngine
 import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
 import com.codeci.ide.ui.utils.TokenKind
 import io.github.rosemoe.sora.lang.Language
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager
 import io.github.rosemoe.sora.lang.analysis.SimpleAnalyzeManager
+import io.github.rosemoe.sora.lang.completion.CompletionItemKind
 import io.github.rosemoe.sora.lang.completion.CompletionPublisher
+import io.github.rosemoe.sora.lang.completion.SimpleCompletionItem
 import io.github.rosemoe.sora.lang.format.Formatter
 import io.github.rosemoe.sora.lang.styling.MappedSpans
 import io.github.rosemoe.sora.lang.styling.SpanFactory
@@ -102,9 +105,9 @@ class LineColumnCursor(private val text: String) {
  * Phase 25.2 — the sora `Language` for the CodeC editor window.
  *
  * - Analyzer: [CodeCAnalyzer] (CodeC regex rules → sora spans).
- * - Completions: `requireAutoComplete` is a NO-OP — sora's own completion
- *   panel stays closed and CodeC's existing engine keeps feeding the app's
- *   popup from the VM text (the shared pipe Phase 27 will re-render).
+ * - Completions: `requireAutoComplete` feeds CodeC's existing engine
+ *   results to sora's NATIVE panel at the caret (device round 3, owner
+ *   request — replaces the app's bottom-anchored popup).
  * - Indent: [indentAdvanceFor] gives one level after a line that opens a
  *   block (`{`, or `:` for Python); sora preserves the current line's
  *   indentation itself.
@@ -127,7 +130,30 @@ class CodeCLanguage(private val language: LanguageType) : Language {
         publisher: CompletionPublisher,
         extraArguments: Bundle
     ) {
-        // Intentionally empty: see class KDoc.
+        // Phase 25.2 device-round 3 (owner: "sora is better than that") —
+        // sora's OWN panel now serves completions (enabled by default in
+        // CodeEditor; this is the only hook it needs). The engine and its
+        // results are the same as before — only the RENDERER changed: a
+        // native popup at the caret replaces the app's bottom-anchored one.
+        // Runs on sora's completion thread (fast, windowed engine).
+        val text = content.toString()
+        val cursor = position.index.coerceIn(0, text.length)
+        val prefixLength = CodeCompletionEngine.currentPrefix(text, cursor).length
+        for (item in CodeCompletionEngine.completions(text, cursor, language)) {
+            publisher.addItem(
+                SimpleCompletionItem(item.label, item.detail, prefixLength, item.insertText)
+                    .kind(
+                        when (item.kind) {
+                            com.codeci.ide.ui.editor.CompletionKind.SNIPPET ->
+                                CompletionItemKind.Snippet
+                            com.codeci.ide.ui.editor.CompletionKind.KEYWORD ->
+                                CompletionItemKind.Keyword
+                            com.codeci.ide.ui.editor.CompletionKind.IDENTIFIER ->
+                                CompletionItemKind.Identifier
+                        }
+                    )
+            )
+        }
     }
 
     override fun getIndentAdvance(content: ContentReference, line: Int, column: Int): Int {

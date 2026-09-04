@@ -282,6 +282,39 @@ same trap (CodeCAnalyzer's `analyze` runs on sora's thread post-construction).
 APK note: the crash-log overlay (round 2) is what produced this stack —
 the no-root debugging loop is now proven end-to-end.
 
+### 4.4 Device round 3 — PASS with two owner-reported items (both fixed)
+
+Owner: "Everything working fine" + crash gone; two problems:
+
+1. **File drawer opened during editor scrolls.** The screen's
+   `ModalNavigationDrawer` had no `gesturesEnabled` — its edge-swipe zone
+   covers the editor's line-number gutter, so a scroll/fling starting at
+   the left edge (with any horizontal drift) opened the drawer mid-scroll.
+   Fix: `gesturesEnabled = activeTabPath == null && currentFileName.isEmpty()`
+   — edge-swipe stays available on the no-file screen; with a file open the
+   drawer opens via the folder button. (Per-side gesture zones don't exist
+   in M3 drawers.)
+2. **"Highlighting/suggestions are still previously used but sora is better
+   than that."** Suggestions: `CodeCLanguage.requireAutoComplete` now feeds
+   the SAME `CodeCompletionEngine` results into sora's NATIVE panel
+   (`SimpleCompletionItem(label, detail, prefixLength, insertText)` + kind
+   icons) — at-caret positioning, prefix-replacing commit, sora-managed
+   keyboard selection. The Phase 12/22 app popup is RETIRED: produceState
+   scan, popup Surface, `insertCompletion`, `completionIndex/Dismissed`,
+   and the popup's hardware-key block (plain Tab/Enter/arrows/Escape now
+   fall through to sora; all Phase 24.3 shortcuts are Ctrl/F5 and still
+   fire first). Owner-directed scope move: this pulls Phase 27's
+   "render completions in sora's panel" forward; Phase 27 keeps its other
+   scope.
+   **Highlighting granularity is UNCHANGED by design** — v1 renders the
+   same 7-kind CodeC tokenizer through sora's span pipeline (visually the
+   same theme). RICHER highlighting (TextMate/tree-sitter grammars) needs
+   a new binary dependency (`language-textmate`) + grammar assets — a
+   separate increment; NOT started without the owner's go.
+
+Device round 3 = §3 recipe items 1–6 PASS (typing, pairing/skip, magnifier,
+strip+run keys, autosave+undo-across-tabs, About entry).
+
 ### CI history
 
 | # | Run | Commit | Result |
