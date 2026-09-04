@@ -109,8 +109,37 @@ class MainActivity : ComponentActivity() {
     private var pendingCameraApiDir: File? = null
     private var pendingCameraTarget: File? = null
 
+    /**
+     * Phase 25.2 device-round instrumentation: the sandbox has no JVM/device,
+     * so a field crash is invisible to the agent. Append every uncaught
+     * exception to a file the owner can read with any file manager
+     * (Android/data/com.codeci.ide/files/crash-log.txt) and then let the
+     * system handler run (dialog etc). Plain java.io — no CodeC internals.
+     */
+    private fun installCrashLog() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            runCatching {
+                val dir = getExternalFilesDir(null) ?: filesDir
+                java.io.File(dir, "crash-log.txt").appendText(
+                    buildString {
+                        append("\n==== ")
+                        append(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                            .format(java.util.Date()))
+                        append("  thread=")
+                        append(thread.name)
+                        append(" ====\n")
+                        append(android.util.Log.getStackTraceString(throwable))
+                    }
+                )
+            }
+            previous?.uncaughtException(thread, throwable)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installCrashLog()
         enableEdgeToEdge()
 
         storagePermissionLauncher = registerForActivityResult(

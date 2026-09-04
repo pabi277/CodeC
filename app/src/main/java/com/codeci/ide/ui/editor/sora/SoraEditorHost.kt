@@ -63,19 +63,13 @@ fun SoraEditorHost(
 ) {
     val codeText by viewModel.codeText.collectAsState()
 
-    // One-time editor configuration. The editor instance itself is created by
-    // the caller (so the screen can reach the searcher / cursor) and survives
-    // recomposition via `remember`.
+    // One-time editor configuration: ONLY what has no reactive effect below.
+    // Everything keyed (language/scheme/size/font/tab/wrap/line numbers) is
+    // applied by exactly ONE LaunchedEffect — setting them twice makes sora
+    // destroy + rebuild the analyzer/scheme at startup for nothing.
     remember(editor) {
         editor.apply {
-            setUndoEnabled(false)
-            setTypefaceText(Typeface.MONOSPACE)
-            setLineNumberEnabled(true)
-            setWordwrap(false)
-            setEditorLanguage(CodeCLanguage(language))
-            setColorScheme(CodeCScheme(theme))
-            setTextSize(fontSizeSp) // sora: setTextSize takes SP directly
-            setTabWidth(tabSize)
+            setUndoEnabled(false) // VM EditorUndoManager is canonical
         }
         Unit
     }
@@ -143,6 +137,12 @@ fun SoraEditorHost(
         val selectionReceipt = editor.subscribeEvent(
             SelectionChangeEvent::class.java,
             EventReceiver { event, _ ->
+                // Our own replays move the caret too; the VM already holds
+                // this text, and `syncedText` is STALE mid-replay (it still
+                // holds the pre-replay string). Letting this through rolled
+                // the VM back and ping-ponged replays — the 25.2 device
+                // crash. Same guard as pushToVm.
+                if (pushing[0]) return@subscribeEvent
                 // Selection-only move: reuse the synced snapshot — no O(n) copy.
                 val left = event.left
                 val right = event.right

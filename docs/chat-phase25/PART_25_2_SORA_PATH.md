@@ -194,6 +194,39 @@ no JVM/device). Files:
       (sora compresses well; Phase 22.1 code removal offsets). Final APK
       re-measure at merge time — budget ≤ +2 MB comfortably met so far.
 
+### 4.1 Device round 1 — CRASH on editor tap (owner report 2026-09-04)
+
+Owner: tapping/using the editor crashes the app (system crash dialog). No
+stack available (no adb; sandbox cannot run the app). Fixes shipped on
+inspection of the bridge:
+
+1. **FATAL bridge race — FIXED.** The `SelectionChangeEvent` receiver did
+   not honor the `pushing` guard. Every VM→sora text replay (tab switch,
+   undo/redo, find/replace, completion insert, keys-strip text keys) fires a
+   sora selection event MID-replay, and the receiver pushed the STALE
+   pre-replay string to `viewModel.updateCode` — the VM rolled back to the
+   old text, recorded a phantom undo step, and the next recomposition
+   replayed the old text into sora, whose echo pushed the new text back:
+   an endless two-way replay ping-pong (2 full-file replays + 2 undo records
+   per cycle) → ANR/OOM → crash dialog. The content-listener path was
+   already guarded; the selection path now is too.
+2. **Startup double-apply — FIXED.** Language/scheme/font/size/tab/wrap/
+   line-numbers were applied in the `remember{}` block AND again by their
+   `LaunchedEffect` first runs; sora destroys + rebuilds the analyzer and
+   scheme on each redundant set. Now the remember block only disables sora's
+   undo stack; everything keyed is applied by exactly one effect.
+3. **Crash capture — ADDED.** `MainActivity.installCrashLog()`: the default
+   uncaught handler now appends the stack to
+   `Android/data/com.codeci.ide/files/crash-log.txt` (any file manager can
+   read it) before delegating to the system handler. Next device round
+   produces a real stack if anything remains.
+
+Plain-tap path re-traced after the fixes: tap → sora touch (25.1-bench-
+proven on this device) → SelectionChangeEvent (not pushing) → VM
+selection-only update → recomposition → both replay branches skip. No app
+code executes beyond a cheap selection push. If the crash reproduces, the
+crash-log file gives the stack.
+
 ### CI history
 
 | # | Run | Commit | Result |
