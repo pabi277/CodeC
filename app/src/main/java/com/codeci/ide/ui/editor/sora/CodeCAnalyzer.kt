@@ -180,7 +180,7 @@ class CodeCLanguage(private val language: LanguageType) : Language {
 private object NoOpFormatter : Formatter {
     override fun format(text: Content, cursorRange: TextRange) = Unit
     override fun formatRegion(text: Content, rangeToFormat: TextRange, cursorRange: TextRange) = Unit
-    override fun setReceiver(receiver: io.github.rosemoe.sora.lang.format.FormatResultReceiver?) = Unit
+    override fun setReceiver(receiver: io.github.rosemoe.sora.lang.format.Formatter.FormatResultReceiver?) = Unit
     override fun isRunning() = false
     override fun destroy() = Unit
 }

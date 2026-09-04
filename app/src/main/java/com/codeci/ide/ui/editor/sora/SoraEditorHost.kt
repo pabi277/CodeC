@@ -1,7 +1,6 @@
 package com.codeci.ide.ui.editor.sora
 
 import android.graphics.Typeface
-import android.util.TypedValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -75,7 +74,7 @@ fun SoraEditorHost(
             setWordwrap(false)
             setEditorLanguage(CodeCLanguage(language))
             setColorScheme(CodeCScheme(theme))
-            setTextSizeUnit(TypedValue.COMPLEX_UNIT_SP, fontSizeSp)
+            setTextSize(fontSizeSp) // sora: setTextSize takes SP directly
             setTabWidth(tabSize)
         }
         Unit
@@ -90,7 +89,7 @@ fun SoraEditorHost(
         // Fresh scheme object per application (sora enforces single ownership).
         editor.setColorScheme(CodeCScheme(theme))
     }
-    LaunchedEffect(fontSizeSp) { editor.setTextSizeUnit(TypedValue.COMPLEX_UNIT_SP, fontSizeSp) }
+    LaunchedEffect(fontSizeSp) { editor.setTextSize(fontSizeSp) }
     LaunchedEffect(fontFamily) {
         editor.setTypefaceText(
             when (fontFamily) {
