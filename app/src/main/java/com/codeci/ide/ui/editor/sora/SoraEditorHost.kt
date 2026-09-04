@@ -142,7 +142,7 @@ fun SoraEditorHost(
                 // holds the pre-replay string). Letting this through rolled
                 // the VM back and ping-ponged replays — the 25.2 device
                 // crash. Same guard as pushToVm.
-                if (pushing[0]) return@subscribeEvent
+                if (pushing[0]) return@EventReceiver
                 // Selection-only move: reuse the synced snapshot — no O(n) copy.
                 val left = event.left
                 val right = event.right
