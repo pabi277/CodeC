@@ -92,8 +92,12 @@ class CodeCLanguageLogicTest {
         var previous = 0 to 0
         for (span in spans) {
             val position = cursor.advance(span.start)
-            // Spans are ordered: positions never move backwards.
-            assertTrue(position >= previous)
+            // Spans are ordered: the line never goes back; within a line the
+            // column never goes back either.
+            assertTrue(
+                position.first > previous.first ||
+                    (position.first == previous.first && position.second >= previous.second)
+            )
             previous = position
             cursor.advance(span.end)
         }
