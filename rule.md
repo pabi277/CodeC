@@ -209,7 +209,7 @@ Every update updates the docs **in the same commit**:
   "Start Phase 25.2")** on `arena/01a06b20-codec` — widget-only swap,
   VM canonical, sora as a BINARY Gradle dep (LGPL-2.1 checklist in
   `PART_25_2_SORA_PATH.md` §4: owner's explicit acceptance + APK-delta
-  re-measure still gate the merge). **CI green `33857318159` (tip `f78864a`; artifact delta +0.55 MiB)** — awaiting the owner device round.
+  re-measure still gate the merge). **CI green `33860045301` (tip `08fb542`, incl. the device-round-1 crash fixes in §4.1; artifact delta +0.55 MiB)** — awaiting the owner device round 2.
   Phases 26–28 remain PLANNED (spec'd in `docs/chat-phase26..28/`) — the
   agent does **not** start them until the owner says so.
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs

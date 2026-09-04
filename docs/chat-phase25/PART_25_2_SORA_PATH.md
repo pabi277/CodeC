@@ -234,6 +234,8 @@ crash-log file gives the stack.
 | 1 | `33855565141` | `b6e8257` | ❌ 2 root causes: `setTextSizeUnit` doesn't exist (sora's `setTextSize(float)` already takes **Sp**); `FormatResultReceiver` is NESTED in `Formatter`. Everything else in the 1 360-line change compiled first try. |
 | 2 | `33856448309` | `4268bdb` | ❌ main sources now compile — test compile: `Pair >= Pair` has no compareTo (span-ordering assertion). |
 | 3 | `33857318159` | `f78864a` | ✅ **GREEN** — `:app` compiles against sora 0.24.6 (release too), host tests pass: `CodeCThemeMapTest` ×5, `CodeCLanguageLogicTest` ×6. Artifacts: CodeC-IDE 20.84 MiB, CodeC-Bench 1.26 MiB. |
+| 4 | `33859414468` | `8727941` | ❌ Kotlin: `return@subscribeEvent` — with SAM-constructor syntax the lambda label is the CONSTRUCTOR name (`return@EventReceiver`). |
+| 5 | `33860045301` | `08fb542` | ✅ **GREEN** — §4.1 fixes in (selection-echo guard, single-apply config, crash log). CodeC-IDE 21 855 224 B (20.84 MiB, delta +0.55 MiB vs 25.1 — unchanged). |
 
 ## 5. Exit condition (unchanged from §3 above)
 
