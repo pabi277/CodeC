@@ -129,6 +129,33 @@ object KeyStripStorage {
             }
             error("unterminated string")
         }
+        fun parseNestedObject(): Map<String, Any> {
+            expect('{')
+            skipWs()
+            val map = mutableMapOf<String, Any>()
+            if (i < text.length && text[i] == '}') { i++; return map }
+            while (true) {
+                val key = parseString()
+                expect(':')
+                skipWs()
+                val value: Any = when {
+                    i < text.length && text[i] == '"' -> parseString()
+                    else -> {
+                        val start = i
+                        while (i < text.length && text[i] != ',' && text[i] != '}') i++
+                        text.substring(start, i).trim()
+                    }
+                }
+                map[key] = value
+                skipWs()
+                when {
+                    i < text.length && text[i] == ',' -> { i++; skipWs() }
+                    i < text.length && text[i] == '}' -> { i++; break }
+                    else -> error("expected ',' or '}' in nested object")
+                }
+            }
+            return map
+        }
         fun parseObject(): MutableMap<String, String> {
             // We parse as map of raw values for our limited schema: values are string/boolean/object
             // For simplicity, we parse fully with recursion.
@@ -164,33 +191,6 @@ object KeyStripStorage {
             // We'll keep as Any map and convert later via helper.
             @Suppress("UNCHECKED_CAST")
             return map as MutableMap<String, String>
-        }
-        fun parseNestedObject(): Map<String, Any> {
-            expect('{')
-            skipWs()
-            val map = mutableMapOf<String, Any>()
-            if (i < text.length && text[i] == '}') { i++; return map }
-            while (true) {
-                val key = parseString()
-                expect(':')
-                skipWs()
-                val value: Any = when {
-                    i < text.length && text[i] == '"' -> parseString()
-                    else -> {
-                        val start = i
-                        while (i < text.length && text[i] != ',' && text[i] != '}') i++
-                        text.substring(start, i).trim()
-                    }
-                }
-                map[key] = value
-                skipWs()
-                when {
-                    i < text.length && text[i] == ',' -> { i++; skipWs() }
-                    i < text.length && text[i] == '}' -> { i++; break }
-                    else -> error("expected ',' or '}' in nested object")
-                }
-            }
-            return map
         }
 
         // Top-level array parse using above but simpler: hand-parse defs

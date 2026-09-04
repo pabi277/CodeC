@@ -365,7 +365,7 @@ object SmartTyping {
         if (!config.emptyPairBackspace) return null // reuse toggle: emptyPair flag covers pair auto-insert? (Spec ties them)
         if (incoming.length != 1) return null
         val closer = openToClose[incoming[0]] ?: return null
-        if (incoming[0] == closer && incoming[0] in setOf('\"', '\\'', '`')) {
+        if (incoming[0] == closer && incoming[0] in setOf('"', '\'', '`')) {
             // For quotes, don't auto-pair if next char is letter/digit (e.g. typing ' in don't)
             // Simplify: only auto-pair if not inside string/comment and next char is whitespace or closer or EOL.
         }
@@ -373,7 +373,7 @@ object SmartTyping {
         if (config.stringAware && isInsideStringOrComment(old.text, old.selection.start, language)) {
             val kind = tokenKindAt(old.text, old.selection.start, language)
             if (kind == TokenKind.COMMENT) return null
-            if (kind == TokenKind.STRING && incoming[0] !in setOf('\"', '\\'', '`')) return null
+            if (kind == TokenKind.STRING && incoming[0] !in setOf('"', '\'', '`')) return null
         }
         val caret = old.selection.start.coerceIn(0, old.text.length)
         val next = old.text.substring(0, caret) + incoming + closer + old.text.substring(caret)

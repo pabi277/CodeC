@@ -1,6 +1,8 @@
 package com.codeci.ide.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,10 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.TextFieldValue
@@ -180,86 +177,80 @@ private fun EditorKeyCap(
             .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .pointerInput(def) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val down = awaitFirstDown()
-                        var isLongPress = false
-                        var isSwipe: String? = null // "up" / "down"
-                        var popupShown = false
-                        val startY = down.position.y
-                        val startX = down.position.x
-                        var upEvent: androidx.compose.ui.input.pointer.PointerEvent? = null
-                        // Long-press job
-                        val longPressJob = scope.launch {
-                            delay(EditorKeySet.LONG_PRESS_MS)
-                            if (isSwipe == null && hasPopup) {
-                                isLongPress = true
-                                popupShown = true
-                                showPopup = true
-                            }
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    var isLongPress = false
+                    var isSwipe: String? = null
+                    val startY = down.position.y
+                    val startX = down.position.x
+                    val longPressJob = scope.launch {
+                        delay(EditorKeySet.LONG_PRESS_MS)
+                        if (isSwipe == null && hasPopup) {
+                            isLongPress = true
+                            showPopup = true
                         }
-                        // Hold-repeat for arrows
-                        val hrJob = if (isArrow) scope.launch {
-                            delay(EditorKeySet.HOLD_INITIAL_DELAY_MS)
-                            held = true
-                            while (true) {
-                                onKey(def.key)
-                                delay(EditorKeySet.HOLD_REPEAT_INTERVAL_MS)
-                            }
-                        } else null
-                        holdJob = hrJob
-
-                        // Track moves until up
+                    }
+                    val hrJob = if (isArrow) scope.launch {
+                        delay(EditorKeySet.HOLD_INITIAL_DELAY_MS)
+                        held = true
                         while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull() ?: break
-                            if (!change.pressed) {
-                                upEvent = event
-                                break
-                            }
-                            val dy = change.position.y - startY
-                            val dx = change.position.x - startX
-                            // Swipe detection: vertical drag dominates and exceeds threshold
-                            if (abs(dy) > swipeThresholdPx && abs(dy) > abs(dx)) {
-                                if (dy < 0 && def.swipeUp != null && isSwipe == null) {
-                                    isSwipe = "up"
-                                    longPressJob.cancel()
-                                    hrJob?.cancel()
-                                    showPopup = false
-                                } else if (dy > 0 && def.swipeDown != null && isSwipe == null) {
-                                    isSwipe = "down"
-                                    longPressJob.cancel()
-                                    hrJob?.cancel()
-                                    showPopup = false
-                                }
+                            onKey(def.key)
+                            delay(EditorKeySet.HOLD_REPEAT_INTERVAL_MS)
+                        }
+                    } else null
+                    holdJob = hrJob
+
+                    // Track moves until up
+                    var finished = false
+                    while (!finished) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull()
+                        if (change == null) {
+                            finished = true
+                            break
+                        }
+                        if (!change.pressed) {
+                            finished = true
+                            break
+                        }
+                        val dy = change.position.y - startY
+                        val dx = change.position.x - startX
+                        if (abs(dy) > swipeThresholdPx && abs(dy) > abs(dx)) {
+                            if (dy < 0 && def.swipeUp != null && isSwipe == null) {
+                                isSwipe = "up"
+                                longPressJob.cancel()
+                                hrJob?.cancel()
+                                showPopup = false
+                            } else if (dy > 0 && def.swipeDown != null && isSwipe == null) {
+                                isSwipe = "down"
+                                longPressJob.cancel()
+                                hrJob?.cancel()
+                                showPopup = false
                             }
                         }
-                        longPressJob.cancel()
-                        hrJob?.cancel()
-                        holdJob = null
-                        val wasHeld = held
-                        held = false
-                        showPopup = false
+                    }
+                    longPressJob.cancel()
+                    hrJob?.cancel()
+                    holdJob = null
+                    val wasHeld = held
+                    held = false
+                    showPopup = false
 
-                        when {
-                            isSwipe == "up" && def.swipeUp != null -> {
-                                onKey(def.swipeUp)
-                            }
-                            isSwipe == "down" && def.swipeDown != null -> {
-                                onKey(def.swipeDown)
-                            }
-                            wasHeld -> {
-                                // Hold-repeat already fired repeatedly; don't fire tap/popup as well.
-                                Unit
-                            }
-                            isLongPress && def.popup != null -> {
-                                // Slide-release: if finger ended above key (y < -10dp), it's popup; otherwise still popup (long-press selects popup).
-                                onKey(def.popup)
-                            }
-                            else -> {
-                                // Regular tap
-                                onKey(def.key)
-                            }
+                    when {
+                        isSwipe == "up" && def.swipeUp != null -> {
+                            onKey(def.swipeUp)
+                        }
+                        isSwipe == "down" && def.swipeDown != null -> {
+                            onKey(def.swipeDown)
+                        }
+                        wasHeld -> {
+                            Unit
+                        }
+                        isLongPress && def.popup != null -> {
+                            onKey(def.popup)
+                        }
+                        else -> {
+                            onKey(def.key)
                         }
                     }
                 }
@@ -272,7 +263,6 @@ private fun EditorKeyCap(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 6.dp)
         )
-        // Corner tick for caps with extras
         if (hasPopup || hasSwipe) {
             Box(
                 modifier = Modifier
@@ -294,7 +284,6 @@ private fun EditorKeyCap(
                 )
             }
         }
-        // Popup cap overlay
         if (showPopup && def.popup != null) {
             val popupLabel = when (val p = def.popup) {
                 is EditorKey.Insert -> p.text
@@ -336,7 +325,8 @@ private fun RunKeyCap(
     val hasPopup = def.popup != null
     var showPopup by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val swipeThresholdPx = with(LocalDensity.current) { 28.dp.toPx() }
+    val density = LocalDensity.current
+    val swipeThresholdPx = with(density) { 28.dp.toPx() }
 
     Box(
         modifier = Modifier
@@ -344,42 +334,43 @@ private fun RunKeyCap(
             .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .pointerInput(def) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val down = awaitFirstDown()
-                        var isLongPress = false
-                        val startY = down.position.y
-                        val job = scope.launch {
-                            delay(EditorKeySet.LONG_PRESS_MS)
-                            if (hasPopup) {
-                                isLongPress = true
-                                showPopup = true
-                            }
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    var isLongPress = false
+                    val startY = down.position.y
+                    val job = scope.launch {
+                        delay(EditorKeySet.LONG_PRESS_MS)
+                        if (hasPopup) {
+                            isLongPress = true
+                            showPopup = true
                         }
-                        var upY = startY
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull() ?: break
-                            if (!change.pressed) {
-                                upY = change.position.y
-                                break
-                            }
-                            val dy = change.position.y - startY
-                            if (kotlin.math.abs(dy) > swipeThresholdPx) {
-                                // For run keys swipe not defined for now; cancel popup
-                                job.cancel()
-                                showPopup = false
-                                break
-                            }
+                    }
+                    var finished = false
+                    while (!finished) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull()
+                        if (change == null) {
+                            finished = true
+                            break
                         }
-                        job.cancel()
-                        val wasPopup = showPopup
-                        showPopup = false
-                        if (wasPopup && def.popup != null && isLongPress) {
-                            onKeyAction(def.popup)
-                        } else {
-                            onKeyAction(def.action)
+                        if (!change.pressed) {
+                            finished = true
+                            break
                         }
+                        val dy = change.position.y - startY
+                        if (abs(dy) > swipeThresholdPx) {
+                            job.cancel()
+                            showPopup = false
+                            break
+                        }
+                    }
+                    job.cancel()
+                    val wasPopup = showPopup
+                    showPopup = false
+                    if (wasPopup && def.popup != null && isLongPress) {
+                        onKeyAction(def.popup)
+                    } else {
+                        onKeyAction(def.action)
                     }
                 }
             },
@@ -410,7 +401,7 @@ private fun RunKeyCap(
         if (showPopup && def.popupLabel != null) {
             Box(
                 modifier = Modifier
-                    .offset { IntOffset(0, -with(LocalDensity.current) { 44.dp.roundToPx() }) }
+                    .offset { IntOffset(0, -with(density) { 44.dp.roundToPx() }) }
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.primary)
                     .padding(horizontal = 10.dp, vertical = 6.dp)
