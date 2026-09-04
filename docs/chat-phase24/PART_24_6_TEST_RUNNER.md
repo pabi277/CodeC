@@ -1,6 +1,6 @@
 # CodeC Phase 24.6 — Test-Runner UI (pytest / go test output tab)
 
-**Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** S
+**Status:** ✅ **IMPLEMENTED & DEVICE-PASSED** (2026-09-04) · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** Phase 21.1 (LanguageRegistry — Python and Go profiles exist)
 · **Target files:** `ui/screens/EditorScreen.kt`, `ui/viewmodels/EditorViewModel.kt`,
   `ui/components/OutputPanelView.kt`, `ui/editor/OutputLineParser.kt`

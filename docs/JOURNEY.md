@@ -844,4 +844,13 @@ recipe (steps 1–8).**
     - **E.8 — adaptive theme.** `ThemeManager.effectiveDark(mode, systemDark)` is pure/companion (AUTO follows `isSystemInDarkTheme`); the app root uses it; Settings lists `Auto (follow system)` first, then Light/Dark. Host test `ThemeManagerTest`.
     - **E.9 — per-project `.codec.json`.** Pure `ui/projects/CodecJsonParser.kt` + `CodecOverride`; `EditorViewModel.runActiveFile` applies the project-root override ABOVE the registry/project config, gates the raw commands through the same toolchain gate, and the editor `⋮ → Edit run config` dialog writes `.codec.json`.
     - **Host tests added:** `CodecJsonParserTest`, `EditorLineOpsTest`, `RunForegroundPolicyTest`, `ThemeManagerTest`, plus `LanguageRegistryTest` (test files/profiles/formatter commands), `OutputLineParserTest` (test-line classification), `ProjectTransferTest` (`exportZipToCache`).
-    - **⚠️ Device pass REQUIRED** — §3 recipes for E.1, E.2, E.3, E.4, E.6, E.7, E.8, E.9 have NOT been run on device. **E.5 is explicitly deferred:** it needs the `EditorScreen` body extracted from the `ModalNavigationDrawer` so a wide layout can render a permanent `EditorProjectDrawer` pane (or a `windowSizeClass` dependency) — a structural refactor better done as its own commit once the owner confirms tablet support is wanted (the rest of the phase is phone-first and device-verifiable now).
+    - **Device round 1 (2026-09-04, owner on-device):**
+        - **E.1 Format — ✅ PASS.** Includes the **Python formatter**: `⋮ → Format` on an `if/else` python file corrected the indentation (owner: "Formater pass"). Managed manually in chat with the black-style snippet (`def add(a,b):`, `x=1+2`, `name='Alice'`, long `y=[...]` list) to confirm black output beyond indentation.
+        - **E.2 Background-run notification — ✅ PASS** (owner: "I tested the notification part it's working fine").
+        - **E.4 Share as ZIP — ✅ PASS.**
+        - **E.6 Test runner — ✅ PASS.**
+        - **E.7 Open with CodeC — ✅ PASS.**
+        - **E.8 Adaptive theme — ✅ PASS.**
+        - **E.9 Per-project `.codec.json` — ✅ PASS.**
+        - **E.3 Hardware shortcuts — ⏳ NOT device-verified this round** (owner: "E.3 is not possible in this time" — needs a Bluetooth keyboard/tablet). Code is CI-green with host tests (`EditorLineOpsTest`, `RunForegroundPolicyTest`, etc.) but the §3 recipes (Ctrl+R, Ctrl+/, Ctrl+D, Ctrl+W, Ctrl+Tab, F5) have **not** run on hardware.
+        - **E.5 Tablet two-pane — ⏸ DEFERRED.** It needs the `EditorScreen` body extracted from the `ModalNavigationDrawer` so a wide layout can render a permanent `EditorProjectDrawer` pane (or a `windowSizeClass` dependency) — a structural refactor better done as its own commit once the owner confirms tablet support is wanted (the rest of the phase is phone-first and device-verifiable now).

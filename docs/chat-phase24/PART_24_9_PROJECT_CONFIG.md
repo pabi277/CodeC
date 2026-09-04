@@ -1,6 +1,6 @@
 # CodeC Phase 24.9 — Per-project `.codec.json` Run-Config Override
 
-**Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** S
+**Status:** ✅ **IMPLEMENTED & DEVICE-PASSED** (2026-09-04) · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** Phase 21.1 (`LanguageRunProfile` registry exists)
 · **Target files:** `ui/projects/ProjectConfig.kt`, `ui/viewmodels/EditorViewModel.kt`
 
