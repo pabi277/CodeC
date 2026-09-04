@@ -179,7 +179,28 @@ sheet; identical scripted input per scenario):
 | 4 | `33848545357` | 🔴 `lintVitalRelease` (fatal release lint inside `assembleRelease`) trips the same targetSdk-28 Play-policy check `:app`'s lint block disables → `lint { checkReleaseBuilds = false }` on the throwaway harness |
 | **5** | **`33849153135`** | ✅ **GREEN — app assemble + tests + lint, bench assembleRelease + bench unit tests (incl. the 10 000-op `DocumentBuffer` fuzz), both artifacts uploaded** |
 
-### 4.5 Exit condition status
+### 4.5 Device round 1 — INTERIM (2026-09-04, owner's first export)
+
+The owner's first Copy-all export contains the six **cold_open** rows only;
+the four scenario families (burst/fling/drag/churn) are still pending. What
+the cold-open rows say:
+
+| Candidate | bench.c | bench.html |
+|---|---|---|
+| C-now | **1155 ms** ⚠️ | 158 ms |
+| C-sora | 112 ms | 51 ms |
+| C-compose2 | 59 ms | 42 ms |
+
+**⚠️ Measurement caveat, recorded before anyone over-reads this:** the owner's
+screens were opened in home-screen order, so **C-now · bench.c was the FIRST
+open in a cold process** — its 1155 ms includes one-time app startup + Compose
+initialization, not just the file open. Every other number (including
+C-now · bench.html at 158 ms) is a warm-process measurement. A fair C-now
+bench.c number requires re-opening that screen once the process is warm;
+requested from the owner alongside the scenario runs. `frames=0` on these rows
+is by design (frame capture runs during scenario reps, not cold open).
+
+### 4.6 Exit condition status
 
 1. ⏳ Decision table filled from device runs — **waiting on the owner**.
 2. ⏳ JOURNEY entry records the winner + raw numbers (entry created; numbers
