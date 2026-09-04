@@ -1,6 +1,6 @@
 # CodeC Phase 24.2 — Background-Run Notification (Foreground Service)
 
-**Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** S
+**Status:** ✅ **IMPLEMENTED & DEVICE-PASSED** (2026-09-04) · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** nothing (Phase 4.8 already declared `POST_NOTIFICATIONS`)
 · **Target files:** `ui/services/CompilerService.kt`, `AndroidManifest.xml`
 

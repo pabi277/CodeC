@@ -65,3 +65,45 @@ object OutputLineParser {
     fun parse(text: String): List<OutputDiagnostic> =
         text.lineSequence().mapNotNull { parseLine(it) }.toList()
 }
+
+/**
+ * Phase 24.6 — a test-runner output line with a colour category. Pure so the
+ * Output Panel renders pytest / go test results with the right colours and
+ * the mapping is host-unit-testable.
+ */
+enum class TestLineKind { PASS, FAIL, ERROR, OK, PLAIN }
+
+data class TestLine(val text: String, val kind: TestLineKind)
+
+object TestOutputParser {
+
+    /**
+     * Maps a single test-runner line to a colour category. Go summaries get
+     * FAIL first (so `ok 1 failed` is not mistaken for a pass); pytest's
+     * `PASSED`/`FAILED` and the `FAIL`/`ERROR` prefixes follow; `--- FAIL`
+     * separators stay FAIL (a summary line, not a passing one).
+     */
+    fun parseLine(raw: String): TestLine {
+        val trimmed = raw.trim()
+        val upper = trimmed.uppercase()
+        val kind = when {
+            // FAIL takes precedence: `ok 1 failed` is a Go FAIL, never a pass.
+            upper.startsWith("FAIL") ||
+                upper.startsWith("ERROR") ||
+                upper.contains("FAILED") ||
+                upper.contains(" FAIL") ||
+                upper.contains("FAILURE") -> TestLineKind.FAIL
+            upper.contains("ERROR") -> TestLineKind.ERROR
+            upper.startsWith("PASSED") || upper.startsWith("OK") -> TestLineKind.PASS
+            upper.startsWith("---") && upper.substringAfter("---").startsWith(" FAIL") ->
+                TestLineKind.FAIL
+            trimmed.startsWith("ok ") -> TestLineKind.PASS
+            upper.contains("PASSED") ||
+                upper.contains(" PASSED") ||
+                upper.contains(" passed") -> TestLineKind.PASS
+            upper.startsWith("---") || upper.startsWith("===") -> TestLineKind.OK
+            else -> TestLineKind.PLAIN
+        }
+        return TestLine(raw, kind)
+    }
+}

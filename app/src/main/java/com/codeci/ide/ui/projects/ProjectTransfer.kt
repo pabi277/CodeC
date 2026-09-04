@@ -83,6 +83,24 @@ object ProjectTransfer {
     }
 
     /**
+     * Phase 24.4 — export a project ZIP into the app cache for sharing
+     * (no SAF picker). Written to `cacheDir/shares/<name>.zip`, where an
+     * Android share sheet can hand the [getUriForFile] FileProvider URI to
+     * another app.
+     */
+    fun exportZipToCache(
+        projectRoot: File,
+        cacheDir: File,
+        zipName: String = "${projectRoot.name}.zip",
+    ): File {
+        val safeName = zipName.substringAfterLast('/').replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val dir = File(cacheDir, "shares").apply { mkdirs() }
+        val target = File(dir, safeName)
+        exportZip(projectRoot, target.outputStream())
+        return target
+    }
+
+    /**
      * Import a SAF stream through a temporary private file, then enumerate the
      * ZIP central directory. Some Android/file-manager ZIP writers produce a
      * local stream containing only the root directory even though their

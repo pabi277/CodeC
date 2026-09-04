@@ -225,4 +225,65 @@ class LanguageRegistryTest {
         )
         assertNull(LanguageRegistry.formatterCommand(LanguageRegistry.forExtension("php")!!, "x.php"))
     }
+
+    @Test
+    fun formatter_command_covers_every_language_with_a_formatter() {
+        assertEquals("black hello.py", LanguageRegistry.formatterCommand(
+            LanguageRegistry.forExtension("py")!!, "hello.py"
+        ))
+        assertEquals("gofmt -w math.go", LanguageRegistry.formatterCommand(
+            LanguageRegistry.forExtension("go")!!, "math.go"
+        ))
+        assertEquals("rustfmt main.rs", LanguageRegistry.formatterCommand(
+            LanguageRegistry.forExtension("rs")!!, "main.rs"
+        ))
+        // Languages with no formatter have no command, so the menu hides.
+        assertNull(LanguageRegistry.forFile("main.lua")?.formatterTemplate)
+    }
+
+    // ---- Phase 24.6: test profiles ---------------------------------------
+
+    @Test
+    fun test_files_are_recognised_by_name() {
+        assertTrue(LanguageRegistry.isTestFile("test_hello.py"))
+        assertTrue(LanguageRegistry.isTestFile("hello_test.py"))
+        assertTrue(LanguageRegistry.isTestFile("math_test.go"))
+        assertFalse(LanguageRegistry.isTestFile("main.py"))
+        assertFalse(LanguageRegistry.isTestFile("test.go"))
+        assertFalse(LanguageRegistry.isTestFile("main.c"))
+    }
+
+    @Test
+    fun test_profile_for_file_returns_test_runner_for_pytest() {
+        val profile = LanguageRegistry.testProfileForFile("tests/test_hello.py")
+        assertEquals("Python tests", profile?.displayName)
+        assertEquals("python3 -m pytest \$SRC -v", profile?.runTemplate)
+        assertNull(profile?.buildTemplate)
+        assertFalse(profile!!.interactive)
+    }
+
+    @Test
+    fun test_profile_for_file_returns_test_runner_for_go() {
+        val profile = LanguageRegistry.testProfileForFile("math_test.go")
+        assertEquals("Go tests", profile?.displayName)
+        assertEquals("go test ./...", profile?.runTemplate)
+    }
+
+    @Test
+    fun test_profile_for_non_test_file_is_null() {
+        assertNull(LanguageRegistry.testProfileForFile("main.py"))
+        assertNull(LanguageRegistry.testProfileForFile("main.go"))
+        assertNull(LanguageRegistry.testProfileForFile("main.c"))
+    }
+
+    @Test
+    fun test_profile_keeps_the_parent_language_install_gate() {
+        val py = LanguageRegistry.testProfileForFile("test_hello.py")!!
+        assertEquals("python", py.requiredPackage)
+        assertEquals("python3", py.probeBinary)
+        assertTrue(py.inRepository)
+        val go = LanguageRegistry.testProfileForFile("math_test.go")!!
+        assertEquals("golang", go.requiredPackage)
+        assertFalse(go.inRepository)
+    }
 }

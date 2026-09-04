@@ -1,6 +1,8 @@
 package com.codeci.ide
 
 import com.codeci.ide.ui.editor.OutputLineParser
+import com.codeci.ide.ui.editor.TestLineKind
+import com.codeci.ide.ui.editor.TestOutputParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -106,5 +108,38 @@ class OutputLineParserTest {
             "Add missing ';'",
             com.codeci.ide.ui.editor.CompilerDiagnostics.semicolonFixLabel(diag)
         )
+    }
+
+    // ---- Phase 24.6: test-runner line classification ----------------------
+
+    @Test
+    fun `pytest PASSED and pytest 1 passed are passes`() {
+        assertEquals(TestLineKind.PASS, TestOutputParser.parseLine("tests/test_hello.py::test_ok PASSED").kind)
+        assertEquals(TestLineKind.PASS, TestOutputParser.parseLine("============================= 1 passed in 0.2s ============================").kind)
+        assertEquals(TestLineKind.PASS, TestOutputParser.parseLine("ok 1 - test_add").kind)
+    }
+
+    @Test
+    fun `pytest FAILED is a fail`() {
+        assertEquals(TestLineKind.FAIL, TestOutputParser.parseLine("tests/test_hello.py::test_bad FAILED").kind)
+    }
+
+    @Test
+    fun `go ok summary with a failure is a fail`() {
+        assertEquals(TestLineKind.FAIL, TestOutputParser.parseLine("FAIL	example/math	0.123s").kind)
+        assertEquals(TestLineKind.FAIL, TestOutputParser.parseLine("ok 1 failed").kind)
+        assertEquals(TestLineKind.FAIL, TestOutputParser.parseLine("--- FAIL: TestBad (0.00s)").kind)
+    }
+
+    @Test
+    fun `error lines are errors`() {
+        assertEquals(TestLineKind.ERROR, TestOutputParser.parseLine("ImportError: No module named pytest").kind)
+    }
+
+    @Test
+    fun `ordinary runner chatter and separators stay summary`() {
+        // "----" separators / "====" are metadata, not a pass/fail line.
+        assertEquals(TestLineKind.OK, TestOutputParser.parseLine("===============================================================").kind)
+        assertEquals(TestLineKind.PLAIN, TestOutputParser.parseLine("collecting ... collected 2 items").kind)
     }
 }

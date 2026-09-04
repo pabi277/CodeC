@@ -1,6 +1,6 @@
 # CodeC Phase 24.5 — Tablet Two-Pane Layout (WindowSizeClass)
 
-**Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** S
+**Status:** ⏸ **DEFERRED** (structural EditorScreen refactor; awaiting owner tablet confirmation) · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** nothing
 · **Target files:** `MainActivity.kt`, `ui/screens/EditorScreen.kt`,
   `ui/screens/FileManagerScreen.kt` (or `ProjectsHub.kt`)

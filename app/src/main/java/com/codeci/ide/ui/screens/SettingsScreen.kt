@@ -624,7 +624,14 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
-            AppThemeMode.values().forEach { themeMode ->
+            // Phase 24.8 — "Auto (follow system)" is the first, default option.
+            val appThemeOptions = listOf(AppThemeMode.SYSTEM, AppThemeMode.LIGHT, AppThemeMode.DARK)
+            appThemeOptions.forEach { themeMode ->
+                val label = when (themeMode) {
+                    AppThemeMode.SYSTEM -> "Auto (follow system)"
+                    AppThemeMode.LIGHT -> "Light"
+                    AppThemeMode.DARK -> "Dark"
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -637,7 +644,7 @@ fun SettingsScreen(
                         onClick = { scope.launch { themeManager.setAppTheme(themeMode) } }
                     )
                     Text(
-                        text = themeMode.name.lowercase().replaceFirstChar { it.uppercase() },
+                        text = label,
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }

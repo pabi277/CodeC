@@ -1,6 +1,6 @@
 # CodeC Phase 24.4 — Project ZIP Share (Export + Share Intent)
 
-**Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** XS
+**Status:** ✅ **IMPLEMENTED & DEVICE-PASSED** (2026-09-04) · **Cost:** `[client-only]` · **Effort:** XS
 · **Depends on:** Phase 8 (`ProjectTransfer.exportZip` already exists)
 · **Target files:** `ui/screens/FileManagerScreen.kt` or `ui/screens/ProjectsHub.kt`
   (overflow menu), `ui/projects/ProjectTransfer.kt`

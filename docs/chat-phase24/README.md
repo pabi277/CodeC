@@ -1,6 +1,6 @@
 # CodeC Phase 24 — Polish Batch: Feasible Items from Groups 3-5
 
-**Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit "Start Phase 24" command.
+**Status:** 🚧 **IN PROGRESS** — owner's "Start Phase 24" command received (2026-09-03); implementation is on `arena/01a06784-codec`. Eight parts implemented (E.1–E.4, E.6–E.9); **E.5 tablet two-pane is deferred**. **CI green `33768581748`** (+ later doc-only run `33769074554`). **Device round 1 (2026-09-04): E.1 ✅ / E.2 ✅ / E.4 ✅ / E.6 ✅ / E.7 ✅ / E.8 ✅ / E.9 ✅; E.3 ⏳ not possible this round (needs BT keyboard/tablet); E.5 ⏸ deferred.**
 · **Cost:** `[client-only]` — all items are pure Kotlin/Compose; no `[repo-build]`
   (except E.2 formatter, which needs the tools from Phase 20 to be installed)
 · **Depends on:** Phase 21 (registry with `formatterTemplate`); Phase 22 (IME keys infrastructure
@@ -36,6 +36,22 @@ These were researched in `RESEARCH_NEXT_PHASES.md` and classified as feasible
 | **E.7** | "Open with CodeC" intent filter | XS | [PART_24_7_OPEN_WITH.md](PART_24_7_OPEN_WITH.md) |
 | **E.8** | Adaptive theme (auto follow system dark/light) | XS | [PART_24_8_ADAPTIVE_THEME.md](PART_24_8_ADAPTIVE_THEME.md) |
 | **E.9** | Per-project `.codec.json` run-config override | S | [PART_24_9_PROJECT_CONFIG.md](PART_24_9_PROJECT_CONFIG.md) |
+
+---
+
+## Device round 1 (2026-09-04, owner on-device)
+
+| Part | Result | Notes |
+|---|---|---|
+| **E.1** Formatter | ✅ PASS | Includes Python: `⋮ → Format` on an `if/else` .py file corrected indentation (owner: "Formater pass"). Black-style snippet (`def add(a,b):`, `x=1+2`, `name='Alice'`, long `y=[...]`) was provided to confirm black output beyond indentation. |
+| **E.2** Notification | ✅ PASS | Owner: "I tested the notification part it's working fine" (5 s foreground notification, Stop action, no notification for short runs). |
+| **E.4** Share as ZIP | ✅ PASS | Projects `⋮ → Share as ZIP` opened the share sheet / received ZIP. |
+| **E.6** Test runner | ✅ PASS | `Test ▷` button, pytest output, PASSED/FALLED line colours. |
+| **E.7** Open with CodeC | ✅ PASS | Shared `.c`/`.py`/`.zip` opened/imported. |
+| **E.8** Adaptive theme | ✅ PASS | Auto followed system dark/light live; explicit Dark override held. |
+| **E.9** `.codec.json` | ✅ PASS | `⋮ → Edit run config` wrote `.codec.json`, multi-file build ran, deletion fell back to registry. |
+| **E.3** Hardware shortcuts | ⏳ NOT VERIFIED this round | Owner: "E.3 is not possible in this time" — needs a Bluetooth keyboard / tablet. Code is CI-green + host-tested (`EditorLineOpsTest`, `RunForegroundPolicyTest`), but the physical-key §3 recipes (Ctrl+R, Ctrl+/, Ctrl+D, Ctrl+W, Ctrl+Tab, F5) were not run. |
+| **E.5** Tablet two-pane | ⏸ DEFERRED | Needs `EditorScreen` body extracted from the `ModalNavigationDrawer` (or a window-size dependency); structural refactor deferred pending owner confirmation. |
 
 ---
 

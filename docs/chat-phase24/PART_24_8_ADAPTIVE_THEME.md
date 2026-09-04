@@ -1,6 +1,6 @@
 # CodeC Phase 24.8 — Adaptive Theme (Auto Follow System Dark/Light)
 
-**Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** XS
+**Status:** ✅ **IMPLEMENTED & DEVICE-PASSED** (2026-09-04) · **Cost:** `[client-only]` · **Effort:** XS
 · **Depends on:** nothing (ThemeManager already exists)
 · **Target files:** `ui/settings/SettingsManager.kt`,
   `ui/theme/ThemeManager.kt`, `ui/screens/SettingsScreen.kt`

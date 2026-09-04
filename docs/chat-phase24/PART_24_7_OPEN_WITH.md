@@ -1,6 +1,6 @@
 # CodeC Phase 24.7 — "Open with CodeC" Intent Filter
 
-**Status:** 📋 **PLANNED** · **Cost:** `[client-only]` · **Effort:** XS
+**Status:** ✅ **IMPLEMENTED & DEVICE-PASSED** (2026-09-04) · **Cost:** `[client-only]` · **Effort:** XS
 · **Depends on:** Phase 8 (Import File / Import ZIP flows already exist)
 · **Target files:** `AndroidManifest.xml`, `MainActivity.kt`
 

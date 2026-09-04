@@ -76,7 +76,12 @@ private val OUTPUT_COLORS = mapOf(
     OutputLineKind.OUTPUT to Color(0xFFFFFFFF),
     OutputLineKind.ERROR to Color(0xFFFF5555),
     OutputLineKind.STATS to Color(0xFF55FF55),
-    OutputLineKind.SYSTEM to Color(0xFF66B2FF)
+    OutputLineKind.SYSTEM to Color(0xFF66B2FF),
+    // Phase 24.6 — test-runner colours (pytest / go test).
+    OutputLineKind.TEST_PASS to Color(0xFF55FF55),
+    OutputLineKind.TEST_FAIL to Color(0xFFFF5555),
+    OutputLineKind.TEST_ERROR to Color(0xFFFFB347),
+    OutputLineKind.TEST_SUMMARY to Color(0xFF66B2FF)
 )
 
 /**
@@ -141,7 +146,7 @@ fun OutputPanelView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Output",
+                text = if (state.testRun) "Tests" else "Output",
                 color = Color.White,
                 style = MaterialTheme.typography.labelLarge
             )

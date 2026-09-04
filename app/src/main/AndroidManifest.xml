@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Phase 24.2: foreground notification for long-running builds/servers. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <!-- Android 13+ runtime permission for codec-notify (targetSdk 28 → requested from the activity). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Normal (install-time) permission for codec-vibrate; no runtime dialog. -->
@@ -72,7 +75,35 @@
                 <action android:name="com.codeci.ide.action.REQUEST_STORAGE_PERMISSION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- Phase 24.7: appear as an "Open with CodeC" target for source
+                 files and ZIP archives shared from other apps. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/x-python" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+            </intent-filter>
         </activity>
+
+        <!-- Phase 24.2: foreground notification host for long-running runs. -->
+        <service
+            android:name=".ui.services.RunForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>

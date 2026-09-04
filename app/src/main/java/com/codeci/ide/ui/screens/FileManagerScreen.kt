@@ -2,6 +2,7 @@ package com.codeci.ide.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,6 +57,7 @@ import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -110,6 +112,7 @@ import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubFilter
 import com.codeci.ide.ui.projects.HubIconToken
 import com.codeci.ide.ui.projects.ProjectInfo
+import com.codeci.ide.ui.projects.ProjectTransfer
 import com.codeci.ide.ui.projects.ProjectTypes
 import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.viewmodels.FileManagerViewModel
@@ -391,6 +394,38 @@ fun FileManagerScreen(
                             HubCardAction.EXPORT -> {
                                 exportProjectName = project.name
                                 exportLauncher.launch("${project.name}.zip")
+                            }
+                            HubCardAction.SHARE_ZIP -> {
+                                scope.launch {
+                                    val file = runCatching {
+                                        ProjectTransfer.exportZipToCache(
+                                            project.root, context.cacheDir, "${project.name}.zip"
+                                        )
+                                    }.getOrNull()
+                                    if (file != null) {
+                                        val uri = FileProvider.getUriForFile(
+                                            context, "${context.packageName}.fileprovider", file
+                                        )
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = "application/zip"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent.createChooser(
+                                                    send, context.getString(R.string.share_as_zip)
+                                                ).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            )
+                                        }.onFailure {
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.share_failed)
+                                            )
+                                        }
+                                    } else {
+                                        snackbarHostState.showSnackbar(context.getString(R.string.share_failed))
+                                    }
+                                }
                             }
                             HubCardAction.DELETE -> deleteProjectTarget = project
                             HubCardAction.SOURCE_CONTROL -> gitSheetProject = project
@@ -989,7 +1024,7 @@ fun FileManagerScreen(
 
 /** Per-project overflow actions (spec §2.4). */
 private enum class HubCardAction {
-    OPEN, RENAME, EXPORT, DELETE, SOURCE_CONTROL, PULL, PUSH, COPY_REMOTE_URL, SWITCH_BRANCH
+    OPEN, RENAME, EXPORT, SHARE_ZIP, DELETE, SOURCE_CONTROL, PULL, PUSH, COPY_REMOTE_URL, SWITCH_BRANCH
 }
 
 @Composable
@@ -1270,6 +1305,11 @@ private fun ProjectHubCard(
                         text = { Text(stringResource(R.string.export_zip)) },
                         leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) },
                         onClick = { menuOpen = false; onAction(entry, HubCardAction.EXPORT) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.share_as_zip)) },
+                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                        onClick = { menuOpen = false; onAction(entry, HubCardAction.SHARE_ZIP) }
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.delete)) },
