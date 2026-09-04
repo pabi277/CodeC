@@ -80,8 +80,10 @@ fun SoraEditorHost(
         editor.setEditorLanguage(CodeCLanguage(language))
     }
     LaunchedEffect(theme) {
-        // Fresh scheme object per application (sora enforces single ownership).
-        editor.setColorScheme(CodeCScheme(theme))
+        // Fresh scheme object per application (sora enforces single ownership);
+        // colors applied post-construction (see CodeCScheme's construction-
+        // order note — reading `type` inside applyDefault was the crash).
+        editor.setColorScheme(CodeCScheme.of(theme))
     }
     LaunchedEffect(fontSizeSp) { editor.setTextSize(fontSizeSp) }
     LaunchedEffect(fontFamily) {

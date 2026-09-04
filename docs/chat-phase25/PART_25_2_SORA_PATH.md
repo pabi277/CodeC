@@ -252,6 +252,36 @@ Fixes:
 NOTE: it is not yet confirmed the owner ran the round-1-fixed APK at all —
 the report may predate it. Either way round 2 is strictly additive.
 
+### 4.3 Device round 2 — CRASH ROOT CAUSE (owner pasted the in-app report)
+
+The overlay worked: the owner pasted a full stack from the dialog. Root
+cause, no guesswork:
+
+    NullPointerException: Parameter specified as non-null is null:
+    EditorThemesKt.getEditorTheme, parameter type
+      at CodeCScheme.applyDefault(CodeCScheme.kt)
+      at EditorColorScheme.<init>(EditorColorScheme.java:237)
+      at CodeCScheme.<init>(CodeCScheme.kt)
+      at SoraEditorHost.kt:84  (LaunchedEffect(theme), first composition)
+
+**Leaked `this` in the super-constructor.** sora's `EditorColorScheme()`
+constructor calls `applyDefault()`; Kotlin subclass properties (`type`) are
+assigned only AFTER `super()` returns, so the override read
+`type == null` → `getEditorTheme(null)`'s intrinsic null-check threw —
+instantly, every time the editor screen composed. (This is why the crash
+was 100 % reproducible on tap and invisible in CI: it is a runtime
+initialization-order bug, not a compile error.) The round-1 ping-pong guard
+was a real latent bug but never got the chance to run.
+
+**Fix:** `CodeCScheme` no longer overrides `applyDefault()` (the base fills
+sora defaults during construction); colors are applied post-construction
+via `CodeCScheme.of(theme)` → `apply(EditorThemeColors)`. `CodeCThemeMap`
+unchanged (pure, host-tested). No other sora subclass override can hit the
+same trap (CodeCAnalyzer's `analyze` runs on sora's thread post-construction).
+
+APK note: the crash-log overlay (round 2) is what produced this stack —
+the no-root debugging loop is now proven end-to-end.
+
 ### CI history
 
 | # | Run | Commit | Result |

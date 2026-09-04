@@ -12,13 +12,39 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
  *
  * Sora colors are referenced by SLOT ID (its [EditorColorScheme] holds an
  * id→ARGB table; analyzer spans carry slot ids, not colors), so the adapter
- * overrides the well-known slots with the CodeC theme palette. Every editor
- * instance needs its OWN scheme object (sora enforces single ownership —
- * `setColorScheme` with a reused instance throws), so `CodeCScheme` builds a
- * fresh object per call.
+ * overwrites the well-known slots with the CodeC theme palette AFTER the
+ * base defaults are applied.
  *
- * The id→color list is computed by the pure [CodeCThemeMap] so the mapping is
- * host-testable without instantiating the (android-dependent) scheme class.
+ * ⚠️ Construction order (the 25.2 device crash): sora's CONSTRUCTOR calls
+ * `applyDefault()`. A Kotlin override of `applyDefault` that reads a
+ * subclass `val` sees NULL there — the property is assigned only after
+ * `super()` returns (`getEditorTheme(type)` threw NPE on the owner's device
+ * the moment the editor composed). CodeC colors are therefore applied by
+ * [apply], called from [of] AFTER construction; `applyDefault` is NOT
+ * overridden.
+ *
+ * Every editor instance needs its OWN scheme object (sora enforces single
+ * ownership) — [of] always builds a fresh one.
+ */
+class CodeCScheme : EditorColorScheme() {
+
+    /** Overwrite the sora defaults with one CodeC theme. Post-construction only. */
+    fun apply(colors: EditorThemeColors) {
+        for ((id, color) in CodeCThemeMap.entries(colors)) {
+            setColor(id, color)
+        }
+    }
+
+    companion object {
+
+        /** Fresh scheme per call — never assign one object to two editors. */
+        fun of(type: EditorThemeType): CodeCScheme =
+            CodeCScheme().apply { apply(getEditorTheme(type)) }
+    }
+}
+
+/**
+ * The pure slot→ARGB mapping, host-tested (see CodeCThemeMapTest).
  */
 object CodeCThemeMap {
 
@@ -59,19 +85,5 @@ object CodeCThemeMap {
             EditorColorScheme.BLOCK_LINE to mutedStrong,
             EditorColorScheme.SIDE_BLOCK_LINE to mutedStrong
         )
-    }
-}
-
-/**
- * One sora scheme per [EditorThemeType]. Fresh instance every construction —
- * never assign the same object to two editors.
- */
-class CodeCScheme(private val type: EditorThemeType) : EditorColorScheme() {
-
-    override fun applyDefault() {
-        super.applyDefault()
-        for ((id, color) in CodeCThemeMap.entries(getEditorTheme(type))) {
-            setColor(id, color)
-        }
     }
 }
