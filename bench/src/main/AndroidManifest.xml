@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 25.1 bench spike — throwaway measurement harness. Separate
+     applicationId (com.codeci.bench), installs alongside the IDE. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:label="CodeC Bench"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:theme="@style/Theme.Bench"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".BenchMainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark, chrome-less host for the editor candidates. Framework theme on
+         purpose: the bench pulls no appcompat dependency. -->
+    <style name="Theme.Bench" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#1E1F22</item>
+        <item name="android:statusBarColor">#1E1F22</item>
+        <item name="android:navigationBarColor">#1E1F22</item>
+    </style>
+</resources>

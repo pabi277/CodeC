@@ -29,11 +29,24 @@ jobs:
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
+      # Phase 25.1 — the bench spike is a SEPARATE APK (com.codeci.bench),
+      # built through the real wrapper and uploaded so the owner can install
+      # it from this run's artifacts and perform the device round. It is not
+      # part of the shipped IDE; remove this step when Phase 25 closes.
+      - name: Build bench spike APK (Phase 25.1, not shipped in the app)
+        run: ./gradlew :bench:assembleRelease :bench:testDebugUnitTest --no-daemon --stacktrace
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: CodeC-IDE
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload bench APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeC-Bench
+          path: bench/build/outputs/apk/release/*.apk
 
       - name: Attach APK to GitHub Release
         if: github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'userland-')

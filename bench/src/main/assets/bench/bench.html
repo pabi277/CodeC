@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<!-- bench.html — Phase 25.1 spike corpus (span-density worst case). -->
+<!-- Generated deterministically by bench/tools/generate_corpus.py. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bench 25.1 — span density worst case</title>
+  <style>
+    :root { --bg: #1e1f22; --fg: #e6e6e6; --accent: #ff79c6; --muted: #6272a4; }
+    body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg);
+           font: 15px/1.55 'Monospace', monospace; }
+    .card { border: 1px solid #44475a; border-radius: 8px; padding: 12px 16px;
+            margin: 8px 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); }
+    .card h2 { font-size: 18px; margin: 0 0 8px; color: var(--accent); }
+    .card p  { font-size: 14px; margin: 4px 0; color: #bd93f9; }
+    .tag    { display: inline-block; padding: 2px 8px; border-radius: 4px;
+              background: #44475a; color: #f1fa8c; font-size: 12px; }
+    .rule-001 { padding: 1px 1px; opacity: 0.1;
+            transform: translateY(1px) scale(1.1); z-index: 101; }
+    .rule-002 { padding: 2px 2px; opacity: 0.2;
+            transform: translateY(2px) scale(1.2); z-index: 102; }
+    .rule-003 { padding: 3px 3px; opacity: 0.3;
+            transform: translateY(3px) scale(1.3); z-index: 103; }
+    .rule-004 { padding: 4px 4px; opacity: 0.4;
+            transform: translateY(4px) scale(1.4); z-index: 104; }
+    .rule-005 { padding: 5px 5px; opacity: 0.5;
+            transform: translateY(5px) scale(1.0); z-index: 105; }
+    .rule-006 { padding: 6px 6px; opacity: 0.6;
+            transform: translateY(6px) scale(1.1); z-index: 106; }
+    .rule-007 { padding: 7px 7px; opacity: 0.7;
+            transform: translateY(0px) scale(1.2); z-index: 107; }
+    .rule-008 { padding: 8px 8px; opacity: 0.8;
+            transform: translateY(1px) scale(1.3); z-index: 108; }
+    .rule-009 { padding: 9px 9px; opacity: 0.9;
+            transform: translateY(2px) scale(1.4); z-index: 109; }
+    .rule-010 { padding: 10px 10px; opacity: 0.0;
+            transform: translateY(3px) scale(1.0); z-index: 110; }
+    .rule-011 { padding: 11px 11px; opacity: 0.1;
+            transform: translateY(4px) scale(1.1); z-index: 111; }
+    .rule-012 { padding: 12px 12px; opacity: 0.2;
+            transform: translateY(5px) scale(1.2); z-index: 112; }
+    .rule-013 { padding: 13px 13px; opacity: 0.3;
+            transform: translateY(6px) scale(1.3); z-index: 113; }
+    .rule-014 { padding: 14px 14px; opacity: 0.4;
+            transform: translateY(0px) scale(1.4); z-index: 114; }
+    .rule-015 { padding: 15px 15px; opacity: 0.5;
+            transform: translateY(1px) scale(1.0); z-index: 115; }
+    .rule-016 { padding: 0px 16px; opacity: 0.6;
+            transform: translateY(2px) scale(1.1); z-index: 116; }
+    .rule-017 { padding: 1px 17px; opacity: 0.7;
+            transform: translateY(3px) scale(1.2); z-index: 117; }
+    .rule-018 { padding: 2px 18px; opacity: 0.8;
+            transform: translateY(4px) scale(1.3); z-index: 118; }
+    .rule-019 { padding: 3px 19px; opacity: 0.9;
+            transform: translateY(5px) scale(1.4); z-index: 119; }
+    .rule-020 { padding: 4px 20px; opacity: 0.0;
+            transform: translateY(6px) scale(1.0); z-index: 120; }
+    .rule-021 { padding: 5px 21px; opacity: 0.1;
+            transform: translateY(0px) scale(1.1); z-index: 121; }
+    .rule-022 { padding: 6px 22px; opacity: 0.2;
+            transform: translateY(1px) scale(1.2); z-index: 122; }
+    .rule-023 { padding: 7px 23px; opacity: 0.3;
+            transform: translateY(2px) scale(1.3); z-index: 123; }
+    .rule-024 { padding: 8px 0px; opacity: 0.4;
+            transform: translateY(3px) scale(1.4); z-index: 124; }
+    .rule-025 { padding: 9px 1px; opacity: 0.5;
+            transform: translateY(4px) scale(1.0); z-index: 125; }
+    .rule-026 { padding: 10px 2px; opacity: 0.6;
+            transform: translateY(5px) scale(1.1); z-index: 126; }
+    .rule-027 { padding: 11px 3px; opacity: 0.7;
+            transform: translateY(6px) scale(1.2); z-index: 127; }
+    .rule-028 { padding: 12px 4px; opacity: 0.8;
+            transform: translateY(0px) scale(1.3); z-index: 128; }
+    .rule-029 { padding: 13px 5px; opacity: 0.9;
+            transform: translateY(1px) scale(1.4); z-index: 129; }
+    .rule-030 { padding: 14px 6px; opacity: 0.0;
+            transform: translateY(2px) scale(1.0); z-index: 130; }
+    .rule-031 { padding: 15px 7px; opacity: 0.1;
+            transform: translateY(3px) scale(1.1); z-index: 131; }
+    .rule-032 { padding: 0px 8px; opacity: 0.2;
+            transform: translateY(4px) scale(1.2); z-index: 132; }
+    .rule-033 { padding: 1px 9px; opacity: 0.3;
+            transform: translateY(5px) scale(1.3); z-index: 133; }
+    .rule-034 { padding: 2px 10px; opacity: 0.4;
+            transform: translateY(6px) scale(1.4); z-index: 134; }
+    .rule-035 { padding: 3px 11px; opacity: 0.5;
+            transform: translateY(0px) scale(1.0); z-index: 135; }
+    .rule-036 { padding: 4px 12px; opacity: 0.6;
+            transform: translateY(1px) scale(1.1); z-index: 136; }
+    .rule-037 { padding: 5px 13px; opacity: 0.7;
+            transform: translateY(2px) scale(1.2); z-index: 137; }
+    .rule-038 { padding: 6px 14px; opacity: 0.8;
+            transform: translateY(3px) scale(1.3); z-index: 138; }
+    .rule-039 { padding: 7px 15px; opacity: 0.9;
+            transform: translateY(4px) scale(1.4); z-index: 139; }
+    .rule-040 { padding: 8px 16px; opacity: 0.0;
+            transform: translateY(5px) scale(1.0); z-index: 140; }
+    .rule-041 { padding: 9px 17px; opacity: 0.1;
+            transform: translateY(6px) scale(1.1); z-index: 141; }
+    .rule-042 { padding: 10px 18px; opacity: 0.2;
+            transform: translateY(0px) scale(1.2); z-index: 142; }
+    .rule-043 { padding: 11px 19px; opacity: 0.3;
+            transform: translateY(1px) scale(1.3); z-index: 143; }
+    .rule-044 { padding: 12px 20px; opacity: 0.4;
+            transform: translateY(2px) scale(1.4); z-index: 144; }
+    .rule-045 { padding: 13px 21px; opacity: 0.5;
+            transform: translateY(3px) scale(1.0); z-index: 145; }
+    .rule-046 { padding: 14px 22px; opacity: 0.6;
+            transform: translateY(4px) scale(1.1); z-index: 146; }
+    .rule-047 { padding: 15px 23px; opacity: 0.7;
+            transform: translateY(5px) scale(1.2); z-index: 147; }
+    .rule-048 { padding: 0px 0px; opacity: 0.8;
+            transform: translateY(6px) scale(1.3); z-index: 148; }
+    .rule-049 { padding: 1px 1px; opacity: 0.9;
+            transform: translateY(0px) scale(1.4); z-index: 149; }
+    .rule-050 { padding: 2px 2px; opacity: 0.0;
+            transform: translateY(1px) scale(1.0); z-index: 150; }
+    .rule-051 { padding: 3px 3px; opacity: 0.1;
+            transform: translateY(2px) scale(1.1); z-index: 151; }
+    .rule-052 { padding: 4px 4px; opacity: 0.2;
+            transform: translateY(3px) scale(1.2); z-index: 152; }
+    .rule-053 { padding: 5px 5px; opacity: 0.3;
+            transform: translateY(4px) scale(1.3); z-index: 153; }
+    .rule-054 { padding: 6px 6px; opacity: 0.4;
+            transform: translateY(5px) scale(1.4); z-index: 154; }
+    .rule-055 { padding: 7px 7px; opacity: 0.5;
+            transform: translateY(6px) scale(1.0); z-index: 155; }
+    .rule-056 { padding: 8px 8px; opacity: 0.6;
+            transform: translateY(0px) scale(1.1); z-index: 156; }
+    .rule-057 { padding: 9px 9px; opacity: 0.7;
+            transform: translateY(1px) scale(1.2); z-index: 157; }
+    .rule-058 { padding: 10px 10px; opacity: 0.8;
+            transform: translateY(2px) scale(1.3); z-index: 158; }
+    .rule-059 { padding: 11px 11px; opacity: 0.9;
+            transform: translateY(3px) scale(1.4); z-index: 159; }
+  </style>
+</head>
+<body>
+  <header class="card" id="top">
+    <h2>Phase 25.1 — <span class="tag">BENCH</span> HTML corpus</h2>
+    <p>Every tag name, attribute string and numeric literal below is a
+       separate token for CodeC’s HTML_CSS tokenizer — this file is the
+       worst case from Phase 22 (CMP-4023: layout cost scales with span count).</p>
+  </header>
+  <section class="card rule-001" data-index="1" aria-label="section 1">
+    <h2>Section 0001 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>3.14159</code> at scale 1.1; status <strong>OK</strong>, retry <em>1</em>.</p>
+    <div class="row" style="--i: 1; padding-left: 1px">
+      <span class="tag">id-00001</span>
+      <a href="/details/0001?view=full&amp;sort=asc">Details 0001</a>
+      <img src="/img/plot-001.png" alt="plot 1" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-002" data-index="2" aria-label="section 2">
+    <h2>Section 0002 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>6.28318</code> at scale 1.2; status <strong>OK</strong>, retry <em>2</em>.</p>
+    <div class="row" style="--i: 2; padding-left: 2px">
+      <span class="tag">id-00002</span>
+      <a href="/details/0002?view=full&amp;sort=asc">Details 0002</a>
+      <img src="/img/plot-002.png" alt="plot 2" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-003" data-index="3" aria-label="section 3">
+    <h2>Section 0003 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>9.42477</code> at scale 1.3; status <strong>OK</strong>, retry <em>3</em>.</p>
+    <div class="row" style="--i: 3; padding-left: 3px">
+      <span class="tag">id-00003</span>
+      <a href="/details/0003?view=full&amp;sort=asc">Details 0003</a>
+      <img src="/img/plot-003.png" alt="plot 3" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-004" data-index="4" aria-label="section 4">
+    <h2>Section 0004 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>12.56636</code> at scale 1.4; status <strong>OK</strong>, retry <em>4</em>.</p>
+    <div class="row" style="--i: 4; padding-left: 4px">
+      <span class="tag">id-00004</span>
+      <a href="/details/0004?view=full&amp;sort=asc">Details 0004</a>
+      <img src="/img/plot-004.png" alt="plot 4" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-005" data-index="5" aria-label="section 5">
+    <h2>Section 0005 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>15.70795</code> at scale 1.5; status <strong>OK</strong>, retry <em>5</em>.</p>
+    <div class="row" style="--i: 5; padding-left: 5px">
+      <span class="tag">id-00005</span>
+      <a href="/details/0005?view=full&amp;sort=asc">Details 0005</a>
+      <img src="/img/plot-005.png" alt="plot 5" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-006" data-index="6" aria-label="section 6">
+    <h2>Section 0006 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>18.84954</code> at scale 1.6; status <strong>OK</strong>, retry <em>6</em>.</p>
+    <div class="row" style="--i: 6; padding-left: 6px">
+      <span class="tag">id-00006</span>
+      <a href="/details/0006?view=full&amp;sort=asc">Details 0006</a>
+      <img src="/img/plot-006.png" alt="plot 6" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-007" data-index="7" aria-label="section 7">
+    <h2>Section 0007 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>21.99113</code> at scale 1.7; status <strong>OK</strong>, retry <em>0</em>.</p>
+    <div class="row" style="--i: 7; padding-left: 7px">
+      <span class="tag">id-00007</span>
+      <a href="/details/0007?view=full&amp;sort=asc">Details 0007</a>
+      <img src="/img/plot-007.png" alt="plot 7" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-008" data-index="8" aria-label="section 8">
+    <h2>Section 0008 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>25.13272</code> at scale 1.8; status <strong>OK</strong>, retry <em>1</em>.</p>
+    <div class="row" style="--i: 8; padding-left: 8px">
+      <span class="tag">id-00008</span>
+      <a href="/details/0008?view=full&amp;sort=asc">Details 0008</a>
+      <img src="/img/plot-008.png" alt="plot 8" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <script>console.log("section 8: bench", 8 * 1.25, "ok");</script>
+  <section class="card rule-009" data-index="9" aria-label="section 9">
+    <h2>Section 0009 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>28.27431</code> at scale 1.0; status <strong>OK</strong>, retry <em>2</em>.</p>
+    <div class="row" style="--i: 9; padding-left: 9px">
+      <span class="tag">id-00009</span>
+      <a href="/details/0009?view=full&amp;sort=asc">Details 0009</a>
+      <img src="/img/plot-009.png" alt="plot 9" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-010" data-index="10" aria-label="section 10">
+    <h2>Section 0010 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>31.41590</code> at scale 1.1; status <strong>OK</strong>, retry <em>3</em>.</p>
+    <div class="row" style="--i: 10; padding-left: 10px">
+      <span class="tag">id-00010</span>
+      <a href="/details/0010?view=full&amp;sort=asc">Details 0010</a>
+      <img src="/img/plot-010.png" alt="plot 10" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-011" data-index="11" aria-label="section 11">
+    <h2>Section 0011 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>34.55749</code> at scale 1.2; status <strong>OK</strong>, retry <em>4</em>.</p>
+    <div class="row" style="--i: 11; padding-left: 11px">
+      <span class="tag">id-00011</span>
+      <a href="/details/0011?view=full&amp;sort=asc">Details 0011</a>
+      <img src="/img/plot-011.png" alt="plot 11" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-012" data-index="12" aria-label="section 12">
+    <h2>Section 0012 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>37.69908</code> at scale 1.3; status <strong>OK</strong>, retry <em>5</em>.</p>
+    <div class="row" style="--i: 12; padding-left: 12px">
+      <span class="tag">id-00012</span>
+      <a href="/details/0012?view=full&amp;sort=asc">Details 0012</a>
+      <img src="/img/plot-012.png" alt="plot 12" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-013" data-index="13" aria-label="section 13">
+    <h2>Section 0013 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>40.84067</code> at scale 1.4; status <strong>OK</strong>, retry <em>6</em>.</p>
+    <div class="row" style="--i: 13; padding-left: 13px">
+      <span class="tag">id-00013</span>
+      <a href="/details/0013?view=full&amp;sort=asc">Details 0013</a>
+      <img src="/img/plot-013.png" alt="plot 13" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-014" data-index="14" aria-label="section 14">
+    <h2>Section 0014 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>43.98226</code> at scale 1.5; status <strong>OK</strong>, retry <em>0</em>.</p>
+    <div class="row" style="--i: 14; padding-left: 14px">
+      <span class="tag">id-00014</span>
+      <a href="/details/0014?view=full&amp;sort=asc">Details 0014</a>
+      <img src="/img/plot-014.png" alt="plot 14" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-015" data-index="15" aria-label="section 15">
+    <h2>Section 0015 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>47.12385</code> at scale 1.6; status <strong>OK</strong>, retry <em>1</em>.</p>
+    <div class="row" style="--i: 15; padding-left: 15px">
+      <span class="tag">id-00015</span>
+      <a href="/details/0015?view=full&amp;sort=asc">Details 0015</a>
+      <img src="/img/plot-015.png" alt="plot 15" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-016" data-index="16" aria-label="section 16">
+    <h2>Section 0016 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>50.26544</code> at scale 1.7; status <strong>OK</strong>, retry <em>2</em>.</p>
+    <div class="row" style="--i: 16; padding-left: 16px">
+      <span class="tag">id-00016</span>
+      <a href="/details/0016?view=full&amp;sort=asc">Details 0016</a>
+      <img src="/img/plot-016.png" alt="plot 16" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <script>console.log("section 16: bench", 16 * 1.25, "ok");</script>
+  <section class="card rule-017" data-index="17" aria-label="section 17">
+    <h2>Section 0017 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>53.40703</code> at scale 1.8; status <strong>OK</strong>, retry <em>3</em>.</p>
+    <div class="row" style="--i: 17; padding-left: 17px">
+      <span class="tag">id-00017</span>
+      <a href="/details/0017?view=full&amp;sort=asc">Details 0017</a>
+      <img src="/img/plot-017.png" alt="plot 17" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-018" data-index="18" aria-label="section 18">
+    <h2>Section 0018 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>56.54862</code> at scale 1.0; status <strong>OK</strong>, retry <em>4</em>.</p>
+    <div class="row" style="--i: 18; padding-left: 18px">
+      <span class="tag">id-00018</span>
+      <a href="/details/0018?view=full&amp;sort=asc">Details 0018</a>
+      <img src="/img/plot-018.png" alt="plot 18" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-019" data-index="19" aria-label="section 19">
+    <h2>Section 0019 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>59.69021</code> at scale 1.1; status <strong>OK</strong>, retry <em>5</em>.</p>
+    <div class="row" style="--i: 19; padding-left: 19px">
+      <span class="tag">id-00019</span>
+      <a href="/details/0019?view=full&amp;sort=asc">Details 0019</a>
+      <img src="/img/plot-019.png" alt="plot 19" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-020" data-index="20" aria-label="section 20">
+    <h2>Section 0020 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>62.83180</code> at scale 1.2; status <strong>OK</strong>, retry <em>6</em>.</p>
+    <div class="row" style="--i: 20; padding-left: 20px">
+      <span class="tag">id-00020</span>
+      <a href="/details/0020?view=full&amp;sort=asc">Details 0020</a>
+      <img src="/img/plot-020.png" alt="plot 20" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-021" data-index="21" aria-label="section 21">
+    <h2>Section 0021 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>65.97339</code> at scale 1.3; status <strong>OK</strong>, retry <em>0</em>.</p>
+    <div class="row" style="--i: 21; padding-left: 21px">
+      <span class="tag">id-00021</span>
+      <a href="/details/0021?view=full&amp;sort=asc">Details 0021</a>
+      <img src="/img/plot-021.png" alt="plot 21" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-022" data-index="22" aria-label="section 22">
+    <h2>Section 0022 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>69.11498</code> at scale 1.4; status <strong>OK</strong>, retry <em>1</em>.</p>
+    <div class="row" style="--i: 22; padding-left: 22px">
+      <span class="tag">id-00022</span>
+      <a href="/details/0022?view=full&amp;sort=asc">Details 0022</a>
+      <img src="/img/plot-022.png" alt="plot 22" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-023" data-index="23" aria-label="section 23">
+    <h2>Section 0023 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>72.25657</code> at scale 1.5; status <strong>OK</strong>, retry <em>2</em>.</p>
+    <div class="row" style="--i: 23; padding-left: 23px">
+      <span class="tag">id-00023</span>
+      <a href="/details/0023?view=full&amp;sort=asc">Details 0023</a>
+      <img src="/img/plot-023.png" alt="plot 23" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-024" data-index="24" aria-label="section 24">
+    <h2>Section 0024 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>75.39816</code> at scale 1.6; status <strong>OK</strong>, retry <em>3</em>.</p>
+    <div class="row" style="--i: 24; padding-left: 24px">
+      <span class="tag">id-00024</span>
+      <a href="/details/0024?view=full&amp;sort=asc">Details 0024</a>
+      <img src="/img/plot-024.png" alt="plot 24" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <script>console.log("section 24: bench", 24 * 1.25, "ok");</script>
+  <section class="card rule-025" data-index="25" aria-label="section 25">
+    <h2>Section 0025 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>78.53975</code> at scale 1.7; status <strong>OK</strong>, retry <em>4</em>.</p>
+    <div class="row" style="--i: 25; padding-left: 25px">
+      <span class="tag">id-00025</span>
+      <a href="/details/0025?view=full&amp;sort=asc">Details 0025</a>
+      <img src="/img/plot-025.png" alt="plot 25" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-026" data-index="26" aria-label="section 26">
+    <h2>Section 0026 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>81.68134</code> at scale 1.8; status <strong>OK</strong>, retry <em>5</em>.</p>
+    <div class="row" style="--i: 26; padding-left: 26px">
+      <span class="tag">id-00026</span>
+      <a href="/details/0026?view=full&amp;sort=asc">Details 0026</a>
+      <img src="/img/plot-026.png" alt="plot 26" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-027" data-index="27" aria-label="section 27">
+    <h2>Section 0027 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>84.82293</code> at scale 1.0; status <strong>OK</strong>, retry <em>6</em>.</p>
+    <div class="row" style="--i: 27; padding-left: 27px">
+      <span class="tag">id-00027</span>
+      <a href="/details/0027?view=full&amp;sort=asc">Details 0027</a>
+      <img src="/img/plot-027.png" alt="plot 27" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-028" data-index="28" aria-label="section 28">
+    <h2>Section 0028 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>87.96452</code> at scale 1.1; status <strong>OK</strong>, retry <em>0</em>.</p>
+    <div class="row" style="--i: 28; padding-left: 28px">
+      <span class="tag">id-00028</span>
+      <a href="/details/0028?view=full&amp;sort=asc">Details 0028</a>
+      <img src="/img/plot-028.png" alt="plot 28" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-029" data-index="29" aria-label="section 29">
+    <h2>Section 0029 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>91.10611</code> at scale 1.2; status <strong>OK</strong>, retry <em>1</em>.</p>
+    <div class="row" style="--i: 29; padding-left: 29px">
+      <span class="tag">id-00029</span>
+      <a href="/details/0029?view=full&amp;sort=asc">Details 0029</a>
+      <img src="/img/plot-029.png" alt="plot 29" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-030" data-index="30" aria-label="section 30">
+    <h2>Section 0030 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>94.24770</code> at scale 1.3; status <strong>OK</strong>, retry <em>2</em>.</p>
+    <div class="row" style="--i: 30; padding-left: 30px">
+      <span class="tag">id-00030</span>
+      <a href="/details/0030?view=full&amp;sort=asc">Details 0030</a>
+      <img src="/img/plot-030.png" alt="plot 30" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-031" data-index="31" aria-label="section 31">
+    <h2>Section 0031 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>97.38929</code> at scale 1.4; status <strong>OK</strong>, retry <em>3</em>.</p>
+    <div class="row" style="--i: 31; padding-left: 31px">
+      <span class="tag">id-00031</span>
+      <a href="/details/0031?view=full&amp;sort=asc">Details 0031</a>
+      <img src="/img/plot-031.png" alt="plot 31" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-032" data-index="32" aria-label="section 32">
+    <h2>Section 0032 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>100.53088</code> at scale 1.5; status <strong>OK</strong>, retry <em>4</em>.</p>
+    <div class="row" style="--i: 32; padding-left: 0px">
+      <span class="tag">id-00032</span>
+      <a href="/details/0032?view=full&amp;sort=asc">Details 0032</a>
+      <img src="/img/plot-032.png" alt="plot 32" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <script>console.log("section 32: bench", 32 * 1.25, "ok");</script>
+  <section class="card rule-033" data-index="33" aria-label="section 33">
+    <h2>Section 0033 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>103.67247</code> at scale 1.6; status <strong>OK</strong>, retry <em>5</em>.</p>
+    <div class="row" style="--i: 33; padding-left: 1px">
+      <span class="tag">id-00033</span>
+      <a href="/details/0033?view=full&amp;sort=asc">Details 0033</a>
+      <img src="/img/plot-033.png" alt="plot 33" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-034" data-index="34" aria-label="section 34">
+    <h2>Section 0034 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>106.81406</code> at scale 1.7; status <strong>OK</strong>, retry <em>6</em>.</p>
+    <div class="row" style="--i: 34; padding-left: 2px">
+      <span class="tag">id-00034</span>
+      <a href="/details/0034?view=full&amp;sort=asc">Details 0034</a>
+      <img src="/img/plot-034.png" alt="plot 34" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-035" data-index="35" aria-label="section 35">
+    <h2>Section 0035 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>109.95565</code> at scale 1.8; status <strong>OK</strong>, retry <em>0</em>.</p>
+    <div class="row" style="--i: 35; padding-left: 3px">
+      <span class="tag">id-00035</span>
+      <a href="/details/0035?view=full&amp;sort=asc">Details 0035</a>
+      <img src="/img/plot-035.png" alt="plot 35" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-036" data-index="36" aria-label="section 36">
+    <h2>Section 0036 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>113.09724</code> at scale 1.0; status <strong>OK</strong>, retry <em>1</em>.</p>
+    <div class="row" style="--i: 36; padding-left: 4px">
+      <span class="tag">id-00036</span>
+      <a href="/details/0036?view=full&amp;sort=asc">Details 0036</a>
+      <img src="/img/plot-036.png" alt="plot 36" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-037" data-index="37" aria-label="section 37">
+    <h2>Section 0037 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>116.23883</code> at scale 1.1; status <strong>OK</strong>, retry <em>2</em>.</p>
+    <div class="row" style="--i: 37; padding-left: 5px">
+      <span class="tag">id-00037</span>
+      <a href="/details/0037?view=full&amp;sort=asc">Details 0037</a>
+      <img src="/img/plot-037.png" alt="plot 37" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-038" data-index="38" aria-label="section 38">
+    <h2>Section 0038 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>119.38042</code> at scale 1.2; status <strong>OK</strong>, retry <em>3</em>.</p>
+    <div class="row" style="--i: 38; padding-left: 6px">
+      <span class="tag">id-00038</span>
+      <a href="/details/0038?view=full&amp;sort=asc">Details 0038</a>
+      <img src="/img/plot-038.png" alt="plot 38" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <section class="card rule-039" data-index="39" aria-label="section 39">
+    <h2>Section 0039 &mdash; <span class="tag">alpha</span> <span class="tag">beta</span></h2>
+    <p class="note">Value <code>122.52201</code> at scale 1.3; status <strong>OK</strong>, retry <em>4</em>.</p>
+    <div class="row" style="--i: 39; padding-left: 7px">
+      <span class="tag">id-00039</span>
+      <a href="/details/0039?view=full&amp;sort=asc">Details 0039</a>
+      <img src="/img/plot-039.png" alt="plot 39" width="240" height="135" loading="lazy">
+    </div>
+  </section>
+  <!-- bench pad 001: filler <span class="tag">pad-001</span> value 0.0px -->
+  <!-- bench pad 002: filler <span class="tag">pad-002</span> value 0.1px -->
+  <!-- bench pad 003: filler <span class="tag">pad-003</span> value 0.2px -->
+  <footer class="card" id="about">
+    <p class="tag">generated corpus &mdash; do not edit by hand</p>
+  </footer>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var cards = document.querySelectorAll(".card");
+      for (var i = 0; i < cards.length; i++) {
+        cards[i].dataset.bench = String(i * 1.5);
+      }
+      console.log("bench.html ready:", cards.length, "cards");
+    });
+  </script>
+</body>
+</html>
