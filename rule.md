@@ -209,7 +209,7 @@ Every update updates the docs **in the same commit**:
   "Start Phase 25.2")** on `arena/01a06b20-codec` — widget-only swap,
   VM canonical, sora as a BINARY Gradle dep (LGPL-2.1 checklist in
   `PART_25_2_SORA_PATH.md` §4: owner's explicit acceptance + APK-delta
-  re-measure still gate the merge). **CI green `33866749797` (tip `c54228d`; artifact delta +0.55 MiB); device rounds 1–4 done — round 4 (2026-09-04): owner "All passed" → 25.2 DEVICE-ACCEPTED (record: PART_25_2 §4.1–§4.5, incl. the §4.3 constructor-order crash root-caused from the owner's in-app crash report).** Merge gates open: owner's explicit LGPL-2.1 acceptance in chat + owner's merge command.
+  re-measure still gate the merge). **CI green `33866749797` (tip `c54228d`; artifact delta +0.55 MiB); device rounds 1–4 done — round 4 (2026-09-04): owner "All passed" → 25.2 DEVICE-ACCEPTED (record: PART_25_2 §4.1–§4.5, incl. the §4.3 constructor-order crash root-caused from the owner's in-app crash report).** Merge gates SATISFIED 2026-09-04: owner LGPL-2.1 "Yes" + "Merge" command → PR #49 (squash). **Phase 25 CLOSED** (bench CI wrapper removed; `bench/` module stays in-tree).
   Phases 26–28 remain PLANNED (spec'd in `docs/chat-phase26..28/`) — the
   agent does **not** start them until the owner says so.
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs

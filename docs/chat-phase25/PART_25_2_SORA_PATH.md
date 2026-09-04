@@ -188,12 +188,14 @@ no JVM/device). Files:
       `assets/licenses/SORA_EDITOR_LGPL.txt`.
 - [x] Copyright/licence headers unchanged (our files are original code;
       sora is linked, not modified).
-- [ ] **Owner's explicit acceptance of LGPL-2.1 in chat — REQUIRED before
-      any merge** (rule.md §3; this gate is not yet satisfied).
-- [x] APK delta provisional: `CodeC-IDE` artifact 21 854 392 B (20.84 MiB,
-      CI `33857318159`) vs 25.1's 20.3 MiB → **+0.55 MiB artifact delta**
-      (sora compresses well; Phase 22.1 code removal offsets). Final APK
-      re-measure at merge time — budget ≤ +2 MB comfortably met so far.
+- [x] **Owner's explicit acceptance of LGPL-2.1 in chat — RECEIVED
+      2026-09-04: owner replied "Yes"** to the two-item gate (LGPL
+      acceptance + merge). Binary-dependency-only discipline held throughout
+      (upstream source read for interfaces in `/tmp/sora-ref`, nothing
+      pasted).
+- [x] APK delta FINAL: `CodeC-IDE` artifact **21 861 382 B (20.85 MiB**,
+      CI `33866749797`, build `c54228d`) vs 25.1's 20.3 MiB → **+0.55 MiB**
+      (budget ≤ +2 MB — met with room).
 
 ### 4.1 Device round 1 — CRASH on editor tap (owner report 2026-09-04)
 
@@ -347,12 +349,13 @@ completions in sora's native at-caret panel with keyboard navigation.
 | 5. Autosave ~2 s, file intact after close/reopen, undo across tab switch | ✅ |
 | 6. Settings → About lists sora-editor + LGPL text | ✅ |
 
-**PHASE 25.2 = COMPLETE (device-accepted).** Merge gates intentionally still
-open per rule.md §3: (1) the owner's explicit **LGPL-2.1 acceptance** in
-chat, (2) the owner's explicit **merge command**. APK delta measured at
-**+0.55 MiB** (CodeC-IDE artifact 21 855 224 B vs 25.1's 20.3 MiB — budget
-≤ +2 MB met with room; final APK re-measure at merge if desired). Follow-up
-candidates (NOT started): incremental analyzer, TextMate/tree-sitter richer
+**PHASE 25.2 = COMPLETE (device-accepted) & MERGED.** All rule.md §3 gates
+satisfied 2026-09-04: owner device round "All passed" (round 4, `c54228d`);
+**LGPL-2.1 accepted (owner: "Yes")**; APK delta **+0.55 MiB** final; **merge
+commanded by the owner ("Merge")** → **PR #49** (squash, per linear-`main`
+convention; includes the 25.1 bench CI wrapper removal — Phase 25 closes,
+`bench/` stays in-tree for future re-benchmarks). Follow-up candidates (NOT
+started, need owner go): incremental analyzer, TextMate/tree-sitter richer
 grammars (needs `language-textmate` dependency + assets), diagnostics
 tap-popup reimplementation on sora, cursor-rect completion anchor via the
 Phase 27 shared pipe.

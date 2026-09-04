@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-04, Phase 25.2 ✅ IMPLEMENTED & DEVICE-ACCEPTED — awaiting the owner's LGPL-2.1 acceptance + merge command):**
+**WHERE THINGS STAND (2026-09-04, Phase 25 ✅ CLOSED — 25.2 device-accepted, LGPL-2.1 accepted ("Yes"), owner commanded "Merge" → PR #49 squash-merged):**
 
 - **Phase 24 is ✅ MERGED to `main` via PR #47** (2026-09-04; device round 1:
   E.1/E.2/E.4/E.6/E.7/E.8/E.9 passed; E.3 hardware shortcuts NOT
@@ -58,8 +58,10 @@ gate, invariants, docs policy) — follow it.
   assigns subclass state → NPE; fixed post-construction via
   `CodeCScheme.of()`. Drawer edge-swipe disabled over the editor (scroll
   conflict). Record: `docs/chat-phase25/PART_25_2_SORA_PATH.md` §4.
-  **Merge gates open: owner's explicit LGPL-2.1 acceptance in chat + the
-  owner's merge command.** APK delta +0.55 MiB (budget ≤ +2 MB).
+  **All gates satisfied: owner "Yes" (LGPL-2.1) + "Merge" → PR #49
+  (squash).** APK delta +0.55 MiB (budget ≤ +2 MB). The 25.1 bench CI
+  wrapper + `CodeC-Bench` artifact are removed with the merge (Phase 25
+  closed); `bench/` stays in-tree for future re-benchmarks.
 - **Phases 26–28 are PLANNED and fully spec'd** (`docs/chat-phase26..28/`) —
   do not start them until the owner says so.
 
