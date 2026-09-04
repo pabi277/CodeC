@@ -155,6 +155,8 @@ fun SoraEditorHost(
                 // indices for text the VM has never seen — a TextFieldValue
                 // whose selection exceeds its text is poison downstream.
                 val base = syncedText
+                val left = event.left
+                val right = event.right
                 val startIdx = left.index.coerceIn(0, base.length)
                 val endIdx = right.index.coerceIn(0, base.length)
                 syncedSelection = TextRange(startIdx, endIdx)
