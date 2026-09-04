@@ -8,10 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
@@ -106,9 +101,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -135,11 +128,12 @@ import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorShellUi
 import com.codeci.ide.ui.editor.FileTreeCollapse
-import com.codeci.ide.ui.editor.FontSizeZoom
 import com.codeci.ide.ui.editor.KeysContext
 import com.codeci.ide.ui.editor.KeysForContext
 import com.codeci.ide.ui.editor.RunKey
 import com.codeci.ide.ui.editor.keysForContext
+import com.codeci.ide.ui.editor.sora.SoraEditorHost
+import io.github.rosemoe.sora.widget.CodeEditor
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -149,11 +143,8 @@ import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.terminal.TerminalHandoff
-import com.codeci.ide.ui.utils.EditorDecorations
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.LanguageType
-import com.codeci.ide.ui.utils.HighlightedCode
-import com.codeci.ide.ui.utils.SyntaxVisualTransformation
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.viewmodels.EditorViewModel
@@ -176,7 +167,6 @@ private val RunGreen = Color(0xFF3DDC84)
 private const val COMPLETION_DEBOUNCE_MS = 120L
 
 /** Tap-anchor for the inline diagnostic tooltip. */
-internal data class EditorPopupAnchor(val x: Float, val y: Float, val diagnostic: EditorDiagnostic)
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -201,6 +191,12 @@ fun EditorScreen(
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    // Phase 25.2 — the edit core is sora-editor's CodeEditor, chosen by the
+    // 25.1 device bench (keystroke p95 14.5 ms vs the old stack's 404 ms on a
+    // 5 000-line file). Declared early: both the find-searcher effect below
+    // and the SoraEditorHost call need it. The ViewModel remains the source
+    // of truth; SoraEditorHost bridges both ways.
+    val soraEditor = remember { CodeEditor(context) }
     val themeManager = remember { ThemeManager(context) }
     val settingsManager = remember { SettingsManager(context) }
     val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.DRACULA)
@@ -244,8 +240,6 @@ fun EditorScreen(
     val canRedo by viewModel.canRedo.collectAsState()
     val findState by viewModel.find.collectAsState()
     val diagnostics by viewModel.diagnostics.collectAsState()
-    val currentLineRange by viewModel.currentLineRange.collectAsState()
-    val bracketRanges by viewModel.bracketRanges.collectAsState()
     val cursorPos by viewModel.cursorPos.collectAsState()
     val isFormatting by viewModel.formatting.collectAsState()
     val openTabs by viewModel.openTabs.collectAsState()
@@ -269,7 +263,6 @@ fun EditorScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val uiScope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
-    val fontSizeState = rememberUpdatedState(fontSize)
 
     val visibleEntries = remember(fileEntries, collapsedDirs) {
         FileTreeCollapse.visible(fileEntries, collapsedDirs)
@@ -300,8 +293,6 @@ fun EditorScreen(
     var keysRowVisible by remember { mutableStateOf(true) }
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
-    var popup by remember { mutableStateOf<EditorPopupAnchor?>(null) }
-    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Phase 12 — language-aware editing: the active file's extension selects
@@ -428,45 +419,30 @@ fun EditorScreen(
         onDispose { viewModel.flushAutoSave() }
     }
 
-    // A stale popup points at a moved line; drop it whenever the buffer text changes.
-    LaunchedEffect(codeText.text) { popup = null }
-
-    val decorations = remember(
-        currentLineRange, bracketRanges, diagnostics,
-        findState.matches, findState.activeIndex
-    ) {
-        EditorDecorations(
-            currentLineRange = currentLineRange,
-            findMatches = findState.matches,
-            activeFindMatch = findState.matches.getOrNull(findState.activeIndex),
-            bracketRanges = bracketRanges,
-            diagnostics = diagnostics
-        )
-    }
-    // Phase 22.1 — the O(n) tokenizer runs debounced on Dispatchers.Default in
-    // the VM; the transformation reuses that snapshot and only layers the
-    // cheap decoration spans (current line, brackets, find, diagnostics) on
-    // the main thread. A stale snapshot just means one inline highlight pass,
-    // never wrong colors.
-    val highlighted by viewModel.highlighted.collectAsState()
-    LaunchedEffect(currentEditorTheme, language) {
-        viewModel.setHighlightContext(currentEditorTheme, language)
-    }
-    // Phase 22.7 — the caret only feeds the INLINE FALLBACK's window, and it
-    // is bucketed the same way the VM buckets it, so ordinary typing does not
-    // rebuild the transformation (which would throw away its memo every
-    // keystroke).
-    val caretBucket = codeText.selection.min.coerceAtLeast(0) / (HighlightedCode.WINDOW / 4)
-    val transformation = remember(
-        currentEditorTheme, decorations, language, highlighted, caretBucket
-    ) {
-        SyntaxVisualTransformation(
-            currentEditorTheme,
-            decorations,
-            language,
-            highlighted,
-            caretBucket * (HighlightedCode.WINDOW / 4)
-        )
+    // Phase 25.2 — the find bar's match highlighting rides sora's own
+    // searcher (matches are drawn by the editor surface itself); navigation
+    // stays on the VM (findNext/findPrev set the selection, which the bridge
+    // mirrors into sora's caret).
+    LaunchedEffect(findState.visible, findState.query) {
+        val searcher = soraEditor.searcher
+        if (findState.visible && findState.query.isNotEmpty()) {
+            runCatching {
+                val type = when {
+                    findState.options.regex -> io.github.rosemoe.sora.widget.EditorSearcher.SearchOptions.TYPE_REGULAR_EXPRESSION
+                    findState.options.wholeWord -> io.github.rosemoe.sora.widget.EditorSearcher.SearchOptions.TYPE_WHOLE_WORD
+                    else -> io.github.rosemoe.sora.widget.EditorSearcher.SearchOptions.TYPE_NORMAL
+                }
+                searcher.search(
+                    findState.query,
+                    io.github.rosemoe.sora.widget.EditorSearcher.SearchOptions(
+                        type,
+                        !findState.options.matchCase
+                    )
+                )
+            }
+        } else {
+            runCatching { searcher.stopSearch() }
+        }
     }
 
     // Phase 22.1 — narrowed keys: the tab strip only depends on the tab list,
@@ -485,7 +461,6 @@ fun EditorScreen(
         }
     }
 
-    val latestDiagnostics by rememberUpdatedState(diagnostics)
 
     // Phase 14 — when RUN ▶ detects a server's bind line, open the Web Preview
     // on that URL. rememberUpdatedState keeps the callback fresh without
@@ -1202,52 +1177,11 @@ fun EditorScreen(
 
             HorizontalDivider()
 
-            val scrollState = rememberScrollState()
-            val hScrollState = rememberScrollState()
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .background(editorColors.background)
-                    .pointerInput(Unit) {
-                        // Phase 16 — pinch to zoom the editor font (Spck §2.3,
-                        // the terminal's reactive pinch rebuilt on Compose
-                        // pointer input). Two-finger only: taps keep placing
-                        // the caret and the scroll views keep single-finger
-                        // drags; once the pinch is real both pointers consume.
-                        awaitEachGesture {
-                            val first = awaitFirstDown(requireUnconsumed = false)
-                            var secondId: PointerId? = null
-                            while (true) {
-                                val e = awaitPointerEvent()
-                                val other = e.changes.firstOrNull { it.id != first.id && it.pressed }
-                                if (other != null) {
-                                    secondId = other.id
-                                    break
-                                }
-                                val cur = e.changes.firstOrNull { it.id == first.id }
-                                if (cur == null || !cur.pressed || cur.isConsumed) return@awaitEachGesture
-                            }
-                            val id2 = secondId ?: return@awaitEachGesture
-                            var prevSpan = 0f
-                            while (true) {
-                                val e = awaitPointerEvent()
-                                val a = e.changes.firstOrNull { it.id == first.id } ?: break
-                                val b = e.changes.firstOrNull { it.id == id2 } ?: break
-                                if (!a.pressed || !b.pressed || a.isConsumed || b.isConsumed) break
-                                val span = (a.position - b.position).getDistance()
-                                if (prevSpan > 0f && span > 0f) {
-                                    val next = FontSizeZoom.applyZoom(fontSizeState.value, span / prevSpan)
-                                    if (next != fontSizeState.value) {
-                                        uiScope.launch { settingsManager.setFontSize(next) }
-                                    }
-                                }
-                                prevSpan = span
-                                a.consume()
-                                b.consume()
-                            }
-                        }
-                    }
                     .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
                         // Phase 12 — autocomplete keys while the popup is up:
                         // TAB/ENTER insert the highlighted suggestion, arrows
@@ -1276,6 +1210,18 @@ fun EditorScreen(
                         } else if (event.type == KeyEventType.KeyDown) {
                             // Phase 24.3 — hardware-keyboard shortcuts.
                             when {
+                                // Phase 25.2 — undo/redo stays on the VM's per-tab
+                                // EditorUndoManager (sora's own stack is disabled in
+                                // the bridge, so Ctrl+Z must NOT reach it).
+                                event.isCtrlPressed && !event.isShiftPressed && event.key == Key.Z -> {
+                                    viewModel.undo(); true
+                                }
+                                event.isCtrlPressed && event.isShiftPressed && event.key == Key.Z -> {
+                                    viewModel.redo(); true
+                                }
+                                event.isCtrlPressed && event.key == Key.Y -> {
+                                    viewModel.redo(); true
+                                }
                                 event.isCtrlPressed && event.key == Key.R -> {
                                     viewModel.runActiveFile(context); true
                                 }
@@ -1307,172 +1253,40 @@ fun EditorScreen(
                         }
                     }
             ) {
-                Row(
+                // Phase 25.2 — the edit surface: sora-editor. Line numbers,
+                // word wrap, current-line highlight, bracket-pair drawing,
+                // pinch text-scale and the caret magnifier are sora-native;
+                // the VM bridge keeps every VM-driven feature (keys strip,
+                // completions, find, undo, autosave) working unchanged.
+                SoraEditorHost(
+                    editor = soraEditor,
+                    viewModel = viewModel,
+                    language = language,
+                    theme = currentEditorTheme,
+                    fontSizeSp = fontSize,
+                    fontFamily = editorFont,
+                    tabSize = tabSize,
+                    wordWrap = wordWrap,
+                    showLineNumbers = showLineNumbers,
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(scrollState)
-                        .then(if (!wordWrap) Modifier.horizontalScroll(hScrollState) else Modifier)
-                        .padding(vertical = 8.dp)
-                ) {
-                    if (showLineNumbers) {
-                        // Phase 22.1 / 22.4 — the gutter is driven by a
-                        // derived line COUNT. `derivedStateOf` does NOT stop
-                        // the count from running per keystroke (it re-runs
-                        // whenever `codeText` changes); what it stops is the
-                        // RECOMPOSITION of this scope and the gutter `Text`
-                        // when the count is unchanged. That is the win here,
-                        // and it is worth having: a plain `count {}` over the
-                        // buffer is a few microseconds even on a large file,
-                        // whereas re-measuring and redrawing the gutter is
-                        // not. (Contrast the completion list, where the work
-                        // itself was expensive — that one had to move off the
-                        // main thread entirely; see §296.)
-                        val lineCount by remember {
-                            derivedStateOf { codeText.text.count { it == '\n' } + 1 }
-                        }
-                        val lineNumbers = remember(lineCount) {
-                            (1..lineCount).joinToString("\n")
-                        }
-                        // Mockup-exact gutter: right-aligned muted numbers with
-                        // a hairline vertical divider at the gutter edge.
-                        Box(
-                            modifier = Modifier
-                                .width(48.dp)
-                                .drawBehind {
-                                    drawLine(
-                                        color = editorColors.text.copy(alpha = 0.14f),
-                                        start = Offset(size.width - 0.5f, 0f),
-                                        end = Offset(size.width - 0.5f, size.height),
-                                        strokeWidth = 1f
-                                    )
-                                }
-                        ) {
-                            Text(
-                                text = lineNumbers,
-                                style = TextStyle(
-                                    fontFamily = editorFont,
-                                    fontSize = fontSize.sp,
-                                    color = Color(0xFF858585),
-                                    textAlign = TextAlign.End
-                                ),
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .padding(end = 8.dp)
-                            )
-                        }
-                    }
-                    BasicTextField(
-                        value = codeText,
-                        onValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
-                        textStyle = TextStyle(
-                            fontFamily = editorFont,
-                            fontSize = fontSize.sp,
-                            color = editorColors.text
-                        ),
-                        visualTransformation = transformation,
-                        cursorBrush = SolidColor(editorColors.text),
-                        onTextLayout = { result -> textLayoutResult = result },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pointerInputDiagnosticsTap(
-                                layoutResult = { textLayoutResult },
-                                diagnosticsProvider = { latestDiagnostics },
-                                hasDiagnostics = diagnostics.isNotEmpty()
-                            ) { position, diagnostic ->
-                                popup = EditorPopupAnchor(position.x, position.y, diagnostic)
-                            }
-                    )
-                }
+                )
 
                 if (isFormatting) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
 
-                popup?.let { anchor ->
-                    val density = LocalDensity.current
-                    val config = LocalConfiguration.current
-                    val (x, y) = with(density) {
-                        val maxX = config.screenWidthDp.dp.toPx() - 280.dp.toPx()
-                        anchor.x.coerceAtMost(maxX).coerceAtLeast(0f) to
-                            (anchor.y - 12.dp.toPx()).coerceAtLeast(0f)
-                    }
-                    Surface(
-                        tonalElevation = 4.dp,
-                        shape = RoundedCornerShape(12.dp),
-                        shadowElevation = 6.dp,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
-                            .padding(8.dp)
-                            .width(260.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = "L${anchor.diagnostic.line}:${anchor.diagnostic.column} · ${anchor.diagnostic.message}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (anchor.diagnostic.severity == DiagnosticSeverity.ERROR) {
-                                    Color(0xFFFF5555)
-                                } else {
-                                    Color(0xFFFFB347)
-                                }
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                CompilerDiagnostics.semicolonFixLabel(anchor.diagnostic)?.let {
-                                    TextButton(onClick = {
-                                        viewModel.applyQuickFix(anchor.diagnostic)
-                                        popup = null
-                                    }) {
-                                        Text(
-                                            stringResource(R.string.fix_add_semicolon),
-                                            style = MaterialTheme.typography.labelMedium
-                                        )
-                                    }
-                                }
-                                TextButton(onClick = {
-                                    viewModel.jumpToDiagnostic(anchor.diagnostic)
-                                    popup = null
-                                }) {
-                                    Text(
-                                        stringResource(R.string.jump_to_line),
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                }
-                                TextButton(onClick = { popup = null }) {
-                                    Text(
-                                        stringResource(R.string.cancel),
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Phase 12 — floating autocomplete popup, anchored near the
-                // cursor's text-layout rectangle (line-number gutter + padding
-                // and the current scroll offsets are folded in).
+                // Phase 12/25.2 — floating autocomplete popup. With sora the
+                // popup anchors above the keys strip (bottom-start of the
+                // editor pane) instead of the old BasicTextField cursor rect.
                 if (showCompletion) {
-                    val density = LocalDensity.current
-                    val cursorRect = textLayoutResult?.let { result ->
-                        runCatching {
-                            result.getCursorRect(
-                                codeText.selection.end.coerceAtLeast(codeText.selection.start)
-                            )
-                        }.getOrNull()
-                    }
-                    val lineNumberWidthPx = with(density) { (40.dp + 8.dp).toPx() }
-                    val topPaddingPx = with(density) { 8.dp.toPx() }
-                    val anchorX = (lineNumberWidthPx + (cursorRect?.left ?: 0f) - hScrollState.value)
-                        .coerceAtLeast(0f)
-                    val anchorY = (topPaddingPx + (cursorRect?.top ?: 0f) - scrollState.value)
-                        .coerceAtLeast(0f)
                     Surface(
                         tonalElevation = 6.dp,
                         shape = RoundedCornerShape(10.dp),
                         shadowElevation = 8.dp,
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset { IntOffset(anchorX.roundToInt(), anchorY.roundToInt()) }
+                            .align(Alignment.BottomStart)
+                            .padding(8.dp)
                             .width(280.dp)
                             .heightIn(max = 220.dp)
                     ) {
@@ -1945,33 +1759,6 @@ fun EditorScreen(
     }
 }
 
-/**
- * Phase 9 — tap-to-inspect diagnostics. Follows the Compose custom-text-link
- * pattern: track the gesture WITHOUT consuming it (so the text field still
- * places the caret normally), and only consume when a diagnostic line was
- * actually hit. [diagnosticsProvider] is read at gesture time (backed by
- * rememberUpdatedState) so the pointer input never restarts on every keystroke.
- */
-internal fun Modifier.pointerInputDiagnosticsTap(
-    layoutResult: () -> TextLayoutResult?,
-    diagnosticsProvider: () -> List<EditorDiagnostic>,
-    hasDiagnostics: Boolean,
-    onDiagnosticHit: (Offset, EditorDiagnostic) -> Unit
-): Modifier = pointerInput(hasDiagnostics) {
-    if (!hasDiagnostics) return@pointerInput
-    awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false)
-        val up = waitForUpOrCancellation() ?: return@awaitEachGesture
-        val layout = layoutResult() ?: return@awaitEachGesture
-        val text = layout.layoutInput.text.text
-        val offset = runCatching { layout.getOffsetForPosition(up.position) }.getOrDefault(-1)
-        if (offset < 0 || offset > text.length) return@awaitEachGesture
-        val line = text.take(offset).count { it == '\n' } + 1
-        val diagnostic = diagnosticsProvider().firstOrNull { it.line == line } ?: return@awaitEachGesture
-        up.consume()
-        onDiagnosticHit(up.position, diagnostic)
-    }
-}
 
 /**
  * Phase 23.2 — one strip, two key sets. Renders whichever keys the current

@@ -65,7 +65,6 @@ import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
-import com.codeci.ide.ui.utils.HighlightedCode
 import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
@@ -310,70 +309,6 @@ class EditorViewModel : ViewModel() {
     val cursorPos: StateFlow<EditorCursorPos> = _cursorPos.asStateFlow()
 
     private var decorationJob: Job? = null
-
-    // ---- Phase 22.1: debounced off-thread syntax highlighting -------------
-
-    /**
-     * The theme + language the editor is currently rendering with. The screen
-     * pushes it through [setHighlightContext]; the highlight pipeline combines
-     * it with the buffer so a theme or language switch re-tokenizes too.
-     */
-    private val _highlightContext =
-        MutableStateFlow(EditorThemeType.DRACULA to LanguageType.C)
-
-    private val _highlighted = MutableStateFlow<HighlightedCode?>(null)
-
-    /**
-     * Phase 22.1 — the pre-built highlight for the last settled buffer. The
-     * editor hands it to `SyntaxVisualTransformation`, which reuses it instead
-     * of tokenizing the whole file on the main thread for every keystroke.
-     * Null (or stale) simply means the transformation highlights inline for a
-     * frame — correctness never depends on this cache.
-     */
-    val highlighted: StateFlow<HighlightedCode?> = _highlighted.asStateFlow()
-
-    private var highlightJob: Job? = null
-
-    init {
-        highlightJob = viewModelScope.launch {
-            combine(_codeText, _highlightContext) { value, context ->
-                // Phase 22.7 — the caret is part of the key: the coloured
-                // window follows the user. Quantized to WINDOW/4 so ordinary
-                // typing and short scrolls do NOT re-tokenize; only moving a
-                // meaningful distance through the file does.
-                val caret = value.selection.min.coerceAtLeast(0)
-                HighlightRequest(
-                    text = value.text,
-                    theme = context.first,
-                    language = context.second,
-                    caretBucket = caret / (HighlightedCode.WINDOW / 4)
-                )
-            }
-                .distinctUntilChanged()
-                .debounce(HIGHLIGHT_DEBOUNCE_MS)
-                .collect { request ->
-                    val caret = _codeText.value.selection.min.coerceAtLeast(0)
-                    val built = withContext(Dispatchers.Default) {
-                        HighlightedCode.of(request.text, request.theme, request.language, caret)
-                    }
-                    // Drop a result the buffer already moved past.
-                    if (built.text == _codeText.value.text) _highlighted.value = built
-                }
-        }
-    }
-
-    /** Phase 22.7 — the identity of one highlight job (see the collector above). */
-    private data class HighlightRequest(
-        val text: String,
-        val theme: EditorThemeType,
-        val language: LanguageType,
-        val caretBucket: Int
-    )
-
-    /** Called by the editor whenever the active theme or language changes. */
-    fun setHighlightContext(theme: EditorThemeType, language: LanguageType) {
-        _highlightContext.value = theme to language
-    }
 
     // ---- Phase 11: Output Panel run pipeline -----------------------------
 

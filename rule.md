@@ -204,9 +204,14 @@ Every update updates the docs **in the same commit**:
   integration) CHOSEN — starts only on the owner's "Start Phase 25.2";
   25.3 ❌ CANCELLED.** Decision table `docs/EDITOR_MOBILE_RESEARCH.md` §3.1;
   record `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.4–§4.6,
-  `docs/JOURNEY.md` §34. Phases 26–28 remain PLANNED (spec'd in
-  `docs/chat-phase26..28/`) — the agent does **not** start them until the
-  owner says so.
+  `docs/JOURNEY.md` §34.
+- **Phase 25.2 (sora-editor integration) IMPLEMENTED (2026-09-04, owner:
+  "Start Phase 25.2")** on `arena/01a06b20-codec` — widget-only swap,
+  VM canonical, sora as a BINARY Gradle dep (LGPL-2.1 checklist in
+  `PART_25_2_SORA_PATH.md` §4: owner's explicit acceptance + APK-delta
+  re-measure still gate the merge). Awaiting CI + owner device round.
+  Phases 26–28 remain PLANNED (spec'd in `docs/chat-phase26..28/`) — the
+  agent does **not** start them until the owner says so.
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
   a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
   device round, Phase 24 E.3 hardware-shortcut device pass (needs a Bluetooth

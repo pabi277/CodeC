@@ -93,3 +93,106 @@ RunKeySet context swap (Phase 23.2 — strip swap logic is editor-agnostic).
 6. Settings → About lists sora-editor + LGPL text.
 PASS = all six.
 ```
+
+## 4. Implementation record (2026-09-04)
+
+All changes on `arena/01a06b20-codec`; CI = first compile check (sandbox has
+no JVM/device). Files:
+
+- NEW `app/src/main/java/com/codeci/ide/ui/editor/sora/CodeCScheme.kt` —
+  `CodeCThemeMap.entries(EditorThemeColors): List<Pair<Int,Int>>` (pure,
+  host-tested) + `CodeCScheme(EditorThemeType)` overriding `applyDefault()`
+  (26 sora slots incl. TEXT_NORMAL, KEYWORD, LITERAL, COMMENT, FUNCTION_NAME,
+  OPERATOR, ANNOTATION, search-match, scrollbar, block-line). Fresh scheme
+  object per editor/theme change (sora single-ownership rule).
+- NEW `.../sora/CodeCAnalyzer.kt` — `TokenStyleIds.styleIdFor(TokenKind)`
+  (STRING+NUMBER → LITERAL; sora 0.24 has no STRING slot); `CodeCAnalyzer`:
+  `SimpleAnalyzeManager<Int>` whose `analyze` re-tokenizes the WHOLE buffer
+  with the existing `MultiLanguageSyntaxHighlighter.tokenize` on sora's own
+  background thread (latest-request-wins) and emits `MappedSpans`;
+  `LineColumnCursor` (forward-only offset→(line,col), pure, host-tested);
+  `CodeCLanguage(LanguageType)`: analyzer + `INTERRUPTION_LEVEL_NONE` +
+  no-op `requireAutoComplete` + pure `indentAdvanceFor` (`{`, or `:` for
+  Python) + `useTab=false` + NoOpFormatter + pure `symbolPairsFor`
+  (C-family pairs + quotes; none for TEXT/MARKDOWN) + no newline handlers.
+- NEW `.../sora/SoraEditorHost.kt` — the two-way bridge. Sora→VM:
+  `ContentListener` (afterInsert/afterDelete) + `SelectionChangeEvent`
+  subscription → `viewModel.updateCode(TextFieldValue(...))` — the same
+  entry point the old `BasicTextField.onValueChange` used, so undo
+  recording, dirty flags, autosave scheduling and decoration refresh are
+  byte-identical to before. VM→sora: AndroidView.update replays foreign
+  changes (tab switch, undo/redo, find/replace, formatter, keys strip,
+  completion insert) as ONE `batchEdit` delete-all+insert + selection
+  restore; selection-only VM changes (find-next navigation, quick fixes,
+  strip cursor keys) replay as caret/region moves without touching text.
+  Reference-equality fast path: typing echoes return the same String
+  instance the listener pushed → zero work per keystroke. Sora's own undo
+  DISABLED (`setUndoEnabled(false)`) — VM `EditorUndoManager` canonical.
+- `EditorScreen.kt` — BasicTextField + custom gutter + per-line scroll Rows
+  replaced by `SoraEditorHost(editor = remember { CodeEditor(context) })`
+  (editor declared early — the find effect and the host both need it);
+  Phase 16 pinch handler deleted (sora `setScalable(true)` is on by
+  default); diagnostics tap-popup + `pointerInputDiagnosticsTap` +
+  `EditorPopupAnchor` + `textLayoutResult`/`fontSizeState`/popup state
+  deleted; completion popup re-anchored `Alignment.BottomStart` above the
+  keys strip; Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y → `viewModel.undo/redo()`;
+  Phase 22.1 decorations builder + `currentLineRange`/`bracketRanges`
+  collectors removed; find bar wired to `soraEditor.searcher`
+  (`SearchOptions(TYPE_* by wholeWord/regex, !matchCase)`).
+- `EditorViewModel.kt` — Phase 22.1 highlight pipeline removed
+  (highlightContext/highlightJob/HighlightRequest); Phase 23 decoration
+  pipeline kept (cheap pure Kotlin; its line/bracket outputs are currently
+  unconsumed by the screen — a v1 trim candidate, harmless).
+- `app/build.gradle.kts` — compileOptions 17 (mirrors :bench, proven green
+  in CI) + `implementation(libs.sora.editor)`.
+- `SettingsScreen.kt` — About: "Open-source licenses — sora-editor ©
+  Rosemoe — LGPL-2.1 · github.com/Rosemoe/sora-editor".
+- `app/src/main/assets/licenses/SORA_EDITOR_LGPL.txt` — verbatim LGPL-2.1
+  text from the upstream repo.
+- Host tests (new): `CodeCThemeMapTest` (slot coverage × all 3 themes,
+  contrast guards, token-style mapping), `CodeCLanguageLogicTest`
+  (indentAdvanceFor, symbolPairsFor, LineColumnCursor walk/clamp, analyzer
+  span ordering).
+
+### Deviations from the 25.2 plan (honest list)
+
+1. **Analyzer v1 = full re-tokenize** per settled edit on
+   `SimpleAnalyzeManager` — NOT `AsyncIncrementalAnalyzeManager` as sketched
+   in §1. Rationale: 25.1 measured the full pipeline (tokenize is ~2 ms on
+   the 517-line HTML; the 5 000-line bench.c cost the OLD renderer ~400 ms
+   per frame, the tokenizer itself far less), and incremental lexing is the
+   single riskiest adapter piece. Follow-up candidate once the device round
+   confirms the v1 budgets.
+2. **Completions stay VM-driven** — sora's panel closed
+   (`requireAutoComplete` no-op); the app popup renders above the keys
+   strip (bottom-start) instead of the old cursor-rect anchor. Cursor-rect
+   anchoring returns with the Phase 27 shared pipe.
+3. **Diagnostics tap-popup removed** with the BasicTextField surface
+   (feature regression, recorded). Jump-to-diagnostic survives via the
+   problems list paths; a sora-side tap consumer is a follow-up.
+4. **Undo is VM-canonical** (sora stack disabled) — this is what keeps
+   "undo survives tab switch" true.
+5. **Pinch text-scale is sora-native** and does not write back to the
+   Settings font-size (Settings change overrides; same non-persistence as
+   the old Phase 16 pinch).
+6. **R8**: :app ships minifyEnabled=false (unchanged) — no keep rules
+   needed; revisit with §1 risk 4 if minification ever lands.
+
+### LGPL-2.1 checklist status (merge gate)
+
+- [x] Binary Gradle dependency ONLY (`libs.sora.editor` = 0.24.6 AAR from
+      Maven Central; no source copied, no fork, no shading; upstream source
+      read for interfaces only, `/tmp/sora-ref`).
+- [x] Attribution in Settings → About + license text in
+      `assets/licenses/SORA_EDITOR_LGPL.txt`.
+- [x] Copyright/licence headers unchanged (our files are original code;
+      sora is linked, not modified).
+- [ ] **Owner's explicit acceptance of LGPL-2.1 in chat — REQUIRED before
+      any merge** (rule.md §3; this gate is not yet satisfied).
+- [ ] APK delta ≤ +2 MB re-measured at merge time.
+
+## 5. Exit condition (unchanged from §3 above)
+
+Owner device round on the new CodeC-IDE release APK (recipe in §3), plus
+optional CodeC Bench re-run (C-sora scenario should now match the shipped
+editor). PASS = all six §3 items.

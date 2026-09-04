@@ -89,8 +89,10 @@ android {
     }
   }
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    // Phase 25.2 — Java 17: sora-editor (the edit core) requires consumers on
+    // 17; :bench already builds at 17.
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
   }
   buildFeatures {
     compose = true
@@ -148,6 +150,9 @@ dependencies {
   implementation(libs.androidx.navigation.compose)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
+  // Phase 25.2 — sora-editor, the edit core (LGPL-2.1, BINARY dependency
+  // only — no source vendored; see docs/chat-phase25/PART_25_2_SORA_PATH.md).
+  implementation(libs.sora.editor)
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)

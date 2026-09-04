@@ -796,6 +796,13 @@ fun SettingsScreen(
                 }
             )
             SettingsItem(title = "GitHub", subtitle = "https://github.com/pabi277/CodeC")
+            // Phase 25.2 — LGPL-2.1 obligation checklist: sora-editor is used
+            // as a binary Gradle dependency only (no source copied, no fork);
+            // the attribution + license pointer live here.
+            SettingsItem(
+                title = "Open-source licenses",
+                subtitle = "sora-editor © Rosemoe — LGPL-2.1 · github.com/Rosemoe/sora-editor"
+            )
             SettingsAction(
                 title = stringResource(com.codeci.ide.R.string.install_from_github),
                 actionText = "INSTALL",
