@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-04, Phase 25 IN PROGRESS — 25.1 bench spike IMPLEMENTED, device round pending):**
+**WHERE THINGS STAND (2026-09-04, Phase 25.2 ✅ IMPLEMENTED & DEVICE-ACCEPTED — awaiting the owner's LGPL-2.1 acceptance + merge command):**
 
 - **Phase 24 is ✅ MERGED to `main` via PR #47** (2026-09-04; device round 1:
   E.1/E.2/E.4/E.6/E.7/E.8/E.9 passed; E.3 hardware shortcuts NOT
@@ -45,6 +45,21 @@ gate, invariants, docs policy) — follow it.
     CANCELLED** (note at the top of `PART_25_3_COMPOSE_FALLBACK.md`).
     Decision table: `docs/EDITOR_MOBILE_RESEARCH.md` §3.1; raw numbers:
     `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.5–§4.6; JOURNEY §34.
+- **Phase 25.2 (sora-editor 0.24.6 as the edit core) is ✅ IMPLEMENTED &
+  DEVICE-ACCEPTED (2026-09-04, owner: "All passed" after 4 device rounds).**
+  Widget-only swap on `arena/01a06b20-codec` (9 CI rounds, green at
+  `33866749797`/`c54228d`): `SoraEditorHost` bridge keeps the VM canonical
+  (tabs/dirty/autosave/undo/find/strip/shortcuts), sora-native pinch,
+  magnifier, symbol pairs, find-highlight — and (round 3, owner request)
+  sora's NATIVE at-caret completion panel fed by the same engine (the old
+  app popup is retired). Device-round 1 crash → root-caused from the
+  owner's IN-APP crash report (`CrashReportOverlay`, no root needed):
+  `EditorColorScheme` constructor calls `applyDefault()` before Kotlin
+  assigns subclass state → NPE; fixed post-construction via
+  `CodeCScheme.of()`. Drawer edge-swipe disabled over the editor (scroll
+  conflict). Record: `docs/chat-phase25/PART_25_2_SORA_PATH.md` §4.
+  **Merge gates open: owner's explicit LGPL-2.1 acceptance in chat + the
+  owner's merge command.** APK delta +0.55 MiB (budget ≤ +2 MB).
 - **Phases 26–28 are PLANNED and fully spec'd** (`docs/chat-phase26..28/`) —
   do not start them until the owner says so.
 

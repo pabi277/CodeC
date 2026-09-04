@@ -1,11 +1,12 @@
 # CodeC Phase 25.2 — Sora Editor Integration (research-recommended path)
 
-**Status:** ⭐ **CHOSEN BY THE 25.1 GATE (2026-09-04)** — C-sora passed every
-device budget on both corpora (decision table:
-[`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md) §3.1; raw
-numbers: [`PART_25_1_SPIKE_BENCH.md`](PART_25_1_SPIKE_BENCH.md) §4.5). Awaits
-the owner's **"Start Phase 25.2"** — not started yet. **Cost:** `[client-only]` ·
-**Effort:** L · **Depends on:** PART 25.1 decision = C-sora ✅
+**Status:** ✅ **IMPLEMENTED & DEVICE-ACCEPTED (2026-09-04)** — implemented on
+`arena/01a06b20-codec` (CI green through `33866749797`), four device rounds:
+round 1 crash → root-caused via the in-app crash report (§4.3), fixed;
+round 3 §3 recipe PASS + two owner reports fixed (§4.4); round 4 (build
+`c54228d`) — **owner: "All passed"** (§4.5). REMAINING MERGE GATES: owner's
+explicit LGPL-2.1 acceptance in chat + owner's merge command. **Cost:**
+`[client-only]` · **Effort:** L · **Depends on:** PART 25.1 decision = C-sora ✅
 · **Target files:** `ui/screens/EditorScreen.kt`, `ui/viewmodels/EditorViewModel.kt`,
 `ui/editor/*` (adapters), `app/build.gradle.kts` (dependency only),
 About/licenses screen, host tests
@@ -329,7 +330,32 @@ strip+run keys, autosave+undo-across-tabs, About entry).
 | 8 | `33863407938` | `fe7ae11` | ✅ **GREEN** — **THE crash fix** (`CodeCScheme.of()`, applyDefault override removed). Device round 3: §3 recipe PASS. |
 | 9 | `33866749797` | `c54228d` | ✅ **GREEN** — round-3 fixes (drawer gesture scoped, sora-native completions, app popup retired). **Build for device round 4.** |
 
-## 5. Exit condition (unchanged from §3 above)
+### 4.5 Device round 4 — FINAL: ALL PASS (owner 2026-09-04, build `c54228d`)
+
+Owner: **"All passed."** §3 recipe items 1–6 verified on device, plus the two
+round-3 fixes confirmed in use: no drawer opening on gutter scrolls/flings;
+completions in sora's native at-caret panel with keyboard navigation.
+
+## 5. Exit condition — RESULT (2026-09-04)
+
+| §3 item | Result |
+|---|---|
+| 1. 5k-line burst typing, no visible jank | ✅ (rounds 3–4; bench budgets were already proven in 25.1) |
+| 2. `(` pairs `)`, typing `)` skips over | ✅ |
+| 3. Caret drag magnifier tracks finger | ✅ |
+| 4. Strip keys + HW Ctrl+S/Ctrl+R + RunKeySet swap on interactive run | ✅ |
+| 5. Autosave ~2 s, file intact after close/reopen, undo across tab switch | ✅ |
+| 6. Settings → About lists sora-editor + LGPL text | ✅ |
+
+**PHASE 25.2 = COMPLETE (device-accepted).** Merge gates intentionally still
+open per rule.md §3: (1) the owner's explicit **LGPL-2.1 acceptance** in
+chat, (2) the owner's explicit **merge command**. APK delta measured at
+**+0.55 MiB** (CodeC-IDE artifact 21 855 224 B vs 25.1's 20.3 MiB — budget
+≤ +2 MB met with room; final APK re-measure at merge if desired). Follow-up
+candidates (NOT started): incremental analyzer, TextMate/tree-sitter richer
+grammars (needs `language-textmate` dependency + assets), diagnostics
+tap-popup reimplementation on sora, cursor-rect completion anchor via the
+Phase 27 shared pipe.
 
 Owner device round on the new CodeC-IDE release APK (recipe in §3), plus
 optional CodeC Bench re-run (C-sora scenario should now match the shipped

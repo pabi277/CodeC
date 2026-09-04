@@ -97,6 +97,10 @@ with procrastination.
 
 ### 3.1 Phase 25.1 decision table — FILLED 2026-09-04 (owner device export)
 
+> **SHIPPED & DEVICE-ACCEPTED 2026-09-04:** the winning C-sora path is live
+> in the app (Phase 25.2, four device rounds, owner "All passed") —
+> `docs/chat-phase25/PART_25_2_SORA_PATH.md` §4–§5.
+
 > Measured by the bench spike (`bench/` module, artifact `CodeC-Bench`) on the
 > owner's device, release APK (R8), identical scripted input, median of 3 reps.
 > Runbook: `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.3; full analysis
