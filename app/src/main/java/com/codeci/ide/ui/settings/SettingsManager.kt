@@ -33,6 +33,20 @@ class SettingsManager(private val context: Context) {
         val DEV_MODE = booleanPreferencesKey("dev_mode")
         val SHOW_FILE_PATHS = booleanPreferencesKey("show_file_paths")
         val EDITOR_CUSTOM_SNIPPETS = stringPreferencesKey("editor_custom_snippets")
+
+        // Phase 26.1 — user-editable key strip (JSON of EditorKeyDef list).
+        val EDITOR_KEY_STRIP_JSON = stringPreferencesKey("editor_key_strip_json")
+
+        // Phase 26.2 — Smart typing per-rule toggles (all ON by default except python colon rule handled in logic).
+        val SMART_TYPING_TYPE_OVER = booleanPreferencesKey("smart_typing_type_over")
+        val SMART_TYPING_WRAP_SELECTION = booleanPreferencesKey("smart_typing_wrap_selection")
+        val SMART_TYPING_EMPTY_PAIR = booleanPreferencesKey("smart_typing_empty_pair")
+        val SMART_TYPING_AUTO_INDENT = booleanPreferencesKey("smart_typing_auto_indent")
+        val SMART_TYPING_STRING_AWARE = booleanPreferencesKey("smart_typing_string_aware")
+        val SMART_TYPING_DELETE_WORD = booleanPreferencesKey("smart_typing_delete_word")
+
+        // Phase 26.3 — IME guide dismissed flag (optional).
+        val IME_GUIDE_DISMISSED = booleanPreferencesKey("ime_guide_dismissed")
     }
 
     /**
@@ -44,6 +58,30 @@ class SettingsManager(private val context: Context) {
     suspend fun setEditorCustomSnippets(raw: String) {
         context.dataStore.edit { it[EDITOR_CUSTOM_SNIPPETS] = raw }
     }
+
+    // Phase 26.1 — key strip JSON.
+    val editorKeyStripJsonFlow: Flow<String> = context.dataStore.data.map { it[EDITOR_KEY_STRIP_JSON] ?: "" }
+    suspend fun setEditorKeyStripJson(json: String) {
+        context.dataStore.edit { it[EDITOR_KEY_STRIP_JSON] = json }
+    }
+
+    // Phase 26.2 — smart typing toggles.
+    val smartTypingTypeOverFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_TYPE_OVER] ?: true }
+    val smartTypingWrapSelectionFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_WRAP_SELECTION] ?: true }
+    val smartTypingEmptyPairFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_EMPTY_PAIR] ?: true }
+    val smartTypingAutoIndentFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_AUTO_INDENT] ?: true }
+    val smartTypingStringAwareFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_STRING_AWARE] ?: true }
+    val smartTypingDeleteWordFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_DELETE_WORD] ?: true }
+    suspend fun setSmartTypingTypeOver(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_TYPE_OVER] = v } }
+    suspend fun setSmartTypingWrapSelection(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_WRAP_SELECTION] = v } }
+    suspend fun setSmartTypingEmptyPair(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_EMPTY_PAIR] = v } }
+    suspend fun setSmartTypingAutoIndent(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_AUTO_INDENT] = v } }
+    suspend fun setSmartTypingStringAware(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_STRING_AWARE] = v } }
+    suspend fun setSmartTypingDeleteWord(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_DELETE_WORD] = v } }
+
+    // Phase 26.3
+    val imeGuideDismissedFlow: Flow<Boolean> = context.dataStore.data.map { it[IME_GUIDE_DISMISSED] ?: false }
+    suspend fun setImeGuideDismissed(v: Boolean) { context.dataStore.edit { it[IME_GUIDE_DISMISSED] = v } }
 
     val fontSizeFlow: Flow<Float> = context.dataStore.data.map { it[FONT_SIZE] ?: 14f }
     val fontFamilyFlow: Flow<String> = context.dataStore.data.map { it[FONT_FAMILY] ?: "Monospace" }

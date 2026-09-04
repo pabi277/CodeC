@@ -121,6 +121,7 @@ import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorShellUi
+import com.codeci.ide.ui.editor.SmartTyping
 import com.codeci.ide.ui.editor.FileTreeCollapse
 import com.codeci.ide.ui.editor.KeysContext
 import com.codeci.ide.ui.editor.KeysForContext
@@ -237,6 +238,29 @@ fun EditorScreen(
     val activeLineEnding by viewModel.activeLineEnding.collectAsState()
     val fileEntries by viewModel.fileEntries.collectAsState()
     val customSnippets by settingsManager.editorCustomSnippetsFlow.collectAsState(initial = "")
+    val imeGuideDismissed by settingsManager.imeGuideDismissedFlow.collectAsState(initial = true)
+    // Phase 26.1 — persisted strip overrides (JSON) — when empty, defaults are used.
+    val keyStripJson by settingsManager.editorKeyStripJsonFlow.collectAsState(initial = "")
+    // Phase 26.2 — smart typing toggles.
+    val typeOverEnabled by settingsManager.smartTypingTypeOverFlow.collectAsState(initial = true)
+    val wrapEnabled by settingsManager.smartTypingWrapSelectionFlow.collectAsState(initial = true)
+    val emptyPairEnabled by settingsManager.smartTypingEmptyPairFlow.collectAsState(initial = true)
+    val smartAutoIndentEnabled by settingsManager.smartTypingAutoIndentFlow.collectAsState(initial = true)
+    val stringAwareEnabled by settingsManager.smartTypingStringAwareFlow.collectAsState(initial = true)
+    // deleteWord toggle not yet used for strip hold; kept for future.
+
+    LaunchedEffect(typeOverEnabled, wrapEnabled, emptyPairEnabled, smartAutoIndentEnabled, stringAwareEnabled, autoIndent) {
+        viewModel.setSmartTypingConfig(
+            SmartTyping.Config(
+                typeOver = typeOverEnabled,
+                wrapSelection = wrapEnabled,
+                emptyPairBackspace = emptyPairEnabled,
+                autoIndent = smartAutoIndentEnabled && autoIndent,
+                stringAware = stringAwareEnabled,
+                deleteWord = true
+            )
+        )
+    }
 
     // Phase 22.2 — "is the soft keyboard up?". WindowInsets.ime animates, so
     // the bottom inset is > 0 for the whole show/hide animation; that is
@@ -295,8 +319,8 @@ fun EditorScreen(
     } else {
         KeysContext.Editor(language)
     }
-    val resolvedKeys = remember(keysContext, customSnippets) {
-        keysForContext(keysContext, customSnippets)
+    val resolvedKeys = remember(keysContext, customSnippets, keyStripJson) {
+        keysForContext(keysContext, customSnippets, keyStripJson)
     }
     // Phase 23.2 — the run keys are VM actions, not editor buffer edits.
     val handleRunKey: (RunKey) -> Unit = { action ->
@@ -304,9 +328,12 @@ fun EditorScreen(
             RunKey.SUBMIT -> viewModel.submitInput()
             RunKey.INTERRUPT -> viewModel.interruptRun()
             RunKey.TAB -> viewModel.appendInput("\t")
-            // D2 — REPL history is a future enhancement; the caps show the
-            // slot but do nothing yet.
             RunKey.HISTORY_UP, RunKey.HISTORY_DOWN -> Unit
+            // Phase 26.1 — run popups (HOME/END/PGUP/PGDN) send cursor/escape sequences to the PTY input line where useful.
+            RunKey.HOME -> viewModel.appendInput("\u001b[H")
+            RunKey.END -> viewModel.appendInput("\u001b[F")
+            RunKey.PAGE_UP -> viewModel.appendInput("\u001b[5~")
+            RunKey.PAGE_DOWN -> viewModel.appendInput("\u001b[6~")
         }
     }
     // Phase 25.2 device-round 3 — completions are served by sora's NATIVE
@@ -464,6 +491,27 @@ fun EditorScreen(
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissInstall() }) {
                     Text(stringResource(R.string.install_prompt_cancel))
+                }
+            }
+        )
+    }
+
+    // Phase 26.3 — IME guide (first-run tips for soft-keyboard users). Dismiss persists via DataStore.
+    if (!imeGuideDismissed) {
+        AlertDialog(
+            onDismissRequest = { uiScope.launch { settingsManager.setImeGuideDismissed(true) } },
+            title = { Text("Typing tips") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("• Long-press a key for its popup ( ; → : , \" → ` , / → comment).", style = MaterialTheme.typography.bodySmall)
+                    Text("• Swipe up/down on () {} [] <> to insert just the opener or closer.", style = MaterialTheme.typography.bodySmall)
+                    Text("• Hold ← → to repeat quickly.", style = MaterialTheme.typography.bodySmall)
+                    Text("• Smart typing (type-over, auto-pair, empty-pair delete) respects strings/comments.", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { uiScope.launch { settingsManager.setImeGuideDismissed(true) } }) {
+                    Text("Got it")
                 }
             }
         )
@@ -1225,7 +1273,8 @@ fun EditorScreen(
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
                     tabSize = tabSize,
-                    onRunKey = handleRunKey
+                    onRunKey = handleRunKey,
+                    onCommentToggle = { viewModel.toggleLineComment(language) }
                 )
             }
 
@@ -1321,6 +1370,7 @@ fun EditorScreen(
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
                     tabSize = tabSize,
                     onRunKey = handleRunKey,
+                    onCommentToggle = { viewModel.toggleLineComment(language) },
                     modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 )
             }
@@ -1657,6 +1707,7 @@ private fun KeysStrip(
     onEditorValueChange: (TextFieldValue) -> Unit,
     tabSize: Int,
     onRunKey: (RunKey) -> Unit,
+    onCommentToggle: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     when (resolved) {
@@ -1666,6 +1717,7 @@ private fun KeysStrip(
             textFieldValue = textFieldValue,
             onValueChange = onEditorValueChange,
             tabSize = tabSize,
+            onCommentToggle = onCommentToggle,
             modifier = modifier
         )
         is KeysForContext.RunKeys -> RunKeysRow(onKeyAction = onRunKey, modifier = modifier)

@@ -63,6 +63,7 @@ import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalHandoff
 import com.codeci.ide.ui.theme.EditorThemeType
+import com.codeci.ide.ui.editor.SmartTyping
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
 import com.codeci.ide.ui.utils.LanguageType
@@ -248,6 +249,11 @@ class EditorViewModel : ViewModel() {
         runCatching { saveFile(ctx) }
     }
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
+
+    // Phase 26.2 — SmartTyping per-session config (wired from EditorScreen's SettingsManager flows).
+    var smartTypingConfig: SmartTyping.Config = SmartTyping.Config()
+        private set
+    fun setSmartTypingConfig(c: SmartTyping.Config) { smartTypingConfig = c }
 
     // ---- Phase 9: multi-file tabs --------------------------------------
 
@@ -561,7 +567,15 @@ class EditorViewModel : ViewModel() {
     fun updateCode(newValue: TextFieldValue, autoIndent: Boolean = false, tabSize: Int = 4) {
         val old = _codeText.value
         var next = newValue
-        if (autoIndent && isSingleNewlineInsert(old, newValue)) {
+        // Phase 26.2 — smart typing (pure, host-testable). Runs before autoIndent legacy.
+        run {
+            val lang = LanguageType.fromFileName(_fileName.value)
+            val cfg = smartTypingConfig
+            // Only run smart pipeline when at least one rule enabled and not both collapsed false? Always run.
+            val smart = SmartTyping.transform(old, next, lang, tabSize, cfg)
+            if (smart !== next) next = smart
+        }
+        if (autoIndent && next === newValue && isSingleNewlineInsert(old, newValue)) {
             next = applyAutoIndent(old, newValue, tabSize)
         }
         if (next.text != old.text) {
