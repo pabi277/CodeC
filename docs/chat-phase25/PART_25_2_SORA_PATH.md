@@ -189,7 +189,18 @@ no JVM/device). Files:
       sora is linked, not modified).
 - [ ] **Owner's explicit acceptance of LGPL-2.1 in chat — REQUIRED before
       any merge** (rule.md §3; this gate is not yet satisfied).
-- [ ] APK delta ≤ +2 MB re-measured at merge time.
+- [x] APK delta provisional: `CodeC-IDE` artifact 21 854 392 B (20.84 MiB,
+      CI `33857318159`) vs 25.1's 20.3 MiB → **+0.55 MiB artifact delta**
+      (sora compresses well; Phase 22.1 code removal offsets). Final APK
+      re-measure at merge time — budget ≤ +2 MB comfortably met so far.
+
+### CI history
+
+| # | Run | Commit | Result |
+|---|-----|--------|--------|
+| 1 | `33855565141` | `b6e8257` | ❌ 2 root causes: `setTextSizeUnit` doesn't exist (sora's `setTextSize(float)` already takes **Sp**); `FormatResultReceiver` is NESTED in `Formatter`. Everything else in the 1 360-line change compiled first try. |
+| 2 | `33856448309` | `4268bdb` | ❌ main sources now compile — test compile: `Pair >= Pair` has no compareTo (span-ordering assertion). |
+| 3 | `33857318159` | `f78864a` | ✅ **GREEN** — `:app` compiles against sora 0.24.6 (release too), host tests pass: `CodeCThemeMapTest` ×5, `CodeCLanguageLogicTest` ×6. Artifacts: CodeC-IDE 20.84 MiB, CodeC-Bench 1.26 MiB. |
 
 ## 5. Exit condition (unchanged from §3 above)
 
