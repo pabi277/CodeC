@@ -274,3 +274,37 @@ terminal from the folder it was created in) — the preview only serves files
 inside app-managed projects under `files/CodeC/projects/<project>/`; a file
 created in the terminal's `$HOME` (or with a stray `cp` into the projects
 root) is not inside a project folder and must be moved/saved into one first.
+
+---
+
+## 9. How to run the Phase 25.1 editor bench (owner runbook, 2026-09-04)
+
+**What this is:** the Phase 25.1 spike measures the three editor cores
+(C-now = today's editor, C-sora = sora-editor, C-compose2 = the visible-window
+sketch) on YOUR phone with identical scripted input. The decision on which
+core CodeC adopts is made from YOUR numbers — nothing is decided by feel.
+
+**Steps:**
+
+1. Open this repo on github.com → **Actions** → the latest green **Build APK**
+   run → **Artifacts** → download **`CodeC-Bench`**, unzip, and install the
+   APK on the phone (app name: **CodeC Bench**; it installs alongside CodeC
+   and cannot touch it).
+2. Battery above 30 %, phone cool, nothing else in the foreground.
+3. Home screen → leave **Input mode: keys** (only flip to `direct` if a
+   candidate reports `typed=0` for a typing scenario — that means it ignored
+   the simulated keyboard).
+4. Open a candidate card (e.g. **C-now · bench.c**), wait for the corpus to
+   load and "ready — run a scenario", then tap the four scenario buttons one
+   at a time. Each runs 3 repetitions with cool-downs. Don't touch the screen
+   while a scenario runs.
+   The first screen you open also records the **cold-open** time automatically.
+5. Repeat for the other candidates (bench.c first — it's the big-file case;
+   bench.html is the span-density worst case).
+6. Back on Home → **Copy all** → paste the markdown into the chat. That's the
+   whole device round.
+
+**If something misbehaves:** the status line under the candidate name shows
+what the harness is doing ("rep 2/3…", "scenario failed: …"). The raw numbers
+also live at `Android/data/com.codeci.bench/files/bench-results.md`
+(exported by Copy/Share regardless).

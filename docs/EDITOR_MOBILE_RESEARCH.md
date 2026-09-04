@@ -95,6 +95,27 @@ fallback if the spike shows Sora can't meet CodeC's budgets (§Phase 25.1 exit
 table). Option A is not viable for the owner's complaint; Option C is just B
 with procrastination.
 
+### 3.1 Phase 25.1 decision table — TO FILL from the device round
+
+> The bench spike (`bench/` module, artifact `CodeC-Bench`) measures all three
+> candidates on the owner's device, release APK (R8), identical scripted
+> input, 3 reps per scenario (median recorded). Runbook:
+> `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.3. **Do not fill this from
+> guesses — only from the owner's Copy-all export.**
+
+| Metric (median of 3 reps) | C-now | C-sora | C-compose2 | Budget |
+|---|---|---|---|---|
+| Keystroke burst p95 (60 keys @ 40 ms, bench.c) | | | | ≤ 1 missed frame |
+| Fling holds 60 fps? (jank/bad frames, ~500 lines) | | | | yes |
+| Caret drag hitch (long-press drag + bottom-edge auto-scroll; lines traversed) | | | | none visible / traversal recorded |
+| Completion refresh after keystroke (16 keys @ 220 ms) | | | | ≤ 2 frames |
+| Cold open bench.c (read + compose + 2 frames) | | | | ≤ 800 ms |
+| APK size delta (MB; bench ships sora WHOLE under R8 — upper bound) | — | | — | ≤ +2 |
+
+**Gate verdict (to be written when the table is filled):** ☐ C-sora wins →
+25.2 · ☐ C-compose2 wins → 25.3 · ☐ C-now meets budgets → stop, 25.2/25.3
+cancelled and marked so.
+
 ---
 
 ## 4. Deep dive: Sora Editor (the engine)

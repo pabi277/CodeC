@@ -1,8 +1,14 @@
 # CodeC Phase 25 — Mobile-first Editor Core
 
-> **Status:** 📋 **PLANNED — research complete, no code written.** Research
-> basis: [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md)
-> (GitHub-verified 2026-09-04). **Owner starts this phase with "Start Phase 25";
+> **Status:** 🚧 **25.1 IMPLEMENTED — bench spike built, CI-gated, DEVICE
+> ROUND REQUIRED (owner).** The three candidates and the harness live in the
+> throwaway `:bench` module (separate APK, artifact `CodeC-Bench`); the
+> decision table in [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md)
+> §3.1 is EMPTY until the owner's device numbers land. 25.2/25.3 remain
+> PLANNED behind that gate. Implementation record:
+> [`PART_25_1_SPIKE_BENCH.md`](PART_25_1_SPIKE_BENCH.md) §4.
+> Research basis: [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md)
+> (GitHub-verified 2026-09-04). **Owner started this phase with "Start Phase 25";
 > no PR/merge without the owner's explicit command** (`rule.md` §3).
 
 Owner brief (2026-09-04): *"the main problem is the editor … find the best

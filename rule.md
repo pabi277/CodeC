@@ -108,6 +108,13 @@ does not begin a lifecycle on its own (§1).
   candidate:** call `./gradlew` from the workflow directly and delete the
   shim — left as-is for now because the shim is what emits the readable
   `::error` annotations; see §10.)
+  **Phase 25.1 addition (remove when Phase 25 closes):** the same workflow
+  also runs `./gradlew :bench:assembleRelease :bench:testDebugUnitTest`
+  directly (real wrapper — the legacy 9.0.0 path cannot configure the module;
+  `settings.gradle.kts` includes `:bench` only there) and uploads the
+  **`CodeC-Bench`** artifact so the owner can perform the bench's device
+  round. The bench is a SEPARATE APK (`com.codeci.bench`); `:app` ships
+  nothing from it.
 - **Owner reads CI in the browser:** repo → **Actions** → the `Build APK`
   run → its log; a green ✓ means all three gates passed. (The agent sandbox
   cannot reach CI logs/artifacts/releases — only `api.github.com` — so the
@@ -171,28 +178,37 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-03, Phase 23 device-accepted)
+## 9. State snapshot (2026-09-04, Phase 25.1 implemented — device round pending)
 
-- **`main` = `7173494`** — Phase 22 via **PR #45** (merged 2026-09-03).
-  Before that: PR #43 Phase 21, PR #41 Website W0, PR #40 Phases 20–24 design
-  docs, PR #39 git fixes, PR #38 Phase 18, PR #37 Phase 17, PR #36 Phases
-  15/16, PR #34 Phase 19, PR #32 Phase 14, PR #30 Phase 12, PR #29 Phase 11.
-  Verify with `git ls-remote origin main` / the GitHub API — the local clone
-  is shallow, so `git log` alone is not proof of history.
-- **Phases 3–22: merged.** **Phase 20.1** (round-4 toolchain roots) COMPLETE,
-  DEVICE-VERIFIED 6/6 and merged. **Phase 21** (LanguageRunProfile; TCC KEPT
-  as the default C compiler) COMPLETE, DEVICE-ACCEPTED and merged. **Phase 22**
-  (editor smoothness + IME keys) MERGED via PR #45.
-- **Phase 23 (Interactive Run UX) ✅ COMPLETE & DEVICE-ACCEPTED** on
-  `arena/01a06662-codec` (`Build APK` `33735687876`; owner: "Start Phase 23"
-  → "Phone test passed"). B.1 inline PTY input (remove `OutputInputRow`) +
-  B.2 run keys (`↵ Enter`/`Ctrl+C`/`Tab`/history). Awaiting the owner's merge
-  command (this session's PR). Record: `docs/chat-phase23/`.
-- **Phase 24 remains PLANNED** (fully spec'd in `docs/chat-phase24/`) — the
-  agent does **not** start it until the owner says "Start Phase 24".
+- **`main` = `5ebbc6e`** — PR #48 (2026-09-04, mobile-editor research +
+  Phase 25–28 plan docs). Before that: PR #47 Phase 24, PR #46 Phase 23,
+  PR #45 Phase 22, PR #44 Phase 21, PR #43 Phase 20.1, PR #41 Website W0,
+  PR #40 Phases 20–24 design docs, PR #39 git fixes, PR #38 Phase 18, PR #37
+  Phase 17, PR #36 Phases 15/16, PR #34 Phase 19, PR #32 Phase 14, PR #30
+  Phase 12, PR #29 Phase 11. Verify with `git ls-remote origin main` / the
+  GitHub API — the local clone is shallow, so `git log` alone is not proof of
+  history.
+- **Phases 3–24: merged.** Phase 23 (interactive run UX) merged via PR #46
+  (device-accepted). Phase 24 (polish batch E.1–E.4, E.6–E.9 device-passed;
+  E.3 hardware shortcuts not device-verified — needs a BT keyboard; E.5
+  tablet two-pane DEFERRED by design) merged via PR #47.
+- **Phase 25 (Mobile-first Editor Core) is IN PROGRESS** — owner: "Start
+  Phase 25" (2026-09-04). **25.1 (bench spike) IMPLEMENTED on
+  `arena/01a06b20-codec`**: throwaway `:bench` module (separate APK, artifact
+  `CodeC-Bench`), three candidates (C-now mirror / C-sora 0.24.6 binary dep /
+  C-compose2 sketch), platform-FrameMetrics harness, committed corpus, host
+  tests. **DEVICE ROUND REQUIRED** — the owner runs the bench and pastes the
+  Copy-all export; then the decision table (`docs/EDITOR_MOBILE_RESEARCH.md`
+  §3.1) is filled and the gate verdict stated in writing (25.2 / 25.3 /
+  stay-on-C-now). Record: `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4,
+  `docs/JOURNEY.md` §34. Phases 26–28 remain PLANNED (spec'd in
+  `docs/chat-phase26..28/`) — the agent does **not** start them until the
+  owner says so.
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
   a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
-  device round.
+  device round, Phase 24 E.3 hardware-shortcut device pass (needs a Bluetooth
+  keyboard/tablet), Phase 24 E.5 tablet two-pane (deferred, needs owner
+  confirmation).
 
 ---
 
