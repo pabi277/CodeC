@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +23,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -33,7 +31,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.components.KeyGestureDetector
 import com.codeci.ide.ui.editor.EditorKey
@@ -155,6 +152,27 @@ private fun CodecKeycap(
     val freshAction by rememberUpdatedState(onAction)
     val freshShift by rememberUpdatedState(shift)
     val label = KeyboardRouter.displayLabel(def, shift)
+    // Device round 1 (owner): "hold to use keys are not showing what will be
+    // released". Two fixes, both INSIDE the cap bounds (the old overflow
+    // bubble — the only child drawn outside the cap, and the only new code
+    // that could fault the draw pass — is gone entirely):
+    //  (a) every cap shows its flick/popup CHAR in the corner permanently —
+    //      `q¹`, `;:` — what a gesture releases is printed on the cap;
+    //  (b) while a popup cap is HELD, the big label swaps to the release key
+    //      (`;` shows `:`), so the finger confirms before it commits.
+    // Only a ONE-character release prints in the corner ("1", ":"); wider
+    // releases (Home, PgUp) fall back to the 26.1 dot tick so nothing
+    // overflows a ~30dp cap.
+    val corner: String? = when {
+        def.popup != null && KeyboardRouter.popupLabel(def.popup).length == 1 ->
+            KeyboardRouter.popupLabel(def.popup)
+        (def.swipeUp as? EditorKey.Insert)?.text?.length == 1 ->
+            (def.swipeUp as EditorKey.Insert).text
+        else -> null
+    }
+    val carriesHidden = corner == null &&
+        (def.popup != null || def.swipeUp != null || def.swipeDown != null)
+    val holdingPreview = popupShown
 
     Box(
         modifier = weightModifier
@@ -242,43 +260,39 @@ private fun CodecKeycap(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
+            text = when {
+                holdingPreview && isShiftCap -> "⇪"
+                holdingPreview && def.popup != null -> KeyboardRouter.popupLabel(def.popup)
+                else -> label
+            },
+            style = if (holdingPreview) MaterialTheme.typography.titleMedium
+                    else MaterialTheme.typography.titleSmall,
+            color = if (holdingPreview) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
             maxLines = 1
         )
-        // corner tick = this cap carries extras (26.1 affordance law)
-        if (hasLongPressAction || def.swipeUp != null || def.swipeDown != null) {
+        // "what a gesture releases" — printed permanently in the corner
+        // (26.1's tick dot upgraded to the actual character).
+        if (corner != null && !holdingPreview) {
+            Text(
+                text = corner,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 2.dp, end = 4.dp)
+            )
+        }
+        // corner tick = this cap carries extras (26.1 affordance law) whose
+        // labels are too wide to print (Home/End/PgUp/PgDn flicks, ⌫W).
+        if (carriesHidden && !holdingPreview) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(3.dp)
                     .size(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), RoundedCornerShape(2.dp))
             )
-        }
-        if (popupShown) {
-            val popupText = when {
-                isShiftCap -> "⇪"
-                def.popup != null -> KeyboardRouter.popupLabel(def.popup)
-                else -> null
-            }
-            if (popupText != null) {
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(0, -with(density) { (rowHeight + 6.dp).roundToPx() }) }
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = popupText,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
         }
     }
 }

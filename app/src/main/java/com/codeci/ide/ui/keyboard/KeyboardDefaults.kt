@@ -55,24 +55,29 @@ object KeyboardDefaults {
         EditorKeyDef("⏎", EditorKey.Insert("\n"), wide = true)
     )
 
-    /** ← → ↑ ↓ with the strip's exact 26.1 popups (Home/End/PgUp/PgDn). */
+    /**
+     * ← → ↑ ↓: tap moves, hold repeats (26.1), and the navigation the strip
+     * gives as POPUPS rides FLICKS here — on this grid the 150 ms repeat
+     * always beats a 300 ms popup, so a popup-only Home would be unreachable
+     * (the strip has the same conflict; the keyboard resolves it with data).
+     */
     private val UTILITY_ROW: List<EditorKeyDef> = listOf(
         EditorKeyDef(KeyboardRouter.TO_SYMBOLS_CAP, EditorKey.Insert("")),
         EditorKeyDef(
             "←", EditorKey.Caret(EditorKey.Caret.Move.LEFT),
-            popup = EditorKey.Caret(EditorKey.Caret.Move.LINE_START)
+            swipeUp = EditorKey.Caret(EditorKey.Caret.Move.LINE_START)
         ),
         EditorKeyDef(
             "→", EditorKey.Caret(EditorKey.Caret.Move.RIGHT),
-            popup = EditorKey.Caret(EditorKey.Caret.Move.LINE_END)
+            swipeUp = EditorKey.Caret(EditorKey.Caret.Move.LINE_END)
         ),
         EditorKeyDef(
             "↑", EditorKey.Caret(EditorKey.Caret.Move.UP),
-            popup = EditorKey.Caret(EditorKey.Caret.Move.PAGE_UP)
+            swipeUp = EditorKey.Caret(EditorKey.Caret.Move.PAGE_UP)
         ),
         EditorKeyDef(
             "↓", EditorKey.Caret(EditorKey.Caret.Move.DOWN),
-            popup = EditorKey.Caret(EditorKey.Caret.Move.PAGE_DOWN)
+            swipeUp = EditorKey.Caret(EditorKey.Caret.Move.PAGE_DOWN)
         )
     )
 
@@ -120,10 +125,12 @@ object KeyboardDefaults {
         language: LanguageType?,
         rowTransform: (List<EditorKeyDef>) -> List<EditorKeyDef> = { it }
     ): KeyboardLayout {
-        val macroRow = EditorKeySet.languageMacroRow(language)
-        val rows = listOf(TOP_ROW, HOME_ROW, BOTTOM_ROW, SPECIAL_ROW, UTILITY_ROW)
-            .map(rowTransform) +
-            if (macroRow.isNotEmpty()) listOf(rowTransform(macroRow)) else emptyList()
+        // Device round 1 (owner): a whole 52dp row for a lone `->` cap was
+        // "unnecessary" — the language tail caps now ride the utility row's
+        // tail instead. Five rows for every language, same hooks.
+        val utilityRow = UTILITY_ROW + EditorKeySet.languageMacroRow(language)
+        val rows = listOf(TOP_ROW, HOME_ROW, BOTTOM_ROW, SPECIAL_ROW, utilityRow)
+            .map(rowTransform)
         return KeyboardLayout.of(rows)
     }
 

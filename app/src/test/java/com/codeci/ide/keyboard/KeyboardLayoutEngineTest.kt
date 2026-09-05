@@ -225,17 +225,36 @@ class KeyboardLayoutEngineTest {
     }
 
     @Test
-    fun languageMacroRowIsThePhase16Hook() {
+    fun languageTailCapsRideTheUtilityRowNotAWholeRow() {
+        // Device round 1 (owner): the lone `->` row is gone — five rows,
+        // every language; the Phase 16 tail caps keep their keys at the
+        // utility row's tail.
         val c = KeyboardDefaults.codeQwerty(LanguageType.C)
+        assertEquals(5, c.rows.size)
+        assertTrue(c.rows[4].any { it.def.label == "->" })
         val py = KeyboardDefaults.codeQwerty(LanguageType.PYTHON)
-        assertEquals("C ships the -> row", "->", c.rows.last().first().def.label)
+        assertEquals(listOf("SYM", "←", "→", "↑", "↓", ":", "_(self)"), py.rows[4].map { it.def.label })
+        assertEquals(5, KeyboardDefaults.codeQwerty(LanguageType.MARKDOWN).rows[4].size)
+    }
+
+    @Test
+    fun arrowNavigationTravelsAsFlicksNotPopups() {
+        // hold-repeat fires at 150 ms and always beats a 300 ms popup, so on
+        // the grid Home/End/PgUp/PgDn MUST live on flicks — a popup-only
+        // arrow key would be unreachable.
+        val arrows = KeyboardDefaults.codeQwerty(null).rows[4]
+            .filter { it.def.key is EditorKey.Caret }
+        assertEquals(4, arrows.size)
         assertEquals(
-            "Python ships the Phase 16 tail verbatim (: and _(self))",
-            listOf(":", "_(self)"),
-            py.rows.last().map { it.def.label }
+            listOf(
+                EditorKey.Caret(EditorKey.Caret.Move.LINE_START),
+                EditorKey.Caret(EditorKey.Caret.Move.LINE_END),
+                EditorKey.Caret(EditorKey.Caret.Move.PAGE_UP),
+                EditorKey.Caret(EditorKey.Caret.Move.PAGE_DOWN)
+            ),
+            arrows.map { it.def.swipeUp }
         )
-        // languages without a tail keep 5 rows
-        assertEquals(5, KeyboardDefaults.codeQwerty(LanguageType.MARKDOWN).rows.size)
+        arrows.forEach { assertEquals(null, it.def.popup) }
     }
 
     @Test

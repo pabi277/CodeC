@@ -353,6 +353,11 @@ untouched with it off.
      digits/brackets, `SYM` for the rest; no IME opens once.
    - **Gestures:** flick-up on `p` = `0`; flick-down on `()` inserts `)` only;
      long-press TAB still indents raw while a ghost is up (then TAB ▸ accepts).
+     Round-1 changes to check: caps show their release in the corner (`q¹`,
+     `;:`); HOLDING `;` swaps the big label to `:` before you release; arrow
+     FLICKS = Home/End/PgUp/PgDn (hold still repeats); no popup bubbles
+     anymore — if any draw crash persists, send the log's FIRST lines
+     (exception class + message, above these frames).
    - **Layers:** `SYM` ⇄ `ABC` one tap each; macro row follows the file's
      language (C gets `->`, Python `:` + `_(self)`).
    - **Deletion:** `⌫` tap deletes, hold repeats (~150 ms/40 ms), flick-up
@@ -369,4 +374,5 @@ untouched with it off.
 composing span (28.1 S2 verdict), no caret/selection announcements by TalkBack
 until 28.4, no swipe-space between letters (spacedBy 4.dp only), and popup
 bubbles overflow their cap without clipping — on purpose (strip clip bug
-class, documented in `CodecKeyboard`).
+class — superseded after round 1: bubbles were removed entirely, previews live
+IN the cap (`CodecKeyboard`'s round-1 note).
