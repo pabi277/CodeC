@@ -236,6 +236,12 @@ Every update updates the docs **in the same commit**:
   device round, Phase 24 E.3 hardware-shortcut device pass (needs a Bluetooth
   keyboard/tablet), Phase 24 E.5 tablet two-pane (deferred, needs owner
   confirmation).
+- **Phases 29–33 📋 PLANNED (2026-09-05, docs only, no app code):** VS Code
+  TextMate colour, snippets/Emmet, LSP as Packages, phone canvas, first-hour
+  UX — `docs/chat-phase29/` … `docs/chat-phase33/`. Research:
+  `docs/OSS_REPLACEMENT_RESEARCH.md`, `docs/PHONE_UX_ANALYSIS.md`.
+  Implementation only on owner `"Start Phase N"`. 28.3/28.4 remain the
+  Keys remainder.
 
 ---
 

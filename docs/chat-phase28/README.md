@@ -57,5 +57,9 @@ Design law for this phase:
 | [28.3](PART_28_3_SUGGESTIONS_ROW0.md) | Suggestions & ghost-accept as keyboard row 0 | client-only | S |
 | [28.4](PART_28_4_ESCAPE_PARITY.md) | Prose escape hatch, TalkBack/HW parity, settings + opt-out | client-only | M |
 
+**After 28.3/28.4:** phone-ease queue is Phase **29** (TextMate) — not more
+Keys. Phase **32.2** coordinates with 28.3 (chips as row 0) instead of
+duplicating it.
+
 Dependencies: **26.1** (keycap/popup/swipe model) required; **27.** rides on
 top (28.3); **25** independent — the spike covers both candidate cores.
