@@ -332,3 +332,41 @@ Nothing here is in the IDE; the decision lands in
    cores + "feels instant" ⇒ **GO** (28.2 starts on your word). Any red ⇒
    record the no-go; the strip (L0) stays the product answer.
 5. Home → **Copy all** → paste into the chat.
+
+## 11. How to run the Phase 28.2 CodeC Keys device round (owner runbook, 2026-09-05)
+
+**What this is:** the first time the keyboard ships INSIDE the IDE — the
+28.1 spike proved the latency law; 28.2 proves the layout engine under real
+use. The feature is **default OFF**; everything else about the editor must be
+untouched with it off.
+
+**Steps:**
+
+1. Actions → latest green **Build APK** → Artifacts → **CodeC-IDE** (the
+   debug APK is `:app`). Install over the current build.
+2. Settings → **CodeC Keys** → flip it ON (a preview keyboard renders in
+   Settings itself — taps there are inert by design). Haptics + row-height
+   slider live under the same toggle. Back to the editor: the grid docks
+   where the soft keyboard was; the system IME must NOT open at all.
+3. Run the five exit checks (`PART_28_2_LAYOUT_ENGINE.md` §3):
+   - **200-char C program** with symbols, all on the grid: flick-up rows for
+     digits/brackets, `SYM` for the rest; no IME opens once.
+   - **Gestures:** flick-up on `p` = `0`; flick-down on `()` inserts `)` only;
+     long-press TAB still indents raw while a ghost is up (then TAB ▸ accepts).
+   - **Layers:** `SYM` ⇄ `ABC` one tap each; macro row follows the file's
+     language (C gets `->`, Python `:` + `_(self)`).
+   - **Deletion:** `⌫` tap deletes, hold repeats (~150 ms/40 ms), flick-up
+     deletes a word; no double-deletes.
+   - **OFF switch:** flip it OFF in Settings → the system IME returns exactly
+     as before (22.x intact: suggestions, autocorrect, run-stdin all normal).
+4. The waived four (ride this round): the OFF→ON flip above IS the
+   self-check (IME visible one way, absent the other); a **real Bluetooth
+   keyboard** must still type while the grid is up; caret/selection handles
+   still work; and the feel line — *does it feel instant?*
+5. Paste notes to the same table shape as 28.1's round (§6 of the spike doc).
+
+**Known costs recorded up front (not bugs):** programmatic edits = no IME
+composing span (28.1 S2 verdict), no caret/selection announcements by TalkBack
+until 28.4, no swipe-space between letters (spacedBy 4.dp only), and popup
+bubbles overflow their cap without clipping — on purpose (strip clip bug
+class, documented in `CodecKeyboard`).

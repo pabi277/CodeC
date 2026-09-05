@@ -53,7 +53,7 @@ Design law for this phase:
 | Part | Title | Cost | Effort |
 |---|---|---|---|
 | [28.1](PART_28_1_SPIKE.md) | IME-free input path spike (both cores) + feel gate | client-only | S |
-| [28.2](PART_28_2_LAYOUT_ENGINE.md) | Data-driven keyboard: layout JSON, keycap model, rendering, gestures | client-only | M |
+| [28.2](PART_28_2_LAYOUT_ENGINE.md) | **🚧 BUILT 2026-09-05** — data-driven keyboard in `:app` (`ui/keyboard/*` + Settings + wiring, CI green); **device round = the gate** (`TROUBLESHOOTING.md` §11) | client-only | M |
 | [28.3](PART_28_3_SUGGESTIONS_ROW0.md) | Suggestions & ghost-accept as keyboard row 0 | client-only | S |
 | [28.4](PART_28_4_ESCAPE_PARITY.md) | Prose escape hatch, TalkBack/HW parity, settings + opt-out | client-only | M |
 

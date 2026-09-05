@@ -86,9 +86,13 @@ gate, invariants, docs policy) — follow it.
   sub-1 ms there too; **28.2 input path of record = S2**. **VERDICT: GO — recorded
   2026-09-05 (owner: "Go", twice; the four human confirmations waive as
   blockers and ride 28.2's device round). `docs/EDITOR_MOBILE_RESEARCH.md`
-  §9.1 carries the verdict. **28.2 (layout engine) STARTED the same day** —
-  GO + start word both satisfied; S2 input path (production's existing
-  `codeText`→`SoraEditorHost` batch-edit route). 28.3/28.4 gated behind 28.2.
+  §9.1 carries the verdict. **28.2 (layout engine) BUILT the same day** —
+  `:app/ui/keyboard/*`: JSON layout over the 26.1 cap schema, pure router,
+  Compose grid, Settings (default OFF), S2 wiring (`updateCode` + sora
+  `setSoftKeyboardEnabled` handoff), `EditorKey.Delete` = DEL's model home,
+  20 host tests; CI green `33964504903`. **The owner's 28.2 device round is
+  the gate now** (`docs/TROUBLESHOOTING.md` §11); PASS opens 28.3 — the whole
+  keyboard ships behind the Settings master switch (L0 strip stays default).
 
 **PHASE STATUS (updated 2026-09-05):**
 **Phase 25 CLOSED (25.2 device-accepted & merged via PR #49; 25.3
