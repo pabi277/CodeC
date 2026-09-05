@@ -376,8 +376,13 @@ routing OK, and **the soft IME never opened in ~1 550 inset samples** (incl.
 the full 5-min human session); K1's red rows are the Compose core's known
 ~260 ms frame cost (the 25.1 C-now disease), not the keyboard — its own
 commit path clocked sub-1 ms there too. Input path of record for 28.2:
-**S2 (programmatic `Content` edits on sora)**. **Verdict GO pending the
-owner's four confirmations** (detector self-check, real BT keyboard,
-TalkBack, "feels instant" yes/no). GO ⇒ 28.2 starts on the owner's word.
-**NO-GO** ⇒ the phase stops here and the L0 strip (Phases 26/27) remains
-the product answer — recorded on this line.
+**S2 (programmatic `Content` edits on sora)**. **Verdict: GO** — the owner said
+"Go" on 2026-09-05 (twice, after seeing the full sheet), waiving the four
+open confirmations as blockers; they ride **28.2's device round** as
+verification (detector self-check, real BT keyboard, "feels instant";
+TalkBack lands with 28.4's parity work). **28.2 started the same day**, wired
+to S2 — which is production's existing architecture, not a new mechanism
+(`codeText` in `EditorViewModel` is the single source of truth;
+`SoraEditorHost` replays every VM edit into sora as ONE `batchEdit` —
+the strip rides that path today). The L0 strip (Phases 26/27) remains the
+product fallback while CodeC Keys ships behind its Settings master switch.

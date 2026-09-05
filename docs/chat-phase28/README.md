@@ -1,10 +1,11 @@
 # CodeC Phase 28 — CodeC Keys: a dedicated in-app code keyboard
 
-> **Status:** 🚧 **STARTED 2026-09-05 (owner: "Start phase 28") — 28.1 SPIKE
-> BUILT on `arena/01a070ae-codec`, owner device round pending** (record:
-> `PART_28_1_SPIKE.md` §4–§5). 28.2–28.4 remain PLANNED and gated: the README
-> design law 3 holds — no layout work until the feel gate passes on the
-> owner's device.
+> **Status:** 🚧 **STARTED 2026-09-05 — 28.1 SPIKE ✅ DONE + GO** (device
+> round 1 recorded `PART_28_1_SPIKE.md` §6: K2/sora meets every budget;
+> owner verdict "Go", 2026-09-05, four open confirmations folded into 28.2's
+> device round). **28.2 LAYOUT ENGINE STARTED the same day (owner: "Go")** —
+> gate cleared per design law 3, so layout work is live on
+> `arena/01a070ae-codec`. 28.3–28.4 remain PLANNED behind their deps.
 > Original feasibility note: **Status was** 📋 PLANNED — feasibility analysis
 > complete, no code written. Owner question (2026-09-04): *"do you think if
 > the app have it's own keyboard possible only for code nothing else and app

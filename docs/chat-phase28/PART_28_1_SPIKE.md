@@ -176,14 +176,18 @@ red rows are the Compose core's ~260 ms frame cost (the whole reason 25.1
 chose sora) — the grid path itself was never the bottleneck there either.
 **Recommended input path for 28.2: S2 (sora `Content` programmatic edits).**
 
-Still open before the verdict is written (asked in chat, owner's word needed):
-1. Control check: with "IME: allowed" flipped, did `ime=` go **> 0** at least
-   once (detector self-proof), and return to 0 after flipping back?
-2. Q1 on REAL hardware: does a Bluetooth keyboard type into the editor while
-   the grid is up (the synthesized-key check is the mechanism proof; the BT
-   pass is the fact).
-3. Q3: TalkBack exploration of editor content with IME suppressed.
-4. The verdict line itself: **does it feel instant?** (yes/no)
+The four open items (① detector self-proof via the "IME: allowed" flip
+showing `ime=` > 0, ② Q1 on a real Bluetooth keyboard, ③ TalkBack with the
+IME suppressed, ④ the feel verdict — *"does it feel instant?"*) were put to
+the owner with the full sheet. **Owner's answer: "Go" (2026-09-05, said
+twice) — a recorded GO; the four items are waived as blockers and FOLD INTO
+28.2's device round as verification steps** (the layout engine's exit
+condition re-checks ①②④ on the production keyboard; ③ is 28.4's parity work
+with this as its baseline).
 
-GO (all four ✅ on K2) ⇒ 28.2 starts ONLY on the owner's word, wired to the
-S2 path. NO-GO ⇒ record here + §9.1 and stop; the L0 strip stays the product.
+**Verdict of record: GO.** 28.2 (`PART_28_2_LAYOUT_ENGINE.md`) started the
+same day on the owner's word, wired to the S2 path (programmatic `Content`
+edits on sora — which is exactly how the production `:app` already works:
+`codeText` is the single source of truth and `SoraEditorHost` replays VM
+edits as one batch edit; the strip rides that path today, the keyboard joins
+it). NO-GO was live: the L0 strip (26/27) stays the product fallback.

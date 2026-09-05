@@ -83,11 +83,12 @@ gate, invariants, docs policy) — follow it.
   (DOWN→commit p95 1.25–3.4 ms, tap audits 64/64 & 40/40 exact on all reps,
   run-route OK, IME inset 0 px in ~2 900 samples — never opened); K1's frame
   reds are the Compose core's known ~260 ms cost, the keyboard itself was
-  sub-1 ms there too; **28.2 input path of record = S2**. **Verdict GO pending
-  the owner's four confirmations** (detector self-check, real BT keyboard,
-  TalkBack, "feels instant" yes/no); go/no-go lands in
-  `docs/EDITOR_MOBILE_RESEARCH.md` §9.1. **28.2–28.4 must NOT start before a
-  recorded GO + the owner's start word.**
+  sub-1 ms there too; **28.2 input path of record = S2**. **VERDICT: GO — recorded
+  2026-09-05 (owner: "Go", twice; the four human confirmations waive as
+  blockers and ride 28.2's device round). `docs/EDITOR_MOBILE_RESEARCH.md`
+  §9.1 carries the verdict. **28.2 (layout engine) STARTED the same day** —
+  GO + start word both satisfied; S2 input path (production's existing
+  `codeText`→`SoraEditorHost` batch-edit route). 28.3/28.4 gated behind 28.2.
 
 **PHASE STATUS (updated 2026-09-05):**
 **Phase 25 CLOSED (25.2 device-accepted & merged via PR #49; 25.3
