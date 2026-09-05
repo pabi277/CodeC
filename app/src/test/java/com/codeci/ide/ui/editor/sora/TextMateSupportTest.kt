@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.utils.LanguageType
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -60,23 +61,39 @@ class TextMateSupportTest {
     fun `all four editor themes load and resolve colors`() {
         for (type in EditorThemeType.entries) {
             val scheme = TextMateThemes.applyTheme(type)
+            val current = ThemeRegistry.getInstance().currentThemeModel
             // Background and normal text must come from the theme JSON, not
-            // stay at sora's defaults-of-defaults (0/unset).
+            // stay at sora's defaults-of-defaults (0/unset) — and the theme
+            // we asked for must be the one ACTIVE afterwards (the Settings
+            // theme switch depends on that).
             assertTrue(
-                "theme ${type.displayName} must set a background",
-                scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND) != 0
+                "after applyTheme(${type.displayName}) the active model is " +
+                    "${current?.name} (raw=${current?.rawTheme?.name}), " +
+                    "bg=0x${Integer.toHexString(scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND))}",
+                current?.name == TextMateThemes.nameFor(type) &&
+                    scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND) != 0 &&
+                    scheme.getColor(EditorColorScheme.TEXT_NORMAL) != 0
             )
-            assertTrue(
-                "theme ${type.displayName} must set normal text color",
-                scheme.getColor(EditorColorScheme.TEXT_NORMAL) != 0
-            )
+            if (type == EditorThemeType.VS_CODE_DARK_PLUS) {
+                // The DEFAULT theme is Dark+ and must look like it.
+                val bg = scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND)
+                assertTrue(
+                    "Dark+ background must be #1E1E1E, got 0x${Integer.toHexString(bg)} " +
+                        "(active model ${current?.name})",
+                    bg == 0xFF1E1E1E.toInt()
+                )
+            }
         }
-        // The DEFAULT theme is Dark+ and must look like it: #1E1E1E background.
+        // Re-applying the default after every other theme ran must switch
+        // BACK to Dark+ (the Settings round-trip: Dark+ → others → Dark+).
         val darkPlus = TextMateThemes.applyTheme(EditorThemeType.VS_CODE_DARK_PLUS)
+        val current = ThemeRegistry.getInstance().currentThemeModel
         val bg = darkPlus.getColor(EditorColorScheme.WHOLE_BACKGROUND)
         assertTrue(
-            "Dark+ background must be #1E1E1E, got ${Integer.toHexString(bg)}",
-            bg == 0xFF1E1E1E.toInt()
+            "Dark+ background must be #1E1E1E after the round trip, got " +
+                "0x${Integer.toHexString(bg)} (active model ${current?.name}, " +
+                "raw=${current?.rawTheme?.name})",
+            bg == 0xFF1E1E1E.toInt() && current?.name == TextMateThemes.nameFor(EditorThemeType.VS_CODE_DARK_PLUS)
         )
     }
 

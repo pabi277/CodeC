@@ -1,6 +1,7 @@
 package com.codeci.ide.ui.editor.sora
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.util.Log
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.utils.LanguageType
@@ -10,9 +11,11 @@ import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.model.DefaultGrammarDefinition
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
-import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
+import io.github.rosemoe.sora.langs.textmate.registry.provider.FileResolver
 import org.eclipse.tm4e.core.registry.IGrammarSource
 import org.eclipse.tm4e.core.registry.IThemeSource
+import java.io.IOException
+import java.io.InputStream
 
 /**
  * Phase 29.1 — process-wide TextMate plumbing (T2: load once per process).
@@ -43,24 +46,55 @@ object TextMateSupport {
     @Volatile
     private var initialized = false
 
-    /** Scopes already registered in [GrammarRegistry] (guarded by [lock]). */
-    private val loadedScopes = mutableSetOf<String>()
+    /**
+     * One resolver, registered once, whose AssetManager can be swapped. The
+     * app process keeps a single AssetManager, but test environments
+     * (Robolectric) recreate the Application — and its AssetManager — per
+     * test, and a stale one fails every later asset open. [ensureInitialized]
+     * refreshes it on each call (a volatile write in the common case).
+     */
+    private object AssetsResolver : FileResolver {
+        @Volatile
+        private var assets: AssetManager? = null
+
+        fun update(assetManager: AssetManager) {
+            assets = assetManager
+        }
+
+        override fun resolveStreamByPath(path: String): InputStream? {
+            val am = assets ?: return null
+            return try {
+                am.open(path)
+            } catch (e: IOException) {
+                null
+            }
+        }
+
+        override fun dispose() {
+            assets = null
+        }
+    }
 
     /** Install assets access + default theme. Safe to call from any thread. */
     fun ensureInitialized(context: Context) {
-        if (initialized) return
+        AssetsResolver.update(context.applicationContext.assets)
+        // Fast path: initialized AND a real theme is active. If the default
+        // theme never landed (e.g. a transient first-read failure), fall
+        // through and retry — the EMPTY model has no colors and every
+        // analyzer would render unstyled.
+        if (initialized && ThemeRegistry.getInstance().currentThemeModel !== ThemeModel.EMPTY) return
         synchronized(lock) {
-            if (initialized) return
-            FileProviderRegistry.getInstance().addFileProvider(
-                AssetsFileResolver(context.applicationContext.assets)
-            )
+            AssetsResolver.update(context.applicationContext.assets)
+            if (!initialized) {
+                FileProviderRegistry.getInstance().addFileProvider(AssetsResolver)
+                initialized = true
+            }
             // A real theme must be current before the first TextMateLanguage
             // is created (the analyzer snapshots it in its constructor).
             if (ThemeRegistry.getInstance().currentThemeModel === ThemeModel.EMPTY) {
                 runCatching { TextMateThemes.applyTheme(EditorThemeType.VS_CODE_DARK_PLUS) }
                     .onFailure { Log.w(TAG, "Default TextMate theme unavailable", it) }
             }
-            initialized = true
         }
     }
 
@@ -122,6 +156,15 @@ object TextMateThemes {
 
     private const val TAG = "TextMateThemes"
 
+    /**
+     * Themes this process loaded, by registry name (guarded by [applyTheme]'s
+     * lock). Once a model is in the registry we switch to it BY REFERENCE —
+     * [ThemeRegistry.setTheme] by name depends on registry-internal matching,
+     * and a miss would silently leave the PREVIOUS theme active (the scheme
+     * would resolve the wrong colors).
+     */
+    private val loadedThemes = mutableMapOf<String, ThemeModel>()
+
     /** Registry name (= file name without extension) for each editor theme. */
     fun nameFor(type: EditorThemeType): String = when (type) {
         EditorThemeType.VS_CODE_DARK_PLUS -> "vscode-dark-plus"
@@ -140,25 +183,36 @@ object TextMateThemes {
      * and attaching it to the editor re-runs the analysis so token colors
      * pick up the new theme immediately.
      */
+    @Synchronized
     fun applyTheme(type: EditorThemeType): TextMateColorScheme {
         val registry = ThemeRegistry.getInstance()
         val name = nameFor(type)
-        if (!registry.setTheme(name)) {
-            val path = pathFor(name)
-            val stream = FileProviderRegistry.getInstance().tryGetInputStream(path)
-            if (stream == null) {
-                // Assets ship inside the APK — this is a build error, not a
-                // runtime state; the guard exists so a packaging mistake
-                // degrades (sora default colors) instead of crashing.
-                Log.w(TAG, "Theme asset missing: $path")
-                return TextMateColorScheme.create(registry)
+        val known = loadedThemes[name]
+        when {
+            // Preferred: a model we loaded ourselves, switched by reference.
+            known != null -> registry.setTheme(known)
+            // Already registered by somebody else (e.g. a previous process
+            // state we do not track): switch by name.
+            registry.setTheme(name) -> {}
+            else -> {
+                val path = pathFor(name)
+                val stream = FileProviderRegistry.getInstance().tryGetInputStream(path)
+                if (stream == null) {
+                    // Assets ship inside the APK — this is a build error, not
+                    // a runtime state; the guard exists so a packaging mistake
+                    // degrades (previous theme stays active) instead of
+                    // crashing. Log loudly: silent wrong colors are worse.
+                    Log.e(TAG, "TextMate theme asset missing: $path — keeping previous theme")
+                } else {
+                    val model = ThemeModel(
+                        IThemeSource.fromInputStream(stream, path, Charsets.UTF_8),
+                        name
+                    )
+                    model.isDark = true
+                    registry.loadTheme(model) // loadTheme(...) also makes it current
+                    loadedThemes[name] = model
+                }
             }
-            val model = ThemeModel(
-                IThemeSource.fromInputStream(stream, path, Charsets.UTF_8),
-                name
-            )
-            model.isDark = true
-            registry.loadTheme(model) // loadTheme(...) also makes it current
         }
         return TextMateColorScheme.create(registry)
     }
