@@ -60,10 +60,11 @@ class GhostCompletionTest {
     @Test
     fun `G6 multi-line insert ghosts the FIRST line only`() {
         val skel = item("int main(void) {", "int main(void) {\n    \n    return 0;\n}")
-        val text = "int ma"
-        val ghost = GhostCompletion.compute(text, 6, listOf(skel))
+        // prefix = the leading word "int"; the rest of line 1 ghosts, line 2+ never do (G6)
+        val text = "int"
+        val ghost = GhostCompletion.compute(text, 3, listOf(skel))
         assertTrue(ghost is GhostState.Visible)
-        assertEquals("in(void) {", (ghost as GhostState.Visible).suffix) // no '\n' in a ghost
+        assertEquals(" main(void) {", (ghost as GhostState.Visible).suffix) // no '\n' in a ghost
         assertTrue(!ghost.suffix.contains('\n'))
     }
 
