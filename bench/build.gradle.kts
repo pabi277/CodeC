@@ -16,7 +16,7 @@ android {
         // the same compatibility mode as the IDE (insets, dispatch behavior).
         targetSdk = 28
         versionCode = 1
-        versionName = "25.1-bench"
+        versionName = "28.1-codec-keys-spike"
     }
 
     // Phase 25.1 — the bench is sideloaded by the owner from the CI artifact

@@ -127,6 +127,21 @@ object InputScripts {
         return Script("caret_drag", t - 100L + 400L, events)
     }
 
+    /**
+     * Phase 28.1 — hardware-key-path probe (spike question Q1): 20 characters
+     * of ordinary code at a relaxed 30 ms cadence, dispatched ONLY as
+     * synthesized KeyEvent pairs. With the soft IME suppressed this is exactly
+     * what a Bluetooth keyboard produces (the window hands KeyEvents to the
+     * focused view, IME-independent); if these land, HW typing works.
+     */
+    fun hwCheck20(): Script {
+        val text = "for (i = 0; i < n; i"
+        require(text.length == 20) { "hwCheck20 must be 20 chars, is ${text.length}" }
+        var t = 100L
+        val events = text.map { c -> ScriptEvent.TypeChar(c, t.also { t += 30L }) }
+        return Script("hw_check20", t + 400L, events)
+    }
+
     /** Names of the commands the runner understands. */
     const val CMD_SCROLL_TOP = "scroll_top"
 }

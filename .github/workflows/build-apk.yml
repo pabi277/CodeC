@@ -35,6 +35,20 @@ jobs:
           name: CodeC-IDE
           path: app/build/outputs/apk/debug/*.apk
 
+      # Phase 28.1 — the CodeC Keys spike device round needs the bench APK.
+      # Built with the REAL wrapper (Gradle 9.3.1): the legacy 9.0.0
+      # invocation above cannot configure AGP 9.1.1 modules, and
+      # settings.gradle.kts only includes `:bench` for that wrapper.
+      # REMOVE THIS BLOCK when Phase 28 closes (same law as the 25.1 wrapper).
+      - name: Build + test bench (Phase 28.1 spike, real wrapper)
+        run: ./gradlew :bench:assembleRelease :bench:testDebugUnitTest --no-daemon
+
+      - name: Upload bench artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeC-Bench
+          path: bench/build/outputs/apk/release/*.apk
+
       - name: Attach APK to GitHub Release
         if: github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'userland-')
         uses: softprops/action-gh-release@v2
