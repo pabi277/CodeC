@@ -1,11 +1,17 @@
 # CodeC Phase 28 — CodeC Keys: a dedicated in-app code keyboard
 
-> **Status:** 📋 **PLANNED — feasibility analysis complete, no code written.**
-> Owner question (2026-09-04): *"do you think if the app have it's own keyboard
-> possible only for code nothing else and app dedicate not for every app?"* —
-> **Answer: yes.** Details: `docs/EDITOR_MOBILE_RESEARCH.md` §9 (L0/L1/L2
-> layers, mechanisms, precedent, honesty table).
-> **Owner starts with "Start Phase 28"; no PR/merge without explicit command.**
+> **Status:** 🚧 **STARTED 2026-09-05 (owner: "Start phase 28") — 28.1 SPIKE
+> BUILT on `arena/01a070ae-codec`, owner device round pending** (record:
+> `PART_28_1_SPIKE.md` §4–§5). 28.2–28.4 remain PLANNED and gated: the README
+> design law 3 holds — no layout work until the feel gate passes on the
+> owner's device.
+> Original feasibility note: **Status was** 📋 PLANNED — feasibility analysis
+> complete, no code written. Owner question (2026-09-04): *"do you think if
+> the app have it's own keyboard possible only for code nothing else and app
+> dedicate not for every app?"* — **Answer: yes.** Details:
+> `docs/EDITOR_MOBILE_RESEARCH.md` §9 (L0/L1/L2 layers, mechanisms, precedent,
+> honesty table).
+> **No PR/merge without the owner's explicit command.**
 
 ![CodeC Keys mockup](../images/editor-research/codec-keys-mockup.png)
 

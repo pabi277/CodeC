@@ -102,10 +102,16 @@ All in `:bench` (throwaway; `:app` shipped ZERO of it — same law as 25.1).
   readable; this makes every bench round self-describing — the 25.1 shim
   trick generalized).
 - **CI history on `arena/01a070ae-codec`:** `33956591999` ❌ (app steps
-  green; bench step exit-1, raw log not readable — motivated the annotation
-  step; two host-test expectation bugs found by self-review: the fold-math
-  DEL count and the swapped-law drop count — `5bf70bd`).
-  → `33956854196` (result recorded by the next line when resolved).
+  green; bench step exit-1, raw log not readable from the sandbox —
+  motivated the tee + failure-annotation step; two host-test expectation
+  bugs found meanwhile by self-review: the fold-math DEL count and the
+  swapped-law drop count — `5bf70bd`); `33956854196` ❌ (the new annotations
+  did their job: `SpikeScreens.kt: Unresolved reference 'view'` ×4 —
+  Compose 1.7's `PointerInputScope` exposes NO `view`; fixed by capturing
+  `LocalView.current` at composition for the IME-hide hooks);
+  `33957016839` ✅ **GREEN (4m01s) on `3ea58d1`** — `:app` assemble+tests+lint and
+  `:bench:assembleRelease`+`testDebugUnitTest` all pass; the `CodeC-Bench`
+  artifact ships. **28.1 is now gated ONLY on the owner's device round (§5).**
 
 ## 5. Owner device-round recipe (the gate)
 

@@ -353,3 +353,20 @@ decision, not a capability limit. CodeC going L1 after Phases 25–27 is the
 *"make it best"* endgame, planned as [Phase 28](chat-phase28/README.md), and
 it is a **spike-gated option**, not a promise: 28.1 exists to prove
 feel/latency before any layout beauty is drawn.
+
+### §9.1 Addendum (2026-09-05) — 28.1 spike BUILT; go/no-go PENDING device round
+
+Owner said "Start phase 28"; per law 3 the ONLY thing built first is the
+feel-gate spike, entirely in `:bench` (never shipped): two K-cores (K1 =
+Compose document core, K2 = the shipping sora `CodeEditor`), each fed ONLY by
+an IME-free 3-row code grid routed through the production key model
+(`EditorKeySet.apply` mirrored verbatim), with DOWN→commit latency ledger, a
+strict-subsequence tap audit (dropped/double/swapped events), a window-ime
+inset flicker probe with a self-check toggle, an HW-synthesized-keys scenario
+(Q1), a stdin-row route scenario (Q2) and a 5-min human session (Q3 + feel).
+Mechanism notes proven in code: Compose 1.7's `PointerInputScope` exposes no
+`view`, so suppression hooks capture `LocalView.current`; sora commits use the
+`Content` line/column API its own symbol view uses. Record + owner runbook +
+budget table: `docs/chat-phase28/PART_28_1_SPIKE.md` §4–§5. **GO** ⇒ 28.2
+starts (owner's word). **NO-GO** ⇒ the phase stops here and the L0 strip
+(Phases 26/27) remains the product answer — recorded on this line.

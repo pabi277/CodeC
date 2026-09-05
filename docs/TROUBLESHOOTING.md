@@ -308,3 +308,27 @@ core CodeC adopts is made from YOUR numbers — nothing is decided by feel.
 what the harness is doing ("rep 2/3…", "scenario failed: …"). The raw numbers
 also live at `Android/data/com.codeci.bench/files/bench-results.md`
 (exported by Copy/Share regardless).
+
+## 10. How to run the Phase 28.1 CodeC Keys spike (owner runbook, 2026-09-05)
+
+**What this is:** the 28.1 gate answers ONE question — can CodeC-drawn keys
+feed the editor at typing speed with the system IME never opening, and does it
+FEEL instant? The 25.1 bench grew two spike cores for it: **K1-codecgrid**
+(today's Compose document path) and **K2-codecgrid** (the shipping sora core).
+Nothing here is in the IDE; the decision lands in
+`docs/EDITOR_MOBILE_RESEARCH.md` §9.1.
+
+**Steps (full detail in `docs/chat-phase28/PART_28_1_SPIKE.md` §5):**
+
+1. Actions → latest green **Build APK** on the session branch → Artifacts →
+   **`CodeC-Bench`** → install (updates the 25.1 bench in place).
+2. Write your three answers + verdict in the notes box on Home FIRST (they
+   ride the export): Q1 Bluetooth keyboard while suppressed? Q2 stdin-route
+   kept working? Q3 TalkBack reads editor + caps?
+3. Per K-screen: run the four scripted scenarios, do the "IME: allowed"
+   control check (the live `ime=` number must go > 0 — that proves the
+   flicker detector), then the 5-min human session on the grid.
+4. `tap=…/64 drop=0 dup=0 swap=no` + `p95 ≤ 16.7 ms` + `ime max=0px` on BOTH
+   cores + "feels instant" ⇒ **GO** (28.2 starts on your word). Any red ⇒
+   record the no-go; the strip (L0) stays the product answer.
+5. Home → **Copy all** → paste into the chat.
