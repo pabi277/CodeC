@@ -59,6 +59,18 @@ class TextMateSupportTest {
 
     @Test
     fun `all four editor themes load and resolve colors`() {
+        // Guard: every theme must have an asset at EXACTLY the path
+        // applyTheme() computes from its registry name (name ↔ file-name
+        // mismatches otherwise degrade silently to the previous theme —
+        // that is exactly how the first CI run failed: the Dark+ asset
+        // shipped as dark-plus.json while the code asked for
+        // vscode-dark-plus.json).
+        for (type in EditorThemeType.entries) {
+            val path = "textmate/themes/${TextMateThemes.nameFor(type)}.json"
+            context.assets.open(path).use { stream ->
+                assertTrue("theme asset $path must not be empty", stream.read() != -1)
+            }
+        }
         for (type in EditorThemeType.entries) {
             val scheme = TextMateThemes.applyTheme(type)
             val current = ThemeRegistry.getInstance().currentThemeModel

@@ -257,16 +257,14 @@ Every update updates the docs **in the same commit**:
   keystroke p95 ≤ 16.7 ms bench.c, APK delta ≤ +1.5 MiB). Records:
   `docs/chat-phase29/` (README + §4/§3 sections), JOURNEY §40. **No
   PR/merge without the owner's command.**
-- **Session-tooling note (2026-09-05):** the sandbox GitHub token
-  (`GH_TOKEN`) expired immediately after CI run 33983164706 finished
-  GREEN on `0e64b87` — `gh`/`git` pushes now fail with 401 until GitHub
-  is reconnected in Arena. Everything through `0e64b87` (code, tests,
-  docs, the green run) is PUSHED; doc updates recording the green run +
-  APK-measurement pending are LOCAL-ONLY until the next push. Outstanding
-  once auth is back: (1) push the local doc commit; (2) measure the APK
-  delta from run 33983164706's `CodeC-IDE` artifact vs `main`'s latest
-  (`gh api repos/…/actions/runs/33983164706/artifacts` → `size_in_bytes`)
-  before the owner device round.
+- **Session-tooling note (2026-09-05, updated):** the sandbox GitHub
+  token expired mid-session (401 on gh/git); the owner reconnected
+  GitHub in Arena and auth works again. Run 33983164706 (`0e64b87`) was
+  in fact a FAILURE (a `gh run watch` exit code was misread as green) —
+  the instrumented test revealed the true root cause (Dark+ asset file
+  name `dark-plus.json` vs registry name `vscode-dark-plus.json`);
+  fixed by the rename + guard commit. Push + green run + APK-delta
+  measurement are the immediate queue, then the owner device round.
 
 ---
 

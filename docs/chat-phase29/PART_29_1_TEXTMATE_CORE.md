@@ -172,47 +172,48 @@ pending at write time.
    measured from the CI artifact vs `main`'s (assets ≈ 234 KB compressed +
    module dex; budget ≤ +1.5 MiB — recorded when CI lands).
 
-### 4.5 CI history + the theme-switch hardening (2026-09-05)
+### 4.5 CI history + the Dark+ asset-name fix (2026-09-05)
 
 - **Run 1 (`6b69c6c`, 33981945825):** compiled clean; 6/7
   `TextMateSupportTest` methods passed. The theme test failed at the
   post-loop Dark+ assert — the returned scheme resolved `#24292E`
-  (github-dark's `editor.background`), i.e. after
-  `applyTheme(VS_CODE_DARK_PLUS)` the *previous* theme was still active.
-- **Root cause (code-level, sora 0.24.6 sources verified against the
-  `0.24.6` tag):** sora's `AssetsFileResolver` holds the `AssetManager`
-  it was constructed with. Robolectric recreates the Application (and its
-  `AssetManager`) **per test method**, so the resolver registered by the
-  first method's `ensureInitialized` goes stale — every later asset open
-  returns null, and `applyTheme`'s degrade path (stream == null → return
-  scheme for the still-current theme) silently kept the loop's last theme
-  (github-dark) active. Contributing weakness:
-  `ThemeRegistry.setTheme(name)` depends on registry-internal name
-  matching, and a miss + null stream combines into a silent wrong theme.
-- **Fix (`a19b033`):** (1) one refreshable `FileResolver` of our own,
-  registered once, whose `AssetManager` is swapped on every
-  `ensureInitialized` call (volatile write; the app process keeps one AM,
-  tests get the current one); (2) `TextMateThemes` caches the
-  `ThemeModel` per theme and switches **by reference**
-  (`setTheme(ThemeModel)`) after first load — no name matching on the hot
-  path; (3) `ensureInitialized` retries the default theme while the
-  registry still holds `ThemeModel.EMPTY` (a failed first attempt no
-  longer poisons the process); (4) a missing theme asset logs at ERROR;
-  (5) the theme test now asserts **per-iteration** that the active model
-  is the one requested (the Settings theme-switch law), with diagnostic
-  messages (active model name + rawTheme name + resolved bg), and asserts
-  Dark+ `#1E1E1E` both inside its loop iteration and after the round
-  trip.
+  (github-dark's `editor.background`).
+- **Root cause (found via the instrumented run, see run 3):** the Dark+
+  theme asset shipped as `textmate/themes/dark-plus.json`, but
+  `applyTheme` derives the path from the registry name —
+  `textmate/themes/vscode-dark-plus.json`. `AssetManager.open` threw,
+  the resolver returned null, and `applyTheme`'s degrade path (missing
+  asset → keep the previous theme) turned the FIRST apply (Dark+, the
+  default) into a no-op. The loop then loaded Monokai → Dracula →
+  GitHub Dark fine (those three file names match their registry names),
+  and the post-loop Dark+ re-apply degraded again — leaving GitHub Dark
+  active, hence `#24292E`. One file name; every symptom.
+- **Fix (`a19b033`, prepared while hunting):** asset renamed to
+  `vscode-dark-plus.json` (all four themes now follow the rule
+  registry name == file name == JSON `name`), plus robustness that
+  stays regardless: `TextMateThemes` caches each loaded `ThemeModel`
+  and switches **by reference** (`setTheme(ThemeModel)` — no
+  registry-internal name matching on the switch path),
+  `ensureInitialized` retries the default theme while the registry
+  still holds `ThemeModel.EMPTY`, a missing theme asset logs at ERROR,
+  and the theme test asserts **per-iteration** that the active model is
+  the one requested (the Settings theme-switch law) — plus a new guard
+  that every theme asset EXISTS at exactly the path `applyTheme`
+  computes, so a name/file mismatch can never slip through again.
+  (Also in `a19b033`: a refreshable `FileResolver` of our own whose
+  `AssetManager` is re-attached on every `ensureInitialized` call —
+  defensive for environments that recreate the Application; the app
+  process keeps one AssetManager.)
 - **Run 2 (`a19b033`, 33982965030):** compile error — the fixup edit
   accidentally dropped the `loadedScopes` field. Restored (`0e64b87`).
-- **Run 3 (`0e64b87`, 33983164706): ✅ GREEN** — `Build APK` succeeded
-  (`gh run watch --exit-status` → 0): compile + all unit tests
-  (Robolectric theme/grammar/analyzer tests included) + `:bench` checks.
-- **APK delta vs `main`: NOT yet measured** — the sandbox GitHub token
-  expired immediately after run 3 finished (gh/git auth down), before the
-  artifact-size API could be queried. Estimate stands at ≈ +0.7–1.0 MiB
-  (234 KB gzipped grammar/theme assets + language-textmate module dex),
-  inside the +1.5 MiB budget. Measure from the run-3 artifact
-  (`CodeC-IDE`, `size_in_bytes` vs `main`'s latest) once GitHub access is
-  restored, before the device round.
+- **Run 3 (`0e64b87`, 33983164706): FAILED, but with the diagnostic the
+  hardened test was built to produce:** "after applyTheme(VS Code
+  Dark+) the active model is EMPTY (raw=null), bg=0xffffffff" — i.e.
+  the Dark+ asset never loaded at all. This pinned the root cause above
+  (run 2 had shipped the hardening but NOT the rename — the file was
+  still `dark-plus.json`). The rename + asset-existence guard landed
+  after it.
+- **Run 4 (the rename commit):** recorded below once green.
+- **APK delta vs `main`:** measured from the green run's `CodeC-IDE`
+  artifact vs `main`'s latest (`size_in_bytes`) — recorded below.
 

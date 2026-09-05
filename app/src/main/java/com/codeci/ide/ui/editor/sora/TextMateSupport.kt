@@ -147,7 +147,7 @@ object TextMateSupport {
 /**
  * Phase 29.1 — editor themes as TextMate theme assets (T4).
  *
- * `textmate/themes/` holds four JSONs: `dark-plus.json` (the flattened
+ * `textmate/themes/` holds four JSONs: `vscode-dark-plus.json` (the flattened
  * vscode dark_vs + dark_plus — the DEFAULT), `monokai.json` (vscode
  * theme-monokai), `dracula.json` and `github-dark.json` (authored from the
  * CodeC palettes with the same scope structure as Dark+). The editor's

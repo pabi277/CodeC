@@ -44,7 +44,7 @@ Source: LuaLS/lua.tmbundle — https://github.com/LuaLS/lua.tmbundle (MIT)
 
 Themes (assets/textmate/themes/)
 --------------------------------
-dark-plus.json: derived from microsoft/vscode (MIT)
+vscode-dark-plus.json: derived from microsoft/vscode (MIT)
   extensions/theme-defaults/themes/dark_vs.json + dark_plus.json, flattened
   into one file (dark_vs "colors" + dark_plus "tokenColors"; JSONC comments
   and trailing commas removed so the file is strict JSON). The classic
@@ -60,7 +60,7 @@ monokai.json: derived from microsoft/vscode (MIT)
 dracula.json, github-dark.json: AUTHORED FOR CodeC (not copies).
   Written for Phase 29 using the Dracula (https://draculatheme.com) and
   GitHub dark palettes already shipped by CodeC since Phase 12/25, applied
-  to the same token-scope structure as dark-plus.json. Released by CodeC
+  to the same token-scope structure as vscode-dark-plus.json. Released by CodeC
   under the MIT License.
 
 MIT License

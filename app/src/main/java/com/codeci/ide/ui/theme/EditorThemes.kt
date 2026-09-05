@@ -31,7 +31,7 @@ data class EditorThemeColors(
  * Phase 29.1 — the Compose-side palette for VS Code Dark+. This drives the
  * NON-editor surfaces (ghost text color, settings theme preview, status
  * accents); the editor itself colours through the TextMate theme asset
- * `textmate/themes/dark-plus.json` (the flattened vscode dark_vs+dark_plus).
+ * `textmate/themes/vscode-dark-plus.json` (the flattened vscode dark_vs+dark_plus).
  * The values below mirror that JSON so both surfaces agree.
  */
 val VSCodeDarkPlusTheme = EditorThemeColors(
