@@ -9,6 +9,12 @@ import com.codeci.ide.R
 import com.codeci.ide.ui.editor.BracketMatcher
 import com.codeci.ide.ui.editor.ClangFormatBridge
 import com.codeci.ide.ui.editor.CodeFormatter
+import com.codeci.ide.ui.editor.AcceptGranularity
+import com.codeci.ide.ui.editor.CodeCompletionEngine
+import com.codeci.ide.ui.editor.CompletionItem
+import com.codeci.ide.ui.editor.CompletionSettings
+import com.codeci.ide.ui.editor.GhostCompletion
+import com.codeci.ide.ui.editor.GhostState
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.TestLine
 import com.codeci.ide.ui.editor.TestLineKind
@@ -74,6 +80,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -156,6 +163,36 @@ data class OutputRunState(
 
 /** Phase 9 — cursor readout for the editor status bar. */
 data class EditorCursorPos(val line: Int, val column: Int, val selectionLength: Int)
+
+/**
+ * Phase 27 — the ONE completion projection the ghost renderer, the
+ * suggestion strip and the "⌄ more" panel read from (27.3's "surfaces never
+ * disagree" law). Emitted from the VM's two-leg pipeline: the instant leg
+ * narrows the cached engine items per keystroke, the debounced leg
+ * re-runs the engine off the main thread.
+ *
+ * [dismissedAnchor] is the per-identifier dismissal (S4): while the caret
+ * stays inside the identifier beginning at this offset, strip+ghost stay
+ * hidden; the next identifier re-arms. [scrollSuppressed] is the G4
+ * scroll-clear (until the next content change). [basisText] is the buffer
+ * instance the model was computed against (identity, not content, is the
+ * "did the buffer change" signal — StateFlow equality stays cheap on the
+ * same instance).
+ */
+data class CompletionModel(
+    val items: List<CompletionItem> = emptyList(),
+    val ghost: GhostState = GhostState.Hidden,
+    val prefixAnchor: Int = -1,
+    val prefix: String = "",
+    val dismissedAnchor: Int? = null,
+    val scrollSuppressed: Boolean = false,
+    val basisText: String = "",
+    val acceptCounts: Map<String, Int> = emptyMap()
+) {
+    companion object {
+        val EMPTY = CompletionModel()
+    }
+}
 
 /** Phase 9 — the whole find/replace bar state. */
 data class FindUiState(
@@ -315,6 +352,182 @@ class EditorViewModel : ViewModel() {
     val cursorPos: StateFlow<EditorCursorPos> = _cursorPos.asStateFlow()
 
     private var decorationJob: Job? = null
+
+    // ---- Phase 27: phone-native autocomplete pipeline --------------------
+    // (ghost text + suggestion strip + "⌄ more" panel; all driven by ONE
+    // model so the three surfaces never disagree — CompletionPolicy holds
+    // the key law, StripContext the strip law, GhostCompletion the ghost.)
+
+    var completionConfig: CompletionSettings = CompletionSettings()
+        private set
+
+    /** Changing the config wakes both pipeline legs (combine key). */
+    private val completionConfigVersion = MutableStateFlow(0L)
+
+    fun setCompletionConfig(c: CompletionSettings) {
+        if (c == completionConfig) return
+        completionConfig = c
+        completionConfigVersion.update { it + 1 }
+    }
+
+    private val _completionModel = MutableStateFlow(CompletionModel.EMPTY)
+    val completionModel: StateFlow<CompletionModel> = _completionModel.asStateFlow()
+
+    /** Engine output of the last debounced pass (the instant leg narrows it). */
+    private var completionItemsBase: List<CompletionItem> = emptyList()
+
+    /** 27.2 recency-of-use boost, in-memory only (per VM lifetime). */
+    private val completionAcceptCounts = HashMap<String, Int>()
+
+    /** Screen → sora: open the native panel as explicit "⌄ more" browse mode. */
+    private val _completionPanelRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val completionPanelRequests: kotlinx.coroutines.flow.SharedFlow<Unit> = _completionPanelRequests
+
+    fun requestCompletionPanel() {
+        if (completionConfig.master && completionConfig.panel) _completionPanelRequests.tryEmit(Unit)
+    }
+
+    /**
+     * Instant leg: on EVERY buffer/selection change the cached items are
+     * narrowed by the grown prefix (startsWith-class filtering only — no
+     * engine re-run) and the ghost is recomputed from them, so both surfaces
+     * visibly track every character. Emits only on a real model change.
+     */
+    private fun refreshCompletionModelNow(v: TextFieldValue) {
+        val cfg = completionConfig
+        val lang = LanguageType.fromFileName(_activeTabPath.value ?: _fileName.value)
+        val prev = _completionModel.value
+        if (cfg.everythingOff || !cfg.anyOn ||
+            v.text.length > GhostCompletion.SOFT_FILE_CAP ||
+            lang == LanguageType.TEXT || lang == LanguageType.JSON
+        ) {
+            completionItemsBase = emptyList()
+            if (prev != CompletionModel.EMPTY) _completionModel.value = CompletionModel.EMPTY
+            return
+        }
+        val text = v.text
+        val caret = v.selection.min.coerceIn(0, text.length)
+        val anchor = CodeCompletionEngine.prefixStart(text, caret)
+        val prefix = text.substring(anchor, caret)
+        // S4 dismissal is per-IDENTIFIER: valid only while the caret sits in
+        // the same identifier (anchor unchanged); the next identifier re-arms.
+        val dismissed = prev.dismissedAnchor.takeIf { it == anchor }
+        // G4 scroll-clear lasts until the next content change.
+        val textChanged = prev.basisText !== text
+        val scrollSuppressed = prev.scrollSuppressed && !textChanged
+        val hasSelection = v.selection.length != 0
+        val items = when {
+            hasSelection || dismissed != null -> emptyList()
+            // Trigger-word context ("def ", "#include" …): the engine's base
+            // set IS the suggestion set; the ghost still requires a prefix (G1).
+            prefix.isEmpty() -> completionItemsBase
+            else -> GhostCompletion.filterForPrefix(completionItemsBase, prefix)
+        }
+        val ghost = if (!hasSelection && dismissed == null && !scrollSuppressed && cfg.ghost) {
+            GhostCompletion.compute(text, caret, items)
+        } else {
+            GhostState.Hidden
+        }
+        val next = CompletionModel(
+            items = items,
+            ghost = ghost,
+            prefixAnchor = anchor,
+            prefix = prefix,
+            dismissedAnchor = prev.dismissedAnchor,
+            scrollSuppressed = scrollSuppressed,
+            basisText = text,
+            acceptCounts = prev.acceptCounts
+        )
+        if (next != prev) _completionModel.value = next
+    }
+
+    /** Debounced leg: full engine recompute OFF the main thread. */
+    private suspend fun refreshCompletionItems(v: TextFieldValue) {
+        val cfg = completionConfig
+        val lang = LanguageType.fromFileName(_activeTabPath.value ?: _fileName.value)
+        if (cfg.everythingOff || !cfg.anyOn ||
+            v.text.length > GhostCompletion.SOFT_FILE_CAP ||
+            lang == LanguageType.TEXT || lang == LanguageType.JSON
+        ) {
+            completionItemsBase = emptyList()
+        } else {
+            val caret = v.selection.min.coerceIn(0, v.text.length)
+            completionItemsBase = withContext(Dispatchers.Default) {
+                runCatching { CodeCompletionEngine.completions(v.text, caret, lang) }
+                    .getOrDefault(emptyList())
+            }
+        }
+        // Reproject against the (possibly newer) live buffer.
+        refreshCompletionModelNow(_codeText.value)
+    }
+
+    private fun beginCompletionPipeline() {
+        viewModelScope.launch {
+            combine(_codeText, completionConfigVersion) { v, _ -> v }
+                .collect { v -> refreshCompletionModelNow(v) }
+        }
+        viewModelScope.launch {
+            combine(_codeText, completionConfigVersion) { v, ver -> v to ver }
+                .debounce { completionConfig.debounceMs.coerceIn(60L, 500L) }
+                .collect { (v, _) -> refreshCompletionItems(v) }
+        }
+    }
+
+    init {
+        beginCompletionPipeline()
+    }
+
+    /** G3(c)/strip-TAB accept: the full ghost insert. No-op on a stale ghost. */
+    fun acceptGhost(granularity: AcceptGranularity = AcceptGranularity.FULL) {
+        val model = _completionModel.value
+        val ghost = model.ghost as? GhostState.Visible ?: return
+        val next = GhostCompletion.accept(_codeText.value, ghost, granularity) ?: return
+        completionAcceptCounts[ghost.item.label] = (completionAcceptCounts[ghost.item.label] ?: 0) + 1
+        clearCompletionTransient()
+        updateCode(next)
+    }
+
+    /** Chip tap (S2): full accept at the caret — same prefix-replacing rule. */
+    fun acceptCompletionItem(item: CompletionItem) {
+        val v = _codeText.value
+        if (v.selection.length != 0) return
+        val caret = v.selection.min.coerceIn(0, v.text.length)
+        val start = CodeCompletionEngine.prefixStart(v.text, caret)
+        val next = TextFieldValue(
+            v.text.substring(0, start) + item.insertText + v.text.substring(caret),
+            TextRange(start + item.insertText.length)
+        )
+        completionAcceptCounts[item.label] = (completionAcceptCounts[item.label] ?: 0) + 1
+        clearCompletionTransient()
+        updateCode(next)
+    }
+
+    /** S3/S4/ESC: dismiss for the CURRENT identifier; the next one re-arms. */
+    fun dismissCompletionForIdentifier() {
+        val v = _codeText.value
+        val caret = v.selection.min.coerceIn(0, v.text.length)
+        val anchor = CodeCompletionEngine.prefixStart(v.text, caret)
+        val counts = _completionModel.value.acceptCounts
+        _completionModel.value = CompletionModel(
+            dismissedAnchor = anchor, basisText = v.text, acceptCounts = counts
+        )
+    }
+
+    /** G4: editor scrolled — the ghost leaves until the next content change. */
+    fun onCompletionScroll() {
+        val prev = _completionModel.value
+        if (prev.ghost is GhostState.Visible && !prev.scrollSuppressed) {
+            _completionModel.value = prev.copy(ghost = GhostState.Hidden, scrollSuppressed = true)
+        }
+    }
+
+    private fun clearCompletionTransient() {
+        completionItemsBase = emptyList()
+        _completionModel.value = CompletionModel.EMPTY.copy(
+            basisText = _codeText.value.text,
+            acceptCounts = HashMap(completionAcceptCounts)
+        )
+    }
 
     // ---- Phase 11: Output Panel run pipeline -----------------------------
 

@@ -47,6 +47,13 @@ class SettingsManager(private val context: Context) {
 
         // Phase 26.3 — IME guide dismissed flag (optional).
         val IME_GUIDE_DISMISSED = booleanPreferencesKey("ime_guide_dismissed")
+
+        // Phase 27.3 — completion law settings. Master off = feature GONE.
+        val COMPLETION_MASTER = booleanPreferencesKey("completion_master")
+        val COMPLETION_GHOST = booleanPreferencesKey("completion_ghost")
+        val COMPLETION_STRIP = booleanPreferencesKey("completion_strip")
+        val COMPLETION_PANEL = booleanPreferencesKey("completion_panel")
+        val COMPLETION_DEBOUNCE_MS = intPreferencesKey("completion_debounce_ms")
     }
 
     /**
@@ -82,6 +89,19 @@ class SettingsManager(private val context: Context) {
     // Phase 26.3
     val imeGuideDismissedFlow: Flow<Boolean> = context.dataStore.data.map { it[IME_GUIDE_DISMISSED] ?: false }
     suspend fun setImeGuideDismissed(v: Boolean) { context.dataStore.edit { it[IME_GUIDE_DISMISSED] = v } }
+
+    // Phase 27.3 — autocomplete surfaces. Defaults: ghost ON, strip ON,
+    // panel on-demand (⌄ more), 120 ms beat.
+    val completionMasterFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_MASTER] ?: true }
+    val completionGhostFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_GHOST] ?: true }
+    val completionStripFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_STRIP] ?: true }
+    val completionPanelFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_PANEL] ?: true }
+    val completionDebounceMsFlow: Flow<Int> = context.dataStore.data.map { it[COMPLETION_DEBOUNCE_MS] ?: 120 }
+    suspend fun setCompletionMaster(v: Boolean) { context.dataStore.edit { it[COMPLETION_MASTER] = v } }
+    suspend fun setCompletionGhost(v: Boolean) { context.dataStore.edit { it[COMPLETION_GHOST] = v } }
+    suspend fun setCompletionStrip(v: Boolean) { context.dataStore.edit { it[COMPLETION_STRIP] = v } }
+    suspend fun setCompletionPanel(v: Boolean) { context.dataStore.edit { it[COMPLETION_PANEL] = v } }
+    suspend fun setCompletionDebounceMs(v: Int) { context.dataStore.edit { it[COMPLETION_DEBOUNCE_MS] = v.coerceIn(60, 500) } }
 
     val fontSizeFlow: Flow<Float> = context.dataStore.data.map { it[FONT_SIZE] ?: 14f }
     val fontFamilyFlow: Flow<String> = context.dataStore.data.map { it[FONT_FAMILY] ?: "Monospace" }

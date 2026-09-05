@@ -1,8 +1,18 @@
 # CodeC Phase 27 — Phone-native Autocomplete
 
-> **Status:** 📋 **PLANNED — research complete, no code written.** Research
-> basis: [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md) §6.
-> **Owner starts with "Start Phase 27"; no PR/merge without explicit command.**
+> **Status:** ✅ **CI GREEN (2026-09-05) on `arena/01a06f9e-codec` — run
+> `33944516016` on `6da7f44` after 4 rounds (assembler+lint+all host tests);
+> device gates = each part's §3 recipe.** Round log: `33943917743` ❌
+> (KeyStripStorage exhaustive `when`s for the new ghost caps — transient caps
+> persist as their physical keys, `51680e5`); `33944038267` ❌ (two test names
+> contained `;` — AGP test-name rule, `c25c5b8`); `33944280599` ❌ (G6 fixture
+> typed `"int ma"` but the ghost prefix is the single identifier run — fixture
+> corrected to typed `"int"`, `6da7f44`); `33944516016` ✅ GREEN (4m51s).
+> Research basis:
+> [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md) §6.
+> **No PR/merge without the owner's explicit command.** Implementation
+> records: §4 of each part (27.1 ghost via sora inlay hints, 27.2 chip strip
+> + gated native panel, 27.3 the policy surface + Settings surface).
 
 Owner complaint (2026-09-04, restated): *"the suggestions are good but also
 problematic for phone because it suggests and can't do anything."* Diagnosis

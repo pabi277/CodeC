@@ -50,6 +50,17 @@ sealed class EditorKey {
 
     /** Phase 26.2 — toggle line comment (popup on /). */
     object CommentToggle : EditorKey()
+
+    /**
+     * Phase 27.1 — the ghost is visible: the TAB cap is in accept mood.
+     * The screen intercepts it (accepts the full ghost); [apply] is a
+     * deliberate no-op fallback so a missed wiring never inserts a tab
+     * silently under the "TAB ▸" label (27.3 — the look tells the truth).
+     */
+    object GhostAccept : EditorKey()
+
+    /** Phase 27.1 — the → cap in ghost mood: accept the next WORD only. */
+    object GhostAcceptWord : EditorKey()
 }
 
 /** One rendered keycap — Phase 26.1 adds popup + swipe layers. */
@@ -175,6 +186,34 @@ object EditorKeySet {
     fun defaultGeneral(): List<EditorKeyDef> = GENERAL
 
     /**
+     * Phase 27.1/27.3 — dual-mood caps while the ghost is visible:
+     *  - TAB ▸: tap accepts the full ghost; its POPUP is plain [EditorKey.Tab]
+     *    so long-press is still raw indent (the accessibility escape hatch).
+     *  - →▸: tap accepts the next ghost WORD; its LINE_END popup is kept.
+     * Labels come from [CompletionPolicy] — the look must tell the truth.
+     * On every other surface the list passes through untouched.
+     */
+    fun keysWithGhostMood(defs: List<EditorKeyDef>, surface: CompletionSurface): List<EditorKeyDef> {
+        if (surface != CompletionSurface.GHOST_ONLY && surface != CompletionSurface.STRIP) return defs
+        return defs.map { def ->
+            when {
+                def.key is EditorKey.Tab -> def.copy(
+                    label = CompletionPolicy.tabCapLabel(surface),
+                    key = EditorKey.GhostAccept,
+                    popup = EditorKey.Tab
+                )
+                def.key is EditorKey.Caret &&
+                    (def.key as EditorKey.Caret).move == EditorKey.Caret.Move.RIGHT ->
+                    def.copy(
+                        label = CompletionPolicy.rightCapLabel(surface),
+                        key = EditorKey.GhostAcceptWord
+                    )
+                else -> def
+            }
+        }
+    }
+
+    /**
      * Custom-snippet data model (Spck's "Custom Snippets"): one `label=text`
      * per line; `#` starts a comment; blank lines are skipped. The Settings
      * editing UI is a recorded follow-up — parsing + the keycap are this
@@ -228,6 +267,9 @@ object EditorKeySet {
             }
             EditorKey.DeleteWord -> SmartTyping.deletePrevWord(value)
             EditorKey.CommentToggle -> value
+            // Phase 27.1 — intercepted by the screen (ghost accept paths);
+            // reaching apply() means no ghost was visible: insert nothing.
+            EditorKey.GhostAccept, EditorKey.GhostAcceptWord -> value
             is EditorKey.Caret -> when (key.move) {
                 EditorKey.Caret.Move.LEFT -> caret(text, if (start != end) start else (start - 1).coerceAtLeast(0))
                 EditorKey.Caret.Move.RIGHT -> caret(text, if (start != end) end else (start + 1).coerceAtMost(text.length))

@@ -111,6 +111,13 @@ fun SettingsScreen(
     val autoIndent by settingsManager.autoIndentFlow.collectAsState(initial = true)
     val wordWrap by settingsManager.wordWrapFlow.collectAsState(initial = false)
 
+    // Phase 27.3 — completion surfaces (master off = the whole feature is gone).
+    val completionMaster by settingsManager.completionMasterFlow.collectAsState(initial = true)
+    val completionGhost by settingsManager.completionGhostFlow.collectAsState(initial = true)
+    val completionStrip by settingsManager.completionStripFlow.collectAsState(initial = true)
+    val completionPanel by settingsManager.completionPanelFlow.collectAsState(initial = true)
+    val completionDebounceMs by settingsManager.completionDebounceMsFlow.collectAsState(initial = 120)
+
     val cStandard by settingsManager.cStandardFlow.collectAsState(initial = "C11")
     val warningLevel by settingsManager.warningLevelFlow.collectAsState(initial = "Standard")
     val optimizationLevel by settingsManager.optimizationLevelFlow.collectAsState(initial = "O0")
@@ -156,6 +163,48 @@ fun SettingsScreen(
             SettingsSwitch(title = "Line Numbers", checked = lineNumbers, onCheckedChange = { scope.launch { settingsManager.setLineNumbers(it) } })
             SettingsSwitch(title = "Auto Indent", checked = autoIndent, onCheckedChange = { scope.launch { settingsManager.setAutoIndent(it) } })
             SettingsSwitch(title = "Word Wrap", checked = wordWrap, onCheckedChange = { scope.launch { settingsManager.setWordWrap(it) } })
+
+            // Phase 27.3 — phone-native autocomplete surfaces. The master
+            // switch removes ALL completion chrome (ghost, chips, panel).
+            SettingsSwitch(
+                title = "Autocompletion",
+                checked = completionMaster,
+                onCheckedChange = { scope.launch { settingsManager.setCompletionMaster(it) } }
+            )
+            SettingsItem(
+                title = "How suggestions appear",
+                subtitle = "Suggestions never steal Enter and never complete by themselves. " +
+                    "Ghost text = dimmed hint in the code (tap it, \"TAB ▸\" or \"→\" to accept, " +
+                    "long-press TAB still indents). Chips = tap targets in the keys row " +
+                    "(swipe down dismisses for the word). \"⌄ more\" opens the full list."
+            )
+            if (completionMaster) {
+                SettingsSwitch(
+                    title = "Inline ghost text",
+                    checked = completionGhost,
+                    onCheckedChange = { scope.launch { settingsManager.setCompletionGhost(it) } }
+                )
+                SettingsSwitch(
+                    title = "Suggestion chips in the keys row",
+                    checked = completionStrip,
+                    onCheckedChange = { scope.launch { settingsManager.setCompletionStrip(it) } }
+                )
+                SettingsSwitch(
+                    title = "\"⌄ more\" opens the full completion panel",
+                    checked = completionPanel,
+                    onCheckedChange = { scope.launch { settingsManager.setCompletionPanel(it) } }
+                )
+                SettingsDropdown(
+                    title = "Suggestion delay",
+                    selectedOption = "$completionDebounceMs ms",
+                    options = listOf("120 ms", "240 ms"),
+                    onOptionSelected = {
+                        scope.launch {
+                            settingsManager.setCompletionDebounceMs(it.split(" ")[0].toInt())
+                        }
+                    }
+                )
+            }
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 

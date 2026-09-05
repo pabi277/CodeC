@@ -99,6 +99,14 @@ object CodeCompletionEngine {
     }
 
     /**
+     * Phase 27.1 — public view of the matcher used by [completions], so the
+     * instant (non-debounced) shrink path narrows cached items by the grown
+     * prefix with the SAME predicate (ghost/strip never re-rank by a
+     * different rule).
+     */
+    fun labelMatches(label: String, prefix: String): Boolean = snippetMatches(label, prefix)
+
+    /**
      * Phase 22.6 — the identifier scan is the single most expensive thing the
      * editor did per keystroke, so it is bounded twice over.
      *
