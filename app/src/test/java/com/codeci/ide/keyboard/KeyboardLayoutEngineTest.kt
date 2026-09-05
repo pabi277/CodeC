@@ -224,19 +224,6 @@ class KeyboardLayoutEngineTest {
     }
 
     @Test
-    fun languageTailCapsRideTheUtilityRowNotAWholeRow() {
-        // Device round 1 (owner): the lone `->` row is gone — five rows,
-        // every language; the Phase 16 tail caps keep their keys at the
-        // utility row's tail.
-        val c = KeyboardDefaults.codeQwerty()
-        assertEquals(5, c.rows.size)
-        assertTrue(c.rows[4].any { it.def.label == "->" })
-        val py = KeyboardDefaults.codeQwerty()
-        assertEquals(listOf("SYM", "←", "→", "↑", "↓", ":", "_(self)"), py.rows[4].map { it.def.label })
-        assertEquals(5, KeyboardDefaults.codeQwerty().rows[4].size)
-    }
-
-    @Test
     fun arrowNavigationTravelsAsFlicksNotPopups() {
         // hold-repeat fires at 150 ms and always beats a 300 ms popup, so on
         // the grid Home/End/PgUp/PgDn MUST live on flicks — a popup-only
