@@ -335,6 +335,8 @@ Nothing here is in the IDE; the decision lands in
 
 ## 11. How to run the Phase 28.2 CodeC Keys device round (owner runbook, 2026-09-05)
 
+> **Merged 2026-09-05** (owner command after rounds 1–3). This card stays as the standing regression pass — if a check ever fails, file it like any other bug.
+
 **What this is:** the first time the keyboard ships INSIDE the IDE — the
 28.1 spike proved the latency law; 28.2 proves the layout engine under real
 use. **Since owner round 2 (2026-09-05) CodeC Keys is DEFAULT ON** ("make the

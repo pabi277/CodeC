@@ -3,7 +3,7 @@
 > **Status:** 🚧 **STARTED 2026-09-05 — 28.1 SPIKE ✅ DONE + GO** (device
 > round 1 recorded `PART_28_1_SPIKE.md` §6: K2/sora meets every budget;
 > owner verdict "Go", 2026-09-05, four open confirmations folded into 28.2's
-> device round). **28.2 LAYOUT ENGINE STARTED the same day (owner: "Go")** —
+> device round). **28.2 LAYOUT ENGINE BUILT the same day, three owner device rounds, ✅ MERGED into main on owner command** —
 > gate cleared per design law 3, so layout work is live on
 > `arena/01a070ae-codec`. 28.3–28.4 remain PLANNED behind their deps.
 > Original feasibility note: **Status was** 📋 PLANNED — feasibility analysis

@@ -1,6 +1,6 @@
 # CodeC Phase 28.2 — CodeC Keys Layout Engine
 
-**Status:** 🚧 **BUILT 2026-09-05** (same day as the 28.1 GO; CI green) —
+**Status:** ✅ **MERGED into main 2026-09-05** on owner command (built + three device rounds the same day; CI green) —
 engine in `:app` `ui/keyboard/`, Settings + `EditorScreen` wired, host tests
 pinning every law; **owner device rounds 1–2 landed same day, fixes below.**
 **Default flipped ON (round 2).** · **Cost:** `[client-only]` ·
