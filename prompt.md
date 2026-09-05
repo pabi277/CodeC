@@ -193,15 +193,11 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. Phases 20.1–24 are MERGED. **Phase 25.1 is COMPLETE and its gate verdict
-   is written: C-sora wins → 25.2 chosen, 25.3 cancelled.** 25.2 starts only
-   when the owner says "Start Phase 25.2" (it is an L-effort editor-core
-   swap: AndroidView host, highlighter adapter, completion provider adapter,
-   find/replace via Sora searcher, LGPL checklist — spec:
-   `docs/chat-phase25/PART_25_2_SORA_PATH.md`). Phases 26–28 and any other
-   phase also start only on the owner's word. Otherwise the agent is in
-   **bug-wait mode**: do nothing until the owner reports a bug or names the
-   next phase. No self-initiated work.
+2. Phases 20.1–27 are MERGED. Phase 28.2 is MERGED; 28.3/28.4 remain
+   planned. **Phases 29–33 are PLANNED only** (`docs/chat-phase29/` …
+   `docs/chat-phase33/`) — no implementation until the owner says
+   `"Start Phase 29"` (recommended next for colour) or another N.
+   Otherwise **bug-wait mode**. No self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,

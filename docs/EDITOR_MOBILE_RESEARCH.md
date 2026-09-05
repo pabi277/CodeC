@@ -259,6 +259,13 @@ A single Settings toggle kills the whole feature (per the anti-pattern list).
 | [26](chat-phase26/README.md) | **Typing experience 2.0** | 26.1 key-strip 2.0 (long-press popups, swipe layers, user-editable sets) · 26.2 smart typing (auto-indent, pair type-over, wrap-selection) · 26.3 code-friendly IME guide panel | 25 (or the surviving editor core) |
 | [27](chat-phase27/README.md) | **Phone-native autocomplete** | 27.1 inline ghost text · 27.2 suggestion strip · 27.3 accept/dismiss rules + settings | 26.1 (strip exists), benefits from 25 but works on current core |
 | [28](chat-phase28/README.md) | **CodeC Keys — dedicated in-app code keyboard** (owner question 2026-09-04, see §9) | 28.1 IME-free input spike · 28.2 data-driven layout engine · 28.3 suggestions as keyboard row 0 · 28.4 prose escape hatch & parity | 26.1 key model; optional endgame after 25–27 prove budgets |
+| [29](chat-phase29/README.md) | **VS Code colour (TextMate)** | 29.1 language-textmate + grammars · 29.2 language parity · 29.3 retire regex | 25.2 Sora host |
+| [30](chat-phase30/README.md) | **Offline completeness** | 30.1 friendly-snippets · 30.2 Emmet · 30.3 strip capacity | 27 pipeline |
+| [31](chat-phase31/README.md) | **IntelliSense as Packages** | 31.1 editor-lsp · 31.2 clangd · 31.3 pylsp/tsserver | 27 UX; pkg hub |
+| [32](chat-phase32/README.md) | **Phone canvas** | 32.1 hide nav · 32.2 one row (with 28.3) · 32.3 output jump | 28.2 Keys |
+| [33](chat-phase33/README.md) | **First hour** | 33.1 tiles · 33.2 Packages sections · 33.3 identity | none |
+
+**Addendum 2026-09-05:** Phases 29–33 planned from `OSS_REPLACEMENT_RESEARCH.md` + `PHONE_UX_ANALYSIS.md`. Recommended next implementation after Keys remainder: **29**.
 
 Recommended order **25.1 → 27.2 → 27.1 → 26.1 → 25.2 → 26.2**: suggestion UX
 (the owner's loudest complaint ships first after the spike), engine migration
