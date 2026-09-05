@@ -28,6 +28,13 @@ object KeyStripStorage {
                 EditorKey.Tab -> append(",\"type\":\"tab\"")
                 EditorKey.DeleteWord -> append(",\"type\":\"deleteWord\"")
                 EditorKey.CommentToggle -> append(",\"type\":\"commentToggle\"")
+                // Phase 27.1 — the dual-mood caps are transient (ghost-driven);
+                // persisted JSON always stores the PHYSICAL key they stand for.
+                EditorKey.GhostAccept -> append(",\"type\":\"tab\"")
+                EditorKey.GhostAcceptWord -> {
+                    append(",\"type\":\"caret\"")
+                    append(",\"move\":").append(escape(EditorKey.Caret.Move.RIGHT.name))
+                }
                 is EditorKey.Caret -> {
                     append(",\"type\":\"caret\"")
                     append(",\"move\":").append(escape(k.move.name))
@@ -62,6 +69,12 @@ object KeyStripStorage {
             EditorKey.Tab -> append("\"type\":\"tab\"")
             EditorKey.DeleteWord -> append("\"type\":\"deleteWord\"")
             EditorKey.CommentToggle -> append("\"type\":\"commentToggle\"")
+            // Phase 27.1 — transient ghost caps persist as their physical key.
+            EditorKey.GhostAccept -> append("\"type\":\"tab\"")
+            EditorKey.GhostAcceptWord -> {
+                append("\"type\":\"caret\"")
+                append(",\"move\":").append(escape(EditorKey.Caret.Move.RIGHT.name))
+            }
             is EditorKey.Caret -> {
                 append("\"type\":\"caret\"")
                 append(",\"move\":").append(escape(key.move.name))
