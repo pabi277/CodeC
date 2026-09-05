@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -86,6 +87,9 @@ fun ComposeCoreSpike(text: String, harness: HarnessState, session: SpikeSession)
 
     var imeAllowed by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+    // Compose 1.7's PointerInputScope has no `view` — capture the root view
+    // at composition; hide/show only needs a window token from this window.
+    val rootView = LocalView.current
 
     LaunchedEffect(session, state) {
         session.commit = { cap -> state.updateCode(CodecKeyGrid.commit(cap, state.codeText.value)) }
@@ -113,12 +117,12 @@ fun ComposeCoreSpike(text: String, harness: HarnessState, session: SpikeSession)
                 if (imeAllowed) return@pointerInput
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    hideIme(context, view)
+                    hideIme(context, rootView)
                     while (true) {
                         val e = awaitPointerEvent(PointerEventPass.Initial)
                         if (e.changes.none { it.pressed }) break
                     }
-                    hideIme(context, view)
+                    hideIme(context, rootView)
                 }
             }
     ) {
@@ -178,6 +182,7 @@ fun SoraCoreSpike(text: String, harness: HarnessState, session: SpikeSession) {
         }
     }
     var imeAllowed by remember { mutableStateOf(false) }
+    val rootView = LocalView.current
 
     LaunchedEffect(session, editor) {
         session.commit = { cap -> runCatching { soraCommit(editor, cap) } }
@@ -210,12 +215,12 @@ fun SoraCoreSpike(text: String, harness: HarnessState, session: SpikeSession) {
                 if (imeAllowed) return@pointerInput
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    hideIme(context, view)
+                    hideIme(context, rootView)
                     while (true) {
                         val e = awaitPointerEvent(PointerEventPass.Initial)
                         if (e.changes.none { it.pressed }) break
                     }
-                    hideIme(context, view)
+                    hideIme(context, rootView)
                 }
             }
     ) {
