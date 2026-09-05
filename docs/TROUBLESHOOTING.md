@@ -364,8 +364,10 @@ editor must be exactly as 22.x–27.x shipped.
      FLICKS = Home/End/PgUp/PgDn (hold still repeats); no popup bubbles
      anymore — if any draw crash persists, send the log's FIRST lines
      (exception class + message, above these frames).
-   - **Layers:** `SYM` ⇄ `ABC` one tap each; macro row follows the file's
-     language (C gets `->`, Python `:` + `_(self)`).
+   - **Layers:** `SYM` ⇄ `ABC` one tap each. Round 3 law: EVERY symbol-layer
+     key is a single character — check `%`, `*`, `(`, `)` tap exactly one
+     char; `->` = `-` then `>`; the letters layer no longer changes with the
+     file's language (no more `->` tail on the arrow row).
    - **Deletion:** `⌫` tap deletes, hold repeats (~150 ms/40 ms), flick-up
      deletes a word; no double-deletes.
    - **OFF switch:** flip it OFF in Settings → the system IME returns exactly

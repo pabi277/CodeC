@@ -47,6 +47,18 @@ pinning every law; **owner device rounds 1–2 landed same day, fixes below.**
   after a slide types NOTHING, a hold without slide still spaces. Pure
   math in `SpaceTrack` + `SpaceTrackTest`; caret travel rides
   `moveCaretBy` → the selection branch (no undo noise).
+- **Symbols layer re-cut to ONE KEY PER BUTTON (round 3, owner: "many keys
+  in one touch … make one key per button")**: the multi-char caps (`()`,
+  `{}`, `->`, `==`, `<=`, `&&`, …) are GONE — three full 10-wide rows of
+  single characters (`!@#$%^&*~` + `- = + _ | \ / < > ?` + `[ ] { } ( ) ' "
+  , .`) plus `ABC : ; TAB space ⌫ ⏎`. Brackets/quotes are their own keys;
+  `->` is two taps. The 22.5 pair behavior stays where it always lived (the
+  strip when the keyboard is OFF; the JSON can still express `pair` caps).
+  Same round deleted the language-tail multi-char caps from the utility row —
+  the letters layer is now language-INDEPENDENT (five rows for everyone);
+  `EditorKeySet.languageMacroRow` remains for the strip/dev JSON, unused by
+  the shipped grid. Pinned by `oneKeyPerButtonOnEveryShippedLayer` +
+  `symbolsLayerIsSingleCharsWithOneTapBack`.
 - **Default: ON since round 2** (owner: "make the keyboard default user can
   off it") — off ⇒ L0 strip + system IME exactly as 22.x–27.x shipped.
 

@@ -94,7 +94,9 @@ gate, invariants, docs policy) — follow it.
   landed same day** (cap corner previews + hold swap, `->` row deleted, arrow
   nav = flicks; then LIVE-buffer commits `applyEditorKey` fixing fast arrows,
   Samsung space trackpad, and the master flipped **DEFAULT ON** per owner —
-  off restores the 22.x IME world exactly). Retest card:
+  off restores the 22.x IME world exactly; round 3 made EVERY key on the
+  symbols layer a single character — no more pair/macro caps, language-free
+  letters layer). Retest card:
   `docs/TROUBLESHOOTING.md` §11; PASS opens 28.3.
 
 **PHASE STATUS (updated 2026-09-05):**
