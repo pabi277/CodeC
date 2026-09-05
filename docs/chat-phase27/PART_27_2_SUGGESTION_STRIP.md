@@ -1,6 +1,6 @@
 # CodeC Phase 27.2 — Suggestion Strip
 
-**Status:** 🚧 **IMPLEMENTED (2026-09-05) — CI pending; device gate = §3
+**Status:** ✅ **CI GREEN (2026-09-05, run `33944516016` on `6da7f44`; 4 rounds — see phase README) — device gate = §3
 recipe** · **Cost:** `[client-only]` · **Effort:** M
 · **Depends on:** Phase 22.2 strip exists; 27.1 logic for shared ranking
 · **Target files:** `ui/components/EditorKeysRow.kt` (strip context), new

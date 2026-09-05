@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-05, Phases 25 ✅ CLOSED, 26 ✅ MERGED via PR #50 — `main` tip `c1b4321`; Phase 27 IMPLEMENTED on the session branch, CI pending, merge gate untouched):**
+**WHERE THINGS STAND (2026-09-05, Phases 25 ✅ CLOSED, 26 ✅ MERGED via PR #50 — `main` tip `c1b4321`; Phase 27 IMPLEMENTED on the session branch — CI GREEN (run `33944516016` on `6da7f44`), merge gate untouched):**
 
 - **Phase 24 is ✅ MERGED to `main` via PR #47** (2026-09-04; device round 1:
   E.1/E.2/E.4/E.6/E.7/E.8/E.9 passed; E.3 hardware shortcuts NOT
@@ -69,8 +69,9 @@ gate, invariants, docs policy) — follow it.
 - **Phase 27 (Phone-native Autocomplete) is 🚧 IMPLEMENTED (2026-09-05, on
   the sora core, after the owner's "Start phase 27")** — ghost text + chip
   strip + native panel demoted to ⌄-more browse, the law in pure
-  `CompletionPolicy`/`StripContext`, settings master switch. CI pending at
-  prompt-write; device gates = each part's adapted §3 recipe
+  `CompletionPolicy`/`StripContext`, settings master switch. CI green after
+  4 rounds (`33944516016`); the only open gate = each part's adapted §3
+  device recipe
   (`docs/chat-phase27/` §4 records). Merge gate untouched: the owner's
   explicit command.
 - **Phase 28 (CodeC Keys IME) is PLANNED, fully spec'd**
@@ -84,7 +85,7 @@ Phases 20.1, 21, 22, 23, 24, 26 are COMPLETE and merged (26 via PR #50; 24 via
 PR #47; 22/23 via PRs #45/#46; 21 via #44; 20.1 via #43). Phase 27
 (completion ghost+strip) is IMPLEMENTED on the session branch — CI + device
 gates; Phase 28 (CodeC Keys IME) is a PLANNED spec only.
-- **Phase 27** (phone-native autocomplete) — 🚧 IMPLEMENTED on `arena/01a06f9e-codec` (ghost+strip+panel policy; CI pending) — `docs/chat-phase27/`
+- **Phase 27** (phone-native autocomplete) — ✅ CI GREEN on `arena/01a06f9e-codec` (ghost+strip+panel policy; device recipes pending) — `docs/chat-phase27/`
 - **Phase 26** (typing experience 2.0) — ✅ MERGED via PR #50 — `docs/chat-phase26/`
 - **Phase 25** (mobile-first editor core) — ✅ CLOSED (25.2 merged via PR #49; 25.3 ❌ cancelled) — `docs/chat-phase25/`
 - **Phase 24** (polish batch E.1–E.9) — ✅ MERGED via PR #47 (E.3 device pass pending BT keyboard; E.5 deferred) — `docs/chat-phase24/`
