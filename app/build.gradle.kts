@@ -155,7 +155,16 @@ dependencies {
   implementation(libs.sora.editor)
   // Phase 29.1 — TextMate: VS Code grammars + themes through sora's
   // language-textmate module (same BOM version; binary dependency only).
-  implementation(libs.sora.language.textmate)
+  // Exclusions (APK-budget trims, 2026-09-05): snakeyaml-engine is the
+  // YAML theme/grammar parser — CodeC ships ONLY .json grammars/themes,
+  // so it is dead weight (RawThemeReader only reaches it for YAML
+  // content-type sources); org.eclipse.jdt.annotation is compile-time
+  // @NonNull/@Nullable annotations. joni/jcodings/gson stay — they ARE
+  // the grammar engine (oniguruma regexes + JSON parsing).
+  implementation(libs.sora.language.textmate) {
+    exclude(group = "org.yaml")
+    exclude(group = "org.eclipse.jdt")
+  }
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)
