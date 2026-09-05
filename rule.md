@@ -108,11 +108,15 @@ does not begin a lifecycle on its own (§1).
   candidate:** call `./gradlew` from the workflow directly and delete the
   shim — left as-is for now because the shim is what emits the readable
   `::error` annotations; see §10.)
-  **Phase 25.1 addition (remove when Phase 25 closes):** the same workflow
-  also runs `./gradlew :bench:assembleRelease :bench:testDebugUnitTest`
-  directly (real wrapper — the legacy 9.0.0 path cannot configure the module;
-  `settings.gradle.kts` includes `:bench` only there) and uploads the
-  **`CodeC-Bench`** artifact so the owner can perform the bench's device
+  **Phase 28.1 re-addition (2026-09-05; remove when Phase 28 closes):** the
+  bench wrapper that shipped with 25.1 (and was removed when Phase 25 closed)
+  is BACK for the 28.1 device round: the workflow runs
+  `./gradlew :bench:assembleRelease :bench:testDebugUnitTest` directly (real
+  wrapper — the legacy 9.0.0 path cannot configure the module;
+  `settings.gradle.kts` includes `:bench` only there), `set -o pipefail` +
+  `tee` to capture the log, re-emits failure lines as check-run annotations
+  (the sandbox can read annotations, not raw logs), and uploads the
+  **`CodeC-Bench`** artifact so the owner can perform the spike's device
   round. The bench is a SEPARATE APK (`com.codeci.bench`); `:app` ships
   nothing from it.
 - **Owner reads CI in the browser:** repo → **Actions** → the `Build APK`
@@ -178,7 +182,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-04, Phase 25.1 implemented — device round pending)
+## 9. State snapshot (2026-09-05, Phase 28.1 spike implemented — device round pending)
 
 - **`main` = `5ebbc6e`** — PR #48 (2026-09-04, mobile-editor research +
   Phase 25–28 plan docs). Before that: PR #47 Phase 24, PR #46 Phase 23,
@@ -210,8 +214,23 @@ Every update updates the docs **in the same commit**:
   VM canonical, sora as a BINARY Gradle dep (LGPL-2.1 checklist in
   `PART_25_2_SORA_PATH.md` §4: owner's explicit acceptance + APK-delta
   re-measure still gate the merge). **CI green `33866749797` (tip `c54228d`; artifact delta +0.55 MiB); device rounds 1–4 done — round 4 (2026-09-04): owner "All passed" → 25.2 DEVICE-ACCEPTED (record: PART_25_2 §4.1–§4.5, incl. the §4.3 constructor-order crash root-caused from the owner's in-app crash report).** Merge gates SATISFIED 2026-09-04: owner LGPL-2.1 "Yes" + "Merge" command → PR #49 (squash). **Phase 25 CLOSED** (bench CI wrapper removed; `bench/` module stays in-tree).
-  Phases 26–28 remain PLANNED (spec'd in `docs/chat-phase26..28/`) — the
-  agent does **not** start them until the owner says so.
+  Phases 26 & 27 MERGED (PRs #50, #51 — `main` tip `92af7fb`, 27's post-merge
+  CI `33955091994`). **Phase 28 STARTED 2026-09-05 (owner: "Start phase
+  28"):** 28.1 — the IME-free input-path spike — is BUILT entirely in
+  `:bench` on `arena/01a070ae-codec` (K1 compose core / K2 sora core,
+  IME-free grid fed through the production key model; latency/echo/IME-
+  flicker probes; CI bench wrapper re-added — §5). **The owner's device
+  round IS the gate** (recipe `docs/chat-phase28/PART_28_1_SPIKE.md` §5,
+  runbook `docs/TROUBLESHOOTING.md` §10). **Device round 1 recorded
+  (2026-09-05, §6): K2/sora meets every budget; K1's reds are the core, not
+  the keyboard. OWNER VERDICT: GO ("Go", 2026-09-05) — the four human
+  confirmations ride 28.2's device round; 28.2 (S2 path) started the same
+  day — **28.2 BUILT + CI green the same day; owner rounds 1–2
+  fixed the same day again (LIVE-buffer commits, space trackpad, cap
+  previews). **CodeC Keys is DEFAULT ON per owner ("user can off it")** —
+  off returns the 22.x strip+IME world intact (L0 fallback). Retest card
+  `TROUBLESHOOTING.md` §11; PASS opens 28.3 (recorded in
+  `docs/EDITOR_MOBILE_RESEARCH.md` §9.1).**
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
   a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
   device round, Phase 24 E.3 hardware-shortcut device pass (needs a Bluetooth

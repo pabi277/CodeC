@@ -132,6 +132,11 @@ import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
+import com.codeci.ide.ui.keyboard.CodecKeyboard
+import com.codeci.ide.ui.keyboard.KeyboardDefaults
+import com.codeci.ide.ui.keyboard.KeyboardLayoutCodec
+import com.codeci.ide.ui.keyboard.KeyboardLayers
+import com.codeci.ide.ui.keyboard.ShiftState
 import com.codeci.ide.ui.editor.EditorShellUi
 import com.codeci.ide.ui.editor.SmartTyping
 import com.codeci.ide.ui.editor.FileTreeCollapse
@@ -254,6 +259,14 @@ fun EditorScreen(
     val imeGuideDismissed by settingsManager.imeGuideDismissedFlow.collectAsState(initial = true)
     // Phase 26.1 — persisted strip overrides (JSON) — when empty, defaults are used.
     val keyStripJson by settingsManager.editorKeyStripJsonFlow.collectAsState(initial = "")
+    // Phase 28.2 — CodeC Keys: master (DEFAULT ON per owner round 2 — the
+    // keyboard IS the product now; Settings can still turn it off and the
+    // 22.x system-IME experience returns intact), haptics, row height, and
+    // the dev-build layout JSON override.
+    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = true)
+    val codecKeysHaptics by settingsManager.codecKeysHapticsFlow.collectAsState(initial = true)
+    val codecKeysHeight by settingsManager.codecKeysHeightFlow.collectAsState(initial = 1f)
+    val codecKeysLayoutJson by settingsManager.codecKeysLayoutJsonFlow.collectAsState(initial = "")
     // Phase 27.3 — completion law settings + the ONE completion model.
     val completionMaster by settingsManager.completionMasterFlow.collectAsState(initial = true)
     val completionGhostOn by settingsManager.completionGhostFlow.collectAsState(initial = true)
@@ -302,6 +315,7 @@ fun EditorScreen(
     // the bottom inset is > 0 for the whole show/hide animation; that is
     // exactly the window during which the keys row must ride the keyboard.
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val uiScope = rememberCoroutineScope()
@@ -358,6 +372,35 @@ fun EditorScreen(
         panelBrowsing = completionPanelBrowsing,
         hasSelection = codeText.selection.length != 0
     )
+
+    // Phase 28.2 — CodeC Keys owns key input. The 28.1 spike certified this
+    // lever (S2 = programmatic VM edits, the grid never fights an IME): with
+    // the grid up, sora's SOFT input is switched off — the editor keeps focus
+    // and the caret, hardware keyboards keep working (sora's own
+    // hard-keyboard rule), and an interactive run waiting for stdin hands
+    // the IME straight back (23.2 law). Leaving the screen always restores
+    // the system keyboard: no other surface can inherit a dead IME.
+    val codecKeysUp = codecKeysOn && !outputState.waitingForInput
+    LaunchedEffect(codecKeysUp) { soraEditor.setSoftKeyboardEnabled(!codecKeysUp) }
+    DisposableEffect(soraEditor) {
+        onDispose { soraEditor.setSoftKeyboardEnabled(true) }
+    }
+    var codecKeysLayer by remember { mutableStateOf(KeyboardLayers.LETTERS) }
+    var codecKeysShift by remember { mutableStateOf(ShiftState.OFF) }
+    // Ghost law (27.1) rides the keyboard too: the TAB / → caps take their
+    // dual mood while a ghost is visible — same function the strip uses.
+    val codecKeysLetters = remember(codecKeysLayoutJson, completionSurface, codecKeysHeight) {
+        val devOverride =
+            if (codecKeysLayoutJson.isNotBlank()) KeyboardLayoutCodec.deserialize(codecKeysLayoutJson) else null
+        (devOverride ?: KeyboardDefaults.codeQwerty { row ->
+            EditorKeySet.keysWithGhostMood(row, completionSurface)
+        }).copy(heightScale = codecKeysHeight)
+    }
+    val codecKeysSymbols = remember(completionSurface, codecKeysHeight) {
+        KeyboardDefaults.symbols { row -> EditorKeySet.keysWithGhostMood(row, completionSurface) }
+            .copy(heightScale = codecKeysHeight)
+    }
+
     val stripContext = remember(
         keysRowVisible, outputState.waitingForInput, completionSettings,
         completionModel, language, codeText.selection, codeText.text.length
@@ -1425,6 +1468,7 @@ fun EditorScreen(
             // behavior) rather than being stranded mid-screen.
             if (keysRowVisible && !imeVisible) {
                 BottomStrip(
+                    suppressKeysVariant = codecKeysUp,
                     context = stripContext,
                     customSnippets = customSnippets,
                     keyStripJson = keyStripJson,
@@ -1445,8 +1489,9 @@ fun EditorScreen(
             // row to the editor. Ln/Col is a glance-value readout, not
             // something you consult mid-keystroke, and on a phone this is a
             // whole extra line of code kept visible above the keyboard. It
-            // returns the moment the keyboard closes.
-            if (!imeVisible) {
+            // returns the moment the keyboard closes. (Phase 28.2: CodeC Keys
+            // yields the row the same way — it is the keyboard now.)
+            if (!imeVisible && !codecKeysUp) {
                 EditorStatusBar(
                     line = cursorPos.line,
                     column = cursorPos.column,
@@ -1497,7 +1542,7 @@ fun EditorScreen(
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     modifier = Modifier.height(outputPanelHeight.dp)
                 )
-            } else if (outputState.hasContent() && !imeVisible) {
+            } else if (outputState.hasContent() && !imeVisible && !codecKeysUp) {
                 // Phase 22.4 — the collapsed strip only exists once there IS
                 // output, and never while you are typing. Before the first
                 // RUN it was 64dp of permanently reserved height showing
@@ -1528,6 +1573,7 @@ fun EditorScreen(
             // about find/replace, autocomplete or the status bar is affected.
             if (keysRowVisible && imeVisible) {
                 BottomStrip(
+                    suppressKeysVariant = codecKeysUp,
                     context = stripContext,
                     customSnippets = customSnippets,
                     keyStripJson = keyStripJson,
@@ -1541,6 +1587,46 @@ fun EditorScreen(
                     onAcceptChip = { viewModel.acceptCompletionItem(it) },
                     onDismissIdentifier = { viewModel.dismissCompletionForIdentifier() },
                     onMore = { viewModel.requestCompletionPanel() },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                )
+            }
+
+            // Phase 28.2 — CodeC Keys: last child of the column, exactly
+            // where the soft keyboard would sit — because it IS the keyboard
+            // now. Same actions as the strip (updateCode with isStrip=true,
+            // ghost interception), same model (`EditorKeySet.apply`), so
+            // every 26/27 law keeps holding over the full QWERTY.
+            if (codecKeysUp) {
+                CodecKeyboard(
+                    layout = if (codecKeysLayer == KeyboardLayers.SYMBOLS) codecKeysSymbols else codecKeysLetters,
+                    shift = codecKeysShift,
+                    onShiftChange = { codecKeysShift = it },
+                    onLayerChange = { codecKeysLayer = it },
+                    textFieldValue = codeText,
+                    onValueChange = {
+                        viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, isStrip = true)
+                    },
+                    tabSize = tabSize,
+                    haptics = codecKeysHaptics,
+                    // Round 2 — live-buffer commits: a tap that lands before
+                    // the recomposition still counts (the arrow-key fix), and
+                    // the space bar doubles as a caret trackpad (Samsung law).
+                    commitKey = { key ->
+                        viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize)
+                    },
+                    onCaretDrag = { cols, lines -> viewModel.moveCaretBy(cols, lines) },
+                    onCommentToggle = { viewModel.toggleLineComment(language) },
+                    onInterceptKey = { key ->
+                        when (key) {
+                            EditorKey.GhostAccept -> {
+                                viewModel.acceptGhost(AcceptGranularity.FULL); true
+                            }
+                            EditorKey.GhostAcceptWord -> {
+                                viewModel.acceptGhost(AcceptGranularity.WORD); true
+                            }
+                            else -> false
+                        }
+                    },
                     modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 )
             }
@@ -1878,6 +1964,10 @@ fun EditorScreen(
  */
 @Composable
 private fun BottomStrip(
+    // Phase 28.2 — with CodeC Keys up, its own bottom rows carry TAB/;/⌫/
+    // arrows, so the Keys variant is redundant; every other variant (run
+    // keys, suggestion chips) rides on above it untouched.
+    suppressKeysVariant: Boolean = false,
     context: StripContext,
     customSnippets: String,
     keyStripJson: String,
@@ -1905,6 +1995,7 @@ private fun BottomStrip(
             modifier = modifier
         )
         is StripContext.Keys -> {
+            if (suppressKeysVariant) return
             val keys = remember(context.language, context.surface, customSnippets, keyStripJson) {
                 EditorKeySet.keysWithGhostMood(
                     EditorKeySet.keysFor(context.language, customSnippets, keyStripJson),

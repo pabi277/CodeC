@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-05, Phases 25 ✅ CLOSED, 26 ✅ MERGED via PR #50 — `main` tip `c1b4321`; Phase 27 IMPLEMENTED on the session branch — CI GREEN (run `33944516016` on `6da7f44`), merge gate untouched):**
+**WHERE THINGS STAND (2026-09-05, Phases 25 ✅ CLOSED, 26 ✅ MERGED via PR #50, 27 ✅ MERGED via PR #51 — `main` tip `92af7fb`; PHASE 28 STARTED (owner: "Start phase 28") — 28.1 spike BUILT on `arena/01a070ae-codec`, device round pending; CI history in `docs/chat-phase28/PART_28_1_SPIKE.md` §4):**
 
 - **Phase 24 is ✅ MERGED to `main` via PR #47** (2026-09-04; device round 1:
   E.1/E.2/E.4/E.6/E.7/E.8/E.9 passed; E.3 hardware shortcuts NOT
@@ -66,28 +66,54 @@ gate, invariants, docs policy) — follow it.
   (2026-09-04; tip `c1b4321`, post-merge CI `33941444393` green) — key strip
   2.0 popups/swipes/hold-repeat + JSON sets, smart typing, IME guide.
   JOURNEY §36.
-- **Phase 27 (Phone-native Autocomplete) is 🚧 IMPLEMENTED (2026-09-05, on
-  the sora core, after the owner's "Start phase 27")** — ghost text + chip
-  strip + native panel demoted to ⌄-more browse, the law in pure
-  `CompletionPolicy`/`StripContext`, settings master switch. CI green after
-  4 rounds (`33944516016`); the only open gate = each part's adapted §3
-  device recipe
-  (`docs/chat-phase27/` §4 records). Merge gate untouched: the owner's
-  explicit command.
-- **Phase 28 (CodeC Keys IME) is PLANNED, fully spec'd**
-  (`docs/chat-phase28/`) — do not start until the owner says so.
+- **Phase 27 (Phone-native Autocomplete) is ✅ MERGED via PR #51**
+  (2026-09-05) — ghost text + chip strip + native panel demoted to ⌄-more
+  browse, the law in pure `CompletionPolicy`/`StripContext`, settings master
+  switch. 5 CI rounds incl. device-round-1 fixes (composing-gate removal +
+  line-tail alignment on word boundaries); `docs/chat-phase27/` §4 records.
+  E.3-style per-part device recipes remain owner-side optional.
+- **Phase 28 (CodeC Keys) is 🚧 STARTED — 28.1 IME-free spike BUILT
+  (2026-09-05, owner: "Start phase 28"), :bench-only, never shipped**: K1
+  (Compose core) / K2 (sora core) each fed ONLY by an IME-free 3-row code
+  grid through the production `EditorKeySet` model (mirrored verbatim), with
+  DOWN→commit latency ledger, strict-subsequence tap audit, IME-inset
+  flicker probe (+ self-check toggle), HW-keys + stdin-route scenarios
+  (spike Q1/Q2) and a 5-min human session. **Device round 1 RECORDED
+  (2026-09-05, `PART_28_1_SPIKE.md` §6): K2/sora passes EVERY budget**
+  (DOWN→commit p95 1.25–3.4 ms, tap audits 64/64 & 40/40 exact on all reps,
+  run-route OK, IME inset 0 px in ~2 900 samples — never opened); K1's frame
+  reds are the Compose core's known ~260 ms cost, the keyboard itself was
+  sub-1 ms there too; **28.2 input path of record = S2**. **VERDICT: GO — recorded
+  2026-09-05 (owner: "Go", twice; the four human confirmations waive as
+  blockers and ride 28.2's device round). `docs/EDITOR_MOBILE_RESEARCH.md`
+  §9.1 carries the verdict. **28.2 (layout engine) BUILT the same day** —
+  `:app/ui/keyboard/*`: JSON layout over the 26.1 cap schema, pure router,
+  Compose grid, Settings (default OFF), S2 wiring (`updateCode` + sora
+  `setSoftKeyboardEnabled` handoff), `EditorKey.Delete` = DEL's model home,
+  20 host tests; CI green `33964504903`. **28.2 device rounds 1–2 ran and
+  landed same day** (cap corner previews + hold swap, `->` row deleted, arrow
+  nav = flicks; then LIVE-buffer commits `applyEditorKey` fixing fast arrows,
+  Samsung space trackpad, and the master flipped **DEFAULT ON** per owner —
+  off restores the 22.x IME world exactly; round 3 made EVERY key on the
+  symbols layer a single character — no more pair/macro caps, language-free
+  letters layer). Retest card:
+  `docs/TROUBLESHOOTING.md` §11; PASS opens 28.3.
 
 **PHASE STATUS (updated 2026-09-05):**
 **Phase 25 CLOSED (25.2 device-accepted & merged via PR #49; 25.3
-CANCELLED); Phase 26 MERGED via PR #50** (`docs/chat-phase25/`,
-`docs/chat-phase26/`).
-Phases 20.1, 21, 22, 23, 24, 26 are COMPLETE and merged (26 via PR #50; 24 via
-PR #47; 22/23 via PRs #45/#46; 21 via #44; 20.1 via #43). Phase 27
-(completion ghost+strip) is IMPLEMENTED on the session branch — CI + device
-gates; Phase 28 (CodeC Keys IME) is a PLANNED spec only.
-- **Phase 27** (phone-native autocomplete) — ✅ CI GREEN on `arena/01a06f9e-codec` (ghost+strip+panel policy; device recipes pending) — `docs/chat-phase27/`
+CANCELLED); Phase 26 MERGED via PR #50; Phase 27 MERGED via PR #51;
+Phase 28 STARTED — 28.1 spike built, device round pending**
+(`docs/chat-phase25/` … `docs/chat-phase28/`).
+Phases 20.1, 21, 22, 23, 24, 26, 27 are COMPLETE and merged (27 via PR #51;
+26 via PR #50; 24 via
+PR #47; 22/23 via PRs #45/#46; 21 via #44; 20.1 via #43). Phase 28 is
+STARTED: 28.1 (IME-free input-path spike in `:bench`) is BUILT on this
+session branch — CI + owner device round are its gates; 28.2–28.4 wait for a
+recorded GO (design law 3: feel is the gate).
+- **Phase 27** (phone-native autocomplete) — ✅ MERGED via PR #51 — `docs/chat-phase27/`
 - **Phase 26** (typing experience 2.0) — ✅ MERGED via PR #50 — `docs/chat-phase26/`
 - **Phase 25** (mobile-first editor core) — ✅ CLOSED (25.2 merged via PR #49; 25.3 ❌ cancelled) — `docs/chat-phase25/`
+- **Phase 28** (CodeC Keys) — 🚧 28.1 SPIKE BUILT, device round + go/no-go pending — `docs/chat-phase28/`
 - **Phase 24** (polish batch E.1–E.9) — ✅ MERGED via PR #47 (E.3 device pass pending BT keyboard; E.5 deferred) — `docs/chat-phase24/`
 - **Phase 23** (inline PTY input + run keys) — ✅ MERGED via PR #46 — `docs/chat-phase23/`
 - **Phase 22** (editor smoothness + IME-anchored keys) — ✅ MERGED via PR #45 — `docs/chat-phase22/`

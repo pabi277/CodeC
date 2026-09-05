@@ -308,3 +308,81 @@ core CodeC adopts is made from YOUR numbers — nothing is decided by feel.
 what the harness is doing ("rep 2/3…", "scenario failed: …"). The raw numbers
 also live at `Android/data/com.codeci.bench/files/bench-results.md`
 (exported by Copy/Share regardless).
+
+## 10. How to run the Phase 28.1 CodeC Keys spike (owner runbook, 2026-09-05)
+
+**What this is:** the 28.1 gate answers ONE question — can CodeC-drawn keys
+feed the editor at typing speed with the system IME never opening, and does it
+FEEL instant? The 25.1 bench grew two spike cores for it: **K1-codecgrid**
+(today's Compose document path) and **K2-codecgrid** (the shipping sora core).
+Nothing here is in the IDE; the decision lands in
+`docs/EDITOR_MOBILE_RESEARCH.md` §9.1.
+
+**Steps (full detail in `docs/chat-phase28/PART_28_1_SPIKE.md` §5):**
+
+1. Actions → latest green **Build APK** on the session branch → Artifacts →
+   **`CodeC-Bench`** → install (updates the 25.1 bench in place).
+2. Write your three answers + verdict in the notes box on Home FIRST (they
+   ride the export): Q1 Bluetooth keyboard while suppressed? Q2 stdin-route
+   kept working? Q3 TalkBack reads editor + caps?
+3. Per K-screen: run the four scripted scenarios, do the "IME: allowed"
+   control check (the live `ime=` number must go > 0 — that proves the
+   flicker detector), then the 5-min human session on the grid.
+4. `tap=…/64 drop=0 dup=0 swap=no` + `p95 ≤ 16.7 ms` + `ime max=0px` on BOTH
+   cores + "feels instant" ⇒ **GO** (28.2 starts on your word). Any red ⇒
+   record the no-go; the strip (L0) stays the product answer.
+5. Home → **Copy all** → paste into the chat.
+
+## 11. How to run the Phase 28.2 CodeC Keys device round (owner runbook, 2026-09-05)
+
+> **Merged 2026-09-05** (owner command after rounds 1–3). This card stays as the standing regression pass — if a check ever fails, file it like any other bug.
+
+**What this is:** the first time the keyboard ships INSIDE the IDE — the
+28.1 spike proved the latency law; 28.2 proves the layout engine under real
+use. **Since owner round 2 (2026-09-05) CodeC Keys is DEFAULT ON** ("make the
+keyboard default, user can off it") — with it OFF, everything else about the
+editor must be exactly as 22.x–27.x shipped.
+
+**Steps:**
+
+1. Actions → latest green **Build APK** → Artifacts → **CodeC-IDE** (the
+   debug APK is `:app`). Install over the current build.
+2. Settings → **CodeC Keys** (ships ON; the preview keyboard renders in
+   Settings itself — taps there are inert by design; haptics + row-height
+   slider under the same toggle). Back to the editor: the grid docks where
+   the soft keyboard was; the system IME must NOT open at all. **Round-2
+   checks:** every rapid arrow tap moves the caret exactly once (live-buffer
+   commit — old bug: same-frame taps collapsed); hold-repeat arrows glide;
+   **hold SPACE until "⇄ caret" → slide → release: the caret followed and NO
+   space was typed** (hold-without-slide still inserts one); arrow FLICKS
+   jump Home/End/PgUp/PgDn.
+3. Run the five exit checks (`PART_28_2_LAYOUT_ENGINE.md` §3):
+   - **200-char C program** with symbols, all on the grid: flick-up rows for
+     digits/brackets, `SYM` for the rest; no IME opens once.
+   - **Gestures:** flick-up on `p` = `0`; flick-down on `()` inserts `)` only;
+     long-press TAB still indents raw while a ghost is up (then TAB ▸ accepts).
+     Round-1 changes to check: caps show their release in the corner (`q¹`,
+     `;:`); HOLDING `;` swaps the big label to `:` before you release; arrow
+     FLICKS = Home/End/PgUp/PgDn (hold still repeats); no popup bubbles
+     anymore — if any draw crash persists, send the log's FIRST lines
+     (exception class + message, above these frames).
+   - **Layers:** `SYM` ⇄ `ABC` one tap each. Round 3 law: EVERY symbol-layer
+     key is a single character — check `%`, `*`, `(`, `)` tap exactly one
+     char; `->` = `-` then `>`; the letters layer no longer changes with the
+     file's language (no more `->` tail on the arrow row).
+   - **Deletion:** `⌫` tap deletes, hold repeats (~150 ms/40 ms), flick-up
+     deletes a word; no double-deletes.
+   - **OFF switch:** flip it OFF in Settings → the system IME returns exactly
+     as before (22.x intact: suggestions, autocorrect, run-stdin all normal).
+4. The waived four (ride this round): the OFF→ON flip above IS the
+   self-check (IME visible one way, absent the other); a **real Bluetooth
+   keyboard** must still type while the grid is up; caret/selection handles
+   still work; and the feel line — *does it feel instant?*
+5. Paste notes to the same table shape as 28.1's round (§6 of the spike doc).
+
+**Known costs recorded up front (not bugs):** programmatic edits = no IME
+composing span (28.1 S2 verdict), no caret/selection announcements by TalkBack
+until 28.4, no swipe-space between letters (spacedBy 4.dp only), and popup
+bubbles overflow their cap without clipping — on purpose (strip clip bug
+class — superseded after round 1: bubbles were removed entirely, previews live
+IN the cap (`CodecKeyboard`'s round-1 note).

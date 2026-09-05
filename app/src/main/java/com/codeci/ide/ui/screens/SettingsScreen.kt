@@ -72,6 +72,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.text.input.TextFieldValue
+import com.codeci.ide.ui.keyboard.CodecKeyboard
+import com.codeci.ide.ui.keyboard.KeyboardDefaults
+import com.codeci.ide.ui.keyboard.ShiftState
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.services.TermuxCompiler
 import com.codeci.ide.ui.projects.GitCredentialsStore
@@ -84,6 +88,7 @@ import com.codeci.ide.ui.theme.TerminalThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.theme.getTerminalTheme
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -117,6 +122,12 @@ fun SettingsScreen(
     val completionStrip by settingsManager.completionStripFlow.collectAsState(initial = true)
     val completionPanel by settingsManager.completionPanelFlow.collectAsState(initial = true)
     val completionDebounceMs by settingsManager.completionDebounceMsFlow.collectAsState(initial = 120)
+
+    // Phase 28.2 — CodeC Keys (the dedicated in-app code keyboard; opt-in
+    // until the device round flips the default).
+    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = true)
+    val codecKeysHaptics by settingsManager.codecKeysHapticsFlow.collectAsState(initial = true)
+    val codecKeysHeight by settingsManager.codecKeysHeightFlow.collectAsState(initial = 1f)
 
     val cStandard by settingsManager.cStandardFlow.collectAsState(initial = "C11")
     val warningLevel by settingsManager.warningLevelFlow.collectAsState(initial = "Standard")
@@ -203,6 +214,58 @@ fun SettingsScreen(
                             settingsManager.setCompletionDebounceMs(it.split(" ")[0].toInt())
                         }
                     }
+                )
+            }
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // CODEC KEYS — Phase 28.2. The editor draws its own code
+            // keyboard; while it is ON the system IME steps aside for the
+            // editor surface (a run waiting for stdin always gets it back,
+            // and leaving the editor restores it: exit condition 5 — "OFF →
+            // system IME returns exactly as before"). DEFAULT ON per owner
+            // round 2 — turn this off any time to go back to the strip + IME.
+            SettingsSectionHeader("CodeC Keys")
+            SettingsItem(
+                title = "Dedicated in-app code keyboard",
+                subtitle = "A data-driven code-QWERTY the app draws itself: flick up for digits/symbols, " +
+                    "hold for popups, ⌫ hold-repeats, flick-up on ⌫ deletes a word. Suggestions ride above " +
+                    "it; it is NOT a system IME and exists only inside the editor. Layout defaults are " +
+                    "built-in; dev builds can override the rows with a layout JSON (Settings → Developer)."
+            )
+            SettingsSwitch(
+                title = "CodeC Keys",
+                checked = codecKeysOn,
+                onCheckedChange = { scope.launch { settingsManager.setCodecKeysEnabled(it) } }
+            )
+            if (codecKeysOn) {
+                SettingsSwitch(
+                    title = "Haptic tick per key",
+                    checked = codecKeysHaptics,
+                    onCheckedChange = { scope.launch { settingsManager.setCodecKeysHaptics(it) } }
+                )
+                SettingsSlider(
+                    title = "Key row height",
+                    value = codecKeysHeight,
+                    valueRange = 0.7f..1.3f,
+                    steps = 0,
+                    onValueChange = { v -> scope.launch { settingsManager.setCodecKeysHeight(v) } },
+                    valueLabel = "${(codecKeysHeight * 100).roundToInt()}%"
+                )
+                Text(
+                    text = "Preview (live — taps here type nowhere)",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                )
+                CodecKeyboard(
+                    layout = KeyboardDefaults.codeQwerty().copy(heightScale = codecKeysHeight),
+                    shift = ShiftState.OFF,
+                    onShiftChange = {},
+                    onLayerChange = {},
+                    textFieldValue = TextFieldValue(""),
+                    onValueChange = {},
+                    haptics = false,
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
 

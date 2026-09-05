@@ -35,6 +35,45 @@ jobs:
           name: CodeC-IDE
           path: app/build/outputs/apk/debug/*.apk
 
+      # Phase 28.1 — the CodeC Keys spike device round needs the bench APK.
+      # Built with the REAL wrapper (Gradle 9.3.1): the legacy 9.0.0
+      # invocation above cannot configure AGP 9.1.1 modules, and
+      # settings.gradle.kts only includes `:bench` for that wrapper.
+      # REMOVE THIS BLOCK when Phase 28 closes (same law as the 25.1 wrapper).
+      - name: Build + test bench (Phase 28.1 spike, real wrapper)
+        run: |
+          set -o pipefail
+          ./gradlew :bench:assembleRelease :bench:testDebugUnitTest --no-daemon 2>&1 | tee bench-build.log
+
+      # Same readable-annotations trick the :app gradle-bootstrap shim uses:
+      # the raw log stream is not API-readable, so on failure the real error
+      # lines are re-emitted as check-run annotations (visible via gh api).
+      - name: Surface bench errors as annotations
+        if: failure()
+        run: |
+          if [ -f bench-build.log ]; then
+            python3 - bench-build.log <<'PY'
+          import pathlib, sys
+          lines = pathlib.Path(sys.argv[1]).read_text(errors="replace").splitlines()
+          needles = ("e: file", "error:", "FAILURE:", "* What went wrong:",
+                     "Execution failed for task", "There were failing tests", "FAILED")
+          seen = set()
+          count = 0
+          for l in lines:
+              if any(n in l for n in needles) and l not in seen:
+                  seen.add(l)
+                  count += 1
+                  if count > 40: break
+                  print("::error::" + l.replace('%', '%25')[:1800])
+          PY
+          fi
+
+      - name: Upload bench artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeC-Bench
+          path: bench/build/outputs/apk/release/*.apk
+
       - name: Attach APK to GitHub Release
         if: github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'userland-')
         uses: softprops/action-gh-release@v2
