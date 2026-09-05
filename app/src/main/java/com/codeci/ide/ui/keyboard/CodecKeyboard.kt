@@ -68,6 +68,15 @@ fun CodecKeyboard(
     /** First refusal on a resolved key (the dual-mood ghost caps, 27.1 law). */
     onInterceptKey: ((EditorKey) -> Boolean)? = null,
     onCommentToggle: (() -> Unit)? = null,
+    /**
+     * Round 2 — the LIVE-buffer commit path (screen: `viewModel.applyEditorKey`).
+     * Preferred over the [textFieldValue]/[onValueChange] snapshot pair, which
+     * drops taps that land inside one frame; the snapshot path stays as the
+     * fallback (and for the inert Settings preview).
+     */
+    commitKey: ((EditorKey) -> Unit)? = null,
+    /** Round 2 — space-bar trackpad: (columns, lines) drag units to the caret. */
+    onCaretDrag: ((Int, Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val rowHeight = (52f * layout.heightScaleClamped).dp
@@ -93,15 +102,17 @@ fun CodecKeyboard(
                         // RowScope.weight must be applied HERE, in the Row's
                         // scope, then handed down the chain.
                         weightModifier = Modifier.weight(cap.widthWeight),
+                        onCaretDrag = onCaretDrag,
                         onAction = { action ->
                             when (action) {
                                 is CapAction.Edit -> {
                                     val key = action.key
                                     val consumed = onInterceptKey?.invoke(key) == true
                                     if (!consumed) {
-                                        if (key is EditorKey.CommentToggle) {
-                                            onCommentToggle?.invoke()
-                                                ?: onValueChange(EditorKeySet.apply(key, textFieldValue, tabSize))
+                                        if (key is EditorKey.CommentToggle && onCommentToggle != null) {
+                                            onCommentToggle()
+                                        } else if (commitKey != null) {
+                                            commitKey(key)
                                         } else {
                                             onValueChange(EditorKeySet.apply(key, textFieldValue, tabSize))
                                         }
@@ -138,13 +149,18 @@ private fun CodecKeycap(
     shift: ShiftState,
     haptics: Boolean,
     weightModifier: Modifier,
+    onCaretDrag: ((Int, Int) -> Unit)?,
     onAction: (CapAction) -> Unit
 ) {
     val def = cap.def
     val isShiftCap = def.label == KeyboardRouter.SHIFT_CAP
     val hasLongPressAction = isShiftCap || def.popup != null
+    // Round 2 — the space-bar trackpad (Samsung law): hold → slide → the
+    // caret follows; releasing after a slide types NOTHING.
+    val canTrack = def.label == "space" && onCaretDrag != null
     var pressed by remember(cap) { mutableStateOf(false) }
     var popupShown by remember(cap) { mutableStateOf(false) }
+    var spaceTracking by remember(cap) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
@@ -173,6 +189,8 @@ private fun CodecKeycap(
     val carriesHidden = corner == null &&
         (def.popup != null || def.swipeUp != null || def.swipeDown != null)
     val holdingPreview = popupShown
+    val colPx = with(density) { SpaceTrack.DP_PER_COLUMN.dp.toPx() }
+    val linePx = with(density) { SpaceTrack.DP_PER_LINE.dp.toPx() }
 
     Box(
         modifier = weightModifier
@@ -182,6 +200,7 @@ private fun CodecKeycap(
             .background(
                 shape = RoundedCornerShape(9.dp),
                 color = when {
+                    spaceTracking -> MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                     pressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
                     isShiftCap && shift != ShiftState.OFF ->
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
@@ -201,12 +220,20 @@ private fun CodecKeycap(
                     var repeated = false
 
                     val longPressJob = scope.launch {
-                        delay(KeyGestureDetector.LONG_PRESS_MS)
-                        if (isSwipe == null && !repeated && hasLongPressAction) {
-                            isLongPress = true
-                            popupShown = true // ⬆ shows the ⇪ affordance, others the popup key
+                        delay(if (canTrack) SpaceTrack.TRIGGER_MS else KeyGestureDetector.LONG_PRESS_MS)
+                        if (isSwipe == null && !repeated) {
+                            if (canTrack) {
+                                spaceTracking = true
+                                if (haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            } else if (hasLongPressAction) {
+                                isLongPress = true
+                                popupShown = true // ⬆ shows the ⇪ affordance, others the popup key
+                            }
                         }
                     }
+                    var lastCols = 0
+                    var lastLines = 0
+                    var trackedMoved = false
                     val repeatJob: Job? = if (cap.repeat) scope.launch {
                         delay(KeyGestureDetector.HOLD_INITIAL_MS)
                         if (isSwipe == null) {
@@ -225,6 +252,18 @@ private fun CodecKeycap(
                         if (!change.pressed) break
                         val dy = change.position.y - startY
                         val dx = change.position.x - startX
+                        if (spaceTracking) {
+                            val cols = SpaceTrack.quantize(dx, colPx)
+                            val lns = SpaceTrack.quantize(dy, linePx)
+                            if (cols != lastCols || lns != lastLines) {
+                                trackedMoved = true
+                                onCaretDrag?.invoke(cols - lastCols, lns - lastLines)
+                                lastCols = cols
+                                lastLines = lns
+                            }
+                            change.consume()
+                            continue
+                        }
                         if (isSwipe == null && abs(dy) > swipePx && abs(dy) > abs(dx)) {
                             isSwipe = when {
                                 dy < 0 && def.swipeUp != null -> "up"
@@ -243,10 +282,14 @@ private fun CodecKeycap(
                     longPressJob.cancel()
                     repeatJob?.cancel()
                     pressed = false
+                    val wasTracking = spaceTracking
+                    spaceTracking = false
                     val showedPopup = popupShown
                     popupShown = false
                     when {
                         isSwipe != null || repeated -> Unit
+                        wasTracking && trackedMoved -> Unit // the slide WAS the gesture
+                        wasTracking -> freshAction(KeyboardRouter.tapAction(def, freshShift))
                         isLongPress && showedPopup -> {
                             freshAction(
                                 if (isShiftCap) CapAction.ToggleLock
@@ -261,6 +304,7 @@ private fun CodecKeycap(
     ) {
         Text(
             text = when {
+                spaceTracking -> "⇄ caret"
                 holdingPreview && isShiftCap -> "⇪"
                 holdingPreview && def.popup != null -> KeyboardRouter.popupLabel(def.popup)
                 else -> label

@@ -337,17 +337,23 @@ Nothing here is in the IDE; the decision lands in
 
 **What this is:** the first time the keyboard ships INSIDE the IDE — the
 28.1 spike proved the latency law; 28.2 proves the layout engine under real
-use. The feature is **default OFF**; everything else about the editor must be
-untouched with it off.
+use. **Since owner round 2 (2026-09-05) CodeC Keys is DEFAULT ON** ("make the
+keyboard default, user can off it") — with it OFF, everything else about the
+editor must be exactly as 22.x–27.x shipped.
 
 **Steps:**
 
 1. Actions → latest green **Build APK** → Artifacts → **CodeC-IDE** (the
    debug APK is `:app`). Install over the current build.
-2. Settings → **CodeC Keys** → flip it ON (a preview keyboard renders in
-   Settings itself — taps there are inert by design). Haptics + row-height
-   slider live under the same toggle. Back to the editor: the grid docks
-   where the soft keyboard was; the system IME must NOT open at all.
+2. Settings → **CodeC Keys** (ships ON; the preview keyboard renders in
+   Settings itself — taps there are inert by design; haptics + row-height
+   slider under the same toggle). Back to the editor: the grid docks where
+   the soft keyboard was; the system IME must NOT open at all. **Round-2
+   checks:** every rapid arrow tap moves the caret exactly once (live-buffer
+   commit — old bug: same-frame taps collapsed); hold-repeat arrows glide;
+   **hold SPACE until "⇄ caret" → slide → release: the caret followed and NO
+   space was typed** (hold-without-slide still inserts one); arrow FLICKS
+   jump Home/End/PgUp/PgDn.
 3. Run the five exit checks (`PART_28_2_LAYOUT_ENGINE.md` §3):
    - **200-char C program** with symbols, all on the grid: flick-up rows for
      digits/brackets, `SYM` for the rest; no IME opens once.

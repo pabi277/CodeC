@@ -259,9 +259,11 @@ fun EditorScreen(
     val imeGuideDismissed by settingsManager.imeGuideDismissedFlow.collectAsState(initial = true)
     // Phase 26.1 — persisted strip overrides (JSON) — when empty, defaults are used.
     val keyStripJson by settingsManager.editorKeyStripJsonFlow.collectAsState(initial = "")
-    // Phase 28.2 — CodeC Keys: master (default OFF — the device round opens
-    // it), haptics, row height, and the dev-build layout JSON override.
-    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = false)
+    // Phase 28.2 — CodeC Keys: master (DEFAULT ON per owner round 2 — the
+    // keyboard IS the product now; Settings can still turn it off and the
+    // 22.x system-IME experience returns intact), haptics, row height, and
+    // the dev-build layout JSON override.
+    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = true)
     val codecKeysHaptics by settingsManager.codecKeysHapticsFlow.collectAsState(initial = true)
     val codecKeysHeight by settingsManager.codecKeysHeightFlow.collectAsState(initial = 1f)
     val codecKeysLayoutJson by settingsManager.codecKeysLayoutJsonFlow.collectAsState(initial = "")
@@ -1606,6 +1608,13 @@ fun EditorScreen(
                     },
                     tabSize = tabSize,
                     haptics = codecKeysHaptics,
+                    // Round 2 — live-buffer commits: a tap that lands before
+                    // the recomposition still counts (the arrow-key fix), and
+                    // the space bar doubles as a caret trackpad (Samsung law).
+                    commitKey = { key ->
+                        viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize)
+                    },
+                    onCaretDrag = { cols, lines -> viewModel.moveCaretBy(cols, lines) },
                     onCommentToggle = { viewModel.toggleLineComment(language) },
                     onInterceptKey = { key ->
                         when (key) {

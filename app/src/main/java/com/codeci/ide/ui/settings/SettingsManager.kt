@@ -49,9 +49,10 @@ class SettingsManager(private val context: Context) {
         val IME_GUIDE_DISMISSED = booleanPreferencesKey("ime_guide_dismissed")
 
         // Phase 28.2 — CodeC Keys (the dedicated code keyboard). Master is
-        // OFF until the device round closes (opt-in feature); haptics + row
-        // height are feel knobs; the JSON is the dev-build layout override
-        // (spec §1.1 "edit the JSON → edit the keyboard" — dev builds only).
+        // ON by default (owner device round 2: "make the keyboard default,
+        // user can off it") — haptics + row height are feel knobs; the JSON
+        // is the dev-build layout override (spec §1.1 "edit the JSON → edit
+        // the keyboard" — dev builds only).
         val CODEC_KEYS_ENABLED = booleanPreferencesKey("codec_keys_enabled")
         val CODEC_KEYS_HAPTICS = booleanPreferencesKey("codec_keys_haptics")
         val CODEC_KEYS_HEIGHT = floatPreferencesKey("codec_keys_height")
@@ -99,9 +100,9 @@ class SettingsManager(private val context: Context) {
     val imeGuideDismissedFlow: Flow<Boolean> = context.dataStore.data.map { it[IME_GUIDE_DISMISSED] ?: false }
     suspend fun setImeGuideDismissed(v: Boolean) { context.dataStore.edit { it[IME_GUIDE_DISMISSED] = v } }
 
-    // Phase 28.2 — CodeC Keys. Default OFF: the L0 strip (26/27) stays the
-    // shipped keyboard until the 28.2 device round passes.
-    val codecKeysEnabledFlow: Flow<Boolean> = context.dataStore.data.map { it[CODEC_KEYS_ENABLED] ?: false }
+    // Phase 28.2 — CodeC Keys. DEFAULT ON (owner round 2); turning it off
+    // returns the L0 strip (26/27) + the system IME exactly as before.
+    val codecKeysEnabledFlow: Flow<Boolean> = context.dataStore.data.map { it[CODEC_KEYS_ENABLED] ?: true }
     val codecKeysHapticsFlow: Flow<Boolean> = context.dataStore.data.map { it[CODEC_KEYS_HAPTICS] ?: true }
     val codecKeysHeightFlow: Flow<Float> = context.dataStore.data.map {
         (it[CODEC_KEYS_HEIGHT] ?: 1f).coerceIn(0.7f, 1.3f)

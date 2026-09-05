@@ -819,6 +819,39 @@ class EditorViewModel : ViewModel() {
         scheduleDecorationRefresh()
     }
 
+    /**
+     * Phase 28.2 round 2 — apply one CodeC Keys cap to the LIVE buffer.
+     * The UI-snapshot path (compute from a captured `codeText`, hand the
+     * value to `updateCode`) swallows fast presses: two taps inside one
+     * frame both derive from the same snapshot, and the equality
+     * short-circuit in `updateCode` drops the second — the device round's
+     * "arrow keys not working well". Reading `_codeText.value` at commit
+     * time makes every tap AND every 40 ms repeat tick count exactly once.
+     */
+    fun applyEditorKey(key: com.codeci.ide.ui.editor.EditorKey, autoIndent: Boolean = false, tabSize: Int = 4) {
+        updateCode(
+            com.codeci.ide.ui.editor.EditorKeySet.apply(key, _codeText.value, tabSize),
+            autoIndent = autoIndent,
+            tabSize = tabSize,
+            isStrip = true
+        )
+    }
+
+    /**
+     * Phase 28.2 round 2 — the space-bar trackpad (Samsung-style): quantized
+     * drag units move the caret; a selection collapses to its start. A
+     * caret-only change takes `updateCode`'s selection branch — no undo
+     * record, no dirty flag, and `SoraEditorHost` replays the selection.
+     */
+    fun moveCaretBy(columns: Int, lines: Int) {
+        if (columns == 0 && lines == 0) return
+        val cur = _codeText.value
+        val anchor = minOf(cur.selection.start, cur.selection.end)
+        val target = com.codeci.ide.ui.keyboard.SpaceTrack.caretAfterDrag(cur.text, anchor, columns, lines)
+        if (target == anchor) return
+        updateCode(TextFieldValue(cur.text, TextRange(target)), isStrip = true)
+    }
+
     fun undo() {
         val manager = undoManager()
         val target = manager.undo(_codeText.value) ?: return

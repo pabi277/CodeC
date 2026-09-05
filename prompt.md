@@ -90,9 +90,12 @@ gate, invariants, docs policy) — follow it.
   `:app/ui/keyboard/*`: JSON layout over the 26.1 cap schema, pure router,
   Compose grid, Settings (default OFF), S2 wiring (`updateCode` + sora
   `setSoftKeyboardEnabled` handoff), `EditorKey.Delete` = DEL's model home,
-  20 host tests; CI green `33964504903`. **The owner's 28.2 device round is
-  the gate now** (`docs/TROUBLESHOOTING.md` §11); PASS opens 28.3 — the whole
-  keyboard ships behind the Settings master switch (L0 strip stays default).
+  20 host tests; CI green `33964504903`. **28.2 device rounds 1–2 ran and
+  landed same day** (cap corner previews + hold swap, `->` row deleted, arrow
+  nav = flicks; then LIVE-buffer commits `applyEditorKey` fixing fast arrows,
+  Samsung space trackpad, and the master flipped **DEFAULT ON** per owner —
+  off restores the 22.x IME world exactly). Retest card:
+  `docs/TROUBLESHOOTING.md` §11; PASS opens 28.3.
 
 **PHASE STATUS (updated 2026-09-05):**
 **Phase 25 CLOSED (25.2 device-accepted & merged via PR #49; 25.3

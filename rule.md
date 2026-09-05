@@ -225,10 +225,12 @@ Every update updates the docs **in the same commit**:
   (2026-09-05, §6): K2/sora meets every budget; K1's reds are the core, not
   the keyboard. OWNER VERDICT: GO ("Go", 2026-09-05) — the four human
   confirmations ride 28.2's device round; 28.2 (S2 path) started the same
-  day — **28.2 BUILT + CI green the same day (`33964504903`); the owner's
-  device round (`TROUBLESHOOTING.md` §11) is its exit gate; PASS opens 28.3.**
-  The L0 strip (26/27) stays the product fallback behind the Settings
-  master switch — default OFF (recorded in `docs/EDITOR_MOBILE_RESEARCH.md` §9.1).**
+  day — **28.2 BUILT + CI green the same day; owner rounds 1–2
+  fixed the same day again (LIVE-buffer commits, space trackpad, cap
+  previews). **CodeC Keys is DEFAULT ON per owner ("user can off it")** —
+  off returns the 22.x strip+IME world intact (L0 fallback). Retest card
+  `TROUBLESHOOTING.md` §11; PASS opens 28.3 (recorded in
+  `docs/EDITOR_MOBILE_RESEARCH.md` §9.1).**
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
   a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
   device round, Phase 24 E.3 hardware-shortcut device pass (needs a Bluetooth

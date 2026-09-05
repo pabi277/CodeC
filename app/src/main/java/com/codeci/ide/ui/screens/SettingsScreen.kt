@@ -125,7 +125,7 @@ fun SettingsScreen(
 
     // Phase 28.2 — CodeC Keys (the dedicated in-app code keyboard; opt-in
     // until the device round flips the default).
-    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = false)
+    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = true)
     val codecKeysHaptics by settingsManager.codecKeysHapticsFlow.collectAsState(initial = true)
     val codecKeysHeight by settingsManager.codecKeysHeightFlow.collectAsState(initial = 1f)
 
@@ -223,7 +223,8 @@ fun SettingsScreen(
             // keyboard; while it is ON the system IME steps aside for the
             // editor surface (a run waiting for stdin always gets it back,
             // and leaving the editor restores it: exit condition 5 — "OFF →
-            // system IME returns exactly as before").
+            // system IME returns exactly as before"). DEFAULT ON per owner
+            // round 2 — turn this off any time to go back to the strip + IME.
             SettingsSectionHeader("CodeC Keys")
             SettingsItem(
                 title = "Dedicated in-app code keyboard",
