@@ -267,8 +267,14 @@ Every update updates the docs **in the same commit**:
   ~0.6 MiB (engine chain weight; PART_29_1 §4.5 records the analysis;
   the plan's "defer Go/Rust" remedy cannot close it). Owner verdict on
   the budget deviation is pending — flagged in the report, the device
-  card, and the phase README. Everything is pushed; branch is at the
-  trim commit.
+  card, and the phase README. DEVICE ROUND 1 (2026-09-06) crashed on
+  file open: `ConcurrentModificationException` in
+  ThemeRegistry.dispatchThemeChange (sora's setTheme(ThemeModel)
+  dispatches without the registry monitor while TextMateAnalyzer
+  construction adds a listener on another worker) — fixed (registry
+  monitor in applyTheme, locked createLanguage helper, theme switch on
+  main) + regression stress test; owner device round still PENDING on
+  the fixed build.
 
 ---
 

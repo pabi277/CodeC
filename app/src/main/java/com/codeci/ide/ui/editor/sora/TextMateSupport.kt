@@ -142,6 +142,23 @@ object TextMateSupport {
             ensureLanguageLoaded(language)
         }
     }
+
+    /**
+     * Phase 29 — build the editor language for a file, UNDER THE SAME LOCK
+     * as grammar loading. `TextMateLanguage.create()` reads the grammar
+     * registry (`findGrammar`) and the TextMateAnalyzer constructor
+     * registers itself with the theme registry — both must not race the
+     * warm-up thread's loads or a concurrent theme switch (device crash
+     * 2026-09-06: ConcurrentModificationException in
+     * ThemeRegistry.dispatchThemeChange). Callers may run this on any
+     * thread; first use of an unwarmed language parses its grammars here.
+     */
+    fun createLanguage(language: LanguageType, fileName: String? = null): CodeCLanguage =
+        synchronized(lock) {
+            // Reentrant: takes the same lock as the loads it depends on.
+            ensureLanguageLoaded(language, fileName)
+            CodeCLanguage.create(language, fileName)
+        }
 }
 
 /**
@@ -185,38 +202,56 @@ object TextMateThemes {
      * The scheme attaches itself to the registry's change notifications,
      * and attaching it to the editor re-runs the analysis so token colors
      * pick up the new theme immediately.
+     *
+     * THREAD SAFETY (device crash 2026-09-06): sora 0.24.6's
+     * `ThemeRegistry.setTheme(ThemeModel)` dispatches the theme change
+     * WITHOUT holding the registry monitor, while `addListener` /
+     * `removeListener` (synchronized) mutate the same list from other
+     * threads — a TextMateAnalyzer's constructor/destroy runs on our
+     * background dispatchers. Iterating while another thread adds threw
+     * `ConcurrentModificationException` in `dispatchThemeChange`. We hold
+     * the registry monitor for the whole switch + scheme creation, so
+     * sora's own synchronized mutations serialize against us (its
+     * synchronized methods are reentrant with this block). Recurring
+     * callers should still prefer the main thread — the editor's theme
+     * effect does — matching sora's single-threaded notification model.
      */
     @Synchronized
     fun applyTheme(type: EditorThemeType): TextMateColorScheme {
         val registry = ThemeRegistry.getInstance()
         val name = nameFor(type)
         val known = loadedThemes[name]
-        when {
-            // Preferred: a model we loaded ourselves, switched by reference.
-            known != null -> registry.setTheme(known)
-            // Already registered by somebody else (e.g. a previous process
-            // state we do not track): switch by name.
-            registry.setTheme(name) -> {}
-            else -> {
-                val path = pathFor(name)
-                val stream = FileProviderRegistry.getInstance().tryGetInputStream(path)
-                if (stream == null) {
-                    // Assets ship inside the APK — this is a build error, not
-                    // a runtime state; the guard exists so a packaging mistake
-                    // degrades (previous theme stays active) instead of
-                    // crashing. Log loudly: silent wrong colors are worse.
-                    Log.e(TAG, "TextMate theme asset missing: $path — keeping previous theme")
-                } else {
-                    val model = ThemeModel(
-                        IThemeSource.fromInputStream(stream, path, Charsets.UTF_8),
-                        name
-                    )
-                    model.isDark = true
-                    registry.loadTheme(model) // loadTheme(...) also makes it current
-                    loadedThemes[name] = model
+        synchronized(registry) {
+            when {
+                // Preferred: a model we loaded ourselves, switched by reference.
+                known != null -> registry.setTheme(known)
+                // Already registered by somebody else (e.g. a previous process
+                // state we do not track): switch by name.
+                registry.setTheme(name) -> {}
+                else -> {
+                    val path = pathFor(name)
+                    val stream = FileProviderRegistry.getInstance().tryGetInputStream(path)
+                    if (stream == null) {
+                        // Assets ship inside the APK — this is a build error, not
+                        // a runtime state; the guard exists so a packaging mistake
+                        // degrades (previous theme stays active) instead of
+                        // crashing. Log loudly: silent wrong colors are worse.
+                        Log.e(TAG, "TextMate theme asset missing: $path — keeping previous theme")
+                    } else {
+                        val model = ThemeModel(
+                            IThemeSource.fromInputStream(stream, path, Charsets.UTF_8),
+                            name
+                        )
+                        model.isDark = true
+                        registry.loadTheme(model) // loadTheme(...) also makes it current
+                        loadedThemes[name] = model
+                    }
                 }
             }
+            // The scheme's constructor re-loads the current theme (which can
+            // dispatch) and registers the scheme as a listener — keep that
+            // inside the monitor as well.
+            return TextMateColorScheme.create(registry)
         }
-        return TextMateColorScheme.create(registry)
     }
 }

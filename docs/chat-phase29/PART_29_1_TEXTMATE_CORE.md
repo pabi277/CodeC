@@ -217,6 +217,33 @@ pending at write time.
   guard; compile, all unit tests (theme test now passes: per-iteration
   switch law + Dark+ `#1E1E1E` in-loop and after the round trip), bench
   checks.
+- **Device round 1 (2026-09-06): CRASH on opening a file / the direct
+  editor** — `java.util.ConcurrentModificationException` in
+  `ThemeRegistry.dispatchThemeChange`, from the editor's theme effect.
+  Root cause: sora 0.24.6's `ThemeRegistry.setTheme(ThemeModel)` (the
+  overload our by-reference switching uses) dispatches the theme change
+  **without holding the registry monitor**, while `addListener` /
+  `removeListener` (synchronized) mutate the same ArrayList from other
+  threads — on file open, the theme effect dispatched (iterating the
+  listener list) on one `Dispatchers.Default` worker while the language
+  effect constructed a `TextMateAnalyzer` (→ `addListener`) on another.
+  Iteration vs. mutation → CME → crash. (The `String` overload is
+  synchronized — which is why the host tests, which are single-threaded,
+  and the pre-hardening name-path never showed it.)
+- **Fix:** (1) `TextMateThemes.applyTheme` holds the registry monitor for
+  the whole switch + scheme creation, so sora's own synchronized
+  mutations serialize against our dispatches (reentrant with its
+  `synchronized` methods); (2) new `TextMateSupport.createLanguage()`
+  routes language creation through the same lock as grammar loading —
+  the analyzer's registry registration can no longer race the warm-up
+  thread's loads; (3) the editor's theme effect now runs the actual
+  switch + `setColorScheme` on the MAIN thread (the theme models are
+  parsed once and cached; sora's notification model is single-threaded —
+  its own demo applies themes on the UI thread), with only
+  `ensureInitialized` kept off-main. New regression test:
+  `theme switching is thread safe against language creation` (4 threads
+  hammering applyTheme + createLanguage concurrently; also asserts no
+  deadlock).
 - **Run 5 (APK-budget trim, 33985493477): ✅ GREEN** — excluded the
   unused `snakeyaml-engine` and `org.eclipse.jdt.annotation` transitives
   (we ship only `.json` grammars/themes; the YAML parser is never

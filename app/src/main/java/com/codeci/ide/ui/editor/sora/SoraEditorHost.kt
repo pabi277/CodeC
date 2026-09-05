@@ -179,25 +179,34 @@ fun SoraEditorHost(
         // + grammar loading (already parsed by the warm-up thread, or parsed
         // here on the very first open of an unwarmed language) happen OFF
         // the main thread; only the view call below runs on main.
+        // createLanguage() holds the same lock as grammar loading — the
+        // analyzer registers itself with the theme registry on construction
+        // and must not race the warm-up thread or a theme switch (device
+        // CME crash, 2026-09-06).
         val lang = withContext(Dispatchers.Default) {
             TextMateSupport.ensureInitialized(appContext)
-            TextMateSupport.ensureLanguageLoaded(language, fileName)
-            CodeCLanguage.create(language, fileName)
+            TextMateSupport.createLanguage(language, fileName)
         }
         // Fresh Language per editor (sora: one language instance serves one editor).
         editor.setEditorLanguage(lang)
     }
     LaunchedEffect(theme) {
         // Phase 29 — the scheme resolves TextMate token scopes through the
-        // active theme asset (dark-plus / monokai / dracula / github-dark).
-        // Fresh scheme object per application (sora enforces single
-        // ownership); attaching it re-runs the analysis so token colors
-        // switch immediately.
-        val scheme = withContext(Dispatchers.Default) {
+        // active theme asset (vscode-dark-plus / monokai / dracula /
+        // github-dark). Init runs off-main (it may still be behind the
+        // warm-up thread's first parse); the SWITCH itself is main-thread:
+        // the theme models are parsed once and cached, and sora notifies
+        // its registry listeners synchronously — its threading model (and
+        // demo) apply themes on the UI thread. Dispatching from a worker
+        // raced analyzer construction on another worker
+        // (ConcurrentModificationException, device crash 2026-09-06);
+        // TextMateThemes.applyTheme additionally holds the registry
+        // monitor, and attaching the fresh scheme re-runs the analysis so
+        // token colors pick up the new theme immediately.
+        withContext(Dispatchers.Default) {
             TextMateSupport.ensureInitialized(appContext)
-            TextMateThemes.applyTheme(theme)
         }
-        editor.setColorScheme(scheme)
+        editor.setColorScheme(TextMateThemes.applyTheme(theme))
     }
     LaunchedEffect(fontSizeSp) { editor.setTextSize(fontSizeSp) }
     LaunchedEffect(fontFamily) {

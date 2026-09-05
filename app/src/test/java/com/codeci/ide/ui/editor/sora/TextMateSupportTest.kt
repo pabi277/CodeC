@@ -129,7 +129,8 @@ class TextMateSupportTest {
         // The 29.3 exit condition, asserted at the code level: for every
         // colourable language the analyze manager is sora's TextMate
         // analyzer — MultiLanguageSyntaxHighlighter.tokenize is not on the
-        // editor hot path for any of them.
+        // editor hot path for any of them. (createLanguage is the same
+        // locked ensure+create path SoraEditorHost uses.)
         for (language in listOf(
             LanguageType.C, LanguageType.CPP, LanguageType.PYTHON,
             LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT, LanguageType.HTML,
@@ -138,8 +139,8 @@ class TextMateSupportTest {
             LanguageType.PHP, LanguageType.RUBY, LanguageType.LUA,
             LanguageType.XML, LanguageType.YAML
         )) {
-            TextMateSupport.ensureLanguageLoaded(language, "probe.${language.extensions.first()}")
-            val codeCLanguage = CodeCLanguage.create(language, "probe.${language.extensions.first()}")
+            val codeCLanguage =
+                TextMateSupport.createLanguage(language, "probe.${language.extensions.first()}")
             val analyzer = codeCLanguage.analyzeManager
             assertTrue(
                 "language $language must analyse through TextMate (got ${analyzer::class.simpleName})",
@@ -150,10 +151,51 @@ class TextMateSupportTest {
 
     @Test
     fun `tsx files get the typescriptreact grammar`() {
-        TextMateSupport.ensureLanguageLoaded(LanguageType.TYPESCRIPT, "Component.tsx")
-        val tsx = CodeCLanguage.create(LanguageType.TYPESCRIPT, "Component.tsx")
+        val tsx = TextMateSupport.createLanguage(LanguageType.TYPESCRIPT, "Component.tsx")
         assertTrue(tsx.analyzeManager !is CodeCAnalyzer)
         assertNotNull(GrammarRegistry.getInstance().findGrammar("source.tsx"))
+    }
+
+    @Test
+    fun `theme switching is thread safe against language creation`() {
+        // Regression (device crash 2026-09-06): applyTheme dispatches the
+        // theme change to the registry's listeners while TextMateAnalyzer
+        // construction on another worker thread adds itself as a listener —
+        // sora's setTheme(ThemeModel) does not hold the registry monitor, so
+        // the dispatch could iterate the listener list mid-mutation
+        // (ConcurrentModificationException in dispatchThemeChange).
+        // applyTheme now holds the registry monitor and createLanguage
+        // serializes with grammar loading; hammer both paths concurrently
+        // and require zero exceptions (and zero deadlocks).
+        val failures = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val languages = listOf(
+            LanguageType.C, LanguageType.PYTHON, LanguageType.HTML, LanguageType.LUA
+        )
+        val threads = (0 until 4).map { i ->
+            Thread {
+                repeat(30) { round ->
+                    try {
+                        if (round % 2 == 0) {
+                            TextMateThemes.applyTheme(
+                                EditorThemeType.entries[(round / 2 + i) % EditorThemeType.entries.size]
+                            )
+                        } else {
+                            TextMateSupport.createLanguage(
+                                languages[(round + i) % languages.size]
+                            )
+                        }
+                    } catch (t: Throwable) {
+                        failures.add(t)
+                    }
+                }
+            }
+        }
+        threads.forEach { it.start() }
+        threads.forEach { it.join(60_000) }
+        threads.forEachIndexed { index, thread ->
+            assertTrue("worker $index deadlocked", !thread.isAlive)
+        }
+        assertTrue("concurrent theme/language work must not throw: $failures", failures.isEmpty())
     }
 
     @Test
