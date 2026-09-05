@@ -108,7 +108,7 @@ class StripContextTest {
     }
 
     @Test
-    fun `S1 - a single candidate stays in key mode; the ghost covers it`() {
+    fun `S1 - a single candidate stays in key mode (the ghost covers it)`() {
         val ghostItem = item("printf", "printf(")
         val ghost = GhostState.Visible("intf(", ghostItem, 2)
         val ctx = stripOf(listOf(ghostItem), ghost = ghost)

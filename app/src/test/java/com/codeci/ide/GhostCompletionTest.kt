@@ -95,7 +95,7 @@ class GhostCompletionTest {
     }
 
     @Test
-    fun `word piece never crosses a newline; leading newline is its own piece`() {
+    fun `word piece never crosses a newline (leading newline is its own piece)`() {
         assertEquals("\n", GhostCompletion.nextWordPiece("\n    x"))
         assertEquals("(", GhostCompletion.nextWordPiece("(\n)"))
     }
