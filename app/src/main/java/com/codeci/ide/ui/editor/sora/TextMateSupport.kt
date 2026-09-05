@@ -46,6 +46,9 @@ object TextMateSupport {
     @Volatile
     private var initialized = false
 
+    /** Scopes already registered in [GrammarRegistry] (guarded by [lock]). */
+    private val loadedScopes = mutableSetOf<String>()
+
     /**
      * One resolver, registered once, whose AssetManager can be swapped. The
      * app process keeps a single AssetManager, but test environments
