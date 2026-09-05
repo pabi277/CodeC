@@ -13,7 +13,6 @@ import com.codeci.ide.ui.keyboard.KeyboardLayers
 import com.codeci.ide.ui.keyboard.KeyboardLayoutCodec
 import com.codeci.ide.ui.keyboard.KeyboardRouter
 import com.codeci.ide.ui.keyboard.ShiftState
-import com.codeci.ide.ui.utils.LanguageType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -34,7 +33,7 @@ class KeyboardLayoutEngineTest {
 
     @Test
     fun builtInLayoutsRoundTripThroughTheCodec() {
-        for (layout in listOf(KeyboardDefaults.codeQwerty(LanguageType.C), KeyboardDefaults.symbols())) {
+        for (layout in listOf(KeyboardDefaults.codeQwerty(), KeyboardDefaults.symbols())) {
             val json = KeyboardLayoutCodec.serialize(layout)
             val back = KeyboardLayoutCodec.deserialize(json)
             assertNotNull("round trip must parse: $json", back)
@@ -182,25 +181,25 @@ class KeyboardLayoutEngineTest {
 
     @Test
     fun codeQwertyCoversEveryLetterOnceWithDigitAndSymbolFlicks() {
-        val caps = KeyboardDefaults.codeQwerty(null).allCaps()
+        val caps = KeyboardDefaults.codeQwerty().allCaps()
         for (c in 'a'..'z') {
             val hits = caps.filter { it.def.label == c.toString() }
             assertEquals("letter $c exactly once", 1, hits.size)
         }
         // digits via flick-up of the top row, in order (exit condition 2:
         // swipe-up on 'p' yields '0'-style digit per JSON)
-        val top = KeyboardDefaults.codeQwerty(null).rows[0]
+        val top = KeyboardDefaults.codeQwerty().rows[0]
         assertEquals("qwertyuiop".map { EditorKey.Insert(it.toString()) }, top.map { it.def.key })
         assertEquals("1234567890".map { EditorKey.Insert(it.toString()) }, top.map { it.def.swipeUp })
         // the promised gentle symbol set distributed over rows 2–3
-        val flicks = KeyboardDefaults.codeQwerty(null).rows[1].mapNotNull { it.def.swipeUp } +
-            KeyboardDefaults.codeQwerty(null).rows[2].mapNotNull { it.def.swipeUp }
+        val flicks = KeyboardDefaults.codeQwerty().rows[1].mapNotNull { it.def.swipeUp } +
+            KeyboardDefaults.codeQwerty().rows[2].mapNotNull { it.def.swipeUp }
         val texts = flicks.filterIsInstance<EditorKey.Insert>().map { it.text }.toSet()
         for (symbol in "_-=;:.\"'(){}<>") {
             assertTrue("gentle-set symbol $symbol reachable by flick", texts.contains(symbol.toString()))
         }
         // bottom specials exist
-        val labels = KeyboardDefaults.codeQwerty(null).rows[3].map { it.def.label }
+        val labels = KeyboardDefaults.codeQwerty().rows[3].map { it.def.label }
         assertTrue(labels.containsAll(listOf("⬆", "TAB", "space", ";", "⌫", "⏎")))
     }
 
@@ -210,7 +209,7 @@ class KeyboardLayoutEngineTest {
         // lives: today the strip and the grid share the model, and the
         // home row's flick carries `;`→…; the dedicated `;`+popup cap is a
         // layout edit away (JSON), which is the point of 28.2.
-        val flicks = KeyboardDefaults.codeQwerty(null).allCaps()
+        val flicks = KeyboardDefaults.codeQwerty().allCaps()
             .mapNotNull { it.def.swipeUp }.filterIsInstance<EditorKey.Insert>().map { it.text }
         assertTrue(flicks.contains(";"))
         assertTrue(flicks.contains(":"))
@@ -218,7 +217,7 @@ class KeyboardLayoutEngineTest {
 
     @Test
     fun delHoldsRepeatsAndFlicksToWordDelete() {
-        val del = KeyboardDefaults.codeQwerty(null).allCaps().first { it.def.label == "⌫" }
+        val del = KeyboardDefaults.codeQwerty().allCaps().first { it.def.label == "⌫" }
         assertTrue("⌫ hold-repeats (26.1 timers)", del.repeat)
         assertEquals(EditorKey.DeleteWord, del.def.swipeUp)
         assertEquals(null, del.def.popup)
@@ -229,12 +228,12 @@ class KeyboardLayoutEngineTest {
         // Device round 1 (owner): the lone `->` row is gone — five rows,
         // every language; the Phase 16 tail caps keep their keys at the
         // utility row's tail.
-        val c = KeyboardDefaults.codeQwerty(LanguageType.C)
+        val c = KeyboardDefaults.codeQwerty()
         assertEquals(5, c.rows.size)
         assertTrue(c.rows[4].any { it.def.label == "->" })
-        val py = KeyboardDefaults.codeQwerty(LanguageType.PYTHON)
+        val py = KeyboardDefaults.codeQwerty()
         assertEquals(listOf("SYM", "←", "→", "↑", "↓", ":", "_(self)"), py.rows[4].map { it.def.label })
-        assertEquals(5, KeyboardDefaults.codeQwerty(LanguageType.MARKDOWN).rows[4].size)
+        assertEquals(5, KeyboardDefaults.codeQwerty().rows[4].size)
     }
 
     @Test
@@ -242,7 +241,7 @@ class KeyboardLayoutEngineTest {
         // hold-repeat fires at 150 ms and always beats a 300 ms popup, so on
         // the grid Home/End/PgUp/PgDn MUST live on flicks — a popup-only
         // arrow key would be unreachable.
-        val arrows = KeyboardDefaults.codeQwerty(null).rows[4]
+        val arrows = KeyboardDefaults.codeQwerty().rows[4]
             .filter { it.def.key is EditorKey.Caret }
         assertEquals(4, arrows.size)
         assertEquals(
@@ -302,7 +301,7 @@ class KeyboardLayoutEngineTest {
     fun ghostMoodTransformReachesTheKeyboardRows() {
         // 27.1 law: while the ghost is visible, TAB caps read "TAB ▸" and
         // first-refuse the press. The keyboard applies the SAME transform.
-        val layout = KeyboardDefaults.codeQwerty(LanguageType.C) { row ->
+        val layout = KeyboardDefaults.codeQwerty { row ->
             EditorKeySet.keysWithGhostMood(row, com.codeci.ide.ui.editor.CompletionSurface.STRIP)
         }
         val tab = layout.rows[3].first { it.def.label.startsWith("TAB") }
