@@ -31,10 +31,10 @@ sealed class KeysForContext {
  * three-way decision (editor / interactive run / none) is host-tested; the
  * screen renders exactly what this returns.
  */
-fun keysForContext(context: KeysContext, customSnippets: String? = null): KeysForContext =
+fun keysForContext(context: KeysContext, customSnippets: String? = null, storedJson: String? = null): KeysForContext =
     when (context) {
         is KeysContext.Editor ->
-            KeysForContext.EditorKeys(EditorKeySet.keysFor(context.language, customSnippets))
+            KeysForContext.EditorKeys(EditorKeySet.keysFor(context.language, customSnippets, storedJson))
         KeysContext.InteractiveRun -> KeysForContext.RunKeys(RunKeySet.KEYS)
         KeysContext.Idle -> KeysForContext.None
     }
