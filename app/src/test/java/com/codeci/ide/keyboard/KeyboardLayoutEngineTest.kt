@@ -6,6 +6,12 @@ import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeyDef
 import com.codeci.ide.ui.editor.EditorKeySet
 import com.codeci.ide.ui.editor.KeyStripStorage
+import com.codeci.ide.ui.keyboard.CapAction
+import com.codeci.ide.ui.keyboard.KeyboardDefaults
+import com.codeci.ide.ui.keyboard.KeyboardLayers
+import com.codeci.ide.ui.keyboard.KeyboardLayoutCodec
+import com.codeci.ide.ui.keyboard.KeyboardRouter
+import com.codeci.ide.ui.keyboard.ShiftState
 import com.codeci.ide.ui.utils.LanguageType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
