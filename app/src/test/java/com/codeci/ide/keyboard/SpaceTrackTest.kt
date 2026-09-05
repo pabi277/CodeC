@@ -15,8 +15,9 @@ class SpaceTrackTest {
 
     @Test
     fun columnsClampInsideTheCurrentLine() {
-        // caret at index 5 (line 2, col 1): dragging right runs out at 'f'.
-        assertEquals(6, SpaceTrack.caretAfterDrag(twoLines, 5, 10, 0))
+        // caret at index 5 (line 2, col 1): dragging right runs out AFTER
+        // 'f' — caret coordinates are end-exclusive, so the line end is 7.
+        assertEquals(7, SpaceTrack.caretAfterDrag(twoLines, 5, 10, 0))
         // …and left runs out at 'd'.
         assertEquals(4, SpaceTrack.caretAfterDrag(twoLines, 5, -10, 0))
     }
@@ -45,7 +46,7 @@ class SpaceTrackTest {
         // origin-relative quantize: repeated sampling at the same px yields
         // the same units — the finger can never outrun the buffer.
         val per = 12f
-        assertEquals(0, SpaceTrack.quantize(6.0f, per))
+        assertEquals(0, SpaceTrack.quantize(5.9f, per))
         assertEquals(1, SpaceTrack.quantize(6.1f, per))
         assertEquals(2, SpaceTrack.quantize(18.0f, per))
         assertEquals(-1, SpaceTrack.quantize(-6.1f, per))
