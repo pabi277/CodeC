@@ -1,8 +1,11 @@
 # CodeC Phase 27 — Phone-native Autocomplete
 
-> **Status:** 📋 **PLANNED — research complete, no code written.** Research
-> basis: [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md) §6.
-> **Owner starts with "Start Phase 27"; no PR/merge without explicit command.**
+> **Status:** 🚧 **IMPLEMENTED (2026-09-05) on `arena/01a06f9e-codec` — CI
+> pending; device gates = each part's §3 recipe.** Research basis:
+> [`docs/EDITOR_MOBILE_RESEARCH.md`](../EDITOR_MOBILE_RESEARCH.md) §6.
+> **No PR/merge without the owner's explicit command.** Implementation
+> records: §4 of each part (27.1 ghost via sora inlay hints, 27.2 chip strip
+> + gated native panel, 27.3 the policy surface + Settings surface).
 
 Owner complaint (2026-09-04, restated): *"the suggestions are good but also
 problematic for phone because it suggests and can't do anything."* Diagnosis

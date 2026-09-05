@@ -1,6 +1,7 @@
 # CodeC Phase 27.1 — Inline Ghost-text Completion
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M
+**Status:** 🚧 **IMPLEMENTED (2026-09-05) — CI pending; device gate = §3
+recipe** · **Cost:** `[client-only]` · **Effort:** M
 · **Depends on:** `CodeCompletionEngine` (exists, debounced off-thread)
 · **Target files:** `ui/screens/EditorScreen.kt` (render), new
    `ui/editor/GhostCompletion.kt` (pure logic), host tests
@@ -66,4 +67,84 @@ same rules.
 4. Select-all, find dialog, interactive run: no ghost appears in any.
 5. Toggle OFF in Settings → zero ghost, zero strip changes, survives restart.
 PASS = all five.
+```
+
+---
+
+## 4. Implementation record (2026-09-05, on the sora core)
+
+The spec's "current Compose core" rendering note is moot — 25.2 landed first —
+so the ghost is rendered through **sora's inlay-hint lane** (the cleanest
+sora-native analogue: point-anchored, zero document mutation, sora shifts the
+anchor on edits for free):
+
+- `ui/editor/GhostCompletion.kt` — pure logic, host-tested
+  (`GhostCompletionTest`): `GhostState.Visible(suffix, item, prefixLength)`;
+  `compute(text, caret, items)` (G1: first item whose *insertText* starts
+  with the caret prefix; G6: suffix capped to the first line; empty-suffix
+  items skipped); `nextWordPiece` (identifier run | symbol run | whitespace
+  run; a leading newline is its own piece, pieces never span newlines —
+  the WORD granularity is **documented ours** (VS Code Ctrl+→-style classes);
+  `accept(value, ghost, FULL|WORD|LINE)` with the stale-ghost guard (the
+  live prefix must still match the item, else null — a ghost computed before
+  a fast typist's next char is rejected, never half-inserted) and the
+  never-over-a-selection rule; `filterForPrefix` — the instant shrink
+  (§step-5 "join the debounced path" is HALVED: full recompute stays on the
+  120/240 ms debounce, but the *shrink* happens synchronously per keystroke
+  from cached items, so the ghost visibly tracks typing — the exit recipe's
+  "typing `f` shrinks the ghost" without an engine run).
+- `ui/editor/sora/GhostHintRenderer.kt` — `GhostInlayHint` (type
+  `codec.ghost`) + renderer painting plain text at FULL text size in the
+  comment color @ exactly 38 % alpha (G5). The stock
+  `TextInlayHintRenderer` (rounded chip, 75 % size) was deliberately NOT
+  used — it reads as a badge, not as ghost text.
+- `SoraEditorHost` — renderer registered once; a keyed `LaunchedEffect`
+  `(ghost, caretLine, caretColumn, …)` applies/clears the container
+  (`editor.setInlayHints`), gated on `hasComposingText()` (G7) and on panel
+  browse (one owning surface); full-text replays clear hints first; a
+  composing selection event preemptively clears.
+  - G3 affordances: tap-the-ghost accepts FULL via sora's
+    `InlayHintClickEvent` (+ `intercept()` so the caret doesn't jump); the
+    **"Tab ▸" pill** floats at the caret row's right edge (48 dp, tap =
+    FULL, swipe-down = reject — G3(b)/G4); strip caps TAB ▸ / →▸ (27.2); HW
+    Tab = FULL, HW Ctrl+→ = WORD (plain HW arrows are never hijacked).
+  - G4: `ScrollEvent` → `viewModel.onCompletionScroll()` hides the ghost
+    until the next content change; caret moves recompute (and usually
+    clear) it via the VM's instant leg.
+- Requirements mapping: G1 ✓ compute · G2 ✓ nothing inserts without accept
+  (undo records the accept as a normal edit) · G3 ✓ (strip/pill/tap/HW) ·
+  G4 ✓ (typing mismatch, caret move, scroll, ESC, pill swipe) · G5 ✓ 38 %
+  of comment color, three themes · G6 ✓ first-line suffix · G7 ✓ (selection
+  suppression in the VM model; composing in the host; find dialog first
+  supersedes by moving the caret — plus the strip surfaces stay key-mode;
+  the 1 MiB soft cap replaces the retired-BasicTextField windowing guard as
+  the file-size bound).
+- **Research notes (sora 0.24.6 sources, read for interfaces only —
+  clean-room law kept):** `PointAnchoredContainer` shifts inlay anchors on
+  insert/delete (`CodeEditor` calls `updateOnInsertion/Deletion`
+  automatically); `setInlayHints(null)` also happens on `setText`;
+  `InlayHintClickEvent` is dispatched from `EditorTouchEventHandler` and is
+  interceptable; renderers are picked per hint type
+  (`getInlayHintRendererForType`), missing renderer = zero width — ours is
+  registered once in the host's `remember(editor)` block.
+
+### Device recipe (§3 adapted to the sora core)
+
+```text
+(Device, CI APK from this branch)
+1. main.c: type `print` → dimmed `f("\n");` paints inline after the caret;
+   type `f` → ghost shrinks to `("\n");`; type `x` → ghost gone. No
+   character ever appears without an accept gesture.
+2. Pill "Tab ▸" at the caret row: tap → full insert, caret after `;`.
+   (Ghost visible again on a new word.) →▸ cap accepts ONE piece at a time;
+   the TAB ▸ cap accepts fully; long-press TAB still indents.
+3. Tap directly ON the ghost text → it accepts.
+4. 5k-line bench.c (from bench/): burst-typing stays at 25.1 budgets with
+   ghost ON (items shrink instantly; full recompute rides the debounce).
+5. Select-all → no ghost. Find open → caret jumps clear it. Mid-`scanf`
+   interactive input → strip is run keys, no ghost. Scroll → ghost hides
+   until the next keystroke.
+6. Settings → Autocompletion OFF → no ghost, no chips, no ⌄ more, no panel;
+   survives restart. Ghost toggle alone hides only the ghost.
+PASS = all six.
 ```

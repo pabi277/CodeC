@@ -1,6 +1,7 @@
 # CodeC Phase 27.2 — Suggestion Strip
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M
+**Status:** 🚧 **IMPLEMENTED (2026-09-05) — CI pending; device gate = §3
+recipe** · **Cost:** `[client-only]` · **Effort:** M
 · **Depends on:** Phase 22.2 strip exists; 27.1 logic for shared ranking
 · **Target files:** `ui/components/EditorKeysRow.kt` (strip context), new
    `ui/components/SuggestionStrip.kt`, host tests for chip pipeline
@@ -65,4 +66,81 @@ Performance: strip model computed inside the existing debounced
 5. One unmatched keystroke (e.g. `z` when nothing matches) → keys return
    immediately and `z` is typed (no swallowed chars — pure-logic test pins it).
 PASS = all five + 22.2/23.2 recipes green.
+```
+
+---
+
+## 4. Implementation record (2026-09-05)
+
+- `ui/editor/StripContext.kt` — the sealed `StripContext` (Hidden | Run |
+  Keys | Suggestions) + pure `SuggestionStripModel`:
+  - `stripContextFor(...)` — single resolution law: chevron toggle off ⇒
+    Hidden; interactive run waiting for stdin ⇒ **Run** (S6 — 23.2 semantics
+    re-pinned in tests); master/strip switch off, selection active, past the
+    1 MiB soft cap, or dismissed-anchor equality ⇒ Keys; ≥ 2 candidates ⇒
+    Suggestions (S1's "ghost mode alone suffices" single-candidate case stays
+    in key mode with the dual-mood TAB ▸); otherwise Keys with the
+    `GHOST_ONLY` surface bit while the ghost shows.
+  - `buildStripModel(items, ghost, acceptCounts)` — engine order is the
+    stable base; the ghost's item pinned FIRST (S1); in-memory
+    recency-of-use boost (Session HashMap in the VM). Chips: ≤ 8
+    (MAX_CHIPS), `displayLabel` ellipsized ≤ 18 chars, kind glyph ƒ/λ/≠
+    (S7), `ghostBacked` flag.
+- `ui/components/SuggestionStrip.kt` — the renderer: pinned left **⌨** cap
+  (S3 return-to-keys), the chips row (horizontal scroll, same 40 dp caps &
+  padding as the keys row — S8 height constancy ⇒ no IME flicker), pinned
+  right **⌄ more** cap (S5, hidden when the panel setting is off). Chip
+  gestures reuse the proven 26.1 cap pattern rewritten for chips: tap =
+  accept (same VM path), long-press = kind+detail tooltip while held (S2),
+  horizontal drag = scroll (no accidental accepts). **Swipe DOWN anywhere on
+  the strip** dismisses for the current identifier (S4). TalkBack labels:
+  "accept printf" per chip, "Hide suggestions, show keys", "Open full
+  completion panel" (step 5's accessibility pass).
+- `ui/editor/sora/CodeCCompletionComponent.kt` — S5's browse mode ON SORA'S
+  NATIVE PANEL (the 25.2 investment kept): a subclass installed via
+  `editor.replaceComponent(EditorAutoCompletion::class.java, …)` whose
+  `requireCompletion()` is **gated** — sora's typing/caret auto-triggers
+  fall through as no-ops (the auto popup is gone); `browseNow()` opens an
+  explicit session in which the panel updates per keystroke and keeps its
+  own hardware Tab/Enter/arrows handling (matrix PANEL column); every hide
+  path (`hide()` override — empty results, tap-away, ESC, fling) ends the
+  session so the panel never resurrects by itself; an
+  `onBrowseVisibility` callback mirrors REAL attach/detach (post-verified
+  `isShowing`, not just "show requested") into Compose state.
+- `EditorScreen` — the old `KeysStrip` is replaced by `BottomStrip`, a dumb
+  renderer over `StripContext` (kept in BOTH positions: docked and
+  IME-anchored). `EditorKeysRow` gained `onInterceptKey` (first-refusal
+  hook for the dual-mood caps; `EditorKeySet.apply` is a deliberate no-op
+  for `GhostAccept`/`GhostAcceptWord` so a missed wiring never inserts a
+  silent tab under the "TAB ▸" label). `KeysContext`/`keysForContext`
+  remain for the 23.2 host tests (`RunKeySetTest` pins them).
+- Ranking note: "prefix match boost" from the spec pipeline is handled
+  upstream — the instant `filterForPrefix` shrink already narrows by the
+  live prefix, so strip-build ranking = ghost-pin + recency + engine order
+  (recorded so the next reader doesn't add a second prefix pass).
+- **Research notes:** `EditorAutoCompletion`'s auto-trigger lives in the
+  PROTECTED `onContentChange`/`onSelectionChange`/`requireCompletion`
+  handlers (overridable; `requireCompletion` and `show()`/`hide()`
+  early-return when disabled); `replaceComponent` disables the old instance
+  and carries its enabled state; `EditorPopupWindow.show()/dismiss()` are
+  public; `cancelCompletionNs` throttles immediate re-requests (single-tap
+  "⌄ more" unaffected).
+
+### Device recipe (§3 unchanged in spirit, sora-core wording)
+
+```text
+(Device)
+1. main.c: type `pri` → chips fill the strip (printf… first chip = ghost's
+   item, filled); tap it → `printf("\n");` inserted, caret after; chips
+   collapse back to keys (unless more identifiers match).
+2. Scroll the strip horizontally → more chips; "⌄ more" → the sora panel
+   opens ABOVE the caret; keep typing → panel updates; tap editor or ESC →
+   panel closes and STAYS closed for this identifier until re-armed.
+3. Swipe DOWN on the strip → chips dismissed for `pri`; type `x` (no
+   matches) → keys return and `x` is typed (never swallowed — also pinned
+   by CompletionPolicyTest).
+4. During `scanf` input: strip = run keys only; zero completion chrome.
+5. Settings: strip off → keys row never flips to chips (ghost + panel stay
+   as configured).
+PASS = all five + 22.2 strip position + 23.2 run-swap recipes green.
 ```

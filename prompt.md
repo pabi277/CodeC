@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-04, Phase 25 ✅ CLOSED — 25.2 device-accepted, LGPL-2.1 accepted ("Yes"), owner commanded "Merge" → PR #49 squash-merged):**
+**WHERE THINGS STAND (2026-09-05, Phases 25 ✅ CLOSED, 26 ✅ MERGED via PR #50 — `main` tip `c1b4321`; Phase 27 IMPLEMENTED on the session branch, CI pending, merge gate untouched):**
 
 - **Phase 24 is ✅ MERGED to `main` via PR #47** (2026-09-04; device round 1:
   E.1/E.2/E.4/E.6/E.7/E.8/E.9 passed; E.3 hardware shortcuts NOT
@@ -62,17 +62,31 @@ gate, invariants, docs policy) — follow it.
   (squash).** APK delta +0.55 MiB (budget ≤ +2 MB). The 25.1 bench CI
   wrapper + `CodeC-Bench` artifact are removed with the merge (Phase 25
   closed); `bench/` stays in-tree for future re-benchmarks.
-- **Phases 26–28 are PLANNED and fully spec'd** (`docs/chat-phase26..28/`) —
-  do not start them until the owner says so.
+- **Phase 26 (Typing Experience 2.0) is ✅ MERGED to `main` via PR #50**
+  (2026-09-04; tip `c1b4321`, post-merge CI `33941444393` green) — key strip
+  2.0 popups/swipes/hold-repeat + JSON sets, smart typing, IME guide.
+  JOURNEY §36.
+- **Phase 27 (Phone-native Autocomplete) is 🚧 IMPLEMENTED (2026-09-05, on
+  the sora core, after the owner's "Start phase 27")** — ghost text + chip
+  strip + native panel demoted to ⌄-more browse, the law in pure
+  `CompletionPolicy`/`StripContext`, settings master switch. CI pending at
+  prompt-write; device gates = each part's adapted §3 recipe
+  (`docs/chat-phase27/` §4 records). Merge gate untouched: the owner's
+  explicit command.
+- **Phase 28 (CodeC Keys IME) is PLANNED, fully spec'd**
+  (`docs/chat-phase28/`) — do not start until the owner says so.
 
-**PHASE STATUS (updated 2026-09-04):**
-**Phase 25.1 is COMPLETE — device gate decided: C-sora wins. 25.2 chosen
-(awaiting the owner's "Start Phase 25.2"); 25.3 CANCELLED** (`docs/chat-phase25/`).
-Phases 20.1, 21, 22, 23, 24 are COMPLETE and merged (24 via PR #47; 22/23 via
-PRs #45/#46; 21 via #44; 20.1 via #43). 25.2/25.3 are gated on the 25.1
-decision table; Phase 26 (symbol row + snippet UX), 27 (completion strip) and
-28 (CodeC Keys IME) are PLANNED specs only.
-- **Phase 25** (mobile-first editor core) — ⭐ 25.1 COMPLETE, gate: **C-sora**; 25.2 chosen & not started; 25.3 ❌ cancelled — `docs/chat-phase25/`
+**PHASE STATUS (updated 2026-09-05):**
+**Phase 25 CLOSED (25.2 device-accepted & merged via PR #49; 25.3
+CANCELLED); Phase 26 MERGED via PR #50** (`docs/chat-phase25/`,
+`docs/chat-phase26/`).
+Phases 20.1, 21, 22, 23, 24, 26 are COMPLETE and merged (26 via PR #50; 24 via
+PR #47; 22/23 via PRs #45/#46; 21 via #44; 20.1 via #43). Phase 27
+(completion ghost+strip) is IMPLEMENTED on the session branch — CI + device
+gates; Phase 28 (CodeC Keys IME) is a PLANNED spec only.
+- **Phase 27** (phone-native autocomplete) — 🚧 IMPLEMENTED on `arena/01a06f9e-codec` (ghost+strip+panel policy; CI pending) — `docs/chat-phase27/`
+- **Phase 26** (typing experience 2.0) — ✅ MERGED via PR #50 — `docs/chat-phase26/`
+- **Phase 25** (mobile-first editor core) — ✅ CLOSED (25.2 merged via PR #49; 25.3 ❌ cancelled) — `docs/chat-phase25/`
 - **Phase 24** (polish batch E.1–E.9) — ✅ MERGED via PR #47 (E.3 device pass pending BT keyboard; E.5 deferred) — `docs/chat-phase24/`
 - **Phase 23** (inline PTY input + run keys) — ✅ MERGED via PR #46 — `docs/chat-phase23/`
 - **Phase 22** (editor smoothness + IME-anchored keys) — ✅ MERGED via PR #45 — `docs/chat-phase22/`

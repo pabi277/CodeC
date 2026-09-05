@@ -61,7 +61,12 @@ fun EditorKeysRow(
     onValueChange: (TextFieldValue) -> Unit,
     tabSize: Int = 4,
     onCommentToggle: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * Phase 27.1 — first refusal on a resolved key (the dual-mood ghost caps).
+     * Return true = consumed; return false/null = [EditorKeySet.apply] as usual.
+     */
+    onInterceptKey: ((EditorKey) -> Boolean)? = null
 ) {
     Row(
         modifier = modifier
@@ -75,7 +80,9 @@ fun EditorKeysRow(
             EditorKeyCap(
                 def = def,
                 onKey = { key ->
-                    if (key is EditorKey.CommentToggle) {
+                    if (onInterceptKey?.invoke(key) == true) {
+                        // consumed upstream (ghost accept) — buffer untouched
+                    } else if (key is EditorKey.CommentToggle) {
                         onCommentToggle?.invoke() ?: onValueChange(EditorKeySet.apply(key, textFieldValue, tabSize))
                     } else {
                         onValueChange(EditorKeySet.apply(key, textFieldValue, tabSize))

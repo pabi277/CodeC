@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -85,6 +86,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -98,6 +100,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -117,18 +121,27 @@ import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
 import com.codeci.ide.ui.components.OutputPanelView
 import com.codeci.ide.ui.components.RunKeysRow
+import com.codeci.ide.ui.components.SuggestionStrip
+import com.codeci.ide.ui.editor.AcceptGranularity
+import com.codeci.ide.ui.editor.CompletionPolicy
+import com.codeci.ide.ui.editor.CompletionSettings
+import com.codeci.ide.ui.editor.CompletionItem
+import com.codeci.ide.ui.editor.CompletionSurface
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
+import com.codeci.ide.ui.editor.EditorKey
+import com.codeci.ide.ui.editor.EditorKeySet
 import com.codeci.ide.ui.editor.EditorShellUi
 import com.codeci.ide.ui.editor.SmartTyping
 import com.codeci.ide.ui.editor.FileTreeCollapse
-import com.codeci.ide.ui.editor.KeysContext
-import com.codeci.ide.ui.editor.KeysForContext
+import com.codeci.ide.ui.editor.GhostState
+import com.codeci.ide.ui.editor.StripContext
+import com.codeci.ide.ui.editor.SuggestionStripModel
 import com.codeci.ide.ui.editor.RunKey
-import com.codeci.ide.ui.editor.keysForContext
 import com.codeci.ide.ui.editor.sora.SoraEditorHost
 import io.github.rosemoe.sora.widget.CodeEditor
+import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -241,6 +254,29 @@ fun EditorScreen(
     val imeGuideDismissed by settingsManager.imeGuideDismissedFlow.collectAsState(initial = true)
     // Phase 26.1 — persisted strip overrides (JSON) — when empty, defaults are used.
     val keyStripJson by settingsManager.editorKeyStripJsonFlow.collectAsState(initial = "")
+    // Phase 27.3 — completion law settings + the ONE completion model.
+    val completionMaster by settingsManager.completionMasterFlow.collectAsState(initial = true)
+    val completionGhostOn by settingsManager.completionGhostFlow.collectAsState(initial = true)
+    val completionStripOn by settingsManager.completionStripFlow.collectAsState(initial = true)
+    val completionPanelOn by settingsManager.completionPanelFlow.collectAsState(initial = true)
+    val completionDebounceMs by settingsManager.completionDebounceMsFlow.collectAsState(initial = 120)
+    val completionSettings = remember(
+        completionMaster, completionGhostOn, completionStripOn, completionPanelOn, completionDebounceMs
+    ) {
+        CompletionSettings(
+            master = completionMaster,
+            ghost = completionGhostOn,
+            strip = completionStripOn,
+            panel = completionPanelOn,
+            debounceMs = completionDebounceMs.toLong()
+        )
+    }
+    LaunchedEffect(completionSettings) { viewModel.setCompletionConfig(completionSettings) }
+    val completionModel by viewModel.completionModel.collectAsState()
+    // True only while sora's panel is ACTUALLY attached (host callback) —
+    // the policy never claims PANEL for an invisible surface (invariant: the
+    // look tells the truth).
+    var completionPanelBrowsing by remember { mutableStateOf(false) }
     // Phase 26.2 — smart typing toggles.
     val typeOverEnabled by settingsManager.smartTypingTypeOverFlow.collectAsState(initial = true)
     val wrapEnabled by settingsManager.smartTypingWrapSelectionFlow.collectAsState(initial = true)
@@ -302,25 +338,43 @@ fun EditorScreen(
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Phase 12 — language-aware editing: the active file's extension selects
-    // the syntax highlighter and the autocomplete suggestions. The popup
-    // recomputes on every buffer/selection change, resets its selection on
-    // new suggestions, and ESC dismisses it until the next edit.
+    // Phase 12 — language-aware editing: the file's extension selects the
+    // syntax highlighter and the completion engine's snippet set. (Phase 27:
+    // suggestions render as ghost text / strip chips / the ⌄-more panel; the
+    // floating auto popup is gone, dismissal is per-identifier and re-arms on
+    // the next identifier.)
     val language = remember(activeTabPath, currentFileName) {
         LanguageType.fromFileName(activeTabPath ?: currentFileName)
     }
-    // Phase 23.2 — which strip to show. An interactive run waiting for stdin
-    // swaps the editor keys for the run keys (Enter / Ctrl+C / Tab / arrows);
-    // otherwise the editor's per-language keys are shown (as before). Idle is
-    // never produced here — the existing `keysRowVisible` toggle governs
-    // whether the strip appears at all.
-    val keysContext = if (outputState.waitingForInput) {
-        KeysContext.InteractiveRun
-    } else {
-        KeysContext.Editor(language)
-    }
-    val resolvedKeys = remember(keysContext, customSnippets, keyStripJson) {
-        keysForContext(keysContext, customSnippets, keyStripJson)
+    // Phase 27.2 — ONE strip context: Keys | Suggestions | Run (| Hidden).
+    // An interactive run waiting for stdin ALWAYS wins (S6 / 23.2 law);
+    // multi-candidate completions become chips (S1); otherwise the editor's
+    // per-language keys show, with dual-mood TAB ▸ / →▸ caps while the ghost
+    // is visible (27.3 — the look tells the truth).
+    val completionSurface = CompletionPolicy.surfaceFor(
+        ghostVisible = completionModel.ghost is GhostState.Visible && completionSettings.ghost,
+        candidateCount = completionModel.items.size,
+        stripEnabled = completionSettings.master && completionSettings.strip,
+        panelBrowsing = completionPanelBrowsing,
+        hasSelection = codeText.selection.length != 0
+    )
+    val stripContext = remember(
+        keysRowVisible, outputState.waitingForInput, completionSettings,
+        completionModel, language, codeText.selection, codeText.text.length
+    ) {
+        SuggestionStripModel.stripContextFor(
+            stripVisible = keysRowVisible,
+            runWaiting = outputState.waitingForInput,
+            settings = completionSettings,
+            items = completionModel.items,
+            ghost = if (completionSettings.ghost) completionModel.ghost else GhostState.Hidden,
+            dismissedAnchor = completionModel.dismissedAnchor,
+            prefixAnchor = completionModel.prefixAnchor,
+            hasSelection = codeText.selection.length != 0,
+            textLength = codeText.text.length,
+            language = language,
+            acceptCounts = completionModel.acceptCounts
+        )
     }
     // Phase 23.2 — the run keys are VM actions, not editor buffer edits.
     val handleRunKey: (RunKey) -> Unit = { action ->
@@ -336,11 +390,14 @@ fun EditorScreen(
             RunKey.PAGE_DOWN -> viewModel.appendInput("\u001b[6~")
         }
     }
-    // Phase 25.2 device-round 3 — completions are served by sora's NATIVE
-    // panel (CodeCLanguage.requireAutoComplete -> CodeCompletionEngine):
-    // positioned at the caret, typed prefix replaced on commit, sora-managed
-    // keyboard handling. The Phase 12/22 app popup (bottom-anchored, own
-    // hardware-key handling) is retired.
+    // Phase 27 — completions are phone-native now: the top item paints as
+    // inline GHOST text at the caret (27.1, sora inlay hint), multiple items
+    // fill the chip strip above the keyboard (27.2), and sora's NATIVE panel
+    // remains ONLY as the explicit "⌄ more" browse surface — the auto popup
+    // on every keystroke is gone, Enter is sacred, and one Settings master
+    // switch removes the whole feature (CompletionPolicy / 27.3 law). The
+    // items still come from the same Phase 12/22 engine, now driven by the
+    // VM's instant + debounced pipeline.
 
     val isWebProject = remember(currentProject) {
         currentProject?.let { name ->
@@ -1226,6 +1283,43 @@ fun EditorScreen(
                                 event.key == Key.F5 -> {
                                     viewModel.runActiveFile(context); true
                                 }
+                                // Phase 27.3 — hardware completion keys. PANEL
+                                // browse mode returns `false` so sora's own
+                                // handler owns Tab/Enter/arrows inside the
+                                // panel; plain HW arrows are NEVER hijacked
+                                // (Ctrl+→ is the partial-accept gesture).
+                                event.isCtrlPressed && !event.isShiftPressed && event.key == Key.DirectionRight -> {
+                                    if (completionSurface == CompletionSurface.GHOST_ONLY ||
+                                        completionSurface == CompletionSurface.STRIP
+                                    ) {
+                                        viewModel.acceptGhost(AcceptGranularity.WORD); true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                event.key == Key.Tab && !event.isCtrlPressed -> {
+                                    when (completionSurface) {
+                                        CompletionSurface.GHOST_ONLY,
+                                        CompletionSurface.STRIP -> {
+                                            viewModel.acceptGhost(AcceptGranularity.FULL); true
+                                        }
+                                        else -> false
+                                    }
+                                }
+                                event.key == Key.Escape -> {
+                                    when (completionSurface) {
+                                        CompletionSurface.PANEL -> {
+                                            soraEditor
+                                                .getComponent(EditorAutoCompletion::class.java)
+                                                .hide()
+                                            true
+                                        }
+                                        CompletionSurface.GHOST_ONLY, CompletionSurface.STRIP -> {
+                                            viewModel.dismissCompletionForIdentifier(); true
+                                        }
+                                        CompletionSurface.NONE -> false
+                                    }
+                                }
                                 else -> false
                             }
                         } else {
@@ -1249,15 +1343,77 @@ fun EditorScreen(
                     wordWrap = wordWrap,
                     showLineNumbers = showLineNumbers,
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxSize(),
+                    // Phase 27 — ghost + gated browse panel.
+                    completionModel = completionModel,
+                    completionMasterOn = completionSettings.master,
+                    ghostEnabled = completionSettings.ghost,
+                    ghostPanelEnabled = completionSettings.panel,
+                    // G5 contrast law: comment color at exactly 38 % alpha.
+                    ghostColorArgb = editorColors.comment.copy(alpha = 0.38f).toArgb(),
+                    onBrowseVisibilityChanged = { completionPanelBrowsing = it }
                 )
 
                 if (isFormatting) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
 
-                // Phase 25.2 device-round 3 — completions render in sora's
-                // native panel at the caret; nothing to compose here.
+                // Phase 27.1 G3(b) — the small "Tab ▸" pill at the caret row
+                // (right edge, top-aligned to the caret line): the obvious
+                // tap target for accepting the ghost; swipe DOWN rejects it.
+                val ghostVisible = completionModel.ghost is GhostState.Visible &&
+                    completionSettings.ghost && completionSettings.master &&
+                    completionSurface != CompletionSurface.PANEL
+                if (ghostVisible) {
+                    val density = LocalDensity.current
+                    val pillY = remember(completionModel.ghost, cursorPos.line, cursorPos.column) {
+                        runCatching {
+                            val lc = soraEditor.text.lineCount
+                            val line = (cursorPos.line - 1).coerceIn(0, (lc - 1).coerceAtLeast(0))
+                            val col = (cursorPos.column - 1).coerceIn(0, soraEditor.text.getColumnCount(line))
+                            soraEditor.getCharOffsetY(line, col).roundToInt()
+                        }.getOrNull()
+                    }
+                    var pillDragDy by remember { mutableStateOf(0f) }
+                    if (pillY != null && pillY >= 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset { IntOffset(0, (pillY - with(density) { 6.dp.roundToPx() }).coerceAtLeast(0)) }
+                                .padding(end = 8.dp)
+                                .defaultMinSize(minHeight = 48.dp, minWidth = 48.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.92f))
+                                .semantics { contentDescription = "Accept suggestion" }
+                                .pointerInput(completionModel.ghost) {
+                                    detectVerticalDragGestures(
+                                        onDragStart = { pillDragDy = 0f },
+                                        onDragEnd = {
+                                            if (pillDragDy > 32f) {
+                                                // G4 — swipe down on the pill rejects
+                                                // the ghost for this identifier.
+                                                viewModel.dismissCompletionForIdentifier()
+                                            }
+                                            pillDragDy = 0f
+                                        },
+                                        onVerticalDrag = { change, dragAmount ->
+                                            pillDragDy += dragAmount
+                                            if (dragAmount > 0) change.consume()
+                                        }
+                                    )
+                                }
+                                .clickable { viewModel.acceptGhost(AcceptGranularity.FULL) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Tab ▸",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 10.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             // Phase 16 — Spck bottom order: the snippet/keys row docks ABOVE
@@ -1268,13 +1424,20 @@ fun EditorScreen(
             // it lands DIRECTLY on top of the keyboard (Termux's extra-keys
             // behavior) rather than being stranded mid-screen.
             if (keysRowVisible && !imeVisible) {
-                KeysStrip(
-                    resolved = resolvedKeys,
+                BottomStrip(
+                    context = stripContext,
+                    customSnippets = customSnippets,
+                    keyStripJson = keyStripJson,
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, isStrip = true) },
                     tabSize = tabSize,
                     onRunKey = handleRunKey,
-                    onCommentToggle = { viewModel.toggleLineComment(language) }
+                    onCommentToggle = { viewModel.toggleLineComment(language) },
+                    showMoreCap = completionSettings.panel,
+                    onAcceptGhost = { viewModel.acceptGhost(it) },
+                    onAcceptChip = { viewModel.acceptCompletionItem(it) },
+                    onDismissIdentifier = { viewModel.dismissCompletionForIdentifier() },
+                    onMore = { viewModel.requestCompletionPanel() }
                 )
             }
 
@@ -1364,13 +1527,20 @@ fun EditorScreen(
             // the docked row above — only the position changes, so nothing
             // about find/replace, autocomplete or the status bar is affected.
             if (keysRowVisible && imeVisible) {
-                KeysStrip(
-                    resolved = resolvedKeys,
+                BottomStrip(
+                    context = stripContext,
+                    customSnippets = customSnippets,
+                    keyStripJson = keyStripJson,
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, isStrip = true) },
                     tabSize = tabSize,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) },
+                    showMoreCap = completionSettings.panel,
+                    onAcceptGhost = { viewModel.acceptGhost(it) },
+                    onAcceptChip = { viewModel.acceptCompletionItem(it) },
+                    onDismissIdentifier = { viewModel.dismissCompletionForIdentifier() },
+                    onMore = { viewModel.requestCompletionPanel() },
                     modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 )
             }
@@ -1695,32 +1865,72 @@ fun EditorScreen(
 
 
 /**
- * Phase 23.2 — one strip, two key sets. Renders whichever keys the current
- * context resolved to: the editor's per-language keys (buffer edits) or the
- * interactive-run keys (VM actions). [KeysForContext.None] renders nothing —
- * the strip's visibility is still governed by the existing chevron toggle.
+ * Phase 27.2 — the one strip, three contexts. Renders exactly what the pure
+ * [StripContext] resolver decided: the editor's per-language keys (with the
+ * dual-mood TAB ▸ / →▸ caps while the ghost shows), the suggestion chips,
+ * or the interactive-run keys (23.2's set — Run wins comparisons upstream).
+ * [StripContext.Hidden] renders nothing — the strip's visibility is still
+ * governed by the existing chevron toggle.
+ *
+ * The chip model stays in the pure pipeline (StripContext.kt /
+ * SuggestionStripModelTest); this composable is a dumb renderer plus the
+ * minimal key interception for the dual-mood caps.
  */
 @Composable
-private fun KeysStrip(
-    resolved: KeysForContext,
+private fun BottomStrip(
+    context: StripContext,
+    customSnippets: String,
+    keyStripJson: String,
     textFieldValue: TextFieldValue,
     onEditorValueChange: (TextFieldValue) -> Unit,
     tabSize: Int,
     onRunKey: (RunKey) -> Unit,
     onCommentToggle: (() -> Unit)? = null,
+    showMoreCap: Boolean = true,
+    onAcceptGhost: (AcceptGranularity) -> Unit = {},
+    onAcceptChip: (CompletionItem) -> Unit = {},
+    onDismissIdentifier: () -> Unit = {},
+    onMore: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    when (resolved) {
-        is KeysForContext.None -> Unit
-        is KeysForContext.EditorKeys -> EditorKeysRow(
-            keys = resolved.defs,
-            textFieldValue = textFieldValue,
-            onValueChange = onEditorValueChange,
-            tabSize = tabSize,
-            onCommentToggle = onCommentToggle,
+    when (context) {
+        is StripContext.Hidden -> Unit
+        is StripContext.Run -> RunKeysRow(onKeyAction = onRunKey, modifier = modifier)
+        is StripContext.Suggestions -> SuggestionStrip(
+            chips = context.chips,
+            showMore = showMoreCap,
+            onAccept = { chip -> onAcceptChip(chip.item) },
+            onDismissIdentifier = onDismissIdentifier,
+            onMore = onMore,
             modifier = modifier
         )
-        is KeysForContext.RunKeys -> RunKeysRow(onKeyAction = onRunKey, modifier = modifier)
+        is StripContext.Keys -> {
+            val keys = remember(context.language, context.surface, customSnippets, keyStripJson) {
+                EditorKeySet.keysWithGhostMood(
+                    EditorKeySet.keysFor(context.language, customSnippets, keyStripJson),
+                    context.surface
+                )
+            }
+            EditorKeysRow(
+                keys = keys,
+                textFieldValue = textFieldValue,
+                onValueChange = onEditorValueChange,
+                tabSize = tabSize,
+                onCommentToggle = onCommentToggle,
+                onInterceptKey = { key ->
+                    when (key) {
+                        EditorKey.GhostAccept -> {
+                            onAcceptGhost(AcceptGranularity.FULL); true
+                        }
+                        EditorKey.GhostAcceptWord -> {
+                            onAcceptGhost(AcceptGranularity.WORD); true
+                        }
+                        else -> false
+                    }
+                },
+                modifier = modifier
+            )
+        }
     }
 }
 

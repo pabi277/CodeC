@@ -1,6 +1,7 @@
 # CodeC Phase 27.3 — Accept/Dismiss Rules, Perf Budget & Settings Law
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S
+**Status:** 🚧 **IMPLEMENTED (2026-09-05) — CI pending; device gate = §3
+recipe** · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** 27.1 + 27.2 implemented together
 · **Target files:** `ui/editor/CompletionPolicy.kt` (new, pure), Settings,
    host tests
@@ -77,3 +78,62 @@ strip ON, panel on-demand, 120 ms.
 4. Master switch OFF → all three surfaces gone, suggestions never computed.
 PASS = all four.
 ```
+
+---
+
+## 4. Implementation record (2026-09-05)
+
+- `ui/editor/CompletionPolicy.kt` — the law file: `CompletionSettings`
+  (master/ghost/strip/panel/debounceMs — `everythingOff`/`anyOn` helpers),
+  `CompletionSurface` (NONE | GHOST_ONLY | STRIP | PANEL),
+  `CompletionInput` / `CompletionAction` enums, `surfaceFor(...)`,
+  `decide(surface, input)` (the §1.1 matrix, every cell a host test),
+  `tabCapLabel(surface)` ("TAB ▸" only when it accepts) and
+  `rightCapLabel(surface)` ("→▸").
+- Matrix deltas from the draft, decided & pinned by tests:
+  - **ESC on the phone has no keycap** — the editor key set never had one;
+    ESCAPE is honored as a hardware key (`onPreviewKeyEvent`), and the
+    phone affordance is the strip's swipe-down / ⌨ cap / pill swipe
+    (identical DISMISS semantics).
+  - **→ cap with a selection** stays MOVE_CARET (ghost never shows with a
+    selection, so accept paths never see one — G7 row).
+  - **PANEL's Tab** returns NOTHING: while browsing, sora's own key handler
+    owns Tab/Enter/↑↓ exactly as the 25.2 device-accepted panel did.
+- Wiring: the screen computes `completionSurface` once per recomposition
+  and feeds it to (a) the strip's dual-mood caps (`keysWithGhostMood`,
+  labels from the policy), (b) the hardware-key interceptor (HW Tab =
+  FULL, HW Ctrl+→ = WORD, HW Esc = reject/dismiss/close), (c) the pill's
+  visibility gate. The strip decides its own context via
+  `stripContextFor` — the TWO never disagree because both read the same
+  `completionModel` + settings (the ghost bit is identical; STRIP ⇔
+  ≥2 candidates in both).
+- **Perf & cadence (§1.2 as shipped):** instant leg = pure `startsWith`
+  narrowing on the main path + `setInlayHints` single-line invalidations;
+  engine recompute only on the 120/240 ms debounce off-main; chips diff by
+  identity (the strip recomposes only when the model changes — StateFlow
+  equality). No per-frame main-thread work anywhere in the feature.
+- **Settings (§1.3 as shipped):** Settings → Editor Settings gains
+  "Autocompletion" (master), ghost / chips / "⌄ more panel" switches and a
+  120/240 ms delay dropdown, plus a plain-language explainer of the
+  accept/dismiss vocabulary. Master OFF removes all chrome AND stops all
+  computation (the VM pipeline emits `CompletionModel.EMPTY` immediately;
+  the sora component is `setEnabled(false)`).
+- Scattered key handling at the old screen (~L1252 comment in the draft is
+  stale by now) — the Phase 12/22 popup handler went away in 25.2 already;
+  this phase's interception lives in the preview handler + the strip's
+  first-refusal hook, both routed through the policy.
+- **Host tests:** `CompletionPolicyTest` pins every matrix cell + the label
+  law + the master-off law; `StripContextTest` pins the dismissal anchor,
+  selection/cap/settings suppression and the dual-mood caps;
+  `GhostCompletionTest` pins ghost compute/accept/shrink.
+
+### Exit-recipe notes
+
+- Soft Enter: never consumed — `EditorAutoCompletion.onKeyEvent` only
+  touches keys while its panel SHOWS (browse mode, hardware keys), and the
+  strip/ghost never install any Enter path at all (there is no soft-IME
+  Enter interception anywhere in the code; pinned by the NEWLINE row).
+- The fuzz-y §3 item 3 ("never visible in a state the matrix forbids") is
+  covered structurally: surfaces render from ONE `CompletionSurface`/+one
+  `StripContext` decision instead of three independent flags; the two
+  surface computations consume the same model fields.
