@@ -34,9 +34,12 @@ editor hot path (fallback only).
 | [29.2](PART_29_2_LANGUAGE_PARITY.md) | Colour every run-profile language (split HTML/CSS/TS) | client-only | S | ✅ implemented |
 | [29.3](PART_29_3_RETIRE_REGEX.md) | Drop regex analyzer from the live editor | client-only | S | ✅ implemented |
 
-**Budgets (device, release APK, same 25.1 law):** keystroke p95 still
-≤ 16.7 ms on bench.c; APK delta **≤ +1.5 MiB**; a `.c` / `.py` / `.html` /
-`.ts` file looks like VS Code Dark+ (owner screenshot vs desktop).
+**Budgets (device, same 25.1 law):** keystroke p95 still ≤ 16.7 ms on
+bench.c; APK delta **≤ +1.5 MiB — MEASURED +2.10 MiB, OVER by ~0.6 MiB,
+owner decision pending** (the weight is the language-textmate engine
+chain: joni/jcodings/gson/tm4e ≈ 1.95 MB — required; assets are only
+~250 KB; see PART_29_1 §4.5); a `.c` / `.py` / `.html` / `.ts` file
+looks like VS Code Dark+ (owner screenshot vs desktop).
 
 **License:** `language-textmate` = LGPL-2.1 (same as sora-editor — depend,
 never fork; notices: `assets/licenses/SORA_LANGUAGE_TEXTMATE_LGPL.txt`).

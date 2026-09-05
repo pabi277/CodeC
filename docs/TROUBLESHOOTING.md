@@ -402,10 +402,11 @@ for the first time (they were plain before); CSS no longer looks like HTML.
 
 1. Actions → latest green **Build APK** on the session branch → Artifacts →
    **CodeC-IDE** → install.
-   *(APK size check: the artifact should be ≤ +1.5 MiB vs the previous
-   `main` build — the grammars are ~234 KB compressed plus the
-   language-textmate module. If it is visibly bigger, say so — there is a
-   documented trim list ready.)*
+   *(APK size: measured at **+2.10 MiB** vs `main` (22.0 → 24.2 MB) —
+   over the planned +1.5 MiB budget; the weight is the TextMate engine
+   chain (joni/jcodings/gson/tm4e), not the grammars (~250 KB). This
+   deviation is flagged for the owner's verdict — PART_29_1 §4.5 —
+   please confirm accept/direct-a-strip when reporting the round.)*
 2. **Dark+ look:** open a C file with keywords, strings, comments,
    preprocessor lines, numbers. Compare with VS Code Dark+ on desktop —
    keywords blue `#569CD6`, strings orange `#CE9178`, comments green

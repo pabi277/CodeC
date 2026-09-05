@@ -213,7 +213,30 @@ pending at write time.
   (run 2 had shipped the hardening but NOT the rename — the file was
   still `dark-plus.json`). The rename + asset-existence guard landed
   after it.
-- **Run 4 (the rename commit):** recorded below once green.
-- **APK delta vs `main`:** measured from the green run's `CodeC-IDE`
-  artifact vs `main`'s latest (`size_in_bytes`) — recorded below.
+- **Run 4 (`8e59d47`, 33984918104): ✅ GREEN** — rename + asset-existence
+  guard; compile, all unit tests (theme test now passes: per-iteration
+  switch law + Dark+ `#1E1E1E` in-loop and after the round trip), bench
+  checks.
+- **Run 5 (APK-budget trim, 33985493477): ✅ GREEN** — excluded the
+  unused `snakeyaml-engine` and `org.eclipse.jdt.annotation` transitives
+  (we ship only `.json` grammars/themes; the YAML parser is never
+  reached). Saved only ~16 KB — they were nearly absent from the merged
+  tree anyway. Kept (harmless, documents intent).
+- **APK delta measured (artifact `CodeC-IDE`, debug, vs `main` 3edfc97):
+  22,037,926 → 24,244,912 bytes = +2,206,986 = +2.10 MiB — OVER the
+  +1.5 MiB budget by ~0.6 MiB.** Breakdown: grammar+theme assets ≈
+  250 KB compressed (all 28 JSONs; even shipping none would not close
+  the gap); the remaining ~1.95 MB is the engine chain —
+  joni + jcodings (oniguruma regexes) + gson (JSON parsing) +
+  language-textmate/tm4e code — every piece of which the feature
+  requires. The plan's over-budget remedy ("ship run-profile set
+  first, defer Go/Rust") targets the wrong weight: Go+Rust grammars
+  are ~12 KB compressed. **⇒ Budget deviation, owner decision required
+  at the device round / merge gate:** accept +2.10 MiB (a 9.7% APK
+  growth, 22.0 → 24.2 MiB) as the cost of VS Code-grade colour, or
+  direct a stripped variant (there is nothing left to strip without
+  dropping languages or the engine). A possible future lever, not
+  taken: R8/minification on release builds (the measured artifact is
+  the debug APK both sides, and minify needs careful keep-rules for
+  gson/tm4e reflection).
 

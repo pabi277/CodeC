@@ -257,14 +257,18 @@ Every update updates the docs **in the same commit**:
   keystroke p95 ≤ 16.7 ms bench.c, APK delta ≤ +1.5 MiB). Records:
   `docs/chat-phase29/` (README + §4/§3 sections), JOURNEY §40. **No
   PR/merge without the owner's command.**
-- **Session-tooling note (2026-09-05, updated):** the sandbox GitHub
-  token expired mid-session (401 on gh/git); the owner reconnected
-  GitHub in Arena and auth works again. Run 33983164706 (`0e64b87`) was
-  in fact a FAILURE (a `gh run watch` exit code was misread as green) —
-  the instrumented test revealed the true root cause (Dark+ asset file
-  name `dark-plus.json` vs registry name `vscode-dark-plus.json`);
-  fixed by the rename + guard commit. Push + green run + APK-delta
-  measurement are the immediate queue, then the owner device round.
+- **Session-tooling note (2026-09-05, final):** a mid-session GitHub
+  token expiry (401s) was resolved when the owner reconnected Arena.
+  Run `0e64b87` had been misread as green (a `gh run watch` exit code) —
+  it failed; the instrumented test exposed the real bug (Dark+ asset
+  `dark-plus.json` vs registry name `vscode-dark-plus.json`), fixed by
+  the rename + guard commit. **Final state: runs 4 (8e59d47) + 5 (trim)
+  GREEN; APK delta measured +2.10 MiB — OVER the +1.5 MiB budget by
+  ~0.6 MiB (engine chain weight; PART_29_1 §4.5 records the analysis;
+  the plan's "defer Go/Rust" remedy cannot close it). Owner verdict on
+  the budget deviation is pending — flagged in the report, the device
+  card, and the phase README. Everything is pushed; branch is at the
+  trim commit.
 
 ---
 
