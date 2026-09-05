@@ -69,11 +69,21 @@ object GhostCompletion {
             val insert = item.insertText
             // Full-length alignment is allowed: when the insert is fully
             // typed, rest is empty and the item is skipped below (a ghost
-            // must always have a visible suffix — G1).
+            // must always have a visible suffix — G1). The matched suffix
+            // must not start MID-word — otherwise typed "mai" would align
+            // its trailing "i" against insert "int main…" and paint
+            // "nt main(void) {" (accept would mangle the buffer to
+            // "maint main(…)…").
             var len = minOf(insert.length, lineTail.length)
-            while (len > 0 &&
-                !insert.regionMatches(0, lineTail, lineTail.length - len, len, ignoreCase = false)
-            ) {
+            while (len > 0) {
+                val start = lineTail.length - len
+                val midWord = start > 0 &&
+                    (lineTail[start - 1].isLetterOrDigit() || lineTail[start - 1] == '_')
+                if (!midWord &&
+                    insert.regionMatches(0, lineTail, start, len, ignoreCase = false)
+                ) {
+                    break
+                }
                 len--
             }
             if (len == 0) continue
