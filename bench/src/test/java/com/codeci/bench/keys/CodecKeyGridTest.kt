@@ -100,9 +100,10 @@ class CodecKeyGridTest {
         val caps = listOf(
             GridKeycap.letter('i'), GridKeycap.letter('n'), GridKeycap.letter('t'),
             GridKeycap.SPACE, GridKeycap.letter('m'), GridKeycap.ENTER, GridKeycap.TAB,
-            GridKeycap.letter('x'), GridKeycap.DEL, GridKeycap.DEL
+            GridKeycap.letter('x'), GridKeycap.DEL
         )
-        // "int m\n    x" with the trailing 'x' deleted by the DEL:
+        // "int m" + newline + TAB(4 spaces) + "x", then one DEL erases the 'x'
+        // — leaving the 4-space indent exactly as the TAB law demands:
         assertEquals("int m\n    ", CodecKeyGrid.expectedText(caps))
     }
 }

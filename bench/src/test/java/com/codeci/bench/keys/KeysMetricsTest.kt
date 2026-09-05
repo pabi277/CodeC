@@ -92,9 +92,11 @@ class KeysMetricsTest {
     }
 
     @Test fun `a swapped arrival is flagged`() {
-        // 'c' before 'b' — the subsequence law breaks.
+        // 'c' before 'b' — the strict subsequence law breaks. The unmatched
+        // "b" counts as one drop (law: dropped = expected - LCS), and the
+        // echo itself is complete; it is `swapped` that carries the signal.
         val a = TapAuditor.verify(chars("a", "b", "c"), chars("a", "c", "b"))
-        assertEquals(0, a.dropped)
+        assertEquals(1, a.dropped)
         assertTrue(a.swapped)
     }
 
