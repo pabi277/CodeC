@@ -172,3 +172,47 @@ pending at write time.
    measured from the CI artifact vs `main`'s (assets ≈ 234 KB compressed +
    module dex; budget ≤ +1.5 MiB — recorded when CI lands).
 
+### 4.5 CI history + the theme-switch hardening (2026-09-05)
+
+- **Run 1 (`6b69c6c`, 33981945825):** compiled clean; 6/7
+  `TextMateSupportTest` methods passed. The theme test failed at the
+  post-loop Dark+ assert — the returned scheme resolved `#24292E`
+  (github-dark's `editor.background`), i.e. after
+  `applyTheme(VS_CODE_DARK_PLUS)` the *previous* theme was still active.
+- **Root cause (code-level, sora 0.24.6 sources verified against the
+  `0.24.6` tag):** sora's `AssetsFileResolver` holds the `AssetManager`
+  it was constructed with. Robolectric recreates the Application (and its
+  `AssetManager`) **per test method**, so the resolver registered by the
+  first method's `ensureInitialized` goes stale — every later asset open
+  returns null, and `applyTheme`'s degrade path (stream == null → return
+  scheme for the still-current theme) silently kept the loop's last theme
+  (github-dark) active. Contributing weakness:
+  `ThemeRegistry.setTheme(name)` depends on registry-internal name
+  matching, and a miss + null stream combines into a silent wrong theme.
+- **Fix (`a19b033`):** (1) one refreshable `FileResolver` of our own,
+  registered once, whose `AssetManager` is swapped on every
+  `ensureInitialized` call (volatile write; the app process keeps one AM,
+  tests get the current one); (2) `TextMateThemes` caches the
+  `ThemeModel` per theme and switches **by reference**
+  (`setTheme(ThemeModel)`) after first load — no name matching on the hot
+  path; (3) `ensureInitialized` retries the default theme while the
+  registry still holds `ThemeModel.EMPTY` (a failed first attempt no
+  longer poisons the process); (4) a missing theme asset logs at ERROR;
+  (5) the theme test now asserts **per-iteration** that the active model
+  is the one requested (the Settings theme-switch law), with diagnostic
+  messages (active model name + rawTheme name + resolved bg), and asserts
+  Dark+ `#1E1E1E` both inside its loop iteration and after the round
+  trip.
+- **Run 2 (`a19b033`, 33982965030):** compile error — the fixup edit
+  accidentally dropped the `loadedScopes` field. Restored (`0e64b87`).
+- **Run 3 (`0e64b87`, 33983164706): ✅ GREEN** — `Build APK` succeeded
+  (`gh run watch --exit-status` → 0): compile + all unit tests
+  (Robolectric theme/grammar/analyzer tests included) + `:bench` checks.
+- **APK delta vs `main`: NOT yet measured** — the sandbox GitHub token
+  expired immediately after run 3 finished (gh/git auth down), before the
+  artifact-size API could be queried. Estimate stands at ≈ +0.7–1.0 MiB
+  (234 KB gzipped grammar/theme assets + language-textmate module dex),
+  inside the +1.5 MiB budget. Measure from the run-3 artifact
+  (`CodeC-IDE`, `size_in_bytes` vs `main`'s latest) once GitHub access is
+  restored, before the device round.
+
