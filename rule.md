@@ -221,9 +221,12 @@ Every update updates the docs **in the same commit**:
   IME-free grid fed through the production key model; latency/echo/IME-
   flicker probes; CI bench wrapper re-added — §5). **The owner's device
   round IS the gate** (recipe `docs/chat-phase28/PART_28_1_SPIKE.md` §5,
-  runbook `docs/TROUBLESHOOTING.md` §10). GO ⇒ 28.2 starts only on the
-  owner's word; NO-GO ⇒ the phase stops and the L0 strip stays the product
-  answer (recorded in `docs/EDITOR_MOBILE_RESEARCH.md` §9.1).
+  runbook `docs/TROUBLESHOOTING.md` §10). **Device round 1 recorded
+  (2026-09-05, §6): K2/sora meets every budget; K1's reds are the core, not
+  the keyboard; verdict GO pending the owner's four confirmations.**
+  GO ⇒ 28.2 starts only on the owner's word, on the S2 input path;
+  NO-GO ⇒ the phase stops and the L0 strip stays the product answer
+  (recorded in `docs/EDITOR_MOBILE_RESEARCH.md` §9.1).
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
   a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
   device round, Phase 24 E.3 hardware-shortcut device pass (needs a Bluetooth

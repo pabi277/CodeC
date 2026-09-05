@@ -367,6 +367,17 @@ inset flicker probe with a self-check toggle, an HW-synthesized-keys scenario
 Mechanism notes proven in code: Compose 1.7's `PointerInputScope` exposes no
 `view`, so suppression hooks capture `LocalView.current`; sora commits use the
 `Content` line/column API its own symbol view uses. Record + owner runbook +
-budget table: `docs/chat-phase28/PART_28_1_SPIKE.md` §4–§5. **GO** ⇒ 28.2
-starts (owner's word). **NO-GO** ⇒ the phase stops here and the L0 strip
-(Phases 26/27) remains the product answer — recorded on this line.
+budget table: `docs/chat-phase28/PART_28_1_SPIKE.md` §4–§5.
+
+**Device round 1 recorded (2026-09-05, `PART_28_1_SPIKE.md` §6): the K2
+(sora-core) numbers meet EVERY budget** — DOWN→commit p95 1.25–3.4 ms (max
+4.4, zero over-frame), 64/64 + 40/40 tap audits exact on every rep, run-row
+routing OK, and **the soft IME never opened in ~1 550 inset samples** (incl.
+the full 5-min human session); K1's red rows are the Compose core's known
+~260 ms frame cost (the 25.1 C-now disease), not the keyboard — its own
+commit path clocked sub-1 ms there too. Input path of record for 28.2:
+**S2 (programmatic `Content` edits on sora)**. **Verdict GO pending the
+owner's four confirmations** (detector self-check, real BT keyboard,
+TalkBack, "feels instant" yes/no). GO ⇒ 28.2 starts on the owner's word.
+**NO-GO** ⇒ the phase stops here and the L0 strip (Phases 26/27) remains
+the product answer — recorded on this line.

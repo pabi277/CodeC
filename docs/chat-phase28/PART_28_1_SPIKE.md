@@ -150,3 +150,40 @@ frame stats during burst p95 ≤ 16.7 ms, bad=0            (both)
 Go = every row green on BOTH cores + owner "feels instant" → 28.2 starts (on
 the owner's word). No-go = record it in §9 of `EDITOR_MOBILE_RESEARCH.md`;
 the strip path (L0) stays the product answer.
+
+## 6. Device round 1 (2026-09-05) — sheet received, recorded
+
+Owner ran both K-cores on bench.c (release APK, R8). Full sheet in chat; the
+decision numbers, medians of 3 reps:
+
+| Check | Budget | K1 (compose core) | K2 (sora core) |
+|---|---|---|---|
+| `type_burst64` tap audit | 64/64, drop=dup=swap=0 | ✅ `tap=64/64 drop=0 dup=0 swap=no` ×3 | ✅ same ×3 |
+| DOWN→commit p95 (ledger) | sub-frame | ✅ 0.78–0.92 ms (max 1.80) | ✅ 1.25–2.66 ms (max 4.33) |
+| Frame p95 during burst | ≤ 16.7 ms, bad=0 | ❌ ~278 ms, 100 % jank — **the core, not the keyboard**: this is the exact C-now disease 25.1 condemned (keystroke p95 404→ here 260-280; the grid's own commit cost above is 0.7 ms) | ✅ 10.5–13.4 ms, bad=0, jank ≤ 1.4 % |
+| `hold_repeat30` audit | 40/40 exact order | ✅ `tap=40/40` ×3, p95 0.81–0.92 ms | ✅ `tap=40/40` ×3, p95 ≤ 3.38 ms, frames ≤ 18.0 p95, bad=0 |
+| Q1 mechanism (`hw_path`) | all synthesized keys land | ✅ 20/20 ×3 | ✅ **21/20** = SymbolPairMatch auto-paired the one `(` (same signature as 25.1's `Typed=62` on 60) — every dispatched key landed, +1 is the editor being *helpful*, not the keyboard losing events |
+| Q2 (`run_route`) | runrow=OK, doc-untouched=OK | ✅ (0.24/0.35 ms) | ✅ (0.41/0.61 ms) |
+| IME flicker | max=0px everywhere | ✅ 0 px — 34+27+14+14 samples scripted + **1354 samples over the human session, never opened** | ✅ 0 px — 49+38+18+14 + **1433 human samples, never opened** |
+| Human 5-min (manual stop) | owner verdict | 117 commits, p50 1.33 / p95 1.76 ms — instant at the commit layer; frames ~144 ms (core again) | 107 commits, **p50 2.41 / p95 3.11 / max 4.38 ms, over1f=0**; frames p50 8.2 / p90 11.6 / p95 15.5 / p99 32.8, jank 4.2 %, bad 25/2645 frames in 5 min |
+| Cold open | context | 304 ms | 56 ms |
+
+Read-out: **the keyboard mechanism is proven on BOTH cores** — sub-1-to-3 ms
+DOWN→commit, zero dropped/dup/swapped events across 99 scripted presses ×3
+reps ×2 cores, hold-repeat timing exact, run-row routing untouched the
+document, and the soft IME never opened once in ~2 900 inset samples. K1's
+red rows are the Compose core's ~260 ms frame cost (the whole reason 25.1
+chose sora) — the grid path itself was never the bottleneck there either.
+**Recommended input path for 28.2: S2 (sora `Content` programmatic edits).**
+
+Still open before the verdict is written (asked in chat, owner's word needed):
+1. Control check: with "IME: allowed" flipped, did `ime=` go **> 0** at least
+   once (detector self-proof), and return to 0 after flipping back?
+2. Q1 on REAL hardware: does a Bluetooth keyboard type into the editor while
+   the grid is up (the synthesized-key check is the mechanism proof; the BT
+   pass is the fact).
+3. Q3: TalkBack exploration of editor content with IME suppressed.
+4. The verdict line itself: **does it feel instant?** (yes/no)
+
+GO (all four ✅ on K2) ⇒ 28.2 starts ONLY on the owner's word, wired to the
+S2 path. NO-GO ⇒ record here + §9.1 and stop; the L0 strip stays the product.

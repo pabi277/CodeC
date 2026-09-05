@@ -78,10 +78,16 @@ gate, invariants, docs policy) — follow it.
   grid through the production `EditorKeySet` model (mirrored verbatim), with
   DOWN→commit latency ledger, strict-subsequence tap audit, IME-inset
   flicker probe (+ self-check toggle), HW-keys + stdin-route scenarios
-  (spike Q1/Q2) and a 5-min human session. **The gate is the owner's device
-  round** (runbook `docs/TROUBLESHOOTING.md` §10; recipe `PART_28_1_SPIKE.md`
-  §5); go/no-go lands in `docs/EDITOR_MOBILE_RESEARCH.md` §9.1. **28.2–28.4
-  must NOT start before a recorded GO.**
+  (spike Q1/Q2) and a 5-min human session. **Device round 1 RECORDED
+  (2026-09-05, `PART_28_1_SPIKE.md` §6): K2/sora passes EVERY budget**
+  (DOWN→commit p95 1.25–3.4 ms, tap audits 64/64 & 40/40 exact on all reps,
+  run-route OK, IME inset 0 px in ~2 900 samples — never opened); K1's frame
+  reds are the Compose core's known ~260 ms cost, the keyboard itself was
+  sub-1 ms there too; **28.2 input path of record = S2**. **Verdict GO pending
+  the owner's four confirmations** (detector self-check, real BT keyboard,
+  TalkBack, "feels instant" yes/no); go/no-go lands in
+  `docs/EDITOR_MOBILE_RESEARCH.md` §9.1. **28.2–28.4 must NOT start before a
+  recorded GO + the owner's start word.**
 
 **PHASE STATUS (updated 2026-09-05):**
 **Phase 25 CLOSED (25.2 device-accepted & merged via PR #49; 25.3
