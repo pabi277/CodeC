@@ -8,6 +8,7 @@ import com.codeci.ide.ui.editor.EditorKeySet
 import com.codeci.ide.ui.editor.KeyStripStorage
 import com.codeci.ide.ui.keyboard.CapAction
 import com.codeci.ide.ui.keyboard.KeyboardDefaults
+import com.codeci.ide.ui.keyboard.KeyboardLayout
 import com.codeci.ide.ui.keyboard.KeyboardLayers
 import com.codeci.ide.ui.keyboard.KeyboardLayoutCodec
 import com.codeci.ide.ui.keyboard.KeyboardRouter
