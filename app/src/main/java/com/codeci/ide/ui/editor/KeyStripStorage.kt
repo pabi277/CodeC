@@ -26,6 +26,7 @@ object KeyStripStorage {
                     append(",\"close\":").append(escape(k.close))
                 }
                 EditorKey.Tab -> append(",\"type\":\"tab\"")
+                EditorKey.Delete -> append(",\"type\":\"delete\"")
                 EditorKey.DeleteWord -> append(",\"type\":\"deleteWord\"")
                 EditorKey.CommentToggle -> append(",\"type\":\"commentToggle\"")
                 // Phase 27.1 — the dual-mood caps are transient (ghost-driven);
@@ -67,6 +68,7 @@ object KeyStripStorage {
                 append(",\"close\":").append(escape(key.close))
             }
             EditorKey.Tab -> append("\"type\":\"tab\"")
+            EditorKey.Delete -> append("\"type\":\"delete\"")
             EditorKey.DeleteWord -> append("\"type\":\"deleteWord\"")
             EditorKey.CommentToggle -> append("\"type\":\"commentToggle\"")
             // Phase 27.1 — transient ghost caps persist as their physical key.
@@ -297,6 +299,7 @@ object KeyStripStorage {
                 EditorKey.Pair(open, close)
             }
             "tab" -> EditorKey.Tab
+            "delete" -> EditorKey.Delete
             "deleteWord" -> EditorKey.DeleteWord
             "commentToggle" -> EditorKey.CommentToggle
             "caret" -> {
@@ -319,6 +322,7 @@ object KeyStripStorage {
                     EditorKey.Pair(open, close)
                 }
                 "tab" -> EditorKey.Tab
+                "delete" -> EditorKey.Delete
                 "deleteWord" -> EditorKey.DeleteWord
                 "commentToggle" -> EditorKey.CommentToggle
                 "caret" -> {

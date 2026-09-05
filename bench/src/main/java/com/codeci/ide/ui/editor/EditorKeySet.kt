@@ -45,6 +45,15 @@ sealed class EditorKey {
      */
     data class Pair(val open: String, val close: String) : EditorKey()
 
+    /**
+     * Phase 28.2 — backspace gets a model home. Until CodeC Keys the system
+     * IME owned deletion, so the app model had no single-delete key (the
+     * 28.1 spike carried DEL as an explicit flag "until 28.2 settles DEL's
+     * real model home" — this is that home). With a selection it deletes the
+     * selection; otherwise the character before the caret.
+     */
+    object Delete : EditorKey()
+
     /** Phase 26.2 — delete the previous word (hold-repeat / swipe-on-DEL). */
     object DeleteWord : EditorKey()
 
@@ -266,6 +275,7 @@ object EditorKeySet {
                 replaced(text, start, end, spaces, spaces.length)
             }
             EditorKey.DeleteWord -> SmartTyping.deletePrevWord(value)
+            EditorKey.Delete -> backspace(value)
             EditorKey.CommentToggle -> value
             // Phase 27.1 — intercepted by the screen (ghost accept paths);
             // reaching apply() means no ghost was visible: insert nothing.
@@ -284,6 +294,23 @@ object EditorKeySet {
             }
         }
     }
+
+    /** Backspace math: selection first, else the character before the caret. */
+    private fun backspace(value: TextFieldValue): TextFieldValue {
+        val text = value.text
+        val start = min(value.selection.start, value.selection.end).coerceIn(0, text.length)
+        val end = max(value.selection.start, value.selection.end).coerceIn(0, text.length)
+        val to = if (start != end) start else (start - 1).coerceAtLeast(0)
+        return TextFieldValue(text.substring(0, to) + text.substring(end), TextRange(to))
+    }
+
+    /**
+     * Phase 28.2 — the per-language macro ROW of the full keyboard reuses the
+     * Phase 16 language hook (spec §1.1: "per-language macro rows reusing the
+     * Phase 16/22 language hook"). C ships `->`, Python `:` + `self`, and so
+     * on — one accessor, so the tail and the keyboard row never diverge.
+     */
+    fun languageMacroRow(language: LanguageType?): List<EditorKeyDef> = languageTail(language)
 
     private fun replaced(text: String, start: Int, end: Int, insert: String, caretShift: Int): TextFieldValue {
         val next = text.substring(0, start) + insert + text.substring(end)
