@@ -42,17 +42,42 @@ object GhostCompletion {
 
     /**
      * Compute the ghost for [caret] in [text]: the first item whose insert
-     * text begins with the current word prefix and has more to say. The
-     * suffix is capped at the first line (G6) and must be non-empty.
+     * text continues what is already typed, and has more to say. The suffix
+     * is capped at the first line (G6) and must be non-empty.
+     *
+     * Alignment unit (fixed after the 2026-09-05 device round — the ghost
+     * never painted on the phone): the strip matches chips by fuzzy LABEL
+     * (`snippetMatches`), so items surface whose insert text does NOT start
+     * with the bare identifier prefix (typed "int mai" → item "int main(…)…;
+     * insert starts with "int ", not "mai"). Identifier-prefix matching made
+     * the ghost invisible in exactly the snippet-heavy cases the phone needs
+     * it. We instead align the insert against the LONGEST SUFFIX of the
+     * current line's text before the caret: typed "int mai" aligns in 7 chars
+     * → ghost "n(void) {"; typed "mai" alone aligns in 0 → hidden (honest:
+     * accept could not replace "mai" without duplicating "int "). The accept
+     * math below only ever replaces the matched range, so any alignment is
+     * sound.
      */
     fun compute(text: String, caret: Int, items: List<CompletionItem>): GhostState {
         if (items.isEmpty()) return GhostState.Hidden
         val cursor = caret.coerceIn(0, text.length)
-        val prefix = CodeCompletionEngine.currentPrefix(text, cursor)
-        if (prefix.isEmpty()) return GhostState.Hidden
+        val lineStart =
+            text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
+        val lineTail = text.substring(lineStart, cursor)
+        if (lineTail.isEmpty()) return GhostState.Hidden
         for (item in items) {
-            if (!item.insertText.startsWith(prefix)) continue
-            val rest = item.insertText.substring(prefix.length)
+            val insert = item.insertText
+            // Full-length alignment is allowed: when the insert is fully
+            // typed, rest is empty and the item is skipped below (a ghost
+            // must always have a visible suffix — G1).
+            var len = minOf(insert.length, lineTail.length)
+            while (len > 0 &&
+                !insert.regionMatches(0, lineTail, lineTail.length - len, len, ignoreCase = false)
+            ) {
+                len--
+            }
+            if (len == 0) continue
+            val rest = insert.substring(len)
             if (rest.isEmpty()) continue
             val firstLine = rest.substringBefore('\n')
             if (firstLine.isEmpty()) {
@@ -60,7 +85,7 @@ object GhostCompletion {
                 // a ghost made of pure newline is invisible — skip the item.
                 continue
             }
-            return GhostState.Visible(firstLine, item, prefix.length)
+            return GhostState.Visible(firstLine, item, len)
         }
         return GhostState.Hidden
     }
@@ -100,7 +125,11 @@ object GhostCompletion {
         val sel = value.selection
         if (sel.start != sel.end) return null // never accept over a selection
         val caret = sel.start.coerceIn(0, text.length)
-        val prefixStart = CodeCompletionEngine.prefixStart(text, caret)
+        // The matched range length travels with the state (see compute's
+        // line-tail alignment — it may exceed the identifier run, e.g.
+        // "int mai" ↔ snippet "int main(…)…").
+        val prefixStart = caret - state.prefixLength
+        if (prefixStart < 0) return null
         val livePrefix = text.substring(prefixStart, caret)
         // The ghost must still match what is really before the caret; a stale
         // snapshot (user typed on before the debounce) is rejected, not half-

@@ -148,3 +148,44 @@ anchor on edits for free):
    survives restart. Ghost toggle alone hides only the ghost.
 PASS = all six.
 ```
+
+### §4.1 Device round 1 (2026-09-05) — "ghost text is not showing" + fix
+
+Owner device report on the CI-green build: chips + chip-accept + caps all
+worked, but the inline ghost NEVER painted (no ghost, no pill, no TAB ▸
+mood; strip showed plain keys for single-candidate cases). Two stacked
+defects, both fixed:
+
+1. **Composing suppression was phone-fatal.** The apply gate and the
+   selection-event clear keyed on sora `hasComposingText()` — but Gboard
+   (and any soft IME with suggestions) holds a composing span around the
+   current word for autocorrect, so composing is true during almost ALL
+   normal phone typing → the ghost was suppressed exactly while typing.
+   G7's intent (CJK composition ambiguity) does not apply: the inlay hint
+   is point-anchored and sora auto-shifts it on replace, so composition
+   cannot corrupt the buffer or the hint. Both gates deleted
+   (`SoraEditorHost.kt`); the other G7 suppressions (selection, find
+   dialog, run context, scroll, file-size cap) are untouched.
+2. **The ghost matched identifier-prefix only; the strip matches fuzzy
+   labels.** Engine items surface via `snippetMatches(label, prefix)`
+   (fuzzy, label-based — e.g. typed `int mai` surfaces the
+   `int main(void) {…` skeleton), but `GhostCompletion.compute` required
+   `insertText.startsWith(identifierPrefix)` — "mai" never starts an
+   "int main…" insert → Hidden. The strip therefore worked while the
+   ghost stayed invisible for precisely the snippet-heavy phone case.
+   Fix: align each item's insert against the **longest suffix of the
+   current line-tail before the caret** (typed "int mai" aligns in 7 →
+   ghost "n(void) {"; bare "mai" aligns in 0 → hidden, because accept
+   could not replace "mai" without duplicating "int "). Soundness: accept
+   only ever replaces the matched range (`prefixLength` travels in the
+   state), so no alignment can corrupt the buffer; staleness re-checks
+   use the same matched range. Host tests: G6 fixture restored to its
+   original intent (typed "int ma" → ghost "in(void) {"), new pins for
+   the multi-word tail, FULL-accept non-duplication, and the bare-word
+   negative. All identifier-only fixtures unchanged (identifier prefix is
+   the longest-alignable tail in those cases).
+
+Also this round: the GitHub-reconnect flow reset the sandbox's local repo
+to the pre-Phase-27 base with the working tree as uncommitted changes;
+state was verified (`git reset --mixed FETCH_HEAD`, never --hard) per the
+standing rule before re-applying work. Nothing on the remote branch moved.

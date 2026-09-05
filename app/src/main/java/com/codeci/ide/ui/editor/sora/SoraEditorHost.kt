@@ -135,7 +135,9 @@ fun SoraEditorHost(
 
     // Phase 27.1 — the ghost: an inlay hint at the caret (sora line/column
     // are 0-based; cursorPos is 1-based). Cleared on every Hidden state —
-    // including the instant shrink/clear path — and on IME composing (G7).
+    // including the instant shrink/clear path. (Composing is NOT a clear
+    // trigger — soft-IME word composition would keep the ghost permanently
+    // hidden on phones; see the device-round note below.)
     // Deduped: repeated null-application per caret move stays free.
     val lastAppliedGhost = remember(editor) { arrayOf<String?>(null) }
     LaunchedEffect(
@@ -144,7 +146,7 @@ fun SoraEditorHost(
     ) {
         val ghost = completionModel.ghost
         if (ghost is GhostState.Visible && ghostEnabled && completionMasterOn &&
-            !browsingActive && !editor.hasComposingText()
+            !browsingActive
         ) {
             runCatching {
                 val lineCount = editor.text.lineCount
@@ -246,10 +248,16 @@ fun SoraEditorHost(
                 // first replay (or arriving between replays) can carry
                 // indices for text the VM has never seen — a TextFieldValue
                 // whose selection exceeds its text is poison downstream.
-                // Phase 27.1 G7 — no ghost while the IME is composing.
-                if (editor.hasComposingText() && editor.inlayHints != null) {
-                    editor.setInlayHints(null)
-                }
+                // NOTE (device round 2026-09-05): deliberately NO
+                // `hasComposingText()` gate here or at apply time. On a soft
+                // keyboard (Gboard with suggestions) the IME holds a
+                // composing span around the current word for autocorrect, so
+                // composing is true during almost ALL normal phone typing and
+                // the gate kept the ghost permanently invisible while every
+                // other affordance (TAB ▸, pill, chips) still worked. The
+                // point-anchored inlay auto-shifts on replace, so real CJK
+                // composition cannot corrupt it either; G7's selection /
+                // find-dialog / run / scroll suppressions still hold.
                 val base = syncedText
                 val left = event.left
                 val right = event.right

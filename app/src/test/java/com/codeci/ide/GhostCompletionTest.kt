@@ -60,12 +60,33 @@ class GhostCompletionTest {
     @Test
     fun `G6 multi-line insert ghosts the FIRST line only`() {
         val skel = item("int main(void) {", "int main(void) {\n    \n    return 0;\n}")
-        // prefix = the leading word "int"; the rest of line 1 ghosts, line 2+ never do (G6)
-        val text = "int"
-        val ghost = GhostCompletion.compute(text, 3, listOf(skel))
+        // Line-tail alignment (device round 2026-09-05): typed "int ma" aligns
+        // against the insert in 6 chars — this is the phone's main snippet case.
+        val ghost = GhostCompletion.compute("int ma", 6, listOf(skel))
         assertTrue(ghost is GhostState.Visible)
-        assertEquals(" main(void) {", (ghost as GhostState.Visible).suffix) // no '\n' in a ghost
+        assertEquals("in(void) {", (ghost as GhostState.Visible).suffix) // no '\n' in a ghost
         assertTrue(!ghost.suffix.contains('\n'))
+    }
+
+    @Test
+    fun `snippet ghosts after a multi-word line tail, and FULL accept never duplicates`() {
+        val skel = item("int main(void) {", "int main(void) {\n    \n    return 0;\n}")
+        val text = "int mai"
+        val ghost = GhostCompletion.compute(text, 7, listOf(skel)) as GhostState.Visible
+        assertEquals("n(void) {", ghost.suffix)
+        assertEquals(7, ghost.prefixLength) // the WHOLE line tail, not the "mai" run
+        // FULL accept replaces exactly the matched range — no doubled "int".
+        val accepted = GhostCompletion.accept(
+            TextFieldValue(text, TextRange(7)), ghost, AcceptGranularity.FULL
+        )!!
+        assertEquals("int main(void) {\n    \n    return 0;\n}", accepted.text)
+    }
+
+    @Test
+    fun `ghost stays hidden when the typed words cannot align with the insert`() {
+        val skel = item("int main(void) {", "int main(void) {\n    \n    return 0;\n}")
+        // Bare "mai" (no leading "int "): accept would duplicate "int" — hidden, honest.
+        assertEquals(GhostState.Hidden, GhostCompletion.compute("mai", 3, listOf(skel)))
     }
 
     @Test
