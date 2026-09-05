@@ -1271,7 +1271,7 @@ fun EditorScreen(
                 KeysStrip(
                     resolved = resolvedKeys,
                     textFieldValue = codeText,
-                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
+                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, isStrip = true) },
                     tabSize = tabSize,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) }
@@ -1367,7 +1367,7 @@ fun EditorScreen(
                 KeysStrip(
                     resolved = resolvedKeys,
                     textFieldValue = codeText,
-                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize) },
+                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, isStrip = true) },
                     tabSize = tabSize,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) },

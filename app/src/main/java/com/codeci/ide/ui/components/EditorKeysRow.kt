@@ -51,6 +51,8 @@ import kotlin.math.abs
  * Phase 26.1 — key strip 2.0: long-press popup, swipe layers, hold-repeat.
  * Caps under 48dp, corner tick for caps with extras, pure gesture state
  * machine (host-testable via KeyGestureDetector), hold-repeat for arrows.
+ * FIX 2026-09-05: horizontal drag to scroll the strip no longer inserts a key
+ * (touchSlop vs swipe), long-press tolerates tiny jitter, swipe consumes.
  */
 @Composable
 fun EditorKeysRow(
@@ -137,6 +139,10 @@ object KeyGestureDetector {
     ): Result {
         val absDy = abs(dyPx)
         val absDx = abs(dxPx)
+        // Horizontal scroll dominates -> not a key tap at all
+        if (absDx > 20 * 3 && absDx > absDy) {
+            return Result.NONE
+        }
         // Swipe takes precedence if vertical drag dominates.
         if (absDy > absDx && absDy > SWIPE_THRESHOLD_DP * 3) { // approx 28dp * density ~3
             return if (dyPx < 0 && hasSwipeUp) Result.SWIPE_UP
@@ -170,6 +176,7 @@ private fun EditorKeyCap(
     var holdJob by remember { mutableStateOf<Job?>(null) }
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 28.dp.toPx() }
+    val scrollThresholdPx = with(density) { 20.dp.toPx() }
 
     Box(
         modifier = Modifier
@@ -181,11 +188,12 @@ private fun EditorKeyCap(
                     val down = awaitFirstDown()
                     var isLongPress = false
                     var isSwipe: String? = null
+                    var isScroll = false
                     val startY = down.position.y
                     val startX = down.position.x
                     val longPressJob = scope.launch {
                         delay(EditorKeySet.LONG_PRESS_MS)
-                        if (isSwipe == null && hasPopup) {
+                        if (isSwipe == null && !isScroll && hasPopup) {
                             isLongPress = true
                             showPopup = true
                         }
@@ -215,14 +223,28 @@ private fun EditorKeyCap(
                         }
                         val dy = change.position.y - startY
                         val dx = change.position.x - startX
-                        if (abs(dy) > swipeThresholdPx && abs(dy) > abs(dx)) {
-                            if (dy < 0 && def.swipeUp != null && isSwipe == null) {
+                        // Horizontal scroll dominates -> suppress tap, let Row scroll
+                        if (!isScroll && abs(dx) > scrollThresholdPx && abs(dx) > abs(dy)) {
+                            isScroll = true
+                            longPressJob.cancel()
+                            hrJob?.cancel()
+                            showPopup = false
+                            // don't consume, let horizontalScroll handle it
+                        } else if (isSwipe == null && !isScroll && abs(dy) > swipeThresholdPx && abs(dy) > abs(dx)) {
+                            if (dy < 0 && def.swipeUp != null) {
                                 isSwipe = "up"
                                 longPressJob.cancel()
                                 hrJob?.cancel()
                                 showPopup = false
-                            } else if (dy > 0 && def.swipeDown != null && isSwipe == null) {
+                                change.consume()
+                            } else if (dy > 0 && def.swipeDown != null) {
                                 isSwipe = "down"
+                                longPressJob.cancel()
+                                hrJob?.cancel()
+                                showPopup = false
+                                change.consume()
+                            } else if (abs(dy) > swipeThresholdPx) {
+                                // vertical drag but key has no swipe in that direction -> cancel popup, still treat as scroll/no-op
                                 longPressJob.cancel()
                                 hrJob?.cancel()
                                 showPopup = false
@@ -237,6 +259,7 @@ private fun EditorKeyCap(
                     showPopup = false
 
                     when {
+                        isScroll -> Unit // horizontal scroll, no key
                         isSwipe == "up" && def.swipeUp != null -> {
                             onKey(def.swipeUp)
                         }
@@ -249,7 +272,11 @@ private fun EditorKeyCap(
                         isLongPress && def.popup != null -> {
                             onKey(def.popup)
                         }
-                        else -> {
+                        isSwipe != null -> {
+                            // swipe detected but no corresponding action -> no-op (don't fall through to tap)
+                            Unit
+                        }
+                        !isScroll -> {
                             onKey(def.key)
                         }
                     }
@@ -327,6 +354,7 @@ private fun RunKeyCap(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 28.dp.toPx() }
+    val scrollThresholdPx = with(density) { 20.dp.toPx() }
 
     Box(
         modifier = Modifier
@@ -337,10 +365,12 @@ private fun RunKeyCap(
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     var isLongPress = false
+                    var isScroll = false
                     val startY = down.position.y
+                    val startX = down.position.x
                     val job = scope.launch {
                         delay(EditorKeySet.LONG_PRESS_MS)
-                        if (hasPopup) {
+                        if (!isScroll && hasPopup) {
                             isLongPress = true
                             showPopup = true
                         }
@@ -358,18 +388,25 @@ private fun RunKeyCap(
                             break
                         }
                         val dy = change.position.y - startY
-                        if (abs(dy) > swipeThresholdPx) {
+                        val dx = change.position.x - startX
+                        if (!isScroll && abs(dx) > scrollThresholdPx && abs(dx) > abs(dy)) {
+                            isScroll = true
                             job.cancel()
                             showPopup = false
-                            break
+                        } else if (abs(dy) > swipeThresholdPx) {
+                            job.cancel()
+                            showPopup = false
+                            // no swipe for run keys, just cancel popup
                         }
                     }
                     job.cancel()
                     val wasPopup = showPopup
                     showPopup = false
-                    if (wasPopup && def.popup != null && isLongPress) {
+                    if (isScroll) {
+                        Unit
+                    } else if (wasPopup && def.popup != null && isLongPress) {
                         onKeyAction(def.popup)
-                    } else {
+                    } else if (!isScroll) {
                         onKeyAction(def.action)
                     }
                 }

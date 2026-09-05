@@ -394,7 +394,8 @@ object SmartTyping {
         newValue: TextFieldValue,
         language: LanguageType?,
         tabSize: Int = 4,
-        config: Config = Config()
+        config: Config = Config(),
+        isStrip: Boolean = false
     ): TextFieldValue {
         // Quick path: selection-only change (no text change) — nothing to smart-handle.
         if (old.text == newValue.text) return newValue
@@ -412,9 +413,12 @@ object SmartTyping {
             // Try auto-pair for openers (insert matching closer and keep caret inside)
             // Only when newValue is the naive single-char insert; replace with pair.
             // Detect naive: newValue == old[0:caretOld] + incoming + old[caretOld:]
-            val naive = old.text.substring(0, caretOld) + incoming + old.text.substring(caretOld)
-            if (newValue.text == naive) {
-                handleAutoPair(old, incoming, config, language)?.let { return it }
+            // Skipped for strip-origin inserts: swipe-up single '(' must stay single, sora handles keyboard pairing.
+            if (!isStrip) {
+                val naive = old.text.substring(0, caretOld) + incoming + old.text.substring(caretOld)
+                if (newValue.text == naive) {
+                    handleAutoPair(old, incoming, config, language)?.let { return it }
+                }
             }
         }
 
@@ -441,15 +445,32 @@ object SmartTyping {
         }
 
         // Empty-pair backspace handling is for deletions, not insertions.
-        // Detect single backspace deletion (length -1, selection collapsed)
-        if (newValue.text.length == old.text.length - 1 && old.selection.collapsed && newValue.selection.collapsed) {
-            // Check if newValue is just old with one char deleted before caret, but Smart would delete two.
+        // Detect backspace deletion (length -1 or -2, selection collapsed). More permissive: if old was (|) and
+        // newValue deleted at least one side, return the both-deleted smart value. This fixes hardware/Gboard
+        // deletions via sora where naive string comparison was brittle (caret vs index mismatch).
+        if ((newValue.text.length == old.text.length - 1 || newValue.text.length == old.text.length - 2)
+            && old.selection.collapsed && newValue.selection.collapsed) {
             handleEmptyPairBackspace(old, config, language)?.let { smart ->
-                // Verify that newValue is the naive single-char deletion; if so, use smart (two-char) instead.
-                // Naive deletion would be old[0:caret-1] + old[caret:]
-                val naive = old.text.substring(0, old.selection.start - 1) + old.text.substring(old.selection.start)
-                if (newValue.text == naive) {
-                    return smart
+                // Naive single-char deletion at caret-1
+                val caret = old.selection.start
+                if (caret > 0) {
+                    val naiveSingle = if (caret <= old.text.length) old.text.substring(0, caret - 1) + old.text.substring(caret) else ""
+                    val naiveBoth = if (caret < old.text.length) old.text.substring(0, caret - 1) + old.text.substring(caret + 1) else ""
+                    // If sora already deleted both, newValue == smart.text — keep smart (already correct)
+                    // If sora deleted one, newValue == naiveSingle — upgrade to smart
+                    if (newValue.text == naiveSingle || newValue.text == naiveBoth || newValue.text == smart.text) {
+                        return smart
+                    }
+                    // Fallback: if old had empty pair and new length is reduced, still apply smart (device-observed case
+                    // where Gboard's deleteSurroundingText produces same length but caret differs)
+                    val left = if (caret > 0) old.text.getOrNull(caret - 1) else null
+                    val right = if (caret < old.text.length) old.text.getOrNull(caret) else null
+                    if (left != null && right != null && openToClose[left] == right) {
+                        // Old was empty pair; if new doesn't contain that pair at that location, treat as pair delete
+                        if (!newValue.text.contains("" + left + right) || newValue.text.length < old.text.length) {
+                            return smart
+                        }
+                    }
                 }
             }
         }

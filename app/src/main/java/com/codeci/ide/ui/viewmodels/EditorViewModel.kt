@@ -564,15 +564,15 @@ class EditorViewModel : ViewModel() {
     // Text editing + undo recording
     // ---------------------------------------------------------------------
 
-    fun updateCode(newValue: TextFieldValue, autoIndent: Boolean = false, tabSize: Int = 4) {
+    fun updateCode(newValue: TextFieldValue, autoIndent: Boolean = false, tabSize: Int = 4, isStrip: Boolean = false) {
         val old = _codeText.value
         var next = newValue
         // Phase 26.2 — smart typing (pure, host-testable). Runs before autoIndent legacy.
+        // isStrip=true for keys coming from the strip: swipe single '(' must stay single (sora handles keyboard pairing).
         run {
             val lang = LanguageType.fromFileName(_fileName.value)
             val cfg = smartTypingConfig
-            // Only run smart pipeline when at least one rule enabled and not both collapsed false? Always run.
-            val smart = SmartTyping.transform(old, next, lang, tabSize, cfg)
+            val smart = SmartTyping.transform(old, next, lang, tabSize, cfg, isStrip = isStrip)
             if (smart !== next) next = smart
         }
         if (autoIndent && next === newValue && isSingleNewlineInsert(old, newValue)) {
