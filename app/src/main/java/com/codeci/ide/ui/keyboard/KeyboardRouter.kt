@@ -35,29 +35,39 @@ object KeyboardRouter {
     const val TO_SYMBOLS_CAP = "SYM"
     const val TO_LETTERS_CAP = "ABC"
 
-    /** Special caps win before any edit routing (they never reach the doc). */
-    private fun routeSpecial(def: EditorKeyDef, popup: Boolean): CapAction? =
-        when (def.label) {
-            SHIFT_CAP -> if (popup) CapAction.ToggleLock else CapAction.ToggleShift
-            TO_SYMBOLS_CAP -> CapAction.SetLayer(KeyboardLayers.SYMBOLS)
-            TO_LETTERS_CAP -> CapAction.SetLayer(KeyboardLayers.LETTERS)
-            else -> null
-        }
+    /** The special caps' labels (they never reach the document). */
+    private fun specialOf(def: EditorKeyDef): String? = when (def.label) {
+        SHIFT_CAP, TO_SYMBOLS_CAP, TO_LETTERS_CAP -> def.label
+        else -> null
+    }
 
     /** Tap: shift-resolved edit (or the special cap's own action). */
-    fun tapAction(def: EditorKeyDef, shift: ShiftState): CapAction =
-        routeSpecial(def, popup = false) ?: CapAction.Edit(resolveEdit(def.key, shift))
+    fun tapAction(def: EditorKeyDef, shift: ShiftState): CapAction = when (specialOf(def)) {
+        SHIFT_CAP -> CapAction.ToggleShift
+        TO_SYMBOLS_CAP -> CapAction.SetLayer(KeyboardLayers.SYMBOLS)
+        TO_LETTERS_CAP -> CapAction.SetLayer(KeyboardLayers.LETTERS)
+        else -> CapAction.Edit(resolveEdit(def.key, shift))
+    }
 
-    /** Hold-release with a popup: the popup key VERBATIM (`:` on `;`),
-     * since popups carry symbols/secondaries, never letter cases. Special
-     * caps keep their own long-press law (⬆ holds = lock). */
-    fun popupAction(def: EditorKeyDef): CapAction =
-        routeSpecial(def, popup = true) ?: def.popup?.let { CapAction.Edit(it) } ?: CapAction.Noop
+    /** Hold-release on a popup cap = the popup key VERBATIM (`:` on `;`);
+     * popups carry symbols/secondaries, never letter cases. The shift cap's
+     * hold is the lock toggle. A special cap WITHOUT a popup is a NOOP —
+     * a stray long-press must never re-fire the layer action (and an
+     * ordinary cap without a popup falls through to its plain key, exactly
+     * like the shipped strip's long-letter-press behavior). */
+    fun popupAction(def: EditorKeyDef): CapAction = when {
+        def.label == SHIFT_CAP -> CapAction.ToggleLock
+        def.popup != null -> CapAction.Edit(def.popup)
+        specialOf(def) != null -> CapAction.Noop
+        else -> CapAction.Edit(def.key)
+    }
 
-    /** Flick up/down: the layer key verbatim (shift never applies to them). */
+    /** Flick up/down: the layer key verbatim (shift never applies to them);
+     * specials ignore flicks entirely. */
     fun swipeAction(def: EditorKeyDef, up: Boolean): CapAction {
+        if (specialOf(def) != null) return CapAction.Noop
         val key = if (up) def.swipeUp else def.swipeDown
-        return routeSpecial(def, popup = false) ?: key?.let { CapAction.Edit(it) } ?: CapAction.Noop
+        return key?.let { CapAction.Edit(it) } ?: CapAction.Noop
     }
 
     /**

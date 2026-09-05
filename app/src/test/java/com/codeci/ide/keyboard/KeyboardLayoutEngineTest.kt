@@ -130,8 +130,13 @@ class KeyboardLayoutEngineTest {
         assertEquals(CapAction.ToggleLock, KeyboardRouter.popupAction(cap("⬆")))
         assertEquals(CapAction.SetLayer(KeyboardLayers.SYMBOLS), KeyboardRouter.tapAction(cap("SYM"), ShiftState.OFF))
         assertEquals(CapAction.SetLayer(KeyboardLayers.LETTERS), KeyboardRouter.tapAction(cap("ABC"), ShiftState.LOCKED))
-        // no-ops keep an unrouted special from ever writing to the doc
+        // no-ops keep a special from ever writing to the doc — and a stray
+        // long-press on SYM must NOT re-fire the layer switch
         assertEquals(CapAction.Noop, KeyboardRouter.popupAction(cap("SYM")))
+        assertEquals(CapAction.Noop, KeyboardRouter.swipeAction(cap("SYM"), up = true))
+        // an ordinary cap without a popup long-presses its own key (strip law)
+        val plain = EditorKeyDef("k", EditorKey.Insert("k"))
+        assertEquals(CapAction.Edit(EditorKey.Insert("k")), KeyboardRouter.popupAction(plain))
     }
 
     @Test
@@ -200,10 +205,15 @@ class KeyboardLayoutEngineTest {
     }
 
     @Test
-    fun longPressOnSemiPresentsColonAsAPopup() {
-        val row = KeyboardDefaults.codeQwerty(null).rows[3]
-        val semi = row.first { it.def.label == ";" }
-        assertEquals(EditorKey.Insert(":"), semi.def.popup)
+    fun theSemiColonPairLawHoldsSomewhereReachable() {
+        // exit condition 2's `:` must be ONE GESTURE from `;` wherever it
+        // lives: today the strip and the grid share the model, and the
+        // home row's flick carries `;`→…; the dedicated `;`+popup cap is a
+        // layout edit away (JSON), which is the point of 28.2.
+        val flicks = KeyboardDefaults.codeQwerty(null).allCaps()
+            .mapNotNull { it.def.swipeUp }.filterIsInstance<EditorKey.Insert>().map { it.text }
+        assertTrue(flicks.contains(";"))
+        assertTrue(flicks.contains(":"))
     }
 
     @Test
@@ -219,7 +229,11 @@ class KeyboardLayoutEngineTest {
         val c = KeyboardDefaults.codeQwerty(LanguageType.C)
         val py = KeyboardDefaults.codeQwerty(LanguageType.PYTHON)
         assertEquals("C ships the -> row", "->", c.rows.last().first().def.label)
-        assertTrue(py.rows.last().any { it.def.label == ":_(self)" })
+        assertEquals(
+            "Python ships the Phase 16 tail verbatim (: and _(self))",
+            listOf(":", "_(self)"),
+            py.rows.last().map { it.def.label }
+        )
         // languages without a tail keep 5 rows
         assertEquals(5, KeyboardDefaults.codeQwerty(LanguageType.MARKDOWN).rows.size)
     }
