@@ -24,16 +24,40 @@ import com.codeci.ide.ui.theme.getEditorTheme
  * [MultiLanguageSyntaxHighlighter.highlight] maps them onto theme colors.
  * All spans are offsets into the (untransformed) buffer text; the visual
  * transformation stays identity-mapped so indices match directly.
+ *
+ * **Phase 29 (2026-09-05): this regex engine is OFF the live editor hot
+ * path.** The editor's analyzer is sora `language-textmate` (VS Code
+ * grammars, see `ui/editor/sora/TextMateSupport.kt`); what remains here is
+ * (a) `LanguageType` + `fromFileName` (still THE file→language mapping),
+ * (b) the keyword sets for [CodeCompletionEngine], (c) the regex tokenizer
+ * as the SmartTyping string/comment probe, the templates preview and the
+ * TextMate-load fallback. [LanguageType] buckets were split in 29.2 so
+ * every `LanguageRegistry` run-profile extension maps to a real grammar.
  */
 enum class LanguageType(val label: String, val extensions: List<String>) {
     C("C", listOf("c", "h")),
     CPP("C++", listOf("cpp", "hpp", "cc", "cxx", "hxx", "hh")),
     PYTHON("Python", listOf("py", "pyw")),
-    JAVASCRIPT("JavaScript", listOf("js", "jsx", "ts", "tsx", "mjs", "cjs")),
-    HTML_CSS("HTML/CSS", listOf("html", "htm", "css", "scss", "xml")),
+    JAVASCRIPT("JavaScript", listOf("js", "jsx", "mjs", "cjs")),
+    // Phase 29.2 — TypeScript is its own bucket (its own TextMate grammar,
+    // source.ts / source.tsx). Before 29 it rode the JavaScript regex.
+    TYPESCRIPT("TypeScript", listOf("ts", "tsx")),
+    // Phase 29.2 — HTML and CSS split (distinct grammars: text.html.basic /
+    // source.css). Before 29 one regex mashed them together.
+    HTML("HTML", listOf("html", "htm")),
+    CSS("CSS", listOf("css", "scss")),
     JSON("JSON", listOf("json")),
     SHELL("Shell", listOf("sh", "bash", "zsh")),
     MARKDOWN("Markdown", listOf("md", "markdown")),
+    // Phase 29.2 — the remaining run-profile languages used to colour as
+    // TEXT; each now maps to its TextMate grammar.
+    GO("Go", listOf("go")),
+    RUST("Rust", listOf("rs")),
+    PHP("PHP", listOf("php")),
+    RUBY("Ruby", listOf("rb")),
+    LUA("Lua", listOf("lua")),
+    XML("XML", listOf("xml")),
+    YAML("YAML", listOf("yaml", "yml")),
     TEXT("Text", listOf("txt", "log"));
 
     companion object {
@@ -59,8 +83,11 @@ object MultiLanguageSyntaxHighlighter {
         LanguageType.CPP -> cKeywords + cppKeywords
         LanguageType.PYTHON -> pythonKeywords
         LanguageType.JAVASCRIPT -> jsKeywords
+        // Phase 29.2 — TS completions are the JS keyword set plus TS-only
+        // words (kept for CodeCompletionEngine; colour itself is TextMate).
+        LanguageType.TYPESCRIPT -> jsKeywords + tsKeywords
         LanguageType.JSON -> jsonKeywords
-        LanguageType.HTML_CSS -> cssKeywords
+        LanguageType.HTML, LanguageType.CSS -> cssKeywords
         LanguageType.SHELL -> shellKeywords
         else -> emptySet()
     }
@@ -150,7 +177,7 @@ object MultiLanguageSyntaxHighlighter {
 
     /** (group name, kind) pairs in alternation priority order, per language. */
     private fun tokenGroupKinds(language: LanguageType): List<Pair<String, TokenKind>> = when (language) {
-        LanguageType.C, LanguageType.CPP, LanguageType.JAVASCRIPT -> listOf(
+        LanguageType.C, LanguageType.CPP, LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT -> listOf(
             "comment" to TokenKind.COMMENT,
             "string" to TokenKind.STRING,
             "number" to TokenKind.NUMBER,
@@ -176,7 +203,7 @@ object MultiLanguageSyntaxHighlighter {
             "function" to TokenKind.FUNCTION,
             "operator" to TokenKind.OPERATOR
         )
-        LanguageType.HTML_CSS -> listOf(
+        LanguageType.HTML, LanguageType.CSS -> listOf(
             "comment" to TokenKind.COMMENT,
             "string" to TokenKind.STRING,
             "number" to TokenKind.NUMBER,
@@ -195,6 +222,10 @@ object MultiLanguageSyntaxHighlighter {
             "operator" to TokenKind.OPERATOR
         )
         LanguageType.TEXT -> emptyList()
+        // Phase 29.2 — the new buckets colour through TextMate only; the
+        // regex fallback has no rules for them (tokenize returns early
+        // because pattern() is null for these languages).
+        else -> emptyList()
     }
 
     /** Build the styled [AnnotatedString] the editor transformation shows. */
@@ -300,7 +331,7 @@ object MultiLanguageSyntaxHighlighter {
                 add("function", """\b[a-zA-Z_][a-zA-Z0-9_]*\s*(?=\()""")
                 add("operator", """[+\-*/%=<>!&|^~]+""")
             }
-            LanguageType.JAVASCRIPT -> {
+            LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT -> {
                 add("comment", """//[^\n]*|/\*[\s\S]*?\*/""")
                 add("string", """`[^`\n]*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'""")
                 add("number", """\b(?:0[xX][0-9a-fA-F]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?)\b""")
@@ -313,7 +344,7 @@ object MultiLanguageSyntaxHighlighter {
                 add("number", """-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b""")
                 keywordBody?.let { add("keyword", it) }
             }
-            LanguageType.HTML_CSS -> {
+            LanguageType.HTML, LanguageType.CSS -> {
                 add("comment", """<!--[\s\S]*?-->|/\*[\s\S]*?\*/""")
                 add("string", """"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'""")
                 add("number", """\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|s|ms|fr|deg|ch|ex)?\b|#[0-9a-fA-F]{3,8}\b""")
@@ -343,8 +374,11 @@ object MultiLanguageSyntaxHighlighter {
                 add("operator", """\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|(?<![A-Za-z0-9_])_[^_\n]+_(?![A-Za-z0-9_])""")
             }
             LanguageType.TEXT -> return null
+            // Phase 29.2 — the new buckets (Go, Rust, PHP, Ruby, Lua, XML,
+            // YAML) colour through TextMate only; no regex fallback rules.
+            else -> return null
         }
-        val needsMultiline = language != LanguageType.JSON && language != LanguageType.HTML_CSS
+        val needsMultiline = language != LanguageType.JSON && language != LanguageType.HTML && language != LanguageType.CSS
         val body = groups.joinToString("|") { "(?<${it.first}>${it.second})" }
         return CompiledPattern(
             Regex(if (needsMultiline) "(?m)$body" else body),
@@ -383,6 +417,15 @@ object MultiLanguageSyntaxHighlighter {
         "if", "import", "in", "instanceof", "let", "new", "null", "of",
         "return", "set", "static", "super", "switch", "this", "throw",
         "true", "try", "typeof", "undefined", "var", "void", "while", "yield"
+    )
+
+    /** Phase 29.2 — TypeScript-only words (completions; colour is TextMate). */
+    private val tsKeywords = setOf(
+        "abstract", "any", "as", "asserts", "bigint", "boolean", "declare",
+        "enum", "implements", "infer", "interface", "internal", "is",
+        "keyof", "module", "namespace", "never", "number", "object",
+        "override", "private", "protected", "public", "readonly",
+        "satisfies", "string", "symbol", "type", "unknown"
     )
 
     private val jsonKeywords = setOf("true", "false", "null")

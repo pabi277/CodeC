@@ -14,9 +14,13 @@ object EditorLineOps {
 
     /** The toggle prefix for a language (C/Go/JS -> `//`, Python/Shell -> `#`). */
     fun commentPrefixFor(language: LanguageType?): String = when (language) {
-        LanguageType.PYTHON, LanguageType.SHELL -> "#"
-        LanguageType.C, LanguageType.CPP, LanguageType.JAVASCRIPT, LanguageType.JSON -> "//"
-        LanguageType.HTML_CSS -> "<!--"
+        LanguageType.PYTHON, LanguageType.SHELL, LanguageType.RUBY, LanguageType.LUA, LanguageType.YAML -> "#"
+        LanguageType.C, LanguageType.CPP, LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT,
+        LanguageType.GO, LanguageType.RUST, LanguageType.JSON -> "//"
+        // Phase 29.2 — HTML and XML toggle <!-- -->. PHP lines are PHP code,
+        // so they keep //; CSS has no line comment and keeps the previous
+        // default (//).
+        LanguageType.HTML, LanguageType.XML -> "<!--"
         else -> "//"
     }
 

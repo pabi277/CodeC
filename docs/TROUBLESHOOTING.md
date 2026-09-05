@@ -386,3 +386,53 @@ until 28.4, no swipe-space between letters (spacedBy 4.dp only), and popup
 bubbles overflow their cap without clipping — on purpose (strip clip bug
 class — superseded after round 1: bubbles were removed entirely, previews live
 IN the cap (`CodecKeyboard`'s round-1 note).
+
+## 12. How to run the Phase 29 VS Code colour device round (owner runbook, 2026-09-05)
+
+> Phase 29 = TextMate (VS Code grammars + themes) as the editor's analyzer.
+> This card is the **exit gate**: all three parts (29.1 core / 29.2 language
+> parity / 29.3 regex retirement) ship in ONE build.
+
+**What you should see change:** a `.c` / `.py` / `.html` / `.ts` file now
+colours like VS Code Dark+ (the new default editor theme) instead of the old
+approximation; Go / Rust / PHP / Ruby / Lua / XML / YAML files are coloured
+for the first time (they were plain before); CSS no longer looks like HTML.
+
+**Steps:**
+
+1. Actions → latest green **Build APK** on the session branch → Artifacts →
+   **CodeC-IDE** → install.
+   *(APK size check: the artifact should be ≤ +1.5 MiB vs the previous
+   `main` build — the grammars are ~234 KB compressed plus the
+   language-textmate module. If it is visibly bigger, say so — there is a
+   documented trim list ready.)*
+2. **Dark+ look:** open a C file with keywords, strings, comments,
+   preprocessor lines, numbers. Compare with VS Code Dark+ on desktop —
+   keywords blue `#569CD6`, strings orange `#CE9178`, comments green
+   `#6A9955`, numbers `#B5CEA8`, functions `#DCDCAA`, background `#1E1E1E`,
+   caret `#AEAFAD`, current line `#282826`, selection `#264F78`.
+3. **Typing still smooth:** type ~60 keys in a long `.c` file (bench.c if
+   you still have it) — no stuck keys, no lag, same feel as 28.2 (the
+   analyzer is INCREMENTAL now; it should feel no worse, ideally better on
+   very long files).
+4. **Every language:** open (or create) one file each of `.py`, `.html`,
+   `.css`, `.ts`, `.tsx`, `.go`, `.rs`, `.php`, `.rb`, `.lua`, `.xml`,
+   `.yaml`, `.md`, `.sh`, `.json` — each has its own distinct VS Code-like
+   colour (CSS clearly different from HTML; `.lua`/`.php`/`.rb` no longer
+   plain white). A plain `.txt` file must stay UNcoloured.
+5. **Theme switching:** Settings → Editor Theme → switch **Monokai**,
+   **Dracula**, **GitHub Dark**, back to **VS Code Dark+** — the editor
+   recolors immediately, no restart, no wrong-then-right flash of token
+   colors after the switch settles.
+6. **Nothing else regressed:** completions/ghost/strip still appear while
+   typing (engine untouched), CodeC Keys still types (its edits go through
+   the same sora buffer), find/replace + selection highlighting still work.
+7. Optional but useful: the FIRST open of a `.php` or `.rb` file after a
+   fresh app start may take a beat longer than usual once (their grammar
+   sets are ~1 MB and load lazily — PHP/Ruby warm-up was deliberately
+   deferred to keep app start light). Everything after that first open is
+   instant.
+
+**Report:** PASS/FAIL per numbered item (screenshots of the C file vs
+desktop VS Code are perfect evidence for item 2). Any wrong-looking color:
+name the file type + what you expected vs saw.

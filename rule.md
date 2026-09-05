@@ -182,16 +182,16 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-05, Phase 28.1 spike implemented — device round pending)
+## 9. State snapshot (2026-09-05, Phase 29 implemented — CI + device round pending)
 
-- **`main` = `5ebbc6e`** — PR #48 (2026-09-04, mobile-editor research +
-  Phase 25–28 plan docs). Before that: PR #47 Phase 24, PR #46 Phase 23,
-  PR #45 Phase 22, PR #44 Phase 21, PR #43 Phase 20.1, PR #41 Website W0,
-  PR #40 Phases 20–24 design docs, PR #39 git fixes, PR #38 Phase 18, PR #37
-  Phase 17, PR #36 Phases 15/16, PR #34 Phase 19, PR #32 Phase 14, PR #30
-  Phase 12, PR #29 Phase 11. Verify with `git ls-remote origin main` / the
-  GitHub API — the local clone is shallow, so `git log` alone is not proof of
-  history.
+- **`main` = `3edfc97`** — PR #53 (2026-09-05, Phases 29–33 plan docs).
+  Before that: PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49
+  Phase 25, PR #48 research docs, PR #47 Phase 24, PR #46 Phase 23, PR #45
+  Phase 22, PR #44 Phase 21, PR #43 Phase 20.1, PR #41 Website W0, PR #40
+  design docs, PR #39 git fixes, PR #38 Phase 18, PR #37 Phase 17, PR #36
+  Phases 15/16, PR #34 Phase 19, PR #32 Phase 14, PR #30 Phase 12, PR #29
+  Phase 11. Verify with `git ls-remote origin main` / the GitHub API — the
+  local clone is shallow, so `git log` alone is not proof of history.
 - **Phases 3–24: merged.** Phase 23 (interactive run UX) merged via PR #46
   (device-accepted). Phase 24 (polish batch E.1–E.4, E.6–E.9 device-passed;
   E.3 hardware shortcuts not device-verified — needs a BT keyboard; E.5
@@ -242,6 +242,21 @@ Every update updates the docs **in the same commit**:
   `docs/OSS_REPLACEMENT_RESEARCH.md`, `docs/PHONE_UX_ANALYSIS.md`.
   Implementation only on owner `"Start Phase N"`. 28.3/28.4 remain the
   Keys remainder.
+- **Phase 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED (2026-09-05, owner:
+  "Start phase 29", all three parts in one build):** sora
+  `language-textmate` (same 0.24.6 BOM) is the editor's analyzer — 24 MIT
+  grammar JSONs + 4 theme JSONs as assets (~234 KB gzipped), default theme
+  **VS Code Dark+** (flattened vscode dark_vs+dark_plus; Monokai/Dracula/
+  GitHub-Dark stay), `LanguageType` split so every run-profile extension
+  has a grammar (TS/TSX, HTML/CSS, Go/Rust/PHP/Ruby/Lua/XML/YAML), regex
+  tokenizer retired to fallback/probe/preview only (`CodeCScheme` deleted).
+  Lazy per-language grammar loading + background warm-up; LGPL/MIT notices
+  in `assets/licenses/`. Host tests: `TextMateGrammarsTest` (pure) +
+  `TextMateSupportTest` (Robolectric, real assets, analyzer-swap law).
+  **Gate = owner device round** (`docs/TROUBLESHOOTING.md` §12; budgets:
+  keystroke p95 ≤ 16.7 ms bench.c, APK delta ≤ +1.5 MiB). Records:
+  `docs/chat-phase29/` (README + §4/§3 sections), JOURNEY §40. **No
+  PR/merge without the owner's command.**
 
 ---
 

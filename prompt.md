@@ -18,7 +18,29 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-05, Phases 25 ✅ CLOSED, 26 ✅ MERGED via PR #50, 27 ✅ MERGED via PR #51 — `main` tip `92af7fb`; PHASE 28 STARTED (owner: "Start phase 28") — 28.1 spike BUILT on `arena/01a070ae-codec`, device round pending; CI history in `docs/chat-phase28/PART_28_1_SPIKE.md` §4):**
+**WHERE THINGS STAND (2026-09-05, `main` tip `3edfc97` = PR #53 plan docs; Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI + owner device round pending; records in `docs/chat-phase29/`):**
+
+- **Phase 29 (all three parts in one build) — TextMate is the editor's
+  analyzer.** Sora `language-textmate` from the SAME 0.24.6 BOM (binary
+  dep only, LGPL-2.1 notice in `assets/licenses/`); 24 MIT grammar JSONs +
+  4 theme JSONs as assets (~234 KB gzipped; vscode / TypeScript-TmLanguage
+  / LuaLS, MIT notices shipped); default editor theme **VS Code Dark+**
+  (flattened `dark_vs`+`dark_plus`; Monokai/Dracula/GitHub-Dark remain);
+  `LanguageType` split (TYPESCRIPT, HTML, CSS, GO, RUST, PHP, RUBY, LUA,
+  XML, YAML) so EVERY `LanguageRegistry` extension has a grammar; the regex
+  highlighter is off the hot path (fallback + SmartTyping probe + templates
+  preview only; `CodeCScheme` deleted). Lazy per-language grammar loading +
+  background warm-up (PHP/Ruby sets deferred to first open). Host tests:
+  `TextMateGrammarsTest` (pure) + `TextMateSupportTest` (Robolectric, real
+  assets, asserts the analyzer swap for all colourable languages).
+  **Gate: `Build APK` green + owner device round per
+  `docs/TROUBLESHOOTING.md` §12** (Dark+ look vs desktop, every language
+  coloured, `.txt` plain, typing still ≤ 16.7 ms p95, theme switching,
+  APK delta ≤ +1.5 MiB). No PR/merge without the owner's command.
+- **Phase 28 remainder:** 28.2 (CodeC Keys layout engine) MERGED via PR #52
+  after owner rounds 1–3 (default ON; standing regression card
+  `TROUBLESHOOTING.md` §11); 28.3 (chips as row 0) + 28.4 (accessibility)
+  remain planned — they do not block 29 and 29 does not depend on them.
 
 - **Phase 24 is ✅ MERGED to `main` via PR #47** (2026-09-04; device round 1:
   E.1/E.2/E.4/E.6/E.7/E.8/E.9 passed; E.3 hardware shortcuts NOT

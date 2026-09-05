@@ -83,6 +83,12 @@ googleid = { group = "com.google.android.libraries.identity.googleid", name = "g
 # decision reflects the core a Phase 25.2 integration would adopt.
 sora-editor = { group = "io.github.rosemoe", name = "editor", version.ref = "soraEditor" }
 sora-editor-language-java = { group = "io.github.rosemoe", name = "language-java", version.ref = "soraEditor" }
+# Phase 29.1 — TextMate (VS Code grammars + themes) from the SAME BOM/version
+# as `editor` (T1: never pin a second sora version). Binary dependency only;
+# the module vendors tm4e (EPL-2.0→LGPL-2.1 compatible, per 25.2 law we do
+# not fork or repackage). Grammars/themes ship as MIT assets (see
+# assets/textmate/ + assets/licenses/).
+sora-language-textmate = { group = "io.github.rosemoe", name = "language-textmate", version.ref = "soraEditor" }
 
 
 [plugins]

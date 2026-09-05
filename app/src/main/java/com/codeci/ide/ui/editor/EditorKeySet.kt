@@ -155,10 +155,14 @@ object EditorKeySet {
             EditorKeyDef(":", EditorKey.Insert(":")),
             EditorKeyDef("_(self)", EditorKey.Insert("self "))
         )
-        LanguageType.HTML_CSS -> listOf(
+        LanguageType.HTML -> listOf(
             EditorKeyDef("</>", EditorKey.Insert("</>"))
         )
-        LanguageType.JAVASCRIPT -> listOf(
+        LanguageType.CSS -> listOf(
+            EditorKeyDef(":", EditorKey.Insert(":")),
+            EditorKeyDef(";", EditorKey.Insert(";"))
+        )
+        LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT -> listOf(
             // Backticks are a pair too — template literals.
             EditorKeyDef("``", EditorKey.Pair("`", "`")),
             EditorKeyDef("=>", EditorKey.Insert("=>"))

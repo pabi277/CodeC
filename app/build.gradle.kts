@@ -153,6 +153,9 @@ dependencies {
   // Phase 25.2 — sora-editor, the edit core (LGPL-2.1, BINARY dependency
   // only — no source vendored; see docs/chat-phase25/PART_25_2_SORA_PATH.md).
   implementation(libs.sora.editor)
+  // Phase 29.1 — TextMate: VS Code grammars + themes through sora's
+  // language-textmate module (same BOM version; binary dependency only).
+  implementation(libs.sora.language.textmate)
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)

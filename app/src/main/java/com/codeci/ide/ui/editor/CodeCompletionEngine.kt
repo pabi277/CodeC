@@ -177,14 +177,24 @@ object CodeCompletionEngine {
         } else {
             emptyList()
         }
-        LanguageType.JAVASCRIPT -> listOf(
+        // Phase 29.2 — TypeScript shares the JS snippets (plus its own set
+        // below); colour is TextMate but completions stay CodeC's engine.
+        LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT -> listOf(
             snippet("function name() {", "function name() {\n    \n}"),
             snippet("const name = value;", "const name = value;"),
             snippet("console.log(...)", "console.log("),
             snippet("for (let i = 0; i < n; i++) {", "for (let i = 0; i < n; i++) {\n    \n}"),
             snippet("if (condition) {", "if (condition) {\n    \n}"),
             snippet("import name from 'module';", "import name from 'module';")
-        )
+        ) + if (language == LanguageType.TYPESCRIPT) {
+            listOf(
+                snippet("interface Name { ... }", "interface Name {\n    \n}"),
+                snippet("type Alias = ...;", "type Alias = ;"),
+                snippet("enum Name { ... }", "enum Name {\n    \n}")
+            )
+        } else {
+            emptyList()
+        }
         LanguageType.SHELL -> listOf(
             snippet("if [ cond ]; then ... fi", "if [ condition ]; then\n    \nfi"),
             snippet("for x in list; do ... done", "for x in list; do\n    \ndone"),
@@ -199,7 +209,9 @@ object CodeCompletionEngine {
         // `.html` or `.md` file fell through to `emptyList()` and the popup
         // never appeared. Both are first-class in CodeC (Web Preview runs
         // HTML directly), so both get a snippet set.
-        LanguageType.HTML_CSS -> listOf(
+        // Phase 29.2 — the bucket split: HTML keeps the HTML snippets, CSS
+        // keeps the CSS ones (each colours with its own grammar now).
+        LanguageType.HTML -> listOf(
             snippet("<!DOCTYPE html> skeleton", HTML_SKELETON),
             snippet("<div class=\"\">", "<div class=\"\">\n    \n</div>"),
             snippet("<a href=\"\">", "<a href=\"\"></a>"),
@@ -207,7 +219,9 @@ object CodeCompletionEngine {
             snippet("<ul><li>", "<ul>\n    <li></li>\n</ul>"),
             snippet("<script src=\"\">", "<script src=\"\"></script>"),
             snippet("<link rel=\"stylesheet\">", "<link rel=\"stylesheet\" href=\"\">"),
-            snippet("<style> ... </style>", "<style>\n    \n</style>"),
+            snippet("<style> ... </style>", "<style>\n    \n</style>")
+        )
+        LanguageType.CSS -> listOf(
             snippet("selector { }", "selector {\n    \n}"),
             snippet("@media (max-width: 600px)", "@media (max-width: 600px) {\n    \n}"),
             snippet("display: flex;", "display: flex;")
@@ -244,14 +258,19 @@ object CodeCompletionEngine {
             "include", "main", "for", "if", "while", "printf", "return", "struct",
             "typedef", "do", "switch", "case"
         )
-        LanguageType.JAVASCRIPT -> setOf(
+        LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT -> setOf(
             "function", "const", "let", "var", "for", "if", "while", "try",
             "catch", "import", "export", "return", "switch", "case"
         )
         LanguageType.SHELL -> setOf("if", "for", "while", "case", "function", "do", "then", "echo")
-        LanguageType.HTML_CSS -> setOf(
+        // Phase 29.2 — the split: HTML tag triggers, CSS property triggers.
+        LanguageType.HTML -> setOf(
             "html", "head", "body", "div", "span", "a", "img", "ul", "li", "p",
             "script", "link", "style", "meta", "table", "form", "input", "button"
+        )
+        LanguageType.CSS -> setOf(
+            "display", "position", "margin", "padding", "border", "background",
+            "color", "font", "flex", "grid", "width", "height", "media"
         )
         LanguageType.MARKDOWN -> emptySet()
         else -> emptySet()

@@ -38,7 +38,8 @@ class CodeCLanguageLogicTest {
     fun `code languages get the standard pairs`() {
         for (language in listOf(
             LanguageType.C, LanguageType.CPP, LanguageType.PYTHON,
-            LanguageType.JAVASCRIPT, LanguageType.HTML_CSS, LanguageType.JSON,
+            LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT, LanguageType.HTML,
+            LanguageType.CSS, LanguageType.GO, LanguageType.JSON,
             LanguageType.SHELL
         )) {
             val pairs = CodeCLanguage.symbolPairsFor(language)

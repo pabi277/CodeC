@@ -28,6 +28,8 @@ import io.github.rosemoe.sora.text.ContentListener
 import io.github.rosemoe.sora.text.batchEdit
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Phase 25.2 — the two-way bridge between sora's [CodeEditor] and the
@@ -67,6 +69,9 @@ fun SoraEditorHost(
     wordWrap: Boolean,
     showLineNumbers: Boolean,
     modifier: Modifier = Modifier,
+    // Phase 29 — the file's own name: disambiguates buckets whose extensions
+    // map to different TextMate grammars (.ts → source.ts, .tsx → source.tsx).
+    fileName: String? = null,
     // ---- Phase 27 wiring (ghost + gated panel) ----
     completionModel: CompletionModel = CompletionModel.EMPTY,
     completionMasterOn: Boolean = true,
@@ -167,15 +172,32 @@ fun SoraEditorHost(
     }
 
     // Reactive settings/context.
-    LaunchedEffect(language) {
+    // Phase 29 — the context the TextMate registries read assets through.
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    LaunchedEffect(language, fileName) {
+        // Phase 29 — the analyzer is sora TextMate (VS Code grammars). Init
+        // + grammar loading (already parsed by the warm-up thread, or parsed
+        // here on the very first open of an unwarmed language) happen OFF
+        // the main thread; only the view call below runs on main.
+        val lang = withContext(Dispatchers.Default) {
+            TextMateSupport.ensureInitialized(appContext)
+            TextMateSupport.ensureLanguageLoaded(language, fileName)
+            CodeCLanguage.create(language, fileName)
+        }
         // Fresh Language per editor (sora: one language instance serves one editor).
-        editor.setEditorLanguage(CodeCLanguage(language))
+        editor.setEditorLanguage(lang)
     }
     LaunchedEffect(theme) {
-        // Fresh scheme object per application (sora enforces single ownership);
-        // colors applied post-construction (see CodeCScheme's construction-
-        // order note — reading `type` inside applyDefault was the crash).
-        editor.setColorScheme(CodeCScheme.of(theme))
+        // Phase 29 — the scheme resolves TextMate token scopes through the
+        // active theme asset (dark-plus / monokai / dracula / github-dark).
+        // Fresh scheme object per application (sora enforces single
+        // ownership); attaching it re-runs the analysis so token colors
+        // switch immediately.
+        val scheme = withContext(Dispatchers.Default) {
+            TextMateSupport.ensureInitialized(appContext)
+            TextMateThemes.applyTheme(theme)
+        }
+        editor.setColorScheme(scheme)
     }
     LaunchedEffect(fontSizeSp) { editor.setTextSize(fontSizeSp) }
     LaunchedEffect(fontFamily) {

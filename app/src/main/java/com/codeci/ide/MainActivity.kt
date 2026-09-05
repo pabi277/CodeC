@@ -142,6 +142,15 @@ class MainActivity : ComponentActivity() {
         installCrashLog()
         enableEdgeToEdge()
 
+        // Phase 29.1 — preload the TextMate grammar sets (VS Code grammars)
+        // on a background thread while the user is still navigating to the
+        // editor, so the first file open finds them already parsed. Purely a
+        // latency optimization: any language not yet warm loads itself on
+        // first open (SoraEditorHost's language effect).
+        lifecycleScope.launch(Dispatchers.Default) {
+            com.codeci.ide.ui.editor.sora.TextMateSupport.warmUp(applicationContext)
+        }
+
         storagePermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->

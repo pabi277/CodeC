@@ -6,8 +6,14 @@ enum class AppThemeMode {
     LIGHT, DARK, SYSTEM
 }
 
-enum class EditorThemeType {
-    MONOKAI, DRACULA, GITHUB_DARK
+enum class EditorThemeType(val displayName: String) {
+    // Phase 29.1 — VS Code Dark+ is the DEFAULT editor theme (owner 2026-09-05:
+    // "colour is very bad"; the exit condition is "looks like VS Code Dark+").
+    // First in the enum = first in the Settings picker.
+    VS_CODE_DARK_PLUS("VS Code Dark+"),
+    MONOKAI("Monokai"),
+    DRACULA("Dracula"),
+    GITHUB_DARK("GitHub Dark");
 }
 
 data class EditorThemeColors(
@@ -19,6 +25,24 @@ data class EditorThemeColors(
     val number: Color,
     val function: Color,
     val operator: Color
+)
+
+/**
+ * Phase 29.1 — the Compose-side palette for VS Code Dark+. This drives the
+ * NON-editor surfaces (ghost text color, settings theme preview, status
+ * accents); the editor itself colours through the TextMate theme asset
+ * `textmate/themes/dark-plus.json` (the flattened vscode dark_vs+dark_plus).
+ * The values below mirror that JSON so both surfaces agree.
+ */
+val VSCodeDarkPlusTheme = EditorThemeColors(
+    background = Color(0xFF1E1E1E),
+    text = Color(0xFFD4D4D4),
+    keyword = Color(0xFF569CD6),
+    string = Color(0xFFCE9178),
+    comment = Color(0xFF6A9955),
+    number = Color(0xFFB5CEA8),
+    function = Color(0xFFDCDCAA),
+    operator = Color(0xFFD4D4D4)
 )
 
 val MonokaiTheme = EditorThemeColors(
@@ -56,6 +80,7 @@ val GitHubDarkTheme = EditorThemeColors(
 
 fun getEditorTheme(type: EditorThemeType): EditorThemeColors {
     return when (type) {
+        EditorThemeType.VS_CODE_DARK_PLUS -> VSCodeDarkPlusTheme
         EditorThemeType.MONOKAI -> MonokaiTheme
         EditorThemeType.DRACULA -> DraculaTheme
         EditorThemeType.GITHUB_DARK -> GitHubDarkTheme

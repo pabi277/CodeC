@@ -1,0 +1,25 @@
+CodeC — NOTICE for io.github.rosemoe:language-textmate
+======================================================
+
+Phase 29 (2026-09-05): CodeC uses the `language-textmate` module of the
+sora-editor project (https://github.com/Rosemoe/sora-editor) as a BINARY
+Gradle dependency from Maven Central, at the same pinned version as the
+`editor` widget (0.24.x BOM — see gradle/libs.versions.toml).
+
+License: GNU LGPL-2.1 (or later) — the full text ships next to this file as
+SORA_EDITOR_LGPL.txt (it is the same license that covers the sora-editor
+`editor` module already used since Phase 25.2).
+
+Obligations honored the same way as Phase 25.2 ("depend, never fork"):
+  * No source from the module is copied, modified or repackaged into CodeC.
+  * The module is consumed as an unmodified binary artifact; users can
+    relink/replace it (LGPL section 4/6 requirements for object code).
+  * Attribution is shown in the app: Settings → About → "Open-source
+    licenses" names sora-editor + language-textmate © Rosemoe, LGPL-2.1.
+
+The module vendors the Eclipse tm4e TextMate engine and depends on
+gson / joni / jcodings / snakeyaml-engine at runtime (transitive Maven
+dependencies, also consumed as unmodified binaries).
+
+The TextMate GRAMMARS and THEMES CodeC feeds into this module are separate
+MIT-licensed assets — see TEXTMATE_GRAMMARS_MIT.txt in this directory.

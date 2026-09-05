@@ -106,7 +106,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     
     val currentAppTheme by themeManager.appThemeFlow.collectAsState(initial = AppThemeMode.SYSTEM)
-    val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.DRACULA)
+    val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.VS_CODE_DARK_PLUS)
     val currentTerminalTheme by themeManager.terminalThemeFlow.collectAsState(initial = TerminalThemeType.DRACULA)
 
     val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 14f)
@@ -765,12 +765,12 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
             SettingsDropdown(
                 title = "Editor Theme",
-                selectedOption = currentEditorTheme.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " "),
-                options = EditorThemeType.values().map { it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") },
+                // Phase 29.1 — display names ("VS Code Dark+") instead of the
+                // enum-name transform; Dark+ leads as the default.
+                selectedOption = currentEditorTheme.displayName,
+                options = EditorThemeType.values().map { it.displayName },
                 onOptionSelected = { option ->
-                    val theme = EditorThemeType.values().first { 
-                        it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") == option 
-                    }
+                    val theme = EditorThemeType.values().first { it.displayName == option }
                     scope.launch { themeManager.setEditorTheme(theme) }
                 }
             )
@@ -911,9 +911,11 @@ fun SettingsScreen(
             // Phase 25.2 — LGPL-2.1 obligation checklist: sora-editor is used
             // as a binary Gradle dependency only (no source copied, no fork);
             // the attribution + license pointer live here.
+            // Phase 29 — language-textmate (same LGPL-2.1 rule) + the MIT
+            // VS Code grammars/themes shipped as unmodified asset copies.
             SettingsItem(
                 title = "Open-source licenses",
-                subtitle = "sora-editor © Rosemoe — LGPL-2.1 · github.com/Rosemoe/sora-editor"
+                subtitle = "sora-editor + language-textmate © Rosemoe — LGPL-2.1 · TextMate grammars & themes — MIT (microsoft/vscode, TypeScript-TmLanguage, LuaLS) · github.com/Rosemoe/sora-editor"
             )
             SettingsAction(
                 title = stringResource(com.codeci.ide.R.string.install_from_github),
