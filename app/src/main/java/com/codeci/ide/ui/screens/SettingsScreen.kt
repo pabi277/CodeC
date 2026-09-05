@@ -258,7 +258,7 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
                 )
                 CodecKeyboard(
-                    layout = KeyboardDefaults.codeQwerty(null).copy(heightScale = codecKeysHeight),
+                    layout = KeyboardDefaults.codeQwerty().copy(heightScale = codecKeysHeight),
                     shift = ShiftState.OFF,
                     onShiftChange = {},
                     onLayerChange = {},

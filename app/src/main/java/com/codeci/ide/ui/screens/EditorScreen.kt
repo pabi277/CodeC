@@ -389,10 +389,10 @@ fun EditorScreen(
     var codecKeysShift by remember { mutableStateOf(ShiftState.OFF) }
     // Ghost law (27.1) rides the keyboard too: the TAB / → caps take their
     // dual mood while a ghost is visible — same function the strip uses.
-    val codecKeysLetters = remember(language, codecKeysLayoutJson, completionSurface, codecKeysHeight) {
+    val codecKeysLetters = remember(codecKeysLayoutJson, completionSurface, codecKeysHeight) {
         val devOverride =
             if (codecKeysLayoutJson.isNotBlank()) KeyboardLayoutCodec.deserialize(codecKeysLayoutJson) else null
-        (devOverride ?: KeyboardDefaults.codeQwerty(language) { row ->
+        (devOverride ?: KeyboardDefaults.codeQwerty { row ->
             EditorKeySet.keysWithGhostMood(row, completionSurface)
         }).copy(heightScale = codecKeysHeight)
     }

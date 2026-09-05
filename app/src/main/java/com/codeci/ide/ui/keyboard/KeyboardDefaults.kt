@@ -2,8 +2,6 @@ package com.codeci.ide.ui.keyboard
 
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeyDef
-import com.codeci.ide.ui.editor.EditorKeySet
-import com.codeci.ide.ui.utils.LanguageType
 
 /**
  * Phase 28.2 — the SHIPPED default layouts, pure code (host-tested). The
@@ -81,36 +79,28 @@ object KeyboardDefaults {
         )
     )
 
-    /** Dense symbol pairs with the 26.1 swipe law: flick-up = opener only,
-     * flick-down = closer only, tap = pair with caret between (22.5). */
-    private fun pairDef(label: String, open: String, close: String) = EditorKeyDef(
-        label, EditorKey.Pair(open, close),
-        swipeUp = EditorKey.Insert(open), swipeDown = EditorKey.Insert(close)
-    )
+    private fun one(c: Char) = EditorKeyDef(c.toString(), EditorKey.Insert(c.toString()))
 
-    /** Symbols layer, 5×(up to 10). One tap in from letters, one tap back. */
+    /**
+     * Symbols layer — ONE KEY PER BUTTON (owner, round 3: "many keys in one
+     * touch … make one key per button"). The multi-char caps (`()`, `->`,
+     * `==`, `<=`…) are GONE: every cap inserts exactly one character; `->`
+     * is `-` then `>`, `==` is `=` twice, and the brackets/quotes live as
+     * their own keys so nothing hides behind a pair. Three full 10-wide
+     * rows + the specials row; the letters layer's flick set stays as-is.
+     *
+     * (The 22.5 pair-with-caret behavior stays where it always was — the
+     * extra-keys strip when CodeC Keys is off, and the dev layout JSON can
+     * still express `pair` caps for anyone who wants them.)
+     */
     private val SYMBOL_ROWS: List<List<EditorKeyDef>> = listOf(
-        listOf("!@#$%^&*~`").map { EditorKeyDef(it.toString(), EditorKey.Insert(it.toString())) },
-        listOf(
-            pairDef("()", "(", ")"), pairDef("{}", "{", "}"),
-            pairDef("[]", "[", "]"), pairDef("<>", "<", ">"),
-            pairDef("\"\"", "\"", "\""), pairDef("''", "'", "'"),
-            pairDef("``", "`", "`"),
-            EditorKeyDef("->", EditorKey.Insert("->")),
-            EditorKeyDef("::", EditorKey.Insert("::")),
-            EditorKeyDef("=>", EditorKey.Insert("=>"))
-        ),
-        listOf("+-*/=%?\\").map { EditorKeyDef(it.toString(), EditorKey.Insert(it.toString())) } +
-            listOf(EditorKeyDef("==", EditorKey.Insert("=="))),
-        listOf(";:.,_|").map { EditorKeyDef(it.toString(), EditorKey.Insert(it.toString())) } +
-            listOf(
-                EditorKeyDef("<=", EditorKey.Insert("<=")),
-                EditorKeyDef(">=", EditorKey.Insert(">=")),
-                EditorKeyDef("!=", EditorKey.Insert("!=")),
-                EditorKeyDef("&&", EditorKey.Insert("&&"))
-            ),
+        "!@#$%^&*~`".map { one(it) },
+        "-=+_|\\/<>?".map { one(it) },
+        "[]{}()'\".,".map { one(it) },
         listOf(
             EditorKeyDef(KeyboardRouter.TO_LETTERS_CAP, EditorKey.Insert("")),
+            EditorKeyDef(":", EditorKey.Insert(":")),
+            EditorKeyDef(";", EditorKey.Insert(";")),
             EditorKeyDef("TAB", EditorKey.Tab, wide = true),
             EditorKeyDef("space", EditorKey.Insert(" "), wide = true),
             DEL,
@@ -118,18 +108,16 @@ object KeyboardDefaults {
         )
     )
 
-    /** The letters layer for [language]: 5 base rows + the Phase 16
-     * language hook as a macro row when the language has one (C `->`,
-     * Python `:` `self`, …). */
+    /**
+     * The letters layer — five rows, language-INDEPENDENT since round 3
+     * (owner: one key per button; the multi-char tail caps — C's `->`,
+     * Python's `_(self)` — are exactly what round 3 deleted; every one of
+     * their characters is a single tap away on the SYM layer).
+     */
     fun codeQwerty(
-        language: LanguageType?,
         rowTransform: (List<EditorKeyDef>) -> List<EditorKeyDef> = { it }
     ): KeyboardLayout {
-        // Device round 1 (owner): a whole 52dp row for a lone `->` cap was
-        // "unnecessary" — the language tail caps now ride the utility row's
-        // tail instead. Five rows for every language, same hooks.
-        val utilityRow = UTILITY_ROW + EditorKeySet.languageMacroRow(language)
-        val rows = listOf(TOP_ROW, HOME_ROW, BOTTOM_ROW, SPECIAL_ROW, utilityRow)
+        val rows = listOf(TOP_ROW, HOME_ROW, BOTTOM_ROW, SPECIAL_ROW, UTILITY_ROW)
             .map(rowTransform)
         return KeyboardLayout.of(rows)
     }
