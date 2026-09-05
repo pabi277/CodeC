@@ -258,14 +258,17 @@ class KeyboardLayoutEngineTest {
     }
 
     @Test
-    fun symbolsLayerTogglesBackAndCarriesPairLaws() {
+    fun symbolsLayerIsSingleCharsWithOneTapBack() {
         val sym = KeyboardDefaults.symbols()
-        assertEquals(5, sym.rows.size)
-        assertTrue(sym.allCaps().any { it.def.label == "ABC" })
-        val parens = sym.allCaps().first { it.def.label == "()" }
-        assertEquals(EditorKey.Pair("(", ")"), parens.def.key)
-        assertEquals(EditorKey.Insert("("), parens.def.swipeUp)
-        assertEquals(EditorKey.Insert(")"), parens.def.swipeDown)
+        assertEquals(4, sym.rows.size)
+        // the full C-relevant character set, EVERY key one character
+        val labels = sym.allCaps().map { it.def.label }.toSet()
+        for (ch in "!@#$%^&*~`-+=_|\\/<>?[]{}()'\".,;:") {
+            assertTrue("sym layer must carry $ch", labels.contains(ch.toString()))
+        }
+        // brackets/quotes are their own keys now (no pair caps on the grid)
+        assertEquals(EditorKey.Insert("("), sym.allCaps().first { it.def.label == "(" }.def.key)
+        assertEquals(null, sym.allCaps().firstOrNull { it.def.label == "()" })
         // one-tap back: the ABC cap routes to the letters layer
         assertEquals(
             CapAction.SetLayer(KeyboardLayers.LETTERS),
