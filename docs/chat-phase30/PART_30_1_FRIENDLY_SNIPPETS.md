@@ -59,12 +59,14 @@ the library's `Context`/`AssetManager`):**
 | `SnippetLibrary.kt` | 155 | Process-wide storage (the snippet twin of `TextMateSupport`): `attach(context)` installs the APK-asset reader (idempotent by AssetManager **identity** — Robolectric recreates the Application per test, and a stale manager fails every later open), `install {}` is the test seam, `reset()` returns to the fallback world, `warmUp()` parses without resolving, `loadedLanguages()` is the bookkeeping view. Two cache layers: parsed entries per language (unbounded — 14 languages) and resolved items per `language\|fileName` (bounded at 12, because `${TM_FILENAME_BASE}` resolution depends on the file). **A total read failure is NOT cached**, so a transient asset error is retried on the next keystroke instead of leaving the phone snippet-less for the session. |
 
 **Engine (`CodeCompletionEngine.kt`, rewritten snippet source).**
-`snippetItems(language, fileName)` = the packs **plus two CodeC extras** the
-upstream data cannot express — the phone-optimised `<!DOCTYPE html>` skeleton
-(what the 22.6 device round pinned behind typing `doc`) and CodeC's
-app-private shell shebang — and falls back to the **built-in tables** whenever
-no pack loads at all, so a broken asset degrades to the 22.x behaviour instead
-of leaving nothing (S1's "assets, not network" made safe). Ranking for a typed
+`snippetItems(language, fileName)` = the packs **plus CodeC's own tables as a
+deduped TAIL** (amended the same day — §3.5: the tables carry the two CodeC-only
+snippets, the phone-optimised `<!DOCTYPE html>` skeleton that the 22.6 device
+round pinned behind typing `doc` and CodeC's app-private shell shebang, *and*
+the descriptive labels a prefix-only pack cannot reach), and the tables are the
+WHOLE list whenever no pack loads at all, so a broken asset degrades to the
+22.x behaviour instead of leaving nothing (S1's "assets, not network" made
+safe). Ranking for a typed
 prefix is now a real ordering (`rankSnippets`): labels the prefix directly
 starts beat labels that merely contain a matching word, shorter labels beat
 longer ones, stable within a tier so a pack's own order breaks exact ties.
@@ -143,7 +145,10 @@ removes any dependence on Gradle's test order. The pack-loaded world is
   — that is what a phone user types and what the chip must show; the entry
   name/description is the `detail` line. The old tables used whole-body first
   lines as labels (`for (int i = 0; i < n; i++) {`), which is why `doc`-style
-  word matching had to be invented in 22.6; both keep working.
+  word matching had to be invented in 22.6. **This bullet was too optimistic as
+  first written** ("both keep working"): with prefix labels only, the 22.6 word
+  matching has nothing to bite on, and four accepted typings broke — corrected
+  by §3.5 (the tables ride along as a tail).
 
 ### 3.4 Exit condition status
 
@@ -167,4 +172,58 @@ Python `for` → 2 (`for` `forr`) vs 1; HTML `doc` → the pack `doctype` **and*
 the CodeC skeleton extra; master off → `StripContext.Keys` + `everythingOff` +
 `!anyOn` (the exact predicates `EditorViewModel` short-circuits on), so nothing
 is computed or painted. Identifiers still rank below pack snippets; JSON/TEXT
-still return nothing.
+still return nothing. *(Post-§3.5 these grow by the tail: C `for` → 5 chips,
+Python `for` → 3, `doc` unchanged at 2.)*
+
+### 3.5 Amendment (2026-09-06, same day — found while writing the device card)
+
+The card in `docs/TROUBLESHOOTING.md` §13 names exact strings, so every one of
+them was measured first on a host JVM driving the REAL engine over the REAL
+assets (`SnippetLibrary.install {}` reading `app/src/main/assets/snippets/`,
+the same seam the Robolectric tests use). Five strings were wrong in the build
+as committed (`b0eab80`), all from two root causes:
+
+| typed | file | packs only (as committed) | pack + tail (now) |
+|---|---|---|---|
+| `head` | `notes.md` | **0 items — nothing at all** | 1 — `# Heading` |
+| `pr` | `a.py` | 1 — `property` (**`print(...)` gone**) | 2 — `property`, `print(...)` |
+| `if ` (trigger) | `run.sh` | **16 items, no if-block**: `echo` `read` `elseif` `else` `for_in` `for_i` `while` `until` … | 2 — `if`, `if [ cond ]; then ... fi` |
+| `def ` (trigger) | `a.py` | 3 — `deft` `defs` `defst` (**no `def`**) | 5 — `def` `deft` `defs` `defst` `def function():` |
+| `@med` | `site.css` | 1 — `med` (the pack's own `@media screen and (…)`) | 2 — `med`, `@media (max-width: 600px)` |
+| `for` | `main.c` | 4 | 5 (the old loop label rides last) |
+| `i` | `main.c` / `a.py` | 9 / 9 | 13 / 13 |
+
+**Fix A — the built-in tables are a deduped TAIL, not dead fallback code.**
+Pack labels are short prefixes, so a word from the old descriptive labels
+matches nothing: Markdown has no `head`-ish prefix at all (the 62-item pack is
+`table`, `link`, …), and Python's `pr` only reaches `property`. `snippetItems`
+now returns `pack + builtinSnippets(language)` filtered through a label set
+built from the pack, so an entry both sources claim keeps its **pack** copy;
+`rankSnippets` still sorts a tier by label length, so short prefix labels stay
+ahead of the tail's body-line labels and the tail only ever ADDS what the pack
+cannot express. The `extras()` function is gone — its two entries already live
+in the tables, which the tail now ships. No pack loads → the tables are still
+the whole list, so the fallback world the 12.x/22.6 host tests pin is
+byte-identical.
+
+**Fix B — the trigger path's "don't offer the word back" test moved from the
+LABEL to the INSERT TEXT** (new private `CompletionItem.retypes(word)`). Pack
+labels ARE trigger words (`if` in shell.json, `def` in python.json), so the old
+`it.label != trigger` discarded the ONE item the trigger matched; `relevant`
+then came up empty and the `ifEmpty` fallback dumped the whole pack — that is
+exactly how `if ` in a shell file offered 16 snippets with no if-block among
+them. An item whose body really is the trigger word is still excluded, so the
+rule keeps its purpose: in the fallback world `import ` no longer offers
+`import module` (its insert is exactly `import `, a no-op re-type). That is the
+ONLY fallback-world delta measured, and no test pinned it.
+
+**Test:** `the built-in tail keeps the labels a prefix-only pack cannot reach`
+(`CompletionCapacityTest`, pack world, 12 assertions) — the four restored
+typings, the pack still outranking the tail (`property` before `print(...)`,
+`med` before `@media (max-width: 600px)`), the shell trigger staying ≤4 chips
+instead of 16, and `def` first after `def `.
+
+Exit conditions are unchanged; they are now reachable on a device for every
+string the card names. Recorded as a deviation from the plan's letter ("replace
+the tables") in favour of its intent (nothing the phone could already do
+disappears): the tables went from *source* to *supplement*.

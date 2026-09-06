@@ -292,8 +292,9 @@ Every update updates the docs **in the same commit**:
   dedupe, the LanguageType→pack map, and a `TextMateSupport`-shaped library
   with two cache layers + degradation) = **84 C / 76 Python / 126 HTML /
   156 CSS / 367 JS / 140 TS / 62 MD / 16 shell** items, with the built-in
-  tables kept as fallback and the two CodeC extras (22.6 DOCTYPE skeleton,
-  app-private shebang); a **clean-room Emmet engine** (`ui/editor/Emmet.kt`,
+  tables kept as a **deduped tail** after the pack (and as the whole list when
+  no pack loads) — they carry the 22.6 DOCTYPE skeleton, the app-private
+  shebang, and the descriptive labels a prefix-only pack cannot reach; a **clean-room Emmet engine** (`ui/editor/Emmet.kt`,
   859 LOC, no dependency — markup `! > + ^ *n ( ) .class #id [attr] {text} $`
   + implicit tags + void/JSX self-close, CSS 82 abbreviations + units +
   keyword tables, and guards that refuse rather than guess) joins the same
@@ -303,13 +304,21 @@ Every update updates the docs **in the same commit**:
   `CompletionPolicy.kt` is not in the diff** — Enter sacred, master switch,
   no auto-commit — plus one narrow, test-pinned S1 exception: a LONE Emmet
   candidate gets its chip because a ghost cannot cover an expansion.
-  **89 new host tests + 6 new cases** (`SnippetSyntaxTest` 21,
-  `SnippetPacksTest` 12, `EmmetTest` 23, `SnippetLibraryTest` 15 Robolectric
-  on the real assets, `CompletionCapacityTest` 18 = the host mirror of all
-  three exit conditions incl. the plan's named test: prefix `i` in C → 10
+  **91 new host tests + 6 new cases** (`SnippetSyntaxTest` 21,
+  `SnippetPacksTest` 12, `EmmetTest` 24, `SnippetLibraryTest` 15 Robolectric
+  on the real assets, `CompletionCapacityTest` 19 = the host mirror of all
+  three exit conditions incl. the plan's named test: prefix `i` in C → 13
   candidates vs 7 before). Two real bugs found by those tests pre-CI
   (`TM_DIRECTORY`'s chained `substringBeforeLast` returning "" for a plain
-  `proj/main.c`; bare `*` in `ul>*` refused). **CI GREEN first try: run
+  `proj/main.c`; bare `*` in `ul>*` refused), and **five more found by
+  MEASURING the device card after CI** (Markdown `head` → 0 items, Python `pr`
+  → no `print`, shell `if ` → 16 snippets with no if-block, Python `def ` → no
+  `def`, a typed `a{Link $}` → nothing): fixed by keeping the tables as a
+  deduped tail, testing the trigger path's "don't offer the word back" against
+  the INSERT TEXT instead of the label, and making Emmet's walk-back
+  brace-depth aware (+2 tests, 18 assertions). **Rule learned: a device card
+  must be measured against the real engine + real assets, not remembered from
+  the design.** **CI GREEN first try: run
   `34034889209`, tip `641f6e8` (4m34s — assemble + `:app:testDebugUnitTest`
   + `:app:lintDebug` + bench); APK artifact delta +116 572 B (+0.11 MiB) vs
   `main`. Gate = owner device round** (`docs/TROUBLESHOOTING.md` §13).

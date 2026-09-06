@@ -132,9 +132,9 @@ only its last fragment (`ul>li*3` → prefix `3`), so the 27.x accept math would
 have left `ul>li*` behind. Both the ViewModel and the ghost's FULL accept
 honour `replaceLength`/`caretOffset`.
 
-### 3.2 Host tests (new: 23 + the capacity mirror)
+### 3.2 Host tests (new: 24 + the capacity mirror)
 
-`EmmetTest` (23, pure — public surface only; the markup and CSS parsers are
+`EmmetTest` (24, pure — public surface only; the markup and CSS parsers are
 private by design): the `!` skeleton incl. its caret, child/sibling/repeat/
 group/climb, implicit tags (`.card`, `ul>*`, `table>tr*2>td`), classes+id+
 attributes+text, `$`/`$$` numbering incl. propagation into nested repeats, void
@@ -193,3 +193,38 @@ Item 2 — `!` offers the skeleton (and the 22.6 DOCTYPE snippet still answers
 `doc`). Item 3 — five C buffers (`ul>li`, `if (!x)`, `div>p`, `!`,
 `a[href=#]{x}`) produce **zero** items with detail `emmet`, and
 `abbreviationAt` returns null for the C language outright.
+
+### 3.5 Amendment (2026-09-06, same day — found while writing the device card)
+
+**A text node containing a SPACE was unreachable when TYPED.** `expand()`
+always handled `a{Link $}` and `nav>ul>li*2>a[href=#]{Link $}` — the numbered
+text case this part's own §1 advertises — and `EmmetTest` pinned it, but those
+tests call `expand()` directly. The editor path goes through `abbreviationAt`,
+whose walk-back stopped at the first space, so on a phone the token under the
+caret was the fragment AFTER the space (`$}`) and the gate returned null:
+measured, `nav>ul>li*2>a[href=#]{Link $}` in `index.html` produced **zero**
+items — the card's own step 7 would have been a FAIL.
+
+**Fix (markup only, 12 lines).** While walking back, a space belongs to the
+token as long as the walk is inside a `{…}` it has not closed yet: brace depth
+counted from the caret backwards, so the opening `{` ends the allowance. CSS is
+untouched (no brace-text syntax, and `{`/`}` are not CSS token chars, so the
+allowance is behind `!css`).
+
+**Guards kept, measured after** (JVM harness, real engine):
+`abbreviationAt("ul> li*2") == "li*2"` still holds (a space OUTSIDE a text node
+ends the token exactly as before); `<p>Hello World` → null (prose, no signal);
+`<p>Hello {World` → the walk-back returns `{World` but `expand` REFUSES it, so
+`completionItemFor` is null and no chip appears (an unbalanced text node is
+malformed input, §3.3 — refusing beats guessing); JSX `{ const x = "a b" }` →
+null (odd quote count); `a { p10 20` in CSS → null (space, and `20` is not a
+letter-led abbreviation); C/`.js` unchanged. New shapes now work: `a{Link $}` → `<a>Link 1</a>`,
+`p{Hello World}` → `<p>Hello World</p>`, and
+`nav>ul>li*2>a[href=#]{Link $}` → `<nav><ul><li><a href="#">Link 1</a></li>` …
+with `Link 1`/`Link 2` and the caret in the first link text.
+
+**Test:** `a text node keeps its spaces, prose still stops at one`
+(`EmmetTest`, 9 assertions — both positive shapes plus `div>p{a b}+p{c d}` (two
+spaced text nodes in one abbreviation), the end-to-end `completionItemFor`, the
+pre-existing `ul> li*2` guard, the prose guard, the unbalanced-`{` refusal at
+both layers, and the CSS refusal).

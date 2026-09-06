@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-06, `main` tip = PR #54 (Phase 29 merged); PHASE 30 (Offline completeness — MIT snippet packs + clean-room Emmet + strip capacity) 🚧 IMPLEMENTED on `arena/01a07646-codec` — owner: "Start phase 30"; all three parts in one build; 89 new host tests + 6 new cases, 157 green locally; **CI GREEN first try — run `34034889209`, tip `641f6e8`, 4m34s (assemble + `:app:testDebugUnitTest` + `:app:lintDebug` + bench); APK artifact delta +116 572 B (+0.11 MiB) vs `main`**; the owner device round (`docs/TROUBLESHOOTING.md` §13) is the only open gate; NO PR/merge without the owner's command; records in `docs/chat-phase30/` + JOURNEY §41. Before that: Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); BOTH crashes device-confirmed fixed; **device round 1 PASSED 2026-09-06 — checklist ALL PASS + APK-size deviation (+2.22 MB) ACCEPTED by the owner; MERGED to main via PR #54 (owner: "Merge it", 2026-09-06)**; records in `docs/chat-phase29/`):**
+**WHERE THINGS STAND (2026-09-06, `main` tip = PR #54 (Phase 29 merged); PHASE 30 (Offline completeness — MIT snippet packs + clean-room Emmet + strip capacity) 🚧 IMPLEMENTED on `arena/01a07646-codec` — owner: "Start phase 30"; all three parts in one build; 91 new host tests + 6 new cases, 159 green locally; **CI GREEN first try — run `34034889209`, tip `641f6e8`, 4m34s (assemble + `:app:testDebugUnitTest` + `:app:lintDebug` + bench); APK artifact delta +116 572 B (+0.11 MiB) vs `main`**; the owner device round (`docs/TROUBLESHOOTING.md` §13) is the only open gate; NO PR/merge without the owner's command; records in `docs/chat-phase30/` + JOURNEY §41. Before that: Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); BOTH crashes device-confirmed fixed; **device round 1 PASSED 2026-09-06 — checklist ALL PASS + APK-size deviation (+2.22 MB) ACCEPTED by the owner; MERGED to main via PR #54 (owner: "Merge it", 2026-09-06)**; records in `docs/chat-phase29/`):**
 
 - **Phase 30 (all three parts in one build) — WHAT is offered, not how it is
   accepted.** 30.1: the four hand-written snippet tables (7 C / 9 Python /
@@ -33,9 +33,14 @@ gate, invariants, docs policy) — follow it.
   `SnippetAssets` LanguageType→packs, JSON/TEXT/XML/YAML none ·
   `SnippetLibrary` attach-by-AssetManager-identity + two cache layers +
   warm-up + degradation) = **84 C / 76 Py / 126 HTML / 156 CSS / 367 JS /
-  140 TS / 62 MD / 16 sh** items; built-in tables stay as FALLBACK, plus the
-  two CodeC extras (22.6 DOCTYPE skeleton, app-private shebang); matching
-  stays case-insensitive (22.6 law); identifiers still rank below snippets.
+  140 TS / 62 MD / 16 sh** items; the built-in tables ride
+  along as a **deduped TAIL** after the pack (and are the whole list when no
+  pack loads) — they carry the 22.6 DOCTYPE skeleton, the app-private shebang
+  and the descriptive labels a prefix-only pack cannot reach (`head` →
+  `# Heading`, `pr` → `print(...)`); matching stays case-insensitive (22.6
+  law); identifiers still rank below snippets; the empty-prefix trigger path
+  excludes an item whose INSERT TEXT is the trigger (not whose label is — pack
+  labels ARE trigger words).
   30.2: **clean-room `ui/editor/Emmet.kt`** (859 LOC, no dependency — rule.md
   §6) at **rank 0** of the same pipeline: markup (`!`/`html:5`, `> + ^ *n
   ( )`, `.class` `#id` `[attr]` `{text}`, `$`/`$$` numbering with counter
@@ -54,8 +59,8 @@ gate, invariants, docs policy) — follow it.
   NOT in the diff** — Enter sacred, master switch, no auto-commit — plus ONE
   narrow test-pinned S1 exception (a lone Emmet candidate chips, because a
   ghost cannot cover an expansion). Tests: `SnippetSyntaxTest` 21 ·
-  `SnippetPacksTest` 12 · `EmmetTest` 23 · `SnippetLibraryTest` 15
-  (Robolectric, real assets) · `CompletionCapacityTest` 18 (host mirror of all
+  `SnippetPacksTest` 12 · `EmmetTest` 24 · `SnippetLibraryTest` 15
+  (Robolectric, real assets) · `CompletionCapacityTest` 19 (host mirror of all
   three exit conditions; the plan's named test = prefix `i` in C → 10
   candidates vs 7) · +2 `StripContextTest` · +4 `GhostCompletionTest` ·
   `CodeCompletionTest` pinned to the fallback world. Two bugs found pre-CI:
@@ -258,8 +263,11 @@ report → STOP at the merge gate. The owner merges to `main` themselves
   `scripts/vendor_snippets.py` and keep `SnippetAssets.packsFor` + its `PACKS`
   table in sync; `SnippetLibraryTest` pins every path). Labels are pack
   PREFIXES; matching is case-insensitive (22.6 law); JSON/TEXT/XML/YAML ship
-  no pack; the built-in Kotlin tables are the FALLBACK when no pack loads, so
-  never delete them. `Emmet.kt` is clean-room — do not paste emmetio code.
+  no pack; the built-in Kotlin tables are a deduped TAIL after the pack and
+  the FALLBACK when none loads, so never delete them (four 22.6-accepted
+  typings exist only there). A device card must be MEASURED against the real
+  engine + real assets before it is handed over — five Phase 30 card strings
+  were wrong until they were (JOURNEY §41). `Emmet.kt` is clean-room — do not paste emmetio code.
   Caps: `MAX_ITEMS` 50 / snippets 40 / identifiers 6 / keywords 6, and
   `SuggestionStripModel.MAX_CHIPS` 8 (the thumb law — the strip is not a list).
   A lone candidate stays in KEY mode unless it is an Emmet expansion

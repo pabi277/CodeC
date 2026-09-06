@@ -4,9 +4,21 @@
 > three parts in one build on `arena/01a07646-codec`; `Build APK` GREEN
 > first try (run `34034889209`, tip `641f6e8`, 4m34s: assemble +
 > `:app:testDebugUnitTest` + `:app:lintDebug` + the bench module); the owner
-> device round (`docs/TROUBLESHOOTING.md` §13) is the only open gate.** 89 new host tests (five files) + 6 new cases in
-> three existing ones; every law of Phase 27 re-pinned (`CompletionPolicy`
-> untouched). **No PR/merge without the owner's command.**
+> device round (`docs/TROUBLESHOOTING.md` §13) is the only open gate.**
+>
+> **Amended the same day, before the device round** (PART_30_1 §3.5,
+> PART_30_2 §3.5): writing the card meant measuring every string in it against
+> the real engine + real assets, and five were wrong — Markdown `head` returned
+> **nothing**, Python `pr` lost `print(...)`, shell `if ` dumped 16 snippets
+> with **no if-block**, Python `def ` had no `def`, and a typed
+> `nav>ul>li*2>a[href=#]{Link $}` never fired (the walk-back stopped at the
+> space inside `{text}`). Fixed by keeping the built-in tables as a **deduped
+> tail** after the pack, moving the trigger path's "don't offer the word back"
+> test from the label to the **insert text**, and making the Emmet walk-back
+> brace-depth aware. Two new host tests (18 assertions), so the phase total is
+> **91 new host tests** (five files) + 6 new cases in three existing ones;
+> every law of Phase 27 re-pinned (`CompletionPolicy` untouched).
+> **No PR/merge without the owner's command.**
 >
 > Original plan (2026-09-05, docs only): suggestions don't give every
 > suggestion; phone coding is painful. Phase 27 already fixed **accept UX**
@@ -75,8 +87,8 @@ About attribution line. Re-vendoring is one command:
 abbreviation grammar was reimplemented from the documented operator subset.
 
 **Host tests:** `SnippetSyntaxTest` (21, pure) · `SnippetPacksTest` (12, pure)
-· `EmmetTest` (23, pure) · `SnippetLibraryTest` (15, Robolectric + real
-assets) · `CompletionCapacityTest` (18, Robolectric — the host mirror of all
+· `EmmetTest` (24, pure) · `SnippetLibraryTest` (15, Robolectric + real
+assets) · `CompletionCapacityTest` (19, Robolectric — the host mirror of all
 three exit conditions) · + `StripContextTest` (lone-Emmet chip, 50-item chip
 cap), `GhostCompletionTest` (caretOffset parking), `CodeCompletionTest`
 (fallback world).

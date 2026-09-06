@@ -84,7 +84,7 @@ accepted yet would be a lie.
 
 ### 3.2 Host tests
 
-`CompletionCapacityTest` (18, Robolectric + real packs) is the host mirror of
+`CompletionCapacityTest` (19, Robolectric + real packs) is the host mirror of
 all three parts' exit conditions; the 30.3 ones:
 
 - **the plan's named host test** — prefix `i` in a C file with snippets loaded
@@ -156,7 +156,10 @@ vs `main`.
 
 Host mirror (green): item 1 — Python `i` → 9 candidates, 8 chips, ⌄ opens the
 panel over the same list; the chip row is horizontally scrollable (27.2 code
-path unchanged). Item 2 — the ghost paints only `items.first()`; Enter is
+path unchanged). *(Amended by PART_30_1 §3.5: with the built-in tables riding
+as a deduped tail, Python `i` and C `i` are now **13** candidates each — 8
+chips + 5 rows behind ⌄ — still one `distinctBy{label}.take(50)` away from the
+cap, and the tier order is untouched.)* Item 2 — the ghost paints only `items.first()`; Enter is
 `CompletionAction.NEWLINE` on every surface, asserted by the untouched
 `CompletionPolicyTest` matrix (12 tests) — Phase 30 never touches
 `CompletionPolicy.kt`.
