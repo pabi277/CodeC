@@ -318,7 +318,13 @@ Every update updates the docs **in the same commit**:
   the INSERT TEXT instead of the label, and making Emmet's walk-back
   brace-depth aware (+2 tests, 18 assertions). **Rule learned: a device card
   must be measured against the real engine + real assets, not remembered from
-  the design.** **CI GREEN first try: run
+  the design.** The amendment cost one for-cause CI round — `34040754444` red
+  on a hand-counted caret literal (16 for a 17-char abbreviation) in the new
+  `EmmetTest` case, i.e. a wrong assertion, not a wrong engine — fixed in
+  `ca8ec57`; **run `34041185149` GREEN (tip `ca8ec57`, 4m51s), artifact
+  24 374 688 B = +116 886 B (+0.11 MiB) vs `main`. Install THAT build for the
+  §13 round.** Sub-rule: caret offsets in tests are `.length`, never counted by
+  hand. **CI GREEN first try: run
   `34034889209`, tip `641f6e8` (4m34s — assemble + `:app:testDebugUnitTest`
   + `:app:lintDebug` + bench); APK artifact delta +116 572 B (+0.11 MiB) vs
   `main`. Gate = owner device round** (`docs/TROUBLESHOOTING.md` §13).

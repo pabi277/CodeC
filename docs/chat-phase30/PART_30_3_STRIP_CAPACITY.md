@@ -154,6 +154,17 @@ gradle-bootstrap shim, plus `:bench:assembleRelease :bench:testDebugUnitTest`);
 first try, no for-cause round. Artifact `CodeC-IDE` +116 572 B (+0.11 MiB / +0.117 MB)
 vs `main`.
 
+**CI (the §3.5 amendment):** run `34040754444` on tip `d3a2443` went RED on
+exactly one test — the phase's single for-cause round — and it was the
+ASSERTION, not the engine: the new `EmmetTest` case handed `abbreviationAt` a
+hand-counted caret of 16 for the 17-char `div>p{a b}+p{c d}`, so the walk-back
+stopped before the closing `}` and null was the correct answer for that caret.
+Fixed in `ca8ec57` (carets are `.length` now, with a comment saying why); run
+**`34041185149` GREEN** on tip `ca8ec57` (4m51s, same steps). Artifact
+`CodeC-IDE` 24 374 374 → **24 374 688 B = +116 886 B (+0.11 MiB)** vs `main`
+(+314 B for the amendment: no new assets, just the tail merge and the
+brace-depth walk-back).
+
 Host mirror (green): item 1 — Python `i` → 9 candidates, 8 chips, ⌄ opens the
 panel over the same list; the chip row is horizontally scrollable (27.2 code
 path unchanged). *(Amended by PART_30_1 §3.5: with the built-in tables riding

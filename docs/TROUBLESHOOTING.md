@@ -493,10 +493,13 @@ shorter to offer.
 **Steps** (each is one line — type exactly what is in backticks; "chips" = the
 row above the keyboard, in order):
 
-1. Actions → latest green **Build APK** on the session branch → Artifacts →
-   **CodeC-IDE** → install, then Settings → About and check the version line
-   carries that run's number (29.4 — a stale APK is the classic false FAIL).
-   *(Artifact delta vs `main`: **+116 572 B (+0.11 MiB / +0.117 MB)** — 29
+1. Actions → **Build APK** run **`34041185149`** (tip `ca8ec57`, GREEN 4m51s —
+   the build that carries the §3.5 amendment; any LATER green run on the
+   session branch is equally good) → Artifacts → **CodeC-IDE** → install, then
+   Settings → About and check the version line carries that run's number (29.4
+   — a stale APK is the classic false FAIL, and this card's chip lists only
+   match the amended build).
+   *(Artifact delta vs `main`: **+116 886 B (+0.11 MiB / +0.117 MB)** — 29
    snippet JSONs, 277 KB raw ≈ 54 KB deflated, plus the resolver/Emmet code;
    Phase 29's TextMate assets and engine are unchanged.)*
 2. **C snippets (30.1):** open or create `main.c`, type `for` → **5 chips**

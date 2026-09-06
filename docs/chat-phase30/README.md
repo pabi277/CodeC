@@ -17,7 +17,12 @@
 > test from the label to the **insert text**, and making the Emmet walk-back
 > brace-depth aware. Two new host tests (18 assertions), so the phase total is
 > **91 new host tests** (five files) + 6 new cases in three existing ones;
-> every law of Phase 27 re-pinned (`CompletionPolicy` untouched).
+> every law of Phase 27 re-pinned (`CompletionPolicy` untouched). Amended build
+> **CI GREEN: run `34041185149`, tip `ca8ec57`, 4m51s** (one for-cause round —
+> `34040754444` red on a hand-counted caret literal in the new `EmmetTest`
+> case, i.e. a wrong assertion, not a wrong engine); artifact `CodeC-IDE`
+> 24 374 688 B = **+116 886 B (+0.11 MiB)** vs `main`. **That is the build the
+> §13 card's chip lists were measured against — install it.**
 > **No PR/merge without the owner's command.**
 >
 > Original plan (2026-09-05, docs only): suggestions don't give every
