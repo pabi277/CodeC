@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-06, `main` tip `3edfc97` = PR #53 plan docs; Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) + NavHost-transition regression test (`288b760`); crash-log now reports header-first (COPY ALL = complete record); records in `docs/chat-phase29/`):**
+**WHERE THINGS STAND (2026-09-06, `main` tip `3edfc97` = PR #53 plan docs; Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); records in `docs/chat-phase29/`):**
 
 - **Phase 29 (all three parts in one build) — TextMate is the editor's
   analyzer.** Sora `language-textmate` from the SAME 0.24.6 BOM (binary
@@ -38,7 +38,7 @@ gate, invariants, docs policy) — follow it.
   coloured, `.txt` plain, typing still ≤ 16.7 ms p95, theme switching,
   APK delta ≤ +1.5 MiB — measured +2.10 MiB, owner verdict pending).
   Crash 1 (CME) fixed `3fb404f`; crash 2 fixed `288b760` (Compose
-  BOM 2024.12.01). **Device round re-test pending** (`TROUBLESHOOTING.md`
+  BOM 2024.12.01) + `db56824` (atomic replay). **Device round re-test pending** (`TROUBLESHOOTING.md`
   §12) + APK-delta verdict (+2.12 MiB vs +1.5 MiB budget). No PR/merge
   without the owner's command.
 - **Phase 28 remainder:** 28.2 (CodeC Keys layout engine) MERGED via PR #52

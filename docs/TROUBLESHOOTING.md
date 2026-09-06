@@ -447,10 +447,17 @@ fixed in `591be79`. Optional before reproducing: tap **CLEAR** so the
 overlay shows only the new crash. Also note the file type of the file
 you opened when it crashed.
 
-**2026-09-06 update — the open-file crash is FIXED (`288b760`):** the
-full crash record named it: `IllegalStateException: LayoutNode should be
-attached to an owner` — the editor Column (under `imePadding()`,
-inside the nav transition) measuring a detached child; a Compose
-1.7.1-era bug family, fixed by bumping the Compose BOM to 2024.12.01
-(1.7.6). If ANY crash recurs in this round, the §-above COPY ALL flow
-still applies — the report now always starts at the exception line.
+**2026-09-06 update — the open-file crash is FIXED (two layers,
+`288b760` + `db56824`):** the full crash record named it:
+`IllegalStateException: LayoutNode should be attached to an owner` —
+the editor Column (under `imePadding()`, inside the nav transition)
+measuring a detached child; a Compose 1.7.1-era bug family, fixed by
+bumping the Compose BOM to 2024.12.01 (1.7.6). The CI nav-transition
+repro test then caught a second, deeper bug: the VM→sora full replay's
+incremental delete-all dispatched `afterDelete` into a layout whose
+per-line width lists sora rebuilds ASYNCHRONOUSLY after any
+`createLayout()` (font-size/language-config effects) →
+`BlockIntList.removeRange` on an empty list. Fixed by making the
+replay an atomic `setText`. If ANY crash recurs in this round, the
+§-above COPY ALL flow still applies — the report now always starts at
+the exception line.

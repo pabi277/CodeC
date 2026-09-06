@@ -381,3 +381,44 @@ the device round is the final arbiter.)
 versionName carries the CI run number; About shows it; crash dialog
 title = exception line), 34010200911 F (repro test missing import),
 **34010505276 S (`288b760` — the crash-2 fix, current)**.
+
+### 4.8 Crash-2 follow-up: the nav-transition test caught a second, deeper bug — FIXED (`db56824`)
+
+The BOM-bump commit's CI run (34010843868 on the docs commit, same code)
+FAILED — the new nav-transition repro test reproduced a REAL crash in CI:
+
+```
+java.lang.IndexOutOfBoundsException
+  at sora.util.BlockIntList.removeRange(BlockIntList.java:220)
+  at sora.widget.layout.LineBreakLayout.afterDelete(LineBreakLayout.java:203)
+  at sora.widget.CodeEditor.afterDelete(CodeEditor.java:5329)
+  at sora.text.Content.delete(Content.java:476)
+  at SoraEditorHost.kt:341                       ← the VM→sora replay
+  … AndroidView update block during the transition measure pass …
+```
+
+**Root cause (sora internals + our replay shape):** the VM→sora full
+replay did an incremental `batchEdit { delete(0,0,lastLine,col); insert }
+— dispatching `afterDelete` into sora's layout. But `createLayout()`
+(run by `setTextSize`/`setText`/wordwrap/inlay-renderer changes — i.e.
+by our own config effects around a file open) rebuilds the layout's
+per-line width lists (`BlockIntList widthMaintainer`,
+`inlineElementsWidths`) **asynchronously** (`measureAllLines` uses a
+`TaskMonitor`). A multi-line delete in that window hits `removeRange`
+on an EMPTY list → IndexOutOfBoundsException. The same mid-measure
+churn (content mutation + layout recreation inside the transition's
+measure pass) is what fed the on-device detached-LayoutNode
+IllegalStateException.
+
+**Fix:** the replay now uses sora's atomic wholesale `setText` — one
+`ACTION_SET_NEW_TEXT` event, no incremental delete dispatch, layout
+rebuilt AFTER the new content is set. `setText` replaces the `Content`
+OBJECT, so the sora→VM `ContentListener` was hoisted to the composable
+level and is re-attached to each new instance (the DisposableEffect
+keeps the subscriptions). Verified: the failing test went green
+(run 34011311415).
+
+**CI ledger addendum:** 34010843868 F (`2bf60f1` — the repro test
+CAUGHT the replay bug), **34011311415 S (`db56824` — atomic replay fix,
+current)**. Crash-2 remediation is now two-layered: BOM 2024.12.01
+(framework detached-node family) + atomic setText replay (our churn).
