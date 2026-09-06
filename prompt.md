@@ -18,8 +18,50 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-06, `main` tip `3edfc97` = PR #53 plan docs; Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); BOTH crashes device-confirmed fixed; **device round 1 PASSED 2026-09-06 — checklist ALL PASS + APK-size deviation (+2.22 MB) ACCEPTED by the owner; MERGED to main via PR #54 (owner: "Merge it", 2026-09-06)**; records in `docs/chat-phase29/`):**
+**WHERE THINGS STAND (2026-09-06, `main` tip = PR #54 (Phase 29 merged); PHASE 30 (Offline completeness — MIT snippet packs + clean-room Emmet + strip capacity) 🚧 IMPLEMENTED on `arena/01a07646-codec` — owner: "Start phase 30"; all three parts in one build; 89 new host tests + 6 new cases, 157 green locally; CI + owner device round (`docs/TROUBLESHOOTING.md` §13) PENDING at write time; NO PR/merge without the owner's command; records in `docs/chat-phase30/` + JOURNEY §41. Before that: Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); BOTH crashes device-confirmed fixed; **device round 1 PASSED 2026-09-06 — checklist ALL PASS + APK-size deviation (+2.22 MB) ACCEPTED by the owner; MERGED to main via PR #54 (owner: "Merge it", 2026-09-06)**; records in `docs/chat-phase29/`):**
 
+- **Phase 30 (all three parts in one build) — WHAT is offered, not how it is
+  accepted.** 30.1: the four hand-written snippet tables (7 C / 9 Python /
+  8 HTML / 3 CSS) are now **29 vendored MIT friendly-snippets packs** in
+  `assets/snippets/` (277 KB raw ≈ 54 KB in the APK, pinned to upstream
+  `6cd7280`, notice in `assets/licenses/FRIENDLY_SNIPPETS_MIT.txt` + About
+  line, re-vendorable via `scripts/vendor_snippets.py`) resolved by five new
+  pure files in `ui/editor/snippets/` (`SnippetJson` strict reader ·
+  `SnippetSyntax` VS Code resolver: tabstops/mirrors/choices/`TM_*` vars/
+  regex transforms + case ops + `:+ :- :?` conditionals/bounds ·
+  `SnippetPacks` entry→items, ≤3 prefixes, first-wins dedupe, ≤64-char detail ·
+  `SnippetAssets` LanguageType→packs, JSON/TEXT/XML/YAML none ·
+  `SnippetLibrary` attach-by-AssetManager-identity + two cache layers +
+  warm-up + degradation) = **84 C / 76 Py / 126 HTML / 156 CSS / 367 JS /
+  140 TS / 62 MD / 16 sh** items; built-in tables stay as FALLBACK, plus the
+  two CodeC extras (22.6 DOCTYPE skeleton, app-private shebang); matching
+  stays case-insensitive (22.6 law); identifiers still rank below snippets.
+  30.2: **clean-room `ui/editor/Emmet.kt`** (859 LOC, no dependency — rule.md
+  §6) at **rank 0** of the same pipeline: markup (`!`/`html:5`, `> + ^ *n
+  ( )`, `.class` `#id` `[attr]` `{text}`, `$`/`$$` numbering with counter
+  propagation, implicit tags, 16 void elements, `/` + JSX self-close) and CSS
+  (82 abbreviations longest-match, 14 unit suffixes, `-` separators vs
+  negatives, `!important`, `+` chains ≤6, keyword tables, caret after `": "`),
+  with guards that REFUSE rather than guess (structural signal required; no
+  firing inside a tag/attribute/comment/string/selector; `.jsx`/`.tsx` only
+  for JSX; plain `.js` and **C never fire**), bounds (120 chars / 100 repeats /
+  400 nodes / depth 24) and `finish()` re-indenting CONTINUATION lines onto
+  the caret's base indent. 30.3: `MAX_ITEMS` 8 → **50** (snippets ≤40,
+  identifiers ≤6, keywords ≤6, tier order unchanged), `MAX_CHIPS` stays **8**
+  (⌄ more = the rest, 27.2), ghost still rank 0; `CompletionItem` gained
+  nullable `replaceLength`/`caretOffset` (null = the 27.x shape) honoured by
+  the VM accept + ghost FULL, ignored by WORD/LINE. **`CompletionPolicy.kt` is
+  NOT in the diff** — Enter sacred, master switch, no auto-commit — plus ONE
+  narrow test-pinned S1 exception (a lone Emmet candidate chips, because a
+  ghost cannot cover an expansion). Tests: `SnippetSyntaxTest` 21 ·
+  `SnippetPacksTest` 12 · `EmmetTest` 23 · `SnippetLibraryTest` 15
+  (Robolectric, real assets) · `CompletionCapacityTest` 18 (host mirror of all
+  three exit conditions; the plan's named test = prefix `i` in C → 10
+  candidates vs 7) · +2 `StripContextTest` · +4 `GhostCompletionTest` ·
+  `CodeCompletionTest` pinned to the fallback world. Two bugs found pre-CI:
+  `TM_DIRECTORY`'s chained `substringBeforeLast` ("" for `proj/main.c`) and a
+  refused bare `*` in `ul>*`. **Gate: `Build APK` green + owner device round
+  per `docs/TROUBLESHOOTING.md` §13.**
 - **Phase 29 (all three parts in one build) — TextMate is the editor's
   analyzer.** Sora `language-textmate` from the SAME 0.24.6 BOM (binary
   dep only, LGPL-2.1 notice in `assets/licenses/`); 24 MIT grammar JSONs +
@@ -210,6 +252,17 @@ report → STOP at the merge gate. The owner merges to `main` themselves
   fallback; preview navigation must carry the **authoritative project**
   (VM `currentProject` / drawer `entry.projectName`), never the Nav route
   argument — the route argument goes stale after in-editor folder switches.
+- **Completion sources (Phase 30):** snippet packs are MIT DATA in
+  `assets/snippets/` — never hand-edit a pack (re-run
+  `scripts/vendor_snippets.py` and keep `SnippetAssets.packsFor` + its `PACKS`
+  table in sync; `SnippetLibraryTest` pins every path). Labels are pack
+  PREFIXES; matching is case-insensitive (22.6 law); JSON/TEXT/XML/YAML ship
+  no pack; the built-in Kotlin tables are the FALLBACK when no pack loads, so
+  never delete them. `Emmet.kt` is clean-room — do not paste emmetio code.
+  Caps: `MAX_ITEMS` 50 / snippets 40 / identifiers 6 / keywords 6, and
+  `SuggestionStripModel.MAX_CHIPS` 8 (the thumb law — the strip is not a list).
+  A lone candidate stays in KEY mode unless it is an Emmet expansion
+  (`detail == Emmet.DETAIL` and no ghost) — 27.2 S1 + its one exception.
 - **CodeCApi:** ops `battery.status` / `sensor.read` / `tts.speak` /
   `camera.capture` / `intent.send`; marker `NEED_PERMISSION:` and
   `CAPTURING:`; camera output names `^[A-Za-z0-9][A-Za-z0-9._-]*\.(jpg|jpeg|png)$`;
@@ -220,11 +273,14 @@ report → STOP at the merge gate. The owner merges to `main` themselves
 1. Verify state (`gh pr list`, `git status`, `gh run list`) before acting —
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
-2. Phases 20.1–27 are MERGED. Phase 28.2 is MERGED; 28.3/28.4 remain
-   planned. **Phases 29–33 are PLANNED only** (`docs/chat-phase29/` …
+2. Phases 20.1–27 are MERGED; 28.2 is MERGED (28.3/28.4 remain planned);
+   **Phase 29 is MERGED via PR #54**. **Phase 30 (snippet packs + Emmet +
+   strip capacity) is IMPLEMENTED on the session branch — its CI/device gate
+   is open, so do not re-implement or "improve" it without evidence.**
+   **Phases 31–33 are PLANNED only** (`docs/chat-phase31/` …
    `docs/chat-phase33/`) — no implementation until the owner says
-   `"Start Phase 29"` (recommended next for colour) or another N.
-   Otherwise **bug-wait mode**. No self-initiated work.
+   `"Start Phase 31"` (or another N). Otherwise **bug-wait mode**. No
+   self-initiated work.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,

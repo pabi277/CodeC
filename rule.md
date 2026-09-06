@@ -84,8 +84,13 @@ does not begin a lifecycle on its own (§1).
    pattern: pure engines + injected adapters). Add/update tests.
 5. **Update docs** — see §7.
 6. **Commit + push** the session branch.
-7. **Watch CI** (`Build APK`: assemble + unit tests + lint). CI is the **only**
-   test executor — the agent sandbox has no JVM/device. Fix only for-cause
+7. **Watch CI** (`Build APK`: assemble + unit tests + lint). CI is the **only
+   test executor of record** — Gradle/AGP, real Robolectric, lint and the APK
+   cannot run in the agent sandbox, and on-device testing is impossible there.
+   *(Since 2026-09-06 a partial exception: a JRE + kotlinc ARE downloadable
+   in-sandbox, so pure-Kotlin files and JUnit sources can be pre-validated
+   locally with Android/Robolectric classes shimmed — see the §9 session-tooling
+   note. Pre-validation never replaces the CI run.)* Fix only for-cause
    failures; never paper over a red run.
 8. **Report** state (run id, tip sha, what changed) and stop at the merge gate
    (§3).
@@ -182,7 +187,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-05, Phase 29 implemented — CI + device round pending)
+## 9. State snapshot (2026-09-06, Phase 30 implemented — CI + device round pending)
 
 - **`main` = `3edfc97`** — PR #53 (2026-09-05, Phases 29–33 plan docs).
   Before that: PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49
@@ -275,6 +280,49 @@ Every update updates the docs **in the same commit**:
   monitor in applyTheme, locked createLanguage helper, theme switch on
   main) + regression stress test; owner device round still PENDING on
   the fixed build.
+- **Phase 30 (Offline completeness — snippet packs + Emmet + strip capacity)
+  🚧 IMPLEMENTED (2026-09-06, owner: "Start phase 30", all three parts in one
+  build)** on `arena/01a07646-codec`: the four hand-written snippet tables
+  (7 C / 9 Python / 8 HTML / 3 CSS) became **29 vendored MIT
+  friendly-snippets packs** (`assets/snippets/`, 277 KB raw ≈ **54 KB**
+  deflated, pinned to upstream `6cd7280`, notice + About line, re-vendorable
+  with `scripts/vendor_snippets.py`) resolved by five new pure files under
+  `ui/editor/snippets/` (strict JSON reader, VS Code snippet resolver incl.
+  transforms/`TM_*` variables/choices, entry→item mapping with first-wins
+  dedupe, the LanguageType→pack map, and a `TextMateSupport`-shaped library
+  with two cache layers + degradation) = **84 C / 76 Python / 126 HTML /
+  156 CSS / 367 JS / 140 TS / 62 MD / 16 shell** items, with the built-in
+  tables kept as fallback and the two CodeC extras (22.6 DOCTYPE skeleton,
+  app-private shebang); a **clean-room Emmet engine** (`ui/editor/Emmet.kt`,
+  859 LOC, no dependency — markup `! > + ^ *n ( ) .class #id [attr] {text} $`
+  + implicit tags + void/JSX self-close, CSS 82 abbreviations + units +
+  keyword tables, and guards that refuse rather than guess) joins the same
+  pipeline at **rank 0** with `replaceLength`/`caretOffset`; and
+  `MAX_ITEMS` 8 → **50** (snippets ≤40, identifiers ≤6, keywords ≤6) while
+  `MAX_CHIPS` stays 8 and ⌄ more still shows the rest (27.2). **Phase 27
+  `CompletionPolicy.kt` is not in the diff** — Enter sacred, master switch,
+  no auto-commit — plus one narrow, test-pinned S1 exception: a LONE Emmet
+  candidate gets its chip because a ghost cannot cover an expansion.
+  **89 new host tests + 6 new cases** (`SnippetSyntaxTest` 21,
+  `SnippetPacksTest` 12, `EmmetTest` 23, `SnippetLibraryTest` 15 Robolectric
+  on the real assets, `CompletionCapacityTest` 18 = the host mirror of all
+  three exit conditions incl. the plan's named test: prefix `i` in C → 10
+  candidates vs 7 before). Two real bugs found by those tests pre-CI
+  (`TM_DIRECTORY`'s chained `substringBeforeLast` returning "" for a plain
+  `proj/main.c`; bare `*` in `ul>*` refused). **Gate = owner device round**
+  (`docs/TROUBLESHOOTING.md` §13). Records: `docs/chat-phase30/` (README +
+  §3 of each part), JOURNEY §41. **No PR/merge without the owner's command.**
+- **Session-tooling note (2026-09-06, Phase 30):** §5's "the agent sandbox has
+  no JVM" is **no longer strictly true** and was used deliberately this phase:
+  a JRE (PyPI `jdk4py`, Temurin 25) and a Kotlin compiler (npm
+  `kotlin-compiler` 2.4.10) are both downloadable in-sandbox, so pure-Kotlin
+  production files AND the real JUnit test sources can be compiled and run
+  locally (Robolectric/Android classes shimmed; assets read straight from the
+  working tree). Phase 30 pre-validated 157 tests + a 211-check harness this
+  way and caught two production bugs before CI. **CI is still the executor of
+  record** (Gradle/AGP, real Robolectric, lint, the APK) — Maven Central and
+  Google Maven are unreachable in-sandbox, so nothing that needs Gradle can run
+  here, and the toolchain lives in `/tmp` (not persisted).
 
 ---
 
