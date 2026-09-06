@@ -387,7 +387,7 @@ bubbles overflow their cap without clipping — on purpose (strip clip bug
 class — superseded after round 1: bubbles were removed entirely, previews live
 IN the cap (`CodecKeyboard`'s round-1 note).
 
-## 12. How to run the Phase 29 VS Code colour device round (owner runbook, 2026-09-05)
+## 12. How to run the Phase 29 VS Code colour device round (owner runbook, 2026-09-05) — ✅ PASSED 2026-09-06
 
 > Phase 29 = TextMate (VS Code grammars + themes) as the editor's analyzer.
 > This card is the **exit gate**: all three parts (29.1 core / 29.2 language

@@ -443,3 +443,24 @@ joni+jcodings+gson+tm4e ≈ 1.95 MB; grammars/themes ≈ 250 KB).
 Remaining for the 29.1 device-round gate (`TROUBLESHOOTING.md` §12):
 Dark+ look, every-language colour, `.txt` plain, ~60-key typing feel,
 theme switching, completions/Keys/find regressions, About LGPL lines.
+
+### 4.10 Device round 1: PASS — gate CLOSED (2026-09-06)
+
+Owner verdict on the `db56824`/`9b5c319` build (`1.3.16`):
+
+- **No crash** on file open / direct editor (crash 1 + crash 2 closed).
+- **Checklist: ALL PASS** — C file looks like VS Code Dark+, every
+  language colored, `.txt` plain, typing smooth, theme switching works,
+  completions / ghost / strip / CodeC Keys / find still work.
+- **APK size verdict: ACCEPTED** — +2.22 MB over `main` (24.26 vs
+  22.04 MB artifact-to-artifact; owner's on-device app-info read
+  24.95 MB). The +1.5 MiB plan budget is a **recorded, owner-accepted
+  deviation**: the weight is the required TextMate engine chain
+  (~1.95 MB), not the grammars (~250 KB) — nothing meaningful to strip
+  short of dropping the feature. (Owner also passed on the "try
+  shrinking later" option.)
+
+**Phase 29 (29.1 + 29.2 + 29.3) is implementation-complete, CI-green
+and device-verified.** Remaining: merge on the owner's explicit
+command (standing rule — no PR/merge without it). CI ledger:
+34011630954 S (`9b5c319`), 34025618209 S (`f7db714`).
