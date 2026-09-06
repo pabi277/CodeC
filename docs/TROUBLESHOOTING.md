@@ -437,3 +437,12 @@ for the first time (they were plain before); CSS no longer looks like HTML.
 **Report:** PASS/FAIL per numbered item (screenshots of the C file vs
 desktop VS Code are perfect evidence for item 2). Any wrong-looking color:
 name the file type + what you expected vs saw.
+
+**If the app CRASHES during this round (2026-09-06 update):** relaunch it —
+the crash-report overlay appears. **COPY ALL and paste it in chat.** The
+report now starts at the record's HEADER (the `java.…Exception` line +
+the first ~80 frames) — earlier builds showed only a byte-tail of the
+whole log file, which cut off exactly the lines that diagnose the crash;
+fixed in `591be79`. Optional before reproducing: tap **CLEAR** so the
+overlay shows only the new crash. Also note the file type of the file
+you opened when it crashed.

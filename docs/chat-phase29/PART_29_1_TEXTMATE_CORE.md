@@ -267,3 +267,62 @@ pending at write time.
   the debug APK both sides, and minify needs careful keep-rules for
   gson/tm4e reflection).
 
+
+### 4.6 Device round 1, continued: crash 2 + the tail-only report problem (2026-09-06)
+
+**Crash 2 (new signature, build `3fb404f`).** After installing the latest
+green APK, the owner still crashes — but the trace is a DIFFERENT failure:
+a MAIN-thread exception thrown during a MEASURE pass on the way into the
+editor (`Choreographer.doFrame` → `ViewRootImpl.performTraversals` →
+`AndroidComposeView.dispatchDraw` → `measureAndLayout` →
+`AnimatedContentMeasurePolicy.measure` → `PaddingValuesModifier.measure`
+→ …, frames cut), triggered by opening a file or the direct editor. The
+CME fix holds (different tail: main-thread frame crash vs
+`CoroutineScheduler` worker). Exception type + origin frames UNKNOWN —
+every owner paste was tail-only.
+
+**Why every paste was tail-only (root cause, not user error).** The app
+already instruments crashes: `MainActivity.installCrashLog` appends every
+uncaught exception to `filesDir/crash-log.txt` and `CrashReportOverlay`
+shows it in-app on next launch with COPY ALL / SHARE / CLEAR. But the
+overlay displayed only the LAST 6000 BYTES of the file, and the file
+accumulates ALL records — after many crashes the newest record's header
+(the `java.…Exception` line, i.e. the diagnosis) falls outside the
+window. The owner literally could not paste the header.
+
+**Fix (commit `591be79`, CI run 34007275621 ✅):**
+- `installCrashLog`: records are HEADER-FIRST and FRAME-CAPPED — the
+  exception line, then the first 80 frames (origin + app/sora code), a
+  `… N more frames` marker, compact cause chain (8 frames, depth ≤ 5)
+  and suppressed; the identical Compose/ViewRootImpl tail is dropped.
+  The file is bounded (~60 KB, trimmed at a record boundary).
+- `CrashReportOverlay`: shows the NEWEST record FROM ITS HEADER
+  (`lastIndexOf("\n==== ")` → `take(9_000)`), not a byte-tail of the
+  whole file — COPY ALL now yields a complete, diagnosable record.
+
+**Robolectric reproduction attempt (same commits, negative result).**
+`EditorLaunchMeasureReproTest` drives the real editor screen end-to-end
+(project + file seeded, `EditorScreen` composed via a compose rule —
+own VM, sora CodeEditor, TextMate language + scheme effects, VM file
+open + text replay, measure/layout frames + compose clock). Iterations:
+(1) via the real activity → died in `onResume` on an UNSHADOWED
+`Environment.isExternalStorageManager` (real AOSP code on the JVM,
+AIOOBE) — a Robolectric gap, not the bug; a custom shadow attempt hit a
+`BootstrapMethodError` in the shadow linkage; (2) composing
+`EditorScreen` directly — **GREEN: the editor screen composes, measures
+and lays out cleanly with an open file.** Conclusion: the device crash
+is NOT in pure-JVM Compose/editor measure logic — it needs device-only
+factors (real frame pacing mid-`AnimatedContent` transition, render
+path, IME insets, or the owner's actual last-open file/state). The test
+stays as the editor-screen integration smoke.
+
+**Owner flow for the next crash report:** install the newest green APK →
+(old crash-log can be CLEARED first — optional) → reproduce the crash →
+relaunch → the overlay now shows the newest record FROM ITS HEADER →
+COPY ALL → paste in chat. That record names the exception and its first
+frames, and crash 2 gets root-caused the same way crash 1 was.
+
+**CI ledger addendum:** 34006261565 F (repro v1, env shadow gap),
+34006593820 F (repro v1b, shadow bootstrap), 34006932947 F (repro v2
+activity, same gap), **34007275621 S (`61c39cc` — instrumentation fix +
+compose-rule repro, current)**.
