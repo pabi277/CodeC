@@ -446,3 +446,11 @@ whole log file, which cut off exactly the lines that diagnose the crash;
 fixed in `591be79`. Optional before reproducing: tap **CLEAR** so the
 overlay shows only the new crash. Also note the file type of the file
 you opened when it crashed.
+
+**2026-09-06 update — the open-file crash is FIXED (`288b760`):** the
+full crash record named it: `IllegalStateException: LayoutNode should be
+attached to an owner` — the editor Column (under `imePadding()`,
+inside the nav transition) measuring a detached child; a Compose
+1.7.1-era bug family, fixed by bumping the Compose BOM to 2024.12.01
+(1.7.6). If ANY crash recurs in this round, the §-above COPY ALL flow
+still applies — the report now always starts at the exception line.

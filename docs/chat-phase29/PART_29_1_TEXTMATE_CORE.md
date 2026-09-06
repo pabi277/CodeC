@@ -326,3 +326,58 @@ frames, and crash 2 gets root-caused the same way crash 1 was.
 34006593820 F (repro v1b, shadow bootstrap), 34006932947 F (repro v2
 activity, same gap), **34007275621 S (`61c39cc` — instrumentation fix +
 compose-rule repro, current)**.
+
+### 4.7 Crash 2 ROOT-CAUSED and fixed (2026-09-06, `288b760`)
+
+**The full record arrived** (the §4.6 instrumentation worked — first
+header-first COPY ALL):
+
+```
+java.lang.IllegalStateException: LayoutNode should be attached to an owner
+  at …LayoutNodeKt.requireOwner(LayoutNode.kt:1561)
+  at …MeasurePassDelegate.remeasure(…:683)      ← measuring a DETACHED child
+  at …RowColumnMeasurePolicyKt.measure(…:119)   ← a Column measuring children
+  at …ColumnMeasurePolicy.measure(Column.kt:208)
+  at …InsetsPaddingModifier.measure(…:359)      ← imePadding()
+  at …FillNode.measure(Size.kt:699)             ← fillMaxSize Box chain
+  … Box → Box → Box …
+  at …AnimatedEnterExitMeasurePolicy.measure(AnimatedVisibility.kt:812)
+  at …EnterExitTransitionModifierNode.measure(…:1173)
+  … AnimatedContent transition content (AnimatedContent.kt:781)
+  … outer measure chain ← AndroidComposeView.dispatchDraw → measureAndLayout
+```
+
+**Diagnosis:** the editor screen's own
+`Column(Modifier.fillMaxSize().imePadding())` — entered through the
+NavHost's default slide+fade `AnimatedContent`/`AnimatedVisibility`
+transition — measures a child that has been DETACHED from the
+composition, during the draw-driven remeasure
+(`dispatchDraw → measureAndLayout → remeasureAndRelayoutIfNeeded`).
+Nothing in our code measures stale nodes: this is the
+detached-node-measured-during-transition crash family of Compose
+**1.7.0/1.7.1** (AnimatedContent + enter/exit + insets padding +
+measure-during-draw), with multiple fixes landing across the 1.7 patch
+line. Our pin was exactly BOM `2024.09.00` = compose **1.7.1**.
+(Consistent with all evidence: crash only on device — real frame-paced
+transition + draw-driven remeasure; the Robolectric compose-rule run of
+the same screen was clean; not the CME from crash 1.)
+
+**Fix:** `composeBom 2024.09.00 → 2024.12.01` (compose 1.7.1 → **1.7.6**,
+material3 1.3.1) — the last stable BOM of the 1.7 line; patch-level,
+navigation-compose 2.8.9-compatible, no API changes needed (zero source
+edits compiled first try). APK impact: 24,246,660 → 24,257,990 B
+(+11 KB, noise; still +2.12 MiB vs `main` — same §4.5 budget picture,
+owner verdict pending).
+
+**Regression pin:** `EditorLaunchMeasureReproTest` gained a second test
+that drives a REAL `NavHost` transition into the editor
+(`autoAdvance = false`, 60 frame steps through the ~700 ms transition,
+each frame = recomposition + measure + layout while the TextMate
+dispatchers deliver) — the device crash's exact interleaving. Both tests
+green on 1.7.6. (Verified after the fact only on the fixed version —
+the device round is the final arbiter.)
+
+**CI ledger addendum:** 34008988014 S (`45162fa` build-visibility:
+versionName carries the CI run number; About shows it; crash dialog
+title = exception line), 34010200911 F (repro test missing import),
+**34010505276 S (`288b760` — the crash-2 fix, current)**.
