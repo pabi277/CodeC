@@ -141,8 +141,18 @@ object CodeCompletionEngine {
                 // snippets after a trigger word: offer the ones the trigger
                 // actually names, and only fall back to the whole pack when
                 // nothing matches (the pre-30 behaviour, capped).
-                val relevant = pack.filter { triggerMatches(it, trigger) && it.label != trigger }
-                items += (relevant.ifEmpty { pack.filter { it.label != trigger } })
+                // Phase 30.1 — the "don't offer the word back" test moved from
+                // the LABEL to the INSERT TEXT, because pack labels ARE trigger
+                // words. Measured on the real shell pack: `if ` matched exactly
+                // ONE item — the pack's own `if` block — and the label test
+                // threw it away, so `relevant` came up empty and the fallback
+                // dumped all 16 shell snippets (`echo`, `read`, `elseif`, …)
+                // with no if-block among them. Same shape for Python `def `
+                // (`deft`/`defs`/`defst`, no `def`). An item whose body really
+                // is just the trigger word is still excluded (`import ` must
+                // not offer an item that inserts `import `).
+                val relevant = pack.filter { triggerMatches(it, trigger) && !it.retypes(trigger) }
+                items += (relevant.ifEmpty { pack.filter { !it.retypes(trigger) } })
                     .take(MAX_SNIPPET_ITEMS)
             }
         }
@@ -211,32 +221,33 @@ object CodeCompletionEngine {
 
     /**
      * Phase 30.1 — the snippet source: the vendored MIT packs when they are
-     * installed (device: always; host tests: injected), plus the two CodeC
-     * extras the packs cannot express. When no pack loads at all the built-in
-     * tables take over, so a broken asset degrades to the 22.x behaviour
-     * instead of leaving the phone with nothing.
+     * installed (device: always; host tests: injected) with CodeC's own tables
+     * appended as a TAIL; when no pack loads at all the tables are the whole
+     * list, so a broken asset degrades to the 22.x behaviour instead of
+     * leaving the phone with nothing.
+     *
+     * The tail is load-bearing. Pack labels are short *prefixes* (`bg`, `for`,
+     * `deft`), so a word from the OLD descriptive labels no longer matches
+     * anything. Measured with packs alone (JVM harness on the real assets):
+     * Markdown `head` returned ZERO items — `# Heading` was a 22.6 device-
+     * accepted chip and no pack prefix is reachable by typing `head`; Python
+     * `pr` returned only `property`, so `print(...)` was gone. The tail brings
+     * both back, and the pack still ranks FIRST (`rankSnippets` sorts a tier by
+     * label length, and prefix labels are shorter than body-first-lines), so
+     * the tail only ever adds what the pack cannot express. It also carries the
+     * two CodeC-only snippets: the phone-optimised HTML skeleton (what `doc`
+     * pinned in 22.6) and the Termux-resolved shebang (29.7 — that interpreter
+     * path lives in CodeC's private files dir, which no upstream pack knows).
      */
     private fun snippetItems(language: LanguageType, fileName: String?): List<CompletionItem> {
         val pack = runCatching { SnippetLibrary.snippetsFor(language, fileName) }
             .getOrDefault(emptyList())
-        return if (pack.isEmpty()) builtinSnippets(language) else pack + extras(language)
-    }
-
-    /** CodeC-specific snippets no upstream pack can carry. */
-    private fun extras(language: LanguageType): List<CompletionItem> = when (language) {
-        // The phone-optimised HTML5 skeleton (viewport meta included). The
-        // pack's own `!`/`html5` entries exist but are unreachable by typing
-        // `doc`, which is what the 22.6 device round pinned.
-        LanguageType.HTML -> listOf(snippet("<!DOCTYPE html> skeleton", HTML_SKELETON))
-        // CodeC's shell lives in app-private storage; no upstream pack knows
-        // the shebang path that makes a `.sh` file runnable here.
-        LanguageType.SHELL -> listOf(
-            snippet(
-                "#!/data/data/com.codeci.ide/files/usr/bin/sh",
-                "#!/data/data/com.codeci.ide/files/usr/bin/sh\n"
-            )
-        )
-        else -> emptyList()
+        if (pack.isEmpty()) return builtinSnippets(language)
+        // `seen.add` dedupes by label: an entry both sources claim keeps its
+        // pack copy (that is what `doc` → DOCTYPE skeleton relied on before).
+        val seen = HashSet<String>(pack.size + 16)
+        pack.forEach { seen.add(it.label) }
+        return pack + builtinSnippets(language).filter { seen.add(it.label) }
     }
 
     /**
@@ -285,10 +296,15 @@ object CodeCompletionEngine {
     private fun snippet(label: String, insert: String) =
         CompletionItem(label, insert, CompletionKind.SNIPPET, "snippet")
 
+    /** True when accepting this item would only re-type [word] (no expansion). */
+    private fun CompletionItem.retypes(word: String): Boolean = insertText.trim() == word
+
     /**
-     * Phase 30.1 — the FALLBACK tables: CodeC's own 22.x/29.x snippets, used
-     * only while no pack is installed (host unit tests without assets) or when
-     * every pack asset failed to read. On a device the packs win.
+     * Phase 30.1 — CodeC's own 22.x/29.x snippet tables. Two roles since the
+     * packs landed: the WHOLE list while no pack is installed (host unit tests
+     * without assets, or every pack asset failed to read), and a deduped TAIL
+     * after the pack on a device — see [snippetItems] for why that tail is
+     * load-bearing.
      */
     private fun builtinSnippets(language: LanguageType): List<CompletionItem> = when (language) {
         LanguageType.PYTHON -> listOf(

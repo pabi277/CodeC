@@ -236,6 +236,31 @@ class EmmetTest {
     }
 
     @Test
+    fun `a text node keeps its spaces, prose still stops at one`() {
+        // `a{Link $}` and `p{Hello World}` are Emmet text/numbered nodes: the
+        // space sits INSIDE the braces, so the walk-back keeps it.
+        assertEquals("a{Link \$}", Emmet.abbreviationAt("a{Link \$}", 9, LanguageType.HTML))
+        val body = "<body>\n  p{Hello World}"
+        assertEquals("p{Hello World}", Emmet.abbreviationAt(body, body.length, LanguageType.HTML))
+        assertNotNull(Emmet.completionItemFor("a{Link \$}", 9, LanguageType.HTML, "i.html"))
+        // Two text nodes, each with a space, in one abbreviation.
+        assertEquals(
+            "div>p{a b}+p{c d}",
+            Emmet.abbreviationAt("div>p{a b}+p{c d}", 16, LanguageType.HTML)
+        )
+        // Outside a text node a space still ends the token (`ul> li*2` → `li*2`),
+        // prose never fires, and an UNBALANCED `{` ahead of the caret produces
+        // no expansion — the walk-back may return `{World`, but the parser
+        // refuses it (refusing beats guessing, §3.3).
+        assertEquals("li*2", Emmet.abbreviationAt("ul> li*2", 8, LanguageType.HTML))
+        assertNull(Emmet.completionItemFor("<p>Hello {World", 15, LanguageType.HTML, "i.html"))
+        assertNull(Emmet.expand("{World", LanguageType.HTML, ""))
+        assertNull(Emmet.abbreviationAt("<p>Hello World", 14, LanguageType.HTML))
+        // CSS has no brace-text syntax: a space ends the token there too.
+        assertNull(Emmet.abbreviationAt("a { p10 20", 10, LanguageType.CSS))
+    }
+
+    @Test
     fun `markup is refused inside a tag, a string or a comment`() {
         assertNull(Emmet.abbreviationAt("<div class=x>", 12, LanguageType.HTML))
         assertNull(Emmet.abbreviationAt("<a href=\"ul>li", 14, LanguageType.HTML))

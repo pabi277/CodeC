@@ -70,8 +70,28 @@ object Emmet {
         val jsx = language == LanguageType.JAVASCRIPT || language == LanguageType.TYPESCRIPT
         val lineStart = text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0))
             .let { if (it < 0) 0 else it + 1 }
+        // A markup TEXT NODE may contain spaces (`a{Link $}`, `p{Hello
+        // World}`), so while walking back a space belongs to the token as long
+        // as we are still inside a `{…}` we have not closed — depth counted
+        // from the caret backwards, so the opening `{` ends the allowance and
+        // prose keeps stopping at its first space (`ul> li*2` → `li*2`). CSS
+        // has no brace-text syntax and `{`/`}` are not CSS token chars, so the
+        // allowance is markup-only.
         var start = cursor
-        while (start > lineStart && isTokenChar(text[start - 1], css)) start--
+        var openBraces = 0
+        while (start > lineStart) {
+            val c = text[start - 1]
+            if (isTokenChar(c, css)) {
+                if (!css) {
+                    if (c == '}') openBraces++ else if (c == '{') openBraces--
+                }
+                start--
+            } else if (!css && c == ' ' && openBraces > 0) {
+                start--
+            } else {
+                break
+            }
+        }
         val token = text.substring(start, cursor)
         if (token.isEmpty() || token.length > MAX_ABBREVIATION) return null
         val before = text.substring(lineStart, start)

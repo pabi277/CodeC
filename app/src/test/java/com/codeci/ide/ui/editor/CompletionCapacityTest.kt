@@ -23,7 +23,9 @@ import org.robolectric.annotation.Config
  * REAL vendored snippet packs (Robolectric + APK assets):
  *
  *  - 30.1 `for` in C/Python offers more than the old 1–2 snippets, `doc` in
- *    HTML still surfaces the DOCTYPE skeleton, master switch OFF ⇒ nothing.
+ *    HTML still surfaces the DOCTYPE skeleton, the built-in tail keeps the
+ *    descriptive labels a prefix-only pack cannot reach (`@med`, `head`, `pr`,
+ *    shell `if `), master switch OFF ⇒ nothing.
  *  - 30.2 `ul>li*3` and `!` expand in HTML (rank 0, tap inserts a list), and
  *    Emmet never fires in a C file.
  *  - 30.3 a short prefix yields MORE THAN EIGHT candidates for the policy
@@ -88,6 +90,51 @@ class CompletionCapacityTest {
         // The typed form from the 22.6 test still works too.
         val typed = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML, "index.html")
         assertTrue(typed.any { it.insertText.contains("<!DOCTYPE html>") })
+    }
+
+    @Test
+    fun `the built-in tail keeps the labels a prefix-only pack cannot reach`() {
+        // Pack labels are short PREFIXES (`bg`, `for`, `deft`), so a word from
+        // the old descriptive labels matches nothing in the pack alone.
+        // Measured with packs only: Markdown `head` → ZERO items and Python
+        // `pr` → `property` alone (`print(...)` gone), both device-accepted in
+        // 22.6. The built-in tables ride along as a deduped tail for exactly
+        // this reason — and CSS `@med` shows the tail ADDING to a pack hit
+        // (the pack's own `med` media query stays rank 0).
+        val css = CodeCompletionEngine.completions("@med", 4, LanguageType.CSS, "site.css")
+        assertEquals("med", css.first().label)
+        assertTrue(
+            "CSS `@med`: ${css.map { it.label }}",
+            css.any { it.label.startsWith("@media") && it.insertText.contains("{") }
+        )
+
+        val md = CodeCompletionEngine.completions("head", 4, LanguageType.MARKDOWN, "notes.md")
+        assertTrue("Markdown `head`: ${md.map { it.label }}", md.any { it.label.contains("Heading") })
+
+        val py = CodeCompletionEngine.completions("pr", 2, LanguageType.PYTHON, "a.py")
+        assertTrue("Python `pr`: ${py.map { it.label }}", py.any { it.insertText.startsWith("print(") })
+        // The pack still outranks the tail: prefix labels are shorter, and
+        // `rankSnippets` sorts a tier by label length.
+        assertEquals("property", py.first().label)
+
+        // The shell/python TRIGGER path: pack labels ARE trigger words (`if`,
+        // `def`), so "don't offer the word back" has to test the INSERT TEXT,
+        // not the label — otherwise the one matching block is dropped and the
+        // whole-pack fallback dumps 16 unrelated shell snippets instead.
+        val sh = CodeCompletionEngine.completions("if ", 3, LanguageType.SHELL, "run.sh")
+        assertTrue(
+            "Shell `if `: ${sh.map { it.label }}",
+            sh.any { it.insertText.contains("then") && it.insertText.contains("fi") }
+        )
+        val pyDef = CodeCompletionEngine.completions("def ", 4, LanguageType.PYTHON, "a.py")
+        assertTrue("Python `def `: ${pyDef.map { it.label }}", pyDef.any { it.label == "def" })
+        // Before the tail + the insert-text test this was `deft`/`defs`/`defst`
+        // only; it is now the pack's `def` first and CodeC's `def function():`.
+        assertEquals("def", pyDef.first().label)
+        assertTrue(pyDef.size >= 4)
+        // The 16-item whole-pack dump is gone: a trigger offers the blocks it
+        // names, not every shell snippet that happens to start with `if`.
+        assertTrue("Shell `if ` grew to ${sh.map { it.label }}", sh.size <= 4)
     }
 
     @Test
@@ -296,7 +343,8 @@ class CompletionCapacityTest {
         )
         assertTrue("the safety cap still holds", items.size <= CodeCompletionEngine.MAX_ITEMS)
         // Snippets are what lifted the count: the old tables gave 4 snippet
-        // matches for this prefix (7 candidates in total), the packs give 8.
+        // matches for this prefix (7 candidates in total), the pack gives 8 and
+        // the built-in tail (§3.5) 4 more — 12 snippets, 13 candidates.
         assertTrue(
             "snippets: ${items.count { it.kind == CompletionKind.SNIPPET }}",
             items.count { it.kind == CompletionKind.SNIPPET } > 4
