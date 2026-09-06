@@ -239,15 +239,18 @@ class EmmetTest {
     fun `a text node keeps its spaces, prose still stops at one`() {
         // `a{Link $}` and `p{Hello World}` are Emmet text/numbered nodes: the
         // space sits INSIDE the braces, so the walk-back keeps it.
-        assertEquals("a{Link \$}", Emmet.abbreviationAt("a{Link \$}", 9, LanguageType.HTML))
+        val numbered = "a{Link \$}"
+        assertEquals(numbered, Emmet.abbreviationAt(numbered, numbered.length, LanguageType.HTML))
         val body = "<body>\n  p{Hello World}"
         assertEquals("p{Hello World}", Emmet.abbreviationAt(body, body.length, LanguageType.HTML))
-        assertNotNull(Emmet.completionItemFor("a{Link \$}", 9, LanguageType.HTML, "i.html"))
-        // Two text nodes, each with a space, in one abbreviation.
-        assertEquals(
-            "div>p{a b}+p{c d}",
-            Emmet.abbreviationAt("div>p{a b}+p{c d}", 16, LanguageType.HTML)
-        )
+        assertNotNull(Emmet.completionItemFor(numbered, numbered.length, LanguageType.HTML, "i.html"))
+        // Two text nodes, each with a space, in one abbreviation. Carets are
+        // `.length`, never a hand-counted literal: this case first shipped with
+        // 16 for a 17-char string, so the walk-back stopped before the closing
+        // `}` and the assertion (not the engine) was wrong — CI run
+        // 34040754444, the phase's one for-cause round.
+        val twoNodes = "div>p{a b}+p{c d}"
+        assertEquals(twoNodes, Emmet.abbreviationAt(twoNodes, twoNodes.length, LanguageType.HTML))
         // Outside a text node a space still ends the token (`ul> li*2` → `li*2`),
         // prose never fires, and an UNBALANCED `{` ahead of the caret produces
         // no expansion — the walk-back may return `{World`, but the parser
