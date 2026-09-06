@@ -25,7 +25,6 @@ import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.lang.styling.inlayHint.InlayHintsContainer
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.ContentListener
-import io.github.rosemoe.sora.text.batchEdit
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import kotlinx.coroutines.Dispatchers
@@ -232,19 +231,22 @@ fun SoraEditorHost(
     // Suppresses the sora→VM echo while WE replay a VM-driven change into sora.
     val pushing = remember { arrayOf(false) }
 
-    DisposableEffect(editor) {
-        fun pushToVm(content: Content) {
-            if (pushing[0]) return // our own replay; the VM already holds this text
-            val newText = content.toString()
-            syncedText = newText
-            soraHasText = newText
-            val cursor = content.cursor
-            val range = TextRange(cursor.left, cursor.right)
-            syncedSelection = range
-            viewModel.updateCode(TextFieldValue(newText, range))
-        }
+    // The sora→VM content listener, hoisted to the composable level: the
+    // VM→sora replay below replaces sora's Content OBJECT wholesale
+    // (setText), and the listener must be re-attached to each new instance.
+    val contentListener = remember(editor) {
+        object : ContentListener {
+            fun pushToVm(content: Content) {
+                if (pushing[0]) return // our own replay; the VM already holds this text
+                val newText = content.toString()
+                syncedText = newText
+                soraHasText = newText
+                val cursor = content.cursor
+                val range = TextRange(cursor.left, cursor.right)
+                syncedSelection = range
+                viewModel.updateCode(TextFieldValue(newText, range))
+            }
 
-        val contentListener = object : ContentListener {
             override fun beforeReplace(content: Content) = Unit
 
             override fun afterInsert(
@@ -257,6 +259,8 @@ fun SoraEditorHost(
                 endLine: Int, endColumn: Int, deletedContent: CharSequence
             ) = pushToVm(content)
         }
+    }
+    DisposableEffect(editor) {
         editor.text.addContentListener(contentListener)
 
         val selectionReceipt = editor.subscribeEvent(
@@ -336,11 +340,27 @@ fun SoraEditorHost(
                     // Phase 27.1 — a full replay invalidates ghost anchors;
                     // the effect above repaints from the fresh VM state.
                     ed.setInlayHints(null)
-                    ed.text.batchEdit { content ->
-                        val lastLine = content.lineCount - 1
-                        content.delete(0, 0, lastLine, content.getColumnCount(lastLine))
-                        content.insert(0, 0, target.text)
-                    }
+                    // 2026-09-06 (crash 2 follow-up, device round): ATOMIC
+                    // wholesale replacement. The old incremental delete-all +
+                    // insert dispatched afterDelete into sora's layout at a
+                    // moment it can legitimately be empty-handed:
+                    // createLayout() — run by setTextSize / setText /
+                    // wordwrap / inlay-renderer changes, i.e. by our own
+                    // config effects around a file open — rebuilds the
+                    // per-line width lists ASYNCHRONOUSLY (LineBreakLayout.
+                    // measureAllLines uses a TaskMonitor). A multi-line
+                    // delete in that window hits BlockIntList.removeRange
+                    // on an EMPTY list → IndexOutOfBoundsException
+                    // (reproduced in CI by EditorLaunchMeasureReproTest's
+                    // nav-transition case; the same mid-measure churn fed
+                    // the on-device detached-LayoutNode crash). setText
+                    // replaces the Content object wholesale — one
+                    // ACTION_SET_NEW_TEXT event, no incremental delete
+                    // dispatch — and rebuilds the layout AFTER the new
+                    // content is set. Our listener follows the Content
+                    // object, so re-attach it to the new instance.
+                    ed.setText(target.text)
+                    ed.text.addContentListener(contentListener)
                     val start = target.selection.start.coerceIn(0, target.text.length)
                     val end = target.selection.end.coerceIn(0, target.text.length)
                     val indexer = ed.text.indexer
