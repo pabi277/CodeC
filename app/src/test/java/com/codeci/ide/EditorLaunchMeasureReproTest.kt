@@ -13,6 +13,8 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
 import java.io.File
 
 /**
@@ -35,7 +37,7 @@ import java.io.File
  * integration smoke for future phases.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], shadows = [ShadowEnvironmentStorageManager::class])
 class EditorLaunchMeasureReproTest {
 
     @Test
@@ -108,4 +110,18 @@ class EditorLaunchMeasureReproTest {
             shadowOf(Looper.getMainLooper()).idle()
         }
     }
+}
+
+
+/**
+ * This Robolectric version does not shadow
+ * [android.os.Environment.isExternalStorageManager], so the real AOSP body
+ * runs under the JVM and crashes (AIOOBE inside the framework). MainActivity
+ * legitimately calls it in onResume (all-files-access banner logic) —
+ * shadow it for the launch smoke: false just skips storage-dir setup.
+ */
+@Implements(android.os.Environment::class)
+class ShadowEnvironmentStorageManager {
+    @Implementation
+    fun isExternalStorageManager(): Boolean = false
 }
