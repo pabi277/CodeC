@@ -40,6 +40,21 @@ class EditorLaunchMeasureReproTest {
 
     @Test
     fun `cold start into last-open file measures the editor without crashing`() {
+        // The failure's STACK is the diagnosis, and CI annotations (the only
+        // channel readable from this sandbox) carry just the message — so on
+        // any crash, rethrow with the trace embedded in the message.
+        try {
+            driveEditorLaunchAndMeasure()
+        } catch (t: Throwable) {
+            val trace = android.util.Log.getStackTraceString(t).lineSequence()
+                .take(60).joinToString("\n")
+            throw AssertionError(
+                "Editor-launch measure crashed: ${t.javaClass.name}: ${t.message}\n$trace", t
+            )
+        }
+    }
+
+    private fun driveEditorLaunchAndMeasure() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val info = ProjectManager(context)
             .createProject("repro", includeStarter = false)
