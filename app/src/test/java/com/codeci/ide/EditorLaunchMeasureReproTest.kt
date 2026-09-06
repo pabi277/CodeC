@@ -1,7 +1,15 @@
 package com.codeci.ide
 
 import android.content.Context
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.test.core.app.ApplicationProvider
 import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.ProjectManager
@@ -97,6 +105,87 @@ class EditorLaunchMeasureReproTest {
                 .joinToString("\n")
             throw AssertionError(
                 "Editor-screen measure crashed: ${t.javaClass.name}: ${t.message}\n$trace\n" +
+                    "(+${dropped[0]} boilerplate frames dropped)", t
+            )
+        }
+    }
+
+    /**
+     * The DEVICE crash's exact shape (2026-09-06 record): navigating INTO the
+     * editor through the NavHost AnimatedContent transition (slide+fade
+     * enter/exit), a draw-driven remeasure measures the editor Column's child
+     * after it was detached — IllegalStateException "LayoutNode should be
+     * attached to an owner" (compose 1.7.1, BOM 2024.09.00). This test drives
+     * a REAL NavHost transition frame by frame (autoAdvance off) so
+     * recomposition + measure + layout interleave exactly as on device. The
+     * BOM bump to 2024.12.01 (compose 1.7.6) is the fix candidate; this test
+     * is the regression pin for that class of bug.
+     */
+    @Test
+    fun `navigating into the editor through a nav transition measures without crashing`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val info = ProjectManager(context)
+            .createProject("repro2", includeStarter = false)
+            .getOrThrow()
+        File(info.root, "bench.c").writeText(
+            "#include <stdio.h>\nint main(void) { return 0; }\n"
+        )
+
+        try {
+            compose.mainClock.autoAdvance = false
+            var navRef: NavHostController? = null
+            compose.setContent {
+                MyApplicationTheme {
+                    val nav = rememberNavController().also { navRef = it }
+                    NavHost(navController = nav, startDestination = "home") {
+                        composable("home") {
+                            Box(Modifier.fillMaxSize()) { Text("home") }
+                        }
+                        composable(
+                            route = "editor?projectName={projectName}&fileName={fileName}",
+                            arguments = listOf(
+                                navArgument("projectName") { nullable = true },
+                                navArgument("fileName") { nullable = true }
+                            )
+                        ) { entry ->
+                            EditorScreen(
+                                projectName = entry.arguments?.getString("projectName"),
+                                fileName = entry.arguments?.getString("fileName")
+                            )
+                        }
+                    }
+                }
+            }
+            repeat(5) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+            compose.runOnIdle { navRef!!.navigate("editor?projectName=repro2&fileName=bench.c") }
+            // Step the whole transition (~700 ms) frame by frame; each frame
+            // runs recomposition, measure and layout while background
+            // dispatchers (TextMate warm-up, language creation, analysis)
+            // deliver results back to the main thread.
+            repeat(60) {
+                compose.mainClock.advanceTimeByFrame()
+                compose.waitForIdle()
+                Thread.sleep(30)
+            }
+            compose.mainClock.autoAdvance = true
+            compose.waitForIdle()
+        } catch (t: Throwable) {
+            val dropped = intArrayOf(0)
+            val trace = android.util.Log.getStackTraceString(t).lineSequence()
+                .filter { line ->
+                    if (!line.startsWith("\tat ")) return@filter !line.startsWith("\tat ")
+                    val boilerplate = line.contains("java.base/") ||
+                        line.contains("org.junit.") ||
+                        line.contains("org.robolectric") ||
+                        line.contains("java.lang.reflect") ||
+                        line.contains("androidx.test") ||
+                        line.contains("android.app.Instrumentation")
+                    if (boilerplate) { dropped[0]++; false } else true
+                }
+                .take(90)
+                .joinToString("\n")
+            throw AssertionError(
+                "Nav-transition-into-editor crashed: ${t.javaClass.name}: ${t.message}\n$trace\n" +
                     "(+${dropped[0]} boilerplate frames dropped)", t
             )
         }
