@@ -464,3 +464,11 @@ Owner verdict on the `db56824`/`9b5c319` build (`1.3.16`):
 and device-verified.** Remaining: merge on the owner's explicit
 command (standing rule — no PR/merge without it). CI ledger:
 34011630954 S (`9b5c319`), 34025618209 S (`f7db714`).
+
+### 4.11 MERGED (2026-09-06, owner: "Merge it")
+
+PR **#54** → `main`, merge commit (history preserved, session branch
+kept). Phase 29 complete: implementation, CI, device round, and the
+size verdict all closed. Next per the queue: 30 snippets/Emmet,
+31 LSP Packages, 32 phone canvas, 33 first-hour (owner's call), plus
+the 28.3/28.4 Keys remainder.
