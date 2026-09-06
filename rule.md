@@ -309,9 +309,12 @@ Every update updates the docs **in the same commit**:
   three exit conditions incl. the plan's named test: prefix `i` in C → 10
   candidates vs 7 before). Two real bugs found by those tests pre-CI
   (`TM_DIRECTORY`'s chained `substringBeforeLast` returning "" for a plain
-  `proj/main.c`; bare `*` in `ul>*` refused). **Gate = owner device round**
-  (`docs/TROUBLESHOOTING.md` §13). Records: `docs/chat-phase30/` (README +
-  §3 of each part), JOURNEY §41. **No PR/merge without the owner's command.**
+  `proj/main.c`; bare `*` in `ul>*` refused). **CI GREEN first try: run
+  `34034889209`, tip `641f6e8` (4m34s — assemble + `:app:testDebugUnitTest`
+  + `:app:lintDebug` + bench); APK artifact delta +116 572 B (+0.11 MiB) vs
+  `main`. Gate = owner device round** (`docs/TROUBLESHOOTING.md` §13).
+  Records: `docs/chat-phase30/` (README + §3 of each part), JOURNEY §41.
+  **No PR/merge without the owner's command.**
 - **Session-tooling note (2026-09-06, Phase 30):** §5's "the agent sandbox has
   no JVM" is **no longer strictly true** and was used deliberately this phase:
   a JRE (PyPI `jdk4py`, Temurin 25) and a Kotlin compiler (npm

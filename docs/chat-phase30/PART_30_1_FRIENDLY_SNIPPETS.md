@@ -155,6 +155,12 @@ removes any dependence on Gradle's test order. The pack-loaded world is
 PASS = all three.
 ```
 
+**CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
+`:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the
+gradle-bootstrap shim, plus `:bench:assembleRelease :bench:testDebugUnitTest`);
+first try, no for-cause round. Artifact `CodeC-IDE` +116 572 B (+0.11 MiB / +0.117 MB)
+vs `main`.
+
 Host mirror (green, real assets — `CompletionCapacityTest`): C `for` → 4
 snippets (`for` `fora` `forc` `forg`, one a real `for (` loop) vs 1 before;
 Python `for` → 2 (`for` `forr`) vs 1; HTML `doc` → the pack `doctype` **and**

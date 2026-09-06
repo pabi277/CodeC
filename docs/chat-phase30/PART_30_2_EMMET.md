@@ -179,6 +179,12 @@ and the lone-Emmet chip vs the lone identifier that stays in key mode.
 PASS = all three.
 ```
 
+**CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
+`:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the
+gradle-bootstrap shim, plus `:bench:assembleRelease :bench:testDebugUnitTest`);
+first try, no for-cause round. Artifact `CodeC-IDE` +116 572 B (+0.11 MiB / +0.117 MB)
+vs `main`.
+
 Host mirror (green): item 1 — `ul>li*3` is rank 0 with detail `emmet`, and the
 accept math yields
 `<body>\n  <ul>\n      <li></li>\n      <li></li>\n      <li></li>\n  </ul>`

@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-06, `main` tip = PR #54 (Phase 29 merged); PHASE 30 (Offline completeness — MIT snippet packs + clean-room Emmet + strip capacity) 🚧 IMPLEMENTED on `arena/01a07646-codec` — owner: "Start phase 30"; all three parts in one build; 89 new host tests + 6 new cases, 157 green locally; CI + owner device round (`docs/TROUBLESHOOTING.md` §13) PENDING at write time; NO PR/merge without the owner's command; records in `docs/chat-phase30/` + JOURNEY §41. Before that: Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); BOTH crashes device-confirmed fixed; **device round 1 PASSED 2026-09-06 — checklist ALL PASS + APK-size deviation (+2.22 MB) ACCEPTED by the owner; MERGED to main via PR #54 (owner: "Merge it", 2026-09-06)**; records in `docs/chat-phase29/`):**
+**WHERE THINGS STAND (2026-09-06, `main` tip = PR #54 (Phase 29 merged); PHASE 30 (Offline completeness — MIT snippet packs + clean-room Emmet + strip capacity) 🚧 IMPLEMENTED on `arena/01a07646-codec` — owner: "Start phase 30"; all three parts in one build; 89 new host tests + 6 new cases, 157 green locally; **CI GREEN first try — run `34034889209`, tip `641f6e8`, 4m34s (assemble + `:app:testDebugUnitTest` + `:app:lintDebug` + bench); APK artifact delta +116 572 B (+0.11 MiB) vs `main`**; the owner device round (`docs/TROUBLESHOOTING.md` §13) is the only open gate; NO PR/merge without the owner's command; records in `docs/chat-phase30/` + JOURNEY §41. Before that: Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); BOTH crashes device-confirmed fixed; **device round 1 PASSED 2026-09-06 — checklist ALL PASS + APK-size deviation (+2.22 MB) ACCEPTED by the owner; MERGED to main via PR #54 (owner: "Merge it", 2026-09-06)**; records in `docs/chat-phase29/`):**
 
 - **Phase 30 (all three parts in one build) — WHAT is offered, not how it is
   accepted.** 30.1: the four hand-written snippet tables (7 C / 9 Python /
@@ -60,8 +60,9 @@ gate, invariants, docs policy) — follow it.
   candidates vs 7) · +2 `StripContextTest` · +4 `GhostCompletionTest` ·
   `CodeCompletionTest` pinned to the fallback world. Two bugs found pre-CI:
   `TM_DIRECTORY`'s chained `substringBeforeLast` ("" for `proj/main.c`) and a
-  refused bare `*` in `ul>*`. **Gate: `Build APK` green + owner device round
-  per `docs/TROUBLESHOOTING.md` §13.**
+  refused bare `*` in `ul>*`. **CI: `Build APK` run
+  `34034889209` GREEN first try (tip `641f6e8`, 4m34s; artifact +0.11 MiB
+  vs `main`). Gate: owner device round per `docs/TROUBLESHOOTING.md` §13.**
 - **Phase 29 (all three parts in one build) — TextMate is the editor's
   analyzer.** Sora `language-textmate` from the SAME 0.24.6 BOM (binary
   dep only, LGPL-2.1 notice in `assets/licenses/`); 24 MIT grammar JSONs +

@@ -148,6 +148,12 @@ for comparison: 16.7 ms per keystroke (25.1 law).
 PASS = both.
 ```
 
+**CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
+`:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the
+gradle-bootstrap shim, plus `:bench:assembleRelease :bench:testDebugUnitTest`);
+first try, no for-cause round. Artifact `CodeC-IDE` +116 572 B (+0.11 MiB / +0.117 MB)
+vs `main`.
+
 Host mirror (green): item 1 — Python `i` → 9 candidates, 8 chips, ⌄ opens the
 panel over the same list; the chip row is horizontally scrollable (27.2 code
 path unchanged). Item 2 — the ghost paints only `items.first()`; Enter is

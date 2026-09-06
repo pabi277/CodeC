@@ -1,8 +1,10 @@
 # CodeC Phase 30 — Offline completeness (snippets + Emmet)
 
 > **Status:** 🚧 **IMPLEMENTED (2026-09-06, owner: "Start phase 30") — all
-> three parts in one build on `arena/01a07646-codec`; CI + device round
-> pending at write time.** 89 new host tests (five files) + 6 new cases in
+> three parts in one build on `arena/01a07646-codec`; `Build APK` GREEN
+> first try (run `34034889209`, tip `641f6e8`, 4m34s: assemble +
+> `:app:testDebugUnitTest` + `:app:lintDebug` + the bench module); the owner
+> device round (`docs/TROUBLESHOOTING.md` §13) is the only open gate.** 89 new host tests (five files) + 6 new cases in
 > three existing ones; every law of Phase 27 re-pinned (`CompletionPolicy`
 > untouched). **No PR/merge without the owner's command.**
 >
@@ -55,9 +57,11 @@ and green; `CodeCompletionTest` (18, Phase 12/22.6) is untouched except for a
 | `ul>li*3` | HTML | nothing | **1 Emmet expansion at rank 0** |
 | `m10` | CSS | nothing | **1 Emmet declaration (`margin: 10px;`)** |
 
-**Budgets:** APK weight of the packs = **277 KB raw / ~54 KB deflated** (29
-JSON assets) — noise next to Phase 29's +2.2 MB engine chain, and well inside
-any reading of the 25.1 size law. Keystroke cost: the whole `completions()`
+**Budgets — MEASURED from the CI artifacts:** `CodeC-IDE` 24 257 802 B (main
+`31e319f`, run `34027216565`) → 24 374 374 B (this branch) = **+116 572 B (+0.11 MiB / +0.117 MB)**,
+i.e. ~54 KB of deflated pack JSON (277 KB raw across 29 assets) plus the new
+resolver/Emmet DEX. Noise next to Phase 29's +2.2 MB engine chain, and far
+inside any reading of the 25.1 size law. Keystroke cost: the whole `completions()`
 call on a **4 000-line** buffer with a ±20 000-char identifier window measured
 **1.8–4.5 ms** on the host JVM (the debounce already keeps it off the critical
 path; budget is 16.7 ms).

@@ -482,8 +482,10 @@ line and the panel row.
 **Steps** (each is one line — type exactly what is in backticks):
 
 1. Actions → latest green **Build APK** on the session branch → Artifacts →
-   **CodeC-IDE** → install. *(APK delta ≈ **+54 KB** — 29 snippet JSONs,
-   277 KB raw; Phase 29's TextMate assets and engine are unchanged.)*
+   **CodeC-IDE** → install. *(Latest green run: **34034889209*. APK artifact
+   delta **+116 572 B (+0.11 MiB / +0.117 MB) vs `main` — 29 snippet JSONs, 277 KB raw ≈ 54 KB
+   deflated, plus the new resolver/Emmet code; Phase 29's TextMate assets and
+   engine are unchanged.)*
 2. **C snippets (30.1):** open or create `main.c`, type `for` → several
    snippet chips (`for`, `fora`, `forc`, `forg`). Tap one → a real loop appears
    and the caret sits at its first hole. Then type `#inc` → `#inc` / `#incl` →
