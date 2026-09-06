@@ -386,3 +386,78 @@ until 28.4, no swipe-space between letters (spacedBy 4.dp only), and popup
 bubbles overflow their cap without clipping — on purpose (strip clip bug
 class — superseded after round 1: bubbles were removed entirely, previews live
 IN the cap (`CodecKeyboard`'s round-1 note).
+
+## 12. How to run the Phase 29 VS Code colour device round (owner runbook, 2026-09-05) — ✅ PASSED 2026-09-06
+
+> Phase 29 = TextMate (VS Code grammars + themes) as the editor's analyzer.
+> This card is the **exit gate**: all three parts (29.1 core / 29.2 language
+> parity / 29.3 regex retirement) ship in ONE build.
+
+**What you should see change:** a `.c` / `.py` / `.html` / `.ts` file now
+colours like VS Code Dark+ (the new default editor theme) instead of the old
+approximation; Go / Rust / PHP / Ruby / Lua / XML / YAML files are coloured
+for the first time (they were plain before); CSS no longer looks like HTML.
+
+**Steps:**
+
+1. Actions → latest green **Build APK** on the session branch → Artifacts →
+   **CodeC-IDE** → install.
+   *(APK size: measured at **+2.10 MiB** vs `main` (22.0 → 24.2 MB) —
+   over the planned +1.5 MiB budget; the weight is the TextMate engine
+   chain (joni/jcodings/gson/tm4e), not the grammars (~250 KB). This
+   deviation is flagged for the owner's verdict — PART_29_1 §4.5 —
+   please confirm accept/direct-a-strip when reporting the round.)*
+2. **Dark+ look:** open a C file with keywords, strings, comments,
+   preprocessor lines, numbers. Compare with VS Code Dark+ on desktop —
+   keywords blue `#569CD6`, strings orange `#CE9178`, comments green
+   `#6A9955`, numbers `#B5CEA8`, functions `#DCDCAA`, background `#1E1E1E`,
+   caret `#AEAFAD`, current line `#282826`, selection `#264F78`.
+3. **Typing still smooth:** type ~60 keys in a long `.c` file (bench.c if
+   you still have it) — no stuck keys, no lag, same feel as 28.2 (the
+   analyzer is INCREMENTAL now; it should feel no worse, ideally better on
+   very long files).
+4. **Every language:** open (or create) one file each of `.py`, `.html`,
+   `.css`, `.ts`, `.tsx`, `.go`, `.rs`, `.php`, `.rb`, `.lua`, `.xml`,
+   `.yaml`, `.md`, `.sh`, `.json` — each has its own distinct VS Code-like
+   colour (CSS clearly different from HTML; `.lua`/`.php`/`.rb` no longer
+   plain white). A plain `.txt` file must stay UNcoloured.
+5. **Theme switching:** Settings → Editor Theme → switch **Monokai**,
+   **Dracula**, **GitHub Dark**, back to **VS Code Dark+** — the editor
+   recolors immediately, no restart, no wrong-then-right flash of token
+   colors after the switch settles.
+6. **Nothing else regressed:** completions/ghost/strip still appear while
+   typing (engine untouched), CodeC Keys still types (its edits go through
+   the same sora buffer), find/replace + selection highlighting still work.
+7. Optional but useful: the FIRST open of a `.php` or `.rb` file after a
+   fresh app start may take a beat longer than usual once (their grammar
+   sets are ~1 MB and load lazily — PHP/Ruby warm-up was deliberately
+   deferred to keep app start light). Everything after that first open is
+   instant.
+
+**Report:** PASS/FAIL per numbered item (screenshots of the C file vs
+desktop VS Code are perfect evidence for item 2). Any wrong-looking color:
+name the file type + what you expected vs saw.
+
+**If the app CRASHES during this round (2026-09-06 update):** relaunch it —
+the crash-report overlay appears. **COPY ALL and paste it in chat.** The
+report now starts at the record's HEADER (the `java.…Exception` line +
+the first ~80 frames) — earlier builds showed only a byte-tail of the
+whole log file, which cut off exactly the lines that diagnose the crash;
+fixed in `591be79`. Optional before reproducing: tap **CLEAR** so the
+overlay shows only the new crash. Also note the file type of the file
+you opened when it crashed.
+
+**2026-09-06 update — the open-file crash is FIXED (two layers,
+`288b760` + `db56824`):** the full crash record named it:
+`IllegalStateException: LayoutNode should be attached to an owner` —
+the editor Column (under `imePadding()`, inside the nav transition)
+measuring a detached child; a Compose 1.7.1-era bug family, fixed by
+bumping the Compose BOM to 2024.12.01 (1.7.6). The CI nav-transition
+repro test then caught a second, deeper bug: the VM→sora full replay's
+incremental delete-all dispatched `afterDelete` into a layout whose
+per-line width lists sora rebuilds ASYNCHRONOUSLY after any
+`createLayout()` (font-size/language-config effects) →
+`BlockIntList.removeRange` on an empty list. Fixed by making the
+replay an atomic `setText`. If ANY crash recurs in this round, the
+§-above COPY ALL flow still applies — the report now always starts at
+the exception line.

@@ -13,24 +13,25 @@ import io.github.rosemoe.sora.lang.completion.CompletionPublisher
 import io.github.rosemoe.sora.lang.completion.SimpleCompletionItem
 import io.github.rosemoe.sora.lang.format.Formatter
 import io.github.rosemoe.sora.lang.styling.MappedSpans
-import io.github.rosemoe.sora.lang.styling.SpanFactory
-import io.github.rosemoe.sora.lang.styling.Styles
 import io.github.rosemoe.sora.lang.styling.TextStyle
+import io.github.rosemoe.sora.lang.styling.Styles
 import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.ContentReference
 import io.github.rosemoe.sora.text.TextRange
-import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.SymbolPairMatch
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
+import io.github.rosemoe.sora.langs.textmate.TextMateLanguage
 
 /**
  * Phase 25.2 — token kind → sora color-slot id. Pure; host-tested.
  *
+ * Used ONLY by the regex fallback analyzer below (29.3: the live editor
+ * colours through TextMate scopes; these slot ids remain for the fallback
+ * path, SmartTyping probes and tests).
+ *
  * Sora 0.24 has no dedicated STRING slot: strings and numbers both live in
- * [EditorColorScheme.LITERAL] in this adapter (the CodeC themes color them
- * identically via `EditorThemeColors.string`, and numbers share it — the
- * app's BasicTextField renderer made the same compromise visually).
+ * [EditorColorScheme.LITERAL] in this adapter.
  */
 object TokenStyleIds {
     fun styleIdFor(kind: TokenKind): Int = when (kind) {
@@ -45,19 +46,17 @@ object TokenStyleIds {
 }
 
 /**
- * Phase 25.2 — CodeC's tokenizer inside sora's analysis pipeline.
+ * Phase 25.2 — CodeC's regex tokenizer inside sora's analysis pipeline.
+ *
+ * **Phase 29.3: this is the FALLBACK, not the editor hot path.** The live
+ * analyzer is sora's TextMate `AsyncIncrementalAnalyzeManager` (VS Code
+ * grammars — see [TextMateSupport]); this class survives for files with no
+ * TextMate grammar (TEXT) and as the safety net when a grammar fails to
+ * load. `MultiLanguageSyntaxHighlighter.tokenize` is therefore no longer
+ * called per keystroke for any colourable language.
  *
  * Extends [SimpleAnalyzeManager], which runs [analyze] on its OWN background
- * thread with latest-request-wins semantics (insert/delete just schedule a
- * full re-run). The analyzer therefore tokenizes the whole buffer with the
- * SAME regex rules the app always used (`MultiLanguageSyntaxHighlighter.tokenize`)
- * OFF the main thread — the budget-critical difference from Phase 22 is that
- * nothing ever tokenizes on the UI thread anymore and the WIDGET no longer
- * relayouts spans per keystroke (sora draws its own line-partitioned spans).
- *
- * This is the honest v1: full re-tokenize per settled edit (a 175 kB file is
- * a background regex sweep; the 517-line HTML is ~2 ms). Incremental
- * per-line lexing is a follow-up behind `AsyncIncrementalAnalyzeManager`.
+ * thread with latest-request-wins semantics.
  */
 class CodeCAnalyzer(private val language: LanguageType) : SimpleAnalyzeManager<Int>() {
 
@@ -102,25 +101,38 @@ class LineColumnCursor(private val text: String) {
 }
 
 /**
- * Phase 25.2 — the sora `Language` for the CodeC editor window.
+ * Phase 25.2 → 29 — the sora `Language` for the CodeC editor window.
  *
- * - Analyzer: [CodeCAnalyzer] (CodeC regex rules → sora spans).
- * - Completions: `requireAutoComplete` feeds CodeC's existing engine
- *   results to sora's NATIVE panel at the caret (device round 3, owner
- *   request — replaces the app's bottom-anchored popup).
- * - Indent: [indentAdvanceFor] gives one level after a line that opens a
+ * - **Analyzer (29.1):** a sora [TextMateLanguage] built from the VS Code
+ *   grammar for the file's language (see [TextMateSupport]). Only
+ *   `getAnalyzeManager()` changed from 25.2 (T5): everything below is still
+ *   CodeC's own, so completions, indent behaviour and symbol pairs behave
+ *   exactly as in the device-accepted 25.2/26/27 rounds.
+ * - **Completions:** `requireAutoComplete` feeds CodeC's existing engine
+ *   results to sora's NATIVE panel at the caret. The TextMate language is
+ *   created with `collectIdentifiers = false` — its own identifier
+ *   completion never runs.
+ * - **Indent:** [indentAdvanceFor] gives one level after a line that opens a
  *   block (`{`, or `:` for Python); sora preserves the current line's
  *   indentation itself.
- * - Symbol pairs: standard C-family pairs + quotes, so `(` auto-closes and
- *   typing `)` over `)` skips (the 25.1 device evidence).
- * - Formatter: no-op — CodeC formats through the VM (clang-format / built-in,
- *   Phase 24 E.1) by editing the buffer, not through sora.
+ * - **Symbol pairs:** standard C-family pairs + quotes, so `(` auto-closes
+ *   and typing `)` over `)` skips (the 25.1 device evidence).
+ * - **Formatter:** no-op — CodeC formats through the VM (clang-format /
+ *   built-in, Phase 24 E.1) by editing the buffer, not through sora.
+ *
+ * Lifecycle: sora's `CodeEditor.setEditorLanguage` destroys the analyzer
+ * returned by [getAnalyzeManager] and then calls [destroy] on the OLD
+ * language — so [destroy] must not touch that analyzer again (it destroys
+ * the TextMate language object or the fallback, never both paths).
  */
-class CodeCLanguage(private val language: LanguageType) : Language {
+class CodeCLanguage private constructor(
+    private val language: LanguageType,
+    private val textMate: TextMateLanguage?,
+    private val fallbackAnalyzer: CodeCAnalyzer
+) : Language {
 
-    private val analyzer = CodeCAnalyzer(language)
-
-    override fun getAnalyzeManager(): AnalyzeManager = analyzer
+    override fun getAnalyzeManager(): AnalyzeManager =
+        textMate?.analyzeManager ?: fallbackAnalyzer
 
     override fun getInterruptionLevel(): Int = Language.INTERRUPTION_LEVEL_NONE
 
@@ -131,10 +143,8 @@ class CodeCLanguage(private val language: LanguageType) : Language {
         extraArguments: Bundle
     ) {
         // Phase 25.2 device-round 3 (owner: "sora is better than that") —
-        // sora's OWN panel now serves completions (enabled by default in
-        // CodeEditor; this is the only hook it needs). The engine and its
-        // results are the same as before — only the RENDERER changed: a
-        // native popup at the caret replaces the app's bottom-anchored one.
+        // sora's OWN panel now serves completions. The engine and its
+        // results are the same as before — only the RENDERER changed.
         // Runs on sora's completion thread (fast, windowed engine).
         val text = content.toString()
         val cursor = position.index.coerceIn(0, text.length)
@@ -170,10 +180,29 @@ class CodeCLanguage(private val language: LanguageType) : Language {
     override fun getNewlineHandlers(): Array<io.github.rosemoe.sora.lang.smartEnter.NewlineHandler> = arrayOf()
 
     override fun destroy() {
-        analyzer.destroy()
+        // The editor destroys the analyzer returned by getAnalyzeManager()
+        // (see class KDoc) — only tear down what it does NOT.
+        if (textMate == null) fallbackAnalyzer.destroy() else textMate.destroy()
     }
 
     companion object {
+
+        /**
+         * Build the language for a file. The TextMate grammar set for
+         * [language]/[fileName] must already be loaded
+         * ([TextMateSupport.ensureLanguageLoaded] — the editor host does
+         * this on a background coroutine before calling us). If the grammar
+         * is unavailable the 25.2 regex analyzer takes over so a broken
+         * asset degrades to 22.x colour, never to a crash.
+         */
+        fun create(language: LanguageType, fileName: String? = null): CodeCLanguage {
+            val scope = TextMateGrammars.scopeFor(language, fileName)
+            val textMate = scope?.let {
+                runCatching { TextMateLanguage.create(it, /* collectIdentifiers = */ false) }
+                    .getOrNull()
+            }
+            return CodeCLanguage(language, textMate, CodeCAnalyzer(language))
+        }
 
         /** Pure indent rule: one more level after a block-opener. Host-tested. */
         fun indentAdvanceFor(lineText: String, language: LanguageType = LanguageType.C): Int {
@@ -195,7 +224,7 @@ class CodeCLanguage(private val language: LanguageType) : Language {
             match.putPair('(', SymbolPairMatch.SymbolPair("(", ")"))
             match.putPair('[', SymbolPairMatch.SymbolPair("[", "]"))
             match.putPair('{', SymbolPairMatch.SymbolPair("{", "}"))
-            match.putPair('"', SymbolPairMatch.SymbolPair("\"", "\""))
+            match.putPair('\"', SymbolPairMatch.SymbolPair("\"", "\""))
             match.putPair('\'', SymbolPairMatch.SymbolPair("'", "'"))
             return match
         }

@@ -15,11 +15,20 @@ class EditorLineOpsTest {
     fun `commentPrefixFor maps languages`() {
         assertEquals("#", EditorLineOps.commentPrefixFor(LanguageType.PYTHON))
         assertEquals("#", EditorLineOps.commentPrefixFor(LanguageType.SHELL))
+        assertEquals("#", EditorLineOps.commentPrefixFor(LanguageType.RUBY))
+        assertEquals("#", EditorLineOps.commentPrefixFor(LanguageType.LUA))
+        assertEquals("#", EditorLineOps.commentPrefixFor(LanguageType.YAML))
         assertEquals("//", EditorLineOps.commentPrefixFor(LanguageType.C))
         assertEquals("//", EditorLineOps.commentPrefixFor(LanguageType.JAVASCRIPT))
+        assertEquals("//", EditorLineOps.commentPrefixFor(LanguageType.TYPESCRIPT))
         assertEquals("//", EditorLineOps.commentPrefixFor(LanguageType.CPP))
+        assertEquals("//", EditorLineOps.commentPrefixFor(LanguageType.GO))
+        assertEquals("//", EditorLineOps.commentPrefixFor(LanguageType.RUST))
         assertEquals("//", EditorLineOps.commentPrefixFor(LanguageType.JSON))
-        assertEquals("<!--", EditorLineOps.commentPrefixFor(LanguageType.HTML_CSS))
+        assertEquals("<!--", EditorLineOps.commentPrefixFor(LanguageType.HTML))
+        assertEquals("<!--", EditorLineOps.commentPrefixFor(LanguageType.XML))
+        // Markdown has no line-comment; it keeps the // default.
+        assertEquals("//", EditorLineOps.commentPrefixFor(LanguageType.MARKDOWN))
         assertEquals("//", EditorLineOps.commentPrefixFor(null))
     }
 

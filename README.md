@@ -119,6 +119,13 @@ The earlier foundations:
   highlights, replace-all), Format (`clang-format` bridge with built-in C-indenter
   fallback), bracket matching, compiler-error squiggles with tap-to-inspect and a
   missing-`;` quick fix, and a Ln/Col status bar.
+- **VS Code colour (Phase 29)**: syntax highlighting runs on the same TextMate
+  engine VS Code uses (sora `language-textmate`), with MIT grammar files for
+  C, C++, Python, JavaScript/TypeScript, HTML, CSS, JSON, Shell, Markdown, Go,
+  Rust, PHP, Ruby, Lua, XML and YAML. The default editor theme is **VS Code
+  Dark+** (real `dark_plus` token colors); Monokai, Dracula and GitHub Dark
+  remain in Settings. Grammars load once per process, lazily per language,
+  off the UI thread.
 - **Single files without a project**: the editor's file sheet treats the shared
   single-files folder as a first-class context — new file, open, run, delete, and
   "Save to project…" when a file graduates.

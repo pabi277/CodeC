@@ -40,11 +40,14 @@ class ThemeManager(private val context: Context) {
     }
 
     val editorThemeFlow: Flow<EditorThemeType> = context.dataStore.data.map { preferences ->
-        val themeString = preferences[EDITOR_THEME_KEY] ?: EditorThemeType.DRACULA.name
+        // Phase 29.1 — default editor theme is VS Code Dark+ for NEW users
+        // (no stored preference). Existing users keep their stored choice;
+        // a stored name that no longer resolves falls back to Dark+.
+        val themeString = preferences[EDITOR_THEME_KEY] ?: EditorThemeType.VS_CODE_DARK_PLUS.name
         try {
             EditorThemeType.valueOf(themeString)
         } catch (e: Exception) {
-            EditorThemeType.DRACULA
+            EditorThemeType.VS_CODE_DARK_PLUS
         }
     }
 

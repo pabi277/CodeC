@@ -37,12 +37,26 @@ class SyntaxHighlighterTest {
         assertEquals(LanguageType.PYTHON, LanguageType.fromFileName("script.py"))
         assertEquals(LanguageType.PYTHON, LanguageType.fromFileName("code/run.PY"))
         assertEquals(LanguageType.JAVASCRIPT, LanguageType.fromFileName("app.js"))
-        assertEquals(LanguageType.JAVASCRIPT, LanguageType.fromFileName("component.tsx"))
-        assertEquals(LanguageType.HTML_CSS, LanguageType.fromFileName("index.html"))
-        assertEquals(LanguageType.HTML_CSS, LanguageType.fromFileName("style.css"))
+        assertEquals(LanguageType.JAVASCRIPT, LanguageType.fromFileName("app.jsx"))
+        // Phase 29.2 — TypeScript is its own bucket now.
+        assertEquals(LanguageType.TYPESCRIPT, LanguageType.fromFileName("app.ts"))
+        assertEquals(LanguageType.TYPESCRIPT, LanguageType.fromFileName("component.tsx"))
+        // Phase 29.2 — HTML and CSS split into distinct buckets.
+        assertEquals(LanguageType.HTML, LanguageType.fromFileName("index.html"))
+        assertEquals(LanguageType.CSS, LanguageType.fromFileName("style.css"))
+        assertEquals(LanguageType.CSS, LanguageType.fromFileName("theme.scss"))
         assertEquals(LanguageType.JSON, LanguageType.fromFileName("data.json"))
         assertEquals(LanguageType.SHELL, LanguageType.fromFileName("setup.sh"))
         assertEquals(LanguageType.MARKDOWN, LanguageType.fromFileName("README.md"))
+        // Phase 29.2 — every run-profile language has a bucket.
+        assertEquals(LanguageType.GO, LanguageType.fromFileName("main.go"))
+        assertEquals(LanguageType.RUST, LanguageType.fromFileName("lib.rs"))
+        assertEquals(LanguageType.PHP, LanguageType.fromFileName("index.php"))
+        assertEquals(LanguageType.RUBY, LanguageType.fromFileName("app.rb"))
+        assertEquals(LanguageType.LUA, LanguageType.fromFileName("game.lua"))
+        assertEquals(LanguageType.XML, LanguageType.fromFileName("pom.xml"))
+        assertEquals(LanguageType.YAML, LanguageType.fromFileName("ci.yaml"))
+        assertEquals(LanguageType.YAML, LanguageType.fromFileName("ci.yml"))
         assertEquals(LanguageType.TEXT, LanguageType.fromFileName("notes.txt"))
         assertEquals(LanguageType.TEXT, LanguageType.fromFileName("Makefile"))
         assertEquals(LanguageType.TEXT, LanguageType.fromFileName(""))
@@ -142,7 +156,7 @@ class SyntaxHighlighterTest {
     @Test
     fun `html tags comments and css numbers are tokenized`() {
         val source = "<!-- hi -->\n<div class=\"x\">text</div>\nbody { color: #fff; margin: 8px; }"
-        val spans = MultiLanguageSyntaxHighlighter.tokenize(source, LanguageType.HTML_CSS)
+        val spans = MultiLanguageSyntaxHighlighter.tokenize(source, LanguageType.HTML)
         assertSpan(source, spans, "<!-- hi -->", TokenKind.COMMENT)
         assertSpan(source, spans, "<div", TokenKind.KEYWORD)
         assertSpan(source, spans, "</div", TokenKind.KEYWORD)

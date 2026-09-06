@@ -20,8 +20,12 @@ android {
     // targetSdk 28 compatibility mode so that downloaded binaries keep
     // working. CodeC is distributed via GitHub (not Play), so this is safe.
     targetSdk = 28
-    versionCode = 19
-    versionName = "1.3.15"
+    versionCode = 20
+    // The device round kept tripping over WHICH apk was installed (three
+    // crash reports pasted from a stale build). The CI run number (or a
+    // local timestamp) rides in versionName so Settings → About / app info
+    // answers it at a glance: "1.3.16 (340xxxx)".
+    versionName = "1.3.16" + (System.getenv("GITHUB_RUN_NUMBER")?.let { " ($it)" } ?: "")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -153,6 +157,18 @@ dependencies {
   // Phase 25.2 — sora-editor, the edit core (LGPL-2.1, BINARY dependency
   // only — no source vendored; see docs/chat-phase25/PART_25_2_SORA_PATH.md).
   implementation(libs.sora.editor)
+  // Phase 29.1 — TextMate: VS Code grammars + themes through sora's
+  // language-textmate module (same BOM version; binary dependency only).
+  // Exclusions (APK-budget trims, 2026-09-05): snakeyaml-engine is the
+  // YAML theme/grammar parser — CodeC ships ONLY .json grammars/themes,
+  // so it is dead weight (RawThemeReader only reaches it for YAML
+  // content-type sources); org.eclipse.jdt.annotation is compile-time
+  // @NonNull/@Nullable annotations. joni/jcodings/gson stay — they ARE
+  // the grammar engine (oniguruma regexes + JSON parsing).
+  implementation(libs.sora.language.textmate) {
+    exclude(group = "org.yaml")
+    exclude(group = "org.eclipse.jdt")
+  }
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)

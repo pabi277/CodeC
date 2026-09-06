@@ -1,6 +1,6 @@
 # CodeC Phase 29.1 — TextMate core
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M
+**Status:** 🚧 IMPLEMENTED (2026-09-05) · **Cost:** `[client-only]` · **Effort:** M
 · **Depends on:** Phase 25.2 (Sora host)
 · **Target:** `app/build.gradle.kts` (Sora BOM already present),
   `ui/editor/sora/CodeCLanguage.kt` / `CodeCAnalyzer.kt`,
@@ -44,3 +44,431 @@ grammars from microsoft/vscode MIT extensions.
 4. About still shows sora LGPL; APK delta ≤ +1.5 MiB vs pre-29.
 PASS = all four.
 ```
+
+---
+
+## 4. IMPLEMENTATION RECORD (2026-09-05, owner: "Start phase 29")
+
+All six T-rules followed. Built on the session branch; CI + device round
+pending at write time.
+
+### 4.1 What shipped
+
+- **Gradle (T1):** `sora-language-textmate = io.github.rosemoe:language-textmate`
+  added to `gradle/libs.versions.toml` **version-ref'd to the same
+  `soraEditor = 0.24.6`** as the editor widget (no second pin);
+  `implementation` in `app/build.gradle.kts`. Binary dependency only (T6).
+- **Assets (T2/T3):** `assets/textmate/grammars/` — 24 unmodified MIT
+  grammar JSONs (microsoft/vscode ×22, LuaLS/lua.tmbundle ×1,
+  MagicRegExp for C++ raw-string regexes; `TypeScript-TmLanguage` grammars
+  are consumed via the copies vscode ships in its javascript /
+  typescript-basics extensions). Core set per T3: C, C++, Python, JS, TS
+  (+TSX), HTML (+derivative), CSS, JSON, Shell, Markdown — plus the 29.2
+  set (Go, Rust, PHP, Ruby, Lua, XML, YAML×3). Raw 2.24 MB, ~234 KB
+  gzipped in the APK. Attribution + MIT text:
+  `assets/licenses/TEXTMATE_GRAMMARS_MIT.txt`.
+- **Themes (T4):** `assets/textmate/themes/` — `dark-plus.json`
+  (**flattened** from vscode `dark_vs.json` (colors) + `dark_plus.json`
+  (tokenColors), JSONC→strict-JSON, with the classic Dark+ editor chrome
+  colors vscode moved to workbench defaults restored: caret `#AEAFAD`, line
+  highlight `#282826`, line numbers `#858585/#C6C6C6`, selection `#264F78`,
+  find-match `#623315`, suggest-widget colors); `monokai.json` (vscode
+  theme-monokai, comments stripped); `dracula.json` + `github-dark.json`
+  **authored for CodeC** from the app's Phase-12 palettes applied to the
+  Dark+ token-scope structure (clean-room: same scopes, our colors — see
+  §4.3 deviations).
+- **Registry (T2):** new `ui/editor/sora/TextMateGrammars.kt` (pure,
+  Android-free: the LanguageType→scope map + per-language grammar SETS —
+  embedded scopes resolve only when the included grammar is registered too:
+  HTML→[html, html-derivative, js, css], PHP→[php-html, php, html, css, js,
+  json, xml], YAML→[yaml, yaml-1.2, yaml-embedded], …) and
+  `ui/editor/sora/TextMateSupport.kt` (idempotent, thread-safe):
+  `ensureInitialized` (installs `AssetsFileResolver`, makes a real theme
+  current — **the TextMate analyzer snapshots the theme in its
+  constructor**, so this must precede the first language), 
+  `ensureLanguageLoaded` (registers one language's set, once per process),
+  `warmUp` (background preload of the core set).
+- **Wiring:** `MainActivity.onCreate` launches
+  `TextMateSupport.warmUp(applicationContext)` on `Dispatchers.Default`
+  (runs while the user navigates to the editor). `SoraEditorHost`'s
+  language effect suspends to `Dispatchers.Default` for
+  ensure+create, then `setEditorLanguage` on main; its theme effect calls
+  `TextMateThemes.applyTheme(type)` (loads the theme asset on first use,
+  makes it current, returns a fresh `TextMateColorScheme`) and
+  `editor.setColorScheme(scheme)` — attaching the scheme re-runs the
+  analysis so token colors switch immediately.
+- **`CodeCLanguage` (T5):** `create(language, fileName)` builds a sora
+  `TextMateLanguage.create(scope, /*collectIdentifiers=*/false)` and
+  **only `getAnalyzeManager()` changed** — completions
+  (`CodeCompletionEngine`), indent (`indentAdvanceFor`), symbol pairs
+  (`symbolPairsFor`) and the no-op formatter are untouched, so the
+  device-accepted 25.2/26/27 behavior carries over verbatim. Lifecycle:
+  sora's `setEditorLanguage` destroys the returned analyzer, so
+  `CodeCLanguage.destroy()` destroys only what the editor does NOT (the
+  TextMate language object, or the fallback analyzer when TextMate is
+  absent).
+- **Settings:** `EditorThemeType` gained `VS_CODE_DARK_PLUS("VS Code Dark+")`
+  (first = default in the picker) and a `displayName` (the picker no longer
+  munges enum names); `ThemeManager` defaults new users to Dark+ (stored
+  choices untouched; unresolvable names fall back to Dark+ instead of
+  Dracula). A Compose palette `VSCodeDarkPlusTheme` mirrors the JSON so the
+  ghost color / settings preview / status accents match.
+- **License notices:** `assets/licenses/SORA_LANGUAGE_TEXTMATE_LGPL.txt`
+  (module = LGPL-2.1, binary-only, same 25.2 checklist) +
+  `TEXTMATE_GRAMMARS_MIT.txt` (per-file upstream paths); the Settings
+  "Open-source licenses" line now names both.
+
+### 4.2 Host tests
+
+- `TextMateGrammarsTest` (pure JVM): **every `LanguageRegistry` extension
+  maps to a TextMate scope** (the 29.2 promise, pinned); ts-vs-tsx
+  disambiguation; embed sets; unique names/scopes/paths; warm-up covers the
+  T3 core set; TEXT→null.
+- `TextMateSupportTest` (Robolectric, real APK assets): every grammar +
+  theme asset opens; all four themes load and resolve colors (Dark+
+  background asserted = `#1E1E1E`); `warmUp` registers every core scope;
+  **the analyzer for every colourable language is sora's TextMate
+  analyzer, not the regex `CodeCAnalyzer`** (the 29.3 exit condition,
+  asserted at code level); TEXT falls back to the regex analyzer; a missing
+  grammar degrades instead of crashing.
+- Deleted: `CodeCThemeMapTest` + `CodeCScheme.kt` (the slot-based scheme
+  the TextMate themes replace).
+
+### 4.3 Deviations from the spec (recorded)
+
+1. **`GITHUB_DARK` kept** (T4 named only Monokai/Dracula + Dark+ default):
+   removing it would silently downgrade users who picked it; it gets a
+  TextMate theme like the others (authored, see above). The Settings
+  picker shows four themes, Dark+ first.
+2. **Dracula / GitHub-Dark are authored, not copied**: the official
+   dracula/visual-studio-code repo builds its theme JSON from sources (no
+   stable committed file), and github-vscode-theme moved repos; instead of
+   chasing builds, both were authored from CodeC's existing palettes with
+   the Dark+ scope structure. The exit conditions only demand Dark+ look
+   like VS Code; the other two must look like themselves.
+3. **`language-configuration.json` files are NOT shipped** (T2 listed them
+   as optional "core set" items): T5 keeps CodeC's own indent + symbol
+   pairs, and sora's TextMate folding/newline handlers need the
+   configuration only for features CodeC does not use (folding was never
+   shipped). Saves ~40 KB and one moving part; noted for Phase 31+ if
+   folding ever ships.
+4. **Warm-up is lazy for PHP/Ruby**: their embed chains (8 grammars) are
+   the heaviest and the languages are the rarest — they register on first
+   open instead of at app start (one-time ~1 MB parse on that open).
+5. **The default `language-textmate` regexp engine is the pure-Java
+   oniguruma port** (Joni) — the optional `oniguruma-native` module was
+   NOT added (another AAR + native libs for marginal gain; budgets
+   first).
+
+### 4.4 Exit condition status
+
+1. C file looks like Dark+ — **device round pending** (§12 retest card).
+2. Typing budget on bench.c — device round pending (the analyzer is
+   `AsyncIncrementalAnalyzeManager`-based and INCREMENTAL per line, a
+   strict upgrade over 25.2's full-file re-tokenize per settled edit).
+3. Theme switching — host-tested for all four; device confirmation in the
+   round.
+4. LGPL/MIT notices ship in-app + in `assets/licenses/`; APK delta
+   measured from the CI artifact vs `main`'s (assets ≈ 234 KB compressed +
+   module dex; budget ≤ +1.5 MiB — recorded when CI lands).
+
+### 4.5 CI history + the Dark+ asset-name fix (2026-09-05)
+
+- **Run 1 (`6b69c6c`, 33981945825):** compiled clean; 6/7
+  `TextMateSupportTest` methods passed. The theme test failed at the
+  post-loop Dark+ assert — the returned scheme resolved `#24292E`
+  (github-dark's `editor.background`).
+- **Root cause (found via the instrumented run, see run 3):** the Dark+
+  theme asset shipped as `textmate/themes/dark-plus.json`, but
+  `applyTheme` derives the path from the registry name —
+  `textmate/themes/vscode-dark-plus.json`. `AssetManager.open` threw,
+  the resolver returned null, and `applyTheme`'s degrade path (missing
+  asset → keep the previous theme) turned the FIRST apply (Dark+, the
+  default) into a no-op. The loop then loaded Monokai → Dracula →
+  GitHub Dark fine (those three file names match their registry names),
+  and the post-loop Dark+ re-apply degraded again — leaving GitHub Dark
+  active, hence `#24292E`. One file name; every symptom.
+- **Fix (`a19b033`, prepared while hunting):** asset renamed to
+  `vscode-dark-plus.json` (all four themes now follow the rule
+  registry name == file name == JSON `name`), plus robustness that
+  stays regardless: `TextMateThemes` caches each loaded `ThemeModel`
+  and switches **by reference** (`setTheme(ThemeModel)` — no
+  registry-internal name matching on the switch path),
+  `ensureInitialized` retries the default theme while the registry
+  still holds `ThemeModel.EMPTY`, a missing theme asset logs at ERROR,
+  and the theme test asserts **per-iteration** that the active model is
+  the one requested (the Settings theme-switch law) — plus a new guard
+  that every theme asset EXISTS at exactly the path `applyTheme`
+  computes, so a name/file mismatch can never slip through again.
+  (Also in `a19b033`: a refreshable `FileResolver` of our own whose
+  `AssetManager` is re-attached on every `ensureInitialized` call —
+  defensive for environments that recreate the Application; the app
+  process keeps one AssetManager.)
+- **Run 2 (`a19b033`, 33982965030):** compile error — the fixup edit
+  accidentally dropped the `loadedScopes` field. Restored (`0e64b87`).
+- **Run 3 (`0e64b87`, 33983164706): FAILED, but with the diagnostic the
+  hardened test was built to produce:** "after applyTheme(VS Code
+  Dark+) the active model is EMPTY (raw=null), bg=0xffffffff" — i.e.
+  the Dark+ asset never loaded at all. This pinned the root cause above
+  (run 2 had shipped the hardening but NOT the rename — the file was
+  still `dark-plus.json`). The rename + asset-existence guard landed
+  after it.
+- **Run 4 (`8e59d47`, 33984918104): ✅ GREEN** — rename + asset-existence
+  guard; compile, all unit tests (theme test now passes: per-iteration
+  switch law + Dark+ `#1E1E1E` in-loop and after the round trip), bench
+  checks.
+- **Device round 1 (2026-09-06): CRASH on opening a file / the direct
+  editor** — `java.util.ConcurrentModificationException` in
+  `ThemeRegistry.dispatchThemeChange`, from the editor's theme effect.
+  Root cause: sora 0.24.6's `ThemeRegistry.setTheme(ThemeModel)` (the
+  overload our by-reference switching uses) dispatches the theme change
+  **without holding the registry monitor**, while `addListener` /
+  `removeListener` (synchronized) mutate the same ArrayList from other
+  threads — on file open, the theme effect dispatched (iterating the
+  listener list) on one `Dispatchers.Default` worker while the language
+  effect constructed a `TextMateAnalyzer` (→ `addListener`) on another.
+  Iteration vs. mutation → CME → crash. (The `String` overload is
+  synchronized — which is why the host tests, which are single-threaded,
+  and the pre-hardening name-path never showed it.)
+- **Fix:** (1) `TextMateThemes.applyTheme` holds the registry monitor for
+  the whole switch + scheme creation, so sora's own synchronized
+  mutations serialize against our dispatches (reentrant with its
+  `synchronized` methods); (2) new `TextMateSupport.createLanguage()`
+  routes language creation through the same lock as grammar loading —
+  the analyzer's registry registration can no longer race the warm-up
+  thread's loads; (3) the editor's theme effect now runs the actual
+  switch + `setColorScheme` on the MAIN thread (the theme models are
+  parsed once and cached; sora's notification model is single-threaded —
+  its own demo applies themes on the UI thread), with only
+  `ensureInitialized` kept off-main. New regression test:
+  `theme switching is thread safe against language creation` (4 threads
+  hammering applyTheme + createLanguage concurrently; also asserts no
+  deadlock).
+- **Run 5 (APK-budget trim, 33985493477): ✅ GREEN** — excluded the
+  unused `snakeyaml-engine` and `org.eclipse.jdt.annotation` transitives
+  (we ship only `.json` grammars/themes; the YAML parser is never
+  reached). Saved only ~16 KB — they were nearly absent from the merged
+  tree anyway. Kept (harmless, documents intent).
+- **APK delta measured (artifact `CodeC-IDE`, debug, vs `main` 3edfc97):
+  22,037,926 → 24,244,912 bytes = +2,206,986 = +2.10 MiB — OVER the
+  +1.5 MiB budget by ~0.6 MiB.** Breakdown: grammar+theme assets ≈
+  250 KB compressed (all 28 JSONs; even shipping none would not close
+  the gap); the remaining ~1.95 MB is the engine chain —
+  joni + jcodings (oniguruma regexes) + gson (JSON parsing) +
+  language-textmate/tm4e code — every piece of which the feature
+  requires. The plan's over-budget remedy ("ship run-profile set
+  first, defer Go/Rust") targets the wrong weight: Go+Rust grammars
+  are ~12 KB compressed. **⇒ Budget deviation, owner decision required
+  at the device round / merge gate:** accept +2.10 MiB (a 9.7% APK
+  growth, 22.0 → 24.2 MiB) as the cost of VS Code-grade colour, or
+  direct a stripped variant (there is nothing left to strip without
+  dropping languages or the engine). A possible future lever, not
+  taken: R8/minification on release builds (the measured artifact is
+  the debug APK both sides, and minify needs careful keep-rules for
+  gson/tm4e reflection).
+
+
+### 4.6 Device round 1, continued: crash 2 + the tail-only report problem (2026-09-06)
+
+**Crash 2 (new signature, build `3fb404f`).** After installing the latest
+green APK, the owner still crashes — but the trace is a DIFFERENT failure:
+a MAIN-thread exception thrown during a MEASURE pass on the way into the
+editor (`Choreographer.doFrame` → `ViewRootImpl.performTraversals` →
+`AndroidComposeView.dispatchDraw` → `measureAndLayout` →
+`AnimatedContentMeasurePolicy.measure` → `PaddingValuesModifier.measure`
+→ …, frames cut), triggered by opening a file or the direct editor. The
+CME fix holds (different tail: main-thread frame crash vs
+`CoroutineScheduler` worker). Exception type + origin frames UNKNOWN —
+every owner paste was tail-only.
+
+**Why every paste was tail-only (root cause, not user error).** The app
+already instruments crashes: `MainActivity.installCrashLog` appends every
+uncaught exception to `filesDir/crash-log.txt` and `CrashReportOverlay`
+shows it in-app on next launch with COPY ALL / SHARE / CLEAR. But the
+overlay displayed only the LAST 6000 BYTES of the file, and the file
+accumulates ALL records — after many crashes the newest record's header
+(the `java.…Exception` line, i.e. the diagnosis) falls outside the
+window. The owner literally could not paste the header.
+
+**Fix (commit `591be79`, CI run 34007275621 ✅):**
+- `installCrashLog`: records are HEADER-FIRST and FRAME-CAPPED — the
+  exception line, then the first 80 frames (origin + app/sora code), a
+  `… N more frames` marker, compact cause chain (8 frames, depth ≤ 5)
+  and suppressed; the identical Compose/ViewRootImpl tail is dropped.
+  The file is bounded (~60 KB, trimmed at a record boundary).
+- `CrashReportOverlay`: shows the NEWEST record FROM ITS HEADER
+  (`lastIndexOf("\n==== ")` → `take(9_000)`), not a byte-tail of the
+  whole file — COPY ALL now yields a complete, diagnosable record.
+
+**Robolectric reproduction attempt (same commits, negative result).**
+`EditorLaunchMeasureReproTest` drives the real editor screen end-to-end
+(project + file seeded, `EditorScreen` composed via a compose rule —
+own VM, sora CodeEditor, TextMate language + scheme effects, VM file
+open + text replay, measure/layout frames + compose clock). Iterations:
+(1) via the real activity → died in `onResume` on an UNSHADOWED
+`Environment.isExternalStorageManager` (real AOSP code on the JVM,
+AIOOBE) — a Robolectric gap, not the bug; a custom shadow attempt hit a
+`BootstrapMethodError` in the shadow linkage; (2) composing
+`EditorScreen` directly — **GREEN: the editor screen composes, measures
+and lays out cleanly with an open file.** Conclusion: the device crash
+is NOT in pure-JVM Compose/editor measure logic — it needs device-only
+factors (real frame pacing mid-`AnimatedContent` transition, render
+path, IME insets, or the owner's actual last-open file/state). The test
+stays as the editor-screen integration smoke.
+
+**Owner flow for the next crash report:** install the newest green APK →
+(old crash-log can be CLEARED first — optional) → reproduce the crash →
+relaunch → the overlay now shows the newest record FROM ITS HEADER →
+COPY ALL → paste in chat. That record names the exception and its first
+frames, and crash 2 gets root-caused the same way crash 1 was.
+
+**CI ledger addendum:** 34006261565 F (repro v1, env shadow gap),
+34006593820 F (repro v1b, shadow bootstrap), 34006932947 F (repro v2
+activity, same gap), **34007275621 S (`61c39cc` — instrumentation fix +
+compose-rule repro, current)**.
+
+### 4.7 Crash 2 ROOT-CAUSED and fixed (2026-09-06, `288b760`)
+
+**The full record arrived** (the §4.6 instrumentation worked — first
+header-first COPY ALL):
+
+```
+java.lang.IllegalStateException: LayoutNode should be attached to an owner
+  at …LayoutNodeKt.requireOwner(LayoutNode.kt:1561)
+  at …MeasurePassDelegate.remeasure(…:683)      ← measuring a DETACHED child
+  at …RowColumnMeasurePolicyKt.measure(…:119)   ← a Column measuring children
+  at …ColumnMeasurePolicy.measure(Column.kt:208)
+  at …InsetsPaddingModifier.measure(…:359)      ← imePadding()
+  at …FillNode.measure(Size.kt:699)             ← fillMaxSize Box chain
+  … Box → Box → Box …
+  at …AnimatedEnterExitMeasurePolicy.measure(AnimatedVisibility.kt:812)
+  at …EnterExitTransitionModifierNode.measure(…:1173)
+  … AnimatedContent transition content (AnimatedContent.kt:781)
+  … outer measure chain ← AndroidComposeView.dispatchDraw → measureAndLayout
+```
+
+**Diagnosis:** the editor screen's own
+`Column(Modifier.fillMaxSize().imePadding())` — entered through the
+NavHost's default slide+fade `AnimatedContent`/`AnimatedVisibility`
+transition — measures a child that has been DETACHED from the
+composition, during the draw-driven remeasure
+(`dispatchDraw → measureAndLayout → remeasureAndRelayoutIfNeeded`).
+Nothing in our code measures stale nodes: this is the
+detached-node-measured-during-transition crash family of Compose
+**1.7.0/1.7.1** (AnimatedContent + enter/exit + insets padding +
+measure-during-draw), with multiple fixes landing across the 1.7 patch
+line. Our pin was exactly BOM `2024.09.00` = compose **1.7.1**.
+(Consistent with all evidence: crash only on device — real frame-paced
+transition + draw-driven remeasure; the Robolectric compose-rule run of
+the same screen was clean; not the CME from crash 1.)
+
+**Fix:** `composeBom 2024.09.00 → 2024.12.01` (compose 1.7.1 → **1.7.6**,
+material3 1.3.1) — the last stable BOM of the 1.7 line; patch-level,
+navigation-compose 2.8.9-compatible, no API changes needed (zero source
+edits compiled first try). APK impact: 24,246,660 → 24,257,990 B
+(+11 KB, noise; still +2.12 MiB vs `main` — same §4.5 budget picture,
+owner verdict pending).
+
+**Regression pin:** `EditorLaunchMeasureReproTest` gained a second test
+that drives a REAL `NavHost` transition into the editor
+(`autoAdvance = false`, 60 frame steps through the ~700 ms transition,
+each frame = recomposition + measure + layout while the TextMate
+dispatchers deliver) — the device crash's exact interleaving. Both tests
+green on 1.7.6. (Verified after the fact only on the fixed version —
+the device round is the final arbiter.)
+
+**CI ledger addendum:** 34008988014 S (`45162fa` build-visibility:
+versionName carries the CI run number; About shows it; crash dialog
+title = exception line), 34010200911 F (repro test missing import),
+**34010505276 S (`288b760` — the crash-2 fix, current)**.
+
+### 4.8 Crash-2 follow-up: the nav-transition test caught a second, deeper bug — FIXED (`db56824`)
+
+The BOM-bump commit's CI run (34010843868 on the docs commit, same code)
+FAILED — the new nav-transition repro test reproduced a REAL crash in CI:
+
+```
+java.lang.IndexOutOfBoundsException
+  at sora.util.BlockIntList.removeRange(BlockIntList.java:220)
+  at sora.widget.layout.LineBreakLayout.afterDelete(LineBreakLayout.java:203)
+  at sora.widget.CodeEditor.afterDelete(CodeEditor.java:5329)
+  at sora.text.Content.delete(Content.java:476)
+  at SoraEditorHost.kt:341                       ← the VM→sora replay
+  … AndroidView update block during the transition measure pass …
+```
+
+**Root cause (sora internals + our replay shape):** the VM→sora full
+replay did an incremental `batchEdit { delete(0,0,lastLine,col); insert }
+— dispatching `afterDelete` into sora's layout. But `createLayout()`
+(run by `setTextSize`/`setText`/wordwrap/inlay-renderer changes — i.e.
+by our own config effects around a file open) rebuilds the layout's
+per-line width lists (`BlockIntList widthMaintainer`,
+`inlineElementsWidths`) **asynchronously** (`measureAllLines` uses a
+`TaskMonitor`). A multi-line delete in that window hits `removeRange`
+on an EMPTY list → IndexOutOfBoundsException. The same mid-measure
+churn (content mutation + layout recreation inside the transition's
+measure pass) is what fed the on-device detached-LayoutNode
+IllegalStateException.
+
+**Fix:** the replay now uses sora's atomic wholesale `setText` — one
+`ACTION_SET_NEW_TEXT` event, no incremental delete dispatch, layout
+rebuilt AFTER the new content is set. `setText` replaces the `Content`
+OBJECT, so the sora→VM `ContentListener` was hoisted to the composable
+level and is re-attached to each new instance (the DisposableEffect
+keeps the subscriptions). Verified: the failing test went green
+(run 34011311415).
+
+**CI ledger addendum:** 34010843868 F (`2bf60f1` — the repro test
+CAUGHT the replay bug), **34011311415 S (`db56824` — atomic replay fix,
+current)**. Crash-2 remediation is now two-layered: BOM 2024.12.01
+(framework detached-node family) + atomic setText replay (our churn).
+
+### 4.9 Device confirmation + size report (2026-09-06)
+
+Owner on the `db56824` build (App Version `1.3.16 (34011311415)` line):
+**"Working"** — the open-file / direct-editor crash is GONE on device.
+Both layers of the crash-2 remediation hold: Compose 1.7.6 (BOM
+2024.12.01) + the atomic `setText` replay. Crash 1 (CME) and crash 2
+are both closed with device transcripts.
+
+Owner-reported on-device size: **24.95 MB** (Android app-info read —
+includes the installed footprint, extracted native libraries and app
+data; reads above the raw APK file). Artifact-to-artifact (the budget
+basis): `main` 3edfc97 = 22,037,926 B; this branch = 24,257,884 B →
+**+2,219,958 B = +2.22 MB (+2.12 MiB)** vs the +1.5 MiB budget —
+overage ~0.65 MB, unchanged in kind from §4.5 (engine chain
+joni+jcodings+gson+tm4e ≈ 1.95 MB; grammars/themes ≈ 250 KB).
+**Explicit accept/direct-a-strip verdict still pending.**
+
+Remaining for the 29.1 device-round gate (`TROUBLESHOOTING.md` §12):
+Dark+ look, every-language colour, `.txt` plain, ~60-key typing feel,
+theme switching, completions/Keys/find regressions, About LGPL lines.
+
+### 4.10 Device round 1: PASS — gate CLOSED (2026-09-06)
+
+Owner verdict on the `db56824`/`9b5c319` build (`1.3.16`):
+
+- **No crash** on file open / direct editor (crash 1 + crash 2 closed).
+- **Checklist: ALL PASS** — C file looks like VS Code Dark+, every
+  language colored, `.txt` plain, typing smooth, theme switching works,
+  completions / ghost / strip / CodeC Keys / find still work.
+- **APK size verdict: ACCEPTED** — +2.22 MB over `main` (24.26 vs
+  22.04 MB artifact-to-artifact; owner's on-device app-info read
+  24.95 MB). The +1.5 MiB plan budget is a **recorded, owner-accepted
+  deviation**: the weight is the required TextMate engine chain
+  (~1.95 MB), not the grammars (~250 KB) — nothing meaningful to strip
+  short of dropping the feature. (Owner also passed on the "try
+  shrinking later" option.)
+
+**Phase 29 (29.1 + 29.2 + 29.3) is implementation-complete, CI-green
+and device-verified.** Remaining: merge on the owner's explicit
+command (standing rule — no PR/merge without it). CI ledger:
+34011630954 S (`9b5c319`), 34025618209 S (`f7db714`).
+
+### 4.11 MERGED (2026-09-06, owner: "Merge it")
+
+PR **#54** → `main`, merge commit (history preserved, session branch
+kept). Phase 29 complete: implementation, CI, device round, and the
+size verdict all closed. Next per the queue: 30 snippets/Emmet,
+31 LSP Packages, 32 phone canvas, 33 first-hour (owner's call), plus
+the 28.3/28.4 Keys remainder.

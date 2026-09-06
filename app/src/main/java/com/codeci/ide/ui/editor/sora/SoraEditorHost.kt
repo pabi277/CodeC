@@ -25,9 +25,10 @@ import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.lang.styling.inlayHint.InlayHintsContainer
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.ContentListener
-import io.github.rosemoe.sora.text.batchEdit
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Phase 25.2 — the two-way bridge between sora's [CodeEditor] and the
@@ -67,6 +68,9 @@ fun SoraEditorHost(
     wordWrap: Boolean,
     showLineNumbers: Boolean,
     modifier: Modifier = Modifier,
+    // Phase 29 — the file's own name: disambiguates buckets whose extensions
+    // map to different TextMate grammars (.ts → source.ts, .tsx → source.tsx).
+    fileName: String? = null,
     // ---- Phase 27 wiring (ghost + gated panel) ----
     completionModel: CompletionModel = CompletionModel.EMPTY,
     completionMasterOn: Boolean = true,
@@ -167,15 +171,41 @@ fun SoraEditorHost(
     }
 
     // Reactive settings/context.
-    LaunchedEffect(language) {
+    // Phase 29 — the context the TextMate registries read assets through.
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    LaunchedEffect(language, fileName) {
+        // Phase 29 — the analyzer is sora TextMate (VS Code grammars). Init
+        // + grammar loading (already parsed by the warm-up thread, or parsed
+        // here on the very first open of an unwarmed language) happen OFF
+        // the main thread; only the view call below runs on main.
+        // createLanguage() holds the same lock as grammar loading — the
+        // analyzer registers itself with the theme registry on construction
+        // and must not race the warm-up thread or a theme switch (device
+        // CME crash, 2026-09-06).
+        val lang = withContext(Dispatchers.Default) {
+            TextMateSupport.ensureInitialized(appContext)
+            TextMateSupport.createLanguage(language, fileName)
+        }
         // Fresh Language per editor (sora: one language instance serves one editor).
-        editor.setEditorLanguage(CodeCLanguage(language))
+        editor.setEditorLanguage(lang)
     }
     LaunchedEffect(theme) {
-        // Fresh scheme object per application (sora enforces single ownership);
-        // colors applied post-construction (see CodeCScheme's construction-
-        // order note — reading `type` inside applyDefault was the crash).
-        editor.setColorScheme(CodeCScheme.of(theme))
+        // Phase 29 — the scheme resolves TextMate token scopes through the
+        // active theme asset (vscode-dark-plus / monokai / dracula /
+        // github-dark). Init runs off-main (it may still be behind the
+        // warm-up thread's first parse); the SWITCH itself is main-thread:
+        // the theme models are parsed once and cached, and sora notifies
+        // its registry listeners synchronously — its threading model (and
+        // demo) apply themes on the UI thread. Dispatching from a worker
+        // raced analyzer construction on another worker
+        // (ConcurrentModificationException, device crash 2026-09-06);
+        // TextMateThemes.applyTheme additionally holds the registry
+        // monitor, and attaching the fresh scheme re-runs the analysis so
+        // token colors pick up the new theme immediately.
+        withContext(Dispatchers.Default) {
+            TextMateSupport.ensureInitialized(appContext)
+        }
+        editor.setColorScheme(TextMateThemes.applyTheme(theme))
     }
     LaunchedEffect(fontSizeSp) { editor.setTextSize(fontSizeSp) }
     LaunchedEffect(fontFamily) {
@@ -201,19 +231,22 @@ fun SoraEditorHost(
     // Suppresses the sora→VM echo while WE replay a VM-driven change into sora.
     val pushing = remember { arrayOf(false) }
 
-    DisposableEffect(editor) {
-        fun pushToVm(content: Content) {
-            if (pushing[0]) return // our own replay; the VM already holds this text
-            val newText = content.toString()
-            syncedText = newText
-            soraHasText = newText
-            val cursor = content.cursor
-            val range = TextRange(cursor.left, cursor.right)
-            syncedSelection = range
-            viewModel.updateCode(TextFieldValue(newText, range))
-        }
+    // The sora→VM content listener, hoisted to the composable level: the
+    // VM→sora replay below replaces sora's Content OBJECT wholesale
+    // (setText), and the listener must be re-attached to each new instance.
+    val contentListener = remember(editor) {
+        object : ContentListener {
+            fun pushToVm(content: Content) {
+                if (pushing[0]) return // our own replay; the VM already holds this text
+                val newText = content.toString()
+                syncedText = newText
+                soraHasText = newText
+                val cursor = content.cursor
+                val range = TextRange(cursor.left, cursor.right)
+                syncedSelection = range
+                viewModel.updateCode(TextFieldValue(newText, range))
+            }
 
-        val contentListener = object : ContentListener {
             override fun beforeReplace(content: Content) = Unit
 
             override fun afterInsert(
@@ -226,6 +259,8 @@ fun SoraEditorHost(
                 endLine: Int, endColumn: Int, deletedContent: CharSequence
             ) = pushToVm(content)
         }
+    }
+    DisposableEffect(editor) {
         editor.text.addContentListener(contentListener)
 
         val selectionReceipt = editor.subscribeEvent(
@@ -305,11 +340,27 @@ fun SoraEditorHost(
                     // Phase 27.1 — a full replay invalidates ghost anchors;
                     // the effect above repaints from the fresh VM state.
                     ed.setInlayHints(null)
-                    ed.text.batchEdit { content ->
-                        val lastLine = content.lineCount - 1
-                        content.delete(0, 0, lastLine, content.getColumnCount(lastLine))
-                        content.insert(0, 0, target.text)
-                    }
+                    // 2026-09-06 (crash 2 follow-up, device round): ATOMIC
+                    // wholesale replacement. The old incremental delete-all +
+                    // insert dispatched afterDelete into sora's layout at a
+                    // moment it can legitimately be empty-handed:
+                    // createLayout() — run by setTextSize / setText /
+                    // wordwrap / inlay-renderer changes, i.e. by our own
+                    // config effects around a file open — rebuilds the
+                    // per-line width lists ASYNCHRONOUSLY (LineBreakLayout.
+                    // measureAllLines uses a TaskMonitor). A multi-line
+                    // delete in that window hits BlockIntList.removeRange
+                    // on an EMPTY list → IndexOutOfBoundsException
+                    // (reproduced in CI by EditorLaunchMeasureReproTest's
+                    // nav-transition case; the same mid-measure churn fed
+                    // the on-device detached-LayoutNode crash). setText
+                    // replaces the Content object wholesale — one
+                    // ACTION_SET_NEW_TEXT event, no incremental delete
+                    // dispatch — and rebuilds the layout AFTER the new
+                    // content is set. Our listener follows the Content
+                    // object, so re-attach it to the new instance.
+                    ed.setText(target.text)
+                    ed.text.addContentListener(contentListener)
                     val start = target.selection.start.coerceIn(0, target.text.length)
                     val end = target.selection.end.coerceIn(0, target.text.length)
                     val indexer = ed.text.indexer

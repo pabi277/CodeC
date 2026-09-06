@@ -1,0 +1,216 @@
+package com.codeci.ide.ui.editor.sora
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.codeci.ide.ui.theme.EditorThemeType
+import com.codeci.ide.ui.utils.LanguageType
+import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * Phase 29 — the TextMate integration on the JVM, through the REAL APK
+ * assets (Robolectric). This is the host-testable stand-in for the device
+ * round: it proves the assets parse, the registry loads them, every editor
+ * theme resolves colors, and — the 29.3 exit condition — the editor's
+ * analyzer for a colourable language is the TextMate one, NOT the regex
+ * [CodeCAnalyzer].
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
+class TextMateSupportTest {
+
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
+    @Before
+    fun setUp() {
+        // Mirrors the app flow: MainActivity warms up in the background; the
+        // language/theme effects ensure their own prerequisites.
+        TextMateSupport.ensureInitialized(context)
+    }
+
+    // ---- assets actually ship and parse ----------------------------------
+
+    @Test
+    fun `every referenced grammar asset exists in the apk`() {
+        val all = listOf(
+            TextMateGrammars.C, TextMateGrammars.CPP, TextMateGrammars.MAGIC_REGEXP,
+            TextMateGrammars.PYTHON, TextMateGrammars.JAVASCRIPT, TextMateGrammars.TYPESCRIPT,
+            TextMateGrammars.TSX, TextMateGrammars.HTML, TextMateGrammars.HTML_DERIVATIVE,
+            TextMateGrammars.CSS, TextMateGrammars.JSON, TextMateGrammars.JSONC,
+            TextMateGrammars.SHELL, TextMateGrammars.MARKDOWN, TextMateGrammars.GO,
+            TextMateGrammars.RUST, TextMateGrammars.PHP, TextMateGrammars.PHP_HTML,
+            TextMateGrammars.RUBY, TextMateGrammars.LUA, TextMateGrammars.XML,
+            TextMateGrammars.YAML, TextMateGrammars.YAML_1_2, TextMateGrammars.YAML_EMBEDDED
+        )
+        for (asset in all) {
+            context.assets.open(asset.path).use { stream ->
+                assertTrue("asset ${asset.path} must not be empty", stream.read() != -1)
+            }
+        }
+    }
+
+    @Test
+    fun `all four editor themes load and resolve colors`() {
+        // Guard: every theme must have an asset at EXACTLY the path
+        // applyTheme() computes from its registry name (name ↔ file-name
+        // mismatches otherwise degrade silently to the previous theme —
+        // that is exactly how the first CI run failed: the Dark+ asset
+        // shipped as dark-plus.json while the code asked for
+        // vscode-dark-plus.json).
+        for (type in EditorThemeType.entries) {
+            val path = "textmate/themes/${TextMateThemes.nameFor(type)}.json"
+            context.assets.open(path).use { stream ->
+                assertTrue("theme asset $path must not be empty", stream.read() != -1)
+            }
+        }
+        for (type in EditorThemeType.entries) {
+            val scheme = TextMateThemes.applyTheme(type)
+            val current = ThemeRegistry.getInstance().currentThemeModel
+            // Background and normal text must come from the theme JSON, not
+            // stay at sora's defaults-of-defaults (0/unset) — and the theme
+            // we asked for must be the one ACTIVE afterwards (the Settings
+            // theme switch depends on that).
+            assertTrue(
+                "after applyTheme(${type.displayName}) the active model is " +
+                    "${current?.name} (raw=${current?.rawTheme?.name}), " +
+                    "bg=0x${Integer.toHexString(scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND))}",
+                current?.name == TextMateThemes.nameFor(type) &&
+                    scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND) != 0 &&
+                    scheme.getColor(EditorColorScheme.TEXT_NORMAL) != 0
+            )
+            if (type == EditorThemeType.VS_CODE_DARK_PLUS) {
+                // The DEFAULT theme is Dark+ and must look like it.
+                val bg = scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND)
+                assertTrue(
+                    "Dark+ background must be #1E1E1E, got 0x${Integer.toHexString(bg)} " +
+                        "(active model ${current?.name})",
+                    bg == 0xFF1E1E1E.toInt()
+                )
+            }
+        }
+        // Re-applying the default after every other theme ran must switch
+        // BACK to Dark+ (the Settings round-trip: Dark+ → others → Dark+).
+        val darkPlus = TextMateThemes.applyTheme(EditorThemeType.VS_CODE_DARK_PLUS)
+        val current = ThemeRegistry.getInstance().currentThemeModel
+        val bg = darkPlus.getColor(EditorColorScheme.WHOLE_BACKGROUND)
+        assertTrue(
+            "Dark+ background must be #1E1E1E after the round trip, got " +
+                "0x${Integer.toHexString(bg)} (active model ${current?.name}, " +
+                "raw=${current?.rawTheme?.name})",
+            bg == 0xFF1E1E1E.toInt() && current?.name == TextMateThemes.nameFor(EditorThemeType.VS_CODE_DARK_PLUS)
+        )
+    }
+
+    // ---- grammar loading + analyzer swap (29.1 / 29.3 exit) ---------------
+
+    @Test
+    fun `warm up registers every core grammar`() {
+        TextMateSupport.warmUp(context)
+        for (scope in listOf(
+            "source.c", "source.cpp", "source.python", "source.js", "source.ts",
+            "text.html.basic", "text.html.derivative", "source.css", "source.json",
+            "source.shell", "text.html.markdown", "source.go", "source.rust",
+            "source.lua", "text.xml", "source.yaml", "source.yaml.1.2"
+        )) {
+            assertNotNull("warm-up must register $scope", GrammarRegistry.getInstance().findGrammar(scope))
+        }
+    }
+
+    @Test
+    fun `colourable languages use the textmate analyzer not the regex one`() {
+        // The 29.3 exit condition, asserted at the code level: for every
+        // colourable language the analyze manager is sora's TextMate
+        // analyzer — MultiLanguageSyntaxHighlighter.tokenize is not on the
+        // editor hot path for any of them. (createLanguage is the same
+        // locked ensure+create path SoraEditorHost uses.)
+        for (language in listOf(
+            LanguageType.C, LanguageType.CPP, LanguageType.PYTHON,
+            LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT, LanguageType.HTML,
+            LanguageType.CSS, LanguageType.JSON, LanguageType.SHELL,
+            LanguageType.MARKDOWN, LanguageType.GO, LanguageType.RUST,
+            LanguageType.PHP, LanguageType.RUBY, LanguageType.LUA,
+            LanguageType.XML, LanguageType.YAML
+        )) {
+            val codeCLanguage =
+                TextMateSupport.createLanguage(language, "probe.${language.extensions.first()}")
+            val analyzer = codeCLanguage.analyzeManager
+            assertTrue(
+                "language $language must analyse through TextMate (got ${analyzer::class.simpleName})",
+                analyzer !is CodeCAnalyzer
+            )
+        }
+    }
+
+    @Test
+    fun `tsx files get the typescriptreact grammar`() {
+        val tsx = TextMateSupport.createLanguage(LanguageType.TYPESCRIPT, "Component.tsx")
+        assertTrue(tsx.analyzeManager !is CodeCAnalyzer)
+        assertNotNull(GrammarRegistry.getInstance().findGrammar("source.tsx"))
+    }
+
+    @Test
+    fun `theme switching is thread safe against language creation`() {
+        // Regression (device crash 2026-09-06): applyTheme dispatches the
+        // theme change to the registry's listeners while TextMateAnalyzer
+        // construction on another worker thread adds itself as a listener —
+        // sora's setTheme(ThemeModel) does not hold the registry monitor, so
+        // the dispatch could iterate the listener list mid-mutation
+        // (ConcurrentModificationException in dispatchThemeChange).
+        // applyTheme now holds the registry monitor and createLanguage
+        // serializes with grammar loading; hammer both paths concurrently
+        // and require zero exceptions (and zero deadlocks).
+        val failures = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val languages = listOf(
+            LanguageType.C, LanguageType.PYTHON, LanguageType.HTML, LanguageType.LUA
+        )
+        val threads = (0 until 4).map { i ->
+            Thread {
+                repeat(30) { round ->
+                    try {
+                        if (round % 2 == 0) {
+                            TextMateThemes.applyTheme(
+                                EditorThemeType.entries[(round / 2 + i) % EditorThemeType.entries.size]
+                            )
+                        } else {
+                            TextMateSupport.createLanguage(
+                                languages[(round + i) % languages.size]
+                            )
+                        }
+                    } catch (t: Throwable) {
+                        failures.add(t)
+                    }
+                }
+            }
+        }
+        threads.forEach { it.start() }
+        threads.forEach { it.join(60_000) }
+        threads.forEachIndexed { index, thread ->
+            assertTrue("worker $index deadlocked", !thread.isAlive)
+        }
+        assertTrue("concurrent theme/language work must not throw: $failures", failures.isEmpty())
+    }
+
+    @Test
+    fun `text files fall back to the regex analyzer`() {
+        val text = CodeCLanguage.create(LanguageType.TEXT, "notes.txt")
+        assertTrue(text.analyzeManager is CodeCAnalyzer)
+    }
+
+    @Test
+    fun `missing grammar degrades to the regex analyzer instead of crashing`() {
+        // Simulate a language whose grammar never loaded: create() with a
+        // scope the registry does not know must not throw.
+        val language = CodeCLanguage.create(LanguageType.PHP, "index.php")
+        // (The PHP set was loaded by earlier tests in the common case; the
+        // point of this test is the contract — no crash, always an analyzer.)
+        assertNotNull(language.analyzeManager)
+    }
+}

@@ -201,7 +201,9 @@ fun EditorScreen(
     val soraEditor = remember { CodeEditor(context) }
     val themeManager = remember { ThemeManager(context) }
     val settingsManager = remember { SettingsManager(context) }
-    val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.DRACULA)
+    // Phase 29.1 — Dark+ is the default editor theme (matches the TextMate
+    // default); a stored preference replaces it as soon as DataStore emits.
+    val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.VS_CODE_DARK_PLUS)
     val editorColors = getEditorTheme(currentEditorTheme)
 
     val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 14f)
@@ -1387,6 +1389,9 @@ fun EditorScreen(
                     showLineNumbers = showLineNumbers,
                     modifier = Modifier
                         .fillMaxSize(),
+                    // Phase 29 — the file's own path: .ts vs .tsx pick
+                    // different TextMate grammars inside one LanguageType.
+                    fileName = activeTabPath ?: currentFileName,
                     // Phase 27 — ghost + gated browse panel.
                     completionModel = completionModel,
                     completionMasterOn = completionSettings.master,

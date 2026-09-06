@@ -49,10 +49,16 @@ fun CrashReportOverlay() {
         withContext(Dispatchers.IO) {
             val file = File(context.filesDir, "crash-log.txt")
             report = if (file.isFile && file.length() > 0) {
-                // Tail only: a corrupted or huge log must not OOM the dialog.
-                val bytes = file.readBytes()
-                val limit = 6000
-                String(bytes, maxOf(0, bytes.size - limit), minOf(bytes.size, limit))
+                // The NEWEST record, from its header — NOT a byte-tail of the
+                // whole file. Records accumulate, and a tail window cuts off
+                // the record's first lines — the exception type and message,
+                // i.e. the diagnosis — exactly when it is needed most
+                // (Phase 29 device round, 2026-09-06: three pasted reports
+                // in a row were generic tail-only stacks). The writer caps
+                // each record and bounds the file, so this read stays small.
+                val text = file.readText()
+                val start = text.lastIndexOf("\n==== ").let { if (it >= 0) it + 1 else 0 }
+                text.substring(start).take(9_000)
             } else {
                 null
             }
@@ -60,9 +66,18 @@ fun CrashReportOverlay() {
     }
 
     report?.let { text ->
+        // The exception line (first line after the ==== header) in the TITLE:
+        // even a screenshot of the dialog then carries the diagnosis. The
+        // body can scroll out of view; the title cannot.
+        val exceptionLine = text.lineSequence()
+            .dropWhile { it.startsWith("====") }
+            .firstOrNull { it.isNotBlank() }
+            ?.take(90)
         AlertDialog(
             onDismissRequest = { /* keep the report until acted on */ },
-            title = { Text("Last crash report") },
+            title = {
+                Text(if (exceptionLine != null) "Crash: $exceptionLine" else "Last crash report")
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(

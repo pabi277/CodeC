@@ -184,10 +184,10 @@ class EditorHighlightCacheTest {
         assertTrue("fixture should be ~517 lines", html.count { it == '\n' } in 480..560)
 
         val full = MultiLanguageSyntaxHighlighter.highlight(
-            html, getEditorTheme(EditorThemeType.DRACULA), LanguageType.HTML_CSS
+            html, getEditorTheme(EditorThemeType.DRACULA), LanguageType.HTML
         )
         val windowed = HighlightedCode.of(
-            html, EditorThemeType.DRACULA, LanguageType.HTML_CSS, caret = html.length / 2
+            html, EditorThemeType.DRACULA, LanguageType.HTML, caret = html.length / 2
         )
         assertTrue(
             "windowed=${windowed.annotated.spanStyles.size} full=${full.spanStyles.size}",

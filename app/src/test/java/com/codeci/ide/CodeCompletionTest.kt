@@ -90,15 +90,15 @@ class CodeCompletionTest {
 
     @Test
     fun `html gets a skeleton and element snippets`() {
-        val items = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML_CSS)
+        val items = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML)
         assertTrue(items.any { it.kind == CompletionKind.SNIPPET && it.label.contains("DOCTYPE") })
-        val div = CodeCompletionEngine.completions("<div", 4, LanguageType.HTML_CSS)
+        val div = CodeCompletionEngine.completions("<div", 4, LanguageType.HTML)
         assertTrue(div.any { it.kind == CompletionKind.SNIPPET && it.label.contains("div") })
     }
 
     @Test
     fun `css rule and media query are offered on an html or css buffer`() {
-        val media = CodeCompletionEngine.completions("@med", 4, LanguageType.HTML_CSS)
+        val media = CodeCompletionEngine.completions("@med", 4, LanguageType.CSS)
         assertTrue(media.any { it.kind == CompletionKind.SNIPPET && it.label.contains("@media") })
     }
 
@@ -115,7 +115,7 @@ class CodeCompletionTest {
         // Regression guard for the Phase 22.6 gap: both fell through to the
         // `else -> emptyList()` branch, so the popup never appeared on a
         // .html or .md file even though Web Preview runs HTML directly.
-        assertTrue(CodeCompletionEngine.completions("<ul", 3, LanguageType.HTML_CSS).isNotEmpty())
+        assertTrue(CodeCompletionEngine.completions("<ul", 3, LanguageType.HTML).isNotEmpty())
         assertTrue(CodeCompletionEngine.completions("bold", 4, LanguageType.MARKDOWN).isNotEmpty())
     }
 
@@ -125,8 +125,8 @@ class CodeCompletionTest {
         // case-SENSITIVE, so lowercase `doc` never surfaced `<!DOCTYPE html>`.
         // On a phone keyboard you type lowercase; requiring the user to guess
         // a snippet's capitalization defeats a prefix search.
-        val lower = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML_CSS)
-        val upper = CodeCompletionEngine.completions("<!DOC", 5, LanguageType.HTML_CSS)
+        val lower = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML)
+        val upper = CodeCompletionEngine.completions("<!DOC", 5, LanguageType.HTML)
         assertTrue(lower.any { it.label.contains("DOCTYPE") })
         assertTrue(upper.any { it.label.contains("DOCTYPE") })
     }
