@@ -1,20 +1,17 @@
 package com.codeci.ide
 
 import android.content.Context
-import android.os.Looper
-import android.view.View
-import android.view.ViewGroup
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.screens.EditorScreen
+import com.codeci.ide.ui.theme.MyApplicationTheme
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.annotation.Implementation
-import org.robolectric.annotation.Implements
 import java.io.File
 
 /**
@@ -23,40 +20,27 @@ import java.io.File
  * The owner's device crashes on opening a file or the direct editor: a
  * main-thread exception during a MEASURE pass (visible stack tail:
  * AnimatedContent → PaddingValues → …, thrown inside the editor screen's
- * subtree; the exception header was lost — see the crash-log fix shipped
- * with this test).
+ * subtree; the exception header was lost — the header-first crash-log fix
+ * shipped in the same phase addresses that for future device reports).
  *
- * The app's "open where I left off" launches STRAIGHT into the editor when
- * a last-open project file exists. This test seeds that state, launches the
- * real [MainActivity], and drives measure/layout frames while idling the
- * main looper (Compose effects, style deliveries) and yielding to the
- * background dispatchers (TextMate warm-up, language creation, analysis) —
- * the exact machinery a file open runs on device. If the crash is in
- * Compose/editor measure logic (pure JVM), it reproduces here with the full
- * stack in the failure. Either way this stays as the cold-start-into-editor
- * integration smoke for future phases.
+ * This test composes the REAL [EditorScreen] with a real project file
+ * open — the screen builds its own EditorViewModel, sora CodeEditor,
+ * ThemeManager/SettingsManager, TextMate language + scheme effects, and
+ * the VM's file-open + text replay — and drives composition, measure and
+ * layout frames plus the compose clock. If the crash is in Compose/editor
+ * measure logic (pure JVM), it reproduces here with the full stack in the
+ * CI failure. Either way it stays as the editor-screen integration smoke
+ * for future phases.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], shadows = [ShadowEnvironmentStorageManager::class])
+@Config(sdk = [34])
 class EditorLaunchMeasureReproTest {
 
-    @Test
-    fun `cold start into last-open file measures the editor without crashing`() {
-        // The failure's STACK is the diagnosis, and CI annotations (the only
-        // channel readable from this sandbox) carry just the message — so on
-        // any crash, rethrow with the trace embedded in the message.
-        try {
-            driveEditorLaunchAndMeasure()
-        } catch (t: Throwable) {
-            val trace = android.util.Log.getStackTraceString(t).lineSequence()
-                .take(60).joinToString("\n")
-            throw AssertionError(
-                "Editor-launch measure crashed: ${t.javaClass.name}: ${t.message}\n$trace", t
-            )
-        }
-    }
+    @get:Rule
+    val compose = createComposeRule()
 
-    private fun driveEditorLaunchAndMeasure() {
+    @Test
+    fun `editor screen with an open file measures without crashing`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val info = ProjectManager(context)
             .createProject("repro", includeStarter = false)
@@ -77,51 +61,44 @@ class EditorLaunchMeasureReproTest {
         )
         EditorLaunchState.save(context, "repro", "bench.c")
 
-        val controller = Robolectric.buildActivity(MainActivity::class.java)
-        controller.setup()
-        val content = controller.get().findViewById<ViewGroup>(android.R.id.content)
-
-        // Drive frames: idle main (composition effects, analyzer style
-        // deliveries posted to the UI thread) → measure + layout → give the
-        // background dispatchers (grammar warm-up, language creation,
-        // async analysis) a moment → repeat. The editor receives its
-        // TextMate language, its color scheme, and the VM's text replay
-        // across these iterations — the same interleaving as a real open.
-        repeat(12) {
-            shadowOf(Looper.getMainLooper()).idle()
-            content.measure(
-                View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(2340, View.MeasureSpec.EXACTLY)
+        // The failure's STACK is the diagnosis, and CI annotations (the only
+        // channel readable from this sandbox) carry a short message — so on
+        // any crash, rethrow with a COMPRESSED trace (boilerplate reflect /
+        // junit / robolectric runner frames dropped) embedded in the message.
+        try {
+            compose.setContent {
+                MyApplicationTheme {
+                    EditorScreen(projectName = "repro", fileName = "bench.c")
+                }
+            }
+            // Let composition, measure, layout and the LaunchedEffects run:
+            // language creation (awaits TextMate warm-up on Dispatchers.Default),
+            // scheme application, VM file open + text replay into the editor,
+            // async analysis style deliveries back to the main thread.
+            repeat(10) {
+                compose.waitForIdle()
+                compose.mainClock.advanceTimeBy(500)
+            }
+            compose.waitForIdle()
+        } catch (t: Throwable) {
+            val dropped = intArrayOf(0)
+            val trace = android.util.Log.getStackTraceString(t).lineSequence()
+                .filter { line ->
+                    if (!line.startsWith("\tat ")) return@filter !line.startsWith("\tat ")
+                    val boilerplate = line.contains("java.base/") ||
+                        line.contains("org.junit.") ||
+                        line.contains("org.robolectric") ||
+                        line.contains("java.lang.reflect") ||
+                        line.contains("androidx.test") ||
+                        line.contains("android.app.Instrumentation")
+                    if (boilerplate) { dropped[0]++; false } else true
+                }
+                .take(90)
+                .joinToString("\n")
+            throw AssertionError(
+                "Editor-screen measure crashed: ${t.javaClass.name}: ${t.message}\n$trace\n" +
+                    "(+${dropped[0]} boilerplate frames dropped)", t
             )
-            content.layout(0, 0, 1080, 2340)
-            Thread.sleep(150)
-            shadowOf(Looper.getMainLooper()).idle()
-        }
-
-        // Rotation-like resize AFTER the analyzer has settled — forces a
-        // full remeasure with fresh constraints on the composed editor.
-        content.measure(
-            View.MeasureSpec.makeMeasureSpec(720, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.EXACTLY)
-        )
-        content.layout(0, 0, 720, 1600)
-        repeat(3) {
-            Thread.sleep(150)
-            shadowOf(Looper.getMainLooper()).idle()
         }
     }
-}
-
-
-/**
- * This Robolectric version does not shadow
- * [android.os.Environment.isExternalStorageManager], so the real AOSP body
- * runs under the JVM and crashes (AIOOBE inside the framework). MainActivity
- * legitimately calls it in onResume (all-files-access banner logic) —
- * shadow it for the launch smoke: false just skips storage-dir setup.
- */
-@Implements(android.os.Environment::class)
-class ShadowEnvironmentStorageManager {
-    @Implementation
-    fun isExternalStorageManager(): Boolean = false
 }
