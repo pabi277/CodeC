@@ -422,3 +422,24 @@ keeps the subscriptions). Verified: the failing test went green
 CAUGHT the replay bug), **34011311415 S (`db56824` — atomic replay fix,
 current)**. Crash-2 remediation is now two-layered: BOM 2024.12.01
 (framework detached-node family) + atomic setText replay (our churn).
+
+### 4.9 Device confirmation + size report (2026-09-06)
+
+Owner on the `db56824` build (App Version `1.3.16 (34011311415)` line):
+**"Working"** — the open-file / direct-editor crash is GONE on device.
+Both layers of the crash-2 remediation hold: Compose 1.7.6 (BOM
+2024.12.01) + the atomic `setText` replay. Crash 1 (CME) and crash 2
+are both closed with device transcripts.
+
+Owner-reported on-device size: **24.95 MB** (Android app-info read —
+includes the installed footprint, extracted native libraries and app
+data; reads above the raw APK file). Artifact-to-artifact (the budget
+basis): `main` 3edfc97 = 22,037,926 B; this branch = 24,257,884 B →
+**+2,219,958 B = +2.22 MB (+2.12 MiB)** vs the +1.5 MiB budget —
+overage ~0.65 MB, unchanged in kind from §4.5 (engine chain
+joni+jcodings+gson+tm4e ≈ 1.95 MB; grammars/themes ≈ 250 KB).
+**Explicit accept/direct-a-strip verdict still pending.**
+
+Remaining for the 29.1 device-round gate (`TROUBLESHOOTING.md` §12):
+Dark+ look, every-language colour, `.txt` plain, ~60-key typing feel,
+theme switching, completions/Keys/find regressions, About LGPL lines.
