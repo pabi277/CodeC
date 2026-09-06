@@ -121,7 +121,8 @@ class MainActivity : ComponentActivity() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             runCatching {
-                java.io.File(filesDir, "crash-log.txt").appendText(
+                val file = java.io.File(filesDir, "crash-log.txt")
+                file.appendText(
                     buildString {
                         append("\n==== ")
                         append(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
@@ -129,11 +130,49 @@ class MainActivity : ComponentActivity() {
                         append("  thread=")
                         append(thread.name)
                         append(" ====\n")
-                        append(android.util.Log.getStackTraceString(throwable))
+                        // 2026-09-06 (Phase 29 device round): HEADER-FIRST,
+                        // FRAME-CAPPED records. The diagnosis is the exception
+                        // line + the FIRST frames (origin + app/sora code); the
+                        // trailing Compose/ViewRootImpl/Looper frames are
+                        // identical in every crash and previously pushed the
+                        // header out of CrashReportOverlay's display window —
+                        // three reports arrived tail-only and undiagnosable.
+                        appendThrowable(this, throwable, frameCap = 80)
+                        var cause = throwable.cause
+                        var depth = 0
+                        while (cause != null && depth < 5) {
+                            append("Caused by: ")
+                            appendThrowable(this, cause, frameCap = 8)
+                            cause = cause.cause
+                            depth++
+                        }
                     }
                 )
+                // Bound the file: keep the newest records only.
+                if (file.length() > 60_000) {
+                    val text = file.readText()
+                    val cut = text.indexOf("\n==== ", text.length - 45_000)
+                    if (cut >= 0) file.writeText(text.substring(cut + 1))
+                }
             }
             previous?.uncaughtException(thread, throwable)
+        }
+    }
+
+    /** Exception line first (the diagnosis), then the first [frameCap] frames. */
+    private fun appendThrowable(sb: StringBuilder, t: Throwable, frameCap: Int) {
+        sb.append(t.toString()).append('\n')
+        val frames = t.stackTrace
+        for (i in 0 until minOf(frames.size, frameCap)) {
+            sb.append("\tat ").append(frames[i]).append('\n')
+        }
+        if (frames.size > frameCap) {
+            sb.append("\t… ").append(frames.size - frameCap)
+                .append(" more frames (Compose/ViewRootImpl tail omitted)\n")
+        }
+        for (suppressed in t.suppressed.take(3)) {
+            sb.append("Suppressed: ").append(suppressed.toString()).append('\n')
+            suppressed.stackTrace.take(4).forEach { sb.append("\tat ").append(it).append('\n') }
         }
     }
 
