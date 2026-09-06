@@ -444,7 +444,11 @@ class EditorViewModel : ViewModel() {
     /** Debounced leg: full engine recompute OFF the main thread. */
     private suspend fun refreshCompletionItems(v: TextFieldValue) {
         val cfg = completionConfig
-        val lang = LanguageType.fromFileName(_activeTabPath.value ?: _fileName.value)
+        // Phase 30 — the engine also takes the file NAME: it feeds Emmet's
+        // JSX-ish gate (`.jsx`/`.tsx` only) and the snippet packs'
+        // `${TM_FILENAME_BASE}` resolution.
+        val path = _activeTabPath.value ?: _fileName.value
+        val lang = LanguageType.fromFileName(path)
         if (cfg.everythingOff || !cfg.anyOn ||
             v.text.length > GhostCompletion.SOFT_FILE_CAP ||
             lang == LanguageType.TEXT || lang == LanguageType.JSON
@@ -453,7 +457,7 @@ class EditorViewModel : ViewModel() {
         } else {
             val caret = v.selection.min.coerceIn(0, v.text.length)
             completionItemsBase = withContext(Dispatchers.Default) {
-                runCatching { CodeCompletionEngine.completions(v.text, caret, lang) }
+                runCatching { CodeCompletionEngine.completions(v.text, caret, lang, path) }
                     .getOrDefault(emptyList())
             }
         }
@@ -492,10 +496,20 @@ class EditorViewModel : ViewModel() {
         val v = _codeText.value
         if (v.selection.length != 0) return
         val caret = v.selection.min.coerceIn(0, v.text.length)
-        val start = CodeCompletionEngine.prefixStart(v.text, caret)
+        // Phase 30 — an item may replace MORE than the identifier under the
+        // caret: an Emmet expansion carries its whole abbreviation
+        // (`ul>li*3|` has the identifier prefix `3`), so [CompletionItem
+        // .replaceLength] wins when the item declares it. Clamped to what is
+        // really before the caret, so a stale chip can never eat text.
+        val identifierStart = CodeCompletionEngine.prefixStart(v.text, caret)
+        val start = item.replaceLength?.let { (caret - it).coerceIn(0, caret) } ?: identifierStart
+        val insert = item.insertText
+        // Phase 30 — park the caret at the snippet's first tabstop / the
+        // expansion's first empty element when the item declares one.
+        val park = item.caretOffset?.takeIf { it in 0..insert.length } ?: insert.length
         val next = TextFieldValue(
-            v.text.substring(0, start) + item.insertText + v.text.substring(caret),
-            TextRange(start + item.insertText.length)
+            v.text.substring(0, start) + insert + v.text.substring(caret),
+            TextRange(start + park)
         )
         completionAcceptCounts[item.label] = (completionAcceptCounts[item.label] ?: 0) + 1
         clearCompletionTransient()

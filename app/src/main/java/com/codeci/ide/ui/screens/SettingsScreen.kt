@@ -917,9 +917,11 @@ fun SettingsScreen(
             // the attribution + license pointer live here.
             // Phase 29 — language-textmate (same LGPL-2.1 rule) + the MIT
             // VS Code grammars/themes shipped as unmodified asset copies.
+            // Phase 30.1 — the MIT friendly-snippets packs, also shipped as
+            // unmodified asset copies (assets/licenses/FRIENDLY_SNIPPETS_MIT).
             SettingsItem(
                 title = "Open-source licenses",
-                subtitle = "sora-editor + language-textmate © Rosemoe — LGPL-2.1 · TextMate grammars & themes — MIT (microsoft/vscode, TypeScript-TmLanguage, LuaLS) · github.com/Rosemoe/sora-editor"
+                subtitle = "sora-editor + language-textmate © Rosemoe — LGPL-2.1 · TextMate grammars & themes — MIT (microsoft/vscode, TypeScript-TmLanguage, LuaLS) · snippet packs — MIT (rafamadriz/friendly-snippets) · github.com/Rosemoe/sora-editor"
             )
             SettingsAction(
                 title = stringResource(com.codeci.ide.R.string.install_from_github),

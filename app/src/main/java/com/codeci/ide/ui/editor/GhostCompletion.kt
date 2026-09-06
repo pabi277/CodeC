@@ -122,8 +122,10 @@ object GhostCompletion {
      * Apply an accept against [value]: the range
      * [caret - ghost.prefixLength, caret) is replaced by the FULL insert text
      * / the next WORD piece / the rest of the current LINE. The caret lands at
-     * the end of what was inserted. Returns null when there is nothing valid
-     * to accept (stale ghost, selection active).
+     * the end of what was inserted — or, since Phase 30, at the item's first
+     * tabstop when it declares one ([CompletionItem.caretOffset]). Returns
+     * null when there is nothing valid to accept (stale ghost, selection
+     * active).
      */
     fun accept(
         value: TextFieldValue,
@@ -149,10 +151,18 @@ object GhostCompletion {
         if (rest.isEmpty()) return null
         return when (granularity) {
             // FULL replaces the typed prefix by the WHOLE insert text.
-            AcceptGranularity.FULL -> TextFieldValue(
-                text.substring(0, prefixStart) + state.item.insertText + text.substring(caret),
-                TextRange(prefixStart + state.item.insertText.length)
-            )
+            // Phase 30 — the caret parks at the item's first tabstop when the
+            // item declares one (snippet packs, Emmet expansions); null keeps
+            // the 27.x rule (caret after the insert).
+            AcceptGranularity.FULL -> {
+                val insert = state.item.insertText
+                val park = state.item.caretOffset?.takeIf { it in 0..insert.length }
+                    ?: insert.length
+                TextFieldValue(
+                    text.substring(0, prefixStart) + insert + text.substring(caret),
+                    TextRange(prefixStart + park)
+                )
+            }
             // WORD/LINE keep the typed prefix in place and append only the
             // piece after the caret.
             else -> {

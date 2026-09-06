@@ -120,9 +120,20 @@ object SuggestionStripModel {
             textLength <= GhostCompletion.SOFT_FILE_CAP &&
             dismissedAnchor != prefixAnchor
         if (!usable) return StripContext.Keys(language, CompletionSurface.NONE)
-        if (items.size >= 2) {
+        // Phase 30.2 — S1's "1 candidate stays in key mode" holds BECAUSE the
+        // ghost covers that candidate. An Emmet expansion cannot be covered:
+        // its insert text (`<ul>…`) never starts with what was typed
+        // (`ul>li*3`), so GhostCompletion.compute stays Hidden and a lone
+        // expansion would be invisible. One Emmet candidate therefore gets its
+        // chip; every other single-candidate case is unchanged (27.2 law).
+        val emmetOnly = items.size == 1 &&
+            items[0].detail == Emmet.DETAIL &&
+            ghost !is GhostState.Visible
+        if (items.size >= 2 || emmetOnly) {
             val chips = buildStripModel(items, ghost, acceptCounts)
-            if (chips.size >= 2) return StripContext.Suggestions(chips)
+            if (chips.size >= 2 || (emmetOnly && chips.size == 1)) {
+                return StripContext.Suggestions(chips)
+            }
         }
         return StripContext.Keys(language, if (ghost is GhostState.Visible) CompletionSurface.GHOST_ONLY else CompletionSurface.NONE)
     }

@@ -206,4 +206,91 @@ class GhostCompletionTest {
         val call = item("print", "print(")
         assertEquals(1, GhostCompletion.filterForPrefix(listOf(call), "print").size)
     }
+    // ---- Phase 30: caretOffset (resolved pack tabstops) --------------------
+
+    @Test
+    fun `FULL accept parks at the item's declared tabstop`() {
+        // A friendly-snippets body resolves to text PLUS the offset of its
+        // first stop; accepting must park there, not at the insert's end.
+        val insert = "int main(void)\n{\n    return 0;\n}"
+        val stop = insert.indexOf("    return")
+        val main = CompletionItem(
+            label = "main",
+            insertText = insert,
+            kind = CompletionKind.SNIPPET,
+            detail = "Standard main()",
+            caretOffset = stop
+        )
+        val text = "int mai"
+        val ghost = GhostCompletion.compute(text, text.length, listOf(main)) as GhostState.Visible
+        val accepted = GhostCompletion.accept(
+            TextFieldValue(text, TextRange(text.length)), ghost, AcceptGranularity.FULL
+        )!!
+        assertEquals(insert, accepted.text)
+        assertEquals(text.length - ghost.prefixLength + stop, accepted.selection.start)
+        // The caret really is on the `return 0;` line (indent included).
+        assertTrue(
+            "tail: <${accepted.text.substring(accepted.selection.start)}>",
+            accepted.text.substring(accepted.selection.start).startsWith("    return 0;")
+        )
+    }
+
+    @Test
+    fun `WORD and LINE accepts ignore the tabstop`() {
+        // A partial accept only commits the piece after the caret, so jumping
+        // to a tabstop deep inside the snippet would teleport the user.
+        val insert = "int main(void)\n{\n    return 0;\n}"
+        val main = CompletionItem(
+            label = "main",
+            insertText = insert,
+            kind = CompletionKind.SNIPPET,
+            caretOffset = insert.indexOf("    return")
+        )
+        val text = "int mai"
+        val ghost = GhostCompletion.compute(text, text.length, listOf(main)) as GhostState.Visible
+        val word = GhostCompletion.accept(
+            TextFieldValue(text, TextRange(text.length)), ghost, AcceptGranularity.WORD
+        )!!
+        assertEquals("int main", word.text) // the next word piece only
+        assertEquals(word.text.length, word.selection.start)
+        val line = GhostCompletion.accept(
+            TextFieldValue(text, TextRange(text.length)), ghost, AcceptGranularity.LINE
+        )!!
+        assertEquals("int main(void)\n", line.text) // G6: the first line + its break
+        assertEquals(line.text.length, line.selection.start)
+    }
+
+    @Test
+    fun `a caretOffset outside the insert falls back to its end (27_x rule)`() {
+        val insert = "printf(\"\\n\");"
+        val stale = CompletionItem(
+            label = "printf(...)",
+            insertText = insert,
+            kind = CompletionKind.SNIPPET,
+            caretOffset = insert.length + 40
+        )
+        val text = "int main() {\n    print\n}\n"
+        val caret = text.indexOf("print") + 5
+        val ghost = GhostCompletion.compute(text, caret, listOf(stale)) as GhostState.Visible
+        val accepted = GhostCompletion.accept(
+            TextFieldValue(text, TextRange(caret)), ghost, AcceptGranularity.FULL
+        )!!
+        assertEquals(caret - ghost.prefixLength + insert.length, accepted.selection.start)
+    }
+
+    @Test
+    fun `an item without a caretOffset keeps the Phase 27 parking`() {
+        val text = "int main() {\n    print\n}\n"
+        val caret = text.indexOf("print") + 5
+        val ghost = GhostCompletion.compute(text, caret, listOf(printf)) as GhostState.Visible
+        assertNull(printf.caretOffset)
+        val accepted = GhostCompletion.accept(
+            TextFieldValue(text, TextRange(caret)), ghost, AcceptGranularity.FULL
+        )!!
+        // 27.x: the caret lands right after the whole insert.
+        assertEquals(
+            caret - ghost.prefixLength + printf.insertText.length,
+            accepted.selection.start
+        )
+    }
 }

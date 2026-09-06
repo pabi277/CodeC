@@ -2,15 +2,28 @@ package com.codeci.ide
 
 import com.codeci.ide.ui.editor.CodeCompletionEngine
 import com.codeci.ide.ui.editor.CompletionKind
+import com.codeci.ide.ui.editor.snippets.SnippetLibrary
 import com.codeci.ide.ui.utils.LanguageType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 /**
  * Phase 12 — buffer & snippet autocomplete engine unit tests. Pure Kotlin.
+ *
+ * Phase 30 note: these assertions pin the BUILT-IN tables, i.e. the fallback a
+ * device uses when no snippet pack could be read. The vendored MIT packs live
+ * in a process-wide singleton, so the `@Before` below guarantees this file sees
+ * the fallback world regardless of Gradle's test order; `CompletionCapacityTest`
+ * and `SnippetLibraryTest` (Robolectric, real assets) cover the pack world.
  */
 class CodeCompletionTest {
+
+    @Before
+    fun noPacksInstalled() {
+        SnippetLibrary.reset()
+    }
 
     @Test
     fun `prefix is the word fragment before the cursor`() {
