@@ -66,9 +66,18 @@ fun CrashReportOverlay() {
     }
 
     report?.let { text ->
+        // The exception line (first line after the ==== header) in the TITLE:
+        // even a screenshot of the dialog then carries the diagnosis. The
+        // body can scroll out of view; the title cannot.
+        val exceptionLine = text.lineSequence()
+            .dropWhile { it.startsWith("====") }
+            .firstOrNull { it.isNotBlank() }
+            ?.take(90)
         AlertDialog(
             onDismissRequest = { /* keep the report until acted on */ },
-            title = { Text("Last crash report") },
+            title = {
+                Text(if (exceptionLine != null) "Crash: $exceptionLine" else "Last crash report")
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(

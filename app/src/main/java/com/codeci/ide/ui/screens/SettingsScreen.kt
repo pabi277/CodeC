@@ -893,8 +893,12 @@ fun SettingsScreen(
             val showFilePaths by settingsManager.showFilePathsFlow.collectAsState(initial = false)
 
             SettingsItem(
-                title = "App Version", 
-                subtitle = "1.3.14 (Beta)",
+                title = "App Version",
+                // BuildConfig.VERSION_NAME carries the CI run number
+                // ("1.3.16 (340xxxx)") — the device round's crash reports
+                // kept coming from a stale build; this answers "which apk
+                // is installed" at a glance.
+                subtitle = com.codeci.ide.BuildConfig.VERSION_NAME + " (Beta)",
                 onClick = {
                     if (com.codeci.ide.BuildConfig.DEBUG && !devModeUnlocked) {
                         versionTaps++
