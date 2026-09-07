@@ -60,10 +60,18 @@ class IntelliSenseCatalogTest {
         // pylsp is not a CodeC apt package (Phase 20.1 didn't publish
         // it — see README §3.3 "If a pip/npm name is not in the CodeC
         // apt repo, prefer a documented pip install"). The card
-        // surfaces `pip install --user python-lsp-server`.
+        // surfaces a chain: `pkg install -y python-pip` lands `pip` on
+        // PATH (Phase 12 publishes `python-pip` as its own deb; the
+        // bare `pip install` command on a fresh userland hits
+        // `command not found` — device round 2026-09-07), then
+        // `pip install --user python-lsp-server` installs the LSP
+        // server into `$PREFIX/`.
         val pylsp = IntelliSenseCatalog.cardById["intellisense-python-pylsp"]
         assertNotNull(pylsp)
-        assertEquals("pip install --user python-lsp-server", pylsp!!.installCommand)
+        assertEquals(
+            "pkg install -y python-pip && pip install --user python-lsp-server",
+            pylsp!!.installCommand,
+        )
         assertEquals("pylsp", pylsp.binary)
     }
 
@@ -83,6 +91,31 @@ class IntelliSenseCatalogTest {
         for (card in IntelliSenseCatalog.cards) {
             assertEquals(PackageCategory.LANGUAGES, card.category)
         }
+    }
+
+    @Test
+    fun pythonCardChainMentionsBothPackages() {
+        // The chain `pkg install -y python-pip && pip install
+        // --user python-lsp-server` has TWO requirements:
+        //   (1) the apt package `python-pip` (so `pip` lands on PATH),
+        //   (2) the pip package `python-lsp-server` (the LSP server).
+        // Pin both — a future edit that drops either breaks the
+        // install path on a fresh userland (device round 2026-09-07
+        // showed the bare `pip install` form failing with
+        // `command not found`).
+        val pylsp = IntelliSenseCatalog.cardById["intellisense-python-pylsp"]!!
+        assertTrue(
+            "python card must install python-pip from the apt repo",
+            pylsp.installCommand.contains("python-pip"),
+        )
+        assertTrue(
+            "python card must install python-lsp-server via pip",
+            pylsp.installCommand.contains("python-lsp-server"),
+        )
+        assertTrue(
+            "python card must chain with && so a missing pip is loud",
+            pylsp.installCommand.contains("&&"),
+        )
     }
 
     @Test

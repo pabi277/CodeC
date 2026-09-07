@@ -68,9 +68,19 @@ object IntelliSenseCatalog {
             runCommand = "clangd --version",
         ),
         // 31.3 — Python via python-lsp-server (pylsp). `python` is
-        // already in the CodeC repository (Phase 12); pylsp is a
-        // documented pip install inside PREFIX. The card surfaces the
-        // pip command; the orchestrator probes `$PREFIX/bin/pylsp`.
+        // already in the CodeC repository (Phase 12); `python-pip` is
+        // a SEPARATE Phase 12 package (the python pip-separation
+        // postinst was neutralized in the CodeC repo so pip is its
+        // own deb — see `docs/chat-phase12/PART_12_PYTHON.md`). The
+        // card surfaces the chained install: `pkg install -y
+        // python-pip` lands `pip` on PATH (idempotent if already
+        // present), then `pip install --user python-lsp-server`
+        // installs the LSP server into `$PREFIX/`. The orchestrator
+        // probes `$PREFIX/bin/pylsp` after install. **Device round
+        // (2026-09-07, owner):** the bare `pip install ...` command
+        // FAILED with `pip: command not found` because the user had
+        // `python` (the interpreter) but not `python-pip` (the
+        // wrapper). The chain makes the card self-sufficient.
         PackageItem(
             id = "intellisense-python-pylsp",
             name = "IntelliSense: Python (pylsp)",
@@ -79,8 +89,10 @@ object IntelliSenseCatalog {
             description = "Adds python-lsp-server — VS Code's Python LSP. " +
                 "Jedi completions, import resolution, signature help, " +
                 "hover docs, go-to-definition. Requires Python (pkg " +
-                "install -y python) — install that first if not present.",
-            installCommand = "pip install --user python-lsp-server",
+                "install -y python) — install that first if not present. " +
+                "This card also installs python-pip (the CodeC apt " +
+                "package from Phase 12).",
+            installCommand = "pkg install -y python-pip && pip install --user python-lsp-server",
             runCommand = "pylsp --version",
         ),
         // 31.3 — JavaScript / TypeScript via typescript-language-server.

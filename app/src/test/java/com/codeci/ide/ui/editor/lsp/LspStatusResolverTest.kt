@@ -80,6 +80,50 @@ class LspStatusResolverTest {
     }
 
     @Test
+    fun availableCardUsesCardBinaryNotCardId() {
+        // Pin the card-binary contract: the probe target is the
+        // card's `binary` (e.g. "clangd", "pylsp"), NOT the card's
+        // `id` (e.g. "intellisense-c-cpp-clangd"). A probe that says
+        // "yes for clangd" must return Installed (the first branch),
+        // and a probe that says "no for clangd" must return
+        // AvailableCard (the second branch). An earlier draft
+        // accidentally probed the card id, which would always
+        // return false in production and silently mask the install
+        // state.
+        val clangdPresent = BinaryProbe { it == "clangd" }
+        assertEquals(
+            LspStatus.Installed,
+            LspStatusResolver.statusFor(LanguageType.C, clangdPresent),
+        )
+        val clangdMissing = BinaryProbe { false }
+        assertEquals(
+            LspStatus.AvailableCard,
+            LspStatusResolver.statusFor(LanguageType.C, clangdMissing),
+        )
+    }
+
+    @Test
+    fun availableCardProbesByLanguageSpecificBinary() {
+        // Each language probes its own card binary. A probe that
+        // says "yes for clangd" must report Installed for C but
+        // AvailableCard for Python (the Python card probes pylsp,
+        // not clangd).
+        val clangdOnly = BinaryProbe { it == "clangd" }
+        assertEquals(
+            LspStatus.Installed,
+            LspStatusResolver.statusFor(LanguageType.C, clangdOnly),
+        )
+        assertEquals(
+            LspStatus.AvailableCard,
+            LspStatusResolver.statusFor(LanguageType.PYTHON, clangdOnly),
+        )
+        assertEquals(
+            LspStatus.AvailableCard,
+            LspStatusResolver.statusFor(LanguageType.TYPESCRIPT, clangdOnly),
+        )
+    }
+
+    @Test
     fun installedTakesPrecedenceOverAvailableCard() {
         // The card and the server probe are checked in order; the
         // installed path is the one the UI shows. This pins the
