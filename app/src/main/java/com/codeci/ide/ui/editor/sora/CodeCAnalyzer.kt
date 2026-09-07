@@ -149,7 +149,13 @@ class CodeCLanguage private constructor(
         // Runs on sora's completion thread (fast, windowed engine).
         val text = content.toString()
         val cursor = position.index.coerceIn(0, text.length)
-        val identifierPrefixLength = CodeCompletionEngine.currentPrefix(text, cursor).length
+        // Phase 30 device round (2026-09-07) — the panel used to hand sora the
+        // WORD-only prefix length for every item, so accepting
+        // `#include <stdio.h>` after typing `#in` replaced only `in` and left
+        // `##include …` in the buffer. Each item now carries the same accept
+        // span the strip chip and the ghost use (the identifier run, or the
+        // longer line tail its insert text continues); Emmet still wins with
+        // its own replaceLength (the whole abbreviation).
         // Phase 30 — the file name reaches the engine (Emmet's JSX-ish gate +
         // the packs' TM_FILENAME_BASE resolution), and each item brings its
         // OWN replace length: an Emmet expansion replaces the whole
@@ -159,7 +165,9 @@ class CodeCLanguage private constructor(
                 SimpleCompletionItem(
                     item.label,
                     item.detail,
-                    item.replaceLength ?: identifierPrefixLength,
+                    item.replaceLength
+                        ?: CodeCompletionEngine.replaceSpanLength(text, cursor, item.insertText)
+                            .coerceAtLeast(0),
                     item.insertText
                 )
                     .kind(

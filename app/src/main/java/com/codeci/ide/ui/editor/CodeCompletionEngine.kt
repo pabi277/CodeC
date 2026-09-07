@@ -95,6 +95,64 @@ object CodeCompletionEngine {
     }
 
     /**
+     * Phase 30 device round (2026-09-07, owner: "in c if i write #in then
+     * click Suggestions it written like ##include<stdio.h>") — how many
+     * characters before [cursorOffset] accepting [insert] must replace.
+     *
+     * The word-run scan behind [prefixStart] cannot see a symbol, so a chip
+     * tapped after typing `#in` deleted only `in` and left the `#` behind —
+     * `##include <stdio.h>`. The same family: `int main(void) {` after
+     * `int mai` left `int int main(…)`, and `<!DOCTYPE html> skeleton` after
+     * `<!doc` left `<<!DOCTYPE …`. The ghost has not had this bug since 27.1
+     * because it aligns the INSERT TEXT against the line tail; that rule is
+     * now the one rule for every accept surface (strip chip, sora panel,
+     * ghost) — see [alignedTailLength].
+     *
+     * The identifier run stays the FLOOR: an item whose insert does not
+     * continue what was typed (`head` → `# `) still replaces the typed word.
+     */
+    fun replaceSpanLength(text: String, cursorOffset: Int, insert: String): Int {
+        val cursor = cursorOffset.coerceIn(0, text.length)
+        val identifierSpan = cursor - prefixStart(text, cursor)
+        // Case-INSENSITIVE on purpose: matching is (22.6 law), so typing
+        // `<!doc` and tapping `<!DOCTYPE html> skeleton` must replace all five
+        // characters — a case-sensitive alignment finds nothing there and the
+        // accept would leave `<<!DOCTYPE html>`.
+        return maxOf(identifierSpan, alignedTailLength(text, cursor, insert, ignoreCase = true))
+    }
+
+    /**
+     * The longest suffix of the current line's text before [cursorOffset] that
+     * [insert] continues, never starting mid-word — 27.1's ghost alignment,
+     * extracted verbatim so the ghost and the accept paths cannot drift apart.
+     * 0 when nothing aligns. [ignoreCase] is false for the ghost (it paints
+     * the literal suffix, so the alignment must be literal) and true for the
+     * accept span (matching is case-insensitive — see [replaceSpanLength]).
+     */
+    fun alignedTailLength(
+        text: String,
+        cursorOffset: Int,
+        insert: String,
+        ignoreCase: Boolean = false
+    ): Int {
+        val cursor = cursorOffset.coerceIn(0, text.length)
+        val lineStart =
+            text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
+        val lineTail = text.substring(lineStart, cursor)
+        var len = minOf(insert.length, lineTail.length)
+        while (len > 0) {
+            val start = lineTail.length - len
+            val midWord = start > 0 &&
+                (lineTail[start - 1].isLetterOrDigit() || lineTail[start - 1] == '_')
+            if (!midWord && insert.regionMatches(0, lineTail, start, len, ignoreCase = ignoreCase)) {
+                return len
+            }
+            len--
+        }
+        return 0
+    }
+
+    /**
      * The ranked candidate list for [cursorOffset].
      *
      * @param fileName the open file (path or leaf). Phase 30: it feeds Emmet's

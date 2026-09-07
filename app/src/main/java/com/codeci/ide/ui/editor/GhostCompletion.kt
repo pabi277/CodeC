@@ -74,18 +74,10 @@ object GhostCompletion {
             // its trailing "i" against insert "int main…" and paint
             // "nt main(void) {" (accept would mangle the buffer to
             // "maint main(…)…").
-            var len = minOf(insert.length, lineTail.length)
-            while (len > 0) {
-                val start = lineTail.length - len
-                val midWord = start > 0 &&
-                    (lineTail[start - 1].isLetterOrDigit() || lineTail[start - 1] == '_')
-                if (!midWord &&
-                    insert.regionMatches(0, lineTail, start, len, ignoreCase = false)
-                ) {
-                    break
-                }
-                len--
-            }
+            // Phase 30 device round — the alignment lives in the engine now
+            // ([CodeCompletionEngine.alignedTailLength]) so the strip chip and
+            // the sora panel replace exactly the same span the ghost does.
+            val len = CodeCompletionEngine.alignedTailLength(text, cursor, insert)
             if (len == 0) continue
             val rest = insert.substring(len)
             if (rest.isEmpty()) continue

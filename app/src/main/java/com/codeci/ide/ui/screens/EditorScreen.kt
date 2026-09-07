@@ -1478,7 +1478,7 @@ fun EditorScreen(
                     customSnippets = customSnippets,
                     keyStripJson = keyStripJson,
                     textFieldValue = codeText,
-                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, isStrip = true) },
+                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) },
@@ -1583,7 +1583,7 @@ fun EditorScreen(
                     customSnippets = customSnippets,
                     keyStripJson = keyStripJson,
                     textFieldValue = codeText,
-                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, isStrip = true) },
+                    onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) },
@@ -1598,9 +1598,14 @@ fun EditorScreen(
 
             // Phase 28.2 — CodeC Keys: last child of the column, exactly
             // where the soft keyboard would sit — because it IS the keyboard
-            // now. Same actions as the strip (updateCode with isStrip=true,
-            // ghost interception), same model (`EditorKeySet.apply`), so
-            // every 26/27 law keeps holding over the full QWERTY.
+            // now. Same actions as the strip (updateCode + ghost
+            // interception), same model (`EditorKeySet.apply`), so every 26/27
+            // law keeps holding over the full QWERTY — with ONE difference
+            // (Phase 30 device round, 2026-09-07): CodeC Keys is a TYPING
+            // surface, so auto-pair is NOT suppressed here. Its commits are
+            // programmatic VM edits, which sora's SymbolPairMatch never sees,
+            // and the strip's reason for suppressing (its own `()` cap) does
+            // not exist on a one-key-per-char grid.
             if (codecKeysUp) {
                 CodecKeyboard(
                     layout = if (codecKeysLayer == KeyboardLayers.SYMBOLS) codecKeysSymbols else codecKeysLetters,
@@ -1609,7 +1614,7 @@ fun EditorScreen(
                     onLayerChange = { codecKeysLayer = it },
                     textFieldValue = codeText,
                     onValueChange = {
-                        viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, isStrip = true)
+                        viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize)
                     },
                     tabSize = tabSize,
                     haptics = codecKeysHaptics,

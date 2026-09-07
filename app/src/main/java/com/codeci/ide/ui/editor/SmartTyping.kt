@@ -395,7 +395,7 @@ object SmartTyping {
         language: LanguageType?,
         tabSize: Int = 4,
         config: Config = Config(),
-        isStrip: Boolean = false
+        suppressAutoPair: Boolean = false
     ): TextFieldValue {
         // Quick path: selection-only change (no text change) — nothing to smart-handle.
         if (old.text == newValue.text) return newValue
@@ -413,8 +413,14 @@ object SmartTyping {
             // Try auto-pair for openers (insert matching closer and keep caret inside)
             // Only when newValue is the naive single-char insert; replace with pair.
             // Detect naive: newValue == old[0:caretOld] + incoming + old[caretOld:]
-            // Skipped for strip-origin inserts: swipe-up single '(' must stay single, sora handles keyboard pairing.
-            if (!isStrip) {
+            // Skipped where the surface has its OWN pair key: the editor key
+            // strip's swipe-up single '(' must stay single (it has a `()` cap).
+            // Phase 30 device round (2026-09-07) — CodeC Keys is NOT such a
+            // surface: its SYM layer is one key per char and its commits go
+            // through the VM, so sora's SymbolPairMatch never sees them. With
+            // pairing suppressed there the IME-free keyboard closed nothing —
+            // the owner's "want auto brackets close" report.
+            if (!suppressAutoPair) {
                 val naive = old.text.substring(0, caretOld) + incoming + old.text.substring(caretOld)
                 if (newValue.text == naive) {
                     handleAutoPair(old, incoming, config, language)?.let { return it }

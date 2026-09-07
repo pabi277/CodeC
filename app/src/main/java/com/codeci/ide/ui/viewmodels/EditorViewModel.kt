@@ -501,8 +501,13 @@ class EditorViewModel : ViewModel() {
         // (`ul>li*3|` has the identifier prefix `3`), so [CompletionItem
         // .replaceLength] wins when the item declares it. Clamped to what is
         // really before the caret, so a stale chip can never eat text.
-        val identifierStart = CodeCompletionEngine.prefixStart(v.text, caret)
-        val start = item.replaceLength?.let { (caret - it).coerceIn(0, caret) } ?: identifierStart
+        // Phase 30 device round (2026-09-07) — everything else uses the SAME
+        // span rule as the ghost: the identifier run, or the longer line tail
+        // the insert text literally continues. Tapping `#include <stdio.h>`
+        // after typing `#in` used to delete only `in` and leave `##include …`.
+        val span = CodeCompletionEngine.replaceSpanLength(v.text, caret, item.insertText)
+        val start = item.replaceLength?.let { (caret - it).coerceIn(0, caret) }
+            ?: (caret - span).coerceIn(0, caret)
         val insert = item.insertText
         // Phase 30 — park the caret at the snippet's first tabstop / the
         // expansion's first empty element when the item declares one.
@@ -791,15 +796,22 @@ class EditorViewModel : ViewModel() {
     // Text editing + undo recording
     // ---------------------------------------------------------------------
 
-    fun updateCode(newValue: TextFieldValue, autoIndent: Boolean = false, tabSize: Int = 4, isStrip: Boolean = false) {
+    fun updateCode(
+        newValue: TextFieldValue,
+        autoIndent: Boolean = false,
+        tabSize: Int = 4,
+        suppressAutoPair: Boolean = false
+    ) {
         val old = _codeText.value
         var next = newValue
         // Phase 26.2 — smart typing (pure, host-testable). Runs before autoIndent legacy.
-        // isStrip=true for keys coming from the strip: swipe single '(' must stay single (sora handles keyboard pairing).
+        // suppressAutoPair=true only for the editor key STRIP: its swipe-up single
+        // '(' must stay single because the strip has its own `()` pair cap. Every
+        // TYPING surface (IME via sora, CodeC Keys) pairs — see SmartTyping.transform.
         run {
             val lang = LanguageType.fromFileName(_fileName.value)
             val cfg = smartTypingConfig
-            val smart = SmartTyping.transform(old, next, lang, tabSize, cfg, isStrip = isStrip)
+            val smart = SmartTyping.transform(old, next, lang, tabSize, cfg, suppressAutoPair)
             if (smart !== next) next = smart
         }
         if (autoIndent && next === newValue && isSingleNewlineInsert(old, newValue)) {
@@ -843,11 +855,17 @@ class EditorViewModel : ViewModel() {
      * time makes every tap AND every 40 ms repeat tick count exactly once.
      */
     fun applyEditorKey(key: com.codeci.ide.ui.editor.EditorKey, autoIndent: Boolean = false, tabSize: Int = 4) {
+        // Phase 30 device round (2026-09-07) — the ONLY caller is CodeC Keys'
+        // live-buffer commit path, i.e. a TYPING surface: `(` must close to
+        // `()` with the caret inside, exactly like the IME (where sora's own
+        // SymbolPairMatch does it). These commits never reach sora's matcher —
+        // they are programmatic VM edits replayed wholesale — so suppressing
+        // the pure rule here left the IME-free keyboard closing nothing. The
+        // editor key strip keeps its suppression (it has an explicit `()` cap).
         updateCode(
             com.codeci.ide.ui.editor.EditorKeySet.apply(key, _codeText.value, tabSize),
             autoIndent = autoIndent,
-            tabSize = tabSize,
-            isStrip = true
+            tabSize = tabSize
         )
     }
 
@@ -863,7 +881,7 @@ class EditorViewModel : ViewModel() {
         val anchor = minOf(cur.selection.start, cur.selection.end)
         val target = com.codeci.ide.ui.keyboard.SpaceTrack.caretAfterDrag(cur.text, anchor, columns, lines)
         if (target == anchor) return
-        updateCode(TextFieldValue(cur.text, TextRange(target)), isStrip = true)
+        updateCode(TextFieldValue(cur.text, TextRange(target)), suppressAutoPair = true)
     }
 
     fun undo() {

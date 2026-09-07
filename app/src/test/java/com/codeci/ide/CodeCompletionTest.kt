@@ -165,6 +165,35 @@ class CodeCompletionTest {
     }
 
     @Test
+    fun `the accept span covers what a word-run scan cannot see (device round 2026-09-07)`() {
+        // Owner report: in C, typing `#in` and tapping the suggestion wrote
+        // `##include<stdio.h>` — the accept replaced only the word run `in`
+        // and left the `#` behind. Every accept surface (strip chip, sora
+        // panel, ghost) now uses ONE rule: the identifier run, or the longer
+        // tail of the current line that the insert text continues.
+        assertEquals(3, CodeCompletionEngine.replaceSpanLength("#in", 3, "#include <stdio.h>\n"))
+        assertEquals(7, CodeCompletionEngine.replaceSpanLength("int mai", 7, "int main(void) {"))
+        assertEquals(4, CodeCompletionEngine.replaceSpanLength("@med", 4, "@media screen and ("))
+        // Case-insensitive, because matching is (22.6 law): `<!doc` must give
+        // way to `<!DOCTYPE html>` completely, not leave `<<!DOCTYPE …`.
+        assertEquals(5, CodeCompletionEngine.replaceSpanLength("<!doc", 5, "<!DOCTYPE html>\n"))
+        // The identifier run stays the FLOOR when the insert does not continue
+        // what was typed (`head` → `# `, `mai` → `int main(…)`).
+        assertEquals(4, CodeCompletionEngine.replaceSpanLength("head", 4, "# "))
+        assertEquals(3, CodeCompletionEngine.replaceSpanLength("mai", 3, "int main(void) {"))
+        // It never crosses a newline and never eats a member-access dot.
+        assertEquals(3, CodeCompletionEngine.replaceSpanLength("int x;\nmai", 10, "main()"))
+        assertEquals(4, CodeCompletionEngine.replaceSpanLength("obj.meth", 8, "method()"))
+        assertEquals(0, CodeCompletionEngine.replaceSpanLength("", 0, "#include <stdio.h>"))
+        // The ghost's own alignment is unchanged: CASE-SENSITIVE (it paints the
+        // literal suffix) and never mid-word (27.1).
+        assertEquals(7, CodeCompletionEngine.alignedTailLength("int mai", 7, "int main(void) {"))
+        assertEquals(0, CodeCompletionEngine.alignedTailLength("<!doc", 5, "<!DOCTYPE html>\n"))
+        assertEquals(0, CodeCompletionEngine.alignedTailLength("mai", 3, "int main(void) {"))
+        assertEquals(3, CodeCompletionEngine.alignedTailLength("#in", 3, "#include <stdio.h>\n"))
+    }
+
+    @Test
     fun `completions are capped`() {
         val text = "aab aac aad aae aaf aag aah aai aaj aak aal aam aaan aao aap"
         val items = CodeCompletionEngine.completions("$text a", text.length + 2, LanguageType.PYTHON)
