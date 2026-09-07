@@ -18,7 +18,7 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**WHERE THINGS STAND (2026-09-06, `main` tip = PR #54 (Phase 29 merged); PHASE 30 (Offline completeness — MIT snippet packs + clean-room Emmet + strip capacity) 🚧 IMPLEMENTED on `arena/01a07646-codec` — owner: "Start phase 30"; all three parts in one build; 91 new host tests + 6 new cases, 159 green locally; **CI GREEN — first build run `34034889209`; amended build run `34041185149`, tip `ca8ec57`, 4m51s (assemble + `:app:testDebugUnitTest` + `:app:lintDebug` + bench) = the build to install; APK artifact delta +116 886 B (+0.11 MiB) vs `main`; one for-cause round (`34040754444`, a hand-counted caret literal in a new test — wrong assertion, not wrong engine)**; the owner device round (`docs/TROUBLESHOOTING.md` §13, 14 measured steps) is the only open gate; NO PR/merge without the owner's command; records in `docs/chat-phase30/` + JOURNEY §41. Before that: Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); BOTH crashes device-confirmed fixed; **device round 1 PASSED 2026-09-06 — checklist ALL PASS + APK-size deviation (+2.22 MB) ACCEPTED by the owner; MERGED to main via PR #54 (owner: "Merge it", 2026-09-06)**; records in `docs/chat-phase29/`):**
+**WHERE THINGS STAND (2026-09-07, `main` tip = PR #55 (Phase 30 merged); PHASE 30 (Offline completeness — MIT snippet packs + clean-room Emmet + strip capacity) ✅ COMPLETE, DEVICE-PASSED & MERGED to `main` via PR #55 (owner: "Start phase 30" → "If all done then merge it", 2026-09-07); all three parts in one build; 91 new host tests + 6 new cases, plus 3 more from the device round (`CodeCompletionTest` 19, `SmartTypingTest` 13) — **124 green locally** over the real production files; **CI: `34034889209` GREEN first try → one for-cause round (`34040754444`, a hand-counted caret literal in a new test) → `34041185149` GREEN → the device round's `34077539890` RED on the known sora/Robolectric flake (`EditorLaunchMeasureReproTest` → `IllegalThreadStateException` in sora's unsynchronized `AsyncIncrementalAnalyzeManager.rerun`) → `c2b392e` tolerates exactly that one signature → `34078739941` GREEN (tip `c2b392e`, 8m33s); APK artifact `CodeC-IDE` 24 375 211 B = +117 409 B (+0.11 MiB) vs `main`**; **device round 1 (`docs/TROUBLESHOOTING.md` §13, build `ca8ec57`) reported TWO bugs — accepting a suggestion kept the typed prefix (`#in` + tap → `##include <stdio.h>`) and CodeC Keys closed no brackets — both fixed in `d63a645`, both re-measured on a host JVM, both device-confirmed PASSED via §14 (owner: "Yes working", 2026-09-07)**; records in `docs/chat-phase30/` + JOURNEY §41 + `docs/TROUBLESHOOTING.md` §13/§14. Before that: Phase 28.2 MERGED via PR #52; PHASE 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED on the session branch — owner: "Start phase 29"; CI green; device round 1 hit two crashes, BOTH FIXED — crash 1 CME in sora theme dispatch (`3fb404f`); crash 2 `IllegalStateException: LayoutNode should be attached to an owner` = Compose 1.7.1 detached-node-during-nav-transition family, fixed by `composeBom 2024.12.01` (1.7.6) — and the CI NavHost-transition repro test then caught the deeper VM→sora replay bug (incremental delete-all into sora's async-rebuilt layout), fixed by an atomic `setText` replay (`db56824`); crash-log now reports header-first (COPY ALL = complete record); BOTH crashes device-confirmed fixed; **device round 1 PASSED 2026-09-06 — checklist ALL PASS + APK-size deviation (+2.22 MB) ACCEPTED by the owner; MERGED to main via PR #54 (owner: "Merge it", 2026-09-06)**; records in `docs/chat-phase29/`):**
 
 - **Phase 30 (all three parts in one build) — WHAT is offered, not how it is
   accepted.** 30.1: the four hand-written snippet tables (7 C / 9 Python /
@@ -272,6 +272,21 @@ report → STOP at the merge gate. The owner merges to `main` themselves
   `SuggestionStripModel.MAX_CHIPS` 8 (the thumb law — the strip is not a list).
   A lone candidate stays in KEY mode unless it is an Emmet expansion
   (`detail == Emmet.DETAIL` and no ghost) — 27.2 S1 + its one exception.
+  **Accept span (device round, 2026-09-07):** accepting an item replaces
+  `CodeCompletionEngine.replaceSpanLength(text, cursor, insert)` = the
+  identifier word-run ∪ the longest tail of the caret's line that the insert
+  text continues — case-INSENSITIVE for accept (22.6's matching law) and never
+  crossing a newline. The ghost must KEEP literal-case alignment
+  (`alignedTailLength(..., ignoreCase = false)`): it paints the suffix into the
+  buffer, so what it claims has to be byte-true. BOTH accept surfaces use it
+  (the VM's chip accept and `CodeCAnalyzer`'s ⌄ panel); an item's own
+  `replaceLength` (Emmet) still wins. **Auto-pair:** `SmartTyping.transform`'s
+  flag is `suppressAutoPair` — pass `true` ONLY for the editor key strip (it has
+  its own `()` cap) and for programmatic caret moves; every TYPING surface
+  (system IME, CodeC Keys) pairs, and `{` + Enter splits the pair with the caret
+  indented. **Name a flag for the behaviour it gates, never for the surface it
+  was invented on** — `isStrip` silently mis-gated the 28.2 keyboard for two
+  phases and no test could see it, because the IME path paired correctly.
 - **CodeCApi:** ops `battery.status` / `sensor.read` / `tts.speak` /
   `camera.capture` / `intent.send`; marker `NEED_PERMISSION:` and
   `CAPTURING:`; camera output names `^[A-Za-z0-9][A-Za-z0-9._-]*\.(jpg|jpeg|png)$`;
@@ -283,9 +298,9 @@ report → STOP at the merge gate. The owner merges to `main` themselves
    including the real `main` tip (locally the clone is shallow; cross-check
    with `api.github.com/repos/pabi277/CodeC/branches/main`).
 2. Phases 20.1–27 are MERGED; 28.2 is MERGED (28.3/28.4 remain planned);
-   **Phase 29 is MERGED via PR #54**. **Phase 30 (snippet packs + Emmet +
-   strip capacity) is IMPLEMENTED on the session branch — its CI/device gate
-   is open, so do not re-implement or "improve" it without evidence.**
+   **Phase 29 is MERGED via PR #54; Phase 30 (snippet packs + Emmet + strip
+   capacity) is MERGED via PR #55 — device-passed 2026-09-07, so do not
+   re-implement or "improve" it without evidence.**
    **Phases 31–33 are PLANNED only** (`docs/chat-phase31/` …
    `docs/chat-phase33/`) — no implementation until the owner says
    `"Start Phase 31"` (or another N). Otherwise **bug-wait mode**. No

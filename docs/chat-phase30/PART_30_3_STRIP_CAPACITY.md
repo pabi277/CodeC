@@ -138,15 +138,33 @@ for comparison: 16.7 ms per keystroke (25.1 law).
   tabstop: `SimpleCompletionItem` has no caret field. Strip and ghost honour
   `caretOffset`. Same deviation as 30.1 §3.3, recorded once here because it is
   a 30.3-surface symptom.
+- **The `:bench` mirror of `CodeCompletionEngine` deliberately stays PRE-30**
+  (`MAX_ITEMS = 8`, no packs, no Emmet, no `replaceLength`): the bench measures
+  the 25.1/28.1 spike cores, and mirroring this phase would drag
+  `ui/editor/snippets/` **and** `assets/snippets/` into `:bench` for numbers
+  nobody will re-take. The divergence is recorded in that file's KDoc (added
+  2026-09-07) so nobody "syncs" it by accident — and so nobody reads a bench
+  candidate count as the IDE's. `bench/…/SmartTyping.kt` IS kept byte-identical
+  (no asset dependency); its `suppressAutoPair` rename landed in the same
+  commit as the app's.
 
 ### 3.4 Exit condition status
 
 ```text
-(Device) — PENDING (owner round; card: docs/TROUBLESHOOTING.md §13)
+(Device) — ✅ PASSED 2026-09-07 (owner round; card: docs/TROUBLESHOOTING.md §13)
 1. Type a short prefix in Python — chips scroll; ⌄ shows more than 8.
 2. Ghost still only the top-1; Enter still newline.
 PASS = both.
 ```
+
+**Device round 1 amendment (2026-09-07).** Uncapping the list widened the
+accept surfaces, and the round exposed the second one: the ⌄ panel
+(`CodeCAnalyzer` → sora's `SimpleCompletionItem`) used to hand sora the
+WORD-only prefix length for every item, so accepting `#include <stdio.h>` after
+`#in` from the PANEL left `##include …` even once the strip chip was fixed. Both
+surfaces now compute the same `CodeCompletionEngine.replaceSpanLength`. Device-
+confirmed **PASSED** on the `c2b392e` build (owner: "Yes working"); card:
+`docs/TROUBLESHOOTING.md` §14.
 
 **CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
 `:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the
@@ -164,6 +182,17 @@ Fixed in `ca8ec57` (carets are `.length` now, with a comment saying why); run
 `CodeC-IDE` 24 374 374 → **24 374 688 B = +116 886 B (+0.11 MiB)** vs `main`
 (+314 B for the amendment: no new assets, just the tail merge and the
 brace-depth walk-back).
+
+
+**CI (the device round, 2026-09-07):** `d63a645` (both fixes) + `7c7f227` (the
+§14 card) went out as run `34077539890` — **RED on the known sora/Robolectric
+flake** (`EditorLaunchMeasureReproTest` → `IllegalThreadStateException` inside
+sora's unsynchronized `AsyncIncrementalAnalyzeManager.rerun`; the same test
+failed the same way on the docs-only run `34041572778` and was green in
+`34041185149`). `c2b392e` makes that smoke tolerate exactly that one
+third-party signature and nothing else → **run `34078739941` GREEN (tip
+`c2b392e`, 8m33s)**, artifact `CodeC-IDE` 24 375 211 B = **+117 409 B
+(+0.11 MiB)** vs `main`. **Merged to `main` via PR #55** on the owner's command.
 
 Host mirror (green): item 1 — Python `i` → 9 candidates, 8 chips, ⌄ opens the
 panel over the same list; the chip row is horizontally scrollable (27.2 code

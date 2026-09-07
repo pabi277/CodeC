@@ -172,12 +172,22 @@ and the lone-Emmet chip vs the lone identifier that stays in key mode.
 ### 3.4 Exit condition status
 
 ```text
-(Device, HTML file) — PENDING (owner round; card: docs/TROUBLESHOOTING.md §13)
+(Device, HTML file) — ✅ PASSED 2026-09-07 (owner round, card: TROUBLESHOOTING §13)
 1. Type `ul>li*3` → chip/ghost offers expansion; tap inserts a list.
 2. Type `!` → HTML5 skeleton (or keep the 22.6 DOCTYPE snippet).
 3. C file: Emmet does not fire on `ul>li`.
 PASS = all three.
 ```
+
+**Device round 1 amendment (2026-09-07).** Emmet itself needed no change: an
+expansion carries its own `replaceLength` (the whole abbreviation), so it wins
+over the generic accept span that this round introduced for pack snippets
+(`CodeCompletionEngine.replaceSpanLength`). The round's second fix is adjacent
+but real for markup authoring — CodeC Keys now auto-closes `(`/`[`/`{`/`"`/`'`
+and `{` + Enter splits the pair with the caret indented, so writing the HTML an
+expansion produces no longer means fighting the keyboard. Both device-confirmed
+**PASSED** on the `c2b392e` build (owner: "Yes working"); card:
+`docs/TROUBLESHOOTING.md` §14.
 
 **CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
 `:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the
@@ -195,6 +205,17 @@ Fixed in `ca8ec57` (carets are `.length` now, with a comment saying why); run
 `CodeC-IDE` 24 374 374 → **24 374 688 B = +116 886 B (+0.11 MiB)** vs `main`
 (+314 B for the amendment: no new assets, just the tail merge and the
 brace-depth walk-back).
+
+
+**CI (the device round, 2026-09-07):** `d63a645` (both fixes) + `7c7f227` (the
+§14 card) went out as run `34077539890` — **RED on the known sora/Robolectric
+flake** (`EditorLaunchMeasureReproTest` → `IllegalThreadStateException` inside
+sora's unsynchronized `AsyncIncrementalAnalyzeManager.rerun`; the same test
+failed the same way on the docs-only run `34041572778` and was green in
+`34041185149`). `c2b392e` makes that smoke tolerate exactly that one
+third-party signature and nothing else → **run `34078739941` GREEN (tip
+`c2b392e`, 8m33s)**, artifact `CodeC-IDE` 24 375 211 B = **+117 409 B
+(+0.11 MiB)** vs `main`. **Merged to `main` via PR #55** on the owner's command.
 
 Host mirror (green): item 1 — `ul>li*3` is rank 0 with detail `emmet`, and the
 accept math yields

@@ -153,12 +153,24 @@ removes any dependence on Gradle's test order. The pack-loaded world is
 ### 3.4 Exit condition status
 
 ```text
-(Device) — PENDING (owner round; card: docs/TROUBLESHOOTING.md §13)
+(Device) — ✅ PASSED 2026-09-07 (owner round, card: docs/TROUBLESHOOTING.md §13)
 1. Type `for` in C and in Python — more than the old 1–2 snippets; chips scroll.
 2. Type `doc` in HTML — DOCTYPE / html skeleton still appears (regression).
 3. Master completion switch OFF → zero snippets computed (27.3).
 PASS = all three.
 ```
+
+**Device round 1 amendment (2026-09-07).** The round was run on build
+`ca8ec57` and came back with two failures; the one that belongs to THIS part is
+the accept span: `#in` + tap `#include <stdio.h>` produced `##include <stdio.h>`
+because the span was the identifier word-run and `#` is not a word character —
+harmless with the old tables (every insert began with its trigger word), wrong
+with pack prefixes like `#inc`, `@med`, `def`. Fixed by
+`CodeCompletionEngine.replaceSpanLength` (word-run ∪ the insert's aligned line
+tail, line-bounded, case-insensitive like the 22.6 matching law) wired at both
+accept surfaces; the ghost keeps literal-case alignment because it paints the
+suffix. Re-tested on the `c2b392e` build: **PASSED** (owner: "Yes working");
+card + root causes: `docs/TROUBLESHOOTING.md` §14, JOURNEY §41.
 
 **CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
 `:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the
@@ -176,6 +188,17 @@ Fixed in `ca8ec57` (carets are `.length` now, with a comment saying why); run
 `CodeC-IDE` 24 374 374 → **24 374 688 B = +116 886 B (+0.11 MiB)** vs `main`
 (+314 B for the amendment: no new assets, just the tail merge and the
 brace-depth walk-back).
+
+
+**CI (the device round, 2026-09-07):** `d63a645` (both fixes) + `7c7f227` (the
+§14 card) went out as run `34077539890` — **RED on the known sora/Robolectric
+flake** (`EditorLaunchMeasureReproTest` → `IllegalThreadStateException` inside
+sora's unsynchronized `AsyncIncrementalAnalyzeManager.rerun`; the same test
+failed the same way on the docs-only run `34041572778` and was green in
+`34041185149`). `c2b392e` makes that smoke tolerate exactly that one
+third-party signature and nothing else → **run `34078739941` GREEN (tip
+`c2b392e`, 8m33s)**, artifact `CodeC-IDE` 24 375 211 B = **+117 409 B
+(+0.11 MiB)** vs `main`. **Merged to `main` via PR #55** on the owner's command.
 
 Host mirror (green, real assets — `CompletionCapacityTest`): C `for` → 4
 snippets (`for` `fora` `forc` `forg`, one a real `for (` loop) vs 1 before;

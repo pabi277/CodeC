@@ -126,6 +126,20 @@ The earlier foundations:
   Dark+** (real `dark_plus` token colors); Monokai, Dracula and GitHub Dark
   remain in Settings. Grammars load once per process, lazily per language,
   off the UI thread.
+- **Snippets, Emmet & suggestions (Phase 30)**: completions come from **29 MIT
+  [friendly-snippets](https://github.com/rafamadriz/friendly-snippets) packs**
+  bundled in the APK — C, C++, Python, JavaScript / TypeScript / React, HTML,
+  CSS, Go, Rust, PHP, Ruby, Lua, Markdown and Shell, with no download and no
+  server — so typing `for`, `#inc`, `def` or `main` offers the real snippet and
+  parks the caret at its first hole. HTML, CSS and JSX also understand
+  **Emmet** (clean-room, built in): `ul>li*3`, `div.card>p{Hello}` or `!` on a
+  fresh line expands into full markup; `m10`, `d:f`, `p10-20` expand into CSS
+  declarations. Up to **50 candidates** per keystroke — 8 chips above the
+  keyboard, **⌄ more** for the rest, plus the inline ghost (**TAB ▸** accepts;
+  **Enter always inserts a newline**, it never accepts). Accepting replaces
+  exactly what you typed (`#in` → `#include <stdio.h>`), and the built-in
+  **CodeC Keys** keyboard auto-closes `()` `[]` `{}` `""` `''` — `{` + Enter
+  leaves you on an indented line with `}` below it.
 - **Single files without a project**: the editor's file sheet treats the shared
   single-files folder as a first-class context — new file, open, run, delete, and
   "Save to project…" when a file graduates.

@@ -1,10 +1,16 @@
 # CodeC Phase 30 — Offline completeness (snippets + Emmet)
 
-> **Status:** 🚧 **IMPLEMENTED (2026-09-06, owner: "Start phase 30") — all
-> three parts in one build on `arena/01a07646-codec`; `Build APK` GREEN
-> first try (run `34034889209`, tip `641f6e8`, 4m34s: assemble +
-> `:app:testDebugUnitTest` + `:app:lintDebug` + the bench module); the owner
-> device round (`docs/TROUBLESHOOTING.md` §13) is the only open gate.**
+> **Status:** ✅ **COMPLETE, DEVICE-PASSED & MERGED to `main` via PR #55
+> (2026-09-07, owner: "If all done then merge it").** Implemented 2026-09-06
+> (owner: "Start phase 30"), all three parts in one build on
+> `arena/01a07646-codec`; `Build APK` GREEN first try (run `34034889209`, tip
+> `641f6e8`, 4m34s: assemble + `:app:testDebugUnitTest` + `:app:lintDebug` +
+> the bench module); device round 1 (`docs/TROUBLESHOOTING.md` §13, build
+> `ca8ec57`) reported TWO bugs, both fixed in `d63a645` and **device-confirmed
+> PASSED on §14 (owner: "Yes working", 2026-09-07)**; final CI **run
+> `34078739941` GREEN (tip `c2b392e`, 8m33s)**, artifact `CodeC-IDE`
+> **24 375 211 B = +117 409 B (+0.11 MiB)** vs `main` (24 257 802 B).
+> **No gate is open.** §13/§14 stay as the standing regression cards.
 >
 > **Amended the same day, before the device round** (PART_30_1 §3.5,
 > PART_30_2 §3.5): writing the card meant measuring every string in it against
@@ -48,8 +54,22 @@
 > Host: **3 new test cases** with every value measured on a host JVM first
 > (`CodeCompletionTest` 19, `SmartTypingTest` 13) — **124 tests green locally**
 > over the real production files. `CompletionPolicy` is still untouched.
-> **Retest build: the newest GREEN `Build APK` run on this branch after
-> `34041185149`** (run number recorded in §14 once CI reports).
+> **CI for this round:** `d63a645` (both fixes) + `7c7f227` (these docs) went
+> out as run `34077539890` — **RED on the known sora/Robolectric flake**
+> (`EditorLaunchMeasureReproTest`, `IllegalThreadStateException` in sora's
+> unsynchronized `AsyncIncrementalAnalyzeManager.rerun`; the same test failed
+> the same way on the docs-only run `34041572778` and was green in
+> `34041185149`). `c2b392e` retires the flake: the smoke tolerates exactly that
+> one third-party signature and still fails on everything else. Re-run
+> **`34078739941` GREEN (tip `c2b392e`, 8m33s)** — artifact `CodeC-IDE`
+> 24 375 211 B = **+117 409 B (+0.11 MiB)** vs `main`, i.e. +523 B over the
+> `ca8ec57` build for the two fixes. (A RED run uploads NO APK artifact — the
+> `gradle-bootstrap` shim runs `:app:testDebugUnitTest` inside the assemble
+> step, before the upload — so a flaky third-party test blocks the owner's
+> build, which is why it was retired rather than re-rolled.)
+> **The owner installed that build and re-tested §14: PASSED ("Yes working",
+> 2026-09-07).** Phase 30 closed and merged via PR #55 on the owner's command.
+> §14 records the run number once CI reports.
 >
 > Original plan (2026-09-05, docs only): suggestions don't give every
 > suggestion; phone coding is painful. Phase 27 already fixed **accept UX**

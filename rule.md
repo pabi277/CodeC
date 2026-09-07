@@ -187,10 +187,11 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-06, Phase 30 implemented — CI + device round pending)
+## 9. State snapshot (2026-09-07, Phase 30 device-passed and merged via PR #55)
 
-- **`main` = `3edfc97`** — PR #53 (2026-09-05, Phases 29–33 plan docs).
-  Before that: PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49
+- **`main` = the Phase 30 merge commit (PR #55, 2026-09-07).** Before that:
+  `31e319f` = PR #54 (Phase 29, 2026-09-06), `3edfc97` = PR #53 (2026-09-05,
+  Phases 29–33 plan docs), PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49
   Phase 25, PR #48 research docs, PR #47 Phase 24, PR #46 Phase 23, PR #45
   Phase 22, PR #44 Phase 21, PR #43 Phase 20.1, PR #41 Website W0, PR #40
   design docs, PR #39 git fixes, PR #38 Phase 18, PR #37 Phase 17, PR #36
@@ -281,7 +282,8 @@ Every update updates the docs **in the same commit**:
   main) + regression stress test; owner device round still PENDING on
   the fixed build.
 - **Phase 30 (Offline completeness — snippet packs + Emmet + strip capacity)
-  🚧 IMPLEMENTED (2026-09-06, owner: "Start phase 30", all three parts in one
+  ✅ COMPLETE, DEVICE-PASSED & MERGED to `main` via PR #55 (2026-09-07; owner:
+  "Start phase 30" → "If all done then merge it"; all three parts in one
   build)** on `arena/01a07646-codec`: the four hand-written snippet tables
   (7 C / 9 Python / 8 HTML / 3 CSS) became **29 vendored MIT
   friendly-snippets packs** (`assets/snippets/`, 277 KB raw ≈ **54 KB**
@@ -327,9 +329,47 @@ Every update updates the docs **in the same commit**:
   hand. **CI GREEN first try: run
   `34034889209`, tip `641f6e8` (4m34s — assemble + `:app:testDebugUnitTest`
   + `:app:lintDebug` + bench); APK artifact delta +116 572 B (+0.11 MiB) vs
-  `main`. Gate = owner device round** (`docs/TROUBLESHOOTING.md` §13).
-  Records: `docs/chat-phase30/` (README + §3 of each part), JOURNEY §41.
-  **No PR/merge without the owner's command.**
+  `main`.**
+  **Device round 1 (§13, build `ca8ec57`) came back with TWO failures — both
+  fixed in `d63a645`, both re-measured on a host JVM against the real
+  production files, both device-confirmed PASSED on §14 (owner: "Yes working",
+  2026-09-07):** **(a)** accepting a suggestion left the typed prefix behind
+  (`#in` + tap → `##include <stdio.h>`) because the accept span was 22.3's
+  IDENTIFIER word-run and `#`/`@`/`!`/`.`/`>` are not word characters — correct
+  while every built-in snippet's insert began with its trigger word, wrong for
+  the packs + Emmet. Now `CodeCompletionEngine.replaceSpanLength` = word-run ∪
+  the insert's aligned line tail (bounded by the caret's line), wired at BOTH
+  accept surfaces (strip chip + ⌄ panel), and `alignedTailLength` gained
+  `ignoreCase` to split the two callers: the ghost PAINTS the suffix so its
+  alignment stays literal-case, the accept path follows the 22.6
+  case-insensitive matching law. **(b)** CodeC Keys closed no brackets and
+  `{` + Enter did not split the pair, because SmartTyping's suppression flag
+  was named `isStrip` and both CodeC Keys paths still passed it — a leftover
+  from when the key strip was the only non-IME surface, while 28.2 made CodeC
+  Keys a full typing surface whose programmatic commits sora's
+  `SymbolPairMatch` never sees. Renamed `suppressAutoPair`; CodeC Keys now
+  pairs, the BottomStrip and programmatic caret moves keep suppression.
+  **Rules learned: a boolean must be named for the BEHAVIOUR it gates, not the
+  surface it was invented on (`isStrip` silently mis-gated the 28.2 keyboard
+  for two phases, and no test could see it because the IME path paired
+  correctly); and the accept span belongs to the ITEM, not to the identifier
+  class — measure it per item.** CI for the round: `34077539890` RED on the
+  known sora/Robolectric flake (`EditorLaunchMeasureReproTest` →
+  `IllegalThreadStateException` inside sora's unsynchronized
+  `AsyncIncrementalAnalyzeManager.rerun`; the same test failed the same way on
+  the docs-only run `34041572778` and was green in `34041185149`) → `c2b392e`
+  makes that smoke tolerate EXACTLY that signature (exception type + the
+  `rerun` frame, walked through the cause chain the compose rule wraps it in),
+  count it, print it, and keep driving frames, while every other throwable
+  still fails with the compressed trace → **run `34078739941` GREEN (tip
+  `c2b392e`, 8m33s), artifact `CodeC-IDE` 24 375 211 B = +117 409 B
+  (+0.11 MiB) vs `main`.** **Rule learned: a RED run uploads NO APK artifact
+  (the `gradle-bootstrap` shim runs `:app:testDebugUnitTest` inside the
+  assemble step, before the upload step), so a coin-flip third-party flake
+  blocks the owner's build — tolerate it narrowly and loudly, never broadly.**
+  Records: `docs/chat-phase30/` (README + §3 of each part), JOURNEY §41,
+  TROUBLESHOOTING §13/§14. **Merged via PR #55 on the owner's explicit
+  command.**
 - **Session-tooling note (2026-09-06, Phase 30):** §5's "the agent sandbox has
   no JVM" is **no longer strictly true** and was used deliberately this phase:
   a JRE (PyPI `jdk4py`, Temurin 25) and a Kotlin compiler (npm
@@ -337,7 +377,11 @@ Every update updates the docs **in the same commit**:
   production files AND the real JUnit test sources can be compiled and run
   locally (Robolectric/Android classes shimmed; assets read straight from the
   working tree). Phase 30 pre-validated 157 tests + a 211-check harness this
-  way and caught two production bugs before CI. **CI is still the executor of
+  way and caught two production bugs before CI. The device round used the same
+  harness again (2026-09-07): both owner-reported bugs were reproduced, fixed
+  and RE-MEASURED locally — accept spans per item, auto-pair per opener, the
+  full `{` + Enter brace-split sequence — before a single test assertion was
+  written, and 124 host tests then ran green over the real production files. **CI is still the executor of
   record** (Gradle/AGP, real Robolectric, lint, the APK) — Maven Central and
   Google Maven are unreachable in-sandbox, so nothing that needs Gradle can run
   here, and the toolchain lives in `/tmp` (not persisted).

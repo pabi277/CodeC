@@ -464,12 +464,19 @@ the exception line.
 
 ---
 
-## 13. How to run the Phase 30 snippets + Emmet device round (owner runbook, 2026-09-06)
+## 13. How to run the Phase 30 snippets + Emmet device round (owner runbook, 2026-09-06) — ✅ PASSED 2026-09-07
 
 > Phase 30 = **what is offered** (27 fixed *how you accept*). All three parts
 > ship in ONE build: 30.1 MIT snippet packs as assets, 30.2 clean-room Emmet
 > for HTML/CSS/JSX, 30.3 the engine cap 8 → 50. This card is the exit gate —
 > the three parts' exit conditions are merged into one pass below.
+>
+> **Ran 2026-09-07 on build `ca8ec57` (run `34041185149`): the owner reported
+> TWO failures — accepting a suggestion kept the typed prefix (`#in` →
+> `##include <stdio.h>`) and CodeC Keys closed no brackets. No other item was
+> reported failing.** Both were fixed in `d63a645` and re-tested through §14
+> below: **PASSED (owner: "Yes working")**, and Phase 30 merged via PR #55.
+> This card stays as the standing regression pass for the offer world.
 >
 > **Every chip list below was MEASURED on a host JVM driving the real engine
 > over the real pack assets**, so a FAIL on the phone is a real signal and not
@@ -580,17 +587,24 @@ typed, the file name, and what appeared instead (a photo of the chip row is
 perfect evidence). If the app crashes, the §12 COPY ALL flow still applies —
 the report starts at the exception line; paste it in chat.
 
-## 14. Phase 30 device round 1 — the two fixes to re-check (owner runbook, 2026-09-07)
+## 14. Phase 30 device round 1 — the two fixes (owner runbook, 2026-09-07) — ✅ PASSED 2026-09-07
 
-> You reported two bugs on the `ca8ec57` build. Both are fixed on the session
-> branch and both were reproduced + re-measured on a host JVM against the real
-> production files first. This card is ONLY those two — run §13 again for the
-> full Phase 30 pass if you want the whole gate in one sitting.
+> **PASSED 2026-09-07 (owner: "Yes working") on the `c2b392e` build — CI run
+> `34078739941` GREEN, artifact `CodeC-IDE` 24 375 211 B (+117 409 B / +0.11 MiB
+> vs `main`).** Phase 30 is closed and merged to `main` via PR #55 on the
+> owner's command. This card stays as the standing regression pass for the two
+> fixes — if a check ever fails again, file it like any other bug.
 >
-> **Which build:** Actions → **Build APK** → the newest GREEN run on
-> `arena/01a07646-codec` (the run AFTER `34041185149`) → Artifacts →
-> **CodeC-IDE**. Settings → About must show the new version (it carries the CI
-> run number — a stale APK is how round-1 reports went sideways in Phase 29).
+> You reported two bugs on the `ca8ec57` build. Both were fixed in `d63a645`
+> and both were reproduced + re-measured on a host JVM against the real
+> production files first. This card is ONLY those two — §13 is the full
+> Phase 30 pass.
+>
+> **Which build:** Actions → **Build APK** → run **`34078739941`** (tip
+> `c2b392e`, GREEN) → Artifacts → **CodeC-IDE**. (`34077539890` is RED on a
+> sora/Robolectric flake unrelated to the fixes, and a red run uploads NO APK
+> artifact.) Settings → About must show the new version (it carries the CI run
+> number — a stale APK is how round-1 reports went sideways in Phase 29).
 
 **Fix 1 — accepting a suggestion now deletes what you typed (all surfaces).**
 
