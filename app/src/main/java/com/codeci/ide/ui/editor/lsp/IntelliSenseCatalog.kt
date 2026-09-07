@@ -74,13 +74,21 @@ object IntelliSenseCatalog {
         // own deb — see `docs/chat-phase12/PART_12_PYTHON.md`). The
         // card surfaces the chained install: `pkg install -y
         // python-pip` lands `pip` on PATH (idempotent if already
-        // present), then `pip install --user python-lsp-server`
-        // installs the LSP server into `$PREFIX/`. The orchestrator
-        // probes `$PREFIX/bin/pylsp` after install. **Device round
-        // (2026-09-07, owner):** the bare `pip install ...` command
-        // FAILED with `pip: command not found` because the user had
-        // `python` (the interpreter) but not `python-pip` (the
-        // wrapper). The chain makes the card self-sufficient.
+        // present), then `pip install python-lsp-server` (NO
+        // `--user` — see below) installs the LSP server into
+        // `$PREFIX/`. The orchestrator probes `$PREFIX/bin/pylsp`
+        // after install. **Device round (2026-09-07, owner):** the
+        // bare `pip install ...` command FAILED with `pip: command
+        // not found` because the user had `python` (the interpreter)
+        // but not `python-pip` (the wrapper). The chain makes the
+        // card self-sufficient. **Device round 2 (2026-09-07):** the
+        // `--user` form FAILED the orchestrator probe because
+        // `pip install --user` writes scripts to `~/.local/bin/`,
+        // NOT `$PREFIX/bin/`. The fix is to drop `--user` — a bare
+        // `pip install <pkg>` uses the active python's `sys.prefix`
+        // (the CodeC `python` is built with `--prefix=$PREFIX`, so
+        // `sys.prefix` is `$PREFIX` and the script lands at
+        // `$PREFIX/bin/pylsp`, exactly what the orchestrator probes).
         PackageItem(
             id = "intellisense-python-pylsp",
             name = "IntelliSense: Python (pylsp)",
@@ -92,12 +100,24 @@ object IntelliSenseCatalog {
                 "install -y python) — install that first if not present. " +
                 "This card also installs python-pip (the CodeC apt " +
                 "package from Phase 12).",
-            installCommand = "pkg install -y python-pip && pip install --user python-lsp-server",
+            installCommand = "pkg install -y python-pip && pip install python-lsp-server",
             runCommand = "pylsp --version",
         ),
         // 31.3 — JavaScript / TypeScript via typescript-language-server.
-        // nodejs is in the repo (Phase 20.1); tsserver is a documented
-        // npm install inside PREFIX.
+        // nodejs is in the repo (Phase 20.1); `npm` is also a
+        // separate Phase 20.1 package (it was split out of nodejs
+        // upstream at 25.3.0-1). The install command is the chain
+        // `pkg install -y npm && npm install -g typescript
+        // typescript-language-server`. The `pkg install -y npm` is
+        // idempotent: if `npm` is already on PATH, `pkg install` is
+        // a no-op; the second half then runs `npm install -g` into
+        // `$PREFIX/lib/node_modules/`. The orchestrator probes
+        // `$PREFIX/bin/typescript-language-server` after install.
+        // **Device round 2 (2026-09-07, owner):** the bare
+        // `npm install -g ...` FAILED with `npm: command not found`
+        // because the user had `node` (from `nodejs`) but not `npm`
+        // (a separate deb). The chain makes the card self-sufficient
+        // — same pattern as the Python `python-pip` chain above.
         PackageItem(
             id = "intellisense-js-tsserver",
             name = "IntelliSense: JavaScript / TypeScript (tsserver)",
@@ -107,8 +127,9 @@ object IntelliSenseCatalog {
                 "Completion for document/console/Window, JSX/TSX types, " +
                 "import resolution, signature help. Requires nodejs " +
                 "(pkg install -y nodejs) — install that first if not " +
-                "present.",
-            installCommand = "npm install -g typescript typescript-language-server",
+                "present. This card also installs `npm` (the CodeC " +
+                "apt package from Phase 20.1).",
+            installCommand = "pkg install -y npm && npm install -g typescript typescript-language-server",
             runCommand = "typescript-language-server --version",
         ),
         // 31.4 (device round 2026-09-07, owner request) — Shell via
@@ -116,7 +137,9 @@ object IntelliSenseCatalog {
         // requires node 20+ (Phase 20.1 ships node 26.4). Adds
         // command-name completion, man-page hover, shellcheck, and
         // explainshell. Requires nodejs (pkg install -y nodejs) —
-        // install that first if not present.
+        // install that first if not present. Chain `pkg install -y
+        // npm` so the user doesn't have to install `npm` separately
+        // (same pattern as the Python card).
         PackageItem(
             id = "intellisense-shell-bash",
             name = "IntelliSense: Shell (bash)",
@@ -125,8 +148,9 @@ object IntelliSenseCatalog {
             description = "Adds bash-language-server — command-name " +
                 "completion, man-page hover, shellcheck, explainshell. " +
                 "Requires nodejs (pkg install -y nodejs) — install " +
-                "that first if not present.",
-            installCommand = "npm install -g bash-language-server",
+                "that first if not present. This card also installs " +
+                "`npm` (the CodeC apt package from Phase 20.1).",
+            installCommand = "pkg install -y npm && npm install -g bash-language-server",
             runCommand = "bash-language-server --version",
         ),
         // 31.4 — HTML via vscode-html-language-server. The npm
@@ -136,7 +160,9 @@ object IntelliSenseCatalog {
         // binaries are identical). The same npm install also lands
         // the CSS and JSON servers; the three cards document that
         // — installing any one of them flips the install command for
-        // the other two to a no-op (npm -g is idempotent).
+        // the other two to a no-op (npm -g is idempotent). Chain
+        // `pkg install -y npm` so the user doesn't have to install
+        // `npm` separately.
         PackageItem(
             id = "intellisense-html-vscode",
             name = "IntelliSense: HTML (vscode)",
@@ -146,8 +172,10 @@ object IntelliSenseCatalog {
                 "element completion, attribute hints, HTML5 tag docs. " +
                 "Also installs the CSS and JSON vscode servers " +
                 "(@zed-industries/vscode-langservers-extracted, one " +
-                "npm package). Requires nodejs (pkg install -y nodejs).",
-            installCommand = "npm install -g @zed-industries/vscode-langservers-extracted",
+                "npm package). Requires nodejs (pkg install -y nodejs). " +
+                "This card also installs `npm` (the CodeC apt package " +
+                "from Phase 20.1).",
+            installCommand = "pkg install -y npm && npm install -g @zed-industries/vscode-langservers-extracted",
             runCommand = "vscode-html-language-server --version",
         ),
         // 31.4 — CSS via vscode-css-language-server. Same npm
@@ -167,8 +195,10 @@ object IntelliSenseCatalog {
                 "@media / @keyframes awareness. Same npm install as " +
                 "the HTML card " +
                 "(@zed-industries/vscode-langservers-extracted). " +
-                "Requires nodejs (pkg install -y nodejs).",
-            installCommand = "npm install -g @zed-industries/vscode-langservers-extracted",
+                "Requires nodejs (pkg install -y nodejs). This card " +
+                "also installs `npm` (the CodeC apt package from " +
+                "Phase 20.1).",
+            installCommand = "pkg install -y npm && npm install -g @zed-industries/vscode-langservers-extracted",
             runCommand = "vscode-css-language-server --version",
         ),
         // 31.4 — JSON via vscode-json-language-server. Same npm
@@ -184,8 +214,10 @@ object IntelliSenseCatalog {
                 "tsconfig.json, and any file with a ${'$'}schema. Same " +
                 "npm install as the HTML card " +
                 "(@zed-industries/vscode-langservers-extracted). " +
-                "Requires nodejs (pkg install -y nodejs).",
-            installCommand = "npm install -g @zed-industries/vscode-langservers-extracted",
+                "Requires nodejs (pkg install -y nodejs). This card " +
+                "also installs `npm` (the CodeC apt package from " +
+                "Phase 20.1).",
+            installCommand = "pkg install -y npm && npm install -g @zed-industries/vscode-langservers-extracted",
             runCommand = "vscode-json-language-server --version",
         ),
         // 31.4 — YAML via redhat-developer/yaml-language-server.
@@ -200,8 +232,10 @@ object IntelliSenseCatalog {
             description = "Adds yaml-language-server — schema-aware " +
                 "completion for Kubernetes manifests, GitHub Actions, " +
                 "docker-compose, and any file with a ${'$'}schema. " +
-                "Requires nodejs (pkg install -y nodejs).",
-            installCommand = "npm install -g yaml-language-server",
+                "Requires nodejs (pkg install -y nodejs). This card " +
+                "also installs `npm` (the CodeC apt package from " +
+                "Phase 20.1).",
+            installCommand = "pkg install -y npm && npm install -g yaml-language-server",
             runCommand = "yaml-language-server --version",
         ),
     )

@@ -64,22 +64,48 @@ class IntelliSenseCatalogTest {
         // PATH (Phase 12 publishes `python-pip` as its own deb; the
         // bare `pip install` command on a fresh userland hits
         // `command not found` — device round 2026-09-07), then
-        // `pip install --user python-lsp-server` installs the LSP
-        // server into `$PREFIX/`.
+        // `pip install python-lsp-server` (NO `--user` — device
+        // round 2: `--user` writes scripts to `~/.local/bin/`, NOT
+        // `$PREFIX/bin/`, so the orchestrator's probe still fails)
+        // installs the LSP server into `$PREFIX/`.
         val pylsp = IntelliSenseCatalog.cardById["intellisense-python-pylsp"]
         assertNotNull(pylsp)
         assertEquals(
-            "pkg install -y python-pip && pip install --user python-lsp-server",
+            "pkg install -y python-pip && pip install python-lsp-server",
             pylsp!!.installCommand,
         )
         assertEquals("pylsp", pylsp.binary)
     }
 
     @Test
-    fun jsCardUsesNpmInsidePrefix() {
+    fun pythonCardDoesNotUsePipUserFlag() {
+        // The `--user` form lands scripts in `~/.local/bin/`, which
+        // is NOT on `$PREFIX/bin/` — the orchestrator's probe would
+        // never see pylsp and the card would never flip to INSTALLED
+        // even after a successful pip install. Device round 2
+        // (2026-09-07) caught this. Pin the absence of `--user` so a
+        // future "let's be safe" edit doesn't reintroduce the bug.
+        val pylsp = IntelliSenseCatalog.cardById["intellisense-python-pylsp"]!!
+        assertTrue(
+            "python card must NOT use pip --user (breaks the orchestrator probe)",
+            !pylsp.installCommand.contains("--user"),
+        )
+    }
+
+    @Test
+    fun jsCardChainsNpmInstallFromAptRepo() {
+        // `npm` is a separate CodeC apt package from Phase 20.1 (it
+        // was split out of nodejs upstream at 25.3.0-1). Bare
+        // `npm install -g ...` FAILED on a userland that had
+        // `nodejs` but not `npm` (device round 2 2026-09-07). The
+        // chain `pkg install -y npm && npm install -g ...` is the
+        // self-sufficient form.
         val tsserver = IntelliSenseCatalog.cardById["intellisense-js-tsserver"]
         assertNotNull(tsserver)
-        assertEquals("npm install -g typescript typescript-language-server", tsserver!!.installCommand)
+        assertEquals(
+            "pkg install -y npm && npm install -g typescript typescript-language-server",
+            tsserver!!.installCommand,
+        )
         assertEquals("typescript-language-server", tsserver.binary)
     }
 
@@ -107,14 +133,21 @@ class IntelliSenseCatalogTest {
     @Test
     fun shellCardUsesNpmInsidePrefix() {
         // bash-language-server is the documented shell LSP, MIT,
-        // 205k weekly downloads. The install is a bare
+        // 205k weekly downloads. The install chains
+        // `pkg install -y npm` (Phase 20.1 — `npm` was split out
+        // of nodejs upstream at 25.3.0-1, so a nodejs-only
+        // userland needs the `npm` deb to land the wrapper on
+        // PATH — device round 2 2026-09-07) and then
         // `npm install -g bash-language-server` (no chained
-        // python-pip dance — nodejs ships npm already at the
-        // Phase 20.1 ref).
+        // python-pip dance — nodejs itself is the requirement,
+        // and Phase 20.1 ships it).
         val shell = IntelliSenseCatalog.cardById["intellisense-shell-bash"]
         assertNotNull(shell)
         assertEquals("bash-language-server", shell!!.binary)
-        assertEquals("npm install -g bash-language-server", shell.installCommand)
+        assertEquals(
+            "pkg install -y npm && npm install -g bash-language-server",
+            shell.installCommand,
+        )
     }
 
     @Test
@@ -125,7 +158,11 @@ class IntelliSenseCatalogTest {
         // identical across the 3 cards. Pin the install command
         // AND the distinct per-language binary so the catalog
         // stays honest about which language probes which binary.
-        val expectedInstall = "npm install -g @zed-industries/vscode-langservers-extracted"
+        // The command also chains `pkg install -y npm` so the
+        // user doesn't have to install `npm` separately (device
+        // round 2 2026-09-07 caught a bare `npm install -g`
+        // failing on a nodejs-only userland).
+        val expectedInstall = "pkg install -y npm && npm install -g @zed-industries/vscode-langservers-extracted"
         for ((id, expectedBinary) in listOf(
             "intellisense-html-vscode" to "vscode-html-language-server",
             "intellisense-css-vscode" to "vscode-css-language-server",
@@ -147,7 +184,10 @@ class IntelliSenseCatalogTest {
         val yaml = IntelliSenseCatalog.cardById["intellisense-yaml-redhat"]
         assertNotNull(yaml)
         assertEquals("yaml-language-server", yaml!!.binary)
-        assertEquals("npm install -g yaml-language-server", yaml.installCommand)
+        assertEquals(
+            "pkg install -y npm && npm install -g yaml-language-server",
+            yaml.installCommand,
+        )
     }
 
     @Test
@@ -173,6 +213,24 @@ class IntelliSenseCatalogTest {
             "python card must chain with && so a missing pip is loud",
             pylsp.installCommand.contains("&&"),
         )
+    }
+
+    @Test
+    fun everyNpmCardChainsPkgInstallNpm() {
+        // Defense in depth: device round 2 (2026-09-07) caught a
+        // bare `npm install -g ...` failing on a userland with
+        // `nodejs` but not `npm`. Every card that ends with
+        // `npm install -g` MUST chain `pkg install -y npm &&`
+        // first. The C/C++ clang card is the one exception (it
+        // uses `pkg install -y clang`, no npm involved).
+        for (card in IntelliSenseCatalog.cards) {
+            if (card.installCommand.contains("npm install")) {
+                assertTrue(
+                    "card ${card.id} must chain `pkg install -y npm &&` before `npm install -g`",
+                    card.installCommand.startsWith("pkg install -y npm &&"),
+                )
+            }
+        }
     }
 
     @Test

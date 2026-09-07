@@ -31,11 +31,11 @@ XML has no widely-deployed LSP; markdown/text have no good LSP.
 
 | Language | Card id | Probe binary | Install command | Notes |
 |---|---|---|---|---|
-| Shell | `intellisense-shell-bash` | `bash-language-server` | `npm install -g bash-language-server` | Phase 20.1 ships nodejs 26.4; bash-language-server 5.6.0 (MIT, 205k weekly) requires node 20+ |
-| HTML | `intellisense-html-vscode` | `vscode-html-language-server` | `npm install -g @zed-industries/vscode-langservers-extracted` | Zed's maintained fork (3 months) of the original Microsoft package; binaries identical |
+| Shell | `intellisense-shell-bash` | `bash-language-server` | `pkg install -y npm && npm install -g bash-language-server` | Phase 20.1 ships nodejs 26.4 (npm is a separate deb); bash-language-server 5.6.0 (MIT, 205k weekly) requires node 20+ |
+| HTML | `intellisense-html-vscode` | `vscode-html-language-server` | `pkg install -y npm && npm install -g @zed-industries/vscode-langservers-extracted` | Zed's maintained fork (3 months) of the original Microsoft package; binaries identical |
 | CSS | `intellisense-css-vscode` | `vscode-css-language-server` | same | Same npm package; same install |
 | JSON | `intellisense-json-vscode` | `vscode-json-language-server` | same | Same npm package; same install |
-| YAML | `intellisense-yaml-redhat` | `yaml-language-server` | `npm install -g yaml-language-server` | redhat-developer; MIT; 2.4M weekly; requires node 18+ |
+| YAML | `intellisense-yaml-redhat` | `yaml-language-server` | `pkg install -y npm && npm install -g yaml-language-server` | redhat-developer; MIT; 2.4M weekly; requires node 18+ |
 
 All 5 cards use `PackageCategory.LANGUAGES`. The 3 vscode cards
 share the same install command; the user only has to install ONE
@@ -63,7 +63,12 @@ PASS = (1) and (3) ship today; (2) is the device round + 31.1 wire.
 1. **Shell**: Open a `.sh` file. Type `git` — expect Phase 30 shell
    pack items; bash-language-server is NOT on disk.
 2. **Install**: Open Packages → LANGUAGES → tap "IntelliSense: Shell
-   (bash)" → INSTALL runs `npm install -g bash-language-server`.
+   (bash)" → INSTALL runs `pkg install -y npm && npm install -g
+   bash-language-server`. The first half lands `npm` on PATH
+   (Phase 20.1 publishes `npm` as its own deb split out of nodejs
+   at 25.3.0-1; idempotent if already installed — device round 2
+   2026-09-07 caught a `nodejs`-only userland failing with
+   `npm: command not found` on the bare `npm install -g` form).
 3. **Verify**: Terminal tab → `bash-language-server --version`
    (should print version 5.6.0). Card flips to INSTALLED.
 4. (When the 31.1 wire ships) re-type `git` — expect command-name
