@@ -248,6 +248,28 @@ Every update updates the docs **in the same commit**:
   `docs/OSS_REPLACEMENT_RESEARCH.md`, `docs/PHONE_UX_ANALYSIS.md`.
   Implementation only on owner `"Start Phase N"`. 28.3/28.4 remain the
   Keys remainder.
+- **Phase 31 (IntelliSense as Packages) 🚧 31.1 PARTIAL (2026-09-07,
+  `arena/01a07baa-codec`, owner: "Start phase 31").** Pure-Kotlin engine
+  under `ui/editor/lsp/` (`LspServerConfig`, `LspItemMapping`, `LspManager`,
+  `ActiveLspManager`) + `editor-lsp` 0.24.6 binary Gradle dep (LGPL-2.1,
+  same family as the owner-accepted 25.2 sora editor) + activity lifecycle
+  on `onResume`/`onPause` (L2) + `completionMasterFlow` collection (master
+  OFF = no LSP process, L3) + 25 host tests pre-validated on a local JVM
+  (Temurin 25 + kotlinc 2.4.20) via reflection on the same `@Test`
+  methods JUnit will execute in CI → **25/25 pass**. Catalog: C / C++ /
+  Python / JS / TS (Go / Rust / PHP / Ruby / Lua / HTML / CSS / JSON /
+  shell / YAML / XML / Markdown / TEXT stay snippet-only — the README
+  intent). The sora `LspEditor` API is `suspend` + per-`CodeEditor` — the
+  production provider is its own 200-LOC file and is the §3.1 follow-up
+  (the device round gates the README's "with server present: a member
+  /local that snippets cannot know appears in chips" condition).
+  31.2 (Packages card for clangd) and 31.3 (pylsp / tsserver cards) are
+  still 📋 PLANNED. **The owner runs phase 32 in parallel on a different
+  branch** — 31.1 changes do not touch the editor surface area phase 32
+  modifies (bottom nav, 28.3 chips-as-row-0), so the two should compose
+  cleanly on `main` whenever each ships. **No PR/merge without the
+  owner's command.** CI is the executor of record (local pre-validation
+  is a smoke, not a substitute).
 - **Phase 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED (2026-09-05, owner:
   "Start phase 29", all three parts in one build):** sora
   `language-textmate` (same 0.24.6 BOM) is the editor's analyzer — 24 MIT

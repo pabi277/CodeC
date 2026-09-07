@@ -169,6 +169,14 @@ dependencies {
     exclude(group = "org.yaml")
     exclude(group = "org.eclipse.jdt")
   }
+  // Phase 31.1 — LSP completion client. sora editor-lsp is a self-contained
+  // AAR that owns a stdio LanguageServerWrapper + an lsp4j implementation; we
+  // never speak lsp4j types directly (see ui/editor/lsp/ — CodeC's pure
+  // models stay Android-free and host-testable, the editor-lsp types are
+  // sealed behind a callback). The module brings org.eclipse.lsp4j:1.0.0 +
+  // kotlinx-coroutines-android 1.10.2 transitively; both are already on the
+  // app classpath at the same versions.
+  implementation(libs.sora.editor.lsp)
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)

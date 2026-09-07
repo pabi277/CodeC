@@ -1,0 +1,30 @@
+CodeC — NOTICE for io.github.rosemoe:editor-lsp
+================================================
+
+Phase 31 (2026-09-07): CodeC uses the `editor-lsp` module of the
+sora-editor project (https://github.com/Rosemoe/sora-editor) as a BINARY
+Gradle dependency from Maven Central, at the same pinned version as the
+`editor` widget and the `language-textmate` module (0.24.6 — see
+gradle/libs.versions.toml).
+
+The module is consumed unmodified as a Java library; no sora source is
+copied into the CodeC tree. It exposes the LSP client/wrapper classes
+that CodeC's LspManager integrates against. The class shim pattern (a
+LspManager provider interface so the integration stays host-testable) is
+CodeC's own design, not a copy of any sora example code.
+
+License: GNU LGPL-2.1 (or later) — the full text ships next to this
+file as SORA_EDITOR_LGPL.txt (the same LGPL-2.1 that already covers
+the sora-editor core the owner accepted in Phase 25.2). The owner has
+already given explicit LGPL-2.1 acceptance for sora-editor; editor-lsp
+is a sibling module of the same project under the same license, and
+the consumption pattern is identical (binary dependency, no source
+vendored, no modifications, no LGPL paste into the CodeC source
+tree).
+
+Source: https://github.com/Rosemoe/sora-editor/tree/main/editor-lsp
+Maven coordinates: io.github.rosemoe:editor-lsp:0.24.6
+AAR size (Maven Central, 2026-06-10): 528 157 bytes
+Transitive dependencies: org.eclipse.lsp4j:org.eclipse.lsp4j:1.0.0,
+org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2,
+org.jetbrains.kotlin:kotlin-stdlib:2.3.10
