@@ -181,7 +181,7 @@ object IntelliSenseCatalog {
             category = PackageCategory.LANGUAGES,
             description = "Adds vscode-json-language-server — " +
                 "schema-aware completion for package.json, " +
-                "tsconfig.json, and any file with a `$schema`. Same " +
+                "tsconfig.json, and any file with a ${'$'}schema. Same " +
                 "npm install as the HTML card " +
                 "(@zed-industries/vscode-langservers-extracted). " +
                 "Requires nodejs (pkg install -y nodejs).",
@@ -199,7 +199,7 @@ object IntelliSenseCatalog {
             category = PackageCategory.LANGUAGES,
             description = "Adds yaml-language-server — schema-aware " +
                 "completion for Kubernetes manifests, GitHub Actions, " +
-                "docker-compose, and any file with a `$schema`. " +
+                "docker-compose, and any file with a ${'$'}schema. " +
                 "Requires nodejs (pkg install -y nodejs).",
             installCommand = "npm install -g yaml-language-server",
             runCommand = "yaml-language-server --version",
