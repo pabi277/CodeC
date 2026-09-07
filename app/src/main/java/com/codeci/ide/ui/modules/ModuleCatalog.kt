@@ -1,5 +1,7 @@
 package com.codeci.ide.ui.modules
 
+import com.codeci.ide.ui.editor.lsp.IntelliSenseCatalog
+
 enum class PackageCategory(val title: String) {
     ALL("All"),
     COMPILERS("Compilers & Build"),
@@ -291,7 +293,7 @@ object PackageCatalog {
             installCommand = "pkg install -y patch",
             runCommand = "patch --version"
         )
-    )
+    ) + IntelliSenseCatalog.cards
 
     val QUICK_ACTIONS: List<QuickAction> = listOf(
         QuickAction("pkg update", "Refresh package indexes", "pkg update"),

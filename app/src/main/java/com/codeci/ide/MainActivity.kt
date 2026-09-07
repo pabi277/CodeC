@@ -274,7 +274,7 @@ class MainActivity : ComponentActivity() {
         // the running manager in sync with the Settings switch (the
         // 31.1 README L3 — "completion master OFF = no LSP process").
         val settings = SettingsManager(this)
-        val manager = LspManager()
+        val manager = LspManager(probe = SystemBinaryProbe(filesDir))
         ActiveLspManager.install(manager)
         lifecycleScope.launch {
             settings.completionMasterFlow.collect { master ->

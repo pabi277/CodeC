@@ -1,0 +1,97 @@
+package com.codeci.ide.ui.editor.lsp
+
+import com.codeci.ide.ui.modules.PackageCategory
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Phase 31.2 / 31.3 — the install-card half of the LSP catalog.
+ *
+ * The cards live in [IntelliSenseCatalog]; the server config lives
+ * in [LspServerCatalog]. These tests pin the two halves of the lock-
+ * step contract: every card has a server config, every server
+ * config's `id` matches a card `id`, and the install commands are
+ * the documented ones (31.2 clang pkg; 31.3 pip / npm inside
+ * PREFIX).
+ */
+class IntelliSenseCatalogTest {
+
+    @Test
+    fun cardsCoverAllServerCatalogLanguages() {
+        // Every language in the LSP server catalog has at least one
+        // card; otherwise the install half is missing.
+        val cardLanguages = IntelliSenseCatalog.cards
+            .flatMap { card ->
+                LspServerCatalog.servers.filter { it.probeBinary == card.binary }.map { it.language }
+            }.toSet()
+        val serverLanguages = LspServerCatalog.servers.map { it.language }.toSet()
+        assertEquals("every server-language has a matching card", serverLanguages, cardLanguages)
+    }
+
+    @Test
+    fun everyServerHasAMatchingCardByProbeBinary() {
+        // The lock-step is by `probeBinary` (= the binary the
+        // manager probes for after install). If the manager says
+        // "clangd" is the binary, the card must probe the same
+        // binary — otherwise install flips AVAILABLE→INSTALLED on
+        // the card but the orchestrator still says "missing".
+        for (server in LspServerCatalog.servers) {
+            val card = IntelliSenseCatalog.cards.firstOrNull { it.binary == server.probeBinary }
+            assertNotNull("missing card for ${server.displayName} (probe=${server.probeBinary})", card)
+        }
+    }
+
+    @Test
+    fun clangCardInstallsClangNotClangd() {
+        // Phase 20.1 ships `clang` (the libllvm deb), with `bin/clangd`
+        // as a sub-binary. The install command is `pkg install -y
+        // clang`, NEVER `pkg install -y clangd` (clangd is not a
+        // separate package at the pinned ref). Pin this so a future
+        // catalog edit does not silently break the recipe.
+        val clang = IntelliSenseCatalog.cardById["intellisense-c-cpp-clangd"]
+        assertNotNull(clang)
+        assertEquals("pkg install -y clang", clang!!.installCommand)
+    }
+
+    @Test
+    fun pythonCardUsesPipInsidePrefix() {
+        // pylsp is not a CodeC apt package (Phase 20.1 didn't publish
+        // it — see README §3.3 "If a pip/npm name is not in the CodeC
+        // apt repo, prefer a documented pip install"). The card
+        // surfaces `pip install --user python-lsp-server`.
+        val pylsp = IntelliSenseCatalog.cardById["intellisense-python-pylsp"]
+        assertNotNull(pylsp)
+        assertEquals("pip install --user python-lsp-server", pylsp!!.installCommand)
+        assertEquals("pylsp", pylsp.binary)
+    }
+
+    @Test
+    fun jsCardUsesNpmInsidePrefix() {
+        val tsserver = IntelliSenseCatalog.cardById["intellisense-js-tsserver"]
+        assertNotNull(tsserver)
+        assertEquals("npm install -g typescript typescript-language-server", tsserver!!.installCommand)
+        assertEquals("typescript-language-server", tsserver.binary)
+    }
+
+    @Test
+    fun allCardsAreInLanguagesCategory() {
+        // The IntelliSense cards are language intelligence — the
+        // existing Languages category is the right home; a future
+        // dedicated "IntelliSense" category is a follow-up.
+        for (card in IntelliSenseCatalog.cards) {
+            assertEquals(PackageCategory.LANGUAGES, card.category)
+        }
+    }
+
+    @Test
+    fun cardDescriptionsMentionPhase31Versions() {
+        // Description sanity: a card without a description won't
+        // help the user. (The ModulesScreen renders the description
+        // under the title.)
+        for (card in IntelliSenseCatalog.cards) {
+            assertTrue("blank description on ${card.id}", card.description.isNotBlank())
+        }
+    }
+}

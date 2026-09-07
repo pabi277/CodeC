@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * when completions are re-enabled.
  */
 class LspManager(
-    private val probe: BinaryProbe = SystemBinaryProbe,
+    private val probe: BinaryProbe = SystemBinaryProbe.NoOp,
     private val providerFactory: ProviderFactory = SystemProviderFactory,
     private val clock: () -> Long = System::nanoTime,
     private val requestTimeoutMs: Long = DEFAULT_REQUEST_TIMEOUT_MS,
@@ -202,16 +202,28 @@ fun interface BinaryProbe {
 
 /**
  * The default probe: a binary is "installed" when `$PREFIX/bin/<binary>`
- * exists and is a regular file. `PREFIX` is the only place the CodeC
- * userland keeps executables; `System.getenv` is safe to read on the
- * JVM (host tests see `null` and the probe returns false unless the
- * caller sets a temp dir).
+ * exists and is a regular file. The probe accepts a `filesDir: File?`
+ * so callers in app code pass the application private files directory;
+ * host tests pass `null` and the probe returns `false` (no fake
+ * binaries), which is exactly the "server missing" path the README
+ * exit condition #1 exercises.
  */
-object SystemBinaryProbe : BinaryProbe {
+class SystemBinaryProbe(private val filesDir: java.io.File? = null) : BinaryProbe {
     override fun exists(binary: String): Boolean {
-        val prefix = System.getenv("CODEC_PREFIX") ?: return false
-        val file = java.io.File("$prefix/bin/$binary")
+        val dir = filesDir ?: return false
+        // Mirrors `ShellEnvironment.prefixDir(filesDir).resolve("bin/<binary>")`
+        // — the only place the CodeC userland keeps executables. Same path
+        // the Phase 21 D.2 install gate + Phase 20.1 LspManager probe and
+        // the ModulesScreen `checkIsInstalled` use; reusing the same
+        // `filesDir/usr/bin/<bin>` location keeps "Packages" and "LSP" on
+        // the same page (one install = both cards flip from gray to green).
+        val file = java.io.File(java.io.File(dir, "usr"), "bin/$binary")
         return file.isFile
+    }
+
+    companion object {
+        /** A no-arg probe that always returns false — for the no-op manager. */
+        val NoOp: BinaryProbe = SystemBinaryProbe()
     }
 }
 
