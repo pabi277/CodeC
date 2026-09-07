@@ -29,7 +29,8 @@
 > case, i.e. a wrong assertion, not a wrong engine); artifact `CodeC-IDE`
 > 24 374 688 B = **+116 886 B (+0.11 MiB)** vs `main`. **That is the build the
 > §13 card's chip lists were measured against — install it.**
-> **No PR/merge without the owner's command.**
+> **No PR/merge without the owner's command.** *(Superseded 2026-09-07: the
+> owner commanded the merge and PR #55 landed it — see the status block.)*
 >
 > **Device round 1 came back with two bugs — both FIXED on this branch
 > (2026-09-07), retest card `docs/TROUBLESHOOTING.md` §14:**
@@ -69,7 +70,6 @@
 > build, which is why it was retired rather than re-rolled.)
 > **The owner installed that build and re-tested §14: PASSED ("Yes working",
 > 2026-09-07).** Phase 30 closed and merged via PR #55 on the owner's command.
-> §14 records the run number once CI reports.
 >
 > Original plan (2026-09-05, docs only): suggestions don't give every
 > suggestion; phone coding is painful. Phase 27 already fixed **accept UX**
@@ -97,9 +97,9 @@ cap (8 chips) stayed where it belongs.
 
 | Part | Title | Cost | Effort | State |
 |---|---|---|---|---|
-| [30.1](PART_30_1_FRIENDLY_SNIPPETS.md) | MIT snippet packs as assets | client-only | M | ✅ implemented |
-| [30.2](PART_30_2_EMMET.md) | Emmet expansions into the same pipeline | client-only | M | ✅ implemented |
-| [30.3](PART_30_3_STRIP_CAPACITY.md) | Completeness vs chip UX | client-only | S | ✅ implemented |
+| [30.1](PART_30_1_FRIENDLY_SNIPPETS.md) | MIT snippet packs as assets | client-only | M | ✅ merged (PR #55) |
+| [30.2](PART_30_2_EMMET.md) | Emmet expansions into the same pipeline | client-only | M | ✅ merged (PR #55) |
+| [30.3](PART_30_3_STRIP_CAPACITY.md) | Completeness vs chip UX | client-only | S | ✅ merged (PR #55) |
 
 **Law:** Phase 27 `CompletionPolicy` unchanged — Enter sacred, master
 switch, no auto-commit. Snippets fill `CompletionItem`; ghost/strip/panel
@@ -120,8 +120,20 @@ and green; `CodeCompletionTest` (18, Phase 12/22.6) is untouched except for a
 | `ul>li*3` | HTML | nothing | **1 Emmet expansion at rank 0** |
 | `m10` | CSS | nothing | **1 Emmet declaration (`margin: 10px;`)** |
 
+*This table was measured against the FIRST build (`641f6e8`) and the §3.5
+amendment moved four rows — with the built-in tables riding as a deduped tail,
+C `i` is **13** candidates (not 10), Python `i` **13** (not 9), C `for` **5**
+(not 4), and the amendment's own five fixes restored Markdown `head` → 1,
+Python `pr` → 2, shell `if ` → 2, Python `def ` → 5 (`def` first). The amended
+numbers are the ones §13's card was written from; PART_30_1 §3.5 and
+PART_30_3 §3.4 carry the measurements.*
+
 **Budgets — MEASURED from the CI artifacts:** `CodeC-IDE` 24 257 802 B (main
-`31e319f`, run `34027216565`) → 24 374 374 B (this branch) = **+116 572 B (+0.11 MiB / +0.117 MB)**,
+`31e319f`, run `34027216565`) → 24 374 374 B (first build) = **+116 572 B (+0.11 MiB / +0.117 MB)**;
+§3.5 amendment 24 374 688 B (+116 886 B); device-round fixes 24 375 211 B
+(run `34078739941`) = **+117 409 B (+0.11 MiB)**; merge tip `646e213`
+(run `34087566165`) 24 375 129 B = **+117 327 B** — the ±82 B between the last
+two is zip/DEX ordering noise on a docs-only commit,
 i.e. ~54 KB of deflated pack JSON (277 KB raw across 29 assets) plus the new
 resolver/Emmet DEX. Noise next to Phase 29's +2.2 MB engine chain, and far
 inside any reading of the 25.1 size law. Keystroke cost: the whole `completions()`
@@ -142,6 +154,8 @@ abbreviation grammar was reimplemented from the documented operator subset.
 assets) · `CompletionCapacityTest` (19, Robolectric — the host mirror of all
 three exit conditions) · + `StripContextTest` (lone-Emmet chip, 50-item chip
 cap), `GhostCompletionTest` (caretOffset parking), `CodeCompletionTest`
-(fallback world).
+(fallback world) — and from the device round **3 more cases** with every value
+measured first (`CodeCompletionTest` 19 for the accept span, `SmartTypingTest`
+13 for pairing + the brace split).
 
 **Not this phase:** clangd / pylsp (Phase 31).
