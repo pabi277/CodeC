@@ -176,7 +176,20 @@ dependencies {
   // sealed behind a callback). The module brings org.eclipse.lsp4j:1.0.0 +
   // kotlinx-coroutines-android 1.10.2 transitively; both are already on the
   // app classpath at the same versions.
-  implementation(libs.sora.editor.lsp)
+  //
+  // GATED on 2026-09-07: the AAR was built with AGP 9.3.1 + Kotlin 2.4.10
+  // (the sora BOM); CodeC is on AGP 9.1.1 + Kotlin 2.2.10. The first push
+  // failed at :app:processDebugMainManifest with the gradle-bootstrap shim
+  // emitting a redacted "Gradle failure 1/2/3" annotation set (the agent
+  // sandbox cannot read raw CI logs — rule.md §5). The orchestrator and
+  // mapping are host-tested with a no-op provider, so the product half of
+  // 31.1 is unaffected; the wire is unblocked once the owner confirms
+  // either (a) the AGP delta is the cause and a Kotlin/AGP bump is
+  // acceptable, or (b) the AAR resolves cleanly with `editorLsp = true`.
+  // See `docs/chat-phase31/PART_31_1_EDITOR_LSP.md` §3.1.
+  if (project.findProperty("editorLsp")?.toString() == "true") {
+    implementation(libs.sora.editor.lsp)
+  }
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)
