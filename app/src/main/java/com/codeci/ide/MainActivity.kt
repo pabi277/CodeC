@@ -74,6 +74,7 @@ import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.screens.WebPreviewScreen
 import com.codeci.ide.ui.editor.lsp.LspManager
+import com.codeci.ide.ui.editor.lsp.SystemBinaryProbe
 import com.codeci.ide.ui.editor.sora.ActiveLspManager
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
