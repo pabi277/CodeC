@@ -579,3 +579,88 @@ round), 6 (`ul>li*3`), 7's `nav>…{Link $}`, 8's `m10`, 10 (`i` → 13 rows beh
 typed, the file name, and what appeared instead (a photo of the chip row is
 perfect evidence). If the app crashes, the §12 COPY ALL flow still applies —
 the report starts at the exception line; paste it in chat.
+
+## 14. Phase 30 device round 1 — the two fixes to re-check (owner runbook, 2026-09-07)
+
+> You reported two bugs on the `ca8ec57` build. Both are fixed on the session
+> branch and both were reproduced + re-measured on a host JVM against the real
+> production files first. This card is ONLY those two — run §13 again for the
+> full Phase 30 pass if you want the whole gate in one sitting.
+>
+> **Which build:** Actions → **Build APK** → the newest GREEN run on
+> `arena/01a07646-codec` (the run AFTER `34041185149`) → Artifacts →
+> **CodeC-IDE**. Settings → About must show the new version (it carries the CI
+> run number — a stale APK is how round-1 reports went sideways in Phase 29).
+
+**Fix 1 — accepting a suggestion now deletes what you typed (all surfaces).**
+
+What was wrong: the accept span was the *identifier* run at the caret, and `#`
+is not an identifier character — so typing `#in` and tapping
+`#include <stdio.h>` replaced only `in` and left the `#` you had typed, giving
+`##include <stdio.h>`. Fine while every snippet began with the word you typed;
+the packs and Emmet ship items that don't.
+
+1. `main.c`, type `#in` → tap the **`#include <stdio.h>`** chip → the line reads
+   **`#include <stdio.h>`** — exactly one `#`, nothing left of `in`.
+2. Same, but accept from the **⌄ more** panel (CodeC Analyzer list) → same result.
+3. `int mai` → tap **`main`** → **`int main() {`** … (the whole `int mai` you
+   typed is gone, not just `mai`).
+4. `site.css`, type `@med` → tap **`@media`** → one `@`, no `@med@media …`.
+5. `index.html`, type `doc` → tap **`doctype`** → one `<!DOCTYPE html>`, no
+   `doc<!DOCTYPE html>`.
+6. **Ghost law unchanged:** type `doc` in `index.html` and the ghost still shows
+   the rest of `<!DOCTYPE html>`; **TAB ▸** accepts it in full; **→▸** takes one
+   word; **ESC** rejects; **Enter inserts a newline and never accepts** (27.x).
+7. Regression half: in `main.c` type `for` → tap a chip → the snippet replaces
+   `for` (not more, not less); type `ma` where the document also contains `main`
+   elsewhere → accepting an identifier must not eat other text.
+
+**Fix 2 — CodeC Keys now auto-closes brackets, and `{` + Enter splits the pair.**
+
+What was wrong: auto-pairing was suppressed for anything that wasn't the system
+IME's text field — a leftover parameter named `isStrip` from when the only
+non-IME surface was the key strip. CodeC Keys is a full typing surface (28.2),
+so its brackets got strip behaviour: one character, no closer.
+
+8. With **CodeC Keys ON** (Settings → CodeC Keys), in `main.c` type each of
+   `(`, `[`, `{`, `"`, `'` → each inserts the **matching closer** and the caret
+   lands **inside** the pair: `()`, `[]`, `{}`, `""`, `''`.
+9. Type `int main()` then Enter, then `{` → you get
+
+   ```c
+   int main()
+   {
+   }
+   ```
+
+   with the caret between the braces; press **Enter** again →
+
+   ```c
+   int main()
+   {
+       |
+   }
+   ```
+
+   the caret **indented on its own line** and `}` on the line after — this is
+   the exact shape you asked for. Keep typing `return 0;`: it stays at that
+   indent.
+10. The pair is not doubled: with the caret between an existing `{` and `}`,
+    pressing Enter still splits it (old behaviour kept); typing `{` when the
+    closer is already the next character does not add a second one.
+11. Python: `def f():` then Enter → the next line is indented (the `:` rule is
+    untouched).
+12. **The strip stays single-character:** tap a `{` or `(` chip on the key strip
+    above the keyboard → it inserts **one** character (a strip tap that quietly
+    adds a closer is a surprise; that half is deliberately unchanged).
+13. **OFF switch:** Settings → CodeC Keys OFF → the system IME returns and
+    pairing behaves exactly as it did before this round.
+
+**By design, NOT bugs:** the ghost paints only what is byte-true after the
+caret, so `<!doc` shows no ghost (case differs from `<!DOCTYPE`) while the chip
+and the panel still accept it and still delete all five typed characters;
+`<` pairs in markup/C-like files as it always did (SmartTyping's own language
+gate decides), and a strip chip never auto-pairs (step 12).
+
+**Report:** PASS/FAIL per numbered step; for any FAIL the exact keys you typed,
+the file name, what appeared, and whether CodeC Keys was ON or OFF.

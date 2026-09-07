@@ -25,6 +25,32 @@
 > §13 card's chip lists were measured against — install it.**
 > **No PR/merge without the owner's command.**
 >
+> **Device round 1 came back with two bugs — both FIXED on this branch
+> (2026-09-07), retest card `docs/TROUBLESHOOTING.md` §14:**
+> **(a)** accepting a suggestion left the typed prefix behind (`#in` + tap →
+> `##include <stdio.h>`): the accept span was 22.3's *identifier* word-run and
+> `#`/`@`/`!`/`.`/`>` are not word characters, which was harmless while every
+> built-in snippet's insert began with its trigger word and wrong for the packs
+> + Emmet. Now `CodeCompletionEngine.replaceSpanLength` = word-run span ∪ the
+> insert's aligned head, bounded by the caret's line; `alignedTailLength`
+> gained `ignoreCase` — the **ghost stays literal-case** (it paints the suffix,
+> so its claim must be byte-true) while the **accept path is case-insensitive**
+> (22.6's matching law), wired at both accept surfaces (VM chip + CodeC
+> Analyzer panel). Measured: `#in`→3, `int mai`→7, `@med`→4, `<!doc`→5,
+> Markdown `head`→4, `obj.meth`+`method()`→4, empty→0, never across a newline.
+> **(b)** CodeC Keys did not auto-close brackets and `{` + Enter did not split
+> the pair: SmartTyping's suppression parameter was named `isStrip` and both
+> CodeC Keys paths still passed `true` — a leftover from when the strip was the
+> only non-IME surface, while 28.2 made CodeC Keys a full typing surface (the
+> system-IME path already paired). Renamed to `suppressAutoPair`; CodeC Keys
+> now pairs (`{` + Enter → caret indented with `}` on its own line), the
+> BottomStrip and programmatic caret moves keep suppression.
+> Host: **3 new test cases** with every value measured on a host JVM first
+> (`CodeCompletionTest` 19, `SmartTypingTest` 13) — **124 tests green locally**
+> over the real production files. `CompletionPolicy` is still untouched.
+> **Retest build: the newest GREEN `Build APK` run on this branch after
+> `34041185149`** (run number recorded in §14 once CI reports).
+>
 > Original plan (2026-09-05, docs only): suggestions don't give every
 > suggestion; phone coding is painful. Phase 27 already fixed **accept UX**
 > (ghost + chips). This phase fixes **what is offered** without a 90 MB LSP.
