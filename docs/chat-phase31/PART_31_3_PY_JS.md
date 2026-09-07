@@ -28,8 +28,8 @@ documented `pip install --user` / `npm i -g` inside PREFIX after
 | Language | Card id | Probe binary | Install command | Notes |
 |---|---|---|---|---|
 | C / C++ | `intellisense-c-cpp-clangd` | `clangd` | `pkg install -y clang` | Phase 20.1 ships clang |
-| Python | `intellisense-python-pylsp` | `pylsp` | `pip install --user python-lsp-server` | Phase 12 ships python3 |
-| JS / TS | `intellisense-js-tsserver` | `typescript-language-server` | `npm install -g typescript typescript-language-server` | Phase 20.1 ships nodejs |
+| Python | `intellisense-python-pylsp` | `pylsp` | `pkg install -y python-pip && pip install --user python-lsp-server` | Phase 12 ships python3 + python-pip; chained so the card is self-sufficient on a fresh userland |
+| JS / TS | `intellisense-js-tsserver` | `typescript-language-server` | `npm install -g typescript typescript-language-server` | Phase 20.1 ships nodejs (npm is a sibling of node) |
 
 All three cards are `PackageCategory.LANGUAGES`, so they show up in
 the LANGUAGES filter and in the ALL list with no ModulesScreen edit.
@@ -55,7 +55,13 @@ PASS = (1) and (3) ship today; (2) is the device round + 31.1 wire.
 1. Open a `.py` file. Type `import ` — expect Phase 30 snippet
    `import ... as` plus identifier items; pylsp is NOT on disk.
 2. Open Packages tab → tap "IntelliSense: Python (pylsp)" → INSTALL
-   runs `pip install --user python-lsp-server` in the live terminal.
+   runs the **chained** install in the live terminal:
+   `pkg install -y python-pip && pip install --user python-lsp-server`.
+   The first half lands `pip` on PATH (Phase 12 publishes `python-pip`
+   as its own deb in the CodeC apt repo; idempotent if already
+   installed — device round 2026-09-07 caught a fresh userland
+   failing with `pip: command not found` on the bare `pip install`
+   form). The second half installs the LSP server into `$PREFIX/`.
 3. Wait for the install to finish; come back. Re-type `import ` — the
    card flips to INSTALLED.
 4. RUN ▶ the file — expect CodeC's `python3` to run (Phase 21 path);
