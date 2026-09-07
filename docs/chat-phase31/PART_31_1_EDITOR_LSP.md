@@ -1,9 +1,13 @@
 # CodeC Phase 31.1 — editor-lsp client
 
-**Status:** 🚧 **IMPLEMENTED** (2026-09-07, owner: "Start phase 31", L1–L5
-host-tested; production provider pending — see §3.1). Pure-Kotlin engine
-under `ui/editor/lsp/`; sora `editor-lsp` 0.24.6 added as a binary Gradle
-dependency (LGPL-2.1, see `app/src/main/assets/licenses/SORA_EDITOR_LSP_LGPL.txt`).
+**Status:** 🚧 **ENGINE SHIPPED, WIRE GATED** (2026-09-07, owner: "Start
+phase 31"). Pure-Kotlin engine under `ui/editor/lsp/` ships with 25 host
+tests passing on a local JVM (Temurin 25 + kotlinc 2.4.20) and on CI (run
+`34119534405`, tip `5592736`). The sora `editor-lsp` 0.24.6 binary Gradle
+dependency is on the version catalog and gated behind
+`project.findProperty("editorLsp") == "true"` because the first push
+(without the gate) failed at `:app:processDebugMainManifest` and the agent
+sandbox cannot read the raw CI log (rule.md §5). See §3.1 and §4.
 
 ---
 
@@ -145,4 +149,24 @@ the UX shell. 31.3 is the same for Python + JS/TS.
   snippets.
 - The sora `LspEditor` API is heavy; the production provider is its
   own 200-LOC file. The follow-up (§3.1) is the right scope.
+- **2026-09-07 first push red.** Run `34119027553` failed at
+  `:app:processDebugMainManifest`. The `gradle-bootstrap` shim emitted
+  only `Gradle failure 1/2/3` (the standard `FAILURE: …` /
+  `* What went wrong:` / `Execution failed for task` lines — the
+  cause is on the line immediately after `* What went wrong:` and
+  did not contain a needle the shim's regex matches). The agent
+  sandbox cannot read raw CI logs (rule.md §5), so the only ways to
+  resolve are (a) the owner opens **Actions → run `34119027553` →
+  Assemble debug APK** in the browser and pastes the cause, or
+  (b) the gate stays and the wire ships without the AAR for now.
+  The most likely cause is the AGP delta (sora's BOM is AGP 9.3.1
+  + Kotlin 2.4.10; CodeC is AGP 9.1.1 + Kotlin 2.2.10), but without
+  the cause in writing we are not going to fix on a guess.
+- **2026-09-07 gate lands, CI green.** The `editor-lsp` Gradle dep
+  is now wrapped in `if (project.findProperty("editorLsp") == "true")`
+  so the orchestrator + tests + activity wire all ship and the
+  `:app:testDebugUnitTest` + `:app:lintDebug` + `:bench:*` runs pass.
+  Run `34119534405` is green (tip `5592736`, 8 m 36 s). The follow-up
+  to flip the property is one line; the rule.md §4.2 fix-on-evidence
+  rule means we wait for the owner's confirmation.
 

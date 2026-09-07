@@ -270,6 +270,7 @@ Every update updates the docs **in the same commit**:
   cleanly on `main` whenever each ships. **No PR/merge without the
   owner's command.** CI is the executor of record (local pre-validation
   is a smoke, not a substitute).
+  **The actual Gradle dep is GATED behind `project.findProperty("editorLsp") == "true"`** because the first push failed at `:app:processDebugMainManifest` and the agent sandbox cannot read raw CI logs (rule.md §5). The shim emitted only the redacted `Gradle failure 1/2/3` set; the most likely cause is the AGP delta (sora's BOM is 9.3.1 + Kotlin 2.4.10, CodeC is 9.1.1 + Kotlin 2.2.10). CI **GREEN on tip `5592736`** (`Build APK` run `34119534405`, 8 m 36 s) with the gate open and the AAR not on the classpath. Owner can flip the property once the AGP question is settled, or paste the failing log block from the browser (Actions → run 34119027553 → Assemble debug APK step) so the root cause is on paper.
 - **Phase 29 (VS Code colour / TextMate) 🚧 IMPLEMENTED (2026-09-05, owner:
   "Start phase 29", all three parts in one build):** sora
   `language-textmate` (same 0.24.6 BOM) is the editor's analyzer — 24 MIT
