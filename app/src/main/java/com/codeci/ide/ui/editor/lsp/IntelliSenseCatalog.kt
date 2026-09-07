@@ -111,6 +111,99 @@ object IntelliSenseCatalog {
             installCommand = "npm install -g typescript typescript-language-server",
             runCommand = "typescript-language-server --version",
         ),
+        // 31.4 (device round 2026-09-07, owner request) — Shell via
+        // bash-language-server. MIT, npm, 205k weekly downloads,
+        // requires node 20+ (Phase 20.1 ships node 26.4). Adds
+        // command-name completion, man-page hover, shellcheck, and
+        // explainshell. Requires nodejs (pkg install -y nodejs) —
+        // install that first if not present.
+        PackageItem(
+            id = "intellisense-shell-bash",
+            name = "IntelliSense: Shell (bash)",
+            binary = "bash-language-server",
+            category = PackageCategory.LANGUAGES,
+            description = "Adds bash-language-server — command-name " +
+                "completion, man-page hover, shellcheck, explainshell. " +
+                "Requires nodejs (pkg install -y nodejs) — install " +
+                "that first if not present.",
+            installCommand = "npm install -g bash-language-server",
+            runCommand = "bash-language-server --version",
+        ),
+        // 31.4 — HTML via vscode-html-language-server. The npm
+        // package is `@zed-industries/vscode-langservers-extracted`
+        // (Zed's maintained fork of the original Microsoft package —
+        // 3 months since last publish vs the original's 2 years; the
+        // binaries are identical). The same npm install also lands
+        // the CSS and JSON servers; the three cards document that
+        // — installing any one of them flips the install command for
+        // the other two to a no-op (npm -g is idempotent).
+        PackageItem(
+            id = "intellisense-html-vscode",
+            name = "IntelliSense: HTML (vscode)",
+            binary = "vscode-html-language-server",
+            category = PackageCategory.LANGUAGES,
+            description = "Adds vscode-html-language-server — HTML " +
+                "element completion, attribute hints, HTML5 tag docs. " +
+                "Also installs the CSS and JSON vscode servers " +
+                "(@zed-industries/vscode-langservers-extracted, one " +
+                "npm package). Requires nodejs (pkg install -y nodejs).",
+            installCommand = "npm install -g @zed-industries/vscode-langservers-extracted",
+            runCommand = "vscode-html-language-server --version",
+        ),
+        // 31.4 — CSS via vscode-css-language-server. Same npm
+        // package as the HTML card; the install command is the
+        // same. The card's `binary` (vscode-css-language-server) is
+        // the per-language probe; the orchestrator's check is
+        // per-language. The user only has to install ONE of the
+        // three vscode cards to flip all three to INSTALLED (npm
+        // -g is idempotent — running it again is a no-op).
+        PackageItem(
+            id = "intellisense-css-vscode",
+            name = "IntelliSense: CSS (vscode)",
+            binary = "vscode-css-language-server",
+            category = PackageCategory.LANGUAGES,
+            description = "Adds vscode-css-language-server — CSS " +
+                "property completion, browser-specific properties, " +
+                "@media / @keyframes awareness. Same npm install as " +
+                "the HTML card " +
+                "(@zed-industries/vscode-langservers-extracted). " +
+                "Requires nodejs (pkg install -y nodejs).",
+            installCommand = "npm install -g @zed-industries/vscode-langservers-extracted",
+            runCommand = "vscode-css-language-server --version",
+        ),
+        // 31.4 — JSON via vscode-json-language-server. Same npm
+        // package; same install command. Schema-aware completion for
+        // package.json / tsconfig.json / etc.
+        PackageItem(
+            id = "intellisense-json-vscode",
+            name = "IntelliSense: JSON (vscode)",
+            binary = "vscode-json-language-server",
+            category = PackageCategory.LANGUAGES,
+            description = "Adds vscode-json-language-server — " +
+                "schema-aware completion for package.json, " +
+                "tsconfig.json, and any file with a `$schema`. Same " +
+                "npm install as the HTML card " +
+                "(@zed-industries/vscode-langservers-extracted). " +
+                "Requires nodejs (pkg install -y nodejs).",
+            installCommand = "npm install -g @zed-industries/vscode-langservers-extracted",
+            runCommand = "vscode-json-language-server --version",
+        ),
+        // 31.4 — YAML via redhat-developer/yaml-language-server.
+        // MIT, npm, 2.4M weekly downloads, requires node 18+
+        // (Phase 20.1 ships node 26). Schema-aware completion
+        // for k8s manifests, GitHub Actions, docker-compose, etc.
+        PackageItem(
+            id = "intellisense-yaml-redhat",
+            name = "IntelliSense: YAML (redhat)",
+            binary = "yaml-language-server",
+            category = PackageCategory.LANGUAGES,
+            description = "Adds yaml-language-server — schema-aware " +
+                "completion for Kubernetes manifests, GitHub Actions, " +
+                "docker-compose, and any file with a `$schema`. " +
+                "Requires nodejs (pkg install -y nodejs).",
+            installCommand = "npm install -g yaml-language-server",
+            runCommand = "yaml-language-server --version",
+        ),
     )
 
     /**

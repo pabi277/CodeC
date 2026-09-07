@@ -94,6 +94,63 @@ class IntelliSenseCatalogTest {
     }
 
     @Test
+    fun catalogHasEightCardsForThe31Series() {
+        // 31.1–31.3 shipped 3 cards (C/C++, Python, JS/TS). The
+        // device round (2026-09-07) added 5 more (shell, HTML, CSS,
+        // JSON, YAML) for a total of 8 — the user picked the "5 new
+        // cards, one per language" path, so 3 (initial) + 5 (31.4) =
+        // 8. Pin the card count so a future edit doesn't silently
+        // drop one.
+        assertEquals(8, IntelliSenseCatalog.cards.size)
+    }
+
+    @Test
+    fun shellCardUsesNpmInsidePrefix() {
+        // bash-language-server is the documented shell LSP, MIT,
+        // 205k weekly downloads. The install is a bare
+        // `npm install -g bash-language-server` (no chained
+        // python-pip dance — nodejs ships npm already at the
+        // Phase 20.1 ref).
+        val shell = IntelliSenseCatalog.cardById["intellisense-shell-bash"]
+        assertNotNull(shell)
+        assertEquals("bash-language-server", shell!!.binary)
+        assertEquals("npm install -g bash-language-server", shell.installCommand)
+    }
+
+    @Test
+    fun vscodeCardsShareTheSameNpmInstall() {
+        // The 3 vscode cards (HTML, CSS, JSON) all install
+        // `@zed-industries/vscode-langservers-extracted` — one
+        // npm package, three binaries. The install command is
+        // identical across the 3 cards. Pin the install command
+        // AND the distinct per-language binary so the catalog
+        // stays honest about which language probes which binary.
+        val expectedInstall = "npm install -g @zed-industries/vscode-langservers-extracted"
+        for ((id, expectedBinary) in listOf(
+            "intellisense-html-vscode" to "vscode-html-language-server",
+            "intellisense-css-vscode" to "vscode-css-language-server",
+            "intellisense-json-vscode" to "vscode-json-language-server",
+        )) {
+            val card = IntelliSenseCatalog.cardById[id]
+            assertNotNull("missing card $id", card)
+            assertEquals("binary mismatch on $id", expectedBinary, card!!.binary)
+            assertEquals(
+                "install command mismatch on $id",
+                expectedInstall,
+                card.installCommand,
+            )
+        }
+    }
+
+    @Test
+    fun yamlCardUsesNpmInsidePrefix() {
+        val yaml = IntelliSenseCatalog.cardById["intellisense-yaml-redhat"]
+        assertNotNull(yaml)
+        assertEquals("yaml-language-server", yaml!!.binary)
+        assertEquals("npm install -g yaml-language-server", yaml.installCommand)
+    }
+
+    @Test
     fun pythonCardChainMentionsBothPackages() {
         // The chain `pkg install -y python-pip && pip install
         // --user python-lsp-server` has TWO requirements:

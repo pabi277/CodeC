@@ -57,19 +57,21 @@ class LspStatusResolverTest {
 
     @Test
     fun noCardForLanguagesWithoutIntelliSense() {
-        // Plain text / JSON / markdown / shell / HTML / CSS / go /
-        // rust / php / ruby / lua / xml / yaml — these languages
-        // have a run profile (most) but no LSP card. Status is
-        // NoCard; the editor stays silent. The 31.3 README says
-        // "defer until a CodeC package exists" for the ones that
-        // do not (gopls, rust-analyzer).
+        // 31.4 (device round 2026-09-07): shell, HTML, CSS, JSON,
+        // YAML are now COVERED (bash-language-server,
+        // vscode-langservers-extracted, yaml-language-server). What
+        // remains NoCard: plain text / markdown / go / rust / php /
+        // ruby / lua / xml. The 31.3 README says "defer until a
+        // CodeC package exists" for the heavy ones (gopls ~50 MB,
+        // rust-analyzer ~200 MB); PHP/Ruby/Lua have LSPs but
+        // complex installs that are a Phase 32/33 conversation;
+        // XML has no widely-deployed LSP; markdown / text have no
+        // good LSP.
         val probe = BinaryProbe { false }
         for (lang in listOf(
-            LanguageType.TEXT, LanguageType.JSON, LanguageType.MARKDOWN,
-            LanguageType.SHELL, LanguageType.HTML, LanguageType.CSS,
+            LanguageType.TEXT, LanguageType.MARKDOWN,
             LanguageType.GO, LanguageType.RUST, LanguageType.PHP,
             LanguageType.RUBY, LanguageType.LUA, LanguageType.XML,
-            LanguageType.YAML,
         )) {
             assertEquals(
                 "expected NoCard for $lang",
@@ -137,5 +139,50 @@ class LspStatusResolverTest {
             LspStatus.Installed,
             LspStatusResolver.statusFor(LanguageType.C, sameProbeAgain)
         )
+    }
+
+    @Test
+    fun installedForShellWhenBashLanguageServerPresent() {
+        // 31.4 — bash-language-server on disk -> SHELL is INSTALLED.
+        val probe = BinaryProbe { it == "bash-language-server" }
+        assertEquals(LspStatus.Installed, LspStatusResolver.statusFor(LanguageType.SHELL, probe))
+    }
+
+    @Test
+    fun availableCardForShellWhenBashLanguageServerMissing() {
+        val probe = BinaryProbe { false }
+        assertEquals(LspStatus.AvailableCard, LspStatusResolver.statusFor(LanguageType.SHELL, probe))
+    }
+
+    @Test
+    fun installedForHtmlCssJsonYamlWhenVscodeAndYamlServersPresent() {
+        // 31.4 — the 4 vscode-* servers + the redhat YAML server.
+        // Pin each language's probe binary — they're distinct
+        // binaries that all land in the user's $PREFIX/bin/ after
+        // the npm installs.
+        val allServers = BinaryProbe {
+            it == "vscode-html-language-server" ||
+                it == "vscode-css-language-server" ||
+                it == "vscode-json-language-server" ||
+                it == "yaml-language-server"
+        }
+        assertEquals(LspStatus.Installed, LspStatusResolver.statusFor(LanguageType.HTML, allServers))
+        assertEquals(LspStatus.Installed, LspStatusResolver.statusFor(LanguageType.CSS, allServers))
+        assertEquals(LspStatus.Installed, LspStatusResolver.statusFor(LanguageType.JSON, allServers))
+        assertEquals(LspStatus.Installed, LspStatusResolver.statusFor(LanguageType.YAML, allServers))
+    }
+
+    @Test
+    fun availableCardForHtmlCssJsonYamlWhenServersMissing() {
+        val probe = BinaryProbe { false }
+        for (lang in listOf(
+            LanguageType.HTML, LanguageType.CSS, LanguageType.JSON, LanguageType.YAML,
+        )) {
+            assertEquals(
+                "expected AvailableCard for $lang",
+                LspStatus.AvailableCard,
+                LspStatusResolver.statusFor(lang, probe)
+            )
+        }
     }
 }

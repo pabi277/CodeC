@@ -48,12 +48,30 @@ data class LspServerConfig(
 }
 
 /**
- * The Phase 31.1 server catalog. Three languages in 31.1–31.3 (C/C++,
- * Python, JS/TS) — go/rust/HTML/CSS/JSON/shell keep their snippet-only
- * world until a server exists in the CodeC repository.
+ * The Phase 31.1 server catalog.
  *
- * The catalog is a `val` (no Android, no IO) so the manager can be
- * constructed in a unit test with the exact same table the app ships.
+ * **31.1–31.3 (C/C++, Python, JS/TS):** in 31.1's first commit. The
+ * cards in [IntelliSenseCatalog] drive the install path; the manager
+ * uses these configs to launch stdio LSP.
+ *
+ * **Device round (2026-09-07, owner request):** added shell (bash),
+ * HTML, CSS, JSON, and YAML. All four are documented npm packages
+ * with active maintainers and 100k+ weekly downloads, install inside
+ * PREFIX after `nodejs` exists (Phase 20.1), and are the canonical
+ * phone-friendly LSP servers. Each language has its own server
+ * config so the manager launches the right binary; the
+ * [IntelliSenseCatalog] may use one combined install card for
+ * several vscode-* servers (`@zed-industries/vscode-langservers-extracted`
+ * ships HTML+CSS+JSON in one npm package), but the probe binaries
+ * stay per-language.
+ *
+ * **Still deferred:** Go (gopls, ~50 MB; needs `golang` in repo),
+ * Rust (rust-analyzer, ~200 MB; needs `rust` in repo), PHP (phpactor /
+ * intelephense; complex installs), Ruby (solargraph; Ruby gem), Lua
+ * (sumneko/lua-language-server, 50+ MB), XML (no widely-deployed
+ * LSP — Phase 30 packs carry the common DTD/namespace completions).
+ * The cards stay disabled until a server is in the CodeC repository
+ * OR a documented npm/pip install path is verified for the device.
  */
 object LspServerCatalog {
     val servers: List<LspServerConfig> = listOf(
@@ -112,6 +130,65 @@ object LspServerCatalog {
             probeBinary = "typescript-language-server",
             command = listOf("typescript-language-server", "--stdio"),
             languageId = "typescript",
+        ),
+        // 31.4 (device round 2026-09-07, owner request) — Shell via
+        // bash-language-server. MIT, 205k weekly downloads, requires
+        // node 20+ (Phase 20.1 ships node 26.4). Adds command-name
+        // completion, man-page hover, shellcheck integration, and
+        // explainshell — completion sources the snippet packs cannot
+        // provide (no pack knows the names of all 4 000+ commands in
+        // the userland).
+        LspServerConfig(
+            language = LanguageType.SHELL,
+            displayName = "Shell (bash-language-server)",
+            probeBinary = "bash-language-server",
+            command = listOf("bash-language-server", "start"),
+            languageId = "shellscript",
+        ),
+        // 31.4 — HTML via vscode-html-language-server. MIT, ships
+        // with the `@zed-industries/vscode-langservers-extracted`
+        // package. Adds HTML element completion, attribute hints,
+        // and HTML5 tag/attribute documentation.
+        LspServerConfig(
+            language = LanguageType.HTML,
+            displayName = "HTML (vscode-html-language-server)",
+            probeBinary = "vscode-html-language-server",
+            command = listOf("vscode-html-language-server", "--stdio"),
+            languageId = "html",
+        ),
+        // 31.4 — CSS via vscode-css-language-server. Same npm
+        // package as HTML. Adds CSS property completion, browser-
+        // specific properties, and `@media` / `@keyframes` awareness
+        // that the Phase 30 Emmet/CSS packs cannot provide.
+        LspServerConfig(
+            language = LanguageType.CSS,
+            displayName = "CSS (vscode-css-language-server)",
+            probeBinary = "vscode-css-language-server",
+            command = listOf("vscode-css-language-server", "--stdio"),
+            languageId = "css",
+        ),
+        // 31.4 — JSON via vscode-json-language-server. Same npm
+        // package. Adds schema-aware completion (e.g. `package.json`
+        // knows the npm script names; `tsconfig.json` knows the
+        // compiler options), which the snippet packs cannot provide.
+        LspServerConfig(
+            language = LanguageType.JSON,
+            displayName = "JSON (vscode-json-language-server)",
+            probeBinary = "vscode-json-language-server",
+            command = listOf("vscode-json-language-server", "--stdio"),
+            languageId = "json",
+        ),
+        // 31.4 — YAML via redhat-developer/yaml-language-server.
+        // MIT, 2.4M weekly downloads, requires node 18+ (Phase 20.1
+        // ships node 26). Adds YAML schema-aware completion (k8s,
+        // GitHub Actions, docker-compose, etc. when the file
+        // declares a `$schema`).
+        LspServerConfig(
+            language = LanguageType.YAML,
+            displayName = "YAML (yaml-language-server)",
+            probeBinary = "yaml-language-server",
+            command = listOf("yaml-language-server", "--stdio"),
+            languageId = "yaml",
         ),
     )
 
