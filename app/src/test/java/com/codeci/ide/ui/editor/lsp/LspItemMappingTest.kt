@@ -129,58 +129,115 @@ class LspItemMappingTest {
  * languages the catalog claims to support. The catalog is the only
  * non-test surface that owns the language→server mapping; if it lies
  * the manager silently returns nothing.
+ *
+ * 31.4 (device round 2026-09-07, owner): added shell, HTML, CSS,
+ * JSON, YAML. The 13-language NoCard set shrinks to 8 (TEXT,
+ * MARKDOWN, GO, RUST, PHP, RUBY, LUA, XML).
  */
 class LspServerCatalogTest {
 
     @Test
     fun catalogHasExpectedLanguages() {
         val supported = LspServerCatalog.servers.map { it.language }.toSet()
-        // C / C++ (31.2), Python (31.3), JS / TS (31.3) — exactly the
-        // README scope for 31.1–31.3.
+        // C / C++ (31.2), Python + JS / TS (31.3) + shell + HTML +
+        // CSS + JSON + YAML (31.4) = 10 languages.
         assertEquals(
-            setOf(LanguageType.C, LanguageType.CPP, LanguageType.PYTHON, LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT),
-            supported
+            setOf(
+                LanguageType.C, LanguageType.CPP, LanguageType.PYTHON,
+                LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT,
+                LanguageType.SHELL, LanguageType.HTML, LanguageType.CSS,
+                LanguageType.JSON, LanguageType.YAML,
+            ),
+            supported,
         )
     }
 
     @Test
     fun everyServerHasAUniqueProbeBinary() {
-        // Two servers can SHARE a binary (C and C++ both use clangd);
-        // they cannot both probe the same binary if they're actually
-        // different binaries. The current catalog reuses clangd
-        // (intentional — the install card is one row), and a separate
-        // probe for pylsp / tsserver.
+        // Two servers can SHARE a binary (C and C++ both use
+        // clangd) — that's intentional, the install card is one
+        // row. The probe binary MUST be set and non-blank on every
+        // server; a blank probe would make the manager fall through
+        // to the no-op provider for that language.
         val probs = LspServerCatalog.servers.map { it.probeBinary }
-        // probe binaries are at least set and non-blank.
         probs.forEach { assertTrue("blank probe", it.isNotBlank()) }
     }
 
     @Test
     fun languageIdsMatchLspSpec() {
-        // Per the LSP spec: c, cpp, python, javascript, typescript.
-        // editor-lsp passes this string to the server in
-        // `initialize`; a wrong value means the server does not hook
-        // completion up for our file.
+        // Per the LSP spec for the 31.4 set. editor-lsp passes this
+        // string to the server in `initialize`; a wrong value means
+        // the server does not hook completion up for our file.
         val byLang = LspServerCatalog.servers.associateBy { it.language }
         assertEquals("c", byLang[LanguageType.C]!!.languageId)
         assertEquals("cpp", byLang[LanguageType.CPP]!!.languageId)
         assertEquals("python", byLang[LanguageType.PYTHON]!!.languageId)
         assertEquals("javascript", byLang[LanguageType.JAVASCRIPT]!!.languageId)
         assertEquals("typescript", byLang[LanguageType.TYPESCRIPT]!!.languageId)
+        // 31.4 additions:
+        assertEquals("shellscript", byLang[LanguageType.SHELL]!!.languageId)
+        assertEquals("html", byLang[LanguageType.HTML]!!.languageId)
+        assertEquals("css", byLang[LanguageType.CSS]!!.languageId)
+        assertEquals("json", byLang[LanguageType.JSON]!!.languageId)
+        assertEquals("yaml", byLang[LanguageType.YAML]!!.languageId)
     }
 
     @Test
     fun forLanguageReturnsNullForUnsupported() {
-        // Plain TEXT, JSON, MARKDOWN, GO, RUST, PHP, RUBY, LUA, XML,
-        // YAML, SHELL, HTML, CSS — none have an LSP card in 31.1.
+        // The 31.4 NoCard set: TEXT, MARKDOWN, GO, RUST, PHP, RUBY,
+        // LUA, XML. (gopls / rust-analyzer stay deferred until
+        // those compilers are in the CodeC apt repo; PHP/Ruby/Lua
+        // need complex installs; XML has no widely-deployed LSP;
+        // markdown/text have no good LSP.)
         for (lang in listOf(
-            LanguageType.TEXT, LanguageType.JSON, LanguageType.MARKDOWN,
+            LanguageType.TEXT, LanguageType.MARKDOWN,
             LanguageType.GO, LanguageType.RUST, LanguageType.PHP,
             LanguageType.RUBY, LanguageType.LUA, LanguageType.XML,
-            LanguageType.YAML, LanguageType.SHELL, LanguageType.HTML,
-            LanguageType.CSS,
         )) {
             assertNull("expected no server for $lang", LspServerCatalog.forLanguage(lang))
+        }
+    }
+
+    @Test
+    fun shellAndVscodeAndYamlServersHaveCorrectArgv() {
+        // Pin the argv so a future edit to the LSP launch path
+        // doesn't accidentally drop the `--stdio` / `start` flag
+        // (the editor-lsp / LSP-spec stdio contract requires it).
+        val shell = LspServerCatalog.forLanguage(LanguageType.SHELL)!!
+        assertEquals(listOf("bash-language-server", "start"), shell.command)
+
+        val html = LspServerCatalog.forLanguage(LanguageType.HTML)!!
+        assertEquals(listOf("vscode-html-language-server", "--stdio"), html.command)
+
+        val css = LspServerCatalog.forLanguage(LanguageType.CSS)!!
+        assertEquals(listOf("vscode-css-language-server", "--stdio"), css.command)
+
+        val json = LspServerCatalog.forLanguage(LanguageType.JSON)!!
+        assertEquals(listOf("vscode-json-language-server", "--stdio"), json.command)
+
+        val yaml = LspServerCatalog.forLanguage(LanguageType.YAML)!!
+        assertEquals(listOf("yaml-language-server", "--stdio"), yaml.command)
+    }
+
+    @Test
+    fun everyServerHasNonBlankProbeAndLanguageId() {
+        // Defense-in-depth — the LspServerConfig `init` block
+        // already enforces this, but pin it here so a future
+        // refactor that removes the `require` checks still
+        // catches the regression in CI.
+        for (server in LspServerCatalog.servers) {
+            assertTrue(
+                "blank probe for ${server.language}",
+                server.probeBinary.isNotBlank(),
+            )
+            assertTrue(
+                "blank languageId for ${server.language}",
+                server.languageId.isNotBlank(),
+            )
+            assertTrue(
+                "empty command for ${server.language}",
+                server.command.isNotEmpty(),
+            )
         }
     }
 }
