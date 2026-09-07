@@ -188,6 +188,13 @@ class MainActivity : ComponentActivity() {
         // first open (SoraEditorHost's language effect).
         lifecycleScope.launch(Dispatchers.Default) {
             com.codeci.ide.ui.editor.sora.TextMateSupport.warmUp(applicationContext)
+            // Phase 30.1 — parse the vendored snippet packs (MIT
+            // friendly-snippets) in the same background hop: a few ms per
+            // language, and the first completion after opening a file is then
+            // a cache hit. Purely a latency optimization — SnippetLibrary
+            // loads any language on demand, and the engine falls back to its
+            // own tables if an asset ever fails to read.
+            com.codeci.ide.ui.editor.snippets.SnippetLibrary.warmUp(applicationContext)
         }
 
         storagePermissionLauncher = registerForActivityResult(

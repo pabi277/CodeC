@@ -1,11 +1,13 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.editor.CodeCompletionEngine
 import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompletionKind
 import com.codeci.ide.ui.editor.CompletionSettings
 import com.codeci.ide.ui.editor.CompletionSurface
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
+import com.codeci.ide.ui.editor.Emmet
 import com.codeci.ide.ui.editor.GhostState
 import com.codeci.ide.ui.editor.StripContext
 import com.codeci.ide.ui.editor.SuggestionStripModel
@@ -118,6 +120,46 @@ class StripContextTest {
         val noGhost = stripOf(listOf(ghostItem))
         assertTrue(noGhost is StripContext.Keys)
         assertEquals(CompletionSurface.NONE, (noGhost as StripContext.Keys).surface)
+    }
+
+    @Test
+    fun `S1 exception (30_2) - a lone Emmet candidate still gets its chip`() {
+        // S1's premise is "one candidate ⇒ the ghost covers it". An Emmet
+        // expansion breaks that premise: its insert text (`<ul>…`) never starts
+        // with what was typed (`ul>li*3`), so GhostCompletion stays Hidden and
+        // a lone expansion would be invisible. The detail marker is the gate.
+        val emmet = CompletionItem(
+            label = "ul>li*3",
+            insertText = "<ul>\n    <li></li>\n</ul>",
+            kind = CompletionKind.SNIPPET,
+            detail = Emmet.DETAIL,
+            replaceLength = 7,
+            caretOffset = 9
+        )
+        val ctx = stripOf(listOf(emmet))
+        assertTrue("lone emmet must chip: $ctx", ctx is StripContext.Suggestions)
+        assertEquals(1, (ctx as StripContext.Suggestions).chips.size)
+        assertEquals("ul>li*3", ctx.chips[0].label)
+        assertEquals(Emmet.DETAIL, ctx.chips[0].detail)
+        // A ghost that DOES cover the candidate puts the row back in key mode.
+        val covered = stripOf(
+            listOf(emmet),
+            ghost = GhostState.Visible("<ul>", emmet, 0)
+        )
+        assertTrue("covered single candidate stays in keys: $covered", covered is StripContext.Keys)
+    }
+
+    @Test
+    fun `30_3 - a long engine list still yields at most MAX_CHIPS chips`() {
+        // The engine's cap went 8 → 50; the THUMB cap did not move. The rest
+        // is reachable through ⌄ more (27.2), which reads the same list.
+        val items = (1..CodeCompletionEngine.MAX_ITEMS).map { item("opt$it") }
+        val chips = SuggestionStripModel.buildStripModel(items, GhostState.Hidden)
+        assertEquals(SuggestionStripModel.MAX_CHIPS, chips.size)
+        val ctx = stripOf(items)
+        assertTrue(ctx is StripContext.Suggestions)
+        assertEquals(SuggestionStripModel.MAX_CHIPS, (ctx as StripContext.Suggestions).chips.size)
+        assertTrue("the chevron has more to show", items.size > chips.size)
     }
 
     @Test

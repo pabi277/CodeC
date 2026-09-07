@@ -184,6 +184,10 @@ fun SoraEditorHost(
         // CME crash, 2026-09-06).
         val lang = withContext(Dispatchers.Default) {
             TextMateSupport.ensureInitialized(appContext)
+            // Phase 30.1 — the snippet packs ride the same off-main hop: the
+            // first completion for this language then hits a warm cache
+            // instead of parsing pack JSON on the completion thread.
+            com.codeci.ide.ui.editor.snippets.SnippetLibrary.warmUp(appContext, listOf(language))
             TextMateSupport.createLanguage(language, fileName)
         }
         // Fresh Language per editor (sora: one language instance serves one editor).

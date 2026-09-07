@@ -461,3 +461,220 @@ per-line width lists sora rebuilds ASYNCHRONOUSLY after any
 replay an atomic `setText`. If ANY crash recurs in this round, the
 §-above COPY ALL flow still applies — the report now always starts at
 the exception line.
+
+---
+
+## 13. How to run the Phase 30 snippets + Emmet device round (owner runbook, 2026-09-06) — ✅ PASSED 2026-09-07
+
+> Phase 30 = **what is offered** (27 fixed *how you accept*). All three parts
+> ship in ONE build: 30.1 MIT snippet packs as assets, 30.2 clean-room Emmet
+> for HTML/CSS/JSX, 30.3 the engine cap 8 → 50. This card is the exit gate —
+> the three parts' exit conditions are merged into one pass below.
+>
+> **Ran 2026-09-07 on build `ca8ec57` (run `34041185149`): the owner reported
+> TWO failures — accepting a suggestion kept the typed prefix (`#in` →
+> `##include <stdio.h>`) and CodeC Keys closed no brackets. No other item was
+> reported failing.** Both were fixed in `d63a645` and re-tested through §14
+> below: **PASSED (owner: "Yes working")**, and Phase 30 merged via PR #55.
+> This card stays as the standing regression pass for the offer world.
+>
+> **Every chip list below was MEASURED on a host JVM driving the real engine
+> over the real pack assets**, so a FAIL on the phone is a real signal and not
+> a guess about what the packs contain. Writing this card also caught five
+> strings the as-committed build got wrong — Markdown `head` returned **zero**
+> items, Python `pr` lost `print(...)`, shell `if ` dumped 16 snippets with **no
+> if-block** among them, Python `def ` offered `deft`/`defs`/`defst` but not
+> `def`, and `nav>ul>li*2>a[href=#]{Link $}` was unreachable when *typed* (the
+> walk-back stopped at the space inside the text node). All five are fixed in
+> the build this card points at; see PART_30_1 §3.5 and PART_30_2 §3.5.
+
+**What you should see change:** typing `for` in C now offers **5** snippets
+instead of one; `i` in Python offers **13** candidates and the chip row scrolls;
+`ul>li*3` on a fresh line of an HTML file expands into a real nested list; `m10`
+inside a CSS rule expands into `margin: 10px;`. Snippet **labels are now mostly
+the short prefixes you type** (`for`, `#inc`, `main`, `bg`) — the old tables
+showed whole body lines (`for (int i = 0; i < n; i++) {`); those long labels
+still appear, but only as the LAST chip of a row, where the pack has nothing
+shorter to offer.
+
+**Steps** (each is one line — type exactly what is in backticks; "chips" = the
+row above the keyboard, in order):
+
+1. Actions → **Build APK** run **`34041185149`** (tip `ca8ec57`, GREEN 4m51s —
+   the build that carries the §3.5 amendment; any LATER green run on the
+   session branch is equally good) → Artifacts → **CodeC-IDE** → install, then
+   Settings → About and check the version line carries that run's number (29.4
+   — a stale APK is the classic false FAIL, and this card's chip lists only
+   match the amended build).
+   *(Artifact delta vs `main`: **+116 886 B (+0.11 MiB / +0.117 MB)** — 29
+   snippet JSONs, 277 KB raw ≈ 54 KB deflated, plus the resolver/Emmet code;
+   Phase 29's TextMate assets and engine are unchanged.)*
+2. **C snippets (30.1):** open or create `main.c`, type `for` → **5 chips**
+   `for` `fora` `forc` `forg` `for (int i = 0; i < n; i++) {`. Tap the first →
+   a real loop appears and the caret sits at its first hole. Then type `#inc` →
+   **3** (`#inc` `#incl` `#include <stdio.h>`) → tap → `#include <stdio.h>`.
+   Then `main` → **3** (`main` `mainn` `int main(void) {`).
+3. **Python snippets (30.1):** create `a.py`, type `for` → **3** (`for` `forr`
+   `for item in iterable:`); then type `def` followed by a SPACE → **5** (`def`
+   `deft` `defs` `defst` `def function():`) — the FIRST chip must be `def`
+   (trigger words still work with an empty prefix).
+4. **The tail (30.1 §3.5 — four strings the pack alone broke):** in `notes.md`
+   type `head` → **1** chip `# Heading` (pack-only build: nothing at all); in
+   `a.py` type `pr` → **2** (`property` `print(...)`); in `run.sh` type `if`
+   followed by a SPACE → **exactly 2** chips, both if-blocks (`if`,
+   `if [ cond ]; then ... fi`) and NOT a 16-item dump of `echo`/`read`/`else`;
+   in `site.css` type `@med` → **2** (`med` = the pack's
+   `@media screen and (max-width: 300px) {…}`, then CodeC's
+   `@media (max-width: 600px)`).
+5. **HTML regression (30.1 exit 2):** create `index.html`, type `doc` → **2**
+   (`doctype` **and** `<!DOCTYPE html> skeleton`); tap the skeleton → a full
+   HTML5 document with the caret inside `<body>`.
+6. **Emmet markup (30.2 exit 1):** inside `<body>` of `index.html`, press Enter
+   so the caret is on a FRESH line, type `ul>li*3` → **ONE** chip labelled
+   `ul>li*3` → tap → a three-item nested list, caret inside the first `<li>`,
+   and the typed `ul>li*3` is GONE (replaced, not appended).
+7. **Emmet, more shapes** (each on a fresh line, one chip unless noted):
+   `div.card>p{Hello}` → `<div class="card">` + `<p>Hello</p>`;
+   `table>tr*2>td` → **2** chips (the expansion, then the pack's `td`);
+   `nav>ul>li*2>a[href=#]{Link $}` → the two links must read `Link 1` and
+   `Link 2`; `a{Link $}` → `<a>Link 1</a>`; `p{Hello World}` → a space inside
+   `{text}` is part of the abbreviation (30.2 §3.5); and `!` alone → the HTML5
+   skeleton (30.2 exit 2).
+8. **Emmet CSS (30.2):** in `site.css`, inside a rule (`div {` then a new line),
+   type `m10` → **1** chip `m10` → tap → `margin: 10px;` with the caret right
+   after the colon. Also `d:f` → `display: flex;` (**28** candidates: the
+   expansion first, then the pack's `f…` snippets, because the prefix left
+   after `d:` is `f`), `p10-20` → `padding: 10px 20px;`, `m10+p20` → two
+   declarations, `mt-5` → `margin-top: -5px;`, `m10!` →
+   `margin: 10px !important;`.
+9. **The C gate (30.2 exit 3):** in `main.c` type `ul>li` and then `!` on a
+   fresh line → **no** expansion chip (ordinary snippets/keywords only). Repeat
+   in a plain `.js` file: `ul>li*3` must NOT fire there either — only `.jsx`
+   and `.tsx` files do (rename the same buffer to `app.jsx` and it fires).
+10. **Capacity (30.3 exit 1):** in `a.py` type `i` → **13** candidates, **8**
+    chips, the row scrolls sideways; tap **⌄ more** → the panel lists **13**
+    rows (MORE THAN 8). Same in `main.c`: `i` → **13**.
+11. **The laws (30.3 exit 2 + Phase 27):** Enter still inserts a newline and
+    never accepts a suggestion; **TAB ▸** accepts the ghost in full and parks
+    the caret at the snippet's first hole; **→▸** accepts one word; ESC
+    rejects; swiping down on the chip row dismisses it for that identifier.
+12. **Master switch (30.1 exit 3):** Settings → Editor Settings → completion
+    master OFF → type `for` in `main.c` → no chips, no ghost, ⌄ does nothing.
+    Switch it back ON → everything returns.
+13. **Feel:** type ~60 keys in a long file (`bench.c` if you still have it) —
+    completions must feel exactly as before (the engine still runs off the main
+    thread behind the 120/240 ms debounce; the pack is parsed once).
+14. **Attribution:** Settings → About → the licence list mentions
+    "snippet packs — MIT (rafamadriz/friendly-snippets)".
+
+**By design, NOT bugs:** one accept parks the caret at the snippet's first hole
+and there is **no Tab-stop walking** (on a phone keyboard TAB is the
+indent/accept cap — Phase 27 invariant 2); a snippet inserted from sora's ⌄
+panel parks the caret at the END of the insert (its item type has no
+caret field) while the strip and ghost honour the hole; `.json` and `.txt`
+files still get no completions at all; an abbreviation glued to a tag
+(`<div>ul>li*3`, no space) fires **nothing** — the walk-back would read it as
+inside the tag, so start abbreviations on a fresh line; a space ends an
+abbreviation EXCEPT inside `{text}` (`ul> li*2` offers only `li*2`).
+
+**Short version (~5 min) if you only have one coffee:** steps 1, 2 (`for` in C
+→ 5 chips), 4 (all four — this is the amendment that exists because of this
+round), 6 (`ul>li*3`), 7's `nav>…{Link $}`, 8's `m10`, 10 (`i` → 13 rows behind
+⌄), 11 (Enter = newline), 12 (master OFF = nothing).
+
+**Report:** PASS/FAIL per numbered item, and for any FAIL the exact text you
+typed, the file name, and what appeared instead (a photo of the chip row is
+perfect evidence). If the app crashes, the §12 COPY ALL flow still applies —
+the report starts at the exception line; paste it in chat.
+
+## 14. Phase 30 device round 1 — the two fixes (owner runbook, 2026-09-07) — ✅ PASSED 2026-09-07
+
+> **PASSED 2026-09-07 (owner: "Yes working") on the `c2b392e` build — CI run
+> `34078739941` GREEN, artifact `CodeC-IDE` 24 375 211 B (+117 409 B / +0.11 MiB
+> vs `main`).** Phase 30 is closed and merged to `main` via PR #55 on the
+> owner's command. This card stays as the standing regression pass for the two
+> fixes — if a check ever fails again, file it like any other bug.
+>
+> You reported two bugs on the `ca8ec57` build. Both were fixed in `d63a645`
+> and both were reproduced + re-measured on a host JVM against the real
+> production files first. This card is ONLY those two — §13 is the full
+> Phase 30 pass.
+>
+> **Which build:** Actions → **Build APK** → run **`34078739941`** (tip
+> `c2b392e`, GREEN) → Artifacts → **CodeC-IDE**. (`34077539890` is RED on a
+> sora/Robolectric flake unrelated to the fixes, and a red run uploads NO APK
+> artifact.) Settings → About must show the new version (it carries the CI run
+> number — a stale APK is how round-1 reports went sideways in Phase 29).
+
+**Fix 1 — accepting a suggestion now deletes what you typed (all surfaces).**
+
+What was wrong: the accept span was the *identifier* run at the caret, and `#`
+is not an identifier character — so typing `#in` and tapping
+`#include <stdio.h>` replaced only `in` and left the `#` you had typed, giving
+`##include <stdio.h>`. Fine while every snippet began with the word you typed;
+the packs and Emmet ship items that don't.
+
+1. `main.c`, type `#in` → tap the **`#include <stdio.h>`** chip → the line reads
+   **`#include <stdio.h>`** — exactly one `#`, nothing left of `in`.
+2. Same, but accept from the **⌄ more** panel (CodeC Analyzer list) → same result.
+3. `int mai` → tap **`main`** → **`int main() {`** … (the whole `int mai` you
+   typed is gone, not just `mai`).
+4. `site.css`, type `@med` → tap **`@media`** → one `@`, no `@med@media …`.
+5. `index.html`, type `doc` → tap **`doctype`** → one `<!DOCTYPE html>`, no
+   `doc<!DOCTYPE html>`.
+6. **Ghost law unchanged:** type `doc` in `index.html` and the ghost still shows
+   the rest of `<!DOCTYPE html>`; **TAB ▸** accepts it in full; **→▸** takes one
+   word; **ESC** rejects; **Enter inserts a newline and never accepts** (27.x).
+7. Regression half: in `main.c` type `for` → tap a chip → the snippet replaces
+   `for` (not more, not less); type `ma` where the document also contains `main`
+   elsewhere → accepting an identifier must not eat other text.
+
+**Fix 2 — CodeC Keys now auto-closes brackets, and `{` + Enter splits the pair.**
+
+What was wrong: auto-pairing was suppressed for anything that wasn't the system
+IME's text field — a leftover parameter named `isStrip` from when the only
+non-IME surface was the key strip. CodeC Keys is a full typing surface (28.2),
+so its brackets got strip behaviour: one character, no closer.
+
+8. With **CodeC Keys ON** (Settings → CodeC Keys), in `main.c` type each of
+   `(`, `[`, `{`, `"`, `'` → each inserts the **matching closer** and the caret
+   lands **inside** the pair: `()`, `[]`, `{}`, `""`, `''`.
+9. Type `int main()` then Enter, then `{` → you get
+
+   ```c
+   int main()
+   {
+   }
+   ```
+
+   with the caret between the braces; press **Enter** again →
+
+   ```c
+   int main()
+   {
+       |
+   }
+   ```
+
+   the caret **indented on its own line** and `}` on the line after — this is
+   the exact shape you asked for. Keep typing `return 0;`: it stays at that
+   indent.
+10. The pair is not doubled: with the caret between an existing `{` and `}`,
+    pressing Enter still splits it (old behaviour kept); typing `{` when the
+    closer is already the next character does not add a second one.
+11. Python: `def f():` then Enter → the next line is indented (the `:` rule is
+    untouched).
+12. **The strip stays single-character:** tap a `{` or `(` chip on the key strip
+    above the keyboard → it inserts **one** character (a strip tap that quietly
+    adds a closer is a surprise; that half is deliberately unchanged).
+13. **OFF switch:** Settings → CodeC Keys OFF → the system IME returns and
+    pairing behaves exactly as it did before this round.
+
+**By design, NOT bugs:** the ghost paints only what is byte-true after the
+caret, so `<!doc` shows no ghost (case differs from `<!DOCTYPE`) while the chip
+and the panel still accept it and still delete all five typed characters;
+`<` pairs in markup/C-like files as it always did (SmartTyping's own language
+gate decides), and a strip chip never auto-pairs (step 12).
+
+**Report:** PASS/FAIL per numbered step; for any FAIL the exact keys you typed,
+the file name, what appeared, and whether CodeC Keys was ON or OFF.

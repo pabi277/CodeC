@@ -11,6 +11,18 @@ import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
  * [completions] shows snippets and matching buffer identifiers/keywords while
  * a word prefix is being typed, and — when the prefix is empty — the snippet
  * list right after a trigger word (e.g. `def `, `import `, `#include`).
+ *
+ * **Bench mirror, PRE-Phase-30 ON PURPOSE (note added 2026-09-07).** The app's
+ * engine moved on in Phase 30: `MAX_ITEMS` 50, the 29 vendored snippet packs,
+ * Emmet at rank 0, `CompletionItem.replaceLength`/`caretOffset`, and the accept
+ * span rule (`replaceSpanLength`). This copy stays at the 25.1/28.1 shape
+ * because the bench exists to measure those spike cores, and mirroring Phase 30
+ * would drag `ui/editor/snippets/` **and** `assets/snippets/` into `:bench` for
+ * numbers nobody will re-take. So: do NOT "sync" this file without also
+ * mirroring the packs, and never read a bench candidate count as the IDE's.
+ * (`SmartTyping.kt` next to it IS kept byte-identical — it has no asset
+ * dependency, and its `suppressAutoPair` rename landed here in the same commit
+ * as the app's.)
  */
 enum class CompletionKind { SNIPPET, KEYWORD, IDENTIFIER }
 

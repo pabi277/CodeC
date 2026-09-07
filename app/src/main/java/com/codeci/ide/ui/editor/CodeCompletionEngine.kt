@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.editor
 
+import com.codeci.ide.ui.editor.snippets.SnippetLibrary
 import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
 
@@ -11,6 +12,19 @@ import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
  * [completions] shows snippets and matching buffer identifiers/keywords while
  * a word prefix is being typed, and — when the prefix is empty — the snippet
  * list right after a trigger word (e.g. `def `, `import `, `#include`).
+ *
+ * **Phase 30 (2026-09-06):** the snippet SOURCE and the CAPACITY changed, the
+ * accept law did not (Phase 27 `CompletionPolicy` is untouched — Enter stays
+ * sacred, the master switch still removes every surface, nothing auto-commits):
+ *  - **30.1** snippets come from the vendored MIT friendly-snippets packs
+ *    (`assets/snippets/`, see `ui/editor/snippets/`), ~1 400 entries instead of
+ *    the 1–9 hand-written Kotlin tables per language; those tables survive ONLY
+ *    as the no-asset fallback plus two CodeC extras the packs cannot express.
+ *  - **30.2** an Emmet-style abbreviation at the caret (`ul>li*3`, `!`, `m10`)
+ *    becomes rank 0 — see [Emmet], clean room.
+ *  - **30.3** the engine returns a longer RANKED list ([MAX_ITEMS] 8 → 50):
+ *    the strip still shows thumb-reachable chips (`SuggestionStripModel`), the
+ *    ghost is still rank 0, and "⌄ more" browses the rest.
  */
 enum class CompletionKind { SNIPPET, KEYWORD, IDENTIFIER }
 
@@ -18,12 +32,41 @@ data class CompletionItem(
     val label: String,
     val insertText: String,
     val kind: CompletionKind,
-    val detail: String? = null
+    val detail: String? = null,
+    /**
+     * Phase 30 — how many characters BEFORE THE CARET this item replaces when
+     * accepted. Null = the identifier prefix (the 27.x rule, still right for
+     * snippets/keywords/identifiers). An Emmet expansion carries its whole
+     * abbreviation: at `ul>li*3|` the identifier prefix is only `3`.
+     */
+    val replaceLength: Int? = null,
+    /**
+     * Phase 30 — where to park the caret INSIDE [insertText] after accepting
+     * (a snippet's first tabstop, an Emmet expansion's first empty element).
+     * Null = after the insert, the 27.x behaviour.
+     */
+    val caretOffset: Int? = null
 )
 
 object CodeCompletionEngine {
 
-    const val MAX_ITEMS = 8
+    /**
+     * Phase 30.3 — the engine's ranked list is no longer 8 deep: 8 was why the
+     * phone list "feels empty" (the strip's thumb budget is a RENDER limit,
+     * `SuggestionStripModel.MAX_CHIPS`, not an engine limit). 50 stays as the
+     * safety cap the plan asks for — it bounds the per-keystroke work now and
+     * is the ceiling a future LSP (Phase 31) will also hand us.
+     */
+    const val MAX_ITEMS = 50
+
+    /** Snippet share of [MAX_ITEMS] (identifiers/keywords get the rest). */
+    const val MAX_SNIPPET_ITEMS = 40
+
+    /** Buffer identifiers offered (was 3 pre-30.3 — the cap hid the rest). */
+    const val MAX_IDENTIFIER_ITEMS = 6
+
+    /** Keywords offered (was 3 pre-30.3). */
+    const val MAX_KEYWORD_ITEMS = 6
 
     /**
      * How far either side of the caret the buffer-identifier scan looks.
@@ -51,31 +94,124 @@ object CodeCompletionEngine {
         return text.substring(prefixStart(text, cursor), cursor)
     }
 
-    fun completions(text: String, cursorOffset: Int, language: LanguageType): List<CompletionItem> {
+    /**
+     * Phase 30 device round (2026-09-07, owner: "in c if i write #in then
+     * click Suggestions it written like ##include<stdio.h>") — how many
+     * characters before [cursorOffset] accepting [insert] must replace.
+     *
+     * The word-run scan behind [prefixStart] cannot see a symbol, so a chip
+     * tapped after typing `#in` deleted only `in` and left the `#` behind —
+     * `##include <stdio.h>`. The same family: `int main(void) {` after
+     * `int mai` left `int int main(…)`, and `<!DOCTYPE html> skeleton` after
+     * `<!doc` left `<<!DOCTYPE …`. The ghost has not had this bug since 27.1
+     * because it aligns the INSERT TEXT against the line tail; that rule is
+     * now the one rule for every accept surface (strip chip, sora panel,
+     * ghost) — see [alignedTailLength].
+     *
+     * The identifier run stays the FLOOR: an item whose insert does not
+     * continue what was typed (`head` → `# `) still replaces the typed word.
+     */
+    fun replaceSpanLength(text: String, cursorOffset: Int, insert: String): Int {
+        val cursor = cursorOffset.coerceIn(0, text.length)
+        val identifierSpan = cursor - prefixStart(text, cursor)
+        // Case-INSENSITIVE on purpose: matching is (22.6 law), so typing
+        // `<!doc` and tapping `<!DOCTYPE html> skeleton` must replace all five
+        // characters — a case-sensitive alignment finds nothing there and the
+        // accept would leave `<<!DOCTYPE html>`.
+        return maxOf(identifierSpan, alignedTailLength(text, cursor, insert, ignoreCase = true))
+    }
+
+    /**
+     * The longest suffix of the current line's text before [cursorOffset] that
+     * [insert] continues, never starting mid-word — 27.1's ghost alignment,
+     * extracted verbatim so the ghost and the accept paths cannot drift apart.
+     * 0 when nothing aligns. [ignoreCase] is false for the ghost (it paints
+     * the literal suffix, so the alignment must be literal) and true for the
+     * accept span (matching is case-insensitive — see [replaceSpanLength]).
+     */
+    fun alignedTailLength(
+        text: String,
+        cursorOffset: Int,
+        insert: String,
+        ignoreCase: Boolean = false
+    ): Int {
+        val cursor = cursorOffset.coerceIn(0, text.length)
+        val lineStart =
+            text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
+        val lineTail = text.substring(lineStart, cursor)
+        var len = minOf(insert.length, lineTail.length)
+        while (len > 0) {
+            val start = lineTail.length - len
+            val midWord = start > 0 &&
+                (lineTail[start - 1].isLetterOrDigit() || lineTail[start - 1] == '_')
+            if (!midWord && insert.regionMatches(0, lineTail, start, len, ignoreCase = ignoreCase)) {
+                return len
+            }
+            len--
+        }
+        return 0
+    }
+
+    /**
+     * The ranked candidate list for [cursorOffset].
+     *
+     * @param fileName the open file (path or leaf). Phase 30: it feeds Emmet's
+     *        JSX-ish gate (`.jsx`/`.tsx` only) and the snippet packs'
+     *        `${TM_FILENAME_BASE}` resolution; null keeps both working with
+     *        the language alone.
+     */
+    fun completions(
+        text: String,
+        cursorOffset: Int,
+        language: LanguageType,
+        fileName: String? = null
+    ): List<CompletionItem> {
         val cursor = cursorOffset.coerceIn(0, text.length)
         if (text.isEmpty()) return emptyList()
         if (language == LanguageType.TEXT || language == LanguageType.JSON) return emptyList()
         val prefix = currentPrefix(text, cursor)
         val items = mutableListOf<CompletionItem>()
+
+        // Phase 30.2 — Emmet first: when the token under the caret is an
+        // abbreviation it is the most specific thing on offer, so it is rank 0
+        // (the strip's first chip, the panel's first row). The ghost usually
+        // cannot paint it — an expansion does not start with what was typed —
+        // which is why StripContext shows a lone Emmet candidate as a chip.
+        Emmet.completionItemFor(text, cursor, language, fileName)?.let { items += it }
+
         val keywords = MultiLanguageSyntaxHighlighter.keywords(language)
 
         if (prefix.isNotEmpty()) {
-            snippets(language)
-                .filter { snippetMatches(it.label, prefix) }
-                .forEach { items += it }
-            identifiers(text, prefix, keywords, cursor, limit = 3)
+            val matches = rankSnippets(snippetItems(language, fileName), prefix)
+            matches.take(MAX_SNIPPET_ITEMS).forEach { items += it }
+            identifiers(text, prefix, keywords, cursor, limit = MAX_IDENTIFIER_ITEMS)
                 .forEach { items += CompletionItem(it, it, CompletionKind.IDENTIFIER, "buffer") }
             keywords
                 .filter { it.startsWith(prefix) }
                 .sorted()
-                .take(3)
+                .take(MAX_KEYWORD_ITEMS)
                 .forEach { items += CompletionItem(it, it, CompletionKind.KEYWORD, "keyword") }
         } else {
             val trigger = lastToken(text, cursor)
             if (trigger.isNotEmpty() && trigger in snippetTriggers(language)) {
-                snippets(language)
-                    .filter { it.label != trigger }
-                    .forEach { items += it }
+                val pack = snippetItems(language, fileName)
+                // Phase 30.1 — a 1 400-entry pack must not dump 50 unrelated
+                // snippets after a trigger word: offer the ones the trigger
+                // actually names, and only fall back to the whole pack when
+                // nothing matches (the pre-30 behaviour, capped).
+                // Phase 30.1 — the "don't offer the word back" test moved from
+                // the LABEL to the INSERT TEXT, because pack labels ARE trigger
+                // words. Measured on the real shell pack: `if ` matched exactly
+                // ONE item — the pack's own `if` block — and the label test
+                // threw it away, so `relevant` came up empty and the fallback
+                // dumped all 16 shell snippets (`echo`, `read`, `elseif`, …)
+                // with no if-block among them. Same shape for Python `def `
+                // (`deft`/`defs`/`defst`, no `def`). An item whose body really
+                // is just the trigger word is still excluded (`import ` must
+                // not offer an item that inserts `import `).
+                val relevant = pack.filter { triggerMatches(it, trigger) && !it.retypes(trigger) }
+                items += (relevant.ifEmpty { pack.filter { !it.retypes(trigger) } })
+                    .take(MAX_SNIPPET_ITEMS)
             }
         }
         return items.distinctBy { it.label }.take(MAX_ITEMS)
@@ -105,6 +241,72 @@ object CodeCompletionEngine {
      * different rule).
      */
     fun labelMatches(label: String, prefix: String): Boolean = snippetMatches(label, prefix)
+
+    /**
+     * Phase 30.1 — rank a whole pack's matches. With 100+ candidates for a
+     * short prefix the ORDER is the feature: a label the prefix directly
+     * starts beats a word inside a label, and shorter labels beat longer ones
+     * (they are the everyday snippet; the long ones are the doc/debug packs).
+     * Stable within a tier, so a pack's own order still breaks exact ties.
+     */
+    private fun rankSnippets(pack: List<CompletionItem>, prefix: String): List<CompletionItem> {
+        if (pack.isEmpty()) return pack
+        val direct = ArrayList<CompletionItem>()
+        val fuzzy = ArrayList<CompletionItem>()
+        for (item in pack) {
+            if (item.label.startsWith(prefix, ignoreCase = true)) direct += item
+            else if (snippetMatches(item.label, prefix)) fuzzy += item
+        }
+        val byShape = compareBy<CompletionItem> { it.label.length }.thenBy { it.label }
+        direct.sortWith(byShape)
+        fuzzy.sortWith(byShape)
+        return direct + fuzzy
+    }
+
+    /**
+     * Phase 30.1 — the trigger-word relevance test: the trigger names the
+     * snippet's label (either direction, so `#include ` finds `#inc`) or its
+     * first body line (`main ` finds `int main(…)`).
+     */
+    private fun triggerMatches(item: CompletionItem, trigger: String): Boolean {
+        if (item.label.startsWith(trigger, ignoreCase = true)) return true
+        val words = item.label.split(WORD_SEPARATOR).filter { it.isNotEmpty() }
+        if (words.any { trigger.startsWith(it, ignoreCase = true) }) return true
+        val firstLine = item.insertText.lineSequence().firstOrNull { it.isNotBlank() }
+            ?.trim().orEmpty()
+        return firstLine.startsWith(trigger, ignoreCase = true)
+    }
+
+    /**
+     * Phase 30.1 — the snippet source: the vendored MIT packs when they are
+     * installed (device: always; host tests: injected) with CodeC's own tables
+     * appended as a TAIL; when no pack loads at all the tables are the whole
+     * list, so a broken asset degrades to the 22.x behaviour instead of
+     * leaving the phone with nothing.
+     *
+     * The tail is load-bearing. Pack labels are short *prefixes* (`bg`, `for`,
+     * `deft`), so a word from the OLD descriptive labels no longer matches
+     * anything. Measured with packs alone (JVM harness on the real assets):
+     * Markdown `head` returned ZERO items — `# Heading` was a 22.6 device-
+     * accepted chip and no pack prefix is reachable by typing `head`; Python
+     * `pr` returned only `property`, so `print(...)` was gone. The tail brings
+     * both back, and the pack still ranks FIRST (`rankSnippets` sorts a tier by
+     * label length, and prefix labels are shorter than body-first-lines), so
+     * the tail only ever adds what the pack cannot express. It also carries the
+     * two CodeC-only snippets: the phone-optimised HTML skeleton (what `doc`
+     * pinned in 22.6) and the Termux-resolved shebang (29.7 — that interpreter
+     * path lives in CodeC's private files dir, which no upstream pack knows).
+     */
+    private fun snippetItems(language: LanguageType, fileName: String?): List<CompletionItem> {
+        val pack = runCatching { SnippetLibrary.snippetsFor(language, fileName) }
+            .getOrDefault(emptyList())
+        if (pack.isEmpty()) return builtinSnippets(language)
+        // `seen.add` dedupes by label: an entry both sources claim keeps its
+        // pack copy (that is what `doc` → DOCTYPE skeleton relied on before).
+        val seen = HashSet<String>(pack.size + 16)
+        pack.forEach { seen.add(it.label) }
+        return pack + builtinSnippets(language).filter { seen.add(it.label) }
+    }
 
     /**
      * Phase 22.6 — the identifier scan is the single most expensive thing the
@@ -152,7 +354,17 @@ object CodeCompletionEngine {
     private fun snippet(label: String, insert: String) =
         CompletionItem(label, insert, CompletionKind.SNIPPET, "snippet")
 
-    private fun snippets(language: LanguageType): List<CompletionItem> = when (language) {
+    /** True when accepting this item would only re-type [word] (no expansion). */
+    private fun CompletionItem.retypes(word: String): Boolean = insertText.trim() == word
+
+    /**
+     * Phase 30.1 — CodeC's own 22.x/29.x snippet tables. Two roles since the
+     * packs landed: the WHOLE list while no pack is installed (host unit tests
+     * without assets, or every pack asset failed to read), and a deduped TAIL
+     * after the pack on a device — see [snippetItems] for why that tail is
+     * load-bearing.
+     */
+    private fun builtinSnippets(language: LanguageType): List<CompletionItem> = when (language) {
         LanguageType.PYTHON -> listOf(
             snippet("def function():", "def function():\n    "),
             snippet("class ClassName:", "class ClassName:\n    "),

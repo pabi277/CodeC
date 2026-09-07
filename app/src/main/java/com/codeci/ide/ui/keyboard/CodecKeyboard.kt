@@ -45,9 +45,12 @@ import kotlin.math.abs
  * [KeyboardLayout] and NOTHING ELSE decides behavior: every press becomes a
  * [CapAction] through the pure [KeyboardRouter], edits go through
  * `EditorKeySet.apply`, and the caller's [onValueChange] is the strip's own
- * entry point (`viewModel.updateCode(..., isStrip = true)` at the screen —
- * the S2 path the 28.1 spike certified: programmatic edits into the VM,
- * `SoraEditorHost` replays them into the document).
+ * entry point (`viewModel.updateCode(...)` at the screen — the S2 path the
+ * 28.1 spike certified: programmatic edits into the VM, `SoraEditorHost`
+ * replays them into the document). Because these commits never pass through
+ * sora's own `SymbolPairMatch`, the pure smart-typing rules are NOT
+ * suppressed for this surface (Phase 30 device round, 2026-09-07): tapping
+ * `(` closes to `()` with the caret inside, like any typing surface.
  *
  * Feel law (spec §1.3): the press state changes the cap color INSIDE the
  * gesture (no ripple, no animation), haptics tick on down, hold-repeat runs
