@@ -97,6 +97,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
+import com.codeci.ide.ui.viewmodels.EditorViewModel
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
