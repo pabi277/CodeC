@@ -177,19 +177,17 @@ dependencies {
   // kotlinx-coroutines-android 1.10.2 transitively; both are already on the
   // app classpath at the same versions.
   //
-  // GATED on 2026-09-07: the AAR was built with AGP 9.3.1 + Kotlin 2.4.10
-  // (the sora BOM); CodeC is on AGP 9.1.1 + Kotlin 2.2.10. The first push
-  // failed at :app:processDebugMainManifest with the gradle-bootstrap shim
-  // emitting a redacted "Gradle failure 1/2/3" annotation set (the agent
-  // sandbox cannot read raw CI logs — rule.md §5). The orchestrator and
-  // mapping are host-tested with a no-op provider, so the product half of
-  // 31.1 is unaffected; the wire is unblocked once the owner confirms
-  // either (a) the AGP delta is the cause and a Kotlin/AGP bump is
-  // acceptable, or (b) the AAR resolves cleanly with `editorLsp = true`.
-  // See `docs/chat-phase31/PART_31_1_EDITOR_LSP.md` §3.1.
-  if (project.findProperty("editorLsp")?.toString() == "true") {
-    implementation(libs.sora.editor.lsp)
-  }
+  // Phase 31.5 (2026-09-07, owner: "Now start wiring"): the gate is
+  // temporarily OPEN — the AAR is on the classpath for every build. The
+  // owner's instruction was to flip the gate and see what happens; if
+  // the AGP delta hypothesis is wrong and the AAR resolves cleanly,
+  // we proceed with the sora `LspEditor` wire. If CI goes red on
+  // :app:processDebugMainManifest, the owner pastes the failing log
+  // (Actions → run 34119027553, then the matching run on the next push)
+  // and we either bump AGP/Kotlin or fall back to the hand-rolled
+  // ~200-LOC LSP stdio client (Path B from the chat). The gate is
+  // the only difference vs the 31.4 tip (1479f53) — no code change.
+  implementation(libs.sora.editor.lsp)
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)
