@@ -17,6 +17,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
+import androidx.compose.foundation.alpha
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -41,7 +43,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.compose.runtime.Composable
@@ -92,7 +96,6 @@ import com.codeci.ide.ui.theme.MyApplicationTheme
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.FileNameUtils
-import androidx.compose.foundation.graphicsLayer
 import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -598,7 +601,7 @@ fun MainApp() {
             AppLogger.i("Navigation", "Navigated to ${destination.route}")
             // Leaving the editor re-shows the bar (the swipe-up gesture is
             // editor-only, so other tabs keep the standard behaviour).
-            if (!destination.route.startsWith("editor")) navHidden = false
+            if (!destination.route?.startsWith("editor") == true) navHidden = false
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose {
@@ -648,7 +651,7 @@ fun MainApp() {
                                     navHidden = navRevealDrag < 32f
                                     navRevealDrag = 0f
                                 },
-                                onDrag = { change, dragAmount ->
+                                onVerticalDrag = { change, dragAmount ->
                                     navRevealDrag = (navRevealDrag + dragAmount).coerceIn(0f, 64f)
                                     change.consume()
                                 }
@@ -662,10 +665,8 @@ fun MainApp() {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .graphicsLayer {
-                                this.alpha = alpha
-                                this.translationY = offset
-                            }
+                            .alpha(alpha)
+                            .offset { IntOffset(0, offset.roundToPx()) }
                     ) {
                         FlatBottomBar(
                             screens = screens,
