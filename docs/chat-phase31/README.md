@@ -1,10 +1,12 @@
 # CodeC Phase 31 — IntelliSense as Packages (Acode-style install)
 
-> **Status:** 🚧 **31.1–31.6 IMPLEMENTED** (2026-09-07/08, owner:
-> "Start phase 31" … previous chat dropped, this chat wired the
-> editor). L1–L5 host-tested. Production wire is the hand-rolled
-> stdio client (sora `editor-lsp` AAR gated off — minSdk 26 / AGP
-> red). Chip strip + ghost now merge LSP on the VM's debounced leg. Acode: tap
+> **Status:** ✅ **31.1–31.6 MERGED to `main`** (2026-09-08, owner:
+> "Ok update all md files and merge it"). CI `Build APK`
+> `34210108408` GREEN (tip `278099e`, 9m14s). Production wire is the
+> hand-rolled stdio client (sora `editor-lsp` AAR gated off — minSdk
+> 26 / AGP red). Chip strip + ghost merge LSP on the VM's debounced
+> leg. **Device recipe (`TROUBLESHOOTING.md` §15) was not run** —
+> owner merged anyway. Acode: tap
 > "Acode LSP" in the plugin store. CodeC: tap a **Packages** card →
 > existing `pkg install` or `npm i -g`. Do **not** build an Ace/JS
 > plugin runtime. Research: `OSS_REPLACEMENT_RESEARCH.md` §8.2–8.4,
@@ -26,7 +28,7 @@
               │  ← IMPLEMENTED (5 packages hub install cards)
               ▼
   31.5/31.6  hand-rolled stdio wire + editor (chip/ghost) attach
-              ← IMPLEMENTED (host-tested; device recipe pending)
+              ← MERGED (CI green `34210108408`; device recipe not run)
 ```
 
 | Part | Title | Cost | Effort | Status |
@@ -35,7 +37,7 @@
 | [31.2](PART_31_2_CLANGD.md) | clangd install + attach | client + pkg (clang already) | M | ✅ card shipped; attach = stdio client |
 | [31.3](PART_31_3_PY_JS.md) | pylsp / tsserver cards (Python install path updated 2026-09-07 — chained `python-pip && pip install`) | client + pkg | M | ✅ cards shipped; attach = stdio client |
 | [31.4](PART_31_4_LANGUAGE_EXPANSION.md) | shell + HTML + CSS + JSON + YAML (5 npm cards) | client + npm | M | ✅ cards shipped; attach = stdio client |
-| [31.5](PART_31_5_STDIO_WIRE.md) | Hand-rolled stdio wire + editor attach | client-only | L | 🚧 wired; device recipe pending |
+| [31.5](PART_31_5_STDIO_WIRE.md) | Hand-rolled stdio wire + editor attach | client-only | L | ✅ CI green; device recipe not run |
 
 **Phone law:** missing server → snippets (Phase 30) still work; no modal
 blocking typing. Optional sheet: "Install Python IntelliSense?" like

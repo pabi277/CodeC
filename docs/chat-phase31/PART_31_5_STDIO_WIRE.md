@@ -1,8 +1,8 @@
 # CodeC Phase 31.5 / 31.6 — hand-rolled LSP stdio wire + editor attach
 
-**Status:** 🚧 **WIRED** (2026-09-08, continuing `arena/01a07baa-codec`
-on `arena/01a08023-codec` after the previous chat dropped). Owner:
-the remaining work was *\"wire the editor\"*.
+**Status:** ✅ **MERGED** (2026-09-08, owner: "Ok update all md files
+and merge it"). CI `Build APK` **`34210108408` GREEN** (tip `278099e`,
+9m14s). Device recipe (`TROUBLESHOOTING.md` §15) was **not** run.
 
 ---
 
@@ -52,7 +52,8 @@ empty for JSON — that is unchanged).
    snippets cannot know appears in the CHIP STRIP, not only ⌄ more.
 ```
 
-(3) is the device gate. Do not claim it without a transcript.
+(3) was **not** run. Owner merged on CI green + "merge it". Do not
+claim a device pass.
 
 ## 5. CI hang (2026-09-08)
 
