@@ -251,6 +251,25 @@ class EditorViewModel : ViewModel() {
     private val _outputExpanded = MutableStateFlow(false)
     val outputExpanded: StateFlow<Boolean> = _outputExpanded.asStateFlow()
 
+    /** Phase 32.3 — first-RUN auto-expand: the Output Panel has never been
+     * shown on this install until the user runs something. The flag persists
+     * across configuration changes (VM lifetime) and resets on process death
+     * (a fresh install's first run should expand the panel so the user sees
+     * the output — the collapsed strip is invisible until tapped).
+     */
+    private val _firstRunEver = MutableStateFlow(true)
+    val firstRunEver: StateFlow<Boolean> = _firstRunEver.asStateFlow()
+
+    /** Phase 32.2 — true while the suggestion strip is showing chips (≥2
+     * candidates or 1 Emmet expansion). Flows to MainActivity so the nav bar
+     * stays hidden when chips are the row 0 (no stacking: nav + keys + chips).
+     * 28.3 (chips as Keys row 0) owns the strip render; this is the
+     * coordination signal. When 28.3 is not merged, this degrades to "hide
+     * nav only" via the existing IME/Keys-up behaviour in 32.1.
+     */
+    private val _stripChipsVisible = MutableStateFlow(false)
+    val stripChipsVisible: StateFlow<Boolean> = _stripChipsVisible.asStateFlow()
+
     private val _isDirty = MutableStateFlow(false)
     val isDirty: StateFlow<Boolean> = _isDirty.asStateFlow()
 
@@ -2599,7 +2618,15 @@ class EditorViewModel : ViewModel() {
             return
         }
 
-        _outputExpanded.value = true
+        // Phase 32.3 — first-RUN auto-expand: a fresh install's first run
+        // should expand the Output Panel so the user sees the output (the
+        // collapsed strip is invisible until tapped). The flag resets on
+        // process death (each install's first run expands). Subsequent runs
+        // keep the user's expanded/collapsed preference.
+        if (_firstRunEver.value) {
+            _outputExpanded.value = true
+            _firstRunEver.value = false
+        }
         buildOutputBuffer = StringBuilder()
         val startLines = buildList {
             if (!buildCommand.isNullOrBlank()) {

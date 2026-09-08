@@ -557,14 +557,23 @@ fun MainApp() {
         launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
             ?: Screen.FileManager.route
     }
+    // Phase 24.7 — deep-link import: when the app is launched with an
+    // incoming file/ZIP, the bridge holds the parsed result until MainApp
+    // consumes it and navigates to the editor. Reset after consumption.
+    val incomingImport by IncomingImportBridge.state.collectAsState()
 
-    // Phase 32.1+32.3 — stateful values (var so the drag + effects can write).
+    // Phase 32.1+32.2+32.3 — stateful values (var so the drag + effects can write).
     var navHidden by remember { mutableStateOf(false) }
     var navRevealDrag by remember { mutableFloatStateOf(0f) }
     val currentDestination by navController.currentBackStackEntryAsState()
     val inEditor = currentDestination?.destination?.route?.startsWith("editor") == true
     val editorShown = inEditor && !isImeVisible
-    val shouldHideNav = inEditor && (isImeVisible || navHidden)
+    // Phase 32.2 — the nav bar also hides when the suggestion strip shows
+    // chips (chipContextVisible), so we never stack: nav + utility keys +
+    // chips at once. The strip is the row 0; nav is the row below.
+    val editorViewModel: EditorViewModel = viewModel(viewModelStoreOwner = activity)
+    val stripChipsVisible by editorViewModel.stripChipsVisible.collectAsState(initial = false)
+    val shouldHideNav = inEditor && (isImeVisible || navHidden || stripChipsVisible)
     LaunchedEffect(incomingImport) {
         incomingImport?.let { import ->
             IncomingImportBridge.clear()
