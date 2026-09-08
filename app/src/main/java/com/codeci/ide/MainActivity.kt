@@ -92,6 +92,7 @@ import com.codeci.ide.ui.theme.MyApplicationTheme
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.FileNameUtils
+import androidx.compose.foundation.graphicsLayer
 import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -557,12 +558,9 @@ fun MainApp() {
             ?: Screen.FileManager.route
     }
 
-    // Phase 32.1 — auto-hide bottom nav while the editor is focused:
-    // the bar disappears when IME or CodeC Keys are up, and a swipe-up
-    // gesture (or hardware back) restores it without losing the buffer.
-    // Tracked here because MainActivity owns the Scaffold's bottomBar.
-    val navHidden by remember { mutableStateOf(false) }
-    val navRevealDrag by remember { mutableFloatStateOf(0f) }
+    // Phase 32.1+32.3 — stateful values (var so the drag + effects can write).
+    var navHidden by remember { mutableStateOf(false) }
+    var navRevealDrag by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(incomingImport) {
         incomingImport?.let { import ->
             IncomingImportBridge.clear()
@@ -658,8 +656,10 @@ fun MainApp() {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .offset { androidx.compose.ui.geometry.Offset(0f, offset) }
-                            .graphicsLayer { this.alpha = alpha }
+                            .graphicsLayer {
+                                this.alpha = alpha
+                                this.translationY = offset
+                            }
                     ) {
                         FlatBottomBar(
                             screens = screens,
