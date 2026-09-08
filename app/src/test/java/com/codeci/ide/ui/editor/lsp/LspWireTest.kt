@@ -53,7 +53,7 @@ class LspWireTest {
         assertEquals("/tmp/main.c", ctx.fileName)
     }
 
-    @Test
+    @Test(timeout = 10_000)
     fun clientRoundTripsInitializeAndCompletionAgainstFakeProcess() {
         val fake = ScriptedLspProcess()
         val config = LspServerCatalog.forLanguage(LanguageType.C)!!
@@ -117,7 +117,15 @@ private class ScriptedLspProcess : Process() {
     override fun getOutputStream(): OutputStream = stdinWrite
     override fun getInputStream(): InputStream = stdoutRead
     override fun getErrorStream(): InputStream = stderr
-    override fun waitFor(): Int { worker.join(500); return 0 }
+    override fun waitFor(): Int {
+        destroy()
+        worker.join(1_000)
+        return 0
+    }
+    override fun waitFor(timeout: Long, unit: java.util.concurrent.TimeUnit): Boolean {
+        worker.join(unit.toMillis(timeout))
+        return !alive
+    }
     override fun exitValue(): Int {
         if (alive) throw IllegalThreadStateException()
         return 0
@@ -126,6 +134,12 @@ private class ScriptedLspProcess : Process() {
         alive = false
         runCatching { stdinWrite.close() }
         runCatching { stdout.close() }
+        runCatching { stdin.close() }
+        runCatching { stdoutRead.close() }
         worker.interrupt()
+    }
+    override fun destroyForcibly(): Process {
+        destroy()
+        return this
     }
 }

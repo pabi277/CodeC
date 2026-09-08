@@ -54,7 +54,18 @@ empty for JSON — that is unchanged).
 
 (3) is the device gate. Do not claim it without a transcript.
 
-## 5. Research notes
+## 5. CI hang (2026-09-08)
+
+`LspStdioClientFramingTest.writerFramesContentLengthHeader` wrote a few
+bytes into a `PipedOutputStream` then called `readBytes()` on the
+connected `PipedInputStream`. `readBytes()` waits for **EOF**. The
+writer was the same thread and never closed, so the test blocked
+forever. That is runs `34185097875` / `34188032592` / `34189756351`
+(owner cancelled at 3+ hours) and `34206169145`. Fix: frame through
+`LspWire` into a `ByteArray`. Gradle `Test` tasks now time out at 5
+minutes so a future hang fails the run instead of pinning the runner.
+
+## 6. Research notes
 
 - LSP spec `Content-Length` is **bytes** (microsoft.github.io/language-server-protocol).
 - Android `ProcessBuilder` of a PREFIX shebang needs termux-exec

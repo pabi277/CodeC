@@ -210,3 +210,10 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
+// A hung host test (unclosed PipedInputStream.readBytes, etc.) used to
+// pin the CI runner until the owner cancelled at 3+ hours. Fail the
+// test task instead — the suite is normally well under this.
+tasks.withType<Test>().configureEach {
+  timeout.set(java.time.Duration.ofMinutes(5))
+}
