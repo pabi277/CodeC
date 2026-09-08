@@ -36,7 +36,7 @@ class LspStdioClientFramingTest {
         val pipe = PipedOutputStream()
         val readerEnd = PipedInputStream(pipe)
         val bytes = "hello".toByteArray(StandardCharsets.UTF_8)
-        val header = "Content-Length: " + bytes.size + "\r\n\r\n".toByteArray(StandardCharsets.UTF_8)
+        val header = ("Content-Length: " + bytes.size + "\r\n\r\n").toByteArray(StandardCharsets.UTF_8)
         pipe.write(header)
         pipe.write(bytes)
         pipe.flush()
@@ -53,7 +53,7 @@ class LspStdioClientFramingTest {
         // bytes as the body.
         val body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"value\":\"ok\"}}"
         val bytes = body.toByteArray(StandardCharsets.UTF_8)
-        val framed = "Content-Length: " + bytes.size + "\r\n\r\n".toByteArray(StandardCharsets.UTF_8) + bytes
+        val framed = ("Content-Length: " + bytes.size + "\r\n\r\n").toByteArray(StandardCharsets.UTF_8) + bytes
         val reader = BufferedReader(
             java.io.InputStreamReader(
                 java.io.ByteArrayInputStream(framed), StandardCharsets.UTF_8,
