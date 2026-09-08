@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Phase 31.1 — LSP completion orchestrator.
+ * Phase 31.1 / 31.5 — LSP completion orchestrator.
  *
  * Phone-shape LSP:
  *  - **One process per language** (L1). Spawn is lazy: the first time
@@ -26,11 +26,13 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    ([com.codeci.ide.ui.editor.sora.CodeCLanguage.requireAutoComplete]) is
  *    already on sora's completion thread, so the await is bounded.
  *
- * **Host-testable:** [Provider] is a single-method interface that returns
- * a `List<LspItemMapping.LspShape>`. The real production provider wraps
- * sora's `LspEditor.requestCompletion(...)`; the test provider returns a
- * static list or throws. The orchestrator NEVER calls sora directly, so
- * `:app:testDebugUnitTest` does not need the AAR on the classpath.
+ * **Host-testable:** [Provider] is a small interface that returns
+ * a `List<LspItemMapping.LspShape>`. The real production provider is
+ * the hand-rolled [LspStdioClient] (Phase 31.5). Tests provide a fake
+ * that returns a static list or throws. The orchestrator NEVER calls
+ * sora's AAR directly, so `:app:testDebugUnitTest` does not need the
+ * AAR on the classpath (it is unusable on CodeC anyway: minSdk 26
+ * vs our 24 — see PART_31_5_STDIO_WIRE.md).
  *
  * **L2 (destroy):** the manager exposes [shutdown] for the activity
  * lifecycle (master completion OFF, file close, app background). Per the
@@ -66,7 +68,7 @@ class LspManager(
     fun setMasterEnabled(enabled: Boolean) {
         val changed = masterEnabled.compareAndSet(!enabled, enabled)
         if (!enabled) shutdown()
-        if (changed) AppLogger.i(TAG, "masterEnabled=$enabled (active=${active.size})")
+        if (changed) AppLogger.i(TAG, "masterEnabled=" + enabled + " (active=" + active.size + ")")
     }
 
     fun isMasterEnabled(): Boolean = masterEnabled.get()
@@ -82,12 +84,22 @@ class LspManager(
      * Otherwise the LSP items are pre-pended to the engine's items so the
      * strip shows LSP first, snippets next, keywords last (Phase 30's
      * rank order is preserved within the engine half).
+     *
+     * The optional [context] is the new Phase 31.5 field — file name +
+     * cursor + full buffer content. When supplied (the analyzer's call
+     * site), the LSP server can `didOpen` / `didChange` the file and
+     * the manager can return LSP items scoped to the cursor. When
+     * absent (older call sites), the manager builds a stub context;
+     * the stdio client will simply skip the `didOpen` and the LSP
+     * server may return an empty list — the engine half is
+     * unaffected.
      */
     fun completions(
         language: LanguageType,
         prefix: String,
         engineItems: List<CompletionItem>,
         limit: Int,
+        context: LspRequestContext? = null,
     ): List<CompletionItem> {
         if (!masterEnabled.get()) return engineItems
         if (language in blacklisted) return engineItems
@@ -101,17 +113,24 @@ class LspManager(
         }
         val provider = active.getOrPut(language) { startProvider(config) }
             ?: return engineItems
+        val ctx = context ?: LspRequestContext(
+            fileName = "",
+            prefix = prefix,
+            line = 0,
+            column = 0,
+            content = "",
+        )
         val shapes = try {
-            timed { provider.request(prefix) }
+            timed { provider.request(ctx) }
         } catch (t: Throwable) {
-            AppLogger.w(TAG, "${config.displayName} request failed: ${t.javaClass.simpleName}: ${t.message}")
+            AppLogger.w(TAG, config.displayName + " request failed: " + t.javaClass.simpleName + ": " + t.message)
             blacklisted += language
             shutdownLanguage(language)
             return engineItems
         }
         if (shapes == null) {
             // Timeout — same handling as a thrown exception.
-            AppLogger.w(TAG, "${config.displayName} request timed out after ${requestTimeoutMs}ms")
+            AppLogger.w(TAG, config.displayName + " request timed out after " + requestTimeoutMs + "ms")
             blacklisted += language
             shutdownLanguage(language)
             return engineItems
@@ -142,10 +161,10 @@ class LspManager(
     private fun startProvider(config: LspServerConfig): Provider? = try {
         val provider = providerFactory.create(config)
         provider.start()
-        AppLogger.i(TAG, "started ${config.displayName} (${config.command.first()})")
+        AppLogger.i(TAG, "started " + config.displayName + " (" + config.command.first() + ")")
         provider
     } catch (t: Throwable) {
-        AppLogger.w(TAG, "failed to start ${config.displayName}: ${t.javaClass.simpleName}: ${t.message}")
+        AppLogger.w(TAG, "failed to start " + config.displayName + ": " + t.javaClass.simpleName + ": " + t.message)
         blacklisted += config.language
         null
     }
@@ -163,7 +182,7 @@ class LspManager(
         val value = block()
         val elapsedMs = (clock() - started) / 1_000_000L
         if (elapsedMs > requestTimeoutMs) {
-            AppLogger.w(TAG, "provider ignored its budget (${elapsedMs}ms)")
+            AppLogger.w(TAG, "provider ignored its budget (" + elapsedMs + "ms)")
             return null
         }
         return value
@@ -176,17 +195,41 @@ class LspManager(
 }
 
 /**
- * A language server provider. Production wraps sora's `LspEditor`; tests
- * provide a fake. The interface is a single `request` because that is
- * the only operation the manager needs to know about.
+ * The context the orchestrator passes to a provider for a
+ * completion request. Built from the analyzer's call site (file
+ * name + prefix + cursor + full buffer content). `content` is the
+ * FULL buffer (not just the current line) so the LSP server has
+ * the surrounding context the completion engine needs to scope
+ * results. A phone-side buffer is small enough (a few KB for
+ * typical source files) that this is fine.
+ */
+data class LspRequestContext(
+    val fileName: String,
+    val prefix: String,
+    val line: Int,
+    val column: Int,
+    val content: String,
+)
+
+/**
+ * A language server provider. Production is the hand-rolled
+ * [LspStdioClient] (Phase 31.5). Tests provide a fake.
  *
- * `start()` is the wire-up (process spawn + LSP initialize handshake).
- * `shutdown()` is the teardown. `request` returns a list of LSP-shaped
- * items; the manager does the mapping.
+ * The contract is:
+ *  - `start()`: process spawn + LSP `initialize` handshake.
+ *  - `setBuffer(fileName, content)`: LSP `didOpen` / `didChange`
+ *    notification when the active file changes. Default no-op
+ *    for providers that don't need it (the no-op, the test
+ *    fakes).
+ *  - `request(context)`: LSP `textDocument/completion` at the
+ *    cursor. Returns the LSP-shaped items; the manager does the
+ *    CodeC mapping.
+ *  - `shutdown()`: `shutdown` + `exit` notifications, then destroy.
  */
 interface Provider {
     fun start()
-    fun request(prefix: String): List<LspItemMapping.LspShape>
+    fun setBuffer(fileName: String, content: String) {}
+    fun request(context: LspRequestContext): List<LspItemMapping.LspShape>
     fun shutdown()
 }
 
@@ -228,25 +271,29 @@ class SystemBinaryProbe(private val filesDir: java.io.File? = null) : BinaryProb
 }
 
 /**
- * The default factory — returns a no-op provider until the production
- * sora `LspEditor` wiring lands (it is a small file; see the follow-up
- * section in `docs/chat-phase31/PART_31_1_EDITOR_LSP.md` for the
- * production glue). Tests inject a different factory.
+ * The default factory — returns a no-op provider. The production
+ * swap (Phase 31.5) is `StdioLspProviderFactory` (a per-language
+ * `LspStdioClient`); the activity wires that instead of this one.
+ * This no-op keeps the manager's rules — master switch, blacklist,
+ * timeout, shutdown — exercisable without any LSP server on the
+ * path. Host tests use this factory by default; their test fakes
+ * (the `StaticProvider` in `LspManagerTest`) override the
+ * [Provider] methods directly.
  */
 object SystemProviderFactory : ProviderFactory {
     override fun create(config: LspServerConfig): Provider = NoopProvider(config)
 
     /**
-     * Returns an empty list and never blocks. The production swap
-     * replaces this with a sora `LspEditor`-backed implementation
-     * (its `request` awaits the `requestCompletion` future on a
-     * coroutine dispatcher). The no-op keeps the manager's rules —
-     * master switch, blacklist, timeout, shutdown — exercisable
-     * without sora on the classpath.
+     * Returns an empty list and never blocks. The production
+     * swap (Phase 31.5) replaces this with an [LspStdioClient]
+     * whose `request` does a real LSP `textDocument/completion`
+     * round-trip. The no-op keeps the manager's rules — master
+     * switch, blacklist, timeout, shutdown — exercisable without
+     * any LSP server on the path.
      */
     private class NoopProvider(private val config: LspServerConfig) : Provider {
         override fun start() = Unit
-        override fun request(prefix: String): List<LspItemMapping.LspShape> = emptyList()
+        override fun request(context: LspRequestContext): List<LspItemMapping.LspShape> = emptyList()
         override fun shutdown() = Unit
     }
 }

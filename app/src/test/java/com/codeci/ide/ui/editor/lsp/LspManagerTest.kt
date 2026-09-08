@@ -159,7 +159,7 @@ class LspManagerTest {
             factory = ProviderFactory {
                 object : Provider {
                     override fun start() = Unit
-                    override fun request(prefix: String): List<LspItemMapping.LspShape> {
+                    override fun request(context: LspRequestContext): List<LspItemMapping.LspShape> {
                         calls.incrementAndGet()
                         throw RuntimeException("server hung")
                     }
@@ -187,7 +187,7 @@ class LspManagerTest {
             providerFactory = ProviderFactory {
                 object : Provider {
                     override fun start() = Unit
-                    override fun request(prefix: String): List<LspItemMapping.LspShape> {
+                    override fun request(context: LspRequestContext): List<LspItemMapping.LspShape> {
                         // Sleep well over the 200 ms budget the manager
                         // passes in by default. timed()'s own wall-clock
                         // check trips the L3 path.
@@ -296,7 +296,7 @@ class LspManagerTest {
             providerFactory = ProviderFactory {
                 object : Provider {
                     override fun start() = Unit
-                    override fun request(prefix: String): List<LspItemMapping.LspShape> {
+                    override fun request(context: LspRequestContext): List<LspItemMapping.LspShape> {
                         throw IllegalStateException("boom")
                     }
                     override fun shutdown() = Unit
@@ -321,7 +321,7 @@ class LspManagerTest {
             providerFactory = ProviderFactory {
                 object : Provider {
                     override fun start() = Unit
-                    override fun request(prefix: String): List<LspItemMapping.LspShape> {
+                    override fun request(context: LspRequestContext): List<LspItemMapping.LspShape> {
                         throw RuntimeException("hung")
                     }
                     override fun shutdown() { shutdowns.incrementAndGet() }
@@ -340,7 +340,7 @@ class LspManagerTest {
         private val onShutdown: () -> Unit = {},
     ) : Provider {
         override fun start() = Unit
-        override fun request(prefix: String): List<LspItemMapping.LspShape> = items
+        override fun request(context: LspRequestContext): List<LspItemMapping.LspShape> = items
         override fun shutdown() = onShutdown()
     }
 }

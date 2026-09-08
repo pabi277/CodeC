@@ -3,6 +3,7 @@ package com.codeci.ide.ui.editor.sora
 import android.os.Bundle
 import com.codeci.ide.ui.editor.CodeCompletionEngine
 import com.codeci.ide.ui.editor.lsp.LspManager
+import com.codeci.ide.ui.editor.lsp.LspRequestContext
 import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
 import com.codeci.ide.ui.utils.TokenKind
@@ -176,7 +177,23 @@ class CodeCLanguage private constructor(
         val prefix = CodeCompletionEngine.currentPrefix(text, cursor)
         val manager = ActiveLspManager.get()
         val merged = if (manager != null) {
-            manager.completions(language, prefix, engineItems, CodeCompletionEngine.MAX_ITEMS)
+            // Phase 31.5 — pass the full buffer + cursor to the LSP
+            // orchestrator so the stdio client can do `didOpen` /
+            // `didChange` + `completion` with the file in scope.
+            // `position.line` and `position.column` are sora's
+            // 0-indexed cursor; the LSP spec uses the same indexing
+            // (line = 0 is the first line, character = 0 is the
+            // first character in the line).
+            val lspContext = LspRequestContext(
+                fileName = fileName ?: "",
+                prefix = prefix,
+                line = position.line,
+                column = position.column,
+                content = text,
+            )
+            manager.completions(
+                language, prefix, engineItems, CodeCompletionEngine.MAX_ITEMS, lspContext,
+            )
         } else {
             engineItems
         }

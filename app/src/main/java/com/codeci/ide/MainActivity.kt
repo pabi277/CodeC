@@ -74,6 +74,7 @@ import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.screens.WebPreviewScreen
 import com.codeci.ide.ui.editor.lsp.LspManager
+import com.codeci.ide.ui.editor.lsp.StdioLspProviderFactory
 import com.codeci.ide.ui.editor.lsp.SystemBinaryProbe
 import com.codeci.ide.ui.editor.sora.ActiveLspManager
 import com.codeci.ide.ui.settings.SettingsManager
@@ -275,7 +276,18 @@ class MainActivity : ComponentActivity() {
         // the running manager in sync with the Settings switch (the
         // 31.1 README L3 — "completion master OFF = no LSP process").
         val settings = SettingsManager(this)
-        val manager = LspManager(probe = SystemBinaryProbe(filesDir))
+        // Phase 31.5 — wire the hand-rolled LSP stdio client
+        // (LspStdioClient) via StdioLspProviderFactory. The factory
+        // builds a per-language LspStdioClient on the first
+        // completion request; the manager owns the lifecycle. The
+        // `projectRoot` is the application private dir (no compile
+        // flags on the first run — a real project path would come
+        // from the editor's "current file" once the analyzer sends
+        // it through LspRequestContext, see CodeCAnalyzer).
+        val manager = LspManager(
+            probe = SystemBinaryProbe(filesDir),
+            providerFactory = StdioLspProviderFactory(projectRoot = filesDir.absolutePath),
+        )
         ActiveLspManager.install(manager)
         lifecycleScope.launch {
             settings.completionMasterFlow.collect { master ->
