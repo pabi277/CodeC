@@ -16,7 +16,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    manager is process-scoped — the activity owns one instance and tells
  *    it when the surface goes away.
  *  - **Timeout / crash → silent fallback to snippets** (L3). A
- *    per-request budget (default 200 ms, 27.3's "don't block keys" law)
+ *    per-request budget (default 1500 ms — the chip/ghost path is the
+ *    debounced off-main leg, so a slow clangd first-hit must not
+ *    blacklist the language; the instant leg still paints snippets)
  *    plus a single-shot failure flag per language so a hung server never
  *    blocks a future keystroke.
  *  - **No network LSP** (L4). Stdio only; the catalog has no `ssh://` or
@@ -158,15 +160,24 @@ class LspManager(
         active.remove(language)?.shutdown()
     }
 
-    private fun startProvider(config: LspServerConfig): Provider? = try {
-        val provider = providerFactory.create(config)
-        provider.start()
-        AppLogger.i(TAG, "started " + config.displayName + " (" + config.command.first() + ")")
-        provider
-    } catch (t: Throwable) {
-        AppLogger.w(TAG, "failed to start " + config.displayName + ": " + t.javaClass.simpleName + ": " + t.message)
-        blacklisted += config.language
-        null
+    private fun startProvider(config: LspServerConfig): Provider? {
+        val provider = try {
+            providerFactory.create(config)
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "failed to create " + config.displayName + ": " + t.javaClass.simpleName + ": " + t.message)
+            blacklisted += config.language
+            return null
+        }
+        return try {
+            provider.start()
+            AppLogger.i(TAG, "started " + config.displayName + " (" + config.command.first() + ")")
+            provider
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "failed to start " + config.displayName + ": " + t.javaClass.simpleName + ": " + t.message)
+            blacklisted += config.language
+            runCatching { provider.shutdown() }
+            null
+        }
     }
 
     /**
@@ -190,7 +201,7 @@ class LspManager(
 
     companion object {
         const val TAG = "LspManager"
-        const val DEFAULT_REQUEST_TIMEOUT_MS = 200L
+        const val DEFAULT_REQUEST_TIMEOUT_MS = 1500L
     }
 }
 
@@ -209,7 +220,31 @@ data class LspRequestContext(
     val line: Int,
     val column: Int,
     val content: String,
-)
+) {
+    companion object {
+        /** 0-based LSP position of [caret] in [text]. Pure; host-tested. */
+        fun at(fileName: String, text: String, caret: Int, prefix: String): LspRequestContext {
+            var line = 0
+            var column = 0
+            val end = caret.coerceIn(0, text.length)
+            for (i in 0 until end) {
+                if (text[i] == '\n') {
+                    line++
+                    column = 0
+                } else {
+                    column++
+                }
+            }
+            return LspRequestContext(
+                fileName = fileName,
+                prefix = prefix,
+                line = line,
+                column = column,
+                content = text,
+            )
+        }
+    }
+}
 
 /**
  * A language server provider. Production is the hand-rolled

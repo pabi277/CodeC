@@ -44,18 +44,23 @@ data class LspResponse(
     val id: Int?,
     val error: String?,
     val result: String?,
+    val method: String? = null,
 )
 
 internal object LspResponseParser {
 
     fun parse(body: String): LspResponse {
-        // id
         val id = matchIntField(body, "\"id\"")
-        // error
-        val error = matchStringField(body, "\"error\"")
-        // result
+        val method = matchStringField(body, "\"method\"")
+        val errorRaw = matchField(body, "\"error\"")
+        val error = when {
+            errorRaw == null -> null
+            errorRaw.trimStart().startsWith("{") ->
+                matchStringField(errorRaw, "\"message\"") ?: errorRaw.trim()
+            else -> errorRaw.trim()
+        }
         val result = matchField(body, "\"result\"")
-        return LspResponse(id = id, error = error, result = result)
+        return LspResponse(id = id, error = error, result = result, method = method)
     }
 
     /**
@@ -74,6 +79,10 @@ internal object LspResponseParser {
     }
 
     private fun findItemsArray(json: String): Int? {
+        // Bare `CompletionItem[]` (no CompletionList wrapper).
+        var i = 0
+        while (i < json.length && json[i].isWhitespace()) i++
+        if (i < json.length && json[i] == '[') return i
         // Look for the substring `"items":[` (allowing whitespace).
         val key = "\"items\""
         var from = 0

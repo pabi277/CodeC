@@ -95,7 +95,6 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -284,9 +283,13 @@ class MainActivity : ComponentActivity() {
         // flags on the first run — a real project path would come
         // from the editor's "current file" once the analyzer sends
         // it through LspRequestContext, see CodeCAnalyzer).
+        val projects = File(filesDir, "CodeC/projects")
         val manager = LspManager(
             probe = SystemBinaryProbe(filesDir),
-            providerFactory = StdioLspProviderFactory(projectRoot = filesDir.absolutePath),
+            providerFactory = StdioLspProviderFactory(
+                projectRoot = if (projects.isDirectory) projects.absolutePath else filesDir.absolutePath,
+                filesDir = filesDir,
+            ),
         )
         ActiveLspManager.install(manager)
         lifecycleScope.launch {

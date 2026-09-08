@@ -177,22 +177,17 @@ class CodeCLanguage private constructor(
         val prefix = CodeCompletionEngine.currentPrefix(text, cursor)
         val manager = ActiveLspManager.get()
         val merged = if (manager != null) {
-            // Phase 31.5 — pass the full buffer + cursor to the LSP
-            // orchestrator so the stdio client can do `didOpen` /
-            // `didChange` + `completion` with the file in scope.
-            // `position.line` and `position.column` are sora's
-            // 0-indexed cursor; the LSP spec uses the same indexing
-            // (line = 0 is the first line, character = 0 is the
-            // first character in the line).
-            val lspContext = LspRequestContext(
-                fileName = fileName ?: "",
-                prefix = prefix,
-                line = position.line,
-                column = position.column,
-                content = text,
-            )
+            // Phase 31.6 — the chip strip (EditorViewModel) is the
+            // primary surface; this panel is ⌄-more browse. Both
+            // call the same manager with the same absolute path so
+            // they cannot disagree on the URI the server saw.
+            val path = ActiveLspManager.documentPath ?: fileName ?: ""
             manager.completions(
-                language, prefix, engineItems, CodeCompletionEngine.MAX_ITEMS, lspContext,
+                language,
+                prefix,
+                engineItems,
+                CodeCompletionEngine.MAX_ITEMS,
+                LspRequestContext.at(path, text, cursor, prefix),
             )
         } else {
             engineItems
@@ -313,6 +308,13 @@ private object NoOpFormatter : Formatter {
 object ActiveLspManager {
     @Volatile private var current: LspManager? = null
 
+    /**
+     * Absolute path of the buffer the editor is completing. The VM
+     * writes this on the debounced completion pass so both the chip
+     * strip and sora's ⌄ panel send the same `file://` URI.
+     */
+    @Volatile var documentPath: String? = null
+
     fun install(manager: LspManager) {
         // L2 — replacing the active manager is a lifecycle event: tear
         // the previous one down so a no-longer-wanted server does not
@@ -326,6 +328,7 @@ object ActiveLspManager {
         if (manager == null || manager === active) {
             active.shutdown()
             current = null
+            documentPath = null
         }
     }
 
