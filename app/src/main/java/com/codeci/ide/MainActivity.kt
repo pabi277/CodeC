@@ -561,6 +561,10 @@ fun MainApp() {
     // Phase 32.1+32.3 — stateful values (var so the drag + effects can write).
     var navHidden by remember { mutableStateOf(false) }
     var navRevealDrag by remember { mutableFloatStateOf(0f) }
+    val currentDestination by navController.currentBackStackEntryAsState()
+    val inEditor = currentDestination?.destination?.route?.startsWith("editor") == true
+    val editorShown = inEditor && !isImeVisible
+    val shouldHideNav = inEditor && (isImeVisible || navHidden)
     LaunchedEffect(incomingImport) {
         incomingImport?.let { import ->
             IncomingImportBridge.clear()
@@ -591,14 +595,6 @@ fun MainApp() {
             navController.removeOnDestinationChangedListener(listener)
         }
     }
-
-    // Phase 32.1 — the nav bar is hidden during editor typing (IME or Keys
-    // up) and revealed by a swipe-up gesture or hardware back. The gesture
-    // only works in the editor so it does not steal touches from other tabs.
-    val currentDestination by navController.currentBackStackEntryAsState()
-    val inEditor = currentDestination?.destination?.route?.startsWith("editor") == true
-    val editorShown = inEditor && !isImeVisible
-    val shouldHideNav = inEditor && (isImeVisible || navHidden)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
