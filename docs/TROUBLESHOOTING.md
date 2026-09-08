@@ -678,3 +678,18 @@ gate decides), and a strip chip never auto-pairs (step 12).
 
 **Report:** PASS/FAIL per numbered step; for any FAIL the exact keys you typed,
 the file name, what appeared, and whether CodeC Keys was ON or OFF.
+
+## 15. Phase 31.5/31.6 — LSP chips in the editor (owner runbook, 2026-09-08)
+
+**Goal:** prove IntelliSense items appear in the **chip strip** (not only ⌄ more) after a language server is installed.
+
+1. Install the C/C++ IntelliSense card: Packages → **C/C++ IntelliSense (clangd)** → install (`pkg install -y clang`). Confirm `clangd` exists (`which clangd` in Terminal).
+2. Open or create a project file `main.c`. Type a small program that uses `stdio.h` (`#include <stdio.h>` then `int main() { fr`).
+3. Wait ~1 s after the last key (the LSP merge is the **debounced** completion pass). The chip strip should offer `fread` / `free` / similar **members snippets cannot invent**.
+4. Tap a chip → it inserts. Ghost (if visible) should match rank-0.
+5. Settings → Completions **master OFF** → chips fall back to snippets only; no clangd process should stay (check Terminal `ps` if you want).
+6. Master ON again → type; chips return after the debounce.
+
+**PASS:** step 3 shows an LSP member in the chip strip. **FAIL:** chips stay snippet-only after 2 s, or the editor hangs on a keystroke.
+
+**By design:** the first completion after install may take ~1.5 s (clangd index); later keystrokes stay snippet-instant and refresh chips after debounce. JSON files now have chips only after the vscode-json-language-server card is installed (the engine has no JSON snippets).

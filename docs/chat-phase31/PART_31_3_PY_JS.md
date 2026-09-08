@@ -1,30 +1,100 @@
-# CodeC Phase 31.3 — Python & JS IntelliSense cards
+# CodeC Phase 31.3 — Python / JS-TS install cards
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` + pkg
-· **Effort:** M · **Depends on:** 31.1, Phase 12 python / 20.1 nodejs in repo
+**Status:** ✅ **CARDS SHIPPED** (2026-09-07, owner: "Start phase 31").
+The Packages hub now has:
+
+- **IntelliSense: Python (pylsp)** — installs `python-lsp-server`
+  via `pip install --user python-lsp-server` (Python 3 itself is the
+  existing Phase 12 card).
+- **IntelliSense: JavaScript / TypeScript (tsserver)** — installs
+  `typescript` + `typescript-language-server` via
+  `npm install -g typescript typescript-language-server` (Node.js
+  itself is the existing Phase 20.1 card).
+
+The orchestrator picks the server up automatically once the binary
+(`pylsp` or `typescript-language-server`) lands in `$PREFIX/bin/`.
+The real wire (sora `LspEditor` ↔ pylsp / tsserver) is the 31.1 §3.1
+follow-up.
+
+**Pip/npm rule:** if a pip/npm name is not in the CodeC apt repo
+(neither is — Phase 20.1 only published `nodejs` as a deb), use the
+documented `pip install --user` / `npm i -g` inside PREFIX after
+`python` / `nodejs` exist. **Never invent a `com.termux` package**.
 
 ---
 
 ## 1. Design
 
-| Card | Install | Server |
-|---|---|---|
-| IntelliSense: Python | `python` + `python-lsp-server` (pip or pkg) | pylsp + Jedi (MIT, lighter than Pyright on phone) |
-| IntelliSense: JavaScript / TypeScript | `nodejs` + `typescript` + `typescript-language-server` | tsserver stdio |
+| Language | Card id | Probe binary | Install command | Notes |
+|---|---|---|---|---|
+| C / C++ | `intellisense-c-cpp-clangd` | `clangd` | `pkg install -y clang` | Phase 20.1 ships clang |
+| Python | `intellisense-python-pylsp` | `pylsp` | `pkg install -y python-pip && pip install python-lsp-server` | Phase 12 ships python3 + python-pip; chained so the card is self-sufficient on a fresh userland; **no `--user`** — see below |
+| JS / TS | `intellisense-js-tsserver` | `typescript-language-server` | `pkg install -y npm && npm install -g typescript typescript-language-server` | Phase 20.1 ships nodejs (npm is a separate deb split out at 25.3.0-1) |
 
-If a pip/npm name is not in the CodeC apt repo, **do not** invent
-`com.termux` packages. Prefer a documented `pip install` / `npm i -g`
-**inside PREFIX** after python/node exist — or defer the card until a
-CodeC package exists. Record the choice in this file’s §4 at implement time.
+All three cards are `PackageCategory.LANGUAGES`, so they show up in
+the LANGUAGES filter and in the ALL list with no ModulesScreen edit.
 
-Airplane mode: cards show “needs network once.”
+The orchestrator probe is `$PREFIX/bin/<binary>` (matched via the
+application's `filesDir/usr/bin/<binary>` symlink, which is the same
+path `ModulesScreen.checkIsInstalled` and the Phase 21 D.2 install
+gate use). One install flips both the card and the orchestrator.
 
 ## 2. Exit condition
 
 ```text
 (Device)
-1. .py: `os.path.` or `print(` — more than snippet; or honest “install IntelliSense”.
-2. .js: `document.` or `console.` after tsserver install.
-3. Uninstall / missing binary → fallback snippets, no crash.
-PASS = all three.
+1. Fresh .py / .ts without pylsp / tsserver: snippets only; typing never blocked.    ← host PASS (no-op provider)
+2. Install card → server attached → `import json` / `console.` complete.            ← install path ready; "attached" is the 31.1 wire (pending)
+3. RUN ▶ still uses CodeC's `python` / `node` for the file.                        ← unchanged
+PASS = (1) and (3) ship today; (2) is the device round + 31.1 wire.
 ```
+
+### 2.1 Device recipe (owner)
+
+**Python**
+1. Open a `.py` file. Type `import ` — expect Phase 30 snippet
+   `import ... as` plus identifier items; pylsp is NOT on disk.
+2. Open Packages tab → tap "IntelliSense: Python (pylsp)" → INSTALL
+   runs the **chained** install in the live terminal:
+   `pkg install -y python-pip && pip install python-lsp-server`.
+   The first half lands `pip` on PATH (Phase 12 publishes `python-pip`
+   as its own deb in the CodeC apt repo; idempotent if already
+   installed — device round 2026-09-07 caught a fresh userland
+   failing with `pip: command not found` on the bare `pip install`
+   form). The second half installs the LSP server into `$PREFIX/`
+   — **WITHOUT `--user`**: device round 2 (same day) caught a
+   `pip install --user` succeeding but writing `pylsp` to
+   `~/.local/bin/`, which is NOT the path the orchestrator probes
+   (`$PREFIX/bin/pylsp`). A bare `pip install` uses the active
+   python's `sys.prefix` (the CodeC `python` is built with
+   `--prefix=$PREFIX`, so the script lands at `$PREFIX/bin/pylsp`).
+3. Wait for the install to finish; come back. Re-type `import ` — the
+   card flips to INSTALLED. Verify in Terminal: `pylsp --version`
+   should print `pylsp 1.15.0` (the LSP server version, NOT the
+   python-lsp-server python package version).
+4. RUN ▶ the file — expect CodeC's `python3` to run (Phase 21 path);
+   pylsp is analysis only.
+5. (When the 31.1 wire ships) type `import ` — expect a `json` /
+   `os` / `re` list from pylsp's Jedi memory in the strip BEFORE
+   the engine's items.
+
+**JavaScript / TypeScript**
+1. Open a `.ts` file. Type `cons` — expect Phase 30 snippet + identifier
+   items; tsserver is NOT on disk.
+2. Open Packages tab → tap "IntelliSense: JavaScript / TypeScript
+   (tsserver)" → INSTALL runs `npm install -g typescript
+   typescript-language-server` in the live terminal.
+3. Wait; come back. Re-type `cons` — the card flips to INSTALLED.
+4. RUN ▶ the file — expect CodeC's `node` to run; tsserver is
+   analysis only.
+5. (When the 31.1 wire ships) type `Window.` — expect a list from
+   tsserver's DOM types in the strip BEFORE the engine's items.
+
+## 3. Follow-ups
+
+- The sora `LspEditor` wire (§3.1 of 31.1) is what flips
+  "card INSTALLED + orchestrator probe TRUE" into "actual LSP
+  completion in the strip". Until that ships, step 5 of either
+  device recipe returns only the Phase 30 snippet world.
+- gopls (Go) and rust-analyzer (Rust) stay disabled until those
+  compilers are `inRepository`. The catalog does not list them.

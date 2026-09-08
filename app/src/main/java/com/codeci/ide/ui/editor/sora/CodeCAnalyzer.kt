@@ -2,6 +2,8 @@ package com.codeci.ide.ui.editor.sora
 
 import android.os.Bundle
 import com.codeci.ide.ui.editor.CodeCompletionEngine
+import com.codeci.ide.ui.editor.lsp.LspManager
+import com.codeci.ide.ui.editor.lsp.LspRequestContext
 import com.codeci.ide.ui.utils.LanguageType
 import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
 import com.codeci.ide.ui.utils.TokenKind
@@ -160,7 +162,37 @@ class CodeCLanguage private constructor(
         // the packs' TM_FILENAME_BASE resolution), and each item brings its
         // OWN replace length: an Emmet expansion replaces the whole
         // abbreviation, not just the identifier fragment at the caret.
-        for (item in CodeCompletionEngine.completions(text, cursor, language, fileName)) {
+        //
+        // Phase 31.1 — when an LspManager is installed (the activity sets it
+        // on resume; null when completions are off, the process is starting,
+        // or the master switch is OFF), its items are PRE-pended so the
+        // strip paints LSP first, snippets/Emmet second, identifiers last
+        // — the Phase 30 engine still wins on ranking inside its own half.
+        // The manager itself honours L1 (one process per language), L2
+        // (destroyed on master OFF / activity pause), L3 (timeout → silent
+        // fallback), and L5 (returns the list synchronously off sora's
+        // completion thread; the production swap wraps a bounded
+        // `LspEditor.requestCompletion` await).
+        val engineItems = CodeCompletionEngine.completions(text, cursor, language, fileName)
+        val prefix = CodeCompletionEngine.currentPrefix(text, cursor)
+        val manager = ActiveLspManager.get()
+        val merged = if (manager != null) {
+            // Phase 31.6 — the chip strip (EditorViewModel) is the
+            // primary surface; this panel is ⌄-more browse. Both
+            // call the same manager with the same absolute path so
+            // they cannot disagree on the URI the server saw.
+            val path = ActiveLspManager.documentPath ?: fileName ?: ""
+            manager.completions(
+                language,
+                prefix,
+                engineItems,
+                CodeCompletionEngine.MAX_ITEMS,
+                LspRequestContext.at(path, text, cursor, prefix),
+            )
+        } else {
+            engineItems
+        }
+        for (item in merged) {
             publisher.addItem(
                 SimpleCompletionItem(
                     item.label,
@@ -256,4 +288,49 @@ private object NoOpFormatter : Formatter {
     override fun setReceiver(receiver: io.github.rosemoe.sora.lang.format.Formatter.FormatResultReceiver?) = Unit
     override fun isRunning() = false
     override fun destroy() = Unit
+}
+
+/**
+ * Phase 31.1 — process-scoped holder for the active [LspManager]. The
+ * activity installs it on `onResume` (after Settings → COMPLETION_MASTER
+ * has been read) and clears it on `onPause` (L2 destroy). When `get()`
+ * returns null the completion path is the engine-only world — exactly the
+ * 22.x–30.x behaviour, with zero LSP overhead.
+ *
+ * A holder is the simplest thing that satisfies:
+ *  - the manager is NOT a Compose / ViewModel singleton (it owns a
+ *    `ConcurrentHashMap` of providers + a blacklist);
+ *  - `CodeCLanguage.requireAutoComplete` is a method, not a composable
+ *    — it cannot read Settings through DI;
+ *  - we want the same manager instance for every open editor so the
+ *    "one process per language" rule (L1) holds across tabs.
+ */
+object ActiveLspManager {
+    @Volatile private var current: LspManager? = null
+
+    /**
+     * Absolute path of the buffer the editor is completing. The VM
+     * writes this on the debounced completion pass so both the chip
+     * strip and sora's ⌄ panel send the same `file://` URI.
+     */
+    @Volatile var documentPath: String? = null
+
+    fun install(manager: LspManager) {
+        // L2 — replacing the active manager is a lifecycle event: tear
+        // the previous one down so a no-longer-wanted server does not
+        // survive the swap.
+        current?.shutdown()
+        current = manager
+    }
+
+    fun clear(manager: LspManager? = null) {
+        val active = current ?: return
+        if (manager == null || manager === active) {
+            active.shutdown()
+            current = null
+            documentPath = null
+        }
+    }
+
+    fun get(): LspManager? = current
 }

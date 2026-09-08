@@ -73,6 +73,10 @@ import com.codeci.ide.ui.screens.SettingsScreen
 import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.screens.WebPreviewScreen
+import com.codeci.ide.ui.editor.lsp.LspManager
+import com.codeci.ide.ui.editor.lsp.StdioLspProviderFactory
+import com.codeci.ide.ui.editor.lsp.SystemBinaryProbe
+import com.codeci.ide.ui.editor.sora.ActiveLspManager
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.CodecApiBridge
@@ -260,6 +264,50 @@ class MainActivity : ComponentActivity() {
             ShellEnvironment.setupStorageDirectory(home)
         }
         recoverParkedNotificationPermission()
+        // Phase 31.1 — install the LSP completion manager so
+        // `CodeCLanguage.requireAutoComplete` can fan out to language
+        // servers (clangd, pylsp, tsserver). The activity owns the
+        // lifecycle (L2): on `onPause` we shut every active provider
+        // down so a backgrounded app stops holding server processes.
+        // Master-completion-OFF is read from DataStore on install so a
+        // Settings change while the app is backgrounded is honoured the
+        // next time the editor surfaces, and a flow collector keeps
+        // the running manager in sync with the Settings switch (the
+        // 31.1 README L3 — "completion master OFF = no LSP process").
+        val settings = SettingsManager(this)
+        // Phase 31.5 — wire the hand-rolled LSP stdio client
+        // (LspStdioClient) via StdioLspProviderFactory. The factory
+        // builds a per-language LspStdioClient on the first
+        // completion request; the manager owns the lifecycle. The
+        // `projectRoot` is the application private dir (no compile
+        // flags on the first run — a real project path would come
+        // from the editor's "current file" once the analyzer sends
+        // it through LspRequestContext, see CodeCAnalyzer).
+        val projects = File(filesDir, "CodeC/projects")
+        val manager = LspManager(
+            probe = SystemBinaryProbe(filesDir),
+            providerFactory = StdioLspProviderFactory(
+                projectRoot = if (projects.isDirectory) projects.absolutePath else filesDir.absolutePath,
+                filesDir = filesDir,
+            ),
+        )
+        ActiveLspManager.install(manager)
+        lifecycleScope.launch {
+            settings.completionMasterFlow.collect { master ->
+                manager.setMasterEnabled(master)
+            }
+        }
+    }
+
+    override fun onPause() {
+        // Phase 31.1 — L2: a backgrounded app does not need its LSP
+        // providers; killing them now means the next onResume starts
+        // fresh, and the 200 ms startup cost is paid at the right
+        // moment (the user is going to the editor next, not the
+        // background). The Settings collector is bound to this
+        // activity's lifecycleScope, so it stops here too.
+        ActiveLspManager.clear()
+        super.onPause()
     }
 
     /**

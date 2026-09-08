@@ -11,6 +11,8 @@ import com.codeci.ide.ui.editor.ClangFormatBridge
 import com.codeci.ide.ui.editor.CodeFormatter
 import com.codeci.ide.ui.editor.AcceptGranularity
 import com.codeci.ide.ui.editor.CodeCompletionEngine
+import com.codeci.ide.ui.editor.lsp.LspRequestContext
+import com.codeci.ide.ui.editor.sora.ActiveLspManager
 import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompletionSettings
 import com.codeci.ide.ui.editor.GhostCompletion
@@ -399,7 +401,7 @@ class EditorViewModel : ViewModel() {
         val prev = _completionModel.value
         if (cfg.everythingOff || !cfg.anyOn ||
             v.text.length > GhostCompletion.SOFT_FILE_CAP ||
-            lang == LanguageType.TEXT || lang == LanguageType.JSON
+            lang == LanguageType.TEXT
         ) {
             completionItemsBase = emptyList()
             if (prev != CompletionModel.EMPTY) _completionModel.value = CompletionModel.EMPTY
@@ -451,18 +453,53 @@ class EditorViewModel : ViewModel() {
         val lang = LanguageType.fromFileName(path)
         if (cfg.everythingOff || !cfg.anyOn ||
             v.text.length > GhostCompletion.SOFT_FILE_CAP ||
-            lang == LanguageType.TEXT || lang == LanguageType.JSON
+            lang == LanguageType.TEXT
         ) {
             completionItemsBase = emptyList()
         } else {
             val caret = v.selection.min.coerceIn(0, v.text.length)
+            val absPath = activeDocumentPath()
+            ActiveLspManager.documentPath = absPath
             completionItemsBase = withContext(Dispatchers.Default) {
-                runCatching { CodeCompletionEngine.completions(v.text, caret, lang, path) }
-                    .getOrDefault(emptyList())
+                val engine = runCatching {
+                    CodeCompletionEngine.completions(v.text, caret, lang, path)
+                }.getOrDefault(emptyList())
+                val manager = ActiveLspManager.get() ?: return@withContext engine
+                val prefix = CodeCompletionEngine.currentPrefix(v.text, caret)
+                runCatching {
+                    manager.completions(
+                        language = lang,
+                        prefix = prefix,
+                        engineItems = engine,
+                        limit = CodeCompletionEngine.MAX_ITEMS,
+                        context = LspRequestContext.at(absPath, v.text, caret, prefix),
+                    )
+                }.getOrDefault(engine)
             }
         }
         // Reproject against the (possibly newer) live buffer.
         refreshCompletionModelNow(_codeText.value)
+    }
+
+    /**
+     * Absolute path of the active buffer so LSP `didOpen` uses a real
+     * `file://` URI. Falls back to the display name when we have no
+     * context yet (the client then skips didOpen rather than sending
+     * `file://main.c`).
+     */
+    private fun activeDocumentPath(): String {
+        val name = _fileName.value
+        val ctx = appContext ?: return name
+        val project = _projectName.value
+        if (project != null) {
+            val info = runCatching { ProjectManager(ctx).project(project) }.getOrNull()
+            val safe = ProjectPathUtils.sanitizeRelativePath(name)
+            if (info != null && safe != null) {
+                return ProjectPathUtils.resolveInside(info.root, safe)?.absolutePath ?: name
+            }
+        }
+        val safe = FileNameUtils.sanitizeFileName(name.substringAfterLast('/')) ?: name
+        return File(FileManager(ctx).getProjectDir(), safe).absolutePath
     }
 
     private fun beginCompletionPipeline() {

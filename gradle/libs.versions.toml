@@ -89,6 +89,23 @@ sora-editor-language-java = { group = "io.github.rosemoe", name = "language-java
 # not fork or repackage). Grammars/themes ship as MIT assets (see
 # assets/textmate/ + assets/licenses/).
 sora-language-textmate = { group = "io.github.rosemoe", name = "language-textmate", version.ref = "soraEditor" }
+# Phase 31.1 — LSP completion (Acode-style IntelliSense as Packages).
+# Same BOM/version as `editor` (T1: never pin a second sora version).
+# Binary dependency only; sora's editor-lsp vendors org.eclipse.lsp4j 1.0.0 +
+# kotlinx-coroutines-android 1.10.2 (transitive, Gradle resolves them).
+# No source vendored, no fork. LSP-2.1 license is compatible with the 25.2
+# LGPL-2.1 acceptance (the editor-lsp AAR is the same module family).
+#
+# Status 2026-09-07: the AAR is on the version catalog and the engine is
+# wired to use it via a swappable `Provider`, but the Gradle dep itself
+# is gated behind the `editorLsp` Gradle property (set to `true` after
+# the sora 0.24.6 AAR resolves cleanly against AGP 9.1.1 — see
+# `docs/chat-phase31/PART_31_1_EDITOR_LSP.md` §3.1). For now the
+# orchestrator is built and host-tested with the no-op provider; the
+# follow-up commit flips the property on once the owner confirms the
+# 9.3.1-vs-9.1.1 AGP delta is non-blocking (the rule.md §4.2 fix-on-
+# evidence rule).
+sora-editor-lsp = { group = "io.github.rosemoe", name = "editor-lsp", version.ref = "soraEditor" }
 
 
 [plugins]
