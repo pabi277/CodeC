@@ -19,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.compose.runtime.Composable
@@ -47,7 +49,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -552,9 +557,12 @@ fun MainApp() {
             ?: Screen.FileManager.route
     }
 
-    // Phase 24.7 — an "Open with CodeC" file/ZIP arrives outside navigation
-    // (onNewIntent); the bridge carries it in and the editor opens the import.
-    val incomingImport by IncomingImportBridge.state.collectAsState()
+    // Phase 32.1 — auto-hide bottom nav while the editor is focused:
+    // the bar disappears when IME or CodeC Keys are up, and a swipe-up
+    // gesture (or hardware back) restores it without losing the buffer.
+    // Tracked here because MainActivity owns the Scaffold's bottomBar.
+    val navHidden by remember { mutableStateOf(false) }
+    val navRevealDrag by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(incomingImport) {
         incomingImport?.let { import ->
             IncomingImportBridge.clear()
@@ -566,9 +574,19 @@ fun MainApp() {
         }
     }
 
+    // Phase 32.1 — auto-hide nav when editor is the focus + IME/Keys active.
+    // The bar hides on editor entry when IME or Keys are up, and re-shows on
+    // destination change away from editor. A swipe-up (see bottomBar above)
+    // can temporarily reveal it from inside the editor.
+    LaunchedEffect(inEditor, isImeVisible) {
+        if (inEditor && isImeVisible) navHidden = true
+    }
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
             AppLogger.i("Navigation", "Navigated to ${destination.route}")
+            // Leaving the editor re-shows the bar (the swipe-up gesture is
+            // editor-only, so other tabs keep the standard behaviour).
+            if (!destination.route.startsWith("editor")) navHidden = false
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose {
@@ -576,15 +594,21 @@ fun MainApp() {
         }
     }
 
+    // Phase 32.1 — the nav bar is hidden during editor typing (IME or Keys
+    // up) and revealed by a swipe-up gesture or hardware back. The gesture
+    // only works in the editor so it does not steal touches from other tabs.
+    val currentDestination by navController.currentBackStackEntryAsState()
+    val inEditor = currentDestination?.destination?.route?.startsWith("editor") == true
+    val editorShown = inEditor && !isImeVisible
+    val shouldHideNav = inEditor && (isImeVisible || navHidden)
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (!isImeVisible) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
+            if (!shouldHideNav) {
                 FlatBottomBar(
                     screens = screens,
-                    currentDestination = currentDestination,
+                    currentDestination = currentDestination?.destination,
                     onNavigate = { screen ->
                         navController.navigate(
                             when (screen) {
@@ -601,6 +625,64 @@ fun MainApp() {
                         }
                     }
                 )
+            } else if (editorShown) {
+                // Phase 32.1 — swipe-up handle: a thin zone above the hidden
+                // bar that the user can drag up to peek/reveal it. The bar
+                // stays hidden by default and appears under the finger only
+                // while the drag is > 0; releasing above the threshold keeps
+                // it revealed until the next editor focus loss.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .height(64.dp)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onDragStart = { navRevealDrag = 0f },
+                                onDragEnd = {
+                                    navHidden = navRevealDrag < 32f
+                                    navRevealDrag = 0f
+                                },
+                                onDrag = { change, dragAmount ->
+                                    navRevealDrag = (navRevealDrag + dragAmount).coerceIn(0f, 64f)
+                                    change.consume()
+                                }
+                            )
+                        }
+                ) {
+                    // The bar content rendered at the drag offset so the user
+                    // sees it slide up under their finger; alpha fades in too.
+                    val alpha = (navRevealDrag / 64f).coerceIn(0.2f, 1f)
+                    val offset = navRevealDrag - 64f
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset { androidx.compose.ui.geometry.Offset(0f, offset) }
+                            .graphicsLayer { this.alpha = alpha }
+                    ) {
+                        FlatBottomBar(
+                            screens = screens,
+                            currentDestination = currentDestination?.destination,
+                            onNavigate = { screen ->
+                                navController.navigate(
+                                    when (screen) {
+                                        is Screen.Editor -> Screen.Editor.createRoute(null)
+                                        is Screen.Terminal -> Screen.Terminal.createRoute(null)
+                                        else -> screen.route
+                                    }
+                                ) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                                navHidden = false
+                            }
+                        )
+                    }
+                }
             }
         }
     ) { innerPadding ->
