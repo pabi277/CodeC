@@ -217,5 +217,5 @@ dependencies {
 // pin the CI runner until the owner cancelled at 3+ hours. Fail the
 // test task instead — the suite is normally well under this.
 tasks.withType<Test>().configureEach {
-  timeout.set(java.time.Duration.ofMinutes(5))
+  timeout.set(Duration.ofMinutes(5))
 }
