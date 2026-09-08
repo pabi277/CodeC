@@ -110,18 +110,40 @@ class LspStdioClient(
             }
         } catch (_: Throwable) {
         }
-        try {
-            p.waitFor(1, TimeUnit.SECONDS)
-        } catch (_: Throwable) {
-        }
-        if (p.isAlive) p.destroyForcibly()
-        try {
-            p.waitFor(2, TimeUnit.SECONDS)
-        } catch (_: Throwable) {
-        }
+        try { output?.close() } catch (_: Throwable) {}
         output = null
         currentFile = null
         incoming.clear()
+        // minSdk 24: Process.waitFor(timeout) / isAlive / destroyForcibly
+        // are API 26. Same pattern as ExecutionRunner (poll exitValue,
+        // destroy(), reflective destroyForcibly). Lint 34209358314.
+        destroyProcessApi24(p)
+    }
+
+    private fun processStillRunning(p: Process): Boolean = try {
+        p.exitValue()
+        false
+    } catch (_: IllegalThreadStateException) {
+        true
+    }
+
+    private fun destroyProcessApi24(p: Process) {
+        try { p.destroy() } catch (_: Throwable) {}
+        val deadline = System.nanoTime() + 2_000_000_000L
+        while (processStillRunning(p) && System.nanoTime() < deadline) {
+            try {
+                Thread.sleep(50)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
+            }
+        }
+        if (processStillRunning(p)) {
+            try {
+                Process::class.java.getMethod("destroyForcibly").invoke(p)
+            } catch (_: Throwable) {
+            }
+        }
     }
 
     // ---------- internals ----------
