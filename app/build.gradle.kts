@@ -177,17 +177,20 @@ dependencies {
   // kotlinx-coroutines-android 1.10.2 transitively; both are already on the
   // app classpath at the same versions.
   //
-  // Phase 31.5 (2026-09-07, owner: "Now start wiring"): the gate is
-  // temporarily OPEN — the AAR is on the classpath for every build. The
-  // owner's instruction was to flip the gate and see what happens; if
-  // the AGP delta hypothesis is wrong and the AAR resolves cleanly,
-  // we proceed with the sora `LspEditor` wire. If CI goes red on
-  // :app:processDebugMainManifest, the owner pastes the failing log
-  // (Actions → run 34119027553, then the matching run on the next push)
-  // and we either bump AGP/Kotlin or fall back to the hand-rolled
-  // ~200-LOC LSP stdio client (Path B from the chat). The gate is
-  // the only difference vs the 31.4 tip (1479f53) — no code change.
-  implementation(libs.sora.editor.lsp)
+  // Phase 31.5 (2026-09-07, owner: "Now start wiring"): the gate-flip
+  // experiment (commit ce4c41b) FAILED — the build reproduced the same
+  // :app:processDebugMainManifest error from the very first 31.1 push.
+  // The owner is pastes the failing log block in chat (rule.md §9); the
+  // gate is re-CLOSED here so the UI-shell branch stays green-mergeable
+  // while the wire question is being decided. The two paths forward,
+  // documented in JOURNEY item 43 (31.4 follow-up paragraph):
+  //   (A) bump CodeC's AGP 9.1.1 → 9.3.1 + Kotlin 2.2.10 → 2.4.10
+  //       to match the sora BOM, then re-flip the gate;
+  //   (B) ship a hand-rolled ~200-LOC LSP stdio client (no sora
+  //       dep, no AGP delta) and skip the AAR entirely.
+  if (project.findProperty("editorLsp")?.toString() == "true") {
+    implementation(libs.sora.editor.lsp)
+  }
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)
