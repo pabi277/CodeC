@@ -90,9 +90,14 @@ internal object LspResponseParser {
             val idx = json.indexOf(key, from)
             if (idx < 0) return null
             val afterKey = idx + key.length
-            // skip whitespace, then expect '['
+            // `"items" : [ ... ]` — colon is required JSON, was skipped
+            // by the first parser and every CompletionList test returned 0.
             var i = afterKey
             while (i < json.length && json[i].isWhitespace()) i++
+            if (i < json.length && json[i] == ':') {
+                i++
+                while (i < json.length && json[i].isWhitespace()) i++
+            }
             if (i < json.length && json[i] == '[') return i
             from = afterKey
         }
