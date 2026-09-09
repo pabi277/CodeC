@@ -202,10 +202,11 @@ Every update updates the docs **in the same commit**:
 
 - **Phase 35** is implemented on session branch `arena/01a086a0-codec`: the
   keep-keys setting, off-main decoration snapshot, solid typing caret, and
-  quiet-on-open caret state are wired and host-tested. CI is the executor of
-  record; the owner’s device runbook is `docs/TROUBLESHOOTING.md` §25 and the
-  measurement card is `docs/chat-phase35/MEASUREMENT_CARD.md`. No device pass
-  or merge is claimed yet.
+  quiet-on-open caret state are wired and host-tested. Build APK CI
+  `34367008019` is GREEN on `317b89a`; the owner’s device runbook is
+  `docs/TROUBLESHOOTING.md` §25 and the measurement card is
+  `docs/chat-phase35/MEASUREMENT_CARD.md`. No device pass or merge is claimed
+  yet.
 - **`main` = the Phase 34 merge commit (PR #59, 2026-09-09).** Before that:
   `31e319f` = PR #54 (Phase 29, 2026-09-06), `3edfc97` = PR #53 (2026-09-05,
   Phases 29–33 plan docs), PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49

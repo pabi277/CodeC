@@ -113,8 +113,8 @@ foreground keep-alive + port lifecycle. Spec:
 - Phase 33 (first-hour UX) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
 - Phase 34 (Official file icons) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
 - Phase 35 (Editor typing feel) is **🚧 IMPLEMENTED** on the session branch;
-  CI and the owner’s cross-device round are pending. The measurement card is
-  deliberately still open.
+  Build APK CI `34367008019` is ✅ GREEN and the owner’s cross-device round is
+  pending. The measurement card is deliberately still open.
 - Phases 36–37 remain **📋 PLANNED** (researched + specced, not implemented).
 - The owner starts each phase with "Start Phase N" and runs the cross-device
   round at the end.

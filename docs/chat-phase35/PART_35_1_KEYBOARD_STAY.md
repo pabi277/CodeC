@@ -51,7 +51,8 @@ PASS = all three.
 
 ## Tests
 
-- `SettingsManager` key round-trip (host, follows the DataStore-key pattern).
+- `SettingsManager` key round-trip (follows the DataStore-key pattern); the
+  Phase 35 CI build `34367008019` is GREEN.
 - `KeysStayPolicyTest` (pure): given (toggle, focused, waitingForInput,
   explicitCollapse) → expected "keys visible" — pins the one law all three
   exit conditions rely on (pure function, mirroring `CompletionPolicy`).

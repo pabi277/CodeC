@@ -895,8 +895,9 @@ are queued.
 
 ## 25. Phase 35 editor typing feel — device round (owner runbook, 2026-09-09)
 
-**Status: 🚧 IMPLEMENTED; CI and device evidence pending. Do not mark this
-section passed until the owner records the result on the slowest phone.**
+**Status: 🚧 IMPLEMENTED; Build APK CI `34367008019` is GREEN. Device
+evidence is pending. Do not mark this section passed until the owner records
+the result on the slowest phone.**
 
 Install the CI APK from the Phase 35 build, then run this matrix on the
 slowest available phone and at least one other Android device:

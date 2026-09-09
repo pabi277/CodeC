@@ -1,8 +1,8 @@
 # Phase 35 — typing measurement card
 
-**State:** instrumentation and host coverage are implemented; the owner’s
-slowest-device card is still pending. This is intentionally not a device-pass
-claim.
+**State:** instrumentation and host coverage are implemented; **CI
+`34367008019` is GREEN** on `317b89a`; the owner’s slowest-device card is
+still pending. This is intentionally not a device-pass claim.
 
 ## Baseline and target
 

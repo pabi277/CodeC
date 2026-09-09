@@ -51,7 +51,8 @@ in-tree typing path + sora's public cursor config.
   are discarded and VM→sora selection replay is deduplicated.
 - Pure tests cover key visibility, caret placement, blink timing, decoration
   invalidation, and the extracted snapshot math. The complete build/test gate
-  is CI; this sandbox has no JDK.
+  is CI; **Build APK run `34367008019` is GREEN** on commit `317b89a`. This
+  sandbox has no JDK.
 
 ## Measurement gate
 

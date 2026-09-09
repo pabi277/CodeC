@@ -62,4 +62,6 @@ PASS = all three.
 
 - Any pure logic extracted (e.g. a `DecorationDirtyPolicy`) gets a host test.
 - The bench module gains (or re-runs) the keystroke-p95 harness so CI keeps
-  the number honest — CI is the only executor of record for the bench.
+  the number honest — **Build APK CI `34367008019` is GREEN** and is the
+  executor of record for the build/test path. The owner device measurement is
+  still required for the phase exit condition.
