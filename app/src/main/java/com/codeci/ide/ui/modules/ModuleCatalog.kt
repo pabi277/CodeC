@@ -11,6 +11,23 @@ enum class PackageCategory(val title: String) {
     UTILS("Archives & Utils")
 }
 
+/**
+ * Phase 33.2 — the human-first grouping the Packages hub renders in. The
+ * "Languages & IntelliSense" section is what a new user needs to RUN code
+ * (languages, compilers, and the Phase 31 IntelliSense cards), always open;
+ * everything else (editors, shells, cli/search, archives) folds into a
+ * "Unix tools" section that is collapsed by default.
+ */
+enum class PackageSection(val title: String) {
+    LANGUAGES_INTELLISENSE("Languages & IntelliSense"),
+    UNIX_TOOLS("Unix tools");
+
+    companion object {
+        /** Render order: the language section is the one the hub opens on. */
+        val ordered: List<PackageSection> = listOf(LANGUAGES_INTELLISENSE, UNIX_TOOLS)
+    }
+}
+
 data class PackageItem(
     val id: String,
     val name: String,
@@ -303,4 +320,16 @@ object PackageCatalog {
         QuickAction("pkg heal", "Repair alternatives DB", "pkg heal"),
         QuickAction("pkg repair", "Fix interrupted state", "pkg repair")
     )
+
+    /**
+     * Phase 33.2 — which hub section a package belongs to. Languages and
+     * compilers/build tools (including every `intellisense-*` card, which
+     * already carries [PackageCategory.LANGUAGES]) sit in the always-open
+     * "Languages & IntelliSense" section; the rest of the toolkit folds into
+     * the collapsed "Unix tools" section.
+     */
+    fun sectionOf(item: PackageItem): PackageSection = when (item.category) {
+        PackageCategory.LANGUAGES, PackageCategory.COMPILERS -> PackageSection.LANGUAGES_INTELLISENSE
+        else -> PackageSection.UNIX_TOOLS
+    }
 }

@@ -70,6 +70,7 @@ import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.IncomingImportBridge
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.WelcomeStarters
 import com.codeci.ide.ui.screens.EditorScreen
 import com.codeci.ide.ui.screens.FileManagerScreen
 import com.codeci.ide.ui.screens.LogsScreen
@@ -78,6 +79,7 @@ import com.codeci.ide.ui.screens.SettingsScreen
 import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.screens.WebPreviewScreen
+import com.codeci.ide.ui.screens.WelcomeScreen
 import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.NavBarPolicy
 import com.codeci.ide.ui.editor.lsp.LspManager
@@ -95,6 +97,7 @@ import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.FileNameUtils
 import androidx.activity.compose.LocalActivity
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -102,6 +105,7 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -551,8 +555,49 @@ fun MainApp() {
         Screen.Modules,
         Screen.Settings
     )
+    // Phase 33.1 — first-run welcome (three starter tiles). The flag is read
+    // ONCE at startup into local state, so a Settings reset ("show welcome
+    // again") only affects the NEXT launch instead of yanking the user out of
+    // Settings mid-session. Local state also makes a tile tap replace the
+    // welcome immediately, without waiting for the DataStore round-trip.
+    // null = still reading; false = show the welcome; true = normal shell.
+    val scope = rememberCoroutineScope()
+    val settingsManager = remember { SettingsManager(activity) }
+    var firstLaunchComplete by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(settingsManager) {
+        firstLaunchComplete = settingsManager.firstLaunchCompleteFlow.first()
+    }
+
+    if (firstLaunchComplete == false) {
+        WelcomeScreen(
+            onStarterChosen = { starter ->
+                scope.launch {
+                    val project = withContext(Dispatchers.IO) {
+                        WelcomeStarters.ensureProject(ProjectManager(activity), starter)
+                    }
+                    if (project != null) {
+                        // Save the launch state BEFORE flipping the flag so the
+                        // shell that replaces the welcome opens the starter file
+                        // (and the next launch opens it too — 33.1 exit 2).
+                        EditorLaunchState.save(activity, project.name, starter.entryFile)
+                        // Persist for the NEXT launch, then flip the local state
+                        // so the normal shell replaces the welcome right away.
+                        settingsManager.setFirstLaunchComplete(true)
+                        firstLaunchComplete = true
+                    }
+                }
+            }
+        )
+        return
+    }
+    if (firstLaunchComplete == null) {
+        // The flag is still reading: render nothing for the one frame so a
+        // returning user never flashes the welcome and a new user never
+        // flashes the hub.
+        return
+    }
     // "Open where I left off": the last project file wins as the start
-    // destination; first launch (or a stale entry) lands on the hub.
+    // destination; a fresh install with no last file lands on the hub.
     val launchState = remember { EditorLaunchState.load(activity) }
     val startDestination = remember(launchState) {
         launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }

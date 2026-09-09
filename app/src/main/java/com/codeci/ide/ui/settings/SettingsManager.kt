@@ -64,6 +64,12 @@ class SettingsManager(private val context: Context) {
         val COMPLETION_STRIP = booleanPreferencesKey("completion_strip")
         val COMPLETION_PANEL = booleanPreferencesKey("completion_panel")
         val COMPLETION_DEBOUNCE_MS = intPreferencesKey("completion_debounce_ms")
+
+        // Phase 33.1 — first-run welcome (three starter tiles). false = the
+        // welcome has not been dismissed yet (fresh install); the app sets it
+        // true when the user picks a starter, and Settings can clear it again
+        // ("show welcome again") so testers re-trigger the first-run flow.
+        val FIRST_LAUNCH_COMPLETE = booleanPreferencesKey("first_launch_complete")
     }
 
     /**
@@ -125,6 +131,10 @@ class SettingsManager(private val context: Context) {
     suspend fun setCompletionStrip(v: Boolean) { context.dataStore.edit { it[COMPLETION_STRIP] = v } }
     suspend fun setCompletionPanel(v: Boolean) { context.dataStore.edit { it[COMPLETION_PANEL] = v } }
     suspend fun setCompletionDebounceMs(v: Int) { context.dataStore.edit { it[COMPLETION_DEBOUNCE_MS] = v.coerceIn(60, 500) } }
+
+    // Phase 33.1 — first-run welcome flag (default false = welcome not yet seen).
+    val firstLaunchCompleteFlow: Flow<Boolean> = context.dataStore.data.map { it[FIRST_LAUNCH_COMPLETE] ?: false }
+    suspend fun setFirstLaunchComplete(v: Boolean) { context.dataStore.edit { it[FIRST_LAUNCH_COMPLETE] = v } }
 
     val fontSizeFlow: Flow<Float> = context.dataStore.data.map { it[FONT_SIZE] ?: 14f }
     val fontFamilyFlow: Flow<String> = context.dataStore.data.map { it[FONT_FAMILY] ?: "Monospace" }

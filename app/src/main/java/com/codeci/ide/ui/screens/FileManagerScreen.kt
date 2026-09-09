@@ -101,6 +101,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -112,11 +113,16 @@ import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubFilter
 import com.codeci.ide.ui.projects.HubIconToken
 import com.codeci.ide.ui.projects.ProjectInfo
+import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectTransfer
 import com.codeci.ide.ui.projects.ProjectTypes
 import com.codeci.ide.ui.projects.ProjectsHub
+import com.codeci.ide.ui.projects.WelcomeStarter
+import com.codeci.ide.ui.projects.WelcomeStarters
 import com.codeci.ide.ui.viewmodels.FileManagerViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Projects Hub (Phase 15) + private, hierarchical source tree (Phase 8). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -215,6 +221,21 @@ fun FileManagerScreen(
     fun selectProject(project: ProjectInfo) {
         viewModel.openProject(context, project.name)
         onProjectSelected(project)
+    }
+
+    // Phase 33.3 — the Projects empty state points at the three 33.1 starter
+    // tiles: tapping one create-or-opens the starter project and opens its
+    // entry file in the editor (idempotent — a second tap reuses it).
+    fun startFromStarter(starter: WelcomeStarter) {
+        scope.launch {
+            val project = withContext(Dispatchers.IO) {
+                WelcomeStarters.ensureProject(ProjectManager(context), starter)
+            }
+            if (project != null) {
+                onProjectSelected(project)
+                onProjectFileSelected(project.name, starter.entryFile)
+            }
+        }
     }
 
     Scaffold(
@@ -445,6 +466,7 @@ fun FileManagerScreen(
                         }
                     },
                     onCreate = { showHubSheet = true },
+                    onStarter = { startFromStarter(it) },
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
@@ -1035,10 +1057,11 @@ private fun ProjectsHubList(
     onFilterSelected: (ProjectHubFilter) -> Unit,
     onCardAction: (ProjectHubEntry, HubCardAction) -> Unit,
     onCreate: () -> Unit,
+    onStarter: (WelcomeStarter) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (entries.isEmpty()) {
-        EmptyProjectsState(onCreate)
+        EmptyProjectsState(onCreate, onStarter)
         return
     }
     val visible = ProjectsHub.filterEntries(entries, filter, searchQuery)
@@ -1634,23 +1657,45 @@ private fun formatBytes(size: Long): String = when {
 }
 
 @Composable
-private fun EmptyProjectsState(onCreate: () -> Unit) {
+private fun EmptyProjectsState(
+    onCreate: () -> Unit,
+    onStarter: (WelcomeStarter) -> Unit
+) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(Modifier.height(24.dp))
         Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.no_projects), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
-        Text(stringResource(R.string.no_projects_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Phase 33.3 — the empty hub points at the three starters (33.1), not
+        // a blank list.
+        Text(
+            text = "Start with C, Python, or a web page — or import an existing codebase.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(24.dp))
-        // Phase 15 — the empty state funnels into the same unified sheet.
-        Button(onClick = onCreate) { Text(stringResource(R.string.hub_create_first)) }
+        WelcomeStarters.starters.forEach { starter ->
+            StarterTile(
+                starter = starter,
+                onClick = { onStarter(starter) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+        Spacer(Modifier.height(12.dp))
+        // The full create / clone / import sheet is still one tap away.
+        TextButton(onClick = onCreate) { Text(stringResource(R.string.hub_create_first)) }
     }
 }
 
 /** Kept as a compatibility entry point for older callers/tests. */
 @Composable
-fun EmptyStateView(onCreateClick: () -> Unit) = EmptyProjectsState(onCreateClick)
+fun EmptyStateView(onCreateClick: () -> Unit) = EmptyProjectsState(onCreateClick, {})
