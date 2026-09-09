@@ -1,8 +1,10 @@
 # CodeC Phase 37.1 — LAN server + URL / QR UX
 
-**Status:** 🚧 IMPLEMENTED + ✅ CI GREEN (2026-09-09, owner: "Start Phase 37")
-on `arena/01a0872e-codec` — **a real device pass is still required** (owner's
-phone + a second device on the same Wi-Fi) ·
+**Status:** ✅ DEVICE-PASSED — implemented, CI green (2026-09-09, owner: "Start
+Phase 37"), then run on the owner's phone **and** a second device on the same
+Wi-Fi and reported **"All pass" (2026-09-10)** — all eight exit checks of the
+phase. That round asked for one more thing, now shipped: **the panel's links
+open in the phone's browser, not just copy** (see §Result, "Open in browser") ·
 **Cost:** `[client-only]` · **Effort:** M
 
 ## Symptom (owner)
@@ -32,6 +34,9 @@ the phone's own WebView.
 4. **Security** — LAN mode stays off by default, is shown clearly while on
    ("anyone on this Wi-Fi can open these files"), and the served root stays
    path-confined (the existing traversal guard). No port < 1024.
+5. **On-device viewing** (owner, after the device round: *"on same device
+   directly open in default browser not copy the link"*) — a row the phone can
+   open itself must be openable with one tap, not only copyable.
 
 ## Exit condition
 
@@ -44,6 +49,15 @@ the phone's own WebView.
 4. LAN OFF (default): the second device cannot connect (loopback only).
 PASS = all four.
 ```
+
+**Result (2026-09-10): ✅ PASS — "All pass"** on the owner's device round: the
+server started on the LAN address, both URLs and the QR were shown, the second
+device opened the LAN URL, the on-device loopback preview still worked, and
+with LAN off the peer could not connect. The second device reaching the phone
+also means client isolation on the router was not in play. The round's single
+follow-up (open in browser on the same device) is implemented here; the 37.2
+half of the checklist (keep-alive, Stop, re-run, port clash) passed in the same
+report.
 
 ## Tests (plan — see "Tests (as shipped)" at the end for what landed)
 
@@ -108,6 +122,27 @@ sites in `EditorScreen`) and under the Web Preview's address bar, where
 `showSwitch = !isLive` — a surface that does not own the server never renders
 a switch that could pretend to rebind it.
 
+**UI: "Open in browser" — the device round's one follow-up.** Each URL row in
+`ServerSharePanel` now carries a 🌐 button that hands the link to the phone's
+**default browser**: `On this device` opens the *loopback* URL (the phone opens
+its own server — no Wi-Fi, no router, nothing to share) and `Other devices`
+opens the *LAN* URL, the same string the QR encodes. Decisions live in the pure
+`ui/services/ShareActions.kt` (`browserUrl` / `isHttpUrl` / `label` /
+`fallbackMessage`); the Android half is exactly one function,
+`ui/services/OpenInBrowser.kt` (`ACTION_VIEW` + `FLAG_ACTIVITY_NEW_TASK`,
+`runCatching`, returns whether it launched), which is now the **only** browser
+launcher in the app — the terminal's link handler (`openTerminalUrl`) delegates
+to it, so there is one place that can open a URL and one place that decides what
+happens when none can. Two rules keep the affordance honest: the button exists
+**only** for a row that holds a real `http(s)://` URL (never a disabled or dead
+button, and never a bare `127.0.0.1:8100` handed to a browser where it would
+silently become a web search), and if the launch fails — no browser app, or one
+that cannot be started — the URL is copied and the toast says
+`No browser on this device — link copied: <url>`, so the link is never lost.
+Copy remains (tap-the-URL still copies in the dense Output Panel row), and
+loopback keeps 👁 for the in-app preview: the browser button is an extra door,
+not a replacement.
+
 **QR:** ZXing `core` **3.5.4** (`com.google.zxing:core`, Apache-2.0, zero
 transitive deps) — `QrCode.encode(text) -> QrModules(size, dark)` returns the
 raw module grid, `null` on failure, and Compose turns the grid into an ARGB
@@ -162,9 +197,17 @@ open-source-first directive, `docs/PHASE34_37_OSS_RESEARCH.md` §4).
 - `ProjectScaffoldTest` (+1: every server template defaults to loopback and
   honours the LAN env) and `ServerScaffoldE2ETest` (+2: the wildcard bind
   round-trip asserting `ready.bind == "0.0.0.0"`, and the clash message).
+- `ShareActionsTest` (6) — the browser button's policy: the loopback URL for
+  the on-device row and the LAN URL for the peer row, no endpoints → nothing to
+  open, only `http`/`https` may reach a browser (`file://` and `javascript:`
+  refused, a host:port string without a scheme refused), a malformed URL yields
+  no button, and the failure path keeps the link.
 - Local pre-validation (JVM harness over the real production files, not a
   replacement for CI): 96 cases green — 80 in the service set and 16 in the
-  scaffold set.
+  scaffold set; re-run after the browser-button follow-up: **86 in the service
+  set (80 + `ShareActionsTest` 6), 0 failed**. The Compose half of the change
+  (`ServerSharePanel`, the terminal launcher) has no unit-testable logic — it
+  is compile- and lint-checked by CI and was checked on the device.
 - **CI (`Build APK`, the executor of record): ✅ GREEN** — run `34393543928`
   (9 m 6 s) on tip `6d36a83`: `:app:assembleDebug` + `:app:testDebugUnitTest`
   (all 11 Phase-37 classes, incl. the real zxing decode round trip) +

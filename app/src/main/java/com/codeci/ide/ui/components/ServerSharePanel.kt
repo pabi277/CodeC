@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
@@ -44,7 +45,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.ui.services.OpenInBrowser
 import com.codeci.ide.ui.services.QrModules
+import com.codeci.ide.ui.services.ShareActions
+import com.codeci.ide.ui.services.ShareRow
 import com.codeci.ide.ui.services.ServerEndpoints
 import com.codeci.ide.ui.services.ServerEntry
 
@@ -88,6 +92,20 @@ fun ServerSharePanel(
     val urls = endpoints ?: return
     val notice = urls.notice()
 
+    /**
+     * Phase 37 follow-up (owner: "on same device directly open in default
+     * browser not copy the link"): the tap opens Chrome, and if the device has
+     * no browser to take the URL the link is **copied instead of lost** — the
+     * toast says so, because a button that silently does nothing is the thing
+     * users blame the app for.
+     */
+    val openInBrowser: (String) -> Unit = { target ->
+        if (!OpenInBrowser.open(context, target)) {
+            context.writeClip("CodeC URL", target)
+            Toast.makeText(context, ShareActions.fallbackMessage(target), Toast.LENGTH_LONG).show()
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -99,8 +117,11 @@ fun ServerSharePanel(
             label = "On this phone",
             url = urls.loopbackUrl,
             accent = Color(0xFF8A8A8A),
+            row = ShareRow.ON_PHONE,
+            showCopy = !dense,
             onCopy = { context.copyToClipboard("CodeC URL", urls.loopbackUrl) },
-            onOpen = { onOpenUrl(urls.loopbackUrl) }
+            onOpen = { onOpenUrl(urls.loopbackUrl) },
+            onBrowser = { url -> openInBrowser(url) }
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -131,16 +152,31 @@ fun ServerSharePanel(
                     )
             )
             if (urls.lanUrl != null) {
-                IconButton(
-                    onClick = { context.copyToClipboard("CodeC URL", urls.lanUrl) },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Default.ContentCopy,
-                        contentDescription = "Copy LAN URL",
-                        tint = Color.LightGray,
-                        modifier = Modifier.size(16.dp)
-                    )
+                ShareActions.browserUrl(urls, ShareRow.OTHER_DEVICES)?.let { lanUrl ->
+                    IconButton(
+                        onClick = { openInBrowser(lanUrl) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.OpenInBrowser,
+                            contentDescription = ShareActions.label(ShareRow.OTHER_DEVICES),
+                            tint = Color(0xFF66B2FF),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                if (!dense) {
+                    IconButton(
+                        onClick = { context.copyToClipboard("CodeC URL", urls.lanUrl) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = "Copy LAN URL",
+                            tint = Color.LightGray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
                 IconButton(
                     onClick = { showQr = !showQr },
@@ -206,8 +242,11 @@ private fun AddressRow(
     label: String,
     url: String,
     accent: Color,
+    row: ShareRow,
+    showCopy: Boolean,
     onCopy: () -> Unit,
-    onOpen: () -> Unit
+    onOpen: () -> Unit,
+    onBrowser: (String) -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -226,13 +265,28 @@ private fun AddressRow(
                 .weight(1f)
                 .clickable { onCopy() }
         )
-        IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
-            Icon(
-                Icons.Default.ContentCopy,
-                contentDescription = "Copy URL",
-                tint = Color.LightGray,
-                modifier = Modifier.size(16.dp)
-            )
+        if (showCopy) {
+            IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.ContentCopy,
+                    contentDescription = "Copy URL",
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        // The owner's new default expectation: the page, now, in a browser tab.
+        // Guarded by the same scheme rule the launcher uses, so a malformed
+        // address never turns the tap into a web search.
+        if (ShareActions.isHttpUrl(url)) {
+            IconButton(onClick = { onBrowser(url) }, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.OpenInBrowser,
+                    contentDescription = ShareActions.label(row),
+                    tint = Color(0xFF66B2FF),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
         IconButton(onClick = onOpen, modifier = Modifier.size(32.dp)) {
             Icon(
@@ -293,11 +347,13 @@ private fun QrModules.toBitmap(): Bitmap? {
 
 /** Clipboard write with the toast the rest of the app uses (Phase 11 pattern). */
 private fun Context.copyToClipboard(label: String, text: String) {
-    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-    if (clipboard == null) {
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
-        return
-    }
+    val written = writeClip(label, text)
+    Toast.makeText(this, if (written) "Copied $text" else text, Toast.LENGTH_SHORT).show()
+}
+
+/** Silent clipboard write — for when the toast belongs to a different story. */
+private fun Context.writeClip(label: String, text: String): Boolean {
+    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return false
     clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
-    Toast.makeText(this, "Copied $text", Toast.LENGTH_SHORT).show()
+    return true
 }

@@ -1,9 +1,9 @@
 # CodeC Phase 37.2 — Foreground keep-alive + port lifecycle
 
-**Status:** 🚧 IMPLEMENTED + ✅ CI GREEN (2026-09-09, owner: "Start Phase 37")
-on `arena/01a0872e-codec` (`Build APK` `34393543928`) — **a real device pass is
-still required** (the four exit checks below need the owner's phone + a second
-device) ·
+**Status:** ✅ DEVICE-PASSED — implemented and CI green (2026-09-09, owner:
+"Start Phase 37"; `Build APK` `34393543928`), and the four exit checks below
+were run on the owner's phone + a second device and reported **"All pass"
+(2026-09-10)** ·
 **Cost:** `[client-only]` · **Effort:** M
 
 ## Symptom (owner)
@@ -47,6 +47,13 @@ serving on which port".
 4. Two servers on the same port: the second shows the "port in use" message.
 PASS = all four.
 ```
+
+**Result (2026-09-10): ✅ PASS — "All pass"** in the owner's device round: the
+server kept answering after the app went to the background, survived the screen
+off, released its port on the notification's Stop and was immediately re-runnable,
+and a second server on the same port reported the clash instead of failing
+silently. No device-side fix came out of that round.
+
 
 ## Tests (plan — what landed is in §Result)
 

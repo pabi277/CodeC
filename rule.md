@@ -198,9 +198,9 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-09, Phase 37 implemented + CI green; device pass outstanding)
+## 9. State snapshot (2026-09-10, Phase 37 device-passed + open-in-browser follow-up; merge held)
 
-- **Phase 37 (Device as server / LAN) is 🚧 IMPLEMENTED** on
+- **Phase 37 (Device as server / LAN) is ✅ DEVICE-PASSED** on
   `arena/01a0872e-codec` (owner: "Start Phase 37"): 37.1 LAN bind + the two
   URLs + ZXing QR, 37.2 keep-alive on the existing `RunForegroundService` +
   `ServerRegistry`/`ServerHost` owning port and process truth. LAN is opt-in
@@ -215,9 +215,21 @@ Every update updates the docs **in the same commit**:
   the same wrong name — a shim only protects you if it mirrors reality), then
   two test-only bugs (`TemporaryFolder.newFolder` refuses a name already used in
   that test; a QR pixel offset is derived from zxing's scale-and-centre, not
-  guessed). **Device pass required** (owner's phone + a second device on the
-  same Wi-Fi, all eight exit checks), so no acceptance is claimed and **merge is
-  HELD for the owner's command**.
+  guessed). **Device pass: ✅ done (2026-09-10)** — the owner ran the eight exit
+  checks on a phone + a second device on the same Wi-Fi and reported **"All
+  pass"**; recorded as the owner's report, not as measured traces. That round's
+  one follow-up is shipped on the same branch: **🌐 opens each share row in the
+  phone's default browser** instead of only copying it (`ui/services/ShareActions.kt`
+  = the pure policy: the loopback URL on `On this device`, the LAN URL on
+  `Other devices`, a button only for a real `http(s)://` URL, per-row labels, the
+  failure message; `ui/services/OpenInBrowser.kt` = the app's **single**
+  `ACTION_VIEW` launcher, which the terminal's `openTerminalUrl` now delegates to;
+  if no browser can serve the URL the link is copied and the toast says so, so a
+  tap never loses it; copy and the in-app 👁 preview unchanged). `ShareActionsTest`
+  (6) → 68 host cases in ten classes; local service-set re-run 86/86.
+  **Merge is still HELD for the owner's command**, and CI on that follow-up
+  commit is its only executor of record (Compose is compile/lint-checked, not
+  host-unit-tested).
 - **Phase 35** is ✅ DEVICE-PASSED by the owner report on session branch
   `arena/01a086a0-codec` (`317b89a`; docs follow-up `88839cd`). Build APK CI
   `34367008019` and current-tip `34367770583` are GREEN. The owner supplied no

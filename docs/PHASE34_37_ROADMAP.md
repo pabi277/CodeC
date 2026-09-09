@@ -9,9 +9,11 @@
 into four phases (34–37). Phase 34 is merged; Phase 35 is device-passed by
 owner report on its session branch. Phase 36 is now DEVICE-PASSED and
 MERGED to `main` via PR #60; **Phase 37 is IMPLEMENTED on its session branch
-(`arena/01a0872e-codec`) and needs the owner's device pass.**
+(`arena/01a0872e-codec`) and ✅ DEVICE-PASSED by the owner's cross-device round
+("All pass", 2026-09-10), plus the one follow-up that round asked for (open the
+link in the phone's browser). Its merge is still held for the owner's command.**
 Each phase lands on `main` only through the §3 merge gate and finishes with
-the owner's cross-device test round.
+the owner's cross-device test round — which, for this series, is now complete.
 
 ## The owner's four row ideas → phases
 
@@ -111,8 +113,11 @@ implemented — `LanAddress` / `LanAddressProvider` / `ServerEndpoints` /
 `LanSharePolicy` / `ServerRegistry` / `ServerHost` / `ServerNotification` /
 `QrCode` (ZXing `core` 3.5.4, Apache-2.0) + `ServerSharePanel`; LAN is an
 opt-in switch that is OFF by default, loopback behaviour is unchanged, and the
-`RunForegroundService` was reused rather than duplicated. **Device pass
-required.**
+`RunForegroundService` was reused rather than duplicated. **Result
+(2026-09-10): ✅ DEVICE-PASSED** — the owner's two-device round returned "All
+pass" on all eight checks, and its one follow-up (🌐 open in the phone's default
+browser instead of only copying, `ShareActions` + `OpenInBrowser`,
+`ShareActionsTest` 6) shipped on the same branch.
 
 ---
 
@@ -130,12 +135,16 @@ required.**
   passed after fixes `da126cf`/`11fe8d7`; green CI is
   `34374983032`/`34375710614`. Merge was authorized by the owner; **PR #60 is
   MERGED to `main`** at `373a51e8f027bcf08fc948b8dc2058c3bda8c566`.
-- Phase 37 (Device as server / LAN) is **🚧 IMPLEMENTED** on
+- Phase 37 (Device as server / LAN) is **✅ DEVICE-PASSED** on
   `arena/01a0872e-codec` (owner: "Start Phase 37"): 37.1 LAN bind + the two
   URLs + QR, 37.2 keep-alive on the existing foreground service + the
-  `ServerRegistry` port lifecycle. 62 new host cases in 9 classes; local
-  pre-validation 96/96 over the real production files. **CI green + the
-  owner's two-device pass are still outstanding, so no acceptance is
-  claimed**; merge is held for the owner's command.
+  `ServerRegistry` port lifecycle. **CI green** (`Build APK` `34393543928` on
+  tip `6d36a83`, APK +355 660 B) **and the owner's two-device round "All
+  pass"** (2026-09-10, all eight exit checks). The round's follow-up — 🌐 opens
+  each row in the phone's browser — adds `ShareActions` / `OpenInBrowser` and
+  takes the phase to **68 new host cases in 10 classes**; local pre-validation
+  96/96 (service + scaffold) plus 86/86 on the post-follow-up service re-run.
+  **Merge is held for the owner's command**, and with it the series ends: the
+  owner's cross-device round for phases 34–37 is complete.
 - The owner starts each phase with "Start Phase N" and runs the cross-device
   round at the end.

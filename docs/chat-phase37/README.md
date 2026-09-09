@@ -1,15 +1,19 @@
 # CodeC Phase 37 — Device as server (localhost on the LAN)
 
-> **Status:** 🚧 IMPLEMENTED on `arena/01a0872e-codec` (2026-09-09, owner:
-> "Start Phase 37") — both parts, 62 new host-test cases in nine new test
-> classes, local pre-validation 96/96 green over the real production files.
-> **CI is ✅ GREEN** — `Build APK` run `34393543928` on tip `6d36a83`
-> (`:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug`; APK
-> 24 844 344 B, +355 660 B vs the `main` build), after two for-cause red
-> rounds recorded in `PART_37_1_LAN_SERVER.md` §Tests. **A real device pass is
-> still required** (owner's phone + a second device on the same Wi-Fi, all
-> eight exit checks); no device acceptance is claimed until the owner reports
-> it, and merge is held for the owner's command.
+> **Status:** ✅ DEVICE-PASSED on `arena/01a0872e-codec` — both parts were
+> implemented (2026-09-09, owner: "Start Phase 37"), went green in CI, and the
+> owner ran the eight exit checks on a phone + a second device on the same
+> Wi-Fi and reported **"All pass" (2026-09-10)**. That round added one
+> requirement, shipped here: **each share row opens in the phone's browser**
+> (pure `ui/services/ShareActions.kt` + the app's single launcher
+> `ui/services/OpenInBrowser.kt`; copy stays, and the link is copied
+> automatically if no browser can handle it) — `ShareActionsTest` (6) covers
+> the policy, so the phase now has **68 new host-test cases in ten classes**.
+> Implementation tips `6d36a83` (docs `3545268`); **CI is ✅ GREEN** —
+> `Build APK` run `34393543928` (`:app:assembleDebug` + `:app:testDebugUnitTest`
+> + `:app:lintDebug`; APK 24 844 344 B, +355 660 B vs the `main` build), after
+> two for-cause red rounds recorded in `PART_37_1_LAN_SERVER.md` §Tests.
+> **Merge is held for the owner's command.**
 > **Cost:** `[client-only]` · **Effort:** M/L · **Owner row:** *"Like spck or
 > Termux we can use a device as a server and run our files at localhost i want
 > to implement that feature"*
@@ -21,11 +25,15 @@
 
 | Part | Title | Cost | Effort | Status |
 |---|---|---|---|---|
-| [37.1](PART_37_1_LAN_SERVER.md) | LAN server + URL/QR | client-only | M | 🚧 implemented — device pass required |
-| [37.2](PART_37_2_KEEPALIVE_PORTS.md) | Keep-alive + ports | client-only | M | 🚧 implemented — device pass required |
+| [37.1](PART_37_1_LAN_SERVER.md) | LAN server + URL/QR | client-only | M | ✅ device-passed (+ open-in-browser follow-up) |
+| [37.2](PART_37_2_KEEPALIVE_PORTS.md) | Keep-alive + ports | client-only | M | ✅ device-passed |
 
 ## What exists today (evidence)
 
+- URLs already opened in the app's own WebView (`WebPreviewScreen`) or copied
+  to the clipboard; there was no way to hand a link to the phone's browser,
+  which is what the owner asked for after the device round
+  (*"on same device directly open in default browser not copy the link"*).
 - `WebPreviewServer` (Phase 9.1) serves the project folder over
   `http://127.0.0.1:<ephemeral>/` — **loopback only**, plain GET/HEAD,
   path-traversal-guarded. This is the static preview.
@@ -78,7 +86,10 @@ So the *on-device* preview is done; what is missing is exactly the owner's ask:
   Phase 24.2 service already navigates these; reuse it, don't add a second
   service type).
 - WebView vs external browser: the on-device preview keeps using 127.0.0.1;
-  the **LAN URL** is what peers use — never mix the two.
+  the **LAN URL** is what peers use — never mix the two automatically.
+- NAT loopback (hairpin): a phone opening its *own* LAN IP works on some
+  routers and not others, which is why the peer row's browser button is an
+  opt-in tap with a copy fallback, and the on-device row uses loopback.
 
 ## Result (2026-09-09) — what "the phone is a server" became
 
@@ -94,16 +105,23 @@ So the *on-device* preview is done; what is missing is exactly the owner's ask:
   ServerEndpoints.of(port, bind, lanAddress, lanShared)   ← the one place URLs exist
         │
   ServerSharePanel (Output Panel header+body, Web Preview address bar)
-     http://127.0.0.1:<port>  ·  http://<lan-ip>:<port>  ·  copy  ·  QR (ZXing core)
+     http://127.0.0.1:<port>  ·  http://<lan-ip>:<port>  ·  copy  ·  QR  ·  🌐 open
+     in the phone's browser (ShareActions → the one OpenInBrowser launcher)
         │
   RunForegroundService.startServing(...)  ← same service, same Stop, no second type
 ```
 
 Rules the implementation locked in (all host-tested):
 
-- **The phone never dials the LAN URL.** The WebView keeps loading
-  `127.0.0.1`; the LAN URL and the QR are peer-facing only — mixing them was
-  the spec's named risk and it cannot happen by construction.
+- **Nothing the phone does *automatically* dials the LAN URL.** The WebView
+  keeps loading `127.0.0.1`; the LAN URL and the QR are peer-facing — mixing
+  them was the spec's named risk and it cannot happen by construction. Since
+  the device round, one *explicit* tap does: 🌐 on the `Other devices` row
+  opens the LAN URL in the phone's browser, because the owner asked to be able
+  to see the link on the same device. That is user-initiated and falls back to
+  a copied link, so a router without NAT loopback costs one failed page, not a
+  silent wrong address. 🌐 on `On this device` opens the loopback URL, which is
+  the answer to "not copy the link" and needs no network at all.
 - **A LAN URL exists only if it can be opened**: LAN on, wildcard bind, and a
   peer-reachable IPv4. Otherwise the panel states the reason
   ("no Wi-Fi address" / "this server answers on the phone only").
