@@ -112,6 +112,7 @@ import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubFilter
 import com.codeci.ide.ui.projects.HubIconToken
+import com.codeci.ide.ui.components.FileIconView
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectTransfer
@@ -1574,11 +1575,11 @@ private fun TreeRow(
             .padding(start = (16 + node.depth * 24).dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = if (isDirectory) Icons.Default.Folder else iconForFile(node.file.name),
-            contentDescription = null,
-            tint = if (isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(28.dp)
+        FileIconView(
+            name = node.file.name,
+            isDirectory = isDirectory,
+            modifier = Modifier.size(28.dp),
+            tint = if (isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -1645,10 +1646,6 @@ private object WebFileName {
         name.endsWith(".html", true) || name.endsWith(".htm", true)
 }
 
-private fun iconForFile(name: String) = when {
-    name.endsWith(".c", true) || name.endsWith(".h", true) || name.endsWith(".cpp", true) -> Icons.Default.Code
-    else -> Icons.Default.InsertDriveFile
-}
 
 private fun formatBytes(size: Long): String = when {
     size < 1024 -> "$size B"

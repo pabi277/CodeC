@@ -60,6 +60,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
+import com.codeci.ide.ui.components.FileIconView
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.DiffOp
 import com.codeci.ide.ui.projects.GitFileChange
@@ -523,15 +524,12 @@ private fun GitHelpLink(url: String) {
 /** Typed icon per extension — Spck marks python/html files distinctly. */
 @Composable
 private fun GitFileIcon(name: String) {
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    when {
-        name.endsWith(".py", ignoreCase = true) ->
-            Icon(SpckIcons.PythonLogo, contentDescription = null, modifier = Modifier.size(24.dp))
-        WebFileSupport.isHtml(name) ->
-            Icon(SpckIcons.HtmlShield, contentDescription = null, modifier = Modifier.size(24.dp))
-        else ->
-            Icon(SpckIcons.FileLine, contentDescription = null, modifier = Modifier.size(24.dp), tint = muted)
-    }
+    FileIconView(
+        name = name,
+        isDirectory = false,
+        modifier = Modifier.size(24.dp),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 /**
