@@ -121,8 +121,8 @@ foreground keep-alive + port lifecycle. Spec:
   branch by owner report. The original acceptance and follow-up checks for
   progressive apt output, background survival, and session-switch redraws
   passed after fixes `da126cf`/`11fe8d7`; green CI is
-  `34374983032`/`34375710614`. Merge is authorized by the owner and pending
-  the PR gate.
+  `34374983032`/`34375710614`. Merge is authorized by the owner; PR #60 is
+  open and pending the final merge gate.
 - Phase 37 remains **📋 PLANNED** (researched + specced, not implemented).
 - The owner starts each phase with "Start Phase N" and runs the cross-device
   round at the end.

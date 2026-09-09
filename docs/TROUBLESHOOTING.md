@@ -937,7 +937,7 @@ numbers, and any failure here before changing the phase to DEVICE-PASSED.
 acceptance and the follow-up checks for the three reported terminal
 regressions passed after fixes `da126cf` and `11fe8d7` on
 `arena/01a086a0-codec`; Build APK CI `34374983032` and `34375710614` are GREEN.
-The owner authorized merge.
+The owner authorized merge; PR #60 is open and pending its final checks.
 
 ### 26.1 Cold-start measurement and state
 
