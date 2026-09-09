@@ -1,6 +1,6 @@
 # CodeC Phase 33.1 — First-run tiles
 
-**Status:** ✅ IMPLEMENTED + CI ✅ (`34346424311`) + DEVICE-PASSED (owner: "Device test pass", 2026-09-09) — merge held · **Cost:** `[client-only]` · **Effort:** M
+**Status:** ✅ IMPLEMENTED + CI ✅ (`34346424311`) + DEVICE-PASSED (owner: "Device test pass", 2026-09-09) — ✅ MERGED via PR #58 · **Cost:** `[client-only]` · **Effort:** M
 · **Target:** first-launch flag in DataStore, Projects empty / welcome
 
 ---

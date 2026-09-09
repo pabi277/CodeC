@@ -890,5 +890,5 @@ C-only.
 
 **Result (2026-09-09):** CI `34346424311` ✅ GREEN first try (tip `5db9e33`;
 assemble + unit tests + lint); **device round ✅ PASSED** (owner: "Device
-test pass"). Merge HELD on the owner's command while the UX/UI phases 34–37
-are queued.
+test pass"); **✅ MERGED to `main` via PR #58** (owner: "Ok Merge", merge
+commit `c4e9aebe`).
