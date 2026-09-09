@@ -76,5 +76,6 @@ PASS = all five.
 - Local pre-validation (Temurin 25 + kotlinc 2.4.10): passes over the real
   `ProjectPathUtils` + `ProjectRunTarget`; the JUnit source type-checks
   against a shim. **CI `34307172630` ✅ GREEN first try (tip `788ba46`,
-  5m22s)**. Device round pending.
+  5m22s)**; the web-project fix re-ran **CI `34309463999` ✅ GREEN first try
+  (tip `9a11382`, 5m58s)**. Device round pending.
 EOF

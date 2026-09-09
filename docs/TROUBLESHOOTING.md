@@ -719,3 +719,5 @@ the file name, what appeared, and whether CodeC Keys was ON or OFF.
 **Fix:** a pure `ProjectRunTarget.isRunnableSource(rel)` — a file with a run profile that is NOT the web preview (main.c/main.py/… run; index.html/style.css don't) — now gates both the editor's RUN dispatch and the ViewModel's web-project early-return, so RUN on a C file in an HTML project compiles/runs it in the panel. `runMainFile` no longer previews a non-HTML entry.
 
 **How to verify (device):** in an HTML project, open a `main.c` (or `main.py`) file → tap RUN ▶ → the chooser offers "Run index.html / Run main.c" → **Run main.c** compiles and runs it in the Output Panel (the open tab stays). Opening `index.html` and tapping RUN still previews it.
+
+**CI:** `34309463999` ✅ GREEN first try (tip `9a11382`, 5m58s).
