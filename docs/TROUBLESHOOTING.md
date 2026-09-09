@@ -819,3 +819,5 @@ For the owner's OWN practice projects, each `.c` file should carry its own
 **How to verify (device):** open `C Programming/01_…_conversion.c` → RUN ▶ →
 build fails and the hint line appears; then set the `.codec.json` above → RUN ▶
 compiles all files and runs the menu.
+
+**CI:** `34323755844` ✅ GREEN first try (tip `6a6d36b`).
