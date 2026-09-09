@@ -1,5 +1,7 @@
 package com.codeci.ide.ui.projects
 
+import com.codeci.ide.ui.services.LanguageRegistry
+import com.codeci.ide.ui.utils.WebFileSupport
 import java.io.File
 
 /**
@@ -35,5 +37,16 @@ object ProjectRunTarget {
     fun shouldAsk(root: File, entry: String, openFile: String?, openRunnable: Boolean): Boolean {
         if (!openRunnable) return false
         return chooserEntry(root, entry, openFile) != null
+    }
+
+    /**
+     * True when [rel] is a source file the run panel can compile/execute —
+     * a language with a run profile that is NOT the web preview. This is what
+     * lets a C/Python file inside a `web` project be RUN instead of always
+     * previewing `index.html` (Phase 33: "html project with c files").
+     */
+    fun isRunnableSource(rel: String?): Boolean {
+        if (rel == null) return false
+        return !WebFileSupport.isHtml(rel) && LanguageRegistry.forFile(rel) != null
     }
 }

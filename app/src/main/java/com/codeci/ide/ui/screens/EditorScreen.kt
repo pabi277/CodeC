@@ -505,8 +505,13 @@ fun EditorScreen(
             ?.takeIf { openRunnable }
     }
 
-    /** RUN the file that is open — the pre-33 behaviour, unchanged. */
-    fun runCurrentFile() {
+    /**
+     * RUN the file that is open, by ITS OWN type: HTML previews; a runnable
+     * source (C/Python/…) runs in the panel even inside a `web` project
+     * (Phase 33: "html project with c files"); otherwise a web project
+     * previews its entry and anything else reports "no run profile".
+     */
+    fun runOpenFile() {
         if (WebFileSupport.isHtml(currentFileName)) {
             val entry = previewEntryOrNull()
             if (entry != null) {
@@ -518,6 +523,8 @@ fun EditorScreen(
                     Toast.LENGTH_SHORT
                 ).show()
             }
+        } else if (ProjectRunTarget.isRunnableSource(currentFileName)) {
+            viewModel.runActiveFile(context)
         } else if (isWebProject) {
             val entry = webDefaultEntryOrNull()
             if (entry != null) {
@@ -536,7 +543,7 @@ fun EditorScreen(
 
     /** RUN the project's main/index file (HTML → preview, else compile/run). */
     fun runMainFile(entryRel: String) {
-        if (WebFileSupport.isHtml(entryRel) || isWebProject) {
+        if (WebFileSupport.isHtml(entryRel)) {
             onOpenPreview(currentProject, entryRel)
         } else {
             viewModel.runFile(context, entryRel)
@@ -686,7 +693,7 @@ fun EditorScreen(
             dismissButton = {
                 TextButton(onClick = {
                     runChooserMain = null
-                    runCurrentFile()
+                    runOpenFile()
                 }) {
                     Text(stringResource(R.string.run_chooser_run, currentFileName.substringAfterLast('/')))
                 }
@@ -1299,14 +1306,13 @@ fun EditorScreen(
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
                                 // Phase 33 — ask "main/index file or the open
-                                // file" when a project has both; otherwise the
-                                // pre-33 behaviour (preview HTML, preview the
-                                // web entry, or run the open file) is unchanged.
+                                // file" when a project has both; otherwise run
+                                // the open file by its own type (runOpenFile).
                                 val mainEntry = runChooserEntryOrNull()
                                 if (mainEntry != null) {
                                     runChooserMain = mainEntry
                                 } else {
-                                    runCurrentFile()
+                                    runOpenFile()
                                 }
                             }
                             .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),

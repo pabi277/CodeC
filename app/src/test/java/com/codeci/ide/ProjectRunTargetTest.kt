@@ -69,4 +69,25 @@ class ProjectRunTargetTest {
         // An entry outside the root never resolves.
         assertNull(ProjectRunTarget.chooserEntry(root, "../main.py", "src/helper.py"))
     }
+
+    @Test
+    fun `a runnable source inside a web project is recognised`() {
+        // Phase 33: an HTML project can hold C/Python files; RUN must execute
+        // them, not preview index.html.
+        assertTrue(ProjectRunTarget.isRunnableSource("main.c"))
+        assertTrue(ProjectRunTarget.isRunnableSource("src/tool.py"))
+        assertTrue(ProjectRunTarget.isRunnableSource("main.cpp"))
+        assertTrue(ProjectRunTarget.isRunnableSource("build.sh"))
+        // node is a run profile too, so a .js file is panel-runnable.
+        assertTrue(ProjectRunTarget.isRunnableSource("app.js"))
+    }
+
+    @Test
+    fun `web and non-source files are not panel-runnable`() {
+        assertFalse(ProjectRunTarget.isRunnableSource("index.html"))
+        assertFalse(ProjectRunTarget.isRunnableSource("about.htm"))
+        assertFalse(ProjectRunTarget.isRunnableSource("style.css"))
+        assertFalse(ProjectRunTarget.isRunnableSource("README.md"))
+        assertFalse(ProjectRunTarget.isRunnableSource(null))
+    }
 }

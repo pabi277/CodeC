@@ -20,6 +20,12 @@ Tapping outside cancels (runs nothing). When the open file IS the main file,
 or the project has no such file, or the open file is not itself runnable, RUN
 behaves exactly as before — no dialog.
 
+**A `web` project can still run its source files (owner bug, 2026-09-09):**
+an HTML project holding `main.c` / `main.py` now RUNs those files in the
+panel instead of always previewing `index.html`. `ProjectRunTarget.isRunnableSource`
+(a run profile that is not the web preview) gates both the editor's dispatch
+(`runOpenFile`) and the ViewModel's web-project early-return.
+
 ## 2. Exit condition
 
 ```text
@@ -29,7 +35,9 @@ behaves exactly as before — no dialog.
 2. Choose main.c → main.c compiles/runs; the open tab stays utils.c.
 3. Choose utils.c (or tap outside) → unchanged / nothing.
 4. Open main.c itself, tap RUN ▶ → no dialog, main.c runs directly.
-PASS = all four.
+5. In an HTML project holding main.c: RUN ▶ on main.c runs it in the
+   panel (never previews index.html); RUN ▶ on index.html previews.
+PASS = all five.
 ```
 
 ## 3. Implementation
@@ -59,9 +67,12 @@ PASS = all four.
 
 ## 4. Tests & validation
 
-- `ProjectRunTargetTest` (6 host cases): main vs open offered; open == main →
+- `ProjectRunTargetTest` (8 host cases): main vs open offered; open == main →
   no choice; missing main → null; non-runnable open → not asked; web
-  index.html vs about.html; entry confinement (traversal refused).
+  index.html vs about.html; entry confinement (traversal refused); a runnable
+  source inside a web project is recognised (main.c / tool.py / main.cpp /
+  build.sh / app.js); web and non-source files are not panel-runnable
+  (index.html / about.htm / style.css / README.md / null).
 - Local pre-validation (Temurin 25 + kotlinc 2.4.10): passes over the real
   `ProjectPathUtils` + `ProjectRunTarget`; the JUnit source type-checks
   against a shim. **CI `34307172630` ✅ GREEN first try (tip `788ba46`,

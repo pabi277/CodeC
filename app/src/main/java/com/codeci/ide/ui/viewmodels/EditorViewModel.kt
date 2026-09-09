@@ -47,6 +47,7 @@ import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.ProjectRunDetector
+import com.codeci.ide.ui.projects.ProjectRunTarget
 import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.services.CompilerSettings
@@ -2474,8 +2475,14 @@ class EditorViewModel : ViewModel() {
             viewModelScope.launch(Dispatchers.IO) {
                 runCatching { BuildArtifactIgnore.ensure(info.root) }
             }
-            // Web projects are handled by the preview flow, not the panel.
-            if (info.config.type.equals("web", ignoreCase = true)) return
+            // Web projects are handled by the preview flow, not the panel —
+            // except that a web project can still hold runnable source files
+            // (main.c, tool.py). RUN on one of those compiles/runs it in the
+            // panel instead of always previewing index.html (Phase 33:
+            // "html project with c files").
+            if (info.config.type.equals("web", ignoreCase = true) &&
+                !ProjectRunTarget.isRunnableSource(ProjectPathUtils.sanitizeRelativePath(sourceName))
+            ) return
             // Phase 14 — server presets: build once, then run as a long-lived
             // background server and auto-open Web Preview on the detected URL.
             if (info.config.isServerType()) {
