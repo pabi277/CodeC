@@ -839,3 +839,5 @@ covers the genuinely ambiguous cases.
 `C Programming/01_number_base_conversion.c`, tap RUN ▶ → the Output Panel runs
 program 01 ("Enter the number: …") and accepts scanf input. Opening
 `C Programming/main.c` still runs the menu.
+
+**CI:** `34330372322` ✅ GREEN first try (tip `36e4fda`).
