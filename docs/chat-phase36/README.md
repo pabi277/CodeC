@@ -1,6 +1,8 @@
 # CodeC Phase 36 — Terminal speed & feel
 
-> **Status:** 🚧 IMPLEMENTED on `arena/01a086a0-codec` ·
+> **Status:** 🚧 FOLLOW-UP DEVICE GATE on `arena/01a086a0-codec` ·
+> The original Phase 36 device acceptance passed by owner report; three
+> terminal regressions were then reported and fixed in `da126cf` and `11fe8d7`.
 > **Cost:** `[client-only]` · **Effort:** M · **Owner row:** *"Terminal is
 > good but Termux is very fast and my Terminal sometimes stays exited for a
 > while then start working and also sometimes behavior not user friendly"*
@@ -24,8 +26,13 @@ prompt marker through `PS1`, and each session owns an `OrderedReadinessQueue`.
 The userland warm-open path trusts its marker instead of probing/re-extracting;
 forced reinstall and compiler-setting changes invalidate preparation. Pure
 queue/cache-key/timing tests and readiness protocol tests are in CI run
-`34370970512` (GREEN). Owner device acceptance remains open; no PR/merge has
-been created.
+`34370970512` (GREEN). The original owner device acceptance passed, then
+reported three follow-ups: `friendly_apt()` buffered package output, terminal
+commands stopped after backgrounding, and session switching redrew duplicate
+prompts. The current fixes stream apt directly through the PTY, promote active
+sessions to `TerminalForegroundService` without the ten-minute wake-lock
+cutoff, and propagate/seed terminal geometry to avoid switch-only SIGWINCH
+redraws. Follow-up validation remains open; no PR/merge has been created.
 
 **Open-source-first reference** (`docs/PHASE34_37_OSS_RESEARCH.md` §3):
 **jackpal Android-Terminal-Emulator (Apache-2.0, archived)** is the canonical

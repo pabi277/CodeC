@@ -116,8 +116,11 @@ foreground keep-alive + port lifecycle. Spec:
   implementation tip `317b89a`, docs follow-up `88839cd`, and Build APK CI
   `34367008019`/`34367770583` are green. Exact device evidence was not
   supplied, so the record does not invent it.
-- Phase 36 (Terminal speed & feel) is **🚧 STARTED** on the session branch;
-  implementation and pure host tests are in progress from `docs/chat-phase36/`.
+- Phase 36 (Terminal speed & feel) is **🚧 FOLLOW-UP DEVICE GATE** on the
+  session branch. The original device acceptance passed by owner report;
+  progressive apt output, background survival, and session-switch redraw
+  fixes are in `da126cf`/`11fe8d7`, with green CI `34374983032`/`34375710614`.
+  Follow-up device validation remains open.
 - Phase 37 remains **📋 PLANNED** (researched + specced, not implemented).
 - The owner starts each phase with "Start Phase N" and runs the cross-device
   round at the end.

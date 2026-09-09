@@ -933,10 +933,10 @@ numbers, and any failure here before changing the phase to DEVICE-PASSED.
 
 ## 26. Phase 36 terminal speed & feel — device round (owner runbook, 2026-09-09)
 
-**Status: 🚧 STARTED; implementation and host tests are in progress on
-`arena/01a086a0-codec`.** Do not call this phase device-passed yet. The phase
-must be tested from the APK produced by its green Build APK CI run after the
-code lands.
+**Status: 🚧 FOLLOW-UP DEVICE GATE; the original Phase 36 acceptance passed by
+owner report, but the owner found three terminal regressions.** The fixes are
+on `arena/01a086a0-codec` in `da126cf` and `11fe8d7`; Build APK CI `34374983032`
+and `34375710614` are GREEN. Do not call the follow-up device gate passed yet.
 
 ### 26.1 Cold-start measurement and state
 
@@ -974,3 +974,33 @@ code lands.
 Record the exact APK/CI run, device matrix, startup measurements, and any
 failure here before changing Phase 36 to DEVICE-PASSED. No PR or merge is
 created until the owner explicitly commands it.
+
+### 26.3 Owner follow-up: streaming, background survival, and switching
+
+The original Phase 36 device acceptance passed, but its follow-up report
+isolated three regressions. Validate these separately from the cold-start
+recipe above:
+
+7. **Progressive package output.** Install a package that is not already in the
+   userland cache, or run a download large enough to last several seconds.
+   Apt/dpkg download and install progress must visibly update while the command
+   is running, including carriage-return progress rewrites; it must not appear
+   as one final batch. The fix removes `friendly_apt()` command substitution,
+   so the PTY and existing emulator/RenderPump remain the streaming path.
+8. **Background survival.** Start a long-running download or command, lock the
+   screen or background CodeC for longer than ten minutes, and return. The
+   command must still be running and its output/history must be intact. An
+   active session promotes `TerminalForegroundService` and uses the app's
+   process-priority contract; the old ten-minute wake-lock timeout is gone.
+   Close/stop every session and confirm the foreground notification and wake
+   lock are released rather than leaving CodeC alive indefinitely.
+9. **Session switching.** Open two sessions, produce distinct output in each,
+   and switch repeatedly while each is idle at `codec $` and while one is
+   running a command. There must be no injected blank lines, duplicate
+   `codec $` prompts, lost history, or cross-session command delivery. Terminal
+   geometry is propagated to every session and seeded before a new PTY starts,
+   avoiding a switch-only `SIGWINCH`/readline redraw. Explicit restart and
+   close behavior must still work.
+
+Record the exact APK/CI run, device matrix, and results for items 7–9 before
+changing this follow-up gate to DEVICE-PASSED.
