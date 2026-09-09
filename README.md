@@ -1,8 +1,12 @@
 # CodeC IDE
 
-A C programming IDE for Android. Write C in projects or as single files, tap **RUN**,
-or open the in-app terminal and type `cc file.c` — plus a package hub and an HTML
-preview served by a local loopback server.
+> **CodeC — write and run C, Python, JavaScript, and HTML on your phone. C works offline with no setup.**
+
+An Android IDE for your phone: a built-in C compiler (TCC) that works offline
+with no download, Python and Node runtimes you install from the **Packages**
+tab, an in-app VT/ANSI terminal with a signed `pkg` repository, and an HTML
+preview served by a local loopback server. Write code in projects or as single
+files and tap **RUN**.
 
 > **🔒 STANDING RULE (owner, 2026-08-26):** agents/session branches must
 > **not open a PR or merge anything without the owner's explicit command** in

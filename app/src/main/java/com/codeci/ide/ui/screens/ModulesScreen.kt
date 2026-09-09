@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -38,7 +40,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,8 +66,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codeci.ide.R
 import com.codeci.ide.ui.modules.PackageCatalog
-import com.codeci.ide.ui.modules.PackageCategory
 import com.codeci.ide.ui.modules.PackageItem
+import com.codeci.ide.ui.modules.PackageSection
 import com.codeci.ide.ui.modules.QuickAction
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -81,20 +82,20 @@ fun ModulesScreen(
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(PackageCategory.ALL) }
     var customCommand by remember { mutableStateOf("") }
+    // Phase 33.2 — the "Unix tools" section is collapsed by default; a tap on
+    // its header expands it. The language section is always open.
+    var unixToolsExpanded by remember { mutableStateOf(false) }
 
-    val filteredPackages = remember(searchQuery, selectedCategory) {
+    val filteredPackages = remember(searchQuery) {
         PackageCatalog.ALL_PACKAGES.filter { item ->
-            val matchesCategory = (selectedCategory == PackageCategory.ALL) || (item.category == selectedCategory)
             val query = searchQuery.trim().lowercase()
-            val matchesQuery = query.isEmpty() ||
+            query.isEmpty() ||
                 item.name.lowercase().contains(query) ||
                 item.id.lowercase().contains(query) ||
                 item.binary.lowercase().contains(query) ||
                 item.description.lowercase().contains(query) ||
                 item.installCommand.lowercase().contains(query)
-            matchesCategory && matchesQuery
         }
     }
 
@@ -131,6 +132,60 @@ fun ModulesScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
                 )
+            }
+
+            // PACKAGES — Phase 33.2: "Languages & IntelliSense" is always open
+            // and "Unix tools" is collapsed by default (tap the header to
+            // expand). A typed search flattens both sections so a name is
+            // found regardless of which section it lives in.
+            if (filteredPackages.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No packages match \"$searchQuery\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else if (searchQuery.isNotBlank()) {
+                items(filteredPackages, key = { it.id }) { item ->
+                    PackageCardRow(
+                        item = item,
+                        context = context,
+                        terminalViewModel = terminalViewModel,
+                        onNavigateToTerminal = onNavigateToTerminal,
+                    )
+                }
+            } else {
+                PackageSection.ordered.forEach { section ->
+                    val sectionItems = filteredPackages.filter { PackageCatalog.sectionOf(it) == section }
+                    if (sectionItems.isEmpty()) return@forEach
+                    val expanded = section == PackageSection.LANGUAGES_INTELLISENSE || unixToolsExpanded
+                    item(key = "section_${section.name}") {
+                        PackageSectionHeader(
+                            title = section.title,
+                            expanded = expanded,
+                            collapsible = section == PackageSection.UNIX_TOOLS,
+                            onToggle = { unixToolsExpanded = !unixToolsExpanded },
+                        )
+                    }
+                    if (expanded) {
+                        items(sectionItems, key = { it.id }) { item ->
+                            PackageCardRow(
+                                item = item,
+                                context = context,
+                                terminalViewModel = terminalViewModel,
+                                onNavigateToTerminal = onNavigateToTerminal,
+                            )
+                        }
+                    }
+                }
             }
 
             // QUICK SYSTEM ACTIONS
@@ -218,79 +273,82 @@ fun ModulesScreen(
                 }
             }
 
-            // CATEGORY FILTER CHIPS
-            item {
-                Text(
-                    text = "Package Categories",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PackageCategory.values().forEach { category ->
-                        FilterChip(
-                            selected = (selectedCategory == category),
-                            onClick = { selectedCategory = category },
-                            label = { Text(category.title) }
-                        )
-                    }
-                }
-            }
-
-            // PACKAGES LIST
-            if (filteredPackages.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No packages match \"$searchQuery\"",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else {
-                items(filteredPackages, key = { it.id }) { item ->
-                    val isInstalled = remember(item.id) { checkIsInstalled(context, item) }
-                    PackageItemCard(
-                        item = item,
-                        isInstalled = isInstalled,
-                        onInstall = {
-                            Toast.makeText(context, "Installing ${item.name}…", Toast.LENGTH_SHORT).show()
-                            terminalViewModel.sendCommand(item.installCommand)
-                            onNavigateToTerminal()
-                        },
-                        onRun = {
-                            Toast.makeText(context, "Launching ${item.name}…", Toast.LENGTH_SHORT).show()
-                            terminalViewModel.sendCommand(item.runCommand)
-                            onNavigateToTerminal()
-                        },
-                        onUninstall = {
-                            Toast.makeText(context, "Uninstalling ${item.name}…", Toast.LENGTH_SHORT).show()
-                            terminalViewModel.sendCommand("pkg uninstall -y ${item.id}")
-                            onNavigateToTerminal()
-                        },
-                        onCopyCommand = { cmd ->
-                            copyToClipboard(context, cmd)
-                            Toast.makeText(context, "Copied: $cmd", Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                }
-            }
-
             item {
                 Spacer(modifier = Modifier.height(32.dp))
             }
+        }
+    }
+}
+
+/**
+ * One package card inside a hub section, with the installed check and the
+ * terminal hand-off wired. Shared by the sectioned list and the search-flat
+ * list so both behave identically (Phase 33.2).
+ */
+@Composable
+private fun PackageCardRow(
+    item: PackageItem,
+    context: Context,
+    terminalViewModel: TerminalViewModel,
+    onNavigateToTerminal: () -> Unit,
+) {
+    val isInstalled = remember(item.id) { checkIsInstalled(context, item) }
+    PackageItemCard(
+        item = item,
+        isInstalled = isInstalled,
+        onInstall = {
+            Toast.makeText(context, "Installing ${item.name}…", Toast.LENGTH_SHORT).show()
+            terminalViewModel.sendCommand(item.installCommand)
+            onNavigateToTerminal()
+        },
+        onRun = {
+            Toast.makeText(context, "Launching ${item.name}…", Toast.LENGTH_SHORT).show()
+            terminalViewModel.sendCommand(item.runCommand)
+            onNavigateToTerminal()
+        },
+        onUninstall = {
+            Toast.makeText(context, "Uninstalling ${item.name}…", Toast.LENGTH_SHORT).show()
+            terminalViewModel.sendCommand("pkg uninstall -y ${item.id}")
+            onNavigateToTerminal()
+        },
+        onCopyCommand = { cmd ->
+            copyToClipboard(context, cmd)
+            Toast.makeText(context, "Copied: $cmd", Toast.LENGTH_SHORT).show()
+        },
+    )
+}
+
+/**
+ * Phase 33.2 — a hub section header. The language section is a plain label;
+ * the "Unix tools" section carries a collapse/expand chevron.
+ */
+@Composable
+private fun PackageSectionHeader(
+    title: String,
+    expanded: Boolean,
+    collapsible: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (collapsible) Modifier.clickable(onClick = onToggle) else Modifier)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        if (collapsible) {
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

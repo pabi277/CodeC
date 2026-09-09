@@ -887,7 +887,24 @@ fun SettingsScreen(
 
             // ABOUT
             SettingsSectionHeader("About")
-            
+
+            // Phase 33.3 — identity copy: CodeC is a multi-language IDE, not
+            // C-only. Kept honest (C is the offline one).
+            SettingsItem(
+                title = "CodeC",
+                subtitle = "Write and run C, Python, JavaScript, and HTML on your phone. C works offline with no setup."
+            )
+            // Phase 33.1 — a "show welcome once" reset for testers (and for
+            // anyone who wants to re-run the first-launch flow).
+            SettingsAction(
+                title = "Show the welcome screen again",
+                actionText = "SHOW",
+                onClick = {
+                    scope.launch { settingsManager.setFirstLaunchComplete(false) }
+                    Toast.makeText(context, "The welcome screen will show on the next launch", Toast.LENGTH_SHORT).show()
+                }
+            )
+
             var versionTaps by remember { mutableStateOf(0) }
             val devModeUnlocked by settingsManager.devModeUnlockedFlow.collectAsState(initial = false)
             val showFilePaths by settingsManager.showFilePathsFlow.collectAsState(initial = false)

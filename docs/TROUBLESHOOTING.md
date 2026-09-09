@@ -855,3 +855,40 @@ The owner's practice-project model, end to end, on the Code-with-C repo:
 
 **Result:** all steps behave as the owner described; the owner commanded the
 merge ("Then merge") → **✅ MERGED to `main` via PR #57**.
+
+## 24. Phase 33.1–33.3 first-hour UX — device round (owner runbook, 2026-09-09)
+
+**Goal:** a fresh install opens on three starter tiles, the Packages hub opens
+on Languages, and the app no longer calls itself a C-only IDE.
+
+1. **Fresh install** (uninstall + reinstall, or Settings → About → "Show the
+   welcome screen again" → restart). The app opens on the **welcome**: three
+   tiles only — **C / Python / HTML** — with no bottom tab bar.
+2. **Tap C.** A "C Starter" project with `main.c` opens in the editor; **RUN ▶**
+   compiles with the built-in TCC and prints `Hello, CodeC!` — **no Packages
+   speech, no install dialog**.
+3. **Second launch.** Kill and reopen the app — it opens the `main.c` you left
+   in (last file), **no tiles**.
+4. **Python gate.** Settings → About → "Show the welcome screen again" → tap
+   **Python**. `main.py` opens; RUN ▶ shows the install sheet **only if
+   `python` is not installed** (with python installed it just runs).
+5. **Packages hub.** Open the **Packages** tab. It opens on a
+   **Languages & IntelliSense** section (python, nodejs, clang, TCC, the
+   `intellisense-*` cards); **Unix tools** is a collapsed header that expands
+   on tap; INSTALL python still streams `pkg install -y python` in the
+   Terminal.
+6. **Identity.** Settings → About shows "CodeC — write and run C, Python,
+   JavaScript, and HTML on your phone. C works offline with no setup."
+   (not C-only). Delete every project so the Projects list is empty — the
+   empty state shows the three starter tiles, and tapping one creates the
+   project and opens its file.
+
+**PASS:** steps 1–6 all hold. **FAIL:** the welcome does not show on a fresh
+install, RUN ▶ on the C tile asks for packages, the second launch shows tiles
+again, the Packages hub opens on Unix tools, or About/README still read
+C-only.
+
+**Result (2026-09-09):** CI `34346424311` ✅ GREEN first try (tip `5db9e33`;
+assemble + unit tests + lint); **device round ✅ PASSED** (owner: "Device
+test pass"). Merge HELD on the owner's command while the UX/UI phases 34–37
+are queued.

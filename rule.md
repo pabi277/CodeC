@@ -28,6 +28,17 @@ owner reports one, the agent:
 There is no "start phase N" ceremony anymore; the owner just states the bug or
 the change they want.
 
+> **Owner update (2026-09-09):** the owner resumed **phased feature work** —
+> *"From now on i will work on the user experience improvement and the ui so
+> research throughly and create the phases properly after all that i will go
+> for various devices use test."* The four row ideas the owner handed over
+> are researched and specced as **phases 34–37** (`docs/PHASE34_37_ROADMAP.md`
+> + `docs/chat-phase34/…37/`): 34 official file icons, 35 editor typing feel,
+> 36 terminal speed & UX, 37 device-as-server LAN. The "Start Phase N" command
+> is therefore **reinstated for 34–37**; the owner ends the series with a
+> cross-device round. The §3 merge gate is unchanged (no PR/merge without the
+> owner's command).
+
 ## 2. Branching & push discipline (law)
 
 1. Work **only** on the current session branch (`arena/*`). Never push to
