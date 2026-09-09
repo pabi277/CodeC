@@ -1,6 +1,6 @@
 # CodeC Phase 33.2 — Packages hub for humans
 
-**Status:** 🚧 IMPLEMENTED (CI ✅ `34346424311`, tip `5db9e33`; device round pending) · **Cost:** `[client-only]` · **Effort:** S
+**Status:** ✅ IMPLEMENTED + CI ✅ (`34346424311`) + DEVICE-PASSED (owner: "Device test pass", 2026-09-09) — merge held · **Cost:** `[client-only]` · **Effort:** S
 · **Target:** `ModuleCatalog` / `ModulesScreen`
 
 ---
