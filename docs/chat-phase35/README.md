@@ -1,58 +1,70 @@
 # CodeC Phase 35 — Editor typing feel
 
-> **Status:** 📋 PLANNED (researched + specced, not implemented) ·
-> **Cost:** `[client-only]` · **Effort:** M · **Owner row:** *"The editor is
-> good but some option like always keyboard stay open, the typing is not smoth
-> like normal keyboard, the cursor is very bouci while typing, and open a file
-> initialization the corsure to the top of the file i want it to be fully
-> remove if user clicks anywhere the cursor than start working"*
+> **Status:** 🚧 IMPLEMENTED on the Phase 35 session branch; CI + owner
+> cross-device round pending · **Cost:** `[client-only]` · **Effort:** M ·
+> **Owner row:** *"The editor is good but some option like always keyboard
+> stay open, the typing is not smoth like normal keyboard, the cursor is very
+> bouci while typing, and open a file initialization the corsure to the top i
+> want it to be fully remove if user clicks anywhere the cursor than start
+> working"*
 
 Four sub-points → four parts, one shared surface (`EditorScreen` +
 `SoraEditorHost` + `EditorViewModel` + `CodecKeyboard`):
 
 ```text
   35.1  "always keyboard stay open"      → a Settings toggle, no silent dismiss
-  35.2  typing not smooth                → measure keystroke p95, cut main-thread work
+  35.2  typing not smooth                → coalesce decoration work off main
   35.3  cursor very bouncy while typing  → solid caret while typing (no re-animation)
-  35.4  caret initialized to top of file → NO caret on open until the first tap
+  35.4  caret initialized to top of file → NO caret on open until first tap
 ```
 
 | Part | Title | Cost | Effort | Status |
 |---|---|---|---|---|
-| [35.1](PART_35_1_KEYBOARD_STAY.md) | Always keyboard stay open | client-only | S | 📋 planned |
-| [35.2](PART_35_2_SMOOTH_TYPING.md) | Smooth typing | client-only | M | 📋 planned |
-| [35.3](PART_35_3_CURSOR_BOUNCE.md) | Non-bouncy cursor | client-only | S | 📋 planned |
-| [35.4](PART_35_4_NO_CARET_ON_OPEN.md) | No caret until first tap | client-only | S | 📋 planned |
+| [35.1](PART_35_1_KEYBOARD_STAY.md) | Always keyboard stay open | client-only | S | 🚧 implemented |
+| [35.2](PART_35_2_SMOOTH_TYPING.md) | Smooth typing | client-only | M | 🚧 implemented; measurement pending |
+| [35.3](PART_35_3_CURSOR_BOUNCE.md) | Non-bouncy cursor | client-only | S | 🚧 implemented |
+| [35.4](PART_35_4_NO_CARET_ON_OPEN.md) | No caret until first tap | client-only | S | 🚧 implemented |
 
 **Open-source-first reference** (`docs/PHASE34_37_OSS_RESEARCH.md` §2): sora-editor
 is an **LGPL-2.1 binary dependency** — its cursor/selection config is read from
-its public API (exact method verified at implementation), never pasted; jackpal's
-Apache-2.0 terminal documents the "solid caret + don't re-animate per keystroke"
-behavior target; Gboard/SwiftKey are behavior references only. **No new
-dependency** — this phase is the in-tree typing path + sora's cursor config.
+its public API (verified against the resolved 0.24.6 surface), never pasted;
+the cursor target is the solid-caret/no-per-key-reanimation behavior used by
+mobile terminals and editors. **No new dependency** — this phase is the
+in-tree typing path + sora's public cursor config.
 
-## The typing path today (evidence — read from source)
+## Implementation record
 
-CodeC Keys cap press → `CodecKeyboard` `commitKey(key)` →
-`EditorViewModel.applyEditorKey` → `EditorKeySet.apply` (allocates a new
-`TextFieldValue`) → `updateCode` → `SmartTyping.transform`, `undo.recordChange`,
-dirty compute, `scheduleAutoSave()`, `scheduleDecorationRefresh()` →
-`_codeText` StateFlow → `SoraEditorHost` AndroidView update → `ed.setText`
-(text changed) **or** `ed.setSelection` (caret moved) → sora `ContentListener`
-echoes back into `updateCode`. Every keystroke therefore:
-- allocates a full-buffer `TextFieldValue`,
-- recomputes decorations (`refreshDecorationsNow`: line/column scan +
-  `BracketMatcher` + find highlights) after a 20 ms debounce,
-- replays the caret into sora (`setSelection`), which restarts sora's cursor
-  blink phase → the **"bouncy"** caret.
+- `SettingsManager.EDITOR_KEEP_KEYS_OPEN` stores `editor.keep_keys_open` with
+  a default of `true`; `KeysStayPolicy` keeps the keyboard mounted while the
+  editor session is focused, preserves the explicit toolbar collapse, and
+  hands the system IME back for interactive stdin.
+- `CaretPlacementPolicy` and the VM's per-open `caretPlaced` flow keep a newly
+  opened file quiet. `SoraEditorHost` clears focus, skips selection replay and
+  scroll-to-caret until a real tap/focus event; a CodeC Keys cap places an
+  unplaced edit at the end of line one.
+- `SoraEditorHost` disables sora cursor animation, uses
+  `setCursorBlinkPeriod(0)` during the active typing window, and restores a
+  normal blink period after `CaretBlinkPolicy.REARM_AFTER_MS`.
+- `EditorDecorationSnapshot` computes line/current-line/bracket state off the
+  main dispatcher after the 80 ms debounce. `DecorationDirtyPolicy` prevents
+  find matching from being repeated for every typed character. Stale snapshots
+  are discarded and VM→sora selection replay is deduplicated.
+- Pure tests cover key visibility, caret placement, blink timing, decoration
+  invalidation, and the extracted snapshot math. The complete build/test gate
+  is CI; **Build APK run `34367008019` is GREEN** on commit `317b89a`. This
+  sandbox has no JDK.
 
-This is not a guess to be fixed blind: **35.2 ships a measurement card first**
-and each part fixes the specific number it finds. See the part docs.
+## Measurement gate
+
+See [`MEASUREMENT_CARD.md`](MEASUREMENT_CARD.md). The prior Phase 28.1 bench
+reference is 14.5 ms keystroke p95 on 5,000 lines; Phase 35 does not claim a
+new p95 until the owner runs the 2,000/10,000-line card on the slowest phone.
 
 ## Cross-device risks to watch
 
 - OEM IME composing spans (Gboard/SwiftKey) — the ghost already documented
   this; the keyboard-stay and smoothness work must not regress composition.
-- Low-end SoCs: a 14.5 ms p95 measured on a bench device is not the p95 on
-  the owner's slowest phone — the measurement card must run there.
-- `WindowInsets.ime` animation differs across OEMs (the keys row rides it).
+- Low-end SoCs: the prior 14.5 ms p95 is not a result for the owner’s slowest
+  phone — complete the measurement card there.
+- Screen size / density and `WindowInsets.ime` animation differences — the
+  keys row must not disappear during an IME transition.

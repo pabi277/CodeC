@@ -1,6 +1,6 @@
 # CodeC Phase 35.2 — Smooth typing
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M
+**Status:** 🚧 IMPLEMENTED; device measurement pending · **Cost:** `[client-only]` · **Effort:** M
 
 ## Symptom (owner)
 
@@ -12,8 +12,9 @@ smooth than the system keyboard.
 One cap press runs, on the **main thread**: `EditorKeySet.apply` (new
 `TextFieldValue`) → `SmartTyping.transform` → `undo.recordChange` +
 `syncUndoFlags` → dirty compute → `scheduleAutoSave()` →
-`scheduleDecorationRefresh()` (a 20 ms-debounced `refreshDecorationsNow`:
-linear line/column scan, `BracketMatcher`, optional `runFind`) → `_codeText`
+`scheduleDecorationRefresh()` (an 80 ms-coalesced snapshot; line/column scan
+and `BracketMatcher` now run on `Dispatchers.Default`, while find matching is
+keyed to query/visibility/options instead of rerunning for every key) → `_codeText`
 emit → `SoraEditorHost` `ed.setText` **or** `ed.setSelection` →
 `ContentListener` echo → `updateCode` again. The Phase 28.1 bench certified
 14.5 ms p95 on a 5 000-line file, but that was a **bench device**, and the
@@ -61,4 +62,6 @@ PASS = all three.
 
 - Any pure logic extracted (e.g. a `DecorationDirtyPolicy`) gets a host test.
 - The bench module gains (or re-runs) the keystroke-p95 harness so CI keeps
-  the number honest — CI is the only executor of record for the bench.
+  the number honest — **Build APK CI `34367008019` is GREEN** and is the
+  executor of record for the build/test path. The owner device measurement is
+  still required for the phase exit condition.

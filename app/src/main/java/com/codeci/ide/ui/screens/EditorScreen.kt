@@ -131,6 +131,7 @@ import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.EditorDiagnostic
+import com.codeci.ide.ui.editor.KeysStayPolicy
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
 import com.codeci.ide.ui.keyboard.CodecKeyboard
@@ -246,6 +247,7 @@ fun EditorScreen(
     val canRedo by viewModel.canRedo.collectAsState()
     val findState by viewModel.find.collectAsState()
     val diagnostics by viewModel.diagnostics.collectAsState()
+    val caretPlaced by viewModel.caretPlaced.collectAsState()
     val cursorPos by viewModel.cursorPos.collectAsState()
     val isFormatting by viewModel.formatting.collectAsState()
     val openTabs by viewModel.openTabs.collectAsState()
@@ -268,6 +270,7 @@ fun EditorScreen(
     // 22.x system-IME experience returns intact), haptics, row height, and
     // the dev-build layout JSON override.
     val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = true)
+    val keepKeysOpen by settingsManager.editorKeepKeysOpenFlow.collectAsState(initial = true)
     val codecKeysHaptics by settingsManager.codecKeysHapticsFlow.collectAsState(initial = true)
     val codecKeysHeight by settingsManager.codecKeysHeightFlow.collectAsState(initial = 1f)
     val codecKeysLayoutJson by settingsManager.codecKeysLayoutJsonFlow.collectAsState(initial = "")
@@ -352,6 +355,15 @@ fun EditorScreen(
     // Phase 17 — Switch Branch, opened from the drawer footer.
     var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
     var keysRowVisible by remember { mutableStateOf(true) }
+    // The screen remains the focused editor session while the output panel or
+    // a transient IME state changes. Only the explicit toolbar collapse and
+    // interactive stdin are allowed to remove the keyboard.
+    val keysVisible = KeysStayPolicy.isVisible(
+        keepOpen = keepKeysOpen,
+        editorFocused = true,
+        waitingForInput = outputState.waitingForInput,
+        explicitlyCollapsed = !keysRowVisible
+    )
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
     // Phase 33 — non-null while the RUN ▶ chooser is up (the user's default file).
@@ -386,7 +398,7 @@ fun EditorScreen(
     // hard-keyboard rule), and an interactive run waiting for stdin hands
     // the IME straight back (23.2 law). Leaving the screen always restores
     // the system keyboard: no other surface can inherit a dead IME.
-    val codecKeysUp = codecKeysOn && !outputState.waitingForInput
+    val codecKeysUp = codecKeysOn && keysVisible
     LaunchedEffect(codecKeysUp) { soraEditor.setSoftKeyboardEnabled(!codecKeysUp) }
     DisposableEffect(soraEditor) {
         onDispose { soraEditor.setSoftKeyboardEnabled(true) }
@@ -415,11 +427,11 @@ fun EditorScreen(
     }
 
     val stripContext = remember(
-        keysRowVisible, outputState.waitingForInput, completionSettings,
+        keysVisible, outputState.waitingForInput, completionSettings,
         completionModel, language, codeText.selection, codeText.text.length
     ) {
         SuggestionStripModel.stripContextFor(
-            stripVisible = keysRowVisible,
+            stripVisible = keysVisible,
             runWaiting = outputState.waitingForInput,
             settings = completionSettings,
             items = completionModel.items,
@@ -1558,7 +1570,7 @@ fun EditorScreen(
             // very bottom of the column instead, so with `imePadding()` above
             // it lands DIRECTLY on top of the keyboard (Termux's extra-keys
             // behavior) rather than being stranded mid-screen.
-            if (keysRowVisible && !imeVisible) {
+            if (keysVisible && !imeVisible) {
                 BottomStrip(
                     suppressKeysVariant = codecKeysUp,
                     context = stripContext,
@@ -1583,7 +1595,7 @@ fun EditorScreen(
             // whole extra line of code kept visible above the keyboard. It
             // returns the moment the keyboard closes. (Phase 28.2: CodeC Keys
             // yields the row the same way — it is the keyboard now.)
-            if (!imeVisible && !codecKeysUp) {
+            if (caretPlaced && !imeVisible && !codecKeysUp) {
                 EditorStatusBar(
                     line = cursorPos.line,
                     column = cursorPos.column,
@@ -1663,7 +1675,7 @@ fun EditorScreen(
             // soft keyboard. Same composable, same key set, same actions as
             // the docked row above — only the position changes, so nothing
             // about find/replace, autocomplete or the status bar is affected.
-            if (keysRowVisible && imeVisible) {
+            if (keysVisible && imeVisible) {
                 BottomStrip(
                     suppressKeysVariant = codecKeysUp,
                     context = stripContext,

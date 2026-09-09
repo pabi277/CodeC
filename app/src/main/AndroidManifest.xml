@@ -104,6 +104,12 @@
             android:name=".ui.services.RunForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Phase 36: keep active terminal PTYs alive when the activity is backgrounded. -->
+        <service
+            android:name=".ui.services.TerminalForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>

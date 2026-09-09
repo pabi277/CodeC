@@ -892,3 +892,116 @@ C-only.
 assemble + unit tests + lint); **device round ✅ PASSED** (owner: "Device
 test pass"). Merge HELD on the owner's command while the UX/UI phases 34–37
 are queued.
+
+## 25. Phase 35 editor typing feel — device round (owner runbook, 2026-09-09)
+
+**Status: ✅ DEVICE-PASSED by owner report ("Device test pass").** The
+implementation tip is `317b89a`, documentation follow-up `88839cd`, and Build
+APK CI `34367008019` plus current-tip CI `34367770583` are GREEN. The owner did
+not provide device/model/measurement details; this record intentionally does
+not invent them. The checklist below remains the reproducible recipe for a
+future regression round.
+
+Install the CI APK from the Phase 35 build, then run this matrix on the
+slowest available phone and at least one other Android device:
+
+1. Settings → CodeC Keys → leave **Keep the code keyboard open while editing**
+   ON. Open a long file, type a burst, switch to Output and back, and confirm
+   CodeC Keys stays mounted without re-tapping. Collapse it from ⋮, confirm the
+   explicit collapse wins, then leave and re-enter the editor and confirm the
+   ON default returns. Turn the setting OFF and confirm the system IME is
+   usable again.
+2. Run an interactive program. While it waits for stdin, confirm the system
+   IME appears; after the run ends, confirm CodeC Keys returns when the setting
+   is ON.
+3. Type a burst with the system IME and with CodeC Keys. The caret should stay
+   solid and glide with the text, without a per-key jump; after about 0.5 s of
+   idle it should resume its normal blink. Tap/drag to select text and confirm
+   selection handles and editing still work.
+4. Open a file without tapping the code area: confirm there is no insertion
+   caret, no forced scroll-to-caret, and no `Ln 1, Col 1` status bar. Tap near
+   the middle of a line and type; the caret must appear at that exact tap.
+   Press a CodeC Keys cap before tapping and confirm it starts at the end of
+   line one and the edit is retained.
+5. Complete the measurement card in `docs/chat-phase35/MEASUREMENT_CARD.md`
+   at small, 2,000-line and 10,000-line files with p50/p95/p99. Also verify
+   undo/redo, `()` pairing, `{` + Enter splitting, ghost/chip acceptance,
+   Gboard/Samsung/SwiftKey composing text, and tab switching.
+
+Record Android version, OEM, keyboard, density/screen size, file sizes, the
+numbers, and any failure here before changing the phase to DEVICE-PASSED.
+
+## 26. Phase 36 terminal speed & feel — device round (owner runbook, 2026-09-09)
+
+**Status: ✅ DEVICE-PASSED by owner report.** The original Phase 36
+acceptance and the follow-up checks for the three reported terminal
+regressions passed after fixes `da126cf` and `11fe8d7` on
+`arena/01a086a0-codec`; Build APK CI `34374983032` and `34375710614` are GREEN.
+The owner authorized merge; PR #60 is open and pending its final checks.
+
+### 26.1 Cold-start measurement and state
+
+1. Install the Phase 36 APK on the slowest available phone and one other
+   Android device. Clear/force-stop CodeC, then open Terminal cold. Confirm the
+   terminal immediately shows **starting shell…**, the first usable prompt is
+   followed by **running**, and no blank/exited-looking gap is mistaken for a
+   dead shell.
+2. Open Logs and capture the startup card containing tap→userland-done,
+   userland-done→prepare-done, prepare-done→prompt, and tap→prompt. Record
+   device model, Android version, cold/warm result, and the numbers. Do not
+   choose a latency optimization by intuition; identify the largest measured
+   split.
+3. Re-open Terminal warm several times. Confirm a marked valid userland is not
+   re-extracted or release-probed on every open, compiler-setting changes cause
+   a fresh preparation, and a forced userland reinstall invalidates the
+   preparation and replaces the shell.
+
+### 26.2 Session behavior and handoff
+
+4. While a fresh shell is starting, dispatch at least three ordered commands
+   from Packages/run handoff (for example install, `cd`, then a run command).
+   Confirm each runs once, in order, only after the actual first prompt; there
+   must be no fixed-delay race or dropped command. Repeat with two sessions and
+   confirm each session keeps its own queue and interactive input.
+5. Verify Ctrl+C, terminal rendering, resize, paste/typing, restart, close,
+   session switching, and the session cap. A normal shell exit must display
+   **exited (code)**; a live shell must display **running**.
+6. Trigger the forced userland reinstall. Confirm every old shell is stopped,
+   the replacement visibly says **userland was updated — session restarted**,
+   and the new prompt remains usable. Confirm `cc` still compiles with the
+   configured standard/warnings/optimization and package/run handoff still
+   reaches the intended project.
+
+The owner reports the original Phase 36 and follow-up device checks passed.
+The exact device matrix and measurements were not supplied, so none are
+invented here. Merge is authorized by the owner after the green PR checks.
+
+### 26.3 Owner follow-up: streaming, background survival, and switching
+
+The original Phase 36 device acceptance passed, and the owner then validated
+these three follow-up regressions separately from the cold-start recipe:
+
+7. **Progressive package output.** Install a package that is not already in the
+   userland cache, or run a download large enough to last several seconds.
+   Apt/dpkg download and install progress must visibly update while the command
+   is running, including carriage-return progress rewrites; it must not appear
+   as one final batch. The fix removes `friendly_apt()` command substitution,
+   so the PTY and existing emulator/RenderPump remain the streaming path.
+8. **Background survival.** Start a long-running download or command, lock the
+   screen or background CodeC for longer than ten minutes, and return. The
+   command must still be running and its output/history must be intact. An
+   active session promotes `TerminalForegroundService` and uses the app's
+   process-priority contract; the old ten-minute wake-lock timeout is gone.
+   Close/stop every session and confirm the foreground notification and wake
+   lock are released rather than leaving CodeC alive indefinitely.
+9. **Session switching.** Open two sessions, produce distinct output in each,
+   and switch repeatedly while each is idle at `codec $` and while one is
+   running a command. There must be no injected blank lines, duplicate
+   `codec $` prompts, lost history, or cross-session command delivery. Terminal
+   geometry is propagated to every session and seeded before a new PTY starts,
+   avoiding a switch-only `SIGWINCH`/readline redraw. Explicit restart and
+   close behavior must still work.
+
+**Result:** items 7–9 passed on the owner's device validation. The owner
+reported device acceptance and authorized merge; the exact device matrix was
+not supplied, so none is invented here.

@@ -7,7 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.R
 import com.codeci.ide.ui.editor.BracketMatcher
+import com.codeci.ide.ui.editor.CaretAction
+import com.codeci.ide.ui.editor.CaretPlacementPolicy
 import com.codeci.ide.ui.editor.ClangFormatBridge
+import com.codeci.ide.ui.editor.DecorationDirtyPolicy
+import com.codeci.ide.ui.editor.FindDecorationKey
 import com.codeci.ide.ui.editor.CodeFormatter
 import com.codeci.ide.ui.editor.AcceptGranularity
 import com.codeci.ide.ui.editor.CodeCompletionEngine
@@ -356,7 +360,15 @@ class EditorViewModel : ViewModel() {
     private val _cursorPos = MutableStateFlow(EditorCursorPos(1, 1, 0))
     val cursorPos: StateFlow<EditorCursorPos> = _cursorPos.asStateFlow()
 
+    // Phase 35.4 — opening a file is a quiet viewing state. This is per open
+    // session rather than persisted in the file, so a newly opened tab never
+    // inherits a stale caret from an earlier visit.
+    private val _caretPlaced = MutableStateFlow(false)
+    val caretPlaced: StateFlow<Boolean> = _caretPlaced.asStateFlow()
+
     private var decorationJob: Job? = null
+    private var decorationGeneration = 0L
+    private var lastFindDecorationKey: FindDecorationKey? = null
 
     // ---- Phase 27: phone-native autocomplete pipeline --------------------
     // (ghost text + suggestion strip + "⌄ more" panel; all driven by ONE
@@ -402,7 +414,7 @@ class EditorViewModel : ViewModel() {
         val cfg = completionConfig
         val lang = LanguageType.fromFileName(_activeTabPath.value ?: _fileName.value)
         val prev = _completionModel.value
-        if (cfg.everythingOff || !cfg.anyOn ||
+        if (!_caretPlaced.value || cfg.everythingOff || !cfg.anyOn ||
             v.text.length > GhostCompletion.SOFT_FILE_CAP ||
             lang == LanguageType.TEXT
         ) {
@@ -851,13 +863,57 @@ class EditorViewModel : ViewModel() {
     // Text editing + undo recording
     // ---------------------------------------------------------------------
 
+    /** Called by the sora host when a real tap/focus interaction places the caret. */
+    fun onEditorInteraction() {
+        if (_caretPlaced.value) return
+        _caretPlaced.value = true
+        refreshCompletionModelNow(_codeText.value)
+        refreshDecorationsNow()
+    }
+
+    /** A focus callback is enough to make a tap an editor interaction. */
+    fun onEditorFocusChanged(hasFocus: Boolean) {
+        if (hasFocus) onEditorInteraction()
+    }
+
+    private fun resetCaretForOpen() {
+        _caretPlaced.value = false
+        _cursorPos.value = EditorCursorPos(0, 0, 0)
+        _currentLineRange.value = null
+        _bracketRanges.value = emptyList()
+        lastFindDecorationKey = null
+        _completionModel.value = CompletionModel.EMPTY
+    }
+
+    /** Place an unplaced keyboard edit at the end of line one. */
+    private fun placeCaretForKeyPress() {
+        if (_caretPlaced.value) return
+        val current = _codeText.value
+        val placement = CaretPlacementPolicy.reduce(
+            text = current.text,
+            wasPlaced = false,
+            action = CaretAction.KeyPress
+        )
+        val offset = placement.offset ?: return
+        _caretPlaced.value = placement.placed
+        _codeText.value = TextFieldValue(current.text, TextRange(offset))
+        refreshCompletionModelNow(_codeText.value)
+        refreshDecorationsNow()
+    }
+
     fun updateCode(
+
         newValue: TextFieldValue,
         autoIndent: Boolean = false,
         tabSize: Int = 4,
         suppressAutoPair: Boolean = false
     ) {
         val old = _codeText.value
+        if (!_caretPlaced.value && (newValue.text != old.text || newValue.selection != old.selection)) {
+            // A first IME/hardware edit or a genuine selection event is the
+            // user's first interaction, even if sora's focus callback races it.
+            _caretPlaced.value = true
+        }
         var next = newValue
         // Phase 26.2 — smart typing (pure, host-testable). Runs before autoIndent legacy.
         // suppressAutoPair=true only for the editor key STRIP: its swipe-up single
@@ -910,6 +966,7 @@ class EditorViewModel : ViewModel() {
      * time makes every tap AND every 40 ms repeat tick count exactly once.
      */
     fun applyEditorKey(key: com.codeci.ide.ui.editor.EditorKey, autoIndent: Boolean = false, tabSize: Int = 4) {
+        placeCaretForKeyPress()
         // Phase 30 device round (2026-09-07) — the ONLY caller is CodeC Keys'
         // live-buffer commit path, i.e. a TYPING surface: `(` must close to
         // `()` with the caret inside, exactly like the IME (where sora's own
@@ -932,6 +989,7 @@ class EditorViewModel : ViewModel() {
      */
     fun moveCaretBy(columns: Int, lines: Int) {
         if (columns == 0 && lines == 0) return
+        placeCaretForKeyPress()
         val cur = _codeText.value
         val anchor = minOf(cur.selection.start, cur.selection.end)
         val target = com.codeci.ide.ui.keyboard.SpaceTrack.caretAfterDrag(cur.text, anchor, columns, lines)
@@ -1038,7 +1096,11 @@ class EditorViewModel : ViewModel() {
     private fun openProjectFile(context: Context, projectName: String, relativePath: String) {
         val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return
         val info = ProjectManager(context).project(projectName) ?: return
-        if (_activeTabPath.value == safe && _projectName.value == info.name) return
+        if (_activeTabPath.value == safe && _projectName.value == info.name) {
+            // Re-opening the current file is still a new viewing session.
+            resetCaretForOpen()
+            return
+        }
         val existing = _openTabs.value.firstOrNull { it.relativePath == safe }
         if (existing != null) {
             activateTab(existing)
@@ -1052,6 +1114,7 @@ class EditorViewModel : ViewModel() {
         val ending = LineEndings.detect(content)
         val normalized = LineEndings.normalizeToLf(content)
         stashActiveTabBuffer(_codeText.value)
+        resetCaretForOpen()
         val tab = EditorTab(safe, TextFieldValue(normalized), normalized, ending)
         _openTabs.value = trimTabs(_openTabs.value.filterNot { it.relativePath == safe } + tab)
         _activeTabPath.value = safe
@@ -1069,10 +1132,14 @@ class EditorViewModel : ViewModel() {
 
     private fun openScratchFile(context: Context, name: String) {
         val safe = FileNameUtils.sanitizeFileName(name) ?: return
-        if (_activeTabPath.value == null && _fileName.value == safe && _projectName.value == null) return
+        if (_activeTabPath.value == null && _fileName.value == safe && _projectName.value == null) {
+            resetCaretForOpen()
+            return
+        }
         val fm = FileManager(context)
         val content = fm.loadFile(safe) ?: return
         stashActiveTabBuffer(_codeText.value)
+        resetCaretForOpen()
         _projectName.value = null
         _activeTabPath.value = null
         _fileName.value = safe
@@ -1178,6 +1245,7 @@ class EditorViewModel : ViewModel() {
         stashActiveTabBuffer(_codeText.value)
         _activeTabPath.value = tab.relativePath
         _fileName.value = tab.relativePath
+        resetCaretForOpen()
         _codeText.value = tab.buffer
         _activeLineEnding.value = tab.lineEnding
         _isDirty.value = tab.buffer.text != tab.savedText
@@ -1221,6 +1289,7 @@ class EditorViewModel : ViewModel() {
             val next = remaining[index.coerceAtMost(remaining.size - 1)]
             _activeTabPath.value = next.relativePath
             _fileName.value = next.relativePath
+            resetCaretForOpen()
             _codeText.value = next.buffer
             _activeLineEnding.value = next.lineEnding
             _isDirty.value = next.buffer.text != next.savedText
@@ -1374,6 +1443,7 @@ class EditorViewModel : ViewModel() {
         _activeTabPath.value = base
         _fileName.value = base
         _projectName.value = projectName
+        resetCaretForOpen()
         _isDirty.value = false
         if (oldPath == null) scratchSavedText = text
         if (oldPath != base) undoManagers.remove(oldPath ?: SCRATCH_KEY)
@@ -1913,12 +1983,14 @@ class EditorViewModel : ViewModel() {
             val tab = EditorTab(path, TextFieldValue(content), content)
             updateTab(path) { tab }
             _fileName.value = path
+            resetCaretForOpen()
             _codeText.value = tab.buffer
             _isDirty.value = false
         } else {
             val fm = FileManager(context)
             val content = fm.loadFile(_fileName.value) ?: return
             scratchSavedText = content
+            resetCaretForOpen()
             _codeText.value = TextFieldValue(content)
             _isDirty.value = false
         }
@@ -2236,6 +2308,7 @@ class EditorViewModel : ViewModel() {
 
     private fun runFind() {
         val state = _find.value
+        lastFindDecorationKey = FindDecorationKey(state.visible, state.query, state.options)
         if (!state.visible || state.query.isEmpty()) {
             _find.value = state.copy(matches = emptyList(), activeIndex = -1, error = null)
             return
@@ -2275,6 +2348,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun selectRegion(start: Int, end: Int) {
+        onEditorInteraction()
         val text = _codeText.value.text
         val clampedStart = start.coerceIn(0, text.length)
         val clampedEnd = end.coerceIn(clampedStart, text.length)
@@ -3201,40 +3275,58 @@ class EditorViewModel : ViewModel() {
 
     private fun scheduleDecorationRefresh() {
         decorationJob?.cancel()
-        decorationJob = viewModelScope.launch {
-            delay(20)
-            refreshDecorationsNow()
+        val generation = ++decorationGeneration
+        decorationJob = viewModelScope.launch(Dispatchers.Default) {
+            // Coalesce a burst of key events without putting the debounce or
+            // the O(file) scan on the main dispatcher.
+            delay(HIGHLIGHT_DEBOUNCE_MS)
+            val current = _codeText.value
+            if (!_caretPlaced.value) return@launch
+            val snapshot = com.codeci.ide.ui.editor.EditorDecorationSnapshot.calculate(
+                current.text,
+                current.selection
+            )
+            withContext(Dispatchers.Main.immediate) {
+                if (
+                    generation == decorationGeneration &&
+                    _caretPlaced.value &&
+                    _codeText.value.text == current.text &&
+                    _codeText.value.selection == current.selection
+                ) {
+                    applyDecorationSnapshot(snapshot)
+                }
+            }
         }
     }
 
+    private fun applyDecorationSnapshot(snapshot: com.codeci.ide.ui.editor.EditorDecorationSnapshot) {
+        _cursorPos.value = EditorCursorPos(
+            snapshot.line,
+            snapshot.column,
+            snapshot.selectionLength
+        )
+        _currentLineRange.value = snapshot.currentLineRange
+        _bracketRanges.value = snapshot.bracketRanges
+    }
+
     private fun refreshDecorationsNow() {
+        decorationJob?.cancel()
+        ++decorationGeneration
+        if (!_caretPlaced.value) {
+            _cursorPos.value = EditorCursorPos(0, 0, 0)
+            _currentLineRange.value = null
+            _bracketRanges.value = emptyList()
+            return
+        }
         val current = _codeText.value
-        val cursor = current.selection.min.coerceIn(0, current.text.length)
-        // Phase 22.5 — count newlines in place. `take(cursor)` ALLOCATED a
-        // copy of the entire prefix (up to the whole file) on every caret
-        // move and every keystroke, purely to count '\n' in it; at the end of
-        // a long file that is a full-file copy per character typed.
-        var line = 1
-        var lineStart = 0
-        for (i in 0 until cursor) {
-            if (current.text[i] == '\n') {
-                line++
-                lineStart = i + 1
-            }
-        }
-        _cursorPos.value = EditorCursorPos(line, cursor - lineStart + 1, current.selection.length)
-        _currentLineRange.value = CodeFormatter.lineBounds(current.text, line)?.takeIf { !it.isEmpty() }
-        _bracketRanges.value = if (
-            current.text.length <= BracketMatcher.MAX_SCAN_LENGTH &&
-            (cursor in current.text.indices || cursor - 1 in current.text.indices)
-        ) {
-            runCatching { BracketMatcher.findPair(current.text, cursor) }.getOrNull()
-                ?.let { (open, close) -> listOf(open..open, close..close) }
-                ?: emptyList()
-        } else {
-            emptyList()
-        }
-        if (_find.value.visible && _find.value.query.isNotEmpty()) {
+        val snapshot = com.codeci.ide.ui.editor.EditorDecorationSnapshot.calculate(
+            current.text,
+            current.selection
+        )
+        applyDecorationSnapshot(snapshot)
+        val find = _find.value
+        val findKey = FindDecorationKey(find.visible, find.query, find.options)
+        if (DecorationDirtyPolicy.findNeedsRefresh(lastFindDecorationKey, findKey)) {
             runFind()
         }
     }

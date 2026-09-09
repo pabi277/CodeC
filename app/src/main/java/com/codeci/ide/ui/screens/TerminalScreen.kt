@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -64,6 +65,7 @@ import com.codeci.ide.ui.components.TerminalExtraKeys
 import com.codeci.ide.ui.components.openTerminalUrl
 import com.codeci.ide.ui.components.parseExtraKeysMacros
 import com.codeci.ide.ui.terminal.ShellEnvironment
+import com.codeci.ide.ui.terminal.TerminalLifecycle
 import com.codeci.ide.ui.terminal.TerminalSessionItem
 import com.codeci.ide.ui.theme.getTerminalTheme
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -84,7 +86,8 @@ fun TerminalScreen(
 ) {
     val context = LocalContext.current
     val snapshot by viewModel.snapshot.collectAsState()
-    val alive by viewModel.alive.collectAsState()
+    val lifecycle by viewModel.lifecycle.collectAsState()
+    val exitCode by viewModel.exitCode.collectAsState()
     val fontSize by viewModel.fontSizeSp.collectAsState()
     val fontFamily by viewModel.fontFamily.collectAsState()
     val terminalThemeType by viewModel.terminalTheme.collectAsState()
@@ -232,7 +235,12 @@ fun TerminalScreen(
                     ?.takeIf { it.isNotBlank() }
                     ?: snapshot.title.takeIf { it.isNotBlank() && it != "Terminal" }
                     ?: stringResource(R.string.nav_terminal)
-                val suffix = if (alive) "" else " — exited"
+                val suffix = when (lifecycle) {
+                    TerminalLifecycle.STARTING -> " — starting"
+                    TerminalLifecycle.RUNNING -> ""
+                    TerminalLifecycle.FAILED -> " — failed"
+                    TerminalLifecycle.EXITED -> " — exited"
+                }
                 Text(
                     text = base + suffix,
                     style = MaterialTheme.typography.titleMedium
@@ -288,6 +296,24 @@ fun TerminalScreen(
                 navigationIconContentColor = Color.White
             )
         )
+        val (statusText, statusColor) = when (lifecycle) {
+            TerminalLifecycle.STARTING -> "starting shell…" to Color(0xFFFFC107)
+            TerminalLifecycle.RUNNING -> "running" to Color(0xFF66BB6A)
+            TerminalLifecycle.FAILED -> "shell failed" to Color(0xFFEF5350)
+            TerminalLifecycle.EXITED -> "exited${exitCode?.let { " ($it)" } ?: ""}" to Color(0xFF9E9E9E)
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF292929))
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+        ) {
+            Text(
+                text = statusText,
+                color = statusColor,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
         TerminalEmulatorView(
             snapshot = snapshot,
             fontSizeSp = fontSize,
@@ -338,7 +364,13 @@ private fun SessionSwitcherMenu(
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         sessions.forEach { item ->
-            val statusColor = if (item.isAlive) Color(0xFF4CAF50) else Color(0xFF9E9E9E)
+            val status = item.session.lifecycle.value
+            val statusColor = when (status) {
+                TerminalLifecycle.STARTING -> Color(0xFFFFC107)
+                TerminalLifecycle.RUNNING -> Color(0xFF4CAF50)
+                TerminalLifecycle.FAILED -> Color(0xFFEF5350)
+                TerminalLifecycle.EXITED -> Color(0xFF9E9E9E)
+            }
             DropdownMenuItem(
                 text = {
                     Column {
@@ -347,10 +379,12 @@ private fun SessionSwitcherMenu(
                             style = MaterialTheme.typography.titleSmall
                         )
                         Text(
-                            text = stringResource(
-                                if (item.isAlive) R.string.session_status_running
-                                else R.string.session_status_exited
-                            ),
+                            text = when (status) {
+                                TerminalLifecycle.STARTING -> "starting shell…"
+                                TerminalLifecycle.RUNNING -> stringResource(R.string.session_status_running)
+                                TerminalLifecycle.FAILED -> "shell failed"
+                                TerminalLifecycle.EXITED -> "exited"
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = statusColor
                         )

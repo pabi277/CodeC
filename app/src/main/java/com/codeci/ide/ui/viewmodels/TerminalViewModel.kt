@@ -3,9 +3,11 @@ package com.codeci.ide.ui.viewmodels
 import android.app.Application
 import android.content.Context
 import android.os.PowerManager
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.services.CompilerSettings
+import com.codeci.ide.ui.services.TerminalForegroundService
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.TerminalThemeType
 import com.codeci.ide.ui.theme.ThemeManager
@@ -20,6 +22,10 @@ import com.codeci.ide.ui.terminal.TerminalSessionItem
 import com.codeci.ide.ui.terminal.TerminalSessionManager
 import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.terminal.TerminalHandoff
+import com.codeci.ide.ui.terminal.TerminalLifecycle
+import com.codeci.ide.ui.terminal.TerminalStartMeasurement
+import com.codeci.ide.ui.terminal.OrderedReadinessQueue
+import com.codeci.ide.ui.terminal.PreparedShellCacheKey
 import com.codeci.ide.ui.terminal.UserlandInstaller
 import com.codeci.ide.ui.terminal.UserlandStatus
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -76,6 +82,18 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private val sessionJobs = mutableMapOf<String, List<kotlinx.coroutines.Job>>()
     private val jobsLock = Any()
 
+    /** Commands are scoped to a session; one slow shell cannot steal another's queue. */
+    private val commandQueues = mutableMapOf<String, OrderedReadinessQueue>()
+    private val pendingBeforeSession = ArrayDeque<String>()
+    private val commandQueueLock = Any()
+
+    /** PreparedShell is reusable only for the exact settings/userland generation. */
+    private var preparedShellCache: Pair<PreparedShellCacheKey, PreparedShell>? = null
+    private val measurementLock = Any()
+    private val measurements = mutableMapOf<String, TerminalStartMeasurement>()
+    private val _lastStartMeasurement = MutableStateFlow<TerminalStartMeasurement?>(null)
+    val lastStartMeasurement: StateFlow<TerminalStartMeasurement?> = _lastStartMeasurement.asStateFlow()
+
     // ---- merged-across-sessions event relays --------------------------------
 
     private val _storagePermissionRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
@@ -121,8 +139,11 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private val _started = MutableStateFlow(false)
     val started: StateFlow<Boolean> = _started.asStateFlow()
 
-    private var queuedCommand: String? = null
     private val startMutex = Mutex()
+
+    /** Last measured grid, applied before spawning a new PTY. */
+    @Volatile private var terminalCols = 80
+    @Volatile private var terminalRows = 24
 
     // ---- Phase 7 multi-session state ----------------------------------------
 
@@ -150,6 +171,10 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         .flatMapLatest { it?.session?.alive ?: flowOf(false) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val lifecycle: StateFlow<TerminalLifecycle> = activeItem
+        .flatMapLatest { it?.session?.lifecycle ?: flowOf(TerminalLifecycle.STARTING) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TerminalLifecycle.STARTING)
+
     val exitCode: StateFlow<Int?> = activeItem
         .flatMapLatest { it?.session?.exitCode ?: flowOf(null) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -160,12 +185,19 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             manager.anyAlive.collect { anyAlive ->
                 try {
                     if (anyAlive) {
-                        wakeLock?.let { if (!it.isHeld) it.acquire(10 * 60 * 1000L) }
+                        // The foreground service protects the app process when
+                        // the activity is backgrounded; the partial wake lock
+                        // keeps a package download/PTY reader moving through
+                        // Doze. Do not use the old ten-minute timeout: a real
+                        // package transaction can legitimately run longer.
+                        TerminalForegroundService.start(getApplication<Application>())
+                        wakeLock?.let { if (!it.isHeld) it.acquire() }
                     } else {
+                        TerminalForegroundService.stop(getApplication<Application>())
                         wakeLock?.let { if (it.isHeld) it.release() }
                     }
                 } catch (e: Exception) {
-                    AppLogger.e("TerminalViewModel", "wake lock error", e)
+                    AppLogger.e("TerminalViewModel", "terminal background keep-alive error", e)
                 }
             }
         }
@@ -179,6 +211,9 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     private fun attachSession(item: TerminalSessionItem) {
         val app = getApplication<Application>()
+        synchronized(commandQueueLock) {
+            commandQueues.getOrPut(item.id) { OrderedReadinessQueue() }
+        }
         val jobs = listOf(
             viewModelScope.launch(Dispatchers.IO) {
                 item.session.codecApiRequests.collect { payload ->
@@ -199,6 +234,26 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             },
             viewModelScope.launch(Dispatchers.IO) {
                 item.session.bellEvents.collect { _bellEvents.tryEmit(it) }
+            },
+            // Flush only on the shell's private readiness marker, never on a
+            // guessed delay. The queue belongs to this session.
+            viewModelScope.launch(Dispatchers.IO) {
+                item.session.shellReadyEvents.collect {
+                    val measurement = synchronized(measurementLock) {
+                        measurements[item.id]?.prompt(SystemClock.elapsedRealtime())
+                            ?.also { updated -> measurements[item.id] = updated }
+                    }
+                    if (measurement != null) {
+                        _lastStartMeasurement.value = measurement
+                        AppLogger.i(
+                            "TerminalViewModel",
+                            "terminal startup tap→userland=${measurement.tapToUserlandMs}ms " +
+                                "userland→prepare=${measurement.userlandToPrepareMs}ms " +
+                                "prepare→prompt=${measurement.prepareToPromptMs}ms"
+                        )
+                    }
+                    flushSessionCommands(item)
+                }
             },
             // Phase 19.5: OSC 52 — a program asked to set the clipboard.
             viewModelScope.launch(Dispatchers.IO) {
@@ -221,6 +276,17 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private fun detachSession(id: String) {
         val jobs = synchronized(jobsLock) { sessionJobs.remove(id) }
         jobs?.forEach { it.cancel() }
+        synchronized(commandQueueLock) { commandQueues.remove(id) }
+        synchronized(measurementLock) { measurements.remove(id) }
+    }
+
+    private fun flushSessionCommands(item: TerminalSessionItem) {
+        val commands = synchronized(commandQueueLock) {
+            commandQueues[item.id]?.markReady().orEmpty()
+        }
+        commands.forEach { command ->
+            if (item.session.shellReady.value) item.session.sendCommand(command)
+        }
     }
 
     // ---- lifecycle ----------------------------------------------------------
@@ -237,6 +303,12 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             if (item == null) {
                 item = manager.createSession() ?: return
                 attachSession(item)
+                synchronized(commandQueueLock) {
+                    val queue = commandQueues.getValue(item.id)
+                    while (pendingBeforeSession.isNotEmpty()) {
+                        queue.enqueue(pendingBeforeSession.removeFirst())
+                    }
+                }
             }
             if (item.session.alive.value && _started.value) return
             startItem(item)
@@ -248,20 +320,42 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
      * (the item is created before the install runs), then the shell starts
      * and any command queued while starting is dispatched.
      */
-    private suspend fun startItem(item: TerminalSessionItem, forceInstall: Boolean = false) {
+    private suspend fun startItem(
+        item: TerminalSessionItem,
+        forceInstall: Boolean = false,
+        reason: String? = null
+    ) {
+        item.session.beginStarting()
+        synchronized(commandQueueLock) {
+            commandQueues.getOrPut(item.id) { OrderedReadinessQueue() }.reset()
+        }
+        val initial = TerminalStartMeasurement(SystemClock.elapsedRealtime())
+        synchronized(measurementLock) { measurements[item.id] = initial }
         try {
+            if (reason != null) item.session.notice("[terminal] $reason")
+            if (forceInstall) preparedShellCache = null
             installUserlandInternal(item.session, force = forceInstall)
+            synchronized(measurementLock) {
+                measurements[item.id] = (measurements[item.id] ?: initial)
+                    .userlandDone(SystemClock.elapsedRealtime())
+            }
             val prepared = prepareShell()
+            synchronized(measurementLock) {
+                measurements[item.id] = (measurements[item.id] ?: initial)
+                    .prepareDone(SystemClock.elapsedRealtime())
+            }
+            // Seed the emulator and PTY with the current grid before exec.
+            // This avoids a post-attach TIOCSWINSZ/SIGWINCH when a newly
+            // created session becomes visible and Bash redraws its prompt.
+            item.session.resize(terminalCols, terminalRows)
             item.session.start(prepared)
             _started.value = true
-            val pending = queuedCommand
-            queuedCommand = null
-            if (!pending.isNullOrBlank()) {
-                kotlinx.coroutines.delay(350)
-                item.session.sendCommand(pending)
-            }
+            // A very fast shell can emit the marker before the collector is
+            // scheduled. The state check makes that path lossless as well.
+            if (item.session.shellReady.value) flushSessionCommands(item)
         } catch (e: Exception) {
             _started.value = false
+            item.session.startupFailed("shell startup failed: ${e.message ?: e.javaClass.simpleName}")
             AppLogger.e("TerminalViewModel", "start failed", e)
         }
     }
@@ -311,7 +405,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 val item = manager.activeItem() ?: return@withLock
                 item.session.stop()
                 item.session.resetEmulator()
-                startItem(item)
+                startItem(item, reason = "shell restarted")
             }
         }
     }
@@ -330,24 +424,68 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 _started.value = false
                 val item = manager.createSession() ?: return@withLock
                 attachSession(item)
-                startItem(item, forceInstall = true)
+                startItem(
+                    item,
+                    forceInstall = true,
+                    reason = "userland was updated — session restarted"
+                )
             }
         }
     }
 
     private fun installUserlandInternal(target: TerminalSession, force: Boolean) {
-        val status = userland.installIfNeeded(force = force) { msg ->
+        val status = userland.installIfNeeded(
+            force = force,
+            // Opening a terminal is not an update check. The explicit
+            // "Install userland" action uses force=true and remains the
+            // deliberate upgrade/reinstall path.
+            checkForUpgrade = false
+        ) { msg ->
             target.notice(msg)
         }
         when (status) {
+            is UserlandStatus.Installed -> preparedShellCache = null
             is UserlandStatus.Failed -> target.notice("userland: failed — ${status.message}")
             else -> { }
         }
     }
 
+    private fun userlandStamp(): String {
+        val prefix = bootstrap.prefixDir()
+        val release = userland.installedRelease(prefix) ?: "unmarked"
+        val marker = File(prefix, ".bootstrap-v${ShellEnvironment.BOOTSTRAP_VERSION}")
+        val bootstrapGeneration = marker.takeIf { it.isFile }
+            ?.readText()
+            ?.trim()
+            ?.ifEmpty { "missing" }
+            ?: "missing"
+        val shell = ShellEnvironment.resolveShell(prefix)
+        return listOf(
+            release,
+            bootstrapGeneration,
+            shell.absolutePath,
+            shell.lastModified(),
+            shell.length()
+        ).joinToString(":")
+    }
+
     private suspend fun prepareShell(): PreparedShell {
         val compilerSettings = compilerSettingsFrom(settings)
-        return withContext(Dispatchers.IO) { bootstrap.prepare(compilerSettings) }
+        val key = PreparedShellCacheKey(compilerSettings, userlandStamp())
+        preparedShellCache?.takeIf { it.first == key }?.let {
+            AppLogger.i("TerminalViewModel", "prepared shell cache hit")
+            // The environment object is reusable, but the cc frontend is
+            // deliberately refreshed for every RUN/start (never stale).
+            withContext(Dispatchers.IO) { bootstrap.rewriteCompilerFrontend() }
+            return it.second
+        }
+        return withContext(Dispatchers.IO) {
+            val prepared = bootstrap.prepare(compilerSettings)
+            // prepare() refreshes the bootstrap marker, so key the cached
+            // result from the post-prepare userland/bootstrap generation.
+            preparedShellCache = PreparedShellCacheKey(compilerSettings, userlandStamp()) to prepared
+            prepared
+        }
     }
 
     // ---- input routing (active session, D5) ----------------------------------
@@ -383,16 +521,33 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun sendCommand(command: String) {
-        val session = activeSession()
-        if (session == null || !_started.value || !session.alive.value) {
-            queuedCommand = command
-            ensureStarted()
+        if (command.isBlank()) return
+        val item = manager.activeItem()
+        val session = item?.session
+        val queueHasPending = item?.let {
+            synchronized(commandQueueLock) { (commandQueues[it.id]?.size ?: 0) > 0 }
+        } ?: false
+        if (item == null || session?.shellReady?.value != true || queueHasPending) {
+            synchronized(commandQueueLock) {
+                if (item != null) {
+                    commandQueues.getOrPut(item.id) { OrderedReadinessQueue() }.enqueue(command)
+                } else {
+                    pendingBeforeSession.addLast(command)
+                }
+            }
+            if (item != null && session?.shellReady?.value == true) {
+                // A command can arrive after the marker but before its
+                // collector gets scheduled. Drain the older commands first.
+                flushSessionCommands(item)
+            } else {
+                ensureStarted()
+            }
             return
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            kotlinx.coroutines.delay(80)
-            session.sendCommand(command)
-        }
+        // The first-prompt marker is the readiness boundary. Once it has
+        // fired, preserve the old asynchronous handoff without adding a
+        // startup race or reordering commands.
+        viewModelScope.launch(Dispatchers.IO) { session.sendCommand(command) }
     }
 
     fun sendKey(sequence: String) {
@@ -400,7 +555,16 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun resize(cols: Int, rows: Int) {
-        activeSession()?.resize(cols, rows)
+        terminalCols = cols
+        terminalRows = rows
+        // Keep every PTY at the same terminal geometry. Resizing only the
+        // active session meant switching to an older session delivered a
+        // SIGWINCH on every switch, which Bash rendered as extra blank
+        // prompts/enters. New sessions receive the same geometry before their
+        // first prompt in startItem().
+        manager.sessions.value.forEach { item ->
+            item.session.resize(cols, rows)
+        }
     }
 
     fun toggleCtrl() {
@@ -442,6 +606,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         try {
+            TerminalForegroundService.stop(getApplication<Application>())
             wakeLock?.let { if (it.isHeld) it.release() }
         } catch (_: Exception) {}
         // viewModelScope is already cancelled here; the manager is plain

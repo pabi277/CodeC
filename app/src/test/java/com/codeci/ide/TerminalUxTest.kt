@@ -6,7 +6,11 @@ import com.codeci.ide.ui.components.findUrlAt
 import com.codeci.ide.ui.components.findWordBoundaries
 import com.codeci.ide.ui.components.parseExtraKeysMacros
 import com.codeci.ide.ui.components.selectedText
+import com.codeci.ide.ui.terminal.OrderedReadinessQueue
+import com.codeci.ide.ui.terminal.PreparedShellCacheKey
 import com.codeci.ide.ui.terminal.TerminalEmulator
+import com.codeci.ide.ui.terminal.TerminalStartMeasurement
+import com.codeci.ide.ui.services.CompilerSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -78,6 +82,44 @@ class TerminalUxTest {
         val line = "echo \"hello_world-123 foo\""
         val (start, end) = findWordBoundaries(line, 10)
         assertEquals("hello_world-123", line.substring(start, end + 1))
+    }
+
+    @Test
+    fun `readiness queue flushes every startup command in order`() {
+        val queue = OrderedReadinessQueue()
+        queue.enqueue("pkg install git")
+        queue.enqueue("cd project")
+        queue.enqueue("./run.sh")
+
+        assertEquals(3, queue.size)
+        assertEquals(listOf("pkg install git", "cd project", "./run.sh"), queue.markReady())
+        assertEquals(0, queue.size)
+        assertTrue(queue.isReady)
+
+        queue.reset()
+        queue.enqueue("next")
+        assertEquals(listOf("next"), queue.markReady())
+    }
+
+    @Test
+    fun `startup measurement reports the three requested boundaries`() {
+        val measurement = TerminalStartMeasurement(100)
+            .userlandDone(250)
+            .prepareDone(400)
+            .prompt(475)
+
+        assertEquals(150L, measurement.tapToUserlandMs)
+        assertEquals(150L, measurement.userlandToPrepareMs)
+        assertEquals(75L, measurement.prepareToPromptMs)
+        assertEquals(375L, measurement.tapToPromptMs)
+    }
+
+    @Test
+    fun `prepared shell cache key changes for compiler or userland inputs`() {
+        val first = PreparedShellCacheKey(CompilerSettings("c11", true, 2), "v1:one")
+        assertEquals(first, first.copy())
+        assertTrue(first != first.copy(userlandStamp = "v2:two"))
+        assertTrue(first != first.copy(compilerSettings = CompilerSettings("c17", true, 2)))
     }
 
     @Test

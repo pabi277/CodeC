@@ -414,23 +414,14 @@ object ShellEnvironment {
         }
 
         friendly_apt() {
-          output="${'$'}("${'$'}@" 2>&1)"
+          # Do not capture apt/dpkg output in command substitution. That made
+          # a download look frozen and then dumped the transaction at the end.
+          # A PTY is already a stream: let every progress line reach the
+          # terminal immediately and preserve the command's exit code.
+          "${'$'}@"
           status="${'$'}?"
           if [ "${'$'}status" -ne 0 ]; then
-            echo "${'$'}output" >&2
-            case "${'$'}output" in
-              *"Could not resolve"*|*"Temporary failure"*|*"Network is unreachable"*|*"Connection timed out"*)
-                echo "pkg: offline or repository unreachable; installed packages remain usable." >&2 ;;
-              *"Hash Sum mismatch"*|*"checksum"*|*"NO_PUBKEY"*|*"not signed"*)
-                echo "pkg: repository integrity check failed; no package was installed." >&2 ;;
-              *"Unable to locate package"*|*"Cannot find package"*)
-                echo "pkg: package not found; run 'pkg update' first to refresh the package catalog." >&2 ;;
-              *"No space left"*|*"not enough free space"*)
-                echo "pkg: insufficient disk space; free space under ${'$'}PREFIX and retry." >&2 ;;
-              *) echo "pkg: apt failed; check the command above and retry." >&2 ;;
-            esac
-          else
-            printf '%s\n' "${'$'}output"
+            echo "pkg: apt failed; check the streamed output above and retry." >&2
           fi
           return "${'$'}status"
         }
@@ -1900,7 +1891,10 @@ HELP
         export TERM="${'$'}{TERM:-xterm-256color}"
         export COLORTERM="${'$'}{COLORTERM:-truecolor}"
         export LANG="${'$'}{LANG:-C.UTF-8}"
-        export PS1='codec ${'$'} '
+        # Command substitution runs when the interactive shell paints each
+        # prompt, so readiness means the actual child shell is usable (not
+        # merely that the parent launcher sourced this file).
+        export PS1='${'$'}(printf "\033]1337;CodeCShellReady\007")codec ${'$'} '
         mkdir -p "${'$'}HOME" "${'$'}TMPDIR" "${'$'}CODEC_PROJECTS" 2>/dev/null
         pj() { cd "${'$'}CODEC_PROJECTS" || return; }
         cd "${'$'}CODEC_PROJECTS" 2>/dev/null || cd "${'$'}HOME" 2>/dev/null || true
@@ -1967,7 +1961,7 @@ HELP
             put("CC_WARN", warningFlags(warnings))
             put("CC_OPT", optimizationFlag(optimization))
             put("ENV", File(etcDir(prefix), "profile").absolutePath)
-            put("PS1", "codec $ ")
+            put("PS1", "\$(printf \"\\033]1337;CodeCShellReady\\007\")codec \$ ")
             put("USER", "codec")
             put("CODEC_PROJECTS", projects.absolutePath)
             if (tccBinary != null) put("TCC_BIN", tccBinary.absolutePath)
@@ -2181,6 +2175,18 @@ class ShellBootstrap(private val context: Context) {
             shell = ShellEnvironment.resolveShell(prefix),
             cwd = projects,
             env = env
+        )
+    }
+
+    /**
+     * Keep the compiler frontend write separate from the memoized shell
+     * object. Terminal warm opens may reuse the prepared environment, but a
+     * RUN must never inherit a stale or user-modified `cc` launcher.
+     */
+    fun rewriteCompilerFrontend() {
+        writeExecutable(
+            File(ShellEnvironment.binDir(prefixDir()), "cc"),
+            ShellEnvironment.ccScript()
         )
     }
 

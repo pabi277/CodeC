@@ -5,11 +5,12 @@
 > user experience improvement and the ui so research throughly and create the
 > phases properly after all that i will go for various devices use test."*
 >
-> The four row ideas the owner handed over are researched below and turned
-> into **four future phases (34–37)**. Nothing is implemented yet; each phase
-> is specced with its exit condition, targets, and tests. They start one at a
-> time on the owner's **"Start Phase N"**, land on `main` through the §3 merge
-> gate, and finish with the owner's **cross-device test round**.
+> The four row ideas the owner handed over were researched below and turned
+into four phases (34–37). Phase 34 is merged; Phase 35 is device-passed by
+owner report on its session branch. Phase 36 is now DEVICE-PASSED on that
+branch and is being merged on the owner's command; Phase 37 remains planned.
+Each phase lands on `main` only through the §3 merge gate and finishes with
+the owner's cross-device test round.
 
 ## The owner's four row ideas → phases
 
@@ -112,6 +113,16 @@ foreground keep-alive + port lifecycle. Spec:
 
 - Phase 33 (first-hour UX) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
 - Phase 34 (Official file icons) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
-- Phases 35–37 are **📋 PLANNED** (researched + specced, not implemented).
-- Nothing starts until the owner's "Start Phase N"; the owner then runs the
-  cross-device round at the end.
+- Phase 35 (Editor typing feel) is **✅ DEVICE-PASSED** by the owner report;
+  implementation tip `317b89a`, docs follow-up `88839cd`, and Build APK CI
+  `34367008019`/`34367770583` are green. Exact device evidence was not
+  supplied, so the record does not invent it.
+- Phase 36 (Terminal speed & feel) is **✅ DEVICE-PASSED** on the session
+  branch by owner report. The original acceptance and follow-up checks for
+  progressive apt output, background survival, and session-switch redraws
+  passed after fixes `da126cf`/`11fe8d7`; green CI is
+  `34374983032`/`34375710614`. Merge is authorized by the owner; PR #60 is
+  open and pending the final merge gate.
+- Phase 37 remains **📋 PLANNED** (researched + specced, not implemented).
+- The owner starts each phase with "Start Phase N" and runs the cross-device
+  round at the end.

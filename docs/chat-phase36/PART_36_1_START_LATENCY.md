@@ -1,6 +1,20 @@
 # CodeC Phase 36.1 — Terminal cold-start latency
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M
+**Status:** ✅ DEVICE-PASSED by owner report · **Cost:** `[client-only]` · **Effort:** M
+
+## Implementation evidence (2026-09-09)
+
+`TerminalStartMeasurement` records tap→userland-done,
+userland-done→prepare-done, prepare-done→prompt, and tap→prompt. The
+measurement is logged in Logs through `AppLogger`. `PreparedShellCacheKey`
+contains the compiler settings and the marked userland generation; a cache hit
+still rewrites the `cc` frontend. Warm opens use the signed userland marker
+without a launch/network probe, while force reinstall invalidates the cache.
+`TerminalLifecycle.STARTING` is exposed immediately and the first-prompt OSC
+marker closes the measurement. Host timing/cache-key tests and the build gate
+are green in CI `34370970512`. The owner subsequently validated the Phase 36
+startup/readiness behavior on device; no device matrix or timing card was
+supplied, so none is invented here.
 
 ## Symptom (owner)
 
