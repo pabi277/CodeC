@@ -1009,6 +1009,17 @@ recipe (steps 1–8).**
   have caught it because its hand-written zxing shim carried the same wrong
   name; the shim is now a mirror of the published signatures (and lives only in
   `/tmp`, never in the repo), and `QrCodeTest` type-checks against it. Fix in
-  the follow-up commit; green run id recorded there.
+  the follow-up commit.
+    - **CI round 2 (`34392284734`):** main sources + `assembleDebug` compiled ✓;
+      `:app:testDebugUnitTest` was RED on two **test-only** causes, both
+      harness blind spots: `ServerLanTest` asked `TemporaryFolder.newFolder("site")`
+      three times in one test (real JUnit throws `IOException: a folder with the
+      path 'site' already exists` — the sandbox shim was lenient), and
+      `QrCodeTest`'s finder-pattern check assumed a fixed pixel offset while
+      zxing scales to integer pixels per module and *centres* the code (the test
+      now finds the first dark pixel and derives the scale from the 7-module
+      run; the local fake writer was rewritten to reproduce that geometry). Both
+      fixed for cause — no assertion was loosened to buy green. Green run id is
+      recorded in `docs/chat-phase37/PART_37_1_LAN_SERVER.md` §Tests.
     - **Gate:** **CI + the owner's two-device pass are outstanding** — all eight exit checks (4 per part: LAN URL + QR reachable, second device opens the page, on-device loopback unaffected, LAN off = unreachable; server survives app-switch/screen-off, notification Stop releases the port, re-run works immediately, two servers on one port → the second says so) need the owner's phone **and** a second device on the same Wi-Fi, which the sandbox cannot supply: **device pass required, nothing is claimed**. Deferred with reasons recorded in `docs/chat-phase37/README.md`: NSD/mDNS discovery, `CODEC_SERVER_PORT`, a second foreground-service type, JmDNS. **No PR/merge without the owner's command.** Records: `docs/chat-phase37/{README,PART_37_1_LAN_SERVER,PART_37_2_KEEPALIVE_PORTS}.md`.
 

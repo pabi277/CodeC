@@ -165,3 +165,20 @@ open-source-first directive, `docs/PHASE34_37_OSS_RESEARCH.md` §4).
 - Local pre-validation (JVM harness over the real production files, not a
   replacement for CI): 96 cases green — 80 in the service set and 16 in the
   scaffold set.
+
+**Two test-only bugs CI caught that the harness could not** (both recorded so
+the next phase does not repeat them):
+
+1. `ServerLanTest` asked `TemporaryFolder.newFolder("site")` three times in one
+   test (bind → clash → rebind needs the same folder), and real JUnit answers an
+   existing name with `IOException: a folder with the path 'site' already
+   exists`. The folder is now built once under `tmp.root` and reused — the rule
+   still owns the tree, so cleanup is unchanged.
+2. `QrCodeTest`'s finder-pattern check assumed a fixed pixel offset. zxing
+   scales the code to an **integer number of pixels per module and centres it**
+   in the requested square, so the offset is `left = (width − (dim + 2·margin)·
+   multiple) / 2` — a guess is wrong. The test now *finds* the first dark pixel
+   and derives the module scale from the 7-module run, which asserts the real
+   property (quiet zone present, the eye's ring/pupil geometry) instead of a
+   coincidence. The local shim's fake writer was rewritten to reproduce that
+   geometry, so this class of mistake is visible in the sandbox again.

@@ -43,13 +43,52 @@ class QrCodeTest {
     }
 
     @Test
-    fun `the grid is square and mostly light`() {
+    fun `the grid carries a quiet zone and a real finder eye`() {
         val modules = QrCode.encode("http://192.168.1.20:8100/", 320)!!
-        assertEquals(320, modules.size)
-        assertEquals(modules.size * modules.size, modules.dark.size)
-        assertTrue("a quiet zone is part of a scannable code", modules.darkCount() < modules.dark.size / 2)
-        assertTrue("corners of the quiet zone stay white", !modules.isDark(0, 0) && !modules.isDark(319, 319))
-        assertTrue("the top-left finder pattern is dark", modules.isDark(modules.size / 8, modules.size / 8))
+        val size = modules.size
+        assertEquals(320, size)
+        assertEquals(size * size, modules.dark.size)
+        assertTrue(
+            "a quiet zone is part of a scannable code",
+            modules.darkCount() < modules.dark.size / 2
+        )
+        assertTrue(
+            "every outer row and column stays white",
+            (0 until size).all {
+                !modules.isDark(it, 0) && !modules.isDark(0, it) &&
+                    !modules.isDark(it, size - 1) && !modules.isDark(size - 1, it)
+            }
+        )
+
+        // The eye is FOUND, not guessed. zxing scales the code to an integer
+        // number of pixels per module and centres it, so assuming a fixed offset
+        // is wrong (CI's first run failed exactly that way): the first dark pixel
+        // in row-major order is the top-left corner of the 7x7 finder pattern,
+        // and the run of dark pixels along that row is 7 modules wide.
+        var firstX = -1
+        var firstY = -1
+        finding@ for (y in 0 until size) {
+            for (x in 0 until size) {
+                if (modules.isDark(x, y)) {
+                    firstX = x
+                    firstY = y
+                    break@finding
+                }
+            }
+        }
+        assertTrue("a QR code always has dark modules", firstX > 0 && firstY > 0)
+        var run7 = 0
+        while (modules.isDark(firstX + run7, firstY)) run7++
+        val scale = run7 / 7
+        assertTrue("module scale must be at least one pixel (was run=$run7)", scale >= 1)
+        for (i in 0..6) {
+            assertTrue("finder top row", modules.isDark(firstX + i * scale, firstY))
+            assertTrue("finder bottom row", modules.isDark(firstX + i * scale, firstY + 6 * scale))
+            assertTrue("finder left column", modules.isDark(firstX, firstY + i * scale))
+            assertTrue("finder right column", modules.isDark(firstX + 6 * scale, firstY + i * scale))
+        }
+        assertTrue("the eye ring is white", !modules.isDark(firstX + scale, firstY + scale))
+        assertTrue("the eye pupil is dark", modules.isDark(firstX + 2 * scale, firstY + 2 * scale))
     }
 
     @Test

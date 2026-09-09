@@ -29,10 +29,17 @@ class ServerLanTest {
      * The served folder, plus a `secret.txt` one level ABOVE it — the file a
      * traversal attempt is trying to reach. (One inside the root is fair game
      * for the server, so it must not be used for this.)
+     *
+     * Built under `tmp.root` directly rather than through `newFolder("site")`:
+     * a test that binds, clashes and rebinds needs the same folder three times,
+     * and `TemporaryFolder.newFolder` refuses a name that already exists (CI
+     * caught that: `IOException: a folder with the path 'site' already exists`).
+     * The rule still owns the whole tree, so cleanup is unchanged.
      */
-    private fun root(): File {
+    private val site: File by lazy {
         File(tmp.root, "secret.txt").writeText("do not serve me")
-        return tmp.newFolder("site").apply {
+        File(tmp.root, "site").apply {
+            mkdirs()
             File(this, "index.html").writeText("<h1>lan ok</h1>")
         }
     }
@@ -130,7 +137,7 @@ class ServerLanTest {
 
     @Test
     fun `loopback mode is unchanged and advertises no lan url`() {
-        val server = WebPreviewServer.start(root())!!
+        val server = WebPreviewServer.start(site)!!
         try {
             assertEquals(LanAddress.LOOPBACK_HOST, server.bindAddress)
             assertTrue(awaitOk("http://127.0.0.1:${server.port}/"))
@@ -141,7 +148,7 @@ class ServerLanTest {
 
     @Test
     fun `lan mode binds every interface and still refuses traversal`() {
-        val server = WebPreviewServer.start(root(), lanMode = true)!!
+        val server = WebPreviewServer.start(site, lanMode = true)!!
         try {
             assertEquals(LanAddress.WILDCARD_HOST, server.bindAddress)
             // The phone itself keeps dialing 127.0.0.1 — the same page, the
@@ -162,16 +169,16 @@ class ServerLanTest {
 
     @Test
     fun `a taken port is reported as a taken port`() {
-        val first = WebPreviewServer.startAt(root(), LanAddress.LOOPBACK_HOST, 0)
+        val first = WebPreviewServer.startAt(site, LanAddress.LOOPBACK_HOST, 0)
         val server = (first as WebPreviewServer.PreviewStart.Ready).server
-        val outcome = WebPreviewServer.startAt(root(), LanAddress.LOOPBACK_HOST, server.port)
+        val outcome = WebPreviewServer.startAt(site, LanAddress.LOOPBACK_HOST, server.port)
         assertTrue(
             "expected PortInUse on ${server.port}, got $outcome",
             outcome is WebPreviewServer.PreviewStart.PortInUse
         )
         assertEquals(server.port, (outcome as WebPreviewServer.PreviewStart.PortInUse).port)
         server.stop()
-        val again = WebPreviewServer.startAt(root(), LanAddress.LOOPBACK_HOST, server.port)
+        val again = WebPreviewServer.startAt(site, LanAddress.LOOPBACK_HOST, server.port)
         assertTrue(
             "the port must be claimable after stop, got $again",
             again is WebPreviewServer.PreviewStart.Ready
