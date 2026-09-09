@@ -129,6 +129,7 @@ import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompletionSurface
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
+import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
@@ -150,6 +151,7 @@ import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.ProjectRunTarget
 import com.codeci.ide.ui.services.LanguageRegistry
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
@@ -352,6 +354,8 @@ fun EditorScreen(
     var keysRowVisible by remember { mutableStateOf(true) }
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
+    // Phase 33 — non-null while the RUN ▶ chooser is up (the user's default file).
+    var runChooserDefault by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Phase 12 — language-aware editing: the file's extension selects the
@@ -386,6 +390,13 @@ fun EditorScreen(
     LaunchedEffect(codecKeysUp) { soraEditor.setSoftKeyboardEnabled(!codecKeysUp) }
     DisposableEffect(soraEditor) {
         onDispose { soraEditor.setSoftKeyboardEnabled(true) }
+    }
+    // Phase 32.1 — tell the app scaffold whether CodeC Keys is on screen so
+    // the 5-tab bar can hide (one meaning row: code → strip → keys). Cleared
+    // on dispose so no other surface inherits a stale "keys visible" signal.
+    LaunchedEffect(codecKeysUp) { EditorChromeState.setKeysVisible(codecKeysUp) }
+    DisposableEffect(Unit) {
+        onDispose { EditorChromeState.setKeysVisible(false) }
     }
     var codecKeysLayer by remember { mutableStateOf(KeyboardLayers.LETTERS) }
     var codecKeysShift by remember { mutableStateOf(ShiftState.OFF) }
@@ -466,7 +477,11 @@ fun EditorScreen(
         if (!viewModel.saveFile(context)) return null
         val info = ProjectManager(context).project(project) ?: return null
         val isWeb = info.config.type.equals("web", ignoreCase = true)
-        val candidate = launchDefault ?: info.config.entry.takeIf { isWeb } ?: return null
+        // Phase 33 — the launch default can now be a C/Python run file too;
+        // the PREVIEW default only ever uses it when it names an HTML file,
+        // else it falls back to the config entry (index.html).
+        val candidate = launchDefault?.takeIf { WebFileSupport.isHtml(it) }
+            ?: info.config.entry.takeIf { isWeb } ?: return null
         val entry = ProjectPathUtils.sanitizeRelativePath(candidate) ?: return null
         val target = ProjectPathUtils.resolveInside(info.root, entry) ?: return null
         return entry.takeIf { target.isFile && WebFileSupport.isHtml(target.name) }
@@ -479,6 +494,61 @@ fun EditorScreen(
             if (viewModel.saveFile(context)) name else null
         } else {
             webDefaultEntryOrNull()
+        }
+    }
+
+    // Phase 33 — RUN ▶ asks "default file or the open file" when the user has
+    // SET a default (ProjectConfig.launchDefault) that differs from the file
+    // currently open. No default set → RUN runs the open file directly. The
+    // decision is pure (ProjectRunTarget); the helpers below carry it out.
+    fun runChooserEntryOrNull(): String? {
+        val project = currentProject ?: return null
+        val info = ProjectManager(context).project(project) ?: return null
+        return ProjectRunTarget.chooserDefault(info.root, info.config.launchDefault, currentFileName)
+    }
+
+    /**
+     * RUN the file that is open, by ITS OWN type: HTML previews; a runnable
+     * source (C/Python/…) runs in the panel even inside a `web` project
+     * (Phase 33: "html project with c files"); otherwise a web project
+     * previews its entry and anything else reports "no run profile".
+     */
+    fun runOpenFile() {
+        if (WebFileSupport.isHtml(currentFileName)) {
+            val entry = previewEntryOrNull()
+            if (entry != null) {
+                onOpenPreview(currentProject, entry)
+            } else {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.file_save_failed),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else if (ProjectRunTarget.isRunnableSource(currentFileName)) {
+            viewModel.runActiveFile(context)
+        } else if (isWebProject) {
+            val entry = webDefaultEntryOrNull()
+            if (entry != null) {
+                onOpenPreview(currentProject, entry)
+            } else {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.default_run_page_missing),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else {
+            viewModel.runActiveFile(context)
+        }
+    }
+
+    /** RUN the project's default file (HTML → preview, else compile/run). */
+    fun runDefaultFile(entryRel: String) {
+        if (WebFileSupport.isHtml(entryRel)) {
+            onOpenPreview(currentProject, entryRel)
+        } else {
+            viewModel.runFile(context, entryRel)
         }
     }
     LaunchedEffect(userMessage) {
@@ -593,6 +663,41 @@ fun EditorScreen(
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissInstall() }) {
                     Text(stringResource(R.string.install_prompt_cancel))
+                }
+            }
+        )
+    }
+
+    // Phase 33 — RUN ▶ chooser: a USER-set default file exists and a different
+    // file is open; let the user pick which one RUN means. Tapping outside
+    // dismisses without running anything.
+    runChooserDefault?.let { defaultEntry ->
+        AlertDialog(
+            onDismissRequest = { runChooserDefault = null },
+            title = { Text(stringResource(R.string.run_chooser_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.run_chooser_body,
+                        defaultEntry.substringAfterLast('/'),
+                        currentFileName.substringAfterLast('/')
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    runChooserDefault = null
+                    runDefaultFile(defaultEntry)
+                }) {
+                    Text(stringResource(R.string.run_chooser_run, defaultEntry.substringAfterLast('/')))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    runChooserDefault = null
+                    runOpenFile()
+                }) {
+                    Text(stringResource(R.string.run_chooser_run, currentFileName.substringAfterLast('/')))
                 }
             }
         )
@@ -1072,7 +1177,10 @@ fun EditorScreen(
                                 }
                             )
                             if (currentProject != null) {
-                                if (WebFileSupport.isHtml(currentFileName) && launchDefault != currentFileName) {
+                                // Phase 33 — any run target (C, Python, HTML,
+                                // JS, shell, …) can be the project's default
+                                // run file, so RUN can offer "default vs open".
+                                if (ProjectRunTarget.isRunTarget(currentFileName) && launchDefault != currentFileName) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.editor_drawer_set_default)) },
                                         onClick = {
@@ -1202,36 +1310,15 @@ fun EditorScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
-                                if (WebFileSupport.isHtml(currentFileName)) {
-                                    // 2026-08-31 — RUN ▶ IS the preview for
-                                    // HTML files: save the buffer and open it.
-                                    // No separate preview affordance.
-                                    val entry = previewEntryOrNull()
-                                    if (entry != null) {
-                                        // The VM project is authoritative: the
-                                        // Nav route's projectName can be stale
-                                        // after an in-editor folder switch.
-                                        onOpenPreview(currentProject, entry)
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.file_save_failed),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                } else if (isWebProject) {
-                                    val entry = webDefaultEntryOrNull()
-                                    if (entry != null) {
-                                        onOpenPreview(currentProject, entry)
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.default_run_page_missing),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                // Phase 33 — ask "default file or the open
+                                // file" when the user has set a default that
+                                // differs from it; otherwise run the open file
+                                // by its own type (runOpenFile).
+                                val defaultEntry = runChooserEntryOrNull()
+                                if (defaultEntry != null) {
+                                    runChooserDefault = defaultEntry
                                 } else {
-                                    viewModel.runActiveFile(context)
+                                    runOpenFile()
                                 }
                             }
                             .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),

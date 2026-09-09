@@ -693,3 +693,165 @@ the file name, what appeared, and whether CodeC Keys was ON or OFF.
 **PASS:** step 3 shows an LSP member in the chip strip. **FAIL:** chips stay snippet-only after 2 s, or the editor hangs on a keystroke.
 
 **By design:** the first completion after install may take ~1.5 s (clangd index); later keystrokes stay snippet-instant and refresh chips after debounce. JSON files now have chips only after the vscode-json-language-server card is installed (the engine has no JSON snippets).
+
+## 16. Phase 32 phone canvas — device round (owner runbook, 2026-09-09) — ✅ PASSED 2026-09-09
+
+**Goal:** the editor regains screen while typing, and the hidden 5-tab bar comes back when you want it.
+
+1. Open a C file in the editor. Tap into the code so the **soft IME** (or CodeC Keys, if Keys is default ON) appears.
+   - The **5-tab bar must disappear** and those lines become editor. With CodeC Keys up, a thin **handle** ("Show tabs" + pill) sits at the very bottom.
+2. **Tap the handle** (or swipe it up) — the 5-tab bar **returns** while the editor buffer is untouched (no lost text/undo).
+3. **Leave the editor** (tap Terminal, then back to Editor) — the bar is **back** normally; when you focus the editor + keyboard again it hides again (reveal is not sticky across navigation).
+4. **One meaning row:** with CodeC Keys ON, type a prefix that opens chips — at most **one** row of chips between the code and the letter keys; the Phase 27 utility-key strip must NOT also appear.
+5. **Output peek + jump:** RUN a file with a deliberate error (e.g. `int main( {`). The output panel expands with the error. **Tap the `file:line` error** in the output — the caret lands on that line in the OPEN file (the user's file, never `source_<stamp>.c`).
+6. With Keys OFF (Settings) confirm the L0 strip/IME behaviour is unchanged (the 22.x recipes still hold).
+
+**PASS:** steps 1–6 all hold. **FAIL:** the bar stays during Keys/IME, the handle does not restore it, the buffer is lost, two chip/key rows stack, or a diagnostic tap opens/jumps to a temp `source_*.c` file.
+
+**Result (2026-09-09, owner): "All test passed on device"** — steps 1–6 PASSED.
+
+## 17. Phase 33 — "can't run a C file in my HTML project" (2026-09-09, fixed on `arena/01a083fc-codec`)
+
+**Symptom (owner):** "I have a html project and where i have c files but i can't run the c file it's opening the index.html."
+
+**Root cause:** `EditorViewModel.runActiveFile` returned early for any project typed `web` (`if (web) return`), so a C/Python file inside an HTML project could never run; and the RUN chooser's "run current file" arm still routed web projects through the old "preview the web entry" branch.
+
+**Fix:** a pure `ProjectRunTarget.isRunnableSource(rel)` — a file with a run profile that is NOT the web preview (main.c/main.py/… run; index.html/style.css don't) — now gates both the editor's RUN dispatch (`runOpenFile`) and the ViewModel's web-project early-return, so RUN on a C file in an HTML project compiles/runs it in the panel. Superseded by §18: the chooser is now driven by the user-set default, not the project entry.
+
+**How to verify (device):** in an HTML project, open a `main.c` (or `main.py`) file → tap RUN ▶ → it compiles and runs in the Output Panel (the open tab stays). Opening `index.html` and tapping RUN still previews it. (With a launch default set, RUN instead asks "Run default / Run open" — see §18.)
+
+**CI:** `34309463999` ✅ GREEN first try (tip `9a11382`, 5m58s).
+
+## 18. Phase 33 — RUN runs the open file by its type; a user-set default adds "default vs open" (2026-09-09, `arena/01a083fc-codec`)
+
+**Owner's model:** a project that is a web showcase (`index.html` + css/js) whose real content is a folder of `.c` practice files (e.g. `Code-with-C`).
+
+**Behaviour now:**
+- RUN ▶ on a `.c` (or `.py`/`.js`) file compiles/runs it in the Output Panel **even inside a `web` project** — it never opens `index.html` for a source file.
+- RUN ▶ on an `.html` file previews it.
+- If you set a **default** (open a runnable file → ⋮ → **Set as launch default**), then RUN ▶ on a *different* file asks **"Run `<default>` / Run `<open>`"**. No default set → RUN just runs the open file. Clear it with ⋮ → **Clear launch default**.
+
+**How to verify (device):**
+1. In a web project with `index.html` and a `main.c`: open `main.c`, tap RUN ▶ → it compiles and runs (Output Panel), the open tab stays.
+2. Set `main.c` as the launch default (⋮ → Set as launch default), open another `.c`, tap RUN ▶ → dialog offers "Run main.c / Run <other>".
+3. Open `main.c` itself, tap RUN ▶ → runs directly, no dialog.
+4. Open `index.html`, tap RUN ▶ → previews it (and 👁 preview still works).
+
+## 19. Phase 33 — cloned/imported ("auto") projects: RUN on a C file opened index.html (2026-09-09, `arena/01a083fc-codec`)
+
+**Owner bug:** "Still same problem index.html opening not the file i am in." The
+`Code-with-C` repo is cloned/imported, and clone/import writes the project as
+type `auto` (spec §2.3.2). RUN ▶ with a `.c` file open still previewed
+`index.html`.
+
+**Root cause (device-log + code):** for an `auto` project, `EditorViewModel.runFile`
+calls `ProjectRunDetector.detect(root, activeFile)`. The detector only special-cased
+`app.py` / `server.c` / `main.py` / `.html` as the active file; a plain
+`C Programming/01_…_conversion.c` gave "no hint", so the root scan ran and hit
+`index.html` first → `AutoRunPlan.Web("index.html")` → `webPreviewHandler` →
+preview. The active file was silently shadowed by the root `index.html`.
+
+**Fix:** `ProjectRunDetector.detect` now treats ANY other runnable source open
+in an `auto` project (a registry run profile that is not the web preview —
+C/C++/Python/JS/shell, via the pure `ProjectRunTarget.isRunnableSource`) as
+`AutoRunPlan.Project(c|python)`, so it falls through to the normal registry
+run on the open file. The no-active-file scan (Projects-hub card) is unchanged
+and still reports the web family for a repo whose root has `index.html`.
+
+**How to verify (device):** clone `Code-with-C`, open `C Programming/01_…_conversion.c`,
+tap RUN ▶ → it compiles and runs in the Output Panel (tab stays on the C file);
+`index.html` still previews when you open it and tap RUN ▶.
+
+**CI:** `34317268507` ✅ GREEN first try (tip `270c70d`, 5m45s).
+
+## 20. Phase 33 — "C Programming/02_…_of_three.c": `tcc: error: file '…/Code-with-C/C' not found` (2026-09-09, `arena/01a083fc-codec`)
+
+**Owner bug:** after §19 (the open file now runs instead of previewing index.html),
+compiling a file whose PATH has a space failed: the Output Panel showed
+`cc 'C Programming/02_largest_smallest_of_three.c' -o bin/…` and TCC reported
+`tcc: error: file '…/Code-with-C/C' not found` — the space path had been
+word-split into `C` + `Programming/…`.
+
+**Root cause:** the outer shell quoting was correct end-to-end (`planFor` and
+`TerminalHandoff` both `shellEscape` the source), and the `cc` frontend
+received the source as ONE argument. But the `cc` script itself flattened the
+converted arguments into a string (`converted="$converted $arg"`) and expanded
+it UNQUOTED (`… $converted …`) in the TCC invocation — `$converted` held the
+absolute path `/data/user/0/…/Code-with-C/C Programming/02_…_of_three.c`, so
+unquoted expansion split it at the space and TCC only saw `C`.
+
+**Fix:** `ShellEnvironment.ccScript()` now rebuilds the argument list with
+`set -- "$@" "$arg"` while iterating a saved arg count, and passes them to TCC
+as `"$@"` (each converted argument stays its own word, spaces intact). The
+`-o` value is still captured to `outfile` and quoted. `ShellBootstrap.prepare`
+rewrites the script on every RUN, so the fix lands with the next APK.
+
+**How to verify (device):** clone `Code-with-C`, open
+`C Programming/02_largest_smallest_of_three.c`, tap RUN ▶ → it compiles and
+runs in the Output Panel. Host regression: `ShellEnvironmentTest.cc script
+passes a source path containing spaces as one argument` (fake TCC records its
+argv; the space path must arrive as a single `ARG:` line).
+
+**CI:** `34321154191` ✅ GREEN first try (tip `fa34750`).
+
+## 21. Phase 33 — "tcc: error: undefined symbol 'main'" on `C Programming/01_…_conversion.c` (2026-09-09, `arena/01a083fc-codec`)
+
+**Not a CodeC bug — the repo's structure.** `Code-with-C` is a multi-file MENU
+project: `C Programming/main.c` is the ONLY file with `int main()`; each
+numbered file defines `void programNN(void)` (called from the menu). Compiling
+one fragment on its own links no `main`, so TCC correctly reports
+`undefined symbol 'main'`.
+
+**What CodeC now does:** when a build fails with the "no main" linker
+signature (`undefined symbol 'main'` from TCC, or ``undefined reference to
+`main'`` from ld), the Output Panel appends a plain-language hint —
+"This file has no main(). It looks like part of a multi-file project…"
+(pure `CompilerDiagnostics.looksLikeMissingMain`, host-tested).
+
+**How to actually run the menu project (multi-file build):**
+1. Open the project, tap ⋮ → **Edit run config** (the `.codec.json` override).
+2. Build: `mkdir -p bin && cc 'C Programming/'*.c -o bin/menu` (compiles
+   `main.c` + all the program files together).
+3. Run: `./bin/menu` — the menu starts; pick a program number.
+For the owner's OWN practice projects, each `.c` file should carry its own
+`main()` so RUN ▶ compiles and runs that single file directly.
+
+**How to verify (device):** open `C Programming/01_…_conversion.c` → RUN ▶ →
+build fails and the hint line appears; then set the `.codec.json` above → RUN ▶
+compiles all files and runs the menu.
+
+**CI:** `34323755844` ✅ GREEN first try (tip `6a6d36b`).
+
+## 22. Phase 33 — self-contained C files whose entry is not `main` now RUN automatically (2026-09-09, `arena/01a083fc-codec`)
+
+**Owner model:** every `.c` practice file is a complete program; its entry may
+be named `program01` / `solve` / `run` / … rather than `main`.
+
+**Behaviour now:** RUN ▶ on a single C file with no `main` but EXACTLY one
+function compiles it through a generated wrapper (written under the app cache,
+never the project) that `#include`s the file and supplies `main()`, then runs
+the result. So `C Programming/01_number_base_conversion.c` runs `program01()`
+directly — no `.codec.json` needed. A file that defines `main` (or several
+functions with no `main`) is left on the normal path; the §21 hint still
+covers the genuinely ambiguous cases.
+
+**How to verify (device):** clone `Code-with-C`, open
+`C Programming/01_number_base_conversion.c`, tap RUN ▶ → the Output Panel runs
+program 01 ("Enter the number: …") and accepts scanf input. Opening
+`C Programming/main.c` still runs the menu.
+
+**CI:** `34330372322` ✅ GREEN first try (tip `36e4fda`).
+
+## 23. Phase 33 device round ✅ PASSED (2026-09-09, `arena/01a083fc-codec`, owner: "Ok working as i wanted")
+
+The owner's practice-project model, end to end, on the Code-with-C repo:
+
+1. Open `C Programming/01_number_base_conversion.c` in the web showcase → RUN ▶
+   compiles and runs the file (the auto-project fix §19 + space-path fix §20 +
+   non-`main` entry wrapper §22 all hold together), never previewing `index.html`.
+2. Set a launch default (⋮ → Set as launch default) → RUN ▶ on a different file
+   asks "Run default / Run open".
+3. Open `index.html` → RUN ▶ still previews it.
+
+**Result:** all steps behave as the owner described; the owner commanded the
+merge ("Then merge") → **✅ MERGED to `main` via PR #57**.

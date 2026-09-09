@@ -1,24 +1,32 @@
 # CodeC Phase 32 — Phone canvas (see the code)
 
-> **Status:** 📋 **PLANNED — no code.** Typing + Keys + chips + 5-tab bar
-> leave a postage stamp of code (`PHONE_UX_ANALYSIS.md` changes 7–8, 11).
-> **Starts only on `"Start Phase 32"`.**
+> **Status:** ✅ **IMPLEMENTED + DEVICE-PASSED + MERGED (2026-09-09, `arena/01a083fc-codec`)** — see the
+> per-part records below. **CI `34305070875` ✅ GREEN first try (tip `b5feb55`,
+> 5m37s)**; **device round `TROUBLESHOOTING.md` §16 ✅ PASSED** (owner: "All
+> test passed on device"). **✅ MERGED to `main` via PR #57** (owner: "Then merge").
 >
-> **28.3 already owns “chips as Keys row 0.”** Do not duplicate it. If
-> 28.3 is not merged, 32.2 waits or degrades to “hide nav only.”
+> **28.3 already owns “chips as Keys row 0.”** It is NOT duplicated here —
+> 32.2 is satisfied by 28.2/28.3 + the 32.1 nav-hide (recorded in its part doc).
 
 ```
-  32.1  Hide bottom nav while the editor is focused / Keys visible
+  32.1  Hide bottom nav while the editor is focused / Keys visible   ✅ new code
               │
               ▼
-  32.2  Coordinate with 28.3: one meaning row (chips vs keys)
+  32.2  Coordinate with 28.3: one meaning row (chips vs keys)        ✅ no code needed
               │
               ▼
-  32.3  First RUN peeks output; tap diagnostic jumps to the user-facing file
+  32.3  First RUN peeks output; tap diagnostic jumps to the user file ✅ hardened
 ```
 
-| Part | Title | Cost | Effort |
-|---|---|---|---|
-| [32.1](PART_32_1_HIDE_NAV.md) | Auto-hide 5-tab bar in editor focus | client-only | S |
-| [32.2](PART_32_2_ONE_ROW.md) | Don’t stack chips + Keys + nav | client-only | S |
-| [32.3](PART_32_3_OUTPUT_JUMP.md) | Output peek + tap-to-line | client-only | S |
+| Part | Title | Cost | Effort | Status |
+|---|---|---|---|---|
+| [32.1](PART_32_1_HIDE_NAV.md) | Auto-hide 5-tab bar in editor focus | client-only | S | ✅ implemented |
+| [32.2](PART_32_2_ONE_ROW.md) | Don’t stack chips + Keys + nav | client-only | S | ✅ no code (28.x owns it) |
+| [32.3](PART_32_3_OUTPUT_JUMP.md) | Output peek + tap-to-line | client-only | S | ✅ implemented |
+
+New pure files: `ui/editor/NavBarPolicy.kt`, `ui/editor/EditorChromeState.kt`,
+`ui/editor/OutputDiagnosticTarget.kt`. Tests: `NavBarPolicyTest`,
+`OutputDiagnosticTargetTest`. Local pre-validation: Temurin 25 + kotlinc
+2.4.10 (rule.md §9 exception) — pure files pass a main-harness (which caught
+the `toRelativeString` direction bug pre-push); JUnit sources type-check
+against a shim. CI is the executor of record.

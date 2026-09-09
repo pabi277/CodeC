@@ -32,6 +32,7 @@ import com.codeci.ide.ui.editor.FindOutcome
 import com.codeci.ide.ui.editor.FindReplaceEngine
 import com.codeci.ide.ui.editor.LineEndings
 import com.codeci.ide.ui.editor.OutputDiagnostic
+import com.codeci.ide.ui.editor.OutputDiagnosticTarget
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.projects.AutoRunPlan
 import com.codeci.ide.ui.projects.BuildArtifactIgnore
@@ -46,8 +47,10 @@ import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.ProjectRunDetector
+import com.codeci.ide.ui.projects.ProjectRunTarget
 import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectsHub
+import com.codeci.ide.ui.services.CEntryWrapper
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.ExecutionRunner
 import com.codeci.ide.ui.services.InstallPromptState
@@ -638,6 +641,18 @@ class EditorViewModel : ViewModel() {
      */
     private var pendingServerProject: String? = null
 
+    /**
+     * Phase 33 (first-hour UX) — the file RUN ▶ was asked to run, as a
+     * root-relative path in the active project, or null for "the open file".
+     * Remembered across the auto-install gate so a successful toolchain
+     * install resumes the SAME target instead of silently switching back to
+     * the open file.
+     */
+    private var pendingRunTarget: String? = null
+
+    /** Basename of [pendingRunTarget], for compiler-diagnostic filtering. */
+    private var runTargetBasename: String? = null
+
     /** Non-null while the "Install <tool>?" sheet is showing. */
     val installPrompt: StateFlow<InstallPromptState?> = _installPrompt.asStateFlow()
 
@@ -663,6 +678,7 @@ class EditorViewModel : ViewModel() {
     fun dismissInstall() {
         _installPrompt.value = null
         pendingServerProject = null
+        pendingRunTarget = null
     }
 
     /**
@@ -725,7 +741,9 @@ class EditorViewModel : ViewModel() {
                 if (serverProject != null) {
                     ProjectManager(ctx).project(serverProject)?.let { startServerRun(ctx, it) }
                 } else {
-                    runActiveFile(ctx)
+                    // Phase 33 — resume the file RUN ▶ was asked to run (the
+                    // main/index entry, or the open file), not just the open file.
+                    runFile(ctx, pendingRunTarget)
                 }
             } else {
                 _outputState.value = _outputState.value.copy(
@@ -2407,16 +2425,40 @@ class EditorViewModel : ViewModel() {
      * single files compile in place (`cc <file> -o a.out && ./a.out`).
      */
     fun runActiveFile(context: Context) {
+        runFile(context, null)
+    }
+
+    /**
+     * Phase 33 (first-hour UX) — RUN ▶ can target a specific project file
+     * (the main/index entry) instead of the open tab. [target] is the
+     * root-relative path inside the active project; null means "the file that
+     * is open". The run pipeline is otherwise identical to [runActiveFile].
+     */
+    fun runFile(context: Context, target: String?) {
         if (_outputState.value.busy) return
+        pendingRunTarget = target
         val appContext = context.applicationContext
         captureContext(appContext)
         if (!saveFile(appContext)) {
             _userMessage.value = appContext.getString(R.string.file_save_failed)
             return
         }
+        // A targeted run compiles the TARGET file's on-disk content. If that
+        // file is also open in a (dirty) tab, flush that buffer first so the
+        // run matches what the user sees in that tab.
+        val project = _projectName.value
+        if (target != null && project != null) {
+            val tab = _openTabs.value.firstOrNull { it.relativePath == target }
+            if (tab != null && tab.buffer.text != tab.savedText) {
+                if (writeProjectFile(appContext, project, target, tab.buffer.text, tab.lineEnding)) {
+                    updateTab(target) { it.copy(savedText = tab.buffer.text) }
+                }
+            }
+        }
         _diagnostics.value = emptyList()
 
-        val project = _projectName.value
+        // The file being run: the target when asked, otherwise the open file.
+        val sourceName = target ?: _fileName.value
         val workDir: File
         val buildCommand: String?
         val runCommand: String?
@@ -2434,8 +2476,14 @@ class EditorViewModel : ViewModel() {
             viewModelScope.launch(Dispatchers.IO) {
                 runCatching { BuildArtifactIgnore.ensure(info.root) }
             }
-            // Web projects are handled by the preview flow, not the panel.
-            if (info.config.type.equals("web", ignoreCase = true)) return
+            // Web projects are handled by the preview flow, not the panel —
+            // except that a web project can still hold runnable source files
+            // (main.c, tool.py). RUN on one of those compiles/runs it in the
+            // panel instead of always previewing index.html (Phase 33:
+            // "html project with c files").
+            if (info.config.type.equals("web", ignoreCase = true) &&
+                !ProjectRunTarget.isRunnableSource(ProjectPathUtils.sanitizeRelativePath(sourceName))
+            ) return
             // Phase 14 — server presets: build once, then run as a long-lived
             // background server and auto-open Web Preview on the detected URL.
             if (info.config.isServerType()) {
@@ -2448,7 +2496,7 @@ class EditorViewModel : ViewModel() {
             // active-file run path with the preset as the project fallback.
             var config = info.config
             if (config.type.equals("auto", ignoreCase = true)) {
-                val activeRelForDetect = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
+                val activeRelForDetect = ProjectPathUtils.sanitizeRelativePath(sourceName)
                 when (val plan = ProjectRunDetector.detect(info.root, activeRelForDetect)) {
                     is AutoRunPlan.Server -> {
                         config = ProjectConfig.defaultFor(info.name, plan.type)
@@ -2473,7 +2521,7 @@ class EditorViewModel : ViewModel() {
             // runs — exactly like the tree's per-file "Run in terminal".
             // The project.json build/run still drives everything else
             // (headers, text, custom multi-file builds).
-            val activeRel = ProjectPathUtils.sanitizeRelativePath(_fileName.value)
+            val activeRel = ProjectPathUtils.sanitizeRelativePath(sourceName)
             // Phase 24.9 — a project-root `.codec.json` overrides the active
             // file's build/run (highest priority). It is applied BEFORE the
             // registry so a multi-file C project can say `gcc main.c utils.c
@@ -2499,7 +2547,7 @@ class EditorViewModel : ViewModel() {
                     runCommand?.let { add(it) }
                 }
                 terminalCommand = steps.joinToString(" && ")
-                preferInteractive = LanguageRegistry.forFile(_fileName.value)?.interactive ?: true
+                preferInteractive = LanguageRegistry.forFile(sourceName)?.interactive ?: true
             } else {
                 // Phase 21.1 — one generic dispatch through LanguageRegistry
                 // replaces the old per-language `when` (python / c / cpp / else).
@@ -2535,9 +2583,31 @@ class EditorViewModel : ViewModel() {
                             // exclude it repo-locally BEFORE the run.
                             viewModelScope.launch(Dispatchers.IO) { PythonCacheIgnore.ensure(info.root) }
                         }
-                        buildCommand = decision.plan.build
+                        // Phase 33 — a self-contained C file whose entry is
+                        // not `main` (program01, solve, …) compiles through a
+                        // generated wrapper that supplies main(). Only when the
+                        // file defines no main and exactly ONE other function;
+                        // otherwise the normal single-file build (and its "no
+                        // main" hint) applies.
+                        val rel = activeRel
+                        val wrapped: Pair<String, String>? =
+                            if (decision.profile.extensions.contains("c") && rel != null) {
+                                val file = ProjectPathUtils.resolveInside(info.root, rel)
+                                if (file != null && file.isFile && file.length() <= CEntryWrapper.MAX_SNIFF_BYTES) {
+                                    val text = runCatching { file.readText() }.getOrNull()
+                                    val entry = text?.let { CEntryWrapper.singleEntry(it) }
+                                    val wrapper = entry?.let { CEntryWrapper.write(appContext.cacheDir, file, it) }
+                                    if (wrapper != null) {
+                                        val outRef = "bin/${LanguageRegistry.outputNameFor(rel)}"
+                                        val build = "mkdir -p bin && cc ${LanguageRegistry.shellEscape(wrapper.absolutePath)} -o ${LanguageRegistry.shellEscape(outRef)}"
+                                        val terminal = "cd ${LanguageRegistry.shellEscape(info.root.absolutePath)} && $build && ${decision.plan.run}"
+                                        build to terminal
+                                    } else null
+                                } else null
+                            } else null
+                        buildCommand = wrapped?.first ?: decision.plan.build
                         runCommand = decision.plan.run
-                        terminalCommand = decision.plan.terminal
+                        terminalCommand = wrapped?.second ?: decision.plan.terminal
                         preferInteractive = decision.profile.interactive
                     }
                     else -> {
@@ -2598,6 +2668,11 @@ class EditorViewModel : ViewModel() {
             _userMessage.value = appContext.getString(R.string.output_no_command)
             return
         }
+
+        // Phase 33 — attribute compiler diagnostics to the file that was RUN
+        // (the main/index target when one was chosen), so a failing main-file
+        // build still shows squiggles/tap-to-line even with another file open.
+        runTargetBasename = target?.substringAfterLast('/')
 
         _outputExpanded.value = true
         buildOutputBuffer = StringBuilder()
@@ -2999,17 +3074,25 @@ class EditorViewModel : ViewModel() {
                 line
             }
         }
+        // Phase 33 — a linker "undefined symbol 'main'" means the single file
+        // was compiled out of a multi-file project (a fragment, no main()).
+        // Surface the hint instead of leaving a bare, cryptic linker error.
+        val noMainHint = if (CompilerDiagnostics.looksLikeMissingMain(buildOutputBuffer.toString())) {
+            listOf(OutputLine(context.getString(R.string.output_no_main_hint), OutputLineKind.SYSTEM))
+        } else {
+            emptyList()
+        }
         _outputState.value = current.copy(
             phase = OutputPhase.DONE,
             busy = false,
             summary = summary,
             waitingForInput = false,
             inputBuffer = "",
-            lines = reColored + OutputLine(summary, OutputLineKind.ERROR)
+            lines = reColored + OutputLine(summary, OutputLineKind.ERROR) + noMainHint
         )
         _diagnostics.value = CompilerDiagnostics.parse(
             buildOutputBuffer.toString(),
-            _fileName.value.substringAfterLast('/')
+            runTargetBasename ?: _fileName.value.substringAfterLast('/')
         )
     }
 
@@ -3017,8 +3100,9 @@ class EditorViewModel : ViewModel() {
      * Tap on a clickable diagnostic line in the Output Panel: open the file
      * (when it is not already the active tab) and move the editor cursor to
      * the reported line/column. Paths are confined to the current project
-     * root (or the single-files folder) — a diagnostic naming a file outside
-     * the active context is ignored.
+     * root (or the single-files folder); a diagnostic naming a compiler temp
+     * (source_<stamp>.c) or a file outside the active context lands in the
+     * ACTIVE file instead of being ignored (Phase 32.3).
      */
     fun jumpToOutputDiagnostic(context: Context, diagnostic: OutputDiagnostic) {
         if (!openOutputDiagnosticFile(context, diagnostic)) return
@@ -3054,17 +3138,21 @@ class EditorViewModel : ViewModel() {
             runCatching { ProjectManager(appContext).project(project)?.root }.getOrNull()
         } else {
             runCatching { FileManager(appContext).getProjectDir() }.getOrNull()
-        }
-        val file = root?.let { resolveDiagnosticFile(it, diagnostic.file) } ?: return false
-        val relative = runCatching { root.toRelativeString(file) }.getOrNull() ?: return false
-        if (relative.startsWith("..")) return false
+        } ?: return false
+
+        // Phase 32.3 — a diagnostic naming a compiler temp (source_<stamp>.c)
+        // or a file that is not a real file under this folder must jump to the
+        // ACTIVE file: the run was launched from it, so the caret belongs in
+        // the user's file, never on a nonexistent temp copy. The pure resolver
+        // returns the active file's path when the named file does not resolve.
+        val target = OutputDiagnosticTarget.targetOrActive(root, diagnostic.file, _fileName.value)
 
         return if (project != null) {
-            openFile(appContext, project, relative)
-            _fileName.value == relative
+            openFile(appContext, project, target)
+            _fileName.value == target
         } else {
-            if (file.name != _fileName.value) openFile(appContext, null, file.name)
-            _fileName.value == file.name
+            if (target != _fileName.value) openFile(appContext, null, target)
+            _fileName.value == target
         }
     }
 
@@ -3079,23 +3167,6 @@ class EditorViewModel : ViewModel() {
                 DiagnosticSeverity.WARNING
             }
         )
-
-    /**
-     * Resolves the file named by a diagnostic against [root]. Absolute paths
-     * must live under the root; relative paths are resolved inside it.
-     */
-    private fun resolveDiagnosticFile(root: File, raw: String): File? {
-        val candidate = if (raw.startsWith('/')) {
-            File(raw)
-        } else {
-            File(root, raw)
-        }
-        if (!candidate.isFile) return null
-        val rootPath = root.absolutePath
-        val candidatePath = candidate.absolutePath
-        if (candidatePath != rootPath && !candidatePath.startsWith(rootPath + File.separator)) return null
-        return candidate
-    }
 
     private suspend fun compilerSettingsFrom(settingsManager: SettingsManager): CompilerSettings {
         val standard = settingsManager.cStandardFlow.first()
