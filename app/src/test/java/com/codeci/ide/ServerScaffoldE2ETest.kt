@@ -109,12 +109,20 @@ class ServerScaffoldE2ETest {
     private fun serverRoundTrip(
         type: String,
         port: Int,
+        extraEnv: Map<String, String> = emptyMap(),
         verify: (File, MutableList<ServerEvent>) -> Unit
     ) = runBlocking {
         val dir = tempProject(type)
         val config = ProjectConfig.defaultFor("demo", type)
         buildProject(dir, config.build)
-        val runner = ServerRunner(shell, env, config.run, dir, readyTimeoutSeconds = 10)
+        val runner = ServerRunner(
+            shell,
+            env + extraEnv,
+            config.run,
+            dir,
+            readyTimeoutSeconds = 10,
+            preferredPort = port
+        )
         val events = mutableListOf<ServerEvent>()
         val job = launch { runner.start().collect { events += it } }
         try {
@@ -167,6 +175,69 @@ class ServerScaffoldE2ETest {
             val (code2, body2) = awaitHttp("http://127.0.0.1:5000/")
             assertEquals(200, code2)
             assertTrue(body2.contains("Edited on the fly"))
+        }
+    }
+
+    /**
+     * Phase 37.1 — the LAN half of the owner's ask, on the real pipeline: with
+     * CODEC_SERVER_HOST=0.0.0.0 the scaffold binds every interface, the
+     * detector reports the wildcard bind (so the UI may advertise a LAN URL),
+     * and the phone's own loopback preview keeps working unchanged.
+     */
+    @Test
+    fun `flask scaffold with the lan env binds the wildcard and still serves loopback`() {
+        serverRoundTrip("python-flask", 5000, mapOf("CODEC_SERVER_HOST" to "0.0.0.0")) { _, events ->
+            val ready = events.filterIsInstance<ServerEvent.Ready>().first()
+            assertEquals(5000, ready.port)
+            assertEquals("http://127.0.0.1:5000", ready.url)
+            assertEquals("the bind line must report the wildcard so LAN mode is honest", "0.0.0.0", ready.bind)
+            assertTrue(
+                events.any { it is ServerEvent.Output && it.line.contains("Running on http://0.0.0.0:5000") }
+            )
+            val (code, body) = awaitHttp("http://127.0.0.1:5000/")
+            assertEquals(200, code)
+            assertTrue(body.contains("Welcome to CodeC Flask App!"))
+        }
+    }
+
+    /**
+     * Phase 37.2 §4 — a taken port reads as an instruction, not a crash. Two
+     * servers on one port: the second must report the clash before it dies.
+     */
+    @Test
+    fun `a server started on a busy port reports the clash instead of dying silently`() {
+        val dir = tempProject("python-flask")
+        val first = ServerRunner(shell, env, "python3 -m http.server 8123 --bind 127.0.0.1", dir, 10, 8123)
+        val second = ServerRunner(shell, env, "python3 -m http.server 8123 --bind 127.0.0.1", dir, 10, 8123)
+        val firstEvents = mutableListOf<ServerEvent>()
+        val secondEvents = mutableListOf<ServerEvent>()
+        runBlocking {
+            val firstJob = launch { first.start().collect { firstEvents += it } }
+            try {
+                // "The first server is up" is answered by its socket, not by its
+                // log: python block-buffers stdout when it is not a tty, so the
+                // bind line of `http.server` can sit in a buffer while the port
+                // is already serving — waiting for the line times out for the
+                // wrong reason.
+                withTimeout(20_000) {
+                    while (runCatching { httpGet("http://127.0.0.1:8123/").first }
+                            .getOrDefault(0) != 200) delay(100)
+                }
+                val secondJob = launch { second.start().collect { secondEvents += it } }
+                withTimeout(20_000) {
+                    while (secondEvents.none { it is ServerEvent.BindFailed }) delay(50)
+                }
+                val clash = secondEvents.filterIsInstance<ServerEvent.BindFailed>().first()
+                assertEquals(8123, clash.port)
+                assertTrue(clash.message.contains("in use"))
+                assertTrue(clash.message.contains("change the port"))
+                second.stop()
+                withTimeout(5_000) { secondJob.join() }
+            } finally {
+                first.stop()
+                withTimeout(5_000) { firstJob.join() }
+                dir.deleteRecursively()
+            }
         }
     }
 

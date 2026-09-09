@@ -101,6 +101,9 @@ Serves a small web app on http://127.0.0.1:5000. When the Flask package is
 installed it runs the real framework; otherwise a stdlib fallback serves the
 same pages, so the project runs out of the box.
 
+CodeC sets CODEC_SERVER_HOST=0.0.0.0 when LAN sharing is on; that is the one
+change that lets other devices on the Wi-Fi open this server.
+
 The page is read from index.html on every request, so edit it and tap
 Reload in the Web Preview — no restart needed. To use the real framework:
     pkg install -y python-pip && pip install flask
@@ -109,6 +112,7 @@ import os
 import sys
 
 PORT = 5000
+HOST = os.environ.get("CODEC_SERVER_HOST", "127.0.0.1")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -131,8 +135,8 @@ try:
         return jsonify(message="Hello from CodeC Flask!")
 
     if __name__ == "__main__":
-        print(" * Running on http://127.0.0.1:5000/ (CodeC Flask)", flush=True)
-        app.run(host="127.0.0.1", port=PORT, debug=False, use_reloader=False)
+        print(" * Running on http://%s:%s/ (CodeC Flask)" % (HOST, PORT), flush=True)
+        app.run(host=HOST, port=PORT, debug=False, use_reloader=False)
 except ImportError:
     from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -150,11 +154,11 @@ except ImportError:
 
     if __name__ == "__main__":
         print(
-            " * Running on http://127.0.0.1:5000/ (CodeC stdlib fallback; install flask via: %s)"
-            % "$PYTHON_PIP_HINT",
+            " * Running on http://%s:%s/ (CodeC stdlib fallback; install flask via: %s)"
+            % (HOST, PORT, "$PYTHON_PIP_HINT"),
             flush=True,
         )
-        HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+        HTTPServer((HOST, PORT), Handler).serve_forever()
 """
 
     private const val FLASK_INDEX = """<!doctype html>
@@ -184,6 +188,9 @@ Serves a small web API on http://127.0.0.1:8000. When FastAPI + uvicorn are
 installed it runs the real framework; otherwise a stdlib fallback serves the
 same pages, so the project runs out of the box.
 
+CodeC sets CODEC_SERVER_HOST=0.0.0.0 when LAN sharing is on, and uvicorn binds
+every interface — other devices on the Wi-Fi can then open this API too.
+
 The page is read from index.html on every request, so edit it and tap
 Reload in the Web Preview — no restart needed. To use the real framework:
     pkg install -y python-pip && pip install fastapi uvicorn
@@ -192,6 +199,7 @@ import os
 import sys
 
 PORT = 8000
+HOST = os.environ.get("CODEC_SERVER_HOST", "127.0.0.1")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -216,8 +224,8 @@ try:
         return {"message": "Hello from CodeC FastAPI!"}
 
     if __name__ == "__main__":
-        print("Uvicorn running on http://127.0.0.1:8000/ (CodeC FastAPI)", flush=True)
-        uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="info")
+        print("Uvicorn running on http://%s:%s/ (CodeC FastAPI)" % (HOST, PORT), flush=True)
+        uvicorn.run(app, host=HOST, port=PORT, log_level="info")
 except ImportError:
     from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -235,11 +243,11 @@ except ImportError:
 
     if __name__ == "__main__":
         print(
-            "Uvicorn running on http://127.0.0.1:8000/ (CodeC stdlib fallback; install fastapi via: %s)"
-            % "$PYTHON_PIP_HINT",
+            "Uvicorn running on http://%s:%s/ (CodeC stdlib fallback; install fastapi via: %s)"
+            % (HOST, PORT, "$PYTHON_PIP_HINT"),
             flush=True,
         )
-        HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+        HTTPServer((HOST, PORT), Handler).serve_forever()
 """
 
     private const val FASTAPI_INDEX = """<!doctype html>
@@ -267,14 +275,27 @@ except ImportError:
  * A tiny single-threaded HTTP server on http://127.0.0.1:8080, written to
  * compile with the built-in TCC (no external libraries):
  *     cc server.c -o bin/server
+ *
+ * CODEC_SERVER_HOST picks the bind address: CodeC exports 0.0.0.0 when LAN
+ * sharing is on, which is what makes this reachable from another device.
  */
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #define PORT 8080
+#define HOST_ENV "CODEC_SERVER_HOST"
+
+static const char *server_host(void) {
+    const char *configured = getenv(HOST_ENV);
+    if (configured != NULL && configured[0] != '\0') {
+        return configured;
+    }
+    return "127.0.0.1";
+}
 
 static const char PAGE[] =
     "<!doctype html>\n"
@@ -314,10 +335,13 @@ int main(void) {
     int yes = 1;
     (void)setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
+    const char *host = server_host();
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_addr.s_addr = (strcmp(host, "0.0.0.0") == 0)
+        ? htonl(INADDR_ANY)
+        : inet_addr(host);
     addr.sin_port = htons(PORT);
 
     if (bind(server, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -330,7 +354,7 @@ int main(void) {
         close(server);
         return 1;
     }
-    printf("CodeC server listening on http://127.0.0.1:8080\n");
+    printf("CodeC server listening on http://%s:%d\n", host, PORT);
     fflush(stdout);
 
     for (;;) {

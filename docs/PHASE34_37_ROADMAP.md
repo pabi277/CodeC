@@ -8,7 +8,8 @@
 > The four row ideas the owner handed over were researched below and turned
 into four phases (34–37). Phase 34 is merged; Phase 35 is device-passed by
 owner report on its session branch. Phase 36 is now DEVICE-PASSED and
-MERGED to `main` via PR #60; Phase 37 remains planned.
+MERGED to `main` via PR #60; **Phase 37 is IMPLEMENTED on its session branch
+(`arena/01a0872e-codec`) and needs the owner's device pass.**
 Each phase lands on `main` only through the §3 merge gate and finishes with
 the owner's cross-device test round.
 
@@ -105,7 +106,13 @@ Run CodeC files as a **LAN-reachable** server like Spck/Termux: bind
 surface `http://<ip>:<port>` + a QR code, and keep the server alive through
 a foreground service. Two parts: **37.1** LAN server + URL/QR UX; **37.2**
 foreground keep-alive + port lifecycle. Spec:
-[`chat-phase37/`](chat-phase37/README.md).
+[`chat-phase37/`](chat-phase37/README.md). **Result (2026-09-09):** both parts
+implemented — `LanAddress` / `LanAddressProvider` / `ServerEndpoints` /
+`LanSharePolicy` / `ServerRegistry` / `ServerHost` / `ServerNotification` /
+`QrCode` (ZXing `core` 3.5.4, Apache-2.0) + `ServerSharePanel`; LAN is an
+opt-in switch that is OFF by default, loopback behaviour is unchanged, and the
+`RunForegroundService` was reused rather than duplicated. **Device pass
+required.**
 
 ---
 
@@ -123,6 +130,12 @@ foreground keep-alive + port lifecycle. Spec:
   passed after fixes `da126cf`/`11fe8d7`; green CI is
   `34374983032`/`34375710614`. Merge was authorized by the owner; **PR #60 is
   MERGED to `main`** at `373a51e8f027bcf08fc948b8dc2058c3bda8c566`.
-- Phase 37 remains **📋 PLANNED** (researched + specced, not implemented).
+- Phase 37 (Device as server / LAN) is **🚧 IMPLEMENTED** on
+  `arena/01a0872e-codec` (owner: "Start Phase 37"): 37.1 LAN bind + the two
+  URLs + QR, 37.2 keep-alive on the existing foreground service + the
+  `ServerRegistry` port lifecycle. 62 new host cases in 9 classes; local
+  pre-validation 96/96 over the real production files. **CI green + the
+  owner's two-device pass are still outstanding, so no acceptance is
+  claimed**; merge is held for the owner's command.
 - The owner starts each phase with "Start Phase N" and runs the cross-device
   round at the end.

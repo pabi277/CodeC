@@ -107,6 +107,10 @@ fun OutputPanelView(
     onSubmitInput: () -> Unit = {},
     /** Phase 14 — a running server project: open the Web Preview at state.serverUrl. */
     onOpenPreviewUrl: (String) -> Unit = {},
+    /** Phase 37.1 — LAN sharing switch for the live server (restarts the run). */
+    onToggleLanShare: (Boolean) -> Unit = {},
+    /** Phase 37.2 — stop every server the shared host owns. */
+    onStopAllServers: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -158,6 +162,16 @@ fun OutputPanelView(
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+            // Phase 37.1 — a live server announces itself in the header, so the
+            // collapsed strip still tells you the phone is serving something.
+            state.serverEndpoints?.let { endpoints ->
+                Text(
+                    text = endpoints.badge(),
+                    color = if (endpoints.hasLan()) Color(0xFF55FF55) else Color(0xFF8A8A8A),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(end = 8.dp)
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
@@ -242,6 +256,21 @@ fun OutputPanelView(
                     modifier = Modifier.size(20.dp)
                 )
             }
+        }
+
+        // Phase 37.1 — the two URLs (+ QR) for a live server, between the
+        // header and the log: the panel is where RUN ▶ ends up, so this is
+        // where the address a second device needs belongs.
+        if (isExpanded && state.serverEndpoints != null) {
+            ServerSharePanel(
+                endpoints = state.serverEndpoints,
+                lanShared = state.lanShared,
+                onToggleLan = onToggleLanShare,
+                servers = state.servers,
+                onOpenUrl = onOpenPreviewUrl,
+                onStopAll = onStopAllServers,
+                dense = true
+            )
         }
 
         if (isExpanded) {

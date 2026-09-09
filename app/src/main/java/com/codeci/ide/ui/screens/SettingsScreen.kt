@@ -947,7 +947,7 @@ fun SettingsScreen(
             // (binary Gradle dependency, no source vendored).
             SettingsItem(
                 title = "Open-source licenses",
-                subtitle = "sora-editor + language-textmate + editor-lsp © Rosemoe — LGPL-2.1 · TextMate grammars & themes — MIT (microsoft/vscode, TypeScript-TmLanguage, LuaLS) · snippet packs — MIT (rafamadriz/friendly-snippets) · file icons — MIT (jesseweed/seti-ui) · github.com/Rosemoe/sora-editor"
+                subtitle = "sora-editor + language-textmate + editor-lsp © Rosemoe — LGPL-2.1 · TextMate grammars & themes — MIT (microsoft/vscode, TypeScript-TmLanguage, LuaLS) · snippet packs — MIT (rafamadriz/friendly-snippets) · file icons — MIT (jesseweed/seti-ui) · QR encoding — Apache-2.0 (zxing/zxing core) · github.com/Rosemoe/sora-editor"
             )
             SettingsAction(
                 title = stringResource(com.codeci.ide.R.string.install_from_github),

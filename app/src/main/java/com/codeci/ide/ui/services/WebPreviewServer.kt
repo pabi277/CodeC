@@ -4,6 +4,7 @@ import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
@@ -16,9 +17,14 @@ import kotlin.concurrent.thread
  * `http://127.0.0.1:<ephemeral port>/`, which makes relative paths, fetch,
  * XHR and modules behave exactly like a `python -m http.server` dev server.
  *
- * The socket binds to the loopback interface only (nothing on the LAN can
- * reach it), answers plain GET/HEAD requests without caching, and refuses
+ * The socket binds to the loopback interface by default (nothing on the LAN
+ * can reach it), answers plain GET/HEAD requests without caching, and refuses
  * any path — encoded or not — that resolves outside the served folder.
+ *
+ * **Phase 37.1** adds the opt-in counterpart: `start(root, lanMode = true)`
+ * binds `0.0.0.0`, so other devices on the same Wi-Fi can open the very same
+ * URL the phone's WebView loads. Loopback stays the default everywhere; the
+ * path-confined [resolveServedFile] guard is unchanged in both modes.
  */
 class WebPreviewServer private constructor(
     private val root: File,
@@ -27,24 +33,57 @@ class WebPreviewServer private constructor(
     @Volatile
     private var running = true
 
-    val port: Int get() = socket.localPort
+    private val stopped = java.util.concurrent.CountDownLatch(1)
+    private val acceptThread: Thread
+
+    /**
+     * Captured at bind time: after [stop] a closed `ServerSocket` reports
+     * `localPort == -1`, and a server row that outlived its socket (the
+     * keep-alive case, Phase 37.2) must still be able to say which port it had.
+     */
+    val port: Int = socket.localPort
+
+    /** `127.0.0.1` or `0.0.0.0` — what the socket was bound to (Phase 37.1). */
+    val bindAddress: String = socket.inetAddress.hostAddress
 
     init {
-        thread(isDaemon = true, name = "codec-preview-accept") {
+        // A bounded accept, so [stop] can actually wait for this thread: without
+        // the poll the loop sits in `accept()` and the fd (and therefore the
+        // port) is only released whenever the blocked syscall happens to wake.
+        runCatching { socket.soTimeout = ACCEPT_POLL_MILLIS }
+        acceptThread = thread(isDaemon = true, name = "codec-preview-accept") {
             while (running) {
-                val connection = runCatching { socket.accept() }.getOrNull() ?: break
+                val connection = try {
+                    socket.accept()
+                } catch (poll: java.net.SocketTimeoutException) {
+                    continue
+                } catch (closed: Exception) {
+                    break
+                }
                 thread(isDaemon = true, name = "codec-preview-conn") {
                     runCatching { handle(connection) }
                     runCatching { connection.close() }
                 }
             }
+            // Close here too and only then open the gate: after [stopped] fires
+            // the port is genuinely free, so "Stop, then re-run on the same
+            // port" works on the first try (37.2 exit check 3).
+            running = false
+            runCatching { socket.close() }
+            stopped.countDown()
         }
     }
 
+    /** Stops the server and waits (bounded) until the listening port is released. */
     fun stop() {
         running = false
         runCatching { socket.close() }
+        runCatching { acceptThread.join(STOP_JOIN_MILLIS) }
+        runCatching { stopped.await(STOP_WAIT_MILLIS, TimeUnit.MILLISECONDS) }
     }
+
+    /** True while the accept loop is alive (a stopped server answers nothing). */
+    val isRunning: Boolean get() = running && !socket.isClosed
 
     private fun handle(connection: Socket) {
         connection.soTimeout = 5_000
@@ -59,18 +98,31 @@ class WebPreviewServer private constructor(
         val method = parts.getOrNull(0)?.uppercase()
         val target = parts.getOrNull(1) ?: "/"
         val output = connection.getOutputStream()
+        // Phase 37 (found by the LAN test): every response announces its
+        // Content-Length, so an error written "header only" left the client
+        // waiting for bytes that never came (HttpURLConnection: "Premature
+        // EOF"). HEAD is the one case where a body-less answer is correct.
         if (method != "GET" && method != "HEAD") {
-            respond(output, 405, "text/plain; charset=utf-8", "Method Not Allowed".toByteArray(), withBody = false)
+            respond(
+                output, 405, "text/plain; charset=utf-8",
+                "Method Not Allowed".toByteArray(), withBody = method != "HEAD"
+            )
             return
         }
         val file = resolveServedFile(root, target)
         if (file == null) {
-            respond(output, 404, "text/plain; charset=utf-8", "Not found: $target".toByteArray(), withBody = false)
+            respond(
+                output, 404, "text/plain; charset=utf-8",
+                "Not found: $target".toByteArray(), withBody = method != "HEAD"
+            )
             return
         }
         val bytes = runCatching { file.readBytes() }.getOrNull()
         if (bytes == null) {
-            respond(output, 500, "text/plain; charset=utf-8", "Read failed".toByteArray(), withBody = false)
+            respond(
+                output, 500, "text/plain; charset=utf-8",
+                "Read failed".toByteArray(), withBody = method != "HEAD"
+            )
             return
         }
         respond(output, 200, contentTypeFor(file.name), bytes, withBody = method != "HEAD")
@@ -106,14 +158,64 @@ class WebPreviewServer private constructor(
 
     companion object {
 
-        /** Binds to 127.0.0.1 on an ephemeral port; null when [rootDir] is missing or bind fails. */
-        fun start(rootDir: File): WebPreviewServer? {
-            if (!rootDir.isDirectory) return null
-            return runCatching {
-                val socket = ServerSocket(0, 16, InetAddress.getByName("127.0.0.1"))
-                WebPreviewServer(rootDir, socket)
-            }.getOrNull()
+        /** How often a blocked `accept()` wakes to notice that we stopped. */
+        private const val ACCEPT_POLL_MILLIS = 200
+
+        /** Bounds on [stop]: the accept loop never needs longer than one poll. */
+        private const val STOP_JOIN_MILLIS = 1_500L
+        private const val STOP_WAIT_MILLIS = 1_500L
+
+        /** The two addresses CodeC ever binds a preview socket to. */
+        const val LOOPBACK_HOST = "127.0.0.1"
+        const val LAN_HOST = LanAddress.WILDCARD_HOST
+
+        /**
+         * Binds [host] on [port] (0 = ephemeral). Kept for callers that only
+         * care about success: null when the folder is missing or the bind
+         * failed for any reason.
+         */
+        fun start(rootDir: File, lanMode: Boolean = false, port: Int = 0): WebPreviewServer? =
+            (startAt(rootDir, if (lanMode) LAN_HOST else LOOPBACK_HOST, port) as? PreviewStart.Ready)
+                ?.server
+
+        /**
+         * Binds [host]:[port] and says *why* it could not (Phase 37.2 §4): a
+         * port already taken is a message the UI can act on, not a silent
+         * null. [port] 0 lets the OS pick an ephemeral one.
+         */
+        fun startAt(rootDir: File, host: String = LOOPBACK_HOST, port: Int = 0): PreviewStart {
+            if (!rootDir.isDirectory) {
+                return PreviewStart.Failed("Folder is not readable: ${rootDir.absolutePath}")
+            }
+            return try {
+                // Bind in two steps on purpose: `ServerSocket(port, …, addr)`
+                // creates the native fd *before* binding, so a failed bind
+                // leaks it until the finalizer runs — and a LAN retry loop that
+                // walks a port range would then be fighting its own leftovers.
+                val socket = ServerSocket()
+                socket.reuseAddress = true
+                try {
+                    socket.bind(java.net.InetSocketAddress(InetAddress.getByName(host), port))
+                } catch (e: Exception) {
+                    runCatching { socket.close() }
+                    throw e
+                }
+                PreviewStart.Ready(WebPreviewServer(rootDir, socket))
+            } catch (e: Exception) {
+                if (isBindConflict(e)) {
+                    PreviewStart.PortInUse(port, host)
+                } else {
+                    PreviewStart.Failed(e.message ?: "Could not start the preview server")
+                }
+            }
         }
+
+        /** `BindException` / "address already in use", through the cause chain. */
+        fun isBindConflict(error: Throwable): Boolean =
+            generateSequence(error) { it.cause }.any { cause ->
+                cause is java.net.BindException ||
+                    cause.message?.lowercase()?.contains("already in use") == true
+            }
 
         /** Percent-decodes a URL component; null on malformed escapes or control bytes. */
         fun decodePercent(raw: String): String? {
@@ -235,5 +337,15 @@ class WebPreviewServer private constructor(
                         ) c.toChar().toString() else "%%%02X".format(c)
                     }
                 }
+    }
+
+    /** How a preview-server start ended — a value, never an exception (37.2 §4). */
+    sealed interface PreviewStart {
+        data class Ready(val server: WebPreviewServer) : PreviewStart
+
+        /** [port] is 0 when the OS was asked to pick one and the bind still failed. */
+        data class PortInUse(val port: Int, val host: String) : PreviewStart
+
+        data class Failed(val message: String) : PreviewStart
     }
 }

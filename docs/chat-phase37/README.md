@@ -1,6 +1,12 @@
 # CodeC Phase 37 — Device as server (localhost on the LAN)
 
-> **Status:** 📋 PLANNED (researched + specced, not implemented) ·
+> **Status:** 🚧 IMPLEMENTED on `arena/01a0872e-codec` (2026-09-09, owner:
+> "Start Phase 37") — both parts, 62 new host-test cases in nine new test
+> classes, local pre-validation 96/96 green over the real production files.
+> **A real device pass is required** (owner's phone + a second device on the
+> same Wi-Fi, all eight exit checks); no device acceptance is claimed until
+> the owner reports it. CI (`Build APK`) is the executor of record, and merge
+> is held for the owner's command.
 > **Cost:** `[client-only]` · **Effort:** M/L · **Owner row:** *"Like spck or
 > Termux we can use a device as a server and run our files at localhost i want
 > to implement that feature"*
@@ -12,8 +18,8 @@
 
 | Part | Title | Cost | Effort | Status |
 |---|---|---|---|---|
-| [37.1](PART_37_1_LAN_SERVER.md) | LAN server + URL/QR | client-only | M | 📋 planned |
-| [37.2](PART_37_2_KEEPALIVE_PORTS.md) | Keep-alive + ports | client-only | M | 📋 planned |
+| [37.1](PART_37_1_LAN_SERVER.md) | LAN server + URL/QR | client-only | M | 🚧 implemented — device pass required |
+| [37.2](PART_37_2_KEEPALIVE_PORTS.md) | Keep-alive + ports | client-only | M | 🚧 implemented — device pass required |
 
 ## What exists today (evidence)
 
@@ -70,3 +76,49 @@ So the *on-device* preview is done; what is missing is exactly the owner's ask:
   service type).
 - WebView vs external browser: the on-device preview keeps using 127.0.0.1;
   the **LAN URL** is what peers use — never mix the two.
+
+## Result (2026-09-09) — what "the phone is a server" became
+
+```text
+  opt-in LAN switch (OFF by default, app-wide, not persisted)
+        │
+        ├─ static preview  → WebPreviewServer binds 0.0.0.0, pool 8100..8199
+        └─ process server  → CODEC_SERVER_HOST=0.0.0.0 for the run
+        │
+  ServerRegistry  ← the one owner of "what serves on which port"
+  ServerHost      ← the one owner of the socket / the process (survives the editor)
+        │
+  ServerEndpoints.of(port, bind, lanAddress, lanShared)   ← the one place URLs exist
+        │
+  ServerSharePanel (Output Panel header+body, Web Preview address bar)
+     http://127.0.0.1:<port>  ·  http://<lan-ip>:<port>  ·  copy  ·  QR (ZXing core)
+        │
+  RunForegroundService.startServing(...)  ← same service, same Stop, no second type
+```
+
+Rules the implementation locked in (all host-tested):
+
+- **The phone never dials the LAN URL.** The WebView keeps loading
+  `127.0.0.1`; the LAN URL and the QR are peer-facing only — mixing them was
+  the spec's named risk and it cannot happen by construction.
+- **A LAN URL exists only if it can be opened**: LAN on, wildcard bind, and a
+  peer-reachable IPv4. Otherwise the panel states the reason
+  ("no Wi-Fi address" / "this server answers on the phone only").
+- **Loopback keeps the pre-37 behaviour**: a loopback preview dies with the
+  screen; only a LAN server survives leaving the editor, and Stop / Clear /
+  STOP ALL always kill.
+- **No port below 1024** anywhere (`LanAddress.MIN_SHARE_PORT`, and the
+  templates' own defaults stay 5000/8000/8080).
+
+## Deferred, recorded on purpose
+
+- **NSD / mDNS discovery** (`_http._tcp`) — the spec called it optional and it
+  adds no reachability the URL does not already give; it stays a future part.
+- **`CODEC_SERVER_PORT`** — templates read `CODEC_SERVER_HOST` only; a port is
+  a *config* value, and letting a template silently move the port would
+  invalidate the URL CodeC just advertised. A clash surfaces as
+  `ServerEvent.BindFailed` with an actionable message instead.
+- **A second foreground-service type** — the spec forbids it; the existing
+  `RunForegroundService` carries the server.
+- **JmDNS** — not pulled (licence of older releases is LGPL; the rule is
+  verify-before-adopt, and there is no need today).

@@ -193,6 +193,11 @@ dependencies {
   if (project.findProperty("editorLsp")?.toString() == "true") {
     implementation(libs.sora.editor.lsp)
   }
+  // Phase 37.1 — QR encoding for the LAN URL (ZXing `core`, Apache-2.0,
+  // zero-dependency). Used only through `QrCode` (ui/services/QrCode.kt),
+  // which returns a plain module grid, so no other file imports zxing and the
+  // bitmap stays in Compose. Notice: assets/licenses/ZXING_APACHE2.txt.
+  implementation(libs.zxing.core)
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
   testImplementation(libs.androidx.compose.ui.test.junit4)

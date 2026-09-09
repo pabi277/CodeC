@@ -198,8 +198,18 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-09, Phase 36 device-passed; merge authorized)
+## 9. State snapshot (2026-09-09, Phase 37 implemented; CI + device pass outstanding)
 
+- **Phase 37 (Device as server / LAN) is 🚧 IMPLEMENTED** on
+  `arena/01a0872e-codec` (owner: "Start Phase 37"): 37.1 LAN bind + the two
+  URLs + ZXing QR, 37.2 keep-alive on the existing `RunForegroundService` +
+  `ServerRegistry`/`ServerHost` owning port and process truth. LAN is opt-in
+  and OFF by default, loopback behaviour is unchanged, no port < 1024, and the
+  templates honour `CODEC_SERVER_HOST` (never `CODEC_SERVER_PORT`). 62 new
+  host cases; local pre-validation 96/96 over the real production files.
+  **Device pass required** (owner's phone + a second device on the same
+  Wi-Fi, all eight exit checks) and `Build APK` CI has not seen this tip yet —
+  so no acceptance is claimed and **merge is HELD for the owner's command**.
 - **Phase 35** is ✅ DEVICE-PASSED by the owner report on session branch
   `arena/01a086a0-codec` (`317b89a`; docs follow-up `88839cd`). Build APK CI
   `34367008019` and current-tip `34367770583` are GREEN. The owner supplied no

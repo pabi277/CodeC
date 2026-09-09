@@ -47,7 +47,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.ServerSharePanel
+import com.codeci.ide.ui.services.LanAddressProvider
+import com.codeci.ide.ui.services.LanSharePolicy
+import com.codeci.ide.ui.services.ServerHost
+import com.codeci.ide.ui.services.ServerHosts
 import com.codeci.ide.ui.services.WebPreviewServer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.utils.FileManager
@@ -88,12 +95,73 @@ fun WebPreviewScreen(
     // real dev server (`file://` blocks all of those). If binding fails the
     // preview degrades to the old file:// load instead of erroring out.
     // Phase 14: live server URLs skip the static server entirely.
+    //
+    // Phase 37.1/37.2: the socket is owned by the shared ServerHost instead of
+    // this composition. Two visible consequences — the LAN switch can rebind
+    // the same folder on 0.0.0.0 (and hand peers a QR code), and a LAN preview
+    // keeps serving after this screen is gone, while a loopback preview still
+    // dies with it exactly as before.
+    val host = ServerHosts.shared
     val servedRoot = remember(projectName, htmlFile, liveUrl) {
         if (isLive) null else resolveServedRoot(context, projectName, htmlFile)
     }
-    val server = remember(servedRoot) { servedRoot?.let { WebPreviewServer.start(it) } }
-    DisposableEffect(server) {
-        onDispose { server?.stop() }
+    val staticId = remember(servedRoot, projectName) {
+        servedRoot?.let { ServerHost.staticId(projectName ?: it.name) }
+    }
+    val lanShared by LanSharePolicy.shared.enabled.collectAsState()
+    var staticEntry by remember(staticId) { mutableStateOf<com.codeci.ide.ui.services.ServerEntry?>(null) }
+    var staticError by remember(staticId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(servedRoot, staticId, lanShared) {
+        val root = servedRoot
+        val id = staticId
+        if (root == null || id == null) {
+            staticEntry = null
+            staticError = null
+            return@LaunchedEffect
+        }
+        if (lanShared) LanAddressProvider.refresh(context, host)
+        when (val outcome = withContext(Dispatchers.IO) {
+            host.serveStatic(id, projectName ?: root.name, root, lanShared)
+        }) {
+            is ServerHost.StaticOutcome.Serving -> {
+                staticEntry = outcome.entry
+                staticError = null
+            }
+            is ServerHost.StaticOutcome.Refused -> {
+                staticEntry = null
+                staticError = outcome.message
+            }
+        }
+    }
+    DisposableEffect(staticId, lanShared) {
+        onDispose {
+            val id = staticId ?: return@onDispose
+            // LAN sharing means somebody else may be reading this folder right
+            // now — leaving the preview must not pull the rug out (37.2 §3).
+            if (!lanShared) host.stop(id)
+        }
+    }
+    val serverPort = staticEntry?.port
+    // The on-device preview always dials loopback; the LAN URL is only ever for
+    // peers, so the two can never be mixed up (37.1 §3).
+    val pagePath = remember(servedRoot, htmlFile) {
+        val root = servedRoot
+        val file = htmlFile
+        if (root == null || file == null) {
+            "/"
+        } else {
+            "/" + (ProjectPathUtils.relativePath(root, file)?.let { WebPreviewServer.urlPathFor(it) } ?: "")
+        }
+    }
+    val shareEndpoints = remember(staticEntry, liveUrl, pagePath) {
+        val entry = staticEntry?.let { it.endpoints }
+            ?: liveUrl?.let { host.registry.findByUrl(it)?.endpoints }
+        entry?.let {
+            if (staticEntry != null) it.copy(
+                loopbackUrl = it.loopbackUrl + pagePath,
+                lanUrl = it.lanUrl?.plus(pagePath)
+            ) else it
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -147,6 +215,28 @@ fun WebPreviewScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
+            // Phase 37.1 — the peer-facing address + QR, right under the bar
+            // that shows the local one. The LAN switch only appears for the
+            // static preview, because that is the server this screen owns.
+            if (shareEndpoints != null) {
+                ServerSharePanel(
+                    endpoints = shareEndpoints,
+                    lanShared = lanShared,
+                    onToggleLan = { enabled -> LanSharePolicy.shared.set(enabled) },
+                    onOpenUrl = { url -> webView?.loadUrl(url) },
+                    servers = host.registry.snapshot(),
+                    onStopAll = { host.stopAll() },
+                    showSwitch = !isLive
+                )
+            }
+            staticError?.let { message ->
+                Text(
+                    text = message,
+                    color = Color(0xFFFFB347),
+                    style = TextStyle(fontSize = 11.sp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
         }
 
         if (error != null) {
@@ -189,7 +279,7 @@ fun WebPreviewScreen(
     }
 
     // Initial load once the WebView instance and the target URL are known.
-    LaunchedEffect(webView, htmlFile, liveUrl) {
+    LaunchedEffect(webView, htmlFile, liveUrl, serverPort) {
         val wv = webView ?: return@LaunchedEffect
         if (liveUrl != null) {
             // Phase 14: live server mode — the URL comes from the runner's
@@ -207,12 +297,13 @@ fun WebPreviewScreen(
                 viewModel.reportError("Preview supports HTML files (.html / .htm)")
             else -> {
                 viewModel.clearError()
-                val root = servedRoot
-                val viaServer = if (server != null && root != null) {
-                    ProjectPathUtils.relativePath(root, file)?.let { rel ->
-                        "http://127.0.0.1:${server.port}/${WebPreviewServer.urlPathFor(rel)}"
-                    }
-                } else null
+                val port = serverPort
+                // The host owns the socket now, so the port can arrive one
+                // frame after the file does. Wait for it (a `file://` load
+                // first would flash, then reload, and lose the fetch/module
+                // behaviour the server exists to provide).
+                if (servedRoot != null && port == null && staticError == null) return@LaunchedEffect
+                val viaServer = if (port != null) "http://127.0.0.1:$port$pagePath" else null
                 currentUrl = viaServer ?: ("file://" + file.absolutePath)
                 wv.loadUrl(currentUrl.orEmpty())
             }

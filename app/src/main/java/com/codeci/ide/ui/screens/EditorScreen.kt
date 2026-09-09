@@ -1644,6 +1644,10 @@ fun EditorScreen(
                     // The Output Panel's "open URL" button carries the same
                     // authoritative project as the RUN ▶ preview path.
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
+                    // Phase 37.1 — the LAN switch belongs to the whole session,
+                    // so it lives in the panel next to the URLs it changes.
+                    onToggleLanShare = { enabled -> viewModel.setLanShare(context, enabled) },
+                    onStopAllServers = { viewModel.stopAllServers(context) },
                     modifier = Modifier.height(outputPanelHeight.dp)
                 )
             } else if (outputState.hasContent() && !imeVisible && !codecKeysUp) {
@@ -1666,6 +1670,8 @@ fun EditorScreen(
                     onInputChange = { viewModel.onInputChange(it) },
                     onSubmitInput = { viewModel.submitInput() },
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
+                    onToggleLanShare = { enabled -> viewModel.setLanShare(context, enabled) },
+                    onStopAllServers = { viewModel.stopAllServers(context) },
                     modifier = Modifier.height(64.dp)
                 )
             }
