@@ -1051,6 +1051,7 @@ private enum class HubCardAction {
     OPEN, RENAME, EXPORT, SHARE_ZIP, DELETE, SOURCE_CONTROL, PULL, PUSH, COPY_REMOTE_URL, SWITCH_BRANCH
 }
 
+@Composable
 private fun ProjectsHubList(
     entries: List<ProjectHubEntry>,
     filter: ProjectHubFilter,
@@ -1353,6 +1354,7 @@ private fun ProjectHubCard(
  * clean-room on CodeC's own flows).
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun ProjectsHubAddSheet(
     onDismiss: () -> Unit,
     onNewProject: () -> Unit,
@@ -1413,6 +1415,7 @@ private fun ProjectsHubAddSheet(
     }
 }
 
+@Composable
 private fun HubSheetRow(
     color: Color,
     iconTint: Color,
@@ -1453,6 +1456,7 @@ private fun HubSheetRow(
 private val HubBadgeYellow = Color(0xFFE6B33C)
 
 @OptIn(ExperimentalFoundationApi::class)
+@Composable
 private fun ProjectTree(
     project: ProjectInfo,
     nodes: List<FileNode>,
@@ -1519,6 +1523,7 @@ private fun ProjectTree(
 }
 
 @OptIn(ExperimentalFoundationApi::class)
+@Composable
 private fun TreeRow(
     node: FileNode,
     onClick: () -> Unit,
@@ -1616,6 +1621,7 @@ private fun formatBytes(size: Long): String = when {
     else -> "%.1f MB".format(size / (1024.0 * 1024.0))
 }
 
+@Composable
 private fun EmptyProjectsState(
     onCreate: () -> Unit,
     onStarter: (WelcomeStarter) -> Unit
