@@ -110,8 +110,8 @@ foreground keep-alive + port lifecycle. Spec:
 
 ## State of record
 
-- Phase 33 (first-hour UX) is **✅ DEVICE-PASSED** on `arena/01a085e0-codec`
-  (owner: "Device test pass") — **merge HELD** while 34–37 are queued.
-- Phases 34–37 are **📋 PLANNED** (researched + specced, not implemented).
+- Phase 33 (first-hour UX) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
+- Phase 34 (Official file icons) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
+- Phases 35–37 are **📋 PLANNED** (researched + specced, not implemented).
 - Nothing starts until the owner's "Start Phase N"; the owner then runs the
   cross-device round at the end.

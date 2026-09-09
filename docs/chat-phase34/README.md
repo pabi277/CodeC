@@ -1,6 +1,6 @@
 # CodeC Phase 34 — Official file icons
 
-> **Status:** 📋 PLANNED (researched + specced, not implemented) ·
+> **Status:** ✅ DEVICE-PASSED & MERGED to `main` ·
 > **Cost:** `[client-only]` · **Effort:** S · **Owner row:** *"The file icons
 > i want the official icons"*
 
