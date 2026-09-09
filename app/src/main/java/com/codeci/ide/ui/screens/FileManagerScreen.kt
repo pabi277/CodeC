@@ -1117,6 +1117,7 @@ private fun ProjectsHubList(
  * selected, dark surface with a hairline outline otherwise; the Git chip
  * carries the branch glyph.
  */
+@Composable
 private fun HubFilterChip(
     value: ProjectHubFilter,
     selected: ProjectHubFilter,
@@ -1183,6 +1184,7 @@ private fun HubFilterChip(
  * git-aware overflow menu. All card data arrives precomputed in [entry]
  * (ViewModel IO); this composable never touches disk.
  */
+@Composable
 private fun ProjectHubCard(
     entry: ProjectHubEntry,
     onAction: (ProjectHubEntry, HubCardAction) -> Unit
