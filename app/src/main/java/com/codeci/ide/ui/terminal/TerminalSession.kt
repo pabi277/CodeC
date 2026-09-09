@@ -46,6 +46,15 @@ class TerminalSession(
     private val _exitCode = MutableStateFlow<Int?>(null)
     val exitCode: StateFlow<Int?> = _exitCode.asStateFlow()
 
+    private val _lifecycle = MutableStateFlow(TerminalLifecycle.EXITED)
+    val lifecycle: StateFlow<TerminalLifecycle> = _lifecycle.asStateFlow()
+
+    private val _shellReady = MutableStateFlow(false)
+    val shellReady: StateFlow<Boolean> = _shellReady.asStateFlow()
+
+    private val _shellReadyEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+    val shellReadyEvents: SharedFlow<Unit> = _shellReadyEvents.asSharedFlow()
+
     private val _storagePermissionRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val storagePermissionRequests: SharedFlow<Unit> = _storagePermissionRequests.asSharedFlow()
 
@@ -72,6 +81,13 @@ class TerminalSession(
         emulator.onClipboardWrite = { text ->
             _clipboardWrites.tryEmit(text)
         }
+        emulator.onShellReady = {
+            if (_alive.value && !_shellReady.value) {
+                _shellReady.value = true
+                _lifecycle.value = TerminalLifecycle.RUNNING
+                _shellReadyEvents.tryEmit(Unit)
+            }
+        }
     }
 
     val bracketedPaste: Boolean get() = synchronized(emulator) { emulator.bracketedPaste }
@@ -81,9 +97,19 @@ class TerminalSession(
     fun cursorKey(direction: Char): String =
         synchronized(emulator) { emulator.cursorKey(direction) }
 
+    /** Paint the immediate startup state before install/prepare work begins. */
+    fun beginStarting() {
+        synchronized(this) {
+            _shellReady.value = false
+            _lifecycle.value = TerminalLifecycle.STARTING
+        }
+    }
+
     @Synchronized
     fun start(prepared: PreparedShell) {
         stopLocked()
+        _shellReady.value = false
+        _lifecycle.value = TerminalLifecycle.STARTING
         try {
             val session = PtySession.startShell(prepared)
             pty = session
@@ -101,6 +127,8 @@ class TerminalSession(
             synchronized(emulator) { emulator.feed(message) }
             publish()
             _alive.value = false
+            _shellReady.value = false
+            _lifecycle.value = TerminalLifecycle.FAILED
         }
     }
 
@@ -146,6 +174,10 @@ class TerminalSession(
         }
         pty = null
         _alive.value = false
+        _shellReady.value = false
+        if (_lifecycle.value != TerminalLifecycle.STARTING) {
+            _lifecycle.value = TerminalLifecycle.EXITED
+        }
     }
 
     private suspend fun readLoop(session: PtySession) {
@@ -193,6 +225,8 @@ class TerminalSession(
                 synchronized(emulator) { emulator.feed(notice) }
                 publish()
                 _alive.value = false
+                _shellReady.value = false
+                _lifecycle.value = TerminalLifecycle.EXITED
                 running.set(false)
             }
         }
@@ -213,6 +247,14 @@ class TerminalSession(
     }
 
     fun transcriptText(): String = synchronized(emulator) { emulator.transcriptText() }
+
+    /** Mark bootstrap failure without pretending a shell is running. */
+    fun startupFailed(message: String) {
+        _alive.value = false
+        _shellReady.value = false
+        _lifecycle.value = TerminalLifecycle.FAILED
+        notice("[terminal] $message")
+    }
 
     /** Paint a status line on the grid without going through the PTY. */
     fun notice(text: String) {

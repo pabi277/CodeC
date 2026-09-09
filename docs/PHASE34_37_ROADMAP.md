@@ -6,10 +6,10 @@
 > phases properly after all that i will go for various devices use test."*
 >
 > The four row ideas the owner handed over were researched below and turned
-> into four phases (34–37). Phase 34 is merged; Phase 35 is now implemented on
-> its session branch and awaits CI plus the owner's cross-device round. Phases
-> 36–37 remain planned. Each phase lands on `main` only through the §3 merge
-> gate and finishes with the owner's cross-device test round.
+into four phases (34–37). Phase 34 is merged; Phase 35 is device-passed by
+owner report on its session branch. Phase 36 is now STARTED on that branch;
+Phase 37 remains planned. Each phase lands on `main` only through the §3
+merge gate and finishes with the owner's cross-device test round.
 
 ## The owner's four row ideas → phases
 
@@ -112,9 +112,12 @@ foreground keep-alive + port lifecycle. Spec:
 
 - Phase 33 (first-hour UX) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
 - Phase 34 (Official file icons) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
-- Phase 35 (Editor typing feel) is **🚧 IMPLEMENTED** on the session branch;
-  Build APK CI `34367008019` is ✅ GREEN and the owner’s cross-device round is
-  pending. The measurement card is deliberately still open.
-- Phases 36–37 remain **📋 PLANNED** (researched + specced, not implemented).
+- Phase 35 (Editor typing feel) is **✅ DEVICE-PASSED** by the owner report;
+  implementation tip `317b89a`, docs follow-up `88839cd`, and Build APK CI
+  `34367008019`/`34367770583` are green. Exact device evidence was not
+  supplied, so the record does not invent it.
+- Phase 36 (Terminal speed & feel) is **🚧 STARTED** on the session branch;
+  implementation and pure host tests are in progress from `docs/chat-phase36/`.
+- Phase 37 remains **📋 PLANNED** (researched + specced, not implemented).
 - The owner starts each phase with "Start Phase N" and runs the cross-device
   round at the end.

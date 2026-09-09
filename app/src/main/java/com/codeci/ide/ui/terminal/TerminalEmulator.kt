@@ -15,7 +15,9 @@ class TerminalEmulator(
     var onCodecApiRequest: ((String) -> Unit)? = null,
     var onBell: (() -> Unit)? = null,
     /** Phase 19.5: OSC 52 clipboard-write requests (decoded, capped). */
-    var onClipboardWrite: ((String) -> Unit)? = null
+    var onClipboardWrite: ((String) -> Unit)? = null,
+    /** CodeC's private shell-readiness marker, emitted after profile setup. */
+    var onShellReady: (() -> Unit)? = null
 ) : AnsiParser.Host {
 
     val buffer = TerminalBuffer(cols, rows, scrollbackLimit)
@@ -124,6 +126,7 @@ class TerminalEmulator(
             "1337" -> {
                 when {
                     value == "CodeCRequestStorage" -> onStoragePermissionRequested?.invoke()
+                    value == SHELL_READY_MARKER -> onShellReady?.invoke()
                     value.startsWith("${CodecApiProtocol.NAMESPACE}:") ->
                         onCodecApiRequest?.invoke(value)
                 }
@@ -356,6 +359,9 @@ class TerminalEmulator(
     }
 
     companion object {
+        /** Private OSC marker emitted only after the shell profile is ready. */
+        const val SHELL_READY_MARKER = "CodeCShellReady"
+
         /** OSC 52 clipboard writes are capped to keep a rogue program from
          * flooding the Android clipboard with megabytes. */
         const val MAX_OSC52_LENGTH = 100_000

@@ -14,6 +14,16 @@ import org.junit.Test
 class ShellEnvironmentTest {
 
     @Test
+    fun `profile emits the shell readiness marker after startup setup`() {
+        val profile = ShellEnvironment.profileScript(
+            File("/tmp/codec-prefix"),
+            File("/tmp/codec-home"),
+            File("/tmp/codec-projects")
+        )
+        assertTrue(profile.contains("CodeCShellReady"))
+    }
+
+    @Test
     fun `cc script runs TCC with static musl flags then chmods the ELF`() {
         val script = ShellEnvironment.ccScript()
         assertTrue(script.startsWith("#!/system/bin/sh"))
@@ -250,7 +260,8 @@ class ShellEnvironmentTest {
         assertTrue(profile.contains("/system/bin/ls"))
         assertFalse(profile.contains("ls -la"))
         assertFalse(profile.contains("codec:\\w"))
-        assertTrue(profile.contains("export PS1='codec $ '"))
+        assertTrue(profile.contains("export PS1='${'$'}(printf"))
+        assertTrue(profile.contains("CodeCShellReady"))
     }
 
     @Test
@@ -278,7 +289,7 @@ class ShellEnvironmentTest {
         assertTrue(env["PATH"]!!.startsWith(File(files, "usr/bin").absolutePath))
         assertTrue(env["PATH"]!!.contains(native.absolutePath))
         assertEquals("xterm-256color", env["TERM"])
-        assertEquals("codec $ ", env["PS1"])
+        assertEquals("\$(printf \"\\033]1337;CodeCShellReady\\007\")codec \$ ", env["PS1"])
         assertTrue(env.containsKey("CODEC_PROJECTS"))
     }
 

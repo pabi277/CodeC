@@ -1,5 +1,15 @@
 # CodeC — the full journey
 
+**2026-09-09 — Phase 35 editor typing feel is ✅ DEVICE-PASSED (owner report:
+"Device test pass").** The implementation is on `arena/01a086a0-codec` at
+`317b89a`; the follow-up record is `88839cd`, and CI runs `34367008019` and
+`34367770583` are green. The owner did not provide device/model/measurement
+details, so none are invented here. **Phase 36 Terminal speed & feel is now
+STARTED** on this same branch from `docs/chat-phase36/`; its measurement-led
+cold-start work and ordered readiness UX are in progress. No PR or merge is
+open or authorized.
+
+
 **2026-09-03 — Phase 21 COMPLETE, device-accepted and MERGED to `main`**
 (owner: "start phase 21" → "Pass" → "marge it"; `arena/01a064e0-codec`, base
 `3fa71ab`). The compiler engine redesign — though **not** the one the spec

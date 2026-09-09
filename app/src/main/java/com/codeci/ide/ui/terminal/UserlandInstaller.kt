@@ -115,15 +115,29 @@ class UserlandInstaller(
      */
     fun installIfNeeded(
         force: Boolean = false,
+        /**
+         * Terminal opens use the recorded marker as the validity boundary.
+         * An explicit installer action can still opt into the release probe.
+         */
+        checkForUpgrade: Boolean = true,
         onProgress: (String) -> Unit = {}
     ): UserlandStatus {
         val prefix = ShellEnvironment.prefixDir(filesDir)
         try {
             prefix.mkdirs()
+            // The terminal's warm-open path treats the signed release marker
+            // as the validity boundary. Do not launch a probe (or touch the
+            // network) merely to open another shell; force/reinstall remains
+            // the explicit verification path.
+            val markedRelease = installedRelease(prefix)
+            if (!force && !checkForUpgrade && markedRelease != null) {
+                onProgress("userland: marker valid — using installed userland")
+                return UserlandStatus.AlreadyInstalled
+            }
             val runnable = hasRunnableUserland(prefix)
 
             if (!force && runnable) {
-                val current = installedRelease(prefix)
+                val current = markedRelease
                 if (!onlineProvider()) {
                     onProgress("userland: offline — using installed userland")
                     return UserlandStatus.AlreadyInstalled

@@ -37,6 +37,27 @@ class TerminalProtocolTest {
     }
 
     @Test
+    fun `private shell readiness marker is reported without printing marker text`() {
+        var ready = 0
+        val emu = TerminalEmulator(onShellReady = { ready++ })
+
+        emu.feed("before\u001b]1337;CodeCShellReady\u0007after")
+
+        assertEquals(1, ready)
+        assertEquals("beforeafter", emu.visibleText().trim())
+    }
+
+    @Test
+    fun `unknown private osc 1337 values remain terminal output safe`() {
+        var ready = 0
+        val emu = TerminalEmulator(onShellReady = { ready++ })
+        emu.feed("\u001b]1337;not-a-readiness-signal\u0007ok")
+
+        assertEquals(0, ready)
+        assertTrue(emu.visibleText().contains("ok"))
+    }
+
+    @Test
     fun `osc 52 writes the clipboard`() {
         val clips = mutableListOf<String>()
         val emu = TerminalEmulator(cols = 20, rows = 5, onClipboardWrite = { clips.add(it) })

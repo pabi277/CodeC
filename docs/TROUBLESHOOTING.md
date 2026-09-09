@@ -895,9 +895,12 @@ are queued.
 
 ## 25. Phase 35 editor typing feel — device round (owner runbook, 2026-09-09)
 
-**Status: 🚧 IMPLEMENTED; Build APK CI `34367008019` is GREEN. Device
-evidence is pending. Do not mark this section passed until the owner records
-the result on the slowest phone.**
+**Status: ✅ DEVICE-PASSED by owner report ("Device test pass").** The
+implementation tip is `317b89a`, documentation follow-up `88839cd`, and Build
+APK CI `34367008019` plus current-tip CI `34367770583` are GREEN. The owner did
+not provide device/model/measurement details; this record intentionally does
+not invent them. The checklist below remains the reproducible recipe for a
+future regression round.
 
 Install the CI APK from the Phase 35 build, then run this matrix on the
 slowest available phone and at least one other Android device:
@@ -927,3 +930,47 @@ slowest available phone and at least one other Android device:
 
 Record Android version, OEM, keyboard, density/screen size, file sizes, the
 numbers, and any failure here before changing the phase to DEVICE-PASSED.
+
+## 26. Phase 36 terminal speed & feel — device round (owner runbook, 2026-09-09)
+
+**Status: 🚧 STARTED; implementation and host tests are in progress on
+`arena/01a086a0-codec`.** Do not call this phase device-passed yet. The phase
+must be tested from the APK produced by its green Build APK CI run after the
+code lands.
+
+### 26.1 Cold-start measurement and state
+
+1. Install the Phase 36 APK on the slowest available phone and one other
+   Android device. Clear/force-stop CodeC, then open Terminal cold. Confirm the
+   terminal immediately shows **starting shell…**, the first usable prompt is
+   followed by **running**, and no blank/exited-looking gap is mistaken for a
+   dead shell.
+2. Open Logs and capture the startup card containing tap→userland-done,
+   userland-done→prepare-done, prepare-done→prompt, and tap→prompt. Record
+   device model, Android version, cold/warm result, and the numbers. Do not
+   choose a latency optimization by intuition; identify the largest measured
+   split.
+3. Re-open Terminal warm several times. Confirm a marked valid userland is not
+   re-extracted or release-probed on every open, compiler-setting changes cause
+   a fresh preparation, and a forced userland reinstall invalidates the
+   preparation and replaces the shell.
+
+### 26.2 Session behavior and handoff
+
+4. While a fresh shell is starting, dispatch at least three ordered commands
+   from Packages/run handoff (for example install, `cd`, then a run command).
+   Confirm each runs once, in order, only after the actual first prompt; there
+   must be no fixed-delay race or dropped command. Repeat with two sessions and
+   confirm each session keeps its own queue and interactive input.
+5. Verify Ctrl+C, terminal rendering, resize, paste/typing, restart, close,
+   session switching, and the session cap. A normal shell exit must display
+   **exited (code)**; a live shell must display **running**.
+6. Trigger the forced userland reinstall. Confirm every old shell is stopped,
+   the replacement visibly says **userland was updated — session restarted**,
+   and the new prompt remains usable. Confirm `cc` still compiles with the
+   configured standard/warnings/optimization and package/run handoff still
+   reaches the intended project.
+
+Record the exact APK/CI run, device matrix, startup measurements, and any
+failure here before changing Phase 36 to DEVICE-PASSED. No PR or merge is
+created until the owner explicitly commands it.

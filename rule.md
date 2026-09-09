@@ -198,15 +198,21 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-09, Phase 35 implemented; CI/device gates pending)
+## 9. State snapshot (2026-09-09, Phase 36 started; Phase 35 device-passed)
 
-- **Phase 35** is implemented on session branch `arena/01a086a0-codec`: the
-  keep-keys setting, off-main decoration snapshot, solid typing caret, and
-  quiet-on-open caret state are wired and host-tested. Build APK CI
-  `34367008019` is GREEN on `317b89a`; the owner’s device runbook is
-  `docs/TROUBLESHOOTING.md` §25 and the measurement card is
-  `docs/chat-phase35/MEASUREMENT_CARD.md`. No device pass or merge is claimed
-  yet.
+- **Phase 35** is ✅ DEVICE-PASSED by the owner report on session branch
+  `arena/01a086a0-codec` (`317b89a`; docs follow-up `88839cd`). Build APK CI
+  `34367008019` and current-tip `34367770583` are GREEN. The owner supplied no
+  device/model/measurement details, so the record makes no unsupported claims.
+- **Phase 36** is 🚧 STARTED on `arena/01a086a0-codec` from `docs/chat-phase36/`:
+  measure the three startup boundaries before selecting a dominant cut; add
+  visible starting/running/exited state; use a settings/userland-keyed
+  PreparedShell cache; and replace the scalar/350 ms command handoff with a
+  per-session ordered queue flushed by the actual first-prompt marker. Preserve
+  PTY/JNI fork/exec, shell environment, cc rewrite, signing/invalidation,
+  multi-session, rendering, input, restart/close, and package/run handoff.
+  Phase 36 host tests, CI, and the owner device round remain open; no PR/merge
+  is authorized without the owner command.
 - **`main` = the Phase 34 merge commit (PR #59, 2026-09-09).** Before that:
   `31e319f` = PR #54 (Phase 29, 2026-09-06), `3edfc97` = PR #53 (2026-09-05,
   Phases 29–33 plan docs), PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49

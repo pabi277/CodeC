@@ -492,6 +492,21 @@ class UserlandInstallerTest {
     }
 
     @Test
+    fun `terminal validity mode trusts a runnable marked userland without release probing`() {
+        val files = tmp.newFolder("files")
+        val prefix = File(files, "usr")
+        File(prefix, "bin").mkdirs()
+        File(prefix, "bin/bash").writeBytes(elfBash)
+        File(prefix, ".userland-release").writeText("userland-v1")
+        val installer = makeInstaller(files)
+
+        val status = installer.installIfNeeded(checkForUpgrade = false)
+
+        assertEquals(UserlandStatus.AlreadyInstalled, status)
+        assertTrue(requested.isEmpty())
+    }
+
+    @Test
     fun `force reinstalls even when already installed`() {
         val files = tmp.newFolder("files")
         val prefix = File(files, "usr")
