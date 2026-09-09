@@ -113,6 +113,7 @@ import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubFilter
 import com.codeci.ide.ui.projects.HubIconToken
 import com.codeci.ide.ui.components.FileIconView
+import com.codeci.ide.ui.components.ProjectIconView
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectTransfer
@@ -1200,7 +1201,7 @@ private fun ProjectHubCard(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            HubTypeIcon(entry)
+            ProjectIconView(entry)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -1347,38 +1348,6 @@ private fun ProjectHubCard(
 }
 
 @Composable
-private fun HubTypeIcon(entry: ProjectHubEntry) {
-    // Mockup-exact: 56dp rounded square, 14dp radius, brand colors from the
-    // design (orange C, blue Python, purple web framework, green static web).
-    val background = when (entry.icon) {
-        HubIconToken.C_ORANGE -> Color(0xFFF0863C)
-        HubIconToken.PY_BLUE -> Color(0xFF3E7CC1)
-        HubIconToken.SERVER_PURPLE -> Color(0xFF8B5CF6)
-        HubIconToken.WEB_GREEN -> Color(0xFF4CAF50)
-        HubIconToken.GENERIC_GRAY -> Color(0xFF6B7280)
-    }
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(background),
-        contentAlignment = Alignment.Center
-    ) {
-        when (entry.icon) {
-            HubIconToken.WEB_GREEN ->
-                Icon(SpckIcons.Globe, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
-            HubIconToken.PY_BLUE ->
-                Icon(SpckIcons.PythonLogo, contentDescription = null, modifier = Modifier.size(34.dp))
-            else ->
-                Text(
-                    entry.iconLabel.ifEmpty { entry.name.take(1).uppercase() },
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-        }
-    }
-}
 
 /**
  * Phase 15 — the unified `+` sheet: exactly one place to New Project /
