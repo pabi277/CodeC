@@ -11,8 +11,8 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 /**
- * Phase 33 (first-hour UX) — RUN ▶ asks "main/index file or the file that is
- * open" only when the project actually has a distinct, real main file.
+ * Phase 33 (first-hour UX) — RUN ▶ asks "default file or the open file" only
+ * when the user has SET a default run file that differs from the open file.
  */
 class ProjectRunTargetTest {
 
@@ -29,45 +29,89 @@ class ProjectRunTargetTest {
         return root
     }
 
+    // ---- chooserDefault: the RUN ▶ decision -------------------------------
+
     @Test
-    fun `a real main file differing from the open file is offered`() {
+    fun `a set default differing from the open file is offered`() {
         val root = projectWith("main.c", "utils.c")
-        assertEquals("main.c", ProjectRunTarget.chooserEntry(root, "main.c", "utils.c"))
-        assertTrue(ProjectRunTarget.shouldAsk(root, "main.c", "utils.c", openRunnable = true))
+        assertEquals(
+            "main.c",
+            ProjectRunTarget.chooserDefault(root, "main.c", "utils.c")
+        )
     }
 
     @Test
-    fun `the open file being the main file means nothing to choose`() {
+    fun `a web default vs an open source file is offered`() {
+        // The Code-with-C shape: a web project (index.html) holding C files.
+        val root = projectWith("index.html", "main.c", "C Programming/01_hello.c")
+        assertEquals(
+            "index.html",
+            ProjectRunTarget.chooserDefault(root, "index.html", "C Programming/01_hello.c")
+        )
+        // And a C default vs an open C file.
+        assertEquals(
+            "main.c",
+            ProjectRunTarget.chooserDefault(root, "main.c", "C Programming/01_hello.c")
+        )
+    }
+
+    @Test
+    fun `the open file being the default means nothing to choose`() {
         val root = projectWith("main.c")
-        assertNull(ProjectRunTarget.chooserEntry(root, "main.c", "main.c"))
-        assertFalse(ProjectRunTarget.shouldAsk(root, "main.c", "main.c", openRunnable = true))
+        assertNull(ProjectRunTarget.chooserDefault(root, "main.c", "main.c"))
     }
 
     @Test
-    fun `a missing main file is not offered`() {
+    fun `no default set means nothing to choose`() {
+        val root = projectWith("main.c", "utils.c")
+        assertNull(ProjectRunTarget.chooserDefault(root, null, "utils.c"))
+        assertNull(ProjectRunTarget.chooserDefault(root, "main.c", null))
+    }
+
+    @Test
+    fun `a missing default file is not offered`() {
         val root = projectWith("utils.c")
-        assertNull(ProjectRunTarget.chooserEntry(root, "main.c", "utils.c"))
-        assertFalse(ProjectRunTarget.shouldAsk(root, "main.c", "utils.c", openRunnable = true))
+        assertNull(ProjectRunTarget.chooserDefault(root, "main.c", "utils.c"))
     }
 
     @Test
-    fun `a non-runnable open file is never asked about`() {
-        val root = projectWith("index.html", "style.css")
-        assertFalse(ProjectRunTarget.shouldAsk(root, "index.html", "style.css", openRunnable = false))
+    fun `a default that is not a run target is never offered`() {
+        val root = projectWith("style.css", "main.c")
+        assertNull(ProjectRunTarget.chooserDefault(root, "style.css", "main.c"))
     }
 
     @Test
-    fun `web entry index html vs an open html file is offered`() {
-        val root = projectWith("index.html", "about.html")
-        assertEquals("index.html", ProjectRunTarget.chooserEntry(root, "index.html", "about.html"))
+    fun `a non-run-target open file is never asked about`() {
+        val root = projectWith("main.c", "style.css")
+        assertNull(ProjectRunTarget.chooserDefault(root, "main.c", "style.css"))
     }
 
+    // ---- chooserEntry: raw confinement ------------------------------------
+
     @Test
-    fun `relative and absolute-looking entries stay confined`() {
+    fun `entries stay confined to the root`() {
         val root = projectWith("main.py", "src/helper.py")
         assertEquals("main.py", ProjectRunTarget.chooserEntry(root, "main.py", "src/helper.py"))
-        // An entry outside the root never resolves.
         assertNull(ProjectRunTarget.chooserEntry(root, "../main.py", "src/helper.py"))
+    }
+
+    // ---- classification ----------------------------------------------------
+
+    @Test
+    fun `run targets are recognised`() {
+        assertTrue(ProjectRunTarget.isRunTarget("main.c"))
+        assertTrue(ProjectRunTarget.isRunTarget("index.html"))
+        assertTrue(ProjectRunTarget.isRunTarget("src/tool.py"))
+        assertTrue(ProjectRunTarget.isRunTarget("app.js"))
+        assertTrue(ProjectRunTarget.isRunTarget("build.sh"))
+    }
+
+    @Test
+    fun `non-run-target files are rejected`() {
+        assertFalse(ProjectRunTarget.isRunTarget("style.css"))
+        assertFalse(ProjectRunTarget.isRunTarget("README.md"))
+        assertFalse(ProjectRunTarget.isRunTarget("data.json"))
+        assertFalse(ProjectRunTarget.isRunTarget(null))
     }
 
     @Test
@@ -78,7 +122,6 @@ class ProjectRunTargetTest {
         assertTrue(ProjectRunTarget.isRunnableSource("src/tool.py"))
         assertTrue(ProjectRunTarget.isRunnableSource("main.cpp"))
         assertTrue(ProjectRunTarget.isRunnableSource("build.sh"))
-        // node is a run profile too, so a .js file is panel-runnable.
         assertTrue(ProjectRunTarget.isRunnableSource("app.js"))
     }
 

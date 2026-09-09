@@ -170,9 +170,9 @@
     <string name="install_prompt_size">Download size: %1$s</string>
     <string name="install_prompt_confirm">Install</string>
     <string name="install_prompt_cancel">Cancel</string>
-    <!-- Phase 33: RUN ▶ asks main/index file vs the open file -->
+    <!-- Phase 33: RUN ▶ asks the user's default file vs the open file -->
     <string name="run_chooser_title">Run which file?</string>
-    <string name="run_chooser_body">Main file: %1$s\nOpen file: %2$s</string>
+    <string name="run_chooser_body">Default file: %1$s\nOpen file: %2$s</string>
     <string name="run_chooser_run">Run %1$s</string>
     <!-- Phase 14: background server presets -->
     <string name="output_starting_server">Starting server…</string>

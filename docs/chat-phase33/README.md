@@ -5,12 +5,14 @@
 > 1–3, 10, 13, 15. **33.1–33.3 start on `"Start Phase 33"`.** Independent of
 > 29–31 but embarrassing if colour is still regex.
 >
-> **33.0 (owner, 2026-09-09):** "when user hit run it asks index/main file
-> or the file currently opened" — ✅ IMPLEMENTED on `arena/01a083fc-codec`
-> ([record](PART_33_0_RUN_CHOOSER.md)): RUN ▶ asks "Run main.c / Run utils.c"
-> whenever a project has a real main/index file that differs from the open
-> file, without switching tabs. **CI `34307172630` ✅ GREEN first try (tip
-> `788ba46`).**
+> **33.0 (owner, 2026-09-09):** the default run file is now a USER choice —
+> "make the default run option as a user task if user set any default file than
+> it will open with a option default or current file" — ✅ IMPLEMENTED on
+> `arena/01a083fc-codec` ([record](PART_33_0_RUN_CHOOSER.md)): RUN ▶ runs the
+> open file by its own type (a `.c` in a web project compiles/runs, never
+> previews `index.html`), and when the user has set a default (⋮ → "Set as
+> launch default") that differs from the open file it asks "Run default / Run
+> open". **CI `34307172630` ✅ GREEN first try (tip `788ba46`).**
 
 ```
   33.1  First-run tiles: C (offline) / Python / HTML

@@ -716,8 +716,23 @@ the file name, what appeared, and whether CodeC Keys was ON or OFF.
 
 **Root cause:** `EditorViewModel.runActiveFile` returned early for any project typed `web` (`if (web) return`), so a C/Python file inside an HTML project could never run; and the RUN chooser's "run current file" arm still routed web projects through the old "preview the web entry" branch.
 
-**Fix:** a pure `ProjectRunTarget.isRunnableSource(rel)` — a file with a run profile that is NOT the web preview (main.c/main.py/… run; index.html/style.css don't) — now gates both the editor's RUN dispatch and the ViewModel's web-project early-return, so RUN on a C file in an HTML project compiles/runs it in the panel. `runMainFile` no longer previews a non-HTML entry.
+**Fix:** a pure `ProjectRunTarget.isRunnableSource(rel)` — a file with a run profile that is NOT the web preview (main.c/main.py/… run; index.html/style.css don't) — now gates both the editor's RUN dispatch (`runOpenFile`) and the ViewModel's web-project early-return, so RUN on a C file in an HTML project compiles/runs it in the panel. Superseded by §18: the chooser is now driven by the user-set default, not the project entry.
 
-**How to verify (device):** in an HTML project, open a `main.c` (or `main.py`) file → tap RUN ▶ → the chooser offers "Run index.html / Run main.c" → **Run main.c** compiles and runs it in the Output Panel (the open tab stays). Opening `index.html` and tapping RUN still previews it.
+**How to verify (device):** in an HTML project, open a `main.c` (or `main.py`) file → tap RUN ▶ → it compiles and runs in the Output Panel (the open tab stays). Opening `index.html` and tapping RUN still previews it. (With a launch default set, RUN instead asks "Run default / Run open" — see §18.)
 
 **CI:** `34309463999` ✅ GREEN first try (tip `9a11382`, 5m58s).
+
+## 18. Phase 33 — RUN runs the open file by its type; a user-set default adds "default vs open" (2026-09-09, `arena/01a083fc-codec`)
+
+**Owner's model:** a project that is a web showcase (`index.html` + css/js) whose real content is a folder of `.c` practice files (e.g. `Code-with-C`).
+
+**Behaviour now:**
+- RUN ▶ on a `.c` (or `.py`/`.js`) file compiles/runs it in the Output Panel **even inside a `web` project** — it never opens `index.html` for a source file.
+- RUN ▶ on an `.html` file previews it.
+- If you set a **default** (open a runnable file → ⋮ → **Set as launch default**), then RUN ▶ on a *different* file asks **"Run `<default>` / Run `<open>`"**. No default set → RUN just runs the open file. Clear it with ⋮ → **Clear launch default**.
+
+**How to verify (device):**
+1. In a web project with `index.html` and a `main.c`: open `main.c`, tap RUN ▶ → it compiles and runs (Output Panel), the open tab stays.
+2. Set `main.c` as the launch default (⋮ → Set as launch default), open another `.c`, tap RUN ▶ → dialog offers "Run main.c / Run <other>".
+3. Open `main.c` itself, tap RUN ▶ → runs directly, no dialog.
+4. Open `index.html`, tap RUN ▶ → previews it (and 👁 preview still works).

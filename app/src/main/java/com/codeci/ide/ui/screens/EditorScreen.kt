@@ -354,8 +354,8 @@ fun EditorScreen(
     var keysRowVisible by remember { mutableStateOf(true) }
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
-    // Phase 33 — non-null while the RUN ▶ chooser is up (the main/index file).
-    var runChooserMain by remember { mutableStateOf<String?>(null) }
+    // Phase 33 — non-null while the RUN ▶ chooser is up (the user's default file).
+    var runChooserDefault by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Phase 12 — language-aware editing: the file's extension selects the
@@ -477,7 +477,11 @@ fun EditorScreen(
         if (!viewModel.saveFile(context)) return null
         val info = ProjectManager(context).project(project) ?: return null
         val isWeb = info.config.type.equals("web", ignoreCase = true)
-        val candidate = launchDefault ?: info.config.entry.takeIf { isWeb } ?: return null
+        // Phase 33 — the launch default can now be a C/Python run file too;
+        // the PREVIEW default only ever uses it when it names an HTML file,
+        // else it falls back to the config entry (index.html).
+        val candidate = launchDefault?.takeIf { WebFileSupport.isHtml(it) }
+            ?: info.config.entry.takeIf { isWeb } ?: return null
         val entry = ProjectPathUtils.sanitizeRelativePath(candidate) ?: return null
         val target = ProjectPathUtils.resolveInside(info.root, entry) ?: return null
         return entry.takeIf { target.isFile && WebFileSupport.isHtml(target.name) }
@@ -493,16 +497,14 @@ fun EditorScreen(
         }
     }
 
-    // Phase 33 — RUN ▶ asks "main/index file or the open file" when a project
-    // has a real main file that is not the file currently open. The decision
-    // is pure (ProjectRunTarget); these two helpers just carry out the choice.
+    // Phase 33 — RUN ▶ asks "default file or the open file" when the user has
+    // SET a default (ProjectConfig.launchDefault) that differs from the file
+    // currently open. No default set → RUN runs the open file directly. The
+    // decision is pure (ProjectRunTarget); the helpers below carry it out.
     fun runChooserEntryOrNull(): String? {
         val project = currentProject ?: return null
         val info = ProjectManager(context).project(project) ?: return null
-        val openRunnable = WebFileSupport.isHtml(currentFileName) ||
-            LanguageRegistry.forFile(currentFileName) != null
-        return ProjectRunTarget.chooserEntry(info.root, info.config.entry, currentFileName)
-            ?.takeIf { openRunnable }
+        return ProjectRunTarget.chooserDefault(info.root, info.config.launchDefault, currentFileName)
     }
 
     /**
@@ -541,8 +543,8 @@ fun EditorScreen(
         }
     }
 
-    /** RUN the project's main/index file (HTML → preview, else compile/run). */
-    fun runMainFile(entryRel: String) {
+    /** RUN the project's default file (HTML → preview, else compile/run). */
+    fun runDefaultFile(entryRel: String) {
         if (WebFileSupport.isHtml(entryRel)) {
             onOpenPreview(currentProject, entryRel)
         } else {
@@ -666,33 +668,33 @@ fun EditorScreen(
         )
     }
 
-    // Phase 33 — RUN ▶ chooser: the project has a main/index file AND a
-    // different file open; let the user pick which one RUN means. Tapping
-    // outside dismisses without running anything.
-    runChooserMain?.let { mainEntry ->
+    // Phase 33 — RUN ▶ chooser: a USER-set default file exists and a different
+    // file is open; let the user pick which one RUN means. Tapping outside
+    // dismisses without running anything.
+    runChooserDefault?.let { defaultEntry ->
         AlertDialog(
-            onDismissRequest = { runChooserMain = null },
+            onDismissRequest = { runChooserDefault = null },
             title = { Text(stringResource(R.string.run_chooser_title)) },
             text = {
                 Text(
                     stringResource(
                         R.string.run_chooser_body,
-                        mainEntry.substringAfterLast('/'),
+                        defaultEntry.substringAfterLast('/'),
                         currentFileName.substringAfterLast('/')
                     )
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
-                    runChooserMain = null
-                    runMainFile(mainEntry)
+                    runChooserDefault = null
+                    runDefaultFile(defaultEntry)
                 }) {
-                    Text(stringResource(R.string.run_chooser_run, mainEntry.substringAfterLast('/')))
+                    Text(stringResource(R.string.run_chooser_run, defaultEntry.substringAfterLast('/')))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    runChooserMain = null
+                    runChooserDefault = null
                     runOpenFile()
                 }) {
                     Text(stringResource(R.string.run_chooser_run, currentFileName.substringAfterLast('/')))
@@ -1175,7 +1177,10 @@ fun EditorScreen(
                                 }
                             )
                             if (currentProject != null) {
-                                if (WebFileSupport.isHtml(currentFileName) && launchDefault != currentFileName) {
+                                // Phase 33 — any run target (C, Python, HTML,
+                                // JS, shell, …) can be the project's default
+                                // run file, so RUN can offer "default vs open".
+                                if (ProjectRunTarget.isRunTarget(currentFileName) && launchDefault != currentFileName) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.editor_drawer_set_default)) },
                                         onClick = {
@@ -1305,12 +1310,13 @@ fun EditorScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
-                                // Phase 33 — ask "main/index file or the open
-                                // file" when a project has both; otherwise run
-                                // the open file by its own type (runOpenFile).
-                                val mainEntry = runChooserEntryOrNull()
-                                if (mainEntry != null) {
-                                    runChooserMain = mainEntry
+                                // Phase 33 — ask "default file or the open
+                                // file" when the user has set a default that
+                                // differs from it; otherwise run the open file
+                                // by its own type (runOpenFile).
+                                val defaultEntry = runChooserEntryOrNull()
+                                if (defaultEntry != null) {
+                                    runChooserDefault = defaultEntry
                                 } else {
                                     runOpenFile()
                                 }
