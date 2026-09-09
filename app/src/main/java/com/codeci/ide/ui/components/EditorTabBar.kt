@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.FileIconView
 
 /** View model of one editor tab for the tab strip. */
 data class EditorTabUi(
@@ -97,6 +99,12 @@ fun EditorTabBar(
                         .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    FileIconView(
+                        name = tab.name,
+                        isDirectory = false,
+                        modifier = Modifier.padding(end = 6.dp).size(16.dp),
+                        tint = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Text(
                         text = tab.name + if (tab.isDirty) " ●" else "",
                         style = MaterialTheme.typography.labelLarge,

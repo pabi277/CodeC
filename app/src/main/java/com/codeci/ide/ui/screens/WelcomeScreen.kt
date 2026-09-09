@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.components.SpckIcons
+import com.codeci.ide.ui.components.StarterIconView
 import com.codeci.ide.ui.projects.WelcomeStarter
 import com.codeci.ide.ui.projects.WelcomeStarters
 
@@ -121,7 +122,7 @@ fun StarterTile(
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            StarterMark(starter)
+            StarterIconView(starter)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -145,38 +146,3 @@ fun StarterTile(
     }
 }
 
-@Composable
-private fun StarterMark(starter: WelcomeStarter) {
-    val background = when (starter.id) {
-        "python" -> Color(0xFF3E7CC1)
-        "web" -> Color(0xFF4CAF50)
-        else -> Color(0xFFF0863C)
-    }
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(background),
-        contentAlignment = Alignment.Center,
-    ) {
-        when (starter.id) {
-            "web" -> Icon(
-                SpckIcons.Globe,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(30.dp),
-            )
-            "python" -> Icon(
-                SpckIcons.PythonLogo,
-                contentDescription = null,
-                modifier = Modifier.size(34.dp),
-            )
-            else -> Text(
-                text = "C",
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}

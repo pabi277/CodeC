@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
+import com.codeci.ide.ui.components.FileIconView
 
 /**
  * Phase 16 (mockup-exact) — the Spck-style navigation drawer: project name
@@ -279,26 +280,6 @@ private enum class RowAction {
     Open, Rename, Delete, Run, Launch, SetDefault, ClearDefault, CopyPath, NewFileHere, NewFolderHere
 }
 
-/** Extension → the drawer's typed file icon (Spck shows a mark per language). */
-@Composable
-private fun FileTypeIcon(name: String, isLaunchDefault: Boolean, tint: Color) {
-    when {
-        name.endsWith(".py", ignoreCase = true) ->
-            Icon(SpckIcons.PythonLogo, contentDescription = null, modifier = Modifier.size(18.dp))
-        WebFileSupport.isHtml(name) ->
-            Icon(SpckIcons.HtmlShield, contentDescription = null, modifier = Modifier.size(18.dp))
-        name.endsWith(".md", ignoreCase = true) || name.endsWith(".txt", ignoreCase = true) ->
-            // Mockup: the book mark is white, not grey.
-            Icon(
-                SpckIcons.BookLine,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        else ->
-            Icon(SpckIcons.FileLine, contentDescription = null, modifier = Modifier.size(18.dp), tint = tint)
-    }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -343,17 +324,18 @@ private fun DrawerRow(
                     tint = muted
                 )
                 Spacer(Modifier.width(4.dp))
-                Icon(
-                    imageVector = SpckIcons.FolderLine,
-                    contentDescription = null,
+                FileIconView(
+                    name = entry.name,
+                    isDirectory = true,
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             } else {
                 Spacer(Modifier.width(22.dp))
-                FileTypeIcon(
+                FileIconView(
                     name = entry.name,
-                    isLaunchDefault = isLaunchDefault,
+                    isDirectory = false,
+                    modifier = Modifier.size(18.dp),
                     tint = muted
                 )
             }
