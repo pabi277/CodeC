@@ -438,11 +438,15 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         val prefix = bootstrap.prefixDir()
         val release = userland.installedRelease(prefix) ?: "unmarked"
         val marker = File(prefix, ".bootstrap-v${ShellEnvironment.BOOTSTRAP_VERSION}")
+        val bootstrapGeneration = marker.takeIf { it.isFile }
+            ?.readText()
+            ?.trim()
+            ?.ifEmpty { "missing" }
+            ?: "missing"
         val shell = ShellEnvironment.resolveShell(prefix)
         return listOf(
             release,
-            marker.lastModified(),
-            marker.length(),
+            bootstrapGeneration,
             shell.absolutePath,
             shell.lastModified(),
             shell.length()
@@ -460,8 +464,12 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             return it.second
         }
         return withContext(Dispatchers.IO) {
-            bootstrap.prepare(compilerSettings)
-        }.also { preparedShellCache = key to it }
+            val prepared = bootstrap.prepare(compilerSettings)
+            // prepare() refreshes the bootstrap marker, so key the cached
+            // result from the post-prepare userland/bootstrap generation.
+            preparedShellCache = PreparedShellCacheKey(compilerSettings, userlandStamp()) to prepared
+            prepared
+        }
     }
 
     // ---- input routing (active session, D5) ----------------------------------
