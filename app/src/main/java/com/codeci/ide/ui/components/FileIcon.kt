@@ -133,8 +133,8 @@ enum class FileIcon(val vector: ImageVector, val tintable: Boolean = true) {
                     val ext = lower.substring(extIndex + 1)
                     when (ext) {
                         "c", "h" -> C
-                        "cpp", "hpp", "cc" -> Cpp
-                        "py" -> Python
+                        "cpp", "hpp", "cc", "cxx", "hxx", "hh" -> Cpp
+                        "py", "pyw" -> Python
                         "js", "mjs", "cjs" -> Javascript
                         "ts" -> Typescript
                         "tsx", "jsx" -> React
@@ -142,8 +142,8 @@ enum class FileIcon(val vector: ImageVector, val tintable: Boolean = true) {
                         "css" -> Css
                         "scss" -> Sass
                         "json" -> Json
-                        "md" -> Markdown
-                        "sh" -> Shell
+                        "md", "markdown" -> Markdown
+                        "sh", "bash", "zsh" -> Shell
                         "yaml", "yml" -> Yaml
                         "toml" -> Config
                         "xml" -> Xml
