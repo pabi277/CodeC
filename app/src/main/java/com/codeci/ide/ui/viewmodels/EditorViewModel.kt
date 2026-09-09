@@ -50,6 +50,7 @@ import com.codeci.ide.ui.projects.ProjectRunDetector
 import com.codeci.ide.ui.projects.ProjectRunTarget
 import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectsHub
+import com.codeci.ide.ui.services.CEntryWrapper
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.ExecutionRunner
 import com.codeci.ide.ui.services.InstallPromptState
@@ -2582,9 +2583,31 @@ class EditorViewModel : ViewModel() {
                             // exclude it repo-locally BEFORE the run.
                             viewModelScope.launch(Dispatchers.IO) { PythonCacheIgnore.ensure(info.root) }
                         }
-                        buildCommand = decision.plan.build
+                        // Phase 33 — a self-contained C file whose entry is
+                        // not `main` (program01, solve, …) compiles through a
+                        // generated wrapper that supplies main(). Only when the
+                        // file defines no main and exactly ONE other function;
+                        // otherwise the normal single-file build (and its "no
+                        // main" hint) applies.
+                        val rel = activeRel
+                        val wrapped: Pair<String, String>? =
+                            if (decision.profile.extensions.contains("c") && rel != null) {
+                                val file = ProjectPathUtils.resolveInside(info.root, rel)
+                                if (file != null && file.isFile && file.length() <= CEntryWrapper.MAX_SNIFF_BYTES) {
+                                    val text = runCatching { file.readText() }.getOrNull()
+                                    val entry = text?.let { CEntryWrapper.singleEntry(it) }
+                                    val wrapper = entry?.let { CEntryWrapper.write(appContext.cacheDir, file, it) }
+                                    if (wrapper != null) {
+                                        val outRef = "bin/${LanguageRegistry.outputNameFor(rel)}"
+                                        val build = "mkdir -p bin && cc ${LanguageRegistry.shellEscape(wrapper.absolutePath)} -o ${LanguageRegistry.shellEscape(outRef)}"
+                                        val terminal = "cd ${LanguageRegistry.shellEscape(info.root.absolutePath)} && $build && ${decision.plan.run}"
+                                        build to terminal
+                                    } else null
+                                } else null
+                            } else null
+                        buildCommand = wrapped?.first ?: decision.plan.build
                         runCommand = decision.plan.run
-                        terminalCommand = decision.plan.terminal
+                        terminalCommand = wrapped?.second ?: decision.plan.terminal
                         preferInteractive = decision.profile.interactive
                     }
                     else -> {

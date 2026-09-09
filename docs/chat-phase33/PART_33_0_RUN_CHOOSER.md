@@ -75,6 +75,11 @@ PASS = all five.
   output is a "no main" linker error (a lone fragment compiled out of a
   multi-file menu project like Code-with-C) now gets a plain-language hint
   line in the Output Panel (`output_no_main_hint`).
+- **`CEntryWrapper`** — the owner's practice files are self-contained C
+  programs whose entry may be named anything, not `main`: a single C file
+  with no `main` and exactly one function now compiles through a generated
+  wrapper (`#include` the file + supply `main()`) and runs directly, no
+  `.codec.json` needed.
 - **Strings** — `run_chooser_body` now reads "Default file: …".
 
 ## 4. Tests & validation

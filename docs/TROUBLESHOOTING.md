@@ -821,3 +821,21 @@ build fails and the hint line appears; then set the `.codec.json` above → RUN 
 compiles all files and runs the menu.
 
 **CI:** `34323755844` ✅ GREEN first try (tip `6a6d36b`).
+
+## 22. Phase 33 — self-contained C files whose entry is not `main` now RUN automatically (2026-09-09, `arena/01a083fc-codec`)
+
+**Owner model:** every `.c` practice file is a complete program; its entry may
+be named `program01` / `solve` / `run` / … rather than `main`.
+
+**Behaviour now:** RUN ▶ on a single C file with no `main` but EXACTLY one
+function compiles it through a generated wrapper (written under the app cache,
+never the project) that `#include`s the file and supplies `main()`, then runs
+the result. So `C Programming/01_number_base_conversion.c` runs `program01()`
+directly — no `.codec.json` needed. A file that defines `main` (or several
+functions with no `main`) is left on the normal path; the §21 hint still
+covers the genuinely ambiguous cases.
+
+**How to verify (device):** clone `Code-with-C`, open
+`C Programming/01_number_base_conversion.c`, tap RUN ▶ → the Output Panel runs
+program 01 ("Enter the number: …") and accepts scanf input. Opening
+`C Programming/main.c` still runs the menu.
