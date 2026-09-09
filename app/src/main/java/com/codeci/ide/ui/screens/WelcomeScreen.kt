@@ -43,6 +43,7 @@ import com.codeci.ide.ui.projects.WelcomeStarters
  * the caller creates-or-opens the starter project, saves the launch state,
  * and marks the welcome complete.
  */
+@Composable
 fun WelcomeScreen(
     onStarterChosen: (WelcomeStarter) -> Unit,
     modifier: Modifier = Modifier,
@@ -103,6 +104,7 @@ fun WelcomeScreen(
  * green) with the language mark, then the title + one-line promise. Spck-style
  * flat card, no elevation.
  */
+@Composable
 fun StarterTile(
     starter: WelcomeStarter,
     onClick: () -> Unit,

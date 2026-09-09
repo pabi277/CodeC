@@ -1662,4 +1662,5 @@ private fun EmptyProjectsState(
 }
 
 /** Kept as a compatibility entry point for older callers/tests. */
+@Composable
 fun EmptyStateView(onCreateClick: () -> Unit) = EmptyProjectsState(onCreateClick, {})
