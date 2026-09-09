@@ -50,6 +50,4 @@ class FileIconTest {
         assertEquals(FileIcon.Default, FileIcon.resolve("unknown.xyz"))
         assertEquals(FileIcon.Default, FileIcon.resolve("noextension"))
     }
-
-    @Test
 }
