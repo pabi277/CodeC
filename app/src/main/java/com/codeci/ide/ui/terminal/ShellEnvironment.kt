@@ -414,23 +414,14 @@ object ShellEnvironment {
         }
 
         friendly_apt() {
-          output="${'$'}("${'$'}@" 2>&1)"
+          # Do not capture apt/dpkg output in command substitution. That made
+          # a download look frozen and then dumped the transaction at the end.
+          # A PTY is already a stream: let every progress line reach the
+          # terminal immediately and preserve the command's exit code.
+          "${'$'}@"
           status="${'$'}?"
           if [ "${'$'}status" -ne 0 ]; then
-            echo "${'$'}output" >&2
-            case "${'$'}output" in
-              *"Could not resolve"*|*"Temporary failure"*|*"Network is unreachable"*|*"Connection timed out"*)
-                echo "pkg: offline or repository unreachable; installed packages remain usable." >&2 ;;
-              *"Hash Sum mismatch"*|*"checksum"*|*"NO_PUBKEY"*|*"not signed"*)
-                echo "pkg: repository integrity check failed; no package was installed." >&2 ;;
-              *"Unable to locate package"*|*"Cannot find package"*)
-                echo "pkg: package not found; run 'pkg update' first to refresh the package catalog." >&2 ;;
-              *"No space left"*|*"not enough free space"*)
-                echo "pkg: insufficient disk space; free space under ${'$'}PREFIX and retry." >&2 ;;
-              *) echo "pkg: apt failed; check the command above and retry." >&2 ;;
-            esac
-          else
-            printf '%s\n' "${'$'}output"
+            echo "pkg: apt failed; check the streamed output above and retry." >&2
           fi
           return "${'$'}status"
         }

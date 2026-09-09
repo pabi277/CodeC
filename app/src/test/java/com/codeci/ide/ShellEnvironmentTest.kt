@@ -104,6 +104,14 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `pkg streams apt progress instead of buffering the transaction`() {
+        val script = ShellEnvironment.pkgScript()
+        assertTrue(script.contains("let every progress line reach the"))
+        assertFalse(script.contains("output=\"${'$'}(\"${'$'}@\" 2>&1)\""))
+        assertTrue(script.contains("\"${'$'}@\""))
+    }
+
+    @Test
     fun `pkg script is guarded to the CodeC repository`() {
         val script = ShellEnvironment.pkgScript()
         assertTrue(script.contains("apt-get"))

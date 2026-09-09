@@ -7,6 +7,7 @@ import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.services.CompilerSettings
+import com.codeci.ide.ui.services.TerminalForegroundService
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.TerminalThemeType
 import com.codeci.ide.ui.theme.ThemeManager
@@ -180,12 +181,19 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             manager.anyAlive.collect { anyAlive ->
                 try {
                     if (anyAlive) {
-                        wakeLock?.let { if (!it.isHeld) it.acquire(10 * 60 * 1000L) }
+                        // The foreground service protects the app process when
+                        // the activity is backgrounded; the partial wake lock
+                        // keeps a package download/PTY reader moving through
+                        // Doze. Do not use the old ten-minute timeout: a real
+                        // package transaction can legitimately run longer.
+                        TerminalForegroundService.start(getApplication<Application>())
+                        wakeLock?.let { if (!it.isHeld) it.acquire() }
                     } else {
+                        TerminalForegroundService.stop(getApplication<Application>())
                         wakeLock?.let { if (it.isHeld) it.release() }
                     }
                 } catch (e: Exception) {
-                    AppLogger.e("TerminalViewModel", "wake lock error", e)
+                    AppLogger.e("TerminalViewModel", "terminal background keep-alive error", e)
                 }
             }
         }
@@ -539,7 +547,14 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun resize(cols: Int, rows: Int) {
-        activeSession()?.resize(cols, rows)
+        // Keep every PTY at the same terminal geometry. Resizing only the
+        // active session meant switching to an older session delivered a
+        // SIGWINCH on every switch, which Bash rendered as extra blank
+        // prompts/enters. New sessions still receive the same geometry before
+        // their first prompt.
+        manager.sessions.value.forEach { item ->
+            item.session.resize(cols, rows)
+        }
     }
 
     fun toggleCtrl() {
@@ -581,6 +596,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         try {
+            TerminalForegroundService.stop(getApplication<Application>())
             wakeLock?.let { if (it.isHeld) it.release() }
         } catch (_: Exception) {}
         // viewModelScope is already cancelled here; the manager is plain
