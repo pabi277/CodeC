@@ -75,7 +75,8 @@ PASS = all five.
 - Local pre-validation (Temurin 25 + kotlinc 2.4.10): the pure file passes a
   main-harness over the real `LanguageRegistry` + `WebFileSupport` +
   `ProjectPathUtils`; the JUnit source type-checks against a shim.
-- **CI is the executor of record; device round pending.**
+- **CI `34314971389` ✅ GREEN first try (tip `a37e8c2`, 4m37s); device round
+  pending.**
 
 ## 5. Evolution note
 

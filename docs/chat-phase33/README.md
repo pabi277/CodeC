@@ -12,7 +12,7 @@
 > open file by its own type (a `.c` in a web project compiles/runs, never
 > previews `index.html`), and when the user has set a default (⋮ → "Set as
 > launch default") that differs from the open file it asks "Run default / Run
-> open". **CI `34307172630` ✅ GREEN first try (tip `788ba46`).**
+> open". **CI `34314971389` ✅ GREEN first try (tip `a37e8c2`).**
 
 ```
   33.1  First-run tiles: C (offline) / Python / HTML
