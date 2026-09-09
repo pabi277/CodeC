@@ -141,6 +141,10 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     private val startMutex = Mutex()
 
+    /** Last measured grid, applied before spawning a new PTY. */
+    @Volatile private var terminalCols = 80
+    @Volatile private var terminalRows = 24
+
     // ---- Phase 7 multi-session state ----------------------------------------
 
     val sessions: StateFlow<List<TerminalSessionItem>> = manager.sessions
@@ -340,6 +344,10 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 measurements[item.id] = (measurements[item.id] ?: initial)
                     .prepareDone(SystemClock.elapsedRealtime())
             }
+            // Seed the emulator and PTY with the current grid before exec.
+            // This avoids a post-attach TIOCSWINSZ/SIGWINCH when a newly
+            // created session becomes visible and Bash redraws its prompt.
+            item.session.resize(terminalCols, terminalRows)
             item.session.start(prepared)
             _started.value = true
             // A very fast shell can emit the marker before the collector is
@@ -547,11 +555,13 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun resize(cols: Int, rows: Int) {
+        terminalCols = cols
+        terminalRows = rows
         // Keep every PTY at the same terminal geometry. Resizing only the
         // active session meant switching to an older session delivered a
         // SIGWINCH on every switch, which Bash rendered as extra blank
-        // prompts/enters. New sessions still receive the same geometry before
-        // their first prompt.
+        // prompts/enters. New sessions receive the same geometry before their
+        // first prompt in startItem().
         manager.sessions.value.forEach { item ->
             item.session.resize(cols, rows)
         }
