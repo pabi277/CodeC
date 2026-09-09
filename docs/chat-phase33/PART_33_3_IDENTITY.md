@@ -1,6 +1,6 @@
 # CodeC Phase 33.3 — Identity copy
 
-**Status:** 🚧 IMPLEMENTED (CI + device round pending) · **Cost:** `[docs + client strings]` · **Effort:** S
+**Status:** 🚧 IMPLEMENTED (CI ✅ `34346424311`, tip `5db9e33`; device round pending) · **Cost:** `[docs + client strings]` · **Effort:** S
 · **Target:** `README.md`, About in Settings, Projects empty state,
   `prompt.md` one-liner if needed
 

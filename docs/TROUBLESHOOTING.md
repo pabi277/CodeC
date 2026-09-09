@@ -888,4 +888,5 @@ install, RUN ▶ on the C tile asks for packages, the second launch shows tiles
 again, the Packages hub opens on Unix tools, or About/README still read
 C-only.
 
-**Result (2026-09-09):** pending the owner's device round.
+**Result (2026-09-09):** CI `34346424311` ✅ GREEN first try (tip `5db9e33`;
+assemble + unit tests + lint). Device round pending the owner.
