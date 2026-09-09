@@ -151,6 +151,7 @@ import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.ProjectRunTarget
 import com.codeci.ide.ui.services.LanguageRegistry
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
@@ -353,6 +354,8 @@ fun EditorScreen(
     var keysRowVisible by remember { mutableStateOf(true) }
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
+    // Phase 33 — non-null while the RUN ▶ chooser is up (the main/index file).
+    var runChooserMain by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Phase 12 — language-aware editing: the file's extension selects the
@@ -489,6 +492,56 @@ fun EditorScreen(
             webDefaultEntryOrNull()
         }
     }
+
+    // Phase 33 — RUN ▶ asks "main/index file or the open file" when a project
+    // has a real main file that is not the file currently open. The decision
+    // is pure (ProjectRunTarget); these two helpers just carry out the choice.
+    fun runChooserEntryOrNull(): String? {
+        val project = currentProject ?: return null
+        val info = ProjectManager(context).project(project) ?: return null
+        val openRunnable = WebFileSupport.isHtml(currentFileName) ||
+            LanguageRegistry.forFile(currentFileName) != null
+        return ProjectRunTarget.chooserEntry(info.root, info.config.entry, currentFileName)
+            ?.takeIf { openRunnable }
+    }
+
+    /** RUN the file that is open — the pre-33 behaviour, unchanged. */
+    fun runCurrentFile() {
+        if (WebFileSupport.isHtml(currentFileName)) {
+            val entry = previewEntryOrNull()
+            if (entry != null) {
+                onOpenPreview(currentProject, entry)
+            } else {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.file_save_failed),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else if (isWebProject) {
+            val entry = webDefaultEntryOrNull()
+            if (entry != null) {
+                onOpenPreview(currentProject, entry)
+            } else {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.default_run_page_missing),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else {
+            viewModel.runActiveFile(context)
+        }
+    }
+
+    /** RUN the project's main/index file (HTML → preview, else compile/run). */
+    fun runMainFile(entryRel: String) {
+        if (WebFileSupport.isHtml(entryRel) || isWebProject) {
+            onOpenPreview(currentProject, entryRel)
+        } else {
+            viewModel.runFile(context, entryRel)
+        }
+    }
     LaunchedEffect(userMessage) {
         val message = userMessage
         if (message != null) {
@@ -601,6 +654,41 @@ fun EditorScreen(
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissInstall() }) {
                     Text(stringResource(R.string.install_prompt_cancel))
+                }
+            }
+        )
+    }
+
+    // Phase 33 — RUN ▶ chooser: the project has a main/index file AND a
+    // different file open; let the user pick which one RUN means. Tapping
+    // outside dismisses without running anything.
+    runChooserMain?.let { mainEntry ->
+        AlertDialog(
+            onDismissRequest = { runChooserMain = null },
+            title = { Text(stringResource(R.string.run_chooser_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.run_chooser_body,
+                        mainEntry.substringAfterLast('/'),
+                        currentFileName.substringAfterLast('/')
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    runChooserMain = null
+                    runMainFile(mainEntry)
+                }) {
+                    Text(stringResource(R.string.run_chooser_run, mainEntry.substringAfterLast('/')))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    runChooserMain = null
+                    runCurrentFile()
+                }) {
+                    Text(stringResource(R.string.run_chooser_run, currentFileName.substringAfterLast('/')))
                 }
             }
         )
@@ -1210,36 +1298,15 @@ fun EditorScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
-                                if (WebFileSupport.isHtml(currentFileName)) {
-                                    // 2026-08-31 — RUN ▶ IS the preview for
-                                    // HTML files: save the buffer and open it.
-                                    // No separate preview affordance.
-                                    val entry = previewEntryOrNull()
-                                    if (entry != null) {
-                                        // The VM project is authoritative: the
-                                        // Nav route's projectName can be stale
-                                        // after an in-editor folder switch.
-                                        onOpenPreview(currentProject, entry)
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.file_save_failed),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                } else if (isWebProject) {
-                                    val entry = webDefaultEntryOrNull()
-                                    if (entry != null) {
-                                        onOpenPreview(currentProject, entry)
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.default_run_page_missing),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                // Phase 33 — ask "main/index file or the open
+                                // file" when a project has both; otherwise the
+                                // pre-33 behaviour (preview HTML, preview the
+                                // web entry, or run the open file) is unchanged.
+                                val mainEntry = runChooserEntryOrNull()
+                                if (mainEntry != null) {
+                                    runChooserMain = mainEntry
                                 } else {
-                                    viewModel.runActiveFile(context)
+                                    runCurrentFile()
                                 }
                             }
                             .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),

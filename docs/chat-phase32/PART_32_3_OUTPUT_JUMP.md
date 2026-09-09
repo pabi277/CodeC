@@ -1,6 +1,6 @@
 # CodeC Phase 32.3 — Output peek and jump
 
-**Status:** ✅ IMPLEMENTED · **Cost:** `[client-only]` · **Effort:** S
+**Status:** ✅ IMPLEMENTED & DEVICE-PASSED (owner: "All test passed on device", 2026-09-09) · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** Phase 11 output panel, `CompilerDiagnostics`
 
 ---

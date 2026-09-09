@@ -1,6 +1,6 @@
 # CodeC Phase 32.1 — Hide bottom navigation while typing
 
-**Status:** ✅ IMPLEMENTED · **Cost:** `[client-only]` · **Effort:** S
+**Status:** ✅ IMPLEMENTED & DEVICE-PASSED (owner: "All test passed on device", 2026-09-09) · **Cost:** `[client-only]` · **Effort:** S
 · **Target:** `MainActivity` Scaffold `bottomBar`, `EditorScreen`
 
 ---

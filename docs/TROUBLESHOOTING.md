@@ -694,7 +694,7 @@ the file name, what appeared, and whether CodeC Keys was ON or OFF.
 
 **By design:** the first completion after install may take ~1.5 s (clangd index); later keystrokes stay snippet-instant and refresh chips after debounce. JSON files now have chips only after the vscode-json-language-server card is installed (the engine has no JSON snippets).
 
-## 16. Phase 32 phone canvas — device round (owner runbook, 2026-09-09)
+## 16. Phase 32 phone canvas — device round (owner runbook, 2026-09-09) — ✅ PASSED 2026-09-09
 
 **Goal:** the editor regains screen while typing, and the hidden 5-tab bar comes back when you want it.
 
@@ -707,3 +707,5 @@ the file name, what appeared, and whether CodeC Keys was ON or OFF.
 6. With Keys OFF (Settings) confirm the L0 strip/IME behaviour is unchanged (the 22.x recipes still hold).
 
 **PASS:** steps 1–6 all hold. **FAIL:** the bar stays during Keys/IME, the handle does not restore it, the buffer is lost, two chip/key rows stack, or a diagnostic tap opens/jumps to a temp `source_*.c` file.
+
+**Result (2026-09-09, owner): "All test passed on device"** — steps 1–6 PASSED.
