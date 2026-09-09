@@ -1,6 +1,6 @@
 # CodeC Phase 35.4 — No caret until the first tap
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S
+**Status:** 🚧 IMPLEMENTED · **Cost:** `[client-only]` · **Effort:** S
 
 ## Symptom (owner)
 
@@ -11,17 +11,17 @@ all** on open, with the caret appearing only when (and where) the user taps.
 
 ## What exists today (evidence)
 
-`EditorViewModel.openFile` sets `_codeText.value = tab.buffer`, where
-`EditorTab`'s buffer is `TextFieldValue(normalized)` — `TextFieldValue`
-defaults `selection` to `TextRange.Zero` (0,0). `SoraEditorHost` replays that
-as a caret at line 0 column 0 (top-left), and `refreshDecorationsNow`
-computes `_cursorPos` from `selection.min = 0` → "1:1". So every opened file
-starts focused-at-top with a visible caret.
+Before this phase, `EditorViewModel.openFile` set `_codeText.value =
+tab.buffer`, where `EditorTab`'s buffer is `TextFieldValue(normalized)` —
+`TextFieldValue` defaults `selection` to `TextRange.Zero` (0,0).
+`SoraEditorHost` replayed that as a caret at line 0 column 0 (top-left), and
+`refreshDecorationsNow` computed `_cursorPos` from `selection.min = 0` →
+"1:1". So every opened file started focused-at-top with a visible caret.
 
 ## Design
 
-1. **A per-tab "caret not yet placed" state** (pure flag on `EditorTab` +
-   VM `StateFlow`, default true on open).
+1. **A per-open "caret not yet placed" state** (a pure placement policy plus
+   a VM `StateFlow`, reset whenever a file is opened or activated).
 2. While unplaced, `SoraEditorHost` renders the editor with **no insertion
    caret** and performs **no scroll-to-caret** on open (the file opens from
    the top *view* but with no cursor drawn, and no forced position).

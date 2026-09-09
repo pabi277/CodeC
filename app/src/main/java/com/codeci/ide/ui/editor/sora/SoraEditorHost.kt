@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.ui.editor.AcceptGranularity
+import com.codeci.ide.ui.editor.CaretBlinkPolicy
 import com.codeci.ide.ui.editor.GhostState
 import com.codeci.ide.ui.viewmodels.CompletionModel
 import com.codeci.ide.ui.viewmodels.EditorViewModel
@@ -28,6 +29,7 @@ import io.github.rosemoe.sora.text.ContentListener
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -81,6 +83,7 @@ fun SoraEditorHost(
     onBrowseVisibilityChanged: (Boolean) -> Unit = {}
 ) {
     val codeText by viewModel.codeText.collectAsState()
+    val caretPlaced by viewModel.caretPlaced.collectAsState()
     val cursorPos by viewModel.cursorPos.collectAsState()
 
     // One-time editor configuration: ONLY what has no reactive effect below.
@@ -90,6 +93,10 @@ fun SoraEditorHost(
     val completionBits = remember(editor) {
         editor.apply {
             setUndoEnabled(false) // VM EditorUndoManager is canonical
+            // Phase 35.3 — disable sora's animated cursor travel. The blink
+            // period is switched to solid only during active typing below.
+            setCursorAnimationEnabled(false)
+            setCursorBlinkPeriod(CaretBlinkPolicy.REARM_AFTER_MS.toInt())
             // Phase 27.2/27.3 — swap the completion window for the gated
             // browse-mode one BEFORE any completion could auto-fire, and
             // register the ghost renderer (type "codec.ghost").
@@ -146,10 +153,10 @@ fun SoraEditorHost(
     val lastAppliedGhost = remember(editor) { arrayOf<String?>(null) }
     LaunchedEffect(
         completionModel.ghost, cursorPos.line, cursorPos.column,
-        ghostEnabled, completionMasterOn, browsingActive
+        ghostEnabled, completionMasterOn, browsingActive, caretPlaced
     ) {
         val ghost = completionModel.ghost
-        if (ghost is GhostState.Visible && ghostEnabled && completionMasterOn &&
+        if (caretPlaced && ghost is GhostState.Visible && ghostEnabled && completionMasterOn &&
             !browsingActive
         ) {
             runCatching {
@@ -167,6 +174,34 @@ fun SoraEditorHost(
         } else if (lastAppliedGhost[0] != null) {
             editor.setInlayHints(null)
             lastAppliedGhost[0] = null
+        }
+    }
+
+    // Phase 35.4 — no insertion caret or forced caret scroll on open. A tap
+    // focuses sora naturally; a CodeC Keys press marks the state placed and
+    // this effect restores focus so the caret is visible beside the edit.
+    LaunchedEffect(caretPlaced) {
+        if (caretPlaced) {
+            if (!editor.hasFocus()) editor.requestFocus()
+            editor.setCursorBlinkPeriod(CaretBlinkPolicy.REARM_AFTER_MS.toInt())
+        } else {
+            editor.clearFocus()
+            editor.setCursorBlinkPeriod(0)
+        }
+    }
+
+    // Phase 35.3 — set a solid caret for the active input burst, then let
+    // sora's normal blink resume after the settle window. This is keyed by the
+    // buffer text, not selection replay, so taps do not restart the animation.
+    val lastTypingText = remember(editor) { arrayOf<String?>(null) }
+    LaunchedEffect(codeText.text, caretPlaced) {
+        val previous = lastTypingText[0]
+        lastTypingText[0] = codeText.text
+        if (!caretPlaced || previous == null || previous == codeText.text) return@LaunchedEffect
+        editor.setCursorBlinkPeriod(0)
+        delay(CaretBlinkPolicy.REARM_AFTER_MS)
+        if (caretPlaced && lastTypingText[0] == codeText.text) {
+            editor.setCursorBlinkPeriod(CaretBlinkPolicy.REARM_AFTER_MS.toInt())
         }
     }
 
@@ -248,6 +283,7 @@ fun SoraEditorHost(
                 val cursor = content.cursor
                 val range = TextRange(cursor.left, cursor.right)
                 syncedSelection = range
+                viewModel.onEditorInteraction()
                 viewModel.updateCode(TextFieldValue(newText, range))
             }
 
@@ -267,6 +303,12 @@ fun SoraEditorHost(
     DisposableEffect(editor) {
         editor.text.addContentListener(contentListener)
 
+        // Focus is the first-tap signal for the quiet-on-open state. This is
+        // installed once per editor view and never edits the buffer itself.
+        editor.setOnFocusChangeListener { _, hasFocus ->
+            viewModel.onEditorFocusChanged(hasFocus)
+        }
+
         val selectionReceipt = editor.subscribeEvent(
             SelectionChangeEvent::class.java,
             EventReceiver { event, _ ->
@@ -276,6 +318,10 @@ fun SoraEditorHost(
                 // the VM back and ping-ponged replays — the 25.2 device
                 // crash. Same guard as pushToVm.
                 if (pushing[0]) return@EventReceiver
+                // A tap can dispatch selection before the platform focus
+                // callback. Mark it here so the exact sora-selected offset is
+                // retained rather than replaced with the typing origin.
+                viewModel.onEditorInteraction()
                 if (soraHasText == null) {
                     // First replay hasn't run: sora holds nothing meaningful
                     // yet. Pushing now would overwrite the VM's real text
@@ -329,6 +375,7 @@ fun SoraEditorHost(
             runCatching { ghostClickReceipt.unsubscribe() }
             runCatching { scrollReceipt.unsubscribe() }
             runCatching { editor.text.removeContentListener(contentListener) }
+            editor.setOnFocusChangeListener(null)
         }
     }
 
@@ -365,18 +412,25 @@ fun SoraEditorHost(
                     // object, so re-attach it to the new instance.
                     ed.setText(target.text)
                     ed.text.addContentListener(contentListener)
-                    val start = target.selection.start.coerceIn(0, target.text.length)
-                    val end = target.selection.end.coerceIn(0, target.text.length)
-                    val indexer = ed.text.indexer
-                    val startPos = indexer.getCharPosition(start)
-                    val endPos = indexer.getCharPosition(end)
-                    if (start == end) {
-                        ed.setSelection(startPos.line, startPos.column)
-                    } else {
-                        ed.setSelectionRegion(
-                            startPos.line, startPos.column,
-                            endPos.line, endPos.column
-                        )
+                    // Opening a file must not replay its default zero
+                    // selection into a visible caret. A placed edit replays
+                    // only when sora does not already hold that selection.
+                    if (caretPlaced && target.selection != syncedSelection) {
+                        val start = target.selection.start.coerceIn(0, target.text.length)
+                        val end = target.selection.end.coerceIn(0, target.text.length)
+                        val indexer = ed.text.indexer
+                        val startPos = indexer.getCharPosition(start)
+                        val endPos = indexer.getCharPosition(end)
+                        if (start == end) {
+                            ed.setSelection(startPos.line, startPos.column)
+                        } else {
+                            ed.setSelectionRegion(
+                                startPos.line, startPos.column,
+                                endPos.line, endPos.column
+                            )
+                        }
+                    } else if (!caretPlaced) {
+                        ed.clearFocus()
                     }
                     syncedText = target.text
                     soraHasText = target.text
@@ -384,7 +438,7 @@ fun SoraEditorHost(
                 } finally {
                     pushing[0] = false
                 }
-            } else if (target.selection != syncedSelection) {
+            } else if (caretPlaced && target.selection != syncedSelection) {
                 // VM-driven caret move (find-next, quick fix): text unchanged.
                 val start = target.selection.start.coerceIn(0, target.text.length)
                 val end = target.selection.end.coerceIn(0, target.text.length)

@@ -1,6 +1,6 @@
 # CodeC Phase 35.1 — "Always keyboard stay open"
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S
+**Status:** 🚧 IMPLEMENTED · **Cost:** `[client-only]` · **Effort:** S
 
 ## Symptom (owner)
 

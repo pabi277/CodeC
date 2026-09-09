@@ -126,6 +126,7 @@ fun SettingsScreen(
     // Phase 28.2 — CodeC Keys (the dedicated in-app code keyboard; opt-in
     // until the device round flips the default).
     val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = true)
+    val keepKeysOpen by settingsManager.editorKeepKeysOpenFlow.collectAsState(initial = true)
     val codecKeysHaptics by settingsManager.codecKeysHapticsFlow.collectAsState(initial = true)
     val codecKeysHeight by settingsManager.codecKeysHeightFlow.collectAsState(initial = 1f)
 
@@ -239,6 +240,11 @@ fun SettingsScreen(
                 onCheckedChange = { scope.launch { settingsManager.setCodecKeysEnabled(it) } }
             )
             if (codecKeysOn) {
+                SettingsSwitch(
+                    title = "Keep the code keyboard open while editing",
+                    checked = keepKeysOpen,
+                    onCheckedChange = { scope.launch { settingsManager.setEditorKeepKeysOpen(it) } }
+                )
                 SettingsSwitch(
                     title = "Haptic tick per key",
                     checked = codecKeysHaptics,

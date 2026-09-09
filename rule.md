@@ -198,9 +198,15 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-07, Phase 30 device-passed and merged via PR #55)
+## 9. State snapshot (2026-09-09, Phase 35 implemented; CI/device gates pending)
 
-- **`main` = the Phase 30 merge commit (PR #55, 2026-09-07).** Before that:
+- **Phase 35** is implemented on session branch `arena/01a086a0-codec`: the
+  keep-keys setting, off-main decoration snapshot, solid typing caret, and
+  quiet-on-open caret state are wired and host-tested. CI is the executor of
+  record; the owner’s device runbook is `docs/TROUBLESHOOTING.md` §25 and the
+  measurement card is `docs/chat-phase35/MEASUREMENT_CARD.md`. No device pass
+  or merge is claimed yet.
+- **`main` = the Phase 34 merge commit (PR #59, 2026-09-09).** Before that:
   `31e319f` = PR #54 (Phase 29, 2026-09-06), `3edfc97` = PR #53 (2026-09-05,
   Phases 29–33 plan docs), PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49
   Phase 25, PR #48 research docs, PR #47 Phase 24, PR #46 Phase 23, PR #45

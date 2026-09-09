@@ -5,11 +5,11 @@
 > user experience improvement and the ui so research throughly and create the
 > phases properly after all that i will go for various devices use test."*
 >
-> The four row ideas the owner handed over are researched below and turned
-> into **four future phases (34–37)**. Nothing is implemented yet; each phase
-> is specced with its exit condition, targets, and tests. They start one at a
-> time on the owner's **"Start Phase N"**, land on `main` through the §3 merge
-> gate, and finish with the owner's **cross-device test round**.
+> The four row ideas the owner handed over were researched below and turned
+> into four phases (34–37). Phase 34 is merged; Phase 35 is now implemented on
+> its session branch and awaits CI plus the owner's cross-device round. Phases
+> 36–37 remain planned. Each phase lands on `main` only through the §3 merge
+> gate and finishes with the owner's cross-device test round.
 
 ## The owner's four row ideas → phases
 
@@ -112,6 +112,9 @@ foreground keep-alive + port lifecycle. Spec:
 
 - Phase 33 (first-hour UX) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
 - Phase 34 (Official file icons) is **✅ DEVICE-PASSED** and **MERGED** to `main`.
-- Phases 35–37 are **📋 PLANNED** (researched + specced, not implemented).
-- Nothing starts until the owner's "Start Phase N"; the owner then runs the
-  cross-device round at the end.
+- Phase 35 (Editor typing feel) is **🚧 IMPLEMENTED** on the session branch;
+  CI and the owner’s cross-device round are pending. The measurement card is
+  deliberately still open.
+- Phases 36–37 remain **📋 PLANNED** (researched + specced, not implemented).
+- The owner starts each phase with "Start Phase N" and runs the cross-device
+  round at the end.

@@ -892,3 +892,37 @@ C-only.
 assemble + unit tests + lint); **device round ✅ PASSED** (owner: "Device
 test pass"). Merge HELD on the owner's command while the UX/UI phases 34–37
 are queued.
+
+## 25. Phase 35 editor typing feel — device round (owner runbook, 2026-09-09)
+
+**Status: 🚧 IMPLEMENTED; CI and device evidence pending. Do not mark this
+section passed until the owner records the result on the slowest phone.**
+
+Install the CI APK from the Phase 35 build, then run this matrix on the
+slowest available phone and at least one other Android device:
+
+1. Settings → CodeC Keys → leave **Keep the code keyboard open while editing**
+   ON. Open a long file, type a burst, switch to Output and back, and confirm
+   CodeC Keys stays mounted without re-tapping. Collapse it from ⋮, confirm the
+   explicit collapse wins, then leave and re-enter the editor and confirm the
+   ON default returns. Turn the setting OFF and confirm the system IME is
+   usable again.
+2. Run an interactive program. While it waits for stdin, confirm the system
+   IME appears; after the run ends, confirm CodeC Keys returns when the setting
+   is ON.
+3. Type a burst with the system IME and with CodeC Keys. The caret should stay
+   solid and glide with the text, without a per-key jump; after about 0.5 s of
+   idle it should resume its normal blink. Tap/drag to select text and confirm
+   selection handles and editing still work.
+4. Open a file without tapping the code area: confirm there is no insertion
+   caret, no forced scroll-to-caret, and no `Ln 1, Col 1` status bar. Tap near
+   the middle of a line and type; the caret must appear at that exact tap.
+   Press a CodeC Keys cap before tapping and confirm it starts at the end of
+   line one and the edit is retained.
+5. Complete the measurement card in `docs/chat-phase35/MEASUREMENT_CARD.md`
+   at small, 2,000-line and 10,000-line files with p50/p95/p99. Also verify
+   undo/redo, `()` pairing, `{` + Enter splitting, ghost/chip acceptance,
+   Gboard/Samsung/SwiftKey composing text, and tab switching.
+
+Record Android version, OEM, keyboard, density/screen size, file sizes, the
+numbers, and any failure here before changing the phase to DEVICE-PASSED.

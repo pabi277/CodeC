@@ -1,6 +1,6 @@
 # CodeC Phase 35.3 — Non-bouncy cursor
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S
+**Status:** 🚧 IMPLEMENTED · **Cost:** `[client-only]` · **Effort:** S
 
 ## Symptom (owner)
 
@@ -31,12 +31,12 @@ programmatic replay and sora's own native caret. That is the "bouncy" feel.
    `syncedSelection` fast-path is for caret-only moves; make the text-change
    replay also skip a redundant `setSelection` when the listener echo already
    carries the same selection).
-3. **Verify the exact sora knob at implementation** — sora's `CodeEditor`
-   exposes cursor configuration (cursor width/period/blink) through its
-   `Cursor` accessor; the precise method name is confirmed against the
-   0.24.6 AAR during implementation, not assumed here. If sora cannot hold a
-   solid cursor, the fallback is a custom `InsertionMark` overlay driven by the
-   same coordinates the editor already reports.
+3. **Use sora's public cursor knobs** — the resolved 0.24.6 `CodeEditor`
+   surface exposes `setCursorAnimationEnabled(false)` and
+   `setCursorBlinkPeriod(int)`. CodeC disables animated travel once, sets the
+   period to zero during the active typing window, and restores the normal
+   period after 500 ms without input. No new dependency or custom overlay is
+   needed.
 
 ## Exit condition
 
