@@ -1,6 +1,16 @@
 # CodeC Phase 36.2 — Terminal session UX behavior
 
-**Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S
+**Status:** 🚧 IMPLEMENTED · **Cost:** `[client-only]` · **Effort:** S
+
+## Implementation evidence (2026-09-09)
+
+Each session now exposes `starting shell…`, `running`, `exited (code)`, or
+failure state. Forced userland replacement opens a replacement session with
+`userland was updated — session restarted`. `OrderedReadinessQueue` is keyed
+per session and flushes FIFO only after the actual first-prompt OSC marker;
+the scalar queue and `delay(350)` handoff are gone. Existing PTY/JNI,
+multi-session, rendering, input, restart/close, and package/run routes remain
+unchanged. Host queue/protocol tests and CI `34370970512` are green.
 
 ## Symptom (owner)
 

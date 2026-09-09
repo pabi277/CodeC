@@ -1,6 +1,6 @@
 # CodeC Phase 36 — Terminal speed & feel
 
-> **Status:** 📋 PLANNED (researched + specced, not implemented) ·
+> **Status:** 🚧 IMPLEMENTED on `arena/01a086a0-codec` ·
 > **Cost:** `[client-only]` · **Effort:** M · **Owner row:** *"Terminal is
 > good but Termux is very fast and my Terminal sometimes stays exited for a
 > while then start working and also sometimes behavior not user friendly"*
@@ -12,8 +12,20 @@
 
 | Part | Title | Cost | Effort | Status |
 |---|---|---|---|---|
-| [36.1](PART_36_1_START_LATENCY.md) | Cold-start latency | client-only | M | 📋 planned |
-| [36.2](PART_36_2_UX_BEHAVIOR.md) | Session UX behavior | client-only | S | 📋 planned |
+| [36.1](PART_36_1_START_LATENCY.md) | Cold-start latency | client-only | M | 🚧 implemented; device gate open |
+| [36.2](PART_36_2_UX_BEHAVIOR.md) | Session UX behavior | client-only | S | 🚧 implemented; device gate open |
+
+**Implementation record (2026-09-09):** startup boundaries are captured in
+`TerminalStartMeasurement` and logged through `AppLogger`; the `PreparedShell`
+cache key is compiler settings plus the marked userland generation, with an
+explicit `cc` frontend rewrite on cache hits. `TerminalLifecycle` drives the
+visible starting/running/exited state, the shell emits a private OSC first-
+prompt marker through `PS1`, and each session owns an `OrderedReadinessQueue`.
+The userland warm-open path trusts its marker instead of probing/re-extracting;
+forced reinstall and compiler-setting changes invalidate preparation. Pure
+queue/cache-key/timing tests and readiness protocol tests are in CI run
+`34370970512` (GREEN). Owner device acceptance remains open; no PR/merge has
+been created.
 
 **Open-source-first reference** (`docs/PHASE34_37_OSS_RESEARCH.md` §3):
 **jackpal Android-Terminal-Emulator (Apache-2.0, archived)** is the canonical
