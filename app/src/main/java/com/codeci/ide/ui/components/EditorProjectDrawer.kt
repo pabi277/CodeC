@@ -280,8 +280,6 @@ private enum class RowAction {
     Open, Rename, Delete, Run, Launch, SetDefault, ClearDefault, CopyPath, NewFileHere, NewFolderHere
 }
 
-/** Extension → the drawer's typed file icon (Spck shows a mark per language). */
-@Composable
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

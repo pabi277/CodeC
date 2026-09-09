@@ -84,7 +84,7 @@ enum class FileIcon(val vector: ImageVector, val tintable: Boolean = true) {
     Markdown(FileIconVectors.Markdown),
     Shell(FileIconVectors.Shell),
     Yaml(FileIconVectors.Yaml),
-    Toml(FileIconVectors.Config),
+    Config(FileIconVectors.Config),
     Xml(FileIconVectors.Xml),
     Java(FileIconVectors.Java),
     Kotlin(FileIconVectors.Kotlin),
@@ -145,7 +145,7 @@ enum class FileIcon(val vector: ImageVector, val tintable: Boolean = true) {
                         "md" -> Markdown
                         "sh" -> Shell
                         "yaml", "yml" -> Yaml
-                        "toml" -> Toml
+                        "toml" -> Config
                         "xml" -> Xml
                         "java" -> Java
                         "kt" -> Kotlin
