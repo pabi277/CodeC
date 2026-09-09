@@ -841,3 +841,17 @@ program 01 ("Enter the number: …") and accepts scanf input. Opening
 `C Programming/main.c` still runs the menu.
 
 **CI:** `34330372322` ✅ GREEN first try (tip `36e4fda`).
+
+## 23. Phase 33 device round ✅ PASSED (2026-09-09, `arena/01a083fc-codec`, owner: "Ok working as i wanted")
+
+The owner's practice-project model, end to end, on the Code-with-C repo:
+
+1. Open `C Programming/01_number_base_conversion.c` in the web showcase → RUN ▶
+   compiles and runs the file (the auto-project fix §19 + space-path fix §20 +
+   non-`main` entry wrapper §22 all hold together), never previewing `index.html`.
+2. Set a launch default (⋮ → Set as launch default) → RUN ▶ on a different file
+   asks "Run default / Run open".
+3. Open `index.html` → RUN ▶ still previews it.
+
+**Result:** all steps behave as the owner described; the owner commanded the
+merge ("Then merge") → **✅ MERGED to `main` via PR #57**.

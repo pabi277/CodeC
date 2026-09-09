@@ -1,9 +1,9 @@
 # CodeC Phase 32 — Phone canvas (see the code)
 
-> **Status:** ✅ **IMPLEMENTED + DEVICE-PASSED (2026-09-09, `arena/01a083fc-codec`)** — see the
+> **Status:** ✅ **IMPLEMENTED + DEVICE-PASSED + MERGED (2026-09-09, `arena/01a083fc-codec`)** — see the
 > per-part records below. **CI `34305070875` ✅ GREEN first try (tip `b5feb55`,
 > 5m37s)**; **device round `TROUBLESHOOTING.md` §16 ✅ PASSED** (owner: "All
-> test passed on device"). **Not merged** — the owner merges (§3).
+> test passed on device"). **✅ MERGED to `main` via PR #57** (owner: "Then merge").
 >
 > **28.3 already owns “chips as Keys row 0.”** It is NOT duplicated here —
 > 32.2 is satisfied by 28.2/28.3 + the 32.1 nav-hide (recorded in its part doc).

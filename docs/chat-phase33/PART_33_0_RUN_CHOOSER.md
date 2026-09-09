@@ -1,6 +1,6 @@
 # CodeC Phase 33.0 — RUN ▶ chooser (the user's default file vs the open file)
 
-**Status:** ✅ IMPLEMENTED (2026-09-09, `arena/01a083fc-codec`) · **Cost:** `[client-only]` · **Effort:** S
+**Status:** ✅ IMPLEMENTED + DEVICE-PASSED + **MERGED via PR #57** (2026-09-09, `arena/01a083fc-codec`) · **Cost:** `[client-only]` · **Effort:** S
 · **Owner request:** "make the default run option as a user task if user set any default file than it will open with a option default or current file."
 
 ---
@@ -35,6 +35,8 @@ open any `.c`, and RUN compiles/runs that file instead of opening `index.html`.
 4. Choose the open file (or tap outside) → unchanged / nothing.
 5. Open the default file itself → RUN ▶ runs it directly, no dialog.
 PASS = all five.
+
+**Result (2026-09-09): ✅ DEVICE-PASSED** — owner: "Ok working as i wanted".
 ```
 
 ## 3. Implementation
@@ -93,8 +95,9 @@ PASS = all five.
 - Local pre-validation (Temurin 25 + kotlinc 2.4.10): the pure file passes a
   main-harness over the real `LanguageRegistry` + `WebFileSupport` +
   `ProjectPathUtils`; the JUnit source type-checks against a shim.
-- **CI:** `34314971389` ✅ GREEN (tip `a37e8c2`, 4m37s) and the auto-project fix `34317268507` ✅ GREEN first try (tip `270c70d`, 5m45s); device round
-  pending.**
+- **CI:** `34314971389` ✅ GREEN (tip `a37e8c2`, 4m37s) and the auto-project
+  fix `34317268507` ✅ GREEN first try (tip `270c70d`, 5m45s). **Device round
+  (2026-09-09) ✅ PASSED — owner "Ok working as i wanted"; MERGED via PR #57.**
 
 ## 5. Evolution note
 
