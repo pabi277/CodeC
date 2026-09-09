@@ -1,8 +1,8 @@
 # CodeC Phase 37.1 — LAN server + URL / QR UX
 
-**Status:** 🚧 IMPLEMENTED (2026-09-09, owner: "Start Phase 37") on
-`arena/01a0872e-codec` — **a real device pass is still required** (owner's
-phone + a second device on the same Wi-Fi; CI is the executor of record) ·
+**Status:** 🚧 IMPLEMENTED + ✅ CI GREEN (2026-09-09, owner: "Start Phase 37")
+on `arena/01a0872e-codec` — **a real device pass is still required** (owner's
+phone + a second device on the same Wi-Fi) ·
 **Cost:** `[client-only]` · **Effort:** M
 
 ## Symptom (owner)
@@ -165,6 +165,15 @@ open-source-first directive, `docs/PHASE34_37_OSS_RESEARCH.md` §4).
 - Local pre-validation (JVM harness over the real production files, not a
   replacement for CI): 96 cases green — 80 in the service set and 16 in the
   scaffold set.
+- **CI (`Build APK`, the executor of record): ✅ GREEN** — run `34393543928`
+  (9 m 6 s) on tip `6d36a83`: `:app:assembleDebug` + `:app:testDebugUnitTest`
+  (all 11 Phase-37 classes, incl. the real zxing decode round trip) +
+  `:app:lintDebug`, artifact `CodeC-IDE` **24 844 344 B**.
+  **APK delta +355 660 B (+347 KiB, ≈ +1.45 %)** against the `main` build
+  `34381534118` (tip `4529e3c`, 24 488 684 B) — that is ZXing `core` 3.5.4
+  (one jar, no transitive deps) plus the phase's own code; the bench artifact
+  moved by 12 B. Stated up front so the device round sees the same number on
+  the artifact.
 
 **Two test-only bugs CI caught that the harness could not** (both recorded so
 the next phase does not repeat them):

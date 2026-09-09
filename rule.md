@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-09, Phase 37 implemented; CI + device pass outstanding)
+## 9. State snapshot (2026-09-09, Phase 37 implemented + CI green; device pass outstanding)
 
 - **Phase 37 (Device as server / LAN) is 🚧 IMPLEMENTED** on
   `arena/01a0872e-codec` (owner: "Start Phase 37"): 37.1 LAN bind + the two
@@ -207,9 +207,17 @@ Every update updates the docs **in the same commit**:
   and OFF by default, loopback behaviour is unchanged, no port < 1024, and the
   templates honour `CODEC_SERVER_HOST` (never `CODEC_SERVER_PORT`). 62 new
   host cases; local pre-validation 96/96 over the real production files.
-  **Device pass required** (owner's phone + a second device on the same
-  Wi-Fi, all eight exit checks) and `Build APK` CI has not seen this tip yet —
-  so no acceptance is claimed and **merge is HELD for the owner's command**.
+  **`Build APK` CI is ✅ GREEN** — run `34393543928` on tip `6d36a83`
+  (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`; APK 24 844 344 B =
+  +355 660 B vs the `main` build `34381534118`, the weight of the zxing `core`
+  jar + this code). Two red rounds came first, both fixed for cause: zxing's
+  hint key is `EncodeHintType.CHARACTER_SET` (a local shim had been written with
+  the same wrong name — a shim only protects you if it mirrors reality), then
+  two test-only bugs (`TemporaryFolder.newFolder` refuses a name already used in
+  that test; a QR pixel offset is derived from zxing's scale-and-centre, not
+  guessed). **Device pass required** (owner's phone + a second device on the
+  same Wi-Fi, all eight exit checks), so no acceptance is claimed and **merge is
+  HELD for the owner's command**.
 - **Phase 35** is ✅ DEVICE-PASSED by the owner report on session branch
   `arena/01a086a0-codec` (`317b89a`; docs follow-up `88839cd`). Build APK CI
   `34367008019` and current-tip `34367770583` are GREEN. The owner supplied no

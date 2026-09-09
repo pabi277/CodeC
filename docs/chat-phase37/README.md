@@ -3,10 +3,13 @@
 > **Status:** 🚧 IMPLEMENTED on `arena/01a0872e-codec` (2026-09-09, owner:
 > "Start Phase 37") — both parts, 62 new host-test cases in nine new test
 > classes, local pre-validation 96/96 green over the real production files.
-> **A real device pass is required** (owner's phone + a second device on the
-> same Wi-Fi, all eight exit checks); no device acceptance is claimed until
-> the owner reports it. CI (`Build APK`) is the executor of record, and merge
-> is held for the owner's command.
+> **CI is ✅ GREEN** — `Build APK` run `34393543928` on tip `6d36a83`
+> (`:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug`; APK
+> 24 844 344 B, +355 660 B vs the `main` build), after two for-cause red
+> rounds recorded in `PART_37_1_LAN_SERVER.md` §Tests. **A real device pass is
+> still required** (owner's phone + a second device on the same Wi-Fi, all
+> eight exit checks); no device acceptance is claimed until the owner reports
+> it, and merge is held for the owner's command.
 > **Cost:** `[client-only]` · **Effort:** M/L · **Owner row:** *"Like spck or
 > Termux we can use a device as a server and run our files at localhost i want
 > to implement that feature"*

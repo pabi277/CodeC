@@ -1019,7 +1019,14 @@ recipe (steps 1–8).**
       zxing scales to integer pixels per module and *centres* the code (the test
       now finds the first dark pixel and derives the scale from the 7-module
       run; the local fake writer was rewritten to reproduce that geometry). Both
-      fixed for cause — no assertion was loosened to buy green. Green run id is
-      recorded in `docs/chat-phase37/PART_37_1_LAN_SERVER.md` §Tests.
-    - **Gate:** **CI + the owner's two-device pass are outstanding** — all eight exit checks (4 per part: LAN URL + QR reachable, second device opens the page, on-device loopback unaffected, LAN off = unreachable; server survives app-switch/screen-off, notification Stop releases the port, re-run works immediately, two servers on one port → the second says so) need the owner's phone **and** a second device on the same Wi-Fi, which the sandbox cannot supply: **device pass required, nothing is claimed**. Deferred with reasons recorded in `docs/chat-phase37/README.md`: NSD/mDNS discovery, `CODEC_SERVER_PORT`, a second foreground-service type, JmDNS. **No PR/merge without the owner's command.** Records: `docs/chat-phase37/{README,PART_37_1_LAN_SERVER,PART_37_2_KEEPALIVE_PORTS}.md`.
+      fixed for cause — no assertion was loosened to buy green.
+    - **✅ CI GREEN — `Build APK` run `34393543928` on tip `6d36a83` (9 m 6 s):
+      `:app:assembleDebug` + `:app:testDebugUnitTest` (all 11 Phase-37 classes,
+      including the real zxing decode round trip) + `:app:lintDebug`; artifact
+      `CodeC-IDE` 24 844 344 B = **+355 660 B (+347 KiB, ≈ +1.45 %)** against the
+      `main` build `34381534118` (tip `4529e3c`, 24 488 684 B) — the weight of
+      one jar (`com.google.zxing:core:3.5.4`, zero transitive deps) plus this
+      phase's code, stated here so the owner sees the same number on the
+      artifact.
+    - **Gate:** **the owner's two-device pass is outstanding** — all eight exit checks (4 per part: LAN URL + QR reachable, second device opens the page, on-device loopback unaffected, LAN off = unreachable; server survives app-switch/screen-off, notification Stop releases the port, re-run works immediately, two servers on one port → the second says so) need the owner's phone **and** a second device on the same Wi-Fi, which the sandbox cannot supply: **device pass required, nothing is claimed**. Deferred with reasons recorded in `docs/chat-phase37/README.md`: NSD/mDNS discovery, `CODEC_SERVER_PORT`, a second foreground-service type, JmDNS. **No PR/merge without the owner's command.** Records: `docs/chat-phase37/{README,PART_37_1_LAN_SERVER,PART_37_2_KEEPALIVE_PORTS}.md`.
 

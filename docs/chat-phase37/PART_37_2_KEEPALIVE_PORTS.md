@@ -1,8 +1,9 @@
 # CodeC Phase 37.2 — Foreground keep-alive + port lifecycle
 
-**Status:** 🚧 IMPLEMENTED (2026-09-09, owner: "Start Phase 37") on
-`arena/01a0872e-codec` — **a real device pass is still required** (the four
-exit checks below need the owner's phone + a second device) ·
+**Status:** 🚧 IMPLEMENTED + ✅ CI GREEN (2026-09-09, owner: "Start Phase 37")
+on `arena/01a0872e-codec` (`Build APK` `34393543928`) — **a real device pass is
+still required** (the four exit checks below need the owner's phone + a second
+device) ·
 **Cost:** `[client-only]` · **Effort:** M
 
 ## Symptom (owner)
