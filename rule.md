@@ -198,21 +198,20 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-09, Phase 36 started; Phase 35 device-passed)
+## 9. State snapshot (2026-09-09, Phase 36 device-passed; merge authorized)
 
 - **Phase 35** is ✅ DEVICE-PASSED by the owner report on session branch
   `arena/01a086a0-codec` (`317b89a`; docs follow-up `88839cd`). Build APK CI
   `34367008019` and current-tip `34367770583` are GREEN. The owner supplied no
   device/model/measurement details, so the record makes no unsupported claims.
-- **Phase 36** is 🚧 STARTED on `arena/01a086a0-codec` from `docs/chat-phase36/`:
-  measure the three startup boundaries before selecting a dominant cut; add
-  visible starting/running/exited state; use a settings/userland-keyed
-  PreparedShell cache; and replace the scalar/350 ms command handoff with a
-  per-session ordered queue flushed by the actual first-prompt marker. Preserve
-  PTY/JNI fork/exec, shell environment, cc rewrite, signing/invalidation,
-  multi-session, rendering, input, restart/close, and package/run handoff.
-  Phase 36 host tests, CI, and the owner device round remain open; no PR/merge
-  is authorized without the owner command.
+- **Phase 36** is ✅ DEVICE-PASSED by owner report on
+  `arena/01a086a0-codec` from `docs/chat-phase36/`: startup measurement and
+  readiness UX, progressive PTY output, foreground-service background
+  survival, and session-switch redraw fixes all passed device validation.
+  Fixes are `da126cf`/`11fe8d7`; Build APK CI `34374983032` and `34375710614`
+  are green. PTY/JNI fork/exec, shell environment, cc rewrite,
+  signing/invalidation, multi-session, rendering, input, restart/close, and
+  package/run handoff remain preserved. The owner authorized the PR/merge.
 - **`main` = the Phase 34 merge commit (PR #59, 2026-09-09).** Before that:
   `31e319f` = PR #54 (Phase 29, 2026-09-06), `3edfc97` = PR #53 (2026-09-05,
   Phases 29–33 plan docs), PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49

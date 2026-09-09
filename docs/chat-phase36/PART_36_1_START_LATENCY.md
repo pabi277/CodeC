@@ -1,6 +1,6 @@
 # CodeC Phase 36.1 — Terminal cold-start latency
 
-**Status:** 🚧 IMPLEMENTED · **Cost:** `[client-only]` · **Effort:** M
+**Status:** ✅ DEVICE-PASSED by owner report · **Cost:** `[client-only]` · **Effort:** M
 
 ## Implementation evidence (2026-09-09)
 
@@ -12,7 +12,9 @@ still rewrites the `cc` frontend. Warm opens use the signed userland marker
 without a launch/network probe, while force reinstall invalidates the cache.
 `TerminalLifecycle.STARTING` is exposed immediately and the first-prompt OSC
 marker closes the measurement. Host timing/cache-key tests and the build gate
-are green in CI `34370970512`.
+are green in CI `34370970512`. The owner subsequently validated the Phase 36
+startup/readiness behavior on device; no device matrix or timing card was
+supplied, so none is invented here.
 
 ## Symptom (owner)
 

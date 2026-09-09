@@ -9,7 +9,8 @@ device acceptance also passed, but the owner found three follow-up regressions:*
 package/download output was batched, backgrounded commands stopped, and
 switching sessions redrew blank lines/duplicate prompts. Fixes are on this
 branch at `da126cf`/`11fe8d7`, with green CI `34374983032`/`34375710614`;
-the follow-up device gate remains open. No PR or merge is open or authorized.
+the owner reports the follow-up device validation **PASSED** and authorized
+merge. The PR gate is now being completed.
 
 
 **2026-09-03 — Phase 21 COMPLETE, device-accepted and MERGED to `main`**

@@ -1,8 +1,9 @@
 # CodeC Phase 36 — Terminal speed & feel
 
-> **Status:** 🚧 FOLLOW-UP DEVICE GATE on `arena/01a086a0-codec` ·
-> The original Phase 36 device acceptance passed by owner report; three
-> terminal regressions were then reported and fixed in `da126cf` and `11fe8d7`.
+> **Status:** ✅ DEVICE-PASSED on `arena/01a086a0-codec`; merge authorized by
+> the owner · The original acceptance and the three follow-up regressions
+> (streaming output, background survival, session switching) all passed on the
+> owner's device validation after fixes `da126cf` and `11fe8d7`.
 > **Cost:** `[client-only]` · **Effort:** M · **Owner row:** *"Terminal is
 > good but Termux is very fast and my Terminal sometimes stays exited for a
 > while then start working and also sometimes behavior not user friendly"*
@@ -14,8 +15,8 @@
 
 | Part | Title | Cost | Effort | Status |
 |---|---|---|---|---|
-| [36.1](PART_36_1_START_LATENCY.md) | Cold-start latency | client-only | M | 🚧 implemented; device gate open |
-| [36.2](PART_36_2_UX_BEHAVIOR.md) | Session UX behavior | client-only | S | 🚧 implemented; device gate open |
+| [36.1](PART_36_1_START_LATENCY.md) | Cold-start latency | client-only | M | ✅ implemented; device-passed |
+| [36.2](PART_36_2_UX_BEHAVIOR.md) | Session UX behavior | client-only | S | ✅ implemented; device-passed |
 
 **Implementation record (2026-09-09):** startup boundaries are captured in
 `TerminalStartMeasurement` and logged through `AppLogger`; the `PreparedShell`
@@ -32,7 +33,8 @@ commands stopped after backgrounding, and session switching redrew duplicate
 prompts. The current fixes stream apt directly through the PTY, promote active
 sessions to `TerminalForegroundService` without the ten-minute wake-lock
 cutoff, and propagate/seed terminal geometry to avoid switch-only SIGWINCH
-redraws. Follow-up validation remains open; no PR/merge has been created.
+redraws. The owner then reported the follow-up device validation passed.
+The phase is device-passed and is being merged on the owner's command.
 
 **Open-source-first reference** (`docs/PHASE34_37_OSS_RESEARCH.md` §3):
 **jackpal Android-Terminal-Emulator (Apache-2.0, archived)** is the canonical

@@ -7,9 +7,10 @@
 >
 > The four row ideas the owner handed over were researched below and turned
 into four phases (34–37). Phase 34 is merged; Phase 35 is device-passed by
-owner report on its session branch. Phase 36 is now STARTED on that branch;
-Phase 37 remains planned. Each phase lands on `main` only through the §3
-merge gate and finishes with the owner's cross-device test round.
+owner report on its session branch. Phase 36 is now DEVICE-PASSED on that
+branch and is being merged on the owner's command; Phase 37 remains planned.
+Each phase lands on `main` only through the §3 merge gate and finishes with
+the owner's cross-device test round.
 
 ## The owner's four row ideas → phases
 
@@ -116,11 +117,12 @@ foreground keep-alive + port lifecycle. Spec:
   implementation tip `317b89a`, docs follow-up `88839cd`, and Build APK CI
   `34367008019`/`34367770583` are green. Exact device evidence was not
   supplied, so the record does not invent it.
-- Phase 36 (Terminal speed & feel) is **🚧 FOLLOW-UP DEVICE GATE** on the
-  session branch. The original device acceptance passed by owner report;
-  progressive apt output, background survival, and session-switch redraw
-  fixes are in `da126cf`/`11fe8d7`, with green CI `34374983032`/`34375710614`.
-  Follow-up device validation remains open.
+- Phase 36 (Terminal speed & feel) is **✅ DEVICE-PASSED** on the session
+  branch by owner report. The original acceptance and follow-up checks for
+  progressive apt output, background survival, and session-switch redraws
+  passed after fixes `da126cf`/`11fe8d7`; green CI is
+  `34374983032`/`34375710614`. Merge is authorized by the owner and pending
+  the PR gate.
 - Phase 37 remains **📋 PLANNED** (researched + specced, not implemented).
 - The owner starts each phase with "Start Phase N" and runs the cross-device
   round at the end.

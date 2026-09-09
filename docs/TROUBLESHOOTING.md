@@ -933,10 +933,11 @@ numbers, and any failure here before changing the phase to DEVICE-PASSED.
 
 ## 26. Phase 36 terminal speed & feel — device round (owner runbook, 2026-09-09)
 
-**Status: 🚧 FOLLOW-UP DEVICE GATE; the original Phase 36 acceptance passed by
-owner report, but the owner found three terminal regressions.** The fixes are
-on `arena/01a086a0-codec` in `da126cf` and `11fe8d7`; Build APK CI `34374983032`
-and `34375710614` are GREEN. Do not call the follow-up device gate passed yet.
+**Status: ✅ DEVICE-PASSED by owner report.** The original Phase 36
+acceptance and the follow-up checks for the three reported terminal
+regressions passed after fixes `da126cf` and `11fe8d7` on
+`arena/01a086a0-codec`; Build APK CI `34374983032` and `34375710614` are GREEN.
+The owner authorized merge.
 
 ### 26.1 Cold-start measurement and state
 
@@ -971,15 +972,14 @@ and `34375710614` are GREEN. Do not call the follow-up device gate passed yet.
    configured standard/warnings/optimization and package/run handoff still
    reaches the intended project.
 
-Record the exact APK/CI run, device matrix, startup measurements, and any
-failure here before changing Phase 36 to DEVICE-PASSED. No PR or merge is
-created until the owner explicitly commands it.
+The owner reports the original Phase 36 and follow-up device checks passed.
+The exact device matrix and measurements were not supplied, so none are
+invented here. Merge is authorized by the owner after the green PR checks.
 
 ### 26.3 Owner follow-up: streaming, background survival, and switching
 
-The original Phase 36 device acceptance passed, but its follow-up report
-isolated three regressions. Validate these separately from the cold-start
-recipe above:
+The original Phase 36 device acceptance passed, and the owner then validated
+these three follow-up regressions separately from the cold-start recipe:
 
 7. **Progressive package output.** Install a package that is not already in the
    userland cache, or run a download large enough to last several seconds.
@@ -1002,5 +1002,6 @@ recipe above:
    avoiding a switch-only `SIGWINCH`/readline redraw. Explicit restart and
    close behavior must still work.
 
-Record the exact APK/CI run, device matrix, and results for items 7–9 before
-changing this follow-up gate to DEVICE-PASSED.
+**Result:** items 7–9 passed on the owner's device validation. The owner
+reported device acceptance and authorized merge; the exact device matrix was
+not supplied, so none is invented here.
