@@ -130,6 +130,15 @@ open-source-first directive, `docs/PHASE34_37_OSS_RESEARCH.md` §4).
   BarcodeFormat, w, h[, hints])`, `RGBLuminanceSource(int w, int h, int[]
   argb)`. Both used: the encoder in production, the reader in the round-trip
   test.
+- `EncodeHintType` constants (`CHARACTER_SET`, `MARGIN`, `ERROR_CORRECTION`) and
+  `LuminanceSource`/`HybridBinarizer` package placement: the published API docs
+  (`https://zxing.github.io/zxing/apidocs/com/google/zxing/class-use/LuminanceSource.html`,
+  `…/EncodeHintType.html`). **`CHARACTER_SET` is spelled that way — there is no
+  `CHARSET` key**, and the first `Build APK` run (`34391044725`) was RED on
+  exactly that line. Worth recording as a lesson: the local shim had been
+  written from the same wrong assumption, so the harness could not see it — a
+  shim only protects you if it mirrors reality, and now the shim carries that
+  note with it.
 - Apache-2.0 text for the notice asset:
   `https://www.apache.org/licenses/LICENSE-2.0.txt`.
 - `LinkProperties.getLinkAddresses` / `WifiManager` IP discovery and the

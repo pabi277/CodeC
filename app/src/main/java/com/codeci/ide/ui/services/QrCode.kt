@@ -40,7 +40,10 @@ object QrCode {
         val side = pixels.coerceIn(MIN_PIXELS, MAX_PIXELS)
         val hints = mapOf(
             EncodeHintType.MARGIN to QUIET_ZONE_MODULES,
-            EncodeHintType.CHARSET to "UTF-8",
+            // The real zxing key is CHARACTER_SET (javadoc.io, core 3.5.4) — not
+            // "CHARSET"; CI caught it, the local shim had been written with the
+            // same wrong name, which is why the harness passed.
+            EncodeHintType.CHARACTER_SET to "UTF-8",
             EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M
         )
         return try {
