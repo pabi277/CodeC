@@ -24,6 +24,13 @@ Four sub-points → four parts, one shared surface (`EditorScreen` +
 | [35.3](PART_35_3_CURSOR_BOUNCE.md) | Non-bouncy cursor | client-only | S | 📋 planned |
 | [35.4](PART_35_4_NO_CARET_ON_OPEN.md) | No caret until first tap | client-only | S | 📋 planned |
 
+**Open-source-first reference** (`docs/PHASE34_37_OSS_RESEARCH.md` §2): sora-editor
+is an **LGPL-2.1 binary dependency** — its cursor/selection config is read from
+its public API (exact method verified at implementation), never pasted; jackpal's
+Apache-2.0 terminal documents the "solid caret + don't re-animate per keystroke"
+behavior target; Gboard/SwiftKey are behavior references only. **No new
+dependency** — this phase is the in-tree typing path + sora's cursor config.
+
 ## The typing path today (evidence — read from source)
 
 CodeC Keys cap press → `CodecKeyboard` `commitKey(key)` →

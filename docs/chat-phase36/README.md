@@ -15,6 +15,14 @@
 | [36.1](PART_36_1_START_LATENCY.md) | Cold-start latency | client-only | M | 📋 planned |
 | [36.2](PART_36_2_UX_BEHAVIOR.md) | Session UX behavior | client-only | S | 📋 planned |
 
+**Open-source-first reference** (`docs/PHASE34_37_OSS_RESEARCH.md` §3):
+**jackpal Android-Terminal-Emulator (Apache-2.0, archived)** is the canonical
+open Android VT-100 terminal — native PTY + separate emulator/view + multi-window —
+and confirms CodeC's `libcodec-pty.so` + `TerminalEmulator` + `TerminalEmulatorView`
+split is the right architecture; any emulator/scrollback detail is cross-checked
+there. **Termux is GPL-3.0 → behavior reference only** (the "fast" feel = one-time
+bootstrap, then `exec` on every open — exactly 36.1's cache). No library swap.
+
 ## The start path today (evidence — read from source)
 
 Tap Terminal → `TerminalViewModel.ensureStarted()` →

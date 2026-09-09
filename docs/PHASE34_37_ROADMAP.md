@@ -53,7 +53,13 @@ records the matrix-specific risks to watch:
 - Clean-room: replicate **features**, never copy code. Icon **assets** follow
   the repo's existing MIT-vendoring precedent (friendly-snippets) — see
   Phase 34's licensing notes; no CC BY-SA (ShareAlike) assets, no
-  `com.termux` code.
+  `com.termux` code, no GPL paste, no trademarked logos.
+- **Open-source first** — the owner's 2026-09-09 directive: research the
+  free-OSS option before writing custom code. The per-phase findings, licences
+  and verdicts are in **`docs/PHASE34_37_OSS_RESEARCH.md`** (Seti MIT +
+  Compose `PathParser` for 34; sora public API + in-tree typing path for 35;
+  jackpal Apache-2.0 / Termux GPL-3.0 reference for 36; NanoHTTPD BSD + ZXing
+  Apache-2.0 + framework NSD for 37).
 - Pure, host-testable engines first (`LanguageRegistry`-style), Compose only
   at the edges — the codebase pattern since Phase 3.
 - CI (`Build APK`) is the only executor of record; local pre-validation with

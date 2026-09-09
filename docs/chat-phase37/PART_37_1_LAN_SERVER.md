@@ -23,9 +23,9 @@ the phone's own WebView.
 3. **URL / QR panel** — when a server is Ready, the Output Panel (and the
    preview screen) shows **two** addresses:
    - `http://127.0.0.1:<port>` — on-device preview (unchanged);
-   - `http://<lan-ip>:<port>` — for other devices, with a **QR code** and a
-     copy button. If no LAN address exists, show "connect the phone to Wi-Fi"
-     instead of a dead URL.
+   - `http://<lan-ip>:<port>` — for other devices, with a **QR code**
+     (ZXing `core`, Apache-2.0) and a copy button. If no LAN address exists,
+     show "connect the phone to Wi-Fi" instead of a dead URL.
 4. **Security** — LAN mode stays off by default, is shown clearly while on
    ("anyone on this Wi-Fi can open these files"), and the served root stays
    path-confined (the existing traversal guard). No port < 1024.

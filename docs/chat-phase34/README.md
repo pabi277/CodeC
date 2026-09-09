@@ -38,10 +38,22 @@ So today the tree is effectively two Material glyphs. The owner wants the
   the more "official" default and is monochrome (fits the existing
   `SpckIcons` single-tint convention).
 - The repo's `ImageVector` path format means Seti SVGs must be **converted to
-  `PathNode` lists** (a small converter script checked into `scripts/`, with
-  the upstream SVGs vendored under `licenses/` + attribution), or hand-ported
-  for the highest-value glyphs. Either way the result is an
-  Android-free, host-testable **icon map**, not a pile of drawables.
+  `PathNode` lists** — and Jetpack Compose already ships the converter:
+  **`androidx.compose.ui.graphics.vector.PathParser`**
+  (`parsePathString(d).toNodes()`) turns an SVG `d="…"` string straight into
+  `PathNode`s (`ui-graphics`, Apache-2.0, in-tree). So the pipeline is
+  **Seti SVG → extract `d` → `PathParser` → `ImageVector`** — no hand-porting.
+  A `scripts/` converter does the mass conversion (optionally `svgo`-minified,
+  validated through `vd-tool`/`svg2vectordrawable`), and the upstream SVGs are
+  vendored under `licenses/` with attribution (the Phase 30 MIT-pack
+  precedent). The result is an Android-free, host-testable **icon map**, not a
+  pile of drawables.
+- **Trademark law:** the Python (PSF), JS/TS (Oracle/etc.) and Java logos are
+  trademarked — **do not vendor the logos**; keep the already-drawn two-tone
+  `SpckIcons` marks (Python/HTML/globe) and use Seti's monochrome glyphs for
+  everything else.
+
+> Full dossier: `docs/PHASE34_37_OSS_RESEARCH.md` §1.
 
 ## Design
 

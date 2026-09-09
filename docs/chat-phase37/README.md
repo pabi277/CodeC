@@ -46,9 +46,16 @@ So the *on-device* preview is done; what is missing is exactly the owner's ask:
   screen sleeping: promote the server to the existing `RunForegroundService`
   with a "Serving <project> on <ip>:<port>" notification + Stop.
 - **QR code** for the URL (Spck shows one) so a second device can join by
-  scanning — encode the LAN URL, render as a generated bitmap (no new
-  dependency needed: a tiny pure QR encoder or a vetted library; decide at
-  implementation against the repo's dependency discipline).
+  scanning — **ZXing `core` (Apache-2.0, zero-dependency)**: `MultiFormatWriter()
+  .encode(url, QR_CODE, w, h)` → `BitMatrix` → bitmap. Confirmed by
+  open-source-first research (`docs/PHASE34_37_OSS_RESEARCH.md` §4); no custom
+  QR encoder needed.
+- **Discovery (optional)** — framework **NSD** (`_http._tcp`, no dependency);
+  **JmDNS** only as a fallback **and only after verifying the exact version's
+  licence** (older releases are LGPL — never pull those).
+- **HTTP reference** — **NanoHTTPD (BSD-3-Clause)** documents range/ETag/
+  directory serving; CodeC keeps its leaner, path-confined
+  `WebPreviewServer` and borrows the technique list, not the code.
 - **Security posture** — LAN exposure is opt-in: loopback stays the default;
   the network toggle is per-run and off by default; the served root remains
   path-confined (`WebPreviewServer.resolveServedFile` already refuses escapes).
