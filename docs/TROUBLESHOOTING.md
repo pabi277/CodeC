@@ -793,3 +793,29 @@ passes a source path containing spaces as one argument` (fake TCC records its
 argv; the space path must arrive as a single `ARG:` line).
 
 **CI:** `34321154191` ✅ GREEN first try (tip `fa34750`).
+
+## 21. Phase 33 — "tcc: error: undefined symbol 'main'" on `C Programming/01_…_conversion.c` (2026-09-09, `arena/01a083fc-codec`)
+
+**Not a CodeC bug — the repo's structure.** `Code-with-C` is a multi-file MENU
+project: `C Programming/main.c` is the ONLY file with `int main()`; each
+numbered file defines `void programNN(void)` (called from the menu). Compiling
+one fragment on its own links no `main`, so TCC correctly reports
+`undefined symbol 'main'`.
+
+**What CodeC now does:** when a build fails with the "no main" linker
+signature (`undefined symbol 'main'` from TCC, or ``undefined reference to
+`main'`` from ld), the Output Panel appends a plain-language hint —
+"This file has no main(). It looks like part of a multi-file project…"
+(pure `CompilerDiagnostics.looksLikeMissingMain`, host-tested).
+
+**How to actually run the menu project (multi-file build):**
+1. Open the project, tap ⋮ → **Edit run config** (the `.codec.json` override).
+2. Build: `mkdir -p bin && cc 'C Programming/'*.c -o bin/menu` (compiles
+   `main.c` + all the program files together).
+3. Run: `./bin/menu` — the menu starts; pick a program number.
+For the owner's OWN practice projects, each `.c` file should carry its own
+`main()` so RUN ▶ compiles and runs that single file directly.
+
+**How to verify (device):** open `C Programming/01_…_conversion.c` → RUN ▶ →
+build fails and the hint line appears; then set the `.codec.json` above → RUN ▶
+compiles all files and runs the menu.

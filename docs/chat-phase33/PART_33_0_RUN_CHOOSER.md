@@ -71,6 +71,10 @@ PASS = all five.
   args into a string and expanded it unquoted, word-splitting a source path
   with a space (`C Programming/…`); it now rebuilds its args via
   `set -- "$@" "$arg"` and passes `"$@"` to TCC, so the space path survives.
+- **`CompilerDiagnostics.looksLikeMissingMain`** — a failed build whose
+  output is a "no main" linker error (a lone fragment compiled out of a
+  multi-file menu project like Code-with-C) now gets a plain-language hint
+  line in the Output Panel (`output_no_main_hint`).
 - **Strings** — `run_chooser_body` now reads "Default file: …".
 
 ## 4. Tests & validation

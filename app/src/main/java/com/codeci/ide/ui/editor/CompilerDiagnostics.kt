@@ -148,4 +148,19 @@ object CompilerDiagnostics {
         }
         return "$trimmed;"
     }
+
+    /**
+     * True when the build output shows a linker failure because the file has
+     * no `main` — the signature of a single file compiled out of a multi-file
+     * project (a fragment like `program01()` called from the project's real
+     * `main.c` menu). TCC prints `undefined symbol 'main'`; GNU ld prints
+     * ``undefined reference to `main'``. The word-boundary guards stop a
+     * symbol like `main_loop` from matching.
+     */
+    fun looksLikeMissingMain(output: String): Boolean {
+        val text = output.lowercase()
+        val symbol = Regex("undefined symbol[^a-z0-9_]*['\"`]?main['\"`]?(?![a-z0-9_])")
+        val reference = Regex("undefined reference[^a-z0-9_]*to[^a-z0-9_]*['\"`]?main['\"`]?(?![a-z0-9_])")
+        return symbol.containsMatchIn(text) || reference.containsMatchIn(text)
+    }
 }

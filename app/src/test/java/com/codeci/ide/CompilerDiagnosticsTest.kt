@@ -5,7 +5,9 @@ import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.services.CompilerError
 import com.codeci.ide.ui.services.ErrorType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Phase 9 — compiler diagnostic parsing for editor squiggles (§2.5). */
@@ -122,5 +124,24 @@ class CompilerDiagnosticsTest {
         assertNull(CompilerDiagnostics.applySemicolonFix("  call(1);  "))
         assertNull(CompilerDiagnostics.applySemicolonFix("if (x) {"))
         assertNull(CompilerDiagnostics.applySemicolonFix(""))
+    }
+
+    @Test
+    fun `missing main is recognised from tcc and ld linker errors`() {
+        assertTrue(CompilerDiagnostics.looksLikeMissingMain("tcc: error: undefined symbol 'main'"))
+        assertTrue(CompilerDiagnostics.looksLikeMissingMain("tcc: error: undefined symbol: main"))
+        assertTrue(CompilerDiagnostics.looksLikeMissingMain("undefined reference to `main'"))
+        assertTrue(CompilerDiagnostics.looksLikeMissingMain("undefined reference to 'main'"))
+        assertTrue(CompilerDiagnostics.looksLikeMissingMain("undefined reference to main"))
+    }
+
+    @Test
+    fun `missing main does not fire on other symbols or clean output`() {
+        assertFalse(CompilerDiagnostics.looksLikeMissingMain(""))
+        assertFalse(CompilerDiagnostics.looksLikeMissingMain("Build OK in 120ms"))
+        assertFalse(CompilerDiagnostics.looksLikeMissingMain("tcc: error: undefined symbol 'program01'"))
+        // main_loop is a different symbol — must not match.
+        assertFalse(CompilerDiagnostics.looksLikeMissingMain("undefined reference to main_loop"))
+        assertFalse(CompilerDiagnostics.looksLikeMissingMain("undefined reference to main_helper"))
     }
 }

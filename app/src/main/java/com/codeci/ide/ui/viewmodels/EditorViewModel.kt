@@ -3051,13 +3051,21 @@ class EditorViewModel : ViewModel() {
                 line
             }
         }
+        // Phase 33 — a linker "undefined symbol 'main'" means the single file
+        // was compiled out of a multi-file project (a fragment, no main()).
+        // Surface the hint instead of leaving a bare, cryptic linker error.
+        val noMainHint = if (CompilerDiagnostics.looksLikeMissingMain(buildOutputBuffer.toString())) {
+            listOf(OutputLine(context.getString(R.string.output_no_main_hint), OutputLineKind.SYSTEM))
+        } else {
+            emptyList()
+        }
         _outputState.value = current.copy(
             phase = OutputPhase.DONE,
             busy = false,
             summary = summary,
             waitingForInput = false,
             inputBuffer = "",
-            lines = reColored + OutputLine(summary, OutputLineKind.ERROR)
+            lines = reColored + OutputLine(summary, OutputLineKind.ERROR) + noMainHint
         )
         _diagnostics.value = CompilerDiagnostics.parse(
             buildOutputBuffer.toString(),
