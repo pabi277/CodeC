@@ -761,3 +761,5 @@ and still reports the web family for a repo whose root has `index.html`.
 **How to verify (device):** clone `Code-with-C`, open `C Programming/01_…_conversion.c`,
 tap RUN ▶ → it compiles and runs in the Output Panel (tab stays on the C file);
 `index.html` still previews when you open it and tap RUN ▶.
+
+**CI:** `34317268507` ✅ GREEN first try (tip `270c70d`, 5m45s).
