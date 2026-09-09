@@ -114,6 +114,32 @@ class ProjectRunDetectorTest {
     }
 
     @Test
+    fun `a c file open in a web showcase runs as c not web`() {
+        // Code-with-C shape: root index.html + a folder of .c practice files.
+        val root = project(
+            "index.html" to "<h1>Code with C</h1>",
+            "script.js" to "console.log('x')",
+            "C Programming/01_number_base_conversion.c" to "#include <stdio.h>\nint main(void){return 0;}"
+        )
+        assertEquals(
+            AutoRunPlan.Project("c"),
+            ProjectRunDetector.detect(root, "C Programming/01_number_base_conversion.c")
+        )
+    }
+
+    @Test
+    fun `a python file open in a web showcase runs as python not web`() {
+        val root = project(
+            "index.html" to "<h1>site</h1>",
+            "Practice/tool.py" to "print('hello')"
+        )
+        assertEquals(
+            AutoRunPlan.Project("python"),
+            ProjectRunDetector.detect(root, "Practice/tool.py")
+        )
+    }
+
+    @Test
     fun `active html wins even when a server file exists`() {
         val root = project("page.html" to "<h1>page</h1>", "server.c" to "// c")
         assertEquals(AutoRunPlan.Web("page.html"), ProjectRunDetector.detect(root, "page.html"))

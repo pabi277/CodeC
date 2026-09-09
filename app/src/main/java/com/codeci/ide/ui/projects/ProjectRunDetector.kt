@@ -28,7 +28,10 @@ sealed class AutoRunPlan {
  *
  * 1. Active file: `app.py` → Flask server; `server.c` → C microservice;
  *    `main.py` → FastAPI server when its content imports fastapi/uvicorn,
- *    otherwise a plain Python script; any `.html` → static Web.
+ *    otherwise a plain Python script; any `.html` → static Web; any other
+ *    runnable source (C/C++/Python/JS/shell — a registry run profile that is
+ *    not the web preview) → that language's preset, so a `.c` practice file
+ *    inside a web showcase is never shadowed by the root `index.html`.
  * 2. If the active file gives no hint, scan the project root (same
  *    precedence): app.py, server.c, main.py, index.html, main.c, first .c,
  *    first .py.
@@ -69,10 +72,24 @@ object ProjectRunDetector {
             return AutoRunPlan.Web(activeRelativePath ?: "index.html")
         }
 
+        // Phase 33 — any OTHER runnable source open in an `auto` project runs
+        // as itself. A web showcase (root index.html) can hold a folder of
+        // `.c` practice files (e.g. the Code-with-C repo): RUN must compile
+        // and run the file the user is IN, not let the root scan shadow it
+        // with `AutoRunPlan.Web("index.html")`.
+        if (activeRelativePath != null && ProjectRunTarget.isRunnableSource(activeRelativePath)) {
+            return AutoRunPlan.Project(projectFamilyFor(activeName.orEmpty()))
+        }
+
         // 2) Project-level scan (root only — matching how the wizard tools
         //    treat the project as a flat workspace).
         return detectFromFiles(projectRoot)
     }
+
+    /** The canonical preset family for an active runnable source (the registry
+     *  drives the actual compile/run; this only names the fallback preset). */
+    private fun projectFamilyFor(activeName: String): String =
+        if (activeName.endsWith(".py")) "python" else "c"
 
     private fun detectFromFiles(projectRoot: File): AutoRunPlan {
         if (!projectRoot.isDirectory) return AutoRunPlan.None(NO_FILES_MESSAGE)

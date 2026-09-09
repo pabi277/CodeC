@@ -736,3 +736,28 @@ the file name, what appeared, and whether CodeC Keys was ON or OFF.
 2. Set `main.c` as the launch default (⋮ → Set as launch default), open another `.c`, tap RUN ▶ → dialog offers "Run main.c / Run <other>".
 3. Open `main.c` itself, tap RUN ▶ → runs directly, no dialog.
 4. Open `index.html`, tap RUN ▶ → previews it (and 👁 preview still works).
+
+## 19. Phase 33 — cloned/imported ("auto") projects: RUN on a C file opened index.html (2026-09-09, `arena/01a083fc-codec`)
+
+**Owner bug:** "Still same problem index.html opening not the file i am in." The
+`Code-with-C` repo is cloned/imported, and clone/import writes the project as
+type `auto` (spec §2.3.2). RUN ▶ with a `.c` file open still previewed
+`index.html`.
+
+**Root cause (device-log + code):** for an `auto` project, `EditorViewModel.runFile`
+calls `ProjectRunDetector.detect(root, activeFile)`. The detector only special-cased
+`app.py` / `server.c` / `main.py` / `.html` as the active file; a plain
+`C Programming/01_…_conversion.c` gave "no hint", so the root scan ran and hit
+`index.html` first → `AutoRunPlan.Web("index.html")` → `webPreviewHandler` →
+preview. The active file was silently shadowed by the root `index.html`.
+
+**Fix:** `ProjectRunDetector.detect` now treats ANY other runnable source open
+in an `auto` project (a registry run profile that is not the web preview —
+C/C++/Python/JS/shell, via the pure `ProjectRunTarget.isRunnableSource`) as
+`AutoRunPlan.Project(c|python)`, so it falls through to the normal registry
+run on the open file. The no-active-file scan (Projects-hub card) is unchanged
+and still reports the web family for a repo whose root has `index.html`.
+
+**How to verify (device):** clone `Code-with-C`, open `C Programming/01_…_conversion.c`,
+tap RUN ▶ → it compiles and runs in the Output Panel (tab stays on the C file);
+`index.html` still previews when you open it and tap RUN ▶.

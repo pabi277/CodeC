@@ -62,6 +62,11 @@ PASS = all five.
 - **`EditorViewModel`** — the `web` project early-return in `runFile` now
   skips only non-runnable files (`ProjectRunTarget.isRunnableSource`), so a
   runnable source falls through to the normal registry run path.
+- **`ProjectRunDetector`** — for an `auto` project (clone/import writes this
+  type), a runnable source open as the active file now returns
+  `AutoRunPlan.Project(c|python)` instead of letting the root scan shadow it
+  with `AutoRunPlan.Web("index.html")`; this is what finally stopped
+  "RUN on a C file opened index.html".
 - **Strings** — `run_chooser_body` now reads "Default file: …".
 
 ## 4. Tests & validation
