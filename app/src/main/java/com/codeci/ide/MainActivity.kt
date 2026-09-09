@@ -19,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -40,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.compose.runtime.Composable
@@ -47,7 +50,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -73,6 +78,8 @@ import com.codeci.ide.ui.screens.SettingsScreen
 import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.screens.WebPreviewScreen
+import com.codeci.ide.ui.editor.EditorChromeState
+import com.codeci.ide.ui.editor.NavBarPolicy
 import com.codeci.ide.ui.editor.lsp.LspManager
 import com.codeci.ide.ui.editor.lsp.StdioLspProviderFactory
 import com.codeci.ide.ui.editor.lsp.SystemBinaryProbe
@@ -566,6 +573,28 @@ fun MainApp() {
         }
     }
 
+    // Phase 32.1 — the 5-tab bar hides while the EDITOR is the destination
+    // and a keyboard is on screen (the system IME, or CodeC Keys). Other tabs
+    // keep the pre-32 behaviour (the bar hides only while the soft keyboard
+    // is up). A swipe-up on the hidden bar's handle reveals it again — sticky
+    // until the user leaves the editor. The decision is pure (NavBarPolicy);
+    // the editor reports its keyboard via EditorChromeState.
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val inEditor = currentDestination?.route
+        ?.startsWith(Screen.Editor.route.substringBefore("?")) == true
+    val editorKeysVisible by EditorChromeState.keysVisible.collectAsState()
+    var navRevealed by remember { mutableStateOf(false) }
+    LaunchedEffect(inEditor) {
+        if (!inEditor) navRevealed = false
+    }
+    val hideNav = NavBarPolicy.hideNavBar(
+        inEditor = inEditor,
+        imeVisible = isImeVisible,
+        keysVisible = editorKeysVisible,
+        revealed = navRevealed,
+    )
+
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
             AppLogger.i("Navigation", "Navigated to ${destination.route}")
@@ -579,10 +608,10 @@ fun MainApp() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (!isImeVisible) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                FlatBottomBar(
+            when {
+                // Phase 32.1 — the bar is visible (or was revealed by the
+                // handle) exactly as before: five flat tabs.
+                !hideNav -> FlatBottomBar(
                     screens = screens,
                     currentDestination = currentDestination,
                     onNavigate = { screen ->
@@ -599,8 +628,19 @@ fun MainApp() {
                             launchSingleTop = true
                             restoreState = true
                         }
+                        // A tab tap is a deliberate navigation: the reveal is
+                        // over (leaving the editor also resets it below).
+                        navRevealed = false
                     }
                 )
+                // Phase 32.1 — hidden because CodeC Keys is up (no IME in the
+                // way): show the thin reveal handle instead of the bar.
+                inEditor && !isImeVisible -> EditorNavRevealHandle(
+                    onReveal = { navRevealed = true }
+                )
+                // Hidden because the soft keyboard is up (any tab): nothing,
+                // the pre-32 behaviour.
+                else -> Unit
             }
         }
     ) { innerPadding ->
@@ -852,6 +892,58 @@ private fun FlatBottomBar(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Phase 32.1 — the thin handle shown where the 5-tab bar would sit while the
+ * bar is hidden in the editor. Tapping it, or swiping it up, reveals the bar
+ * again (sticky until the user leaves the editor). The drag threshold lives
+ * in the pure [NavBarPolicy], so the gesture's "did they mean it" test is
+ * host-tested; this composable only converts px → dp and renders the handle.
+ */
+@Composable
+private fun EditorNavRevealHandle(onReveal: () -> Unit) {
+    val density = LocalDensity.current
+    var dragDy by remember { mutableStateOf(0f) }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .background(MaterialTheme.colorScheme.surface)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { dragDy = 0f },
+                    onDragEnd = {
+                        val totalDragDp = dragDy / density.density
+                        if (NavBarPolicy.revealOnSwipe(totalDragDp)) onReveal()
+                        dragDy = 0f
+                    },
+                    onVerticalDrag = { change, dragAmount ->
+                        dragDy += dragAmount
+                        change.consume()
+                    }
+                )
+            }
+            .clickable(onClick = onReveal),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(width = 44.dp, height = 4.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                        RoundedCornerShape(2.dp)
+                    )
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Show tabs",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

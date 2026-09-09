@@ -693,3 +693,17 @@ the file name, what appeared, and whether CodeC Keys was ON or OFF.
 **PASS:** step 3 shows an LSP member in the chip strip. **FAIL:** chips stay snippet-only after 2 s, or the editor hangs on a keystroke.
 
 **By design:** the first completion after install may take ~1.5 s (clangd index); later keystrokes stay snippet-instant and refresh chips after debounce. JSON files now have chips only after the vscode-json-language-server card is installed (the engine has no JSON snippets).
+
+## 16. Phase 32 phone canvas — device round (owner runbook, 2026-09-09)
+
+**Goal:** the editor regains screen while typing, and the hidden 5-tab bar comes back when you want it.
+
+1. Open a C file in the editor. Tap into the code so the **soft IME** (or CodeC Keys, if Keys is default ON) appears.
+   - The **5-tab bar must disappear** and those lines become editor. With CodeC Keys up, a thin **handle** ("Show tabs" + pill) sits at the very bottom.
+2. **Tap the handle** (or swipe it up) — the 5-tab bar **returns** while the editor buffer is untouched (no lost text/undo).
+3. **Leave the editor** (tap Terminal, then back to Editor) — the bar is **back** normally; when you focus the editor + keyboard again it hides again (reveal is not sticky across navigation).
+4. **One meaning row:** with CodeC Keys ON, type a prefix that opens chips — at most **one** row of chips between the code and the letter keys; the Phase 27 utility-key strip must NOT also appear.
+5. **Output peek + jump:** RUN a file with a deliberate error (e.g. `int main( {`). The output panel expands with the error. **Tap the `file:line` error** in the output — the caret lands on that line in the OPEN file (the user's file, never `source_<stamp>.c`).
+6. With Keys OFF (Settings) confirm the L0 strip/IME behaviour is unchanged (the 22.x recipes still hold).
+
+**PASS:** steps 1–6 all hold. **FAIL:** the bar stays during Keys/IME, the handle does not restore it, the buffer is lost, two chip/key rows stack, or a diagnostic tap opens/jumps to a temp `source_*.c` file.

@@ -32,6 +32,7 @@ import com.codeci.ide.ui.editor.FindOutcome
 import com.codeci.ide.ui.editor.FindReplaceEngine
 import com.codeci.ide.ui.editor.LineEndings
 import com.codeci.ide.ui.editor.OutputDiagnostic
+import com.codeci.ide.ui.editor.OutputDiagnosticTarget
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.projects.AutoRunPlan
 import com.codeci.ide.ui.projects.BuildArtifactIgnore
@@ -3017,8 +3018,9 @@ class EditorViewModel : ViewModel() {
      * Tap on a clickable diagnostic line in the Output Panel: open the file
      * (when it is not already the active tab) and move the editor cursor to
      * the reported line/column. Paths are confined to the current project
-     * root (or the single-files folder) — a diagnostic naming a file outside
-     * the active context is ignored.
+     * root (or the single-files folder); a diagnostic naming a compiler temp
+     * (source_<stamp>.c) or a file outside the active context lands in the
+     * ACTIVE file instead of being ignored (Phase 32.3).
      */
     fun jumpToOutputDiagnostic(context: Context, diagnostic: OutputDiagnostic) {
         if (!openOutputDiagnosticFile(context, diagnostic)) return
@@ -3054,17 +3056,21 @@ class EditorViewModel : ViewModel() {
             runCatching { ProjectManager(appContext).project(project)?.root }.getOrNull()
         } else {
             runCatching { FileManager(appContext).getProjectDir() }.getOrNull()
-        }
-        val file = root?.let { resolveDiagnosticFile(it, diagnostic.file) } ?: return false
-        val relative = runCatching { root.toRelativeString(file) }.getOrNull() ?: return false
-        if (relative.startsWith("..")) return false
+        } ?: return false
+
+        // Phase 32.3 — a diagnostic naming a compiler temp (source_<stamp>.c)
+        // or a file that is not a real file under this folder must jump to the
+        // ACTIVE file: the run was launched from it, so the caret belongs in
+        // the user's file, never on a nonexistent temp copy. The pure resolver
+        // returns the active file's path when the named file does not resolve.
+        val target = OutputDiagnosticTarget.targetOrActive(root, diagnostic.file, _fileName.value)
 
         return if (project != null) {
-            openFile(appContext, project, relative)
-            _fileName.value == relative
+            openFile(appContext, project, target)
+            _fileName.value == target
         } else {
-            if (file.name != _fileName.value) openFile(appContext, null, file.name)
-            _fileName.value == file.name
+            if (target != _fileName.value) openFile(appContext, null, target)
+            _fileName.value == target
         }
     }
 
@@ -3079,23 +3085,6 @@ class EditorViewModel : ViewModel() {
                 DiagnosticSeverity.WARNING
             }
         )
-
-    /**
-     * Resolves the file named by a diagnostic against [root]. Absolute paths
-     * must live under the root; relative paths are resolved inside it.
-     */
-    private fun resolveDiagnosticFile(root: File, raw: String): File? {
-        val candidate = if (raw.startsWith('/')) {
-            File(raw)
-        } else {
-            File(root, raw)
-        }
-        if (!candidate.isFile) return null
-        val rootPath = root.absolutePath
-        val candidatePath = candidate.absolutePath
-        if (candidatePath != rootPath && !candidatePath.startsWith(rootPath + File.separator)) return null
-        return candidate
-    }
 
     private suspend fun compilerSettingsFrom(settingsManager: SettingsManager): CompilerSettings {
         val standard = settingsManager.cStandardFlow.first()

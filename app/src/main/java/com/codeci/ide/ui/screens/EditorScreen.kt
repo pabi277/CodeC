@@ -129,6 +129,7 @@ import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompletionSurface
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
+import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
@@ -386,6 +387,13 @@ fun EditorScreen(
     LaunchedEffect(codecKeysUp) { soraEditor.setSoftKeyboardEnabled(!codecKeysUp) }
     DisposableEffect(soraEditor) {
         onDispose { soraEditor.setSoftKeyboardEnabled(true) }
+    }
+    // Phase 32.1 — tell the app scaffold whether CodeC Keys is on screen so
+    // the 5-tab bar can hide (one meaning row: code → strip → keys). Cleared
+    // on dispose so no other surface inherits a stale "keys visible" signal.
+    LaunchedEffect(codecKeysUp) { EditorChromeState.setKeysVisible(codecKeysUp) }
+    DisposableEffect(Unit) {
+        onDispose { EditorChromeState.setKeysVisible(false) }
     }
     var codecKeysLayer by remember { mutableStateOf(KeyboardLayers.LETTERS) }
     var codecKeysShift by remember { mutableStateOf(ShiftState.OFF) }
