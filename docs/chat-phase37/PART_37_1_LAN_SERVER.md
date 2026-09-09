@@ -217,6 +217,15 @@ open-source-first directive, `docs/PHASE34_37_OSS_RESEARCH.md` §4).
   (one jar, no transitive deps) plus the phase's own code; the bench artifact
   moved by 12 B. Stated up front so the device round sees the same number on
   the artifact.
+- **CI for the device round's follow-up: ✅ GREEN** — `Build APK` run
+  `34398031696` on tip `98cb2b4` (9 m 35 s). The workflow's bare `gradle` call
+  goes through the `gradle-bootstrap` bridge, which runs the real wrapper with
+  `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so
+  `ShareActionsTest` (6) executed on CI inside that same "Assemble debug APK"
+  step — which is also why a test failure surfaces there and not in its own
+  step. Artifact `CodeC-IDE` **24 847 792 B** = **+3 485 B (3.4 KiB)** over the
+  docs-tip build (phase total **+359 108 B, +1.47 %** against `main`'s
+  `34381534118`); `CodeC-Bench` 1 369 823 B.
 
 **Two test-only bugs CI caught that the harness could not** (both recorded so
 the next phase does not repeat them):

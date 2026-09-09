@@ -9,10 +9,12 @@
 > `ui/services/OpenInBrowser.kt`; copy stays, and the link is copied
 > automatically if no browser can handle it) — `ShareActionsTest` (6) covers
 > the policy, so the phase now has **68 new host-test cases in ten classes**.
-> Implementation tips `6d36a83` (docs `3545268`); **CI is ✅ GREEN** —
-> `Build APK` run `34393543928` (`:app:assembleDebug` + `:app:testDebugUnitTest`
-> + `:app:lintDebug`; APK 24 844 344 B, +355 660 B vs the `main` build), after
-> two for-cause red rounds recorded in `PART_37_1_LAN_SERVER.md` §Tests.
+> Implementation tips `6d36a83` (docs `3545268`, follow-up `98cb2b4`);
+> **CI is ✅ GREEN on both** — `Build APK` `34393543928` (APK 24 844 344 B,
+> +355 660 B vs the `main` build) and `34398031696` on the follow-up
+> (APK 24 847 792 B), each through assemble + `:app:testDebugUnitTest` +
+> `:app:lintDebug`, after two for-cause red rounds recorded in
+> `PART_37_1_LAN_SERVER.md` §Tests.
 > **Merge is held for the owner's command.**
 > **Cost:** `[client-only]` · **Effort:** M/L · **Owner row:** *"Like spck or
 > Termux we can use a device as a server and run our files at localhost i want

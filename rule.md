@@ -226,10 +226,15 @@ Every update updates the docs **in the same commit**:
   `ACTION_VIEW` launcher, which the terminal's `openTerminalUrl` now delegates to;
   if no browser can serve the URL the link is copied and the toast says so, so a
   tap never loses it; copy and the in-app 👁 preview unchanged). `ShareActionsTest`
-  (6) → 68 host cases in ten classes; local service-set re-run 86/86.
-  **Merge is still HELD for the owner's command**, and CI on that follow-up
-  commit is its only executor of record (Compose is compile/lint-checked, not
-  host-unit-tested).
+  (6) → 68 host cases in ten classes; local service-set re-run 86/86, and
+  **CI on that follow-up is ✅ GREEN** — `Build APK` `34398031696` on tip
+  `98cb2b4` (9 m 35 s; APK 24 847 792 B, +3 485 B over the docs tip).
+  **Merge is still HELD for the owner's command.**
+  *Mechanism worth remembering:* the workflow's bare `gradle` call is the
+  `gradle-bootstrap` bridge, which runs the real wrapper with
+  `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` **inside the single
+  "Assemble debug APK" step** — so a unit-test failure shows up as that step
+  failing, and a green run of it is genuine proof the app tests ran.
 - **Phase 35** is ✅ DEVICE-PASSED by the owner report on session branch
   `arena/01a086a0-codec` (`317b89a`; docs follow-up `88839cd`). Build APK CI
   `34367008019` and current-tip `34367770583` are GREEN. The owner supplied no
