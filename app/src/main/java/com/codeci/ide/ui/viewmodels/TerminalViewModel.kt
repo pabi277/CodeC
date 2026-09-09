@@ -501,9 +501,9 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         val item = manager.activeItem()
         val session = item?.session
         val queueHasPending = item?.let {
-            synchronized(commandQueueLock) { commandQueues[it.id]?.size ?: 0 }
+            synchronized(commandQueueLock) { (commandQueues[it.id]?.size ?: 0) > 0 }
         } ?: false
-        if (item == null || session == null || !session.shellReady.value || queueHasPending) {
+        if (item == null || session?.shellReady?.value != true || queueHasPending) {
             synchronized(commandQueueLock) {
                 if (item != null) {
                     commandQueues.getOrPut(item.id) { OrderedReadinessQueue() }.enqueue(command)
@@ -511,7 +511,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                     pendingBeforeSession.addLast(command)
                 }
             }
-            if (item != null && session.shellReady.value) {
+            if (item != null && session?.shellReady?.value == true) {
                 // A command can arrive after the marker but before its
                 // collector gets scheduled. Drain the older commands first.
                 flushSessionCommands(item)
