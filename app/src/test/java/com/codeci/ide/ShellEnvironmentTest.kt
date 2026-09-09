@@ -41,6 +41,59 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `cc script passes a source path containing spaces as one argument`() {
+        val base = File(System.getProperty("java.io.tmpdir"), "codec-cc-space-${System.nanoTime()}")
+        try {
+            val proj = File(base, "proj").apply { mkdirs() }
+            File(proj, "C Programming").mkdirs()
+            File(proj, "C Programming/main.c").writeText("int main(void){return 0;}\n")
+
+            // codec_stdio.o present → the frontend skips the rebuild step.
+            val bundle = File(base, "tcc-bundle").apply { mkdirs() }
+            File(bundle, "codec_stdio.o").writeText("")
+
+            // Fake TCC: echo each argument on its own ARG: line.
+            val tccBin = File(base, "fake-tcc").apply {
+                writeText("#!/bin/sh\nfor a in \"\$@\"; do echo \"ARG:\$a\"; done\nexit 0\n")
+                setExecutable(true)
+            }
+            val cc = File(base, "cc").apply {
+                writeText(ShellEnvironment.ccScript())
+                setExecutable(true)
+            }
+
+            val process = ProcessBuilder(
+                "/bin/sh", cc.absolutePath, "C Programming/main.c", "-o", "app.out"
+            )
+                .directory(proj)
+                .redirectErrorStream(true)
+                .apply {
+                    environment()["TCC_BIN"] = tccBin.absolutePath
+                    environment()["TCC_BUNDLE"] = bundle.absolutePath
+                    environment()["CODEC_PROJECTS"] = proj.absolutePath
+                }
+                .start()
+            val completed = process.waitFor(10, TimeUnit.SECONDS)
+            if (!completed) process.destroyForcibly()
+            val output = process.inputStream.bufferedReader().readText()
+
+            assertTrue("cc script timed out: $output", completed)
+            assertEquals(output, 0, process.exitValue())
+            // The space path must arrive as ONE argument — never split at the
+            // space into ".../C" + "Programming/...".
+            val argLines = output.lineSequence()
+                .filter { it.startsWith("ARG:") }
+                .map { it.removePrefix("ARG:") }
+                .toList()
+            val spacePath = File(proj, "C Programming/main.c").absolutePath
+            assertTrue("expected the space path as one arg, got:\n$output", spacePath in argLines)
+            assertFalse("path must not be word-split", "${proj.absolutePath}/C" in argLines)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `pkg script is guarded to the CodeC repository`() {
         val script = ShellEnvironment.pkgScript()
         assertTrue(script.contains("apt-get"))

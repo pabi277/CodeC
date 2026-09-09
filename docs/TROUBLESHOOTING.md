@@ -763,3 +763,31 @@ tap RUN ▶ → it compiles and runs in the Output Panel (tab stays on the C fil
 `index.html` still previews when you open it and tap RUN ▶.
 
 **CI:** `34317268507` ✅ GREEN first try (tip `270c70d`, 5m45s).
+
+## 20. Phase 33 — "C Programming/02_…_of_three.c": `tcc: error: file '…/Code-with-C/C' not found` (2026-09-09, `arena/01a083fc-codec`)
+
+**Owner bug:** after §19 (the open file now runs instead of previewing index.html),
+compiling a file whose PATH has a space failed: the Output Panel showed
+`cc 'C Programming/02_largest_smallest_of_three.c' -o bin/…` and TCC reported
+`tcc: error: file '…/Code-with-C/C' not found` — the space path had been
+word-split into `C` + `Programming/…`.
+
+**Root cause:** the outer shell quoting was correct end-to-end (`planFor` and
+`TerminalHandoff` both `shellEscape` the source), and the `cc` frontend
+received the source as ONE argument. But the `cc` script itself flattened the
+converted arguments into a string (`converted="$converted $arg"`) and expanded
+it UNQUOTED (`… $converted …`) in the TCC invocation — `$converted` held the
+absolute path `/data/user/0/…/Code-with-C/C Programming/02_…_of_three.c`, so
+unquoted expansion split it at the space and TCC only saw `C`.
+
+**Fix:** `ShellEnvironment.ccScript()` now rebuilds the argument list with
+`set -- "$@" "$arg"` while iterating a saved arg count, and passes them to TCC
+as `"$@"` (each converted argument stays its own word, spaces intact). The
+`-o` value is still captured to `outfile` and quoted. `ShellBootstrap.prepare`
+rewrites the script on every RUN, so the fix lands with the next APK.
+
+**How to verify (device):** clone `Code-with-C`, open
+`C Programming/02_largest_smallest_of_three.c`, tap RUN ▶ → it compiles and
+runs in the Output Panel. Host regression: `ShellEnvironmentTest.cc script
+passes a source path containing spaces as one argument` (fake TCC records its
+argv; the space path must arrive as a single `ARG:` line).

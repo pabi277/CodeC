@@ -129,10 +129,18 @@ object ShellEnvironment {
           exit 127
         fi
         CWD=${'$'}(pwd)
-        converted=""
         outfile=""
         out_next=0
-        for arg in "${'$'}@"; do
+        # Rebuild the argument list with each source path converted to an
+        # absolute one, keeping every argument a SEPARATE word. The old code
+        # flattened them into a string and expanded it unquoted, so a source
+        # path with a space ("C Programming/02_..._of_three.c") was word-split
+        # and tcc only saw "C" (owner bug 2026-09-09).
+        arg_count=${'$'}#
+        while [ "${'$'}arg_count" -gt 0 ]; do
+          arg="${'$'}1"
+          shift
+          arg_count=${'$'}((arg_count - 1))
           if [ "${'$'}out_next" = 1 ]; then
             case "${'$'}arg" in
               /*) ;;
@@ -165,7 +173,7 @@ object ShellEnvironment {
               esac
               ;;
           esac
-          converted="${'$'}converted ${'$'}arg"
+          set -- "${'$'}@" "${'$'}arg"
         done
         if [ -z "${'$'}outfile" ]; then
           outfile="${'$'}CWD/a.out"
@@ -178,9 +186,11 @@ object ShellEnvironment {
         extra="${'$'}extra -I include-tcc -I include -B . -L ."
         [ ! -f codec_stdio.o ] && [ -f codec_stdio.c ] && "${'$'}TCC_BIN" -c -I include-tcc -I include -o codec_stdio.o codec_stdio.c
         # Same order as EmbeddedCompiler.buildCompileCommand: archives then -o last.
+        # "$@" carries each converted argument as its own word, so a source
+        # path containing spaces reaches TCC intact.
         # Do not exec: we must chmod +x the ELF afterwards or ./a.out is denied.
         # shellcheck disable=SC2086
-        "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o codec_stdio.o ${'$'}converted libtcc1.a libc.a libtcc1.a libc.a crtn.o -o "${'$'}outfile"
+        "${'$'}TCC_BIN" ${'$'}extra crt1.o crti.o codec_stdio.o "${'$'}@" libtcc1.a libc.a libtcc1.a libc.a crtn.o -o "${'$'}outfile"
         status=${'$'}?
         if [ "${'$'}status" -eq 0 ] && [ -n "${'$'}outfile" ] && [ -f "${'$'}outfile" ]; then
           chmod 755 "${'$'}outfile" 2>/dev/null

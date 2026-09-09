@@ -67,6 +67,10 @@ PASS = all five.
   `AutoRunPlan.Project(c|python)` instead of letting the root scan shadow it
   with `AutoRunPlan.Web("index.html")`; this is what finally stopped
   "RUN on a C file opened index.html".
+- **`ShellEnvironment.ccScript()`** — the `cc` frontend flattened converted
+  args into a string and expanded it unquoted, word-splitting a source path
+  with a space (`C Programming/…`); it now rebuilds its args via
+  `set -- "$@" "$arg"` and passes `"$@"` to TCC, so the space path survives.
 - **Strings** — `run_chooser_body` now reads "Default file: …".
 
 ## 4. Tests & validation
