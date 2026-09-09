@@ -64,5 +64,6 @@ PASS = all four.
   index.html vs about.html; entry confinement (traversal refused).
 - Local pre-validation (Temurin 25 + kotlinc 2.4.10): passes over the real
   `ProjectPathUtils` + `ProjectRunTarget`; the JUnit source type-checks
-  against a shim. CI is the executor of record; device round pending.
+  against a shim. **CI `34307172630` ✅ GREEN first try (tip `788ba46`,
+  5m22s)**. Device round pending.
 EOF

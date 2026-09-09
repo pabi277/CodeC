@@ -9,7 +9,8 @@
 > or the file currently opened" — ✅ IMPLEMENTED on `arena/01a083fc-codec`
 > ([record](PART_33_0_RUN_CHOOSER.md)): RUN ▶ asks "Run main.c / Run utils.c"
 > whenever a project has a real main/index file that differs from the open
-> file, without switching tabs.
+> file, without switching tabs. **CI `34307172630` ✅ GREEN first try (tip
+> `788ba46`).**
 
 ```
   33.1  First-run tiles: C (offline) / Python / HTML
