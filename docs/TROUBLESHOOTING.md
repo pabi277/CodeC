@@ -791,3 +791,5 @@ rewrites the script on every RUN, so the fix lands with the next APK.
 runs in the Output Panel. Host regression: `ShellEnvironmentTest.cc script
 passes a source path containing spaces as one argument` (fake TCC records its
 argv; the space path must arrive as a single `ARG:` line).
+
+**CI:** `34321154191` ✅ GREEN first try (tip `fa34750`).
