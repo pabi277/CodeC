@@ -128,6 +128,7 @@ import kotlinx.coroutines.withContext
 
 /** Projects Hub (Phase 15) + private, hierarchical source tree (Phase 8). */
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun FileManagerScreen(
     modifier: Modifier = Modifier,
     viewModel: FileManagerViewModel = viewModel(),
