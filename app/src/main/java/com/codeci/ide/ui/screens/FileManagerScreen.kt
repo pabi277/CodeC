@@ -128,7 +128,6 @@ import kotlinx.coroutines.withContext
 
 /** Projects Hub (Phase 15) + private, hierarchical source tree (Phase 8). */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun FileManagerScreen(
     modifier: Modifier = Modifier,
     viewModel: FileManagerViewModel = viewModel(),
@@ -1051,7 +1050,6 @@ private enum class HubCardAction {
     OPEN, RENAME, EXPORT, SHARE_ZIP, DELETE, SOURCE_CONTROL, PULL, PUSH, COPY_REMOTE_URL, SWITCH_BRANCH
 }
 
-@Composable
 private fun ProjectsHubList(
     entries: List<ProjectHubEntry>,
     filter: ProjectHubFilter,
@@ -1118,7 +1116,6 @@ private fun ProjectsHubList(
  * selected, dark surface with a hairline outline otherwise; the Git chip
  * carries the branch glyph.
  */
-@Composable
 private fun HubFilterChip(
     value: ProjectHubFilter,
     selected: ProjectHubFilter,
@@ -1185,7 +1182,6 @@ private fun HubFilterChip(
  * git-aware overflow menu. All card data arrives precomputed in [entry]
  * (ViewModel IO); this composable never touches disk.
  */
-@Composable
 private fun ProjectHubCard(
     entry: ProjectHubEntry,
     onAction: (ProjectHubEntry, HubCardAction) -> Unit
@@ -1347,7 +1343,6 @@ private fun ProjectHubCard(
     }
 }
 
-@Composable
 
 /**
  * Phase 15 — the unified `+` sheet: exactly one place to New Project /
@@ -1355,7 +1350,6 @@ private fun ProjectHubCard(
  * clean-room on CodeC's own flows).
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun ProjectsHubAddSheet(
     onDismiss: () -> Unit,
     onNewProject: () -> Unit,
@@ -1416,7 +1410,6 @@ private fun ProjectsHubAddSheet(
     }
 }
 
-@Composable
 private fun HubSheetRow(
     color: Color,
     iconTint: Color,
@@ -1457,7 +1450,6 @@ private fun HubSheetRow(
 private val HubBadgeYellow = Color(0xFFE6B33C)
 
 @OptIn(ExperimentalFoundationApi::class)
-@Composable
 private fun ProjectTree(
     project: ProjectInfo,
     nodes: List<FileNode>,
@@ -1524,7 +1516,6 @@ private fun ProjectTree(
 }
 
 @OptIn(ExperimentalFoundationApi::class)
-@Composable
 private fun TreeRow(
     node: FileNode,
     onClick: () -> Unit,
@@ -1622,7 +1613,6 @@ private fun formatBytes(size: Long): String = when {
     else -> "%.1f MB".format(size / (1024.0 * 1024.0))
 }
 
-@Composable
 private fun EmptyProjectsState(
     onCreate: () -> Unit,
     onStarter: (WelcomeStarter) -> Unit
@@ -1663,5 +1653,4 @@ private fun EmptyProjectsState(
 }
 
 /** Kept as a compatibility entry point for older callers/tests. */
-@Composable
 fun EmptyStateView(onCreateClick: () -> Unit) = EmptyProjectsState(onCreateClick, {})
