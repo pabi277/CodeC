@@ -1,7 +1,7 @@
 # CodeC Phase 36 — Terminal speed & feel
 
-> **Status:** ✅ DEVICE-PASSED on `arena/01a086a0-codec`; PR #60 is open for
-> the owner-authorized merge · The original acceptance and the three follow-up regressions
+> **Status:** ✅ DEVICE-PASSED and MERGED to `main` via PR #60 · The original
+> acceptance and the three follow-up regressions
 > (streaming output, background survival, session switching) all passed on the
 > owner's device validation after fixes `da126cf` and `11fe8d7`.
 > **Cost:** `[client-only]` · **Effort:** M · **Owner row:** *"Terminal is
@@ -34,7 +34,7 @@ prompts. The current fixes stream apt directly through the PTY, promote active
 sessions to `TerminalForegroundService` without the ten-minute wake-lock
 cutoff, and propagate/seed terminal geometry to avoid switch-only SIGWINCH
 redraws. The owner then reported the follow-up device validation passed.
-The phase is device-passed; PR #60 is open and is being merged on the owner's command.
+The phase is device-passed and merged to `main` via PR #60 on the owner's command.
 
 **Open-source-first reference** (`docs/PHASE34_37_OSS_RESEARCH.md` §3):
 **jackpal Android-Terminal-Emulator (Apache-2.0, archived)** is the canonical

@@ -9,8 +9,9 @@ device acceptance also passed, but the owner found three follow-up regressions:*
 package/download output was batched, backgrounded commands stopped, and
 switching sessions redrew blank lines/duplicate prompts. Fixes are on this
 branch at `da126cf`/`11fe8d7`, with green CI `34374983032`/`34375710614`;
-the owner reports the follow-up device validation **PASSED** and authorized merge. PR #60 is
-open with the green build checks and is ready for merge.
+the owner reports the follow-up device validation **PASSED** and authorized merge. **PR #60
+is now MERGED to `main`** at `373a51e8f027bcf08fc948b8dc2058c3bda8c566` after
+both Build APK checks passed.
 
 
 **2026-09-03 — Phase 21 COMPLETE, device-accepted and MERGED to `main`**

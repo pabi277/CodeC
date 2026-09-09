@@ -7,8 +7,8 @@
 >
 > The four row ideas the owner handed over were researched below and turned
 into four phases (34–37). Phase 34 is merged; Phase 35 is device-passed by
-owner report on its session branch. Phase 36 is now DEVICE-PASSED on that
-branch and is being merged on the owner's command; Phase 37 remains planned.
+owner report on its session branch. Phase 36 is now DEVICE-PASSED and
+MERGED to `main` via PR #60; Phase 37 remains planned.
 Each phase lands on `main` only through the §3 merge gate and finishes with
 the owner's cross-device test round.
 
@@ -121,8 +121,8 @@ foreground keep-alive + port lifecycle. Spec:
   branch by owner report. The original acceptance and follow-up checks for
   progressive apt output, background survival, and session-switch redraws
   passed after fixes `da126cf`/`11fe8d7`; green CI is
-  `34374983032`/`34375710614`. Merge is authorized by the owner; PR #60 is
-  open and pending the final merge gate.
+  `34374983032`/`34375710614`. Merge was authorized by the owner; **PR #60 is
+  MERGED to `main`** at `373a51e8f027bcf08fc948b8dc2058c3bda8c566`.
 - Phase 37 remains **📋 PLANNED** (researched + specced, not implemented).
 - The owner starts each phase with "Start Phase N" and runs the cross-device
   round at the end.
