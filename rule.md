@@ -211,7 +211,9 @@ Every update updates the docs **in the same commit**:
   Fixes are `da126cf`/`11fe8d7`; Build APK CI `34374983032` and `34375710614`
   are green. PTY/JNI fork/exec, shell environment, cc rewrite,
   signing/invalidation, multi-session, rendering, input, restart/close, and
-  package/run handoff remain preserved. The owner authorized the PR/merge; PR #60 is open and awaiting final checks.
+  package/run handoff remain preserved. The owner authorized the PR/merge;
+**PR #60 is MERGED to `main`** at
+`373a51e8f027bcf08fc948b8dc2058c3bda8c566` after green checks.
 - **`main` = the Phase 34 merge commit (PR #59, 2026-09-09).** Before that:
   `31e319f` = PR #54 (Phase 29, 2026-09-06), `3edfc97` = PR #53 (2026-09-05,
   Phases 29–33 plan docs), PR #52 Phase 28.2, PR #51 Phase 27, PR #50 Phase 26, PR #49
