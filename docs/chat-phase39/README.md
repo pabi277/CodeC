@@ -1,6 +1,6 @@
 # CodeC Phase 39 — Outputs are temporary, never in your repository
 
-> **Status:** ✅ COMPLETE, DEVICE-PASSED & MERGED (2026-09-10) · **Cost:**
+> **Status:** ✅ COMPLETE, DEVICE-PASSED & MERGED to `main` via PR #66 at `9034726` (2026-09-10) · **Cost:**
 > `[client-only]` · **Effort:** S/M · **Owner row:** *"I the output files as
 > temporarily file and don't come to add in github push find all languages
 > temporarily file and remove from git push also the .codec file"*
