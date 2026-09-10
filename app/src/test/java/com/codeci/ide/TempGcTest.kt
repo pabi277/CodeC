@@ -82,7 +82,7 @@ class TempGcTest {
 
     @Test
     fun `scan only returns stamp dirs under runs`() {
-        val tempRoot = tmp.newFolder("temp")
+        val tempRoot = tmp.newFolder()
         // plant a sibling that must NEVER be walked
         val important = File(tempRoot, "important").also { it.mkdirs(); File(it, "secret").writeText("x") }
         val runs = File(tempRoot, "runs").also { it.mkdirs() }
@@ -99,9 +99,9 @@ class TempGcTest {
 
     @Test
     fun `apply refuses deletes outside runs and is idempotent on vanished dirs`() {
-        val tempRoot = tmp.newFolder("temp")
+        val tempRoot = tmp.newFolder()
         File(tempRoot, "runs").mkdirs()
-        val outside = tmp.newFolder("outside-secret")
+        val outside = tmp.newFolder()
         File(outside, "keep-me").writeText("safe")
         val actions = listOf(
             GcAction.Delete(outside),
@@ -118,7 +118,7 @@ class TempGcTest {
 
     @Test
     fun `collect age-outs real dirs on disk`() {
-        val tempRoot = tmp.newFolder("temp")
+        val tempRoot = tmp.newFolder()
         val now = System.currentTimeMillis()
         // three stamp dirs; make 1 and 2 old by setting lastModified far past
         for (s in listOf(1L, 2L, 3L)) {
@@ -141,7 +141,7 @@ class TempGcTest {
 
     @Test
     fun `clearIdle removes every non-busy run`() {
-        val tempRoot = tmp.newFolder("temp")
+        val tempRoot = tmp.newFolder()
         RunArtifacts.ensureRunDir(tempRoot, 1L).also { File(it, "a").writeText("1") }
         RunArtifacts.ensureRunDir(tempRoot, 2L).also { File(it, "b").writeText("2") }
         val report = TempGc.clearIdle(tempRoot, busy = setOf(2L))
@@ -152,7 +152,7 @@ class TempGcTest {
 
     @Test
     fun `measure and formatMeasure are honest about empty and non-empty`() {
-        val tempRoot = tmp.newFolder("temp")
+        val tempRoot = tmp.newFolder()
         assertEquals("empty", TempGc.formatMeasure(TempGc.measure(tempRoot)))
         val d = RunArtifacts.ensureRunDir(tempRoot, 5L)
         File(d, "program").writeText("hello")
@@ -168,7 +168,7 @@ class TempGcTest {
 
     @Test
     fun `a file planted at a stamp path is not followed by scan`() {
-        val tempRoot = tmp.newFolder("temp")
+        val tempRoot = tmp.newFolder()
         File(tempRoot, "runs").mkdirs()
         File(tempRoot, "runs/7").writeText("not a directory")
         assertTrue(TempGc.scan(tempRoot).isEmpty())
