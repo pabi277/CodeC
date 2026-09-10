@@ -216,10 +216,13 @@ private fun SuggestionChipCap(
             Text(
                 text = chip.glyph,
                 style = MaterialTheme.typography.labelSmall,
+                // Phase 40.5 — on a filled (accent) chip the glyph is onPrimary
+                // at full strength (5.06:1); the raw accent as text on the strip
+                // measured 3.05:1, so idle chips use onSurface (10.37:1).
                 color = if (chip.ghostBacked) {
-                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                    MaterialTheme.colorScheme.onPrimary
                 } else {
-                    MaterialTheme.colorScheme.primary
+                    MaterialTheme.colorScheme.onSurface
                 }
             )
             Text(

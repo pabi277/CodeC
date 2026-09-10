@@ -303,7 +303,9 @@ private fun EditorKeyCap(
                     .align(Alignment.TopEnd)
                     .padding(3.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                    // Phase 40.5 — onPrimary on a 70%-alpha primary measured
+                    // 3.46:1; the badge uses the opaque primary (5.06:1).
+                    .background(MaterialTheme.colorScheme.primary)
                     .padding(horizontal = 2.dp, vertical = 1.dp)
             ) {
                 Text(
@@ -432,7 +434,9 @@ private fun RunKeyCap(
                     .align(Alignment.TopEnd)
                     .padding(3.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                    // Phase 40.5 — onPrimary on a 70%-alpha primary measured
+                    // 3.46:1; the badge uses the opaque primary (5.06:1).
+                    .background(MaterialTheme.colorScheme.primary)
                     .padding(horizontal = 2.dp, vertical = 1.dp)
             ) {
                 Text(

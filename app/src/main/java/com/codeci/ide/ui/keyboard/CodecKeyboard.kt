@@ -24,6 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.components.KeyGestureDetector
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
+import com.codeci.ide.ui.theme.Contrast
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -192,6 +195,24 @@ private fun CodecKeycap(
     val carriesHidden = corner == null &&
         (def.popup != null || def.swipeUp != null || def.swipeDown != null)
     val holdingPreview = popupShown
+    // Phase 40.5 — the cap sits on `surface` at 90% over the keyboard strip
+    // (`surfaceVariant` at 50% over `surface`), which is lighter than the base
+    // surface the accent is measured against. The accent used as TEXT (the held
+    // release preview, the corner `q¹` hint) is corrected against the cap the
+    // theme really draws — primary at 0.9 measured 3.86:1 here. The corner dot
+    // stays neutral (onSurface): a primary dot on a primary-tinted cap is
+    // invisible, the neutral one clears 3:1 in every cap state.
+    val capRgb = Contrast.composite(
+        MaterialTheme.colorScheme.surface.toArgb(),
+        Contrast.composite(
+            MaterialTheme.colorScheme.surfaceVariant.toArgb(),
+            MaterialTheme.colorScheme.surface.toArgb(),
+            0.5f
+        ),
+        0.9f
+    )
+    fun onCap(color: Color): Color =
+        Color(Contrast.ensureReadable(color.toArgb(), capRgb, Contrast.AA_TEXT))
     val colPx = with(density) { SpaceTrack.DP_PER_COLUMN.dp.toPx() }
     val linePx = with(density) { SpaceTrack.DP_PER_LINE.dp.toPx() }
 
@@ -203,10 +224,13 @@ private fun CodecKeycap(
             .background(
                 shape = RoundedCornerShape(9.dp),
                 color = when {
-                    spaceTracking -> MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    // Phase 40.5 — 0.6 measured 4.34:1 for the label in the
+                    // LIGHT theme (onSurface on the tinted cap); 0.5 is 5.40:1
+                    // dark / 5.43:1 light, pressed stays lighter than both.
+                    spaceTracking -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     pressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
                     isShiftCap && shift != ShiftState.OFF ->
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
                 }
             )
@@ -314,7 +338,7 @@ private fun CodecKeycap(
             },
             style = if (holdingPreview) MaterialTheme.typography.titleMedium
                     else MaterialTheme.typography.titleSmall,
-            color = if (holdingPreview) MaterialTheme.colorScheme.primary
+            color = if (holdingPreview) onCap(MaterialTheme.colorScheme.primary)
                     else MaterialTheme.colorScheme.onSurface,
             maxLines = 1
         )
@@ -324,7 +348,9 @@ private fun CodecKeycap(
             Text(
                 text = corner,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                // Phase 40.5 — the corner hint is text: primary at 0.9 measured
+                // 3.86:1 on the cap, so it is corrected against the cap.
+                color = onCap(MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 2.dp, end = 4.dp)
@@ -338,7 +364,11 @@ private fun CodecKeycap(
                     .align(Alignment.TopEnd)
                     .padding(3.dp)
                     .size(4.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), RoundedCornerShape(2.dp))
+                    // Phase 40.5 — a primary dot at 0.7 on a primary-tinted cap
+                    // is invisible (1.4:1 on the active cap); onSurface clears
+                    // 3:1 on every cap state and both themes (12.98:1 plain,
+                    // 4.09:1 active in the dark theme; 16.56 / 5.36 in light).
+                    .background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(2.dp))
             )
         }
     }

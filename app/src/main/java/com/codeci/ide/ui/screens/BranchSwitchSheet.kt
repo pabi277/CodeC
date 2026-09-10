@@ -439,7 +439,9 @@ private fun BranchRow(
                         .background(accent.copy(alpha = 0.12f))
                         .border(
                             width = 1.dp,
-                            color = accent.copy(alpha = 0.55f),
+                            // Phase 40.5 — a 55%-alpha accent border measured
+                            // 2.25:1; opaque identity colour clears 3:1.
+                            color = accent,
                             shape = RoundedCornerShape(10.dp)
                         )
                 } else {

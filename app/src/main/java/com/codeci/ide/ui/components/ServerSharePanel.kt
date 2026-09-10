@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.components
 
+import com.codeci.ide.ui.theme.CodecPalette
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -136,7 +137,7 @@ fun ServerSharePanel(
             Text(
                 text = urls.lanUrl ?: "not shared",
                 style = monoStyle(),
-                color = if (urls.hasLan()) Color(0xFFD6FFD6) else Color(0xFF777777),
+                color = if (urls.hasLan()) Color(0xFFD6FFD6) else Color(CodecPalette.MUTED_TEXT),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
@@ -313,7 +314,7 @@ private fun QrCodeImage(text: String, size: Dp) {
         ) {
             Text(
                 text = "QR unavailable",
-                color = Color(0xFF8A8A8A),
+                color = Color(CodecPalette.MUTED_TEXT),
                 style = MaterialTheme.typography.labelSmall
             )
         }

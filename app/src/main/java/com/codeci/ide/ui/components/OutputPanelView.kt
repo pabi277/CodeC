@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codeci.ide.R
 import com.codeci.ide.ui.editor.CompilerDiagnostics
+import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.viewmodels.OutputLine
@@ -158,7 +159,7 @@ fun OutputPanelView(
             state.summary?.let { summary ->
                 Text(
                     text = summary,
-                    color = if (state.busy) Color(0xFF66B2FF) else Color(0xFF8A8A8A),
+                    color = if (state.busy) Color(0xFF66B2FF) else Color(CodecPalette.MUTED_TEXT),
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -169,7 +170,7 @@ fun OutputPanelView(
             state.serverEndpoints?.let { endpoints ->
                 Text(
                     text = endpoints.badge(),
-                    color = if (endpoints.hasLan()) Color(0xFF55FF55) else Color(0xFF8A8A8A),
+                    color = if (endpoints.hasLan()) Color(0xFF55FF55) else Color(CodecPalette.MUTED_TEXT),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(end = 8.dp)
                 )
@@ -318,7 +319,7 @@ fun OutputPanelView(
             } else {
                 Text(
                     text = "Run ▶ to compile and execute here",
-                    color = Color(0xFF666666),
+                    color = Color(CodecPalette.MUTED_TEXT),
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -428,7 +429,7 @@ private fun InlineInputRow(
                 if (buffer.isEmpty()) {
                     Text(
                         text = "Type here — Enter sends",
-                        color = Color(0xFF666666),
+                        color = Color(CodecPalette.MUTED_TEXT),
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace
                     )

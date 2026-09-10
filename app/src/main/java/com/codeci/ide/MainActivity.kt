@@ -935,7 +935,9 @@ private fun FlatBottomBar(
                     it.route?.startsWith(screen.route.substringBefore("?")) == true
                 } == true
                 val activeColor = MaterialTheme.colorScheme.primary
-                val idleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
+                // Phase 40.5 — 0.65 measured 3.53:1 on the LIGHT nav bar; 0.8 is 6.86:1
+                // dark and 5.23:1 light, so the labels stay readable in both themes.
+                val idleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 Column(
                     modifier = Modifier
                         .weight(1f)

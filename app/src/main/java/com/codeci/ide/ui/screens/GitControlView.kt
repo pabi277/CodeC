@@ -132,7 +132,9 @@ fun GitControlSheet(
                             .clickable { showBranchSheet = true }
                             .border(
                                 width = 1.dp,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                                // Phase 40.5 — 0.55 alpha measured 2.25:1 (needs
+                                // 3:1 for a control boundary); opaque is 4.56:1.
+                                color = MaterialTheme.colorScheme.primary,
                                 shape = RoundedCornerShape(50)
                             )
                             .padding(horizontal = 12.dp, vertical = 5.dp)
@@ -1041,9 +1043,12 @@ private fun GitChangeRow(
                 .border(
                     width = 1.dp,
                     color = if (markResolvedMode) {
-                        ConflictPurple.copy(alpha = 0.6f)
+                        // Phase 40.5 — 0.6 alpha measured 2.55:1; opaque conflict
+                        // purple is 4.81:1 (an inactive control is exempt, but the
+                        // boundary still identifies the button, so it uses outline).
+                        ConflictPurple
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                        MaterialTheme.colorScheme.outline
                     },
                     shape = RoundedCornerShape(10.dp)
                 )

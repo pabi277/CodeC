@@ -6,8 +6,8 @@
   "editor.foreground": "#F8F8F2",
   "editorCursor.foreground": "#F8F8F2",
   "editor.lineHighlightBackground": "#44475A",
-  "editorLineNumber.foreground": "#6272A4",
-  "editorLineNumber.activeForeground": "#90919D",
+  "editorLineNumber.foreground": "#8593BB",
+  "editorLineNumber.activeForeground": "#B8C0E0",
   "editor.selectionBackground": "#44475A",
   "editor.findMatchBackground": "#46578740",
   "editor.wordHighlightBackground": "#44475A40",
@@ -51,7 +51,7 @@
   {
    "scope": "comment",
    "settings": {
-    "foreground": "#6272A4"
+    "foreground": "#8DA0D0"
    }
   },
   {
@@ -174,7 +174,7 @@
   {
    "scope": "punctuation.definition.quote.begin.markdown",
    "settings": {
-    "foreground": "#6272A4"
+    "foreground": "#8DA0D0"
    }
   },
   {

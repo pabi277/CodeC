@@ -115,6 +115,7 @@ import com.codeci.ide.ui.projects.ProjectHubFilter
 import com.codeci.ide.ui.projects.HubIconToken
 import com.codeci.ide.ui.components.FileIconView
 import com.codeci.ide.ui.components.ProjectIconView
+import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectTransfer
@@ -1115,7 +1116,9 @@ private fun ProjectsHubList(
                     Icons.Default.Search,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    // Phase 40.5 — an accent at 60% measured 2.45:1 (needs 3:1
+                    // for a graphic); the opaque accent is 4.47:1.
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -1169,7 +1172,9 @@ private fun HubFilterChip(
                 } else {
                     Modifier.border(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
+                        // Phase 40.5 — 0.25 alpha measured 2.38:1; `outline` is
+                        // Material's own boundary role and clears 3:1.
+                        color = MaterialTheme.colorScheme.outline,
                         shape = shape
                     )
                 }
@@ -1405,15 +1410,15 @@ private fun ProjectsHubAddSheet(
                 modifier = Modifier.padding(bottom = 14.dp)
             )
             HubSheetRow(
-                color = Color(0xFFA78BFA),
-                iconTint = Color(0xFF241A4F),
+                color = Color(CodecPalette.HUB_ROW_VIOLET),
+                iconTint = Color(CodecPalette.ON_HUB_ROW_VIOLET),
                 icon = SpckIcons.FilePlus,
                 title = stringResource(R.string.hub_sheet_new),
                 subtitle = stringResource(R.string.hub_sheet_new_subtitle),
                 onClick = onNewProject
             )
             HubSheetRow(
-                color = Color(0xFF6366F1),
+                color = Color(CodecPalette.HUB_ROW_INDIGO),
                 iconTint = Color.White,
                 icon = SpckIcons.CloneRepo,
                 title = stringResource(R.string.hub_sheet_clone),
@@ -1421,7 +1426,7 @@ private fun ProjectsHubAddSheet(
                 onClick = onCloneGit
             )
             HubSheetRow(
-                color = Color(0xFF3B82F6),
+                color = Color(CodecPalette.HUB_ROW_BLUE),
                 iconTint = Color.White,
                 icon = SpckIcons.ZipFile,
                 title = stringResource(R.string.import_zip),
@@ -1429,7 +1434,7 @@ private fun ProjectsHubAddSheet(
                 onClick = onImportZip
             )
             HubSheetRow(
-                color = Color(0xFF4CAF50),
+                color = Color(CodecPalette.TILE_GREEN),
                 iconTint = Color.White,
                 icon = SpckIcons.FolderLine,
                 title = stringResource(R.string.hub_sheet_folder),
@@ -1659,7 +1664,7 @@ private fun EmptyProjectsState(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(24.dp))
-        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.no_projects), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
