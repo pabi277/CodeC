@@ -36,6 +36,8 @@
 - Tests: `app/src/test/java/com/codeci/ide/GitHubPhase40Test.kt` (36 host cases,
   36/36 green on a local JVM before the push). Tooling:
   `scripts/ci_annotations.py` (read a red run's annotations from the sandbox).
+- **Device round: ⏳ NOT RUN — runbook: [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md)**
+  (8 checks, each with the exact on-screen text that means PASS).
 
 ## What exists today (evidence, read on 2026-09-10)
 
