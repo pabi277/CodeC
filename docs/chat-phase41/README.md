@@ -83,7 +83,10 @@ to give review"* + the number/email above:
   §Round 2.
 
 **Round 2 (owner, same day): the developer identity is hardcoded, the
-boxes are gone** — owner, verbatim: *"I want to sit as developer not some
+boxes are gone — CI ✅ GREEN, `Build APK` `34533033047` on tip `0d8317c`
+(24 998 614 B; the first round-2 run `34532387788` was red on the
+UNRELATED `UserlandInstallerTest` loopback keep-alive flake — diagnosed in
+TROUBLESHOOTING §31, same code green on retrigger)** — owner, verbatim: *"I want to sit as developer not some
 other guy. So i want my number hard coded. Any feedback comes to me no
 need for the user to set number the user know me or don't know me does not
 matter a bit. So remove the boxes and set it in the code."* Shipped:

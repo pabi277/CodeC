@@ -210,7 +210,11 @@ Every update updates the docs **in the same commit**:
   `SettingsManager` (`feedback_exit_prompt_enabled`, the only feedback
   key left). The round-1 separate screen + exit survey are unchanged;
   65/65 host-pre-validated. Round-2 runbook D1–D8 (D1: NO contact fields;
-  D8: the chat opens to the hardcoded number). Merge HELD.
+  D8: the chat opens to the hardcoded number). **Round-2 CI ✅ GREEN —
+  `Build APK` `34533033047` on tip `0d8317c`** (the first run
+  `34532387788` was red on the unrelated `UserlandInstallerTest`
+  loopback keep-alive flake — TROUBLESHOOTING §31 has the diagnosis and
+  the for-cause fix if it recurs). Merge HELD.
 
 - **Phase 41 follow-up (2026-09-10, owner: "1-8 pass but the number is not
   mine" + requests): round 1 PASSED 8/8; the follow-up ships the owner's
