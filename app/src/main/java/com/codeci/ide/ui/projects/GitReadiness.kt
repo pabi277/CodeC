@@ -74,7 +74,6 @@ data class GitReadiness(
             GitBlocker.NO_REPOSITORY -> "This folder isn't a Git repository. Clone one from Files → ⋮ → Clone from GitHub, or run `git init` in the terminal."
             GitBlocker.NO_REMOTE -> "There is no remote configured for this project. Pull and local commits still work; push needs a remote. Add one or tap Publish to create one."
             GitBlocker.OFFLINE -> "You're offline or the remote is unreachable. Your work is safe on this device — reconnect and retry."
-            else -> ""
         }
     }
 
@@ -85,7 +84,6 @@ data class GitReadiness(
             GitBlocker.NO_TOKEN -> "CONNECT_TOKEN"
             GitBlocker.NO_REMOTE -> "PUBLISH_REPO"
             GitBlocker.OFFLINE -> "RETRY"
-            else -> "none"
         }
     }
 }
