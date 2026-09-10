@@ -256,27 +256,3 @@ object TempGc {
         }.getOrDefault(0)
     }
 }
-
-/**
- * Live-stamp registry so GC never deletes a run that is still executing.
- * Process-wide; written by CompilerService / EditorViewModel / ServerHost,
- * read by TempGc call sites. Thread-safe.
- */
-object LiveRunStamps {
-    private val lock = Any()
-    private val stamps = linkedSetOf<Long>()
-
-    fun add(stamp: Long) {
-        synchronized(lock) { stamps += stamp }
-    }
-
-    fun remove(stamp: Long) {
-        synchronized(lock) { stamps -= stamp }
-    }
-
-    fun snapshot(): Set<Long> = synchronized(lock) { stamps.toSet() }
-
-    fun clear() {
-        synchronized(lock) { stamps.clear() }
-    }
-}

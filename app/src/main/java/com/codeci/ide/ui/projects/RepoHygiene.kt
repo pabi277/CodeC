@@ -212,14 +212,15 @@ object RepoHygiene {
      */
     fun ensure(projectRoot: File): List<String> {
         return runCatching {
-            val gitDir = resolveGitDir(projectRoot) ?: return@runCatching emptyList()
+            val gitDir = resolveGitDir(projectRoot)
+            if (gitDir == null) return@runCatching emptyList<String>()
             val exclude = File(gitDir, "info/exclude")
             val existing = runCatching { if (exclude.isFile) exclude.readText() else null }.getOrNull()
             val gitignore = runCatching {
                 File(projectRoot, ".gitignore").takeIf { it.isFile }?.readText()
             }.getOrNull()
             val missing = missingLines(existing, gitignore)
-            if (missing.isEmpty()) return@runCatching emptyList()
+            if (missing.isEmpty()) return@runCatching emptyList<String>()
             exclude.parentFile?.mkdirs()
             exclude.writeText(appendTo(existing, missing))
             missing.map { it.pattern }
@@ -282,14 +283,14 @@ object RepoHygiene {
      * removal. Best-effort — any failure is swallowed when [swallow] is true.
      */
     fun untrackTracked(projectRoot: File, git: GitManager, swallow: Boolean = true): List<String> {
-        val run = {
-            val tracked = git.trackedFiles(projectRoot) ?: return@run emptyList()
+        fun once(): List<String> {
+            val tracked = git.trackedFiles(projectRoot) ?: return emptyList()
             val doomed = trackedViolations(tracked)
-            if (doomed.isEmpty()) return@run emptyList()
+            if (doomed.isEmpty()) return emptyList()
             git.rmCached(projectRoot, doomed)
-            doomed
+            return doomed
         }
-        return if (swallow) runCatching(run).getOrDefault(emptyList()) else run()
+        return if (swallow) runCatching { once() }.getOrDefault(emptyList()) else once()
     }
 
     /**
