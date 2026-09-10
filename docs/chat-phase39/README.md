@@ -177,5 +177,6 @@ PASS = all six (3 is host-tested; 1, 2, 4, 5, 6 need the device round).
 pin), plus the existing `PythonCacheIgnoreTest` / `SettingsAuditTest` updated
 for the new Storage rows (43 → 45 controls) and the always-on ensure path.
 
+**CI ✅ GREEN — `Build APK` `34448677743` on tip `2d9002d` (5 m 47 s).**
 **Device round (pending owner):** phase exit conditions 1–6 on a real phone
-+ a push to GitHub. CI is the executor of record for the host cases.
++ a push to GitHub.
