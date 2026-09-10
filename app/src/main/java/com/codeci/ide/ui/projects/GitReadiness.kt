@@ -21,13 +21,12 @@ enum class GitBlocker {
     NO_TOKEN,
     NO_REPOSITORY,
     NO_REMOTE,
-    NO_NETWORK,
     OFFLINE
 }
 
 /**
  * Holds the answers. null blocker == ready to act.
- * Non-null blocker == what to tell the user, with an action.
+ * Non-null blocker == what to tell the user, with an action id.
  */
 data class GitReadiness(
     val gitInstalled: Boolean,
@@ -63,19 +62,20 @@ data class GitReadiness(
     }
 
     /** One sentence, same tone as GitErrors. */
-    fun message(blocker: GitBlocker): String when (blocker) {
-        when (blocker) {
+    fun message(blocker: GitBlocker): String {
+        return when (blocker) {
             GitBlocker.GIT_NOT_INSTALLED -> "Git isn't installed. Install it from Modules → Git (or run `pkg install git` in the terminal), then retry."
             GitBlocker.NO_TOKEN -> "No GitHub token is connected, so this operation needs authorization. Add one in Settings → GitHub Account (a fine-grained token with Contents → Read and write), then retry."
             GitBlocker.NO_REPOSITORY -> "This folder isn't a Git repository. Clone one from Files → ⋮ → Clone from GitHub, or run `git init` in the terminal."
             GitBlocker.NO_REMOTE -> "There is no remote configured for this project. Pull and local commits still work; push needs a remote. Add one or tap Publish to create one."
             GitBlocker.OFFLINE -> "You're offline or the remote is unreachable. Your work is safe on this device — reconnect and retry."
+            else -> ""
         }
     }
 
     /** Action id that surfaces a one-tap remedy. */
-    fun actionId(blocker: GitBlocker): String when (blocker) {
-        when (blocker) {
+    fun actionId(blocker: GitBlocker): String {
+        return when (blocker) {
             GitBlocker.GIT_NOT_INSTALLED -> "INSTALL_GIT"
             GitBlocker.NO_TOKEN -> "CONNECT_TOKEN"
             GitBlocker.NO_REMOTE -> "PUBLISH_REPO"
