@@ -201,8 +201,8 @@ Every update updates the docs **in the same commit**:
 ## 9. State snapshot (2026-09-10, **Phase 38 is ✅ COMPLETE, DEVICE-PASSED & MERGED; Phases 39-43 are 📋 PLANNED docs on `main`**)
 
 - **Phase 38 (Identity: app icon + Settings trim) is ✅ COMPLETE,
-  DEVICE-PASSED & MERGED to `main`** (owner: "Start Phase 38" → "All
-  device test pass … then marge it", 2026-09-10) — both parts shipped in
+  DEVICE-PASSED & MERGED to `main` via PR #64 → `main` at `dcd65b4bc3e65d268bcc354da9d413d74eb25038` (merge commit, history preserved)** (owner: "Start Phase
+  38" → "All device test pass … then marge it", 2026-09-10) — both parts shipped in
   one build; CI GREEN (`34442522565` on `ce1a38c`; docs follow-up
   `34443027257` on `d37bba9`) and the device round passed by owner
   report (no device details supplied, none invented). **38.1:** the original `>_` mark

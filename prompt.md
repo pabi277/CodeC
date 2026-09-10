@@ -364,8 +364,8 @@ report → STOP at the merge gate. The owner merges to `main` themselves
    **The 38-43 series ("before I share the app") runs 38 → 39 → 40 → 41 →
    42 → 43 — the numbers ARE the order (39.1 before 43.2 is the one
    ordering rule). Phase 38 (Identity: app icon + Settings trim) is ✅
-   COMPLETE, DEVICE-PASSED & MERGED to `main`** (owner: "Start Phase 38"
-   → "All device test pass … then marge it", 2026-09-10): the original
+   COMPLETE, DEVICE-PASSED & MERGED to `main` via PR #64 → `main` at `dcd65b4bc3e65d268bcc354da9d413d74eb25038` (merge commit, history preserved)** (owner:
+   "Start Phase 38" → "All device test pass … then marge it", 2026-09-10): the original
    `>_` mark with a real monochrome layer, committed generated rasters +
    a notification silhouette (38.1), and the Termux Engine card out of
    Settings with the mechanism kept + the audit that deleted two
