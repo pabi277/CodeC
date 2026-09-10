@@ -693,10 +693,20 @@ class GitBranchManagerTest {
             val dir = tempDir()
             val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
             manager(dir, e).fetchBranch(repo(dir), "test-1")
-            assertEquals(
-                "CMD [fetch] [origin] [+refs/heads/test-1:refs/remotes/origin/test-1]",
-                log(e).last()
+            val commands = log(e)
+            assertTrue(
+                commands.any {
+                    it == "CMD [fetch] [origin] [+refs/heads/test-1:refs/remotes/origin/test-1]"
+                }
             )
+            // After fetch, prove the tracking ref landed.
+            assertTrue(
+                commands.any {
+                    it == "CMD [rev-parse] [--verify] [refs/remotes/origin/test-1]"
+                }
+            )
+            // No FETCH_HEAD recovery when rev-parse succeeds.
+            assertTrue(commands.none { it.contains("[update-ref]") })
         }
     }
 
