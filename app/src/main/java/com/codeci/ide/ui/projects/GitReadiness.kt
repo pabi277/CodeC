@@ -63,10 +63,12 @@ data class GitReadiness(
             return GitBlocker.OFFLINE
         }
 
-        null // ready
+        // 6. Ready to proceed
+        return null
     }
 
     /** One sentence, same tone as GitErrors. */
+    @Suppress("NON_EXHAUSTIVE_WHEN")
     fun message(blocker: GitBlocker): String {
         return when (blocker) {
             GitBlocker.GIT_NOT_INSTALLED -> "Git isn't installed. Install it from Modules → Git (or run `pkg install git` in the terminal), then retry."
