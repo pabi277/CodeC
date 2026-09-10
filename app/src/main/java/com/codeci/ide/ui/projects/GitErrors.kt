@@ -186,6 +186,17 @@ object GitErrors {
                         "Leave \"Stash my uncommitted changes\" on (or commit first), then retry."
                 ).let(::withDetail)
 
+            // Remote-tracking ref missing / short origin/name not a branch.
+            lower.contains("is not a branch") ||
+                lower.contains("cannot set up tracking information") ||
+                lower.contains("did not land on this device") ->
+                GitFriendlyError(
+                    GitErrorKind.GENERIC,
+                    "Couldn't download that branch from GitHub. Check you're " +
+                        "online (and that a token is set for private repos), " +
+                        "then tap Refresh from GitHub and try again."
+                ).let(::withDetail)
+
             // SSH remotes aren't supported by CodeC's clone flow.
             lower.contains("publickey") || lower.contains("could not read from remote repository") ->
                 GitFriendlyError(

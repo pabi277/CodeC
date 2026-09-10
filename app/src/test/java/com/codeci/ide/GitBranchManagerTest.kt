@@ -51,8 +51,23 @@ class GitBranchManagerTest {
                 exit "${'$'}{FAKE_BRANCH_EXIT:-0}"
                 ;;
               rev-parse)
+                # --verify refs/remotes/... → fake sha so checkoutRemote can
+                # prove the tracking ref landed (override with FAKE_REVPARSE_*).
+                if [ "${'$'}2" = "--verify" ]; then
+                  case "${'$'}3" in
+                    refs/remotes/*)
+                      if [ -n "${'$'}FAKE_REVPARSE_OUT" ]; then printf '%b\n' "${'$'}FAKE_REVPARSE_OUT"
+                      else echo "abc123def456"
+                      fi
+                      exit "${'$'}{FAKE_REVPARSE_EXIT:-0}"
+                      ;;
+                  esac
+                fi
                 if [ -n "${'$'}FAKE_REVPARSE_OUT" ]; then printf '%b' "${'$'}FAKE_REVPARSE_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_REVPARSE_EXIT:-0}"
+                ;;
+              update-ref)
+                exit "${'$'}{FAKE_UPDATE_REF_EXIT:-0}"
                 ;;
               checkout)
                 if [ -n "${'$'}FAKE_CHECKOUT_OUT" ]; then printf '%b' "${'$'}FAKE_CHECKOUT_OUT"; echo ""; fi
@@ -182,16 +197,24 @@ class GitBranchManagerTest {
             val dir = tempDir()
             val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
             manager(dir, e).checkoutRemote(repo(dir), "origin/develop")
-            // Fetch the head first (shallow clones never had it), then track.
+            // Fetch, checkout from FULL refs/remotes/… ref (not short
+            // origin/develop — that caused "starting point is not a branch"),
+            // then set upstream.
             val commands = log(e)
             assertTrue(
                 commands.any {
                     it == "CMD [fetch] [origin] [+refs/heads/develop:refs/remotes/origin/develop]"
                 }
             )
-            assertEquals(
-                "CMD [checkout] [-b] [develop] [--track] [origin/develop]",
-                commands.last()
+            assertTrue(
+                commands.any {
+                    it == "CMD [checkout] [-B] [develop] [refs/remotes/origin/develop]"
+                }
+            )
+            assertTrue(
+                commands.any {
+                    it.startsWith("CMD [branch] [--set-upstream-to=origin/develop]")
+                }
             )
         }
     }
@@ -717,7 +740,39 @@ class GitBranchManagerTest {
             )
             assertTrue(
                 commands.any {
-                    it == "CMD [checkout] [-b] [test-2] [--track] [origin/test-2]"
+                    it == "CMD [checkout] [-B] [test-2] [refs/remotes/origin/test-2]"
+                }
+            )
+            assertTrue(commands.any { it.startsWith("CMD [rev-parse] [--verify]") })
+        }
+    }
+
+    @Test
+    fun `fetchBranch recovers via FETCH_HEAD when the refspec leaves no tracking ref`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_REVPARSE_EXIT" to "1"
+                )
+            )
+            try {
+                manager(dir, e).fetchBranch(repo(dir), "test-1")
+                fail("expected fetchBranch to fail when the tracking ref never lands")
+            } catch (ex: GitManager.GitCommandException) {
+                assertTrue(
+                    ex.message!!.contains("did not land") ||
+                        ex.message!!.contains("fetch")
+                )
+            }
+            val commands = log(e)
+            assertTrue(commands.any { it.contains("[fetch]") })
+            assertTrue(commands.any { it == "CMD [fetch] [origin] [test-1]" })
+            assertTrue(
+                commands.any {
+                    it == "CMD [update-ref] [refs/remotes/origin/test-1] [FETCH_HEAD]"
                 }
             )
         }

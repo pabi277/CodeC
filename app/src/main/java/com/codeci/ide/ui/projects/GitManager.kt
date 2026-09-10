@@ -514,20 +514,60 @@ class GitManager(
      * Works for shallow clones that never received that branch (the usual
      * reason test-1 / test-2 were missing from the Switch Branch sheet while
      * GitHub still had them).
+     *
+     * Shallow clones get `--depth 1` on this one head so the tip is always
+     * downloadable. After fetch we verify the remote-tracking ref exists;
+     * some git builds only leave FETCH_HEAD — recover with update-ref.
      */
     fun fetchBranch(root: File, branch: String) {
         val name = branch.trim()
         require(GitBranchOps.isSafeExistingBranch(name)) { "Invalid branch name" }
         val remote = firstRemote(root) ?: "origin"
-        // Explicit refspec: src refs/heads/<name> → dst refs/remotes/<remote>/<name>
-        // so a shallow clone still gets a remote-tracking ref to --track.
-        val refspec = "+refs/heads/$name:refs/remotes/$remote/$name"
-        exec(
-            root,
-            listOf("fetch", remote, refspec),
-            networkTimeoutSeconds,
-            "git fetch failed"
-        )
+        val dest = "refs/remotes/$remote/$name"
+        val refspec = "+refs/heads/$name:$dest"
+        val args = mutableListOf("fetch")
+        if (File(root, ".git/shallow").isFile) {
+            args += "--depth"
+            args += "1"
+        }
+        args += remote
+        args += refspec
+        exec(root, args, networkTimeoutSeconds, "git fetch failed")
+        if (!remoteTrackingRefExists(root, remote, name)) {
+            // Fallback: plain fetch into FETCH_HEAD, then point the tracking ref.
+            exec(
+                root,
+                listOf("fetch", remote, name),
+                networkTimeoutSeconds,
+                "git fetch failed"
+            )
+            exec(
+                root,
+                listOf("update-ref", dest, "FETCH_HEAD"),
+                localTimeoutSeconds,
+                "git update-ref failed"
+            )
+        }
+        if (!remoteTrackingRefExists(root, remote, name)) {
+            throw GitCommandException(
+                "git fetch failed: remote branch '$name' did not land on this device",
+                1,
+                emptyList()
+            )
+        }
+    }
+
+    /** True when `refs/remotes/<remote>/<branch>` resolves (loose or packed). */
+    fun remoteTrackingRefExists(root: File, remote: String, branch: String): Boolean {
+        val ref = "refs/remotes/${remote.trim()}/${branch.trim()}"
+        val result = runCatching {
+            runGit(
+                workingDir = root,
+                args = listOf("rev-parse", "--verify", ref),
+                timeoutSeconds = localTimeoutSeconds
+            )
+        }.getOrNull() ?: return false
+        return result.exitCode == 0 && result.stdout.any { it.trim().isNotEmpty() }
     }
 
     /**
@@ -627,37 +667,45 @@ class GitManager(
     }
 
     /**
-     * `git checkout -b <local> --track <remote>` for a remote-only branch.
+     * Check out a remote-only branch as a local tracking branch.
      *
-     * Checking the remote-tracking ref out directly would detach HEAD, so a
-     * local tracking branch is created from it instead; when a local branch of
-     * the same name already exists, the caller (see [switchBranch]) checks
-     * that one out instead of failing here.
+     * Device error was: `cannot set up tracking information; starting point
+     * 'origin/test-1' is not a branch` — ls-remote listed the name, but
+     * `checkout -b --track origin/test-1` needs a real remote-tracking ref.
+     * On shallow clones the short name is not a branch.
      *
-     * Phase 39 device follow-up: if the remote-tracking ref is missing
-     * (shallow clone never fetched it, or the branch only exists on GitHub),
-     * [fetchBranch] pulls that one head first so `--track` has something to
-     * point at. That is the "user wants this existing GitHub branch" path.
+     * Path:
+     *  1. [fetchBranch] so `refs/remotes/<remote>/<local>` really exists
+     *  2. `git checkout -B <local> refs/remotes/<remote>/<local>` from the
+     *     **full** ref (never the short `origin/name`)
+     *  3. `git branch --set-upstream-to=<remote>/<local> <local>`
+     *
+     * When a local branch of the same name already exists, [switchBranch]
+     * checks that one out instead of calling here.
      */
     fun checkoutRemote(root: File, remoteRef: String) {
         val safe = remoteRef.trim()
         require(GitBranchOps.isSafeExistingBranch(safe)) { "Invalid branch name" }
         val local = safe.substringAfter('/', "")
         require(local.isNotEmpty() && ProjectsHub.isValidBranchName(local)) { "Invalid branch name" }
-        // Always fetch this one head first so a shallow clone (or a branch that
-        // only ever lived on GitHub) has refs/remotes/<remote>/<local> to track.
-        // Cheap when already up to date; required when ls-remote listed it but
-        // the device never downloaded the objects.
         val remote = safe.substringBefore('/', firstRemote(root) ?: "origin")
             .ifEmpty { firstRemote(root) ?: "origin" }
-        runCatching { fetchBranch(root, local) }.getOrElse { throw it }
-        val track = "$remote/$local"
+        fetchBranch(root, local)
+        val fullRef = "refs/remotes/$remote/$local"
         exec(
             root,
-            listOf("checkout", "-b", local, "--track", track),
+            listOf("checkout", "-B", local, fullRef),
             localTimeoutSeconds,
             "git checkout failed"
         )
+        runCatching {
+            exec(
+                root,
+                listOf("branch", "--set-upstream-to=$remote/$local", local),
+                localTimeoutSeconds,
+                "git branch --set-upstream-to failed"
+            )
+        }
     }
 
     /**
