@@ -222,6 +222,7 @@ fun BranchSwitchSheet(
                                 items(branches.local, key = { "local:${it.name}" }) { branch ->
                                     BranchRow(
                                         branch = branch,
+                                        label = branch.name,
                                         selected = selected?.name == branch.name &&
                                             selected?.kind == BranchTargetKind.LOCAL,
                                         onClick = {
@@ -230,13 +231,28 @@ fun BranchSwitchSheet(
                                         }
                                     )
                                 }
-                                if (branches.remote.isNotEmpty()) {
+                                item {
+                                    SectionHeader(stringResource(R.string.branch_switch_remote_header))
+                                }
+                                if (branches.remote.isEmpty()) {
                                     item {
-                                        SectionHeader(stringResource(R.string.branch_switch_remote_header))
+                                        Text(
+                                            text = state.remoteDiscoveryNote
+                                                ?: stringResource(R.string.branch_switch_remote_empty),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 4.dp, vertical = 8.dp)
+                                        )
                                     }
+                                } else {
                                     items(branches.remote, key = { "remote:${it.name}" }) { branch ->
                                         BranchRow(
                                             branch = branch,
+                                            // Show the short name (test-1) not origin/test-1
+                                            // so the list matches what the user sees on GitHub.
+                                            label = branch.localName,
                                             selected = selected?.name == branch.name &&
                                                 selected?.kind == BranchTargetKind.REMOTE,
                                             onClick = {
@@ -244,6 +260,17 @@ fun BranchSwitchSheet(
                                                 selected = BranchTarget(branch.name, BranchTargetKind.REMOTE)
                                             }
                                         )
+                                    }
+                                }
+                                item {
+                                    TextButton(
+                                        onClick = {
+                                            viewModel.loadBranches(context, projectRoot)
+                                        },
+                                        enabled = !state.branchesLoading && !state.branchBusy,
+                                        modifier = Modifier.padding(horizontal = 0.dp)
+                                    ) {
+                                        Text(stringResource(R.string.branch_switch_refresh_remote))
                                     }
                                 }
                                 item {
@@ -270,6 +297,16 @@ fun BranchSwitchSheet(
                                         )
                                     }
                                 }
+                            }
+                            state.remoteDiscoveryNote?.takeIf { branches.remote.isNotEmpty() }?.let { note ->
+                                Text(
+                                    text = note,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                                )
                             }
                             if (creating) {
                                 OutlinedTextField(
@@ -316,7 +353,13 @@ fun BranchSwitchSheet(
                                 CircularProgressIndicator(modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(10.dp))
                                 Text(
-                                    text = stringResource(R.string.branch_switch_working),
+                                    text = stringResource(
+                                        if (selected?.kind == BranchTargetKind.REMOTE) {
+                                            R.string.branch_switch_fetching
+                                        } else {
+                                            R.string.branch_switch_working
+                                        }
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -379,7 +422,9 @@ private fun SectionHeader(text: String) {
 private fun BranchRow(
     branch: GitBranch,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    /** Display label — short name for remote rows (`test-1` not `origin/test-1`). */
+    label: String = branch.name,
 ) {
     val accent = MaterialTheme.colorScheme.primary
     Row(
@@ -412,7 +457,7 @@ private fun BranchRow(
         )
         Spacer(Modifier.width(12.dp))
         Text(
-            text = branch.name,
+            text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = if (branch.isCurrent) accent else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (branch.isCurrent) FontWeight.SemiBold else FontWeight.Normal,

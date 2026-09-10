@@ -493,6 +493,10 @@ class GitManager(
      * (not only the one the clone landed on, and not only branches created
      * inside the app). Best-effort: callers treat failure as "list what we
      * already know".
+     *
+     * Uses `--prune` so deleted remote branches disappear from the list.
+     * For shallow clones (`--depth 1`) a plain fetch still only updates the
+     * tracked tip — use [fetchBranch] / [listRemoteHeadNames] for other heads.
      */
     fun fetch(root: File) {
         val remote = firstRemote(root) ?: "origin"
@@ -502,6 +506,106 @@ class GitManager(
             networkTimeoutSeconds,
             "git fetch failed"
         )
+    }
+
+    /**
+     * `git fetch <remote> <branch>` — pull one remote head into
+     * `refs/remotes/<remote>/<branch>` so [checkoutRemote] can track it.
+     * Works for shallow clones that never received that branch (the usual
+     * reason test-1 / test-2 were missing from the Switch Branch sheet while
+     * GitHub still had them).
+     */
+    fun fetchBranch(root: File, branch: String) {
+        val name = branch.trim()
+        require(GitBranchOps.isSafeExistingBranch(name)) { "Invalid branch name" }
+        val remote = firstRemote(root) ?: "origin"
+        // Explicit refspec: src refs/heads/<name> → dst refs/remotes/<remote>/<name>
+        // so a shallow clone still gets a remote-tracking ref to --track.
+        val refspec = "+refs/heads/$name:refs/remotes/$remote/$name"
+        exec(
+            root,
+            listOf("fetch", remote, refspec),
+            networkTimeoutSeconds,
+            "git fetch failed"
+        )
+    }
+
+    /**
+     * Every branch name on the first remote (`git ls-remote --heads`), even
+     * when a shallow clone never fetched them. Falls back to the remote URL
+     * from `.git/config` when `git ls-remote <remote>` needs the full URL.
+     * Empty list on failure (caller keeps the local list).
+     */
+    fun listRemoteHeadNames(root: File): List<String> {
+        val remote = firstRemote(root) ?: "origin"
+        // Prefer the configured remote name (auth/askpass already wired).
+        val viaRemote = runCatching {
+            runGit(
+                workingDir = root,
+                args = listOf("ls-remote", "--heads", remote),
+                timeoutSeconds = networkTimeoutSeconds.coerceAtMost(60L)
+            )
+        }.getOrNull()
+        if (viaRemote != null && viaRemote.exitCode == 0) {
+            val names = ProjectsHub.branchNamesFromLsRemote(viaRemote.stdout)
+            if (names.isNotEmpty()) return names.distinct()
+        }
+        // Fallback: read the remote URL from config and query it directly
+        // (same path the clone dialog uses).
+        val url = runCatching {
+            val cfg = File(root, ".git/config")
+            if (cfg.isFile) ProjectsHub.remoteUrlFromConfig(cfg.readText()) else null
+        }.getOrNull()
+        if (!url.isNullOrBlank() && isCloneableUrl(url)) {
+            return runCatching { listRemoteBranches(url) }.getOrDefault(emptyList())
+        }
+        return emptyList()
+    }
+
+    /**
+     * Local branches plus every head that exists on the remote (from
+     * [listRemoteHeadNames]), so the Switch Branch sheet can offer "check out
+     * test-1" even when the clone never fetched it. Remote rows already
+     * covered by a local branch are dropped ([withoutLocallyTrackedRemotes]).
+     *
+     * [remoteDiscoveryError] is set when the network probe failed so the UI
+     * can show a soft hint without hiding local branches.
+     */
+    fun listBranchesWithRemoteHeads(root: File): Pair<GitBranchList, String?> {
+        val local = listBranches(root)
+        // Always try a plain fetch first (updates tips we already track).
+        val fetchErr = runCatching { fetch(root) }.exceptionOrNull()
+        val afterFetch = runCatching { listBranches(root) }.getOrDefault(local)
+
+        val remoteNames = runCatching { listRemoteHeadNames(root) }.getOrDefault(emptyList())
+        if (remoteNames.isEmpty()) {
+            val note = when {
+                fetchErr != null ->
+                    GitErrors.classify(
+                        raw = fetchErr.message,
+                        exitCode = (fetchErr as? GitCommandException)?.exitCode,
+                        hasToken = hasCredentials
+                    ).message
+                else -> null
+            }
+            return afterFetch.withoutLocallyTrackedRemotes() to note
+        }
+        val remote = firstRemote(root) ?: "origin"
+        val localNames = afterFetch.local.map { it.name }.toSet()
+        val knownRemote = afterFetch.remote.map { it.localName }.toSet()
+        val extras = remoteNames
+            .filter { it !in localNames && it !in knownRemote }
+            .filter { GitBranchOps.isSafeExistingBranch(it) }
+            .sorted()
+            .map { name ->
+                GitBranch(
+                    name = "$remote/$name",
+                    isRemote = true,
+                    isCurrent = false
+                )
+            }
+        val merged = afterFetch.copy(branches = afterFetch.branches + extras)
+        return merged.withoutLocallyTrackedRemotes() to null
     }
 
     /** `git checkout <branch>` for a branch that already exists locally. */
@@ -529,15 +633,28 @@ class GitManager(
      * local tracking branch is created from it instead; when a local branch of
      * the same name already exists, the caller (see [switchBranch]) checks
      * that one out instead of failing here.
+     *
+     * Phase 39 device follow-up: if the remote-tracking ref is missing
+     * (shallow clone never fetched it, or the branch only exists on GitHub),
+     * [fetchBranch] pulls that one head first so `--track` has something to
+     * point at. That is the "user wants this existing GitHub branch" path.
      */
     fun checkoutRemote(root: File, remoteRef: String) {
         val safe = remoteRef.trim()
         require(GitBranchOps.isSafeExistingBranch(safe)) { "Invalid branch name" }
         val local = safe.substringAfter('/', "")
         require(local.isNotEmpty() && ProjectsHub.isValidBranchName(local)) { "Invalid branch name" }
+        // Always fetch this one head first so a shallow clone (or a branch that
+        // only ever lived on GitHub) has refs/remotes/<remote>/<local> to track.
+        // Cheap when already up to date; required when ls-remote listed it but
+        // the device never downloaded the objects.
+        val remote = safe.substringBefore('/', firstRemote(root) ?: "origin")
+            .ifEmpty { firstRemote(root) ?: "origin" }
+        runCatching { fetchBranch(root, local) }.getOrElse { throw it }
+        val track = "$remote/$local"
         exec(
             root,
-            listOf("checkout", "-b", local, "--track", safe),
+            listOf("checkout", "-b", local, "--track", track),
             localTimeoutSeconds,
             "git checkout failed"
         )

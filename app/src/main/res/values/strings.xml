@@ -412,15 +412,18 @@
     <string name="branch_switch_stash">Stash my uncommitted changes</string>
     <string name="branch_switch_clean">Working tree clean — nothing to stash</string>
     <string name="branch_switch_dirty">%1$d uncommitted change(s) will be saved and restored</string>
-    <string name="branch_switch_local_header">Branches</string>
-    <string name="branch_switch_remote_header">Remote</string>
-    <string name="branch_switch_remote_tag">remote</string>
+    <string name="branch_switch_local_header">On this device</string>
+    <string name="branch_switch_remote_header">On GitHub — tap to check out</string>
+    <string name="branch_switch_remote_tag">check out</string>
+    <string name="branch_switch_remote_empty">No other branches found on GitHub. Pull the list again after you reconnect, or create a new branch below.</string>
+    <string name="branch_switch_refresh_remote">Refresh from GitHub</string>
     <string name="branch_switch_new">New branch…</string>
     <string name="branch_switch_new_hint">Branch name</string>
     <string name="branch_switch_invalid_name">Use letters, digits and . _ / + -</string>
     <string name="branch_switch_action">SWITCH</string>
     <string name="branch_switch_current">current</string>
     <string name="branch_switch_working">Switching branch…</string>
+    <string name="branch_switch_fetching">Fetching branch from GitHub…</string>
     <string name="branch_switch_empty">This repository has no branches yet.</string>
     <string name="close_action">Close</string>
 </resources>

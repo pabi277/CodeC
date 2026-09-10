@@ -180,11 +180,18 @@ class GitBranchManagerTest {
     fun `checkoutRemote creates a tracking branch instead of detaching HEAD`() = runBlocking {
         withTimeout(20_000) {
             val dir = tempDir()
-            val e = env(dir)
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
             manager(dir, e).checkoutRemote(repo(dir), "origin/develop")
+            // Fetch the head first (shallow clones never had it), then track.
+            val commands = log(e)
+            assertTrue(
+                commands.any {
+                    it == "CMD [fetch] [origin] [+refs/heads/develop:refs/remotes/origin/develop]"
+                }
+            )
             assertEquals(
                 "CMD [checkout] [-b] [develop] [--track] [origin/develop]",
-                log(e).last()
+                commands.last()
             )
         }
     }
@@ -654,6 +661,65 @@ class GitBranchManagerTest {
             val commands = log(e)
             assertEquals("CMD [remote]", commands[0])
             assertEquals("CMD [fetch] [--prune] [origin]", commands[1])
+        }
+    }
+
+    @Test
+    fun `fetchBranch pulls one head by refspec`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
+            manager(dir, e).fetchBranch(repo(dir), "test-1")
+            assertEquals(
+                "CMD [fetch] [origin] [+refs/heads/test-1:refs/remotes/origin/test-1]",
+                log(e).last()
+            )
+        }
+    }
+
+    @Test
+    fun `listBranchesWithRemoteHeads merges ls-remote names the clone never fetched`() = runBlocking {
+        withTimeout(20_000) {
+            // Shallow clone only has main locally + origin/main; GitHub also
+            // has test-1 and test-2. The sheet must offer them under Remote.
+            val dir = tempDir()
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_BRANCH_OUT" to "* main\\n  remotes/origin/main",
+                    "FAKE_LS_REMOTE_OUT" to
+                        "aaa\\trefs/heads/main\\nbbb\\trefs/heads/test-1\\nccc\\trefs/heads/test-2"
+                )
+            )
+            val (list, _) = manager(dir, e).listBranchesWithRemoteHeads(repo(dir))
+            assertEquals(listOf("main"), list.local.map { it.name })
+            // origin/main is dropped (local twin); test-1/test-2 appear.
+            assertEquals(
+                listOf("origin/test-1", "origin/test-2"),
+                list.remote.map { it.name }
+            )
+            assertTrue(log(e).any { it.startsWith("CMD [ls-remote]") })
+        }
+    }
+
+    @Test
+    fun `checkoutRemote fetches the branch before tracking it`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
+            manager(dir, e).checkoutRemote(repo(dir), "origin/test-2")
+            val commands = log(e)
+            assertTrue(
+                commands.any {
+                    it == "CMD [fetch] [origin] [+refs/heads/test-2:refs/remotes/origin/test-2]"
+                }
+            )
+            assertTrue(
+                commands.any {
+                    it == "CMD [checkout] [-b] [test-2] [--track] [origin/test-2]"
+                }
+            )
         }
     }
 

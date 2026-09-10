@@ -54,6 +54,11 @@ class GitControlViewModel : ViewModel() {
         val branchResult: String? = null,
         val branchError: String? = null,
         /**
+         * Phase 39 device follow-up — soft note when GitHub heads could not
+         * be listed (offline / no token). Local branches still show.
+         */
+        val remoteDiscoveryNote: String? = null,
+        /**
          * Phase 17 device fix — the reason the last push failed, kept until a
          * push succeeds or the user dismisses it. A failed push used to look
          * exactly like a successful one (the commit clears the change list),
@@ -110,15 +115,19 @@ class GitControlViewModel : ViewModel() {
     /**
      * Loads the branch list for the Switch Branch dialog (off the UI thread).
      *
-     * Phase 39 device follow-up: best-effort `git fetch --prune` first so
-     * branches that already exist on GitHub (not only the clone default and
-     * not only branches created in-app) appear under Remote and can be
-     * checked out. Offline / no token keeps the local list — never blocks
-     * the dialog on a network failure.
+     * Phase 39 device follow-up: discovers every head on GitHub via
+     * `git ls-remote --heads` (not only what a shallow clone already fetched),
+     * so test-1 / test-2 show under Remote even when the device never had
+     * them. Offline / no token keeps the local list — never blocks the dialog
+     * on a network failure. Checking one out fetches that branch on demand.
      */
     fun loadBranches(context: Context, projectRoot: File) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(branchesLoading = true, branchError = null)
+            _state.value = _state.value.copy(
+                branchesLoading = true,
+                branchError = null,
+                remoteDiscoveryNote = null
+            )
             val git = gitContext(context).manager()
             if (git == null) {
                 _state.value = _state.value.copy(
@@ -128,11 +137,15 @@ class GitControlViewModel : ViewModel() {
                 return@launch
             }
             try {
-                val list = withContext(Dispatchers.IO) {
-                    runCatching { git.fetch(projectRoot) }
-                    git.listBranches(projectRoot).withoutLocallyTrackedRemotes()
+                val (list, note) = withContext(Dispatchers.IO) {
+                    git.listBranchesWithRemoteHeads(projectRoot)
                 }
-                _state.value = _state.value.copy(branchesLoading = false, branches = list)
+                _state.value = _state.value.copy(
+                    branchesLoading = false,
+                    branches = list,
+                    // Soft fetch/ls-remote failure only — never hide locals.
+                    remoteDiscoveryNote = note
+                )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     branchesLoading = false,
