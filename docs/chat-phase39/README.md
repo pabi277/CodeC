@@ -149,7 +149,7 @@ PASS = all six (3 is host-tested; 1, 2, 4, 5, 6 need the device round).
   39.2 covers them).
 - `ProjectTransfer.importZip` scratch zip moved off `projectsRoot` into the
   system temp dir (still deleted in `finally`).
-- `MainActivity.onCreate` kicks `TempGc.collect` on a daemon thread.
+- `MainActivity.onCreate` kicks `TempGc.sweep` on a daemon thread.
 - Settings → Storage: **Temporary files — N files, X MB — [Clear]** via
   `TempGc.measure` / `clearIdle` (idle only; live stamps kept).
 

@@ -79,6 +79,9 @@ import com.codeci.ide.ui.keyboard.CodecKeyboard
 import com.codeci.ide.ui.keyboard.KeyboardDefaults
 import com.codeci.ide.ui.keyboard.ShiftState
 import com.codeci.ide.ui.services.EmbeddedCompiler
+import com.codeci.ide.ui.services.LiveRunStamps
+import com.codeci.ide.ui.services.TempGc
+import com.codeci.ide.ui.services.TempMeasure
 import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.terminal.ShellEnvironment
@@ -838,18 +841,18 @@ fun SettingsScreen(
             // tolerates the policy.
             val tempRoot = remember { File(context.filesDir, "CodeC/temp") }
             var tempMeasure by remember {
-                mutableStateOf(com.codeci.ide.ui.services.TempGc.measure(tempRoot))
+                mutableStateOf<TempMeasure>(TempGc.measure(tempRoot))
             }
             LaunchedEffect(Unit) {
                 tempMeasure = withContext(Dispatchers.IO) {
-                    com.codeci.ide.ui.services.TempGc.measure(tempRoot)
+                    TempGc.measure(tempRoot)
                 }
             }
             SettingsItem(
                 title = stringResource(com.codeci.ide.R.string.temporary_files_title),
                 subtitle = stringResource(
                     com.codeci.ide.R.string.temporary_files_subtitle,
-                    com.codeci.ide.ui.services.TempGc.formatMeasure(tempMeasure)
+                    TempGc.formatMeasure(tempMeasure)
                 )
             )
             SettingsAction(
@@ -858,13 +861,13 @@ fun SettingsScreen(
                 onClick = {
                     scope.launch {
                         val report = withContext(Dispatchers.IO) {
-                            com.codeci.ide.ui.services.TempGc.clearIdle(
+                            TempGc.clearIdle(
                                 tempRoot,
-                                busy = com.codeci.ide.ui.services.LiveRunStamps.snapshot(),
+                                busy = LiveRunStamps.snapshot(),
                             )
                         }
                         tempMeasure = withContext(Dispatchers.IO) {
-                            com.codeci.ide.ui.services.TempGc.measure(tempRoot)
+                            TempGc.measure(tempRoot)
                         }
                         Toast.makeText(
                             context,

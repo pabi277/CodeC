@@ -126,7 +126,7 @@ class TempGcTest {
             File(d, "program").writeText("x".repeat(100))
             if (s < 3L) d.setLastModified(now - 48L * 3600_000L)
         }
-        val report = TempGc.collect(
+        val report = TempGc.sweep(
             tempRoot,
             now = now,
             busy = emptySet(),

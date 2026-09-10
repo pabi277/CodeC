@@ -13,11 +13,11 @@ import org.junit.Test
 class TempGcAndRunInteropTest {
 
     @Test
-    fun `MainActivity cold-start invokes TempGc_collect`() {
+    fun `MainActivity cold-start invokes TempGc_sweep`() {
         val src = RepoFiles.mainSource(
             "app/src/main/java/com/codeci/ide/MainActivity.kt"
         ).readText()
-        assertTrue("MainActivity must call TempGc.collect on start", "TempGc.collect" in src)
+        assertTrue("MainActivity must call TempGc.sweep on start", "TempGc.sweep" in src)
         assertTrue("MainActivity must pass LiveRunStamps.snapshot()", "LiveRunStamps.snapshot()" in src)
     }
 
