@@ -83,7 +83,11 @@ import java.io.File
 fun GitControlSheet(
     projectRoot: File,
     onDismiss: () -> Unit,
-    viewModel: GitControlViewModel = viewModel()
+    viewModel: GitControlViewModel = viewModel(),
+    /** Phase 39 device follow-up — see [BranchSwitchSheet.onBeforeSwitch]. */
+    onBeforeBranchSwitch: (() -> Unit)? = null,
+    /** Phase 39 device follow-up — see [BranchSwitchSheet.onAfterSwitch]. */
+    onAfterBranchSwitch: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
@@ -190,6 +194,48 @@ fun GitControlSheet(
                         maxLines = 5,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     )
+                    // Phase 39.2 — "what will be committed" list + hygiene note.
+                    // Makes the ignore policy verifiable by a human instead of
+                    // by faith, and answers "why didn't my file push?".
+                    state.hygieneNote?.let { note ->
+                        Text(
+                            text = note,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                        )
+                    }
+                    state.commitPreview?.let { preview ->
+                        if (preview.total > 0) {
+                            Text(
+                                text = stringResource(R.string.git_commit_preview_header, preview.total),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                            )
+                            preview.staged.forEach { entry ->
+                                Text(
+                                    text = "  ${entry.status}  ${entry.path}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            if (preview.truncated) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.git_commit_preview_more,
+                                        (preview.total - preview.staged.size).coerceAtLeast(0)
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                                )
+                            }
+                        }
+                    }
                     // Mockup-exact: light-lavender fill with dark text
                     // (not the default primary/white button).
                     Button(
@@ -215,8 +261,15 @@ fun GitControlSheet(
                             .height(50.dp)
                             .padding(top = 10.dp)
                     ) {
+                        // Phase 39 device follow-up — name the branch so a
+                        // push from test-1 never looks like "push to main".
+                        val pushBranch = state.status?.branch
                         Text(
-                            stringResource(R.string.git_commit_push),
+                            text = if (!pushBranch.isNullOrBlank()) {
+                                stringResource(R.string.git_commit_push_to, pushBranch)
+                            } else {
+                                stringResource(R.string.git_commit_push)
+                            },
                             letterSpacing = 1.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -423,8 +476,18 @@ fun GitControlSheet(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = when {
-                                        ahead > 0 ->
-                                            stringResource(R.string.git_unpushed_count, ahead)
+                                        ahead > 0 -> {
+                                            val b = state.status?.branch
+                                            if (!b.isNullOrBlank()) {
+                                                stringResource(
+                                                    R.string.git_unpushed_count_branch,
+                                                    ahead,
+                                                    b
+                                                )
+                                            } else {
+                                                stringResource(R.string.git_unpushed_count, ahead)
+                                            }
+                                        }
                                         state.pushError != null ->
                                             stringResource(R.string.git_unpushed_unknown)
                                         else -> stringResource(
@@ -457,7 +520,15 @@ fun GitControlSheet(
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.height(42.dp)
                             ) {
-                                Text(stringResource(R.string.git_push_action), letterSpacing = 0.8.sp)
+                                val pushBranch = state.status?.branch
+                                Text(
+                                    text = if (!pushBranch.isNullOrBlank()) {
+                                        stringResource(R.string.git_push_to, pushBranch)
+                                    } else {
+                                        stringResource(R.string.git_push_action)
+                                    },
+                                    letterSpacing = 0.8.sp
+                                )
                             }
                         }
                     }
@@ -480,7 +551,9 @@ fun GitControlSheet(
     if (showBranchSheet) {
         BranchSwitchSheet(
             projectRoot = projectRoot,
-            onDismiss = { showBranchSheet = false }
+            onDismiss = { showBranchSheet = false },
+            onBeforeSwitch = onBeforeBranchSwitch,
+            onAfterSwitch = onAfterBranchSwitch
         )
     }
 }

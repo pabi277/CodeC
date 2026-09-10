@@ -3,9 +3,7 @@ package com.codeci.ide.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.codeci.ide.ui.projects.BuildArtifactIgnore
 import com.codeci.ide.ui.projects.DiffEngine
-import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitBranchList
 import com.codeci.ide.ui.projects.GitContext
@@ -15,6 +13,7 @@ import com.codeci.ide.ui.projects.GitFriendlyError
 import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.GitStatus
+import com.codeci.ide.ui.projects.RepoHygiene
 import com.codeci.ide.ui.projects.SwitchBranchResult
 import com.codeci.ide.ui.projects.BranchTarget
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -30,6 +29,11 @@ import kotlinx.coroutines.withContext
  * Phase 13 — state for the Source Control pane ([GitControlSheet]): branch
  * + change list, pull, and the one-tap commit-and-push flow, plus the inline
  * diff viewer contents.
+ *
+ * Phase 39.2 — ignore/untrack live inside [GitManager.stageAll] (the choke
+ * point). refresh() still calls [RepoHygiene.ensure] so the change list
+ * never offers build outputs; the untrack-on-refresh path is gone (it now
+ * happens on the same commit as the stage, so history stays one commit).
  */
 class GitControlViewModel : ViewModel() {
 
@@ -50,6 +54,11 @@ class GitControlViewModel : ViewModel() {
         val branchResult: String? = null,
         val branchError: String? = null,
         /**
+         * Phase 39 device follow-up — soft note when GitHub heads could not
+         * be listed (offline / no token). Local branches still show.
+         */
+        val remoteDiscoveryNote: String? = null,
+        /**
          * Phase 17 device fix — the reason the last push failed, kept until a
          * push succeeds or the user dismisses it. A failed push used to look
          * exactly like a successful one (the commit clears the change list),
@@ -60,7 +69,18 @@ class GitControlViewModel : ViewModel() {
          * Phase 17 follow-up — a help link to show next to [pushError] (the
          * GitHub token page for auth failures), or null when not applicable.
          */
-        val pushHelpUrl: String? = null
+        val pushHelpUrl: String? = null,
+        /**
+         * Phase 39.2 — one-line note when stageAll untracked previously
+         * committed build outputs ("Removed N build outputs from the repo…").
+         * Cleared on the next successful refresh without a hygiene change.
+         */
+        val hygieneNote: String? = null,
+        /**
+         * Phase 39.2 — "what will be committed" projection (first ~15 names)
+         * from the current status. Empty when nothing is staged/pending.
+         */
+        val commitPreview: RepoHygiene.CommitPreview? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -92,10 +112,22 @@ class GitControlViewModel : ViewModel() {
 
     // ---- Phase 17: branches ------------------------------------------------
 
-    /** Loads the branch list for the Switch Branch dialog (off the UI thread). */
+    /**
+     * Loads the branch list for the Switch Branch dialog (off the UI thread).
+     *
+     * Phase 39 device follow-up: discovers every head on GitHub via
+     * `git ls-remote --heads` (not only what a shallow clone already fetched),
+     * so test-1 / test-2 show under Remote even when the device never had
+     * them. Offline / no token keeps the local list — never blocks the dialog
+     * on a network failure. Checking one out fetches that branch on demand.
+     */
     fun loadBranches(context: Context, projectRoot: File) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(branchesLoading = true, branchError = null)
+            _state.value = _state.value.copy(
+                branchesLoading = true,
+                branchError = null,
+                remoteDiscoveryNote = null
+            )
             val git = gitContext(context).manager()
             if (git == null) {
                 _state.value = _state.value.copy(
@@ -105,8 +137,15 @@ class GitControlViewModel : ViewModel() {
                 return@launch
             }
             try {
-                val list = withContext(Dispatchers.IO) { git.listBranches(projectRoot) }
-                _state.value = _state.value.copy(branchesLoading = false, branches = list)
+                val (list, note) = withContext(Dispatchers.IO) {
+                    git.listBranchesWithRemoteHeads(projectRoot)
+                }
+                _state.value = _state.value.copy(
+                    branchesLoading = false,
+                    branches = list,
+                    // Soft fetch/ls-remote failure only — never hide locals.
+                    remoteDiscoveryNote = note
+                )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     branchesLoading = false,
@@ -122,12 +161,19 @@ class GitControlViewModel : ViewModel() {
      * result text is kept in `branchResult`/`branchError` so the dialog can
      * show it before the user closes it (entry points without a snackbar —
      * the editor drawer, the Projects card — still surface the outcome).
+     *
+     * [onBeforeSwitch] / [onAfterSwitch] let the editor flush open buffers
+     * before checkout and reload them from the new tree afterwards — without
+     * that, every branch shows the same in-memory text and auto-save bleeds
+     * edits across branches.
      */
     fun switchBranch(
         context: Context,
         projectRoot: File,
         target: BranchTarget,
-        stashChanges: Boolean = true
+        stashChanges: Boolean = true,
+        onBeforeSwitch: (() -> Unit)? = null,
+        onAfterSwitch: (() -> Unit)? = null
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(
@@ -144,15 +190,23 @@ class GitControlViewModel : ViewModel() {
                 return@launch
             }
             try {
+                // Flush editor buffers on the main dispatcher before git runs.
+                onBeforeSwitch?.invoke()
                 val result = withContext(Dispatchers.IO) {
                     git.switchBranch(projectRoot, target, stashChanges)
                 }
+                // Reload editor from the new tree before the dialog shows
+                // success — otherwise the user still sees the old branch.
+                onAfterSwitch?.invoke()
                 _state.value = _state.value.copy(
                     branchBusy = false,
                     branchResult = describeSwitch(result)
                 )
                 refresh(context, projectRoot)
             } catch (e: Exception) {
+                // Checkout failed — still refresh the editor in case a partial
+                // write landed (or the pre-switch flush left the tree dirty).
+                onAfterSwitch?.invoke()
                 _state.value = _state.value.copy(
                     branchBusy = false,
                     branchError = friendly(e, git.hasCredentials).display()
@@ -221,27 +275,53 @@ class GitControlViewModel : ViewModel() {
                 val isRepo = withContext(Dispatchers.IO) { git.isRepository(projectRoot) }
                 val status = if (isRepo) {
                     withContext(Dispatchers.IO) {
-                        // Device round fix 2026-08-31: a python bytecode cache
-                        // that nothing ignores gets repo-locally excluded right
-                        // before we list changes — the panel (and its COMMIT &
-                        // PUSH staging) never offers __pycache__ files again.
-                        PythonCacheIgnore.ensure(projectRoot)
-                        // Same treatment for build/run outputs (a.out, bin/*):
-                        // exclude new ones AND untrack any that an earlier
-                        // push already committed, so artifacts stop traveling.
-                        BuildArtifactIgnore.ensure(projectRoot)
-                        BuildArtifactIgnore.untrackTracked(projectRoot, git)
-                        git.status(projectRoot)
+                        // Phase 39.2 — one table covers python caches, build
+                        // outputs, .codec/, OS junk. ensure() is idempotent
+                        // and never edits the user's .gitignore. Untrack of
+                        // already-committed artifacts now happens inside
+                        // stageAll (same commit as the clean tree), not here.
+                        RepoHygiene.ensure(projectRoot)
+                        val local = git.status(projectRoot)
+                        // Phase 39 device follow-up — the "Branch X is not on
+                        // the remote yet" banner used only the local upstream
+                        // config. After a successful create+push the branch
+                        // IS on GitHub, but if tracking was missing/stale the
+                        // banner stayed. Probe the remote and repair tracking.
+                        git.resolvePublishState(projectRoot, local)
                     }
                 } else {
                     null
+                }
+                // "What will be committed" — every pending path the sheet
+                // shows, projected the same way stage+commit would take them.
+                val preview = status?.let { s ->
+                    // Treat every listed change as "would be staged by add -A".
+                    // Map untracked/unstaged onto a synthetic staged view for
+                    // the preview (stageAll is add -A).
+                    val synthetic = s.files.map { f ->
+                        val x = if (f.x == ' ' || f.x == '?') {
+                            when {
+                                f.y == '?' -> 'A' // untracked → would be added
+                                f.y == 'D' -> 'D'
+                                f.y == 'M' || f.y == ' ' -> 'M'
+                                else -> f.y
+                            }
+                        } else f.x
+                        "${x}  ${f.oldPath?.let { "$it -> ${f.path}" } ?: f.path}"
+                    }
+                    RepoHygiene.commitPreview(
+                        porcelainLines = listOf("## ${s.branch ?: "HEAD"}") + synthetic,
+                        limit = 15,
+                        hygieneNote = _state.value.hygieneNote,
+                    )
                 }
                 _state.value = _state.value.copy(
                     loading = false,
                     gitInstalled = true,
                     isRepo = isRepo,
                     status = status,
-                    message = finalMessage
+                    message = finalMessage,
+                    commitPreview = preview,
                 )
             } catch (e: Exception) {
                 // `git status` never authenticates, so a token check is moot;
@@ -288,19 +368,34 @@ class GitControlViewModel : ViewModel() {
             return
         }
         runGitOperation(context, projectRoot, "Committing…") { git ->
-            // Make sure fresh build outputs (a.out, bin/…) are ignored before
-            // `git add -A` sweeps the tree.
-            BuildArtifactIgnore.ensure(projectRoot)
-            git.stageAll(projectRoot)
+            // Phase 39.2 — stageAll is the choke point: ensure exclude +
+            // untrack previously-committed artifacts + git add -A. The
+            // hygiene note is surfaced on the sheet so an unexplained
+            // `git rm --cached` never appears in the user's history.
+            val hygiene = git.stageAll(projectRoot)
+            val note = hygiene.userMessage()
+            if (note != null) {
+                _state.value = _state.value.copy(hygieneNote = note)
+            }
             git.commit(projectRoot, trimmed)
             // Phase 17 device fix: publish a branch that has no upstream yet
             // (`git push --set-upstream <remote> <branch>`) instead of failing
             // with "has no upstream branch" — and never claim a push worked.
             val pushFailure = runCatching { git.pushHandlingUpstream(projectRoot) }
                 .exceptionOrNull()
+            // Phase 39 device follow-up — name the branch so success never
+            // reads like a silent push to main.
+            val branchLabel = runCatching { git.currentBranch(projectRoot) }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
             if (pushFailure == null) {
                 _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
-                "Committed & pushed ✓"
+                val pushed = if (branchLabel != null) {
+                    "Committed & pushed to $branchLabel ✓"
+                } else {
+                    "Committed & pushed ✓"
+                }
+                if (note != null) "$note · $pushed" else pushed
             } else {
                 // Phase 17 follow-up: a friendly, actionable reason + token
                 // link instead of raw git output.
@@ -309,7 +404,9 @@ class GitControlViewModel : ViewModel() {
                     pushError = friendly.message,
                     pushHelpUrl = friendly.helpUrl
                 )
-                "Committed locally ✓ — NOT pushed: ${friendly.message}"
+                val prefix = if (note != null) "$note · " else ""
+                val where = if (branchLabel != null) " on $branchLabel" else ""
+                "${prefix}Committed locally$where ✓ — NOT pushed: ${friendly.message}"
             }
         }
     }
@@ -332,7 +429,8 @@ class GitControlViewModel : ViewModel() {
         ) { git ->
             git.pushHandlingUpstream(projectRoot)
             _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
-            "Pushed ✓"
+            val branch = runCatching { git.currentBranch(projectRoot) }.getOrNull()
+            if (!branch.isNullOrBlank()) "Pushed to $branch ✓" else "Pushed ✓"
         }
     }
 

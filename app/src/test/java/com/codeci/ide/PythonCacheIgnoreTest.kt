@@ -96,21 +96,35 @@ class PythonCacheIgnoreTest {
     }
 
     @Test
-    fun ensure_skips_when_the_user_gitignore_already_covers_it() {
+    fun ensure_skips_python_lines_when_the_user_gitignore_already_covers_them() {
         File(root, ".git").mkdirs()
         File(root, "__pycache__").mkdirs()
-        File(root, ".gitignore").writeText("__pycache__/\n")
+        File(root, ".gitignore").writeText("__pycache__/\n*.pyc\n*.pyo\n")
         PythonCacheIgnore.ensure(root)
-        assertFalse(File(root, ".git/info/exclude").exists())
+        // Phase 39.2 writes the REST of the table, but not the python lines
+        // the user already covered.
+        val exclude = File(root, ".git/info/exclude")
+        if (exclude.isFile) {
+            val content = exclude.readText()
+            // exact patterns the user wrote must not be duplicated
+            val lines = content.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }
+            assertTrue(lines.none { it == "__pycache__/" })
+            assertTrue(lines.none { it == "*.pyc" })
+            assertTrue(lines.none { it == "*.pyo" })
+        }
     }
 
     @Test
-    fun ensure_is_a_noop_without_a_repo_and_without_a_cache() {
+    fun ensure_is_a_noop_without_a_repo_and_writes_without_needing_a_cache() {
         File(root, "main.py").writeText("print(1)")
         PythonCacheIgnore.ensure(root) // no .git at all
-        File(root, ".git").mkdirs()
-        PythonCacheIgnore.ensure(root) // repo but no cache
         assertFalse(File(root, ".git/info/exclude").exists())
+        File(root, ".git").mkdirs()
+        // Phase 39.2 — the full RepoHygiene table is applied for any repo,
+        // without waiting for a __pycache__ to appear on disk.
+        PythonCacheIgnore.ensure(root)
+        assertTrue(File(root, ".git/info/exclude").isFile)
+        assertTrue(File(root, ".git/info/exclude").readText().contains("__pycache__/"))
     }
 
     @Test

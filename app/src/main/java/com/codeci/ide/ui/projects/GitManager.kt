@@ -140,8 +140,21 @@ class GitManager(
     }
 
     /** Stage everything (`git add -A`) — the pane commits the whole tree. */
-    fun stageAll(root: File) {
+    /**
+     * Phase 39.2 — the choke point. Every path that stages (COMMIT & PUSH,
+     * future publish) goes through here, so ignore/untrack cannot be
+     * bypassed by a caller's good intentions:
+     *   1. [RepoHygiene.ensure] appends missing patterns to `.git/info/exclude`
+     *   2. tracked violations are `git rm --cached`'d (file stays on disk)
+     *   3. `git add -A`
+     * A `git rm --cached` failure aborts before add — a half-staged commit
+     * is worse than no commit. Returns the hygiene result so the sheet can
+     * show "Removed N build outputs…".
+     */
+    fun stageAll(root: File): RepoHygiene.HygieneResult {
+        val hygiene = RepoHygiene.prepareForStage(root, this, strict = true)
         exec(root, listOf("add", "-A"), localTimeoutSeconds, "git add failed")
+        return hygiene
     }
 
     /**
@@ -263,14 +276,108 @@ class GitManager(
      * a branch tracks something, so a missing upstream is detectable without
      * another process — and the extra `status` call is the one CodeC already
      * makes for the Source Control sheet.
+     *
+     * Always passes the branch **name** (not a bare `git push`) so a push
+     * from `test-1` cannot be mistaken for (or silently land on) `main`.
+     * When upstream is already set, this is still `git push <remote> <branch>`
+     * — same effect as plain `git push`, with an explicit ref.
      */
     fun pushHandlingUpstream(root: File) {
         val status = runCatching { status(root) }.getOrNull()
-        push(
+        val branch = status?.branch
+        val needsUpstream = status?.upstream == null
+        if (needsUpstream) {
+            push(root, setUpstream = true, branchName = branch)
+        } else {
+            // Explicit remote + branch so the argv (and the UI label) always
+            // name the branch the user is on — never a silent default.
+            val remote = firstRemote(root) ?: "origin"
+            val ref = branch?.trim()
+                ?.takeIf { GitBranchOps.isSafeExistingBranch(it) }
+                ?: "HEAD"
+            exec(
+                root,
+                listOf("push", remote, ref),
+                networkTimeoutSeconds,
+                "git push failed"
+            )
+        }
+    }
+
+    /**
+     * True when [branch] already exists on the first remote as a head
+     * (`refs/heads/<branch>` via `git ls-remote --heads`). Used to stop the
+     * "not on the remote yet" banner after a successful publish when the
+     * local upstream config is missing or stale — the remote is the truth.
+     *
+     * Best-effort: offline / no token / empty branch → false (banner may
+     * still show; the next successful push clears it).
+     */
+    fun remoteHasBranch(root: File, branch: String): Boolean {
+        val name = branch.trim()
+        if (name.isEmpty() || !GitBranchOps.isSafeExistingBranch(name)) return false
+        val remote = firstRemote(root) ?: "origin"
+        // Cap the probe well below the full push timeout — a hung ls-remote
+        // must not freeze the Source Control sheet for five minutes.
+        val probeTimeout = networkTimeoutSeconds.coerceAtMost(30L)
+        val result = runCatching {
+            runGit(
+                workingDir = root,
+                args = listOf("ls-remote", "--heads", remote, name),
+                timeoutSeconds = probeTimeout
+            )
+        }.getOrNull() ?: return false
+        if (result.exitCode != 0) return false
+        // Exact refs/heads/<name> only — never a suffix of another branch
+        // (e.g. refs/heads/foo/test-1 must not match test-1).
+        val needle = "refs/heads/$name"
+        return result.stdout.any { line ->
+            val ref = line.trim().substringAfter('\t', "")
+                .ifEmpty { line.trim().substringAfter(' ', "") }
+                .trim()
+            ref == needle
+        }
+    }
+
+    /**
+     * `git branch --set-upstream-to=<remote>/<branch> <branch>` — wire local
+     * tracking after we discover the remote already has the branch (e.g. a
+     * previous publish succeeded but tracking never stuck). Best-effort; the
+     * caller keeps going even if this fails.
+     */
+    fun setUpstream(root: File, branch: String) {
+        val name = branch.trim()
+        require(GitBranchOps.isSafeExistingBranch(name)) { "Invalid branch name" }
+        val remote = firstRemote(root) ?: "origin"
+        exec(
             root,
-            setUpstream = status?.upstream == null,
-            branchName = status?.branch
+            listOf("branch", "--set-upstream-to=$remote/$name", name),
+            localTimeoutSeconds,
+            "git branch --set-upstream-to failed"
         )
+    }
+
+    /**
+     * Enriches a local [GitStatus] with a remote probe (and, when the remote
+     * already has the branch, repairs missing upstream tracking so the next
+     * `git status` reports ahead/behind honestly).
+     *
+     * Only hits the network when the local heuristic says "unpublished".
+     */
+    fun resolvePublishState(root: File, local: GitStatus): GitStatus {
+        val branch = local.branch ?: return local
+        if (local.detached || local.noCommits || local.upstream != null) return local
+        val onRemote = runCatching { remoteHasBranch(root, branch) }.getOrNull()
+            ?: return local.copy(remoteBranchExists = null)
+        if (onRemote) {
+            // Repair tracking so the banner stays gone and ahead counts work.
+            runCatching { setUpstream(root, branch) }
+            val refreshed = runCatching { status(root) }.getOrNull()
+            if (refreshed != null) {
+                return refreshed.copy(remoteBranchExists = true)
+            }
+        }
+        return local.copy(remoteBranchExists = onRemote)
     }
 
     /** `git pull` — merge auto-edit disabled so no editor can ever block. */
@@ -380,6 +487,167 @@ class GitManager(
         return value.takeIf { it.isNotEmpty() && it != "HEAD" }
     }
 
+    /**
+     * `git fetch --prune <remote>` — refresh remote-tracking refs so the
+     * Switch Branch sheet can offer branches that already exist on GitHub
+     * (not only the one the clone landed on, and not only branches created
+     * inside the app). Best-effort: callers treat failure as "list what we
+     * already know".
+     *
+     * Uses `--prune` so deleted remote branches disappear from the list.
+     * For shallow clones (`--depth 1`) a plain fetch still only updates the
+     * tracked tip — use [fetchBranch] / [listRemoteHeadNames] for other heads.
+     */
+    fun fetch(root: File) {
+        val remote = firstRemote(root) ?: "origin"
+        exec(
+            root,
+            listOf("fetch", "--prune", remote),
+            networkTimeoutSeconds,
+            "git fetch failed"
+        )
+    }
+
+    /**
+     * `git fetch <remote> <branch>` — pull one remote head into
+     * `refs/remotes/<remote>/<branch>` so [checkoutRemote] can track it.
+     * Works for shallow clones that never received that branch (the usual
+     * reason test-1 / test-2 were missing from the Switch Branch sheet while
+     * GitHub still had them).
+     *
+     * Shallow clones get `--depth 1` on this one head so the tip is always
+     * downloadable. After fetch we verify the remote-tracking ref exists;
+     * some git builds only leave FETCH_HEAD — recover with update-ref.
+     */
+    fun fetchBranch(root: File, branch: String) {
+        val name = branch.trim()
+        require(GitBranchOps.isSafeExistingBranch(name)) { "Invalid branch name" }
+        val remote = firstRemote(root) ?: "origin"
+        val dest = "refs/remotes/$remote/$name"
+        val refspec = "+refs/heads/$name:$dest"
+        val args = mutableListOf("fetch")
+        if (File(root, ".git/shallow").isFile) {
+            args += "--depth"
+            args += "1"
+        }
+        args += remote
+        args += refspec
+        exec(root, args, networkTimeoutSeconds, "git fetch failed")
+        if (!remoteTrackingRefExists(root, remote, name)) {
+            // Fallback: plain fetch into FETCH_HEAD, then point the tracking ref.
+            exec(
+                root,
+                listOf("fetch", remote, name),
+                networkTimeoutSeconds,
+                "git fetch failed"
+            )
+            exec(
+                root,
+                listOf("update-ref", dest, "FETCH_HEAD"),
+                localTimeoutSeconds,
+                "git update-ref failed"
+            )
+        }
+        if (!remoteTrackingRefExists(root, remote, name)) {
+            throw GitCommandException(
+                "git fetch failed: remote branch '$name' did not land on this device",
+                1,
+                emptyList()
+            )
+        }
+    }
+
+    /** True when `refs/remotes/<remote>/<branch>` resolves (loose or packed). */
+    fun remoteTrackingRefExists(root: File, remote: String, branch: String): Boolean {
+        val ref = "refs/remotes/${remote.trim()}/${branch.trim()}"
+        val result = runCatching {
+            runGit(
+                workingDir = root,
+                args = listOf("rev-parse", "--verify", ref),
+                timeoutSeconds = localTimeoutSeconds
+            )
+        }.getOrNull() ?: return false
+        return result.exitCode == 0 && result.stdout.any { it.trim().isNotEmpty() }
+    }
+
+    /**
+     * Every branch name on the first remote (`git ls-remote --heads`), even
+     * when a shallow clone never fetched them. Falls back to the remote URL
+     * from `.git/config` when `git ls-remote <remote>` needs the full URL.
+     * Empty list on failure (caller keeps the local list).
+     */
+    fun listRemoteHeadNames(root: File): List<String> {
+        val remote = firstRemote(root) ?: "origin"
+        // Prefer the configured remote name (auth/askpass already wired).
+        val viaRemote = runCatching {
+            runGit(
+                workingDir = root,
+                args = listOf("ls-remote", "--heads", remote),
+                timeoutSeconds = networkTimeoutSeconds.coerceAtMost(60L)
+            )
+        }.getOrNull()
+        if (viaRemote != null && viaRemote.exitCode == 0) {
+            val names = ProjectsHub.branchNamesFromLsRemote(viaRemote.stdout)
+            if (names.isNotEmpty()) return names.distinct()
+        }
+        // Fallback: read the remote URL from config and query it directly
+        // (same path the clone dialog uses).
+        val url = runCatching {
+            val cfg = File(root, ".git/config")
+            if (cfg.isFile) ProjectsHub.remoteUrlFromConfig(cfg.readText()) else null
+        }.getOrNull()
+        if (!url.isNullOrBlank() && isCloneableUrl(url)) {
+            return runCatching { listRemoteBranches(url) }.getOrDefault(emptyList())
+        }
+        return emptyList()
+    }
+
+    /**
+     * Local branches plus every head that exists on the remote (from
+     * [listRemoteHeadNames]), so the Switch Branch sheet can offer "check out
+     * test-1" even when the clone never fetched it. Remote rows already
+     * covered by a local branch are dropped ([withoutLocallyTrackedRemotes]).
+     *
+     * [remoteDiscoveryError] is set when the network probe failed so the UI
+     * can show a soft hint without hiding local branches.
+     */
+    fun listBranchesWithRemoteHeads(root: File): Pair<GitBranchList, String?> {
+        val local = listBranches(root)
+        // Always try a plain fetch first (updates tips we already track).
+        val fetchErr = runCatching { fetch(root) }.exceptionOrNull()
+        val afterFetch = runCatching { listBranches(root) }.getOrDefault(local)
+
+        val remoteNames = runCatching { listRemoteHeadNames(root) }.getOrDefault(emptyList())
+        if (remoteNames.isEmpty()) {
+            val note = when {
+                fetchErr != null ->
+                    GitErrors.classify(
+                        raw = fetchErr.message,
+                        exitCode = (fetchErr as? GitCommandException)?.exitCode,
+                        hasToken = hasCredentials
+                    ).message
+                else -> null
+            }
+            return afterFetch.withoutLocallyTrackedRemotes() to note
+        }
+        val remote = firstRemote(root) ?: "origin"
+        val localNames = afterFetch.local.map { it.name }.toSet()
+        val knownRemote = afterFetch.remote.map { it.localName }.toSet()
+        val extras = remoteNames
+            .filter { it !in localNames && it !in knownRemote }
+            .filter { GitBranchOps.isSafeExistingBranch(it) }
+            .sorted()
+            .map { name ->
+                GitBranch(
+                    name = "$remote/$name",
+                    isRemote = true,
+                    isCurrent = false
+                )
+            }
+        val merged = afterFetch.copy(branches = afterFetch.branches + extras)
+        return merged.withoutLocallyTrackedRemotes() to null
+    }
+
     /** `git checkout <branch>` for a branch that already exists locally. */
     fun checkout(root: File, branch: String) {
         val safe = branch.trim()
@@ -399,24 +667,45 @@ class GitManager(
     }
 
     /**
-     * `git checkout -b <local> --track <remote>` for a remote-only branch.
+     * Check out a remote-only branch as a local tracking branch.
      *
-     * Checking the remote-tracking ref out directly would detach HEAD, so a
-     * local tracking branch is created from it instead; when a local branch of
-     * the same name already exists, the caller (see [switchBranch]) checks
-     * that one out instead of failing here.
+     * Device error was: `cannot set up tracking information; starting point
+     * 'origin/test-1' is not a branch` — ls-remote listed the name, but
+     * `checkout -b --track origin/test-1` needs a real remote-tracking ref.
+     * On shallow clones the short name is not a branch.
+     *
+     * Path:
+     *  1. [fetchBranch] so `refs/remotes/<remote>/<local>` really exists
+     *  2. `git checkout -B <local> refs/remotes/<remote>/<local>` from the
+     *     **full** ref (never the short `origin/name`)
+     *  3. `git branch --set-upstream-to=<remote>/<local> <local>`
+     *
+     * When a local branch of the same name already exists, [switchBranch]
+     * checks that one out instead of calling here.
      */
     fun checkoutRemote(root: File, remoteRef: String) {
         val safe = remoteRef.trim()
         require(GitBranchOps.isSafeExistingBranch(safe)) { "Invalid branch name" }
         val local = safe.substringAfter('/', "")
         require(local.isNotEmpty() && ProjectsHub.isValidBranchName(local)) { "Invalid branch name" }
+        val remote = safe.substringBefore('/', firstRemote(root) ?: "origin")
+            .ifEmpty { firstRemote(root) ?: "origin" }
+        fetchBranch(root, local)
+        val fullRef = "refs/remotes/$remote/$local"
         exec(
             root,
-            listOf("checkout", "-b", local, "--track", safe),
+            listOf("checkout", "-B", local, fullRef),
             localTimeoutSeconds,
             "git checkout failed"
         )
+        runCatching {
+            exec(
+                root,
+                listOf("branch", "--set-upstream-to=$remote/$local", local),
+                localTimeoutSeconds,
+                "git branch --set-upstream-to failed"
+            )
+        }
     }
 
     /**
@@ -487,6 +776,21 @@ class GitManager(
         val fromBranch = before?.branch
         val dirty = before?.files?.isNotEmpty() == true
 
+        // No-op when the user re-confirms the branch they are already on
+        // (avoids a useless checkout that fails on a dirty tree).
+        if (target.kind == BranchTargetKind.LOCAL &&
+            fromBranch != null &&
+            target.name.trim() == fromBranch
+        ) {
+            return SwitchBranchResult(branch = fromBranch)
+        }
+        if (target.kind == BranchTargetKind.REMOTE) {
+            val local = target.name.trim().substringAfter('/', "")
+            if (fromBranch != null && local == fromBranch) {
+                return SwitchBranchResult(branch = fromBranch)
+            }
+        }
+
         var stashed = false
         if (stashChanges && dirty) {
             stashed = stashPush(
@@ -528,7 +832,15 @@ class GitManager(
 
         var restored = false
         var pending = false
-        if (stashChanges) {
+        if (stashed && target.kind == BranchTargetKind.NEW) {
+            // Creating a branch carries the work you were doing onto it —
+            // the stash was marked with the *parent* name, so the
+            // "codecBranch == landed" lookup below would miss it and leave
+            // edits parked forever under the old branch.
+            runCatching { stashPop(root) }
+                .onSuccess { restored = true }
+                .onFailure { pending = true }
+        } else if (stashChanges) {
             val mine = runCatching { stashList(root) }.getOrDefault(emptyList())
                 .firstOrNull { it.codecBranch == landed }
             if (mine != null) {
@@ -891,7 +1203,16 @@ data class GitStatus(
     val behind: Int = 0,
     val files: List<GitFileChange> = emptyList(),
     /** True for `## No commits yet on <branch>` (an empty repository). */
-    val noCommits: Boolean = false
+    val noCommits: Boolean = false,
+    /**
+     * Phase 39 device follow-up — when non-null, overrides the local-only
+     * "no upstream config" guess with a real `git ls-remote` answer:
+     * `true` = branch exists on the remote (so the "not on remote yet"
+     * banner must hide even if upstream tracking is missing);
+     * `false` = confirmed missing on the remote.
+     * `null` = not probed (fall back to the local heuristic).
+     */
+    val remoteBranchExists: Boolean? = null,
 ) {
     /**
      * Phase 17 follow-up (owner, 2026-09-01: "locally commit cannot be
@@ -899,9 +1220,20 @@ data class GitStatus(
      * its commits live only on this device and the first push must publish
      * the branch itself. A fresh repo with zero commits is NOT unpublished
      * (there is nothing to push), and a detached HEAD is not either.
+     *
+     * Phase 39 device follow-up: if we already know the remote has this
+     * branch ([remoteBranchExists] = true), it is NOT unpublished — the
+     * banner was lying after a successful create+push when only the local
+     * upstream config was missing. If the remote probe says false, keep
+     * the banner. If unprobed, keep the original local heuristic.
      */
     val unpublished: Boolean
-        get() = branch != null && !detached && upstream == null && !noCommits
+        get() {
+            if (branch == null || detached || noCommits) return false
+            if (remoteBranchExists == true) return false
+            if (remoteBranchExists == false) return upstream == null
+            return upstream == null
+        }
 }
 
 /**

@@ -371,8 +371,11 @@ report → STOP at the merge gate. The owner merges to `main` themselves
    Settings with the mechanism kept + the audit that deleted two
    reader-less store keys (38.2) — 45 new host cases, CI GREEN, device
    round passed by owner report. **Phase 39 (outputs are temporary,
-   never in your repo) is next and starts on the owner's "Start Phase
-   39"**; no self-initiated phase starts otherwise.
+   never in your repo) is 🔧 IMPLEMENTED on `arena/01a08a0a-codec`
+   (host-tested; device round pending)** — `RunArtifacts` + `TempGc` +
+   `RepoHygiene` (~56 patterns incl. `.codec/`) enforced inside
+   `stageAll`; no self-initiated phase starts otherwise. **Next: device
+   round, then Phase 40.**
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,

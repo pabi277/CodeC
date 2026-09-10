@@ -78,6 +78,25 @@ class GitStatusParserTest {
     }
 
     @Test
+    fun `remoteBranchExists true clears unpublished even without upstream`() {
+        // Phase 39 device follow-up: branch is on GitHub but local upstream
+        // tracking is missing — the banner must not keep saying "not on the
+        // remote yet".
+        val local = GitStatusParser.parse(listOf("## test-1", "M  a.c"))
+        assertTrue(local.unpublished)
+        val enriched = local.copy(remoteBranchExists = true)
+        assertFalse(enriched.unpublished)
+        assertEquals("test-1", enriched.branch)
+    }
+
+    @Test
+    fun `remoteBranchExists false keeps unpublished when no upstream`() {
+        val local = GitStatusParser.parse(listOf("## test-1"))
+        val enriched = local.copy(remoteBranchExists = false)
+        assertTrue(enriched.unpublished)
+    }
+
+    @Test
     fun `detached head`() {
         val status = GitStatusParser.parse(listOf("## HEAD (no branch)"))
         assertTrue(status.detached)

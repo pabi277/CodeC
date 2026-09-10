@@ -6,19 +6,18 @@ import android.provider.DocumentsContract
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.R
-import com.codeci.ide.ui.projects.BuildArtifactIgnore
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
 import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectConfig
-import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubStats
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.RepoHygiene
 import com.codeci.ide.ui.projects.ProjectRunDetector
 import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.projects.ProjectTransfer
@@ -99,11 +98,14 @@ class FileManagerViewModel : ViewModel() {
             val isGit = gitDir.exists()
             val branch = if (isGit) readBranchQuietly(project.root, gitDir) else null
             val status = if (isGit && git != null) {
-                // Device round fix 2026-08-31: stray __pycache__ from a python
-                // run must not light up the card badge / push offer either.
-                runCatching { PythonCacheIgnore.ensure(project.root) }
-                // Build outputs (a.out, bin/*.out, …) stay out of the badge too.
-                runCatching { BuildArtifactIgnore.ensure(project.root) }
+                // Phase 39.2 — one table covers python caches, build outputs,
+                // .codec/, OS junk. ensure() is idempotent and never edits
+                // the user's .gitignore.
+                runCatching { RepoHygiene.ensure(project.root) }
+                // Hub cards stay local-only (no ls-remote per project — that
+                // would stall the grid offline). The Source Control sheet
+                // runs resolvePublishState and repairs upstream tracking, so
+                // the next hub refresh after opening SC sees the truth.
                 runCatching { git.status(project.root) }.getOrNull()
             } else {
                 null
@@ -131,6 +133,7 @@ class FileManagerViewModel : ViewModel() {
                 // Phase 17 device fix: commits that never reached the remote.
                 unpushed = status?.ahead ?: 0,
                 // Phase 17 follow-up: a branch with commits but no remote.
+                // Phase 39 device follow-up: remote probe can clear this.
                 unpublished = status?.unpublished == true
             )
         }
@@ -556,9 +559,18 @@ class FileManagerViewModel : ViewModel() {
                     ?: error(context.getString(R.string.git_not_installed_message))
                 // Phase 17 device fix: a branch created in the app has no
                 // upstream, so publish it instead of failing.
-                withContext(Dispatchers.IO) { git?.pushHandlingUpstream(project.root) }
+                // Phase 39 device follow-up: name the branch in the success
+                // toast so a push from test-1 never looks like "pushed main".
+                val branch = withContext(Dispatchers.IO) {
+                    git?.pushHandlingUpstream(project.root)
+                    git?.currentBranch(project.root)
+                }
                 loadProjects(context)
-                _userMessage.value = context.getString(R.string.hub_push_success, projectName)
+                _userMessage.value = if (!branch.isNullOrBlank()) {
+                    context.getString(R.string.hub_push_success_branch, projectName, branch)
+                } else {
+                    context.getString(R.string.hub_push_success, projectName)
+                }
                 onDone()
             } catch (e: Exception) {
                 _userMessage.value = context.getString(

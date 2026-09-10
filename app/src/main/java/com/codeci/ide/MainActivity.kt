@@ -87,6 +87,8 @@ import com.codeci.ide.ui.editor.lsp.StdioLspProviderFactory
 import com.codeci.ide.ui.editor.lsp.SystemBinaryProbe
 import com.codeci.ide.ui.editor.sora.ActiveLspManager
 import com.codeci.ide.ui.settings.SettingsManager
+import com.codeci.ide.ui.services.LiveRunStamps
+import com.codeci.ide.ui.services.TempGc
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.CodecApiBridge
 import com.codeci.ide.ui.terminal.CodecApiProtocol
@@ -195,6 +197,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         installCrashLog()
         enableEdgeToEdge()
+        // Phase 39.1 — bound CodeC/temp/runs on every cold start. Never
+        // touches a stamp that is currently running (LiveRunStamps) and
+        // never walks outside runs/. Failures are counted, never thrown.
+        try {
+            val gcThread = Thread {
+                try {
+                    val tempRoot = java.io.File(filesDir, "CodeC/temp")
+                    TempGc.sweep(tempRoot, busy = LiveRunStamps.snapshot())
+                } catch (_: Throwable) {
+                    // GC must never crash the app.
+                }
+            }
+            gcThread.isDaemon = true
+            gcThread.name = "codec-temp-gc"
+            gcThread.start()
+        } catch (_: Throwable) {
+            // ignore
+        }
+
 
         // Phase 29.1 — preload the TextMate grammar sets (VS Code grammars)
         // on a background thread while the user is still navigating to the

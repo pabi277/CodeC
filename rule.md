@@ -228,9 +228,14 @@ Every update updates the docs **in the same commit**:
   assets` step passed first try; `CodeC-IDE` 24 815 485 B = −32 351 B
   / −0.13 % vs `main` — the deleted template webps outweigh the new
   rasters). **Device round ✅ PASSED (owner report, 2026-09-10) and the
-  merge was commanded and executed. Next: `Start Phase 39` → 40 → 41 →
-  42 → 43 (the numbers are the order; 39.1 before 43.2).** Records:
-  `docs/chat-phase38/`, JOURNEY §54.
+  merge was commanded and executed. **Phase 39 is 🔧 IMPLEMENTED on
+  `arena/01a08a0a-codec` (host-tested; device round pending)** —
+  `RunArtifacts` + `TempGc` + `RepoHygiene` (~56 patterns incl. `.codec/`)
+  enforced inside `stageAll`; Settings → Storage temporary-files row;
+  user `.gitignore` always wins. Next: device round, then `Start Phase
+  40` → 41 → 42 → 43 (the numbers are the order; 39.1 before 43.2 is now
+  satisfied).** Records: `docs/chat-phase38/`, `docs/chat-phase39/`,
+  JOURNEY §54 / §55.
 
 - **Phases 38-43 are 📋 PLANNED — docs only, no app code; the plan itself is now on `main`** (written 2026-09-10,
   owner: six new "before I share this" ideas + *"research thoroughly then write

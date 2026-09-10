@@ -1883,7 +1883,18 @@ fun EditorScreen(
         }
 
         gitSheetRoot?.let { root ->
-            GitControlSheet(projectRoot = root, onDismiss = { gitSheetRoot = null })
+            GitControlSheet(
+                projectRoot = root,
+                onDismiss = {
+                    gitSheetRoot = null
+                    // Branch may have changed from the SC chip sheet.
+                    viewModel.refreshGitMeta(context)
+                },
+                // Phase 39 device follow-up — keep editor buffers in lockstep
+                // with the checked-out branch (flush before, reload after).
+                onBeforeBranchSwitch = { viewModel.prepareForBranchSwitch(context) },
+                onAfterBranchSwitch = { viewModel.reloadAfterBranchSwitch(context) }
+            )
         }
 
         // Phase 17 — Switch Branch from the drawer footer: closing refreshes
@@ -1894,7 +1905,9 @@ fun EditorScreen(
                 onDismiss = {
                     gitBranchSheetRoot = null
                     viewModel.refreshGitMeta(context)
-                }
+                },
+                onBeforeSwitch = { viewModel.prepareForBranchSwitch(context) },
+                onAfterSwitch = { viewModel.reloadAfterBranchSwitch(context) }
             )
         }
 

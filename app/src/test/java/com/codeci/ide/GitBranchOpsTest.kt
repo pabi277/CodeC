@@ -146,4 +146,21 @@ class GitBranchOpsTest {
         assertNull(StashMarker.branchOf("WIP on main: 1a2b3c4 something"))
         assertNull(StashMarker.branchOf(null))
     }
+
+    @Test
+    fun `withoutLocallyTrackedRemotes drops origin twins of local branches`() {
+        val list = GitBranchParser.parse(
+            listOf(
+                "* main",
+                "  feature",
+                "  remotes/origin/main",
+                "  remotes/origin/feature",
+                "  remotes/origin/only-remote"
+            )
+        )
+        val filtered = list.withoutLocallyTrackedRemotes()
+        assertEquals(listOf("main", "feature"), filtered.local.map { it.name })
+        assertEquals(listOf("origin/only-remote"), filtered.remote.map { it.name })
+        assertEquals("main", filtered.current)
+    }
 }

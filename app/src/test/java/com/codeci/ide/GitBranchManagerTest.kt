@@ -51,8 +51,23 @@ class GitBranchManagerTest {
                 exit "${'$'}{FAKE_BRANCH_EXIT:-0}"
                 ;;
               rev-parse)
+                # --verify refs/remotes/... → fake sha so checkoutRemote can
+                # prove the tracking ref landed (override with FAKE_REVPARSE_*).
+                if [ "${'$'}2" = "--verify" ]; then
+                  case "${'$'}3" in
+                    refs/remotes/*)
+                      if [ -n "${'$'}FAKE_REVPARSE_OUT" ]; then printf '%b\n' "${'$'}FAKE_REVPARSE_OUT"
+                      else echo "abc123def456"
+                      fi
+                      exit "${'$'}{FAKE_REVPARSE_EXIT:-0}"
+                      ;;
+                  esac
+                fi
                 if [ -n "${'$'}FAKE_REVPARSE_OUT" ]; then printf '%b' "${'$'}FAKE_REVPARSE_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_REVPARSE_EXIT:-0}"
+                ;;
+              update-ref)
+                exit "${'$'}{FAKE_UPDATE_REF_EXIT:-0}"
                 ;;
               checkout)
                 if [ -n "${'$'}FAKE_CHECKOUT_OUT" ]; then printf '%b' "${'$'}FAKE_CHECKOUT_OUT"; echo ""; fi
@@ -77,6 +92,13 @@ class GitBranchManagerTest {
               remote)
                 if [ -n "${'$'}FAKE_REMOTE_OUT" ]; then printf '%b' "${'$'}FAKE_REMOTE_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_REMOTE_EXIT:-0}"
+                ;;
+              ls-remote)
+                if [ -n "${'$'}FAKE_LS_REMOTE_OUT" ]; then printf '%b' "${'$'}FAKE_LS_REMOTE_OUT"; echo ""; fi
+                exit "${'$'}{FAKE_LS_REMOTE_EXIT:-0}"
+                ;;
+              fetch)
+                exit "${'$'}{FAKE_FETCH_EXIT:-0}"
                 ;;
               push)
                 if [ -n "${'$'}FAKE_PUSH_ERR" ]; then printf '%b' "${'$'}FAKE_PUSH_ERR" >&2; echo "" >&2; fi
@@ -173,11 +195,26 @@ class GitBranchManagerTest {
     fun `checkoutRemote creates a tracking branch instead of detaching HEAD`() = runBlocking {
         withTimeout(20_000) {
             val dir = tempDir()
-            val e = env(dir)
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
             manager(dir, e).checkoutRemote(repo(dir), "origin/develop")
-            assertEquals(
-                "CMD [checkout] [-b] [develop] [--track] [origin/develop]",
-                log(e).last()
+            // Fetch, checkout from FULL refs/remotes/… ref (not short
+            // origin/develop — that caused "starting point is not a branch"),
+            // then set upstream.
+            val commands = log(e)
+            assertTrue(
+                commands.any {
+                    it == "CMD [fetch] [origin] [+refs/heads/develop:refs/remotes/origin/develop]"
+                }
+            )
+            assertTrue(
+                commands.any {
+                    it == "CMD [checkout] [-B] [develop] [refs/remotes/origin/develop]"
+                }
+            )
+            assertTrue(
+                commands.any {
+                    it.startsWith("CMD [branch] [--set-upstream-to=origin/develop]")
+                }
             )
         }
     }
@@ -543,14 +580,89 @@ class GitBranchManagerTest {
             manager(fresh, freshEnv).pushHandlingUpstream(repo(fresh))
             assertEquals("CMD [push] [--set-upstream] [origin] [test]", log(freshEnv).last())
 
-            // A cloned branch already tracks its remote: keep the plain push.
+            // A cloned branch already tracks its remote: push names the branch
+            // explicitly (Phase 39 device follow-up) so the argv never looks
+            // like a silent default to main.
             val tracking = tempDir()
-            val trackingEnv = env(tracking, mapOf("FAKE_STATUS_OUT" to "## main...origin/main"))
+            val trackingEnv = env(
+                tracking,
+                mapOf(
+                    "FAKE_STATUS_OUT" to "## test-1...origin/test-1",
+                    "FAKE_REMOTE_OUT" to "origin"
+                )
+            )
             manager(tracking, trackingEnv).pushHandlingUpstream(repo(tracking))
             val commands = log(trackingEnv)
             assertEquals("CMD [status] [--porcelain=v1] [-b]", commands[0])
-            assertEquals("CMD [push]", commands[1])
-            assertEquals(2, commands.size)
+            assertEquals("CMD [remote]", commands[1])
+            assertEquals("CMD [push] [origin] [test-1]", commands[2])
+            assertEquals(3, commands.size)
+        }
+    }
+
+    @Test
+    fun `remoteHasBranch is true when ls-remote lists the head`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val yes = env(
+                dir,
+                mapOf(
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_LS_REMOTE_OUT" to "abc123\trefs/heads/test-1"
+                )
+            )
+            assertTrue(manager(dir, yes).remoteHasBranch(repo(dir), "test-1"))
+
+            // Empty ls-remote → not on remote.
+            val no = tempDir()
+            val noEnv = env(no, mapOf("FAKE_REMOTE_OUT" to "origin", "FAKE_LS_REMOTE_OUT" to ""))
+            assertFalse(manager(no, noEnv).remoteHasBranch(repo(no), "test-1"))
+
+            // A different branch name must not match as a suffix.
+            val other = tempDir()
+            val otherEnv = env(
+                other,
+                mapOf(
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_LS_REMOTE_OUT" to "abc123\trefs/heads/foo/test-1"
+                )
+            )
+            assertFalse(manager(other, otherEnv).remoteHasBranch(repo(other), "test-1"))
+        }
+    }
+
+    @Test
+    fun `resolvePublishState clears unpublished when remote already has the branch`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            // status: no upstream; ls-remote: branch exists; set-upstream +
+            // refreshed status report tracking.
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_STATUS_OUT" to "## test-1",
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_LS_REMOTE_OUT" to "abc123\trefs/heads/test-1",
+                    // After set-upstream, a second status should look tracked
+                    // — the fake always returns FAKE_STATUS_OUT, so we still
+                    // rely on remoteBranchExists=true on the returned status.
+                )
+            )
+            val git = manager(dir, e)
+            val local = git.status(repo(dir))
+            assertTrue(local.unpublished)
+            val resolved = git.resolvePublishState(repo(dir), local)
+            assertFalse(resolved.unpublished)
+            assertEquals(true, resolved.remoteBranchExists)
+            // argv: status (local) already done by caller; resolve does
+            // remote + ls-remote + set-upstream + status refresh.
+            val commands = log(e)
+            assertTrue(commands.any { it.startsWith("CMD [ls-remote]") })
+            assertTrue(
+                commands.any {
+                    it.startsWith("CMD [branch] [--set-upstream-to=origin/test-1]")
+                }
+            )
         }
     }
 
@@ -560,6 +672,163 @@ class GitBranchManagerTest {
             val dir = tempDir()
             val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "upstream\\norigin"))
             assertEquals("upstream", manager(dir, e).firstRemote(repo(dir)))
+        }
+    }
+
+    @Test
+    fun `fetch prunes the first remote`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
+            manager(dir, e).fetch(repo(dir))
+            val commands = log(e)
+            assertEquals("CMD [remote]", commands[0])
+            assertEquals("CMD [fetch] [--prune] [origin]", commands[1])
+        }
+    }
+
+    @Test
+    fun `fetchBranch pulls one head by refspec`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
+            manager(dir, e).fetchBranch(repo(dir), "test-1")
+            val commands = log(e)
+            assertTrue(
+                commands.any {
+                    it == "CMD [fetch] [origin] [+refs/heads/test-1:refs/remotes/origin/test-1]"
+                }
+            )
+            // After fetch, prove the tracking ref landed.
+            assertTrue(
+                commands.any {
+                    it == "CMD [rev-parse] [--verify] [refs/remotes/origin/test-1]"
+                }
+            )
+            // No FETCH_HEAD recovery when rev-parse succeeds.
+            assertTrue(commands.none { it.contains("[update-ref]") })
+        }
+    }
+
+    @Test
+    fun `listBranchesWithRemoteHeads merges ls-remote names the clone never fetched`() = runBlocking {
+        withTimeout(20_000) {
+            // Shallow clone only has main locally + origin/main; GitHub also
+            // has test-1 and test-2. The sheet must offer them under Remote.
+            val dir = tempDir()
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_BRANCH_OUT" to "* main\\n  remotes/origin/main",
+                    "FAKE_LS_REMOTE_OUT" to
+                        "aaa\\trefs/heads/main\\nbbb\\trefs/heads/test-1\\nccc\\trefs/heads/test-2"
+                )
+            )
+            val (list, _) = manager(dir, e).listBranchesWithRemoteHeads(repo(dir))
+            assertEquals(listOf("main"), list.local.map { it.name })
+            // origin/main is dropped (local twin); test-1/test-2 appear.
+            assertEquals(
+                listOf("origin/test-1", "origin/test-2"),
+                list.remote.map { it.name }
+            )
+            assertTrue(log(e).any { it.startsWith("CMD [ls-remote]") })
+        }
+    }
+
+    @Test
+    fun `checkoutRemote fetches the branch before tracking it`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
+            manager(dir, e).checkoutRemote(repo(dir), "origin/test-2")
+            val commands = log(e)
+            assertTrue(
+                commands.any {
+                    it == "CMD [fetch] [origin] [+refs/heads/test-2:refs/remotes/origin/test-2]"
+                }
+            )
+            assertTrue(
+                commands.any {
+                    it == "CMD [checkout] [-B] [test-2] [refs/remotes/origin/test-2]"
+                }
+            )
+            assertTrue(commands.any { it.startsWith("CMD [rev-parse] [--verify]") })
+        }
+    }
+
+    @Test
+    fun `fetchBranch recovers via FETCH_HEAD when the refspec leaves no tracking ref`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_REVPARSE_EXIT" to "1"
+                )
+            )
+            try {
+                manager(dir, e).fetchBranch(repo(dir), "test-1")
+                fail("expected fetchBranch to fail when the tracking ref never lands")
+            } catch (ex: GitManager.GitCommandException) {
+                assertTrue(
+                    ex.message!!.contains("did not land") ||
+                        ex.message!!.contains("fetch")
+                )
+            }
+            val commands = log(e)
+            assertTrue(commands.any { it.contains("[fetch]") })
+            assertTrue(commands.any { it == "CMD [fetch] [origin] [test-1]" })
+            assertTrue(
+                commands.any {
+                    it == "CMD [update-ref] [refs/remotes/origin/test-1] [FETCH_HEAD]"
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `switchBranch is a no-op when already on the target local branch`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_STATUS_OUT" to "## main...origin/main"))
+            val result = manager(dir, e).switchBranch(
+                repo(dir),
+                BranchTarget("main", BranchTargetKind.LOCAL)
+            )
+            assertEquals("main", result.branch)
+            // Only the status probe — no checkout, no stash.
+            assertEquals(listOf("CMD [status] [--porcelain=v1] [-b]"), log(e))
+        }
+    }
+
+    @Test
+    fun `switchBranch to NEW restores the just-stashed dirty work onto it`() = runBlocking {
+        withTimeout(20_000) {
+            // Phase 39 device follow-up: creating a branch while dirty used to
+            // park the stash under the *parent* name and never pop it, so the
+            // new branch looked empty and every branch shared the same edits.
+            val dir = tempDir()
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_STATUS_OUT" to "## main...origin/main\\n M src/app.py",
+                    "FAKE_REMOTE_OUT" to "origin"
+                )
+            )
+            val result = manager(dir, e).switchBranch(
+                repo(dir),
+                BranchTarget("feature/wip", BranchTargetKind.NEW)
+            )
+            val commands = log(e)
+            assertTrue(result.stashed)
+            assertTrue(result.restored)
+            assertEquals("feature/wip", result.branch)
+            assertTrue(commands.any { it == "CMD [stash] [push] [-u] [-m] [codec-switch: main]" })
+            assertTrue(commands.any { it == "CMD [checkout] [-b] [feature/wip]" })
+            // Pop the top stash by default ref — not a "codecBranch == landed" miss.
+            assertTrue(commands.any { it == "CMD [stash] [pop] [stash@{0}]" })
         }
     }
 

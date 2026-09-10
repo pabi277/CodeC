@@ -10,7 +10,7 @@
 > the build instead of rotting back.
 
 Audit date: 2026-09-10, against `SettingsScreen.kt` as edited by Phase
-38.2 (11 sections, 43 `Settings*` control rows).
+38.2 (11 sections, 45 `Settings*` control rows).
 
 ## Deleted by this audit (with evidence)
 
@@ -39,7 +39,7 @@ Audit date: 2026-09-10, against `SettingsScreen.kt` as edited by Phase
 
 Screen order (machine-checked): Editor Settings | CodeC Keys | Compiler | Terminal | Terminal Extra-Keys & Shortcuts | Package Repository & Trust | GitHub Account | Appearance | Storage | About | Developer Options
 
-This table is what `SettingsAuditTest` counts: 11 sections, 43 rows
+This table is what `SettingsAuditTest` counts: 11 sections, 45 rows
 (three of the sections — Terminal Extra-Keys & Shortcuts, Package
 Repository & Trust, GitHub Account — are custom cards with no
 `Settings*` rows; they are covered under "Other surfaces" below and in
@@ -78,19 +78,21 @@ change nothing and say so).
 | 28 | Appearance | Accent Color | dropdown | `accent_color` | `accentColorFlow` → app accent | keep |
 | 29 | Storage | Terminal Storage Access (~/storage) | item + button | storage permission + `~/storage` setup | `ShellEnvironment.hasStoragePermission` / setup | keep |
 | 30 | Storage | Projects Location | item | — (info; displays `getExternalFilesDir`) | — | keep |
-| 31 | Storage | Clear Cache | action | deletes `cacheDir` | space freed; toast confirms | keep |
-| 32 | About | Show the welcome screen again | action | `first_launch_complete=false` | `firstLaunchCompleteFlow` → MainActivity welcome | keep |
-| 33 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |
-| 34 | About | GitHub | item | — (info) | — | keep |
-| 35 | About | Open-source licenses | item | — (info; LGPL/MIT obligations) | — | keep |
-| 36 | About | Install APK from GitHub | action | downloads latest release APK | `ApkUpdateManager` | keep |
-| 37 | Developer Options | Show File Paths | switch | `show_file_paths` | `showFilePathsFlow` → file tree labels | keep |
-| 38 | Developer Options | Export App Logs | action | ACTION_SHARE with `AppLogger` logs | share sheet | keep |
-| 39 | Developer Options | View App Logs | action | navigates to log screen | `onNavigateToLogs` | keep |
-| 40 | Developer Options | Clear ALL Data | action | deletes single-file storage | `FileManager` | keep |
-| 41 | Developer Options | Test Compiler Service | action | probe compile of `int main(){return 0;}` | toast result | keep (dev-only) |
-| 42 | Developer Options | Simulate Module Download | action | fake 2s download | logs + toast | keep (dev-only) |
-| 43 | Developer Options | Force Crash | action | throws RuntimeException | CrashReportOverlay | keep (dev-only) |
+| 31 | Storage | Temporary files | item | — (info; `TempGc.measure` of `CodeC/temp/runs`) | size shown; Phase 39.1 | keep |
+| 32 | Storage | Clear temporary files | action | `TempGc.clearIdle` (idle run dirs only) | space freed; live stamps kept; Phase 39.1 | keep |
+| 33 | Storage | Clear Cache | action | deletes `cacheDir` | space freed; toast confirms | keep |
+| 34 | About | Show the welcome screen again | action | `first_launch_complete=false` | `firstLaunchCompleteFlow` → MainActivity welcome | keep |
+| 35 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |
+| 36 | About | GitHub | item | — (info) | — | keep |
+| 37 | About | Open-source licenses | item | — (info; LGPL/MIT obligations) | — | keep |
+| 38 | About | Install APK from GitHub | action | downloads latest release APK | `ApkUpdateManager` | keep |
+| 39 | Developer Options | Show File Paths | switch | `show_file_paths` | `showFilePathsFlow` → file tree labels | keep |
+| 40 | Developer Options | Export App Logs | action | ACTION_SHARE with `AppLogger` logs | share sheet | keep |
+| 41 | Developer Options | View App Logs | action | navigates to log screen | `onNavigateToLogs` | keep |
+| 42 | Developer Options | Clear ALL Data | action | deletes single-file storage | `FileManager` | keep |
+| 43 | Developer Options | Test Compiler Service | action | probe compile of `int main(){return 0;}` | toast result | keep (dev-only) |
+| 44 | Developer Options | Simulate Module Download | action | fake 2s download | logs + toast | keep (dev-only) |
+| 45 | Developer Options | Force Crash | action | throws RuntimeException | CrashReportOverlay | keep (dev-only) |
 
 ## Other surfaces (not Settings* rows — listed for completeness, not counted)
 

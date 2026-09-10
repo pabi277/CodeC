@@ -112,7 +112,12 @@ object ProjectTransfer {
         require(!canonicalDestination.exists() || canonicalDestination.isDirectory) { "Invalid project destination" }
         if (!canonicalDestination.exists() && !canonicalDestination.mkdirs()) error("Could not create imported project")
 
-        val temporaryZip = File.createTempFile("codec-import-", ".zip", canonicalDestination.parentFile)
+        // Phase 39.1 — the scratch zip used to land next to the project
+        // (projectsRoot itself), so a crash mid-import left a
+        // `codec-import-*.zip` that the hub could mistake for a project.
+        // It now lives under java.io.tmpdir (app-private on Android) and
+        // is still deleted in finally; TempGc's runs/ root is separate.
+        val temporaryZip = File.createTempFile("codec-import-", ".zip")
         return try {
             input.use { source ->
                 temporaryZip.outputStream().use { output ->

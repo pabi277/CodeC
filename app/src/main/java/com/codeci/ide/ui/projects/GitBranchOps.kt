@@ -98,6 +98,20 @@ data class GitBranchList(
 ) {
     val local: List<GitBranch> get() = branches.filter { !it.isRemote }
     val remote: List<GitBranch> get() = branches.filter { it.isRemote }
+
+    /**
+     * Drop remote-tracking rows that already have a same-named local branch
+     * (`origin/main` when `main` is local). The Switch sheet lists locals
+     * first; showing the remote twin only confuses "I can't switch" when
+     * the user taps the remote copy of the branch they are already on.
+     */
+    fun withoutLocallyTrackedRemotes(): GitBranchList {
+        val localNames = local.map { it.name }.toSet()
+        val filtered = branches.filter { branch ->
+            !branch.isRemote || branch.localName !in localNames
+        }
+        return copy(branches = filtered)
+    }
 }
 
 /**

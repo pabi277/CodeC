@@ -177,6 +177,14 @@ class CompilerService(private val context: Context) {
     }
 
     /**
+     * Phase 39.1 — per-run directory under `CodeC/temp/runs/<stamp>/`.
+     * Every artifact CodeC invents for a compile lands here so TempGc can
+     * bound the cache; a user-supplied `-o` path never goes through this.
+     */
+    fun getRunDir(stamp: Long = System.currentTimeMillis()): File =
+        RunArtifacts.ensureRunDir(getTempDir(), stamp)
+
+    /**
      * Compiles [code] with the engine selected by [backend]:
      *  - [BACKEND_EMBEDDED]: the built-in TCC compiler shipped in the APK.
      *  - [BACKEND_BUNDLED]: the Clang downloaded in Modules.
@@ -265,10 +273,18 @@ class CompilerService(private val context: Context) {
                 engine = CompilerEngine.EMBEDDED
             )
         }
-        val tempDir = getTempDir()
         val stamp = System.currentTimeMillis()
-        val sourceFile = File(tempDir, "source_$stamp.c")
-        val outputBinary = File(tempDir, "program_$stamp")
+        val plan = RunArtifacts.plan(
+            lang = "c",
+            project = getTempDir(),
+            tempRoot = getTempDir(),
+            stamp = stamp,
+            userSuppliedOutput = null,
+        )
+        val runDir = RunArtifacts.ensureRunDir(getTempDir(), stamp)
+        val sourceFile = plan.sourceCopy ?: File(runDir, "source.c")
+        val outputBinary = plan.binary
+        LiveRunStamps.add(stamp)
         try {
             sourceFile.writeText(code)
             val command = listOf(tcc.absolutePath) + EmbeddedCompiler.buildCompileCommand(
@@ -339,6 +355,8 @@ class CompilerService(private val context: Context) {
                 output = e.message.orEmpty(),
                 engine = CompilerEngine.EMBEDDED
             )
+        } finally {
+            LiveRunStamps.remove(stamp)
         }
     }
 
@@ -390,16 +408,24 @@ class CompilerService(private val context: Context) {
                 output = "Compiler binary is not executable: ${targetBinary.absolutePath}"
             )
         }
-        val tempDir = getTempDir()
         val stamp = System.currentTimeMillis()
-        val sourceFile = File(tempDir, "source_$stamp.c")
-        val outputBinary = File(tempDir, "program_$stamp")
+        val plan = RunArtifacts.plan(
+            lang = "c",
+            project = getTempDir(),
+            tempRoot = getTempDir(),
+            stamp = stamp,
+            userSuppliedOutput = null,
+        )
+        val runDir = RunArtifacts.ensureRunDir(getTempDir(), stamp)
+        val sourceFile = plan.sourceCopy ?: File(runDir, "source.c")
+        val outputBinary = plan.binary
+        LiveRunStamps.add(stamp)
         try {
             sourceFile.writeText(code)
             val command = buildCompileCommand(clang, settings, sourceFile, outputBinary)
             AppLogger.i("CompilerService", "Compile: ${command.joinToString(" ")}")
 
-            val process = startToolProcess(command, tempDir, clang, mergeStreams = false)
+            val process = startToolProcess(command, runDir, clang, mergeStreams = false)
             val stdoutReader = ThreadedReader(process.inputStream.bufferedReader())
             val stderrReader = ThreadedReader(process.errorStream.bufferedReader())
             stdoutReader.start()
@@ -465,6 +491,8 @@ class CompilerService(private val context: Context) {
                 ),
                 output = e.message.orEmpty()
             )
+        } finally {
+            LiveRunStamps.remove(stamp)
         }
     }
 
@@ -800,11 +828,24 @@ class CompilerService(private val context: Context) {
         return command
     }
 
+    /**
+     * Phase 39.1 — after a one-shot execute finishes, drop the binary + its
+     * source copy. New layout uses `runs/<stamp>/{source.c,program}`; the
+     * legacy flat `program_<stamp>` / `source_<stamp>.c` names are still
+     * recognised so a binary from an older build still cleans up. The run
+     * directory itself is left for TempGc (keepNewest / age / bytes).
+     */
     private fun cleanupArtifacts(binary: File) {
         try {
-            val stamp = binary.name.removePrefix("program_")
+            val parent = binary.parentFile
             binary.delete()
-            File(binary.parentFile, "source_$stamp.c").delete()
+            // New layout.
+            File(parent, "source.c").delete()
+            // Legacy flat names (pre-39.1).
+            if (binary.name.startsWith("program_")) {
+                val stamp = binary.name.removePrefix("program_")
+                File(parent, "source_$stamp.c").delete()
+            }
         } catch (e: Exception) {
             AppLogger.e("CompilerService", "Cleanup failed", e)
         }
