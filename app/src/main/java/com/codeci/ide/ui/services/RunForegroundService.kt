@@ -32,11 +32,19 @@ import java.util.concurrent.atomic.AtomicReference
  * process priority so Android is far less likely to kill it while the user is
  * in another app. The Stop action is delivered back to the ViewModel through
  * [stopCallback].
+ *
+ * Phase 37.2 extends the same service to the LAN server: [startServing] keeps
+ * the process alive behind a `Serving <project> on <ip>:<port>` title with the
+ * identical Stop action, so a phone server survives the user switching apps
+ * without the app growing a second foreground-service type.
  */
 class RunForegroundService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var lastTitle: String = "CodeC run"
+
+    /** Phase 37.2 — a server keeps one steady text instead of an elapsed clock. */
+    private var servingBody: String? = null
     private var tickerJob: Job? = null
 
     override fun onCreate() {
@@ -55,6 +63,7 @@ class RunForegroundService : Service() {
             }
             else -> {
                 lastTitle = intent?.getStringExtra(EXTRA_TITLE) ?: "CodeC run"
+                servingBody = intent?.getStringExtra(EXTRA_BODY)
                 startForeground(NOTIFICATION_ID, buildNotification(0))
                 startTicker()
                 return START_NOT_STICKY
@@ -71,7 +80,9 @@ class RunForegroundService : Service() {
     }
 
     private fun startTicker() {
-        if (tickerJob != null) return
+        // A server notification says "Serving … on ip:port"; re-notifying it
+        // once a second for a running clock would be pure battery burn.
+        if (tickerJob != null || servingBody != null) return
         val start = System.currentTimeMillis()
         tickerJob = scope.launch {
             while (true) {
@@ -93,14 +104,16 @@ class RunForegroundService : Service() {
             Intent(this, RunForegroundService::class.java).setAction(ACTION_STOP),
             pendingIntentFlags()
         )
-        val body = if (elapsedSeconds > 0) {
-            getString(R.string.foreground_run_body, elapsedSeconds)
-        } else {
-            getString(R.string.foreground_run_starting)
+        val serving = servingBody
+        val title = if (serving != null) lastTitle else getString(R.string.foreground_run_title, lastTitle)
+        val body = when {
+            serving != null -> serving
+            elapsedSeconds > 0 -> getString(R.string.foreground_run_body, elapsedSeconds)
+            else -> getString(R.string.foreground_run_starting)
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(getString(R.string.foreground_run_title, lastTitle))
+            .setContentTitle(title)
             .setContentText(body)
             .setContentIntent(tapPending)
             .addAction(0, getString(R.string.foreground_run_stop), stopPending)
@@ -131,6 +144,7 @@ class RunForegroundService : Service() {
     companion object {
         const val ACTION_STOP = "com.codeci.ide.action.STOP_FOREGROUND_RUN"
         private const val EXTRA_TITLE = "title"
+        private const val EXTRA_BODY = "body"
         private const val CHANNEL_ID = "codec_runs"
         private const val NOTIFICATION_ID = 1001
 
@@ -142,9 +156,21 @@ class RunForegroundService : Service() {
             set(value) { onStopRequest.set(value) }
 
         /** Start the foreground run notification for [title]. */
-        fun start(context: Context, title: String) {
+        fun start(context: Context, title: String) = startInternal(context, title, null)
+
+        /**
+         * Phase 37.2 — keep-alive for a LAN server: same service, same Stop
+         * action, but the title is the composed `Serving <project> on
+         * <ip>:<port>` sentence and the body says what sharing means. No second
+         * service type (the spec's explicit rule).
+         */
+        fun startServing(context: Context, title: String, body: String) =
+            startInternal(context, title, body)
+
+        private fun startInternal(context: Context, title: String, body: String?) {
             val intent = Intent(context, RunForegroundService::class.java).apply {
                 putExtra(EXTRA_TITLE, title)
+                body?.let { putExtra(EXTRA_BODY, it) }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)

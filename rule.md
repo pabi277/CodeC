@@ -198,8 +198,66 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-09, Phase 36 device-passed; merge authorized)
+## 9. State snapshot (2026-09-10, Phase 37 device-passed + open-in-browser follow-up; merge held; **Phases 38-43 PLANNED**)
 
+- **Phases 38-43 are 📋 PLANNED — docs only, no app code, no PR** (2026-09-10,
+  owner: six new "before I share this" ideas + *"research thoroughly then write
+  new phases"*), **renumbered on the owner's follow-up request ("*Rename the
+  phases so i can continue 38 to 43*") so that the numbers are the order of
+  work**: **38** app icon + Settings trim, **39** temp outputs + the repo ignore
+  policy, **40** git readiness/push truth/publish-to-GitHub, **41**
+  WhatsApp-first feedback, **42** share-readiness (signing, updater, weight,
+  backup, crash loop, export-all), **43** file system strength (safe folder walk
+  + open-folder-as-project). The only ordering rule to remember inside that
+  sequence: **39.1 before 43.2** (a linked user folder must never receive CodeC's
+  build outputs). Old→new map: 42→38, 40→39, 38→40, 41→41, 43→42, 39→43.
+  Records:
+  `docs/PHASE38_43_ROADMAP.md` + `docs/PHASE38_43_OSS_RESEARCH.md` +
+  `docs/chat-phase38/`…`chat-phase43/`. CI on the planning commit is ✅ GREEN
+  (`Build APK` `34433912076`, tip `8d365c4`, 6 m 18 s — a docs-only push, run
+  anyway). Each phase starts on the owner's "Start Phase N" and keeps every law of this manual (device gates are the
+  owner's, CI is the executor of record, no PR without an explicit command).
+  Standing scope decisions from that research, so they are not re-litigated:
+  keep the `git` **CLI** (JGit rejected); never make `MANAGE_EXTERNAL_STORAGE`
+  load-bearing (it is already declared + offered at three call sites — the
+  finding that corrected an earlier note); the user's own `.gitignore` always
+  beats CodeC's `.git/info/exclude` entries; no telemetry/Crashlytics; no Play
+  path while `targetSdk = 28` is deliberate; **and `targetSdk 28` stays.**
+- **Phase 37 (Device as server / LAN) is ✅ DEVICE-PASSED** on
+  `arena/01a0872e-codec` (owner: "Start Phase 37"): 37.1 LAN bind + the two
+  URLs + ZXing QR, 37.2 keep-alive on the existing `RunForegroundService` +
+  `ServerRegistry`/`ServerHost` owning port and process truth. LAN is opt-in
+  and OFF by default, loopback behaviour is unchanged, no port < 1024, and the
+  templates honour `CODEC_SERVER_HOST` (never `CODEC_SERVER_PORT`). 62 new
+  host cases; local pre-validation 96/96 over the real production files.
+  **`Build APK` CI is ✅ GREEN** — run `34393543928` on tip `6d36a83`
+  (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`; APK 24 844 344 B =
+  +355 660 B vs the `main` build `34381534118`, the weight of the zxing `core`
+  jar + this code). Two red rounds came first, both fixed for cause: zxing's
+  hint key is `EncodeHintType.CHARACTER_SET` (a local shim had been written with
+  the same wrong name — a shim only protects you if it mirrors reality), then
+  two test-only bugs (`TemporaryFolder.newFolder` refuses a name already used in
+  that test; a QR pixel offset is derived from zxing's scale-and-centre, not
+  guessed). **Device pass: ✅ done (2026-09-10)** — the owner ran the eight exit
+  checks on a phone + a second device on the same Wi-Fi and reported **"All
+  pass"**; recorded as the owner's report, not as measured traces. That round's
+  one follow-up is shipped on the same branch: **🌐 opens each share row in the
+  phone's default browser** instead of only copying it (`ui/services/ShareActions.kt`
+  = the pure policy: the loopback URL on `On this device`, the LAN URL on
+  `Other devices`, a button only for a real `http(s)://` URL, per-row labels, the
+  failure message; `ui/services/OpenInBrowser.kt` = the app's **single**
+  `ACTION_VIEW` launcher, which the terminal's `openTerminalUrl` now delegates to;
+  if no browser can serve the URL the link is copied and the toast says so, so a
+  tap never loses it; copy and the in-app 👁 preview unchanged). `ShareActionsTest`
+  (6) → 68 host cases in ten classes; local service-set re-run 86/86, and
+  **CI on that follow-up is ✅ GREEN** — `Build APK` `34398031696` on tip
+  `98cb2b4` (9 m 35 s; APK 24 847 792 B, +3 485 B over the docs tip).
+  **Merge is still HELD for the owner's command.**
+  *Mechanism worth remembering:* the workflow's bare `gradle` call is the
+  `gradle-bootstrap` bridge, which runs the real wrapper with
+  `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` **inside the single
+  "Assemble debug APK" step** — so a unit-test failure shows up as that step
+  failing, and a green run of it is genuine proof the app tests ran.
 - **Phase 35** is ✅ DEVICE-PASSED by the owner report on session branch
   `arena/01a086a0-codec` (`317b89a`; docs follow-up `88839cd`). Build APK CI
   `34367008019` and current-tip `34367770583` are GREEN. The owner supplied no

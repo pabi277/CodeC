@@ -63,14 +63,22 @@ import com.codeci.ide.ui.services.InteractiveRunSession
 import com.codeci.ide.ui.services.LanguageRegistry
 import com.codeci.ide.ui.services.LanguageRunPlanner
 import com.codeci.ide.ui.services.LanguageToolProbe
+import com.codeci.ide.ui.services.LanAddressProvider
+import com.codeci.ide.ui.services.LanSharePolicy
 import com.codeci.ide.ui.services.RunForegroundService
 import com.codeci.ide.ui.services.RunDecision
 import com.codeci.ide.ui.services.RunEvent
 import com.codeci.ide.ui.services.RunForegroundPolicy
 import com.codeci.ide.ui.services.RunPhase
 import com.codeci.ide.ui.services.RunSpec
+import com.codeci.ide.ui.services.ServerEndpoints
+import com.codeci.ide.ui.services.ServerEntry
 import com.codeci.ide.ui.services.ServerEvent
+import com.codeci.ide.ui.services.ServerHost
+import com.codeci.ide.ui.services.ServerHosts
+import com.codeci.ide.ui.services.ServerNotification
 import com.codeci.ide.ui.services.ServerRunner
+import com.codeci.ide.ui.services.LanAddress
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.PtyNative
@@ -150,6 +158,21 @@ data class OutputRunState(
     val serverUrl: String? = null,
     /** Phase 14 — true while the panel is attached to a long-lived server, not a batch run. */
     val serverRun: Boolean = false,
+    /**
+     * Phase 37.1 — the two addresses the running server answers on (on-device
+     * + LAN), or null when nothing is serving. The share row renders this; it
+     * never assembles URLs itself, so the panel and the notification cannot
+     * disagree.
+     */
+    val serverEndpoints: ServerEndpoints? = null,
+    /** Phase 37.1 — the state of the app-wide LAN-sharing switch. */
+    val lanShared: Boolean = false,
+    /**
+     * Phase 37.2 — every live server the [com.codeci.ide.ui.services.ServerHost]
+     * owns, newest last. The panel lists them under the share row so "what is
+     * serving on which port" has a single visible answer.
+     */
+    val servers: List<ServerEntry> = emptyList(),
     /**
      * Phase 23.1 — true while a program is running AND interactive (PTY
      * mode): the Output Panel shows its inline stdin field. Piped
@@ -232,6 +255,12 @@ class EditorViewModel : ViewModel() {
         const val PROJECT_BUILD_DIR = "bin"
         /** Phase 21.2 — a toolchain download may legitimately take minutes. */
         private const val INSTALL_TIMEOUT_SECONDS = 900L
+        /**
+         * Phase 37.1 — the environment variable the server templates read to
+         * pick their bind host. Absent (the loopback default) the templates bind
+         * 127.0.0.1 exactly as before; a LAN run sets it to `0.0.0.0`.
+         */
+        const val CODEC_SERVER_HOST_ENV = "CODEC_SERVER_HOST"
         private const val SCRATCH_KEY = "\u0000scratch"
         private val INITIAL_CODE = """
             #include <stdio.h>
@@ -623,6 +652,88 @@ class EditorViewModel : ViewModel() {
     private var webPreviewHandler: ((String?, String) -> Unit)? = null
 
     /**
+     * Phase 37.2 — the key the shared [ServerHost] owns this run's process
+     * under. The host (not the ViewModel) holds the process, which is what
+     * lets a LAN server survive leaving the editor tab.
+     */
+    private var serverSessionId: String? = null
+
+    /** The project the current server run belongs to (also its host session id). */
+    private var serverProjectName: String? = null
+
+    /**
+     * Phase 37.1 — the app-wide LAN-sharing switch, off by default. The Editor
+     * and the Web Preview read the same flow, so the panel can never show a
+     * LAN URL the preview screen thinks is off (and vice versa).
+     */
+    val lanShared: StateFlow<Boolean> = LanSharePolicy.shared.enabled
+
+    /**
+     * Phase 37.1 — turn LAN sharing on/off for the rest of this session.
+     *
+     * A bind address is fixed when the socket is created, so switching LAN
+     * while a server is live **restarts** it (kill, re-run with the new bind)
+     * instead of pretending the change took effect. The restart is announced in
+     * the Output Panel, and the loopback URL is re-detected from the bind line
+     * exactly like a normal RUN ▶.
+     */
+    fun setLanShare(context: Context, enabled: Boolean) {
+        val appContext = context.applicationContext
+        if (!LanSharePolicy.shared.set(enabled)) return
+        captureContext(appContext)
+        val host = ServerHosts.shared
+        viewModelScope.launch {
+            LanAddressProvider.refresh(appContext, host)
+            host.refreshLan(enabled)
+            _outputState.value = _outputState.value.copy(
+                lanShared = enabled,
+                servers = host.registry.snapshot(),
+                serverEndpoints = serverSessionId?.let { host.endpointsOf(it) }
+                    ?: _outputState.value.serverEndpoints
+            )
+            val running = _outputState.value.serverRun && _outputState.value.busy
+            val project = serverProjectName ?: _projectName.value
+            if (running) {
+                appendOutputLine(
+                    OutputLine(
+                        if (enabled) {
+                            "LAN share ON — restarting the server on 0.0.0.0"
+                        } else {
+                            "LAN share OFF — restarting the server on 127.0.0.1"
+                        },
+                        OutputLineKind.SYSTEM
+                    )
+                )
+                host.stop(ServerHost.processId(project.orEmpty()))
+                host.stop(ServerHost.staticId(project.orEmpty()))
+                serverSessionId = null
+                serverProjectName = null
+                val info = project?.let { ProjectManager(appContext).project(it) }
+                if (info != null) startServerRun(appContext, info)
+            }
+        }
+    }
+
+    /** The live servers the shared host owns (registry is the single truth). */
+    fun liveServers(): List<ServerEntry> = ServerHosts.shared.registry.snapshot()
+
+    /** Phase 37.2 — the registry-level "stop all servers". */
+    fun stopAllServers(context: Context) {
+        val appContext = context.applicationContext
+        captureContext(appContext)
+        ServerHosts.shared.stopAll()
+        serverSessionId = null
+        stopForegroundRun(appContext)
+        _outputState.value = _outputState.value.copy(
+            busy = false,
+            servers = emptyList(),
+            summary = "All servers stopped"
+        )
+        appendOutputLine(OutputLine("Stopped every server this session started", OutputLineKind.SYSTEM))
+    }
+
+
+    /**
      * Phase 14 — the Editor wires this to navigation: when a server project's
      * RUN ▶ detects its port line, the handler receives the loopback URL and
      * MainActivity opens Web Preview on it. The project name travels with the
@@ -772,12 +883,28 @@ class EditorViewModel : ViewModel() {
     }
 
     override fun onCleared() {
-        activeServer?.stop()
+        // Phase 37.2 — a LAN server survives the editor. The process belongs to
+        // the shared ServerHost, not to this scope, so the only thing this
+        // ViewModel may do on its death is stop observing. Loopback-only
+        // previews keep the pre-37 behaviour (they die with the screen).
+        val id = serverSessionId
+        val keepAlive = id != null && ServerHosts.shared.entryFor(id)?.lanShared == true
+        if (id != null && !keepAlive) ServerHosts.shared.stop(id)
+        if (!keepAlive) {
+            serverSessionId = null
+            serverProjectName = null
+        }
         activeServer = null
         foregroundNotifyJob?.cancel()
         foregroundNotifyJob = null
-        foregroundServiceActive = false
-        RunForegroundService.stopCallback = null
+        if (keepAlive && id != null) {
+            // Keep the notification's Stop action working until a fresh
+            // ViewModel re-attaches and installs its own callback.
+            RunForegroundService.stopCallback = { ServerHosts.shared.stop(id) }
+        } else {
+            foregroundServiceActive = false
+            RunForegroundService.stopCallback = null
+        }
         super.onCleared()
     }
 
@@ -795,10 +922,26 @@ class EditorViewModel : ViewModel() {
         val ctx = context.applicationContext
         foregroundNotifyJob = viewModelScope.launch {
             delay(RunForegroundPolicy.THRESHOLD_MS)
-            if (_outputState.value.busy) {
+            val state = _outputState.value
+            if (state.busy) {
                 val title = _fileName.value.substringAfterLast('/').ifBlank { "CodeC" }
                 foregroundServiceActive = true
-                RunForegroundService.start(ctx, title)
+                if (state.serverRun) {
+                    // Phase 37.2 — a server gets "Serving <project> on
+                    // <ip>:<port>" + Stop; the URL may still be missing here
+                    // (the bind line can come later), which
+                    // refreshServingNotification fixes as soon as it lands.
+                    RunForegroundService.startServing(
+                        ctx,
+                        ServerNotification.title(
+                            serverProjectName ?: _projectName.value,
+                            state.serverEndpoints
+                        ),
+                        ServerNotification.body(state.serverEndpoints)
+                    )
+                } else {
+                    RunForegroundService.start(ctx, title)
+                }
             }
         }
     }
@@ -2459,11 +2602,23 @@ class EditorViewModel : ViewModel() {
         activeRunner = null
         interactiveRun?.stop()
         interactiveRun = null
+        stopServerSession()
+        _outputState.value = OutputRunState(phase = OutputPhase.IDLE)
+    }
+
+    /**
+     * Phase 37.2 — explicit teardown of the current server run. The Stop
+     * button and Clear always stop the process, a keep-alive LAN server
+     * included: only *leaving the editor* is allowed to keep it serving (that
+     * is what the notification and its Stop action are for).
+     */
+    private fun stopServerSession() {
+        val id = serverSessionId
+        serverSessionId = null
         serverRunJob?.cancel()
         serverRunJob = null
-        activeServer?.stop()
+        if (id != null) ServerHosts.shared.stop(id) else activeServer?.stop()
         activeServer = null
-        _outputState.value = OutputRunState(phase = OutputPhase.IDLE)
     }
 
     /** Stops the running build/run pipeline and kills the live process. */
@@ -2474,10 +2629,7 @@ class EditorViewModel : ViewModel() {
         activeRunner = null
         interactiveRun?.stop()
         interactiveRun = null
-        serverRunJob?.cancel()
-        serverRunJob = null
-        activeServer?.stop()
-        activeServer = null
+        stopServerSession()
         val current = _outputState.value
         if (current.busy) {
             _outputState.value = current.copy(
@@ -2938,6 +3090,8 @@ class EditorViewModel : ViewModel() {
             phase = if (buildCommand != null) OutputPhase.BUILDING else OutputPhase.RUNNING,
             busy = true,
             serverRun = true,
+            lanShared = LanSharePolicy.shared.isEnabled(),
+            servers = ServerHosts.shared.registry.snapshot(),
             lines = startLines,
             summary = context.getString(
                 if (buildCommand != null) R.string.output_compiling else R.string.output_starting_server
@@ -2995,34 +3149,75 @@ class EditorViewModel : ViewModel() {
                     if (failed || _outputState.value.buildExitCode != 0) return@launch
                 }
 
-                // 2) Server phase — long-lived; the flow completes only when
-                //    the child exits (or the user cancels the collection).
+                // 2) Server phase — long-lived. Phase 37.2: the process is
+                //    owned by the shared ServerHost, not by this scope, so the
+                //    user leaving the editor (or Android destroying the
+                //    activity) no longer kills a LAN server; this collector is
+                //    a mirror of the host's replayed event stream.
                 _outputState.value = _outputState.value.copy(
                     phase = OutputPhase.RUNNING,
                     summary = context.getString(R.string.output_starting_server)
                 )
+                val host = ServerHosts.shared
+                val lan = LanSharePolicy.shared.isEnabled()
+                if (lan) {
+                    LanAddressProvider.refresh(context.applicationContext, host)
+                }
                 val server = ServerRunner(
                     shell = prepared.shell,
-                    environment = prepared.env,
+                    environment = if (lan) {
+                        // The templates read this and bind accordingly; without
+                        // it a LAN switch would change nothing (37.1 §1).
+                        prepared.env + mapOf(CODEC_SERVER_HOST_ENV to LanAddress.WILDCARD_HOST)
+                    } else {
+                        prepared.env
+                    },
                     command = runCommand.orEmpty(),
-                    workDir = info.root
+                    workDir = info.root,
+                    preferredPort = config.port ?: 0
                 )
                 activeServer = server
-                server.start().collect { event ->
+                serverProjectName = info.name
+                val sessionId = ServerHost.processId(info.name)
+                serverSessionId = sessionId
+                host.attachProcess(sessionId, info.name, server, lan).collect { event ->
                     when (event) {
                         is ServerEvent.Output -> appendOutputLine(
                             OutputLine(event.line, OutputLineKind.OUTPUT)
                         )
                         is ServerEvent.Ready -> {
+                            val endpoints = ServerEndpoints.of(
+                                port = event.port,
+                                bind = event.bind,
+                                lanAddress = host.lanAddress(),
+                                lanShared = lan
+                            )
                             _outputState.value = _outputState.value.copy(
                                 serverUrl = event.url,
+                                serverEndpoints = endpoints,
+                                lanShared = lan,
+                                servers = host.registry.snapshot(),
                                 summary = context.getString(R.string.output_server_running_at, event.url)
                             )
+                            refreshServingNotification(context, endpoints)
                             serverReadyHandler?.invoke(info.name, event.url)
+                        }
+                        is ServerEvent.BindFailed -> {
+                            appendOutputLine(OutputLine(event.message, OutputLineKind.ERROR))
+                            _outputState.value = _outputState.value.copy(summary = event.message)
                         }
                         is ServerEvent.ReadyTimeout -> {
                             _outputState.value = _outputState.value.copy(
                                 serverUrl = _outputState.value.serverUrl ?: config.serverPreviewUrl(),
+                                serverEndpoints = _outputState.value.serverEndpoints
+                                    ?: config.port?.let {
+                                        ServerEndpoints.of(
+                                            it,
+                                            if (lan) LanAddress.WILDCARD_HOST else LanAddress.LOOPBACK_HOST,
+                                            host.lanAddress(),
+                                            lan
+                                        )
+                                    },
                                 summary = context.getString(
                                     R.string.output_server_no_url,
                                     event.message
@@ -3034,10 +3229,9 @@ class EditorViewModel : ViewModel() {
                     }
                 }
             } catch (e: CancellationException) {
-                // Stop pressed: stopRun() already updated the state; kill the
-                // server process, then propagate.
-                activeServer?.stop()
-                activeServer = null
+                // Stop pressed: stopRun() already told the host to kill the
+                // process. Merely losing this collector must not kill a LAN
+                // server, so nothing is destroyed here — then propagate.
                 throw e
             } catch (e: Exception) {
                 failRun(context, e.message ?: "Server run failed")
@@ -3048,14 +3242,34 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Phase 37.2 — re-issue the keep-alive notification with the serving title.
+     * Promotion happens on the 5-second timer; the URL usually arrives after
+     * that, so the title is refreshed when the bind line is detected.
+     */
+    private fun refreshServingNotification(context: Context, endpoints: ServerEndpoints) {
+        if (!foregroundServiceActive) return
+        RunForegroundService.startServing(
+            context.applicationContext,
+            ServerNotification.title(serverProjectName ?: _projectName.value, endpoints),
+            ServerNotification.body(endpoints)
+        )
+    }
+
     /** Phase 14 — a background server ended on its own. Honest summary per exit code. */
     private fun finishServerExit(context: Context, exitCode: Int) {
         stopForegroundRun(context)
+        serverSessionId = null
+        val host = ServerHosts.shared
         val ok = exitCode == 0
         _outputState.value = _outputState.value.copy(
             phase = if (ok) OutputPhase.DONE else OutputPhase.FAILED,
             busy = false,
             serverUrl = _outputState.value.serverUrl,
+            // The URLs are dead the moment the process is: drop them instead
+            // of leaving a QR code that scans into a refused connection.
+            serverEndpoints = null,
+            servers = host.registry.snapshot(),
             summary = context.getString(R.string.output_server_exited, exitCode),
             waitingForInput = false,
             inputBuffer = "",

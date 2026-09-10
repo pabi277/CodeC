@@ -38,7 +38,12 @@ class ProjectScaffoldTest {
         assertEquals(listOf("app.py", "index.html"), files.map { it.relativePath })
         val app = files.first { it.relativePath == "app.py" }.content
         val index = files.first { it.relativePath == "index.html" }.content
-        assertTrue(app.contains("Running on http://127.0.0.1:5000"))
+        // Phase 37.1: the bind host comes from CODEC_SERVER_HOST, defaulting
+        // to loopback — and the printed line follows the real host, which is
+        // what lets ServerPortDetector tell a shared server from a private one.
+        assertTrue(app.contains("Running on http://%s:%s/"))
+        assertTrue(app.contains("HOST = os.environ.get(\"CODEC_SERVER_HOST\", \"127.0.0.1\")"))
+        assertTrue(app.contains("app.run(host=HOST, port=PORT"))
         assertTrue(app.contains("from flask import Flask"))
         assertTrue(app.contains("HTTPServer(("))
         assertTrue(app.contains("pip install flask"))
@@ -53,7 +58,9 @@ class ProjectScaffoldTest {
         assertEquals(listOf("main.py", "index.html"), files.map { it.relativePath })
         val app = files.first { it.relativePath == "main.py" }.content
         val index = files.first { it.relativePath == "index.html" }.content
-        assertTrue(app.contains("Uvicorn running on http://127.0.0.1:8000"))
+        assertTrue(app.contains("Uvicorn running on http://%s:%s/"))
+        assertTrue(app.contains("HOST = os.environ.get(\"CODEC_SERVER_HOST\", \"127.0.0.1\")"))
+        assertTrue(app.contains("uvicorn.run(app, host=HOST, port=PORT"))
         assertTrue(app.contains("from fastapi import FastAPI"))
         assertTrue(index.contains("Welcome to CodeC FastAPI App!"))
     }
@@ -63,9 +70,33 @@ class ProjectScaffoldTest {
         val files = ProjectScaffold.filesFor("c-microservice")
         assertEquals(listOf("server.c"), files.map { it.relativePath })
         val content = files.single().content
-        assertTrue(content.contains("CodeC server listening on http://127.0.0.1:8080"))
+        assertTrue(content.contains("CodeC server listening on http://%s:%d"))
+        assertTrue(content.contains("getenv(HOST_ENV)"))
+        assertTrue(content.contains("htonl(INADDR_ANY)"))
         assertTrue(content.contains("#include <sys/socket.h>"))
         assertTrue(content.contains("cc server.c -o bin/server"))
+    }
+
+    @Test
+    fun `every server template defaults to loopback and honours the lan env`() {
+        // The LAN switch is opt-in, so a template run without CodeC's env must
+        // still bind 127.0.0.1; with the env it must print the wildcard line
+        // the detector recognises. Both halves are template guarantees.
+        val hosts = mapOf(
+            "python-flask" to "app.py",
+            "python-fastapi" to "main.py"
+        )
+        for ((type, file) in hosts) {
+            val content = ProjectScaffold.filesFor(type).first { it.relativePath == file }.content
+            assertTrue("$type must default to loopback", content.contains("\"127.0.0.1\""))
+            assertTrue("$type must read the LAN env", content.contains("CODEC_SERVER_HOST"))
+            assertTrue("$type must not hardcode the host in bind", !content.contains("host=\"127.0.0.1\""))
+            assertTrue("$type must not hardcode the tuple bind", !content.contains("HTTPServer((\"127.0.0.1\", PORT)"))
+        }
+        val c = ProjectScaffold.filesFor("c-microservice").single().content
+        assertTrue(c.contains("CODEC_SERVER_HOST"))
+        assertTrue(c.contains("return \"127.0.0.1\";"))
+        assertTrue(!c.contains("htonl(INADDR_LOOPBACK)"))
     }
 
     @Test

@@ -3,7 +3,6 @@ package com.codeci.ide.ui.components
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -112,13 +111,11 @@ fun findWordBoundaries(text: String, col: Int): Pair<Int, Int> {
 }
 
 fun openTerminalUrl(context: Context, url: String) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        Toast.makeText(context, "Cannot open URL: ${e.message}", Toast.LENGTH_SHORT).show()
+    // Phase 37 follow-up: the ACTION_VIEW plumbing moved to the app's single
+    // launcher (`OpenInBrowser`) so the share row and the terminal cannot drift
+    // apart on how a URL is opened; this keeps the terminal's own failure text.
+    if (!com.codeci.ide.ui.services.OpenInBrowser.open(context, url)) {
+        Toast.makeText(context, "Cannot open URL: $url", Toast.LENGTH_SHORT).show()
     }
 }
 

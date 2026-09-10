@@ -32,6 +32,8 @@ secretsGradlePlugin = "2.0.1"
 credentials = "1.5.0"
 googleid = "1.1.1"
 soraEditor = "0.24.6"
+# Phase 37.1 — QR codes for the LAN URL (Apache-2.0, zero transitive deps).
+zxingCore = "3.5.4"
 
 
 [libraries]
@@ -106,6 +108,11 @@ sora-language-textmate = { group = "io.github.rosemoe", name = "language-textmat
 # 9.3.1-vs-9.1.1 AGP delta is non-blocking (the rule.md §4.2 fix-on-
 # evidence rule).
 sora-editor-lsp = { group = "io.github.rosemoe", name = "editor-lsp", version.ref = "soraEditor" }
+# Phase 37.1 — ZXing core for the "scan to open the phone's server" QR code.
+# Apache-2.0, no transitive dependencies (docs/PHASE34_37_OSS_RESEARCH.md §4:
+# "no custom QR encoder needed"). Only `core` is used — never `javase`
+# (that one drags in JAI/ImageIO), and never the Android `android-core`.
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxingCore" }
 
 
 [plugins]
