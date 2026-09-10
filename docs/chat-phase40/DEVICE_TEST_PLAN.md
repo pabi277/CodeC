@@ -1,8 +1,11 @@
 # CodeC Phase 40 — device test plan (owner runbook)
 
-> **Branch:** `arena/01a08c04-codec` · **Tip:** `e623a16` (impl `29e175e`) ·
-> **CI ✅ GREEN:** `Build APK` `34499964179` (impl) and `34500719045` (docs) ·
-> **Status of this round:** ⏳ NOT RUN — *device pass required*.
+> **Branch:** `arena/01a08c04-codec` · **Functional round:** `e623a16`
+> (impl `29e175e`) · **Colour round (40.5):** `8648314` · **CI ✅ GREEN:**
+> `Build APK` `34499964179`, `34500719045`, `34509510002` ·
+> **Status:** ✅ **checks 1–8 PASSED** on the owner's device (2026-09-10);
+> **checks C1–C3 (colour look-over) are new in 40.5 — run them with the same
+> APK** (Actions → latest green run on this branch → `CodeC-IDE`).
 >
 > Every check below has a **PASS looks like** line with the exact on-screen
 > text. If a line differs, that is the bug report — copy the text verbatim and
@@ -142,7 +145,37 @@ attached only after `git ls-remote` confirms access, then the branch is pushed.
 like** an inline error naming GitHub's own words (`… name already exists …`),
 the dialog stays open, and changing the name and publishing again works.
 
-## 7. Not part of this round (don't chase these)
+## 7. Phase 40.5 — colour look-over (3 checks, same APK)
+
+The functional round passed. These three are the visual half: they are what the
+owner's report was about (*"Now it is violet 💜 but not very good to read"*).
+Background and measurements: [PART_40_5](PART_40_5_COLOUR_REPAIR.md).
+
+**C1 — the Accent Color row shows a colour, not a hex.** Settings → Appearance.
+**PASS looks like:** the row reads **Accent Color**, then a round **violet
+dot**, then the word **Violet**. Tapping it opens exactly six entries — **Violet,
+Teal, Red, Blue, Orange, CodeC green** — each with its own dot. Pick **CodeC
+green**: the row then shows a green dot and **CodeC green**, and the app's
+accent-coloured controls (buttons, toggles, keyboard highlights) turn green.
+*FAIL:* the row still shows a hex string like `#FF6200EE`, or the list has no
+dots.
+
+**C2 — dark theme, the original complaint.** Dark theme, a code file open, tap
+into it so the keyboard and status bar are visible. **PASS looks like:** the
+status bar reads `Ln 1, Col 1 · UTF-8 · Kotlin · Spaces: 4 · LF` — the **LF**
+segment is as easy to read as **UTF-8**. The bottom bar's unselected labels
+(Files, Editor, Terminal, Packages, Settings) are all equally legible. The small
+corner hints on the keys (`q¹`, `;:`) are visible without leaning in, and a
+held/special key is a lighter violet with a readable label. *FAIL:* anything
+violet or grey that needs squinting.
+
+**C3 — light theme.** Settings → App Theme → **Light**, then repeat C2's glance.
+**PASS looks like:** the bottom-bar labels and the whole `Ln … · LF` line stay
+readable on the pale strip (this is where 3.53:1 and 3.78:1 used to be), the
+project tiles keep white letters/icons on their fills, and the Output panel
+stays dark by design with readable hint text.
+
+## 8. Not part of this round (don't chase these)
 
 - `↑ Everything up-to-date — nothing was pushed` is covered by the host test
   suite; the PUSH row only appears when there is something to push, so it is
@@ -151,7 +184,7 @@ the dialog stays open, and changing the name and publishing again works.
   trigger GitHub's limit to see them.
 - The in-app APK updater still points at `releases/latest` (Phase 42).
 
-## 8. What to send back
+## 9. What to send back
 
 For each check: **number + PASS/FAIL + the exact on-screen text** (or a
 screenshot of the sheet/dialog). Useful extras: phone model, Android version,

@@ -1,13 +1,19 @@
 # CodeC Phase 40 — GitHub that tells the truth
 
 > **Status:** 🔧 IMPLEMENTED on `arena/01a08c04-codec` — **CI ✅ GREEN**
-> (`Build APK` `34499964179` on tip `29e175e`, first push of the repair) —
-> the first attempt on `arena/01a08b68-codec` failed CI 16 times and is recorded
-> with its root causes in [PART_40_4](PART_40_4_CI_LOOP_DIAGNOSIS.md) · **Cost:**
+> (`Build APK` `34499964179` on the repair, `34509510002` on the colour repair
+> `8648314`) · **Device:** ✅ **8/8 functional checks passed** on the owner's
+> phone (2026-09-10); colour look-over (3 checks) in the runbook. The first
+> attempt on `arena/01a08b68-codec` failed CI 16 times and is recorded with its
+> root causes in [PART_40_4](PART_40_4_CI_LOOP_DIAGNOSIS.md) · **Cost:**
 > `[client-only]` · **Effort:** M/L · **Owner row:** *"Github integration update
 > now Github is working but it's not user friendly if i try to clone a repo and
 > didn't download the git it shows error in the background i can't see it,
 > sometimes it's push stay local, new branch create mostly stays local"*
+>
+> **40.5 (owner, pre-merge):** *"research throughly on the color of the app's
+> inside texts … Now it is violet 💜 but not very good to read. Also correct
+> other colors"* → [PART_40_5](PART_40_5_COLOUR_REPAIR.md).
 
 ```text
   40.1  Readiness + errors that cannot be missed
@@ -21,6 +27,7 @@
 | [40.2](PART_40_2_PUSH_TRUTH.md) | Push & branch outcome | M | 🔧 IMPLEMENTED |
 | [40.3](PART_40_3_PUBLISH_TO_GITHUB.md) | Publish to GitHub | M | 🔧 IMPLEMENTED |
 | [40.4](PART_40_4_CI_LOOP_DIAGNOSIS.md) | The 16-run failure loop: diagnosis + repair rules | S/M | ✅ DIAGNOSED |
+| [40.5](PART_40_5_COLOUR_REPAIR.md) | Colour repair: every in-app text measured (the violet bug) | M | 🔧 IMPLEMENTED |
 
 **Implementation map** (all on `arena/01a08c04-codec`, one commit):
 
@@ -36,8 +43,20 @@
 - Tests: `app/src/test/java/com/codeci/ide/GitHubPhase40Test.kt` (36 host cases,
   36/36 green on a local JVM before the push). Tooling:
   `scripts/ci_annotations.py` (read a red run's annotations from the sandbox).
-- **Device round: ⏳ NOT RUN — runbook: [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md)**
-  (8 checks, each with the exact on-screen text that means PASS).
+- ⚠️ **CI does not run the app suite** (`Build APK` builds `:app`, tests
+  `:bench`): the Phase 40 and 40.5 tests pass in the sandbox harness, not in CI.
+  One-line fix offered in [PART_40_5 §7](PART_40_5_COLOUR_REPAIR.md).
+- 40.5 `ui/theme/Contrast.kt` + `ui/theme/CodecPalette.kt` (new) + `Theme.kt`
+  rewritten around `AccentPalette.rolesFor` (the accent is corrected per theme
+  instead of pasted raw into `primary`), the Settings accent picker shows a
+  swatch + name, and the measured fixes across the panels, tiles, editor themes
+  and translucent chrome — full table and method in
+  [PART_40_5](PART_40_5_COLOUR_REPAIR.md). Tests: `AppContrastTest` (12) +
+  `ChromeContrastTest` (7, reads the alphas out of the UI sources).
+- **Device round: ✅ 8/8 PASSED on the owner's phone** (2026-09-10) — runbook:
+  [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md) (8 functional checks + the 3-check
+  colour look-over from 40.5, each with the exact on-screen text that means
+  PASS).
 
 ## What exists today (evidence, read on 2026-09-10)
 
