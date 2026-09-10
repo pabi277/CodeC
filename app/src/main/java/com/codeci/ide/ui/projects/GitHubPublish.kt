@@ -43,114 +43,69 @@ object GitHubPublish {
         return """{"name":"${name}","description":${descJson},"homepage":null,"private":${privateStr}}"""
     }
 
-    /** Parse the JSON response from GitHub's `CREATE` endpoint.
+    /** Parse the raw JSON body from GitHub.
      *
-     * On success returns [PublishResult] with html_url, ssh_url, default_branch.
-     * On failure returns [ApiError] with a user‑friendly kind + message.
+     * On success returns a simple data class with html_url, ssh_url, default_branch.
+     * On failure returns a sealed class with error kind and message.
      *
      * The [json] parameter should already be [GitRedactor]-cleaned so no token
      * reaches the parser.
      */
     sealed class ApiError(
-        val kind: ApiErrorKind,
-        val message: String,
-        val helpUrl: String? = null
+        val kind: Int,
+        val message: String
     )
 
     object ApiError {
-        @JvmField
-        object TokenMissing : ApiError(
-            kind = ApiErrorKind.TOKEN_MISSING,
-            message = "No GitHub token is connected.",
-            helpUrl = TOKEN_HELP_URL
-        )
-
-        @JvmField
-        data class PermissionMissing(
-            val needed: String,
-            @JvmField
-            override val helpUrl: String? = TOKEN_HELP_URL
-        ) : ApiError(
-            kind = ApiErrorKind.PERMISSION_MISSING,
-            message = "Your token may not allow repository creation. ${needed}",
-            helpUrl = TOKEN_HELP_URL
-        )
-
-        @JvmField
-        object NameTaken : ApiError(
-            kind = ApiErrorKind.NAME_TAKEN,
-            message = "A repository with that name already exists on this account.",
-            helpUrl = null
-        )
-
-        @JvmField
-        object RateLimited : ApiError(
-            kind = ApiErrorKind.RATE_LIMITED,
-            message = "GitHub rate limit exceeded. Try again later.",
-            helpUrl = null
-        )
-
-        @JvmField
-        object Server : ApiError(
-            kind = ApiErrorKind.SERVER,
-            message = "GitHub could not be reached. Check your network and retry.",
-            helpUrl = null
-        )
+        const val TOKEN_MISSING_KIND = 1
+        const val PERMISSION_MISSING_KIND = 2
+        const val NAME_TAKEN_KIND = 3
+        const val RATE_LIMITED_KIND = 4
+        const val SERVER_KIND = 5
     }
 
-    /** Enum class for API error kinds. */
-    enum class ApiErrorKind {
-        TOKEN_MISSING,
-        PERMISSION_MISSING,
-        NAME_TAKEN,
-        RATE_LIMITED,
-        SERVER,
-        GENERIC
-    }
-
-    /** Successful repo creation result. */
+    /** Result of parsing the GitHub create-repo response. */
     data class PublishResult(
         val htmlUrl: String,
         val sshUrl: String?,
-        val defaultBranch: String,
-        val private: Boolean
+        val defaultBranch: String
     )
 
     /** Parse the raw JSON body from GitHub.
      *
      * On success returns [PublishResult] with html_url, ssh_url, default_branch.
-     * On failure returns [ApiError] with a user‑friendly kind + message.
+     * On failure returns [ApiError] with a kind code and message.
      *
      * The [json] parameter should already be [GitRedactor]-cleaned so no token
      * reaches the parser.
      */
-    fun parseCreateResponse(json: String): Either<PublishResult, ApiError> {
+    fun parseCreateResponse(json: String): Result<PublishResult, ApiError> {
         val lower = json.lowercase()
 
         // 401 → token missing/invalid
         if (lower.contains("credentials login failed") ||
             lower.contains("bad credentials")) {
-            return Right(ApiError.TokenMissing())
+            return Result.failure(ApiError(ApiError.TOKEN_MISSING_KIND, "No GitHub token is connected."))
         }
 
         // 403 with rate-limit info
         if (lower.contains("rate limit exceeded") ||
             lower.contains("too many requests")) {
-            return Right(ApiError.RateLimited())
+            return Result.failure(ApiError(ApiError.RATE_LIMITED_KIND, "GitHub rate limit exceeded. Try again later."))
         }
 
         // 422 — validation errors (name taken, etc.)
         if (lower.contains("\"message\"") && lower.contains("\"status\": 422")) {
             // Check for name taken
             if (lower.contains("\"name\"") && lower.contains("\"already exists\""))
-                return Right(ApiError.NameTaken())
+                return Result.failure(ApiError(ApiError.NAME_TAKEN_KIND, "A repository with that name already exists on this account."))
             // Generic 422
-            return Right(ApiError.NameTaken())
+            return Result.failure(ApiError(ApiError.NAME_TAKEN_KIND, "A repository with that name already exists on this account."))
         }
 
         // 5xx or other server error
         if (lower.contains("\"message\"") && lower.contains("\"status\": 5")) {
-            return Right(ApiError.Server())
+            return Result.failure(ApiError(ApiError.SERVER_KIND, "GitHub could not be reached. Check your network and retry."))
         }
 
         // Try to extract the fields we need for success
@@ -159,16 +114,15 @@ object GitHubPublish {
         val defaultBranch = extractJsonField(json, "default_branch")
 
         if (htmlUrl != null && defaultBranch != null) {
-            return Left(PublishResult(
+            return Result.success(PublishResult(
                 htmlUrl = htmlUrl,
                 sshUrl = sshUrl,
-                defaultBranch = defaultBranch,
-                private = false // caller decides
+                defaultBranch = defaultBranch
             ))
         }
 
         // Fallback: generic error
-        return Right(ApiError.Server())
+        return Result.failure(ApiError(ApiError.SERVER_KIND, "GitHub could not be reached. Check your network and retry."))
     }
 
     /** Very simple JSON field extractor: returns the value after "key":, or null.
@@ -192,13 +146,24 @@ object GitHubPublish {
         return if (sb.isNotEmpty()) sb.toString() else null
     }
 
-    /** Turn an [ApiError] into a user‑friendly message + help link. */
-    fun apiErrorMessage(error: ApiError): String {
-        val parts = StringBuilder()
-        parts.append(error.message)
-        if (error.helpUrl != null && !error.helpUrl.isBlank()) {
-            parts.append('\n').append(error.helpUrl)
-        }
-        return parts.toString()
+    /** When token cannot create repos, show this message + browser fallback. */
+    fun tokenCanCreateReposMessage(): String {
+        return "No GitHub token is connected, so repository creation is not possible. " +
+            "Add a token in Settings → GitHub Account (a fine-grained token with " +
+            "Contents → Read and write), then retry.\n" +
+            "Alternatively, open https://github.com/settings/personal-access-tokens/new " +
+            "to create a token, then try again."
     }
+}
+
+/** A simple result type (since we can't use Either without adding a dependency). */
+sealed class Result {
+    data class Success<T>(val value: T) : Result()
+    data class Failure(val message: String) : Result()
+
+    @JvmStatic
+    fun success<T>(value: T): Result = Result.Success(value)
+
+    @JvmStatic
+    fun failure(message: String): Result = Result.Failure(message)
 }
