@@ -198,9 +198,9 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-10, Phase 37 device-passed + open-in-browser follow-up; merge held; **Phases 38-43 PLANNED**)
+## 9. State snapshot (2026-09-10, **Phase 37 + the 38-43 plan MERGED to `main` via PR #62 at `e89dc49`**; Phases 38-43 are 📋 PLANNED docs on `main`)
 
-- **Phases 38-43 are 📋 PLANNED — docs only, no app code, no PR** (2026-09-10,
+- **Phases 38-43 are 📋 PLANNED — docs only, no app code; the plan itself is now on `main`** (written 2026-09-10,
   owner: six new "before I share this" ideas + *"research thoroughly then write
   new phases"*), **renumbered on the owner's follow-up request ("*Rename the
   phases so i can continue 38 to 43*") so that the numbers are the order of
@@ -223,7 +223,7 @@ Every update updates the docs **in the same commit**:
   finding that corrected an earlier note); the user's own `.gitignore` always
   beats CodeC's `.git/info/exclude` entries; no telemetry/Crashlytics; no Play
   path while `targetSdk = 28` is deliberate; **and `targetSdk 28` stays.**
-- **Phase 37 (Device as server / LAN) is ✅ DEVICE-PASSED** on
+- **Phase 37 (Device as server / LAN) is ✅ DEVICE-PASSED and ✅ MERGED via PR #62** on
   `arena/01a0872e-codec` (owner: "Start Phase 37"): 37.1 LAN bind + the two
   URLs + ZXing QR, 37.2 keep-alive on the existing `RunForegroundService` +
   `ServerRegistry`/`ServerHost` owning port and process truth. LAN is opt-in
