@@ -110,8 +110,7 @@ legibility, both status-bar silhouettes, CI + reproducible renders, and
 the Settings scroll with no Termux card); item 4's About/README mark and
 the 512 asset were verified in-repo. **Merge authorized by the owner in
 the same message ("updated all md files and if phase 38 complete then
-marge it") — Phase 38 is merged to `main` (see JOURNEY §54 for the PR
-record).**
+marge it") — Phase 38 is ✅ MERGED to `main` via PR #64 → `main` at `dcd65b4bc3e65d268bcc354da9d413d74eb25038` (merge commit, history preserved); PR checks ✅ GREEN (`34445023100`).**
 
 ## What exists today (evidence, read 2026-09-10)
 
