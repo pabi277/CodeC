@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.codeci.ide.ui.theme.dataStore
 import kotlinx.coroutines.flow.Flow
+import com.codeci.ide.ui.theme.AccentPalette
 import kotlinx.coroutines.flow.map
 
 class SettingsManager(private val context: Context) {
@@ -169,7 +170,12 @@ class SettingsManager(private val context: Context) {
         it[TERMINAL_EXTRA_KEYS_MACROS] ?: ""
     }
 
-    val accentColorFlow: Flow<String> = context.dataStore.data.map { it[ACCENT_COLOR] ?: "#FF6200EE" }
+        // Phase 40.5 — the default is CodeC's own green (AccentPalette.DEFAULT_STORAGE_HEX),
+    // not the template violet. A stored value is returned as it is, so an accent the
+    // user picked earlier is never rewritten.
+    val accentColorFlow: Flow<String> = context.dataStore.data.map {
+        AccentPalette.effectiveStoredAccent(it[ACCENT_COLOR])
+    }
 
     val devModeUnlockedFlow: Flow<Boolean> = context.dataStore.data.map { it[DEV_MODE] ?: false }
     val showFilePathsFlow: Flow<Boolean> = context.dataStore.data.map { it[SHOW_FILE_PATHS] ?: false }

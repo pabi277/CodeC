@@ -1,6 +1,9 @@
 # CodeC Phase 40.1 — Readiness gate + errors that cannot be missed
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** 🔧 IMPLEMENTED + DEVICE-PASSED (check 1) · merged on the owner's
+> command (Phase 40) · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **CI:** ✅ `Build APK` `34499964179` on `29e175e` — see the
+> [README](README.md) for the phase ledger ·
 > **Owner row (verbatim):** *"…if i try to clone a repo and didn't download the
 > git it shows error in the background i can't see it"*
 

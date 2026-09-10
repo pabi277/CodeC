@@ -50,7 +50,8 @@ val MonokaiTheme = EditorThemeColors(
     text = Color(0xFFF8F8F2),
     keyword = Color(0xFFF92672),
     string = Color(0xFFE6DB74),
-    comment = Color(0xFF75715E),
+    // Phase 40.5 — was #75715E (3.03:1 on this background); 4.99:1 now.
+    comment = Color(0xFF9C9678),
     number = Color(0xFFAE81FF),
     function = Color(0xFFA6E22E),
     operator = Color(0xFFF8F8F2)
@@ -61,7 +62,8 @@ val DraculaTheme = EditorThemeColors(
     text = Color(0xFFF8F8F2),
     keyword = Color(0xFFFF79C6),
     string = Color(0xFFF1FA8C),
-    comment = Color(0xFF6272A4),
+    // Phase 40.5 — was #6272A4 (3.03:1); this pair keeps Dracula's hue at 5.47:1.
+    comment = Color(0xFF8DA0D0),
     number = Color(0xFFBD93F9),
     function = Color(0xFF50FA7B),
     operator = Color(0xFFFF79C6)
@@ -72,7 +74,8 @@ val GitHubDarkTheme = EditorThemeColors(
     text = Color(0xFFE1E4E8),
     keyword = Color(0xFFF97583),
     string = Color(0xFF9ECBFF),
-    comment = Color(0xFF6A737D),
+    // Phase 40.5 — was #6A737D (3.05:1); this is GitHub's own dark-mode muted at 4.77:1.
+    comment = Color(0xFF8B949E),
     number = Color(0xFF79B8FF),
     function = Color(0xFFB392F0),
     operator = Color(0xFFF97583)

@@ -17,9 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.theme.Contrast
 
 private val ErrorRed = Color(0xFFFF5555)
 private val WarningAmber = Color(0xFFFFB347)
@@ -46,6 +48,19 @@ fun EditorStatusBar(
     modifier: Modifier = Modifier
 ) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    // Phase 40.5 — this strip is `surfaceVariant` at 50% over `surface`, i.e.
+    // lighter than the base surface the accent is measured against. Anything
+    // meaningful on it is corrected against the strip the theme really draws
+    // (hue kept, lightness moved only as far as AA needs), so the accent, the
+    // error red and the warning amber read in BOTH themes: the old hardcoded
+    // #FF5555/#FFB347 and the raw accent measured 4.13/1.56/3.46:1 here.
+    val stripRgb = Contrast.composite(
+        MaterialTheme.colorScheme.surfaceVariant.toArgb(),
+        MaterialTheme.colorScheme.surface.toArgb(),
+        0.5f
+    )
+    fun onStrip(color: Color): Color =
+        Color(Contrast.ensureReadable(color.toArgb(), stripRgb, Contrast.AA_TEXT))
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -67,7 +82,7 @@ fun EditorStatusBar(
             Text(
                 text = stringResource(R.string.status_selection, selectionLength),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
+                color = onStrip(MaterialTheme.colorScheme.primary)
             )
         }
         // Mockup-exact: the line ending reads as a plain muted segment of
@@ -77,7 +92,7 @@ fun EditorStatusBar(
         Text(
             text = lineEnding,
             style = MaterialTheme.typography.labelSmall,
-            color = muted.copy(alpha = 0.7f),
+            color = onStrip(muted),
             modifier = if (onLineEndingClick != null) {
                 Modifier.clickable { onLineEndingClick() }
             } else {
@@ -93,12 +108,12 @@ fun EditorStatusBar(
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DiagnosticsDot(color = ErrorRed)
+                DiagnosticsDot(color = onStrip(ErrorRed))
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = "✕ $errorCount",
                     style = MaterialTheme.typography.labelSmall,
-                    color = ErrorRed
+                    color = onStrip(ErrorRed)
                 )
             }
         }
@@ -110,12 +125,12 @@ fun EditorStatusBar(
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DiagnosticsDot(color = WarningAmber)
+                DiagnosticsDot(color = onStrip(WarningAmber))
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = "⚠ $warningCount",
                     style = MaterialTheme.typography.labelSmall,
-                    color = WarningAmber
+                    color = onStrip(WarningAmber)
                 )
             }
         }

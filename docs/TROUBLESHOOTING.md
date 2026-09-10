@@ -1043,3 +1043,85 @@ diagnostic, and git's `Permission denied (publickey)` yield **nothing**
 `CompilerService` AUTO chain), the `com.termux.permission.RUN_COMMAND`
 permission and the `<queries>` entry are all **unchanged** — Phase 38.2
 removed the *panel*, not the mechanism.
+
+## 28. A red `Build APK` you cannot read → read its annotations (agent runbook; Phase 40.4, 2026-09-10)
+
+**Symptom (what happened on `arena/01a08b68-codec`):** 16 consecutive red
+`Build APK` runs, 2 hours, every one failing in the Kotlin front end in under
+2.5 minutes, with the *same* errors repeating across runs — because nobody read
+the output. The sandbox cannot open CI logs (`gh run view --log-failed` and
+`gh api …/jobs/<id>/logs` both fail: the log blob host is unreachable), but the
+errors are still readable — GitHub keeps them as check-run **annotations**.
+
+**Read them (sandbox):**
+
+```
+python3 scripts/ci_annotations.py                 # latest run on this branch
+python3 scripts/ci_annotations.py 34489229134     # a specific run
+```
+
+**Read them (owner's browser):** repo → **Actions** → the `Build APK` run →
+the `Assemble debug APK` step → **Annotations** (the same `e: file:///…` lines).
+
+**Rules that prevent the loop:**
+
+1. Compile the pure Kotlin locally first (`rule.md` §9: jdk4py + kotlinc; the
+   harness in the Phase 40.4 record compiles the real `ui/projects` files).
+2. Never push a second time with the same error signature: read the annotation,
+   fix *that line*, push once.
+3. Fix in place. 11 "Rewrite X" commits in that loop moved the errors instead of
+   removing them.
+4. Only call APIs that exist in this repo; open the owning file first
+   (`GitRedactor`, `GitErrors`, `GitManager` are all Android-free and testable).
+5. Two red runs, same signature = wrong strategy. Stop, re-derive from the
+   phase doc.
+
+## 29. Text is hard to read / "it is violet 💜 but not very good to read" (owner report; Phase 40.5, 2026-09-10)
+
+**What it was.** The accent was stored as a raw `#AARRGGBB` (default
+`#FF6200EE`, the Android Studio template violet) and pushed straight into
+`colorScheme.primary` for **both** themes. `#6200EE` is a light-theme colour:
+on the dark surface it is **2.25:1**, where WCAG 2.2 AA (§1.4.3) wants 4.5:1
+for body text — and white on it was 1.72:1, so accent buttons were as bad. In
+the light theme the same value is a fine 7.44:1, which is why only dark mode
+looked broken. Material 3 solves this with tonal roles (primary = tone 40 in
+light, tone 80 in dark); the app never applied that to a user's accent.
+
+**The fix (what to check if it ever regresses).**
+
+1. `AccentPalette.rolesFor(seed, dark, surface)` (`ui/theme/CodecPalette.kt`)
+   keeps the accent's hue and moves only its lightness until it clears 4.5:1 on
+   the surface the theme actually draws; `onPrimary`/`onContainer` are measured
+   (`Contrast.onColorFor`), never assumed. All twelve roles come from the
+   accent (`secondary` = less chroma, `tertiary` = hue +60°).
+2. Colours drawn on a **translucent** surface must be derived from that surface,
+   not from the base surface: the editor status bar (`surfaceVariant` @0.5 over
+   `surface`) and the key caps (`surface` @0.9, or the accent tint) compute the
+   composited colour and correct their text against it (`Contrast.ensureReadable`).
+   This is the rule that was missing in nine places.
+3. Every token in `CodecPalette` carries its measured ratio in KDoc, and
+   `AppContrastTest` (16 cases) + `ChromeContrastTest` (7) re-derive all of
+   them — the chrome test reads the alphas **out of the UI sources**, so raising
+   one fails the build. `:app:testDebugUnitTest` runs both in CI through the
+   `gradle-bootstrap` bridge.
+
+**"It is still violet" — read this before filing it.** The default accent is now
+**CodeC green `#3DDC84`**, but a value already stored on the device is never
+rewritten (a user's choice must survive an update). Settings → Appearance will
+show the stored accent; tap **CodeC green** to switch. A clean install starts
+green.
+
+**Not covered on purpose (WCAG 2.2 §1.4.3 exceptions):** disabled controls
+(they must read as disabled), and decorations with no information of their own
+(the status bar's `·` separators, the bottom-sheet drag handle, the keyboard's
+pressed-state tint — the pressed cap's *label* is still 6.01:1 dark / 6.45:1
+light).
+
+**Measured before → after highlights:** muted panel text 2.90:1 → 6.31:1 ·
+output-header legend 4.44 → 5.80 · QR fallback 4.16 → 5.44 · terminal
+"shell failed" 4.17 → 4.63 · project tiles 2.57/2.78/4.32/4.23 → 5.02/5.13/5.72/5.10 ·
+hub rows 3.68/4.47 → 5.17/5.90 · editor comments (monokai/dracula/github)
+3.95/3.03/3.05 → 4.99/5.47/4.77 · bottom-nav labels (light) 3.53 → 5.23 ·
+status "LF" (light) 3.78 → 8.17 · key-cap tints and hints, badges (3.46) and
+55 %-alpha borders (2.25, need 3:1) — all fixed and pinned. Full table:
+[`chat-phase40/PART_40_5_COLOUR_REPAIR.md`](chat-phase40/PART_40_5_COLOUR_REPAIR.md).

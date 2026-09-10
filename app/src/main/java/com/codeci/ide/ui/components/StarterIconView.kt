@@ -12,13 +12,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.projects.WelcomeStarter
+import com.codeci.ide.ui.theme.CodecPalette
 
 @Composable
 fun StarterIconView(starter: WelcomeStarter, modifier: Modifier = Modifier) {
     val background = when (starter.id) {
-        "python" -> Color(0xFF3E7CC1)
-        "web" -> Color(0xFF4CAF50)
-        else -> Color(0xFFF0863C)
+        "python" -> Color(CodecPalette.TILE_BLUE)
+        "web" -> Color(CodecPalette.TILE_GREEN)
+        else -> Color(CodecPalette.TILE_ORANGE)
     }
     
     val icon = when (starter.id) {

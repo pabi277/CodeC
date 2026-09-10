@@ -145,7 +145,9 @@ fun EditorProjectDrawer(
                         .clip(RoundedCornerShape(50))
                         .border(
                             width = 1.dp,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                            // Phase 40.5 — 0.55 alpha measured 2.25:1 against the
+                            // surface; the opaque accent clears 3:1.
+                            color = MaterialTheme.colorScheme.primary,
                             shape = RoundedCornerShape(50)
                         )
                         .clickable(onClick = onSwitchBranch)

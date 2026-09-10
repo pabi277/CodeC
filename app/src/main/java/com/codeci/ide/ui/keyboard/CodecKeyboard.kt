@@ -24,6 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.components.KeyGestureDetector
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
+import com.codeci.ide.ui.theme.Contrast
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -192,6 +195,49 @@ private fun CodecKeycap(
     val carriesHidden = corner == null &&
         (def.popup != null || def.swipeUp != null || def.swipeDown != null)
     val holdingPreview = popupShown
+    // Phase 40.5 — everything drawn ON a cap is derived from the colour that cap
+    // really has: the theme's `surface` at 90% over the keyboard strip
+    // (`surfaceVariant` at 50% over `surface`), or the accent tint when the cap
+    // is active/pressed. The strip is lighter than the base surface the accent
+    // was measured against, and a *light* accent (the default green) turns the
+    // tinted cap light too — the label used to be plain `onSurface`, which on
+    // a green tint measured 3.43:1. One source for the background = no drift
+    // between what is painted and what the maths assumes.
+    val keyboardStrip = Contrast.composite(
+        MaterialTheme.colorScheme.surfaceVariant.toArgb(),
+        MaterialTheme.colorScheme.surface.toArgb(),
+        0.5f
+    )
+    // 0.5 measured 5.40:1 dark / 5.43:1 light for the label; 0.6 was 4.34:1.
+    val tintAlpha: Float? = when {
+        spaceTracking -> 0.5f
+        pressed -> 0.42f
+        isShiftCap && shift != ShiftState.OFF -> 0.5f
+        else -> null
+    }
+    val capColor = if (tintAlpha == null) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+    } else {
+        MaterialTheme.colorScheme.primary.copy(alpha = tintAlpha)
+    }
+    val capRgb = Contrast.composite(capColor.toArgb(), keyboardStrip, capColor.alpha)
+    /** [color] as text on THIS cap — corrected only as far as AA needs. */
+    fun onCap(color: Color): Color =
+        Color(Contrast.ensureReadable(color.toArgb(), capRgb, Contrast.AA_TEXT))
+    // The label on an untinted cap is onSurface (12.98:1); on a tinted cap it is
+    // whatever stays readable on the tint, and the corner dot flips to the
+    // colour that clears 3:1 there (a primary dot on a tinted cap was 1.4:1).
+    val labelColor = if (tintAlpha == null) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        Color(Contrast.ensureReadable(MaterialTheme.colorScheme.onSurface.toArgb(), capRgb, Contrast.AA_TEXT))
+    }
+    val cornerHintColor = onCap(MaterialTheme.colorScheme.primary)
+    val cornerDotColor = if (Contrast.passes(MaterialTheme.colorScheme.onSurface.toArgb(), capRgb, Contrast.AA_NON_TEXT)) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        Color(Contrast.onColorFor(capRgb))
+    }
     val colPx = with(density) { SpaceTrack.DP_PER_COLUMN.dp.toPx() }
     val linePx = with(density) { SpaceTrack.DP_PER_LINE.dp.toPx() }
 
@@ -200,16 +246,7 @@ private fun CodecKeycap(
             .height(rowHeight)
             // Rounded FILL only — no child clip: the popup bubble renders
             // outside the cap bounds (the strip clips today; we don't).
-            .background(
-                shape = RoundedCornerShape(9.dp),
-                color = when {
-                    spaceTracking -> MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                    pressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
-                    isShiftCap && shift != ShiftState.OFF ->
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                    else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                }
-            )
+            .background(shape = RoundedCornerShape(9.dp), color = capColor)
             .semantics { contentDescription = label }
             .pointerInput(cap, isShiftCap) {
                 awaitEachGesture {
@@ -314,8 +351,9 @@ private fun CodecKeycap(
             },
             style = if (holdingPreview) MaterialTheme.typography.titleMedium
                     else MaterialTheme.typography.titleSmall,
-            color = if (holdingPreview) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface,
+            // A held cap previews the release key in the accent; a tinted cap
+            // keeps whichever of onSurface/the accent is readable on the tint.
+            color = if (holdingPreview) onCap(MaterialTheme.colorScheme.primary) else labelColor,
             maxLines = 1
         )
         // "what a gesture releases" — printed permanently in the corner
@@ -324,7 +362,9 @@ private fun CodecKeycap(
             Text(
                 text = corner,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                // Phase 40.5 — the corner hint is text: primary at 0.9 measured
+                // 3.86:1 on the cap, so it is corrected against the cap.
+                color = cornerHintColor,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 2.dp, end = 4.dp)
@@ -338,7 +378,11 @@ private fun CodecKeycap(
                     .align(Alignment.TopEnd)
                     .padding(3.dp)
                     .size(4.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), RoundedCornerShape(2.dp))
+                    // Phase 40.5 — a primary dot at 0.7 on a primary-tinted cap
+                    // is invisible (1.4:1 on the active cap); this is onSurface
+                    // where it clears 3:1 on the cap, and the readable extreme
+                    // where the tint would swallow it.
+                    .background(cornerDotColor, RoundedCornerShape(2.dp))
             )
         }
     }

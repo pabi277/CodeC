@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,8 +39,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,14 +62,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.components.FileIconView
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.DiffOp
+import com.codeci.ide.ui.projects.GitBlocker
+import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.GitFileState
+import com.codeci.ide.ui.projects.GitOp
+import com.codeci.ide.ui.projects.GitHubPublish
+import com.codeci.ide.ui.projects.PushOutcome
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.GitControlViewModel
 import java.io.File
@@ -94,6 +105,8 @@ fun GitControlSheet(
     var commitMessage by remember { mutableStateOf("") }
     // Phase 17 — the branch chip opens the Switch Branch dialog.
     var showBranchSheet by remember { mutableStateOf(false) }
+    // Phase 40.3 — the Publish-to-GitHub dialog (create the remote there isn't one).
+    var showPublishSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(projectRoot) {
         viewModel.refresh(context, projectRoot)
@@ -119,7 +132,9 @@ fun GitControlSheet(
                             .clickable { showBranchSheet = true }
                             .border(
                                 width = 1.dp,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                                // Phase 40.5 — 0.55 alpha measured 2.25:1 (needs
+                                // 3:1 for a control boundary); opaque is 4.56:1.
+                                color = MaterialTheme.colorScheme.primary,
                                 shape = RoundedCornerShape(50)
                             )
                             .padding(horizontal = 12.dp, vertical = 5.dp)
@@ -177,6 +192,56 @@ fun GitControlSheet(
                     SheetGuidance(stringResource(R.string.git_not_a_repo_message))
                 }
                 else -> {
+                    // ---- Phase 40.1: readiness before the attempt ----------
+                    // The owner's symptom was an error rendered where he was
+                    // not looking ("it shows error in the background i can't
+                    // see it"). Readiness answers *before* the tap: what is
+                    // missing, in one sentence, with the remedy on the same row.
+                    val pushBlocker = state.readiness?.blocker(GitOp.PUSH)
+                    val pushReadiness = state.readiness?.message(GitOp.PUSH)
+                    when {
+                        pushBlocker != null && pushReadiness != null -> Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp)
+                        ) {
+                            Text(
+                                text = "!",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = UnpushedAmber
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = pushReadiness,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = UnpushedAmber
+                                )
+                                if (pushBlocker == GitBlocker.NO_TOKEN) {
+                                    GitHelpLink(GitErrors.TOKEN_HELP_URL)
+                                }
+                            }
+                            if (pushBlocker == GitBlocker.NO_REMOTE) {
+                                Spacer(Modifier.width(8.dp))
+                                OutlinedButton(
+                                    onClick = { showPublishSheet = true },
+                                    enabled = !state.busy && !state.publishBusy,
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.height(42.dp)
+                                ) {
+                                    Text("PUBLISH", letterSpacing = 0.8.sp)
+                                }
+                            }
+                        }
+                        state.readiness?.isReady(GitOp.PUSH) == true -> Text(
+                            text = "✓ GitHub ready",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                        )
+                    }
                     // Phase 17 §2.5 — conflicts get their own group and block
                     // the commit; everything else stays in "Changes".
                     val files = state.status?.files.orEmpty()
@@ -458,7 +523,12 @@ fun GitControlSheet(
                     // all — it simply is not published yet, which is exactly
                     // the case the owner hit with a freshly created branch.
                     val unpublished = state.status?.unpublished == true
-                    if (ahead > 0 || state.pushError != null || unpublished) {
+                    // Phase 40.2 — a push result is *state*, not a toast: it
+                    // stays until it is dismissed or the user refreshes.
+                    val pushOk = state.lastResult?.ok == true
+                    if (ahead > 0 || state.pushError != null || unpublished ||
+                        state.lastResult != null
+                    ) {
                         HorizontalDivider()
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -467,37 +537,52 @@ fun GitControlSheet(
                                 .padding(vertical = 10.dp)
                         ) {
                             Text(
-                                text = "↑",
+                                text = if (pushOk) "✓" else "↑",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = UnpushedAmber
+                                color = if (pushOk) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    UnpushedAmber
+                                }
                             )
                             Spacer(Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = when {
-                                        ahead > 0 -> {
-                                            val b = state.status?.branch
-                                            if (!b.isNullOrBlank()) {
-                                                stringResource(
-                                                    R.string.git_unpushed_count_branch,
-                                                    ahead,
-                                                    b
-                                                )
-                                            } else {
-                                                stringResource(R.string.git_unpushed_count, ahead)
+                                if (!pushOk) {
+                                    Text(
+                                        text = when {
+                                            ahead > 0 -> {
+                                                val b = state.status?.branch
+                                                if (!b.isNullOrBlank()) {
+                                                    stringResource(
+                                                        R.string.git_unpushed_count_branch,
+                                                        ahead,
+                                                        b
+                                                    )
+                                                } else {
+                                                    stringResource(R.string.git_unpushed_count, ahead)
+                                                }
                                             }
-                                        }
-                                        state.pushError != null ->
-                                            stringResource(R.string.git_unpushed_unknown)
-                                        else -> stringResource(
-                                            R.string.git_unpushed_new_branch,
-                                            state.status?.branch ?: ""
-                                        )
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = UnpushedAmber
-                                )
+                                            state.pushError != null ->
+                                                stringResource(R.string.git_unpushed_unknown)
+                                            else -> stringResource(
+                                                R.string.git_unpushed_new_branch,
+                                                state.status?.branch ?: ""
+                                            )
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = UnpushedAmber
+                                    )
+                                }
+                                // Phase 40.2 — what actually happened to the last
+                                // push, named branch and all.
+                                state.lastResult?.let { result ->
+                                    PushResultCard(
+                                        result = result,
+                                        onDismiss = { viewModel.dismissPushResult() },
+                                        onPublish = { showPublishSheet = true }
+                                    )
+                                }
                                 state.pushError?.let { error ->
                                     Text(
                                         text = error,
@@ -556,6 +641,285 @@ fun GitControlSheet(
             onAfterSwitch = onAfterBranchSwitch
         )
     }
+
+    // Phase 40.3 — Publish to GitHub (create the remote when there isn't one).
+    if (showPublishSheet) {
+        PublishToGitHubDialog(
+            defaultName = projectRoot.name,
+            busy = state.publishBusy,
+            error = state.publishError,
+            note = state.publishNote,
+            needsPermission = state.publishNeedsPermission,
+            onDismiss = {
+                showPublishSheet = false
+                viewModel.dismissPublish()
+            },
+            onPublish = { name, description, isPrivate ->
+                viewModel.publishToGitHub(
+                    context = context,
+                    projectRoot = projectRoot,
+                    repoName = name,
+                    description = description.takeIf { it.isNotBlank() },
+                    isPrivate = isPrivate
+                )
+            },
+            onAttach = { url -> viewModel.attachRemoteToGitHub(context, projectRoot, url) }
+        )
+    }
+}
+
+/**
+ * Phase 40.2 — the result card. Deliberately a projection of git's own bytes
+ * (never a green tick we invented): the branch it refers to is always named,
+ * because "push stayed local" was exactly the case where the UI did not say
+ * which branch it was talking about.
+ */
+@Composable
+private fun PushResultCard(
+    result: PushOutcome,
+    onDismiss: () -> Unit,
+    onPublish: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+        when (result) {
+            is PushOutcome.Pushed -> {
+                Text(
+                    text = "✓ Pushed ${result.branch} → ${shortRemote(result.remoteUrl)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                val detail = when {
+                    result.newBranch -> "new branch on GitHub"
+                    result.from != null -> "${result.from}..${result.to}"
+                    else -> null
+                }
+                if (detail != null) {
+                    Text(
+                        text = "  $detail",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            is PushOutcome.UpToDate -> Text(
+                text = "↑ Everything up-to-date — nothing was pushed",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            is PushOutcome.Rejected -> Text(
+                text = "✗ Push rejected — ${result.hint}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            is PushOutcome.NoRemote -> {
+                Text(
+                    text = "↑ Still local — ${result.message}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = UnpushedAmber
+                )
+                TextButton(onClick = onPublish) { Text("PUBLISH TO GITHUB") }
+            }
+            is PushOutcome.Auth -> Text(
+                text = "✗ ${result.message}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            is PushOutcome.Failed -> {
+                Text(
+                    text = "✗ ${result.message}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                result.detail?.let { detail ->
+                    Text(
+                        text = detail,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+        Text(
+            text = "Dismiss",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .clickable { onDismiss() }
+                .padding(vertical = 2.dp, horizontal = 2.dp)
+        )
+    }
+}
+
+/**
+ * Phase 40.3 — the Publish dialog.
+ *
+ * Two hard rules from the spec are visible here: **private by default** (a
+ * phone IDE pushing a folder called `taxes` to a public repository is a data
+ * leak — GitHub's own default is public, so `private` is sent explicitly), and
+ * **the failure message lives in the window the user is looking at** (the
+ * Phase 40.1 lesson: never a snackbar alone).
+ */
+@Composable
+private fun PublishToGitHubDialog(
+    defaultName: String,
+    busy: Boolean,
+    error: String?,
+    note: String?,
+    needsPermission: String?,
+    onDismiss: () -> Unit,
+    onPublish: (name: String, description: String, isPrivate: Boolean) -> Unit,
+    onAttach: (url: String) -> Unit
+) {
+    val context = LocalContext.current
+    var name by remember { mutableStateOf(GitHubPublish.nameFor(defaultName)) }
+    var description by remember { mutableStateOf("") }
+    var isPrivate by remember { mutableStateOf(true) }
+    var existingUrl by remember { mutableStateOf("") }
+
+    // Success closes the dialog — the sheet keeps the result card and note.
+    LaunchedEffect(note) {
+        if (!note.isNullOrBlank()) onDismiss()
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        properties = DialogProperties(
+            dismissOnBackPress = !busy,
+            dismissOnClickOutside = !busy
+        ),
+        title = {
+            Text(
+                text = "Publish to GitHub",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = "Creates the repository on GitHub, adds it as origin, and " +
+                        "pushes this branch.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    enabled = !busy,
+                    label = { Text("Repository name") }
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    singleLine = true,
+                    enabled = !busy,
+                    label = { Text("Description (optional)") }
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(
+                        checked = isPrivate,
+                        onCheckedChange = { isPrivate = it },
+                        enabled = !busy
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text("Private repository", style = MaterialTheme.typography.bodyMedium)
+                }
+                Text(
+                    text = "GitHub's own default is public — this stays private unless " +
+                        "you turn it off.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                error?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                needsPermission?.let { needs ->
+                    Text(
+                        text = "GitHub asked for: $needs",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                if (error != null) {
+                    Text(
+                        text = "Open github.com/new ↗",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(GitHubPublish.NEW_REPO_URL))
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    )
+                                }
+                            }
+                            .padding(vertical = 4.dp)
+                    )
+                }
+
+                HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                Text(
+                    text = "Already created it in the browser?",
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = existingUrl,
+                    onValueChange = { existingUrl = it },
+                    singleLine = true,
+                    enabled = !busy,
+                    placeholder = { Text("https://github.com/user/repo.git") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onPublish(name, description, isPrivate) },
+                enabled = !busy && name.isNotBlank()
+            ) {
+                Text(if (busy) "PUBLISHING…" else "PUBLISH")
+            }
+        },
+        dismissButton = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = { onAttach(existingUrl.trim()) },
+                    enabled = !busy && existingUrl.isNotBlank()
+                ) {
+                    Text("ATTACH")
+                }
+                TextButton(onClick = onDismiss, enabled = !busy) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        }
+    )
+}
+
+/** `https://github.com/u/r.git` → `github.com/u/r` for one-line result cards. */
+private fun shortRemote(url: String?): String {
+    if (url.isNullOrBlank()) return "GitHub"
+    return url
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .removeSuffix(".git")
+        .trimEnd('/')
 }
 
 @Composable
@@ -679,9 +1043,12 @@ private fun GitChangeRow(
                 .border(
                     width = 1.dp,
                     color = if (markResolvedMode) {
-                        ConflictPurple.copy(alpha = 0.6f)
+                        // Phase 40.5 — 0.6 alpha measured 2.55:1; opaque conflict
+                        // purple is 4.81:1 (an inactive control is exempt, but the
+                        // boundary still identifies the button, so it uses outline).
+                        ConflictPurple
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                        MaterialTheme.colorScheme.outline
                     },
                     shape = RoundedCornerShape(10.dp)
                 )

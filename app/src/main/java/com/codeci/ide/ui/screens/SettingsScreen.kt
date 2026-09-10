@@ -24,10 +24,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Warning
@@ -86,7 +88,9 @@ import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.DeviceDiagnostics
+import com.codeci.ide.ui.theme.AccentPalette
 import com.codeci.ide.ui.theme.AppThemeMode
+import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.TerminalThemeType
 import com.codeci.ide.ui.theme.ThemeManager
@@ -140,7 +144,7 @@ fun SettingsScreen(
     val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 12f)
     val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "JetBrains Mono")
     val terminalExtraKeysMacros by settingsManager.terminalExtraKeysMacrosFlow.collectAsState(initial = "")
-    val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
+    val accentColor by settingsManager.accentColorFlow.collectAsState(initial = AccentPalette.DEFAULT_STORAGE_HEX)
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(com.codeci.ide.R.string.settings_title)) })
@@ -749,11 +753,22 @@ fun SettingsScreen(
             // HERE as well; one effect deserves one row, and the Terminal
             // section (with its live preview) owns it.
 
+            // Phase 40.5 — the picker shows a swatch + a name instead of a raw
+            // hex string, offers the app's own green, and only ever lists
+            // accents that pass WCAG AA in BOTH themes (AppContrastTest
+            // re-derives every choice; the accent itself is lightness-corrected
+            // by AccentPalette.rolesFor, so the stored value is unchanged).
             SettingsDropdown(
                 title = stringResource(com.codeci.ide.R.string.accent_color),
-                selectedOption = accentColor,
-                options = listOf("#FF6200EE", "#FF018786", "#FFB00020", "#FF1976D2", "#FFFF9800"),
-                onOptionSelected = { scope.launch { settingsManager.setAccentColor(it) } }
+                selectedOption = AccentPalette.labelFor(accentColor),
+                options = AccentPalette.choiceLabels,
+                onOptionSelected = { label ->
+                    AccentPalette.storageHexFor(label)?.let { hex ->
+                        scope.launch { settingsManager.setAccentColor(hex) }
+                    }
+                },
+                selectedSwatchArgb = AccentPalette.rgbOf(accentColor),
+                optionSwatchArgb = { label -> AccentPalette.argbForLabel(label) }
             )
 
             Box(modifier = Modifier.padding(16.dp)) {
@@ -1136,9 +1151,18 @@ fun SettingsSlider(title: String, value: Float, valueRange: ClosedFloatingPointR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsDropdown(title: String, selectedOption: String, options: List<String>, onOptionSelected: (String) -> Unit) {
+fun SettingsDropdown(
+    title: String,
+    selectedOption: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit,
+    /** Phase 40.5 — optional colour swatch before the selected value (ARGB). */
+    selectedSwatchArgb: Int? = null,
+    /** Phase 40.5 — optional per-option colour swatch, keyed by option label. */
+    optionSwatchArgb: ((String) -> Int?)? = null,
+) {
     var expanded by remember { mutableStateOf(false) }
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1146,7 +1170,7 @@ fun SettingsDropdown(title: String, selectedOption: String, options: List<String
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-        
+
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded },
@@ -1156,15 +1180,29 @@ fun SettingsDropdown(title: String, selectedOption: String, options: List<String
                 value = selectedOption,
                 onValueChange = {},
                 readOnly = true,
+                leadingIcon = selectedSwatchArgb?.let { argb ->
+                    { SwatchDot(argb) }
+                },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier.menuAnchor().fillMaxWidth(),
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
             )
-            
+
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 options.forEach { option ->
+                    val swatch = optionSwatchArgb?.invoke(option)
                     DropdownMenuItem(
-                        text = { Text(option) },
+                        text = {
+                            if (swatch == null) {
+                                Text(option)
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    SwatchDot(swatch)
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(option)
+                                }
+                            }
+                        },
                         onClick = {
                             onOptionSelected(option)
                             expanded = false
@@ -1174,6 +1212,17 @@ fun SettingsDropdown(title: String, selectedOption: String, options: List<String
             }
         }
     }
+}
+
+/** The colour dot the picker shows; the theme supplies the readable primary. */
+@Composable
+private fun SwatchDot(argb: Int) {
+    Box(
+        modifier = Modifier
+            .size(18.dp)
+            .clip(CircleShape)
+            .background(Color(argb))
+    )
 }
 
 @Composable

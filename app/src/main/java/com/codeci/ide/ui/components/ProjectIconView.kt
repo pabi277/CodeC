@@ -15,16 +15,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.projects.HubIconToken
+import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.projects.ProjectHubEntry
 
 @Composable
 fun ProjectIconView(entry: ProjectHubEntry, modifier: Modifier = Modifier) {
     val background = when (entry.icon) {
-        HubIconToken.C_ORANGE -> Color(0xFFF0863C)
-        HubIconToken.PY_BLUE -> Color(0xFF3E7CC1)
-        HubIconToken.SERVER_PURPLE -> Color(0xFF8B5CF6)
-        HubIconToken.WEB_GREEN -> Color(0xFF4CAF50)
-        HubIconToken.GENERIC_GRAY -> Color(0xFF6B7280)
+        HubIconToken.C_ORANGE -> Color(CodecPalette.TILE_ORANGE)
+        HubIconToken.PY_BLUE -> Color(CodecPalette.TILE_BLUE)
+        HubIconToken.SERVER_PURPLE -> Color(CodecPalette.TILE_VIOLET)
+        HubIconToken.WEB_GREEN -> Color(CodecPalette.TILE_GREEN)
+        HubIconToken.GENERIC_GRAY -> Color(CodecPalette.TILE_GRAY)
     }
     
     val icon = when (entry.icon) {

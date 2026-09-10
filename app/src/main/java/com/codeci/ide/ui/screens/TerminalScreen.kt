@@ -67,6 +67,7 @@ import com.codeci.ide.ui.components.parseExtraKeysMacros
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalLifecycle
 import com.codeci.ide.ui.terminal.TerminalSessionItem
+import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.theme.getTerminalTheme
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 
@@ -299,7 +300,7 @@ fun TerminalScreen(
         val (statusText, statusColor) = when (lifecycle) {
             TerminalLifecycle.STARTING -> "starting shell…" to Color(0xFFFFC107)
             TerminalLifecycle.RUNNING -> "running" to Color(0xFF66BB6A)
-            TerminalLifecycle.FAILED -> "shell failed" to Color(0xFFEF5350)
+            TerminalLifecycle.FAILED -> "shell failed" to Color(CodecPalette.ERROR_TEXT)
             TerminalLifecycle.EXITED -> "exited${exitCode?.let { " ($it)" } ?: ""}" to Color(0xFF9E9E9E)
         }
         Row(

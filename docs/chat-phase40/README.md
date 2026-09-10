@@ -1,10 +1,24 @@
 # CodeC Phase 40 — GitHub that tells the truth
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
+> **Status:** 🔧 IMPLEMENTED on `arena/01a08c04-codec` — **CI ✅ GREEN**
+> (`Build APK` `34499964179` on the repair, `34509510002` on the colour repair
+> `8648314`) · **Device:** ✅ **8/8 functional checks passed** on the owner's
+> phone (2026-09-10); colour look-over (3 checks) in the runbook. The first
+> attempt on `arena/01a08b68-codec` failed CI 16 times and is recorded with its
+> root causes in [PART_40_4](PART_40_4_CI_LOOP_DIAGNOSIS.md) · **Cost:**
 > `[client-only]` · **Effort:** M/L · **Owner row:** *"Github integration update
 > now Github is working but it's not user friendly if i try to clone a repo and
 > didn't download the git it shows error in the background i can't see it,
 > sometimes it's push stay local, new branch create mostly stays local"*
+>
+> **40.5 (owner, pre-merge):** *"research throughly on the color of the app's
+> inside texts … Now it is violet 💜 but not very good to read. Also correct
+> other colors"* → [PART_40_5](PART_40_5_COLOUR_REPAIR.md). Follow-up in the
+> same phase: *"Make the green as default"* → **CodeC green `#3DDC84` is now the
+> default accent** (first in the picker; a stored choice is never rewritten), the
+> scheme's `secondary`/`tertiary` roles come from the accent instead of the
+> template's purple/pink, and the light accent exposed one more real fault — the
+> key-cap label on a tinted cap (3.43:1) — now fixed and pinned.
 
 ```text
   40.1  Readiness + errors that cannot be missed
@@ -14,9 +28,46 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [40.1](PART_40_1_READINESS_AND_ERRORS.md) | Readiness gate + visible errors | S/M | 📋 PLANNED |
-| [40.2](PART_40_2_PUSH_TRUTH.md) | Push & branch outcome | M | 📋 PLANNED |
-| [40.3](PART_40_3_PUBLISH_TO_GITHUB.md) | Publish to GitHub | M | 📋 PLANNED |
+| [40.1](PART_40_1_READINESS_AND_ERRORS.md) | Readiness gate + visible errors | S/M | 🔧 IMPLEMENTED |
+| [40.2](PART_40_2_PUSH_TRUTH.md) | Push & branch outcome | M | 🔧 IMPLEMENTED |
+| [40.3](PART_40_3_PUBLISH_TO_GITHUB.md) | Publish to GitHub | M | 🔧 IMPLEMENTED |
+| [40.4](PART_40_4_CI_LOOP_DIAGNOSIS.md) | The 16-run failure loop: diagnosis + repair rules | S/M | ✅ DIAGNOSED |
+| [40.5](PART_40_5_COLOUR_REPAIR.md) | Colour repair: every in-app text measured (the violet bug) | M | 🔧 IMPLEMENTED |
+
+**Implementation map** (all on `arena/01a08c04-codec`, one commit):
+
+- 40.1 `ui/projects/GitReadiness.kt` (pure) + `GitControlViewModel.refresh()`
+  composing it + the readiness row in `GitControlView` + the clone dialog's
+  inline error (`FileManagerViewModel.cloneError`, `DialogProperties` instead of
+  the invented `onShow`).
+- 40.2 `ui/projects/GitPushOutcome.kt` (pure parser) + `GitManager.pushCapturing()`
+  (one push, git's own bytes) + `PushResultCard` + `lastResult` state.
+- 40.3 `ui/projects/GitHubPublish.kt` + `GitHubPublishApi.kt` + `GitManager.addRemote/`
+  `hasRemote/remoteUrl` + `publishToGitHub()`/`attachRemoteToGitHub()` +
+  `PublishToGitHubDialog` (private by default, browser fallback offered).
+- Tests: `app/src/test/java/com/codeci/ide/GitHubPhase40Test.kt` (36 host cases,
+  36/36 green on a local JVM before the push). Tooling:
+  `scripts/ci_annotations.py` (read a red run's annotations from the sandbox).
+- **CI runs the app suite through the `gradle-bootstrap` bridge** (verified in
+  `settings.gradle.kts` + `gradle-bootstrap/build.gradle.kts`): the `Assemble
+  debug APK` step's `:app` resolves to that bridge, which runs the real wrapper's
+  `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`. The contrast suites
+  are therefore CI-enforced, not just sandbox-checked
+  ([PART_40_5 §7](PART_40_5_COLOUR_REPAIR.md)).
+- 40.5 `ui/theme/Contrast.kt` + `ui/theme/CodecPalette.kt` (new) + `Theme.kt`
+  rewritten around `AccentPalette.rolesFor` (the accent is corrected per theme
+  instead of pasted raw into `primary`, and all twelve roles are derived from it
+  — no template purple/pink in `secondary`/`tertiary`), **the default accent is
+  CodeC green** (`SettingsManager`'s fallback and both `collectAsState`
+  placeholders read the one `AccentPalette.DEFAULT_STORAGE_HEX`), the Settings
+  accent picker shows a swatch + name, and the measured fixes across the panels,
+  tiles, editor themes and translucent chrome — full table and method in
+  [PART_40_5](PART_40_5_COLOUR_REPAIR.md). Tests: `AppContrastTest` (16) +
+  `ChromeContrastTest` (7, reads the alphas out of the UI sources).
+- **Device round: ✅ 8/8 PASSED on the owner's phone** (2026-09-10) — runbook:
+  [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md) (8 functional checks + the 3-check
+  colour look-over from 40.5, each with the exact on-screen text that means
+  PASS).
 
 ## What exists today (evidence, read on 2026-09-10)
 
