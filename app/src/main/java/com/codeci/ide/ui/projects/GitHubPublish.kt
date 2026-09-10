@@ -1,8 +1,6 @@
 package com.codeci.ide.ui.projects
 
-import com.codeci.ide.ui.projects.GitRedactor.redactUrls
-import com.codeci.ide.ui.projects.GitRedactor.redactAll
-import java.util.Locale
+import com.codeci.ide.ui.projects.GitRedactor.*;
 
 /**
  * Phase 40.3 — pure, Android-free GitHub repo creation.
@@ -59,14 +57,6 @@ object GitHubPublish {
         val kind: ApiErrorKind,
         val message: String,
         val helpUrl: String? = null
-    )
-
-    /** Successful repo creation result. */
-    data class PublishResult(
-        val htmlUrl: String,
-        val sshUrl: String?,
-        val defaultBranch: String,
-        val private: Boolean
     )
 
     /** ApiError subclasses. */
