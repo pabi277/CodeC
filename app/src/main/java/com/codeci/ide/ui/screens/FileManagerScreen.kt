@@ -104,6 +104,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
@@ -147,6 +148,7 @@ fun FileManagerScreen(
     val tree by viewModel.tree.collectAsState()
     val isBusy by viewModel.isBusy.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
+    val cloneError by viewModel.cloneError.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
@@ -757,7 +759,19 @@ fun FileManagerScreen(
         }
 
         AlertDialog(
-            onDismissRequest = { showCloneDialog = false },
+            // Phase 40.1 — a clone in flight cannot be dismissed by a stray
+            // tap; and the failure is rendered INSIDE this dialog below, never
+            // in a snackbar alone (the owner's "error in the background" bug).
+            onDismissRequest = {
+                if (!isBusy) {
+                    showCloneDialog = false
+                    viewModel.clearCloneError()
+                }
+            },
+            properties = DialogProperties(
+                dismissOnBackPress = !isBusy,
+                dismissOnClickOutside = !isBusy
+            ),
             title = {
                 Text(
                     stringResource(R.string.clone_title),
@@ -767,6 +781,16 @@ fun FileManagerScreen(
             },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
+                    // Phase 40.1 — the inline error slot, in the dialog's own
+                    // text column, so a failure is impossible to miss.
+                    cloneError?.let { error ->
+                        Text(
+                            text = stringResource(R.string.clone_failed, error),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     Text(
                         stringResource(R.string.clone_url_label),
                         style = MaterialTheme.typography.labelMedium,
@@ -1004,6 +1028,7 @@ fun FileManagerScreen(
             },
             onCloneGit = {
                 showHubSheet = false
+                viewModel.clearCloneError()
                 showCloneDialog = true
             },
             onImportZip = {

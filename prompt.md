@@ -18,6 +18,22 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
+**PHASE 40 IS IMPLEMENTED ON `arena/01a08c04-codec` (2026-09-10) — AND ITS
+FIRST ATTEMPT IS A CAUTIONARY TALE.** The owner's earlier Phase 40 session
+(`arena/01a08b68-codec`) pushed **16 red `Build APK` runs in two hours**, every
+one a plain Kotlin syntax/type error in the new files (`GitReadiness.kt`,
+`GitHubPublish*.kt`, `GitPushOutcome.kt`, the clone dialog) — no local compile,
+and the CI annotations were never read, so the same errors repeated across runs.
+The full evidence table, the root causes, and the repair rules are in
+[`docs/chat-phase40/PART_40_4_CI_LOOP_DIAGNOSIS.md`](docs/chat-phase40/PART_40_4_CI_LOOP_DIAGNOSIS.md);
+read them before any GitHub work. The working implementation (40.1 readiness +
+errors-in-the-window, 40.2 push truth from git's own bytes, 40.3 Publish to
+GitHub) is on `arena/01a08c04-codec`, pre-validated on a host JVM (36/36 host
+cases, four real bugs caught before CI) and awaiting the owner's merge + device
+round. Two new helpers exist for exactly that failure mode:
+`scripts/ci_annotations.py` (read a red run's annotations from the sandbox) and
+the jdk4py + kotlinc pre-validation loop (`rule.md` §9).
+
 **PHASES 38-43 ARE PLANNED, NOT STARTED (2026-09-10, docs-only).** The owner's
 six "before I share the app" ideas (git errors invisible + push that stays local;
 "open a folder" crashing + no open-project-from-folder; output/temp files

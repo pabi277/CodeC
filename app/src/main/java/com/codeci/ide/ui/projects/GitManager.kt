@@ -76,6 +76,34 @@ class GitManager(
         /** True when [url] is a cloneable HTTP(S) URL (no local paths, no scp syntax). */
         fun isCloneableUrl(url: String): Boolean =
             repoNameFromUrl(url) != null
+
+        /** Remote names safe to pass as argv (`origin`, `upstream`, `fork-2`). */
+        private val SAFE_REMOTE_NAME = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+        /** scp-style remotes (`git@github.com:user/repo.git`) — no shell involved. */
+        private val SCP_REMOTE = Regex("^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+:[A-Za-z0-9._/-]+$")
+
+        /** Characters that never belong in a remote URL we hand to git. */
+        private val UNSAFE_URL_CHARS = charArrayOf(
+            ';', '|', '&', '`', '$', '<', '>', '(', ')', '{', '}', '*', '?', '!',
+            '\\', '"', '\'', ' ', '\t', '\n', '\r'
+        )
+
+        /**
+         * Phase 40.3 — true for a remote URL CodeC will hand to `git remote
+         * add` as a single argv element: an https clone URL or an scp-style
+         * SSH remote. No shell metacharacters, no whitespace, no local paths.
+         *
+         * Commands are passed as an argv list (never a shell), so this is
+         * defence in depth — it keeps a pasted string from becoming a
+         * surprising git argument, not just a surprising shell word.
+         */
+        fun isSafeRemoteUrl(url: String): Boolean {
+            val trimmed = url.trim()
+            if (trimmed.isEmpty()) return false
+            if (trimmed.any { ch -> UNSAFE_URL_CHARS.contains(ch) }) return false
+            return isCloneableUrl(trimmed) || SCP_REMOTE.matches(trimmed)
+        }
     }
 
     /** Thrown when git exits non-zero. [message] is already redacted. */
@@ -262,11 +290,88 @@ class GitManager(
         )
     }
 
+    /**
+     * Phase 40.2 — the raw, redacted result of one `git push`, for
+     * [GitPushParser]. Same argv and same timeout/env path as [push] and
+     * [pushHandlingUpstream] (`--set-upstream` whenever the branch tracks
+     * nothing), but a non-zero exit is *returned*, not thrown: the caller wants
+     * git's own words to decide what to tell the user.
+     *
+     * [GitCommandException] is still raised for a timeout (exit 124) — that is
+     * an attempt that never finished, not an outcome to parse.
+     */
+    fun pushCapturing(
+        root: File,
+        branchName: String? = null,
+        setUpstream: Boolean? = null
+    ): GitPushAttempt {
+        val status = runCatching { status(root) }.getOrNull()
+        val branch = branchName?.trim()?.takeIf { it.isNotEmpty() } ?: status?.branch
+        val needsUpstream = setUpstream ?: (status?.upstream == null)
+        val remote = firstRemote(root) ?: "origin"
+        val ref = branch?.takeIf { GitBranchOps.isSafeExistingBranch(it) } ?: "HEAD"
+        val args = if (needsUpstream) {
+            listOf("push", "--set-upstream", remote, ref)
+        } else {
+            listOf("push", remote, ref)
+        }
+        val result = runGit(root, args, networkTimeoutSeconds)
+        return GitPushAttempt(
+            exitCode = result.exitCode,
+            stdout = result.stdout,
+            stderr = result.stderr
+        )
+    }
+
     /** First configured remote (`git remote`), or null when the command fails. */
     fun firstRemote(root: File): String? {
         val result = runGit(root, listOf("remote"), localTimeoutSeconds)
         if (result.exitCode != 0) return null
         return result.stdout.map { it.trim() }.firstOrNull { it.isNotEmpty() }
+    }
+
+    /** Every configured remote name (empty when there is none). */
+    fun remoteNames(root: File): List<String> {
+        val result = runGit(root, listOf("remote"), localTimeoutSeconds)
+        if (result.exitCode != 0) return emptyList()
+        return result.stdout.map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    /** True when a remote called [name] exists. */
+    fun hasRemote(root: File, name: String = "origin"): Boolean =
+        remoteNames(root).any { it.equals(name.trim(), ignoreCase = true) }
+
+    /**
+     * The URL of a remote (`git remote get-url <name>`), or null when the
+     * remote/the command does not exist. Used by Phase 40.1 readiness and the
+     * Phase 40.2 result card — never parsed for credentials ([GitRedactor]
+     * scrubs `https://user:token@…` shapes in any case).
+     */
+    fun remoteUrl(root: File, name: String? = null): String? {
+        val remote = name?.trim()?.takeIf { it.isNotEmpty() } ?: firstRemote(root) ?: return null
+        val result = runGit(root, listOf("remote", "get-url", remote), localTimeoutSeconds)
+        if (result.exitCode != 0) return null
+        return result.stdout.map { it.trim() }.firstOrNull { it.isNotEmpty() }
+    }
+
+    /**
+     * Phase 40.3 — attach a new remote. **Never re-points an existing one**
+     * (Publish is a create/attach operation only): an existing name is a
+     * programming error, not something to silently overwrite.
+     */
+    fun addRemote(root: File, name: String, url: String) {
+        val remote = name.trim()
+        require(remote.isNotEmpty()) { "Remote name cannot be empty" }
+        require(SAFE_REMOTE_NAME.matches(remote)) { "Invalid remote name" }
+        val target = url.trim()
+        require(isSafeRemoteUrl(target)) { "Unsupported remote URL" }
+        require(!hasRemote(root, remote)) { "Remote '$remote' already exists" }
+        exec(
+            root,
+            listOf("remote", "add", remote, target),
+            localTimeoutSeconds,
+            "git remote add failed"
+        )
     }
 
     /**
@@ -1194,6 +1299,20 @@ data class GitFileChange(
 }
 
 enum class GitFileState { MODIFIED, ADDED, DELETED, UNTRACKED, RENAMED, UNMERGED }
+
+/**
+ * Phase 40.2 — one `git push` attempt exactly as git reported it: exit code
+ * plus already-redacted output lines. [GitPushParser] turns this into the
+ * user-facing [PushOutcome]; `succeeded` is git's own verdict, nothing more.
+ */
+data class GitPushAttempt(
+    val exitCode: Int,
+    val stdout: List<String> = emptyList(),
+    val stderr: List<String> = emptyList()
+) {
+    val output: List<String> get() = stdout + stderr
+    val succeeded: Boolean get() = exitCode == 0
+}
 
 data class GitStatus(
     val branch: String?,

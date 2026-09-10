@@ -7,12 +7,20 @@ import com.codeci.ide.ui.projects.DiffEngine
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitBranchList
 import com.codeci.ide.ui.projects.GitContext
+import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.GitErrorKind
 import com.codeci.ide.ui.projects.GitFriendlyError
 import com.codeci.ide.ui.projects.GitErrors
+import com.codeci.ide.ui.projects.GitHubPublish
+import com.codeci.ide.ui.projects.GitHubPublishApi
 import com.codeci.ide.ui.projects.GitManager
+import com.codeci.ide.ui.projects.GitPushAttempt
+import com.codeci.ide.ui.projects.GitPushParser
+import com.codeci.ide.ui.projects.GitReadiness
 import com.codeci.ide.ui.projects.GitStatus
+import com.codeci.ide.ui.projects.PublishResult
+import com.codeci.ide.ui.projects.PushOutcome
 import com.codeci.ide.ui.projects.RepoHygiene
 import com.codeci.ide.ui.projects.SwitchBranchResult
 import com.codeci.ide.ui.projects.BranchTarget
@@ -81,6 +89,29 @@ class GitControlViewModel : ViewModel() {
          * from the current status. Empty when nothing is staged/pending.
          */
         val commitPreview: RepoHygiene.CommitPreview? = null,
+        /**
+         * Phase 40.1 — who is ready for what, composed from state the view
+         * already has. Every surface asks this *before* offering an action, so
+         * "clone failed because git is missing" is answered before the attempt
+         * instead of after it.
+         */
+        val readiness: GitReadiness? = null,
+        /**
+         * Phase 40.2 — the real outcome of the last push, parsed from git's
+         * own bytes. Survives scrolling; cleared by [dismissPushResult] and by
+         * an explicit refresh, so "push stayed local" can never again look
+         * like success.
+         */
+        val lastResult: PushOutcome? = null,
+        /**
+         * Phase 40.3 — Publish to GitHub: busy flag, the actionable error, and
+         * the note shown once a repository was created and pushed.
+         */
+        val publishBusy: Boolean = false,
+        val publishError: String? = null,
+        val publishNote: String? = null,
+        /** GitHub's own `X-Accepted-GitHub-Permissions` value, when it sent one. */
+        val publishNeedsPermission: String? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -105,6 +136,37 @@ class GitControlViewModel : ViewModel() {
                 message = e.message ?: "Git operation failed"
             )
         }
+
+    /**
+     * Phase 40.2 — the friendly, actionable explanation for a non-success
+     * [PushOutcome], or null when the push worked. The parser names the cause;
+     * [GitErrors] stays the fallback for text we could not classify.
+     */
+    private fun failureFor(
+        outcome: PushOutcome,
+        attempt: GitPushAttempt,
+        hasToken: Boolean
+    ): GitFriendlyError? = when (outcome) {
+        is PushOutcome.Pushed, is PushOutcome.UpToDate -> null
+        is PushOutcome.NoRemote -> GitFriendlyError(
+            kind = GitErrorKind.NO_UPSTREAM,
+            message = outcome.message
+        )
+        is PushOutcome.Auth -> GitFriendlyError(
+            kind = outcome.kind,
+            message = outcome.message,
+            helpUrl = outcome.helpUrl
+        )
+        is PushOutcome.Rejected -> GitFriendlyError(
+            kind = GitErrorKind.REJECTED,
+            message = outcome.hint
+        )
+        is PushOutcome.Failed -> GitErrors.classify(
+            attempt.output.joinToString("\n"),
+            attempt.exitCode,
+            hasToken
+        )
+    }
 
     fun consumeMessage() {
         _state.value = _state.value.copy(message = null)
@@ -268,7 +330,14 @@ class GitControlViewModel : ViewModel() {
                         gitInstalled = false,
                         isRepo = false,
                         status = null,
-                        message = finalMessage
+                        message = finalMessage,
+                        // Phase 40.1 — git itself is the blocker; every
+                        // operation is answered before it is attempted.
+                        readiness = GitReadiness.forProject(
+                            gitInstalled = false,
+                            hasToken = false,
+                            isRepository = false
+                        )
                     )
                     return@launch
                 }
@@ -292,6 +361,29 @@ class GitControlViewModel : ViewModel() {
                 } else {
                     null
                 }
+                // Phase 40.1 — readiness is composed from state we already have
+                // (`git remote`, the stored token, the repo flag). One extra
+                // local `git remote get-url` per refresh, no network.
+                val remoteName = if (isRepo) {
+                    withContext(Dispatchers.IO) { git.firstRemote(projectRoot) }
+                } else {
+                    null
+                }
+                val remoteUrl = if (isRepo) {
+                    withContext(Dispatchers.IO) { git.remoteUrl(projectRoot, remoteName) }
+                } else {
+                    null
+                }
+                val readiness = GitReadiness.forProject(
+                    gitInstalled = true,
+                    hasToken = git.hasCredentials,
+                    isRepository = isRepo,
+                    remoteName = remoteName,
+                    remoteUrl = remoteUrl,
+                    // Unknown, not guessed: a stale connectivity value must
+                    // never block an operation that would have worked.
+                    online = null
+                )
                 // "What will be committed" — every pending path the sheet
                 // shows, projected the same way stage+commit would take them.
                 val preview = status?.let { s ->
@@ -322,6 +414,10 @@ class GitControlViewModel : ViewModel() {
                     status = status,
                     message = finalMessage,
                     commitPreview = preview,
+                    readiness = readiness,
+                    // An explicit REFRESH (no finalMessage) clears the result
+                    // card; the refresh that follows an operation keeps it.
+                    lastResult = if (finalMessage == null) null else _state.value.lastResult,
                 )
             } catch (e: Exception) {
                 // `git status` never authenticates, so a token check is moot;
@@ -378,35 +474,44 @@ class GitControlViewModel : ViewModel() {
                 _state.value = _state.value.copy(hygieneNote = note)
             }
             git.commit(projectRoot, trimmed)
-            // Phase 17 device fix: publish a branch that has no upstream yet
-            // (`git push --set-upstream <remote> <branch>`) instead of failing
-            // with "has no upstream branch" — and never claim a push worked.
-            val pushFailure = runCatching { git.pushHandlingUpstream(projectRoot) }
-                .exceptionOrNull()
-            // Phase 39 device follow-up — name the branch so success never
-            // reads like a silent push to main.
+            // Phase 40.2 — ONE push, and its real bytes decide what we say.
+            // A push that stays local used to be indistinguishable from one
+            // that reached GitHub; now the outcome is parsed and kept as
+            // state ([UiState.lastResult]).
             val branchLabel = runCatching { git.currentBranch(projectRoot) }
                 .getOrNull()
                 ?.takeIf { it.isNotBlank() }
-            if (pushFailure == null) {
-                _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
-                val pushed = if (branchLabel != null) {
-                    "Committed & pushed to $branchLabel ✓"
-                } else {
-                    "Committed & pushed ✓"
+            val attempt = git.pushCapturing(projectRoot, branchName = branchLabel)
+            val outcome = GitPushParser.parse(
+                stdout = attempt.stdout,
+                stderr = attempt.stderr,
+                exitCode = attempt.exitCode,
+                branch = branchLabel,
+                remoteUrl = runCatching { git.remoteUrl(projectRoot) }.getOrNull()
+            )
+            val failure = failureFor(outcome, attempt, git.hasCredentials)
+            _state.value = _state.value.copy(
+                lastResult = outcome,
+                pushError = failure?.message,
+                pushHelpUrl = failure?.helpUrl
+            )
+            if (failure == null) {
+                // Phase 39 device follow-up — name the branch so success never
+                // reads like a silent push to main.
+                val pushed = when {
+                    outcome is PushOutcome.UpToDate && branchLabel != null ->
+                        "Already up to date on $branchLabel ✓"
+                    outcome is PushOutcome.UpToDate -> "Already up to date ✓"
+                    branchLabel != null -> "Committed & pushed to $branchLabel ✓"
+                    else -> "Committed & pushed ✓"
                 }
                 if (note != null) "$note · $pushed" else pushed
             } else {
                 // Phase 17 follow-up: a friendly, actionable reason + token
                 // link instead of raw git output.
-                val friendly = friendly(pushFailure, git.hasCredentials)
-                _state.value = _state.value.copy(
-                    pushError = friendly.message,
-                    pushHelpUrl = friendly.helpUrl
-                )
                 val prefix = if (note != null) "$note · " else ""
                 val where = if (branchLabel != null) " on $branchLabel" else ""
-                "${prefix}Committed locally$where ✓ — NOT pushed: ${friendly.message}"
+                "${prefix}Committed locally$where ✓ — NOT pushed: ${failure.message}"
             }
         }
     }
@@ -416,27 +521,232 @@ class GitControlViewModel : ViewModel() {
      * offers this whenever the branch is ahead of its remote).
      */
     fun push(context: Context, projectRoot: File) {
-        runGitOperation(
-            context,
-            projectRoot,
-            "Pushing…",
-            onError = { failure ->
-                _state.value = _state.value.copy(
-                    pushError = failure.message,
-                    pushHelpUrl = failure.helpUrl
-                )
+        runGitOperation(context, projectRoot, "Pushing…") { git ->
+            val branch = runCatching { git.currentBranch(projectRoot) }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
+            val attempt = git.pushCapturing(projectRoot, branchName = branch)
+            val outcome = GitPushParser.parse(
+                stdout = attempt.stdout,
+                stderr = attempt.stderr,
+                exitCode = attempt.exitCode,
+                branch = branch,
+                remoteUrl = runCatching { git.remoteUrl(projectRoot) }.getOrNull()
+            )
+            val failure = failureFor(outcome, attempt, git.hasCredentials)
+            _state.value = _state.value.copy(
+                lastResult = outcome,
+                pushError = failure?.message,
+                pushHelpUrl = failure?.helpUrl
+            )
+            when {
+                failure != null -> "NOT pushed: ${failure.message}"
+                branch != null -> "Pushed to $branch ✓"
+                else -> "Pushed ✓"
             }
-        ) { git ->
-            git.pushHandlingUpstream(projectRoot)
-            _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
-            val branch = runCatching { git.currentBranch(projectRoot) }.getOrNull()
-            if (!branch.isNullOrBlank()) "Pushed to $branch ✓" else "Pushed ✓"
         }
     }
 
     /** Dismisses the sticky "not pushed" explanation. */
     fun dismissPushError() {
         _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
+    }
+
+    /** Phase 40.2 — dismisses the result card (it is state, not a toast). */
+    fun dismissPushResult() {
+        _state.value = _state.value.copy(lastResult = null)
+    }
+
+    /**
+     * Phase 40.3 — "Publish to GitHub": create the repository with the stored
+     * token, attach it as `origin` (never re-pointing an existing remote), then
+     * push the current branch.
+     *
+     * The token is read from [GitCredentialsStore] for this one request and is
+     * never written to disk or a log line; GitHub's own words become the error
+     * message. Nothing is deleted and nothing is renamed — Publish only creates
+     * and attaches.
+     */
+    fun publishToGitHub(
+        context: Context,
+        projectRoot: File,
+        repoName: String,
+        description: String? = null,
+        isPrivate: Boolean = true
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(
+                publishBusy = true,
+                publishError = null,
+                publishNote = null,
+                publishNeedsPermission = null
+            )
+            val store = GitCredentialsStore(context.applicationContext)
+            val token = withContext(Dispatchers.IO) { store.stored().token }
+            if (token.isBlank()) {
+                _state.value = _state.value.copy(
+                    publishBusy = false,
+                    publishError = GitErrors.tokenMissing().message,
+                    pushHelpUrl = GitErrors.TOKEN_HELP_URL
+                )
+                return@launch
+            }
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    publishBusy = false,
+                    publishError = GitErrors.notInstalled().message
+                )
+                return@launch
+            }
+            val name = GitHubPublish.nameFor(repoName.ifBlank { projectRoot.name })
+            val created = withContext(Dispatchers.IO) {
+                GitHubPublishApi.createRepo(token, name, description, isPrivate)
+            }
+            if (created is PublishResult.ApiError) {
+                _state.value = _state.value.copy(
+                    publishBusy = false,
+                    publishError = created.message,
+                    publishNeedsPermission = created.needsPermission
+                )
+                return@launch
+            }
+            val published = created as PublishResult.Published
+            try {
+                val resultLine = withContext(Dispatchers.IO) {
+                    if (!git.hasRemote(projectRoot, "origin")) {
+                        git.addRemote(projectRoot, "origin", published.remoteUrl)
+                    }
+                    val branch = runCatching { git.currentBranch(projectRoot) }
+                        .getOrNull()
+                        ?.takeIf { it.isNotBlank() }
+                    val attempt = git.pushCapturing(
+                        projectRoot,
+                        branchName = branch,
+                        setUpstream = true
+                    )
+                    val outcome = GitPushParser.parse(
+                        stdout = attempt.stdout,
+                        stderr = attempt.stderr,
+                        exitCode = attempt.exitCode,
+                        branch = branch,
+                        remoteUrl = published.remoteUrl
+                    )
+                    _state.value = _state.value.copy(lastResult = outcome)
+                    val failure = failureFor(outcome, attempt, git.hasCredentials)
+                    if (failure != null) {
+                        throw GitManager.GitCommandException(
+                            failure.message,
+                            attempt.exitCode,
+                            attempt.output
+                        )
+                    }
+                    "Published to ${published.htmlUrl} ✓"
+                }
+                _state.value = _state.value.copy(
+                    publishBusy = false,
+                    publishNote = resultLine,
+                    pushError = null,
+                    pushHelpUrl = null
+                )
+                refresh(context, projectRoot, finalMessage = resultLine)
+            } catch (e: Exception) {
+                val failure = friendly(e, git.hasCredentials)
+                val text = "The repository ${published.htmlUrl} was created, but the " +
+                    "push failed: ${failure.message}"
+                _state.value = _state.value.copy(
+                    publishBusy = false,
+                    publishError = text,
+                    pushError = failure.message,
+                    pushHelpUrl = failure.helpUrl
+                )
+                refresh(context, projectRoot, finalMessage = text)
+            }
+        }
+    }
+
+    /**
+     * Phase 40.3 browser fallback — attach a repository the user created on
+     * github.com, then push. The URL is verified with `git ls-remote` first
+     * (the engine reports whether the stored token can actually read it), so
+     * "attach" never assumes access from the name.
+     */
+    fun attachRemoteToGitHub(context: Context, projectRoot: File, url: String) {
+        val trimmed = url.trim()
+        if (!GitManager.isCloneableUrl(trimmed)) {
+            _state.value = _state.value.copy(
+                publishError = "Enter an https:// GitHub repository URL"
+            )
+            return
+        }
+        viewModelScope.launch {
+            _state.value = _state.value.copy(
+                publishBusy = true,
+                publishError = null,
+                publishNote = null
+            )
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    publishBusy = false,
+                    publishError = GitErrors.notInstalled().message
+                )
+                return@launch
+            }
+            try {
+                val resultLine = withContext(Dispatchers.IO) {
+                    // Verify access before attaching (throws when it cannot).
+                    git.listRemoteBranches(trimmed)
+                    if (!git.hasRemote(projectRoot, "origin")) {
+                        git.addRemote(projectRoot, "origin", trimmed)
+                    }
+                    val branch = runCatching { git.currentBranch(projectRoot) }
+                        .getOrNull()
+                        ?.takeIf { it.isNotBlank() }
+                    val attempt = git.pushCapturing(
+                        projectRoot,
+                        branchName = branch,
+                        setUpstream = true
+                    )
+                    val outcome = GitPushParser.parse(
+                        stdout = attempt.stdout,
+                        stderr = attempt.stderr,
+                        exitCode = attempt.exitCode,
+                        branch = branch,
+                        remoteUrl = trimmed
+                    )
+                    _state.value = _state.value.copy(lastResult = outcome)
+                    val failure = failureFor(outcome, attempt, git.hasCredentials)
+                    if (failure != null) {
+                        throw GitManager.GitCommandException(
+                            failure.message,
+                            attempt.exitCode,
+                            attempt.output
+                        )
+                    }
+                    "Attached $trimmed ✓"
+                }
+                _state.value = _state.value.copy(publishBusy = false, publishNote = resultLine)
+                refresh(context, projectRoot, finalMessage = resultLine)
+            } catch (e: Exception) {
+                val failure = friendly(e, git.hasCredentials)
+                _state.value = _state.value.copy(
+                    publishBusy = false,
+                    publishError = failure.message,
+                    pushError = failure.message,
+                    pushHelpUrl = failure.helpUrl
+                )
+            }
+        }
+    }
+
+    /** Phase 40.3 — clears the publish row after the user has read it. */
+    fun dismissPublish() {
+        _state.value = _state.value.copy(
+            publishError = null,
+            publishNote = null,
+            publishNeedsPermission = null
+        )
     }
 
     /**

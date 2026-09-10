@@ -1043,3 +1043,35 @@ diagnostic, and git's `Permission denied (publickey)` yield **nothing**
 `CompilerService` AUTO chain), the `com.termux.permission.RUN_COMMAND`
 permission and the `<queries>` entry are all **unchanged** — Phase 38.2
 removed the *panel*, not the mechanism.
+
+## 28. A red `Build APK` you cannot read → read its annotations (agent runbook; Phase 40.4, 2026-09-10)
+
+**Symptom (what happened on `arena/01a08b68-codec`):** 16 consecutive red
+`Build APK` runs, 2 hours, every one failing in the Kotlin front end in under
+2.5 minutes, with the *same* errors repeating across runs — because nobody read
+the output. The sandbox cannot open CI logs (`gh run view --log-failed` and
+`gh api …/jobs/<id>/logs` both fail: the log blob host is unreachable), but the
+errors are still readable — GitHub keeps them as check-run **annotations**.
+
+**Read them (sandbox):**
+
+```
+python3 scripts/ci_annotations.py                 # latest run on this branch
+python3 scripts/ci_annotations.py 34489229134     # a specific run
+```
+
+**Read them (owner's browser):** repo → **Actions** → the `Build APK` run →
+the `Assemble debug APK` step → **Annotations** (the same `e: file:///…` lines).
+
+**Rules that prevent the loop:**
+
+1. Compile the pure Kotlin locally first (`rule.md` §9: jdk4py + kotlinc; the
+   harness in the Phase 40.4 record compiles the real `ui/projects` files).
+2. Never push a second time with the same error signature: read the annotation,
+   fix *that line*, push once.
+3. Fix in place. 11 "Rewrite X" commits in that loop moved the errors instead of
+   removing them.
+4. Only call APIs that exist in this repo; open the owning file first
+   (`GitRedactor`, `GitErrors`, `GitManager` are all Android-free and testable).
+5. Two red runs, same signature = wrong strategy. Stop, re-derive from the
+   phase doc.

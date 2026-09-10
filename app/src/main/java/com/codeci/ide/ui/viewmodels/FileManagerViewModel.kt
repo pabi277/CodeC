@@ -61,8 +61,26 @@ class FileManagerViewModel : ViewModel() {
     private val _userMessage = MutableStateFlow<String?>(null)
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
 
+    /**
+     * Phase 40.1 — the clone failure, kept for the *dialog's own* text column.
+     *
+     * Owner, 2026-09-10: *"if i try to clone a repo and didn't download the git
+     * it shows error in the background i can't see it"*. The dialog owns a
+     * separate window above the snackbar, so a failure routed only to
+     * [userMessage] was invisible while the clone dialog stayed open. A failure
+     * message must live in the window the user is looking at.
+     */
+    private val _cloneError = MutableStateFlow<String?>(null)
+    val cloneError: StateFlow<String?> = _cloneError.asStateFlow()
+
     fun consumeMessage() {
         _userMessage.value = null
+        _cloneError.value = null
+    }
+
+    /** Clears the inline clone error when the dialog is reopened or dismissed. */
+    fun clearCloneError() {
+        _cloneError.value = null
     }
 
     fun loadProjects(context: Context) {
@@ -502,10 +520,13 @@ class FileManagerViewModel : ViewModel() {
                 finishImport(context, manager, manager.project(name) ?: ProjectInfo(name, dest, ProjectConfig.defaultFor(name, "auto")), onCloned)
                 _userMessage.value = context.getString(R.string.clone_success, name)
             } catch (e: Exception) {
-                _userMessage.value = context.getString(
-                    R.string.clone_failed,
-                    friendlyGitMessage(e, git)
-                )
+                // Phase 40.1 — the same text goes to BOTH surfaces: the
+                // snackbar (for after the dialog closes) and the dialog's own
+                // inline slot (while it is open, which is where the user is
+                // actually looking).
+                val friendly = friendlyGitMessage(e, git)
+                _userMessage.value = context.getString(R.string.clone_failed, friendly)
+                _cloneError.value = friendly
             } finally {
                 _isBusy.value = false
             }
