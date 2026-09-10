@@ -1126,18 +1126,26 @@ status "LF" (light) 3.78 → 8.17 · key-cap tints and hints, badges (3.46) and
 55 %-alpha borders (2.25, need 3:1) — all fixed and pinned. Full table:
 [`chat-phase40/PART_40_5_COLOUR_REPAIR.md`](chat-phase40/PART_40_5_COLOUR_REPAIR.md).
 
-## 30. Sending feedback / where the WhatsApp button is (Phase 41, 2026-09-10)
+## 30. Sending feedback / where the WhatsApp button is (Phase 41, 2026-09-10; follow-up round same day)
 
-**Settings → Feedback & Support** is the whole feedback surface: type what
-happened, optionally tick *Include the last 120 log lines* (redacted — no
-tokens, paths shortened) and *Include the last crash* (prefilled after a
-crash), then CHAT ON WHATSAPP / COPY REPORT / EMAIL / GITHUB ISSUE.
+**Settings → Feedback & Support → OPEN** (its own screen since the
+follow-up round, also reachable from the exit popup): type what happened,
+optionally tick *Include the last 120 log lines* (redacted — no tokens,
+paths shortened) and *Include the last crash* (prefilled after a crash),
+then CHAT ON WHATSAPP / COPY REPORT / EMAIL / GITHUB ISSUE. The owner's
+number (+91 62967 46606) and email ship IN the APK, so a fresh install has
+the CHAT and EMAIL rows from the start.
 
-- **"There is no CHAT ON WHATSAPP button."** — the owner's reply-to number
-  has not been filled on this install (or was typed wrong). Fill *WhatsApp
-  number for replies* (with country code, e.g. `+91 98765 43210`) → SAVE.
-  An empty or invalid number hides the row on purpose — a wa.me link to a
-  wrong number opens a chat with the wrong person.
+- **"A popup asks how it went when I close the app."** — that is the exit
+  survey (owner-requested for the testing phase): rate with stars, SHARE
+  EXPERIENCE opens the Feedback page with the rating in the report, GIVE A
+  REVIEW opens the GitHub repo, and **tap back again (or EXIT) to close**.
+  It is off-able: the Feedback page's *Ask for feedback on exit* switch.
+- **"There is no CHAT ON WHATSAPP button."** — the stored number was
+  cleared on this install (a stored empty value is an explicit off and
+  beats the shipped default). Retype the number (with country code, e.g.
+  `+91 98765 43210`) → SAVE. An invalid number never produces a button — a
+  wa.me link to a wrong number opens a chat with the wrong person.
 - **"CHAT is greyed out."** — write what happened first (non-empty text
   enables CHAT); COPY REPORT and GITHUB ISSUE always work.
 - **"Tapping CHAT copied the report instead of opening WhatsApp."** —

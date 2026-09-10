@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
@@ -72,6 +73,7 @@ import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.WelcomeStarters
 import com.codeci.ide.ui.screens.EditorScreen
+import com.codeci.ide.ui.screens.FeedbackScreen
 import com.codeci.ide.ui.screens.FileManagerScreen
 import com.codeci.ide.ui.screens.LogsScreen
 import com.codeci.ide.ui.screens.ModulesScreen
@@ -88,7 +90,11 @@ import com.codeci.ide.ui.editor.lsp.SystemBinaryProbe
 import com.codeci.ide.ui.editor.sora.ActiveLspManager
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.services.LiveRunStamps
+import com.codeci.ide.ui.services.OpenInBrowser
 import com.codeci.ide.ui.services.TempGc
+import com.codeci.ide.ui.support.ExitFeedbackDialog
+import com.codeci.ide.ui.support.ExitSurvey
+import com.codeci.ide.ui.support.FeedbackStore
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.CodecApiBridge
 import com.codeci.ide.ui.terminal.CodecApiProtocol
@@ -672,6 +678,47 @@ fun MainApp() {
         }
     }
 
+    // Phase 41 follow-up (owner, after device round 1) — the exit survey:
+    // a back press that would CLOSE the app (nothing left to pop) shows the
+    // rate/experience/review dialog instead, and "tap again to exit" is the
+    // dialog's own back handling. Off-able from the Feedback screen
+    // (testing-phase default ON); when off, back closes directly.
+    val feedbackStore = remember { FeedbackStore(activity) }
+    val exitPromptEnabled by feedbackStore.exitPromptEnabledFlow.collectAsState(initial = true)
+    var exitPromptVisible by remember { mutableStateOf(false) }
+
+    if (exitPromptVisible) {
+        ExitFeedbackDialog(
+            onShareExperience = { rating ->
+                exitPromptVisible = false
+                navController.navigate(Screen.Feedback.createRoute(rating)) {
+                    launchSingleTop = true
+                }
+            },
+            onReview = {
+                OpenInBrowser.openOrCopy(
+                    context = activity,
+                    url = ExitSurvey.REPO_URL,
+                    clipboardLabel = "CodeC repository",
+                    copyInstead = ExitSurvey.REPO_URL,
+                    failureMessage = "No browser — the repo link is copied"
+                )
+            },
+            onExit = { activity.finish() },
+            onDismiss = { exitPromptVisible = false }
+        )
+    }
+
+    // Registered BEFORE the Scaffold/NavHost so anything composed inside
+    // them (NavHost's own pop handling, dialogs, sheets) wins while it can
+    // consume the back press; this handler only decides what back does AT
+    // THE ROOT: the exit survey, or a direct close when it is switched off.
+    BackHandler(enabled = !exitPromptVisible) {
+        if (!navController.popBackStack()) {
+            if (exitPromptEnabled) exitPromptVisible = true else activity.finish()
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
@@ -893,11 +940,30 @@ fun MainApp() {
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onNavigateToFeedback = {
+                        navController.navigate(Screen.Feedback.createRoute()) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
             composable(Screen.Logs.route) {
                 LogsScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            // Phase 41 follow-up — feedback's own screen (Settings → OPEN,
+            // or the exit survey's SHARE EXPERIENCE with a rating).
+            composable(
+                route = Screen.Feedback.route,
+                arguments = listOf(navArgument("rating") {
+                    defaultValue = 0
+                })
+            ) { backStackEntry ->
+                val rating = backStackEntry.arguments?.getInt("rating") ?: 0
+                FeedbackScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    exitRating = rating
+                )
             }
         }
     }

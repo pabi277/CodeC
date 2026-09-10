@@ -42,3 +42,27 @@ Report the check numbers that passed (e.g. "1-8 pass") plus the phone
 model. Check 3's redaction half is already host-tested
 (`FeedbackDraftTest`); the device round confirms what a human actually
 sees.
+
+---
+
+## Round 2 — the follow-up build (separate screen + exit survey + your defaults)
+
+> Install the NEW CI artifact from `arena/01a08cc6-codec` (the follow-up
+> commit). Round 1 (checks 1–8) is already PASSED and does not repeat —
+> this round covers what changed. Your number and email now ship in the
+> APK, so a fresh install (or clearing the app's storage first) is the
+> honest starting point.
+
+| # | What to do | PASS looks like |
+|---|---|---|
+| D1 | Fresh install → Settings → **Feedback & Support** → OPEN | The full-screen Feedback page opens (back arrow top-left). With nothing stored, the CHAT row already shows **+9196296746606** and the EMAIL button is there — your shipped defaults |
+| D2 | From the Projects tab (or wherever you start), press BACK once | The "Enjoying CodeC? 💚" popup appears: star row, SHARE EXPERIENCE, GIVE A REVIEW, NOT NOW, EXIT, "tap back again to exit" |
+| D3 | With the popup open, press BACK again | The app closes (tap-again-to-exit). Reopen it |
+| D4 | Popup again: tap 4 stars, then **SHARE EXPERIENCE** | The Feedback page opens with "Your exit rating: ★★★★☆ — it goes into the report below"; tap COPY REPORT and paste — the info line ends "· Rating: 4/5" |
+| D5 | Popup: **GIVE A REVIEW** | The browser opens github.com/pabi277/CodeC |
+| D6 | Popup: **NOT NOW** | The popup closes and the app STAYS open |
+| D7 | Feedback page: turn OFF "Ask for feedback on exit" → press BACK (at a root tab) | The app closes directly — no popup. Turn it back ON if you want it during testing |
+| D8 | Send yourself one CHAT message end-to-end with your real number | The WhatsApp chat that opens is YOUR +91 62967 46606, message typed, not sent |
+
+Report "D1–D8 pass" (plus the phone model). D8 is the one that closes the
+"the number is not mine" finding from round 1.

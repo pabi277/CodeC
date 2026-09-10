@@ -184,3 +184,51 @@ into the APK — the owner fills it once in Settings → Feedback & Support).
 `FeedbackStore.DEFAULT_WHATSAPP_NUMBER` is the one-line change point when
 Phase 42 (share-readiness) decides whether a tester's fresh install
 should carry the number — flagged to the owner in the phase report.
+
+---
+
+## Follow-up round (2026-09-10, owner: device round 1 "1-8 pass" + three requests)
+
+**Round 1 record:** 8/8 checks PASSED on the owner's phone (owner report;
+the tested WhatsApp number was not the owner's own — which prompted
+request 1 below). The owner then asked for three changes, all shipped on
+`arena/01a08cc6-codec`:
+
+1. **"Add number +91 62967 46606 · Email- chakraborttypabi2772006@gmail.com"**
+   — the PART_41_2-recorded Phase 42 decision point (`DEFAULT_WHATSAPP_NUMBER`,
+   "empty by design"), decided a phase early by the owner: both defaults now
+   ship in the APK (`916296746606` / the address, pinned by
+   `ExitSurveyTest`). A stored value always wins over a default, and
+   clearing a field is an EXPLICIT off (a stored `""` hides the row; it
+   does not fall back to the shipped default — the field's supporting text
+   says so).
+2. **"Can it be a separate page?"** — yes: the card moved to
+   `ui/screens/FeedbackScreen.kt` (Settings keeps one OPEN row → audit
+   control 46), reachable from Settings AND from the exit survey. The
+   reply-to fields stay on that screen ("where feedback from this app is
+   delivered" — visible to testers on purpose: it is the honest answer to
+   "who reads this?").
+3. **The exit survey** (owner: *"for the testing phase it when user want to
+   close the app it show a sweet request pop up for rate,experience,
+   bugs,problems etc and tap again to exit and a option to give review"*).
+   This AMENDS the part's "nothing else in the app may nag" non-goal —
+   amended by the owner, not abandoned: the prompt ships with its off
+   switch on the Feedback screen (default ON, key
+   `feedback_exit_prompt_enabled`), it appears only on a back press that
+   would close the app (never mid-work), it sends nothing by itself, and
+   an accidental outside tap never closes the app
+   (`dismissOnClickOutside = false`; the dialog's back press IS the exit —
+   the classic "tap again to exit"). The star row rides the report's info
+   line ("· Rating: 4/5") and nothing else; GIVE A REVIEW opens the public
+   repo (CodeC ships from GitHub, so the repository page is the review
+   surface). Wiring: a single `BackHandler` in `MainApp`, registered
+   BEFORE the Scaffold so every in-app back consumer (NavHost pops,
+   dialogs, sheets) keeps priority; at the root it decides prompt vs
+   direct exit. `ExitSurveyTest` pins the defaults, the rating rules
+   (0/null/out-of-range never render), and the wiring by source scan.
+
+**Deferred:** an in-app "app store" style review card (screenshots gallery
+etc.) — GIVE A REVIEW already opens the repo; Phase 42 (share-readiness)
+owns anything more. The exit prompt's long-term fate (keep / soften to
+once-a-week / remove) is explicitly Phase 42's call — the switch and the
+`ExitSurvey` KDoc record that.

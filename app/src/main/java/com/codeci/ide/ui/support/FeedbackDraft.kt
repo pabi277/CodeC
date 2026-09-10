@@ -12,9 +12,12 @@ import com.codeci.ide.ui.projects.GitRedactor
  * all come in from the caller; this class only carries them.
  *
  * @param project the project the user last had open in the editor, or null.
- * @param screen where the report was composed from ("Settings", later the
- *   crash overlay via 42.3) so the owner can tell a crash report from a
- *   typed one at a glance.
+ * @param screen where the report was composed from ("Feedback", the exit
+ *   survey's route, later the crash overlay via 42.3) so the owner can tell
+ *   a crash report from a typed one at a glance.
+ * @param exitRating the star rating tapped in the exit survey (1–5), or
+ *   null/0 when the report was not opened from there. It rides the info
+ *   line ("· Rating: 4/5") — a skimmable signal, never a silent extra.
  * @param maxChars the budget the REPORT text must fit (WhatsApp URLs have
  *   to survive OEM browsers; ~2 k is the documented truncation zone, so the
  *   default leaves headroom). `Int.MAX_VALUE` means "no budget" — the COPY
@@ -30,6 +33,7 @@ data class FeedbackInput(
     val abis: String,
     val project: String? = null,
     val screen: String? = null,
+    val exitRating: Int? = null,
     val userText: String = "",
     val includeLog: Boolean = false,
     val logTail: List<String> = emptyList(),
@@ -145,6 +149,7 @@ object FeedbackDraft {
             append(" · ").append(i.abis.trim().ifEmpty { "unknown abi" })
             append("\nProject: ").append(i.project?.trim()?.takeIf { it.isNotEmpty() } ?: NO_PROJECT)
             i.screen?.trim()?.takeIf { it.isNotEmpty() }?.let { append(" · Screen: ").append(it) }
+            i.exitRating?.takeIf { it in 1..5 }?.let { append(" · Rating: ").append(it).append("/5") }
             append("\n--- what I saw ---\n")
             // The user's own text: verbatim, never re-wrapped, never cut.
             append(i.userText.trim().ifEmpty { NO_TEXT })

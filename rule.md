@@ -198,7 +198,23 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-10, **Phase 41 is 🔧 IMPLEMENTED on `arena/01a08cc6-codec` (CI + device round pending); 38/39/40 are ✅ COMPLETE & MERGED; 42-43 are 📋 PLANNED**)
+## 9. State snapshot (2026-09-10, **Phase 41 is 🔧 IMPLEMENTED + round-1 DEVICE-PASSED 8/8, follow-up round shipped (round 2 pending); 38/39/40 are ✅ COMPLETE & MERGED; 42-43 are 📋 PLANNED**)
+
+- **Phase 41 follow-up (2026-09-10, owner: "1-8 pass but the number is not
+  mine" + requests): round 1 PASSED 8/8; the follow-up ships the owner's
+  contacts IN the APK** (`DEFAULT_WHATSAPP_NUMBER = "916296746606"`,
+  `DEFAULT_CONTACT_EMAIL` — the PART_41_2 Phase 42 decision point decided
+  early), **feedback as its own screen** (`FeedbackScreen`; Settings keeps
+  one OPEN row, audit control 46), **and the exit survey**: back-at-root
+  shows the "Enjoying CodeC? 💚" rate/experience/review dialog
+  (tap-again-to-exit; outside taps never close; the rating rides the
+  report's info line and nothing uploads by itself; GIVE A REVIEW opens
+  the public repo; off-able via `feedback_exit_prompt_enabled`, default ON
+  — the "no nag" law amended by owner request, Phase 42 owns its fate).
+  `ExitSurveyTest` (8) + amended persistence test (attachment-shaped
+  booleans banned; the switch is allowed) — 71/71 host-pre-validated.
+  Round-2 runbook `docs/chat-phase41/DEVICE_TEST_PLAN.md` (D1–D8; D8 =
+  the chat opens to the owner's own number). Merge HELD.
 
 - **Phase 41 (Feedback that reaches you, WhatsApp-first) is 🔧 IMPLEMENTED
   on `arena/01a08cc6-codec`** (owner: "Start phase 41", 2026-09-10) — both

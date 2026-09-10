@@ -86,7 +86,6 @@ import com.codeci.ide.ui.services.TempGc
 import com.codeci.ide.ui.services.TempMeasure
 import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.settings.SettingsManager
-import com.codeci.ide.ui.support.FeedbackSectionCard
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.DeviceDiagnostics
 import com.codeci.ide.ui.theme.AccentPalette
@@ -107,7 +106,8 @@ import java.io.File
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    onNavigateToLogs: () -> Unit = {}
+    onNavigateToLogs: () -> Unit = {},
+    onNavigateToFeedback: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val themeManager = remember { ThemeManager(context) }
@@ -1029,15 +1029,22 @@ fun SettingsScreen(
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // FEEDBACK & SUPPORT (Phase 41) — a section, not a screen, right
-            // after About so "what build is this" and "who do I tell" sit
-            // together. The card owns everything: the report builder's pure
-            // decisions (FeedbackDraft/FeedbackSectionState), the WhatsApp-
-            // first channels with copy/email/GitHub fallbacks that never
-            // lose the content, the owner's reply-to fields, and the honest
-            // three-line disclosure. Nothing is ever sent by the app itself.
+            // FEEDBACK & SUPPORT (Phase 41) — right after About so "what
+            // build is this" and "who do I tell" sit together. The follow-up
+            // round moved the content to its own screen (owner request:
+            // "can it be a separate page?") reachable from Settings and from
+            // the exit survey; this row is the door. The screen owns the
+            // report builder's pure decisions (FeedbackDraft), the
+            // WhatsApp-first channels with copy/email/GitHub fallbacks, the
+            // owner's reply-to fields, the exit-prompt switch, and the
+            // honest three-line disclosure. Nothing is ever sent by the app
+            // itself.
             SettingsSectionHeader("Feedback & Support")
-            FeedbackSectionCard()
+            SettingsAction(
+                title = "Send feedback, rate, or report a bug",
+                actionText = "OPEN",
+                onClick = onNavigateToFeedback
+            )
 
             if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))

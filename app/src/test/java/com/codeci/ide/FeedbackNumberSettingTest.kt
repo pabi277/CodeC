@@ -84,10 +84,14 @@ class FeedbackNumberSettingTest {
         ).readText()
 
     @Test
-    fun `the store declares exactly the two feedback keys on the shared datastore`() {
-        val keys = Regex("stringPreferencesKey\\(\"([^\"]+)\"\\)")
+    fun `the store declares exactly the two contact keys plus the exit-prompt switch on the shared datastore`() {
+        val stringKeys = Regex("stringPreferencesKey\\(\"([^\"]+)\"\\)")
             .findAll(storeSource).map { it.groupValues[1] }.toList()
-        assertEquals(listOf("feedback_whatsapp_number", "feedback_contact_email"), keys)
+        assertEquals(listOf("feedback_whatsapp_number", "feedback_contact_email"), stringKeys)
+        // The follow-up round added exactly one boolean: the exit-prompt switch.
+        val booleanKeys = Regex("booleanPreferencesKey\\(\"([^\"]+)\"\\)")
+            .findAll(storeSource).map { it.groupValues[1] }.toList()
+        assertEquals(listOf("feedback_exit_prompt_enabled"), booleanKeys)
         assertTrue("must ride the same DataStore as the other settings", storeSource.contains("com.codeci.ide.ui.theme.dataStore"))
     }
 

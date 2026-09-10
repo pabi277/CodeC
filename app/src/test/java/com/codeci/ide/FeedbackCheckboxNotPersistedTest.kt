@@ -6,18 +6,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 41.2 — "no silent always-on attachment". The attachment checkboxes
- * are a privacy behaviour, so they are tested, not commented: toggling them
- * and coming back later must start from the same fresh defaults, and no
- * store may ever carry their state.
+ * Phase 41.2 + follow-up — "no silent always-on attachment". The attachment
+ * checkboxes are a privacy behaviour, so they are tested, not commented:
+ * toggling them and coming back later must start from the same fresh
+ * defaults, and no store may ever carry their state.
  *
  * Implemented as (1) the fresh-state pins — a new `FeedbackSectionState` IS
  * what "leave the screen and return" gives, because the card's state lives
- * in `remember` — and (2) a structural source scan: no feedback-shaped key
- * of any kind exists in any preference store, and the section's card never
- * writes to a DataStore. Compose-navigation under Robolectric would test
- * the same thing far more expensively and unverifiably-before-CI (40.4's
- * law).
+ * in `remember` — and (2) a structural source scan: no ATTACHMENT-shaped
+ * key of any kind exists in any preference store, and the feedback
+ * surfaces never write to a DataStore directly (only via `FeedbackStore`'s
+ * savers). The exit-prompt switch (`feedback_exit_prompt_enabled`, added by
+ * the owner's follow-up request) is deliberately allowed: it is a UI
+ * preference about a dialog, not consent to attach anything — the banned
+ * class is keys that would make an attachment silent.
  */
 class FeedbackCheckboxNotPersistedTest {
 
@@ -63,7 +65,7 @@ class FeedbackCheckboxNotPersistedTest {
             .joinToString("\n") { it.substringBefore("//") }
 
     @Test
-    fun `no preference store carries a feedback boolean - or any feedback key beyond the two contacts`() {
+    fun `no preference store carries an attachment-shaped key - only the exit-prompt switch and the two contacts exist`() {
         val stores = listOf(
             "app/src/main/java/com/codeci/ide/ui/settings/SettingsManager.kt",
             "app/src/main/java/com/codeci/ide/ui/theme/ThemeManager.kt",
@@ -72,29 +74,39 @@ class FeedbackCheckboxNotPersistedTest {
         )
         for (path in stores) {
             val src = codeOnly(path)
+            // The banned class: a boolean that could make an ATTACHMENT
+            // silent (log/crash/attach semantics). The exit-prompt switch
+            // is a dialog preference, not attachment consent.
             assertFalse(
-                "attachment state must never be a stored boolean ($path)",
-                Regex("[Bb]ooleanPreferencesKey\\(\\s*\"[^\"]*feedback[^\"]*\"").containsMatchIn(src)
+                "an attachment state must never be a stored boolean ($path)",
+                Regex("[Bb]ooleanPreferencesKey\\(\\s*\"[^\"]*(log|crash|attach)[^\"]*\"").containsMatchIn(src)
             )
-            val feedbackKeys = Regex("[!=(]\\s*\\w+PreferencesKey\\(\"([^\"]*feedback[^\"]*)\"\\)")
+            val feedbackKeys = Regex("\\w+PreferencesKey\\(\"([^\"]*feedback[^\"]*)\"\\)")
                 .findAll(src).map { it.groupValues[1] }.toList()
             assertTrue(
-                "only the two reply-to keys may exist, found $feedbackKeys ($path)",
-                feedbackKeys.all { it == "feedback_whatsapp_number" || it == "feedback_contact_email" }
+                "only the three deliberate feedback keys may exist, found $feedbackKeys ($path)",
+                feedbackKeys.all {
+                    it == "feedback_whatsapp_number" ||
+                        it == "feedback_contact_email" ||
+                        it == "feedback_exit_prompt_enabled"
+                }
             )
         }
     }
 
     @Test
-    fun `the feedback card never writes to a datastore`() {
+    fun `the feedback card and screen never write to a datastore`() {
         val card = codeOnly("app/src/main/java/com/codeci/ide/ui/support/FeedbackSectionCard.kt")
-        assertFalse(
-            "the card's only persistence is through FeedbackStore's savers",
-            card.contains("dataStore.edit")
-        )
-        assertFalse(
-            "attachment checkboxes must stay local composition state",
-            card.contains("PreferencesKey")
-        )
+        val screen = codeOnly("app/src/main/java/com/codeci/ide/ui/screens/FeedbackScreen.kt")
+        for ((name, src) in listOf("FeedbackSectionCard" to card, "FeedbackScreen" to screen)) {
+            assertFalse(
+                "$name's only persistence is through FeedbackStore's savers",
+                src.contains("dataStore.edit")
+            )
+            assertFalse(
+                "attachment checkboxes must stay local composition state ($name)",
+                src.contains("PreferencesKey")
+            )
+        }
     }
 }

@@ -57,20 +57,30 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Phase 41.2 — the Feedback & Support section's card (the section header is
- * SettingsScreen's; this is the content). One text field, two ephemeral
- * attachment checkboxes, the channel buttons (WhatsApp-first, then the
- * fallbacks that always work), the owner's reply-to fields, and the honest
- * three-line disclosure ABOVE the checkboxes so it is on screen at the
- * moment a box is first ticked (exit 41.2.4).
+ * Phase 41.2 + follow-up — the Feedback & Support content card, now the
+ * body of its own screen (owner request after device round 1: *"can it be
+ * a separate page?"*). One text field, two ephemeral attachment checkboxes,
+ * the channel buttons (WhatsApp-first, then the fallbacks that always
+ * work), the owner's reply-to fields, and the honest three-line disclosure
+ * ABOVE the checkboxes so it is on screen at the moment a box is first
+ * ticked (exit 41.2.4).
  *
  * Nothing here sends anything by itself: CHAT opens WhatsApp with the
  * message typed (the user presses send), EMAIL opens a compose window, COPY
  * touches only the clipboard, GITHUB ISSUE opens a prefilled browser page.
  * If a launch fails, the content is copied — a tap never loses the report.
+ *
+ * @param screenLabel what the report's info line calls this surface
+ *   ("Feedback" from the screen, formerly "Settings").
+ * @param exitRating the star rating handed over by the exit survey
+ *   (0 = none); shown as a banner so the user sees what rides along.
  */
 @Composable
-fun FeedbackSectionCard(modifier: Modifier = Modifier) {
+fun FeedbackSectionCard(
+    modifier: Modifier = Modifier,
+    screenLabel: String = "Feedback",
+    exitRating: Int = 0
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val feedbackStore = remember { FeedbackStore(context) }
@@ -127,7 +137,8 @@ fun FeedbackSectionCard(modifier: Modifier = Modifier) {
             device = Build.MODEL,
             abis = DeviceDiagnostics.abiSummary(),
             project = lastProject,
-            screen = "Settings",
+            screen = screenLabel,
+            exitRating = exitRating.takeIf { it in 1..5 },
             userText = state.userText,
             includeLog = state.includeLog,
             logTail = if (state.includeLog) AppLogger.logs.value else emptyList(),
@@ -164,6 +175,15 @@ fun FeedbackSectionCard(modifier: Modifier = Modifier) {
         shape = MaterialTheme.shapes.medium
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            if (ExitSurvey.hasRating(exitRating)) {
+                Text(
+                    "Your exit rating: ${ExitSurvey.stars(exitRating)} — it goes into the report below",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             OutlinedTextField(
                 value = state.userText,
                 onValueChange = { state = state.copy(userText = it) },
@@ -364,7 +384,7 @@ fun FeedbackSectionCard(modifier: Modifier = Modifier) {
                 supportingText = {
                     val t = numberField.trim()
                     when {
-                        t.isEmpty() -> Text("empty = the CHAT row stays hidden")
+                        t.isEmpty() -> Text("empty = no CHAT row (clearing is an explicit off)")
                         FeedbackContacts.numberForStorage(t) != null ->
                             Text("ok — ${FeedbackContacts.numberForStorage(t)}")
                         else -> Text("that doesn't look like a WhatsApp number (with country code, e.g. +91 98765 43210)")
@@ -381,7 +401,7 @@ fun FeedbackSectionCard(modifier: Modifier = Modifier) {
                 supportingText = {
                     val t = emailField.trim()
                     when {
-                        t.isEmpty() -> Text("empty = the EMAIL button stays hidden")
+                        t.isEmpty() -> Text("empty = no EMAIL button (clearing is an explicit off)")
                         FeedbackContacts.emailForStorage(t) != null -> Text("ok")
                         else -> Text("that doesn't look like an email address")
                     }

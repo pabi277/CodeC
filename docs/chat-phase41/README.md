@@ -1,8 +1,10 @@
 # CodeC Phase 41 — Feedback that reaches you (WhatsApp-first)
 
-> **Status:** 🔧 **IMPLEMENTED on `arena/01a08cc6-codec` — ✅ CI GREEN
-> (`Build APK` `34525080153` on tip `8fdbe6a`; host-tested 61/61; device
-> round pending)** · **Cost:** `[client-only]` ·
+> **Status:** 🔧 **IMPLEMENTED + DEVICE ROUND 1 PASSED (owner: "1-8 pass",
+> 2026-09-10) — follow-up round shipped (separate screen, exit survey,
+> owner's number/email as shipped defaults); round 2 pending** · ✅ CI GREEN
+> (`Build APK` `34525080153` on tip `8fdbe6a`; host-tested 71/71) ·
+> **Cost:** `[client-only]` ·
 > **Effort:** S/M · **Owner row:** *"For testing i have to add a feedback
 > page give the best way, i am willing to give my WhatsApp number"*
 
@@ -43,6 +45,40 @@
   `SettingsAuditTest` (12 sections now) + `SettingsKeysHaveReadersTest`
   (4 stores now) were updated in the same commit and run in the same local
   loop. Device runbook: [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md).
+
+**Device round 1: ✅ 8/8 PASSED (owner report, 2026-09-10: "1 -8 pass but
+the number is not mine")** — the tested number was not the owner's, which
+became the follow-up's first decision: the owner's real number + email now
+SHIP in the APK.
+
+**Follow-up round (owner, same day): separate screen + exit survey +
+shipped defaults** — `"Can it be a separate page?"` + *"for the testing
+phase it when user want to close the app it show a sweet request pop up
+for rate,experience, bugs,problems etc and tap again to exit and a option
+to give review"* + the number/email above:
+
+- `ui/screens/FeedbackScreen.kt` — the content moved from a Settings card
+  to its own screen (Settings keeps one OPEN row; audit now 46 controls).
+  It also carries the exit-prompt switch (default ON).
+- `ui/support/ExitSurvey.kt` (pure) + `ui/support/ExitFeedbackDialog.kt` —
+  back-at-root shows "Enjoying CodeC? 💚" with a star row; **tap again to
+  exit** (the dialog's own back press is the exit; outside taps do
+  nothing); SHARE EXPERIENCE opens the Feedback screen with the rating
+  riding the report's info line ("· Rating: 4/5" — nothing is ever
+  uploaded by itself); GIVE A REVIEW opens the GitHub repo; NOT NOW stays.
+- `FeedbackStore` — `DEFAULT_WHATSAPP_NUMBER = "916296746606"` (+91 62967
+  46606) and `DEFAULT_CONTACT_EMAIL` now ship (the PART_41_2-recorded
+  Phase 42 decision point, decided by the owner); a stored value always
+  wins; clearing is an explicit off. New key `feedback_exit_prompt_enabled`
+  (the ONE feedback boolean allowed — a dialog preference, not attachment
+  consent; `FeedbackCheckboxNotPersistedTest` now bans attachment-shaped
+  keys instead of all feedback booleans).
+- `Screen.Feedback` (`feedback?rating={rating}`) + the MainActivity
+  `BackHandler` (registered before the Scaffold so in-app back handling
+  keeps priority; at root it decides prompt-vs-direct-exit).
+- Tests: `ExitSurveyTest` (8 — defaults, stars/ratingLine, report
+  fragment, wiring pins) + amended persistence/audit tests — **71/71
+  pre-validated locally.** Round-2 runbook: DEVICE_TEST_PLAN §Round 2.
 
 ## What exists today (evidence, read 2026-09-10)
 
