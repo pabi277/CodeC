@@ -24,6 +24,16 @@ enum class GitBlocker {
     OFFLINE
 }
 
+/** Operations that carry a token-needs flag. */
+sealed class GitOp {
+    val needsToken: Boolean
+        get() = this is GitOp.CommitOrPush || this is GitOp.Publish
+}
+
+data class GitOp.Clone(override val needsToken: Boolean = false) : GitOp()
+data class GitOp.CommitOrPush(override val needsToken: Boolean = true) : GitOp()
+data class GitOp.Publish(override val needsToken: Boolean = true) : GitOp()
+
 /**
  * Holds the answers. null blocker == ready to act.
  * Non-null blocker == what to tell the user, with an action id.
@@ -36,7 +46,7 @@ data class GitReadiness(
     val online: Boolean?
 ) {
     /** Null when ready. Non-null blocker, with message and action id. */
-    fun blocker(op: GitOperation): GitBlocker? {
+    fun blocker(op: GitOp): GitBlocker? {
         // 1. Git not installed — most blocking; fixes every other question
         if (!gitInstalled) return GitBlocker.GIT_NOT_INSTALLED
 
@@ -84,18 +94,3 @@ data class GitReadiness(
         }
     }
 }
-
-/** Operations that carry a token-needs flag. */
-class GitOperation(
-    val needsToken: Boolean,
-    val isPushPull: Boolean
-)
-
-/** A clone operation — does not need a token (public repos clone without auth). */
-object GitOperationClone : GitOperation(needsToken = false, isPushPull = false)
-
-/** A commit-or-push operation — needs a token. */
-class GitOperationCommitOrPublish : GitOperation(needsToken = true, isPushPull = true)
-
-/** A publish operation — needs a token. */
-class GitOperationPublish : GitOperation(needsToken = true, isPushPull = true)
