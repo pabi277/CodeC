@@ -1,6 +1,9 @@
 # CodeC Phase 40.3 — Publish to GitHub: create the remote when there isn't one
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🔧 IMPLEMENTED + DEVICE-PASSED (checks 6a–6c) · merged on the
+> owner's command (Phase 40) · **Cost:** `[client-only]` · **Effort:** M ·
+> **CI:** ✅ `Build APK` `34499964179` on `29e175e` — see the
+> [README](README.md) for the phase ledger ·
 > **Owner row (verbatim):** *"Github integration update now Github is working
 > but it's not user friendly"* — the sharpest instance of that is a local
 > project with nowhere to push.

@@ -1,6 +1,9 @@
 # CodeC Phase 40.2 — Push & branch truth: what actually reached GitHub
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🔧 IMPLEMENTED + DEVICE-PASSED (checks 3–5) · merged on the
+> owner's command (Phase 40) · **Cost:** `[client-only]` · **Effort:** M ·
+> **CI:** ✅ `Build APK` `34499964179` on `29e175e` — see the
+> [README](README.md) for the phase ledger ·
 > **Owner row (verbatim):** *"sometimes it's push stay local, new branch create
 > mostly stays local"*
 

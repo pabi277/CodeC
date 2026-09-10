@@ -1,8 +1,9 @@
 # CodeC Phase 40 — device test plan (owner runbook)
 
 > **Branch:** `arena/01a08c04-codec` · **Functional round:** `e623a16`
-> (impl `29e175e`) · **Colour round (40.5):** `8648314` · **CI ✅ GREEN:**
-> `Build APK` `34499964179`, `34500719045`, `34509510002` ·
+> (impl `29e175e`) · **Colour round (40.5):** `8648314` → `807cdf9` (green by
+> default) · **CI ✅ GREEN:** `Build APK` `34499964179`, `34500719045`,
+> `34509510002`, `34510219794`, `34516344512` ·
 > **Status:** ✅ **checks 1–8 PASSED** on the owner's device (2026-09-10);
 > **checks C1–C3 are the colour look-over** (40.5, incl. the
 > *CodeC green by default* change) — run them with the latest green APK
