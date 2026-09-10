@@ -225,10 +225,12 @@ Every update updates the docs **in the same commit**:
   Robolectric DataStore round-trip was replaced by pure
   `FeedbackContacts` tests + a store source-scan, for the 40.4
   never-push-unverifiable reason). Device runbook
-  `docs/chat-phase41/DEVICE_TEST_PLAN.md` (8 checks). **CI pending at
-  writing time — the run id is recorded in JOURNEY §57 when pushed; merge
-  HELD for the owner's command.** Records: `docs/chat-phase41/`, JOURNEY
-  §57, TROUBLESHOOTING §30.
+  `docs/chat-phase41/DEVICE_TEST_PLAN.md` (8 checks). **CI ✅ GREEN on the first push — `Build APK` `34525080153` on tip
+  `8fdbe6a`** (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`
+  through the bridge; artifact `CodeC-IDE` 24 992 107 B = +60 216 B /
+  +0.24 % vs the Phase 40 merge build). **Device round pending (the
+  owner's gate); merge HELD for the owner's command.** Records:
+  `docs/chat-phase41/`, JOURNEY §57, TROUBLESHOOTING §30.
 
 - **Phase 38 (Identity: app icon + Settings trim) is ✅ COMPLETE,
   DEVICE-PASSED & MERGED to `main` via PR #64 → `main` at `dcd65b4bc3e65d268bcc354da9d413d74eb25038` (merge commit, history preserved)** (owner: "Start Phase

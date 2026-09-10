@@ -1,7 +1,8 @@
 # CodeC Phase 41 — Feedback that reaches you (WhatsApp-first)
 
-> **Status:** 🔧 **IMPLEMENTED on `arena/01a08cc6-codec` (host-tested
-> 61/61, CI + device round pending)** · **Cost:** `[client-only]` ·
+> **Status:** 🔧 **IMPLEMENTED on `arena/01a08cc6-codec` — ✅ CI GREEN
+> (`Build APK` `34525080153` on tip `8fdbe6a`; host-tested 61/61; device
+> round pending)** · **Cost:** `[client-only]` ·
 > **Effort:** S/M · **Owner row:** *"For testing i have to add a feedback
 > page give the best way, i am willing to give my WhatsApp number"*
 
