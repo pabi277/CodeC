@@ -1,6 +1,6 @@
 # CodeC Phase 40 — GitHub that tells the truth
 
-> **Status:** 🔧 IMPLEMENTED on `arena/01a08c04-codec` — **CI ✅ GREEN**
+> **Status:** ✅ **MERGED to `main` ([PR #68](https://github.com/pabi277/CodeC/pull/68) at `6816f635`, 2026-09-10, on the owner's command; CI ✅ on the merge commit, `Build APK` `34517692563`) — CI ✅ GREEN**
 > (`Build APK` `34499964179` on the repair, `34509510002` on the colour repair
 > `8648314`) · **Device:** ✅ **8/8 functional checks passed** on the owner's
 > phone (2026-09-10); colour look-over (3 checks) in the runbook. The first
