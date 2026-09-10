@@ -6,7 +6,14 @@
 
 **24 847 906 B ≈ 23.7 MiB** for the debug universal APK (run `34399227052`);
 the release build today would be about the same, because
-`isMinifyEnabled = false` and `isShrinkResources` is unset. What's inside it,
+`isMinifyEnabled = false` and `isShrinkResources` is unset.
+**The noise floor, measured:** the docs-only run `34433912076` (tip `8d365c4`)
+produced `CodeC-IDE` at 24 847 809 B — **97 B below** the build of its parent
+tip `04f336f` (24 847 906 B) with **no `app/` file changed** and the same
+3-digit CI run number in `versionName`. So zip assembly itself moves the size by
+~10² bytes. Any 43.2 result smaller than ~0.1 % (≈24 KB) is not a finding, and a
+before/after pair measured on *different* runs must be re-measured twice before
+it is reported to the owner. What's inside it,
 in order of weight, from the repo's own facts rather than guesses:
 
 Measured in the working tree on 2026-09-10 (`du -sh`), not estimated:

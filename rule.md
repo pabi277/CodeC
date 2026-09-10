@@ -209,8 +209,9 @@ Every update updates the docs **in the same commit**:
   Recommended order **42 → 40 → 38 → 41 → 43 → 39**, with one hard dependency:
   **40.1 before 39.2**. Records:
   `docs/PHASE38_43_ROADMAP.md` + `docs/PHASE38_43_OSS_RESEARCH.md` +
-  `docs/chat-phase38/`…`chat-phase43/`. Each phase starts on the owner's
-  "Start Phase N" and keeps every law of this manual (device gates are the
+  `docs/chat-phase38/`…`chat-phase43/`. CI on the planning commit is ✅ GREEN
+  (`Build APK` `34433912076`, tip `8d365c4`, 6 m 18 s — a docs-only push, run
+  anyway). Each phase starts on the owner's "Start Phase N" and keeps every law of this manual (device gates are the
   owner's, CI is the executor of record, no PR without an explicit command).
   Standing scope decisions from that research, so they are not re-litigated:
   keep the `git` **CLI** (JGit rejected); never make `MANAGE_EXTERNAL_STORAGE`
