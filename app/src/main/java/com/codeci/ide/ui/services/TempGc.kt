@@ -140,7 +140,7 @@ object TempGc {
     }
 
     /**
-     * Inventory of `tempRoot/runs/*` stamp dirs. Entries that are not
+     * Inventory of `tempRoot/runs/<stamp>` stamp dirs. Entries that are not
      * directories or that escape [tempRoot] are skipped and never followed.
      */
     fun scan(tempRoot: File): List<RunDir> {
@@ -172,7 +172,7 @@ object TempGc {
         return out
     }
 
-    /** Apply a plan. Refuses any delete whose path is outside [tempRoot]/runs. */
+    /** Apply a plan. Refuses any delete whose path is outside `tempRoot/runs`. */
     fun apply(tempRoot: File, actions: List<GcAction>): GcReport {
         val rootCanonical = try {
             tempRoot.canonicalFile
