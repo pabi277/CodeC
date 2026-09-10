@@ -9,8 +9,10 @@ import java.io.File
  * preference stores must have a READER. Enumerating the stores (not one
  * file) matters: `GitCredentialsStore`'s four keys live on the same
  * `settings` DataStore as `SettingsManager`'s, declared from
- * `ui/theme/ThemeManager.kt` (Phase 41 added `ui/support/FeedbackStore.kt`
- * to the same DataStore — same law, same list).
+ * `ui/theme/ThemeManager.kt`. (Phase 41 round 2: the feedback contact
+ * store was DELETED — the developer's number/email are hardcoded
+ * `DeveloperContact`, not settings; the exit-prompt switch lives in
+ * `SettingsManager` and is covered by the same chain.)
  *
  * The chain checked is honest about how this codebase reads values:
  * a key is consumed inside its store by a flow/setter ("block"), and
@@ -30,9 +32,7 @@ class SettingsKeysHaveReadersTest {
     private val storePaths = listOf(
         "app/src/main/java/com/codeci/ide/ui/settings/SettingsManager.kt",
         "app/src/main/java/com/codeci/ide/ui/theme/ThemeManager.kt",
-        "app/src/main/java/com/codeci/ide/ui/projects/GitCredentialsStore.kt",
-        // Phase 41 — the feedback reply-to contacts ride the same DataStore.
-        "app/src/main/java/com/codeci/ide/ui/support/FeedbackStore.kt"
+        "app/src/main/java/com/codeci/ide/ui/projects/GitCredentialsStore.kt"
     )
 
     private val keyDecl = Regex("""\bval\s+(\w+)\s*=\s*\w+PreferencesKey\("([^"]+)"\)""")

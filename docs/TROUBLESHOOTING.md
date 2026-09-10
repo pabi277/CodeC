@@ -1128,24 +1128,25 @@ status "LF" (light) 3.78 → 8.17 · key-cap tints and hints, badges (3.46) and
 
 ## 30. Sending feedback / where the WhatsApp button is (Phase 41, 2026-09-10; follow-up round same day)
 
-**Settings → Feedback & Support → OPEN** (its own screen since the
-follow-up round, also reachable from the exit popup): type what happened,
-optionally tick *Include the last 120 log lines* (redacted — no tokens,
-paths shortened) and *Include the last crash* (prefilled after a crash),
-then CHAT ON WHATSAPP / COPY REPORT / EMAIL / GITHUB ISSUE. The owner's
-number (+91 62967 46606) and email ship IN the APK, so a fresh install has
-the CHAT and EMAIL rows from the start.
+**Settings → Feedback & Support → OPEN** (its own screen, also reachable
+from the exit popup): type what happened, optionally tick *Include the
+last 120 log lines* (redacted — no tokens, paths shortened) and *Include
+the last crash* (prefilled after a crash), then CHAT ON WHATSAPP / COPY
+REPORT / EMAIL / GITHUB ISSUE. The developer's number (+91 62967 46606)
+and email are HARDCODED in the app (round 2, owner decision: feedback
+always goes to the developer; there is nothing to configure and no
+number/email field in the UI).
 
 - **"A popup asks how it went when I close the app."** — that is the exit
   survey (owner-requested for the testing phase): rate with stars, SHARE
   EXPERIENCE opens the Feedback page with the rating in the report, GIVE A
   REVIEW opens the GitHub repo, and **tap back again (or EXIT) to close**.
   It is off-able: the Feedback page's *Ask for feedback on exit* switch.
-- **"There is no CHAT ON WHATSAPP button."** — the stored number was
-  cleared on this install (a stored empty value is an explicit off and
-  beats the shipped default). Retype the number (with country code, e.g.
-  `+91 98765 43210`) → SAVE. An invalid number never produces a button — a
-  wa.me link to a wrong number opens a chat with the wrong person.
+- **"There is no CHAT ON WHATSAPP button."** — there is nothing to
+  configure (the number is built into the app), so a missing row is a BUG:
+  report it via GITHUB ISSUE. On a device without WhatsApp the button is
+  still shown, but tapping it copies the report and names the number to
+  write to instead of opening a dead link.
 - **"CHAT is greyed out."** — write what happened first (non-empty text
   enables CHAT); COPY REPORT and GITHUB ISSUE always work.
 - **"Tapping CHAT copied the report instead of opening WhatsApp."** —

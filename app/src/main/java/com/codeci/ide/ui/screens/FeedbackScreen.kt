@@ -24,9 +24,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.support.ExitSurvey
 import com.codeci.ide.ui.support.FeedbackSectionCard
-import com.codeci.ide.ui.support.FeedbackStore
 import kotlinx.coroutines.launch
 
 /**
@@ -36,6 +36,10 @@ import kotlinx.coroutines.launch
  * survey's SHARE EXPERIENCE. Same card, same pure decisions, same honest
  * disclosure — only the address changed, plus the exit-prompt switch that
  * lives here so the popup's off-switch sits next to the thing it controls.
+ *
+ * Round 2: the reply-to fields are gone entirely (the developer's contact
+ * is hardcoded — `DeveloperContact`); the only knob on this screen is the
+ * exit-prompt switch.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,9 +49,9 @@ fun FeedbackScreen(
     exitRating: Int = 0
 ) {
     val context = LocalContext.current
-    val feedbackStore = remember { FeedbackStore(context) }
+    val settingsManager = remember { SettingsManager(context) }
     val scope = rememberCoroutineScope()
-    val exitPromptEnabled by feedbackStore.exitPromptEnabledFlow.collectAsState(initial = true)
+    val exitPromptEnabled by settingsManager.feedbackExitPromptEnabledFlow.collectAsState(initial = true)
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -72,7 +76,7 @@ fun FeedbackScreen(
             SettingsSwitch(
                 title = "Ask for feedback on exit",
                 checked = exitPromptEnabled,
-                onCheckedChange = { scope.launch { feedbackStore.setExitPromptEnabled(it) } }
+                onCheckedChange = { scope.launch { settingsManager.setFeedbackExitPromptEnabled(it) } }
             )
             Text(
                 "Testing phase: when you close the app (back at the main screen), " +

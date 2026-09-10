@@ -33,11 +33,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,17 +51,21 @@ import com.codeci.ide.ui.services.OpenInBrowser
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.DeviceDiagnostics
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Phase 41.2 + follow-up — the Feedback & Support content card, now the
- * body of its own screen (owner request after device round 1: *"can it be
- * a separate page?"*). One text field, two ephemeral attachment checkboxes,
- * the channel buttons (WhatsApp-first, then the fallbacks that always
- * work), the owner's reply-to fields, and the honest three-line disclosure
- * ABOVE the checkboxes so it is on screen at the moment a box is first
- * ticked (exit 41.2.4).
+ * Phase 41.2 + follow-ups — the Feedback & Support content card, the body
+ * of its own screen. One text field, two ephemeral attachment checkboxes,
+ * and the channel buttons (WhatsApp-first, then the fallbacks that always
+ * work), with the honest three-line disclosure ABOVE the checkboxes so it
+ * is on screen at the moment a box is first ticked (exit 41.2.4).
+ *
+ * **Round 2 (owner, 2026-09-10): the reply-to fields are GONE** — every
+ * channel points at the developer, hardcoded in [DeveloperContact]
+ * (*"I want to sit as developer not some other guy … no need for the user
+ * to set number"*). The user writes what happened and taps a button; the
+ * app already knows who it goes to. Nothing user-configurable remains on
+ * this screen except the exit-prompt switch (on the screen, not the card).
  *
  * Nothing here sends anything by itself: CHAT opens WhatsApp with the
  * message typed (the user presses send), EMAIL opens a compose window, COPY
@@ -71,7 +73,7 @@ import kotlinx.coroutines.withContext
  * If a launch fails, the content is copied — a tap never loses the report.
  *
  * @param screenLabel what the report's info line calls this surface
- *   ("Feedback" from the screen, formerly "Settings").
+ *   ("Feedback").
  * @param exitRating the star rating handed over by the exit survey
  *   (0 = none); shown as a banner so the user sees what rides along.
  */
@@ -82,14 +84,7 @@ fun FeedbackSectionCard(
     exitRating: Int = 0
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val feedbackStore = remember { FeedbackStore(context) }
     val gitStore = remember { GitCredentialsStore(context) }
-
-    // Stored contacts (reactive: paste a number + SAVE and the CHAT row
-    // appears with no restart — exit 41.2.1).
-    val storedNumber by feedbackStore.whatsappNumberFlow.collectAsState(initial = "")
-    val storedEmail by feedbackStore.contactEmailFlow.collectAsState(initial = "")
 
     // The section's own state. The attachment choices are deliberately NOT
     // part of any store: every report is a fresh choice (privacy law).
@@ -98,14 +93,6 @@ fun FeedbackSectionCard(
     var crashKnown by remember { mutableStateOf(false) }
     var lastProject by remember { mutableStateOf<String?>(null) }
     var secret by remember { mutableStateOf<String?>(null) }
-    var numberField by remember { mutableStateOf("") }
-    var emailField by remember { mutableStateOf("") }
-    var savedMessage by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(storedNumber, storedEmail) {
-        if (numberField.isBlank()) numberField = storedNumber
-        if (emailField.isBlank()) emailField = storedEmail
-    }
 
     LaunchedEffect(Unit) {
         // One sink, one reader list: the crash record comes from the SAME
@@ -161,8 +148,8 @@ fun FeedbackSectionCard(
     }
 
     val section = state.copy(
-        whatsappNumberE164 = storedNumber.ifBlank { null },
-        contactEmail = storedEmail.ifBlank { null }
+        whatsappNumberE164 = DeveloperContact.WHATSAPP_E164,
+        contactEmail = DeveloperContact.EMAIL
     )
 
     Card(
@@ -211,7 +198,7 @@ fun FeedbackSectionCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                "If you write to a personal WhatsApp number, the owner can see your phone " +
+                "If you write to the developer on WhatsApp, they can see your phone " +
                     "number and profile — that's how the reply gets back to you.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -265,7 +252,7 @@ fun FeedbackSectionCard(
                 Button(
                     onClick = {
                         val budgeted = buildReport(FeedbackDraft.WHATSAPP_BUDGET)
-                        val url = FeedbackDraft.whatsappUrl(storedNumber, budgeted)
+                        val url = FeedbackDraft.whatsappUrl(DeveloperContact.WHATSAPP_E164, budgeted)
                         if (url == null) {
                             copyReport("WhatsApp link could not be built — the report is copied")
                         } else if (!whatsappInstalled(context)) {
@@ -273,12 +260,12 @@ fun FeedbackSectionCard(
                             // be a dead end — copy + show the number.
                             copyReport(
                                 "WhatsApp is not installed — the report is copied. " +
-                                    "Write to +$storedNumber"
+                                    "Write to ${DeveloperContact.WHATSAPP_DISPLAY}"
                             )
                         } else if (!OpenInBrowser.open(context, url)) {
                             copyReport(
                                 "WhatsApp did not open — the report is copied. " +
-                                    "Write to +$storedNumber"
+                                    "Write to ${DeveloperContact.WHATSAPP_DISPLAY}"
                             )
                         } else {
                             Toast.makeText(
@@ -296,7 +283,7 @@ fun FeedbackSectionCard(
                     Text("CHAT ON WHATSAPP")
                 }
                 Text(
-                    "Replies go to +$storedNumber · the message opens typed, you press send",
+                    "Replies go to ${DeveloperContact.WHATSAPP_DISPLAY} · the message opens typed, you press send",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
@@ -310,7 +297,7 @@ fun FeedbackSectionCard(
                 }
             } else {
                 Text(
-                    "WhatsApp number not set — COPY REPORT and GITHUB ISSUE reach the owner too",
+                    "WhatsApp is unavailable on this device — COPY REPORT and GITHUB ISSUE reach the developer too",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -331,7 +318,7 @@ fun FeedbackSectionCard(
                     OutlinedButton(onClick = {
                         val full = buildReport(Int.MAX_VALUE)
                         val uri = FeedbackDraft.mailto(
-                            storedEmail,
+                            DeveloperContact.EMAIL,
                             full,
                             subject = "CodeC feedback ${BuildConfig.VERSION_NAME}"
                         )
@@ -368,71 +355,9 @@ fun FeedbackSectionCard(
                 }
             }
 
+            // Round 2 (owner): no reply-to fields — the developer's contact
+            // is hardcoded (DeveloperContact); the user has nothing to set.
             Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                "Reply-to details (owner): where feedback from this app is delivered",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(
-                value = numberField,
-                onValueChange = { numberField = it },
-                label = { Text("WhatsApp number for replies") },
-                singleLine = true,
-                supportingText = {
-                    val t = numberField.trim()
-                    when {
-                        t.isEmpty() -> Text("empty = no CHAT row (clearing is an explicit off)")
-                        FeedbackContacts.numberForStorage(t) != null ->
-                            Text("ok — ${FeedbackContacts.numberForStorage(t)}")
-                        else -> Text("that doesn't look like a WhatsApp number (with country code, e.g. +91 98765 43210)")
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(
-                value = emailField,
-                onValueChange = { emailField = it },
-                label = { Text("Contact email for replies (optional)") },
-                singleLine = true,
-                supportingText = {
-                    val t = emailField.trim()
-                    when {
-                        t.isEmpty() -> Text("empty = no EMAIL button (clearing is an explicit off)")
-                        FeedbackContacts.emailForStorage(t) != null -> Text("ok")
-                        else -> Text("that doesn't look like an email address")
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            if (savedMessage != null) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    savedMessage ?: "",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                OutlinedButton(onClick = {
-                    scope.launch {
-                        val n = feedbackStore.saveWhatsappNumber(numberField)
-                        val e = feedbackStore.saveContactEmail(emailField)
-                        savedMessage = buildString {
-                            append(if (n) "Number saved" else "Number NOT saved — doesn't look like a WhatsApp number")
-                            append(" · ")
-                            append(if (e) "email saved" else "email NOT saved — doesn't look like an address")
-                        }
-                    }
-                }) {
-                    Text("SAVE")
-                }
-            }
         }
     }
 }

@@ -94,7 +94,6 @@ import com.codeci.ide.ui.services.OpenInBrowser
 import com.codeci.ide.ui.services.TempGc
 import com.codeci.ide.ui.support.ExitFeedbackDialog
 import com.codeci.ide.ui.support.ExitSurvey
-import com.codeci.ide.ui.support.FeedbackStore
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.CodecApiBridge
 import com.codeci.ide.ui.terminal.CodecApiProtocol
@@ -683,8 +682,8 @@ fun MainApp() {
     // rate/experience/review dialog instead, and "tap again to exit" is the
     // dialog's own back handling. Off-able from the Feedback screen
     // (testing-phase default ON); when off, back closes directly.
-    val feedbackStore = remember { FeedbackStore(activity) }
-    val exitPromptEnabled by feedbackStore.exitPromptEnabledFlow.collectAsState(initial = true)
+    // (settingsManager is the one MainApp already holds for first-launch.)
+    val exitPromptEnabled by settingsManager.feedbackExitPromptEnabledFlow.collectAsState(initial = true)
     var exitPromptVisible by remember { mutableStateOf(false) }
 
     if (exitPromptVisible) {

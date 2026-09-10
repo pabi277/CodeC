@@ -109,7 +109,7 @@ change nothing and say so).
 | Package Repository & Trust card | Package Repository & Trust | shows trust info; CHECK verifies repo | keep |
 | GitHub Account card (4 fields, link, disconnect/save) | GitHub Account | writes `GitCredentialsStore` | keep |
 | About header (app mark + name + tagline) | About | identity only (Phase 38.1) | keep |
-| Feedback screen (`FeedbackScreen`, Phase 41 follow-up: the card moved out of Settings to its own screen) — text field, 2 ephemeral checkboxes, CHAT/COPY/EMAIL/GITHUB buttons, 2 owner reply-to fields + save, exit-prompt switch | Feedback & Support | writes `FeedbackStore` (`feedback_whatsapp_number`, `feedback_contact_email`, `feedback_exit_prompt_enabled`); builds the `FeedbackDraft` report; the checkboxes are deliberately NOT stored (fresh choice per report, pinned by `FeedbackCheckboxNotPersistedTest`) | keep |
+| Feedback screen (`FeedbackScreen`, Phase 41 follow-up: the card moved out of Settings to its own screen) — text field, 2 ephemeral checkboxes, CHAT/COPY/EMAIL/GITHUB buttons, exit-prompt switch | Feedback & Support | builds the `FeedbackDraft` report; every channel points at the HARDCODED developer contact (`DeveloperContact`, round 2 — no contact store keys exist); writes only `feedback_exit_prompt_enabled` (`SettingsManager`); the checkboxes are deliberately NOT stored (fresh choice per report, pinned by `FeedbackCheckboxNotPersistedTest`) | keep |
 
 ## Store keys NOT surfaced as Settings rows (config surface, read-only)
 

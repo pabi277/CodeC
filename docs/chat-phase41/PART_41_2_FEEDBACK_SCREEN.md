@@ -232,3 +232,45 @@ etc.) — GIVE A REVIEW already opens the repo; Phase 42 (share-readiness)
 owns anything more. The exit prompt's long-term fate (keep / soften to
 once-a-week / remove) is explicitly Phase 42's call — the switch and the
 `ExitSurvey` KDoc record that.
+
+---
+
+## Round 2 (2026-09-10, owner: *"I want to sit as developer not some other guy"*)
+
+The owner ended the "the number is a Settings value" design (this part's
+original table row *Your number for replies* and the README's "number is a
+setting" law) in one sentence: *"So i want my number hard coded. Any
+feedback comes to me no need for the user to set number the user know me
+or don't know me does not matter a bit. So remove the boxes and set it in
+the code."*
+
+What changed, and what deliberately did not:
+
+- **`ui/support/DeveloperContact.kt` is the single source** —
+  `WHATSAPP_E164 = "916296746606"` (+91 62967 46606), `WHATSAPP_DISPLAY`,
+  `EMAIL = chakraborttypabi2772006@gmail.com`. Hardcoded constants; every
+  channel (CHAT, EMAIL, GITHUB ISSUE's repo) reads them. `ExitSurveyTest`
+  pins that the constant is valid E.164 (a wrong constant would make the
+  CHAT row vanish — `whatsappUrl` returns null) and that it matches what
+  the owner typed.
+- **The reply-to fields, the SAVE button, `FeedbackStore.kt` and
+  `FeedbackContacts.kt` are DELETED.** No store key for the contacts
+  exists anymore (`ExitSurveyTest` pins the absence — the round-1 keys
+  must not come back). The exit-prompt switch moved to `SettingsManager`
+  (`feedback_exit_prompt_enabled`), the only feedback key left, covered by
+  the audit's reader-chain test like every other key.
+- **Unchanged on purpose:** the ephemeral-checkboxes privacy law (fresh
+  choice per report, `FeedbackCheckboxNotPersistedTest` still bans
+  attachment-shaped keys), the three-line disclosure (line 3 now says
+  "the developer" — still true, and now the ONLY identity involved), the
+  WhatsApp-less fallback (copy + the number, shown as
+  `WHATSAPP_DISPLAY`), and the honest "nothing sends by itself" rule.
+- **Test deltas:** `FeedbackNumberSettingTest` deleted with the feature it
+  pinned; `ExitSurveyTest` grew the round-2 pins (validity,
+  not-configurable, wiring via `SettingsManager`); the persistence and
+  key-reader tests updated. 65/65 host-pre-validated.
+
+**Why this is the right shape for the testing phase:** one developer, one
+identity, zero configuration — and when the owner someday wants a second
+maintainer or a support alias, it is one constant in one file (or a list),
+not a settings surface that every tester had to understand.

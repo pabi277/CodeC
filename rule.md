@@ -198,7 +198,19 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-10, **Phase 41 is 🔧 IMPLEMENTED + round-1 DEVICE-PASSED 8/8, follow-up round shipped (round 2 pending); 38/39/40 are ✅ COMPLETE & MERGED; 42-43 are 📋 PLANNED**)
+## 9. State snapshot (2026-09-10, **Phase 41 is 🔧 IMPLEMENTED + round-1 DEVICE-PASSED 8/8; round 2 (hardcoded developer contact) shipped, round-2 device pass pending; 38/39/40 are ✅ COMPLETE & MERGED; 42-43 are 📋 PLANNED**)
+
+- **Phase 41 round 2 (owner: "I want to sit as developer not some other
+  guy … remove the boxes and set it in the code"): the developer's contact
+  is HARDCODED** (`ui/support/DeveloperContact.kt` — +91 62967 46606 /
+  chakraborttypabi2772006@gmail.com, the single source every channel
+  reads; `ExitSurveyTest` pins validity + that no contact store key or
+  input field returns). **The reply-to fields, `FeedbackStore.kt` and
+  `FeedbackContacts.kt` are DELETED**; the exit-prompt switch moved to
+  `SettingsManager` (`feedback_exit_prompt_enabled`, the only feedback
+  key left). The round-1 separate screen + exit survey are unchanged;
+  65/65 host-pre-validated. Round-2 runbook D1–D8 (D1: NO contact fields;
+  D8: the chat opens to the hardcoded number). Merge HELD.
 
 - **Phase 41 follow-up (2026-09-10, owner: "1-8 pass but the number is not
   mine" + requests): round 1 PASSED 8/8; the follow-up ships the owner's

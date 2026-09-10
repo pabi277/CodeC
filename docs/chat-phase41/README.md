@@ -78,9 +78,29 @@ to give review"* + the number/email above:
 - `Screen.Feedback` (`feedback?rating={rating}`) + the MainActivity
   `BackHandler` (registered before the Scaffold so in-app back handling
   keeps priority; at root it decides prompt-vs-direct-exit).
-- Tests: `ExitSurveyTest` (8 — defaults, stars/ratingLine, report
-  fragment, wiring pins) + amended persistence/audit tests — **71/71
-  pre-validated locally.** Round-2 runbook: DEVICE_TEST_PLAN §Round 2.
+- Tests: `ExitSurveyTest` + amended persistence/audit tests — 71/71
+  pre-validated locally at round 1. Round-2 runbook: DEVICE_TEST_PLAN
+  §Round 2.
+
+**Round 2 (owner, same day): the developer identity is hardcoded, the
+boxes are gone** — owner, verbatim: *"I want to sit as developer not some
+other guy. So i want my number hard coded. Any feedback comes to me no
+need for the user to set number the user know me or don't know me does not
+matter a bit. So remove the boxes and set it in the code."* Shipped:
+
+- `ui/support/DeveloperContact.kt` — the ONE place the feedback identity
+  lives: `WHATSAPP_E164 = "916296746606"`, `WHATSAPP_DISPLAY = "+91 62967
+  46606"`, `EMAIL`. Hardcoded, not a setting, not a DataStore key.
+- **`FeedbackStore.kt` and `FeedbackContacts.kt` DELETED** (both contact
+  keys gone with them); the reply-to input fields + SAVE are gone from the
+  card — the user has nothing to set, every channel points at the
+  developer. The exit-prompt switch moved to `SettingsManager`
+  (`feedback_exit_prompt_enabled`, the ONLY feedback key left in any
+  store). `FeedbackNumberSettingTest` deleted with the feature it pinned;
+  `ExitSurveyTest` now pins the round-2 law (the constants are valid, and
+  no contact key/field can come back). **65/65 pre-validated locally.**
+  The round-1 exit-survey design and the ephemeral-checkboxes privacy law
+  are unchanged.
 
 ## What exists today (evidence, read 2026-09-10)
 

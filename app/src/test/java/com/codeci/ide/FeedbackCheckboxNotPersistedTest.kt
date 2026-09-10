@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 41.2 + follow-up — "no silent always-on attachment". The attachment
+ * Phase 41.2 + follow-ups — "no silent always-on attachment". The attachment
  * checkboxes are a privacy behaviour, so they are tested, not commented:
  * toggling them and coming back later must start from the same fresh
  * defaults, and no store may ever carry their state.
@@ -15,9 +15,9 @@ import org.junit.Test
  * what "leave the screen and return" gives, because the card's state lives
  * in `remember` — and (2) a structural source scan: no ATTACHMENT-shaped
  * key of any kind exists in any preference store, and the feedback
- * surfaces never write to a DataStore directly (only via `FeedbackStore`'s
- * savers). The exit-prompt switch (`feedback_exit_prompt_enabled`, added by
- * the owner's follow-up request) is deliberately allowed: it is a UI
+ * surfaces never write to a DataStore directly (only via `SettingsManager`'s
+ * setter). The exit-prompt switch (`feedback_exit_prompt_enabled`, in
+ * `SettingsManager` since round 2) is deliberately allowed: it is a UI
  * preference about a dialog, not consent to attach anything — the banned
  * class is keys that would make an attachment silent.
  */
@@ -65,12 +65,11 @@ class FeedbackCheckboxNotPersistedTest {
             .joinToString("\n") { it.substringBefore("//") }
 
     @Test
-    fun `no preference store carries an attachment-shaped key - only the exit-prompt switch and the two contacts exist`() {
+    fun `no preference store carries an attachment-shaped key - only the exit-prompt switch exists`() {
         val stores = listOf(
             "app/src/main/java/com/codeci/ide/ui/settings/SettingsManager.kt",
             "app/src/main/java/com/codeci/ide/ui/theme/ThemeManager.kt",
-            "app/src/main/java/com/codeci/ide/ui/projects/GitCredentialsStore.kt",
-            "app/src/main/java/com/codeci/ide/ui/support/FeedbackStore.kt"
+            "app/src/main/java/com/codeci/ide/ui/projects/GitCredentialsStore.kt"
         )
         for (path in stores) {
             val src = codeOnly(path)
@@ -83,13 +82,11 @@ class FeedbackCheckboxNotPersistedTest {
             )
             val feedbackKeys = Regex("\\w+PreferencesKey\\(\"([^\"]*feedback[^\"]*)\"\\)")
                 .findAll(src).map { it.groupValues[1] }.toList()
+            // Round 2: the contact keys are gone (hardcoded DeveloperContact);
+            // the exit-prompt switch is the only feedback key left.
             assertTrue(
-                "only the three deliberate feedback keys may exist, found $feedbackKeys ($path)",
-                feedbackKeys.all {
-                    it == "feedback_whatsapp_number" ||
-                        it == "feedback_contact_email" ||
-                        it == "feedback_exit_prompt_enabled"
-                }
+                "only the exit-prompt switch may exist, found $feedbackKeys ($path)",
+                feedbackKeys.all { it == "feedback_exit_prompt_enabled" }
             )
         }
     }
@@ -100,7 +97,7 @@ class FeedbackCheckboxNotPersistedTest {
         val screen = codeOnly("app/src/main/java/com/codeci/ide/ui/screens/FeedbackScreen.kt")
         for ((name, src) in listOf("FeedbackSectionCard" to card, "FeedbackScreen" to screen)) {
             assertFalse(
-                "$name's only persistence is through FeedbackStore's savers",
+                "$name's only persistence is SettingsManager's setter",
                 src.contains("dataStore.edit")
             )
             assertFalse(

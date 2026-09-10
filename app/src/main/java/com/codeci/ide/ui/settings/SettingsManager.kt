@@ -77,6 +77,16 @@ class SettingsManager(private val context: Context) {
         // true when the user picks a starter, and Settings can clear it again
         // ("show welcome again") so testers re-trigger the first-run flow.
         val FIRST_LAUNCH_COMPLETE = booleanPreferencesKey("first_launch_complete")
+
+        // Phase 41 follow-up (round 1) — the exit survey prompt
+        // (owner-requested for the testing phase; see ui/support/ExitSurvey).
+        // Default ON. This is a UI preference about a dialog, NOT attachment
+        // consent — the attachment checkboxes stay never-persisted
+        // (FeedbackCheckboxNotPersistedTest bans attachment-shaped keys).
+        // Round 2 note: this is the ONLY feedback key left in any store —
+        // the developer's number/email are hardcoded (DeveloperContact),
+        // not settings.
+        val FEEDBACK_EXIT_PROMPT = booleanPreferencesKey("feedback_exit_prompt_enabled")
     }
 
     /**
@@ -145,6 +155,13 @@ class SettingsManager(private val context: Context) {
     // Phase 33.1 — first-run welcome flag (default false = welcome not yet seen).
     val firstLaunchCompleteFlow: Flow<Boolean> = context.dataStore.data.map { it[FIRST_LAUNCH_COMPLETE] ?: false }
     suspend fun setFirstLaunchComplete(v: Boolean) { context.dataStore.edit { it[FIRST_LAUNCH_COMPLETE] = v } }
+
+    // Phase 41 follow-up — the exit survey prompt (testing-phase default ON).
+    val feedbackExitPromptEnabledFlow: Flow<Boolean> =
+        context.dataStore.data.map { it[FEEDBACK_EXIT_PROMPT] ?: true }
+    suspend fun setFeedbackExitPromptEnabled(v: Boolean) {
+        context.dataStore.edit { it[FEEDBACK_EXIT_PROMPT] = v }
+    }
 
     val fontSizeFlow: Flow<Float> = context.dataStore.data.map { it[FONT_SIZE] ?: 14f }
     val fontFamilyFlow: Flow<String> = context.dataStore.data.map { it[FONT_FAMILY] ?: "Monospace" }
