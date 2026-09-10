@@ -1,6 +1,6 @@
 # CodeC Phase 38.2 — Settings trim: the Termux bridge goes, the fallback stays
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-10, `arena/01a089a3-codec`) — see the
+> **Status:** ✅ COMPLETE, DEVICE-PASSED & MERGED (2026-09-10) — see the
 > implementation record at the end · **Cost:** `[client-only]` ·
 > **Effort:** S · **Owner row (verbatim):** *"From the settings remove
 > unessesary Termux bridge"*
@@ -198,3 +198,7 @@ PASS = 1, 4, 5 always; 2-3 as far as the owner's devices allow.
 - **Exit items owned by the owner**: 1-5 of §Exit condition (the device
   eyes); 5's CI half (no new lint finding, no dangling string reference)
   rides the `Build APK` run.
+- **Device round: ✅ PASSED (2026-09-10, owner report: "All device test
+  pass"; no device details supplied, none invented).** CI GREEN
+  (`34442522565` on `ce1a38c`; docs follow-up `34443027257` on `d37bba9`).
+  Merge authorized by the owner in the same message.

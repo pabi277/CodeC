@@ -198,11 +198,14 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-10, **Phase 37 + the 38-43 plan MERGED to `main` via PR #62 at `e89dc49`; Phase 38 is 🚧 IMPLEMENTED on `arena/01a089a3-codec`**)
+## 9. State snapshot (2026-09-10, **Phase 38 is ✅ COMPLETE, DEVICE-PASSED & MERGED; Phases 39-43 are 📋 PLANNED docs on `main`**)
 
-- **Phase 38 (Identity: app icon + Settings trim) is 🚧 IMPLEMENTED on
-  `arena/01a089a3-codec`** (owner: "Start Phase 38", 2026-09-10) — both
-  parts in one build. **38.1:** the original `>_` mark
+- **Phase 38 (Identity: app icon + Settings trim) is ✅ COMPLETE,
+  DEVICE-PASSED & MERGED to `main`** (owner: "Start Phase 38" → "All
+  device test pass … then marge it", 2026-09-10) — both parts shipped in
+  one build; CI GREEN (`34442522565` on `ce1a38c`; docs follow-up
+  `34443027257` on `d37bba9`) and the device round passed by owner
+  report (no device details supplied, none invented). **38.1:** the original `>_` mark
   (`docs/icon/codec-mark.svg`) as flat adaptive layers + a REAL
   `monochrome` layer (the template had pointed it at the full-colour
   foreground), 10 committed density rasters + `codec-512.png` generated
@@ -224,11 +227,10 @@ Every update updates the docs **in the same commit**:
   `Build APK` `34442522565` on tip `ce1a38c`** (the new `Check icon
   assets` step passed first try; `CodeC-IDE` 24 815 485 B = −32 351 B
   / −0.13 % vs `main` — the deleted template webps outweigh the new
-  rasters). **Remaining gate: the owner's device round (launcher
-  shapes, themed icons, status-bar silhouettes, Settings scroll);
-  merge is HELD for the owner's command.** After 38: `Start Phase 39` → 40 → 41 → 42 → 43 (the numbers
-  are the order; 39.1 before 43.2). Records: `docs/chat-phase38/`,
-  JOURNEY §54.
+  rasters). **Device round ✅ PASSED (owner report, 2026-09-10) and the
+  merge was commanded and executed. Next: `Start Phase 39` → 40 → 41 →
+  42 → 43 (the numbers are the order; 39.1 before 43.2).** Records:
+  `docs/chat-phase38/`, JOURNEY §54.
 
 - **Phases 38-43 are 📋 PLANNED — docs only, no app code; the plan itself is now on `main`** (written 2026-09-10,
   owner: six new "before I share this" ideas + *"research thoroughly then write

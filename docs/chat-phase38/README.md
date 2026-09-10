@@ -1,10 +1,10 @@
 # CodeC Phase 38 — Identity: a real app icon, and Settings that stop explaining Termux
 
-> **Status:** 🚧 IMPLEMENTED on `arena/01a089a3-codec` (owner: "Start phase
-> 38", 2026-09-10) — CI is the executor of record; the device round
-> (items 1-5 below) is the owner's. · **Cost:** `[client-only]` +
-> build-time icon tooling · **Effort:** S/M · **Owner rows:** *"I have to
-> set a app icon"* · *"From the settings remove unessesary Termux bridge"*
+> **Status:** ✅ COMPLETE, DEVICE-PASSED & MERGED to `main` (2026-09-10;
+> owner: "Start phase 38" → "All device test pass … then marge it"). ·
+> **Cost:** `[client-only]` + build-time icon tooling · **Effort:** S/M ·
+> **Owner rows:** *"I have to set a app icon"* · *"From the settings remove
+> unessesary Termux bridge"*
 
 ```text
   38.1  An original CodeC launcher icon (adaptive + monochrome + legacy bitmaps)
@@ -13,8 +13,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [38.1](PART_38_1_APP_ICON.md) | App icon, notification icon, release/store art | M | 🚧 IMPLEMENTED (§ below) |
-| [38.2](PART_38_2_SETTINGS_TRIM.md) | Termux bridge out of Settings + row audit | S | 🚧 IMPLEMENTED (§ below) |
+| [38.1](PART_38_1_APP_ICON.md) | App icon, notification icon, release/store art | M | ✅ COMPLETE, DEVICE-PASSED |
+| [38.2](PART_38_2_SETTINGS_TRIM.md) | Termux bridge out of Settings + row audit | S | ✅ COMPLETE, DEVICE-PASSED |
 | — | [SETTINGS_AUDIT.md](SETTINGS_AUDIT.md) — one row, one effect (38.2 deliverable) | — | ✅ written + machine-pinned |
 
 ## Implementation record (2026-09-10, `arena/01a089a3-codec`)
@@ -97,8 +97,21 @@ run; the `gradle-bootstrap` bridge ran `:app:assembleDebug` +
 the 45 new cases really executed). Artifacts: `CodeC-IDE`
 24 815 485 B = **−32 351 B (−0.13 %) vs `main`**'s build — the deleted
 template `.webp` rasters outweigh the new PNG set; `CodeC-Bench`
-1 369 829 B. Device round (exit items 1-5, §Exit condition below)
-is the owner's; merge is HELD for the owner's command.**
+1 369 829 B. The docs follow-up run `34443027257` on tip `d37bba9` is
+✅ GREEN too.**
+
+**Device round: ✅ PASSED (2026-09-10, owner report: "All device test
+pass").** The owner ran the exit checks on the phone and reported all of
+them passing; no device/model/measurement details were supplied, so none
+are invented here — the pass is recorded as the owner's report, the same
+as Phases 33/35/36. That closes exit items 1-3 and 5-7 of the §Exit
+condition (launcher shapes with no clipped detail, themed/monochrome
+legibility, both status-bar silhouettes, CI + reproducible renders, and
+the Settings scroll with no Termux card); item 4's About/README mark and
+the 512 asset were verified in-repo. **Merge authorized by the owner in
+the same message ("updated all md files and if phase 38 complete then
+marge it") — Phase 38 is merged to `main` (see JOURNEY §54 for the PR
+record).**
 
 ## What exists today (evidence, read 2026-09-10)
 

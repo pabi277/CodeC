@@ -1,6 +1,6 @@
 # CodeC Phase 38.1 — An original CodeC launcher icon (and the notification silhouette)
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-10, `arena/01a089a3-codec`) — see the
+> **Status:** ✅ COMPLETE, DEVICE-PASSED & MERGED (2026-09-10) — see the
 > implementation record at the end · **Cost:** `[client-only]` +
 > **build-time tooling** · **Effort:** M · **Owner row (verbatim):**
 > *"I have to set a app icon"*
@@ -216,6 +216,11 @@ Shipped exactly as designed above, with the deltas the design allowed:
   themed icons, status bar, an API 24/25 device if available); 6 runs in
   CI; the `render_icon.mjs` twice-run byte-compare and the asset-shape
   checks are already green locally.
+- **Device round: ✅ PASSED (2026-09-10, owner report: "All device test
+  pass"; no device details supplied, none invented).** CI GREEN
+  (`34442522565` on `ce1a38c`; docs follow-up `34443027257` on `d37bba9`)
+  with the `Check icon assets` step passing first try. Merge authorized
+  by the owner in the same message.
 - **Deferred → closed**: "channel icons" — `NotificationChannel` has no
   icon parameter in Android; the notification small icon (per
   notification) is the whole story, and it is fixed. Not re-opened.
