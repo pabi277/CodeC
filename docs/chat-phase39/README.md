@@ -1,6 +1,6 @@
 # CodeC Phase 39 — Outputs are temporary, never in your repository
 
-> **Status:** 🔧 IMPLEMENTED (host-tested; device round pending) · **Cost:**
+> **Status:** ✅ COMPLETE, DEVICE-PASSED & MERGED (2026-09-10) · **Cost:**
 > `[client-only]` · **Effort:** S/M · **Owner row:** *"I the output files as
 > temporarily file and don't come to add in github push find all languages
 > temporarily file and remove from git push also the .codec file"*
@@ -12,8 +12,9 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [39.1](PART_39_1_OUTPUTS_ARE_TEMPORARY.md) | Outputs as temporary files | M | 🔧 IMPLEMENTED |
-| [39.2](PART_39_2_IGNORE_POLICY.md) | Nothing CodeC made reaches your repo | S/M | 🔧 IMPLEMENTED |
+| [39.1](PART_39_1_OUTPUTS_ARE_TEMPORARY.md) | Outputs as temporary files | M | ✅ COMPLETE |
+| [39.2](PART_39_2_IGNORE_POLICY.md) | Nothing CodeC made reaches your repo | S/M | ✅ COMPLETE |
+| Device git UX follow-ups | Branch isolation, list/check-out GitHub heads, sticky unpublished, named push target | S | ✅ COMPLETE |
 
 ## What exists today (evidence, read 2026-09-10)
 
@@ -177,6 +178,15 @@ PASS = all six (3 is host-tested; 1, 2, 4, 5, 6 need the device round).
 pin), plus the existing `PythonCacheIgnoreTest` / `SettingsAuditTest` updated
 for the new Storage rows (43 → 45 controls) and the always-on ensure path.
 
-**CI ✅ GREEN — `Build APK` `34448677743` on tip `2d9002d` (5 m 47 s).**
-**Device round (pending owner):** phase exit conditions 1–6 on a real phone
-+ a push to GitHub.
+**CI ✅ GREEN (core Phase 39):** `Build APK` [`34448677743`](https://github.com/pabi277/CodeC/actions/runs/34448677743) on tip `2d9002d` (5 m 47 s).
+
+**Device round ✅ PASSED (owner, 2026-09-10):** phase exits 1–6 reported pass; then owner filed Source Control UX bugs found while using real branches on the phone. All fixed on the same session branch before merge:
+
+| Bug | Fix tip | CI |
+|---|---|---|
+| Sticky “Branch X is not on the remote yet” after publish; push looked like main | `aacbd02` — `resolvePublishState` + `ls-remote` + named push target | [`34455576225`](https://github.com/pabi277/CodeC/actions/runs/34455576225) |
+| Branches not isolated in the editor; could create but not switch existing | `dac8632` — editor flush/reload around switch; stash onto NEW; fetch on open | green with series |
+| Only `main` listed; GitHub `test-1`/`test-2` invisible | `d3e09b9` — `listBranchesWithRemoteHeads` via `ls-remote` | [`34460869600`](https://github.com/pabi277/CodeC/actions/runs/34460869600) |
+| `origin/test-1 is not a branch` on check-out | `27ffa6e`/`8045847` — fetch full `refs/remotes/…`, `checkout -B` from full ref | [`34475899851`](https://github.com/pabi277/CodeC/actions/runs/34475899851) |
+
+**Session tip at merge:** `8045847` on `arena/01a08a0a-codec`. Owner: *“All working update all the documents and merge if nothing left in this phase.”* Nothing left in Phase 39 — next is **Phase 40** (GitHub that tells the truth).

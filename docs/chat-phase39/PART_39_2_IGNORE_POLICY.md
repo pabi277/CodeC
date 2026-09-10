@@ -1,6 +1,6 @@
 # CodeC Phase 39.2 — The ignore policy: nothing CodeC made reaches your repository
 
-> **Status:** 🔧 IMPLEMENTED (2026-09-10) · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** ✅ COMPLETE, DEVICE-PASSED & MERGED (2026-09-10) · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"don't come to add in github push find all
 > languages temporarily file and remove from git push also the .codec file"*
 
