@@ -198,8 +198,26 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-10, Phase 37 device-passed + open-in-browser follow-up; merge held)
+## 9. State snapshot (2026-09-10, Phase 37 device-passed + open-in-browser follow-up; merge held; **Phases 38-43 PLANNED**)
 
+- **Phases 38-43 are 📋 PLANNED — docs only, no app code, no PR** (2026-09-10,
+  owner: six new "before I share this" ideas + *"research thoroughly then write
+  new phases"*): **38** git readiness/push truth/publish-to-GitHub, **39** safe
+  folder walk + open-folder-as-project, **40** temp outputs + ignore policy,
+  **41** WhatsApp-first feedback, **42** app icon + Settings trim, **43**
+  share-readiness (release signing, updater, weight, backup, crash loop).
+  Recommended order **42 → 40 → 38 → 41 → 43 → 39**, with one hard dependency:
+  **40.1 before 39.2**. Records:
+  `docs/PHASE38_43_ROADMAP.md` + `docs/PHASE38_43_OSS_RESEARCH.md` +
+  `docs/chat-phase38/`…`chat-phase43/`. Each phase starts on the owner's
+  "Start Phase N" and keeps every law of this manual (device gates are the
+  owner's, CI is the executor of record, no PR without an explicit command).
+  Standing scope decisions from that research, so they are not re-litigated:
+  keep the `git` **CLI** (JGit rejected); never make `MANAGE_EXTERNAL_STORAGE`
+  load-bearing (it is already declared + offered at three call sites — the
+  finding that corrected an earlier note); the user's own `.gitignore` always
+  beats CodeC's `.git/info/exclude` entries; no telemetry/Crashlytics; no Play
+  path while `targetSdk = 28` is deliberate; **and `targetSdk 28` stays.**
 - **Phase 37 (Device as server / LAN) is ✅ DEVICE-PASSED** on
   `arena/01a0872e-codec` (owner: "Start Phase 37"): 37.1 LAN bind + the two
   URLs + ZXing QR, 37.2 keep-alive on the existing `RunForegroundService` +
