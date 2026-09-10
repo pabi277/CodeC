@@ -18,22 +18,17 @@ SESSION branch only, never `main` or any other branch. **`rule.md` is the
 operating manual for all work after Phase 18** (branching, lifecycle, merge
 gate, invariants, docs policy) — follow it.
 
-**PHASE 40 IS IMPLEMENTED ON `arena/01a08c04-codec` (2026-09-10) — AND ITS
-FIRST ATTEMPT IS A CAUTIONARY TALE.** The owner's earlier Phase 40 session
-(`arena/01a08b68-codec`) pushed **16 red `Build APK` runs in two hours**, every
-one a plain Kotlin syntax/type error in the new files (`GitReadiness.kt`,
-`GitHubPublish*.kt`, `GitPushOutcome.kt`, the clone dialog) — no local compile,
-and the CI annotations were never read, so the same errors repeated across runs.
-The full evidence table, the root causes, and the repair rules are in
-[`docs/chat-phase40/PART_40_4_CI_LOOP_DIAGNOSIS.md`](docs/chat-phase40/PART_40_4_CI_LOOP_DIAGNOSIS.md);
-read them before any GitHub work. The working implementation (40.1 readiness +
-errors-in-the-window, 40.2 push truth from git's own bytes, 40.3 Publish to
-GitHub) is on `arena/01a08c04-codec`, pre-validated on a host JVM (36/36 host
-cases, four real bugs caught before CI) — **CI ✅ GREEN on its first push
-(`Build APK` `34499964179` on tip `29e175e`)** — and awaiting the owner's merge + device
-round. Two new helpers exist for exactly that failure mode:
-`scripts/ci_annotations.py` (read a red run's annotations from the sandbox) and
-the jdk4py + kotlinc pre-validation loop (`rule.md` §9).
+**PHASE 40 IS DONE, DEVICE-PASSED AND MERGED (2026-09-10) — READ ITS CAUTIONARY TALE ANYWAY.** The owner's earlier Phase 40 session (`arena/01a08b68-codec`) pushed **16 red `Build APK` runs in two hours**, every one a plain Kotlin syntax/type error in the new files — no local compile, and the CI annotations were never read, so the same errors repeated. The evidence table, root causes and repair rules are in
+[`docs/chat-phase40/PART_40_4_CI_LOOP_DIAGNOSIS.md`](docs/chat-phase40/PART_40_4_CI_LOOP_DIAGNOSIS.md); read them before any GitHub work. Two helpers exist for exactly that failure mode: `scripts/ci_annotations.py` (read a red run's annotations from the sandbox) and the jdk4py + kotlinc pre-validation loop (`rule.md` §9). **This session's branch never pushed a red run**: 40.1–40.3 (readiness + errors-in-the-window, push truth from git's own bytes, Publish to GitHub) were pre-validated on a host JVM (36/36 cases, four real bugs caught before CI), and the device round passed all 8 checks (owner: *"All passed in device"*, runbook `docs/chat-phase40/DEVICE_TEST_PLAN.md`).
+
+**PHASE 40.5 — THE COLOUR LAW (owner: *"research throughly on the color of the app's inside texts … Now it is violet 💜 but not very good to read. Also correct other colors"*, then *"Make the green as default"*).** Root cause of the reported violet: the accent was pushed **raw into `colorScheme.primary` for both themes** — 7.44:1 in light, **2.25:1 as dark-theme text** where WCAG 2.2 AA wants 4.5:1 (M3 solves this with tone roles: primary = tone 40 light / tone 80 dark). Standing rules that came out of it, all pinned by tests (`AppContrastTest` 16 + `ChromeContrastTest` 7 — the chrome test reads the alphas **out of the UI sources**, so raising one fails the build; both run in CI via the `gradle-bootstrap` bridge):
+
+1. **The accent is a role, not a hex.** Use `AccentPalette.rolesFor(seed, dark, surface)` — hue kept, lightness moved only until it clears AA, `onPrimary`/`onContainer` **measured**. `CodecPalette.DEFAULT_ACCENT` is **CodeC green `#3DDC84`** and `AccentPalette.DEFAULT_STORAGE_HEX` is the single spelling of it; a **stored** accent is never rewritten.
+2. **A colour drawn on a translucent surface must be derived from that surface**, not from the base: composite the layers (`Contrast.composite`) and correct against the result (`Contrast.ensureReadable`). The editor status bar and the key caps do this; nine other places used to assume a dark background.
+3. **No new `Color(0x…)` literal for text or icons** — take the token from `CodecPalette` (each carries its measured ratio in KDoc) or derive it, and if you add one, add its case to `ChromeContrastTest`/`AppContrastTest`.
+4. Values that already pass are **not** restyled, disabled controls and decorations stay dim (WCAG §1.4.3 exemptions), and no colour is ever "corrected" for the sake of it in a theme where it already passes.
+
+Full dossier: [`docs/chat-phase40/PART_40_5_COLOUR_REPAIR.md`](docs/chat-phase40/PART_40_5_COLOUR_REPAIR.md); owner-facing version: TROUBLESHOOTING §29.
 
 **PHASES 38-43 ARE PLANNED, NOT STARTED (2026-09-10, docs-only).** The owner's
 six "before I share the app" ideas (git errors invisible + push that stays local;
