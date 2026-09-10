@@ -8,6 +8,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,6 +44,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -77,7 +79,6 @@ import com.codeci.ide.ui.keyboard.CodecKeyboard
 import com.codeci.ide.ui.keyboard.KeyboardDefaults
 import com.codeci.ide.ui.keyboard.ShiftState
 import com.codeci.ide.ui.services.EmbeddedCompiler
-import com.codeci.ide.ui.services.TermuxCompiler
 import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.terminal.ShellEnvironment
@@ -89,9 +90,7 @@ import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.theme.getTerminalTheme
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -277,23 +276,32 @@ fun SettingsScreen(
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // COMPILER SETTINGS
-            SettingsSectionHeader("Compiler Settings")
-            
+            // COMPILER — Phase 38.2 merged the three compiler sections
+            // (Compiler Settings + Built-in Compiler + Termux Engine)
+            // into one. There is nothing to pick here: since Phase 21 the
+            // app always runs AUTO (built-in TCC → bundled Clang → Termux
+            // fallback), so the section carries the real settings (C
+            // standard / warnings / optimization), the engine explanation
+            // and the TCC status line — and the Termux *bridge UI* is gone
+            // (the fallback engine itself is untouched; its setup steps
+            // now appear only in the error path that needs them, via
+            // CompilerRemediation in the Output Panel).
+            SettingsSectionHeader("Compiler")
+
             SettingsDropdown(
                 title = "C Standard",
                 selectedOption = cStandard,
                 options = listOf("C89", "C99", "C11", "C17"),
                 onOptionSelected = { scope.launch { settingsManager.setCStandard(it) } }
             )
-            
+
             SettingsDropdown(
                 title = "Warning Level",
                 selectedOption = warningLevel,
                 options = listOf("None", "Standard", "All (-Wall -Wextra)"),
                 onOptionSelected = { scope.launch { settingsManager.setWarningLevel(it) } }
             )
-            
+
             SettingsDropdown(
                 title = "Optimization Level",
                 selectedOption = optimizationLevel,
@@ -302,68 +310,19 @@ fun SettingsScreen(
             )
 
             SettingsItem(
-                title = "Compiler",
+                title = "Engine",
                 subtitle = "C compiles with the built-in TCC by default — offline, instant, " +
                     "no download. C++ and advanced C11/C17 code need the full LLVM " +
                     "toolchain: install it from Packages (or run \"pkg install clang\" in " +
-                    "the terminal) and RUN \u25b6 offers it automatically when a file needs it."
+                    "the terminal) and RUN \u25b6 offers it automatically when a file needs it. " +
+                    "If the built-in compiler cannot run on your device, CodeC can use a " +
+                    "compatible terminal app's compiler automatically."
             )
 
-            // BUILT-IN COMPILER CARD
             var tccState by remember { mutableStateOf(loadTccUiState(context)) }
-            SettingsSectionHeader("Built-in Compiler")
             SettingsItem(
-                title = "TCC (Tiny C Compiler)",
+                title = "Built-in TCC status",
                 subtitle = buildTccStatusText(tccState)
-            )
-
-            // TERMUX BRIDGE CARD
-            var termuxState by remember { mutableStateOf(loadTermuxState(context)) }
-            var probing by remember { mutableStateOf(false) }
-
-            SettingsSectionHeader("Termux Engine")
-            SettingsItem(
-                title = "Termux",
-                subtitle = buildTermuxStatusText(termuxState, probing)
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = { TermuxCompiler.openTermux(context) }) {
-                    Text("OPEN TERMUX")
-                }
-                TextButton(
-                    onClick = {
-                        scope.launch {
-                            probing = true
-                            termuxState = termuxState.copy(probeResult = null)
-                            val probe = withContext(Dispatchers.IO) {
-                                TermuxCompiler.runCommand(
-                                    context = context,
-                                    arguments = listOf("-c", "echo codec-bridge-ok"),
-                                    label = "CodeC bridge check",
-                                    timeoutSeconds = 8
-                                )
-                            }
-                            termuxState = loadTermuxState(context).copy(probeResult = formatProbe(probe))
-                            probing = false
-                        }
-                    },
-                    enabled = termuxState.installed && !probing
-                ) {
-                    Text(if (probing) "CHECKING…" else "CHECK BRIDGE")
-                }
-            }
-            SettingsItem(
-                title = "How to enable",
-                subtitle = "1) Install Termux 0.109+ from F-Droid or GitHub (termux.dev). " +
-                    "2) In Termux run: echo \"allow-external-apps=true\" >> ~/.termux/termux.properties && " +
-                    "termux-reload-settings. 3) Grant CodeC the \"Run commands in Termux " +
-                    "environment\" permission (Android Settings → Apps → CodeC IDE → Permissions → " +
-                    "Additional permissions). 4) In Termux run: pkg update && pkg install clang"
             )
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -781,18 +740,10 @@ fun SettingsScreen(
                 }
             )
 
-            SettingsDropdown(
-                title = "Terminal Theme",
-                selectedOption = currentTerminalTheme.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " "),
-                options = TerminalThemeType.values().map { it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") },
-                onOptionSelected = { option ->
-                    val theme = TerminalThemeType.values().first { 
-                        it.name.lowercase().replaceFirstChar { char -> char.uppercase() }.replace("_", " ") == option 
-                    }
-                    scope.launch { themeManager.setTerminalTheme(theme) }
-                }
-            )
-            
+            // Phase 38.2 audit — the Terminal Theme dropdown used to appear
+            // HERE as well; one effect deserves one row, and the Terminal
+            // section (with its live preview) owns it.
+
             SettingsDropdown(
                 title = stringResource(com.codeci.ide.R.string.accent_color),
                 selectedOption = accentColor,
@@ -894,12 +845,36 @@ fun SettingsScreen(
             // ABOUT
             SettingsSectionHeader("About")
 
-            // Phase 33.3 — identity copy: CodeC is a multi-language IDE, not
-            // C-only. Kept honest (C is the offline one).
-            SettingsItem(
-                title = "CodeC",
-                subtitle = "Write and run C, Python, JavaScript, and HTML on your phone. C works offline with no setup."
-            )
+            // Phase 38.1 — the About header carries the app mark
+            // (@drawable/app_mark, the same ">_" drawing as the launcher
+            // icon, self-contained so launcher and UI art can diverge).
+            // Phase 33.3 — identity copy: CodeC is a multi-language IDE,
+            // not C-only. Kept honest (C is the offline one).
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Image(
+                    painter = painterResource(com.codeci.ide.R.drawable.app_mark),
+                    contentDescription = "CodeC",
+                    modifier = Modifier.size(44.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "CodeC",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Write and run C, Python, JavaScript, and HTML on your phone. C works offline with no setup.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             // Phase 33.1 — a "show welcome once" reset for testers (and for
             // anyone who wants to re-run the first-launch flow).
             SettingsAction(
@@ -978,8 +953,10 @@ fun SettingsScreen(
                     }
                 }
             )
-            SettingsItem(title = "Licenses", subtitle = "Open source licenses")
-            
+            // Phase 38.2 audit — the bare "Licenses" row that used to sit
+            // here duplicated the "Open-source licenses" row above it and
+            // controlled nothing; deleted.
+
             if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
                 SettingsSectionHeader("Developer Options")
@@ -1184,50 +1161,14 @@ private fun loadTccUiState(context: Context): TccUiState {
 private fun buildTccStatusText(state: TccUiState): String = when {
     state.abi == null ->
         "No built-in compiler for this device's CPU (${DeviceDiagnostics.abiSummary()}). " +
-            "The app will use the Clang module or Termux instead."
+            "CodeC will use the Clang module from Packages automatically — or, if the " +
+            "built-in compiler cannot run on your device, a compatible terminal app's " +
+            "compiler (the error message in the Output Panel explains how)."
     state.available ->
         "Ready ✓ — a full C compiler inside the APK (${state.abi}). Offline, instant, no " +
-            "downloads and no Termux needed for everyday C code."
+            "downloads needed for everyday C code."
     else ->
         "Present but could not start. Reinstall the app, or install clang from Packages."
-}
-
-private data class TermuxUiState(
-    val installed: Boolean,
-    val permissionGranted: Boolean,
-    val probeResult: String? = null
-)
-
-private fun loadTermuxState(context: Context): TermuxUiState = TermuxUiState(
-    installed = TermuxCompiler.isTermuxInstalled(context),
-    permissionGranted = TermuxCompiler.isRunCommandPermissionGranted(context)
-)
-
-private fun buildTermuxStatusText(state: TermuxUiState, probing: Boolean): String {
-    if (!state.installed) {
-        return "Not installed. Install Termux 0.109+ from F-Droid or GitHub (https://termux.dev), " +
-            "open it once, then run: pkg update && pkg install clang"
-    }
-    if (probing) return "Checking the Termux bridge…"
-    state.probeResult?.let { return it }
-    return if (state.permissionGranted) {
-        "Installed, permission granted. Tap CHECK BRIDGE to verify — CodeC can then use " +
-            "Termux's clang as a fallback engine."
-    } else {
-        "Installed, but CodeC is not allowed to run commands inside Termux yet. Grant the " +
-            "\"Run commands in Termux environment\" permission (App Info → Permissions → " +
-            "Additional permissions) and enable allow-external-apps in Termux (see \"How to " +
-            "enable\" below)."
-    }
-}
-
-private fun formatProbe(probe: TermuxCompiler.TermuxResult): String = when {
-    probe.timedOut ->
-        "No response from Termux. Enable allow-external-apps: in Termux run: echo " +
-            "\"allow-external-apps=true\" >> ~/.termux/termux.properties && termux-reload-settings"
-    probe.internalFailure != null -> "Not ready: ${probe.internalFailure}"
-    probe.exitCode == 0 -> "Ready ✓ — CodeC can compile and run through Termux."
-    else -> "Unexpected result (exit ${probe.exitCode})."
 }
 
 @Composable

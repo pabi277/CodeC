@@ -22,6 +22,7 @@ import com.codeci.ide.ui.editor.CompletionSettings
 import com.codeci.ide.ui.editor.GhostCompletion
 import com.codeci.ide.ui.editor.GhostState
 import com.codeci.ide.ui.editor.CompilerDiagnostics
+import com.codeci.ide.ui.editor.CompilerRemediation
 import com.codeci.ide.ui.editor.TestLine
 import com.codeci.ide.ui.editor.TestLineKind
 import com.codeci.ide.ui.editor.TestOutputParser
@@ -1547,7 +1548,6 @@ class EditorViewModel : ViewModel() {
                     _activeTabPath.value = newPath
                     undoManagers[newPath] = undoManagers.remove(oldName) ?: EditorUndoManager()
                 }
-                SettingsManager(context).replaceRecentFile(oldName, newPath)
                 _userMessage.value = context.getString(R.string.rename_success)
                 onRenamed(newPath)
             } else {
@@ -1903,9 +1903,6 @@ class EditorViewModel : ViewModel() {
         _activeTabPath.value?.let { _activeTabPath.value = remap(it) ?: it }
         _fileName.value = remap(_fileName.value) ?: _fileName.value
         _launchDefault.value?.let { _launchDefault.value = remap(it) ?: it }
-        viewModelScope.launch {
-            runCatching { SettingsManager(appContext).replaceRecentFile(oldPath, newPath) }
-        }
         refreshFileEntries(appContext)
         _userMessage.value = appContext.getString(R.string.rename_success)
     }
@@ -3370,13 +3367,20 @@ class EditorViewModel : ViewModel() {
         } else {
             emptyList()
         }
+        // Phase 38.2 — the exec "Permission denied" signature gets the
+        // Termux-fallback remedy right where the user is holding the broken
+        // build (the four steps used to live in a Settings card that is now
+        // gone; the fallback engine itself is untouched).
+        val execRemedy = CompilerRemediation.textFor(buildOutputBuffer.toString())?.let {
+            listOf(OutputLine(it, OutputLineKind.SYSTEM))
+        } ?: emptyList()
         _outputState.value = current.copy(
             phase = OutputPhase.DONE,
             busy = false,
             summary = summary,
             waitingForInput = false,
             inputBuffer = "",
-            lines = reColored + OutputLine(summary, OutputLineKind.ERROR) + noMainHint
+            lines = reColored + OutputLine(summary, OutputLineKind.ERROR) + noMainHint + execRemedy
         )
         _diagnostics.value = CompilerDiagnostics.parse(
             buildOutputBuffer.toString(),

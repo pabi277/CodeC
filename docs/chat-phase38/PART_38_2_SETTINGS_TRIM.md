@@ -1,7 +1,9 @@
 # CodeC Phase 38.2 — Settings trim: the Termux bridge goes, the fallback stays
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S ·
-> **Owner row (verbatim):** *"From the settings remove unessesary Termux bridge"*
+> **Status:** 🚧 IMPLEMENTED (2026-09-10, `arena/01a089a3-codec`) — see the
+> implementation record at the end · **Cost:** `[client-only]` ·
+> **Effort:** S · **Owner row (verbatim):** *"From the settings remove
+> unessesary Termux bridge"*
 
 ## Symptom
 
@@ -149,3 +151,50 @@ PASS = 1, 4, 5 always; 2-3 as far as the owner's devices allow.
   written too (it's the source of the text), so it exists in both places with
   one owner: the code-generated error text quotes the doc's wording, not the
   reverse.
+
+
+## Implementation record (2026-09-10)
+
+- **The card is gone; the mechanism stayed.** All five blocks of §Design 1
+  landed: section + buttons + helpers + import + prose deleted;
+  `TermuxCompiler.kt`, every `CompilerService` call site, the
+  `RUN_COMMAND` permission and the `<queries>` entry untouched (grep:
+  zero `TermuxCompiler.` references remain in SettingsScreen — and
+  `SettingsAuditTest` pins that, so the card cannot silently return).
+- **The guidance moved to the error path.** `ui/editor/
+  CompilerRemediation.kt` (pure) owns the four steps;
+  `EditorViewModel.finishFailedBuild` appends the remedy `SYSTEM` line
+  when the build output matches the exec signature (shell/wrapper
+  wording with exec markers; `error:` diagnostic lines are excluded so a
+  "cannot open output file … Permission denied" compile error does NOT
+  trigger it). Wording source: `docs/TROUBLESHOOTING.md` §27 (quoted
+  verbatim from `CompilerRemediation.STEPS`).
+- **Compiler sections merged**: "Compiler Settings" + "Built-in
+  Compiler" → single **Compiler** (renamed header, C Standard / Warning
+  Level / Optimization Level / Engine prose / Built-in TCC status). The
+  TCC status copy's two Termux mentions became the one About-style
+  sentence, now in the Engine item.
+- **The audit found more than the plan guessed**
+  ([SETTINGS_AUDIT.md](SETTINGS_AUDIT.md), 43 rows, machine-pinned by
+  `SettingsAuditTest`): the Appearance **Terminal Theme dropdown** was a
+  second row for the same effect as the Terminal section's (deleted —
+  one effect, one row); the bare **"Licenses"** item duplicated the
+  "Open-source licenses" row above it (deleted); and two stored keys had
+  **no reader at all** — `recent_files_csv` (write-only: open/rename
+  wrote it, nothing ever collected `recentFilesOrderedFlow`) and
+  `smart_typing_delete_word` (no reader, no writer; EditorScreen's own
+  comment admitted the toggle was "kept for future"). Both deleted with
+  their four call sites (EditorScreen ×2, EditorViewModel ×2) — pure
+  subtraction, no behaviour change (the Files tab lists from disk; the
+  ⌫ delete-word gesture stays, always on).
+- **`SettingsKeysHaveReadersTest`** enumerates the *stores* exactly as
+  the plan's scope note demanded (`SettingsManager` + `ThemeManager` +
+  `GitCredentialsStore` — the last one is why: `GIT_TOKEN` & co. are
+  read via `storedFlow` → `stored()`, a 2-hop chain the test follows)
+  and fails on any key whose value nothing outside the store reads. 41
+  keys checked, all with readers, plus a regression pin that the two
+  deleted keys stay deleted (comment-stripped, so the audit note in the
+  source can name them).
+- **Exit items owned by the owner**: 1-5 of §Exit condition (the device
+  eyes); 5's CI half (no new lint finding, no dangling string reference)
+  rides the `Build APK` run.

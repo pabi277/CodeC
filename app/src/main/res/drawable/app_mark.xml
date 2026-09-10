@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 38.1 — the in-app CodeC mark (Settings → About header, and any
+     future in-app identity surface): the ">_" glyph on its own rounded
+     tile. The launcher layers (ic_launcher_foreground/background/
+     monochrome) stay launcher-only so the adaptive art and the UI art
+     can be tuned independently; this file is the self-contained mark. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#101418"
+        android:pathData="M24,0 L84,0 A24,24 0 0 1 108,24 L108,84 A24,24 0 0 1 84,108 L24,108 A24,24 0 0 1 0,84 L0,24 A24,24 0 0 1 24,0 Z" />
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M39,36 L57,54 L39,72 L34,67 L47,54 L34,41 Z" />
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M52,64 L74,64 L74,72 L52,72 Z" />
+</vector>

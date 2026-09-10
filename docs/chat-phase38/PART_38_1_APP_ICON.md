@@ -1,7 +1,9 @@
 # CodeC Phase 38.1 — An original CodeC launcher icon (and the notification silhouette)
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` + **build-time tooling** ·
-> **Effort:** M · **Owner row (verbatim):** *"I have to set a app icon"*
+> **Status:** 🚧 IMPLEMENTED (2026-09-10, `arena/01a089a3-codec`) — see the
+> implementation record at the end · **Cost:** `[client-only]` +
+> **build-time tooling** · **Effort:** M · **Owner row (verbatim):**
+> *"I have to set a app icon"*
 
 ## Symptom
 
@@ -173,3 +175,47 @@ There is no unit test for art, and pretending otherwise would be theatre. What
   launcher bugs); bitmaps are the boring correct answer.
 - **Reworking the app name/label here** — the label stays `CodeC`
   (`@string/app_name`), already covered by Phase 33's identity work.
+
+
+## Implementation record (2026-09-10)
+
+Shipped exactly as designed above, with the deltas the design allowed:
+
+- **The mark**: `>_` (caret + underscore), two flat paths, 108-viewport,
+  drawn inside both the 66 dp safe box and the 33-unit safe circle
+  (farthest point ≈ 26.9 — the round-mask margin is deliberate). Master:
+  `docs/icon/codec-mark.svg`. Colours: surface `#101418`, accent
+  `#3DDC84` (the identity green CodeC already carried).
+- **Layers**: foreground/background/monochrome exactly as the table in
+  §Design 2; `mipmap-anydpi-v26/*.xml` now wire
+  `@drawable/ic_launcher_monochrome` (≠ foreground — the template bug).
+- **Rasters**: `scripts/render_icon.mjs` (node + sharp 0.35.4, pinned in
+  `scripts/package.json`, node_modules gitignored) reads the master SVG
+  and writes the 10 density PNGs (rounded-square tile for
+  `ic_launcher.png`, circle for `ic_launcher_round.png`) +
+  `docs/icon/codec-512.png`. **Determinism proven**: two consecutive
+  runs produce identical md5s. Template `.webp` files deleted in the
+  same commit.
+- **`ic_stat_codec.xml` chose the vector-silhouette option** (24-grid,
+  bolder than the launcher glyph so it stays legible at status size —
+  chevron `M6,4 L14,12 L6,20 L4,18 L10,12 L4,6 Z` + bar to x 20.4). All
+  three `setSmallIcon` call sites switched (run, terminal, codec-notify
+  — the last also drops the system `ic_dialog_info`).
+- **`app_mark.xml`** (rounded tile r=24 + the same glyph paths) is the
+  About-header mark; README embeds `docs/icon/codec-512.png` above the
+  title.
+- **Tests**: `IconAssetSetTest` (7) + `IconGeometryTest` (7) +
+  `SafeZoneMathTest` (13) + the `IconGeometry`/`RepoFiles` utils — all
+  host, source-tree reading, no Robolectric. The geometry test fails on
+  today's template art by construction (the bugdroid draws to
+  `L107,108.928`), which is the proof it is worth having.
+- **CI**: new `Check icon assets (Phase 38.1)` step runs
+  `scripts/check_icon_assets.sh` right after checkout (bash + python3
+  only — no new tooling, per the plan).
+- **Exit items owned by the owner**: 1-3 and 5 (eyes on launcher shapes,
+  themed icons, status bar, an API 24/25 device if available); 6 runs in
+  CI; the `render_icon.mjs` twice-run byte-compare and the asset-shape
+  checks are already green locally.
+- **Deferred → closed**: "channel icons" — `NotificationChannel` has no
+  icon parameter in Android; the notification small icon (per
+  notification) is the whole story, and it is fixed. Not re-opened.

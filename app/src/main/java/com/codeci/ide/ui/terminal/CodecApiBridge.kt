@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.codeci.ide.MainActivity
+import com.codeci.ide.R
 import com.codeci.ide.ui.utils.AppLogger
 import java.io.File
 import java.util.concurrent.CountDownLatch
@@ -813,7 +814,10 @@ object CodecApiBridge {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
-                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    // Phase 38.1 — the app's own silhouette; a system
+                    // drawable (ic_dialog_info) renders unpredictably
+                    // across OEMs and is not ours to use.
+                    .setSmallIcon(R.drawable.ic_stat_codec)
                     .setContentTitle(title)
                     .setAutoCancel(true)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)

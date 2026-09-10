@@ -227,10 +227,8 @@ fun EditorScreen(
         if (projectName != null && fileName != null) {
             viewModel.openFile(context, projectName, fileName)
             ProjectManager(context).project(projectName)?.let(onProjectSelected)
-            settingsManager.addRecentFile(fileName)
         } else if (fileName != null) {
             viewModel.openFile(context, null, fileName)
-            settingsManager.addRecentFile(fileName)
         }
     }
 
@@ -303,7 +301,8 @@ fun EditorScreen(
     val emptyPairEnabled by settingsManager.smartTypingEmptyPairFlow.collectAsState(initial = true)
     val smartAutoIndentEnabled by settingsManager.smartTypingAutoIndentFlow.collectAsState(initial = true)
     val stringAwareEnabled by settingsManager.smartTypingStringAwareFlow.collectAsState(initial = true)
-    // deleteWord toggle not yet used for strip hold; kept for future.
+    // Phase 38.2 audit: the stored deleteWord toggle was dead (never
+    // read anywhere) and is deleted; the gesture itself is always on.
 
     LaunchedEffect(typeOverEnabled, wrapEnabled, emptyPairEnabled, smartAutoIndentEnabled, stringAwareEnabled, autoIndent) {
         viewModel.setSmartTypingConfig(

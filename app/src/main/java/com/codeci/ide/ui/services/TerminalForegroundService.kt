@@ -42,7 +42,8 @@ class TerminalForegroundService : Service() {
         }
         val pending = PendingIntent.getActivity(this, 0, tapIntent, pendingIntentFlags())
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            // Phase 38.1 — a real status-bar silhouette (the ">_" mark).
+            .setSmallIcon(R.drawable.ic_stat_codec)
             .setContentTitle("CodeC terminal")
             .setContentText("Terminal running in the background")
             .setContentIntent(pending)

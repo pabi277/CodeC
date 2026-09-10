@@ -1,0 +1,14 @@
+{
+  "name": "codec-icon-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build-time generators for the CodeC icon set (Phase 38.1). Outputs are committed; CI never installs this.",
+  "license": "SEE ../LICENSES note in render_icon.mjs — sharp is BSD-3-Clause",
+  "type": "commonjs",
+  "scripts": {
+    "render": "node render_icon.mjs"
+  },
+  "dependencies": {
+    "sharp": "0.35.4"
+  }
+}

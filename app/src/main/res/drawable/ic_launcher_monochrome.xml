@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 38.1 — the REAL monochrome (themed-icon) layer: the same ">_"
+     drawing as the foreground, single-colour white on transparent
+     (Android 13+ tints it; the launcher composites it onto its own
+     tint). The template pointed <monochrome> at the full-colour
+     foreground — that mistake is what this file fixes. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39,36 L57,54 L39,72 L34,67 L47,54 L34,41 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52,64 L74,64 L74,72 L52,72 Z" />
+</vector>

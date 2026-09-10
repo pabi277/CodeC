@@ -28,7 +28,6 @@ class SettingsManager(private val context: Context) {
         val TERMINAL_EXTRA_KEYS_MACROS = stringPreferencesKey("terminal_extra_keys_macros")
 
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
-        val RECENT_FILES_CSV = stringPreferencesKey("recent_files_csv")
 
         val DEV_MODE = booleanPreferencesKey("dev_mode")
         val SHOW_FILE_PATHS = booleanPreferencesKey("show_file_paths")
@@ -37,13 +36,16 @@ class SettingsManager(private val context: Context) {
         // Phase 26.1 — user-editable key strip (JSON of EditorKeyDef list).
         val EDITOR_KEY_STRIP_JSON = stringPreferencesKey("editor_key_strip_json")
 
-        // Phase 26.2 — Smart typing per-rule toggles (all ON by default except python colon rule handled in logic).
+        // Phase 26.2 — Smart typing per-rule toggles (all ON by default
+        // except python colon rule handled in logic). Phase 38.2 audit:
+        // smart_typing_delete_word was deleted — nothing ever read it
+        // (⌫ flick-up deletes a word — always on by design, so no
+        // stored toggle exists for it).
         val SMART_TYPING_TYPE_OVER = booleanPreferencesKey("smart_typing_type_over")
         val SMART_TYPING_WRAP_SELECTION = booleanPreferencesKey("smart_typing_wrap_selection")
         val SMART_TYPING_EMPTY_PAIR = booleanPreferencesKey("smart_typing_empty_pair")
         val SMART_TYPING_AUTO_INDENT = booleanPreferencesKey("smart_typing_auto_indent")
         val SMART_TYPING_STRING_AWARE = booleanPreferencesKey("smart_typing_string_aware")
-        val SMART_TYPING_DELETE_WORD = booleanPreferencesKey("smart_typing_delete_word")
 
         // Phase 26.3 — IME guide dismissed flag (optional).
         val IME_GUIDE_DISMISSED = booleanPreferencesKey("ime_guide_dismissed")
@@ -98,13 +100,11 @@ class SettingsManager(private val context: Context) {
     val smartTypingEmptyPairFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_EMPTY_PAIR] ?: true }
     val smartTypingAutoIndentFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_AUTO_INDENT] ?: true }
     val smartTypingStringAwareFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_STRING_AWARE] ?: true }
-    val smartTypingDeleteWordFlow: Flow<Boolean> = context.dataStore.data.map { it[SMART_TYPING_DELETE_WORD] ?: true }
     suspend fun setSmartTypingTypeOver(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_TYPE_OVER] = v } }
     suspend fun setSmartTypingWrapSelection(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_WRAP_SELECTION] = v } }
     suspend fun setSmartTypingEmptyPair(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_EMPTY_PAIR] = v } }
     suspend fun setSmartTypingAutoIndent(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_AUTO_INDENT] = v } }
     suspend fun setSmartTypingStringAware(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_STRING_AWARE] = v } }
-    suspend fun setSmartTypingDeleteWord(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_DELETE_WORD] = v } }
 
     // Phase 26.3
     val imeGuideDismissedFlow: Flow<Boolean> = context.dataStore.data.map { it[IME_GUIDE_DISMISSED] ?: false }
@@ -171,36 +171,11 @@ class SettingsManager(private val context: Context) {
 
     val accentColorFlow: Flow<String> = context.dataStore.data.map { it[ACCENT_COLOR] ?: "#FF6200EE" }
 
-    val recentFilesOrderedFlow: Flow<List<String>> = context.dataStore.data.map {
-        val csv = it[RECENT_FILES_CSV] ?: ""
-        if (csv.isEmpty()) emptyList() else csv.split(",")
-    }
-
     val devModeUnlockedFlow: Flow<Boolean> = context.dataStore.data.map { it[DEV_MODE] ?: false }
     val showFilePathsFlow: Flow<Boolean> = context.dataStore.data.map { it[SHOW_FILE_PATHS] ?: false }
 
     suspend fun setDevModeUnlocked(unlocked: Boolean) { context.dataStore.edit { it[DEV_MODE] = unlocked } }
     suspend fun setShowFilePaths(show: Boolean) { context.dataStore.edit { it[SHOW_FILE_PATHS] = show } }
-
-    suspend fun addRecentFile(fileName: String) {
-        context.dataStore.edit { preferences ->
-            val currentCsv = preferences[RECENT_FILES_CSV] ?: ""
-            val currentList = if (currentCsv.isEmpty()) emptyList() else currentCsv.split(",")
-            val newList = mutableListOf(fileName)
-            newList.addAll(currentList.filter { it != fileName })
-            preferences[RECENT_FILES_CSV] = newList.take(10).joinToString(",")
-        }
-    }
-
-    suspend fun replaceRecentFile(oldName: String, newName: String) {
-        context.dataStore.edit { preferences ->
-            val currentCsv = preferences[RECENT_FILES_CSV] ?: ""
-            val currentList = if (currentCsv.isEmpty()) emptyList() else currentCsv.split(",")
-            val newList = mutableListOf(newName)
-            newList.addAll(currentList.filter { it != oldName && it != newName })
-            preferences[RECENT_FILES_CSV] = newList.take(10).joinToString(",")
-        }
-    }
 
     suspend fun setFontSize(size: Float) { context.dataStore.edit { it[FONT_SIZE] = size } }
     suspend fun setFontFamily(family: String) { context.dataStore.edit { it[FONT_FAMILY] = family } }

@@ -26,6 +26,13 @@ jobs:
         with:
           gradle-version: "9.0.0"
 
+      # Phase 38.1 — repo-shape guard for the launcher icon set (bash +
+      # python3 only, no tooling): both rasters per density, no stale
+      # .webp, density-table sizes, adaptive XML wiring. The JUnit twin
+      # (IconAssetSetTest) runs inside the assemble step below.
+      - name: Check icon assets (Phase 38.1)
+        run: ./scripts/check_icon_assets.sh
+
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 

@@ -198,7 +198,33 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-10, **Phase 37 + the 38-43 plan MERGED to `main` via PR #62 at `e89dc49`**; Phases 38-43 are 📋 PLANNED docs on `main`)
+## 9. State snapshot (2026-09-10, **Phase 37 + the 38-43 plan MERGED to `main` via PR #62 at `e89dc49`; Phase 38 is 🚧 IMPLEMENTED on `arena/01a089a3-codec`**)
+
+- **Phase 38 (Identity: app icon + Settings trim) is 🚧 IMPLEMENTED on
+  `arena/01a089a3-codec`** (owner: "Start Phase 38", 2026-09-10) — both
+  parts in one build. **38.1:** the original `>_` mark
+  (`docs/icon/codec-mark.svg`) as flat adaptive layers + a REAL
+  `monochrome` layer (the template had pointed it at the full-colour
+  foreground), 10 committed density rasters + `codec-512.png` generated
+  by `scripts/render_icon.mjs` (sharp 0.35.4 pinned; two runs =
+  byte-identical md5s), template `.webp`s deleted in the same commit,
+  `ic_stat_codec` silhouette in BOTH foreground services + the
+  `CodecApiBridge` notification (was a system `ic_dialog_info`), and a
+  new `Check icon assets` CI step. **38.2:** Settings 13 → 11 sections —
+  the Termux Engine card is GONE while the fallback engine, the
+  `RUN_COMMAND` permission and the `<queries>` entry are untouched; the
+  four Termux steps moved to the Output Panel error path
+  (`CompilerRemediation`, `TROUBLESHOOTING.md` §27); the audit
+  (`chat-phase38/SETTINGS_AUDIT.md`, 43 machine-pinned rows) also
+  deleted the duplicate Appearance Terminal-Theme dropdown, the
+  duplicate "Licenses" item, and two reader-less store keys
+  (`recent_files_csv`, `smart_typing_delete_word`) with their call
+  sites. Tests: 45 new host cases, pre-validated 45/45 on a local JVM
+  (the pre-validation caught 5 real bugs pre-CI). **Gate: the `Build
+  APK` CI run + the owner's device round; merge is HELD for the owner's
+  command.** After 38: `Start Phase 39` → 40 → 41 → 42 → 43 (the numbers
+  are the order; 39.1 before 43.2). Records: `docs/chat-phase38/`,
+  JOURNEY §54.
 
 - **Phases 38-43 are 📋 PLANNED — docs only, no app code; the plan itself is now on `main`** (written 2026-09-10,
   owner: six new "before I share this" ideas + *"research thoroughly then write

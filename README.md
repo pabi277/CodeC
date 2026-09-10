@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/icon/codec-512.png" width="112" alt="CodeC — the >_ mark">
+</p>
+
 # CodeC IDE
 
 > **CodeC — write and run C, Python, JavaScript, and HTML on your phone. C works offline with no setup.**
@@ -39,14 +43,16 @@ apps like Coding C / C4droid): a static musl toolchain is embedded in the APK fo
 **arm64-v8a** and **x86_64** devices, so compiling works **offline, instantly, with no
 downloads, no Termux and no setup**. Programs are compiled to fully static executables.
 
-### Compiler engines (Settings → Compiler Engine)
+### Compiler engines (automatic — the picker left in Phase 21)
 
-| Engine | What it does |
-|---|---|
-| **Auto** (default) | Built-in TCC first (offline, instant). If it's unavailable, the Clang module; if Android blocks that (Android 10+ W^X policy, noexec storage, CPU mismatch, broken toolchain), automatically compiles and runs through **Termux's Clang**. |
-| **Built-in (TCC)** | Only the compiler embedded in the APK. Covers ANSI C and most of C99; perfect for learning and everyday code. |
-| **Bundled Clang** | Only the Clang downloaded in **Modules** (full C11/C17, stricter warnings — for advanced code). |
-| **Termux** | Always compiles with Termux's Clang. |
+There is nothing to pick: every RUN uses **Auto** — built-in TCC first
+(offline, instant); if that's unavailable, the Clang module from
+**Packages**; and if Android blocks the downloaded compiler (Android 10+
+W^X policy, noexec storage, CPU mismatch, broken toolchain), CodeC
+compiles and runs through a compatible terminal app's **Termux Clang**
+automatically. The four setup steps for that last fallback appear in the
+Output Panel exactly when they are needed — see
+[TROUBLESHOOTING.md §27](docs/TROUBLESHOOTING.md).
 
 The bundled Clang module (optional) must be **arm64**; an x86 emulator can't run it — but
 the built-in TCC covers x86_64 emulators automatically.
@@ -170,7 +176,10 @@ pkg update && pkg install clang
 
 and grant CodeC the **"Run commands in Termux environment"** permission
 (Android Settings → Apps → CodeC IDE → Permissions → Additional permissions).
-Settings → Compiler Engine → "CHECK BRIDGE" verifies the whole chain.
+There is no Settings card for this any more (Phase 38.2 removed the Termux
+bridge UI — the engine is fully automatic): when a build actually needs the
+fallback, the Output Panel prints these same four steps
+([TROUBLESHOOTING.md §27](docs/TROUBLESHOOTING.md)).
 
 ## Troubleshooting
 
