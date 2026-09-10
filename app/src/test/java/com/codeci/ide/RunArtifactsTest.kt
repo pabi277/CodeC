@@ -21,12 +21,12 @@ class RunArtifactsTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val project: File get() = tmp.newFolder("proj")
-    private val tempRoot: File get() = tmp.newFolder("temp")
+    /** Fresh unique folder per call — TemporaryFolder forbids reusing names. */
+    private fun fresh(): File = tmp.newFolder()
 
     @Test
     fun `C single-file plan lands under runs stamp and is owned by CodeC`() {
-        val plan = RunArtifacts.plan("c", project, tempRoot, stamp = 42L, userSuppliedOutput = null)
+        val plan = RunArtifacts.plan("c", fresh(), fresh(), stamp = 42L, userSuppliedOutput = null)
         assertTrue(plan.ownedByCodeC)
         assertEquals(42L, plan.stamp)
         assertNotNull(plan.sourceCopy)
@@ -37,8 +37,9 @@ class RunArtifactsTest {
 
     @Test
     fun `userSuppliedOutput is never redirected`() {
+        val project = fresh()
         val plan = RunArtifacts.plan(
-            "c", project, tempRoot, stamp = 7L, userSuppliedOutput = "bin/menu"
+            "c", project, fresh(), stamp = 7L, userSuppliedOutput = "bin/menu"
         )
         assertFalse(plan.ownedByCodeC)
         assertEquals(File(project, "bin/menu").absolutePath, plan.binary.absolutePath)
@@ -49,14 +50,14 @@ class RunArtifactsTest {
     @Test
     fun `absolute userSuppliedOutput stays absolute`() {
         val abs = File(tmp.root, "elsewhere/out").absolutePath
-        val plan = RunArtifacts.plan("c", project, tempRoot, 1L, abs)
+        val plan = RunArtifacts.plan("c", fresh(), fresh(), 1L, abs)
         assertFalse(plan.ownedByCodeC)
         assertEquals(abs, plan.binary.absolutePath)
     }
 
     @Test
     fun `python plan gets a pycache dir under the run stamp`() {
-        val plan = RunArtifacts.plan("python", project, tempRoot, 9L, null)
+        val plan = RunArtifacts.plan("python", fresh(), fresh(), 9L, null)
         assertTrue(plan.ownedByCodeC)
         assertNotNull(plan.pycacheDir)
         assertTrue(plan.pycacheDir!!.path.replace('\\', '/').endsWith("runs/9/pycache"))
@@ -64,7 +65,7 @@ class RunArtifactsTest {
 
     @Test
     fun `server plan gets a server log under the run stamp`() {
-        val plan = RunArtifacts.plan("server", project, tempRoot, 3L, null)
+        val plan = RunArtifacts.plan("server", fresh(), fresh(), 3L, null)
         assertNotNull(plan.serverLog)
         assertTrue(plan.serverLog!!.name == "server.log")
     }
@@ -88,7 +89,8 @@ class RunArtifactsTest {
 
     @Test
     fun `confineToTemp refuses a path that escapes the temp root`() {
-        val outside = File(tmp.root, "important")
+        val tempRoot = fresh()
+        val outside = File(tmp.root, "important-${System.nanoTime()}")
         outside.mkdirs()
         val safe = RunArtifacts.confineToTemp(tempRoot, outside, stamp = 5L)
         assertTrue(safe.path.replace('\\', '/').contains("runs/5"))
@@ -97,6 +99,7 @@ class RunArtifactsTest {
 
     @Test
     fun `confineToTemp keeps a path already inside`() {
+        val tempRoot = fresh()
         val inside = File(tempRoot, "runs/5/program")
         inside.parentFile.mkdirs()
         val safe = RunArtifacts.confineToTemp(tempRoot, inside, stamp = 5L)
@@ -105,7 +108,7 @@ class RunArtifactsTest {
 
     @Test
     fun `ensureRunDir creates the stamp directory`() {
-        val dir = RunArtifacts.ensureRunDir(tempRoot, 99L)
+        val dir = RunArtifacts.ensureRunDir(fresh(), 99L)
         assertTrue(dir.isDirectory)
         assertEquals("99", dir.name)
     }
