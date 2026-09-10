@@ -1,7 +1,5 @@
 package com.codeci.ide.ui.projects
 
-import com.codeci.ide.ui.projects.GitRedactor.*;
-
 /**
  * Phase 40.3 — pure, Android-free GitHub repo creation.
  *
@@ -18,7 +16,6 @@ object GitHubPublish {
     /** GitHub-safe project name: alphanumerics, dot, hyphen, underscore.
      *  Max 100 characters, no leading or trailing dot.
      */
-    @JvmField
     fun nameFor(projectName: String): String {
         val safe = projectName
             .replace(" ", "-")    // spaces -> hyphen
@@ -27,22 +24,23 @@ object GitHubPublish {
         // Keep only [A-Za-z0-9._-], trim to 100 chars, no leading/trailing .
         val filtered = safe.filter { it.isLetterOrDigit() || it == '.' || it == '-' || it == '_' }
         val trimmed = safe.take(100)
-        return trimmed.removePrefix { it == '.' }.removeSuffix { it == '.' }
+        var result = trimmed
+        if (result.startsWith(".")) result = result.substring(1)
+        if (result.endsWith(".")) result = result.substring(0, result.length - 1)
+        return result
     }
 
     /** Hand-rolled JSON body for `POST /user/repos`.
      *  No OkJson, no gson — just a string we can safely pass through GitRedactor.
      */
-    @JvmField
     fun body(name: String, description: String?, private: Boolean): String {
-        val desc = description
-            ?.take(200)              // GitHub truncates at 1000 but we cap earlier
-            ?.replace("\"", "\\\"") // escape double quotes
-            ?.replace("\n", "\\n")  // escape newlines
-            : ""
-
+        val desc: String? = description?.take(200)
+        val descEscaped: String? = desc?.let { d ->
+            d.replace("\"", "\\\"").replace("\n", "\\n")
+        }
         val privateStr = if (private) "true" else "false"
-        """{"name":"${name}","description":${if (desc.isNotEmpty()) "\"" + desc + "\"" else "null"}","homepage":null,"private":${privateStr}}"""
+        val descJson = if (descEscaped?.isNotEmpty() == true) "\"" + descEscaped + "\"" else "null"
+        return """{"name":"${name}","description":${descJson},"homepage":null,"private":${privateStr}}"""
     }
 
     /** Parse the JSON response from GitHub's `CREATE` endpoint.
@@ -59,9 +57,7 @@ object GitHubPublish {
         val helpUrl: String? = null
     )
 
-    /** ApiError subclasses. */
     object ApiError {
-        /** Token is missing or invalid. */
         @JvmField
         object TokenMissing : ApiError(
             kind = ApiErrorKind.TOKEN_MISSING,
@@ -69,7 +65,6 @@ object GitHubPublish {
             helpUrl = TOKEN_HELP_URL
         )
 
-        /** Permission missing — token doesn't have repo:write. */
         @JvmField
         data class PermissionMissing(
             val needed: String,
@@ -77,11 +72,10 @@ object GitHubPublish {
             override val helpUrl: String? = TOKEN_HELP_URL
         ) : ApiError(
             kind = ApiErrorKind.PERMISSION_MISSING,
-            message = "Your token may not allow repository creation. $needed",
+            message = "Your token may not allow repository creation. ${needed}",
             helpUrl = TOKEN_HELP_URL
         )
 
-        /** Name already exists on this account. */
         @JvmField
         object NameTaken : ApiError(
             kind = ApiErrorKind.NAME_TAKEN,
@@ -89,7 +83,6 @@ object GitHubPublish {
             helpUrl = null
         )
 
-        /** Rate limited — GitHub returned 403 with X-RateLimit-Remaining: 0. */
         @JvmField
         object RateLimited : ApiError(
             kind = ApiErrorKind.RATE_LIMITED,
@@ -97,7 +90,6 @@ object GitHubPublish {
             helpUrl = null
         )
 
-        /** Generic server error. */
         @JvmField
         object Server : ApiError(
             kind = ApiErrorKind.SERVER,
@@ -132,7 +124,6 @@ object GitHubPublish {
      * The [json] parameter should already be [GitRedactor]-cleaned so no token
      * reaches the parser.
      */
-    @JvmField
     fun parseCreateResponse(json: String): Either<PublishResult, ApiError> {
         val lower = json.lowercase()
 
@@ -183,7 +174,6 @@ object GitHubPublish {
     /** Very simple JSON field extractor: returns the value after "key":, or null.
      *  Handles simple quoted strings without nested quotes.
      */
-    @JvmField
     private fun extractJsonField(json: String, key: String): String? {
         val keyLower = key.lowercase()
         val keySearch = """"${keyLower}":"""
@@ -203,7 +193,6 @@ object GitHubPublish {
     }
 
     /** Turn an [ApiError] into a user‑friendly message + help link. */
-    @JvmField
     fun apiErrorMessage(error: ApiError): String {
         val parts = StringBuilder()
         parts.append(error.message)
