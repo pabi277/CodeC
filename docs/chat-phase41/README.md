@@ -1,8 +1,9 @@
 # CodeC Phase 41 — Feedback that reaches you (WhatsApp-first)
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** S/M · **Owner row:** *"For testing i have to add
-> a feedback page give the best way, i am willing to give my WhatsApp number"*
+> **Status:** 🔧 **IMPLEMENTED on `arena/01a08cc6-codec` (host-tested
+> 61/61, CI + device round pending)** · **Cost:** `[client-only]` ·
+> **Effort:** S/M · **Owner row:** *"For testing i have to add a feedback
+> page give the best way, i am willing to give my WhatsApp number"*
 
 ```text
   41.1  The report: a pure draft builder + the links that carry it
@@ -11,8 +12,36 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [41.1](PART_41_1_REPORT_AND_LINKS.md) | `FeedbackDraft` + WhatsApp/mailto/GitHub links | S/M | 📋 PLANNED |
-| [41.2](PART_41_2_FEEDBACK_SCREEN.md) | The screen, the opt-ins, the number in Settings | S | 📋 PLANNED |
+| [41.1](PART_41_1_REPORT_AND_LINKS.md) | `FeedbackDraft` + WhatsApp/mailto/GitHub links | S/M | 🔧 IMPLEMENTED |
+| [41.2](PART_41_2_FEEDBACK_SCREEN.md) | The screen, the opt-ins, the number in Settings | S | 🔧 IMPLEMENTED |
+
+**Implementation map** (all on `arena/01a08cc6-codec`):
+
+- 41.1 `ui/support/FeedbackDraft.kt` (pure: `build`/`redact`/`whatsappUrl`/
+  `normaliseNumber`/`mailto`/`gitHubIssueUrl`/`encode`) + the E.164
+  country-code table; redaction = this object's token-shape table **plus**
+  `GitRedactor` (the stored literal + URL credentials) — the only two
+  redaction paths, as specced.
+- 41.2 `ui/support/FeedbackSectionCard.kt` (the Settings section's content:
+  text field, two **ephemeral** checkboxes, CHAT/COPY/EMAIL/GITHUB buttons,
+  owner reply-to fields, the three-line disclosure ABOVE the checkboxes),
+  `ui/support/FeedbackStore.kt` (2 DataStore keys, `GitCredentialsStore`-
+  shaped; the pure decisions live in `FeedbackContacts.kt`),
+  `ui/support/FeedbackSectionState.kt` (pure row/primary-action state),
+  `ui/crash/CrashLog.kt` (the ONE newest-record read of
+  `filesDir/crash-log.txt`, extracted from `CrashReportOverlay` so the
+  overlay and the report cannot drift), and
+  `OpenInBrowser.openOrCopy` (the shared open-or-copy policy — the share
+  row 37 now routes through it too).
+- Tests: `FeedbackDraftTest` (23), `FeedbackSectionStateTest` (10),
+  `FeedbackNumberSettingTest` (7), `FeedbackCheckboxNotPersistedTest` (6),
+  `CrashLogTest` (4) — **50 new host cases, pre-validated 61/61 on a local
+  JVM (jdk4py Temurin 25 + kotlinc 2.4.10, the Phase 40.4 harness route
+  with a JUnit shim + datastore shims; the loop caught 5 test-side bugs
+  before CI — assertion arithmetic and wrong fixtures, not engine bugs).**
+  `SettingsAuditTest` (12 sections now) + `SettingsKeysHaveReadersTest`
+  (4 stores now) were updated in the same commit and run in the same local
+  loop. Device runbook: [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md).
 
 ## What exists today (evidence, read 2026-09-10)
 

@@ -198,7 +198,37 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-10, **Phase 38 is ✅ COMPLETE, DEVICE-PASSED & MERGED; Phases 39-43 are 📋 PLANNED docs on `main`**)
+## 9. State snapshot (2026-09-10, **Phase 41 is 🔧 IMPLEMENTED on `arena/01a08cc6-codec` (CI + device round pending); 38/39/40 are ✅ COMPLETE & MERGED; 42-43 are 📋 PLANNED**)
+
+- **Phase 41 (Feedback that reaches you, WhatsApp-first) is 🔧 IMPLEMENTED
+  on `arena/01a08cc6-codec`** (owner: "Start phase 41", 2026-09-10) — both
+  parts in one build: **41.1** the pure `FeedbackDraft` (fixed report
+  layout; redaction-before-budget via its token-shape table + `GitRedactor`
+  only; `~proj/`/`~home/`/`~app/` path shortening; the 1 800-char WhatsApp
+  budget that trims log-then-crash and NEVER the user's text; strict E.164
+  `normaliseNumber` on the ITU country-code table; wa.me/mailto/GitHub-issue
+  builders with pinned UTF-8 encoding incl. Devanagari/Bengali/emoji) and
+  **41.2** the Settings **Feedback & Support** section (12th, after About;
+  two EPHEMERAL checkboxes — log off by default, crash prefilled when
+  present; CHAT ON WHATSAPP with a `com.whatsapp` presence probe so a
+  WhatsApp-less device gets copy + number instead of a dead link; COPY /
+  EMAIL / GITHUB ISSUE fallbacks; the owner's reply-to store
+  `FeedbackStore` — 2 keys, empty = hidden, `DEFAULT_WHATSAPP_NUMBER`
+  empty by design and is Phase 42's one-line "ship the number?" decision;
+  the honest 3-line disclosure above the checkboxes). `CrashLog` is the
+  ONE reader of `crash-log.txt` (extracted from `CrashReportOverlay`);
+  `OpenInBrowser.openOrCopy` is the shared open-or-copy policy (share row
+  37 uses it too). Tests: 50 new host cases + updated `SettingsAuditTest`
+  (12 sections) / `SettingsKeysHaveReadersTest` (4 stores) — **61/61
+  pre-validated on the Phase 40.4 local harness** (jdk4py + kotlinc +
+  JUnit/datastore shims; 5 test-side bugs caught pre-CI; the planned
+  Robolectric DataStore round-trip was replaced by pure
+  `FeedbackContacts` tests + a store source-scan, for the 40.4
+  never-push-unverifiable reason). Device runbook
+  `docs/chat-phase41/DEVICE_TEST_PLAN.md` (8 checks). **CI pending at
+  writing time — the run id is recorded in JOURNEY §57 when pushed; merge
+  HELD for the owner's command.** Records: `docs/chat-phase41/`, JOURNEY
+  §57, TROUBLESHOOTING §30.
 
 - **Phase 38 (Identity: app icon + Settings trim) is ✅ COMPLETE,
   DEVICE-PASSED & MERGED to `main` via PR #64 → `main` at `dcd65b4bc3e65d268bcc354da9d413d74eb25038` (merge commit, history preserved)** (owner: "Start Phase

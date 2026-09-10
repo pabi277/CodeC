@@ -1125,3 +1125,30 @@ hub rows 3.68/4.47 → 5.17/5.90 · editor comments (monokai/dracula/github)
 status "LF" (light) 3.78 → 8.17 · key-cap tints and hints, badges (3.46) and
 55 %-alpha borders (2.25, need 3:1) — all fixed and pinned. Full table:
 [`chat-phase40/PART_40_5_COLOUR_REPAIR.md`](chat-phase40/PART_40_5_COLOUR_REPAIR.md).
+
+## 30. Sending feedback / where the WhatsApp button is (Phase 41, 2026-09-10)
+
+**Settings → Feedback & Support** is the whole feedback surface: type what
+happened, optionally tick *Include the last 120 log lines* (redacted — no
+tokens, paths shortened) and *Include the last crash* (prefilled after a
+crash), then CHAT ON WHATSAPP / COPY REPORT / EMAIL / GITHUB ISSUE.
+
+- **"There is no CHAT ON WHATSAPP button."** — the owner's reply-to number
+  has not been filled on this install (or was typed wrong). Fill *WhatsApp
+  number for replies* (with country code, e.g. `+91 98765 43210`) → SAVE.
+  An empty or invalid number hides the row on purpose — a wa.me link to a
+  wrong number opens a chat with the wrong person.
+- **"CHAT is greyed out."** — write what happened first (non-empty text
+  enables CHAT); COPY REPORT and GITHUB ISSUE always work.
+- **"Tapping CHAT copied the report instead of opening WhatsApp."** —
+  WhatsApp is not installed on the device (or could not open). The toast
+  says so and the number to write to is shown under the button — the
+  report is never lost.
+- **"Nothing was sent, right?"** — right. CodeC only opens the target app
+  with the message typed; you read it and press send yourself. The
+  checkboxes reset to a fresh choice every visit — nothing is attached
+  silently.
+- **"The report is cut short."** — the WhatsApp draft is budgeted (1 800
+  chars) so the URL survives OEM browsers; the report says
+  `[log trimmed — use COPY FULL REPORT for the whole thing]`. COPY REPORT
+  has no budget.

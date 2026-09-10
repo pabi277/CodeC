@@ -86,6 +86,7 @@ import com.codeci.ide.ui.services.TempGc
 import com.codeci.ide.ui.services.TempMeasure
 import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.settings.SettingsManager
+import com.codeci.ide.ui.support.FeedbackSectionCard
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.DeviceDiagnostics
 import com.codeci.ide.ui.theme.AccentPalette
@@ -1025,6 +1026,18 @@ fun SettingsScreen(
             // Phase 38.2 audit — the bare "Licenses" row that used to sit
             // here duplicated the "Open-source licenses" row above it and
             // controlled nothing; deleted.
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // FEEDBACK & SUPPORT (Phase 41) — a section, not a screen, right
+            // after About so "what build is this" and "who do I tell" sit
+            // together. The card owns everything: the report builder's pure
+            // decisions (FeedbackDraft/FeedbackSectionState), the WhatsApp-
+            // first channels with copy/email/GitHub fallbacks that never
+            // lose the content, the owner's reply-to fields, and the honest
+            // three-line disclosure. Nothing is ever sent by the app itself.
+            SettingsSectionHeader("Feedback & Support")
+            FeedbackSectionCard()
 
             if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))

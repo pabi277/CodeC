@@ -47,21 +47,18 @@ fun CrashReportOverlay() {
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            val file = File(context.filesDir, "crash-log.txt")
-            report = if (file.isFile && file.length() > 0) {
-                // The NEWEST record, from its header — NOT a byte-tail of the
-                // whole file. Records accumulate, and a tail window cuts off
-                // the record's first lines — the exception type and message,
-                // i.e. the diagnosis — exactly when it is needed most
-                // (Phase 29 device round, 2026-09-06: three pasted reports
-                // in a row were generic tail-only stacks). The writer caps
-                // each record and bounds the file, so this read stays small.
-                val text = file.readText()
-                val start = text.lastIndexOf("\n==== ").let { if (it >= 0) it + 1 else 0 }
-                text.substring(start).take(9_000)
-            } else {
-                null
-            }
+            // The NEWEST record, from its header — NOT a byte-tail of the
+            // whole file. Records accumulate, and a tail window cuts off
+            // the record's first lines — the exception type and message,
+            // i.e. the diagnosis — exactly when it is needed most
+            // (Phase 29 device round, 2026-09-06: three pasted reports
+            // in a row were generic tail-only stacks). The writer caps
+            // each record and bounds the file, so this read stays small.
+            //
+            // Phase 41.2: the read itself lives in `CrashLog` now — the
+            // feedback section needs the same bytes, and one sink must
+            // have one reader list so the two can never drift apart.
+            report = CrashLog.newestRecord(context.filesDir)
         }
     }
 

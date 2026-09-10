@@ -1,6 +1,11 @@
 # CodeC Phase 41.2 — Settings → Feedback & support, with honest disclosure
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S
+> **Status:** 🔧 IMPLEMENTED (`ui/support/FeedbackSectionCard.kt` +
+> `FeedbackStore.kt` + `FeedbackContacts.kt` + `FeedbackSectionState.kt` +
+> `ui/crash/CrashLog.kt`; `FeedbackSectionStateTest` 10,
+> `FeedbackNumberSettingTest` 7, `FeedbackCheckboxNotPersistedTest` 6,
+> `CrashLogTest` 4 — host-pre-validated) · **Cost:** `[client-only]` ·
+> **Effort:** S
 
 ## Design
 
@@ -110,3 +115,72 @@ PASS = 1-5 on the owner's device.
   screenshot themselves and pasting it into the chat the link already opened.
 - **Collecting emails for a "beta list"** — different product, and it would
   make this screen a marketing surface, which is how trust dies.
+
+---
+
+## Implementation record (2026-09-10, `arena/01a08cc6-codec`)
+
+The section shipped as **About → "Feedback & Support"** (12th section,
+between About and the debug-only Developer Options), with the card content
+in its own file so `SettingsScreen.kt` stays navigable and the pinned
+audit (`SettingsAuditTest`, now 12 sections) keeps its meaning. The
+disclosure sits ABOVE the checkboxes (exit 4); the checkbox labels state
+their own redaction policy; the CHAT row shows the number it replies to.
+
+**Decisions made during implementation, recorded for the device round:**
+
+1. **The crash box is prefilled when a crash is present** (exit 5
+   "prefilled in"; the README's risk line "off-by-default if that turns
+   out to be too much" stays the device round's call — flip
+   `FeedbackSectionState`'s `includeCrash` default to `false` if so). The
+   LOG box is off by default, and NEITHER is ever persisted: a fresh
+   `FeedbackSectionState` is what "leave and return" gives, pinned by
+   `FeedbackCheckboxNotPersistedTest` (fresh-default pins + a structural
+   source scan: no feedback boolean key exists in any store, and the card
+   never writes to a DataStore).
+2. **The crash read is the overlay's read, extracted, not duplicated** —
+   `ui/crash/CrashLog.kt` owns `newestRecord(filesDir)`
+   (header-first, 9 000-char display cap); `CrashReportOverlay` now calls
+   it too. One sink, one reader list. `CrashLogTest` pins the semantics
+   (newest-from-header, absent/empty/blank → null).
+3. **EMAIL is a second owner-set field, hidden when unset** — the same law
+   as the WhatsApp number (empty → hidden, not broken; the store's
+   `DEFAULT_CONTACT_EMAIL` is the one-line change point). The planned
+   `mailto:` route is unchanged; an owner who never fills it simply never
+   sees the button, and COPY + GITHUB ISSUE are the always-on fallbacks.
+4. **The WhatsApp row degrades exactly as exit 2 demands, via an explicit
+   presence probe** — `com.whatsapp` or `com.whatsapp.w4b` (the API-33
+   `PackageInfoFlags` overload with the legacy path guarded). If neither
+   is installed the wa.me link is never launched; instead the FULL report
+   is copied and the toast names the number to write to (the number is
+   also permanently visible under the CHAT button). If WhatsApp IS
+   installed but the launch fails, `OpenInBrowser.openOrCopy`'s policy
+   applies — content copied, never lost.
+5. **`FeedbackSectionState` (pure) owns the row decisions** — chat
+   availability (valid stored number only), `chatReady` (non-blank text,
+   per the design table's "non-empty to enable CHAT"), `primaryAction`
+   (CHAT vs COPY, exit 1), email availability — so the Compose layer is a
+   render, not a policy.
+6. **Test-plan deviation, for cause:** the planned Robolectric DataStore
+   round-trip was replaced by pure tests over `FeedbackContacts` (the
+   storage decisions: blank = clear, invalid = refuse, normalised =
+   stored) + a source scan of `FeedbackStore` + the store's addition to
+   `SettingsKeysHaveReadersTest`'s store list (the generic key → flow →
+   out-of-store-reader chain now covers `feedback_whatsapp_number` and
+   `feedback_contact_email`). Reason: the sandbox cannot run Robolectric,
+   and Phase 40.4's law is to never push an unverifiable test when a pure
+   equivalent carries the same guarantee. The DataStore plumbing itself
+   (2 keys, 2 flows, 2 savers) mirrors `GitCredentialsStore`, compiles
+   against the datastore shims in the local loop, and CI is the executor
+   of record for it.
+7. **`OpenInBrowser.openOrCopy` is the shared helper** (the spec's
+   "decided in implementation" point): open via the single launcher; on
+   failure copy `copyInstead` (the URL for the share rows, the full
+   report for the feedback channels) and say so. ServerSharePanel's
+   open-button now routes through it — same behavior, one policy.
+
+**The number's default is empty BY DESIGN** (the phase's law: not welded
+into the APK — the owner fills it once in Settings → Feedback & Support).
+`FeedbackStore.DEFAULT_WHATSAPP_NUMBER` is the one-line change point when
+Phase 42 (share-readiness) decides whether a tester's fresh install
+should carry the number — flagged to the owner in the phase report.

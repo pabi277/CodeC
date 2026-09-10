@@ -1,6 +1,8 @@
 # CodeC Phase 41.1 — The report: pure draft builder + the links that carry it
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M
+> **Status:** 🔧 IMPLEMENTED (`ui/support/FeedbackDraft.kt`,
+> `FeedbackDraftTest` 23 cases, host-pre-validated) · **Cost:**
+> `[client-only]` · **Effort:** S/M
 
 ## Design
 
@@ -146,3 +148,73 @@ can diff two reports meaningfully). Timestamps come in from the caller.
   (`MainActivity.kt:125-175`) is the record's writer: 60 KB file bound,
   header-first, `frameCap = 80`, causes to depth 5 — so 41 reads that file and
   does **not** invent a second crash sink.
+
+---
+
+## Implementation record (2026-09-10, `arena/01a08cc6-codec`)
+
+Shipped as `ui/support/FeedbackDraft.kt`, exactly the specced shape
+(`FeedbackInput` gained two optional fields: `screen` — the report's
+project line reads "Project: x · Screen: y" — and `secretToScrub`, the
+stored git token, which is only ever passed to `GitRedactor` and never
+rendered). Exit conditions 1–5 are all pinned by `FeedbackDraftTest`:
+
+- **1** golden layout, byte-for-byte; sections in fixed order; user text
+  verbatim; blank text → the `(no text)` line.
+- **2** `ghp_secret123` + `CODEC_GIT_TOKEN=…` fixtures → `<redacted>`;
+  the full token-shape table (classic/fine-grained PAT, `gh[soru]_`,
+  `x-access-token:`, `Authorization: Bearer`, `KEY=VALUE` secrets) plus
+  `GitRedactor`'s literal + `user:pass@` URL rules; `~proj/`, `~home/`,
+  `~app/` path shortening in BOTH `/data/user/0/` and `/data/data/`
+  spellings (they are the same directory; a log line may carry either).
+- **3** the number table verbatim, plus edges (trunk-0, 7/16 digits,
+  words-after-number, Italian `+39 06…` landline — rejected on purpose,
+  see below).
+- **4** `whatsappUrl("919876543210", "hi\nthere 100%")` →
+  `…?text=hi%0Athere%20100%25` exactly; Devanagari + Bengali + emoji
+  fixtures with hand-computed UTF-8 percent sequences; `mailto` and
+  `gitHubIssueUrl` encoding.
+- **5** budget: log trimmed first (oldest lines go, notice present), crash
+  second (from the bottom — the header + exception line are the diagnosis),
+  user text NEVER cut (an over-budget report with a long text is the
+  correct output); `maxChars = Int.MAX_VALUE` = no budget, no notices.
+
+**Decisions made during implementation, recorded for the device round:**
+
+1. **`ghp_` shape loosened from the spec's `{36}` to `{8,}`** — real classic
+   PATs are 36–40 chars, but a TRUNCATED paste is still a secret, and the
+   exit fixture `ghp_secret123` (11 chars) must come out redacted.
+   Over-redaction is the safe direction; the prefix `ghp_` is distinctive
+   enough that false positives are not a realistic log shape.
+2. **`normaliseNumber` is stricter than plain digit rules** — after
+   stripping separators/`+`/`00` and the 8–15 bound, the first 1–3 digits
+   must be an ASSIGNED E.164 country code (the ITU list as data, ~220
+   entries) and the subscriber part must be 7–12 digits not starting with
+   `0`. That is what makes the doc's `8-800-555-3535` case null (any
+   country-code reading leaves a trunk-`0` subscriber) while
+   `0044-7700-900123` passes. **Known cost:** Italian-style landlines that
+   legitimately keep a `0` (`+39 06 …`) are rejected — accepted because
+   the number stored here is the owner's single support number, and
+   strictness beats completeness for a wrong-number failure mode.
+3. **The crash section's 14-line cap (header + exception + 12 frames) is
+   the design, not a budget cut** — the crash-trim notice appears only
+   when the BUDGET cut crash lines; the full record stays in
+   CrashReportOverlay's COPY ALL (one sink, one reader list).
+4. **`mailto` gained an optional `subject`** (default "CodeC feedback") —
+   an owner triaging an inbox needs the subject line; the exit conditions
+   pin the body encoding, which is unchanged.
+5. **The GitHub issue row targets `pabi277/CodeC`, checked public on
+   2026-09-10** (`gh repo view --json isPrivate` → `false`, issues
+   enabled) — so the row is shown unconditionally, no private-repo caveat
+   needed. If the repo ever goes private, the link still works for a
+   signed-in browser session; the part doc's original wording stands.
+
+**Local pre-validation (Phase 40.4's law):** jdk4py Temurin 25 + kotlinc
+2.4.10 over the REAL pure sources (the Android-free half of `ui/projects`
+for `GitRedactor` + the Phase 41 files) with a JUnit shim and a
+datastore-shim set mirroring the real API shapes; the repo's own `@Test`
+methods ran reflectively — **61/61** (50 new + the audit/key-reader
+suites). The loop caught 5 test-side bugs before CI (budget arithmetic
+that forgot the notice line's own length, and wrong number fixtures like
+`(+1) 555-123-4567` — a `+` after a separator is a paste error the engine
+correctly rejects); the engine itself needed no change.

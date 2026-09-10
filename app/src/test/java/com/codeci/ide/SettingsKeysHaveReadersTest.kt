@@ -5,11 +5,12 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Phase 38.2 — the audit's enforcement: every DataStore key in the three
+ * Phase 38.2 — the audit's enforcement: every DataStore key in the
  * preference stores must have a READER. Enumerating the stores (not one
  * file) matters: `GitCredentialsStore`'s four keys live on the same
  * `settings` DataStore as `SettingsManager`'s, declared from
- * `ui/theme/ThemeManager.kt`.
+ * `ui/theme/ThemeManager.kt` (Phase 41 added `ui/support/FeedbackStore.kt`
+ * to the same DataStore — same law, same list).
  *
  * The chain checked is honest about how this codebase reads values:
  * a key is consumed inside its store by a flow/setter ("block"), and
@@ -29,7 +30,9 @@ class SettingsKeysHaveReadersTest {
     private val storePaths = listOf(
         "app/src/main/java/com/codeci/ide/ui/settings/SettingsManager.kt",
         "app/src/main/java/com/codeci/ide/ui/theme/ThemeManager.kt",
-        "app/src/main/java/com/codeci/ide/ui/projects/GitCredentialsStore.kt"
+        "app/src/main/java/com/codeci/ide/ui/projects/GitCredentialsStore.kt",
+        // Phase 41 — the feedback reply-to contacts ride the same DataStore.
+        "app/src/main/java/com/codeci/ide/ui/support/FeedbackStore.kt"
     )
 
     private val keyDecl = Regex("""\bval\s+(\w+)\s*=\s*\w+PreferencesKey\("([^"]+)"\)""")

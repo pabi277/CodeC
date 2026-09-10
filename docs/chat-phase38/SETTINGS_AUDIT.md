@@ -10,7 +10,9 @@
 > the build instead of rotting back.
 
 Audit date: 2026-09-10, against `SettingsScreen.kt` as edited by Phase
-38.2 (11 sections, 45 `Settings*` control rows).
+38.2 (11 sections, 45 `Settings*` control rows). Phase 41 added a 12th
+section — **Feedback & Support** — with no `Settings*` rows (it is a
+self-contained card; see "Other surfaces").
 
 ## Deleted by this audit (with evidence)
 
@@ -37,9 +39,9 @@ Audit date: 2026-09-10, against `SettingsScreen.kt` as edited by Phase
 
 ## Control rows (one row per Settings* control, in screen order)
 
-Screen order (machine-checked): Editor Settings | CodeC Keys | Compiler | Terminal | Terminal Extra-Keys & Shortcuts | Package Repository & Trust | GitHub Account | Appearance | Storage | About | Developer Options
+Screen order (machine-checked): Editor Settings | CodeC Keys | Compiler | Terminal | Terminal Extra-Keys & Shortcuts | Package Repository & Trust | GitHub Account | Appearance | Storage | About | Feedback & Support | Developer Options
 
-This table is what `SettingsAuditTest` counts: 11 sections, 45 rows
+This table is what `SettingsAuditTest` counts: 12 sections, 45 rows
 (three of the sections — Terminal Extra-Keys & Shortcuts, Package
 Repository & Trust, GitHub Account — are custom cards with no
 `Settings*` rows; they are covered under "Other surfaces" below and in
@@ -106,6 +108,7 @@ change nothing and say so).
 | Package Repository & Trust card | Package Repository & Trust | shows trust info; CHECK verifies repo | keep |
 | GitHub Account card (4 fields, link, disconnect/save) | GitHub Account | writes `GitCredentialsStore` | keep |
 | About header (app mark + name + tagline) | About | identity only (Phase 38.1) | keep |
+| Feedback & Support card (text field, 2 ephemeral checkboxes, CHAT/COPY/EMAIL/GITHUB buttons, 2 owner reply-to fields + save) | Feedback & Support (Phase 41) | writes `FeedbackStore` (`feedback_whatsapp_number`, `feedback_contact_email`); builds the `FeedbackDraft` report; the checkboxes are deliberately NOT stored (fresh choice per report, pinned by `FeedbackCheckboxNotPersistedTest`) | keep |
 
 ## Store keys NOT surfaced as Settings rows (config surface, read-only)
 
