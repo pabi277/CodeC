@@ -86,17 +86,16 @@ data class GitReadiness(
 }
 
 /** Operations that carry a token-needs flag. */
-sealed class GitOperation {
-    /** True when this operation needs a GitHub token. */
-    val needsToken: Boolean
-        get() = this is GitOperation.CommitOrPublish || this is GitOperation.Publish
-}
+class GitOperation(
+    val needsToken: Boolean,
+    val isPushPull: Boolean
+)
 
 /** A clone operation — does not need a token (public repos clone without auth). */
-data class GitOperation.Clone() : GitOperation()
+object GitOperationClone : GitOperation(needsToken = false, isPushPull = false)
 
 /** A commit-or-push operation — needs a token. */
-data class GitOperation.CommitOrPush() : GitOperation()
+class GitOperationCommitOrPublish : GitOperation(needsToken = true, isPushPull = true)
 
 /** A publish operation — needs a token. */
-data class GitOperation.Publish() : GitOperation()
+class GitOperationPublish : GitOperation(needsToken = true, isPushPull = true)
