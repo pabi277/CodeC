@@ -149,7 +149,11 @@ check-run annotations (GitHub UI / run-page HTML) — never in the sandbox's
 
 ## CI record
 
-- Fix branch: `arena/01a08c04-codec` — see the tip sha + `Build APK` run id in
-  the session report / `docs/NEXT_STEPS.md` head line.
+- **`Build APK` ✅ GREEN on the first push of the repair — run `34499964179` on tip
+  `29e175e`** (5 m 53 s: icon-asset check, assemble + `:app:testDebugUnitTest` +
+  `:app:lintDebug` through the `gradle-bootstrap` bridge, bench build; artifact
+  `CodeC-IDE` 24 915 965 B = +100 480 B / +0.40 % vs `main`'s `24 815 485 B`).
+  The 36 new host cases executed inside that step. It was the first attempt on
+  this branch — the exact opposite of the 16 consecutive red runs it replaces.
 - The abandoned branch `arena/01a08b68-codec` (`a3a8b46`) is left untouched for
   the record; its content is superseded by this one.

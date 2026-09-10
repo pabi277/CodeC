@@ -1,6 +1,7 @@
 # CodeC Phase 40 — GitHub that tells the truth
 
-> **Status:** 🔧 IMPLEMENTED on `arena/01a08c04-codec` (host-tested, CI pending) —
+> **Status:** 🔧 IMPLEMENTED on `arena/01a08c04-codec` — **CI ✅ GREEN**
+> (`Build APK` `34499964179` on tip `29e175e`, first push of the repair) —
 > the first attempt on `arena/01a08b68-codec` failed CI 16 times and is recorded
 > with its root causes in [PART_40_4](PART_40_4_CI_LOOP_DIAGNOSIS.md) · **Cost:**
 > `[client-only]` · **Effort:** M/L · **Owner row:** *"Github integration update

@@ -29,7 +29,8 @@ The full evidence table, the root causes, and the repair rules are in
 read them before any GitHub work. The working implementation (40.1 readiness +
 errors-in-the-window, 40.2 push truth from git's own bytes, 40.3 Publish to
 GitHub) is on `arena/01a08c04-codec`, pre-validated on a host JVM (36/36 host
-cases, four real bugs caught before CI) and awaiting the owner's merge + device
+cases, four real bugs caught before CI) — **CI ✅ GREEN on its first push
+(`Build APK` `34499964179` on tip `29e175e`)** — and awaiting the owner's merge + device
 round. Two new helpers exist for exactly that failure mode:
 `scripts/ci_annotations.py` (read a red run's annotations from the sandbox) and
 the jdk4py + kotlinc pre-validation loop (`rule.md` §9).
