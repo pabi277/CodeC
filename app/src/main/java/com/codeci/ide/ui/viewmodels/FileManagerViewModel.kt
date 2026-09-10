@@ -61,8 +61,12 @@ class FileManagerViewModel : ViewModel() {
     private val _userMessage = MutableStateFlow<String?>(null)
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
 
+    /** Error shown inside the clone dialog (never a snackbar alone). */ private val _cloneError = MutableStateFlow<String?>(null)
+    val cloneError: StateFlow<String?> = _cloneError.asStateFlow()
+
     fun consumeMessage() {
         _userMessage.value = null
+        _cloneError.value = null
     }
 
     fun loadProjects(context: Context) {
@@ -502,10 +506,9 @@ class FileManagerViewModel : ViewModel() {
                 finishImport(context, manager, manager.project(name) ?: ProjectInfo(name, dest, ProjectConfig.defaultFor(name, "auto")), onCloned)
                 _userMessage.value = context.getString(R.string.clone_success, name)
             } catch (e: Exception) {
-                _userMessage.value = context.getString(
-                    R.string.clone_failed,
-                    friendlyGitMessage(e, git)
-                )
+                val friendly = friendlyGitMessage(e, git)
+                _userMessage.value = context.getString(R.string.clone_failed, friendly)
+                _cloneError.value = friendly
             } finally {
                 _isBusy.value = false
             }

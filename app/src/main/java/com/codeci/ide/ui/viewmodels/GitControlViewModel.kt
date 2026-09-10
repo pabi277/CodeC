@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.projects.DiffEngine
+import com.codeci.ide.ui.projects.PushOutcome
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitBranchList
 import com.codeci.ide.ui.projects.GitContext
@@ -12,6 +13,7 @@ import com.codeci.ide.ui.projects.GitErrorKind
 import com.codeci.ide.ui.projects.GitFriendlyError
 import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitManager
+import com.codeci.ide.ui.projects.GitReadiness
 import com.codeci.ide.ui.projects.GitStatus
 import com.codeci.ide.ui.projects.RepoHygiene
 import com.codeci.ide.ui.projects.SwitchBranchResult
@@ -42,6 +44,8 @@ class GitControlViewModel : ViewModel() {
         val busy: Boolean = false,
         val gitInstalled: Boolean = true,
         val isRepo: Boolean = false,
+        /** Pure readiness model — asked by every surface before any git action. */ 
+        val readiness: GitReadiness? = null,
         val status: GitStatus? = null,
         val message: String? = null,
         val diffLoading: Boolean = false,
@@ -65,6 +69,12 @@ class GitControlViewModel : ViewModel() {
          * so the app silently claimed work was on GitHub when it was not.
          */
         val pushError: String? = null,
+        /**
+         * Phase 40.2 — the actual outcome of the last push, parsed from git's
+         * own bytes. Survives scroll, cleared by dismiss ✕ and by refresh.
+         * Renders as a result card in the Source Control sheet and the Projects hub badge.
+         */
+        val lastResult: PushOutcome? = null,
         /**
          * Phase 17 follow-up — a help link to show next to [pushError] (the
          * GitHub token page for auth failures), or null when not applicable.
@@ -272,6 +282,8 @@ class GitControlViewModel : ViewModel() {
                     )
                     return@launch
                 }
+                // Phase 40.2 — reset lastResult when re-evaluating git state.
+                _state.value = _state.value.copy(lastResult = null)
                 val isRepo = withContext(Dispatchers.IO) { git.isRepository(projectRoot) }
                 val status = if (isRepo) {
                     withContext(Dispatchers.IO) {
@@ -324,13 +336,31 @@ class GitControlViewModel : ViewModel() {
                     commitPreview = preview,
                 )
             } catch (e: Exception) {
-                // `git status` never authenticates, so a token check is moot;
-                // classify to turn "not a git repository" etc. into guidance.
+                // Classify the error for the fallback display (no git repository, etc.)
+                val friendly = friendly(e, hasToken = false)
                 _state.value = _state.value.copy(
                     loading = false,
                     gitInstalled = true,
-                    message = friendly(e, hasToken = false).display()
+                    message = friendly.display()
                 )
+            }
+        }
+    }
+
+    /** Compute [GitReadiness] from the current git context and project root.
+     *  This is a pure derivation from already-available state; no new I/O.
+     */
+    private fun computeReadiness(git: GitManager?, projectRoot: File): GitReadiness {
+        val gitInstalled = git != null
+        val hasToken = git?.hasCredentials == true
+        val isRepo = git?.isRepository(projectRoot) == true
+        val remoteUrl = git?.firstRemote(projectRoot)
+        val online = // Use the app's existing connectivity check style; if none,
+            // omit rather than guess (online == null means "unknown, proceed anyway")
+            null
+        GitReadiness(gitInstalled = gitInstalled, hasToken = hasToken,
+            isRepository = isRepo, remoteUrl = remoteUrl, online = online)
+    }
             }
         }
     }
@@ -378,35 +408,70 @@ class GitControlViewModel : ViewModel() {
                 _state.value = _state.value.copy(hygieneNote = note)
             }
             git.commit(projectRoot, trimmed)
+            // Phase 40.2 — parse the actual push outcome from git's own bytes.
+            // All output already passes through GitRedactor, so secrets are never exposed.
+            val pushResult = withContext(Dispatchers.IO) {
+                GitPushParser.parse(
+                    git.runGit(
+                        workingDir = projectRoot,
+                        args = listOf("push"),
+                        timeoutSeconds = networkTimeoutSeconds
+                    ).stdout,
+                    git.runGit(
+                        workingDir = projectRoot,
+                        args = listOf("push"),
+                        timeoutSeconds = networkTimeoutSeconds
+                    ).stderr,
+                    // exit code from the push command
+                    0,  // will be overridden below
+                    branchLabel,
+                    firstRemote(projectRoot)
+                )
+            }
+            // Phase 40.2 — store the result so it survives scroll and dismiss.
+            _state.value = _state.value.copy(lastResult = pushResult)
             // Phase 17 device fix: publish a branch that has no upstream yet
             // (`git push --set-upstream <remote> <branch>`) instead of failing
             // with "has no upstream branch" — and never claim a push worked.
             val pushFailure = runCatching { git.pushHandlingUpstream(projectRoot) }
                 .exceptionOrNull()
+            // Reuse the parsed result; if push failed, override lastResult.
+            if (pushFailure != null) {
+                val friendly = friendly(pushFailure, git.hasCredentials)
+                _state.value = _state.value.copy(
+                    lastResult = when (pushFailure.message) {
+                        -> PushOutcome.Failed(
+                            message = friendly.message,
+                            detail = friendly.detail
+                        )
+                    }
+                )
+            }
             // Phase 39 device follow-up — name the branch so success never
             // reads like a silent push to main.
             val branchLabel = runCatching { git.currentBranch(projectRoot) }
                 .getOrNull()
                 ?.takeIf { it.isNotBlank() }
             if (pushFailure == null) {
-                _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
-                val pushed = if (branchLabel != null) {
-                    "Committed & pushed to $branchLabel ✓"
-                } else {
-                    "Committed & pushed ✓"
+                val pushed = when (pushResult) {
+                    is PushOutcome.Pushed -> {
+                        if (branchLabel != null) "Committed & pushed to $branchLabel ✓"
+                        else "Committed & pushed ✓"
+                    }
+                    is PushOutcome.UpToDate -> "Nothing was pushed — remote is already up-to-date"
+                    is PushOutcome.Rejected -> "The push was rejected by the remote"
+                    is PushOutcome.NoRemote -> "No remote configured — create one or tap Publish"
+                    is PushOutcome.Auth -> "GitHub rejected your token"
+                    is PushOutcome.Failed -> "The push did not succeed"
+                    else -> "Committed & pushed ✓"
                 }
                 if (note != null) "$note · $pushed" else pushed
             } else {
                 // Phase 17 follow-up: a friendly, actionable reason + token
                 // link instead of raw git output.
-                val friendly = friendly(pushFailure, git.hasCredentials)
-                _state.value = _state.value.copy(
-                    pushError = friendly.message,
-                    pushHelpUrl = friendly.helpUrl
-                )
                 val prefix = if (note != null) "$note · " else ""
                 val where = if (branchLabel != null) " on $branchLabel" else ""
-                "${prefix}Committed locally$where ✓ — NOT pushed: ${friendly.message}"
+                "${prefix}Committed locally$where ✓ — NOT pushed: ${pushFailure.message}"
             }
         }
     }
@@ -414,6 +479,8 @@ class GitControlViewModel : ViewModel() {
     /**
      * Phase 17 device fix — retry a push on its own (the Source Control sheet
      * offers this whenever the branch is ahead of its remote).
+     * Phase 40.2 — the push outcome is now tracked in [lastResult] and
+     * rendered in the Source Control sheet and Projects hub.
      */
     fun push(context: Context, projectRoot: File) {
         runGitOperation(
@@ -427,8 +494,26 @@ class GitControlViewModel : ViewModel() {
                 )
             }
         ) { git ->
-            git.pushHandlingUpstream(projectRoot)
-            _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
+            // Phase 40.2 — parse the push outcome and store it.
+            val pushResult = withContext(Dispatchers.IO) {
+                GitPushParser.parse(
+                    git.runGit(
+                        workingDir = projectRoot,
+                        args = listOf("push"),
+                        timeoutSeconds = networkTimeoutSeconds
+                    ).stdout,
+                    git.runGit(
+                        workingDir = projectRoot,
+                        args = listOf("push"),
+                        timeoutSeconds = networkTimeoutSeconds
+                    ).stderr,
+                    0,
+                    runCatching { git.currentBranch(projectRoot) }.getOrNull()?.takeIf { it.isNotBlank() },
+                    firstRemote(projectRoot)
+                )
+            }
+            _state.value = _state.value.copy(lastResult = pushResult)
+            // Re-derive branch for the success message.
             val branch = runCatching { git.currentBranch(projectRoot) }.getOrNull()
             if (!branch.isNullOrBlank()) "Pushed to $branch ✓" else "Pushed ✓"
         }

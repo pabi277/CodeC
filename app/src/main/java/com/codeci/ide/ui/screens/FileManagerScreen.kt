@@ -147,6 +147,7 @@ fun FileManagerScreen(
     val tree by viewModel.tree.collectAsState()
     val isBusy by viewModel.isBusy.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
+    val cloneError by viewModel.cloneError.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
@@ -758,6 +759,13 @@ fun FileManagerScreen(
 
         AlertDialog(
             onDismissRequest = { showCloneDialog = false },
+            // Non-dismissable while a clone is busy; on failure, only close when
+            // the error is rendered inside the dialog (never a snackbar alone).
+            onShow = { dialog ->
+                // Block back/outside-tap while the clone operation is in flight.
+                dialog.setCancelable(!viewModel.isBusy.value)
+                dialog.setCanceledOnTouchOutside(!viewModel.isBusy.value)
+            },
             title = {
                 Text(
                     stringResource(R.string.clone_title),
@@ -767,6 +775,16 @@ fun FileManagerScreen(
             },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
+                    //Inline error slot — appears inside the dialog, never as a snackbar.
+                    viewModel.cloneError?.let { error ->
+                        Text(
+                            error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                        )
+                    }
+                    // Original content follows...
                     Text(
                         stringResource(R.string.clone_url_label),
                         style = MaterialTheme.typography.labelMedium,

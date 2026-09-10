@@ -66,6 +66,7 @@ import com.codeci.ide.ui.projects.DiffOp
 import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.GitFileState
 import com.codeci.ide.ui.utils.WebFileSupport
+import com.codeci.ide.ui.projects.PushOutcome
 import com.codeci.ide.ui.viewmodels.GitControlViewModel
 import java.io.File
 
@@ -498,13 +499,63 @@ fun GitControlSheet(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = UnpushedAmber
                                 )
+                                // Phase 40.2 — render the last push outcome from the pure model.
+                                state.lastResult?.let { result ->
+                                    when (result) {
+                                        is PushOutcome.Pushed -> {
+                                            Text(
+                                                text = "✓ Pushed ${result.branch} → ${result.remoteUrl?.getOrElse { "github.com" } } (\${result.to})",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        is PushOutcome.UpToDate -> {
+                                            Text(
+                                                text = "↑ Everything up-to-date",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        is PushOutcome.Rejected -> {
+                                            Text(
+                                                text = "↑ Push rejected: ${result.why?.toString().toLowerCase()}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                        is PushOutcome.NoRemote -> {
+                                            Text(
+                                                text = "→ No remote configured. Tap Publish to create one.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        is PushOutcome.Auth -> {
+                                            Text(
+                                                text = "→ Auth failed. Check your token in Settings.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                        is PushOutcome.Failed -> {
+                                            Text(
+                                                text = "✗ Push failed",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                                // Fallback to pushError if lastResult is not yet available
                                 state.pushError?.let { error ->
-                                    Text(
-                                        text = error,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
+                                    if (state.lastResult == null) {
+                                        Text(
+                                            text = error,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(top = 2.dp)
+                                        )
+                                    }
                                 }
                                 // Phase 17 follow-up — a tappable help link
                                 // (the GitHub token page) when the failure has
