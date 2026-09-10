@@ -272,4 +272,15 @@ class GitErrorsTest {
         val err = GitErrors.notInstalled()
         assertEquals(err.message, err.display())
     }
+
+    @Test
+    fun `dirty checkout that would overwrite maps to a clear stash hint`() {
+        val err = GitErrors.classify(
+            raw = "error: Your local changes to the following files would be overwritten by checkout:\\n\\tmain.c\\nPlease commit your changes or stash them before you switch branches.",
+            exitCode = 1,
+            hasToken = true
+        )
+        assertEquals(GitErrorKind.CONFLICT, err.kind)
+        assertTrue(err.message.contains("Stash", ignoreCase = true) || err.message.contains("uncommitted", ignoreCase = true))
+    }
 }

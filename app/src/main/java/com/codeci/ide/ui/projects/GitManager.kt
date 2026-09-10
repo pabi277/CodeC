@@ -487,6 +487,23 @@ class GitManager(
         return value.takeIf { it.isNotEmpty() && it != "HEAD" }
     }
 
+    /**
+     * `git fetch --prune <remote>` — refresh remote-tracking refs so the
+     * Switch Branch sheet can offer branches that already exist on GitHub
+     * (not only the one the clone landed on, and not only branches created
+     * inside the app). Best-effort: callers treat failure as "list what we
+     * already know".
+     */
+    fun fetch(root: File) {
+        val remote = firstRemote(root) ?: "origin"
+        exec(
+            root,
+            listOf("fetch", "--prune", remote),
+            networkTimeoutSeconds,
+            "git fetch failed"
+        )
+    }
+
     /** `git checkout <branch>` for a branch that already exists locally. */
     fun checkout(root: File, branch: String) {
         val safe = branch.trim()
@@ -594,6 +611,21 @@ class GitManager(
         val fromBranch = before?.branch
         val dirty = before?.files?.isNotEmpty() == true
 
+        // No-op when the user re-confirms the branch they are already on
+        // (avoids a useless checkout that fails on a dirty tree).
+        if (target.kind == BranchTargetKind.LOCAL &&
+            fromBranch != null &&
+            target.name.trim() == fromBranch
+        ) {
+            return SwitchBranchResult(branch = fromBranch)
+        }
+        if (target.kind == BranchTargetKind.REMOTE) {
+            val local = target.name.trim().substringAfter('/', "")
+            if (fromBranch != null && local == fromBranch) {
+                return SwitchBranchResult(branch = fromBranch)
+            }
+        }
+
         var stashed = false
         if (stashChanges && dirty) {
             stashed = stashPush(
@@ -635,7 +667,15 @@ class GitManager(
 
         var restored = false
         var pending = false
-        if (stashChanges) {
+        if (stashed && target.kind == BranchTargetKind.NEW) {
+            // Creating a branch carries the work you were doing onto it —
+            // the stash was marked with the *parent* name, so the
+            // "codecBranch == landed" lookup below would miss it and leave
+            // edits parked forever under the old branch.
+            runCatching { stashPop(root) }
+                .onSuccess { restored = true }
+                .onFailure { pending = true }
+        } else if (stashChanges) {
             val mine = runCatching { stashList(root) }.getOrDefault(emptyList())
                 .firstOrNull { it.codecBranch == landed }
             if (mine != null) {

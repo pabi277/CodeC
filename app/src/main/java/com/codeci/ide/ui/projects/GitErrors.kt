@@ -172,6 +172,20 @@ object GitErrors {
                         "it, mark it resolved, then retry."
                 ).let(::withDetail)
 
+            // Checkout blocked by uncommitted local edits that would be lost.
+            // Phase 39 device follow-up: this is the usual reason Switch Branch
+            // looks "broken" for pre-existing branches when the editor still
+            // holds dirty buffers (or stash was turned off).
+            lower.contains("would be overwritten") ||
+                lower.contains("your local changes") ||
+                lower.contains("please commit your changes") ||
+                lower.contains("please commit or stash") ->
+                GitFriendlyError(
+                    GitErrorKind.CONFLICT,
+                    "Can't switch — uncommitted edits would be overwritten. " +
+                        "Leave \"Stash my uncommitted changes\" on (or commit first), then retry."
+                ).let(::withDetail)
+
             // SSH remotes aren't supported by CodeC's clone flow.
             lower.contains("publickey") || lower.contains("could not read from remote repository") ->
                 GitFriendlyError(

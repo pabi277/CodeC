@@ -107,7 +107,15 @@ class GitControlViewModel : ViewModel() {
 
     // ---- Phase 17: branches ------------------------------------------------
 
-    /** Loads the branch list for the Switch Branch dialog (off the UI thread). */
+    /**
+     * Loads the branch list for the Switch Branch dialog (off the UI thread).
+     *
+     * Phase 39 device follow-up: best-effort `git fetch --prune` first so
+     * branches that already exist on GitHub (not only the clone default and
+     * not only branches created in-app) appear under Remote and can be
+     * checked out. Offline / no token keeps the local list — never blocks
+     * the dialog on a network failure.
+     */
     fun loadBranches(context: Context, projectRoot: File) {
         viewModelScope.launch {
             _state.value = _state.value.copy(branchesLoading = true, branchError = null)
@@ -120,7 +128,10 @@ class GitControlViewModel : ViewModel() {
                 return@launch
             }
             try {
-                val list = withContext(Dispatchers.IO) { git.listBranches(projectRoot) }
+                val list = withContext(Dispatchers.IO) {
+                    runCatching { git.fetch(projectRoot) }
+                    git.listBranches(projectRoot).withoutLocallyTrackedRemotes()
+                }
                 _state.value = _state.value.copy(branchesLoading = false, branches = list)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
@@ -137,12 +148,19 @@ class GitControlViewModel : ViewModel() {
      * result text is kept in `branchResult`/`branchError` so the dialog can
      * show it before the user closes it (entry points without a snackbar —
      * the editor drawer, the Projects card — still surface the outcome).
+     *
+     * [onBeforeSwitch] / [onAfterSwitch] let the editor flush open buffers
+     * before checkout and reload them from the new tree afterwards — without
+     * that, every branch shows the same in-memory text and auto-save bleeds
+     * edits across branches.
      */
     fun switchBranch(
         context: Context,
         projectRoot: File,
         target: BranchTarget,
-        stashChanges: Boolean = true
+        stashChanges: Boolean = true,
+        onBeforeSwitch: (() -> Unit)? = null,
+        onAfterSwitch: (() -> Unit)? = null
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(
@@ -159,15 +177,23 @@ class GitControlViewModel : ViewModel() {
                 return@launch
             }
             try {
+                // Flush editor buffers on the main dispatcher before git runs.
+                onBeforeSwitch?.invoke()
                 val result = withContext(Dispatchers.IO) {
                     git.switchBranch(projectRoot, target, stashChanges)
                 }
+                // Reload editor from the new tree before the dialog shows
+                // success — otherwise the user still sees the old branch.
+                onAfterSwitch?.invoke()
                 _state.value = _state.value.copy(
                     branchBusy = false,
                     branchResult = describeSwitch(result)
                 )
                 refresh(context, projectRoot)
             } catch (e: Exception) {
+                // Checkout failed — still refresh the editor in case a partial
+                // write landed (or the pre-switch flush left the tree dirty).
+                onAfterSwitch?.invoke()
                 _state.value = _state.value.copy(
                     branchBusy = false,
                     branchError = friendly(e, git.hasCredentials).display()

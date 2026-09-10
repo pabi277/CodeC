@@ -75,7 +75,18 @@ import java.io.File
 fun BranchSwitchSheet(
     projectRoot: File,
     onDismiss: () -> Unit,
-    viewModel: GitControlViewModel = viewModel()
+    viewModel: GitControlViewModel = viewModel(),
+    /**
+     * Phase 39 device follow-up — flush open editor buffers before checkout
+     * so git sees a complete tree (and so auto-save cannot rewrite the next
+     * branch with this branch's text).
+     */
+    onBeforeSwitch: (() -> Unit)? = null,
+    /**
+     * Reload open tabs + drawer from disk after checkout so each branch
+     * shows its own files, not the previous branch's in-memory buffers.
+     */
+    onAfterSwitch: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
@@ -326,7 +337,14 @@ fun BranchSwitchSheet(
                                     } else {
                                         selected ?: return@TextButton
                                     }
-                                    viewModel.switchBranch(context, projectRoot, target, stashChanges)
+                                    viewModel.switchBranch(
+                                        context = context,
+                                        projectRoot = projectRoot,
+                                        target = target,
+                                        stashChanges = stashChanges,
+                                        onBeforeSwitch = onBeforeSwitch,
+                                        onAfterSwitch = onAfterSwitch
+                                    )
                                 }
                             ) {
                                 Text(

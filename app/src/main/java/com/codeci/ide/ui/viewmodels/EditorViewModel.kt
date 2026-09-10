@@ -2118,11 +2118,14 @@ class EditorViewModel : ViewModel() {
             val file = ProjectPathUtils.resolveInside(info.root, path) ?: return
             if (!file.isFile || !file.canRead()) return
             val content = runCatching { file.readText() }.getOrNull() ?: return
-            val tab = EditorTab(path, TextFieldValue(content), content)
+            val ending = LineEndings.detect(content)
+            val normalized = LineEndings.normalizeToLf(content)
+            val tab = EditorTab(path, TextFieldValue(normalized), normalized, ending)
             updateTab(path) { tab }
             _fileName.value = path
             resetCaretForOpen()
             _codeText.value = tab.buffer
+            _activeLineEnding.value = ending
             _isDirty.value = false
         } else {
             val fm = FileManager(context)
@@ -2137,6 +2140,98 @@ class EditorViewModel : ViewModel() {
         _diagnostics.value = emptyList()
         resetDecorationsForNewBuffer()
         _userMessage.value = context.getString(R.string.reloaded_from_disk)
+    }
+
+    /**
+     * Phase 39 device follow-up — after a git branch switch the working tree
+     * on disk is a different commit, but open editor tabs still held the
+     * previous branch's buffers. Auto-save then wrote those buffers back onto
+     * every branch, so "branches are not isolated" and switches to older
+     * branches looked like no-ops (or failed with "local changes would be
+     * overwritten").
+     *
+     * Call order for Switch Branch:
+     *  1. [prepareForBranchSwitch] — flush every dirty tab to disk so git can
+     *     stash a complete tree (and so nothing is lost if the switch fails).
+     *  2. git checkout / stash (outside this VM).
+     *  3. [reloadAfterBranchSwitch] — re-read every open path from disk,
+     *     drop tabs whose files no longer exist on this branch, refresh the
+     *     drawer tree + branch chip.
+     */
+    fun prepareForBranchSwitch(context: Context) {
+        captureContext(context)
+        stashActiveTabBuffer(_codeText.value)
+        // Cancel a pending debounced auto-save so it cannot race the checkout
+        // and rewrite the newly checked-out files with the old buffer.
+        autoSaveJob?.cancel()
+        autoSaveJob = null
+        // Silent flush — saveAllTabs would toast "Saved" on every switch.
+        val app = context.applicationContext
+        val project = _projectName.value
+        if (project == null) {
+            runCatching { saveFile(app) }
+            return
+        }
+        _openTabs.value = _openTabs.value.map { tab ->
+            when {
+                tab.buffer.text == tab.savedText -> tab
+                writeProjectFile(app, project, tab.relativePath, tab.buffer.text, tab.lineEnding) ->
+                    tab.copy(savedText = tab.buffer.text)
+                else -> tab
+            }
+        }
+        _isDirty.value = computeDirty(_codeText.value.text)
+    }
+
+    fun reloadAfterBranchSwitch(context: Context) {
+        captureContext(context)
+        val appContext = context.applicationContext
+        val project = _projectName.value ?: run {
+            refreshGitMeta(appContext)
+            return
+        }
+        val info = ProjectManager(appContext).project(project) ?: run {
+            refreshGitMeta(appContext)
+            return
+        }
+        val root = info.root
+        val active = _activeTabPath.value
+        // Drop undo history: it belongs to the previous branch's content.
+        undoManagers.clear()
+
+        val reloaded = _openTabs.value.mapNotNull { tab ->
+            val file = ProjectPathUtils.resolveInside(root, tab.relativePath)
+            if (file == null || !file.isFile || !file.canRead()) return@mapNotNull null
+            val content = runCatching { file.readText() }.getOrNull() ?: return@mapNotNull null
+            val ending = LineEndings.detect(content)
+            val normalized = LineEndings.normalizeToLf(content)
+            EditorTab(tab.relativePath, TextFieldValue(normalized), normalized, ending)
+        }
+        _openTabs.value = reloaded
+
+        val stillActive = reloaded.firstOrNull { it.relativePath == active }
+            ?: reloaded.firstOrNull()
+        if (stillActive != null) {
+            _activeTabPath.value = stillActive.relativePath
+            _fileName.value = stillActive.relativePath
+            resetCaretForOpen()
+            _codeText.value = stillActive.buffer
+            _activeLineEnding.value = stillActive.lineEnding
+            _isDirty.value = false
+            resetDecorationsForNewBuffer()
+            syncUndoFlags(undoManager())
+            _diagnostics.value = emptyList()
+        } else {
+            // No open file survived the switch (e.g. every tab was branch-
+            // only). Leave a clean empty-looking buffer rather than stale text.
+            _activeTabPath.value = null
+            _codeText.value = TextFieldValue("")
+            _isDirty.value = false
+            _fileName.value = "main.c"
+            resetDecorationsForNewBuffer()
+        }
+        refreshFileEntries(appContext)
+        refreshGitMeta(appContext)
     }
 
     // ---------------------------------------------------------------------

@@ -83,7 +83,11 @@ import java.io.File
 fun GitControlSheet(
     projectRoot: File,
     onDismiss: () -> Unit,
-    viewModel: GitControlViewModel = viewModel()
+    viewModel: GitControlViewModel = viewModel(),
+    /** Phase 39 device follow-up — see [BranchSwitchSheet.onBeforeSwitch]. */
+    onBeforeBranchSwitch: (() -> Unit)? = null,
+    /** Phase 39 device follow-up — see [BranchSwitchSheet.onAfterSwitch]. */
+    onAfterBranchSwitch: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
@@ -547,7 +551,9 @@ fun GitControlSheet(
     if (showBranchSheet) {
         BranchSwitchSheet(
             projectRoot = projectRoot,
-            onDismiss = { showBranchSheet = false }
+            onDismiss = { showBranchSheet = false },
+            onBeforeSwitch = onBeforeBranchSwitch,
+            onAfterSwitch = onAfterBranchSwitch
         )
     }
 }

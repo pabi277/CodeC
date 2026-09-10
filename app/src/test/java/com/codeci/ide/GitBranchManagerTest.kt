@@ -82,6 +82,9 @@ class GitBranchManagerTest {
                 if [ -n "${'$'}FAKE_LS_REMOTE_OUT" ]; then printf '%b' "${'$'}FAKE_LS_REMOTE_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_LS_REMOTE_EXIT:-0}"
                 ;;
+              fetch)
+                exit "${'$'}{FAKE_FETCH_EXIT:-0}"
+                ;;
               push)
                 if [ -n "${'$'}FAKE_PUSH_ERR" ]; then printf '%b' "${'$'}FAKE_PUSH_ERR" >&2; echo "" >&2; fi
                 exit "${'$'}{FAKE_PUSH_EXIT:-0}"
@@ -639,6 +642,62 @@ class GitBranchManagerTest {
             val dir = tempDir()
             val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "upstream\\norigin"))
             assertEquals("upstream", manager(dir, e).firstRemote(repo(dir)))
+        }
+    }
+
+    @Test
+    fun `fetch prunes the first remote`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_REMOTE_OUT" to "origin"))
+            manager(dir, e).fetch(repo(dir))
+            val commands = log(e)
+            assertEquals("CMD [remote]", commands[0])
+            assertEquals("CMD [fetch] [--prune] [origin]", commands[1])
+        }
+    }
+
+    @Test
+    fun `switchBranch is a no-op when already on the target local branch`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val e = env(dir, mapOf("FAKE_STATUS_OUT" to "## main...origin/main"))
+            val result = manager(dir, e).switchBranch(
+                repo(dir),
+                BranchTarget("main", BranchTargetKind.LOCAL)
+            )
+            assertEquals("main", result.branch)
+            // Only the status probe — no checkout, no stash.
+            assertEquals(listOf("CMD [status] [--porcelain=v1] [-b]"), log(e))
+        }
+    }
+
+    @Test
+    fun `switchBranch to NEW restores the just-stashed dirty work onto it`() = runBlocking {
+        withTimeout(20_000) {
+            // Phase 39 device follow-up: creating a branch while dirty used to
+            // park the stash under the *parent* name and never pop it, so the
+            // new branch looked empty and every branch shared the same edits.
+            val dir = tempDir()
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_STATUS_OUT" to "## main...origin/main\\n M src/app.py",
+                    "FAKE_REMOTE_OUT" to "origin"
+                )
+            )
+            val result = manager(dir, e).switchBranch(
+                repo(dir),
+                BranchTarget("feature/wip", BranchTargetKind.NEW)
+            )
+            val commands = log(e)
+            assertTrue(result.stashed)
+            assertTrue(result.restored)
+            assertEquals("feature/wip", result.branch)
+            assertTrue(commands.any { it == "CMD [stash] [push] [-u] [-m] [codec-switch: main]" })
+            assertTrue(commands.any { it == "CMD [checkout] [-b] [feature/wip]" })
+            // Pop the top stash by default ref — not a "codecBranch == landed" miss.
+            assertTrue(commands.any { it == "CMD [stash] [pop] [stash@{0}]" })
         }
     }
 
