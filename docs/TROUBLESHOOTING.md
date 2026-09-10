@@ -1161,3 +1161,27 @@ number/email field in the UI).
   chars) so the URL survives OEM browsers; the report says
   `[log trimmed — use COPY FULL REPORT for the whole thing]`. COPY REPORT
   has no budget.
+
+## 31. `UserlandInstallerTest` red on "Connection reset" — a loopback keep-alive race (2026-09-10)
+
+**Symptom:** `Build APK` red on one test only —
+`UserlandInstallerTest.missing shared library is diagnosed and phase 2 fallback works`:
+`expected fallback Installed, got Failed(message=Connection reset)`.
+
+**Cause (read from the code, not guessed):** the test serves the bootstrap
+over an in-process loopback `HttpServer`; `DownloadManager` downloads with
+`HttpURLConnection` + `Range` resume. The JVM keep-alive pool reuses a
+connection the test server has just closed (idle timeout under CI load) →
+the ranged GET goes down a stale socket → "Connection reset". Ranged
+requests are not transparently retried, so it surfaces as `Failed`.
+Timing-dependent: the same suite passed on the four previous runs of this
+branch (`34525080153`, `34525817215`, `34529280630`, `34530054784`).
+
+**Not a Phase 41 fault** — the diff touches feedback UI only; the download
+path is Phase 2-era and unchanged.
+
+**Disposition:** retrigger (docs-only commit / new run of the same code).
+If it recurs, the for-cause fix is a bounded retry-on-reset around
+`DownloadManager`'s connect (which would ALSO make real-device downloads
+more robust on flaky mobile networks) — recorded here so the next
+occurrence starts at the root cause, not at the symptom.
