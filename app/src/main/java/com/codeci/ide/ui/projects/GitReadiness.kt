@@ -14,7 +14,9 @@ import com.codeci.ide.ui.projects.GitManager.isRepository
  * (GIT_NOT_INSTALLED before NO_TOKEN — installing git is the only fix that
  * makes every other question meaningful). NO_REMOTE is not a blocker for
  * commit (local commits must keep working offline, Phase 14's law), but IS a
- * blocker for push/pull, which is why blocker() takes the intended operation.
+ * blocker for push/pull, which is why blocker() takes two booleans:
+ *   * needsToken — true for commit/push operations
+ *   * isPushPull — true for push/pull operations (not commit)
  */
 enum class GitBlocker {
     GIT_NOT_INSTALLED,
@@ -23,26 +25,6 @@ enum class GitBlocker {
     NO_REMOTE,
     OFFLINE
 }
-
-/**
- * Operation types for the blocker check.
- * Each variant carries a flag indicating whether a GitHub token is needed.
- */
-sealed class GitOperation {
-    val needsToken: Boolean
-        get() = when (this) {
-            is GitOperation.Clone -> false
-            is GitOperation.CommitOrPublish -> true
-            is GitOperation.Publish -> true
-            else -> false
-        }
-}
-
-class GitOperation.Clone() : GitOperation()
-
-class GitOperation.CommitOrPublish() : GitOperation()
-
-class GitOperation.Publish() : GitOperation()
 
 /**
  * Holds the answers. null blocker == ready to act.
@@ -56,22 +38,23 @@ data class GitReadiness(
     val online: Boolean?
 ) {
     /** Null when ready. Non-null blocker, with message and action id. */
-    fun blocker(op: GitOperation): GitBlocker? {
+    fun blocker(
+        needsToken: Boolean,
+        isPushPull: Boolean
+    ): GitBlocker? {
         // 1. Git not installed — most blocking; fixes every other question
         if (!gitInstalled) return GitBlocker.GIT_NOT_INSTALLED
 
         // 2. No token — only block ops that need credentials (push, pull, publish)
         //    A public-repo clone does NOT require a token — that is current correct
         //    behaviour and must not regress.
-        if (!hasToken && op.needsToken) return GitBlocker.NO_TOKEN
+        if (!hasToken && needsToken) return GitBlocker.NO_TOKEN
 
         // 3. Not a git repository
         if (!isRepository) return GitBlocker.NO_REPOSITORY
 
         // 4. No remote — blocker only for push/pull, not for commit
-        if (op is GitOperation.CommitOrPublish || op is GitOperation.Publish) {
-            if (remoteUrl == null) return GitBlocker.NO_REMOTE
-        }
+        if (isPushPull && remoteUrl == null) return GitBlocker.NO_REMOTE
 
         // 5. Offline / no network signal
         if (online != true) {
