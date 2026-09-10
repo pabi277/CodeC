@@ -359,14 +359,20 @@ report → STOP at the merge gate. The owner merges to `main` themselves
    **Phase 37 (device-as-server LAN) is IMPLEMENTED, CI GREEN and
    ✅ DEVICE-PASSED on `arena/01a0872e-codec`** (owner: "All pass" on all eight
    exit checks, 2026-09-10), **with that round's 🌐 open-in-browser follow-up
-   shipped on the same branch** — the phase series is therefore complete and
-   only the merge gate remains
-   (`docs/PHASE34_37_ROADMAP.md` §State of record) — 34 official file icons,
-   35 editor typing feel, 36 terminal speed & UX, 37 device-as-server LAN.
-   Each starts on the owner's **"Start Phase N"** and finishes with a
-   cross-device round; see the head line. No self-initiated phase starts
-   otherwise. The owner's stated end of the series is the cross-device
-   round: done — report Phase 37, then stop at the merge gate.
+   shipped on the same branch** — and Phase 37 + the 38-43 plan are now
+   **MERGED via PR #62** (`main` at `e89dc49`).
+   **The 38-43 series ("before I share the app") runs 38 → 39 → 40 → 41 →
+   42 → 43 — the numbers ARE the order (39.1 before 43.2 is the one
+   ordering rule). Phase 38 (Identity: app icon + Settings trim) is ✅
+   COMPLETE, DEVICE-PASSED & MERGED to `main`** (owner: "Start Phase 38"
+   → "All device test pass … then marge it", 2026-09-10): the original
+   `>_` mark with a real monochrome layer, committed generated rasters +
+   a notification silhouette (38.1), and the Termux Engine card out of
+   Settings with the mechanism kept + the audit that deleted two
+   reader-less store keys (38.2) — 45 new host cases, CI GREEN, device
+   round passed by owner report. **Phase 39 (outputs are temporary,
+   never in your repo) is next and starts on the owner's "Start Phase
+   39"**; no self-initiated phase starts otherwise.
 3. A part is complete only when its exit condition is met and verified (owner
    device transcript for device gates — never claim acceptance without one).
 4. Keep `prompt.md`, `docs/JOURNEY.md`, `docs/NEXT_STEPS.md`,

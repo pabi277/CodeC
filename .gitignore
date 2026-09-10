@@ -27,3 +27,6 @@ codec-packages/.work
 codec-packages/dist
 __pycache__/
 *.pyc
+
+# Phase 38.1 — icon generator deps (scripts/render_icon.mjs); outputs are committed
+node_modules/

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 38.1 — the notification small icon: the ">_" silhouette as a
+     single-colour 24 dp vector (status-bar icons are tinted silhouettes;
+     a full-colour adaptive foreground in that slot renders as a white
+     box). Deliberately bolder than the launcher glyph (it fills the 24
+     grid instead of the 66/108 safe zone) so it stays legible at status
+     size. Used by RunForegroundService, TerminalForegroundService and
+     CodecApiBridge's notify. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6,4 L14,12 L6,20 L4,18 L10,12 L4,6 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,16.7 L20.4,16.7 L20.4,20 L10,20 Z" />
+</vector>

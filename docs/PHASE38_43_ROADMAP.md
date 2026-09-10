@@ -210,6 +210,11 @@ reality, and a written known-issues page for testers.
 
 ## State of record (when this plan was written)
 
+> **Update 2026-09-10:** Phase 38 (Identity) is ✅ COMPLETE, DEVICE-PASSED
+> & MERGED to `main` — CI `34442522565`/`34443027257` green, owner device
+> round "All device test pass", merge commanded. 39 is next. The bullets
+> below are the frozen snapshot from planning day.
+
 - Phase 37 (device as server / LAN) — ✅ IMPLEMENTED, ✅ CI green
   (`Build APK` `34393543928` on `6d36a83`, `34398031696` on the follow-up
   `98cb2b4`), ✅ **DEVICE-PASSED by the owner's two-device round** ("All pass",

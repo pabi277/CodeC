@@ -112,7 +112,9 @@ class RunForegroundService : Service() {
             else -> getString(R.string.foreground_run_starting)
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            // Phase 38.1 — a real status-bar silhouette (the ">_" mark),
+            // not the full-colour adaptive foreground (white-box bug).
+            .setSmallIcon(R.drawable.ic_stat_codec)
             .setContentTitle(title)
             .setContentText(body)
             .setContentIntent(tapPending)
