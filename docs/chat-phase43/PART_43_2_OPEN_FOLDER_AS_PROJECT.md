@@ -1,4 +1,4 @@
-# CodeC Phase 39.2 — Open a folder as a project (link + sync), in place where it is legal
+# CodeC Phase 43.2 — Open a folder as a project (link + sync), in place where it is legal
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** L ·
 > **Owner row (verbatim):** *"i can't open a project in the editor from project
@@ -9,7 +9,7 @@
 Everything the user already has — a folder from a course, a USB-drive dump, a
 `Download/school/` tree, a project another app created — cannot be opened. The
 only entry points are *New project*, *Clone*, *Import ZIP* and *Open folder*,
-and "Open folder" (39.1) is a **one-way copy into a new project**: after it,
+and "Open folder" (43.1) is a **one-way copy into a new project**: after it,
 the user's folder and CodeC's copy are unrelated. Nothing can be added to the
 hub from an existing folder, nothing can be saved back, and nothing can be
 opened from any of the `FileManager.projectDirCandidates()` roots other than the
@@ -73,22 +73,22 @@ project, on pull-to-refresh in the hub, and from an explicit **Sync now** in
 the project's ⋮ menu. No `FileObserver`/`ContentObserver` background watcher
 (this phase's README defers it with reasons): observers are OEM-unreliable and
 a surprise write into the user's folder while they are editing it elsewhere is
-worse than a visible action. Every sync is bounded by 39.1's
+worse than a visible action. Every sync is bounded by 43.1's
 `WalkBudget` and reports counts, so a linked folder with 40 000 files says so
 instead of hanging.
 
-**4. Skip rules are shared, and that is why 40.1 comes first.** Push uses
+**4. Skip rules are shared, and that is why 39.1 comes first.** Push uses
 `TreeWalkPolicy.shouldSkip` **plus** `BuildArtifactIgnore.matchesPatterns`:
 CodeC must never write `a.out`, `bin/menu`, `__pycache__` or `.codec/` back
 into the user's real folder — the same rule that keeps them out of git
-(Phase 40). If 40.1 ships first, CodeC's own outputs live in
+(Phase 39). If 39.1 ships first, CodeC's own outputs live in
 `filesDir/CodeC/temp/` and are not in the project at all, so push has nothing
 to leak; the ignore list remains as the belt. **Ordering dependency recorded:
-40.1 → 39.2.** (39.1 has no such dependency and may be pulled forward.)
+39.1 → 43.2.** (43.1 has no such dependency and may be pulled forward.)
 
 **5. "Open a folder as project" is the entry point.** The hub sheet's
 *Open folder* row becomes a chooser with three outcomes, all from one SAF
-pick: (a) **Copy into CodeC** (39.1, unchanged semantics), (b) **Link and
+pick: (a) **Copy into CodeC** (43.1, unchanged semantics), (b) **Link and
 sync** (new), (c) when the picked folder is *already* a CodeC project root
 candidate, **Add to hub** (no copy at all — register the root and use the
 `File` path; this is the small piece that makes "open a project from the
@@ -125,7 +125,7 @@ PASS = all six on the owner's device; 1-3 are the core promise.
 
 CodeC can *already* hold `/sdcard` paths directly when the user granted all-files
 access (`Environment.isExternalStorageManager()`), so a third design is available
-for 39.2: **open in place** — no copy, no link ledger, edits land in the user's
+for 43.2: **open in place** — no copy, no link ledger, edits land in the user's
 own folder, and a huge project costs nothing. It is not chosen as the default,
 for four reasons, and the device round may still prefer it per-project:
 
@@ -135,7 +135,7 @@ for four reasons, and the device round may still prefer it per-project:
 2. it breaks the one rule that keeps project operations safe:
    `ProjectManager.project()` demands `canonicalFile.parentFile == projectsRoot`,
    so an external root means every project operation (rename, delete, duplicate,
-   export, `.codec/project.json` writes, and Phase 40.1's artifact deletion) has
+   export, `.codec/project.json` writes, and Phase 39.1's artifact deletion) has
    to be re-audited for "this could now be the user's Downloads folder";
 3. on API 30+ **without** the grant there is no path at all — SAF cannot write
    back into an arbitrary folder's tree efficiently, so an in-place project on
@@ -150,7 +150,7 @@ default (works with the picker and with a granted folder alike), and treat
 in-place as a per-project flag the *user* turns on in the folder's long-press
 menu, only visible when `isExternalStorageManager()` is true — with the danger
 the owner named (CodeC must not delete the user's `build/` without asking)
-handled by 40.1's ignore engine never deleting outside `projectsRoot`, ever. That
+handled by 39.1's ignore engine never deleting outside `projectsRoot`, ever. That
 last clause is a law, not a nicety: **no CodeC cleanup path may write or delete
 outside its own project root without an explicit user confirmation in the same
 dialog.** If implementing it turns out to need more than that flag plus a
@@ -173,14 +173,14 @@ dialog.** If implementing it turns out to need more than that flag plus a
   `ProjectSync.request()` exactly once per qualifying event (a debounced
   coalescing queue, so 20 rapid saves are one sync — assert the coalescing,
   not the timing); a thrown `Throwable` from the resolver becomes a message +
-  a `w`-level log and `_isSyncing` clears (the same boundary rule as 39.1).
+  a `w`-level log and `_isSyncing` clears (the same boundary rule as 43.1).
 - Deliberately **not** unit-tested: real DocumentsUI behaviour, SD-card
   removal, OEM provider quirks — device round, and the doc says so instead of
   faking a `ContentResolver`.
 
 ## Sources (record)
 
-- `rule.md` §lifecycle (no blind fix — 39.1's crash record gates 39.2's
+- `rule.md` §lifecycle (no blind fix — 43.1's crash record gates 43.2's
   picker change too).
 - [stackoverflow.com/q/37157765] + [stackoverflow.com/q/57260955-family
   answers / stackoverflow.com/q/57747643 (CommonsWare)] — `ACTION_OPEN_DOCUMENT_TREE`
@@ -201,7 +201,7 @@ dialog.** If implementing it turns out to need more than that flag plus a
 - CodeC code, 2026-09-10: `ProjectManager` (`projectsRoot`, `project()`
   parent check, `migrateLegacyFiles`), `FileManager.projectDirCandidates`,
   `EditorViewModel` save choke point, `GitDiff` (reused for Show diff),
-  `SettingsManager`/DataStore for the link record, `ProjectTransfer` (39.1's
+  `SettingsManager`/DataStore for the link record, `ProjectTransfer` (43.1's
   walker), `BuildArtifactIgnore` (shared skip rules).
 
 ## Deferred / rejected with reasons

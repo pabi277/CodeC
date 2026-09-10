@@ -1,4 +1,4 @@
-# CodeC Phase 43.2 — Weight: what a tester actually has to download
+# CodeC Phase 42.2 — Weight: what a tester actually has to download
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` + build config · **Effort:** M
 
@@ -11,7 +11,7 @@ the release build today would be about the same, because
 produced `CodeC-IDE` at 24 847 809 B — **97 B below** the build of its parent
 tip `04f336f` (24 847 906 B) with **no `app/` file changed** and the same
 3-digit CI run number in `versionName`. So zip assembly itself moves the size by
-~10² bytes. Any 43.2 result smaller than ~0.1 % (≈24 KB) is not a finding, and a
+~10² bytes. Any 42.2 result smaller than ~0.1 % (≈24 KB) is not a finding, and a
 before/after pair measured on *different* runs must be re-measured twice before
 it is reported to the owner. What's inside it,
 in order of weight, from the repo's own facts rather than guesses:
@@ -55,7 +55,7 @@ means *no C compiler at all*, so the pairing needs the test below, not hope);
 (c) **ship the TCC runtime as a module download** like everything else
 (there is already a `tcc` entry in `ModuleCatalog.kt:53` and a `ModuleInstaller`
 with a host test) — smallest APK by far, costs first-run network for C users,
-and 43.2 explicitly *does not* decide this alone: it is the owner's
+and 42.2 explicitly *does not* decide this alone: it is the owner's
 offline-first call, recorded as an open question with its numbers.
 **Also found while measuring:** `abiFilters` lists four ABIs but
 `EmbeddedCompiler.ABI_DIRS = listOf("arm64-v8a", "x86_64")` and `jniLibs` holds
@@ -93,7 +93,7 @@ actually breaks), flexmark extension loader, `BuildConfig` (the
 **Report the byte delta to the owner even if it's an increase** (Phase 37's
 discipline: measure with `du -b`, state it as a percentage).
 - `-keepattributes SourceFile,LineNumberTable` — non-negotiable here: CodeC's
-  own crash record is the support channel (41/43.3), and an unobfuscated
+  own crash record is the support channel (41/42.3), and an unobfuscated
   line-number table is what makes a minified-build crash readable. Renaming
   source-file attributes off (`-renamesourcefileattribute SourceFile`) is fine.
 - `mapping.txt` is uploaded as a **CI artifact** (not into the APK), so a
@@ -116,8 +116,8 @@ the owner's target group are arm64 or x86_64.
 **3. Resource weight, cheaply.** `isCrunchPngs = false` was set for a reason
 (the vendored IDE's PNG pipeline) — so **measure first**: try `isCrunchPngs =
 true` on the release variant, record the delta and any build failure, and keep
-it off if it breaks anything. Then Phase 42.1's icon set lands with real
-WebP/PNG only (42 deleted nothing, 42.1 replaces the bitmaps), so the icon
+it off if it breaks anything. Then Phase 38.1's icon set lands with real
+WebP/PNG only (42 deleted nothing, 38.1 replaces the bitmaps), so the icon
 densities are correct by construction.
 
 **4. What we will not do.** No changes to `packaging { jniLibs {
@@ -166,7 +166,7 @@ shrink turns into a blank editor.
 5. The `assets/tcc` decision is recorded with its numbers and the owner's
    choice — including "keep shipping both ABIs in every artifact" if that is
    what the offline-first guarantee costs; and the armv7/x86 "no built-in C
-   compiler" sentence lands in `docs/BETA.md` (43.3's release-notes work).
+   compiler" sentence lands in `docs/BETA.md` (42.3's release-notes work).
 PASS = 1-5; 3 is where the phase is won or lost.
 ```
 
@@ -249,13 +249,13 @@ host does cover:
   hygiene, own phase if ever.
 - **Removing the bundled `libtcc.so` in favour of clang-only** — the TCC
   fallback exists precisely because downloaded clang cannot be exec'd on some
-  devices (33.3's C path, 42.2's Termux fallback); deleting the offline
+  devices (33.3's C path, 38.2's Termux fallback); deleting the offline
   compiler to save 1.2 MB would trade a real capability for a rounding error.
 - **Dex shrink via `r8 -allowaccessmodification` tuning, `-classmemberranking`
   tricks** — measurable, brittle, unreadable crash risk; not for a beta whose
   support channel is a human reading a crash log.
 - **Publishing `.aab` for direct install** — you can't install an AAB; and
-  `bundletool build-apks --mode=universal` output is exactly 43.2's universal
+  `bundletool build-apks --mode=universal` output is exactly 42.2's universal
   APK, without the signing ceremony. Recorded in case the Play decision ever
   changes.
 - **Asset compression of `assets/`** — `assets/` is stored opaquely; the only

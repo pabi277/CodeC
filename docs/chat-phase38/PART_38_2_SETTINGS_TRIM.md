@@ -1,4 +1,4 @@
-# CodeC Phase 42.2 — Settings trim: the Termux bridge goes, the fallback stays
+# CodeC Phase 38.2 — Settings trim: the Termux bridge goes, the fallback stays
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S ·
 > **Owner row (verbatim):** *"From the settings remove unessesary Termux bridge"*
@@ -56,7 +56,7 @@ Compiler** · **Termux Engine** · Terminal · Terminal Extra-Keys & Shortcuts �
 Package Repository & Trust · GitHub Account · Appearance · Storage · About ·
 Developer Options. Three compiler sections for one automatic policy is where
 the confusion came from, so this part also produces a `SettingsAudit` table in
-`docs/chat-phase42/` — one row per control: *what it changes, who can observe
+`docs/chat-phase38/` — one row per control: *what it changes, who can observe
 it, does anything read the stored value?* — and applies the verdict:
 
 - **merge** the compiler-related rows that both describe the same automatic
@@ -66,7 +66,7 @@ it, does anything read the stored value?* — and applies the verdict:
   key is never queried is worse than no switch, because the user believes it
   did something).
 - **keep** Package Repository & Trust (it drives the Part D trust material) and
-  GitHub Account (38.1's readiness reads it), each *stated* as kept with its
+  GitHub Account (40.1's readiness reads it), each *stated* as kept with its
   reader named — so the next audit does not re-open them.
 
 The audit is a table in a doc + a host test, not a sweep: the test enumerates

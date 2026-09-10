@@ -202,12 +202,16 @@ Every update updates the docs **in the same commit**:
 
 - **Phases 38-43 are 📋 PLANNED — docs only, no app code, no PR** (2026-09-10,
   owner: six new "before I share this" ideas + *"research thoroughly then write
-  new phases"*): **38** git readiness/push truth/publish-to-GitHub, **39** safe
-  folder walk + open-folder-as-project, **40** temp outputs + ignore policy,
-  **41** WhatsApp-first feedback, **42** app icon + Settings trim, **43**
-  share-readiness (release signing, updater, weight, backup, crash loop).
-  Recommended order **42 → 40 → 38 → 41 → 43 → 39**, with one hard dependency:
-  **40.1 before 39.2**. Records:
+  new phases"*), **renumbered on the owner's follow-up request ("*Rename the
+  phases so i can continue 38 to 43*") so that the numbers are the order of
+  work**: **38** app icon + Settings trim, **39** temp outputs + the repo ignore
+  policy, **40** git readiness/push truth/publish-to-GitHub, **41**
+  WhatsApp-first feedback, **42** share-readiness (signing, updater, weight,
+  backup, crash loop, export-all), **43** file system strength (safe folder walk
+  + open-folder-as-project). The only ordering rule to remember inside that
+  sequence: **39.1 before 43.2** (a linked user folder must never receive CodeC's
+  build outputs). Old→new map: 42→38, 40→39, 38→40, 41→41, 43→42, 39→43.
+  Records:
   `docs/PHASE38_43_ROADMAP.md` + `docs/PHASE38_43_OSS_RESEARCH.md` +
   `docs/chat-phase38/`…`chat-phase43/`. CI on the planning commit is ✅ GREEN
   (`Build APK` `34433912076`, tip `8d365c4`, 6 m 18 s — a docs-only push, run

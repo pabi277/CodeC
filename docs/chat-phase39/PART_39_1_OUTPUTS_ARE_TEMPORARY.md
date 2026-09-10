@@ -1,4 +1,4 @@
-# CodeC Phase 40.1 — Outputs are temporary files (and get collected)
+# CodeC Phase 39.1 — Outputs are temporary files (and get collected)
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"I the output files as temporarily file"* — read as:
@@ -14,7 +14,7 @@ used for a term has hundreds of stray binaries and copies of the user's source
 sitting in app storage — invisible to the user, so it looks like nothing is
 wrong until storage is tight. Meanwhile project-side outputs
 (`a.out`, `bin/menu`, `__pycache__`) are *inside* the repository, which is the
-half that annoys the user (40.2).
+half that annoys the user (39.2).
 
 Two things are therefore wrong and they are different: **location** (some
 outputs belong to the project, e.g. the user's own `-o bin/menu`) and
@@ -32,7 +32,7 @@ object RunArtifacts {
              userSuppliedOutput: String?): ArtifactPlan
     data class ArtifactPlan(val sourceCopy: File?, val binary: File, val cwd: File,
                             val ownedByCodeC: Boolean)   // owned ⇒ GC-eligible
-    fun isCodeCArtifact(relativePath: String): Boolean   // for 40.2 + 39.2's push set
+    fun isCodeCArtifact(relativePath: String): Boolean   // for 39.2 + 43.2's push set
 }
 ```
 
@@ -49,11 +49,11 @@ build output" from name patterns in three places.
 **2. Per-language placements, explicit in the plan** (so the device round can
 check each row):
 
-| Run | Today | After 40.1 |
+| Run | Today | After 39.1 |
 |---|---|---|
 | C single file (TCC/Clang) | `temp/source_*.c`, `temp/program_*` | `temp/runs/<stamp>/{source.c,program}` |
-| C project (`bin/<name>.out`, `-o bin/menu`) | project `bin/` | unchanged (user's path), excluded by 40.2, deleted by *Clear outputs* |
-| Python | runs in place (`__pycache__/` appears in the project) | unchanged location; `PYTHONPYCACHEPREFIX` set to `temp/runs/<stamp>/pycache` when the interpreter supports it (3.8+), so the cache is *ours*, and 40.2 covers the case where it isn't |
+| C project (`bin/<name>.out`, `-o bin/menu`) | project `bin/` | unchanged (user's path), excluded by 39.2, deleted by *Clear outputs* |
+| Python | runs in place (`__pycache__/` appears in the project) | unchanged location; `PYTHONPYCACHEPREFIX` set to `temp/runs/<stamp>/pycache` when the interpreter supports it (3.8+), so the cache is *ours*, and 39.2 covers the case where it isn't |
 | Node / Lua / HTML preview | no output files | `stdout` capture files (if any) move under the run dir |
 | Server (`ServerHost`) | log tail in memory | session logs under `temp/runs/<stamp>/server.log`, GC'd |
 
@@ -98,14 +98,14 @@ it).
 1. RUN a C file 5×: `CodeC/temp/runs/` holds 5 stamp dirs; the project has no
    source_*.c / program_* anywhere; the Output Panel and re-runs work.
 2. `cc src/*.c -o bin/menu` in the terminal + RUN with that config: bin/menu
-   still exists where the user asked, and is excluded from git (40.2).
+   still exists where the user asked, and is excluded from git (39.2).
 3. Restart the app after 30 RUNs: only the newest 8 (or the byte cap) remain;
    Settings → Storage reports the size, and [Clear] empties idle runs.
 4. While a server/run is live, its stamp dir survives GC (kill -0 equivalent:
    re-run while GC ran — no "file disappeared" error).
 5. Python run creates no `__pycache__` in the project when
    `PYTHONPYCACHEPREFIX` is honoured; when the interpreter is older, the
-   fallback is exactly today's behaviour + 40.2's exclusion (no failure).
+   fallback is exactly today's behaviour + 39.2's exclusion (no failure).
 6. `Clear outputs` never deletes a file that is in the user's `.gitignore`
    sense "theirs" — i.e. the only deletions are under CodeC's temp root.
 PASS = 1, 3, 4, 6 on device; 2 and 5 are the device round's spot checks.
@@ -148,7 +148,7 @@ PASS = 1, 3, 4, 6 on device; 2 and 5 are the device round's spot checks.
 - **Android's `cacheDir` for the run artifacts** — the OS may evict cache at
   any moment; a run in progress would vanish mid-compile. `filesDir/CodeC/temp`
   with our own GC keeps control (and stays inside the app's backup exclusions,
-  see 43.3).
+  see 42.3).
 - **`useLegacyPackaging`/`noexec` interactions** — untouched: temp files are
   data + a binary executed from app-private storage, exactly like today.
 - **Deleting the user's `bin/menu`** — no. It is theirs; we only exclude it

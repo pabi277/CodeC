@@ -1,4 +1,4 @@
-# CodeC Phase 43.1 — A real release channel (and an updater that can be trusted)
+# CodeC Phase 42.1 — A real release channel (and an updater that can be trusted)
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` + workflow + one secret ·
 > **Effort:** M
@@ -59,14 +59,14 @@ and neither fires on a normal push.
 **Artifact hygiene, part of the same change.** CI currently uploads two APKs —
 `CodeC-IDE` (the app, debug) and `CodeC-Bench` (the Phase 28.1 spike, whose
 step comment says *"REMOVE THIS BLOCK when Phase 28 closes"*) — and a stranger
-reading the Actions page cannot tell which is which. 43.1 deletes the bench
+reading the Actions page cannot tell which is which. 42.1 deletes the bench
 block (28.1-28.2 are closed; 28.3/28.4 ride in the app), renames the app
 artifact to `CodeC-IDE-debug`, and leaves one APK per build type on the page. A
 beta's most common support ticket is "the app you sent me doesn't work", and
 half of those are the wrong file.
 
 Naming: `CodeC-IDE-1.3.17-universal.apk` (the one to pick when in doubt) plus
-per-ABI files from 43.2. `versionCode` stays hand-authored but gains a CI
+per-ABI files from 42.2. `versionCode` stays hand-authored but gains a CI
 check: the tag's `app-v<X.Y.Z>` must equal `versionName`'s numeric part, and
 `versionCode` must be **strictly greater** than the greatest one in any
 existing `app-v*` release (one `releases` API call, unauthenticated) — the
@@ -116,7 +116,7 @@ takes the first `assets[]` entry ending in `.apk` and `downloadApk()` writes
 `cacheDir/updates/CodeC-IDE.apk` with `input.copyTo(output)`, no
 `Content-Length` check, no digest, no delete. The gap is not that the code is
 bad, it is that there are two downloaders and only one of them is careful — so
-43.1's implementation rule is: **extract the careful one's rules into a shared
+42.1's implementation rule is: **extract the careful one's rules into a shared
 pure object (`ui/services/ReleaseFetch.kt`-style: JSON→model, no Android),
 then make both callers use it**; the userland path keeps its behaviour (its
 tests `UserlandInstallerTest`/`ModuleInstallerTest` stay green) and the APK path

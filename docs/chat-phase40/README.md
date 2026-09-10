@@ -1,133 +1,125 @@
-# CodeC Phase 40 — Outputs are temporary, never in your repository
+# CodeC Phase 40 — GitHub that tells the truth
 
 > **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** S/M · **Owner row:** *"I the output files as
-> temporarily file and don't come to add in github push find all languages
-> temporarily file and remove from git push also the .codec file"*
+> `[client-only]` · **Effort:** M/L · **Owner row:** *"Github integration update
+> now Github is working but it's not user friendly if i try to clone a repo and
+> didn't download the git it shows error in the background i can't see it,
+> sometimes it's push stay local, new branch create mostly stays local"*
 
 ```text
-  40.1  Run/build outputs live in a temp dir and are garbage-collected
-  40.2  The ignore policy: per-language patterns + .codec, applied at the choke point
+  40.1  Readiness + errors that cannot be missed
+  40.2  Push / branch truth (what actually reached GitHub)
+  40.3  Publish to GitHub (create the remote when there isn't one)
 ```
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [40.1](PART_40_1_OUTPUTS_ARE_TEMPORARY.md) | Outputs as temporary files | M | 📋 PLANNED |
-| [40.2](PART_40_2_IGNORE_POLICY.md) | Nothing CodeC made reaches your repo | S/M | 📋 PLANNED |
+| [40.1](PART_40_1_READINESS_AND_ERRORS.md) | Readiness gate + visible errors | S/M | 📋 PLANNED |
+| [40.2](PART_40_2_PUSH_TRUTH.md) | Push & branch outcome | M | 📋 PLANNED |
+| [40.3](PART_40_3_PUBLISH_TO_GITHUB.md) | Publish to GitHub | M | 📋 PLANNED |
 
-## What exists today (evidence, read 2026-09-10)
+## What exists today (evidence, read on 2026-09-10)
 
-- **Two ignore helpers, both writing to `.git/info/exclude`** (never the user's
-  `.gitignore` — "the user's own file always wins" is the stated law in both):
-  - `BuildArtifactIgnore.EXCLUDE_LINES` = exactly **12 patterns**:
-    `*.out *.o *.obj *.exe *.class bin/ dist/ build/ target/ node_modules/
-    .venv/ venv/`, with `missingLines()`, `appendTo()`, `matchesPatterns()`,
-    `untrackTracked()` and a `resolveGitDir()` that also understands a
-    `gitdir:` pointer file.
-  - `PythonCacheIgnore` covers `__pycache__`-style caches separately.
-- **Untracking exists but is wired to one place.** `untrackTracked(projectRoot,
-  git)` (which runs `git rm -f --cached --quiet -- <paths>` for tracked files
-  matching the patterns) is called from **`GitControlViewModel.refresh()`**
-  only. `stageAll()` is `git add -A`, and COMMIT & PUSH paths that don't go
-  through that refresh can still stage an artifact that was tracked before the
-  rules existed.
-- **`CodeC`'s own files are not excluded.** `.codec/project.json`
-  (`ProjectManager.writeConfig`) and the root `.codec.json`
-  (`CodecJsonParser`, Phase 24.9) are neither in `EXCLUDE_LINES` nor in
-  `PythonCacheIgnore` — the owner's *"also the .codec file"* is a real gap, not
-  a misunderstanding.
-- **Compiled-run temp files already live outside the project** — and nobody
-  cleans them up: `CompilerService.getTempDir()` is
-  `filesDir/CodeC/temp`, where `source_<stamp>.c` and `program_<stamp>` are
-  written; only one success path deletes (`line 807`:
-  `File(binary.parentFile, "source_$stamp.c").delete()`). There is **no GC**:
-  every RUN leaves a new pair of files forever. `ProjectTransfer.importZip`
-  writes `codec-import-*.zip` into `projectsRoot()`'s own directory and deletes
-  it in `finally` (correct, but a crash mid-import leaves it).
-- The hub/card list is built from `projectsRoot().listFiles()` filtered to
-  directories whose name passes `sanitizeProjectName` and does not start with
-  `.` — so any stray folder a run creates in `projectsRoot` silently becomes a
-  "project".
+- **The engine is solid.** `ui/projects/GitManager.kt` (935 LOC) runs the
+  userland `git` binary with a cleared environment, `GIT_TERMINAL_PROMPT=0`,
+  an askpass helper that reads the token **from the env** (never written to
+  disk), redaction of the token in every line (`GitRedactor`), local/network
+  timeouts (60 s / 300 s) with a poll loop, and `GitCommandException` carrying
+  exit code + redacted output. `GitErrors.kt` (220 LOC, Phase 17) already maps
+  12 failure kinds — `NOT_INSTALLED`, `NO_TOKEN`, `AUTH_FAILED`, `OFFLINE`,
+  `REJECTED`, `NO_UPSTREAM`, `TIMEOUT`, … — into a message plus a help URL.
+- **Upstream handling exists.** `pushHandlingUpstream()` reads
+  `git status --porcelain=v1 -b`, and when there is no upstream it pushes
+  `--set-upstream <remote> <branch>`; `GitBranchOps.SwitchBranchResult` carries
+  `published` / `publishError`, so a new branch created in the app *is*
+  published, and the sheet says "· published to GitHub" or "· not on GitHub
+  yet: <reason>".
+- **The hub card already shows a badge**: `ProjectsHubEntry.unpublished` /
+  `unpushed` render `↑` / `↑3` on the project card (`FileManagerScreen:1268`).
+
+## …and the three holes that produce exactly what the owner reported
+
+1. **Nothing checks readiness before acting.** `GitManager.isAvailable()`
+   (binary present, executable, `git --version` OK) exists **with zero call
+   sites** in the app. `GitContext.manager()` returns `null` when
+   `$PREFIX/bin/git` is absent, and `FileManagerViewModel.cloneFromGitHub`
+   turns that into `error(git_not_installed_message)` — correct text, wrong
+   place (next hole).
+2. **The failure message can be rendered where the user cannot see it.**
+   `cloneFromGitHub` reports through `_userMessage`, which `FileManagerScreen`
+   shows in the **SnackbarHost** — while the clone `AlertDialog` stays open:
+   `showCloneDialog = false` is only in the *success* callback. A dialog owns a
+   separate window above the snackbar, so a failure is literally "an error in
+   the background i can't see it": the dialog just stops being busy. (Push/
+   commit inside `GitControlSheet` does surface `pushError`, but only while
+   that sheet stays open — after it is dismissed the state is gone.)
+3. **"Push stayed local" has four different causes and one shared silence.**
+   (a) no credentials → git dies with `could not read Username`, mapped to
+   `NO_TOKEN` but only *after* the attempt; (b) a token without Contents:write
+   → `REJECTED`/`AUTH_FAILED`; (c) **the project has no remote at all** —
+   `firstRemote()` falls back to the literal `"origin"` and the push fails with
+   `'origin' does not exist`, with nothing offering to create the repository;
+   (d) pushed to a *different* branch name than the user expects, since
+   `push()` with `setUpstream = false` pushes only the current branch's
+   upstream. None of the four is *pre-announced*, and (c) has no remedy at all.
 
 ## Research that shaped the design
 
-Dossier: [`../PHASE38_43_OSS_RESEARCH.md`](../PHASE38_43_OSS_RESEARCH.md) §3.
-The one adoptable data set is **`github/gitignore`**, which is **CC0-1.0**
-("allowing unrestricted use … without attribution requirements") and is exactly
-the curated per-language pattern knowledge the owner asked to be found ("find
-all languages temporarily file"). 40.2 borrows its **pattern names** — merged
-into one table, not shipped as template files. Mechanism-wise, everything we
-need is git's own: `.git/info/exclude` (machine-private, never travels),
-`git rm --cached`, `git status --porcelain=v1`, `git check-ignore -v`.
+Full dossier: [`../PHASE38_43_OSS_RESEARCH.md`](../PHASE38_43_OSS_RESEARCH.md) §1.
+Decisions: **keep the CLI engine** (JGit rejected on Java-11 BREE vs API 24,
+weight, and forked semantics); **`POST /user/repos` for publish**, with the
+fine-grained-token caveat recorded (it needs *Administration: write* and an
+all-repositories scope, else the UI must say "create it in the browser and
+paste the URL"); **`X-Accepted-GitHub-Permissions` is the answer to "which
+permission am I missing"** — we surface GitHub's own words instead of
+inventing a guess; VS Code / GitHub Desktop as *behaviour* reference for
+"publish = an explicit state with a one-button remedy".
 
-## The rules both parts share
-
-1. **Never edit the user's `.gitignore`.** CodeC's rules go to
-   `.git/info/exclude`, and a pattern the user already has (in either file) is
-   not duplicated — today's behaviour, kept.
-2. **Never delete a file the user might want.** GC only ever removes files
-   under `CodeC/temp/` that CodeC created and that are not in use by a running
-   process; `.git/` is never touched except through git subcommands.
-3. **A file's location decides its lifetime.** Inside the project = the user's;
-   in `CodeC/temp` = CodeC's, and therefore collectable.
-4. `git add -A` must not be able to bypass anything: the enforcement point is
-   `GitManager.stageAll()`, not a caller's good intentions.
-
-## Exit condition (whole phase)
+## Exit condition (owner's device, one GitHub account, no server changes)
 
 ```text
-1. RUN a C file, then COMMIT & PUSH in a repo: GitHub shows the sources; no
-   a.out / program_* / source_*.c / bin/* anywhere in the commit; and
-   `git status --porcelain` afterwards is clean apart from real sources.
-2. .codec/project.json and .codec.json never appear in a commit, in a project
-   that had them committed BEFORE this phase (the `git rm --cached` path), and
-   the local files still work after the untrack (the project still opens, runs,
-   and keeps its run config).
-3. Python: __pycache__/, *.pyc, .venv/, .pytest_cache/ stay out. Node:
-   node_modules/, npm-debug.log, .next/, dist/ (when created by CodeC's run)
-   stay out. C/C++ extra: *.so, *.a, *.d, CMakeFiles/, CMakeCache.txt,
-   compile_commands.json stay out. (Each table entry has a host test.)
-4. Run `cc src/*.c -o bin/menu` yourself in CodeC's terminal, then COMMIT &
-   PUSH: bin/menu is still excluded — because the ignore table, not the file
-   location, catches the user's own output.
-5. After 20 RUNs and one app restart, `CodeC/temp` is bounded (≤ the GC cap in
-   bytes AND in entry count) and the last run's artifacts still work — GC never
-   eats what is currently in use.
-6. A user's own `.gitignore` that says `!a.out` (i.e. they DO want it) wins —
-   CodeC neither edits their file nor untracks the file they want tracked.
-PASS = all six (3 is host-tested; 1, 2, 4, 5, 6 need the device round).
+1. Git NOT installed (fresh app, no Modules → Git): the clone dialog and the
+   Source Control sheet both say so BEFORE a tap, with an "Install Git" action
+   that opens Modules with Git preselected. Nothing hangs, nothing spins.
+2. Clone with a bad URL / no network / wrong token: the message appears inside
+   the dialog, and the dialog closes. A failure is never only in the snackbar.
+3. A project with no remote: "Publish to GitHub" creates the repo (or states
+   the exact missing permission from GitHub's reply), adds the remote, pushes,
+   and the sheet shows `main → github.com/<owner>/<repo>` with the short SHA.
+4. Create a branch, commit, push: `git ls-remote` from the same repo shows the
+   branch, the hub badge clears, and the sheet says which branch was published.
+5. "Everything up-to-date" is reported as itself — not as a success that
+   pushed something.
+PASS = all five on the owner's device (3 needs a real repo creation).
 ```
 
 ## Risks to watch (multi-device round)
 
-- **Already-tracked artifacts.** `.git/info/exclude` cannot un-track; only
-  `git rm --cached` + a commit can, and *that commit is a deletion in the
-  user's history on GitHub*. It must be explicit and explain itself — the
-  device round checks that "cleaned 3 build files out of the repository" is a
-  sentence the user understands, not a mystery commit.
-- **Case-insensitive filesystems** (some SD cards / OEM providers) make
-  `bin/` vs `BIN/` behaviour differ — patterns are matched on the git-relative
-  path exactly as git does, and `matchesPatterns()` must stay consistent with
-  `git check-ignore` on the same inputs (a test asserts the two agree on the
-  device).
-- **Clone-from-GitHub repos that ship their own `.gitignore`** — the common
-  case; the "user file wins" rule is what protects it, and 40.2 tests it.
-- **`.codec/` is config, not junk.** Excluding it from *git* must not break
-  anything on the next clone: the design answer is that
-  `ProjectConfig.defaultFor(name, "auto")` regenerates it (the clone path in
-  `FileManagerViewModel` already does exactly this), so a fresh clone on
-  another phone still opens, and RUN detection (`ProjectRunDetector`) fills the
-  rest. If a future `.codec.json` gains something unreproducible, that is the
-  moment to revisit — recorded here so the trade-off is visible.
+- **Provider-of-truth drift**: `unpushed`/`unpublished` are computed in
+  `loadProjects` (hub) and in `GitControlViewModel.refresh` (sheet). One
+  shared pure projection must produce both, or they will disagree — that is
+  the exact bug class Phase 37 pinned with `ServerEndpoints`/`ServerRegistry`.
+- **Rate limits / API errors**: unauthenticated `api.github.com` is 60 req/h
+  per IP; a 403 with a rate-limit body must not look like a token problem.
+- **Shallow clones** (`--depth 1`, Phase 15): pushing from a shallow clone is
+  legal but git can refuse on some servers (`shallowupdate`); the outcome
+  parser must recognise that message and not blame the token.
+- **Private-repo cloning** with a fine-grained token scoped to other repos →
+  404 from git, which reads like "repo does not exist". `GitErrors` must keep
+  those distinct.
+- **Old git versions** in the userland prefix: `--porcelain=v1` and
+  `push --set-upstream` are safe; `git restore`/`git switch` deliberately are
+  not used anywhere (Phase 15 law) — new code must not start.
 
 ## Deferred, recorded on purpose
 
-- **Writing the user's `.gitignore`** (VS Code offers this) — CodeC will not
-  modify a tracked file in someone's repository from an IDE action.
-- **`git clean -fdx` as a "clean" button** — deletes untracked user files;
-  refused. "Clear outputs" only touches `CodeC/temp`.
-- **A global `core.excludesFile`** — it lives in `$HOME`, which for CodeC's
-  `$PREFIX` is userland state that may be reinstalled; `.git/info/exclude` per
-  repo is stable and inspectable.
-- **Committing the untrack automatically** — the deletion commit is made by the
-  user's own COMMIT & PUSH, not by a background job.
+- **SSH remotes / keys on device** — no agent, and `~/.ssh` permission games on
+  Android; HTTPS + stored token stays the only supported transport.
+- **GitHub OAuth device flow** — needs a client id baked in and a browser
+  dance; a pasted token is smaller, revocable by the user, and already the
+  model Settings teaches.
+- **The `gh` CLI module** — exists in the catalog and works in the terminal;
+  not used by the app, because its output is not a stable parsing target and
+  two REST calls do not justify the dependency.
+- **Rewriting history** (rebase/squash/amend, force-push) — CodeC keeps
+  refusing; a phone is not where an irreversible git command belongs.

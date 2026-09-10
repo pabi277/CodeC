@@ -1,4 +1,4 @@
-# CodeC Phase 38.2 — Push & branch truth: what actually reached GitHub
+# CodeC Phase 40.2 — Push & branch truth: what actually reached GitHub
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"sometimes it's push stay local, new branch create
@@ -81,7 +81,7 @@ truth or they disagree).
 `checkoutNew` + publish (Phase 17) keeps its behaviour; the `publishError`
 line moves from the transient `branchResult` into the same `lastResult` card,
 and the hub badge for an unpublished branch gains the reason (`NO_REMOTE` vs
-`AUTH` vs `REJECTED`) in its tooltip (38.1's `blocker().message()` is reused —
+`AUTH` vs `REJECTED`) in its tooltip (40.1's `blocker().message()` is reused —
 one text, two surfaces).
 
 **No new push shapes.** Force-push, `--all`, `--mirror`, tag pushing by
@@ -90,7 +90,7 @@ is that the phone never runs an irreversible git command without the user
 typing it in the terminal. One deliberate addition: when `ahead > 0`
 and `behind > 0`, the card offers **Pull first** and refuses to push into a
 diverged upstream (git would reject it anyway; we simply say so before the
-attempt, in the same vocabulary as 38.1).
+attempt, in the same vocabulary as 40.1).
 
 ## Exit condition
 
@@ -136,7 +136,7 @@ PASS = all five on the owner's device (a second device/clone makes 4 easy).
   (`pushError`, `describeSwitch`), `GitControlView:405-440` (the badge block),
   `ProjectsHub.kt:67` (`unpublished` field), `FileManagerScreen:1255-1285`
   (the `↑N` / `↑` badges).
-- `docs/chat-phase17/*` (upstream/publish device fix) and the Phase 37
+- `docs/chat-phase15/PART_17_SOURCE_CONTROL.md` (the upstream/publish device fix) and the Phase 37
   "one owner of the truth" pattern (`ServerRegistry`/`ServerEndpoints`).
 - git's own output formats, as reproduced on device during Phase 17's round
   and in the sandbox (`git 2.x` from the CodeC userland); the parser test

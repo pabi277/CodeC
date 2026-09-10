@@ -23,14 +23,24 @@ six "before I share the app" ideas (git errors invisible + push that stays local
 "open a folder" crashing + no open-project-from-folder; output/temp files
 landing in commits + `.codec` files; a feedback page reachable on WhatsApp; drop
 the Termux bridge row from Settings; set an app icon — plus *"what should I add
-more before sharing the app"*) became **Phase 38** (git readiness, push truth,
-publish-to-GitHub), **39** (safe folder walk, open-folder-as-project), **40**
-(temp outputs are CodeC's own, one ignore policy), **41** (WhatsApp-first
-feedback with honest disclosure), **42** (original adaptive icon + real monochrome
-layer, Settings trim) and **43** (share-readiness: release signing + a truthful
-updater, measured weight, backup rules, crash-loop guard, export-all, permission
-list that matches reality). Read `docs/PHASE38_43_ROADMAP.md` (order:
-**42 → 40 → 38 → 41 → 43 → 39**; **40.1 must land before 39.2**) and
+more before sharing the app"*) became six phases, and on the owner's follow-up
+(**"Rename the phases so i can continue 38 to 43"**) the numbering was set so
+that **the numbers are the order of work**: **38** Identity (original adaptive
+launcher mark + real `monochrome` layer + notification icon, and the Termux
+Engine card out of Settings with `TermuxCompiler`'s fallback kept), **39**
+Outputs are temporary (run artifacts under `CodeC/temp` + `TempGc`, and
+`RepoHygiene`'s ~60 patterns incl. `.codec/` enforced inside `stageAll`, the
+user's own `.gitignore` always winning), **40** GitHub that tells the truth
+(readiness gate with the error *inside* the dialog, push/branch truth as a
+result card, publish via `POST /user/repos`), **41** Feedback that reaches you
+(`FeedbackDraft` → `wa.me`, number kept as a Settings value, no telemetry),
+**42** Share-readiness (release signing + `app-v*` tags + a truthful updater,
+measured weight, real backup rules, crash-loop guard, export-all, permission
+list that matches reality) and **43** File system strength (bounded
+`Throwable`-safe folder walk, then open-folder-as-project with a *persisted* SAF
+grant). Work straight down the list — the one dependency inside it is **39.1
+before 43.2**. Old→new map for anything quoting the earlier numbers: 42→38,
+40→39, 38→40, 41→41, 43→42, 39→43. Read `docs/PHASE38_43_ROADMAP.md` and
 `docs/PHASE38_43_OSS_RESEARCH.md` (what was rejected with reasons: JGit,
 `MANAGE_EXTERNAL_STORAGE` as a dependency, shipping gitignore *files*, Firebase
 Crashlytics, a Telegram bot token in the APK, Play while `targetSdk = 28`).

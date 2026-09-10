@@ -1,4 +1,4 @@
-# CodeC Phase 40.2 — The ignore policy: nothing CodeC made reaches your repository
+# CodeC Phase 39.2 — The ignore policy: nothing CodeC made reaches your repository
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"don't come to add in github push find all
@@ -79,7 +79,7 @@ fun stageAll(root: File) {
 }
 ```
 
-so *every* path that stages (sheet, quick-commit, future 38.3 publish) is
+so *every* path that stages (sheet, quick-commit, future 40.3 publish) is
 covered, and `GitControlViewModel.refresh()`'s separate call disappears. The
 order matters and is tested: untrack-then-add means the *same* commit records
 both the removal and the clean tree, instead of a follow-up "remove junk"

@@ -44,7 +44,7 @@ the report reads the file `MainActivity.installCrashLog()` writes
 second sink is how a crash gets reported from the wrong build. (2) *No modal
 hijack*: `CrashReportOverlay` already opens before anything else on the next
 launch with COPY ALL / Share / Clear and the sentence *"please COPY ALL and
-paste it into the chat"*. 41 contributes one button to it (43.3 wires
+paste it into the chat"*. 41 contributes one button to it (42.3 wires
 `[Send a report]` into this screen); the three existing buttons keep working
 untouched, because that dialog is how the owner has debugged a dozen device
 rounds.
@@ -52,7 +52,7 @@ rounds.
 **Nothing else in the app may nag.** Explicit non-goals for this part: no
 first-run feedback dialog, no "rate us", no "share on WhatsApp" growth prompt,
 no periodic nudge. Feedback is asked for where the user goes looking for it
-(Settings) and after a crash (43.3 hands the crash record to this screen) —
+(Settings) and after a crash (42.3 hands the crash record to this screen) —
 that's it.
 
 ## Exit condition
@@ -67,7 +67,7 @@ that's it.
 4. The disclosure text is on screen at the moment a checkbox is first ticked
    (no scrolling to find it), and the log checkbox's state is not persisted
    (each report is a fresh choice) — pinned by test.
-5. After a crash (or a simulated one from 43.3's safe mode), the crash row is
+5. After a crash (or a simulated one from 42.3's safe mode), the crash row is
    prefilled in and the section is reachable in one tap.
 PASS = 1-5 on the owner's device.
 ```

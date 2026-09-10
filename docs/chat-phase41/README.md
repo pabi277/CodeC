@@ -30,7 +30,7 @@
   header-first records, `appendThrowable(frameCap = 80)`, up to 5 causes, a 60 KB
   bound). What Phase 41 adds is **the chat** — the thing that text is asking for
   — plus a structured report that does not require the user to find a chat window
-  themselves, and a hook in that same overlay (43.3) so the tap replaces the
+  themselves, and a hook in that same overlay (42.3) so the tap replaces the
   copy-paste ritual.
 - **The material for a report already exists and is good**: `AppLogger`
   (`ui/utils/AppLogger.kt`, a 1 000-line ring of `LEVEL/tag: message` lines,
@@ -117,7 +117,7 @@ PASS = all five on the owner's device (3's redaction half is host-tested).
 ## Deferred, recorded on purpose
 
 - **A public issue-tracker flow** (auto-create an issue with the token from
-  38.3) — the prefilled browser URL covers the need with no secret handling;
+  40.3) — the prefilled browser URL covers the need with no secret handling;
   `POST /repos/{owner}/{repo}/issues` needs *Issues: write* and would
   re-introduce the "which permission?" question in a second place.
 - **Ratings prompts / in-app surveys / Discord or Telegram group join links** —

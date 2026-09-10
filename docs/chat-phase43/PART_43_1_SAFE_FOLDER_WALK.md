@@ -1,4 +1,4 @@
-# CodeC Phase 39.1 — "Open folder" that cannot crash
+# CodeC Phase 43.1 — "Open folder" that cannot crash
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"open a folder crash the app"*
@@ -83,21 +83,21 @@ and the message names what was kept. No `.codec/project.json` is written for a
 project that did not finish.
 
 **The boundary catches `Throwable`.** Every SAF entry point
-(`importFolder`, `importFile`, ZIP import, `fileImportLauncher`, the 39.2 link
+(`importFolder`, `importFile`, ZIP import, `fileImportLauncher`, the 43.2 link
 picker) ends with `catch (t: Throwable)` → `AppLogger.e` with the class +
 message + top frames, and a one-line user message. This is a *policy*, written
-once into 39's law: **no user-facing action may be able to kill the app**.
+once into 43's law: **no user-facing action may be able to kill the app**.
 (Kotlin/Compose cancellation semantics mean we do not swallow
 `CancellationException` into a message — it is rethrown after cleanup; the
 test pins that too.)
 
-**Why 39.1 does not persist the grant.** The picker already uses the right
+**Why 43.1 does not persist the grant.** The picker already uses the right
 contract (`ActivityResultContracts.OpenDocumentTree()`,
 `FileManagerScreen.kt:177`), so the fix is one call — but *not here*: on a
 successful one-shot import we deliberately do **not** call
 `takePersistableUriPermission` (a copied tree needs no lingering permission, and
 a grant the user can see in system settings but cannot explain is a worse app).
-39.2 persists, because it promises a lasting link. That asymmetry is deliberate
+43.2 persists, because it promises a lasting link. That asymmetry is deliberate
 and is stated in both docs so a reviewer does not "unify" it.
 
 ## Exit condition
@@ -157,7 +157,7 @@ PASS = all six.
   TreeDocumentFile#findFile lousy performance"] — why `DocumentFile`'s
   per-child queries are the wrong tool for bulk work (we keep
   `DocumentsContract`).
-- `docs/chat-phase39/README.md` §"noexec is physics"; `rule.md` lifecycle
+- `docs/chat-phase43/README.md` §"noexec is physics"; `rule.md` lifecycle
   (reproduce + evidence before the fix).
 
 ## Deferred / rejected with reasons
@@ -169,7 +169,7 @@ PASS = all six.
   `ln -s` across the FUSE mount is unreliable and `git status`/`cc` would
   follow links out of the sandbox; no.
 - **Streaming the SAF tree directly into the editor (no copy at all)** — that
-  is 39.2, with its own mirror rules; 39.1 keeps *import = copy* semantics for
+  is 43.2, with its own mirror rules; 43.1 keeps *import = copy* semantics for
   users who want a snapshot.
 - **`ACTION_CREATE_DOCUMENT`-based "export back"** — exists already
-  (`exportZip`/`CreateDocument`); 39.2 handles write-back for links.
+  (`exportZip`/`CreateDocument`); 43.2 handles write-back for links.

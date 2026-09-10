@@ -1,4 +1,4 @@
-# CodeC Phase 38.3 — Publish to GitHub: create the remote when there isn't one
+# CodeC Phase 40.3 — Publish to GitHub: create the remote when there isn't one
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"Github integration update now Github is working
@@ -108,7 +108,7 @@ code *in*).
    not half-added (either both steps land or the state says what is partial
    and offers to finish it).
 5. A project that already has `origin`: no Publish row; instead "Push
-   <branch> to <host>" from 38.2.
+   <branch> to <host>" from 40.2.
 PASS = all five, plus the owner's judgement that the wording told them what
 was happening at every step.
 ```
@@ -159,7 +159,7 @@ was happening at every step.
   but it needs a client id in the APK, a browser round-trip, and a token
   refresh story; the paste-a-token model already exists in Settings and a
   fine-grained token is what the owner's own workflow uses. Revisit if
-  Phases 38+ show real confusion in the round.
+  Phases 40+ show real confusion in the round.
 - **GitHub App installation / org repos** — out of scope for a phone IDE.
 - **Creating the repo with a template or `auto_init: true`** — rejected in
   §Design rule 5; a non-empty remote makes the first push fail.

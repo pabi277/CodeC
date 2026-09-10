@@ -1,4 +1,4 @@
-# CodeC Phase 43.3 — The safety net: crash loops, backup, export, and what we promise
+# CodeC Phase 42.3 — The safety net: crash loops, backup, export, and what we promise
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M
 
@@ -76,7 +76,7 @@ If the include-list turns out not to cover DataStore (which lives in
 `data/data/…/datastore/`), the rule adds that domain — decided at
 implementation by *testing a real restore* (`adb backup` is deprecated, so the
 check is `allowBackup=false` vs the include list, and the honest fallback if
-inclusion proves unreliable is **`android:allowBackup="false"` + 43.3's export
+inclusion proves unreliable is **`android:allowBackup="false"` + 42.3's export
 feature as the sanctioned path**, which is the safer of the two and the one
 this part recommends: a phone IDE that says *"your code leaves this device only
 when you export it"* is a better promise than a partial backup).
@@ -144,12 +144,12 @@ there is no "all of it", and no discoverability.
 **Design.**
 - `ProjectTransfer.exportAllZip(out: OutputStream, roots: List<File>)` — no new
   I/O surface: `exportZip(projectRoot, OutputStream)` already exists (with the
-  `MAX_ZIP_ENTRIES = 10_000` / `MAX_ZIP_ENTRY_BYTES = 128 MiB` limits 39.1's
+  `MAX_ZIP_ENTRIES = 10_000` / `MAX_ZIP_ENTRY_BYTES = 128 MiB` limits 43.1's
   review found, and a `finally` delete on the cache path), so "all" is a loop
   over the roots writing `projects/<name>/…` entries — **exactly the layout
   `importZip(InputStream, destination)` reads** — with the caps becoming
   *budgets shared across projects* (today they are per-project: 12 projects ×
-  9 999 entries sail through what no phone should unpack; 39.1 makes the budget
+  9 999 entries sail through what no phone should unpack; 43.1 makes the budget
   explicit, this part reuses it). Round-trip is the requirement, not the archive
   format.
 - **Two roots, not one — a data-loss trap found while reading.** Projects live
@@ -175,7 +175,7 @@ there is no "all of it", and no discoverability.
   keeps your projects in app storage. Uninstalling CodeC deletes them — export
   a backup ZIP first."* Same sentence, in the release notes and in
   `docs/BETA.md`.
-- `Storage` section gains the size line 40.1 already adds ("CodeC uses
+- `Storage` section gains the size line 39.1 already adds ("CodeC uses
   X MB: projects / temp / userland"), plus `[EXPORT ALL]`.
 - **Exit condition, because this is data safety:** 3 projects + a nested folder
   + a 20 MB asset file → export → uninstall → fresh install → import →
@@ -217,13 +217,13 @@ tester will see them, plus the checks that keep them true:
   `app/src/main/java` — each is removed in this part, or the row in
   `docs/DATA_AND_PRIVACY.md` names the code that uses it (if `WAKE_LOCK` turns
   out to be required by a vendored Termux-derived service, *that* is the reason
-  to write down, not to keep it silently). 39.1's revocable per-folder grant
+  to write down, not to keep it silently). 43.1's revocable per-folder grant
   gets its own row too. And `ManifestPermissionsTest` pins the declared set
   against a table in `docs/DATA_AND_PRIVACY.md`: a permission with no row, or a
   row with no reader, **fails the build** — the only way this list stays true
   after the beta.
 - **Licences** — already covered (Phase 30's `LICENSES.md` + snippets, Phase
-  37's zxing line in About); 43.3 only adds a `docs/DATA_AND_PRIVACY.md` page
+  37's zxing line in About); 42.3 only adds a `docs/DATA_AND_PRIVACY.md` page
   the About row points to, so the claim has a source and F-Droid-style reviewers
   have something to read.
 - **`BETA.md`** (repo + linked from the release notes): the known-issues list
@@ -283,7 +283,7 @@ PASS = all four; 2 and 3 are the owner's device, 1 has an on-device half too.
 - `ManifestPermissionsTest` (host, reads the merged manifest text as source —
   the exact-set assertion behind the privacy sentence).
 - `SafeModeBanner`/`AboutText`: string presence + no hardcoded-English
-  regressions in the *new* strings (42's audit already established the
+  regressions in the *new* strings (38's audit already established the
   `strings.xml` habit; the new rows go through `stringResource`).
 
 ## Sources (record)
@@ -312,7 +312,7 @@ PASS = all four; 2 and 3 are the owner's device, 1 has an on-device half too.
   launchers), `GitCredentialsStore` + `ui/theme/ThemeManager.kt:12`
   (`preferencesDataStore(name = "settings")`), and — noting that
   `android:debuggable` is **absent** from the source manifest, which is why
-  43.1's exit check tests the built APK's flags rather than trusting the XML, and
+  42.1's exit check tests the built APK's flags rather than trusting the XML, and
   `app/build.gradle.kts:62-79`'s "uninstall wiped it" story — the same failure
   mode, observed from the developer's side, which is why item 3 is not
   optional.
@@ -323,7 +323,7 @@ PASS = all four; 2 and 3 are the owner's device, 1 has an on-device half too.
 ## Deferred / rejected with reasons
 
 - **A full "sync to Drive/Dropbox" feature** — a different product; the ZIP is
-  the portable unit, and 39.1's folder picker already gives users a place to
+  the portable unit, and 43.1's folder picker already gives users a place to
   put it.
 - **Restoring projects from an Android auto-backup** — fragile across ABIs and
   versions by construction; explicit export is the promise.
@@ -336,5 +336,5 @@ PASS = all four; 2 and 3 are the owner's device, 1 has an on-device half too.
 - **A "reset settings" button in Settings** — tempting and cheap, but it is
   the button that deletes someone's LSP config while they're panicking; safe
   mode's *session-only* override is the same relief without the destruction.
-  (If the owner wants it after the beta, it belongs next to 40.1's cache
+  (If the owner wants it after the beta, it belongs next to 39.1's cache
   controls, with a preview of exactly what resets.)

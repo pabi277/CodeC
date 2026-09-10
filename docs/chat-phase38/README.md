@@ -1,125 +1,131 @@
-# CodeC Phase 38 — GitHub that tells the truth
+# CodeC Phase 38 — Identity: a real app icon, and Settings that stop explaining Termux
 
 > **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** M/L · **Owner row:** *"Github integration update
-> now Github is working but it's not user friendly if i try to clone a repo and
-> didn't download the git it shows error in the background i can't see it,
-> sometimes it's push stay local, new branch create mostly stays local"*
+> `[client-only]` · **Effort:** S/M · **Owner rows:** *"I have to set a app
+> icon"* · *"From the settings remove unessesary Termux bridge"*
 
 ```text
-  38.1  Readiness + errors that cannot be missed
-  38.2  Push / branch truth (what actually reached GitHub)
-  38.3  Publish to GitHub (create the remote when there isn't one)
+  38.1  An original CodeC launcher icon (adaptive + monochrome + legacy bitmaps)
+  38.2  Settings trim: drop the Termux card, audit for rows with no effect
 ```
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [38.1](PART_38_1_READINESS_AND_ERRORS.md) | Readiness gate + visible errors | S/M | 📋 PLANNED |
-| [38.2](PART_38_2_PUSH_TRUTH.md) | Push & branch outcome | M | 📋 PLANNED |
-| [38.3](PART_38_3_PUBLISH_TO_GITHUB.md) | Publish to GitHub | M | 📋 PLANNED |
+| [38.1](PART_38_1_APP_ICON.md) | App icon, notification icon, release/store art | M | 📋 PLANNED |
+| [38.2](PART_38_2_SETTINGS_TRIM.md) | Termux bridge out of Settings + row audit | S | 📋 PLANNED |
 
-## What exists today (evidence, read on 2026-09-10)
+## What exists today (evidence, read 2026-09-10)
 
-- **The engine is solid.** `ui/projects/GitManager.kt` (935 LOC) runs the
-  userland `git` binary with a cleared environment, `GIT_TERMINAL_PROMPT=0`,
-  an askpass helper that reads the token **from the env** (never written to
-  disk), redaction of the token in every line (`GitRedactor`), local/network
-  timeouts (60 s / 300 s) with a poll loop, and `GitCommandException` carrying
-  exit code + redacted output. `GitErrors.kt` (220 LOC, Phase 17) already maps
-  12 failure kinds — `NOT_INSTALLED`, `NO_TOKEN`, `AUTH_FAILED`, `OFFLINE`,
-  `REJECTED`, `NO_UPSTREAM`, `TIMEOUT`, … — into a message plus a help URL.
-- **Upstream handling exists.** `pushHandlingUpstream()` reads
-  `git status --porcelain=v1 -b`, and when there is no upstream it pushes
-  `--set-upstream <remote> <branch>`; `GitBranchOps.SwitchBranchResult` carries
-  `published` / `publishError`, so a new branch created in the app *is*
-  published, and the sheet says "· published to GitHub" or "· not on GitHub
-  yet: <reason>".
-- **The hub card already shows a badge**: `ProjectsHubEntry.unpublished` /
-  `unpushed` render `↑` / `↑3` on the project card (`FileManagerScreen:1268`).
-
-## …and the three holes that produce exactly what the owner reported
-
-1. **Nothing checks readiness before acting.** `GitManager.isAvailable()`
-   (binary present, executable, `git --version` OK) exists **with zero call
-   sites** in the app. `GitContext.manager()` returns `null` when
-   `$PREFIX/bin/git` is absent, and `FileManagerViewModel.cloneFromGitHub`
-   turns that into `error(git_not_installed_message)` — correct text, wrong
-   place (next hole).
-2. **The failure message can be rendered where the user cannot see it.**
-   `cloneFromGitHub` reports through `_userMessage`, which `FileManagerScreen`
-   shows in the **SnackbarHost** — while the clone `AlertDialog` stays open:
-   `showCloneDialog = false` is only in the *success* callback. A dialog owns a
-   separate window above the snackbar, so a failure is literally "an error in
-   the background i can't see it": the dialog just stops being busy. (Push/
-   commit inside `GitControlSheet` does surface `pushError`, but only while
-   that sheet stays open — after it is dismissed the state is gone.)
-3. **"Push stayed local" has four different causes and one shared silence.**
-   (a) no credentials → git dies with `could not read Username`, mapped to
-   `NO_TOKEN` but only *after* the attempt; (b) a token without Contents:write
-   → `REJECTED`/`AUTH_FAILED`; (c) **the project has no remote at all** —
-   `firstRemote()` falls back to the literal `"origin"` and the push fails with
-   `'origin' does not exist`, with nothing offering to create the repository;
-   (d) pushed to a *different* branch name than the user expects, since
-   `push()` with `setUpstream = false` pushes only the current branch's
-   upstream. None of the four is *pre-announced*, and (c) has no remedy at all.
+- **The launcher icon is the Android Studio template art.**
+  `res/drawable/ic_launcher_background.xml` is a `#3DDC84` full-bleed field with
+  the template's grid paths; `ic_launcher_foreground.xml` is the template's
+  robot-head paths plus a `aapt:attr` linear gradient. `mipmap-anydpi-v26/`
+  wires `background`+`foreground`, and its `monochrome` layer points at
+  **the same full-colour foreground** (it "works", but it is not a monochrome
+  design); `mipmap-{m,h,xh,xxh,xxxh}dpi/ic_launcher{,_round}.webp` are the
+  template's bitmaps. Manifest: `android:icon="@mipmap/ic_launcher"`,
+  `android:roundIcon="@mipmap/ic_launcher_round"` — so the shape of the wiring
+  is right and only the art and the monochrome layer are wrong.
+- **The notification small icon is that same foreground vector**: both
+  `RunForegroundService.kt:115` and `TerminalForegroundService.kt:45` call
+  `.setSmallIcon(R.drawable.ic_launcher_foreground)` — a full-colour adaptive
+  foreground in a slot that wants a single-colour silhouette is the classic
+  white-blob status bar. (`CodecApiBridge.kt:816` uses
+  `android.R.drawable.ic_dialog_info`, a system drawable that also should not be
+  used by a third-party notification.)
+- **The Termux card is a whole Settings section.** `SettingsScreen.kt:320-366`:
+  a "TERMUX BRIDGE CARD" with `SettingsSectionHeader("Termux Engine")`, a
+  status row built by `buildTermuxStatusText(...)`, **OPEN TERMUX** and
+  **CHECK** buttons (`TermuxCompiler.runCommand` probe), and a four-step
+  instruction paragraph (`allow-external-apps=true`, `termux-reload-settings`,
+  *Additional permissions*, `pkg update && pkg install clang`) — plus
+  `TermuxUiState`/`loadTermuxState`/`formatProbe` helpers at
+  `:1195-1230` and two mentions inside the compiler-explanation copy at
+  `:1187-1190`. Meanwhile `CompilerService` already treats Termux as a
+  *fallback engine only*: `BACKEND_AUTO` is "the only value the app passes
+  since Phase 21 removed the Settings picker", and the Termux paths are
+  guarded by `if (!TermuxCompiler.isTermuxInstalled(context))` returning the
+  bundled result.
+- The manifest declares `com.termux.permission.RUN_COMMAND` (install-time,
+  user-granted in system settings) and a `<queries><package
+  android:name="com.termux"/></queries>` entry for the visibility check.
 
 ## Research that shaped the design
 
-Full dossier: [`../PHASE38_43_OSS_RESEARCH.md`](../PHASE38_43_OSS_RESEARCH.md) §1.
-Decisions: **keep the CLI engine** (JGit rejected on Java-11 BREE vs API 24,
-weight, and forked semantics); **`POST /user/repos` for publish**, with the
-fine-grained-token caveat recorded (it needs *Administration: write* and an
-all-repositories scope, else the UI must say "create it in the browser and
-paste the URL"); **`X-Accepted-GitHub-Permissions` is the answer to "which
-permission am I missing"** — we surface GitHub's own words instead of
-inventing a guess; VS Code / GitHub Desktop as *behaviour* reference for
-"publish = an explicit state with a one-button remedy".
+Dossier: [`../PHASE38_43_OSS_RESEARCH.md`](../PHASE38_43_OSS_RESEARCH.md) §5-§6.
+Key constraints, all from AOSP-derived guidance: **108 dp canvas → 72 dp masked
+viewport → 66 dp safe circle** for key art, with the outer 18 dp per side
+reserved for parallax/pulse; **a real `monochrome` layer** because Android 13
+tints themed icons and **Android 16 QPR 2 auto-generates one when the app
+ships none** (i.e. skipping it means somebody else designs your icon for you);
+density bitmaps still needed for API 24-25 (48/72/96/144/192 px) and a
+**separate 512×512** store/release icon. Tooling: `sharp` (BSD-3) or
+`@resvg/resvg-js` (**MPL-2.0**, PNG is the maintained output, webp is still on
+its roadmap) as a **build-time generator committed as files** — no runtime
+dependency, no CI toolchain requirement, and the master SVG stays in the repo
+as the single source of truth.
 
-## Exit condition (owner's device, one GitHub account, no server changes)
+## What "identity" means for this phase (scope guard)
+
+One mark, used consistently: launcher (adaptive + legacy), notification small
+icon, the in-app About/header mark, and the 512×512 that goes on a GitHub
+Release. **Not** in scope: a splash screen animation, an animated/adaptive
+"pulsing" icon, a monochrome-only theme, re-theming the app colours
+(`SpckIcons`/`#3DDC84`-era palette stays), or touching Phase 34's **file**
+icons (the vendored Seti set is a separate, already-device-passed surface).
+And by `rule.md` §6: the mark must be **original** — no Android robot, no
+GitHub Octocat, no VS Code glyph, no Material glyph used *as* the logo.
+
+## Exit condition
 
 ```text
-1. Git NOT installed (fresh app, no Modules → Git): the clone dialog and the
-   Source Control sheet both say so BEFORE a tap, with an "Install Git" action
-   that opens Modules with Git preselected. Nothing hangs, nothing spins.
-2. Clone with a bad URL / no network / wrong token: the message appears inside
-   the dialog, and the dialog closes. A failure is never only in the snackbar.
-3. A project with no remote: "Publish to GitHub" creates the repo (or states
-   the exact missing permission from GitHub's reply), adds the remote, pushes,
-   and the sheet shows `main → github.com/<owner>/<repo>` with the short SHA.
-4. Create a branch, commit, push: `git ls-remote` from the same repo shows the
-   branch, the hub badge clears, and the sheet says which branch was published.
-5. "Everything up-to-date" is reported as itself — not as a success that
-   pushed something.
-PASS = all five on the owner's device (3 needs a real repo creation).
+1. On the owner's launcher (and one other device if available): CodeC's icon is
+   the new mark in circle, squircle and rounded-square shapes, with no clipped
+   detail (the 66 dp rule holds — check by looking at a circle mask).
+2. Themed/monochrome icons ON (Android 12+ launcher setting): the mark reads
+   correctly in single-colour — it is legible, not a filled blob.
+3. Status bar: the run and terminal notifications show a clean silhouette
+   (compare against an app that does it right, e.g. the system's own).
+4. Settings → About and README show the same mark; the 512×512 asset exists in
+   the repo and is what the GitHub Release uses.
+5. API 24/25 device (if the owner has one): a real bitmap icon, not the
+   adaptive XML fallback, not a default Android icon.
+6. `gradle :app:assembleDebug` and `:app:lintDebug` green with no new lint
+   finding in the icon family (e.g. `MonochromeLauncherIcon`, the `Icon*`
+   density/shape checks), and
+   a `scripts/render_icon.mjs` re-run reproduces the committed bitmaps
+   byte-comparably (so the assets are provably generated, not hand-tweaked).
+7. Settings no longer shows the Termux Engine card, and a compile that needs the
+   Termux fallback still works — with the *error path* naming Termux when it is
+   genuinely the problem (38.2's exit checks).
+PASS = all seven; 1-3 and 5 are the owner's eyes.
 ```
 
 ## Risks to watch (multi-device round)
 
-- **Provider-of-truth drift**: `unpushed`/`unpublished` are computed in
-  `loadProjects` (hub) and in `GitControlViewModel.refresh` (sheet). One
-  shared pure projection must produce both, or they will disagree — that is
-  the exact bug class Phase 37 pinned with `ServerEndpoints`/`ServerRegistry`.
-- **Rate limits / API errors**: unauthenticated `api.github.com` is 60 req/h
-  per IP; a 403 with a rate-limit body must not look like a token problem.
-- **Shallow clones** (`--depth 1`, Phase 15): pushing from a shallow clone is
-  legal but git can refuse on some servers (`shallowupdate`); the outcome
-  parser must recognise that message and not blame the token.
-- **Private-repo cloning** with a fine-grained token scoped to other repos →
-  404 from git, which reads like "repo does not exist". `GitErrors` must keep
-  those distinct.
-- **Old git versions** in the userland prefix: `--porcelain=v1` and
-  `push --set-upstream` are safe; `git restore`/`git switch` deliberately are
-  not used anywhere (Phase 15 law) — new code must not start.
+- **Vector gradients**: the current foreground uses `aapt:attr`
+  `linearGradient`, which needs API 21+ for VectorDrawables — fine — but
+  **launchers that rasterise the layer themselves have rendered vector
+  gradients wrong before**; the new mark should be flat-colour per layer
+  (that is also what makes the monochrome version honest).
+- **Adaptive-icon mask differences** (OEM launchers: Samsung OneUI, Xiaomi
+  HyperOS, Motorola) — check on at least two, because the safe-zone bug only
+  shows on the roundest mask.
+- **WebP vs PNG** in `mipmap-*`: existing assets are `.webp`; switching to
+  `.png` in the same folders is legal (Android resolves the resource by name)
+  but the *old* files must be deleted in the same commit, or the build fails
+  with duplicate resources.
+- **Removing a Settings section users may rely on**: 38.2 must keep the
+  capability and the *documentation* path (the same four steps belong in
+  `docs/`, referenced from the compiler error), not silently delete knowledge.
 
 ## Deferred, recorded on purpose
 
-- **SSH remotes / keys on device** — no agent, and `~/.ssh` permission games on
-  Android; HTTPS + stored token stays the only supported transport.
-- **GitHub OAuth device flow** — needs a client id baked in and a browser
-  dance; a pasted token is smaller, revocable by the user, and already the
-  model Settings teaches.
-- **The `gh` CLI module** — exists in the catalog and works in the terminal;
-  not used by the app, because its output is not a stable parsing target and
-  two REST calls do not justify the dependency.
-- **Rewriting history** (rebase/squash/amend, force-push) — CodeC keeps
-  refusing; a phone is not where an irreversible git command belongs.
+- **An animated / adaptive-parallax icon** — no.
+- **Replacing `SpckIcons` file icons with brand glyphs** — Phase 34 already
+  settled that surface (MIT Seti, monochrome), and Simple Icons-style brand
+  marks are trademarks.
+- **Deleting `TermuxCompiler` entirely** — rejected with reasons in 38.2 (it is
+  the working fallback on devices where the downloaded clang cannot be exec'd).
+- **An icon-pack style Settings option ("choose your launcher colour")** —
+  cute, meaningless for a beta, and the launcher already themes it.

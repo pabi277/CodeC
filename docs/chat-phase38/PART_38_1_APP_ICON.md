@@ -1,4 +1,4 @@
-# CodeC Phase 42.1 — An original CodeC launcher icon (and the notification silhouette)
+# CodeC Phase 38.1 — An original CodeC launcher icon (and the notification silhouette)
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` + **build-time tooling** ·
 > **Effort:** M · **Owner row (verbatim):** *"I have to set a app icon"*
@@ -91,7 +91,7 @@ are out of scope (Phase 34 owns the file-icon surface, 29 owns the theme).
 ## Exit condition
 
 ```text
-See chat-phase42/README.md §Exit condition items 1-6 (this part owns 1-6; 42.2
+See chat-phase38/README.md §Exit condition items 1-6 (this part owns 1-6; 38.2
 owns 7). Extra specifics for this part:
 ·  the 66 dp rule verified by looking at a ROUND mask, not only the default;
 ·  themed (monochrome) icons ON → the mark is legible as one colour;

@@ -1,4 +1,4 @@
-# CodeC Phase 38.1 — Readiness gate + errors that cannot be missed
+# CodeC Phase 40.1 — Readiness gate + errors that cannot be missed
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"…if i try to clone a repo and didn't download the

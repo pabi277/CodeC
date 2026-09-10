@@ -7,7 +7,7 @@
 > research throughly than write new phases"*
 >
 > Six ideas came in; they became **five phases (38–42)**. The sixth thing asked
-> for — *my* honest list of what still blocks a share — became **Phase 43**, and
+> for — *my* honest list of what still blocks a share — became **Phase 42**, and
 > it is not decoration: the app testers would install today is a **debug-signed,
 > debuggable, un-minified APK whose in-app updater points at a bootstrap
 > release**. That has to be fixed before any outsider sees it.
@@ -26,53 +26,69 @@
 
 | # | Owner's words (verbatim) | Phase | Title | Effort |
 |---|---|---|---|---|
-| 1 | "Github integration update now Github is working but it's not user friendly if i try to clone a repo and didn't download the git it shows error in the background i can't see it, sometimes it's push stay local, new branch create mostly stays local" | **38** | GitHub that tells the truth | M/L |
-| 2 | "Now the file system is good but i want it more stronger, i can't open a project in the editor from project folder, open a folder crash the app" | **39** | File system strength (open any folder) | L |
-| 3 | "I the output files as temporarily file and don't come to add in github push find all languages temporarily file and remove from git push also the .codec file" | **40** | Outputs are temporary, never in your repo | S/M |
+| 1 | "Github integration update now Github is working but it's not user friendly if i try to clone a repo and didn't download the git it shows error in the background i can't see it, sometimes it's push stay local, new branch create mostly stays local" | **40** | GitHub that tells the truth | M/L |
+| 2 | "Now the file system is good but i want it more stronger, i can't open a project in the editor from project folder, open a folder crash the app" | **43** | File system strength (open any folder) | L |
+| 3 | "I the output files as temporarily file and don't come to add in github push find all languages temporarily file and remove from git push also the .codec file" | **39** | Outputs are temporary, never in your repo | S/M |
 | 4 | "For testing i have to add a feedback page give the best way, i am willing to give my WhatsApp number" | **41** | Feedback that reaches you (WhatsApp) | S/M |
-| 5 | "From the settings remove unessesary Termux bridge" | **42** | Identity & Settings trim (icon first) | S/M |
-| 6 | "I have to set a app icon" | **42** | (same phase — 42.1 is the icon) | |
-| — | "what should i add more before sharing the app" (agent's own review) | **43** | Share-readiness: signing, size, updates, safety | M |
+| 5 | "From the settings remove unessesary Termux bridge" | **38** | Identity & Settings trim (icon first) | S/M |
+| 6 | "I have to set a app icon" | **38** | (same phase — 38.1 is the icon) | |
+| — | "what should i add more before sharing the app" (agent's own review) | **42** | Share-readiness: signing, size, updates, safety | M |
 
 Phase numbers 38+ continue the 34–37 UX/UI series; 37 is done (✅ CI green +
 ✅ device-passed, merge held at `04f336f`), so these start from that tip.
 
 ---
 
-## Recommended order
+## Execution order: **38 → 39 → 40 → 41 → 42 → 43**
 
-**42 → 40 → 38 → 41 → 43 → 39.** Small, visible and embarrassing-things-first,
-deep refactor last:
+The numbers **are** the order — renamed on the owner's request (*"Rename the
+phases so i can continue 38 to 43"*) so one command per phase, in sequence, is
+all the planning you have to remember. Small, visible and
+embarrassing-things-first; the deep refactor last:
 
-1. **42 — the icon and the Settings trim.** The launcher icon on a tester's home
+1. **38 — the icon and the Settings trim.** The launcher icon on a tester's home
    screen is currently the **Android Studio template icon** (green `#3DDC84` +
    the Android robot paths) and the notification small icon reuses that same
    full-colour vector. Cheapest thing in the list, biggest first impression.
-2. **40 — outputs never reach the repo.** Small, mechanical, and it protects
+2. **39 — outputs never reach the repo.** Small, mechanical, and it protects
    *other people's* repositories: today `git add -A` in COMMIT & PUSH can carry
    `a.out`, `bin/menu` or `.codec/` to GitHub depending on what was committed
    before the ignore rules existed.
-3. **38 — GitHub that tells the truth.** The owner's loudest complaint, and the
+3. **40 — GitHub that tells the truth.** The owner's loudest complaint, and the
    diagnosis is already in the code (see §"Evidence" per phase): failures happen
    in a path whose message is rendered *behind the open dialog*.
 4. **41 — feedback channel.** Needed the day a second person installs the app;
    it is a Settings row, a pure draft builder and a `wa.me` link.
-5. **43 — share-readiness.** Signing, non-debuggable release artifact, size, the
+5. **42 — share-readiness.** Signing, non-debuggable release artifact, size, the
    broken in-app updater, backup rules. This is the gate for "sharing" itself.
-6. **39 — file system strength.** The only phase that changes an architectural
+6. **43 — file system strength.** The only phase that changes an architectural
    law ("a project lives under `filesDir/CodeC/projects`"), so it goes last and
-   gets the most test surface. Its 39.1 half (the crash) is separately
+   gets the most test surface. Its 43.1 half (the crash) is separately
    shippable and can be pulled forward if the owner prefers.
 
-The owner may reorder by saying **"Start Phase N"** for any of them (the 34–37
-law the owner reinstated: one phase at a time, `Start Phase N`, and the merge
-gate is the owner's).
+The numbers were assigned to that order, so **the only rule to remember is
+"go in order"**: 39 before 43, because a linked user folder must never be where
+CodeC puts its own build outputs. The owner may still reorder by saying
+**"Start Phase N"** for any of them (the 34–37 law the owner reinstated: one
+phase at a time, `Start Phase N`, and the merge gate is the owner's).
+
+**Renumbering map** (the six ideas did not change, only their numbers — use this
+if an older note or chat message quotes the old one):
+
+| New | Old | Phase |
+|---|---|---|
+| **38** | was 42 | Identity: app icon + Settings trim (Termux card out) |
+| **39** | was 40 | Outputs are temporary + the repo ignore policy |
+| **40** | was 38 | GitHub that tells the truth (readiness, push truth, publish) |
+| **41** | was 41 | Feedback that reaches you (WhatsApp) — unchanged |
+| **42** | was 43 | Share-readiness: signing, weight, updates, safety |
+| **43** | was 39 | File system strength (safe folder walk + open-folder project) |
 
 ---
 
 ## What each phase actually changes (one paragraph each)
 
-**38 — GitHub that tells the truth.** A pre-flight **readiness** answer
+**40 — GitHub that tells the truth.** A pre-flight **readiness** answer
 (`GitReadiness`: is `git` installed · is a token stored · is this a repo · does
 it have a remote · does the branch have an upstream · is there anything to
 push), computed as pure data and *rendered before the user taps*, with one-tap
@@ -88,26 +104,26 @@ through `POST /user/repos` — or, when the token cannot, says precisely which
 permission is missing (GitHub returns it in `X-Accepted-GitHub-Permissions`)
 and offers the browser fallback.
 
-**39 — File system strength.** Two halves. **39.1** makes "Open folder" never
+**43 — File system strength.** Two halves. **43.1** makes "Open folder" never
 crash: the SAF copy today is a plain recursion (`ProjectTransfer.copyDocumentChildren`)
 with no visited set, no depth/file/byte budget, no cancellation, and its
 caller catches only `Exception` — a provider that returns the parent as its own
 child is a `StackOverflowError`, which *is* the crash. Replaced with an
 iterative walk planned by a pure `TreeWalkPolicy`, budgets, progress + cancel,
 per-provider failure as a message, `Throwable` at the boundary, and the grant
-persisted (`takePersistableUriPermission`, never called today). **39.2** makes
+persisted (`takePersistableUriPermission`, never called today). **43.2** makes
 a folder *usable as a project without copying it into app storage first* —
 `ProjectLink(projectName, treeUri, …)` + a pure `ProjectLinkPolicy.decide`
 (take / refuse-with-reason / re-pick when the grant is gone), with the honest
 limitation recorded up front: emulated storage is mounted `noexec`, so a linked
 project **runs from an internal mirror** (sync in on open/save, the push-set on
 save-back excludes CodeC's own outputs) while the user's folder stays the source
-of truth — **40.1 must land first**, or the mirror would push build artifacts
+of truth — **39.1 must land first**, or the mirror would push build artifacts
 into a folder the user owns. The all-files-access "open in place" variant is
-documented in 39.2 as *considered and rejected as the default*, with the four
+documented in 43.2 as *considered and rejected as the default*, with the four
 reasons and the one per-project flag that may still earn its place.
 
-**40 — Outputs are temporary, never in your repo.** Generated files stop
+**39 — Outputs are temporary, never in your repo.** Generated files stop
 landing in the project at all: one `RunArtifacts` policy routes every
 language's build/run output to `filesDir/CodeC/temp/runs/<stamp>/`, and a
 `TempGc` policy prunes it (age/capacity/newest-N) on start and after Stop. For
@@ -131,20 +147,20 @@ text, an *opt-in* redacted log tail). Nothing is sent automatically; there is
 no telemetry to add; the number lives in Settings so it is never welded into
 the APK.
 
-**42 — Identity & Settings trim.** **42.1**: an original CodeC mark, built the
+**38 — Identity & Settings trim.** **38.1**: an original CodeC mark, built the
 adaptive-icon way — 108 dp canvas, key art inside the 66 dp safe zone, real
 `monochrome` layer for themed icons, legacy bitmaps for API 24–25, plus
 `ic_launcher_round`, a 512×512 store/release asset, and **a proper
 black-on-transparent notification small icon** replacing
 `ic_launcher_foreground` in both foreground services. Master art lives in the
 repo as one SVG; the rasters are generated by a build-time script (never a
-runtime dependency). **42.2**: remove the "Termux Engine" card and its
+runtime dependency). **38.2**: remove the "Termux Engine" card and its
 four-step prose from Settings while keeping `TermuxCompiler` as the silent
 fallback it already is inside `CompilerService` — guidance then appears in the
 error path that actually needs it, and the same audit is run across the rest of
 Settings (any row with no effect goes).
 
-**43 — Share-readiness.** A release **channel**: `assembleRelease` in CI,
+**42 — Share-readiness.** A release **channel**: `assembleRelease` in CI,
 signed with an upload key kept in Actions secrets (the build file already
 reads `KEYSTORE_PATH`/`STORE_PASSWORD`/`KEY_PASSWORD`; `my-upload-key.jks` is
 not in the repo, so today a release build simply cannot run in CI), published
@@ -169,7 +185,7 @@ reality, and a written known-issues page for testers.
   *depended on or vendored*: MIT · Apache-2.0 · BSD · **CC0** (the
   `github/gitignore` templates are CC0, which is why 40 can use them and no
   `CC BY-SA` asset appears anywhere). No GPL/LGPL paste, no `com.termux`
-  packages or repos, no trademarked logos — which is precisely why 42.1 draws
+  packages or repos, no trademarked logos — which is precisely why 38.1 draws
   an original mark instead of shipping the Android robot.
 - **Android-free core**: every rule that decides something (readiness, push
   outcome, tree-walk budgets, temp GC, ignore patterns, feedback redaction)
@@ -185,8 +201,8 @@ reality, and a written known-issues page for testers.
 - **Open-source first**: for each phase the dossier records what already exists,
   its licence, and either "use it", "vendor it with attribution" or "behaviour
   reference only, because …".
-- **Device gates are the owner's**: 38.3 (real push to a real repo), 39
-  (real device file providers), 41 (real WhatsApp install) and 42.1 (real
+- **Device gates are the owner's**: 40.3 (real push to a real repo), 39
+  (real device file providers), 41 (real WhatsApp install) and 38.1 (real
   launcher masks) cannot be settled in the sandbox and are flagged as
   **device pass required**.
 
@@ -202,11 +218,11 @@ reality, and a written known-issues page for testers.
 - Phases 34–36 are merged to `main`; the cross-device round that ended that
   series is complete. 38–43 start **only** on the owner's "Start Phase N".
 - Deliberate non-goals, recorded so nobody re-litigates them: no GitHub OAuth
-  app dance (a token the user pastes stays the model, 38 documents why); no
+  app dance (a token the user pastes stays the model, 40 documents why); no
   *dependence* on `MANAGE_EXTERNAL_STORAGE` (39 — the app already declares and
   offers it; what is forbidden is making it required for opening a folder); no
   telemetry of any kind (41); no Play Store path while `targetSdk = 28` is what
-  keeps downloaded compilers executable (43 documents the trade-off instead of
+  keeps downloaded compilers executable (42 documents the trade-off instead of
   pretending it away).
 
 ## Corrections found while writing the parts (2026-09-10)
@@ -217,13 +233,13 @@ each one changes an implementation decision:
 
 | # | Assumption going in | What the tree actually shows | Consequence |
 |---|---|---|---|
-| 1 | the userland tarball is packaged in the APK, which is why it is 24 MB | `app/src/main/assets/` = `licenses` 76 K, `snippets` 332 K, `tcc` 7.3 M + 3.6 M, `textmate` 2.3 M — no bootstrap. The rootfs is **downloaded** by `UserlandInstaller` from `releases/download/<tag>/userland-<arch>.tar.gz` | 43.2's "package vs download" question was already answered years ago; the size work is DEX/ABI, not the toolchain |
+| 1 | the userland tarball is packaged in the APK, which is why it is 24 MB | `app/src/main/assets/` = `licenses` 76 K, `snippets` 332 K, `tcc` 7.3 M + 3.6 M, `textmate` 2.3 M — no bootstrap. The rootfs is **downloaded** by `UserlandInstaller` from `releases/download/<tag>/userland-<arch>.tar.gz` | 42.2's "package vs download" question was already answered years ago; the size work is DEX/ABI, not the toolchain |
 | 2 | `libtcc.so` ships for all four `abiFilters` | `EmbeddedCompiler.ABI_DIRS = listOf("arm64-v8a", "x86_64")`, and `jniLibs` has exactly those two | on `armeabi-v7a`/`x86` `tccBinary()` is `null` **by design**; armv7 testers download ~7.3 MB of C runtime they cannot use → `docs/BETA.md` known-issues + per-ABI artifacts |
-| 3 | `splits.abi` shrinks everything per ABI | AGP filters `jniLibs`/CMake output, **not `assets/`** | 43.2 needs a packaging exclude or per-flavor `assets.srcDirs`, or the splits are pointless; exit item 2 got a "revert if <15 %" rule |
-| 4 | the app should avoid `MANAGE_EXTERNAL_STORAGE` | it is declared (`:12`) and offered at three call sites | 39's design must not make it required, and 43.3's privacy text has to be honest about what the grant means; the diet is `ACCESS_WIFI_STATE`/`WAKE_LOCK`/`VIBRATE` (no readers found) |
-| 5 | there is no crash-report surface to build on | `MainActivity.installCrashLog()` (`:125-175`) + `ui/crash/CrashReportOverlay` already show the newest header-first record before anything else with COPY ALL/Share/Clear, and literally say "paste it into the chat" | 41 becomes the *link*, not the pipeline; 43.3 extends the overlay instead of adding a second modal |
+| 3 | `splits.abi` shrinks everything per ABI | AGP filters `jniLibs`/CMake output, **not `assets/`** | 42.2 needs a packaging exclude or per-flavor `assets.srcDirs`, or the splits are pointless; exit item 2 got a "revert if <15 %" rule |
+| 4 | the app should avoid `MANAGE_EXTERNAL_STORAGE` | it is declared (`:12`) and offered at three call sites | 43's design must not make it required, and 42.3's privacy text has to be honest about what the grant means; the diet is `ACCESS_WIFI_STATE`/`WAKE_LOCK`/`VIBRATE` (no readers found) |
+| 5 | there is no crash-report surface to build on | `MainActivity.installCrashLog()` (`:125-175`) + `ui/crash/CrashReportOverlay` already show the newest header-first record before anything else with COPY ALL/Share/Clear, and literally say "paste it into the chat" | 41 becomes the *link*, not the pipeline; 42.3 extends the overlay instead of adding a second modal |
 | 6 | `GitRedactor` scrubs token shapes | it scrubs **the literal token it was constructed with** + `user:pass@` URLs (`GitManager.kt:911-932`) | 41.1 needs its own `TokenShapes` table *plus* `GitRedactor`, and says why two redaction sources are not allowed |
-| 7 | the token is a file under `files/CodeC/keys` | it is `git_token` in the shared `preferencesDataStore(name = "settings")` → `files/datastore/settings.preferences_pb` (and `GitCredentialsStore`'s KDoc names the wrong file) | 43.3's backup exclude list is written around the real path, plus a comment fix |
-| 8 | projects live in one root | `ProjectManager.projectsRoot()` = `filesDir/CodeC/projects`, **and** `FileManager.projectDirCandidates()` adds `getExternalFilesDir(null)/CodeC/projects` | "export all" must take the candidate list or it silently omits projects — 43.3 §3 got a test for exactly that |
-| 9 | the SAF folder picker is absent | `FileManagerScreen.kt:177` already uses `ActivityResultContracts.OpenDocumentTree()`; only `takePersistableUriPermission` is missing (zero call sites) | 39.1/39.2 change from "add SAF" to "persist the grant we already get" — a 3-line fix, not a subsystem |
-| 10 | OkHttp is needed by something | `implementation(libs.logging.interceptor)` + `implementation(libs.okhttp)` (`:201-202`) with **no `okhttp3` import in `app/src`**; `app/proguard-rules.pro` is the untouched template (every rule commented) | 43.2 deletes provable dead weight before asking R8 to shrink it, and the keep-rule work starts from an empty file |
+| 7 | the token is a file under `files/CodeC/keys` | it is `git_token` in the shared `preferencesDataStore(name = "settings")` → `files/datastore/settings.preferences_pb` (and `GitCredentialsStore`'s KDoc names the wrong file) | 42.3's backup exclude list is written around the real path, plus a comment fix |
+| 8 | projects live in one root | `ProjectManager.projectsRoot()` = `filesDir/CodeC/projects`, **and** `FileManager.projectDirCandidates()` adds `getExternalFilesDir(null)/CodeC/projects` | "export all" must take the candidate list or it silently omits projects — 42.3 §3 got a test for exactly that |
+| 9 | the SAF folder picker is absent | `FileManagerScreen.kt:177` already uses `ActivityResultContracts.OpenDocumentTree()`; only `takePersistableUriPermission` is missing (zero call sites) | 43.1/43.2 change from "add SAF" to "persist the grant we already get" — a 3-line fix, not a subsystem |
+| 10 | OkHttp is needed by something | `implementation(libs.logging.interceptor)` + `implementation(libs.okhttp)` (`:201-202`) with **no `okhttp3` import in `app/src`**; `app/proguard-rules.pro` is the untouched template (every rule commented) | 42.2 deletes provable dead weight before asking R8 to shrink it, and the keep-rule work starts from an empty file |

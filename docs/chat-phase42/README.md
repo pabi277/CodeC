@@ -1,131 +1,198 @@
-# CodeC Phase 42 — Identity: a real app icon, and Settings that stop explaining Termux
+# CodeC Phase 42 — Share-readiness: signing, size, updates, and not eating anyone's data
 
 > **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** S/M · **Owner rows:** *"I have to set a app
-> icon"* · *"From the settings remove unessesary Termux bridge"*
+> `[client-only]` + CI/workflow · **Effort:** M · **Owner row:** *"Please you
+> also full thought one time i will it use now so what should i add more before
+> sharing the app"*
+
+This is the agent's own review, written against the same standard as the
+owner's six ideas: read the code, find what actually breaks for a stranger
+installing this APK, and spec the fix. Six findings are hard defects **today**;
+the rest of the checklist is judged "keep / defer / reject" below.
 
 ```text
-  42.1  An original CodeC launcher icon (adaptive + monochrome + legacy bitmaps)
-  42.2  Settings trim: drop the Termux card, audit for rows with no effect
+  42.1  A real release channel: release-signed, non-debuggable APK + a fixed updater
+  42.2  Weight: R8 + resource shrink + per-ABI artifacts (measured, not hoped)
+  42.3  Safety net: crash-loop guard, backup rules, export-everything, first-run
 ```
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [42.1](PART_42_1_APP_ICON.md) | App icon, notification icon, release/store art | M | 📋 PLANNED |
-| [42.2](PART_42_2_SETTINGS_TRIM.md) | Termux bridge out of Settings + row audit | S | 📋 PLANNED |
+| [42.1](PART_42_1_RELEASE_CHANNEL.md) | Release build, signing, GitHub Release, updater | M | 📋 PLANNED |
+| [42.2](PART_42_2_APK_WEIGHT.md) | Size: R8, shrink, ABI splits | M | 📋 PLANNED |
+| [42.3](PART_42_3_LAUNCH_SAFETY.md) | Crash loop, backup, export, permissions | S/M | 📋 PLANNED |
 
-## What exists today (evidence, read 2026-09-10)
+## The six hard findings (evidence, read 2026-09-10)
 
-- **The launcher icon is the Android Studio template art.**
-  `res/drawable/ic_launcher_background.xml` is a `#3DDC84` full-bleed field with
-  the template's grid paths; `ic_launcher_foreground.xml` is the template's
-  robot-head paths plus a `aapt:attr` linear gradient. `mipmap-anydpi-v26/`
-  wires `background`+`foreground`, and its `monochrome` layer points at
-  **the same full-colour foreground** (it "works", but it is not a monochrome
-  design); `mipmap-{m,h,xh,xxh,xxxh}dpi/ic_launcher{,_round}.webp` are the
-  template's bitmaps. Manifest: `android:icon="@mipmap/ic_launcher"`,
-  `android:roundIcon="@mipmap/ic_launcher_round"` — so the shape of the wiring
-  is right and only the art and the monochrome layer are wrong.
-- **The notification small icon is that same foreground vector**: both
-  `RunForegroundService.kt:115` and `TerminalForegroundService.kt:45` call
-  `.setSmallIcon(R.drawable.ic_launcher_foreground)` — a full-colour adaptive
-  foreground in a slot that wants a single-colour silhouette is the classic
-  white-blob status bar. (`CodecApiBridge.kt:816` uses
-  `android.R.drawable.ic_dialog_info`, a system drawable that also should not be
-  used by a third-party notification.)
-- **The Termux card is a whole Settings section.** `SettingsScreen.kt:320-366`:
-  a "TERMUX BRIDGE CARD" with `SettingsSectionHeader("Termux Engine")`, a
-  status row built by `buildTermuxStatusText(...)`, **OPEN TERMUX** and
-  **CHECK** buttons (`TermuxCompiler.runCommand` probe), and a four-step
-  instruction paragraph (`allow-external-apps=true`, `termux-reload-settings`,
-  *Additional permissions*, `pkg update && pkg install clang`) — plus
-  `TermuxUiState`/`loadTermuxState`/`formatProbe` helpers at
-  `:1195-1230` and two mentions inside the compiler-explanation copy at
-  `:1187-1190`. Meanwhile `CompilerService` already treats Termux as a
-  *fallback engine only*: `BACKEND_AUTO` is "the only value the app passes
-  since Phase 21 removed the Settings picker", and the Termux paths are
-  guarded by `if (!TermuxCompiler.isTermuxInstalled(context))` returning the
-  bundled result.
-- The manifest declares `com.termux.permission.RUN_COMMAND` (install-time,
-  user-granted in system settings) and a `<queries><package
-  android:name="com.termux"/></queries>` entry for the visibility check.
+1. **Testers get a debuggable build.** CI's only app task is
+   `gradle :app:assembleDebug` (`.github/workflows/build-apk.yml:30`, via the
+   `gradle-bootstrap` bridge), and `README.md` tells users to install exactly
+   that artifact from an Actions run. A debug APK means `android:debuggable=true`
+   (any adb/root on the device can `run-as com.codeci.ide` and read the app's
+   whole sandbox — including a stored GitHub token), no optimisation, and debug
+   runtime behaviour. There is no release artifact at all.
+2. **A release build cannot currently run in CI.** `build.gradle.kts` release
+   `signingConfig` reads `KEYSTORE_PATH` (default `${rootDir}/my-upload-key.jks`)
+   + `STORE_PASSWORD`/`KEY_PASSWORD` env — and `my-upload-key.jks` is **not in
+   the repo** (verified) with no workflow reference to it. So
+   `:app:assembleRelease` in CI would fail on a missing keystore. (The debug
+   path works because `debug.keystore` is deliberately pinned and committed.)
+3. **The in-app updater points at the wrong release, and installs whatever it
+   finds.** `ApkUpdateManager` fetches
+   `GET /repos/pabi277/CodeC/releases/latest`, then takes the **first asset
+   whose name ends in `.apk`** — no version comparison against
+   `BuildConfig`, no size cap, no checksum, no cleanup of
+   `cacheDir/updates/CodeC-IDE.apk`. Meanwhile the only releases that exist are
+   **`userland-v1` (marked "Latest") and `userland-v2-dev`** — *bootstrap*
+   releases — and the workflow's own release step deliberately skips
+   `userland-*` tags. So the one button built for "stay current" is pointed at
+   a channel that carries no app APK, and it would happily install an
+   *older* build if one were attached.
+4. **Everything in app storage is backup-eligible — including the GitHub
+   token.** `AndroidManifest.xml:46-49` has `android:allowBackup="true"` with
+   `fullBackupContent="@xml/backup_rules"` and
+   `dataExtractionRules="@xml/data_extraction_rules"`, and **both XML files are
+   the untouched Android Studio samples**: `backup_rules.xml` is a
+   `<full-backup-content>` with two commented-out lines, and
+   `data_extraction_rules.xml` has an empty `<cloud-backup>` with a `TODO` plus
+   a fully commented-out `<device-transfer>` block. So nothing is excluded:
+   `files/usr` (the whole downloaded toolchain + dpkg state + installed
+   packages), `files/home`, `files/CodeC/{projects,temp,modules,tcc}`,
+   `files/git-askpass.sh`, `files/crash-log.txt` **and**
+   `files/datastore/settings.preferences_pb` — the DataStore that holds
+   `git_token`. Hundreds of MB of device- and ABI-specific state in a cloud
+   backup is at best a failed backup; restoring it onto a different-ABI phone is
+   a hole shaped exactly like `$PREFIX`; and a token quietly riding to another
+   device is the one thing `GitRedactor` exists to prevent elsewhere.
+5. **Uninstall deletes their work, and nothing says so.** Projects live under
+   `filesDir/CodeC/projects` (`ProjectManager.projectsRoot()`), so uninstalling
+   wipes every project (the `debug.keystore` note in `build.gradle.kts:62-79`
+   records exactly this hazard from the *developer* side: an incompatible update
+   → uninstall → whole sandbox gone). Per-project ZIP export exists
+   (`ProjectTransfer.exportZip` + `exportZipToCache`, driven by
+   `FileManagerScreen`'s `CreateDocument("application/zip")` launcher) but there
+   is no "export everything", and the first-run flow never mentions it. Note the
+   trap for whoever implements it: `FileManager.projectDirCandidates()` also
+   lists `getExternalFilesDir(null)/CodeC/projects`, so "all projects" means
+   both roots or it silently omits some.
+6. **Four ABIs declared, two ABIs actually supported, and the biggest payload
+   is not split-filtered.** `build.gradle.kts:42` lists
+   `arm64-v8a, armeabi-v7a, x86_64, x86`, `isMinifyEnabled = false`
+   (`:86`), `isCrunchPngs = false` (`:85`), and `app/proguard-rules.pro` is the
+   untouched template. 24 847 906 B today (run `34399227052`). Measured payload:
+   `assets/tcc/{arm64-v8a 3.7 M, x86_64 3.6 M}` +
+   `jniLibs/{arm64-v8a,x86_64}/libtcc.so` (581 600 + 405 352 B) +
+   `assets/textmate` 2.3 M. Two consequences 42.2 owns: **`assets/` is not
+   filtered by `splits.abi`** (so per-ABI artifacts still carry every ABI's TCC
+   runtime unless a packaging exclude or per-flavor `assets.srcDirs` is added),
+   and `EmbeddedCompiler.ABI_DIRS` covers only arm64+x86_64 — so on an
+   `armeabi-v7a` device the app carries ~7.3 MB of C runtime it cannot use and
+   has no built-in compiler at all. Both are fixable and neither is visible
+   without measuring.
 
-## Research that shaped the design
+Also worth stating as a *non*-defect: `targetSdk = 28` is **deliberate** and
+documented (API 29+ SELinux denies exec'ing app-data binaries; Termux uses the
+same compatibility mode), and it is the reason CodeC is distributed from GitHub
+and not Google Play (Play additionally demands an AAB, API-36 targeting from
+2026-08-31, a privacy policy, and — for new personal accounts — **12 opted-in
+closed-testers for 14 continuous days**). Phase 42 records that trade-off so
+"just publish it on Play" gets an answer with numbers, and keeps GitHub
+Releases as the channel.
 
-Dossier: [`../PHASE38_43_OSS_RESEARCH.md`](../PHASE38_43_OSS_RESEARCH.md) §5-§6.
-Key constraints, all from AOSP-derived guidance: **108 dp canvas → 72 dp masked
-viewport → 66 dp safe circle** for key art, with the outer 18 dp per side
-reserved for parallax/pulse; **a real `monochrome` layer** because Android 13
-tints themed icons and **Android 16 QPR 2 auto-generates one when the app
-ships none** (i.e. skipping it means somebody else designs your icon for you);
-density bitmaps still needed for API 24-25 (48/72/96/144/192 px) and a
-**separate 512×512** store/release icon. Tooling: `sharp` (BSD-3) or
-`@resvg/resvg-js` (**MPL-2.0**, PNG is the maintained output, webp is still on
-its roadmap) as a **build-time generator committed as files** — no runtime
-dependency, no CI toolchain requirement, and the master SVG stays in the repo
-as the single source of truth.
+## Checklist reviewed, with verdicts
 
-## What "identity" means for this phase (scope guard)
+| Candidate | Verdict | Where |
+|---|---|---|
+| Release signing + non-debuggable artifact | ✅ **do** | 42.1 |
+| Fix the updater (version check, channel, digest, cleanup) | ✅ **do** | 42.1 |
+| Release notes / known-issues page for testers | ✅ **do** | 42.1 |
+| R8 + `shrinkResources` | ✅ do, measured; `proguard-rules.pro` is the untouched template today | 42.2 |
+| Delete provably-unused dependencies (OkHttp + logging-interceptor, `material-icons-extended`) | ✅ do, before shrinking anything | 42.2 |
+| Permission diet (`ACCESS_WIFI_STATE`/`WAKE_LOCK`/`VIBRATE` have no reader; `MANAGE_EXTERNAL_STORAGE` genuinely does) | ✅ do, with the honest sentence instead of a boilerplate one | 42.3 |
+| CI artifact hygiene: `CodeC-IDE` **and** `CodeC-Bench` are both downloadable, and the bench block's own comment says "REMOVE THIS BLOCK when Phase 28 closes" | ✅ do — a tester installing `CodeC-Bench` is a support ticket about a different app | 42.1 |
+| ABI splits (per-device artifacts) | ✅ do | 42.2 |
+| PNG crunch (revisit `isCrunchPngs=false`) | ⚠ evaluate in 42.2, keep the reason if it must stay off | 42.2 |
+| `allowBackup` / backup rules | ✅ fix | 42.3 |
+| Crash-loop safe mode + hand-off to feedback | ✅ do | 42.3 |
+| Export-all-projects ZIP | ✅ do | 42.3 |
+| First-run permissions explainer (what the app can and cannot touch) | ✅ do (3 lines, no dialog storm) | 42.3 |
+| "Check for updates" one-liner in About | ✅ falls out of 42.1 | 42.1 |
+| Privacy policy / no-telemetry statement | ✅ one paragraph in About + the release text | 42.3 |
+| Licenses screen | ✔ **already** (Phase 30 snippets + Phase 37 zxing lines in About) — no work | — |
+| Version-in-About (CI run number) | ✔ already (Phase 29's lesson) | — |
+| Feedback channel | → **Phase 41** (not duplicated here) | 41 |
+| Localization / translations | ❌ defer — one language, one audience; a machine-translated UI is worse than none | — |
+| Onboarding tour with coach marks | ❌ defer — Phase 33.1's three starter tiles + a runnable demo project already do the job; a tour would be the 4th first-run interruption | — |
+| In-app "what's new" changelog popup | ❌ reject — the release notes page exists; a popup steals the first launch | — |
+| Analytics / crash upload | ❌ reject — offline-first is the product; the crash record + Phase 41's chat is the telemetry, human-powered | — |
+| Play Store listing assets (feature graphic, screenshots) | ⚠ defer with Play (see the targetSdk law above) | 42.1 note |
+| Auto-updater that installs silently | ❌ reject — Android won't allow it quietly, and a phone IDE must not replace its own binary behind the user's back | — |
+| F-Droid metadata (`Repo.yml`, anti-tracked-libs) | ⚠ optional; needs a release-signed source build, so it rides *after* 42.1 — recorded, not planned | — |
 
-One mark, used consistently: launcher (adaptive + legacy), notification small
-icon, the in-app About/header mark, and the 512×512 that goes on a GitHub
-Release. **Not** in scope: a splash screen animation, an animated/adaptive
-"pulsing" icon, a monochrome-only theme, re-theming the app colours
-(`SpckIcons`/`#3DDC84`-era palette stays), or touching Phase 34's **file**
-icons (the vendored Seti set is a separate, already-device-passed surface).
-And by `rule.md` §6: the mark must be **original** — no Android robot, no
-GitHub Octocat, no VS Code glyph, no Material glyph used *as* the logo.
-
-## Exit condition
+## Exit condition (whole phase; the owner's own install test)
 
 ```text
-1. On the owner's launcher (and one other device if available): CodeC's icon is
-   the new mark in circle, squircle and rounded-square shapes, with no clipped
-   detail (the 66 dp rule holds — check by looking at a circle mask).
-2. Themed/monochrome icons ON (Android 12+ launcher setting): the mark reads
-   correctly in single-colour — it is legible, not a filled blob.
-3. Status bar: the run and terminal notifications show a clean silhouette
-   (compare against an app that does it right, e.g. the system's own).
-4. Settings → About and README show the same mark; the 512×512 asset exists in
-   the repo and is what the GitHub Release uses.
-5. API 24/25 device (if the owner has one): a real bitmap icon, not the
-   adaptive XML fallback, not a default Android icon.
-6. `gradle :app:assembleDebug` and `:app:lintDebug` green with no new lint
-   finding in the icon family (e.g. `MonochromeLauncherIcon`, the `Icon*`
-   density/shape checks), and
-   a `scripts/render_icon.mjs` re-run reproduces the committed bitmaps
-   byte-comparably (so the assets are provably generated, not hand-tweaked).
-7. Settings no longer shows the Termux Engine card, and a compile that needs the
-   Termux fallback still works — with the *error path* naming Termux when it is
-   genuinely the problem (42.2's exit checks).
-PASS = all seven; 1-3 and 5 are the owner's eyes.
+1. `git tag app-v1.3.17 && git push --tags` produces a GitHub Release with
+   `CodeC-IDE-1.3.17-arm64-v8a.apk` (+ the other ABIs, and a universal one)
+   attached, release-signed, NOT debuggable, with written release notes.
+2. On a phone: uninstall CodeC → install that APK → every first-run flow works
+   (bootstrap download, permissions, a demo project runs) → then
+   Settings → Check for updates says "up to date". Downgrade check: installing
+   an OLDER artifact over a newer one is refused by the app's own updater and
+   says why (no silent downgrade).
+3. `adb shell dumpsys package com.codeci.ide | grep flags` shows no DEBUGGABLE
+   flag; the APK installs on API 24, 26 and a current device.
+4. With R8 on, every language path still works on device (TCC compile, clang
+   module, Python/Node run, LSP servers, TextMate colouring, sora editor,
+   preview, packages install) — measured artifact bytes recorded before/after
+   in the part doc, and the delta is reported to the owner.
+5. Backup: `adb backup`/device-transfer no longer tries to move the userland;
+   no `allowBackup` warning in lint.
+6. Crash-loop guard: a test crash on launch twice leaves the app unusable today;
+   after 42.3 the third launch opens in safe mode with the crash text and a
+   one-tap hand-off to Phase 41's report — and the user's files are intact.
+7. Uninstall safety: "Export all projects" produces a ZIP that re-imports into
+   a clean install and the files are byte-identical (spot-check 3).
+PASS = all seven, on the owner's device + one other if available. 4 is the one
+most likely to bite, so it is the one that gets the most test time.
 ```
 
 ## Risks to watch (multi-device round)
 
-- **Vector gradients**: the current foreground uses `aapt:attr`
-  `linearGradient`, which needs API 21+ for VectorDrawables — fine — but
-  **launchers that rasterise the layer themselves have rendered vector
-  gradients wrong before**; the new mark should be flat-colour per layer
-  (that is also what makes the monochrome version honest).
-- **Adaptive-icon mask differences** (OEM launchers: Samsung OneUI, Xiaomi
-  HyperOS, Motorola) — check on at least two, because the safe-zone bug only
-  shows on the roundest mask.
-- **WebP vs PNG** in `mipmap-*`: existing assets are `.webp`; switching to
-  `.png` in the same folders is legal (Android resolves the resource by name)
-  but the *old* files must be deleted in the same commit, or the build fails
-  with duplicate resources.
-- **Removing a Settings section users may rely on**: 42.2 must keep the
-  capability and the *documentation* path (the same four steps belong in
-  `docs/`, referenced from the compiler error), not silently delete knowledge.
+- **R8 removing something that looked unused** — the realistic victims are
+  sora-editor's component/plugin entry points, the TextMate grammar/theme
+  loader, flexmark/`org.json`-style reflection, DataStore serializers, and
+  Compose-only classes referenced from `AndroidManifest`-adjacent XML. Rule
+  for this phase: **keep rules minimal and named**; every added `-keep` needs a
+  comment saying which crash it prevented, or it becomes permanent weight.
+- **A debug→release signing change is an uninstall for existing testers** (same
+  signature = same key forever; a *new* upload key means they lose the app's
+  data). This must be said in the release notes *before* the switch, and the
+  upload key backed up in a password manager, because **losing it means no
+  updates for anyone, ever**.
+- **Per-ABI artifacts multiply what testers can install wrongly** (x86_64 on an
+  emulator, armeabi-v7a on an old phone) — the release text must name which
+  file to pick, and About should show the device's ABI (already available via
+  `DeviceDiagnostics.abiSummary()`), so a mismatch is diagnosable in one
+  screenshot.
+- **A universal APK is the safe default** if the owner wants one link for
+  everyone: 42.2's exit condition keeps `CodeC-IDE-universal.apk` as the primary
+  asset and the split ones as "advanced".
 
 ## Deferred, recorded on purpose
 
-- **An animated / adaptive-parallax icon** — no.
-- **Replacing `SpckIcons` file icons with brand glyphs** — Phase 34 already
-  settled that surface (MIT Seti, monochrome), and Simple Icons-style brand
-  marks are trademarks.
-- **Deleting `TermuxCompiler` entirely** — rejected with reasons in 42.2 (it is
-  the working fallback on devices where the downloaded clang cannot be exec'd).
-- **An icon-pack style Settings option ("choose your launcher colour")** —
-  cute, meaningless for a beta, and the launcher already themes it.
+- **Play Store** (see the `targetSdk = 28` law above) — not a "later polish"
+  item, a *different product decision*: to be on Play CodeC must give up
+  exec'ing downloaded compilers or move to a different execution strategy
+  entirely. If the owner ever wants Play, that becomes its own phase with that
+  question answered first.
+- **An `update.json` manifest** instead of GitHub's release API — a server to
+  run, for no benefit while GitHub is the channel.
+- **Delta/patch updates** — meaningless at these sizes for a hand-full of
+  testers.
+- **App Bundle (`.aab`) for direct install** — you cannot install an AAB, so it
+  would be a file nobody can use; `bundletool`'s universal-APK output is
+  covered by 42.2 instead.
+- **Dependency audit / SBOM tooling** — worth doing before a *public* release
+  to a stranger audience; recorded as the first item of whatever phase
+  follows, not folded into a beta-prep phase.
