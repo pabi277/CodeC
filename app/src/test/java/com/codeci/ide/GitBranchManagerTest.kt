@@ -78,6 +78,10 @@ class GitBranchManagerTest {
                 if [ -n "${'$'}FAKE_REMOTE_OUT" ]; then printf '%b' "${'$'}FAKE_REMOTE_OUT"; echo ""; fi
                 exit "${'$'}{FAKE_REMOTE_EXIT:-0}"
                 ;;
+              ls-remote)
+                if [ -n "${'$'}FAKE_LS_REMOTE_OUT" ]; then printf '%b' "${'$'}FAKE_LS_REMOTE_OUT"; echo ""; fi
+                exit "${'$'}{FAKE_LS_REMOTE_EXIT:-0}"
+                ;;
               push)
                 if [ -n "${'$'}FAKE_PUSH_ERR" ]; then printf '%b' "${'$'}FAKE_PUSH_ERR" >&2; echo "" >&2; fi
                 exit "${'$'}{FAKE_PUSH_EXIT:-0}"
@@ -543,14 +547,89 @@ class GitBranchManagerTest {
             manager(fresh, freshEnv).pushHandlingUpstream(repo(fresh))
             assertEquals("CMD [push] [--set-upstream] [origin] [test]", log(freshEnv).last())
 
-            // A cloned branch already tracks its remote: keep the plain push.
+            // A cloned branch already tracks its remote: push names the branch
+            // explicitly (Phase 39 device follow-up) so the argv never looks
+            // like a silent default to main.
             val tracking = tempDir()
-            val trackingEnv = env(tracking, mapOf("FAKE_STATUS_OUT" to "## main...origin/main"))
+            val trackingEnv = env(
+                tracking,
+                mapOf(
+                    "FAKE_STATUS_OUT" to "## test-1...origin/test-1",
+                    "FAKE_REMOTE_OUT" to "origin"
+                )
+            )
             manager(tracking, trackingEnv).pushHandlingUpstream(repo(tracking))
             val commands = log(trackingEnv)
             assertEquals("CMD [status] [--porcelain=v1] [-b]", commands[0])
-            assertEquals("CMD [push]", commands[1])
-            assertEquals(2, commands.size)
+            assertEquals("CMD [remote]", commands[1])
+            assertEquals("CMD [push] [origin] [test-1]", commands[2])
+            assertEquals(3, commands.size)
+        }
+    }
+
+    @Test
+    fun `remoteHasBranch is true when ls-remote lists the head`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val yes = env(
+                dir,
+                mapOf(
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_LS_REMOTE_OUT" to "abc123\trefs/heads/test-1"
+                )
+            )
+            assertTrue(manager(dir, yes).remoteHasBranch(repo(dir), "test-1"))
+
+            // Empty ls-remote → not on remote.
+            val no = tempDir()
+            val noEnv = env(no, mapOf("FAKE_REMOTE_OUT" to "origin", "FAKE_LS_REMOTE_OUT" to ""))
+            assertFalse(manager(no, noEnv).remoteHasBranch(repo(no), "test-1"))
+
+            // A different branch name must not match as a suffix.
+            val other = tempDir()
+            val otherEnv = env(
+                other,
+                mapOf(
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_LS_REMOTE_OUT" to "abc123\trefs/heads/foo/test-1"
+                )
+            )
+            assertFalse(manager(other, otherEnv).remoteHasBranch(repo(other), "test-1"))
+        }
+    }
+
+    @Test
+    fun `resolvePublishState clears unpublished when remote already has the branch`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            // status: no upstream; ls-remote: branch exists; set-upstream +
+            // refreshed status report tracking.
+            val e = env(
+                dir,
+                mapOf(
+                    "FAKE_STATUS_OUT" to "## test-1",
+                    "FAKE_REMOTE_OUT" to "origin",
+                    "FAKE_LS_REMOTE_OUT" to "abc123\trefs/heads/test-1",
+                    // After set-upstream, a second status should look tracked
+                    // — the fake always returns FAKE_STATUS_OUT, so we still
+                    // rely on remoteBranchExists=true on the returned status.
+                )
+            )
+            val git = manager(dir, e)
+            val local = git.status(repo(dir))
+            assertTrue(local.unpublished)
+            val resolved = git.resolvePublishState(repo(dir), local)
+            assertFalse(resolved.unpublished)
+            assertEquals(true, resolved.remoteBranchExists)
+            // argv: status (local) already done by caller; resolve does
+            // remote + ls-remote + set-upstream + status refresh.
+            val commands = log(e)
+            assertTrue(commands.any { it.startsWith("CMD [ls-remote]") })
+            assertTrue(
+                commands.any {
+                    it.startsWith("CMD [branch] [--set-upstream-to=origin/test-1]")
+                }
+            )
         }
     }
 

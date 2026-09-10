@@ -102,6 +102,10 @@ class FileManagerViewModel : ViewModel() {
                 // .codec/, OS junk. ensure() is idempotent and never edits
                 // the user's .gitignore.
                 runCatching { RepoHygiene.ensure(project.root) }
+                // Hub cards stay local-only (no ls-remote per project — that
+                // would stall the grid offline). The Source Control sheet
+                // runs resolvePublishState and repairs upstream tracking, so
+                // the next hub refresh after opening SC sees the truth.
                 runCatching { git.status(project.root) }.getOrNull()
             } else {
                 null
@@ -129,6 +133,7 @@ class FileManagerViewModel : ViewModel() {
                 // Phase 17 device fix: commits that never reached the remote.
                 unpushed = status?.ahead ?: 0,
                 // Phase 17 follow-up: a branch with commits but no remote.
+                // Phase 39 device follow-up: remote probe can clear this.
                 unpublished = status?.unpublished == true
             )
         }
@@ -554,9 +559,18 @@ class FileManagerViewModel : ViewModel() {
                     ?: error(context.getString(R.string.git_not_installed_message))
                 // Phase 17 device fix: a branch created in the app has no
                 // upstream, so publish it instead of failing.
-                withContext(Dispatchers.IO) { git?.pushHandlingUpstream(project.root) }
+                // Phase 39 device follow-up: name the branch in the success
+                // toast so a push from test-1 never looks like "pushed main".
+                val branch = withContext(Dispatchers.IO) {
+                    git?.pushHandlingUpstream(project.root)
+                    git?.currentBranch(project.root)
+                }
                 loadProjects(context)
-                _userMessage.value = context.getString(R.string.hub_push_success, projectName)
+                _userMessage.value = if (!branch.isNullOrBlank()) {
+                    context.getString(R.string.hub_push_success_branch, projectName, branch)
+                } else {
+                    context.getString(R.string.hub_push_success, projectName)
+                }
                 onDone()
             } catch (e: Exception) {
                 _userMessage.value = context.getString(

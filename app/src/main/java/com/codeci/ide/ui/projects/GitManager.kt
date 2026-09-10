@@ -276,14 +276,108 @@ class GitManager(
      * a branch tracks something, so a missing upstream is detectable without
      * another process — and the extra `status` call is the one CodeC already
      * makes for the Source Control sheet.
+     *
+     * Always passes the branch **name** (not a bare `git push`) so a push
+     * from `test-1` cannot be mistaken for (or silently land on) `main`.
+     * When upstream is already set, this is still `git push <remote> <branch>`
+     * — same effect as plain `git push`, with an explicit ref.
      */
     fun pushHandlingUpstream(root: File) {
         val status = runCatching { status(root) }.getOrNull()
-        push(
+        val branch = status?.branch
+        val needsUpstream = status?.upstream == null
+        if (needsUpstream) {
+            push(root, setUpstream = true, branchName = branch)
+        } else {
+            // Explicit remote + branch so the argv (and the UI label) always
+            // name the branch the user is on — never a silent default.
+            val remote = firstRemote(root) ?: "origin"
+            val ref = branch?.trim()
+                ?.takeIf { GitBranchOps.isSafeExistingBranch(it) }
+                ?: "HEAD"
+            exec(
+                root,
+                listOf("push", remote, ref),
+                networkTimeoutSeconds,
+                "git push failed"
+            )
+        }
+    }
+
+    /**
+     * True when [branch] already exists on the first remote as a head
+     * (`refs/heads/<branch>` via `git ls-remote --heads`). Used to stop the
+     * "not on the remote yet" banner after a successful publish when the
+     * local upstream config is missing or stale — the remote is the truth.
+     *
+     * Best-effort: offline / no token / empty branch → false (banner may
+     * still show; the next successful push clears it).
+     */
+    fun remoteHasBranch(root: File, branch: String): Boolean {
+        val name = branch.trim()
+        if (name.isEmpty() || !GitBranchOps.isSafeExistingBranch(name)) return false
+        val remote = firstRemote(root) ?: "origin"
+        // Cap the probe well below the full push timeout — a hung ls-remote
+        // must not freeze the Source Control sheet for five minutes.
+        val probeTimeout = networkTimeoutSeconds.coerceAtMost(30L)
+        val result = runCatching {
+            runGit(
+                workingDir = root,
+                args = listOf("ls-remote", "--heads", remote, name),
+                timeoutSeconds = probeTimeout
+            )
+        }.getOrNull() ?: return false
+        if (result.exitCode != 0) return false
+        // Exact refs/heads/<name> only — never a suffix of another branch
+        // (e.g. refs/heads/foo/test-1 must not match test-1).
+        val needle = "refs/heads/$name"
+        return result.stdout.any { line ->
+            val ref = line.trim().substringAfter('\t', "")
+                .ifEmpty { line.trim().substringAfter(' ', "") }
+                .trim()
+            ref == needle
+        }
+    }
+
+    /**
+     * `git branch --set-upstream-to=<remote>/<branch> <branch>` — wire local
+     * tracking after we discover the remote already has the branch (e.g. a
+     * previous publish succeeded but tracking never stuck). Best-effort; the
+     * caller keeps going even if this fails.
+     */
+    fun setUpstream(root: File, branch: String) {
+        val name = branch.trim()
+        require(GitBranchOps.isSafeExistingBranch(name)) { "Invalid branch name" }
+        val remote = firstRemote(root) ?: "origin"
+        exec(
             root,
-            setUpstream = status?.upstream == null,
-            branchName = status?.branch
+            listOf("branch", "--set-upstream-to=$remote/$name", name),
+            localTimeoutSeconds,
+            "git branch --set-upstream-to failed"
         )
+    }
+
+    /**
+     * Enriches a local [GitStatus] with a remote probe (and, when the remote
+     * already has the branch, repairs missing upstream tracking so the next
+     * `git status` reports ahead/behind honestly).
+     *
+     * Only hits the network when the local heuristic says "unpublished".
+     */
+    fun resolvePublishState(root: File, local: GitStatus): GitStatus {
+        val branch = local.branch ?: return local
+        if (local.detached || local.noCommits || local.upstream != null) return local
+        val onRemote = runCatching { remoteHasBranch(root, branch) }.getOrNull()
+            ?: return local.copy(remoteBranchExists = null)
+        if (onRemote) {
+            // Repair tracking so the banner stays gone and ahead counts work.
+            runCatching { setUpstream(root, branch) }
+            val refreshed = runCatching { status(root) }.getOrNull()
+            if (refreshed != null) {
+                return refreshed.copy(remoteBranchExists = true)
+            }
+        }
+        return local.copy(remoteBranchExists = onRemote)
     }
 
     /** `git pull` — merge auto-edit disabled so no editor can ever block. */
@@ -904,7 +998,16 @@ data class GitStatus(
     val behind: Int = 0,
     val files: List<GitFileChange> = emptyList(),
     /** True for `## No commits yet on <branch>` (an empty repository). */
-    val noCommits: Boolean = false
+    val noCommits: Boolean = false,
+    /**
+     * Phase 39 device follow-up — when non-null, overrides the local-only
+     * "no upstream config" guess with a real `git ls-remote` answer:
+     * `true` = branch exists on the remote (so the "not on remote yet"
+     * banner must hide even if upstream tracking is missing);
+     * `false` = confirmed missing on the remote.
+     * `null` = not probed (fall back to the local heuristic).
+     */
+    val remoteBranchExists: Boolean? = null,
 ) {
     /**
      * Phase 17 follow-up (owner, 2026-09-01: "locally commit cannot be
@@ -912,9 +1015,20 @@ data class GitStatus(
      * its commits live only on this device and the first push must publish
      * the branch itself. A fresh repo with zero commits is NOT unpublished
      * (there is nothing to push), and a detached HEAD is not either.
+     *
+     * Phase 39 device follow-up: if we already know the remote has this
+     * branch ([remoteBranchExists] = true), it is NOT unpublished — the
+     * banner was lying after a successful create+push when only the local
+     * upstream config was missing. If the remote probe says false, keep
+     * the banner. If unprobed, keep the original local heuristic.
      */
     val unpublished: Boolean
-        get() = branch != null && !detached && upstream == null && !noCommits
+        get() {
+            if (branch == null || detached || noCommits) return false
+            if (remoteBranchExists == true) return false
+            if (remoteBranchExists == false) return upstream == null
+            return upstream == null
+        }
 }
 
 /**

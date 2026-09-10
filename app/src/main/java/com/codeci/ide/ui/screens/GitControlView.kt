@@ -257,8 +257,15 @@ fun GitControlSheet(
                             .height(50.dp)
                             .padding(top = 10.dp)
                     ) {
+                        // Phase 39 device follow-up — name the branch so a
+                        // push from test-1 never looks like "push to main".
+                        val pushBranch = state.status?.branch
                         Text(
-                            stringResource(R.string.git_commit_push),
+                            text = if (!pushBranch.isNullOrBlank()) {
+                                stringResource(R.string.git_commit_push_to, pushBranch)
+                            } else {
+                                stringResource(R.string.git_commit_push)
+                            },
                             letterSpacing = 1.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -465,8 +472,18 @@ fun GitControlSheet(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = when {
-                                        ahead > 0 ->
-                                            stringResource(R.string.git_unpushed_count, ahead)
+                                        ahead > 0 -> {
+                                            val b = state.status?.branch
+                                            if (!b.isNullOrBlank()) {
+                                                stringResource(
+                                                    R.string.git_unpushed_count_branch,
+                                                    ahead,
+                                                    b
+                                                )
+                                            } else {
+                                                stringResource(R.string.git_unpushed_count, ahead)
+                                            }
+                                        }
                                         state.pushError != null ->
                                             stringResource(R.string.git_unpushed_unknown)
                                         else -> stringResource(
@@ -499,7 +516,15 @@ fun GitControlSheet(
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.height(42.dp)
                             ) {
-                                Text(stringResource(R.string.git_push_action), letterSpacing = 0.8.sp)
+                                val pushBranch = state.status?.branch
+                                Text(
+                                    text = if (!pushBranch.isNullOrBlank()) {
+                                        stringResource(R.string.git_push_to, pushBranch)
+                                    } else {
+                                        stringResource(R.string.git_push_action)
+                                    },
+                                    letterSpacing = 0.8.sp
+                                )
                             }
                         }
                     }

@@ -312,6 +312,10 @@
     <string name="git_working_tree_clean">Working tree clean ✓</string>
     <string name="git_commit_hint">Commit message</string>
     <string name="git_commit_push">COMMIT &amp; PUSH</string>
+    <!-- Phase 39 device follow-up: always name the checked-out branch so a
+         push from test-1 cannot look like (or silently target) main. -->
+    <string name="git_commit_push_to">COMMIT &amp; PUSH TO %1$s</string>
+    <string name="git_push_to">PUSH TO %1$s</string>
     <string name="git_renamed_from">renamed from %1$s</string>
     <string name="git_diff_title">Changes</string>
     <string name="git_diff_empty">No textual differences (binary file, mode change, or empty diff).</string>
@@ -353,6 +357,7 @@
     <string name="hub_pull_failed">Pull failed: %1$s</string>
     <string name="hub_push">Push Changes</string>
     <string name="hub_push_success">Pushed %1$s</string>
+    <string name="hub_push_success_branch">Pushed %1$s → %2$s</string>
     <string name="hub_push_failed">Push failed: %1$s</string>
     <string name="project_missing">Project is no longer available</string>
     <string name="invalid_project_name">Invalid project name</string>
@@ -391,6 +396,7 @@
     <string name="git_unstage">Unstage file</string>
     <string name="git_no_other_changes">No other changes — only the conflicts above.</string>
     <string name="git_unpushed_count">%1$d commit(s) not pushed yet</string>
+    <string name="git_unpushed_count_branch">%1$d commit(s) on "%2$s" not pushed yet</string>
     <string name="git_unpushed_unknown">Push did not finish — your commits are still on this device</string>
     <string name="git_unpushed_new_branch">Branch "%1$s" is not on the remote yet — the first push publishes it</string>
     <string name="git_push_action">PUSH</string>

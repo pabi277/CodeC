@@ -242,7 +242,13 @@ class GitControlViewModel : ViewModel() {
                         // already-committed artifacts now happens inside
                         // stageAll (same commit as the clean tree), not here.
                         RepoHygiene.ensure(projectRoot)
-                        git.status(projectRoot)
+                        val local = git.status(projectRoot)
+                        // Phase 39 device follow-up — the "Branch X is not on
+                        // the remote yet" banner used only the local upstream
+                        // config. After a successful create+push the branch
+                        // IS on GitHub, but if tracking was missing/stale the
+                        // banner stayed. Probe the remote and repair tracking.
+                        git.resolvePublishState(projectRoot, local)
                     }
                 } else {
                     null
@@ -338,9 +344,19 @@ class GitControlViewModel : ViewModel() {
             // with "has no upstream branch" — and never claim a push worked.
             val pushFailure = runCatching { git.pushHandlingUpstream(projectRoot) }
                 .exceptionOrNull()
+            // Phase 39 device follow-up — name the branch so success never
+            // reads like a silent push to main.
+            val branchLabel = runCatching { git.currentBranch(projectRoot) }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
             if (pushFailure == null) {
                 _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
-                if (note != null) "$note · Committed & pushed ✓" else "Committed & pushed ✓"
+                val pushed = if (branchLabel != null) {
+                    "Committed & pushed to $branchLabel ✓"
+                } else {
+                    "Committed & pushed ✓"
+                }
+                if (note != null) "$note · $pushed" else pushed
             } else {
                 // Phase 17 follow-up: a friendly, actionable reason + token
                 // link instead of raw git output.
@@ -350,7 +366,8 @@ class GitControlViewModel : ViewModel() {
                     pushHelpUrl = friendly.helpUrl
                 )
                 val prefix = if (note != null) "$note · " else ""
-                "${prefix}Committed locally ✓ — NOT pushed: ${friendly.message}"
+                val where = if (branchLabel != null) " on $branchLabel" else ""
+                "${prefix}Committed locally$where ✓ — NOT pushed: ${friendly.message}"
             }
         }
     }
@@ -373,7 +390,8 @@ class GitControlViewModel : ViewModel() {
         ) { git ->
             git.pushHandlingUpstream(projectRoot)
             _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
-            "Pushed ✓"
+            val branch = runCatching { git.currentBranch(projectRoot) }.getOrNull()
+            if (!branch.isNullOrBlank()) "Pushed to $branch ✓" else "Pushed ✓"
         }
     }
 
