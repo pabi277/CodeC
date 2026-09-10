@@ -214,7 +214,10 @@ Every update updates the docs **in the same commit**:
   `ExitSurveyTest` (8) + amended persistence test (attachment-shaped
   booleans banned; the switch is allowed) — 71/71 host-pre-validated.
   Round-2 runbook `docs/chat-phase41/DEVICE_TEST_PLAN.md` (D1–D8; D8 =
-  the chat opens to the owner's own number). Merge HELD.
+  the chat opens to the owner's own number). **Follow-up CI ✅ GREEN —
+  `Build APK` `34529280630` on tip `4cfa1ce`** (pushed after a §2.4
+  realign: the between-turn sandbox reset had moved HEAD to the base
+  commit while the worktree stayed current). Merge HELD.
 
 - **Phase 41 (Feedback that reaches you, WhatsApp-first) is 🔧 IMPLEMENTED
   on `arena/01a08cc6-codec`** (owner: "Start phase 41", 2026-09-10) — both

@@ -49,7 +49,9 @@
 **Device round 1: ✅ 8/8 PASSED (owner report, 2026-09-10: "1 -8 pass but
 the number is not mine")** — the tested number was not the owner's, which
 became the follow-up's first decision: the owner's real number + email now
-SHIP in the APK.
+SHIP in the APK. **Follow-up CI ✅ GREEN — `Build APK` `34529280630` on
+tip `4cfa1ce`** (assemble + tests + lint; artifact `CodeC-IDE`
+25 013 629 B = +21 522 B vs the phase build).
 
 **Follow-up round (owner, same day): separate screen + exit survey +
 shipped defaults** — `"Can it be a separate page?"` + *"for the testing
