@@ -144,7 +144,7 @@ fun SettingsScreen(
     val terminalFontSize by settingsManager.terminalFontSizeFlow.collectAsState(initial = 12f)
     val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "JetBrains Mono")
     val terminalExtraKeysMacros by settingsManager.terminalExtraKeysMacrosFlow.collectAsState(initial = "")
-    val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
+    val accentColor by settingsManager.accentColorFlow.collectAsState(initial = AccentPalette.DEFAULT_STORAGE_HEX)
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(com.codeci.ide.R.string.settings_title)) })

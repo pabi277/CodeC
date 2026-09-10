@@ -13,7 +13,12 @@
 >
 > **40.5 (owner, pre-merge):** *"research throughly on the color of the app's
 > inside texts … Now it is violet 💜 but not very good to read. Also correct
-> other colors"* → [PART_40_5](PART_40_5_COLOUR_REPAIR.md).
+> other colors"* → [PART_40_5](PART_40_5_COLOUR_REPAIR.md). Follow-up in the
+> same phase: *"Make the green as default"* → **CodeC green `#3DDC84` is now the
+> default accent** (first in the picker; a stored choice is never rewritten), the
+> scheme's `secondary`/`tertiary` roles come from the accent instead of the
+> template's purple/pink, and the light accent exposed one more real fault — the
+> key-cap label on a tinted cap (3.43:1) — now fixed and pinned.
 
 ```text
   40.1  Readiness + errors that cannot be missed
@@ -43,15 +48,21 @@
 - Tests: `app/src/test/java/com/codeci/ide/GitHubPhase40Test.kt` (36 host cases,
   36/36 green on a local JVM before the push). Tooling:
   `scripts/ci_annotations.py` (read a red run's annotations from the sandbox).
-- ⚠️ **CI does not run the app suite** (`Build APK` builds `:app`, tests
-  `:bench`): the Phase 40 and 40.5 tests pass in the sandbox harness, not in CI.
-  One-line fix offered in [PART_40_5 §7](PART_40_5_COLOUR_REPAIR.md).
+- **CI runs the app suite through the `gradle-bootstrap` bridge** (verified in
+  `settings.gradle.kts` + `gradle-bootstrap/build.gradle.kts`): the `Assemble
+  debug APK` step's `:app` resolves to that bridge, which runs the real wrapper's
+  `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`. The contrast suites
+  are therefore CI-enforced, not just sandbox-checked
+  ([PART_40_5 §7](PART_40_5_COLOUR_REPAIR.md)).
 - 40.5 `ui/theme/Contrast.kt` + `ui/theme/CodecPalette.kt` (new) + `Theme.kt`
   rewritten around `AccentPalette.rolesFor` (the accent is corrected per theme
-  instead of pasted raw into `primary`), the Settings accent picker shows a
-  swatch + name, and the measured fixes across the panels, tiles, editor themes
-  and translucent chrome — full table and method in
-  [PART_40_5](PART_40_5_COLOUR_REPAIR.md). Tests: `AppContrastTest` (12) +
+  instead of pasted raw into `primary`, and all twelve roles are derived from it
+  — no template purple/pink in `secondary`/`tertiary`), **the default accent is
+  CodeC green** (`SettingsManager`'s fallback and both `collectAsState`
+  placeholders read the one `AccentPalette.DEFAULT_STORAGE_HEX`), the Settings
+  accent picker shows a swatch + name, and the measured fixes across the panels,
+  tiles, editor themes and translucent chrome — full table and method in
+  [PART_40_5](PART_40_5_COLOUR_REPAIR.md). Tests: `AppContrastTest` (16) +
   `ChromeContrastTest` (7, reads the alphas out of the UI sources).
 - **Device round: ✅ 8/8 PASSED on the owner's phone** (2026-09-10) — runbook:
   [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md) (8 functional checks + the 3-check

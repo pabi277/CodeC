@@ -195,24 +195,49 @@ private fun CodecKeycap(
     val carriesHidden = corner == null &&
         (def.popup != null || def.swipeUp != null || def.swipeDown != null)
     val holdingPreview = popupShown
-    // Phase 40.5 — the cap sits on `surface` at 90% over the keyboard strip
-    // (`surfaceVariant` at 50% over `surface`), which is lighter than the base
-    // surface the accent is measured against. The accent used as TEXT (the held
-    // release preview, the corner `q¹` hint) is corrected against the cap the
-    // theme really draws — primary at 0.9 measured 3.86:1 here. The corner dot
-    // stays neutral (onSurface): a primary dot on a primary-tinted cap is
-    // invisible, the neutral one clears 3:1 in every cap state.
-    val capRgb = Contrast.composite(
+    // Phase 40.5 — everything drawn ON a cap is derived from the colour that cap
+    // really has: the theme's `surface` at 90% over the keyboard strip
+    // (`surfaceVariant` at 50% over `surface`), or the accent tint when the cap
+    // is active/pressed. The strip is lighter than the base surface the accent
+    // was measured against, and a *light* accent (the default green) turns the
+    // tinted cap light too — the label used to be plain `onSurface`, which on
+    // a green tint measured 3.43:1. One source for the background = no drift
+    // between what is painted and what the maths assumes.
+    val keyboardStrip = Contrast.composite(
+        MaterialTheme.colorScheme.surfaceVariant.toArgb(),
         MaterialTheme.colorScheme.surface.toArgb(),
-        Contrast.composite(
-            MaterialTheme.colorScheme.surfaceVariant.toArgb(),
-            MaterialTheme.colorScheme.surface.toArgb(),
-            0.5f
-        ),
-        0.9f
+        0.5f
     )
+    // 0.5 measured 5.40:1 dark / 5.43:1 light for the label; 0.6 was 4.34:1.
+    val tintAlpha: Float? = when {
+        spaceTracking -> 0.5f
+        pressed -> 0.42f
+        isShiftCap && shift != ShiftState.OFF -> 0.5f
+        else -> null
+    }
+    val capColor = if (tintAlpha == null) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+    } else {
+        MaterialTheme.colorScheme.primary.copy(alpha = tintAlpha)
+    }
+    val capRgb = Contrast.composite(capColor.toArgb(), keyboardStrip, capColor.alpha)
+    /** [color] as text on THIS cap — corrected only as far as AA needs. */
     fun onCap(color: Color): Color =
         Color(Contrast.ensureReadable(color.toArgb(), capRgb, Contrast.AA_TEXT))
+    // The label on an untinted cap is onSurface (12.98:1); on a tinted cap it is
+    // whatever stays readable on the tint, and the corner dot flips to the
+    // colour that clears 3:1 there (a primary dot on a tinted cap was 1.4:1).
+    val labelColor = if (tintAlpha == null) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        Color(Contrast.ensureReadable(MaterialTheme.colorScheme.onSurface.toArgb(), capRgb, Contrast.AA_TEXT))
+    }
+    val cornerHintColor = onCap(MaterialTheme.colorScheme.primary)
+    val cornerDotColor = if (Contrast.passes(MaterialTheme.colorScheme.onSurface.toArgb(), capRgb, Contrast.AA_NON_TEXT)) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        Color(Contrast.onColorFor(capRgb))
+    }
     val colPx = with(density) { SpaceTrack.DP_PER_COLUMN.dp.toPx() }
     val linePx = with(density) { SpaceTrack.DP_PER_LINE.dp.toPx() }
 
@@ -221,19 +246,7 @@ private fun CodecKeycap(
             .height(rowHeight)
             // Rounded FILL only — no child clip: the popup bubble renders
             // outside the cap bounds (the strip clips today; we don't).
-            .background(
-                shape = RoundedCornerShape(9.dp),
-                color = when {
-                    // Phase 40.5 — 0.6 measured 4.34:1 for the label in the
-                    // LIGHT theme (onSurface on the tinted cap); 0.5 is 5.40:1
-                    // dark / 5.43:1 light, pressed stays lighter than both.
-                    spaceTracking -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    pressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
-                    isShiftCap && shift != ShiftState.OFF ->
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                }
-            )
+            .background(shape = RoundedCornerShape(9.dp), color = capColor)
             .semantics { contentDescription = label }
             .pointerInput(cap, isShiftCap) {
                 awaitEachGesture {
@@ -338,8 +351,9 @@ private fun CodecKeycap(
             },
             style = if (holdingPreview) MaterialTheme.typography.titleMedium
                     else MaterialTheme.typography.titleSmall,
-            color = if (holdingPreview) onCap(MaterialTheme.colorScheme.primary)
-                    else MaterialTheme.colorScheme.onSurface,
+            // A held cap previews the release key in the accent; a tinted cap
+            // keeps whichever of onSurface/the accent is readable on the tint.
+            color = if (holdingPreview) onCap(MaterialTheme.colorScheme.primary) else labelColor,
             maxLines = 1
         )
         // "what a gesture releases" — printed permanently in the corner
@@ -350,7 +364,7 @@ private fun CodecKeycap(
                 style = MaterialTheme.typography.labelSmall,
                 // Phase 40.5 — the corner hint is text: primary at 0.9 measured
                 // 3.86:1 on the cap, so it is corrected against the cap.
-                color = onCap(MaterialTheme.colorScheme.primary),
+                color = cornerHintColor,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 2.dp, end = 4.dp)
@@ -365,10 +379,10 @@ private fun CodecKeycap(
                     .padding(3.dp)
                     .size(4.dp)
                     // Phase 40.5 — a primary dot at 0.7 on a primary-tinted cap
-                    // is invisible (1.4:1 on the active cap); onSurface clears
-                    // 3:1 on every cap state and both themes (12.98:1 plain,
-                    // 4.09:1 active in the dark theme; 16.56 / 5.36 in light).
-                    .background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(2.dp))
+                    // is invisible (1.4:1 on the active cap); this is onSurface
+                    // where it clears 3:1 on the cap, and the readable extreme
+                    // where the tint would swallow it.
+                    .background(cornerDotColor, RoundedCornerShape(2.dp))
             )
         }
     }

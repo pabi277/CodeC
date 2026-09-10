@@ -4,8 +4,9 @@
 > (impl `29e175e`) · **Colour round (40.5):** `8648314` · **CI ✅ GREEN:**
 > `Build APK` `34499964179`, `34500719045`, `34509510002` ·
 > **Status:** ✅ **checks 1–8 PASSED** on the owner's device (2026-09-10);
-> **checks C1–C3 (colour look-over) are new in 40.5 — run them with the same
-> APK** (Actions → latest green run on this branch → `CodeC-IDE`).
+> **checks C1–C3 are the colour look-over** (40.5, incl. the
+> *CodeC green by default* change) — run them with the latest green APK
+> (Actions → latest green run on this branch → `CodeC-IDE`).
 >
 > Every check below has a **PASS looks like** line with the exact on-screen
 > text. If a line differs, that is the bug report — copy the text verbatim and
@@ -151,23 +152,28 @@ The functional round passed. These three are the visual half: they are what the
 owner's report was about (*"Now it is violet 💜 but not very good to read"*).
 Background and measurements: [PART_40_5](PART_40_5_COLOUR_REPAIR.md).
 
-**C1 — the Accent Color row shows a colour, not a hex.** Settings → Appearance.
-**PASS looks like:** the row reads **Accent Color**, then a round **violet
-dot**, then the word **Violet**. Tapping it opens exactly six entries — **Violet,
-Teal, Red, Blue, Orange, CodeC green** — each with its own dot. Pick **CodeC
-green**: the row then shows a green dot and **CodeC green**, and the app's
-accent-coloured controls (buttons, toggles, keyboard highlights) turn green.
-*FAIL:* the row still shows a hex string like `#FF6200EE`, or the list has no
-dots.
+**C1 — CodeC green is the default, and the row shows a colour, not a hex.**
+Settings → Appearance. **PASS looks like:** the row reads **Accent Color**, then
+a round **green dot**, then the words **CodeC green** — with no trip to the
+picker first. Tapping it opens exactly six entries, **CodeC green first**, then
+**Violet, Teal, Red, Blue, Orange**, each with its own dot. Pick **Violet**: the
+row shows a violet dot and **Violet**, and the app's accent-coloured controls
+(buttons, toggles, keyboard highlights) turn violet; pick **CodeC green** to put
+it back. *FAIL:* the row still shows a hex string like `#FF6200EE`, or it says
+**Violet before you choose anything** — in that case your phone has an accent
+saved by an older build (this update never overwrites a saved choice), so tap
+**CodeC green** and mention it: the default is green on a clean install.
 
 **C2 — dark theme, the original complaint.** Dark theme, a code file open, tap
 into it so the keyboard and status bar are visible. **PASS looks like:** the
 status bar reads `Ln 1, Col 1 · UTF-8 · Kotlin · Spaces: 4 · LF` — the **LF**
 segment is as easy to read as **UTF-8**. The bottom bar's unselected labels
 (Files, Editor, Terminal, Packages, Settings) are all equally legible. The small
-corner hints on the keys (`q¹`, `;:`) are visible without leaning in, and a
-held/special key is a lighter violet with a readable label. *FAIL:* anything
-violet or grey that needs squinting.
+corner hints on the keys (`q¹`, `;:`) are visible without leaning in. Hold a
+key with a hidden release, and press/hold a normal key: the cap turns a lighter
+green and **its label stays readable** (this is the case the light default
+exposed — white on that green used to be 3.43:1). *FAIL:* anything green or grey
+that needs squinting, or a label that disappears into a tinted cap.
 
 **C3 — light theme.** Settings → App Theme → **Light**, then repeat C2's glance.
 **PASS looks like:** the bottom-bar labels and the whole `Ln … · LF` line stay

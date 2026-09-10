@@ -95,6 +95,7 @@ import com.codeci.ide.ui.terminal.CodecApiProtocol
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.MyApplicationTheme
+import com.codeci.ide.ui.theme.AccentPalette
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.FileNameUtils
@@ -275,7 +276,7 @@ class MainActivity : ComponentActivity() {
             val themeManager = remember { ThemeManager(context) }
             val settingsManager = remember { SettingsManager(context) }
             val appTheme by themeManager.appThemeFlow.collectAsState(initial = AppThemeMode.SYSTEM)
-            val accentColor by settingsManager.accentColorFlow.collectAsState(initial = "#FF6200EE")
+            val accentColor by settingsManager.accentColorFlow.collectAsState(initial = AccentPalette.DEFAULT_STORAGE_HEX)
 
             val isDarkTheme = ThemeManager.effectiveDark(appTheme, isSystemInDarkTheme())
 

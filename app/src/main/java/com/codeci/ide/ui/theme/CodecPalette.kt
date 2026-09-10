@@ -100,7 +100,7 @@ object CodecPalette {
 
     // ---- the identity colour (docs/icon/codec-mark.svg) --------------------
 
-    /** CodeC's own green — the launcher mark. Offered as an accent choice. */
+    /** CodeC's own green — the launcher mark. **The app's default accent.** */
     const val IDENTITY_GREEN = 0xFF3DDC84.toInt()
 
     /**
@@ -110,35 +110,59 @@ object CodecPalette {
      */
     data class AccentChoice(val argb: Int, val label: String)
 
-    /** Every accent the Settings picker offers, in picker order. */
+    /**
+     * Every accent the Settings picker offers, in picker order — **the default
+     * first** (as the old hex list did with `#FF6200EE`).
+     */
     val ACCENT_CHOICES: List<AccentChoice> = listOf(
+        AccentChoice(IDENTITY_GREEN, "CodeC green"),  // the launcher mark's colour — the default
         AccentChoice(0xFF6200EE.toInt(), "Violet"),   // Material violet (the historical default)
         AccentChoice(0xFF018786.toInt(), "Teal"),
         AccentChoice(0xFFB00020.toInt(), "Red"),
         AccentChoice(0xFF1976D2.toInt(), "Blue"),
-        AccentChoice(0xFFFF9800.toInt(), "Orange"),
-        AccentChoice(IDENTITY_GREEN, "CodeC green")   // the launcher mark's colour
+        AccentChoice(0xFFFF9800.toInt(), "Orange")
     )
 
-    /** `#FF6200EE` — the accent used when nothing is stored (unchanged). */
-    const val DEFAULT_ACCENT = 0xFF6200EE.toInt()
+    /**
+     * `#FF3DDC84` — CodeC's own green, used when nothing is stored.
+     *
+     * It used to be `#FF6200EE` (the Android Studio template violet), which the
+     * owner asked to change: *"Make the green as default"*. A **stored** accent
+     * is never overwritten — anyone who chose Violet in the old hex list keeps
+     * it, and Violet is one tap away in the picker.
+     */
+    const val DEFAULT_ACCENT = IDENTITY_GREEN
 }
 
 /**
- * The four colour roles an accent has to fill, corrected for the theme it is
- * used in.
+ * The twelve colour roles an accent has to fill, corrected for the theme they
+ * are used in.
  *
  * Material 3 gets this from its tonal palette (primary = **tone 40 in light,
  * tone 80 in dark**); the app pushed one raw hex into `primary` for both, which
  * is how a violet intended for a light background ended up as dark-theme text
  * at 2.25:1. [rolesFor] reproduces the M3 relationship from the user's own
- * accent instead of or from a fixed seed.
+ * accent instead of a fixed seed.
+ *
+ * `secondary`/`tertiary` are derived from the same accent too (M3 derives every
+ * role from one source colour: secondary is the accent with less chroma,
+ * tertiary the accent rotated to a contrasting hue). Before this, those roles
+ * stayed on the purple/pink template — so an app with a green accent still
+ * painted its log "DEBUG" line pink and its template chips purple-grey.
  */
 data class AccentRoles(
     val primary: Int,
     val onPrimary: Int,
     val container: Int,
-    val onContainer: Int
+    val onContainer: Int,
+    val secondary: Int,
+    val onSecondary: Int,
+    val secondaryContainer: Int,
+    val onSecondaryContainer: Int,
+    val tertiary: Int,
+    val onTertiary: Int,
+    val tertiaryContainer: Int,
+    val onTertiaryContainer: Int
 ) {
     /** True when the accent needed no correction (it already passed). */
     fun isUnchanged(seed: Int): Boolean = (seed and 0xFFFFFF) == (primary and 0xFFFFFF)
@@ -152,27 +176,40 @@ object AccentPalette {
     /** Container lightness for a light theme (tone ~90). */
     private const val LIGHT_CONTAINER_L = 0.88
 
+    /** M3 rotates the third role a sixth of the wheel away from the accent. */
+    private const val TERTIARY_HUE_SHIFT = 60.0
+
+    /** Secondary keeps the accent's hue and drops most of its chroma. */
+    private const val SECONDARY_SATURATION = 0.5
+
+    /** Tertiary keeps more chroma than secondary, but stays a tint of the hue. */
+    private const val TERTIARY_SATURATION = 0.7
+
+    /** The accent's hue with [degrees] of rotation and [saturationScale] chroma. */
+    private fun hueShifted(seed: Int, degrees: Double, saturationScale: Double): Int {
+        val (hue, saturation, lightness) = Contrast.hsl(seed)
+        return Contrast.fromHsl(
+            hue + degrees,
+            (saturation * saturationScale).coerceIn(0.15, 1.0),
+            lightness
+        )
+    }
+
     /**
-     * Derives the accent roles for [dark] theme on [surface].
-     *
-     * - `primary` keeps the accent's **hue and saturation** and only moves its
-     *   lightness until it clears [Contrast.AA_TEXT] (4.5:1) against
-     *   [surface]. An accent that already clears it is returned untouched.
-     * - `onPrimary` is measured, not assumed (`Contrast.onColorFor`).
-     * - `container`/`onContainer` are the tonal pair Material 3 uses for
-     *   tonal buttons/chips, held to the same 4.5:1.
+     * The role as **text/fill**: hue kept, lightness moved only until it clears
+     * [Contrast.AA_TEXT] (4.5:1) against [surface]. A colour that already
+     * clears it is returned untouched.
      */
-    fun rolesFor(seed: Int, dark: Boolean, surface: Int): AccentRoles {
-        val primary = Contrast.readableOn(
-            seed = seed,
-            surface = surface,
-            target = Contrast.AA_TEXT,
-            preferLighter = dark
-        )
-        val containerBase = Contrast.withLightness(
-            primary,
-            if (dark) DARK_CONTAINER_L else LIGHT_CONTAINER_L
-        )
+    private fun textRole(seed: Int, dark: Boolean, surface: Int): Int =
+        Contrast.readableOn(seed = seed, surface = surface, target = Contrast.AA_TEXT, preferLighter = dark)
+
+    /**
+     * The tonal pair Material 3 uses for chips/tonal buttons: a container at
+     * the theme's container lightness plus a readable colour for on it.
+     * The pair is held to the same 4.5:1 (`onContainer` on `container`).
+     */
+    private fun containerRoles(role: Int, dark: Boolean): Pair<Int, Int> {
+        val containerBase = Contrast.withLightness(role, if (dark) DARK_CONTAINER_L else LIGHT_CONTAINER_L)
         // The container must not be unreadable either: pull it towards an
         // extreme until the "on" colour clears the text threshold.
         val onContainerBase = Contrast.onColorFor(containerBase)
@@ -182,11 +219,40 @@ object AccentPalette {
             Contrast.readableOn(containerBase, onContainerBase, Contrast.AA_TEXT, preferLighter = !dark)
         }
         val onContainer = Contrast.onColorFor(container)
+        return container to Contrast.ensureReadable(onContainer, container, Contrast.AA_TEXT)
+    }
+
+    /**
+     * Derives every accent role for a [dark] theme on [surface].
+     *
+     * - `primary` is the accent itself, lightness-corrected to clear
+     *   [Contrast.AA_TEXT] against [surface]; `onPrimary` is measured, not
+     *   assumed (`Contrast.onColorFor`).
+     * - `secondary` is the same hue with less chroma, `tertiary` the hue
+     *   rotated by [TERTIARY_HUE_SHIFT] — the M3 relationship, taken from the
+     *   user's colour instead of the template's purple/pink.
+     * - Each role's container/on-container pair is held to the same 4.5:1.
+     */
+    fun rolesFor(seed: Int, dark: Boolean, surface: Int): AccentRoles {
+        val primary = textRole(seed, dark, surface)
+        val secondary = textRole(hueShifted(seed, 0.0, SECONDARY_SATURATION), dark, surface)
+        val tertiary = textRole(hueShifted(seed, TERTIARY_HUE_SHIFT, TERTIARY_SATURATION), dark, surface)
+        val (container, onContainer) = containerRoles(primary, dark)
+        val (secondaryContainer, onSecondaryContainer) = containerRoles(secondary, dark)
+        val (tertiaryContainer, onTertiaryContainer) = containerRoles(tertiary, dark)
         return AccentRoles(
             primary = primary,
             onPrimary = Contrast.onColorFor(primary),
             container = container,
-            onContainer = Contrast.ensureReadable(onContainer, container, Contrast.AA_TEXT)
+            onContainer = onContainer,
+            secondary = secondary,
+            onSecondary = Contrast.onColorFor(secondary),
+            secondaryContainer = secondaryContainer,
+            onSecondaryContainer = onSecondaryContainer,
+            tertiary = tertiary,
+            onTertiary = Contrast.onColorFor(tertiary),
+            tertiaryContainer = tertiaryContainer,
+            onTertiaryContainer = onTertiaryContainer
         )
     }
 
@@ -206,6 +272,27 @@ object AccentPalette {
 
     /** `#RRGGBB` for a colour, for storage/preview (`accentHex`). */
     fun toHex(argb: Int): String = String.format("#%06X", argb and 0xFFFFFF)
+
+    /**
+     * The stored form of the app's default accent — `#FF3DDC84` (CodeC green).
+     * The one place the app's fallback accent is spelled out: `SettingsManager`
+     * and every `collectAsState(initial = …)` read it from here, so a missing
+     * value cannot mean two different colours in two places.
+     */
+    val DEFAULT_STORAGE_HEX: String =
+        String.format("#FF%06X", CodecPalette.DEFAULT_ACCENT and 0xFFFFFF)
+
+    /**
+     * The accent a stored value means: [stored] itself, or the app default when
+     * nothing was ever stored or the value cannot be parsed.
+     *
+     * A **stored** choice is returned verbatim — including the historical
+     * `#FF6200EE`, so an accent the user picked is never silently rewritten.
+     * (It is also why nobody has to migrate: the default only applies where no
+     * value exists.)
+     */
+    fun effectiveStoredAccent(stored: String?): String =
+        if (stored != null && parseHex(stored) != null) stored else DEFAULT_STORAGE_HEX
 
     // --- the Settings row's view of the choices (Phase 40.5) --------------
     // Kept here, not in the UI, so the picker and AppContrastTest derive the

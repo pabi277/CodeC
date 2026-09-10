@@ -80,26 +80,56 @@ class ChromeContrastTest {
     @Test
     fun `a key-cap tint keeps the cap label readable in both themes`() {
         val src = source("app/src/main/java/com/codeci/ide/ui/keyboard/CodecKeyboard.kt")
-        val tints = Regex("""primary\.copy\(alpha = ([0-9.]+)f\)""")
-            .findAll(src).map { it.groupValues[1].toFloat() }.toList()
+        // The cap's tints are declared together (`val tintAlpha: Float? = when {…}`);
+        // reading them from there means raising one fails this test.
+        val tintBlock = Regex("""val tintAlpha: Float\? = when \{(.*?)\n    \}""", RegexOption.DOT_MATCHES_ALL)
+            .find(src)?.groupValues?.get(1)
+        assertTrue(
+            "the cap tints must be declared together (val tintAlpha: Float? = when {…})",
+            tintBlock != null
+        )
+        val tints = Regex("""([0-9.]+)f""").findAll(tintBlock!!).map { it.groupValues[1].toFloat() }.toList()
         assertTrue("no accent cap tints found in CodecKeyboard.kt", tints.isNotEmpty())
         val strongest = tints.max()
+        // The cap's own colour is the single source for what is drawn on it: the
+        // label, the corner hint and the dot all correct against it. Without
+        // that, a LIGHT accent (the default green) put near-white onSurface text
+        // on a light green cap — 3.43:1, measured on the dark theme.
         assertTrue(
-            "the keyboard must derive its accent-on-cap colour (onCap)",
-            src.contains("fun onCap(")
+            "the keyboard must derive its cap colours from the cap it draws (capRgb)",
+            src.contains("val capRgb = Contrast.composite(") && src.contains("fun onCap(")
         )
         for (theme in themes) {
             val cap = Contrast.composite(theme.surface, strip(theme), 0.9f)
             val activeCap = Contrast.composite(primaryOf(theme), strip(theme), strongest)
+            // Plain cap: onSurface is used raw, so it must clear AA on its own.
             require("${theme.name} keycap label on a plain cap", theme.onSurface, cap, Contrast.AA_TEXT)
-            require("${theme.name} keycap label on the strongest tint ($strongest)", theme.onSurface, activeCap, Contrast.AA_TEXT)
-            // The corner dot is a graphic, and it sits on every cap state.
-            require("${theme.name} keycap dot on a plain cap", theme.onSurface, cap, Contrast.AA_NON_TEXT)
-            require("${theme.name} keycap dot on the strongest tint", theme.onSurface, activeCap, Contrast.AA_NON_TEXT)
+            // Tinted cap: the label is corrected against the tint, so the
+            // corrected colour must clear AA — and for a light accent the raw
+            // one would not, which is why the correction is load-bearing.
+            val label = Contrast.ensureReadable(theme.onSurface, activeCap, Contrast.AA_TEXT)
+            require("${theme.name} keycap label on the strongest tint ($strongest)", label, activeCap, Contrast.AA_TEXT)
+            // The corner dot is a graphic: onSurface where it clears 3:1, else
+            // the readable extreme (which the source picks at runtime).
+            val dot = if (Contrast.ratio(theme.onSurface, activeCap) >= Contrast.AA_NON_TEXT) {
+                theme.onSurface
+            } else {
+                Contrast.onColorFor(activeCap)
+            }
+            require("${theme.name} keycap dot on the strongest tint", dot, activeCap, Contrast.AA_NON_TEXT)
             // The corner hint and the held-release preview are text on the cap.
             val hint = Contrast.ensureReadable(primaryOf(theme), cap, Contrast.AA_TEXT)
             require("${theme.name} keycap corner hint (corrected)", hint, cap, Contrast.AA_TEXT)
         }
+        // …and the case the default green makes unavoidable: a light accent in
+        // the dark theme must NEED that correction.
+        val darkTheme = themes.first { it.dark }
+        val greenCap = Contrast.composite(primaryOf(darkTheme), strip(darkTheme), strongest)
+        assertTrue(
+            "a light accent tint must need a corrected label (raw onSurface was " +
+                "%.2f:1)".format(Contrast.ratio(darkTheme.onSurface, greenCap)),
+            Contrast.ratio(darkTheme.onSurface, greenCap) < Contrast.AA_TEXT
+        )
     }
 
     @Test
@@ -184,6 +214,12 @@ class ChromeContrastTest {
             theme.contains("AccentPalette.rolesFor(") &&
                 theme.contains("onPrimary = Color(roles.onPrimary)") &&
                 theme.contains("primaryContainer = Color(roles.container)")
+        )
+        assertTrue(
+            "secondary/tertiary must come from the accent too (no template purple/pink left)",
+            theme.contains("secondary = Color(roles.secondary)") &&
+                theme.contains("tertiary = Color(roles.tertiary)") &&
+                theme.contains("onSecondaryContainer = Color(roles.onSecondaryContainer)")
         )
         assertTrue(
             "the raw-accent-into-primary path must be gone",

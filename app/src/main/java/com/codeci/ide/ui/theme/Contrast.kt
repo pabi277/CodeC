@@ -4,12 +4,12 @@ package com.codeci.ide.ui.theme
  * Phase 40.5 — pure, Android-free colour-contrast maths (WCAG 2.2).
  *
  * Why this exists: the app's accent is user-configurable and the old code
- * pushed it into `colorScheme.primary` unchanged in BOTH themes. The default
- * accent (`#FF6200EE`, the Android Studio template violet) therefore became
- * *text* on a near-black surface in dark mode — a measured **2.25:1**, where
- * WCAG 2.2 §1.4.3 requires 4.5:1 for body text (§1.4.11: 3:1 for non-text).
- * That is exactly the owner's report: *"it is violet but not very good to
- * read"*.
+ * pushed it into `colorScheme.primary` unchanged in BOTH themes. The accent
+ * (`#FF6200EE`, the Android Studio template violet — the default until 40.5)
+ * therefore became *text* on a near-black surface in dark mode — a measured
+ * **2.25:1**, where WCAG 2.2 §1.4.3 requires 4.5:1 for body text (§1.4.11:
+ * 3:1 for non-text). That is exactly the owner's report: *"it is violet but
+ * not very good to read"*.
  *
  * Everything here is integer/float maths with no Compose or Android import, so
  * it runs in `:app:testDebugUnitTest` and can pin every colour pair in the app.
@@ -162,9 +162,13 @@ object Contrast {
             if (passes(candidate, surface, target)) return candidate
             i++
         }
-        // Terminal fallback: pure white / pure black always beat any surface
-        // (21:1 against the opposite extreme).
-        return if (preferLighter) 0xFFFFFFFF.toInt() else 0xFF000000.toInt()
+        // Terminal fallback: the *better* of the two extremes, not the one the
+        // walk happened to head for. A mid-luminance surface (a light accent
+        // tint, e.g. the default green over a dark theme at 50 %) is beaten by
+        // black even though its walk was "lighter"; returning white there
+        // measured 4.43:1 — short of the 4.5 this function promises. One of
+        // white/black is always >= 4.58:1 on any background.
+        return bestExtremeFor(surface)
     }
 
     /**
@@ -174,8 +178,17 @@ object Contrast {
      */
     fun ensureReadable(fg: Int, bg: Int, target: Double = AA_TEXT): Int {
         if (passes(fg, bg, target)) return fg
-        val preferLighter = ratio(0xFFFFFFFF.toInt(), bg) >= ratio(0xFF101014.toInt(), bg)
-        return readableOn(fg, bg, target, preferLighter)
+        // Pick the direction by the ratio the two *extremes* actually achieve,
+        // so the walk can always reach [target] (the previous comparison used
+        // #101014, the "on" colour, which is not the darkest reachable).
+        return readableOn(fg, bg, target, preferLighter = ratio(0xFFFFFFFF.toInt(), bg) >= ratio(0xFF000000.toInt(), bg))
+    }
+
+    /** Whichever of pure white / pure black measures better on [background]. */
+    fun bestExtremeFor(background: Int): Int {
+        val white = 0xFFFFFFFF.toInt()
+        val black = 0xFF000000.toInt()
+        return if (ratio(white, background) >= ratio(black, background)) white else black
     }
 
     /**

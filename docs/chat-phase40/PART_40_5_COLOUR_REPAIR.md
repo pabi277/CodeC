@@ -2,7 +2,13 @@
 
 > **Owner's report:** *"research throughly on the color of the app's inside texts
 > and make it good to see. Now it is violet 💜 but not very good to read. Also
-> correct other colors"* — this is the gate before merging Phase 40.
+> correct other colors"* — this was the gate before merging Phase 40.
+>
+> **Follow-up (same phase):** *"Make the green as default"* → §1a: the default
+> accent is now **CodeC green `#3DDC84`** (first in the picker), the scheme's
+> `secondary`/`tertiary` roles are derived from the accent as well (no purple/
+> pink template leftovers), and a light accent exposed — and fixed — one more
+> real fault in the cap-label maths (§1b).
 >
 > **Branch:** `arena/01a08c04-codec` · **Base:** the Phase 40 repair (`29e175e`
 > + `e623a16`) + the device runbook (`68321c8`, 8/8 checks passed on device).
@@ -14,8 +20,9 @@
 
 ## 1. Why the violet was hard to read (root cause, not a re-tint)
 
-`SettingsManager` stores the accent as a raw `#AARRGGBB`, default `#FF6200EE`
-(the Android Studio template violet). `MyApplicationTheme` pushed that value
+`SettingsManager` stored the accent as a raw `#AARRGGBB`, defaulting to
+`#FF6200EE` (the Android Studio template violet — still offered as `Violet`,
+no longer the default; see §1a). `MyApplicationTheme` pushed that value
 straight into `primary`:
 
 ```kotlin
@@ -37,7 +44,7 @@ draws, `onPrimary` is *measured* (`Contrast.onColorFor`) instead of assumed,
 and `primaryContainer`/`onPrimaryContainer` are derived the same way. An accent
 that already passes is returned untouched.
 
-| Accent `#FF6200EE` | dark theme | light theme |
+| The violet, as it behaved (still the story of any light accent) | dark theme | light theme |
 |---|---|---|
 | `primary` before | `#6200EE` — **2.25:1** ❌ | `#6200EE` — 7.44:1 ✅ |
 | `primary` after | `#A15FFF` — **4.56:1** ✅ | `#6200EE` — 7.44:1 ✅ (unchanged) |
@@ -51,6 +58,64 @@ probe before the tests existed, and now pinned by
 `AppContrastTest.every accent choice is readable in both themes`. The stored
 format is unchanged (`#FF%06X`), so accents saved by older builds keep working;
 a stored value that is not one of the six still shows as its own hex.
+
+## 1a. The default is now CodeC green
+
+*"Make the green as default."* Three parts:
+
+1. **The value.** `CodecPalette.DEFAULT_ACCENT = IDENTITY_GREEN` (`#3DDC84`,
+   the launcher mark), stored as `#FF3DDC84`. `AccentPalette.DEFAULT_STORAGE_HEX`
+   is the single spelling of it: `SettingsManager`'s fallback, `MainActivity`'s
+   and `SettingsScreen`'s pre-emission placeholder all read that one value, so a
+   missing preference can no longer mean two different colours in two places
+   (and there is no violet flash on a cold start).
+2. **The picker order.** CodeC green is the first entry, as the default always
+   was (the old hex list led with its default too). The other five are
+   unchanged: Violet, Teal, Red, Blue, Orange.
+3. **No silent rewrites.** A **stored** accent is returned verbatim by
+   `AccentPalette.effectiveStoredAccent` — including `#FF6200EE`, so a tap the
+   user made in the old hex list is never overwritten. The default only applies
+   where no value exists (or where the stored value is unparseable, which also
+   used to fall through to the template violet). *If a phone still shows Violet
+   after this update, that is a stored choice: CodeC green is one tap away.*
+
+**The scheme now comes from the accent, not from the template.** With green as
+the accent but the template's `PurpleGrey`/`Pink` still in `secondary`/`tertiary`,
+three visible places stayed off-brand: the `DEBUG` line in Logs (pink),
+the commit-hygiene note in Source Control, and the concept chips in Templates
+(purple-grey). `AccentPalette.rolesFor` now derives all twelve roles from the one
+accent the way Material 3 derives a scheme from a seed — `secondary` = the
+accent's hue with less chroma, `tertiary` = the hue rotated 60° — each held to
+4.5:1 on the surface and 4.5:1 for on-container on its container
+(`AppContrastTest.secondary and tertiary come from the accent, not the template`
+re-derives all six accents × both themes). `Color.kt`'s purple constants now
+only back the never-reached "no accent at all" fallback.
+
+## 1b. What the green default exposed (and the test caught)
+
+Making the accent light — green is far lighter than the violet — turned the
+*active* keyboard cap (accent at 50 % over the strip) into a light green
+`#38865E`. On it:
+
+| Drawn on the tinted cap | Before | After |
+|---|---|---|
+| Cap label (`onSurface`, near-white) | **3.43:1** ❌ | derived from the cap → ≥4.5:1 ✅ |
+| Corner hint (`q¹`, accent as text) | 1.4–2:1 ❌ | derived from the cap ✅ |
+| Corner dot (accent) | 1.4:1 ❌ | `onSurface`, else the readable extreme ✅ |
+
+The key cap now computes the colour it actually paints (`capColor` → composited
+`capRgb`) and derives everything on it from **that**, so the maths and the pixels
+cannot drift apart.
+
+Fixing it uncovered a genuine bug in `Contrast.ensureReadable`: it chose its walk
+direction by comparing white against `#101014` (the "on" colour) rather than
+black, and its fallback returned the walked-toward extreme without checking it.
+On `#38865E` that produced **white at 4.43:1** — short of the 4.5:1 the function
+promises — while black reached 4.74:1. It now compares the two real extremes,
+falls back to whichever measures better (`bestExtremeFor`), and
+`AppContrastTest.ensureReadable always reaches its target, mid-luminance
+included` pins the guarantee (one of white/black is always ≥4.58:1 on any
+background, so the promise is keepable).
 
 ## 2. The other colours that failed (found by measuring, then fixed)
 
@@ -125,28 +190,32 @@ border on a dark surface. So the repair does three things beyond the values:
 # in the sandbox (no Android needed — the suites are pure/text reads):
 kotlinc -cp … Contrast.kt CodecPalette.kt JUnit.kt RepoFiles.kt \
     AppContrastTest.kt ChromeContrastTest.kt SettingsAuditTest.kt Runner.kt
-kotlin -cp out.jar RunnerKt com.codeci.ide.AppContrastTest       # PASS=12 FAIL=0
+kotlin -cp out.jar RunnerKt com.codeci.ide.AppContrastTest       # PASS=16 FAIL=0
 kotlin -cp out.jar RunnerKt com.codeci.ide.ChromeContrastTest    # PASS=7  FAIL=0
 kotlin -cp out.jar RunnerKt com.codeci.ide.SettingsAuditTest     # PASS=5  FAIL=0
-# in CI: ./gradlew :app:testDebugUnitTest — NOT WIRED YET, see §7
+# in CI: yes — the legacy Gradle step routes :app through gradle-bootstrap,
+# whose assembleDebug task runs ./gradlew :app:assembleDebug
+# :app:testDebugUnitTest :app:lintDebug (so these suites gate the build).
 ```
 
 `ChromeContrastTest` reads the alphas **out of the UI sources** — it fails if
 someone raises the bottom-nav alpha back to 0.65 (`3.53:1, needs 4.5`) or a
-key-cap tint to 0.62 (`4.15:1, needs 4.5`). Both were confirmed by mutating the
-sources during this phase.
+key-cap tint to 0.62 (`4.15:1, needs 4.5`), and if the key cap stops deriving its
+label from the cap it draws. Both mutation checks were run during this phase.
 
 ## 6. Device look-over (3 checks, do it with the Phase 40 runbook)
 
 The 8 functional checks in [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md) already
 passed on device. These three are the *visual* half of the same round.
 
-**C1 — the picker shows a colour, not a hex.** Settings → Appearance.
-**PASS looks like:** the row reads **Accent Color** with a round violet dot and
-the word **Violet**. Tapping it opens exactly six entries — **Violet, Teal,
-Red, Blue, Orange, CodeC green** — each with its own dot; picking **CodeC
-green** leaves a green dot and **CodeC green** on the row, and the app's
-accent-coloured controls turn green. *FAIL:* the row shows a hex string.
+**C1 — green is the default, and the picker shows colours.** Settings →
+Appearance. **PASS looks like:** the row reads **Accent Color** with a round
+**green** dot and the words **CodeC green**. Tapping it opens exactly six
+entries, **CodeC green first**, then **Violet, Teal, Red, Blue, Orange**, each
+with its own dot; picking another leaves that dot and name on the row and
+recolours the app's accent controls. *FAIL:* the row shows a hex string, or it
+still says Violet — that is a value stored by an older build (nothing
+overwrites a saved choice): tap **CodeC green** and say so in your reply.
 
 **C2 — dark theme, the owner's complaint.** Editor screen, dark theme, with the
 CodeC keyboard up (tap a code file). **PASS looks like:** the status bar reads
@@ -166,21 +235,25 @@ their fills, and the Output panel stays dark by design with readable hint text.
 > Reminder (`rule.md` §3): CI green and pushed ≠ merged. **No PR/merge happens
 > without your explicit command.**
 
-## 7. Gap found while verifying (recorded, not smuggled into this repair)
+## 7. Where these tests actually run (checked, because it matters)
 
-The `Build APK` workflow assembles the app and runs the **bench** module's unit
-tests (`./gradlew :bench:assembleRelease :bench:testDebugUnitTest`), but it
-never runs `:app:testDebugUnitTest`. Everything under
-`app/src/test/java/com/codeci/ide/` — the Phase 40 suite (36 cases in
-`GitHubPhase40Test`) and the 19 contrast cases added here — is therefore
-verified **in the sandbox harness** and by whoever runs the tests locally, but
-**not by CI**. A green `Build APK` on this branch means "the app compiles and
-the bench tests pass", nothing more.
+`Build APK` sets up Gradle **9.0.0**, which cannot configure this repo's AGP;
+`settings.gradle.kts` therefore points `:app` at `gradle-bootstrap/` for that one
+legacy invocation, and the bridge's `assembleDebug` task runs the real wrapper:
 
-Wiring it in is one line (`./gradlew :app:testDebugUnitTest --no-daemon`), but
-the first run of ~120 app test classes that have never executed in CI can
-surface pre-existing failures, which would turn the branch red for reasons that
-have nothing to do with this repair. That is the owner's call, so it is
-**offered, not done**: say the word and it lands as its own small commit (with
-the same readable-annotations trick the bench step uses, so a failure is
-readable from the sandbox instead of a 40 MB log).
+```text
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+```
+
+So the contrast suites **do gate CI** — a red `AppContrastTest`,
+`ChromeContrastTest` or `SettingsAuditTest` fails the `Assemble debug APK` step
+(and the bridge re-emits the failing test names as annotations, which
+`scripts/ci_annotations.py` can read from the sandbox). The local kotlinc harness
+described in §5 is only a faster loop; CI is the executor of record, and the two
+40.5 commits (`8648314`, `5fcbedf`) are green with the suites running inside that
+step.
+
+> Worth knowing when reading older records: a docs line that says "runs inside
+> the assemble step" is talking about this bridge. It was verified here by
+> reading `settings.gradle.kts` + `gradle-bootstrap/build.gradle.kts`, not by
+> trusting the older prose.

@@ -34,9 +34,15 @@ class AppContrastTest {
 
     // ---- the accent (the reported bug) -------------------------------------
 
+    /** The default until 40.5 — still offered as `Violet` in the picker. */
+    private val historicalViolet = 0xFF6200EE.toInt()
+
     @Test
     fun `the historical default accent becomes readable in the dark theme`() {
-        val seed = CodecPalette.DEFAULT_ACCENT
+        // The accent of the owner's report: the template violet, which the app
+        // used to push into `primary` in both themes (it is a *choice* now, and
+        // the default is CodeC green — pinned by its own test below).
+        val seed = historicalViolet
         // The bug, reproduced: the raw accent as dark-theme text.
         assertEquals(2.25, Contrast.ratio(seed, CodecPalette.SURFACE_DARK), 0.02)
         val roles = AccentPalette.rolesFor(seed, dark = true, surface = CodecPalette.SURFACE_DARK)
@@ -56,9 +62,11 @@ class AppContrastTest {
 
     @Test
     fun `an accent that already passes is never restyled`() {
-        val seed = CodecPalette.DEFAULT_ACCENT
-        val light = AccentPalette.rolesFor(seed, dark = false, surface = 0xFFFFFBFE.toInt())
-        assertEquals("light theme already passed at 7.44:1", seed, light.primary)
+        // The violet is fine in a light theme (7.44:1) — so in light mode the
+        // accent must come back byte-for-byte untouched, not "corrected" for
+        // the sake of it.
+        val light = AccentPalette.rolesFor(historicalViolet, dark = false, surface = 0xFFFFFBFE.toInt())
+        assertEquals("light theme already passed at 7.44:1", historicalViolet, light.primary)
     }
 
     @Test
@@ -121,10 +129,122 @@ class AppContrastTest {
         assertEquals(null, AccentPalette.argbForLabel("Nope"))
         assertEquals(null, AccentPalette.storageHexFor("Nope"))
         assertEquals(0x123456, AccentPalette.rgbOf("#FF123456"))
-        assertEquals(CodecPalette.DEFAULT_ACCENT, AccentPalette.parseHex("#FF6200EE"))
-        assertEquals(CodecPalette.DEFAULT_ACCENT, AccentPalette.parseHex("6200EE"))
+        assertEquals(0xFF6200EE.toInt(), AccentPalette.parseHex("#FF6200EE"))
+        assertEquals(0xFF6200EE.toInt(), AccentPalette.parseHex("6200EE"))
         assertEquals(null, AccentPalette.parseHex("nope"))
-        assertEquals("#6200EE", AccentPalette.toHex(CodecPalette.DEFAULT_ACCENT))
+        assertEquals("#3DDC84", AccentPalette.toHex(CodecPalette.DEFAULT_ACCENT))
+    }
+
+    @Test
+    fun `the default accent is CodeC green`() {
+        // Owner, pre-merge: "Make the green as default."
+        assertEquals(CodecPalette.IDENTITY_GREEN, CodecPalette.DEFAULT_ACCENT)
+        assertEquals("#FF3DDC84", AccentPalette.DEFAULT_STORAGE_HEX)
+        // …and it is the first thing the picker offers, as the default used to be.
+        assertEquals("CodeC green", CodecPalette.ACCENT_CHOICES.first().label)
+        assertEquals("CodeC green", AccentPalette.labelFor(AccentPalette.DEFAULT_STORAGE_HEX))
+        // The green must be readable in both themes, like every other choice.
+        for (dark in listOf(true, false)) {
+            val roles = AccentPalette.rolesFor(
+                CodecPalette.DEFAULT_ACCENT, dark, if (dark) 0xFF1C1B1F.toInt() else 0xFFFFFBFE.toInt()
+            )
+            assertTrue(
+                "CodeC green primary in ${if (dark) "dark" else "light"}",
+                Contrast.ratio(roles.primary, if (dark) 0xFF1C1B1F.toInt() else 0xFFFFFBFE.toInt()) >= Contrast.AA_TEXT
+            )
+        }
+    }
+
+    @Test
+    fun `a stored accent always wins over the default`() {
+        // Nothing stored, or an unreadable value → the default.
+        assertEquals(AccentPalette.DEFAULT_STORAGE_HEX, AccentPalette.effectiveStoredAccent(null))
+        assertEquals(AccentPalette.DEFAULT_STORAGE_HEX, AccentPalette.effectiveStoredAccent("nonsense"))
+        // A choice is never rewritten — including the historical violet, so a
+        // picker pick made before 40.5 keeps working.
+        assertEquals("#FF6200EE", AccentPalette.effectiveStoredAccent("#FF6200EE"))
+        assertEquals("#FF018786", AccentPalette.effectiveStoredAccent("#FF018786"))
+        assertEquals("#FF123456", AccentPalette.effectiveStoredAccent("#FF123456"))
+        // …and every picker choice round-trips through it unchanged.
+        for (choice in CodecPalette.ACCENT_CHOICES) {
+            val stored = AccentPalette.storageHexFor(choice.label)!!
+            assertEquals(stored, AccentPalette.effectiveStoredAccent(stored))
+        }
+    }
+
+    @Test
+    fun `ensureReadable always reaches its target, mid-luminance included`() {
+        // The case the default green exposed: #38865E (green at 50 % over the
+        // dark keyboard strip) is a mid-luminance colour where WHITE only
+        // manages 4.43:1 while BLACK reaches 4.74:1. The old direction choice
+        // (white vs the #101014 "on" colour) walked the wrong way and returned
+        // a colour that failed the very target it promises.
+        val midLuminance = listOf(
+            0xFF38865E.toInt(), // the green tint itself
+            0xFF7D7D7D.toInt(), 0xFF808080.toInt(), // the luminance where neither
+            0xFF6A9955.toInt(), 0xFFB45309.toInt(), // extreme is comfortable
+        )
+        val foreColours = listOf(0xFFFFFFFF.toInt(), 0xFFE6E1E5.toInt(), 0xFF000000.toInt(), 0xFF3DDC84.toInt())
+        for (bg in midLuminance) {
+            for (fg in foreColours) {
+                for (target in listOf(Contrast.AA_TEXT, Contrast.AA_NON_TEXT)) {
+                    val fixed = Contrast.ensureReadable(fg, bg, target)
+                    val ratio = Contrast.ratio(fixed, bg)
+                    assertTrue(
+                        "ensureReadable(#%06X on #%06X, %.1f) = #%06X at %.2f:1".format(
+                            fg and 0xFFFFFF, bg and 0xFFFFFF, target, fixed and 0xFFFFFF, ratio
+                        ),
+                        ratio >= target
+                    )
+                }
+            }
+        }
+        // The extremes it chooses between are always good enough for AA text —
+        // that is why the fallback can promise it.
+        for (bg in midLuminance + listOf(0xFFFFFFFF.toInt(), 0xFF000000.toInt(), 0xFF3DDC84.toInt())) {
+            assertTrue(
+                "the better extreme on #%06X".format(bg and 0xFFFFFF),
+                Contrast.ratio(Contrast.bestExtremeFor(bg), bg) >= Contrast.AA_TEXT
+            )
+        }
+    }
+
+    @Test
+    fun `secondary and tertiary come from the accent, not the template`() {
+        val dark = 0xFF1C1B1F.toInt()
+        val light = 0xFFFFFBFE.toInt()
+        for (choice in CodecPalette.ACCENT_CHOICES) {
+            for ((themeName, surface, isDark) in listOf(
+                Triple("dark", dark, true),
+                Triple("light", light, false),
+            )) {
+                val roles = AccentPalette.rolesFor(choice.argb, isDark, surface)
+                // Secondary keeps the accent's hue; tertiary is rotated, and
+                // neither may be the template's purple/pink.
+                val seedHue = Contrast.hue(choice.argb)
+                val secondaryDrift = hueDistance(seedHue, Contrast.hue(roles.secondary))
+                assertTrue(
+                    "${choice.label} $themeName: secondary hue drifted ${"%.1f".format(secondaryDrift)}°",
+                    secondaryDrift < 2.0
+                )
+                for ((role, colour) in listOf(
+                    "secondary" to roles.secondary,
+                    "tertiary" to roles.tertiary,
+                )) {
+                    assertTrue(
+                        "${choice.label} $themeName: $role as text on the surface",
+                        Contrast.ratio(colour, surface) >= Contrast.AA_TEXT
+                    )
+                    assertTrue(
+                        "${choice.label} $themeName: on-${role}Container on ${role}Container",
+                        Contrast.ratio(
+                            if (role == "secondary") roles.onSecondaryContainer else roles.onTertiaryContainer,
+                            if (role == "secondary") roles.secondaryContainer else roles.tertiaryContainer
+                        ) >= Contrast.AA_TEXT
+                    )
+                }
+            }
+        }
     }
 
     // ---- every text pair the palette documents ------------------------------
@@ -288,6 +408,12 @@ class AppContrastTest {
 
     private fun rgb(hex: String): Int =
         AccentPalette.parseHex(hex) ?: error("not a colour: $hex")
+
+    /** Shortest distance between two hues, in degrees (0…180). */
+    private fun hueDistance(a: Double, b: Double): Double {
+        val d = kotlin.math.abs(a - b) % 360.0
+        return if (d > 180.0) 360.0 - d else d
+    }
 }
 
 /**
