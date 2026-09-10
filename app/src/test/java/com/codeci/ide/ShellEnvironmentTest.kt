@@ -299,6 +299,10 @@ class ShellEnvironmentTest {
         assertEquals("xterm-256color", env["TERM"])
         assertEquals("\$(printf \"\\033]1337;CodeCShellReady\\007\")codec \$ ", env["PS1"])
         assertTrue(env.containsKey("CODEC_PROJECTS"))
+        // Phase 39.1 — CPython 3.8+ honours this to keep __pycache__ out of
+        // the project tree; older interpreters ignore it and 39.2 covers them.
+        assertTrue(env.containsKey("PYTHONPYCACHEPREFIX"))
+        assertTrue(env.getValue("PYTHONPYCACHEPREFIX").replace('\\', '/').contains("CodeC/temp"))
     }
 
     @Test

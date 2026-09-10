@@ -75,6 +75,13 @@
     <string name="storage_setup_complete">Shared storage setup complete (~/storage)</string>
     <string name="projects_location">Projects Location</string>
     <string name="clear_cache">Clear Cache</string>
+    <string name="temporary_files_title">Temporary files</string>
+    <string name="temporary_files_subtitle">Run/build outputs CodeC created — %1$s. Cleared automatically; never part of your repository.</string>
+    <string name="clear_temporary_files">Clear temporary files</string>
+    <string name="temporary_files_cleared">Cleared %1$d idle run(s)</string>
+    <string name="git_hygiene_note_placeholder">Removed build outputs from the repo</string>
+    <string name="git_commit_preview_header">Will commit %1$d file(s)</string>
+    <string name="git_commit_preview_more">…and %1$d more</string>
     <string name="clear">CLEAR</string>
     <string name="cache_cleared">Cache cleared</string>
     <string name="about">About</string>

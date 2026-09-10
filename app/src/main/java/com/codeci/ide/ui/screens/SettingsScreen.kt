@@ -90,7 +90,9 @@ import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.theme.getEditorTheme
 import com.codeci.ide.ui.theme.getTerminalTheme
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -829,6 +831,52 @@ fun SettingsScreen(
                 title = stringResource(com.codeci.ide.R.string.projects_location),
                 subtitle = context.getExternalFilesDir(null)?.absolutePath ?: "Internal Storage"
             )
+
+            // Phase 39.1 — Temporary files row: size of CodeC/temp/runs +
+            // a Clear that only touches idle run dirs (never the user's
+            // project, never a live stamp). The number is why the user
+            // tolerates the policy.
+            val tempRoot = remember { File(context.filesDir, "CodeC/temp") }
+            var tempMeasure by remember {
+                mutableStateOf(com.codeci.ide.ui.services.TempGc.measure(tempRoot))
+            }
+            LaunchedEffect(Unit) {
+                tempMeasure = withContext(Dispatchers.IO) {
+                    com.codeci.ide.ui.services.TempGc.measure(tempRoot)
+                }
+            }
+            SettingsItem(
+                title = stringResource(com.codeci.ide.R.string.temporary_files_title),
+                subtitle = stringResource(
+                    com.codeci.ide.R.string.temporary_files_subtitle,
+                    com.codeci.ide.ui.services.TempGc.formatMeasure(tempMeasure)
+                )
+            )
+            SettingsAction(
+                title = stringResource(com.codeci.ide.R.string.clear_temporary_files),
+                actionText = stringResource(com.codeci.ide.R.string.clear),
+                onClick = {
+                    scope.launch {
+                        val report = withContext(Dispatchers.IO) {
+                            com.codeci.ide.ui.services.TempGc.clearIdle(
+                                tempRoot,
+                                busy = com.codeci.ide.ui.services.LiveRunStamps.snapshot(),
+                            )
+                        }
+                        tempMeasure = withContext(Dispatchers.IO) {
+                            com.codeci.ide.ui.services.TempGc.measure(tempRoot)
+                        }
+                        Toast.makeText(
+                            context,
+                            context.getString(
+                                com.codeci.ide.R.string.temporary_files_cleared,
+                                report.deleted,
+                            ),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
+            )
             
             SettingsAction(
                 title = stringResource(com.codeci.ide.R.string.clear_cache),
@@ -920,9 +968,12 @@ fun SettingsScreen(
             // Phase 31.1 — editor-lsp is a sibling sora module under the
             // same LGPL-2.1; the consumption pattern is identical to 25.2
             // (binary Gradle dependency, no source vendored).
+            // Phase 39.2 — github/gitignore pattern names (CC0-1.0); we take
+            // the names only, not the template files — see
+            // assets/licenses/GITHUB_GITIGNORE_CC0.txt.
             SettingsItem(
                 title = "Open-source licenses",
-                subtitle = "sora-editor + language-textmate + editor-lsp © Rosemoe — LGPL-2.1 · TextMate grammars & themes — MIT (microsoft/vscode, TypeScript-TmLanguage, LuaLS) · snippet packs — MIT (rafamadriz/friendly-snippets) · file icons — MIT (jesseweed/seti-ui) · QR encoding — Apache-2.0 (zxing/zxing core) · github.com/Rosemoe/sora-editor"
+                subtitle = "sora-editor + language-textmate + editor-lsp © Rosemoe — LGPL-2.1 · TextMate grammars & themes — MIT (microsoft/vscode, TypeScript-TmLanguage, LuaLS) · snippet packs — MIT (rafamadriz/friendly-snippets) · file icons — MIT (jesseweed/seti-ui) · QR encoding — Apache-2.0 (zxing/zxing core) · ignore pattern names — CC0-1.0 (github/gitignore) · github.com/Rosemoe/sora-editor"
             )
             SettingsAction(
                 title = stringResource(com.codeci.ide.R.string.install_from_github),

@@ -1,6 +1,6 @@
 # CodeC Phase 39 — Outputs are temporary, never in your repository
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
+> **Status:** 🔧 IMPLEMENTED (host-tested; device round pending) · **Cost:**
 > `[client-only]` · **Effort:** S/M · **Owner row:** *"I the output files as
 > temporarily file and don't come to add in github push find all languages
 > temporarily file and remove from git push also the .codec file"*
@@ -12,8 +12,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [39.1](PART_39_1_OUTPUTS_ARE_TEMPORARY.md) | Outputs as temporary files | M | 📋 PLANNED |
-| [39.2](PART_39_2_IGNORE_POLICY.md) | Nothing CodeC made reaches your repo | S/M | 📋 PLANNED |
+| [39.1](PART_39_1_OUTPUTS_ARE_TEMPORARY.md) | Outputs as temporary files | M | 🔧 IMPLEMENTED |
+| [39.2](PART_39_2_IGNORE_POLICY.md) | Nothing CodeC made reaches your repo | S/M | 🔧 IMPLEMENTED |
 
 ## What exists today (evidence, read 2026-09-10)
 
@@ -131,3 +131,51 @@ PASS = all six (3 is host-tested; 1, 2, 4, 5, 6 need the device round).
   repo is stable and inspectable.
 - **Committing the untrack automatically** — the deletion commit is made by the
   user's own COMMIT & PUSH, not by a background job.
+
+
+## What shipped (2026-09-10, `Start Phase 39`)
+
+**39.1 — outputs are temporary.**
+- `ui/services/RunArtifacts.kt` (pure): `plan()` / `isCodeCArtifact` /
+  `confineToTemp` / `ensureRunDir`. CodeC-invented artifacts land under
+  `CodeC/temp/runs/<stamp>/`; a user-supplied `-o bin/menu` stays put.
+- `ui/services/TempGc.kt` (pure planner + edge): age / `keepNewest=8` /
+  `maxBytes=128 MiB` / `busy` stamps; walk confined to `runs/` only.
+  `LiveRunStamps` is the process-wide busy set.
+- `CompilerService` writes `runs/<stamp>/{source.c,program}` (TCC + Clang);
+  registers the stamp while compiling; legacy flat names still clean up.
+- `ShellEnvironment.buildEnv` exports `PYTHONPYCACHEPREFIX` under
+  `CodeC/temp/runs/pycache` (CPython 3.8+; older interpreters ignore it and
+  39.2 covers them).
+- `ProjectTransfer.importZip` scratch zip moved off `projectsRoot` into the
+  system temp dir (still deleted in `finally`).
+- `MainActivity.onCreate` kicks `TempGc.collect` on a daemon thread.
+- Settings → Storage: **Temporary files — N files, X MB — [Clear]** via
+  `TempGc.measure` / `clearIdle` (idle only; live stamps kept).
+
+**39.2 — nothing CodeC made reaches your repository.**
+- `ui/projects/RepoHygiene.kt` (pure): ~56 patterns in named groups (C/C++,
+  Python, Node/JS/TS, Java/Kotlin, Lua, Go/Rust trivial, OS junk, CodeC),
+  derived from `github/gitignore` pattern *names* (CC0-1.0; recorded in
+  `assets/licenses/GITHUB_GITIGNORE_CC0.txt`). User `.gitignore` always
+  wins, including `!a.out` negation.
+- `BuildArtifactIgnore` + `PythonCacheIgnore` folded into thin deprecated
+  delegates; the two original files deleted.
+- Enforcement choke point: `GitManager.stageAll` =
+  `RepoHygiene.prepareForStage` (ensure + untrack) → `git add -A`. A
+  `git rm --cached` failure aborts before add. `GitControlViewModel.refresh`
+  only `ensure`s (no more untrack-on-refresh); COMMIT & PUSH surfaces the
+  one-line "Removed N build outputs…" note.
+- Source Control sheet: **Will commit N file(s)** preview (first 15 names,
+  renames as `old → new`) from the current status.
+- `.codec/` and `.codec.json` are in the table; clone still regenerates
+  via `ProjectConfig.defaultFor` (already the path).
+
+**Tests (host):** `RunArtifactsTest`, `TempGcTest`, `TempGcAndRunInteropTest`,
+`RepoHygieneTest` (golden table + user-wins + false cases),
+`CommitPreviewTest`, `StageAllHygieneTest` (order pin + no-untrack-on-refresh
+pin), plus the existing `PythonCacheIgnoreTest` / `SettingsAuditTest` updated
+for the new Storage rows (43 → 45 controls) and the always-on ensure path.
+
+**Device round (pending owner):** phase exit conditions 1–6 on a real phone
++ a push to GitHub. CI is the executor of record for the host cases.

@@ -190,6 +190,48 @@ fun GitControlSheet(
                         maxLines = 5,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     )
+                    // Phase 39.2 — "what will be committed" list + hygiene note.
+                    // Makes the ignore policy verifiable by a human instead of
+                    // by faith, and answers "why didn't my file push?".
+                    state.hygieneNote?.let { note ->
+                        Text(
+                            text = note,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                        )
+                    }
+                    state.commitPreview?.let { preview ->
+                        if (preview.total > 0) {
+                            Text(
+                                text = stringResource(R.string.git_commit_preview_header, preview.total),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                            )
+                            preview.staged.forEach { entry ->
+                                Text(
+                                    text = "  ${entry.status}  ${entry.path}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            if (preview.truncated) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.git_commit_preview_more,
+                                        (preview.total - preview.staged.size).coerceAtLeast(0)
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                                )
+                            }
+                        }
+                    }
                     // Mockup-exact: light-lavender fill with dark text
                     // (not the default primary/white button).
                     Button(

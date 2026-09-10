@@ -140,8 +140,21 @@ class GitManager(
     }
 
     /** Stage everything (`git add -A`) — the pane commits the whole tree. */
-    fun stageAll(root: File) {
+    /**
+     * Phase 39.2 — the choke point. Every path that stages (COMMIT & PUSH,
+     * future publish) goes through here, so ignore/untrack cannot be
+     * bypassed by a caller's good intentions:
+     *   1. [RepoHygiene.ensure] appends missing patterns to `.git/info/exclude`
+     *   2. tracked violations are `git rm --cached`'d (file stays on disk)
+     *   3. `git add -A`
+     * A `git rm --cached` failure aborts before add — a half-staged commit
+     * is worse than no commit. Returns the hygiene result so the sheet can
+     * show "Removed N build outputs…".
+     */
+    fun stageAll(root: File): RepoHygiene.HygieneResult {
+        val hygiene = RepoHygiene.prepareForStage(root, this, strict = true)
         exec(root, listOf("add", "-A"), localTimeoutSeconds, "git add failed")
+        return hygiene
     }
 
     /**

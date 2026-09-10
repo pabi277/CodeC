@@ -1,0 +1,27 @@
+github/gitignore pattern names — CC0-1.0
+========================================
+
+CodeC's Phase 39.2 ignore table (`RepoHygiene.EXCLUDE_LINES`) borrows
+**pattern names** from the canonical templates at:
+
+    https://github.com/github/gitignore
+
+We do **not** ship the template files themselves, and we do not write
+them into a user's repository. The names are merged into one curated
+table of what CodeC can actually produce or run on a phone (C/C++,
+Python, Node/JS/TS, Java/Kotlin, Lua, Go/Rust trivial, OS junk, and
+CodeC's own `.codec/` metadata). The enforcement mechanism is git's
+own `.git/info/exclude` (machine-private, never travels) — the user's
+`.gitignore` always wins, including a `!` negation.
+
+Licence (from github/gitignore README / LICENSE):
+
+> All templates in the github/gitignore repository are released under
+> the CC0-1.0 license, allowing unrestricted use in your projects
+> without attribution requirements.
+
+CC0 1.0 Universal summary: the templates are dedicated to the public
+domain. No ShareAlike clause travels with them. Recording the source
+here is this repo's habit, not a licence obligation.
+
+Full CC0 legal code: https://creativecommons.org/publicdomain/zero/1.0/legalcode

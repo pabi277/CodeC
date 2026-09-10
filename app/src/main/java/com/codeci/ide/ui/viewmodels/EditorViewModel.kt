@@ -40,7 +40,6 @@ import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputDiagnosticTarget
 import com.codeci.ide.ui.editor.OutputLineParser
 import com.codeci.ide.ui.projects.AutoRunPlan
-import com.codeci.ide.ui.projects.BuildArtifactIgnore
 import com.codeci.ide.ui.projects.CodecJsonParser
 import com.codeci.ide.ui.projects.CodecOverride
 import com.codeci.ide.ui.projects.EditorLaunchState
@@ -51,9 +50,9 @@ import com.codeci.ide.ui.projects.ProjectConfig
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.RepoHygiene
 import com.codeci.ide.ui.projects.ProjectRunDetector
 import com.codeci.ide.ui.projects.ProjectRunTarget
-import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.services.CEntryWrapper
 import com.codeci.ide.ui.services.CompilerSettings
@@ -2018,8 +2017,7 @@ class EditorViewModel : ViewModel() {
                             File(gitDir, "HEAD").takeIf { it.isFile }?.readText()
                         )
                     }.getOrNull()
-                    runCatching { PythonCacheIgnore.ensure(root) }
-                    runCatching { BuildArtifactIgnore.ensure(root) }
+                    runCatching { RepoHygiene.ensure(root) }
                     val files = runCatching { GitContext(appContext).manager()?.status(root)?.files }.getOrNull()
                     Triple(branch, files?.let(ProjectsHub::fileBadges), files?.size)
                 }.getOrNull()
@@ -2694,10 +2692,9 @@ class EditorViewModel : ViewModel() {
                 _userMessage.value = "Project '$project' is gone"
                 return
             }
-            // Keep build outputs (a.out, bin/*.out, …) out of git before a
-            // run creates them — same repo-local policy as the python cache.
+            // Phase 39.2 — keep build outputs / caches / .codec out of git before a run creates them.
             viewModelScope.launch(Dispatchers.IO) {
-                runCatching { BuildArtifactIgnore.ensure(info.root) }
+                runCatching { RepoHygiene.ensure(info.root) }
             }
             // Web projects are handled by the preview flow, not the panel —
             // except that a web project can still hold runnable source files
@@ -2801,10 +2798,10 @@ class EditorViewModel : ViewModel() {
                     }
                     is RunDecision.Execute -> {
                         if (decision.profile.displayName == "Python") {
-                            // Device round fix 2026-08-31: python writes
-                            // __pycache__ and `git add -A` used to stage it —
-                            // exclude it repo-locally BEFORE the run.
-                            viewModelScope.launch(Dispatchers.IO) { PythonCacheIgnore.ensure(info.root) }
+                            // Phase 39.2 — exclude caches before the run; 39.1
+                            // also sets PYTHONPYCACHEPREFIX so the cache lands
+                            // under CodeC/temp when the interpreter supports it.
+                            viewModelScope.launch(Dispatchers.IO) { RepoHygiene.ensure(info.root) }
                         }
                         // Phase 33 — a self-contained C file whose entry is
                         // not `main` (program01, solve, …) compiles through a

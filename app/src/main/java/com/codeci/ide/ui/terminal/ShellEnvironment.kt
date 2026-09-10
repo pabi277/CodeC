@@ -1966,6 +1966,13 @@ HELP
             put("CODEC_PROJECTS", projects.absolutePath)
             if (tccBinary != null) put("TCC_BIN", tccBinary.absolutePath)
             put("TCC_BUNDLE", tccBundle.absolutePath)
+            // Phase 39.1 — park Python's __pycache__ under CodeC/temp when the
+            // interpreter honours PYTHONPYCACHEPREFIX (CPython 3.8+). Older
+            // interpreters ignore the var; 39.2's exclude table covers that
+            // fallback. A fresh stamp dir per process keeps GC simple.
+            val pycache = File(File(filesDir, "CodeC/temp/runs"), "pycache")
+            runCatching { pycache.mkdirs() }
+            put("PYTHONPYCACHEPREFIX", pycache.absolutePath)
         }
     }
 

@@ -1,6 +1,6 @@
 # CodeC Phase 39.1 — Outputs are temporary files (and get collected)
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🔧 IMPLEMENTED (2026-09-10) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"I the output files as temporarily file"* — read as:
 > treat what CodeC produces as temporary, not as project content.
 

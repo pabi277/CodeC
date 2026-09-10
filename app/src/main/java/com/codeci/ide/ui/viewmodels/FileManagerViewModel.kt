@@ -6,19 +6,18 @@ import android.provider.DocumentsContract
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.R
-import com.codeci.ide.ui.projects.BuildArtifactIgnore
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.FileTreeRepository
 import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectConfig
-import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubStats
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.RepoHygiene
 import com.codeci.ide.ui.projects.ProjectRunDetector
 import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.projects.ProjectTransfer
@@ -99,11 +98,10 @@ class FileManagerViewModel : ViewModel() {
             val isGit = gitDir.exists()
             val branch = if (isGit) readBranchQuietly(project.root, gitDir) else null
             val status = if (isGit && git != null) {
-                // Device round fix 2026-08-31: stray __pycache__ from a python
-                // run must not light up the card badge / push offer either.
-                runCatching { PythonCacheIgnore.ensure(project.root) }
-                // Build outputs (a.out, bin/*.out, …) stay out of the badge too.
-                runCatching { BuildArtifactIgnore.ensure(project.root) }
+                // Phase 39.2 — one table covers python caches, build outputs,
+                // .codec/, OS junk. ensure() is idempotent and never edits
+                // the user's .gitignore.
+                runCatching { RepoHygiene.ensure(project.root) }
                 runCatching { git.status(project.root) }.getOrNull()
             } else {
                 null

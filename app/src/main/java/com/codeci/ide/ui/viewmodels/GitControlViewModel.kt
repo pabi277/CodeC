@@ -3,9 +3,7 @@ package com.codeci.ide.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.codeci.ide.ui.projects.BuildArtifactIgnore
 import com.codeci.ide.ui.projects.DiffEngine
-import com.codeci.ide.ui.projects.PythonCacheIgnore
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitBranchList
 import com.codeci.ide.ui.projects.GitContext
@@ -15,6 +13,7 @@ import com.codeci.ide.ui.projects.GitFriendlyError
 import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.GitStatus
+import com.codeci.ide.ui.projects.RepoHygiene
 import com.codeci.ide.ui.projects.SwitchBranchResult
 import com.codeci.ide.ui.projects.BranchTarget
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -30,6 +29,11 @@ import kotlinx.coroutines.withContext
  * Phase 13 — state for the Source Control pane ([GitControlSheet]): branch
  * + change list, pull, and the one-tap commit-and-push flow, plus the inline
  * diff viewer contents.
+ *
+ * Phase 39.2 — ignore/untrack live inside [GitManager.stageAll] (the choke
+ * point). refresh() still calls [RepoHygiene.ensure] so the change list
+ * never offers build outputs; the untrack-on-refresh path is gone (it now
+ * happens on the same commit as the stage, so history stays one commit).
  */
 class GitControlViewModel : ViewModel() {
 
@@ -60,7 +64,18 @@ class GitControlViewModel : ViewModel() {
          * Phase 17 follow-up — a help link to show next to [pushError] (the
          * GitHub token page for auth failures), or null when not applicable.
          */
-        val pushHelpUrl: String? = null
+        val pushHelpUrl: String? = null,
+        /**
+         * Phase 39.2 — one-line note when stageAll untracked previously
+         * committed build outputs ("Removed N build outputs from the repo…").
+         * Cleared on the next successful refresh without a hygiene change.
+         */
+        val hygieneNote: String? = null,
+        /**
+         * Phase 39.2 — "what will be committed" projection (first ~15 names)
+         * from the current status. Empty when nothing is staged/pending.
+         */
+        val commitPreview: RepoHygiene.CommitPreview? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -221,27 +236,47 @@ class GitControlViewModel : ViewModel() {
                 val isRepo = withContext(Dispatchers.IO) { git.isRepository(projectRoot) }
                 val status = if (isRepo) {
                     withContext(Dispatchers.IO) {
-                        // Device round fix 2026-08-31: a python bytecode cache
-                        // that nothing ignores gets repo-locally excluded right
-                        // before we list changes — the panel (and its COMMIT &
-                        // PUSH staging) never offers __pycache__ files again.
-                        PythonCacheIgnore.ensure(projectRoot)
-                        // Same treatment for build/run outputs (a.out, bin/*):
-                        // exclude new ones AND untrack any that an earlier
-                        // push already committed, so artifacts stop traveling.
-                        BuildArtifactIgnore.ensure(projectRoot)
-                        BuildArtifactIgnore.untrackTracked(projectRoot, git)
+                        // Phase 39.2 — one table covers python caches, build
+                        // outputs, .codec/, OS junk. ensure() is idempotent
+                        // and never edits the user's .gitignore. Untrack of
+                        // already-committed artifacts now happens inside
+                        // stageAll (same commit as the clean tree), not here.
+                        RepoHygiene.ensure(projectRoot)
                         git.status(projectRoot)
                     }
                 } else {
                     null
+                }
+                // "What will be committed" — every pending path the sheet
+                // shows, projected the same way stage+commit would take them.
+                val preview = status?.let { s ->
+                    // Treat every listed change as "would be staged by add -A".
+                    // Map untracked/unstaged onto a synthetic staged view for
+                    // the preview (stageAll is add -A).
+                    val synthetic = s.files.map { f ->
+                        val x = if (f.x == ' ' || f.x == '?') {
+                            when {
+                                f.y == '?' -> 'A' // untracked → would be added
+                                f.y == 'D' -> 'D'
+                                f.y == 'M' || f.y == ' ' -> 'M'
+                                else -> f.y
+                            }
+                        } else f.x
+                        "${x}  ${f.oldPath?.let { "$it -> ${f.path}" } ?: f.path}"
+                    }
+                    RepoHygiene.commitPreview(
+                        porcelainLines = listOf("## ${s.branch ?: "HEAD"}") + synthetic,
+                        limit = 15,
+                        hygieneNote = _state.value.hygieneNote,
+                    )
                 }
                 _state.value = _state.value.copy(
                     loading = false,
                     gitInstalled = true,
                     isRepo = isRepo,
                     status = status,
-                    message = finalMessage
+                    message = finalMessage,
+                    commitPreview = preview,
                 )
             } catch (e: Exception) {
                 // `git status` never authenticates, so a token check is moot;
@@ -288,10 +323,15 @@ class GitControlViewModel : ViewModel() {
             return
         }
         runGitOperation(context, projectRoot, "Committing…") { git ->
-            // Make sure fresh build outputs (a.out, bin/…) are ignored before
-            // `git add -A` sweeps the tree.
-            BuildArtifactIgnore.ensure(projectRoot)
-            git.stageAll(projectRoot)
+            // Phase 39.2 — stageAll is the choke point: ensure exclude +
+            // untrack previously-committed artifacts + git add -A. The
+            // hygiene note is surfaced on the sheet so an unexplained
+            // `git rm --cached` never appears in the user's history.
+            val hygiene = git.stageAll(projectRoot)
+            val note = hygiene.userMessage()
+            if (note != null) {
+                _state.value = _state.value.copy(hygieneNote = note)
+            }
             git.commit(projectRoot, trimmed)
             // Phase 17 device fix: publish a branch that has no upstream yet
             // (`git push --set-upstream <remote> <branch>`) instead of failing
@@ -300,7 +340,7 @@ class GitControlViewModel : ViewModel() {
                 .exceptionOrNull()
             if (pushFailure == null) {
                 _state.value = _state.value.copy(pushError = null, pushHelpUrl = null)
-                "Committed & pushed ✓"
+                if (note != null) "$note · Committed & pushed ✓" else "Committed & pushed ✓"
             } else {
                 // Phase 17 follow-up: a friendly, actionable reason + token
                 // link instead of raw git output.
@@ -309,7 +349,8 @@ class GitControlViewModel : ViewModel() {
                     pushError = friendly.message,
                     pushHelpUrl = friendly.helpUrl
                 )
-                "Committed locally ✓ — NOT pushed: ${friendly.message}"
+                val prefix = if (note != null) "$note · " else ""
+                "${prefix}Committed locally ✓ — NOT pushed: ${friendly.message}"
             }
         }
     }
