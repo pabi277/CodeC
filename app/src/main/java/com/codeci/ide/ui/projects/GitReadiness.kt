@@ -24,15 +24,25 @@ enum class GitBlocker {
     OFFLINE
 }
 
-/** Operations that carry a token-needs flag. */
-sealed class GitOp {
+/**
+ * Operation types for the blocker check.
+ * Each variant carries a flag indicating whether a GitHub token is needed.
+ */
+sealed class GitOperation {
     val needsToken: Boolean
-        get() = this is GitOp.CommitOrPush || this is GitOp.Publish
+        get() = when (this) {
+            is GitOperation.Clone -> false
+            is GitOperation.CommitOrPublish -> true
+            is GitOperation.Publish -> true
+            else -> false
+        }
 }
 
-data class GitOp.Clone(override val needsToken: Boolean = false) : GitOp()
-data class GitOp.CommitOrPush(override val needsToken: Boolean = true) : GitOp()
-data class GitOp.Publish(override val needsToken: Boolean = true) : GitOp()
+class GitOperation.Clone() : GitOperation()
+
+class GitOperation.CommitOrPublish() : GitOperation()
+
+class GitOperation.Publish() : GitOperation()
 
 /**
  * Holds the answers. null blocker == ready to act.
@@ -46,7 +56,7 @@ data class GitReadiness(
     val online: Boolean?
 ) {
     /** Null when ready. Non-null blocker, with message and action id. */
-    fun blocker(op: GitOp): GitBlocker? {
+    fun blocker(op: GitOperation): GitBlocker? {
         // 1. Git not installed — most blocking; fixes every other question
         if (!gitInstalled) return GitBlocker.GIT_NOT_INSTALLED
 
@@ -59,7 +69,9 @@ data class GitReadiness(
         if (!isRepository) return GitBlocker.NO_REPOSITORY
 
         // 4. No remote — blocker only for push/pull, not for commit
-        if (op.isPushPull && remoteUrl == null) return GitBlocker.NO_REMOTE
+        if (op is GitOperation.CommitOrPublish || op is GitOperation.Publish) {
+            if (remoteUrl == null) return GitBlocker.NO_REMOTE
+        }
 
         // 5. Offline / no network signal
         if (online != true) {
