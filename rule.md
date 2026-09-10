@@ -220,9 +220,13 @@ Every update updates the docs **in the same commit**:
   duplicate "Licenses" item, and two reader-less store keys
   (`recent_files_csv`, `smart_typing_delete_word`) with their call
   sites. Tests: 45 new host cases, pre-validated 45/45 on a local JVM
-  (the pre-validation caught 5 real bugs pre-CI). **Gate: the `Build
-  APK` CI run + the owner's device round; merge is HELD for the owner's
-  command.** After 38: `Start Phase 39` → 40 → 41 → 42 → 43 (the numbers
+  (the pre-validation caught 5 real bugs pre-CI) and **✅ CI GREEN —
+  `Build APK` `34442522565` on tip `ce1a38c`** (the new `Check icon
+  assets` step passed first try; `CodeC-IDE` 24 815 485 B = −32 351 B
+  / −0.13 % vs `main` — the deleted template webps outweigh the new
+  rasters). **Remaining gate: the owner's device round (launcher
+  shapes, themed icons, status-bar silhouettes, Settings scroll);
+  merge is HELD for the owner's command.** After 38: `Start Phase 39` → 40 → 41 → 42 → 43 (the numbers
   are the order; 39.1 before 43.2). Records: `docs/chat-phase38/`,
   JOURNEY §54.
 

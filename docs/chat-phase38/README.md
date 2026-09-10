@@ -89,8 +89,16 @@ assertion that could never match, the audit comment tripping the
 dead-key pin, the section manifest problem, and the dev-only verdict
 mismatch). Render determinism proven twice by md5; raster pixels
 sample-verified (`#101418` tile, `#3DDC84` glyph, transparent corners).
-**CI: `Build APK` + the new icon-asset step = the gate of record;
-device round (exit items 1-5, README §Exit condition) is the owner's.**
+**CI: ✅ GREEN —
+`Build APK` `34442522565` on tip `ce1a38c` (5 m 57 s; every step green
+including the new `Check icon assets (Phase 38.1)` step on its first
+run; the `gradle-bootstrap` bridge ran `:app:assembleDebug` +
+`:app:testDebugUnitTest` + `:app:lintDebug` inside the assemble step, so
+the 45 new cases really executed). Artifacts: `CodeC-IDE`
+24 815 485 B = **−32 351 B (−0.13 %) vs `main`**'s build — the deleted
+template `.webp` rasters outweigh the new PNG set; `CodeC-Bench`
+1 369 829 B. Device round (exit items 1-5, §Exit condition below)
+is the owner's; merge is HELD for the owner's command.**
 
 ## What exists today (evidence, read 2026-09-10)
 
