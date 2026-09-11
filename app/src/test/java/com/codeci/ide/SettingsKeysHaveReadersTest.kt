@@ -5,11 +5,14 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Phase 38.2 — the audit's enforcement: every DataStore key in the three
+ * Phase 38.2 — the audit's enforcement: every DataStore key in the
  * preference stores must have a READER. Enumerating the stores (not one
  * file) matters: `GitCredentialsStore`'s four keys live on the same
  * `settings` DataStore as `SettingsManager`'s, declared from
- * `ui/theme/ThemeManager.kt`.
+ * `ui/theme/ThemeManager.kt`. (Phase 41 round 2: the feedback contact
+ * store was DELETED — the developer's number/email are hardcoded
+ * `DeveloperContact`, not settings; the exit-prompt switch lives in
+ * `SettingsManager` and is covered by the same chain.)
  *
  * The chain checked is honest about how this codebase reads values:
  * a key is consumed inside its store by a flow/setter ("block"), and

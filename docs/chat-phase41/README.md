@@ -1,8 +1,13 @@
 # CodeC Phase 41 — Feedback that reaches you (WhatsApp-first)
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** S/M · **Owner row:** *"For testing i have to add
-> a feedback page give the best way, i am willing to give my WhatsApp number"*
+> **Status:** ✅ **MERGED to `main` via [PR #70](https://github.com/pabi277/CodeC/pull/70)
+> on the owner's command ("Merge it", 2026-09-11)** — device round 1 ✅ 8/8
+> (owner: "1-8 pass"); round 2 (hardcoded developer contact) shipped and CI
+> green (`34533033047`, artifact 24 998 614 B), its device pass (D1–D8) not
+> separately reported — the owner merged on their own judgment; the runbook
+> stays in the repo · **Cost:** `[client-only]` ·
+> **Effort:** S/M · **Owner row:** *"For testing i have to add a feedback
+> page give the best way, i am willing to give my WhatsApp number"*
 
 ```text
   41.1  The report: a pure draft builder + the links that carry it
@@ -11,8 +16,95 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [41.1](PART_41_1_REPORT_AND_LINKS.md) | `FeedbackDraft` + WhatsApp/mailto/GitHub links | S/M | 📋 PLANNED |
-| [41.2](PART_41_2_FEEDBACK_SCREEN.md) | The screen, the opt-ins, the number in Settings | S | 📋 PLANNED |
+| [41.1](PART_41_1_REPORT_AND_LINKS.md) | `FeedbackDraft` + WhatsApp/mailto/GitHub links | S/M | 🔧 IMPLEMENTED |
+| [41.2](PART_41_2_FEEDBACK_SCREEN.md) | The screen, the opt-ins, the number in Settings | S | 🔧 IMPLEMENTED |
+
+**Implementation map** (all on `arena/01a08cc6-codec`):
+
+- 41.1 `ui/support/FeedbackDraft.kt` (pure: `build`/`redact`/`whatsappUrl`/
+  `normaliseNumber`/`mailto`/`gitHubIssueUrl`/`encode`) + the E.164
+  country-code table; redaction = this object's token-shape table **plus**
+  `GitRedactor` (the stored literal + URL credentials) — the only two
+  redaction paths, as specced.
+- 41.2 `ui/support/FeedbackSectionCard.kt` (the Settings section's content:
+  text field, two **ephemeral** checkboxes, CHAT/COPY/EMAIL/GITHUB buttons,
+  owner reply-to fields, the three-line disclosure ABOVE the checkboxes),
+  `ui/support/FeedbackStore.kt` (2 DataStore keys, `GitCredentialsStore`-
+  shaped; the pure decisions live in `FeedbackContacts.kt`),
+  `ui/support/FeedbackSectionState.kt` (pure row/primary-action state),
+  `ui/crash/CrashLog.kt` (the ONE newest-record read of
+  `filesDir/crash-log.txt`, extracted from `CrashReportOverlay` so the
+  overlay and the report cannot drift), and
+  `OpenInBrowser.openOrCopy` (the shared open-or-copy policy — the share
+  row 37 now routes through it too).
+- Tests: `FeedbackDraftTest` (23), `FeedbackSectionStateTest` (10),
+  `FeedbackNumberSettingTest` (7), `FeedbackCheckboxNotPersistedTest` (6),
+  `CrashLogTest` (4) — **50 new host cases, pre-validated 61/61 on a local
+  JVM (jdk4py Temurin 25 + kotlinc 2.4.10, the Phase 40.4 harness route
+  with a JUnit shim + datastore shims; the loop caught 5 test-side bugs
+  before CI — assertion arithmetic and wrong fixtures, not engine bugs).**
+  `SettingsAuditTest` (12 sections now) + `SettingsKeysHaveReadersTest`
+  (4 stores now) were updated in the same commit and run in the same local
+  loop. Device runbook: [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md).
+
+**Device round 1: ✅ 8/8 PASSED (owner report, 2026-09-10: "1 -8 pass but
+the number is not mine")** — the tested number was not the owner's, which
+became the follow-up's first decision: the owner's real number + email now
+SHIP in the APK. **Follow-up CI ✅ GREEN — `Build APK` `34529280630` on
+tip `4cfa1ce`** (assemble + tests + lint; artifact `CodeC-IDE`
+25 013 629 B = +21 522 B vs the phase build).
+
+**Follow-up round (owner, same day): separate screen + exit survey +
+shipped defaults** — `"Can it be a separate page?"` + *"for the testing
+phase it when user want to close the app it show a sweet request pop up
+for rate,experience, bugs,problems etc and tap again to exit and a option
+to give review"* + the number/email above:
+
+- `ui/screens/FeedbackScreen.kt` — the content moved from a Settings card
+  to its own screen (Settings keeps one OPEN row; audit now 46 controls).
+  It also carries the exit-prompt switch (default ON).
+- `ui/support/ExitSurvey.kt` (pure) + `ui/support/ExitFeedbackDialog.kt` —
+  back-at-root shows "Enjoying CodeC? 💚" with a star row; **tap again to
+  exit** (the dialog's own back press is the exit; outside taps do
+  nothing); SHARE EXPERIENCE opens the Feedback screen with the rating
+  riding the report's info line ("· Rating: 4/5" — nothing is ever
+  uploaded by itself); GIVE A REVIEW opens the GitHub repo; NOT NOW stays.
+- `FeedbackStore` — `DEFAULT_WHATSAPP_NUMBER = "916296746606"` (+91 62967
+  46606) and `DEFAULT_CONTACT_EMAIL` now ship (the PART_41_2-recorded
+  Phase 42 decision point, decided by the owner); a stored value always
+  wins; clearing is an explicit off. New key `feedback_exit_prompt_enabled`
+  (the ONE feedback boolean allowed — a dialog preference, not attachment
+  consent; `FeedbackCheckboxNotPersistedTest` now bans attachment-shaped
+  keys instead of all feedback booleans).
+- `Screen.Feedback` (`feedback?rating={rating}`) + the MainActivity
+  `BackHandler` (registered before the Scaffold so in-app back handling
+  keeps priority; at root it decides prompt-vs-direct-exit).
+- Tests: `ExitSurveyTest` + amended persistence/audit tests — 71/71
+  pre-validated locally at round 1. Round-2 runbook: DEVICE_TEST_PLAN
+  §Round 2.
+
+**Round 2 (owner, same day): the developer identity is hardcoded, the
+boxes are gone — CI ✅ GREEN, `Build APK` `34533033047` on tip `0d8317c`
+(24 998 614 B; the first round-2 run `34532387788` was red on the
+UNRELATED `UserlandInstallerTest` loopback keep-alive flake — diagnosed in
+TROUBLESHOOTING §31, same code green on retrigger)** — owner, verbatim: *"I want to sit as developer not some
+other guy. So i want my number hard coded. Any feedback comes to me no
+need for the user to set number the user know me or don't know me does not
+matter a bit. So remove the boxes and set it in the code."* Shipped:
+
+- `ui/support/DeveloperContact.kt` — the ONE place the feedback identity
+  lives: `WHATSAPP_E164 = "916296746606"`, `WHATSAPP_DISPLAY = "+91 62967
+  46606"`, `EMAIL`. Hardcoded, not a setting, not a DataStore key.
+- **`FeedbackStore.kt` and `FeedbackContacts.kt` DELETED** (both contact
+  keys gone with them); the reply-to input fields + SAVE are gone from the
+  card — the user has nothing to set, every channel points at the
+  developer. The exit-prompt switch moved to `SettingsManager`
+  (`feedback_exit_prompt_enabled`, the ONLY feedback key left in any
+  store). `FeedbackNumberSettingTest` deleted with the feature it pinned;
+  `ExitSurveyTest` now pins the round-2 law (the constants are valid, and
+  no contact key/field can come back). **65/65 pre-validated locally.**
+  The round-1 exit-survey design and the ephemeral-checkboxes privacy law
+  are unchanged.
 
 ## What exists today (evidence, read 2026-09-10)
 

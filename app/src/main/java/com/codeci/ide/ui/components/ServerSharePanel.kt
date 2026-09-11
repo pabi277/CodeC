@@ -99,12 +99,19 @@ fun ServerSharePanel(
      * no browser to take the URL the link is **copied instead of lost** — the
      * toast says so, because a button that silently does nothing is the thing
      * users blame the app for.
+     *
+     * Phase 41: those three lines became `OpenInBrowser.openOrCopy` (the one
+     * shared open-or-copy policy — the feedback channels route through the
+     * same helper), so this row calls it instead of keeping a private copy.
      */
     val openInBrowser: (String) -> Unit = { target ->
-        if (!OpenInBrowser.open(context, target)) {
-            context.writeClip("CodeC URL", target)
-            Toast.makeText(context, ShareActions.fallbackMessage(target), Toast.LENGTH_LONG).show()
-        }
+        OpenInBrowser.openOrCopy(
+            context = context,
+            url = target,
+            clipboardLabel = "CodeC URL",
+            copyInstead = target,
+            failureMessage = ShareActions.fallbackMessage(target)
+        )
     }
 
     Column(

@@ -10,7 +10,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.codeci.ide.ui.support.ExitSurvey
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Editor : Screen(
@@ -62,4 +64,18 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Modules : Screen("modules", "Packages", Icons.Default.Download)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)
     object Logs : Screen("logs", "Logs", Icons.Default.Settings)
+
+    /**
+     * Phase 41 follow-up — feedback got its own screen (owner request after
+     * device round 1). [rating] is the exit survey's star count (0 = opened
+     * from Settings); it rides the report's info line, never a server.
+     */
+    object Feedback : Screen(
+        "feedback?rating={rating}",
+        "Feedback",
+        Icons.Default.Chat
+    ) {
+        fun createRoute(rating: Int = 0): String =
+            if (rating in 1..ExitSurvey.MAX_STARS) "feedback?rating=$rating" else "feedback"
+    }
 }

@@ -106,7 +106,8 @@ import java.io.File
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    onNavigateToLogs: () -> Unit = {}
+    onNavigateToLogs: () -> Unit = {},
+    onNavigateToFeedback: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val themeManager = remember { ThemeManager(context) }
@@ -1025,6 +1026,25 @@ fun SettingsScreen(
             // Phase 38.2 audit — the bare "Licenses" row that used to sit
             // here duplicated the "Open-source licenses" row above it and
             // controlled nothing; deleted.
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // FEEDBACK & SUPPORT (Phase 41) — right after About so "what
+            // build is this" and "who do I tell" sit together. The follow-up
+            // round moved the content to its own screen (owner request:
+            // "can it be a separate page?") reachable from Settings and from
+            // the exit survey; this row is the door. The screen owns the
+            // report builder's pure decisions (FeedbackDraft), the
+            // WhatsApp-first channels with copy/email/GitHub fallbacks, the
+            // owner's reply-to fields, the exit-prompt switch, and the
+            // honest three-line disclosure. Nothing is ever sent by the app
+            // itself.
+            SettingsSectionHeader("Feedback & Support")
+            SettingsAction(
+                title = "Send feedback, rate, or report a bug",
+                actionText = "OPEN",
+                onClick = onNavigateToFeedback
+            )
 
             if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))

@@ -1125,3 +1125,63 @@ hub rows 3.68/4.47 → 5.17/5.90 · editor comments (monokai/dracula/github)
 status "LF" (light) 3.78 → 8.17 · key-cap tints and hints, badges (3.46) and
 55 %-alpha borders (2.25, need 3:1) — all fixed and pinned. Full table:
 [`chat-phase40/PART_40_5_COLOUR_REPAIR.md`](chat-phase40/PART_40_5_COLOUR_REPAIR.md).
+
+## 30. Sending feedback / where the WhatsApp button is (Phase 41, 2026-09-10; follow-up round same day)
+
+**Settings → Feedback & Support → OPEN** (its own screen, also reachable
+from the exit popup): type what happened, optionally tick *Include the
+last 120 log lines* (redacted — no tokens, paths shortened) and *Include
+the last crash* (prefilled after a crash), then CHAT ON WHATSAPP / COPY
+REPORT / EMAIL / GITHUB ISSUE. The developer's number (+91 62967 46606)
+and email are HARDCODED in the app (round 2, owner decision: feedback
+always goes to the developer; there is nothing to configure and no
+number/email field in the UI).
+
+- **"A popup asks how it went when I close the app."** — that is the exit
+  survey (owner-requested for the testing phase): rate with stars, SHARE
+  EXPERIENCE opens the Feedback page with the rating in the report, GIVE A
+  REVIEW opens the GitHub repo, and **tap back again (or EXIT) to close**.
+  It is off-able: the Feedback page's *Ask for feedback on exit* switch.
+- **"There is no CHAT ON WHATSAPP button."** — there is nothing to
+  configure (the number is built into the app), so a missing row is a BUG:
+  report it via GITHUB ISSUE. On a device without WhatsApp the button is
+  still shown, but tapping it copies the report and names the number to
+  write to instead of opening a dead link.
+- **"CHAT is greyed out."** — write what happened first (non-empty text
+  enables CHAT); COPY REPORT and GITHUB ISSUE always work.
+- **"Tapping CHAT copied the report instead of opening WhatsApp."** —
+  WhatsApp is not installed on the device (or could not open). The toast
+  says so and the number to write to is shown under the button — the
+  report is never lost.
+- **"Nothing was sent, right?"** — right. CodeC only opens the target app
+  with the message typed; you read it and press send yourself. The
+  checkboxes reset to a fresh choice every visit — nothing is attached
+  silently.
+- **"The report is cut short."** — the WhatsApp draft is budgeted (1 800
+  chars) so the URL survives OEM browsers; the report says
+  `[log trimmed — use COPY FULL REPORT for the whole thing]`. COPY REPORT
+  has no budget.
+
+## 31. `UserlandInstallerTest` red on "Connection reset" — a loopback keep-alive race (2026-09-10)
+
+**Symptom:** `Build APK` red on one test only —
+`UserlandInstallerTest.missing shared library is diagnosed and phase 2 fallback works`:
+`expected fallback Installed, got Failed(message=Connection reset)`.
+
+**Cause (read from the code, not guessed):** the test serves the bootstrap
+over an in-process loopback `HttpServer`; `DownloadManager` downloads with
+`HttpURLConnection` + `Range` resume. The JVM keep-alive pool reuses a
+connection the test server has just closed (idle timeout under CI load) →
+the ranged GET goes down a stale socket → "Connection reset". Ranged
+requests are not transparently retried, so it surfaces as `Failed`.
+Timing-dependent: the same suite passed on the four previous runs of this
+branch (`34525080153`, `34525817215`, `34529280630`, `34530054784`).
+
+**Not a Phase 41 fault** — the diff touches feedback UI only; the download
+path is Phase 2-era and unchanged.
+
+**Disposition:** retrigger (docs-only commit / new run of the same code).
+If it recurs, the for-cause fix is a bounded retry-on-reset around
+`DownloadManager`'s connect (which would ALSO make real-device downloads
+more robust on flaky mobile networks) — recorded here so the next
+occurrence starts at the root cause, not at the symptom.
