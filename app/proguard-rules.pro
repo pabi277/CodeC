@@ -21,3 +21,15 @@
 # LineNumberTable every pasted crash log from a release build is
 # unreadable, which is exactly the support cost this file exists to beat.
 -keepattributes SourceFile,LineNumberTable
+
+## Section: sora-editor language-textmate (tm4e)
+# Prevents "ERROR: R8: Missing class org.eclipse.jdt.annotation.NonNullByDefault"
+# (measured in CI run 34577896124 — the first R8 run): Phase 29.1 EXCLUDES
+# the org.eclipse.jdt.annotation artifact from the textmate dependency
+# because those types are compile-time-only nullness metadata; tm4e's
+# plist parser still REFERENCES NonNullByDefault, and R8's missing-class
+# analysis promotes that reference to a hard error. The class is never
+# loaded at runtime (annotations are invisible to Android's runtime), so
+# warning suppression is the correct fix — NOT shipping the artifact back.
+-dontwarn org.eclipse.jdt.annotation.**
+
