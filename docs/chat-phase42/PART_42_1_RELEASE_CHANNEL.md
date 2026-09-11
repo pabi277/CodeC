@@ -1,7 +1,30 @@
 # CodeC Phase 42.1 — A real release channel (and an updater that can be trusted)
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` + workflow + one secret ·
+> **Status:** ✅ FIRST PUBLISH DONE 2026-09-11 (tag `app-v1.3.17`) · **Cost:** `[client-only]` + workflow + secrets ·
 > **Effort:** M
+
+### First publish round — the record (2026-09-11)
+
+Tag `app-v1.3.17` → run `34597577303` **GREEN end-to-end**, publishing the
+first signed release `CodeC IDE v1.3.17` with exactly one attached asset
+(**`CodeC-IDE-1.3.17-universal.apk` = 6 630 554 B — byte-equal to the
+measure-only lane's R8 build**, which also cross-verifies R8
+determinism). The lane exercised, in order: secrets decode → signed
+`assembleRelease` → universal-only APK-set check → tag/versionName +
+versionCode guard → notes build with the SHA256 table → idempotent attach.
+It took **3 publish attempts**, and each failure is now a self-documenting
+lane feature: attempt 1 (run `34592848741`) — signed assemble failed AND
+the error surfacer crashed silently; the lane's answer was to make the
+assemble step annotate its OWN filtered failure tail + make the surfacer
+crash-proof (ASCII-safe + exception fallback). Attempts 2–3 — the real
+error became visible (`Failed to read key "upload": null`): a
+mobile-pasted password secret carried invisible whitespace; owner
+re-entered the secrets, attempt 3 published. Lesson recorded for future
+tag runs: the lane now tells you exactly what broke.
+
+🟡 Remaining for the exit condition: the updater UX round (up-to-date /
+refuses-downgrade on device, exit 2) — rides the owner's device round
+against THIS published release.
 
 ## Symptom
 

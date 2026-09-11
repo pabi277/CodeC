@@ -30,13 +30,11 @@ your phone; C works offline with no setup._
 
 ## Which APK should I install?
 
-- **Almost everyone: `CodeC-IDE-{{VERSION}}-universal.apk`.** It runs on
-  every device CodeC supports (64-bit ARM phones, x86_64 emulators, and
-  32-bit ARM phones).
-- The per-ABI files (`-arm64-v8a`, `-armeabi-v7a`, `-x86_64`) are the same
-  app minus the parts your device cannot use. Pick them when you know your
-  device's ABI (Settings → About in the app shows it); when in doubt,
-  take universal.
+- **Everyone: `CodeC-IDE-{{VERSION}}-universal.apk` — the ONLY APK.** It
+  runs on every device CodeC supports (64-bit ARM phones, x86_64
+  emulators, and 32-bit ARM phones). Per-ABI variants were tried and
+  reverted (measured < 2 % smaller because the offline C toolchain ships
+  in every variant; Docs: Phase 42.2).
 - **32-bit ARM (armeabi-v7a / older x86) devices:** the built-in C compiler
   is not bundled for your ABI — C works through the downloadable Clang
   module (Packages tab) or the Termux fallback. Everything else in the app
