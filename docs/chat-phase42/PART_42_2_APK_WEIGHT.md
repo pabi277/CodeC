@@ -1,6 +1,6 @@
 # CodeC Phase 42.2 — Weight: what a tester actually has to download
 
-> **Status:** 🔧 CODE-COMPLETE 2026-09-11 · CI green · splits MEASURED + REVERTED (owner) · release R8 delta from the measure lane · 🟡 device round (owner) · **Cost:** `[client-only]` + build config · **Effort:** M
+> **Status:** ✅ CODE-COMPLETE + MEASURED 2026-09-11 · R8 release = 6 630 554 B (−74 % vs debug) · splits reverted (owner) · non-debuggable machine-proven · 🟡 remaining: 3 secrets + publish tag + device round (owner) · **Cost:** `[client-only]` + build config · **Effort:** M
 
 ### Implementation record (2026-09-11)
 
@@ -83,6 +83,25 @@ to the flat truth now). AGP 9 also REMOVED the legacy
 `android.applicationVariants` API — the naming hook uses
 `androidComponents.onVariants` + `VariantOutputImpl` with a hard error if
 that impl class ever disappears.
+
+**RELEASE LANE MEASURED (exit-3/exit-4 numbers, run `34579414369`, GREEN):**
+
+| lane (universal, same commit) | bytes | note |
+|---|---|---|
+| debug | 25 553 564 | iteration build, unminified — what CI uploads |
+| **release (measure-only key)** | **6 630 554** | **−74.0 % vs debug** — R8 + shrinkResources + PNG crunch (exit-2's recorded byte delta) |
+
+- **Exit-3 machine half ✅**: `aapt dump badging` — the release manifest
+  emits **no android:debuggable flag** (annotated every run now).
+- **R8 mapping kept**: mapping.txt = 54 926 497 B, stays a CI-artifact-only
+  fact (never a release asset — spec).
+- The first real R8 failure is now the rules file's first proven section:
+  `org.eclipse.jdt.annotation.NonNullByDefault` missing from tm4e
+  (run 34577896124) → `-dontwarn org.eclipse.jdt.annotation.**` with the
+  failure named, per the file law.
+- The in-app updater's `-universal.apk` grammar, the version guard, and the
+  release-notes SHA256 table are unchanged — universal-only simply means
+  the publish lane attaches exactly one APK (three gotchas in reverse).
 
 ✅ **OWNER DECISIONS CLOSED (2026-09-11)** — asked straight after the
 splits measurement:
