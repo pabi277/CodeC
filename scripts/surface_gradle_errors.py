@@ -34,8 +34,15 @@ def main() -> None:
             count += 1
             if count > 40:
                 break
-            print("::error::" + line.replace("%", "%25")[:1800])
+            # ASCII only: workflow commands tolerate anything, but a
+            # non-UTF-8 stdout + exotic log chars must never crash this
+            # step (run 34592848741: the surfacer failed silently).
+            safe = line.encode("ascii", errors="replace").decode("ascii")
+            print("::error::" + safe.replace("%", "%25")[:1800])
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:  # never leave a failed step opaque
+        print(f"::notice::surface_gradle_errors failed ({exc!r}) - read the step's own log")

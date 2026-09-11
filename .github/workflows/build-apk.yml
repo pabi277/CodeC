@@ -120,7 +120,18 @@ jobs:
         if: steps.signing.outputs.present == 'true'
         run: |
           set -o pipefail
-          ./gradlew :app:assembleRelease --no-daemon 2>&1 | tee release-build.log
+          # On failure: annotate the filtered failure lines OURSELVES — a
+          # crashing surfacer must never leave a signing failure opaque
+          # (run 34592848741: both this step and the surfacer failed with
+          # zero annotations).
+          ./gradlew :app:assembleRelease --no-daemon 2>&1 | tee release-build.log || {
+            pick=$(grep -vE '^w: file' release-build.log | grep -iE "went wrong|FAILURE:|execution failed|missing class|error in|caused by|e: file|keystore|Exception|alias" | tail -8)
+            if [ -z "$pick" ]; then
+              pick=$(grep -vE '^w: file' release-build.log | tail -8)
+            fi
+            echo "$pick" | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
 
       - name: Surface release-build errors as annotations
         if: failure()
