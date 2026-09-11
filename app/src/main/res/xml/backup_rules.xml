@@ -13,19 +13,22 @@
     GitRedactor exists to prevent elsewhere.
 
     The single include below is the whole backup scope: nothing outside it
-    is ever copied. The excludes are belt-and-braces documents — they pin
-    the dangerous paths so a future broadened <include> cannot silently drag
-    the toolchain (or the token) into a backup. Host-pinned: BackupRulesTest.
+    is ever copied. THE LAW for this file: it carries ONE include and NO
+    exclude elements — under an include-list, every exclude is superfluous
+    (nothing else is included in the first place) and lint's
+    [FullBackupContent] family errors on exactly that shape (CI evidence:
+    run 34561139415, 42.1 — "exclude is not in an included path").
 
-    Deliberately NOT included:
+    The dangerous paths stay pinned HERE as documentation — any of them
+    appearing in an <include> element fails BackupRulesTest:
       - files/datastore/settings.preferences_pb — the settings DataStore,
         which holds the GitHub token (GitCredentialsStore). A fresh install
         asks the user to sign in again; that is intentional, see
         docs/DATA_AND_PRIVACY.md.
       - files/usr, files/home — the downloaded userland/toolchain + dpkg
         state (hundreds of MB, ABI- and device-specific).
-      - files/CodeC/{temp,modules,tcc} — regenerable run temp, downloaded
-        compiler modules, and the extracted TCC bundle.
+      - files/CodeC/temp, files/CodeC/modules, files/CodeC/tcc —
+        regenerable run temp, downloaded compiler modules, TCC bundle.
       - files/crash-log.txt — a crash record belongs to the build that
         wrote it, not to the next install.
 
@@ -35,10 +38,4 @@
 -->
 <full-backup-content>
     <include domain="file" path="CodeC/projects" />
-    <exclude domain="file" path="usr" />
-    <exclude domain="file" path="home" />
-    <exclude domain="file" path="CodeC/temp" />
-    <exclude domain="file" path="CodeC/modules" />
-    <exclude domain="file" path="CodeC/tcc" />
-    <exclude domain="file" path="crash-log.txt" />
 </full-backup-content>

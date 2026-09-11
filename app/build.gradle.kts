@@ -1,4 +1,6 @@
 import java.time.Duration
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 plugins {
   alias(libs.plugins.android.application)
@@ -37,7 +39,7 @@ android {
     // version name. UTC date: stable per day, no clock lies.
     buildConfigField(
       "String", "BUILD_DATE",
-      "\"${java.time.LocalDate.now(java.time.ZoneOffset.UTC)}\""
+      "\"${LocalDate.now(ZoneOffset.UTC)}\""
     )
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

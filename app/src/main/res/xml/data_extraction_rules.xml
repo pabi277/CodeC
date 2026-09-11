@@ -10,24 +10,20 @@
     copy in that path) — the device round decides; until then both channels
     are identical, so the GitHub token never leaves this device by backup at
     all (docs/DATA_AND_PRIVACY.md; host-pinned by BackupRulesTest).
+
+    THE LAW, same as backup_rules.xml: ONE include per channel and NO
+    exclude elements — under an include-list lint's [FullBackupContent]
+    errors on every exclude (CI evidence: run 34561139415). The dangerous
+    paths (datastore/settings.preferences_pb with the GitHub token; usr,
+    home; CodeC/temp, CodeC/modules, CodeC/tcc; crash-log.txt) stay pinned
+    here as documentation forever — an <include> naming any of them fails
+    BackupRulesTest.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="file" path="CodeC/projects" />
-        <exclude domain="file" path="usr" />
-        <exclude domain="file" path="home" />
-        <exclude domain="file" path="CodeC/temp" />
-        <exclude domain="file" path="CodeC/modules" />
-        <exclude domain="file" path="CodeC/tcc" />
-        <exclude domain="file" path="crash-log.txt" />
     </cloud-backup>
     <device-transfer>
         <include domain="file" path="CodeC/projects" />
-        <exclude domain="file" path="usr" />
-        <exclude domain="file" path="home" />
-        <exclude domain="file" path="CodeC/temp" />
-        <exclude domain="file" path="CodeC/modules" />
-        <exclude domain="file" path="CodeC/tcc" />
-        <exclude domain="file" path="crash-log.txt" />
     </device-transfer>
 </data-extraction-rules>

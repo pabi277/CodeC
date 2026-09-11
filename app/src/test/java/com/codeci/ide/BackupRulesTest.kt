@@ -16,20 +16,26 @@ import org.w3c.dom.Element
  *
  * The policy being pinned (spec: docs/chat-phase42/PART_42_3):
  *  1. only `CodeC/projects` is ever included — a backup carries "my code";
- *  2. the dangerous paths are excluded AND can never be included: the whole
- *     userland (`usr`), its home, the regenerable CodeC temp/modules/tcc
- *     trees, and the crash log;
+ *  2. BOTH files carry NO exclude elements at all: under an include-list
+ *     every exclude is superfluous (nothing else is included in the first
+ *     place) and lint's [FullBackupContent] errors on exactly that shape —
+ *     CI evidence: run 34561139415 (42.1) failed on `:app:lintDebug` with
+ *     "`usr` is not in an included path". The dangerous paths (userland
+ *     `usr`/`home`, CodeC/temp|modules|tcc, crash-log.txt) stay pinned in
+ *     the XML COMMENTS — the documentation wall — and any of them appearing
+ *     in an <include> element fails test 1;
  *  3. NOTHING touches `datastore` — that is where the GitHub token lives
  *     (GitCredentialsStore on the "settings" DataStore), and a token in a
  *     cloud backup is the one thing GitRedactor exists to prevent;
  *  4. `data_extraction_rules.xml` has a <device-transfer> block with the
- *     SAME lists (the sample's was commented out — the classic omission);
+ *     SAME include (the sample's was commented out — the classic omission);
  *  5. the manifest still points at both files with allowBackup=true, and
  *     neither XML contains the string "TODO" any more.
  */
 class BackupRulesTest {
 
-    private val expectedExcludes = listOf(
+    /** Pinned as comment documentation; may NEVER appear in a rule element. */
+    private val dangerousPaths = listOf(
         "usr", "home", "CodeC/temp", "CodeC/modules", "CodeC/tcc", "crash-log.txt"
     )
 
@@ -58,11 +64,9 @@ class BackupRulesTest {
     private fun includesOf(section: Element?): List<String> =
         ruleSet(section).filter { it.first == "include" }.map { it.second }
 
-    private fun excludesOf(section: Element?): List<String> =
-        ruleSet(section).filter { it.first == "exclude" }.map { it.second }
 
     @Test
-    fun `backup rules include exactly the user's projects`() {
+    fun `backup rules include exactly the user's projects - one include, zero excludes`() {
         val xml = root(RepoFiles.mainSource("app/src/main/res/xml/backup_rules.xml"))
         assertEquals("full-backup-content", xml.tagName)
         assertEquals(
@@ -70,11 +74,27 @@ class BackupRulesTest {
             listOf("file:CodeC/projects"),
             includesOf(xml)
         )
-        for (path in expectedExcludes) {
-            assertTrue("backup_rules must exclude '$path'", excludesOf(xml).contains("file:$path"))
+        // The lint law (FullBackupContent, run 34561139415): exclude elements
+        // are superfluous under the include-list and error in CI — zero today,
+        // zero ever, so the wall cannot quietly reappear as lint-debt.
+        assertEquals(
+            "no exclude elements allowed under the include-list (lint errors on the shape)",
+            emptyList<Pair<String, String>>(),
+            ruleSet(xml).filter { it.first == "exclude" }
+        )
+        for (path in dangerousPaths) {
             assertFalse(
-                "'$path' must never be included (belt-and-braces rule)",
+                "'$path' must never be included — the dangerous-path wall",
                 includesOf(xml).contains("file:$path")
+            )
+        }
+        // The wall's documentation: the XML comment still NAMES every
+        // dangerous path, so a reviewer meets them where the rules are.
+        val text = RepoFiles.mainSource("app/src/main/res/xml/backup_rules.xml").readText()
+        for (path in dangerousPaths) {
+            assertTrue(
+                "backup_rules documentation must still pin '$path' (it is the wall no rule may carry)",
+                text.contains(path)
             )
         }
     }
@@ -118,12 +138,19 @@ class BackupRulesTest {
         )
         for (section in listOf(cloud, transfer)) {
             assertEquals(listOf("file:CodeC/projects"), includesOf(section))
-            for (path in expectedExcludes) {
-                assertTrue(
-                    "<${section?.tagName}> must exclude '$path'",
-                    excludesOf(section).contains("file:$path")
-                )
-            }
+            assertEquals(
+                "no exclude elements allowed under the include-list (lint errors on the shape)",
+                emptyList<Pair<String, String>>(),
+                ruleSet(section).filter { it.first == "exclude" }
+            )
+        }
+        // Same documentation wall as backup_rules: every dangerous path named.
+        val text = RepoFiles.mainSource("app/src/main/res/xml/data_extraction_rules.xml").readText()
+        for (path in dangerousPaths) {
+            assertTrue(
+                "data_extraction_rules documentation must still pin '$path'",
+                text.contains(path)
+            )
         }
     }
 

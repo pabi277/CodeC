@@ -62,16 +62,16 @@ in the manifest — the test above fails if any ever is.
 
 ## What the backup/restore actually carries (Phase 42.3 §1)
 
-- **Carries:** `CodeC/projects/**` (your source), the editor's
-  preferences (theme, font size, tabs), git credentials you saved
-  (git_credentials.properties — whole-project backups would be worse
-  without it), repos you added (you can always re-add).
-- **Never carries:** `CodeC/tmp/**` (temp scratch), `CodeC/tcc out/**`
-  (build outputs), `CodeC/usr/**` (43 MB bootstrap — re-downloaded
-  after restore), `CodeC/modules/**` (re-downloaded),
-  `CodeC/termux-install**` (residual scratch), `crash-log.txt` (a crash
-  history is not yours to bring back), `*.preferences_pb` from
-  `files/datastore/` **except the editor theme**, any file over 32 MB.
+- **Carries:** `CodeC/projects/**` — your source, and ONLY your source.
+  That one include is the whole backup scope.
+- **Never carries:** `CodeC/tmp/**` (temp scratch), `CodeC/tcc/**`
+  (build outputs), `usr/**` (the downloaded userland — re-downloaded
+  after restore), `home/**` (its dpkg state), `CodeC/modules/**`
+  (re-downloaded), `crash-log.txt` (a crash record belongs to the build
+  that wrote it, not to the next install), and
+  `datastore/settings.preferences_pb` — the settings DataStore, which is
+  where the GitHub token lives: **your token never rides a backup; a
+  fresh install asks you to sign in again, and that is intentional.**
 
 ## The crash log — yours, and only sent when you say so
 
