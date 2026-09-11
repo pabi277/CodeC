@@ -215,6 +215,20 @@ fun FileManagerScreen(
         if (uri != null && projectName != null) viewModel.exportProject(context, projectName, uri)
     }
 
+    // Phase 42.3 §3 — "everything" backup: the hub menu's export/import of
+    // ALL project roots as one ZIP (the uninstall-eats-your-work answer),
+    // beside the existing per-project export.
+    val backupExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri != null) viewModel.exportAllProjects(context, uri)
+    }
+    val backupImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) viewModel.importProjectsBackup(context, uri)
+    }
+
     LaunchedEffect(Unit) { viewModel.loadProjects(context) }
     LaunchedEffect(userMessage) {
         userMessage?.let {
@@ -327,6 +341,30 @@ fun FileManagerScreen(
                                 onClick = {
                                     showActionsMenu = false
                                     viewModel.refresh(context)
+                                }
+                            )
+                            HorizontalDivider()
+                            // Phase 42.3 §3 — "everything" backup: one ZIP
+                            // over every project root (shared budgets), and
+                            // its restore into a clean install. The "your
+                            // data is safe" answer a test phase must ship.
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.export_all_projects)) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    val stamp = java.text.SimpleDateFormat(
+                                        "yyyyMMdd-HHmm", java.util.Locale.US
+                                    ).format(java.util.Date())
+                                    backupExportLauncher.launch("codec-projects-backup-$stamp.zip")
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.import_projects_backup)) },
+                                onClick = {
+                                    showActionsMenu = false
+                                    backupImportLauncher.launch(
+                                        arrayOf("application/zip", "application/octet-stream")
+                                    )
                                 }
                             )
                         } else {

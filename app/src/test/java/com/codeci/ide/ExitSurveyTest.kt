@@ -142,7 +142,11 @@ class ExitSurveyTest {
         assertTrue("the BackHandler must exist", main.contains("BackHandler("))
         assertTrue(
             "back at root decides between the prompt and a direct exit",
-            main.contains("if (exitPromptEnabled) exitPromptVisible = true else activity.finish()")
+            main.contains("exitPromptEnabled -> exitPromptVisible = true")
+        )
+        assertTrue(
+            "Phase 42.3: safe mode is outside the survey boundary — back exits directly",
+            main.contains("SafeMode.active -> activity.finish()")
         )
         assertTrue(
             "the prompt is off-able via the SettingsManager flow",

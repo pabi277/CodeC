@@ -86,9 +86,23 @@ change nothing and say so).
 | 34 | About | Show the welcome screen again | action | `first_launch_complete=false` | `firstLaunchCompleteFlow` → MainActivity welcome | keep |
 | 35 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |
 | 36 | About | GitHub | item | — (info) | — | keep |
+| 48 | About | Build date | item | — (info; `BuildConfig.BUILD_DATE` UTC — 42.3: "which build is this?" from inside the app) | — | keep |
+| 49 | About | Authors | item | — (info; builder identity for tester builds) | — | keep |
+| 50 | About | Privacy & permissions — all-files access (optional) | item | — (info; honest-correction row, `MANAGE_EXTERNAL_STORAGE`) | — | keep |
+| 51 | About | Legacy storage read/write (≤ Android 12L) | item | — (info) | — | keep |
+| 52 | About | Camera (optional) | item | — (info) | — | keep |
+| 53 | About | Internet | item | — (info; "no telemetry anywhere" is checkable in DATA_AND_PRIVACY.md) | — | keep |
+| 54 | About | Network & Wi-Fi state | item | — (info) | — | keep |
+| 55 | About | Run notification + foreground service | item | — (info; why a notification exists while a run lives) | — | keep |
+| 56 | About | Install packages | item | — (info; updater + bootstrap only) | — | keep |
+| 57 | About | Wake lock | item | — (info) | — | keep |
+| 58 | About | Vibration | item | — (info) | — | keep |
+| 59 | About | Termux bridge (optional) | item | — (info; declared by Termux, guarded) | — | keep |
+| 60 | About | The full table | item | — (info; points at docs/DATA_AND_PRIVACY.md) | — | keep |
 | 37 | About | Open-source licenses | item | — (info; LGPL/MIT obligations) | — | keep |
 | 38 | About | Check for updates | action | app-release channel check (app-v* only), versioned/SHA-256-verified download or a named refusal | `ApkUpdateManager`+`UpdatePolicy`+`ReleaseFetch` (42.1: the updater no longer installs a bootstrap's "latest") | keep |
 | 39 | Feedback & Support | Send feedback, rate, or report a bug | action | navigates to `Screen.Feedback` | `FeedbackScreen` (Phase 41 follow-up moved the card to its own screen; the exit-prompt switch lives there) | keep |
+| 47 | Feedback & Support | Report the last crash | action | navigates to `Screen.Feedback?crash=1` (both attachments pre-ticked); row exists only while `crash-log.txt` has a record | `CrashLog` presence (42.3: the Settings twin of the overlay's SEND REPORT) | keep |
 | 41 | Developer Options | Show File Paths | switch | `show_file_paths` | `showFilePathsFlow` → file tree labels | keep |
 | 41 | Developer Options | Export App Logs | action | ACTION_SHARE with `AppLogger` logs | share sheet | keep |
 | 42 | Developer Options | View App Logs | action | navigates to log screen | `onNavigateToLogs` | keep |

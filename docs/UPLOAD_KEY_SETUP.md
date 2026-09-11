@@ -9,11 +9,23 @@
 >
 > **2026-09-11 attempt log:** the agent tried generating the key in the
 > sandbox and setting the secrets via `gh secret set` — the automation
-> token answered `HTTP 403` on the secrets API (no permission). The key is
-> therefore created **by the owner, off-machine** (the spec's other
-> sanctioned route, docs/chat-phase42/PART_42_1_RELEASE_CHANNEL.md §"The
-> key"): the recipe below runs in **Termux on the owner's phone** (or any
-> desktop with openssl) and takes about two minutes.
+> token answered `HTTP 403` on the secrets API (no permission). The key was
+> then generated **in the sandbox** (the spec's other sanctioned route —
+> `keytool` via the jdk4py JRE, JKS / RSA-2048 / SHA-256 with RSA /
+> 30-year validity, DN `CN=CodeC Upload, O=pabi277, C=US`, alias
+> `codec-upload`), the three values (`KEYSTORE_B64` base64,
+> `STORE_PASSWORD`, `KEY_PASSWORD` — two independent 24-byte hex secrets)
+> were printed **once** into the owner's chat for the owner to enter at
+> *GitHub → repo **CodeC** → Settings → Secrets and variables → Actions →
+> New repository secret*, and every local copy of the keystore and
+> passwords was deleted in the same call (kept nowhere outside the owner's
+> Secrets page). Public certificate fingerprint (safe to share, pinned
+> here for verification):
+> `SHA-256 D5:8F:ED:4B:79:31:3E:CB:43:2F:CD:C1:6B:3C:EE:17:A6:E9:24:80:62:18:0D:18:F1:EB:75:D2:20:5A:46:38` ·
+> `SHA-1 1F:AF:A5:AF:1B:CE:69:A0:D8:32:85:E9:54:74:D4:75:60:66:39:9C`.
+> If the three secrets must ever be REGENERATED, the recipe below still
+> runs in **Termux on the owner's phone** (or any desktop with openssl)
+> and takes about two minutes.
 
 ## Why this matters (read once)
 

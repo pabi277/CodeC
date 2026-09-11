@@ -32,6 +32,13 @@ android {
     // local timestamp) rides in versionName so Settings → About / app info
     // answers it at a glance: "1.3.17 (340xxxx)".
     versionName = "1.3.17" + (System.getenv("GITHUB_RUN_NUMBER")?.let { " ($it)" } ?: "")
+    // Phase 42.3 — the About row's BUILD date + provenance: a tester asking
+    // "which build is this?" answers it from Settings → About, next to the
+    // version name. UTC date: stable per day, no clock lies.
+    buildConfigField(
+      "String", "BUILD_DATE",
+      "\"${java.time.LocalDate.now(java.time.ZoneOffset.UTC)}\""
+    )
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

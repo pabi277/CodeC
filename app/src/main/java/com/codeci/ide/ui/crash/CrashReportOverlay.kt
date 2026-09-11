@@ -39,9 +39,28 @@ import kotlinx.coroutines.withContext
  *
  * The dialog only appears when a NEW crash exists (the file is deleted on
  * Clear, so a normal session never sees it again).
+ *
+ * Phase 42.3 — this same overlay is the crash-LOOP guard's single surface
+ * (extended, never a second modal — a stacked dialog is how a safety
+ * feature becomes the thing people screenshot and complain about):
+ *
+ *  - [loopDetected] adds the sentence *"CodeC failed again while starting.
+ *    Nothing has been changed or deleted."* and one more button,
+ *    [TRY WITHOUT MY SETTINGS] — the safe-mode door (PART_42_3 §2);
+ *  - [SEND REPORT] hands the crash record to Phase 41's feedback screen
+ *    with both attachments pre-ticked (via [CrashHandOffBridge]), replacing
+ *    today's manual "copy this and find me in a chat" with a tap — the one
+ *    moment a user is motivated to tell you is right after you failed them.
  */
 @Composable
-fun CrashReportOverlay() {
+fun CrashReportOverlay(
+    /** True when the startup ledger counted two interrupted starts in a row. */
+    loopDetected: Boolean = false,
+    /** [TRY WITHOUT MY SETTINGS]: activate safe mode for the session + restart. */
+    onStartWithoutSettings: () -> Unit = {},
+    /** [SEND REPORT]: hand the newest record to the feedback screen. */
+    onSendReport: () -> Unit = {}
+) {
     val context = LocalContext.current
     var report by remember { mutableStateOf<String?>(null) }
 
@@ -77,9 +96,19 @@ fun CrashReportOverlay() {
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (loopDetected) {
+                        // Phase 42.3 §2 — the loop sentence, worded so the
+                        // user trusts the [TRY WITHOUT MY SETTINGS] door:
+                        // nothing was reset, nothing was deleted, projects
+                        // and files are untouched.
+                        Text(
+                            "CodeC failed again while starting. Nothing has been changed or deleted.",
+                            fontSize = 13.sp
+                        )
+                    }
                     Text(
-                        "CodeC crashed previously. Please COPY ALL and paste it " +
-                            "into the chat so the exact failing line can be fixed.",
+                        "CodeC crashed previously. Please SEND REPORT (or COPY ALL and paste " +
+                            "into the chat) so the exact failing line can be fixed.",
                         fontSize = 13.sp
                     )
                     Text(
@@ -94,13 +123,24 @@ fun CrashReportOverlay() {
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val clipboard =
-                        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("CodeC crash log", text))
-                    Toast.makeText(context, "Crash log copied — paste it in the chat", Toast.LENGTH_LONG)
-                        .show()
-                }) { Text("COPY ALL") }
+                Column {
+                    TextButton(onClick = {
+                        val clipboard =
+                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("CodeC crash log", text))
+                        Toast.makeText(context, "Crash log copied — paste it in the chat", Toast.LENGTH_LONG)
+                            .show()
+                    }) { Text("COPY ALL") }
+                    // Phase 42.3 — one tap hands the SAME record to the
+                    // feedback screen (both attachments pre-ticked); nothing
+                    // is ever uploaded by the app itself.
+                    TextButton(onClick = onSendReport) { Text("SEND REPORT") }
+                    if (loopDetected) {
+                        TextButton(onClick = onStartWithoutSettings) {
+                            Text("TRY WITHOUT MY SETTINGS")
+                        }
+                    }
+                }
             },
             dismissButton = {
                 Column {

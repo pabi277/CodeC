@@ -69,13 +69,18 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
      * Phase 41 follow-up — feedback got its own screen (owner request after
      * device round 1). [rating] is the exit survey's star count (0 = opened
      * from Settings); it rides the report's info line, never a server.
+     * Phase 42.3 — `crash=1` is the crash overlay's [Send a report]
+     * hand-off: the screen pre-ticks both attachments (PART_42_3 §2).
      */
     object Feedback : Screen(
-        "feedback?rating={rating}",
+        "feedback?rating={rating}&crash={crash}",
         "Feedback",
         Icons.Default.Chat
     ) {
-        fun createRoute(rating: Int = 0): String =
-            if (rating in 1..ExitSurvey.MAX_STARS) "feedback?rating=$rating" else "feedback"
+        fun createRoute(rating: Int = 0, reportCrash: Boolean = false): String {
+            val base =
+                if (rating in 1..ExitSurvey.MAX_STARS) "feedback?rating=$rating" else "feedback"
+            return if (reportCrash) base + (if (base.contains('?')) "&" else "?") + "crash=1" else base
+        }
     }
 }

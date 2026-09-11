@@ -100,6 +100,11 @@
     <string name="update_no_checksum">This release has no checksum, so CodeC refuses to install it automatically. Opening the Releases page instead.</string>
     <string name="update_download_failed">Couldn\'t download the APK: %1$s. Opening the Releases page instead.</string>
     <string name="allow_unknown_sources">Allow CodeC IDE to install updates, then try again.</string>
+    <string name="safe_mode_banner">Safe mode: your settings are bypassed for this session only — nothing was changed or deleted on disk. Your projects are still here and can be exported.</string>
+    <string name="safe_mode_dismiss">Dismiss the safe mode banner</string>
+    <string name="report_last_crash">Report the last crash (log attached, nothing sent by itself)</string>
+    <string name="export_all_projects">Export all projects (backup ZIP)</string>
+    <string name="import_projects_backup">Import projects backup (ZIP)</string>
     <string name="licenses">Licenses</string>
     <string name="open_source_licenses">Open source licenses</string>
     <string name="developer_options">Developer Options</string>

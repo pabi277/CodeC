@@ -199,8 +199,34 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Phase 42.3 — the crash-loop ledger state for THIS launch, decided
+     * synchronously as the first work of the process (before ANY init
+     * whose crash should count as a startup crash). Two counters in a
+     * SharedPreferences — no daemon, no service, no DataStore coroutine.
+     */
+    private var startupPlan: com.codeci.ide.ui.crash.StartupLedger.Plan =
+        com.codeci.ide.ui.crash.StartupLedger.Plan.NORMAL
+    private var startupLedger: com.codeci.ide.ui.crash.StartupLedger? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        runCatching {
+            val prefs = getSharedPreferences("codec-startup", MODE_PRIVATE)
+            val store = object : com.codeci.ide.ui.crash.StartupLedger.Store {
+                override fun readStarting(): Boolean = prefs.getBoolean("starting", false)
+                override fun readCount(): Int = prefs.getInt("count", 0)
+                override fun write(starting: Boolean, count: Int) {
+                    // commit (not apply): the marker must be durable BEFORE
+                    // any later code can crash this start, or the crash
+                    // would never be counted.
+                    prefs.edit().putBoolean("starting", starting).putInt("count", count).commit()
+                }
+            }
+            val ledger = com.codeci.ide.ui.crash.StartupLedger(store)
+            startupLedger = ledger
+            startupPlan = ledger.noteLaunch()
+        }
         installCrashLog()
         enableEdgeToEdge()
         // Phase 39.1 — bound CodeC/temp/runs on every cold start. Never
@@ -280,17 +306,49 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
             val themeManager = remember { ThemeManager(context) }
             val settingsManager = remember { SettingsManager(context) }
-            val appTheme by themeManager.appThemeFlow.collectAsState(initial = AppThemeMode.SYSTEM)
-            val accentColor by settingsManager.accentColorFlow.collectAsState(initial = AccentPalette.DEFAULT_STORAGE_HEX)
+            // Phase 42.3 — safe mode: the persisted visual inputs are the
+            // ones a startup crash could come from (a garbage accent string
+            // reaching AccentPalette's parser), so while the session flag
+            // is set they resolve to their DEFAULTS. Session-only: nothing
+            // is written back or deleted (SafeMode.resolve is the pinned law).
+            val safeModeActive = com.codeci.ide.ui.crash.SafeMode.active
+            val appTheme by (
+                if (safeModeActive) kotlinx.coroutines.flow.flowOf(AppThemeMode.SYSTEM)
+                else themeManager.appThemeFlow
+                ).collectAsState(initial = AppThemeMode.SYSTEM)
+            val accentColor by (
+                if (safeModeActive) kotlinx.coroutines.flow.flowOf(AccentPalette.DEFAULT_STORAGE_HEX)
+                else settingsManager.accentColorFlow
+                ).collectAsState(initial = AccentPalette.DEFAULT_STORAGE_HEX)
 
             val isDarkTheme = ThemeManager.effectiveDark(appTheme, isSystemInDarkTheme())
 
             MyApplicationTheme(darkTheme = isDarkTheme, accentHex = accentColor) {
-                MainApp()
+                MainApp(onStartupFinished = {
+                    // Phase 42.3 — the main screen was drawn: this start
+                    // succeeded, so the loop counter and the marker clear.
+                    startupLedger?.noteStartupFinished()
+                })
                 // Phase 25.2 device-round instrumentation: if the previous
                 // run crashed, surface the report in-app (no root / file
                 // manager needed) before anything else.
-                com.codeci.ide.ui.crash.CrashReportOverlay()
+                // Phase 42.3 — when TWO consecutive starts died, the same
+                // overlay gains the loop sentence, the safe-mode door, and
+                // a one-tap hand-off to the feedback screen.
+                com.codeci.ide.ui.crash.CrashReportOverlay(
+                    loopDetected = startupPlan ==
+                        com.codeci.ide.ui.crash.StartupLedger.Plan.LOOP_SUSPECTED,
+                    onStartWithoutSettings = {
+                        com.codeci.ide.ui.crash.SafeMode.activateForSession()
+                        // The accepted reduced start IS the repair: count
+                        // a crash AFTER it from zero like any other.
+                        startupLedger?.noteStartupFinished()
+                        recreate()
+                    },
+                    onSendReport = {
+                        com.codeci.ide.ui.crash.CrashHandOffBridge.requestCrashReport()
+                    }
+                )
             }
         }
     }
@@ -565,12 +623,30 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainApp() {
+fun MainApp(onStartupFinished: () -> Unit = {}) {
     val navController = rememberNavController()
     val activity = requireNotNull(LocalActivity.current) as ComponentActivity
     val terminalViewModel: TerminalViewModel = viewModel(viewModelStoreOwner = activity)
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
+
+    // Phase 42.3 — "the main screen has been drawn": report the successful
+    // start to the crash-loop ledger exactly once per process (first
+    // composition of the shell). Spec: PART_42_3 §2.
+    LaunchedEffect("codec-startup-finished") { onStartupFinished() }
+
+    // Phase 42.3 — the crash overlay's [Send a report]: open Phase 41's
+    // feedback screen with both attachments pre-ticked (crash=1).
+    val crashReportRequested by com.codeci.ide.ui.crash.CrashHandOffBridge
+        .reportCrashRequested.collectAsState()
+    LaunchedEffect(crashReportRequested) {
+        if (crashReportRequested) {
+            com.codeci.ide.ui.crash.CrashHandOffBridge.clear()
+            navController.navigate(Screen.Feedback.createRoute(reportCrash = true)) {
+                launchSingleTop = true
+            }
+        }
+    }
     // 2026-08-31 bar: five tabs with Terminal dead-center —
     // Projects · Editor · Terminal · Packages · Settings. The Home dashboard
     // is gone; the app opens straight into the editor where the user left
@@ -625,7 +701,13 @@ fun MainApp() {
     }
     // "Open where I left off": the last project file wins as the start
     // destination; a fresh install with no last file lands on the hub.
-    val launchState = remember { EditorLaunchState.load(activity) }
+    // Phase 42.3 — safe mode NEVER reopens the saved session: a
+    // half-written project file is exactly the kind of startup culprit the
+    // guard exists for, so the reduced start lands on the hub with the
+    // last file untouched on disk.
+    val launchState = remember {
+        if (com.codeci.ide.ui.crash.SafeMode.active) null else EditorLaunchState.load(activity)
+    }
     val startDestination = remember(launchState) {
         launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
             ?: Screen.FileManager.route
@@ -712,9 +794,17 @@ fun MainApp() {
     // them (NavHost's own pop handling, dialogs, sheets) wins while it can
     // consume the back press; this handler only decides what back does AT
     // THE ROOT: the exit survey, or a direct close when it is switched off.
+    // Phase 42.3 — the exit survey is a BRIDGE/SNACKS surface outside the
+    // safe-mode boundary: while safe mode is on, the last thing a user in a
+    // reduced session needs is a "how was your experience" prompt whose
+    // [NOT NOW] would have to write a preference; back exits directly.
     BackHandler(enabled = !exitPromptVisible) {
         if (!navController.popBackStack()) {
-            if (exitPromptEnabled) exitPromptVisible = true else activity.finish()
+            when {
+                com.codeci.ide.ui.crash.SafeMode.active -> activity.finish()
+                exitPromptEnabled -> exitPromptVisible = true
+                else -> activity.finish()
+            }
         }
     }
 
@@ -757,11 +847,23 @@ fun MainApp() {
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.padding(innerPadding)
-        ) {
+        // Phase 42.3 — the safe-mode banner rides above the NavHost inside
+        // the scaffold padding: dismissible, one slim line, and it can
+        // never hide the export row behind a modal.
+        var safeModeBannerVisible by remember {
+            mutableStateOf(com.codeci.ide.ui.crash.SafeMode.active)
+        }
+        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            if (safeModeBannerVisible) {
+                com.codeci.ide.ui.crash.SafeModeBanner(
+                    onDismiss = { safeModeBannerVisible = false }
+                )
+            }
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = Modifier.weight(1f)
+            ) {
             composable(
                 route = Screen.Editor.route,
                 arguments = listOf(
@@ -940,8 +1042,8 @@ fun MainApp() {
                             restoreState = true
                         }
                     },
-                    onNavigateToFeedback = {
-                        navController.navigate(Screen.Feedback.createRoute()) {
+                    onNavigateToFeedback = { reportCrash ->
+                        navController.navigate(Screen.Feedback.createRoute(reportCrash = reportCrash)) {
                             launchSingleTop = true
                         }
                     }
@@ -952,17 +1054,23 @@ fun MainApp() {
             }
             // Phase 41 follow-up — feedback's own screen (Settings → OPEN,
             // or the exit survey's SHARE EXPERIENCE with a rating).
+            // Phase 42.3 — `crash=1` arrives from the crash overlay's
+            // [Send a report]: both attachments pre-ticked.
             composable(
                 route = Screen.Feedback.route,
-                arguments = listOf(navArgument("rating") {
-                    defaultValue = 0
-                })
+                arguments = listOf(
+                    navArgument("rating") { defaultValue = 0 },
+                    navArgument("crash") { defaultValue = 0 }
+                )
             ) { backStackEntry ->
                 val rating = backStackEntry.arguments?.getInt("rating") ?: 0
+                val crash = backStackEntry.arguments?.getInt("crash") ?: 0
                 FeedbackScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    exitRating = rating
+                    exitRating = rating,
+                    initialReportCrash = crash == 1
                 )
+            }
             }
         }
     }

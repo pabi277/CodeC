@@ -81,14 +81,22 @@ import kotlinx.coroutines.withContext
 fun FeedbackSectionCard(
     modifier: Modifier = Modifier,
     screenLabel: String = "Feedback",
-    exitRating: Int = 0
+    exitRating: Int = 0,
+    /**
+     * Phase 42.3 — the crash overlay's [Send a report] arrives here with
+     * the log attachment pre-ticked (the crash box self-ticks when a
+     * record exists). Ephemeral by the same privacy law: the choice lives
+     * only in this screen's state, never in a store.
+     */
+    initialAttachLog: Boolean = false
 ) {
     val context = LocalContext.current
     val gitStore = remember { GitCredentialsStore(context) }
 
     // The section's own state. The attachment choices are deliberately NOT
-    // part of any store: every report is a fresh choice (privacy law).
-    var state by remember { mutableStateOf(FeedbackSectionState()) }
+    // part of any store: every report is a fresh choice (privacy law);
+    // `initialAttachLog` is a one-session hand-off choice, not a preference.
+    var state by remember { mutableStateOf(FeedbackSectionState(includeLog = initialAttachLog)) }
     var crashRecord by remember { mutableStateOf<String?>(null) }
     var crashKnown by remember { mutableStateOf(false) }
     var lastProject by remember { mutableStateOf<String?>(null) }
