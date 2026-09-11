@@ -117,21 +117,17 @@ android {
     }
   }
 
-  // Phase 42.2 — per-ABI artifacts, universal kept as the default. The
-  // natural ABI set stays in ndk.abiFilters; splits only packages. A
-  // tester on a slow link picks the per-ABI APK; "just install it" stays
-  // the universal one. AbiPolicyTest pins the two lists in lockstep.
-  // Owner-open decisions (numbers in docs/chat-phase42/PART_42_2): the
-  // assets/tcc/<abi> trap (a packaging exclude or per-flavor assets) and
-  // dropping x86 from abiFilters — both recorded as the owner's call.
-  splits {
-    abi {
-      isEnable = true
-      reset()
-      include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
-      isUniversalApk = true
-    }
-  }
+  // Phase 42.2 — REVERTED 2026-09-11 (owner's call): per-ABI splits.
+  // Measured on green runs 34571675385 / 34572206168 (byte-identical):
+  // universal debug 25 553 560 B; per-ABI debug APKs were only
+  // -0.94 % / -1.77 % smaller because assets/tcc/<abi> (~10.9 MB) rides
+  // EVERY split — splits filter jniLibs only (the spec's §assets trap,
+  // confirmed in bytes). Exit-4's law: if the per-ABI lane is not at
+  // least 15 % lighter than universal, the split machinery reverts.
+  // The owner chose the revert over the tcc-flavored mechanisms
+  // (packaging hook / ABI flavors / tcc-as-download — decision card in
+  // the part doc), and chose to KEEP x86 in the natural ABI set.
+  // One universal APK per build type is the whole shipping set again.
   compileOptions {
     // Phase 25.2 — Java 17: sora-editor (the edit core) requires consumers on
     // 17; :bench already builds at 17.

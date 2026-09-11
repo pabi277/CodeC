@@ -1,64 +1,51 @@
 #!/usr/bin/env bash
-# Phase 42.2 — validates the release artifact SET right after
-# :app:assembleRelease. Repo/grep tests check the CONFIG; this checks the
-# executables of record (the APK zips themselves):
-#   1. exactly one universal APK, named per the update-channel grammar;
-#   2. exactly one APK per abiFilter ABI;
-#   3. each per-ABI split contains native libs for its own ABI only;
-#   4. assets/tcc coverage: splits carry ALL tcc dirs (the known trap —
-#      splits do not filter assets) — recorded, not failed, until the
-#      owner picks a mechanism (PART_42_2 decision card).
+# Phase 42.2 — validates THE release artifact (universal-only since the
+# 2026-09-11 revert, see PART_42_2 — splits measured 0.94-1.77 % under the
+# assets/tcc trap, below the 15 % floor that would have kept them).
+# Check the executable of record (the APK zip itself):
+#   1. exactly one release APK, named per the update-channel grammar
+#      (…-universal.apk — the updater's default);
+#   2. it carries native libs for ALL FOUR natural ABIs (the universal
+#      promise: anyone can install it);
+#   3. the bundled offline compiler material survives packaging for the
+#      two tcc ABIs (assets/tcc/<abi> is NOT filtered — recorded design).
 set -u
 cd "$(dirname "$0")/.."
 
-ROOT="app/build/outputs/apk"
+ROOT="app/build/outputs/apk/release"
 FAIL=0
 
-mapfile -t RELEASE_APKS < <(find "$ROOT" -path '*/release/*.apk' | sort)
-if [ "${#RELEASE_APKS[@]}" -eq 0 ]; then
-  echo "::error::no release APKs found under $ROOT"
+mapfile -t APK < <(find "$ROOT" -name '*.apk' | sort)
+if [ "${#APK[@]}" -ne 1 ]; then
+  echo "::error::expected exactly 1 release APK (universal-only per the 42.2 revert), found ${#APK[@]}: ${APK[*]:-none}"
   exit 1
 fi
+apk="${APK[0]}"
+base=$(basename "$apk")
 
-GRADLE=$(grep -o 'abiFilters += listOf([^)]*)' app/build.gradle.kts)
-EXPECTED=$(echo "$GRADLE" | grep -o '"[^"]*"' | tr -d '"')
-
-UNIVERSAL_COUNT=0
-for apk in "${RELEASE_APKS[@]}"; do
-  base=$(basename "$apk")
-  case "$base" in
-    CodeC-IDE-*-universal.apk) UNIVERSAL_COUNT=$((UNIVERSAL_COUNT+1)) ;;
-  esac
-  if [[ "$base" != CodeC-IDE-*.apk ]]; then
-    echo "::error::$base does not follow the update-channel name grammar (UpdatePolicy)"
-    FAIL=1
-  fi
-done
-if [ "$UNIVERSAL_COUNT" -ne 1 ]; then
-  echo "::error::expected exactly 1 universal release APK, found $UNIVERSAL_COUNT"
+if [[ "$base" != CodeC-IDE-*-universal.apk ]]; then
+  echo "::error::$base does not match the update-channel grammar CodeC-IDE-<version>-universal.apk (UpdatePolicy)"
   FAIL=1
 fi
 
-for abi in $EXPECTED; do
-  hits=$(printf '%s\n' "${RELEASE_APKS[@]}" | grep -c -- "-$abi\.apk$" || true)
-  if [ "$hits" -ne 1 ]; then
-    echo "::error::expected exactly 1 split APK for $abi (-$abi.apk), found $hits"
-    FAIL=1
-    continue
-  fi
-  apk=$(printf '%s\n' "${RELEASE_APKS[@]}" | grep -- "-$abi\.apk$" | head -1)
-  bad=$(unzip -l "$apk" | awk '{print $4}' | grep '^lib/' | cut -d/ -f2 | sort -u | grep -vx "$abi" || true)
-  if [ -n "$bad" ]; then
-    echo "::error::$(basename "$apk") contains native libs for: $bad (splits must carry one ABI)"
+for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+  count=$(unzip -l "$apk" | grep -c "lib/$abi/" || true)
+  if [ "$count" -eq 0 ]; then
+    echo "::error::$base carries NO native libs for $abi — the universal promise is broken"
     FAIL=1
   fi
-  tccs=$(unzip -l "$apk" | awk '{print $4}' | grep '^assets/tcc/' | cut -d/ -f3 | sort -u | tr '\n' ' ')
-  echo "::notice::$(basename "$apk") assets/tcc coverage: ${tccs:-none}" \
-    "(known trap until the owner picks an exclude mechanism — PART_42_2)"
+done
+
+for d in arm64-v8a x86_64; do
+  count=$(unzip -l "$apk" | grep -c "assets/tcc/$d/" || true)
+  if [ "$count" -eq 0 ]; then
+    echo "::error::assets/tcc/$d missing from release (packaging/shrink overreach) — offline C compiler is gone"
+    FAIL=1
+  fi
 done
 
 if [ "$FAIL" -ne 0 ]; then
-  echo "::error::release APK set check FAILED — see annotations above"
+  echo "::error::release APK check FAILED — see annotations above"
   exit 1
 fi
-echo "release APK set check passed: ${#RELEASE_APKS[@]} artifacts (1 universal + per-ABI splits)"
+echo "release APK check passed: $base (universal, 4 ABI native sets, tcc assets intact)"

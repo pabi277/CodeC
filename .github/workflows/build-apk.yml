@@ -105,6 +105,13 @@ jobs:
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
+      # Phase 42.2 — R8/shrinkResources numbers must NOT wait on the
+      # owner's signing secrets: this builds the release variant with a
+      # throwaway key and annotates size, debuggability (exit-3's machine
+      # half) and the R8 mapping; it UPLOADS NOTHING by design.
+      - name: Assemble release APK (measure-only, Phase 42.2)
+        run: ./scripts/measure_release_apk.sh
+
       # Phase 42.1 — the release channel artifact: signed, non-debuggable,
       # built on every run so a tag publish is never the first time the
       # release variant was exercised. The REAL wrapper (the legacy 9.0.0
@@ -119,10 +126,10 @@ jobs:
         if: failure()
         run: python3 scripts/surface_gradle_errors.py release-build.log
 
-      # Phase 42.2 — the per-ABI split set is correct BEFORE it ever gets
-      # uploaded: one universal (update-channel grammar), one APK per
-      # abiFilter ABI, native libs restricted to the split's own ABI, and
-      # the assets/tcc-by-ABI trap annotated (splits do not filter assets).
+      # Phase 42.2 — THE release artifact (universal-only since the
+      # owner's 2026-09-11 revert, PART_42_2 measured record) is correct
+      # BEFORE it ever gets uploaded: on the update-channel grammar,
+      # native libs for all four ABIs, both tcc asset dirs intact.
       - name: Check release APK set (Phase 42.2)
         if: steps.signing.outputs.present == 'true'
         run: ./scripts/check_release_apk_set.sh

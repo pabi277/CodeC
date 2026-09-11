@@ -1,6 +1,6 @@
 # CodeC Phase 42.2 — Weight: what a tester actually has to download
 
-> **Status:** 🔧 CODE-COMPLETE 2026-09-11 · CI green + splits measured · awaiting OWNER DECISIONS only · **Cost:** `[client-only]` + build config · **Effort:** M
+> **Status:** 🔧 CODE-COMPLETE 2026-09-11 · CI green · splits MEASURED + REVERTED (owner) · release R8 delta from the measure lane · 🟡 device round (owner) · **Cost:** `[client-only]` + build config · **Effort:** M
 
 ### Implementation record (2026-09-11)
 
@@ -67,11 +67,13 @@ strip only `jniLibs` per ABI (the deltas above ≈ the other-ABI tcc.so +
 pty.so); `assets/tcc/<abi>` rides every split — the spec's own §assets trap,
 now confirmed with real bytes instead of a doc warning. The per-ABI lane as
 currently packaged is a rounding error the slow-link tester will never
-feel. Two puzzles recorded, not explained away: the universal debug grew
-+705 654 B vs the 2026-09-10 baseline 24 847 906 B (noise floor ≈24 KB, so
-this is REAL; candidates: pipeline change under splits, not the okhttp
-removal which is −400 KB of DEX) — flagged for the owner report, and the
-release-lane R8 delta remains unmeasurable until secrets exist.
+feel. The "+705 654 B universal growth vs the 09-10 baseline" puzzle is
+*resolved by the measurement chain*: the pre-42.2 tip (42.3 green run
+`34568541160`) shipped its universal debug at 25 915 167 B — the proper
+before-42.2 number, so 42.2's code-side effect on the universal debug is
+**−361 607 B (−1.4 %)**, matching the predicted ~−400 KB from the okhttp
+pair removal. The 09-10 number was simply a stale anchor across two landed
+phases (42.1 + 42.3 code, ~+1.07 MB in APK bytes; recorded, not chased).
 
 Also proven by the run: per-ABI names are born exactly on the updater's
 grammar (`CodeC-IDE-1.3.17-arm64-v8a-debug.apk` etc.), and AGP 9 with
@@ -82,7 +84,29 @@ to the flat truth now). AGP 9 also REMOVED the legacy
 `androidComponents.onVariants` + `VariantOutputImpl` with a hard error if
 that impl class ever disappears.
 
-🟡 **Owner decision card** (numbers, not a pick — spec law):
+✅ **OWNER DECISIONS CLOSED (2026-09-11)** — asked straight after the
+splits measurement:
+
+1. **assets/tcc → option (d): REVERT splits.** The per-ABI experiment is
+   over: one universal APK per build type is the whole shipping set, and
+   the split machinery lives only in this doc as a measured verdict. The
+   mechanisms (a)/(b)/(c) stay available for a future phase if a tester
+   ever asks for a smaller download with evidence. Executed in-tree:
+   `splits {}` removed with its measured epitaph; `AbiPolicyTest` now
+   pins the universal-only law (an enabled splits block fails the build);
+   `check_release_apk_set.sh` validates THE one release APK (on-grammar,
+   four ABI lib sets, both tcc dirs intact); BETA.md B-2 re-pointed to
+   the universal APK.
+2. **x86 → KEEP.** `ndk.abiFilters` stays the four natural lanes
+   (arm64-v8a, armeabi-v7a, x86_64, x86); pinned by test.
+3. **R8 byte delta → MEASURABLE WITHOUT SECRETS.** New CI step
+   `scripts/measure_release_apk.sh` assembles the release variant with a
+   throwaway key and annotates size, manifest non-debuggability
+   (exit-3's machine half), mapping.txt presence, and asset survival;
+   it UPLOADS NOTHING (a measure-only artifact must never look
+   downloadable). Mapping.txt stays a CI-artifact-only fact per the spec.
+
+### Decision options that were asked (the CLOSED card, kept for the record)
 
 1. **assets/tcc trap.** Today every per-ABI APK duplicates the full tcc
    assets set (arm64 7.3 MB + x86_64 3.6 MB ≈ **10.9 MB** of the 24.8 MB
@@ -99,21 +123,17 @@ that impl class ever disappears.
    offline-first promise** of **§deferred** (the bundled TCC is there
    because downloaded compilers fail on some devices) — listed because the
    spec says it needs YOUR explicit sign-off, not mine.
-   **(d) keep both tcc dirs in every split** — NOW MEASURED: per-ABI
-   savings are 0.94–1.77 % under this option (table above), so the 15 %
-   rule would revert the split machinery to universal-only unless (a) or
-   (b) ships. If you want the per-ABI lane to exist at all, pick (a) or
-   (b); option (a) is the smaller Gradle change (one packaging-task hook)
-   and my default-shaped proposal, but the call is yours.
-2. **Drop `x86` from `abiFilters`** — the emulator lane already has
-   `x86_64`; `x86` (32-bit Intel) devices are effectively gone. Dropping it
-   removes one split + one PTY build. `armeabi-v7a` is NOT droppable
+   **(d) keep both tcc dirs in every split — ✅ PICKED.** Measured
+   savings were 0.94–1.77 % under this option (table above), so the 15 %
+   law fired and the split machinery reverted to universal-only.
+2. **Drop `x86` from `abiFilters`** — ❌ DECLINED (owner keeps x86; the
+   32-bit-Intel emulator lane stays). `armeabi-v7a` was never droppable
    (32-bit ARM devices are real in the beta pool — exit 5).
-3. **material-icons-extended** — the OkHttp pair died on grep proof; the
-   icon set's verdict waits on the R8-measured release build (R8 tree-
-   shakes unreferenced vector classes; measure before enumerating the
-   `Icons.*` uses by hand). Same rule: removal commit must name it and
-   show green CI.
+3. **material-icons-extended** — STILL OPEN pending the measured release
+   build (the measure-only lane now provides it without secrets). R8
+   tree-shakes unreferenced vector classes; enumerate `Icons.*` uses by
+   hand only if the measured number still points at the icon set. Same
+   law when it happens: removal commit must name it and show green CI.
 
 ### Pre-implementation analysis (spec), kept for the record
 

@@ -6,16 +6,17 @@ import org.junit.Test
 
 /**
  * Phase 42.2 — [docs/chat-phase42/PART_42_2_APK_WEIGHT.md §assets/tcc]: the
- * bundled-engine set is NEVER allowed to drift from the split set. For every
- * ABI in the natural filter list, either:
+ * bundled-engine set is NEVER allowed to drift from the shipped ABI set
+ * (universal-only since the 2026-09-11 splits revert). For every ABI in
+ * the natural filter list, either:
  *   - jniLibs/<abi>/libtcc.so AND assets/tcc/<abi> both exist (the offline
  *     C toolchain rides the artifact), or
  *   - the ABI is in NO_BUNDLED_TCC, and then EmbeddedCompiler.tccBinary()
  *     already returns null for it (typed null at apiDir==null, Phase 33.3).
  *
- * Note the trap this protects: splits/abiFilters filter ONLY native libs.
- * assets/tcc/<abi> (≈7.3 MB arm64 / 3.6 MB x86_64) rides every split until
- * the owner picks an exclude mechanism — recorded in the part doc.
+ * The trap that killed splits, for the record: abiFilters/splits filter
+ * ONLY native libs; assets/tcc/<abi> (≈7.3 MB arm64 / 3.6 MB x86_64) rode
+ * every split, capping savings at <2 % — below the 15 % floor.
  */
 class BundledEngineAbiCoverageTest {
 
