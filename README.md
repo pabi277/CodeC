@@ -29,9 +29,10 @@ files and tap **RUN**.
 
 1. Open https://github.com/pabi277/CodeC/releases and pick the newest
    **CodeC IDE** release (`app-v…` tag).
-2. Download **`CodeC-IDE-<version>-universal.apk`** (per-ABI files are for
-   advanced users; universal is always right). The release notes carry
-   `sha256:` lines if you want to verify the download first.
+2. Download **`CodeC-IDE-<version>-universal.apk`** — the only APK, and
+   always the right one (per-ABI variants were measured and reverted in
+   Phase 42.2). The release notes carry `sha256:` lines if you want to
+   verify the download first.
 3. On your phone: download the APK → allow **Install unknown apps** → install.
 
 **Developer / branch builds:** push a branch (or merge to `main`) → GitHub

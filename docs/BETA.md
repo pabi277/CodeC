@@ -2,7 +2,7 @@
 
 > Phase 42.3. This is the page the release notes link to. It is written
 > for a stranger who just installed the APK: the honest list of what
-> bitler testers so far, what never worked, and exactly what to do when
+> bit testers so far, what never worked, and exactly what to do when
 > something hangs. A beta is not a dump — this file is the difference.
 
 ## What "beta" means here
@@ -11,7 +11,11 @@
   phone, compile+run in an APK-bundled compiler stack, sync to GitHub) and
   the core paths are tested in CI and by device rounds — but the owners'
   device matrix is still one phone family, and edge devices keep finding
-  bugs.
+  bugs. **Carried from Phase 42 (2026-09-11):** the owner's release round
+  passed 4/4 on their phone (editor across the language matrix, offline C,
+  About fingerprint, updater up-to-date); the **install on Android 7 / 8
+  (API 24 / 26) tier has NOT been run yet** — tests on those tiers come
+  from beta testers' devices, so say your Android version in any report.
 - Your work is safe: projects live under
   `Android/data/…/files/CodeC/projects/`, they are the only thing the
   [42.3 backup rules](chat-phase42/PART_42_3_LAUNCH_SAFETY.md) carry, and
@@ -27,12 +31,12 @@
 |---|---|---|---|
 | B-1 | Opening a **huge folder** (thousands of files, node_modules-sized) stalls the file tree | The tree scan is single-threaded on purpose; the storage document APIs are slow per file | Open a subfolder instead of the repo root; the tree rescans on demand — if it sits 30 s+, force-stop and reopen (your files are fine; the scan is read-only) |
 | B-2 | **32-bit ARM older tablets**: install or boot fails | Older SoCs need a 32-bit (`armeabi-v7a`) userland; the universal APK *includes* native libs for `armeabi-v7a` (42.2 kept four ABI lanes, universal-only artifacts) | Install the universal APK from the release page (it is the only APK — per-ABI splits were measured and reverted, PART_42_2); if boot still fails, attach the log in an issue |
-| B-4 | **32-bit ARM devices**: the built-in C compiler is not available | The bundled offline TCC toolchain ships only for `arm64-v8a` / `x86_64` (Phase 33.3 typed null: `EmbeddedCompiler.tccBinary()` returns null on other ABIs; the app never pretends otherwise) | Install the C toolchain module from the modules screen, or use Termux; everything except offline C compilation works |
 | B-3 | Long-running builds die when the screen turns off | The OS kills the process despite the foreground notification | Keep the notification visible (tap it; don't swipe it away); the foreground service + wake lock already hold — do-not-disturb is fine, battery-saver levels are the killer |
 | B-4 | `git push` asks for the key again after an update | The credentials store is wiped if Android's backup restore only partially ran | Settings → GitHub Account → reconnect; PATs are never uploaded anywhere |
 | B-5 | "Parse error / package appears invalid" on install | The download was interrupted or a partial APK got handed to the installer | The updater verifies SHA-256 **before** any install since 42.1; if it refuses, re-download from the release page in a browser — the checksums are in the release notes |
 | B-6 | Cursor/highlight wrong on **very long lines** (>10 kB single line) | The editor's line-length guard (39.x) shows a readable substitute | Split the line; the file on disk is untouched (the guard is a display throttle, never an edit) |
 | B-7 | Crash-loop after update: the app closes at the splash twice | Persisted settings from a mismatched build are the #1 cause proven across the device rounds | Third launch: the loop sentence + **[Try starting without my settings]** (42.3) boots the app without your settings — your projects are untouched; the counter resets on a clean start |
+| B-8 | **32-bit ARM devices**: the built-in C compiler is not available | The bundled offline TCC toolchain ships only for `arm64-v8a` / `x86_64` (Phase 33.3 typed null: `EmbeddedCompiler.tccBinary()` returns null on other ABIs; the app never pretends otherwise) | Install the C toolchain module from the modules screen, or use Termux; everything except offline C compilation works |
 
 ### Things that EARNED their way off this list
 
