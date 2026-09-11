@@ -1,4 +1,6 @@
 import java.time.Duration
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 plugins {
   alias(libs.plugins.android.application)
@@ -22,12 +24,23 @@ android {
     // targetSdk 28 compatibility mode so that downloaded binaries keep
     // working. CodeC is distributed via GitHub (not Play), so this is safe.
     targetSdk = 28
-    versionCode = 20
+    // Phase 42.1 — versionCode/versionName are release metadata now: a tag
+    // `app-v<X.Y.Z>` must name this versionName, and the publish step refuses
+    // a versionCode that is not strictly greater than every shipped one
+    // (.github/workflows/build-apk.yml + docs/RELEASE_NOTES.md).
+    versionCode = 21
     // The device round kept tripping over WHICH apk was installed (three
     // crash reports pasted from a stale build). The CI run number (or a
     // local timestamp) rides in versionName so Settings → About / app info
-    // answers it at a glance: "1.3.16 (340xxxx)".
-    versionName = "1.3.16" + (System.getenv("GITHUB_RUN_NUMBER")?.let { " ($it)" } ?: "")
+    // answers it at a glance: "1.3.17 (340xxxx)".
+    versionName = "1.3.17" + (System.getenv("GITHUB_RUN_NUMBER")?.let { " ($it)" } ?: "")
+    // Phase 42.3 — the About row's BUILD date + provenance: a tester asking
+    // "which build is this?" answers it from Settings → About, next to the
+    // version name. UTC date: stable per day, no clock lies.
+    buildConfigField(
+      "String", "BUILD_DATE",
+      "\"${LocalDate.now(ZoneOffset.UTC)}\""
+    )
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -82,8 +95,17 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = false
-      isMinifyEnabled = false
+      // Phase 42.2 — release gets R8 + shrinkResources + PNG crunch
+      // (aapt2's crunch is lossless recompression); DEBUG is deliberately
+      // untouched (fast iteration, readable traces, the CI debug artifact
+      // is what developers install). The keep-rule file law: one section
+      // per library, each -keep with a comment naming the crash it
+      // prevents; mapping.txt is a CI artifact, never a public release
+      // asset; SourceFile/LineNumberTable stays (a crash record the
+      // owner cannot read is the worst third-party flake).
+      isMinifyEnabled = true
+      isShrinkResources = true
+      isCrunchPngs = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
@@ -94,6 +116,18 @@ android {
       }
     }
   }
+
+  // Phase 42.2 — REVERTED 2026-09-11 (owner's call): per-ABI splits.
+  // Measured on green runs 34571675385 / 34572206168 (byte-identical):
+  // universal debug 25 553 560 B; per-ABI debug APKs were only
+  // -0.94 % / -1.77 % smaller because assets/tcc/<abi> (~10.9 MB) rides
+  // EVERY split — splits filter jniLibs only (the spec's §assets trap,
+  // confirmed in bytes). Exit-4's law: if the per-ABI lane is not at
+  // least 15 % lighter than universal, the split machinery reverts.
+  // The owner chose the revert over the tcc-flavored mechanisms
+  // (packaging hook / ABI flavors / tcc-as-download — decision card in
+  // the part doc), and chose to KEEP x86 in the natural ABI set.
+  // One universal APK per build type is the whole shipping set again.
   compileOptions {
     // Phase 25.2 — Java 17: sora-editor (the edit core) requires consumers on
     // 17; :bench already builds at 17.
@@ -130,6 +164,32 @@ android {
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
+  }
+
+}
+
+// Phase 42.2 — APK file names follow the update-channel grammar the
+// in-app updater already parses (UpdatePolicy): CodeC-IDE-<version>-
+// <abi>.apk, the universal one named -universal.apk (the updater's
+// default). Publishing AGP's raw app-<abi>-release.apk names would
+// resurrect the "updater picks the first .apk" support ticket.
+// versionName may carry " (GITHUB_RUN_NUMBER)" — strip before naming.
+// AGP 9 note: the legacy android.applicationVariants API is REMOVED
+// (run 34570360926: 'Unresolved reference: applicationVariants'); the
+// onVariants + VariantOutputImpl route below is the AGP 9 surface — and
+// the outputFileName property still lives on the impl class, so the hard
+// error guards a future AGP bump from silently shipping
+// app-<abi>-release.apk names under a "green" build again.
+androidComponents {
+  onVariants { variant ->
+    variant.outputs.forEach { output ->
+      val impl = output as? com.android.build.api.variant.impl.VariantOutputImpl
+        ?: error("42.2 APK naming: output is not VariantOutputImpl — AGP surface changed?")
+      val abi = impl.filters.firstOrNull { it.filterType.name == "ABI" }?.identifier ?: "universal"
+      val version = (output.versionName.get() ?: "unknown").substringBefore(' ')
+      val suffix = if (variant.buildType == "release") "" else "-${variant.buildType}"
+      impl.outputFileName = "CodeC-IDE-$version-$abi$suffix.apk"
+    }
   }
 }
 
@@ -198,8 +258,11 @@ dependencies {
   // which returns a plain module grid, so no other file imports zxing and the
   // bitmap stays in Compose. Notice: assets/licenses/ZXING_APACHE2.txt.
   implementation(libs.zxing.core)
-  implementation(libs.logging.interceptor)
-  implementation(libs.okhttp)
+  // Phase 42.2 — REMOVED: com.squareup.okhttp3:okhttp + logging-interceptor.
+  // Grep proof (2026-09-11): zero `okhttp3`/`okio` imports anywhere in
+  // app/src — the app speaks HTTP through java.net HttpURLConnection
+  // (UpdateManager, UserlandInstaller); :bench never referenced them
+  // either. Both lines were dead weight on the release classpath.
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

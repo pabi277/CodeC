@@ -107,7 +107,8 @@ import java.io.File
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     onNavigateToLogs: () -> Unit = {},
-    onNavigateToFeedback: () -> Unit = {}
+    /** reportCrash=true is the crash-loop hand-off: feedback pre-ticks both attachments. */
+    onNavigateToFeedback: (reportCrash: Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val themeManager = remember { ThemeManager(context) }
@@ -977,6 +978,18 @@ fun SettingsScreen(
                 }
             )
             SettingsItem(title = "GitHub", subtitle = "https://github.com/pabi277/CodeC")
+            // Phase 42.3 §4 — the About card answers WHO made this build and
+            // WHAT build it is: three releases-tester-identity rows, plain
+            // data (no strings of mine to lie about in a fork either — a
+            // build changes this file, its versionName, and its tag).
+            SettingsItem(
+                title = "Build date",
+                subtitle = com.codeci.ide.BuildConfig.BUILD_DATE + " (UTC)"
+            )
+            SettingsItem(
+                title = "Authors",
+                subtitle = "pabi277 + contributors · tester builds for personal use"
+            )
             // Phase 25.2 — LGPL-2.1 obligation checklist: sora-editor is used
             // as a binary Gradle dependency only (no source copied, no fork);
             // the attribution + license pointer live here.
@@ -994,31 +1007,144 @@ fun SettingsScreen(
                 title = "Open-source licenses",
                 subtitle = "sora-editor + language-textmate + editor-lsp © Rosemoe — LGPL-2.1 · TextMate grammars & themes — MIT (microsoft/vscode, TypeScript-TmLanguage, LuaLS) · snippet packs — MIT (rafamadriz/friendly-snippets) · file icons — MIT (jesseweed/seti-ui) · QR encoding — Apache-2.0 (zxing/zxing core) · ignore pattern names — CC0-1.0 (github/gitignore) · github.com/Rosemoe/sora-editor"
             )
+            // Phase 42.3 §5 — the permission table, surfaced: one short row
+            // per declared permission with its one-line reason. The "not a
+            // dialog storm" part: they are plain info rows, and the whole
+            // table's source-of-truth is docs/DATA_AND_PRIVACY.md, pinned
+            // to the manifest by ManifestPermissionsTest. The honest order
+            // puts the all-files approval first — it is the one permission
+            // where "CodeC cannot read your files" would be false.
+            SettingsItem(
+                title = "Privacy & permissions — all-files access (optional)",
+                subtitle = "With your approval CodeC can open any project folder; decline it and it still works one folder at a time — MANAGE_EXTERNAL_STORAGE"
+            )
+            SettingsItem(
+                title = "Legacy storage read/write (≤ Android 12L)",
+                subtitle = "READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE capped at API 32 — the scoped-storage boundary"
+            )
+            SettingsItem(
+                title = "Camera (optional)",
+                subtitle = "A photo capture goes straight into a scratch file you attach — CAMERA; hardware optional, camera-less devices install fine"
+            )
+            SettingsItem(
+                title = "Internet",
+                subtitle = "Only what you start: git clone/fetch/push, package downloads, the checksum-verified updater — no telemetry anywhere"
+            )
+            SettingsItem(
+                title = "Network & Wi-Fi state",
+                subtitle = "ACCESS_NETWORK_STATE + ACCESS_WIFI_STATE — reachability checks and the LAN-address hint"
+            )
+            SettingsItem(
+                title = "Run notification + foreground service",
+                subtitle = "POST_NOTIFICATIONS + FOREGROUND_SERVICE(+dataSync) — why a notification exists while a compile/run lives; works denied"
+            )
+            SettingsItem(
+                title = "Install packages",
+                subtitle = "REQUEST_INSTALL_PACKAGES — only the two install paths you start: the userland bootstrap and the verified update"
+            )
+            SettingsItem(
+                title = "Wake lock",
+                subtitle = "WAKE_LOCK — a running terminal/compile must not die with the screen off"
+            )
+            SettingsItem(
+                title = "Vibration",
+                subtitle = "VIBRATE — terminal bell and key haptics; works denied"
+            )
+            SettingsItem(
+                title = "Termux bridge (optional)",
+                subtitle = "com.termux.permission.RUN_COMMAND — declared by Termux, used only when the bridge is on"
+            )
+            SettingsItem(
+                title = "The full table",
+                subtitle = "docs/DATA_AND_PRIVACY.md in the repository — every permission, its reason, and the code that uses it; no SMS/contacts/location/phone permissions exist in this app"
+            )
+            // Phase 42.1 — the honest updater: app releases only (a
+            // userland-* bootstrap can never be offered), version compared
+            // numerically ("up to date" when same, a named refusal when
+            // older), the abi-matched asset with universal fallback, and a
+            // SHA-256 from the release notes required before any install —
+            // no checksum means the browser, never an exception.
             SettingsAction(
-                title = stringResource(com.codeci.ide.R.string.install_from_github),
-                actionText = "INSTALL",
+                title = stringResource(com.codeci.ide.R.string.check_for_updates),
+                actionText = "CHECK",
                 onClick = {
                     scope.launch {
                         val updater = com.codeci.ide.ui.services.ApkUpdateManager(context)
+                        val installedText =
+                            com.codeci.ide.ui.services.UpdatePolicy.Version.parse(
+                                com.codeci.ide.BuildConfig.VERSION_NAME
+                            )?.text ?: com.codeci.ide.BuildConfig.VERSION_NAME
                         Toast.makeText(context, context.getString(com.codeci.ide.R.string.checking_update), Toast.LENGTH_SHORT).show()
-                        val release = updater.fetchLatestRelease()
-                        if (release == null) {
-                            Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_none), Toast.LENGTH_LONG).show()
-                            updater.openReleasesPage()
-                            return@launch
-                        }
-                        Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_found, release.name), Toast.LENGTH_SHORT).show()
-                        if (!updater.canRequestPackageInstalls()) {
-                            Toast.makeText(context, context.getString(com.codeci.ide.R.string.allow_unknown_sources), Toast.LENGTH_LONG).show()
-                            context.startActivity(updater.installPermissionIntent())
-                            return@launch
-                        }
-                        val apk = updater.downloadApk(release.apkUrl)
-                        if (apk == null) {
-                            Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_download_failed), Toast.LENGTH_LONG).show()
-                            updater.openReleasesPage()
-                        } else {
-                            updater.installApk(apk)
+                        when (val check = updater.checkForUpdate()) {
+                            is com.codeci.ide.ui.services.UpdateCheck.Failed -> {
+                                Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_check_failed), Toast.LENGTH_LONG).show()
+                                updater.openReleasesPage()
+                            }
+                            is com.codeci.ide.ui.services.UpdateCheck.NoAppReleases -> {
+                                Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_none), Toast.LENGTH_LONG).show()
+                                updater.openReleasesPage()
+                            }
+                            is com.codeci.ide.ui.services.UpdateCheck.UpToDate -> {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(com.codeci.ide.R.string.update_up_to_date, installedText),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                            is com.codeci.ide.ui.services.UpdateCheck.OlderVersion -> {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(
+                                        com.codeci.ide.R.string.update_older_refused,
+                                        check.candidate ?: check.reason,
+                                        installedText
+                                    ),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                            is com.codeci.ide.ui.services.UpdateCheck.UpdateAvailable -> {
+                                val candidateText =
+                                    com.codeci.ide.ui.services.UpdatePolicy.Version.parse(check.release.tag)?.text
+                                        ?: check.release.tag
+                                if (check.expectedSha256 == null) {
+                                    Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_no_checksum), Toast.LENGTH_LONG).show()
+                                    updater.openReleasesPage()
+                                    return@launch
+                                }
+                                val sizeText =
+                                    if (check.asset.sizeBytes > 0) "%.1f MB".format(check.asset.sizeBytes / 1048576.0)
+                                    else "the APK"
+                                Toast.makeText(
+                                    context,
+                                    context.getString(
+                                        com.codeci.ide.R.string.update_found,
+                                        candidateText,
+                                        sizeText
+                                    ),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                if (!updater.canRequestPackageInstalls()) {
+                                    Toast.makeText(context, context.getString(com.codeci.ide.R.string.allow_unknown_sources), Toast.LENGTH_LONG).show()
+                                    context.startActivity(updater.installPermissionIntent())
+                                    return@launch
+                                }
+                                when (val result = updater.downloadVerified(check)) {
+                                    is com.codeci.ide.ui.services.DownloadResult.Ready ->
+                                        updater.installApk(result.file)
+                                    is com.codeci.ide.ui.services.DownloadResult.BrowserOnly -> {
+                                        Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_no_checksum), Toast.LENGTH_LONG).show()
+                                        updater.openReleasesPage()
+                                    }
+                                    is com.codeci.ide.ui.services.DownloadResult.Failed -> {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(com.codeci.ide.R.string.update_download_failed, result.reason),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        updater.openReleasesPage()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1043,8 +1169,25 @@ fun SettingsScreen(
             SettingsAction(
                 title = "Send feedback, rate, or report a bug",
                 actionText = "OPEN",
-                onClick = onNavigateToFeedback
+                onClick = { onNavigateToFeedback(false) }
             )
+            // Phase 42.3 §2 — the same [Send a report] the crash overlay
+            // offers, reachable from Settings any time a crash record
+            // exists: opens 41.2's screen with both attachments pre-ticked.
+            // Nothing is ever sent by the app itself.
+            var lastCrashPresent by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                lastCrashPresent = withContext(Dispatchers.IO) {
+                    com.codeci.ide.ui.crash.CrashLog.newestRecord(context.filesDir) != null
+                }
+            }
+            if (lastCrashPresent) {
+                SettingsAction(
+                    title = stringResource(com.codeci.ide.R.string.report_last_crash),
+                    actionText = "OPEN",
+                    onClick = { onNavigateToFeedback(true) }
+                )
+            }
 
             if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))

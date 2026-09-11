@@ -722,6 +722,81 @@ class FileManagerViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Phase 42.3 §3 — "Export all projects": one backup ZIP over EVERY
+     * project root (ProjectManager's internal one AND the external-files
+     * and legacy shared-storage candidates), with the shared budgets from
+     * [ProjectTransfer.exportAllZip]. A failed backup deletes the partial
+     * SAF file: a half-backup that LOOKS whole is a data-loss letter.
+     */
+    fun exportAllProjects(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        ProjectTransfer.exportAllZip(output, backupRoots(context))
+                    } ?: error("Could not open the backup destination")
+                }
+                val renames =
+                    if (result.renames.isEmpty()) "" else " (renamed: ${result.renames.keys.joinToString()})"
+                val skipped =
+                    if (result.skipped.isEmpty()) "" else " (skipped: ${result.skipped.take(3).joinToString()})"
+                _userMessage.value =
+                    "Exported ${result.projects} projects (${formatSize(result.bytesWritten)})$renames$skipped"
+            } catch (e: Exception) {
+                runCatching { context.contentResolver.delete(uri, null, null) }
+                _userMessage.value = "Backup failed: ${e.message ?: "unknown error"}"
+            } finally {
+                _isBusy.value = false
+            }
+        }
+    }
+
+    /**
+     * Phase 42.3 §3 — restore an export-all backup into the INTERNAL
+     * projects root (external candidates are deliberately not restore
+     * targets: the backup's job is to bring the user's work into a clean
+     * install, and the executable root is the one that is backed up).
+     */
+    fun importProjectsBackup(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val count = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        ProjectTransfer.importAllZip(input, ProjectManager(context).projectsRoot())
+                    } ?: error("Could not read the backup")
+                }
+                _userMessage.value = "Imported backup ($count entries)"
+                loadProjects(context)
+            } catch (e: Exception) {
+                _userMessage.value = "Backup import failed: ${e.message ?: "unknown error"}"
+            } finally {
+                _isBusy.value = false
+            }
+        }
+    }
+
+    /**
+     * The "everything" backup's roots — 42.3's two-roots trap: projects may
+     * sit under filesDir AND under getExternalFilesDir (and a legacy
+     * shared-storage copy when the all-files grant makes it readable).
+     * Only roots that exist right now are returned, canonical-deduped.
+     */
+    private fun backupRoots(context: Context): List<File> {
+        val candidates = listOfNotNull(
+            runCatching { ProjectManager(context).projectsRoot() }.getOrNull(),
+            context.getExternalFilesDir(null)?.let { File(it, "CodeC/projects") },
+            runCatching {
+                File(android.os.Environment.getExternalStorageDirectory(), "CodeC/projects")
+            }.getOrNull()
+        )
+        return candidates
+            .distinctBy { runCatching { it.canonicalFile }.getOrDefault(it) }
+            .filter { it.isDirectory }
+    }
+
     fun formatSize(size: Long): String {
         if (size <= 0) return "0 B"
         val units = arrayOf("B", "KB", "MB", "GB", "TB")

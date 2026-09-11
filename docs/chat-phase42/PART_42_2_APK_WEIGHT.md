@@ -1,8 +1,160 @@
 # CodeC Phase 42.2 — Weight: what a tester actually has to download
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` + build config · **Effort:** M
+> **Status:** ✅ CODE-COMPLETE + MEASURED 2026-09-11 · R8 release = 6 630 554 B (−74 % vs debug) · splits reverted (owner) · non-debuggable machine-proven · 🟡 remaining: 3 secrets + publish tag + device round (owner) · **Cost:** `[client-only]` + build config · **Effort:** M
 
-## The number, and what it is made of
+### Implementation record (2026-09-11)
+
+Landed (the spec's non-decision set; '🟡' marks what waits on the owner):
+
+- **R8 release-only** — `isMinifyEnabled = true`, `isShrinkResources = true`,
+  `isCrunchPngs = true` on the release buildType; **debug is untouched**
+  (the CI debug artifact developers install stays a fast, unminified build).
+  `proguard-rules.pro` is rewritten from the AGP template into the law-
+  formatted file: one section per library, every keep with a comment naming
+  the prevented failure, first attempt ships **zero** library keeps
+  (Compose is R8-aware), and `-keepattributes SourceFile,LineNumberTable`
+  is pinned non-negotiable (the spec's rule; pinned by test).
+- **Per-ABI splits, universal kept** — `splits { abi }` enable + the same
+  four ABIs as `ndk.abiFilters`, `isUniversalApk = true`.
+- **Update-channel APK names** — release artifacts are now BORN named
+  `CodeC-IDE-<version>-<abi>.apk` / `…-universal.apk` via
+  `applicationVariants` output naming (filter `ABI`), which is the grammar
+  `UpdatePolicy.pickAsset` already parses; publishing AGP's raw
+  `app-arm64-v8a-release.apk` names would have resurrected the 42.1
+  "first .apk asset" bug class. Debug: `CodeC-IDE-<version>-<abi>-debug.apk`.
+- **okhttp + logging-interceptor REMOVED** (`app/build.gradle.kts:214-215`
+  pre-change) — grep proof: zero `okhttp3`/`okio` imports in `app/src`
+  (HTTP goes through `java.net.HttpURLConnection` — UpdateManager,
+  UserlandInstaller), none in `:bench` either; the two lines were dead
+  weight. Named here so a reviewer can object, per the spec's rule.
+- **Workflow reconciled for the split set** — debug artifact now uploads
+  from `outputs/apk/universal/debug/`, the release artifact from
+  `outputs/apk/*/release/`; the notes build, the idempotent-attach cleaner
+  (`clear_release_assets.py`, now recursive into `*/release/`), and both
+  publish globs follow the same layout. New CI step
+  `scripts/check_release_apk_set.sh` runs after `assembleRelease` (exit 1's
+  machine): exactly one universal named per the update grammar, one APK per
+  filtered ABI, native libs restricted to the split's own ABI, and the
+  **assets/tcc-by-ABI trap annotated** (splits do NOT filter `assets/` —
+  every split currently carries the full ~10.9 MB tcc set).
+- **Tests (exit 2 set, host)** — `AbiPolicyTest` (splits.include ==
+  abiFilters; universal lane present; **`armeabi-v7a` never dropped**),
+  `BundledEngineAbiCoverageTest` (each filtered ABI either ships
+  jniLibs+assets tcc or is in the declared no-bundled set ==
+  `EmbeddedCompiler.ABI_DIRS`), `ProguardKeepsDocumentedTest` (no
+  undocumented keeps; line-table keep present; release-only minify pinned).
+  Local harness: 3 suites, **9/9 green**; CI `testDebugUnitTest` is the
+  gate.
+- **BETA.md gains the 32-bit ARM sentence** (exit 5): "the built-in C
+  compiler is not available; install the C toolchain module or use
+  Termux" (row B-4), so `armeabi-v7a` ships and the known limitation is a
+  sentence, not a bug report.
+
+✅ **CI measure recorded** — green runs `34571675385` + `34572206168`
+(byte-identical, which also re-verifies build determinism across runs) on
+debug, released lane still gated on the owner's 3 secrets:
+
+| APK | bytes | vs universal |
+|---|---|---|
+| `CodeC-IDE-1.3.17-universal-debug` | **25 553 560** | — |
+| `…-arm64-v8a-debug` | 25 309 500 | −244 060 B (**−0.95 %**) |
+| `…-x86_64-debug` | 25 312 384 | −241 176 B (−0.94 %) |
+| `…-armeabi-v7a-debug` | 25 101 741 | −451 819 B (−1.77 %) |
+| `…-x86-debug` | 25 104 033 | −449 527 B (−1.76 %) |
+
+**Exit-4 verdict on the default mechanism: FAILS the 15 % floor.** Splits
+strip only `jniLibs` per ABI (the deltas above ≈ the other-ABI tcc.so +
+pty.so); `assets/tcc/<abi>` rides every split — the spec's own §assets trap,
+now confirmed with real bytes instead of a doc warning. The per-ABI lane as
+currently packaged is a rounding error the slow-link tester will never
+feel. The "+705 654 B universal growth vs the 09-10 baseline" puzzle is
+*resolved by the measurement chain*: the pre-42.2 tip (42.3 green run
+`34568541160`) shipped its universal debug at 25 915 167 B — the proper
+before-42.2 number, so 42.2's code-side effect on the universal debug is
+**−361 607 B (−1.4 %)**, matching the predicted ~−400 KB from the okhttp
+pair removal. The 09-10 number was simply a stale anchor across two landed
+phases (42.1 + 42.3 code, ~+1.07 MB in APK bytes; recorded, not chased).
+
+Also proven by the run: per-ABI names are born exactly on the updater's
+grammar (`CodeC-IDE-1.3.17-arm64-v8a-debug.apk` etc.), and AGP 9 with
+splits writes ALL APKs FLAT into `outputs/apk/<buildType>/` (the assumed
+`<abi>/<buildType>` nesting was AGP-≤7 lore; the artifact globs are pinned
+to the flat truth now). AGP 9 also REMOVED the legacy
+`android.applicationVariants` API — the naming hook uses
+`androidComponents.onVariants` + `VariantOutputImpl` with a hard error if
+that impl class ever disappears.
+
+**RELEASE LANE MEASURED (exit-3/exit-4 numbers, run `34579414369`, GREEN):**
+
+| lane (universal, same commit) | bytes | note |
+|---|---|---|
+| debug | 25 553 564 | iteration build, unminified — what CI uploads |
+| **release (measure-only key)** | **6 630 554** | **−74.0 % vs debug** — R8 + shrinkResources + PNG crunch (exit-2's recorded byte delta) |
+
+- **Exit-3 machine half ✅**: `aapt dump badging` — the release manifest
+  emits **no android:debuggable flag** (annotated every run now).
+- **R8 mapping kept**: mapping.txt = 54 926 497 B, stays a CI-artifact-only
+  fact (never a release asset — spec).
+- The first real R8 failure is now the rules file's first proven section:
+  `org.eclipse.jdt.annotation.NonNullByDefault` missing from tm4e
+  (run 34577896124) → `-dontwarn org.eclipse.jdt.annotation.**` with the
+  failure named, per the file law.
+- The in-app updater's `-universal.apk` grammar, the version guard, and the
+  release-notes SHA256 table are unchanged — universal-only simply means
+  the publish lane attaches exactly one APK (three gotchas in reverse).
+
+✅ **OWNER DECISIONS CLOSED (2026-09-11)** — asked straight after the
+splits measurement:
+
+1. **assets/tcc → option (d): REVERT splits.** The per-ABI experiment is
+   over: one universal APK per build type is the whole shipping set, and
+   the split machinery lives only in this doc as a measured verdict. The
+   mechanisms (a)/(b)/(c) stay available for a future phase if a tester
+   ever asks for a smaller download with evidence. Executed in-tree:
+   `splits {}` removed with its measured epitaph; `AbiPolicyTest` now
+   pins the universal-only law (an enabled splits block fails the build);
+   `check_release_apk_set.sh` validates THE one release APK (on-grammar,
+   four ABI lib sets, both tcc dirs intact); BETA.md B-2 re-pointed to
+   the universal APK.
+2. **x86 → KEEP.** `ndk.abiFilters` stays the four natural lanes
+   (arm64-v8a, armeabi-v7a, x86_64, x86); pinned by test.
+3. **R8 byte delta → MEASURABLE WITHOUT SECRETS.** New CI step
+   `scripts/measure_release_apk.sh` assembles the release variant with a
+   throwaway key and annotates size, manifest non-debuggability
+   (exit-3's machine half), mapping.txt presence, and asset survival;
+   it UPLOADS NOTHING (a measure-only artifact must never look
+   downloadable). Mapping.txt stays a CI-artifact-only fact per the spec.
+
+### Decision options that were asked (the CLOSED card, kept for the record)
+
+1. **assets/tcc trap.** Today every per-ABI APK duplicates the full tcc
+   assets set (arm64 7.3 MB + x86_64 3.6 MB ≈ **10.9 MB** of the 24.8 MB
+   universal base). Without a mechanism, per-ABI splits save only the
+   jniLibs delta (~0.4–0.6 MB) and are likely to trip the exit-4 revert
+   rule. Options: **(a)** strip the foreign `assets/tcc/<abi>` dir inside
+   each split's package task (AGP has no split-aware assets API;
+   `packaging.resources.excludes` is variant-wide, so this is a small task
+   hook + `BundledEngineAbiCoverageTest` update); **(b)** ABI product
+   flavors with per-flavor `assets.srcDirs` (louder Gradle change, same
+   user effect, keeps `EmbeddedCompiler.abiDir()` agreement mechanical);
+   **(c)** tcc-as-downloadable-module — delete `assets/tcc` from the APK,
+   first C compile downloads it like clang does: **strongly against the
+   offline-first promise** of **§deferred** (the bundled TCC is there
+   because downloaded compilers fail on some devices) — listed because the
+   spec says it needs YOUR explicit sign-off, not mine.
+   **(d) keep both tcc dirs in every split — ✅ PICKED.** Measured
+   savings were 0.94–1.77 % under this option (table above), so the 15 %
+   law fired and the split machinery reverted to universal-only.
+2. **Drop `x86` from `abiFilters`** — ❌ DECLINED (owner keeps x86; the
+   32-bit-Intel emulator lane stays). `armeabi-v7a` was never droppable
+   (32-bit ARM devices are real in the beta pool — exit 5).
+3. **material-icons-extended** — STILL OPEN pending the measured release
+   build (the measure-only lane now provides it without secrets). R8
+   tree-shakes unreferenced vector classes; enumerate `Icons.*` uses by
+   hand only if the measured number still points at the icon set. Same
+   law when it happens: removal commit must name it and show green CI.
+
+### Pre-implementation analysis (spec), kept for the record
 
 **24 847 906 B ≈ 23.7 MiB** for the debug universal APK (run `34399227052`);
 the release build today would be about the same, because
@@ -26,50 +178,8 @@ Measured in the working tree on 2026-09-10 (`du -sh`), not estimated:
 | `assets/textmate/` (grammars 2.3 MB + themes 52 KB), `assets/snippets` 332 KB, `assets/licenses` 76 KB | ≈ 2.7 MB | no — offline syntax highlighting and snippets are the product; themes could drop unused grammars only with a *measured* editor regression risk |
 | Kotlin stdlib + **Compose BOM (runtime/foundation/material3)** + lifecycle + navigation + DataStore + coroutines, **unminified** | the bulk of the remaining ~15 MB of DEX | yes — R8 shrinks app+lib code ~30-50 % in comparable apps |
 | `sora-editor` + `language-textmate` (already trimmed: `org.yaml` + `org.eclipse.jdt` **excluded** in `build.gradle.kts` with a comment naming the reason) | — | the precedent to follow: **exclusions with proof beat shrinking**; further `exclude()` candidates are checked the same way |
-| `implementation(libs.okhttp)` + `implementation(libs.logging.interceptor)` (`build.gradle.kts:201-202`) | OkHttp 4.10 + okio, ~400 KB of DEX | **`grep -rn "okhttp3" app/src` finds no import in app code** — if `:bench` and the generated/bridge paths don't use it either, deleting the two lines is cheaper and safer than asking R8 to shrink them |
+| `implementation(libs.okhttp)` + `implementation(libs.logging.interceptor)` (`build.gradle.kts:201-202`) | OkHttp 4.10 + okio, ~400 KB of DEX | **`grep -rn \"okhttp3\" app/src` finds no import in app code** — if `:bench` and the generated/bridge paths don't use it either, deleting the two lines is cheaper and safer than asking R8 to shrink them |
 | `material-icons-extended` (`build.gradle.kts:146`) | a known multi-hundred-KB icon font/class set | trim to the icons actually referenced (the `Icons.*` set is enumerable), or rely on R8 in the release build |
-| resources: 268 `strings.xml` entries, layouts, themes, vendored-Termux resources, `res/font` (Material Symbols Rounded) | — | `shrinkResources` removes unreferenced ones; `isCrunchPngs = false` currently keeps PNGs fat |
-
-**There is no packaged userland, and that fact changes the whole size
-argument.** The Termux-style rootfs is **downloaded** on first run by
-`ui/terminal/UserlandInstaller.kt` from
-`https://github.com/pabi277/CodeC/releases/download/<tag>/userland-<arch>.tar.gz`
-with a `.sha256` sidecar, `MIN_FREE_BYTES = 48 MB` of headroom, staging +
-atomic `swapPrefix` — the ~24 MiB in the APK is therefore *app* code, not a
-toolchain payload, and the "make the APK small by dropping the bootstrap" idea
-is already done. What the APK **does** carry per-ABI is the C engine:
-
-**§assets — the one trap in this part.** `assets/tcc/<abi>/` (7.3 MB for
-arm64, 3.6 MB for x86_64) is *not* filtered by `splits.abi`: AGP filters
-`jniLibs` and the CMake output per ABI, but `assets/` is copied into every
-artifact as-is. So the naive version of this phase yields four APKs that are
-still ~4 MB overweight each, and an arm64 user still downloads the x86_64 TCC
-runtime. Three ways out, all measurable:
-(a) **`packaging.resources.excludes`** (AGP 8+/9) driven by the ABI being
-built — needs a per-split hook, i.e. a small custom task or four
-product flavors (`abi` dimension) instead of `splits`;
-(b) **product flavors per ABI**, each with `sourceSets.main.assets.srcDirs`
-pointing at one `assets/tcc/<abi>` — more build config, exact control, and it
-is what `EmbeddedCompiler.abiDir()` would then have to agree with (a mismatch
-means *no C compiler at all*, so the pairing needs the test below, not hope);
-(c) **ship the TCC runtime as a module download** like everything else
-(there is already a `tcc` entry in `ModuleCatalog.kt:53` and a `ModuleInstaller`
-with a host test) — smallest APK by far, costs first-run network for C users,
-and 42.2 explicitly *does not* decide this alone: it is the owner's
-offline-first call, recorded as an open question with its numbers.
-**Also found while measuring:** `abiFilters` lists four ABIs but
-`EmbeddedCompiler.ABI_DIRS = listOf("arm64-v8a", "x86_64")` and `jniLibs` holds
-only those two — so **on an `armeabi-v7a` or `x86` device `tccBinary()` returns
-`null` by design**, the bundled engine is absent, and C compilation depends on
-the userland/Termux path. Consequences for this part: dropping **x86** from
-`abiFilters` costs nothing except `libcodec-pty.so` for a platform nobody
-ships phones on (emulators are x86_64); dropping **armeabi-v7a** would break the
-terminal on 32-bit ARM phones, so it **stays**. And armv7 users are precisely
-the ones for whom a per-ABI artifact matters — today they download 7.3 MB of
-`libtcc`/TCC runtime their device cannot even load. The release notes must say
-which file to pick (`docs/BETA.md`'s known-issues list gains: *"32-bit ARM
-devices: the built-in C compiler is not available; install the C toolchain
-module or use Termux"*).
 
 ## Design
 

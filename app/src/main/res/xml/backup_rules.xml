@@ -1,13 +1,41 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Phase 42.3 — real backup rules (this file replaced the Android Studio
+    sample that shipped as-is since the project began; the sample had no
+    <include>/<exclude>, so "back up essentially everything in app storage"
+    was the effective policy — including the whole downloaded userland).
+
+    Policy: an auto-backup carries ONLY what a person would call "my code".
+    Everything a network re-download or a first run can rebuild stays out;
+    anything device- or ABI-specific (the toolchain prefix) MUST stay out —
+    a restore onto a different-ABI phone is otherwise an exec'ing-$PREFIX-
+    shaped hole, and a GitHub token riding a cloud backup is exactly what
+    GitRedactor exists to prevent elsewhere.
+
+    The single include below is the whole backup scope: nothing outside it
+    is ever copied. THE LAW for this file: it carries ONE include and NO
+    exclude elements — under an include-list, every exclude is superfluous
+    (nothing else is included in the first place) and lint's
+    [FullBackupContent] family errors on exactly that shape (CI evidence:
+    run 34561139415, 42.1 — "exclude is not in an included path").
+
+    The dangerous paths stay pinned HERE as documentation — any of them
+    appearing in an <include> element fails BackupRulesTest:
+      - files/datastore/settings.preferences_pb — the settings DataStore,
+        which holds the GitHub token (GitCredentialsStore). A fresh install
+        asks the user to sign in again; that is intentional, see
+        docs/DATA_AND_PRIVACY.md.
+      - files/usr, files/home — the downloaded userland/toolchain + dpkg
+        state (hundreds of MB, ABI- and device-specific).
+      - files/CodeC/temp, files/CodeC/modules, files/CodeC/tcc —
+        regenerable run temp, downloaded compiler modules, TCC bundle.
+      - files/crash-log.txt — a crash record belongs to the build that
+        wrote it, not to the next install.
+
+    Products of these rules:
+      CodeC/projects — the user's projects — ride auto-backup and
+      device-to-device transfer, and nothing else does.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <include domain="file" path="CodeC/projects" />
 </full-backup-content>

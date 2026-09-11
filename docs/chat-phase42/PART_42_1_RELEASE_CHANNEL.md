@@ -1,7 +1,30 @@
 # CodeC Phase 42.1 — A real release channel (and an updater that can be trusted)
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` + workflow + one secret ·
+> **Status:** ✅ FIRST PUBLISH DONE 2026-09-11 (tag `app-v1.3.17`) · **Cost:** `[client-only]` + workflow + secrets ·
 > **Effort:** M
+
+### First publish round — the record (2026-09-11)
+
+Tag `app-v1.3.17` → run `34597577303` **GREEN end-to-end**, publishing the
+first signed release `CodeC IDE v1.3.17` with exactly one attached asset
+(**`CodeC-IDE-1.3.17-universal.apk` = 6 630 554 B — byte-equal to the
+measure-only lane's R8 build**, which also cross-verifies R8
+determinism). The lane exercised, in order: secrets decode → signed
+`assembleRelease` → universal-only APK-set check → tag/versionName +
+versionCode guard → notes build with the SHA256 table → idempotent attach.
+It took **3 publish attempts**, and each failure is now a self-documenting
+lane feature: attempt 1 (run `34592848741`) — signed assemble failed AND
+the error surfacer crashed silently; the lane's answer was to make the
+assemble step annotate its OWN filtered failure tail + make the surfacer
+crash-proof (ASCII-safe + exception fallback). Attempts 2–3 — the real
+error became visible (`Failed to read key "upload": null`): a
+mobile-pasted password secret carried invisible whitespace; owner
+re-entered the secrets, attempt 3 published. Lesson recorded for future
+tag runs: the lane now tells you exactly what broke.
+
+🟡 Remaining for the exit condition: the updater UX round (up-to-date /
+refuses-downgrade on device, exit 2) — rides the owner's device round
+against THIS published release.
 
 ## Symptom
 
@@ -23,6 +46,17 @@ check whether it was newer).
   `debug.keystore` note in `build.gradle.kts` already learned (a *pinned* key
   so sideload-over-sideload keeps working; the debug store was created with
   that reasoning and this is the same problem at the release level).
+  **What actually happened (2026-09-11):** the sandbox route was attempted
+  first (PKCS12/AES-256 key minted with OpenSSL in `/tmp`, secrets written
+  via `gh secret set`, local files deleted) — but the automation token has
+  no permission on the Actions secrets API (`HTTP 403`), so nothing was
+  stored and the owner route is the live one:
+  **[docs/UPLOAD_KEY_SETUP.md](../UPLOAD_KEY_SETUP.md)** (Termux on the
+  owner's phone, ~2 min, secrets pasted through the GitHub web UI). Until
+  the secrets exist every push still builds (release artifact skipped with a
+  notice); a publish run fails early naming the secret. This paragraph is
+  also the recovery note: if the key is ever lost, the setup doc's
+  rotation recipe is the only way back.
 - Store: GitHub Actions **secrets** `KEYSTORE_B64` + `STORE_PASSWORD` +
   `KEY_PASSWORD`; the workflow materialises the file to a temp path and exports
   `KEYSTORE_PATH` — **the build file needs no change** (it already reads

@@ -46,7 +46,15 @@ import kotlinx.coroutines.launch
 fun FeedbackScreen(
     onNavigateBack: () -> Unit = {},
     /** The exit survey's star rating (0 = the screen was opened directly). */
-    exitRating: Int = 0
+    exitRating: Int = 0,
+    /**
+     * Phase 42.3 — the crash overlay's [Send a report] hand-off: arrive
+     * with both attachments pre-ticked (the crash box already self-ticks
+     * when a record exists; this pre-ticks the log tail). One tap on the
+     * overlay IS the user's attachment choice — nothing is ever uploaded
+     * by the app itself, and nothing about the choice is persisted.
+     */
+    initialReportCrash: Boolean = false
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
@@ -67,7 +75,7 @@ fun FeedbackScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            FeedbackSectionCard(exitRating = exitRating)
+            FeedbackSectionCard(exitRating = exitRating, initialAttachLog = initialReportCrash)
 
             // The exit survey's off-switch, next to the thing it controls.
             // Default ON (testing phase); the "no nag" law of PART_41_2 is

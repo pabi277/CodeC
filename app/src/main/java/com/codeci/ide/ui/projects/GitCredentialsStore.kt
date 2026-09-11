@@ -11,7 +11,15 @@ import kotlinx.coroutines.flow.map
 /**
  * Phase 13 — app-private storage for the GitHub HTTPS credentials and the
  * commit author identity, on the same DataStore the rest of the settings use
- * (`files/datastore/user.preferences_pb`, sandboxed to the app UID).
+ * (`files/datastore/settings.preferences_pb`, sandboxed to the app UID —
+ * the store is named "settings", see ui/theme/ThemeManager.kt's
+ * `preferencesDataStore`; this comment said `user.preferences_pb` until
+ * Phase 42.3, and a security review that starts from a wrong path checks
+ * the wrong file).
+ *
+ * Phase 42.3 — this file is exactly why `files/datastore/` is NOT in the
+ * backup include list (res/xml/backup_rules.xml): the token must never ride
+ * a cloud backup or device transfer.
  *
  * The token never leaves this store except into the per-command environment
  * of a git child process ([GitManager]); it is never written into

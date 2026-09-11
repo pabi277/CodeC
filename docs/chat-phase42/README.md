@@ -1,6 +1,6 @@
 # CodeC Phase 42 — Share-readiness: signing, size, updates, and not eating anyone's data
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
+> **Status:** ✅ COMPLETE 2026-09-11 — release `app-v1.3.17` published, owner device round 4/4, merged to main · **Cost:**
 > `[client-only]` + CI/workflow · **Effort:** M · **Owner row:** *"Please you
 > also full thought one time i will it use now so what should i add more before
 > sharing the app"*
@@ -18,9 +18,9 @@ the rest of the checklist is judged "keep / defer / reject" below.
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [42.1](PART_42_1_RELEASE_CHANNEL.md) | Release build, signing, GitHub Release, updater | M | 📋 PLANNED |
-| [42.2](PART_42_2_APK_WEIGHT.md) | Size: R8, shrink, ABI splits | M | 📋 PLANNED |
-| [42.3](PART_42_3_LAUNCH_SAFETY.md) | Crash loop, backup, export, permissions | S/M | 📋 PLANNED |
+| [42.1](PART_42_1_RELEASE_CHANNEL.md) | Release build, signing, GitHub Release, updater | M | ✅ DONE — first publish run `34597577303`; `CodeC IDE v1.3.17` live |
+| [42.2](PART_42_2_APK_WEIGHT.md) | Size: R8, shrink, ABI splits | M | ✅ DONE — 25 553 564 → 6 630 554 B (−74 %); splits measured + reverted (owner); okhttp pair removed |
+| [42.3](PART_42_3_LAUNCH_SAFETY.md) | Crash loop, backup, export, permissions | S/M | ✅ DONE — include-list backup rules (lint-clean), crash-loop safe mode, export-all, 11 privacy rows |
 
 ## The six hard findings (evidence, read 2026-09-10)
 
@@ -156,6 +156,39 @@ Releases as the channel.
 PASS = all seven, on the owner's device + one other if available. 4 is the one
 most likely to bite, so it is the one that gets the most test time.
 ```
+
+### Outcome, 2026-09-11 (what actually passed; nothing dressed up)
+
+1. **Tag → signed release** ✅ — `app-v1.3.17` published (run `34597577303`
+   after attempts 1–2 taught the lane to annotate its own failures and the
+   owner to re-paste a whitespace-damaged secret). One universal APK (6 630 554 B) + notes; "the other ABIs" line of this
+   exit became universal-only when 42.2 measured + reverted splits.
+2. **Fresh install + updater** ✅ on the owner's phone — settings, editor,
+   demo flows all good; **updater says "up to date."** The *downgrade-
+   refusal* and *second-release* halves of this item ride the next release
+   pair (runbook in PART_42_1 + BETA.md) — UpdatePolicy's refusal logic is
+   host-test pinned in the meantime.
+3. **No DEBUGGABLE flag** ✅ — machine-proven on EVERY CI run now (aapt on
+   the measure-lane release). **API 24/26 install: NOT run** (owner has one
+   device) — carried to the BETA tester round, recorded in BETA.md.
+4. **R8 language matrix on device** ✅ — owner verified editor across the
+   language set + offline C compile on the release; bytes recorded in
+   PART_42_2 (25 553 564 → 6 630 554, the full delta reported).
+5. **Backup excludes userland + token** ✅ machine side (include-list-only
+   XMLs, lint CLEAN — the 42.1 FullBackupContent incident taught the law);
+   the owner's bmgr/D2D device round stays on the runbook, not separately
+   reported before merge.
+6. **Crash-loop guard** — code-complete, harness 85/85, banner + hand-off
+   built; owner's twice-crash device execution not separately reported
+   before merge (runbook in PART_42_3 stays).
+7. **Export-all ZIP round-trip** — machine-pinned
+   (ProjectTransferExportAllTest); device spot-check not separately
+   reported before merge.
+
+Device items 5/6/7 + the API-tier install are carried to `docs/BETA.md`'s
+tester checklist + the part-doc runbooks — Phase 41's own merge sent the
+same precedent (ship on the machine pins + owner's core-device pass; the
+runbooks stay true).
 
 ## Risks to watch (multi-device round)
 

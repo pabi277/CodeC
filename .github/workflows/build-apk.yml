@@ -3,10 +3,24 @@ name: Build APK
 on:
   push:
     branches: ["**"]
+    # Phase 42.1 — app releases publish ONLY from an app-v* tag; a normal
+    # push never publishes anything.
+    tags: ["app-v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish a GitHub Release for this ref — run ON an app-v* tag"
+        required: true
+        default: false
+        type: boolean
   release:
     types: [published]
+
+# Release creation/attachment needs write on contents (everything else the
+# job does is read-only by default).
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -14,6 +28,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history + tags: the publish step writes its changelog from
+          # `git log <previous app-v*>..<this tag>`.
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -33,58 +51,194 @@ jobs:
       - name: Check icon assets (Phase 38.1)
         run: ./scripts/check_icon_assets.sh
 
+      # Phase 42.1 — the release notes template keeps every section a
+      # stranger needs (and the {{SHA256_LINES}} placeholder the in-app
+      # updater's checksum verification depends on).
+      - name: Check release notes template (Phase 42.1)
+        run: ./scripts/check_release_notes.sh
+
+      # Phase 42.1 — release signing material lives in Actions secrets ONLY
+      # (KEYSTORE_B64 + STORE_PASSWORD + KEY_PASSWORD, documented in
+      # docs/chat-phase42/PART_42_1_RELEASE_CHANNEL.md; never in git).
+      # Missing secrets are fine for a normal push (debug artifact only)
+      # but FAIL a publish run before anything is uploaded, naming the
+      # missing secret.
+      - name: Resolve release signing material (Phase 42.1)
+        id: signing
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -e
+          # The tag this run is about (release events name it in the event,
+          # everything else in the ref).
+          TAG="${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}"
+          case "$TAG" in app-v*) APP_TAG=true ;; *) APP_TAG=false ;; esac
+          PUBLISH=false
+          if [ "${{ github.ref_type }}" = "tag" ] && [ "$APP_TAG" = "true" ]; then PUBLISH=true; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish_release }}" = "true" ]; then PUBLISH=true; fi
+          # A release created from the github.com UI on an app-v* tag (web-made
+          # tags do NOT fire push:tags) publishes through this same pipeline.
+          if [ "${{ github.event_name }}" = "release" ] && [ "$APP_TAG" = "true" ]; then PUBLISH=true; fi
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+          echo "app_tag=$APP_TAG" >> "$GITHUB_OUTPUT"
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            if [ "$PUBLISH" = "true" ]; then
+              echo "::error::missing Actions secret KEYSTORE_B64 (with STORE_PASSWORD/KEY_PASSWORD) — nothing was published or uploaded; one-time setup: docs/UPLOAD_KEY_SETUP.md"
+              exit 1
+            fi
+            echo "::notice::no release signing secrets — this build ships the debug artifact only"
+          else
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/codec-upload.keystore"
+            echo "::add-mask::$STORE_PASSWORD"
+            echo "::add-mask::$KEY_PASSWORD"
+            {
+              echo "KEYSTORE_PATH=$RUNNER_TEMP/codec-upload.keystore"
+              echo "STORE_PASSWORD=$STORE_PASSWORD"
+              echo "KEY_PASSWORD=$KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: CodeC-IDE
-          path: app/build/outputs/apk/debug/*.apk
+      # Phase 42.2 — R8/shrinkResources numbers must NOT wait on the
+      # owner's signing secrets: this builds the release variant with a
+      # throwaway key and annotates size, debuggability (exit-3's machine
+      # half) and the R8 mapping; it UPLOADS NOTHING by design.
+      - name: Assemble release APK (measure-only, Phase 42.2)
+        run: ./scripts/measure_release_apk.sh
 
-      # Phase 28.1 — the CodeC Keys spike device round needs the bench APK.
-      # Built with the REAL wrapper (Gradle 9.3.1): the legacy 9.0.0
-      # invocation above cannot configure AGP 9.1.1 modules, and
-      # settings.gradle.kts only includes `:bench` for that wrapper.
-      # REMOVE THIS BLOCK when Phase 28 closes (same law as the 25.1 wrapper).
-      - name: Build + test bench (Phase 28.1 spike, real wrapper)
+      # Phase 42.1 — the release channel artifact: signed, non-debuggable,
+      # built on every run so a tag publish is never the first time the
+      # release variant was exercised. The REAL wrapper (the legacy 9.0.0
+      # invocation above exists only for the :app shim's one task).
+      - name: Assemble release APK (Phase 42.1)
+        if: steps.signing.outputs.present == 'true'
         run: |
           set -o pipefail
-          ./gradlew :bench:assembleRelease :bench:testDebugUnitTest --no-daemon 2>&1 | tee bench-build.log
+          # On failure: annotate the filtered failure lines OURSELVES — a
+          # crashing surfacer must never leave a signing failure opaque
+          # (run 34592848741: both this step and the surfacer failed with
+          # zero annotations).
+          ./gradlew :app:assembleRelease --no-daemon 2>&1 | tee release-build.log || {
+            pick=$(grep -vE '^w: file' release-build.log | grep -iE "went wrong|FAILURE:|execution failed|missing class|error in|caused by|e: file|keystore|Exception|alias" | tail -8)
+            if [ -z "$pick" ]; then
+              pick=$(grep -vE '^w: file' release-build.log | tail -8)
+            fi
+            echo "$pick" | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
 
-      # Same readable-annotations trick the :app gradle-bootstrap shim uses:
-      # the raw log stream is not API-readable, so on failure the real error
-      # lines are re-emitted as check-run annotations (visible via gh api).
-      - name: Surface bench errors as annotations
+      - name: Surface release-build errors as annotations
         if: failure()
-        run: |
-          if [ -f bench-build.log ]; then
-            python3 - bench-build.log <<'PY'
-          import pathlib, sys
-          lines = pathlib.Path(sys.argv[1]).read_text(errors="replace").splitlines()
-          needles = ("e: file", "error:", "FAILURE:", "* What went wrong:",
-                     "Execution failed for task", "There were failing tests", "FAILED")
-          seen = set()
-          count = 0
-          for l in lines:
-              if any(n in l for n in needles) and l not in seen:
-                  seen.add(l)
-                  count += 1
-                  if count > 40: break
-                  print("::error::" + l.replace('%', '%25')[:1800])
-          PY
-          fi
+        run: python3 scripts/surface_gradle_errors.py release-build.log
 
-      - name: Upload bench artifact
+      # Phase 42.2 — THE release artifact (universal-only since the
+      # owner's 2026-09-11 revert, PART_42_2 measured record) is correct
+      # BEFORE it ever gets uploaded: on the update-channel grammar,
+      # native libs for all four ABIs, both tcc asset dirs intact.
+      - name: Check release APK set (Phase 42.2)
+        if: steps.signing.outputs.present == 'true'
+        run: ./scripts/check_release_apk_set.sh
+
+      # Phase 42.1 — API-readable artifact facts (the sandbox/owner cannot
+      # read raw logs, annotations are visible via gh api): every APK and
+      # its exact bytes. The size budget for 42.2 is recorded from THESE.
+      - name: Report APK sizes (Phase 42.1)
+        if: always()
+        run: |
+          find app/build/outputs/apk -name '*.apk' 2>/dev/null | sort | \
+          while read -r f; do
+            echo "::notice title=APK size::${f#app/build/outputs/} = $(du -b "$f" | cut -f1) bytes"
+          done
+
+      # Phase 42.1 — one artifact per build type, named so a stranger on the
+      # Actions page cannot pick the wrong file. The Phase 28.1 bench block
+      # is GONE (its own comment said REMOVE when Phase 28 closes; 28.3/28.4
+      # ride in the app): two APKs on the page was a wrong-install factory.
+      - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CodeC-Bench
-          path: bench/build/outputs/apk/release/*.apk
+          name: CodeC-IDE-debug
+          path: app/build/outputs/apk/debug/CodeC-IDE-*-universal-debug.apk
 
-      - name: Attach APK to GitHub Release
-        if: github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'userland-')
+      - name: Upload release APK artifact
+        if: steps.signing.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeC-IDE-release
+          path: app/build/outputs/apk/release/CodeC-IDE-*.apk
+
+      # The R8 mapping (once 42.2 turns minification on) is a CI artifact
+      # ONLY: readable stack traces for the owner, never a public release
+      # asset.
+      - name: Upload release mapping artifact
+        if: steps.signing.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeC-IDE-release-mapping
+          path: app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: ignore
+
+      # ---------------- publish (app-v* tag / dispatch / web release) -----------
+
+      # Phase 42.1 exit 6: the tag must name the binary's versionName, and
+      # versionCode must exceed every already-released one — a tag run IS
+      # the test for this guard (recorded in the part doc).
+      - name: Verify tag against the binary (Phase 42.1)
+        if: steps.signing.outputs.publish == 'true'
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/check_release_version.sh "${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}"
+
+      - name: Build release notes (Phase 42.1)
+        if: steps.signing.outputs.publish == 'true'
+        run: |
+          TAG="${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}"
+          # shellcheck disable=SC2046
+          ./scripts/build_release_notes.sh "$TAG" "${{ steps.version.outputs.version_code }}" $(find app/build/outputs/apk -path '*/release/*.apk' | sort)
+
+      # Idempotent attachment: a web-created release AND a tag-push can both
+      # land here (a tag created from the web UI fires release[published],
+      # not push:tags). Remove same-named assets first so a re-run is a
+      # no-op instead of a 422.
+      - name: Clear previously attached app APKs (Phase 42.1)
+        if: steps.signing.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APK_DIR: app/build/outputs/apk
+        run: |
+          TAG="${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}"
+          python3 scripts/clear_release_assets.py "$TAG" "$APK_DIR"
+
+      - name: Publish app release (Phase 42.1)
+        if: steps.signing.outputs.publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/debug/*.apk
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+          name: CodeC IDE v${{ steps.version.outputs.version }}
+          body_path: build/release-notes.md
+          files: app/build/outputs/apk/release/CodeC-IDE-*.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The pre-42.1 manual escape hatch, kept (the spec's "both routes
+      # work"): a release created from the github.com UI on ANY other tag —
+      # not app-v* (those publish above), not userland-* (bootstraps carry
+      # no app) — gets the signed release APK attached. Never the debug
+      # APK: the old step attached debuggable artifacts to releases, which
+      # is exactly the wrong-file support ticket this phase closes.
+      - name: Attach signed APK to a manual release (Phase 42.1)
+        if: github.event_name == 'release' && steps.signing.outputs.app_tag != 'true' && !startsWith(github.event.release.tag_name, 'userland-') && steps.signing.outputs.present == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/CodeC-IDE-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

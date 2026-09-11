@@ -25,12 +25,29 @@ files and tap **RUN**.
 
 ## Install the APK from GitHub
 
-1. Push this branch (or merge to `main`). GitHub Actions builds `app-debug.apk`.
-2. Open **Actions** → latest **Build APK** run → **Artifacts** → `CodeC-IDE`.
-3. Or create a GitHub **Release** (any tag). The workflow attaches the APK to that release.
-4. On your phone: download the APK → allow **Install unknown apps** → install.
+**The release channel (Phase 42.1)** — for anyone who just wants the app:
 
-In the app: **Settings → Install APK from GitHub** downloads the latest release APK and opens the installer.
+1. Open https://github.com/pabi277/CodeC/releases and pick the newest
+   **CodeC IDE** release (`app-v…` tag).
+2. Download **`CodeC-IDE-<version>-universal.apk`** — the only APK, and
+   always the right one (per-ABI variants were measured and reverted in
+   Phase 42.2). The release notes carry `sha256:` lines if you want to
+   verify the download first.
+3. On your phone: download the APK → allow **Install unknown apps** → install.
+
+**Developer / branch builds:** push a branch (or merge to `main`) → GitHub
+Actions builds the APKs → **Actions** → the **Build APK** run → **Artifacts**
+→ `CodeC-IDE-debug` (unsigned-key debug build; updates only over other debug
+builds) and `CodeC-IDE-release` (signed with the upload key). **A release is
+published only from an `app-v<X.Y.Z>` tag** — the tag must equal
+`versionName`, and `versionCode` must exceed every shipped one (the publish
+step checks both before attaching anything).
+
+In the app: **Settings → About → Check for updates** looks only at `app-v*`
+releases, compares versions numerically ("up to date" / a named refusal when
+older), verifies the `sha256:` line before installing, and opens the Releases
+page instead whenever the release publishes no checksum. It never installs a
+`userland-*` bootstrap as an app and never phones home by itself.
 
 Direct releases page: https://github.com/pabi277/CodeC/releases
 
