@@ -1,19 +1,33 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Phase 42.3 — Android 12+ (API 31+) extraction rules, the sibling of
+    backup_rules.xml with the SAME policy in both channels: only the user's
+    projects (files/CodeC/projects) may leave the device automatically.
+
+    <cloud-backup> covers Google-cloud auto backup; <device-transfer> covers
+    direct phone-to-phone migration. The 42.3 spec explicitly left open
+    whether device-transfer MAY also carry the settings DataStore (no cloud
+    copy in that path) — the device round decides; until then both channels
+    are identical, so the GitHub token never leaves this device by backup at
+    all (docs/DATA_AND_PRIVACY.md; host-pinned by BackupRulesTest).
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <include domain="file" path="CodeC/projects" />
+        <exclude domain="file" path="usr" />
+        <exclude domain="file" path="home" />
+        <exclude domain="file" path="CodeC/temp" />
+        <exclude domain="file" path="CodeC/modules" />
+        <exclude domain="file" path="CodeC/tcc" />
+        <exclude domain="file" path="crash-log.txt" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <include domain="file" path="CodeC/projects" />
+        <exclude domain="file" path="usr" />
+        <exclude domain="file" path="home" />
+        <exclude domain="file" path="CodeC/temp" />
+        <exclude domain="file" path="CodeC/modules" />
+        <exclude domain="file" path="CodeC/tcc" />
+        <exclude domain="file" path="crash-log.txt" />
     </device-transfer>
-    -->
 </data-extraction-rules>
