@@ -10,7 +10,7 @@ set -u
 cd "$(dirname "$0")/.."
 
 KEY="$RUNNER_TEMP/measure-only.keystore"
-keytool -genkeypair -alias measure -keyalg RSA -keysize 2048 -validity 1 \
+keytool -genkeypair -alias upload -keyalg RSA -keysize 2048 -validity 1 \
   -keystore "$KEY" -storetype PKCS12 \
   -storepass measure-only-key -keypass measure-only-key \
   -dname "CN=CodeC measure-only (throwaway)"
