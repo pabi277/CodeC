@@ -13,16 +13,18 @@ KEY="$RUNNER_TEMP/measure-only.keystore"
 keytool -genkeypair -alias measure -keyalg RSA -keysize 2048 -validity 1 \
   -keystore "$KEY" -storetype PKCS12 \
   -storepass measure-only-key -keypass measure-only-key \
-  -dname "CN=CodeC measure-only (throwaway)" >/dev/null 2>&1
+  -dname "CN=CodeC measure-only (throwaway)"
 
 # A gradle failure here must NOT be masked by the checks below: keep the
-# log and surface it as annotations (same 42.1 pattern as the signed lane).
+# log and annotate its TAIL verbatim (the classified surfacer's needle
+# list has already missed one failure family — annotations are the only
+# log surface reachable from outside the runner).
 set -o pipefail
 LOG="app/build/measure-build.log"
 if ! KEYSTORE_PATH="$KEY" STORE_PASSWORD=measure-only-key KEY_PASSWORD=measure-only-key \
     ./gradlew :app:assembleRelease --no-daemon 2>&1 | tee "$LOG"; then
-  python3 scripts/surface_gradle_errors.py "$LOG" || true
-  echo "::error::measure-only release assemble FAILED (annotations above show the root error)"
+  tail -40 "$LOG" | while IFS= read -r line; do echo "::error::$line"; done
+  echo "::error::measure-only release assemble FAILED (full tail above)"
   exit 1
 fi
 
