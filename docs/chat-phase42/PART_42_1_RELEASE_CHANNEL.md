@@ -23,6 +23,17 @@ check whether it was newer).
   `debug.keystore` note in `build.gradle.kts` already learned (a *pinned* key
   so sideload-over-sideload keeps working; the debug store was created with
   that reasoning and this is the same problem at the release level).
+  **What actually happened (2026-09-11):** the sandbox route was attempted
+  first (PKCS12/AES-256 key minted with OpenSSL in `/tmp`, secrets written
+  via `gh secret set`, local files deleted) — but the automation token has
+  no permission on the Actions secrets API (`HTTP 403`), so nothing was
+  stored and the owner route is the live one:
+  **[docs/UPLOAD_KEY_SETUP.md](../UPLOAD_KEY_SETUP.md)** (Termux on the
+  owner's phone, ~2 min, secrets pasted through the GitHub web UI). Until
+  the secrets exist every push still builds (release artifact skipped with a
+  notice); a publish run fails early naming the secret. This paragraph is
+  also the recovery note: if the key is ever lost, the setup doc's
+  rotation recipe is the only way back.
 - Store: GitHub Actions **secrets** `KEYSTORE_B64` + `STORE_PASSWORD` +
   `KEY_PASSWORD`; the workflow materialises the file to a temp path and exports
   `KEYSTORE_PATH` — **the build file needs no change** (it already reads

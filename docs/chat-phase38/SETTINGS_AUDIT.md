@@ -87,7 +87,7 @@ change nothing and say so).
 | 35 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |
 | 36 | About | GitHub | item | — (info) | — | keep |
 | 37 | About | Open-source licenses | item | — (info; LGPL/MIT obligations) | — | keep |
-| 38 | About | Install APK from GitHub | action | downloads latest release APK | `ApkUpdateManager` | keep |
+| 38 | About | Check for updates | action | app-release channel check (app-v* only), versioned/SHA-256-verified download or a named refusal | `ApkUpdateManager`+`UpdatePolicy`+`ReleaseFetch` (42.1: the updater no longer installs a bootstrap's "latest") | keep |
 | 39 | Feedback & Support | Send feedback, rate, or report a bug | action | navigates to `Screen.Feedback` | `FeedbackScreen` (Phase 41 follow-up moved the card to its own screen; the exit-prompt switch lives there) | keep |
 | 41 | Developer Options | Show File Paths | switch | `show_file_paths` | `showFilePathsFlow` → file tree labels | keep |
 | 41 | Developer Options | Export App Logs | action | ACTION_SHARE with `AppLogger` logs | share sheet | keep |

@@ -81,13 +81,23 @@ class BackupRulesTest {
 
     @Test
     fun `no rule anywhere touches the datastore (the token decision)`() {
+        // Checked on parsed RULES, not raw text: the XML comments explain WHY
+        // datastore/ is left out (that explanation is the documentation value),
+        // but no include/exclude element may ever carry it — the GitHub token
+        // lives in files/datastore/settings.preferences_pb (GitCredentialsStore).
         for (file in listOf("backup_rules.xml", "data_extraction_rules.xml")) {
-            val text = RepoFiles.mainSource("app/src/main/res/xml/$file").readText()
-            assertFalse(
-                "$file must not reference datastore/ (the GitHub token lives there — " +
-                    "a fresh install re-asks the GitHub sign-in, that is intentional)",
-                text.contains("datastore", ignoreCase = true)
-            )
+            val doc = root(RepoFiles.mainSource("app/src/main/res/xml/$file"))
+            for (tag in listOf("include", "exclude")) {
+                val nodes = doc.getElementsByTagName(tag)
+                for (i in 0 until nodes.length) {
+                    val e = nodes.item(i) as Element
+                    assertFalse(
+                        "$file has a $tag rule touching datastore/ — " +
+                            "that would carry the GitHub token into backups",
+                        e.getAttribute("path").contains("datastore", ignoreCase = true)
+                    )
+                }
+            }
         }
     }
 
