@@ -1,10 +1,11 @@
 # CodeC Phase 41 — Feedback that reaches you (WhatsApp-first)
 
-> **Status:** 🔧 **IMPLEMENTED + DEVICE ROUND 1 PASSED (owner: "1-8 pass",
-> 2026-09-10) — follow-up round shipped (separate screen, exit survey,
-> owner's number/email as shipped defaults); round 2 pending** · ✅ CI GREEN
-> (`Build APK` `34525080153` on tip `8fdbe6a`; host-tested 71/71) ·
-> **Cost:** `[client-only]` ·
+> **Status:** ✅ **MERGED to `main` via [PR #70](https://github.com/pabi277/CodeC/pull/70)
+> on the owner's command ("Merge it", 2026-09-11)** — device round 1 ✅ 8/8
+> (owner: "1-8 pass"); round 2 (hardcoded developer contact) shipped and CI
+> green (`34533033047`, artifact 24 998 614 B), its device pass (D1–D8) not
+> separately reported — the owner merged on their own judgment; the runbook
+> stays in the repo · **Cost:** `[client-only]` ·
 > **Effort:** S/M · **Owner row:** *"For testing i have to add a feedback
 > page give the best way, i am willing to give my WhatsApp number"*
 

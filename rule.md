@@ -198,7 +198,12 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-10, **Phase 41 is 🔧 IMPLEMENTED + round-1 DEVICE-PASSED 8/8; round 2 (hardcoded developer contact) shipped, round-2 device pass pending; 38/39/40 are ✅ COMPLETE & MERGED; 42-43 are 📋 PLANNED**)
+## 9. State snapshot (2026-09-11, **Phase 41 is ✅ COMPLETE & MERGED to `main` via PR #70 (round 1 device-passed 8/8; round-2 device pass not separately reported — the owner's call); 38/39/40 are ✅ COMPLETE & MERGED; 42-43 are 📋 PLANNED — next: "Start Phase 42"**)
+
+- **Phase 41 MERGED (2026-09-11, owner: "Merge it") — [PR #70](https://github.com/pabi277/CodeC/pull/70)
+  from `arena/01a08cc6-codec`** (7 commits, all CI green; the merge record:
+  README + this snapshot + JOURNEY §57c). The queue continues with
+  **"Start Phase 42"** (share-readiness) → 43.
 
 - **Phase 41 round 2 (owner: "I want to sit as developer not some other
   guy … remove the boxes and set it in the code"): the developer's contact
