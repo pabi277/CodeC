@@ -119,6 +119,14 @@ jobs:
         if: failure()
         run: python3 scripts/surface_gradle_errors.py release-build.log
 
+      # Phase 42.2 — the per-ABI split set is correct BEFORE it ever gets
+      # uploaded: one universal (update-channel grammar), one APK per
+      # abiFilter ABI, native libs restricted to the split's own ABI, and
+      # the assets/tcc-by-ABI trap annotated (splits do not filter assets).
+      - name: Check release APK set (Phase 42.2)
+        if: steps.signing.outputs.present == 'true'
+        run: ./scripts/check_release_apk_set.sh
+
       # Phase 42.1 — API-readable artifact facts (the sandbox/owner cannot
       # read raw logs, annotations are visible via gh api): every APK and
       # its exact bytes. The size budget for 42.2 is recorded from THESE.
@@ -138,14 +146,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CodeC-IDE-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/universal/debug/*.apk
 
       - name: Upload release APK artifact
         if: steps.signing.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: CodeC-IDE-release
-          path: app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/*/release/*.apk
 
       # The R8 mapping (once 42.2 turns minification on) is a CI artifact
       # ONLY: readable stack traces for the owner, never a public release
@@ -175,7 +183,7 @@ jobs:
         run: |
           TAG="${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}"
           # shellcheck disable=SC2046
-          ./scripts/build_release_notes.sh "$TAG" "${{ steps.version.outputs.version_code }}" $(find app/build/outputs/apk/release -name '*.apk' | sort)
+          ./scripts/build_release_notes.sh "$TAG" "${{ steps.version.outputs.version_code }}" $(find app/build/outputs/apk -path '*/release/*.apk' | sort)
 
       # Idempotent attachment: a web-created release AND a tag-push can both
       # land here (a tag created from the web UI fires release[published],
@@ -185,7 +193,7 @@ jobs:
         if: steps.signing.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APK_DIR: app/build/outputs/apk/release
+          APK_DIR: app/build/outputs/apk
         run: |
           TAG="${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}"
           python3 scripts/clear_release_assets.py "$TAG" "$APK_DIR"
@@ -197,7 +205,7 @@ jobs:
           tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
           name: CodeC IDE v${{ steps.version.outputs.version }}
           body_path: build/release-notes.md
-          files: app/build/outputs/apk/release/*.apk
+          files: app/build/outputs/apk/*/release/*.apk
           draft: false
           prerelease: false
         env:
@@ -213,6 +221,6 @@ jobs:
         if: github.event_name == 'release' && steps.signing.outputs.app_tag != 'true' && !startsWith(github.event.release.tag_name, 'userland-') && steps.signing.outputs.present == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/*.apk
+          files: app/build/outputs/apk/*/release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

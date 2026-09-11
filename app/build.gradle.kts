@@ -95,8 +95,17 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = false
-      isMinifyEnabled = false
+      // Phase 42.2 — release gets R8 + shrinkResources + PNG crunch
+      // (aapt2's crunch is lossless recompression); DEBUG is deliberately
+      // untouched (fast iteration, readable traces, the CI debug artifact
+      // is what developers install). The keep-rule file law: one section
+      // per library, each -keep with a comment naming the crash it
+      // prevents; mapping.txt is a CI artifact, never a public release
+      // asset; SourceFile/LineNumberTable stays (a crash record the
+      // owner cannot read is the worst third-party flake).
+      isMinifyEnabled = true
+      isShrinkResources = true
+      isCrunchPngs = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
@@ -105,6 +114,22 @@ android {
       if (debugStore.exists()) {
         signingConfig = signingConfigs.getByName("debugConfig")
       }
+    }
+  }
+
+  // Phase 42.2 — per-ABI artifacts, universal kept as the default. The
+  // natural ABI set stays in ndk.abiFilters; splits only packages. A
+  // tester on a slow link picks the per-ABI APK; "just install it" stays
+  // the universal one. AbiPolicyTest pins the two lists in lockstep.
+  // Owner-open decisions (numbers in docs/chat-phase42/PART_42_2): the
+  // assets/tcc/<abi> trap (a packaging exclude or per-flavor assets) and
+  // dropping x86 from abiFilters — both recorded as the owner's call.
+  splits {
+    abi {
+      isEnable = true
+      reset()
+      include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+      isUniversalApk = true
     }
   }
   compileOptions {
@@ -143,6 +168,21 @@ android {
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
+  }
+
+  // Phase 42.2 — APK file names follow the update-channel grammar the
+  // in-app updater already parses (UpdatePolicy): CodeC-IDE-<version>-
+  // <abi>.apk, the universal one named -universal.apk (the updater's
+  // default). Publishing AGP's raw app-<abi>-release.apk names would
+  // resurrect the "updater picks the first .apk" support ticket.
+  // versionName may carry " (GITHUB_RUN_NUMBER)" — strip before naming.
+  applicationVariants.all { variant ->
+    variant.outputs.configureEach { output ->
+      val abi = output.getFilter("ABI") ?: "universal"
+      val version = (variant.versionName ?: "unknown").substringBefore(' ')
+      val suffix = if (variant.buildType.name == "release") "" else "-${variant.buildType.name}"
+      outputFileName = "CodeC-IDE-$version-$abi$suffix.apk"
+    }
   }
 }
 
@@ -211,8 +251,11 @@ dependencies {
   // which returns a plain module grid, so no other file imports zxing and the
   // bitmap stays in Compose. Notice: assets/licenses/ZXING_APACHE2.txt.
   implementation(libs.zxing.core)
-  implementation(libs.logging.interceptor)
-  implementation(libs.okhttp)
+  // Phase 42.2 — REMOVED: com.squareup.okhttp3:okhttp + logging-interceptor.
+  // Grep proof (2026-09-11): zero `okhttp3`/`okio` imports anywhere in
+  // app/src — the app speaks HTTP through java.net HttpURLConnection
+  // (UpdateManager, UserlandInstaller); :bench never referenced them
+  // either. Both lines were dead weight on the release classpath.
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

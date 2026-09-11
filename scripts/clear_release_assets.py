@@ -8,7 +8,10 @@ browser flow lands here only). Re-uploading an asset name that already
 exists is a 422, so before attaching we delete any same-named stale asset:
 a re-run becomes a repair instead of a failure.
 
-Usage: python3 scripts/clear_release_assets.py <tag> <apk-dir>
+Usage: python3 scripts/clear_release_assets.py <tag> <apk-root>
+
+<apk-root> is searched recursively, restricted to */release/ directories
+(Phase 42.2 added per-ABI split dirs like outputs/apk/arm64-v8a/release/).
 """
 import json
 import os
@@ -28,14 +31,18 @@ def gh(*args: str) -> str:
 
 def main() -> None:
     if len(sys.argv) != 3:
-        raise SystemExit("usage: clear_release_assets.py <tag> <apk-dir>")
-    tag, apk_dir = sys.argv[1], pathlib.Path(sys.argv[2])
+        raise SystemExit("usage: clear_release_assets.py <tag> <apk-root>")
+    tag, apk_root = sys.argv[1], pathlib.Path(sys.argv[2])
     try:
         rel = json.loads(gh("api", f"repos/{{owner}}/{{repo}}/releases/tags/{tag}"))
     except RuntimeError:
         print(f"no release at {tag} yet — the create step will make it")
         return
-    wanted = {p.name for p in apk_dir.glob("*.apk")}
+    wanted = {
+        p.name
+        for p in apk_root.rglob("*.apk")
+        if p.parent.name == "release"
+    }
     for asset in rel.get("assets", []):
         if asset.get("name") in wanted:
             gh("api", "-X", "DELETE", f"repos/{{owner}}/{{repo}}/releases/assets/{asset['id']}")
