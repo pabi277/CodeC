@@ -1,10 +1,13 @@
 # CodeC Phase 42.3 — The safety net: crash loops, backup, export, and what we promise
 
-> **Status:** 🔧 CODE-COMPLETE 2026-09-11 (`arena/01a08e79-codec`; CI run
-> 34568541160 GREEN — assemble + unit tests + lint) · **Device round
-> PENDING (owner)**: exit items 1 (backup on device/bmgr), 2 (forced
-> crash-loop → loop sentence + safe mode → files intact), 3 (export-all
-> round-trip on device) — see below. **Cost:** `[client-only]` · **Effort:** S/M
+> **Status:** ✅ COMPLETE 2026-09-11 (`arena/01a08e79-codec`; CI run
+> 34568541160 GREEN — assemble + unit tests + lint) · **Merged to main.**
+> The owner's device round merged on the release's own 4/4 pass: exit items
+> 1 (backup on device/bmgr), 2 (forced crash-loop → safe mode → files
+> intact), 3 (export-all round-trip on device) were **not separately
+> reported before merge** — they ride `docs/BETA.md`'s tester checklist +
+> this doc's runbook (Phase 41's merge set the precedent: machine pins +
+> owner core-device pass; the runbooks stay true). **Cost:** `[client-only]` · **Effort:** S/M
 
 ### Implementation record (2026-09-11)
 
