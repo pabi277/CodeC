@@ -146,14 +146,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CodeC-IDE-debug
-          path: app/build/outputs/apk/**/debug/CodeC-IDE-*-universal-debug.apk
+          path: app/build/outputs/apk/debug/CodeC-IDE-*-universal-debug.apk
 
       - name: Upload release APK artifact
         if: steps.signing.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: CodeC-IDE-release
-          path: app/build/outputs/apk/**/release/CodeC-IDE-*.apk
+          path: app/build/outputs/apk/release/CodeC-IDE-*.apk
 
       # The R8 mapping (once 42.2 turns minification on) is a CI artifact
       # ONLY: readable stack traces for the owner, never a public release
@@ -205,7 +205,7 @@ jobs:
           tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
           name: CodeC IDE v${{ steps.version.outputs.version }}
           body_path: build/release-notes.md
-          files: app/build/outputs/apk/**/release/CodeC-IDE-*.apk
+          files: app/build/outputs/apk/release/CodeC-IDE-*.apk
           draft: false
           prerelease: false
         env:
@@ -221,6 +221,6 @@ jobs:
         if: github.event_name == 'release' && steps.signing.outputs.app_tag != 'true' && !startsWith(github.event.release.tag_name, 'userland-') && steps.signing.outputs.present == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/**/release/CodeC-IDE-*.apk
+          files: app/build/outputs/apk/release/CodeC-IDE-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

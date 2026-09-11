@@ -1,6 +1,6 @@
 # CodeC Phase 42.2 — Weight: what a tester actually has to download
 
-> **Status:** 🔧 CODE-COMPLETE 2026-09-11 · awaiting CI measure + owner decisions · **Cost:** `[client-only]` + build config · **Effort:** M
+> **Status:** 🔧 CODE-COMPLETE 2026-09-11 · CI green + splits measured · awaiting OWNER DECISIONS only · **Cost:** `[client-only]` + build config · **Effort:** M
 
 ### Implementation record (2026-09-11)
 
@@ -50,12 +50,37 @@ Landed (the spec's non-decision set; '🟡' marks what waits on the owner):
   Termux" (row B-4), so `armeabi-v7a` ships and the known limitation is a
   sentence, not a bug report.
 
-🟡 **CI measure pending** — the byte delta (exit 3's recorded numbers) and
-the ≥ 15 %-smaller-per-ABI verdict (exit 4) read off the "Report APK sizes"
-annotations of the split-aware run *on this commit*; the record below fills
-in when that run lands on green. Release numbers stay provisional until the
-owner enters the 3 signing secrets (the release lane only assembles with
-them); debug splits measure the same split machinery meanwhile.
+✅ **CI measure recorded** — green runs `34571675385` + `34572206168`
+(byte-identical, which also re-verifies build determinism across runs) on
+debug, released lane still gated on the owner's 3 secrets:
+
+| APK | bytes | vs universal |
+|---|---|---|
+| `CodeC-IDE-1.3.17-universal-debug` | **25 553 560** | — |
+| `…-arm64-v8a-debug` | 25 309 500 | −244 060 B (**−0.95 %**) |
+| `…-x86_64-debug` | 25 312 384 | −241 176 B (−0.94 %) |
+| `…-armeabi-v7a-debug` | 25 101 741 | −451 819 B (−1.77 %) |
+| `…-x86-debug` | 25 104 033 | −449 527 B (−1.76 %) |
+
+**Exit-4 verdict on the default mechanism: FAILS the 15 % floor.** Splits
+strip only `jniLibs` per ABI (the deltas above ≈ the other-ABI tcc.so +
+pty.so); `assets/tcc/<abi>` rides every split — the spec's own §assets trap,
+now confirmed with real bytes instead of a doc warning. The per-ABI lane as
+currently packaged is a rounding error the slow-link tester will never
+feel. Two puzzles recorded, not explained away: the universal debug grew
++705 654 B vs the 2026-09-10 baseline 24 847 906 B (noise floor ≈24 KB, so
+this is REAL; candidates: pipeline change under splits, not the okhttp
+removal which is −400 KB of DEX) — flagged for the owner report, and the
+release-lane R8 delta remains unmeasurable until secrets exist.
+
+Also proven by the run: per-ABI names are born exactly on the updater's
+grammar (`CodeC-IDE-1.3.17-arm64-v8a-debug.apk` etc.), and AGP 9 with
+splits writes ALL APKs FLAT into `outputs/apk/<buildType>/` (the assumed
+`<abi>/<buildType>` nesting was AGP-≤7 lore; the artifact globs are pinned
+to the flat truth now). AGP 9 also REMOVED the legacy
+`android.applicationVariants` API — the naming hook uses
+`androidComponents.onVariants` + `VariantOutputImpl` with a hard error if
+that impl class ever disappears.
 
 🟡 **Owner decision card** (numbers, not a pick — spec law):
 
@@ -74,9 +99,12 @@ them); debug splits measure the same split machinery meanwhile.
    offline-first promise** of **§deferred** (the bundled TCC is there
    because downloaded compilers fail on some devices) — listed because the
    spec says it needs YOUR explicit sign-off, not mine.
-   **(d) keep both tcc dirs in every split** and let the 15 % rule decide
-   whether splits survive at all (the revert would keep universal-only,
-   which costs the slow-link tester the per-ABI lane entirely).
+   **(d) keep both tcc dirs in every split** — NOW MEASURED: per-ABI
+   savings are 0.94–1.77 % under this option (table above), so the 15 %
+   rule would revert the split machinery to universal-only unless (a) or
+   (b) ships. If you want the per-ABI lane to exist at all, pick (a) or
+   (b); option (a) is the smaller Gradle change (one packaging-task hook)
+   and my default-shaped proposal, but the call is yours.
 2. **Drop `x86` from `abiFilters`** — the emulator lane already has
    `x86_64`; `x86` (32-bit Intel) devices are effectively gone. Dropping it
    removes one split + one PTY build. `armeabi-v7a` is NOT droppable
