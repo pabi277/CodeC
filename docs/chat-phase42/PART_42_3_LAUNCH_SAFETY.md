@@ -1,6 +1,56 @@
 # CodeC Phase 42.3 — The safety net: crash loops, backup, export, and what we promise
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M
+> **Status:** 🔧 CODE-COMPLETE 2026-09-11 (`arena/01a08e79-codec`; CI run
+> 34568541160 GREEN — assemble + unit tests + lint) · **Device round
+> PENDING (owner)**: exit items 1 (backup on device/bmgr), 2 (forced
+> crash-loop → loop sentence + safe mode → files intact), 3 (export-all
+> round-trip on device) — see below. **Cost:** `[client-only]` · **Effort:** S/M
+
+### Implementation record (2026-09-11)
+
+- **Backup** — the two XMLs now carry ONE include (`CodeC/projects`) each
+  (cloud + device-transfer channels identical); **lint drove a shape
+  correction**: the original commit's exclude wall was structurally
+  superfluous and lint `[FullBackupContent]` errors on it (run 34561139415),
+  so the dangerous paths (usr, home, CodeC/temp|modules|tcc, crash-log.txt,
+  datastore/) live as pinned comment documentation while the test asserts
+  one-include/zero-excludes + the wall's names survive in text. Token:
+  lives in the settings DataStore — OUT of backup scope by design
+  ("a fresh install asks you to sign in again — intentional").
+  🟡 device: `bmgr`/D2D round + 3 spot-picked files byte-identical.
+- **Crash loop** — `StartupLedger` (two SharedPreferences ints, counted
+  synchronously first in `onCreate` before any init; corrupt ledger ⇒
+  never a crash), plan loop at the 3rd launch (2 interrupted starts).
+  `SafeMode` = process-lifetime flag: persisted visual inputs
+  (theme/accent/`EditorLaunchState` restore) resolve to defaults for the
+  session only — nothing written back, nothing deleted (pinned by
+  `StartupLedgerTest` 8/8). The SAME 25.2 `CrashReportOverlay` carries the
+  loop sentence + **[TRY WITHOUT MY SETTINGS]** (activate → `recreate()`)
+  + **[SEND REPORT]** (hand-off into 41.2's feedback via
+  `CrashHandOffBridge` → `Screen.Feedback?crash=1`, both attachments
+  pre-ticked). `SafeModeBanner` sits above the NavHost, dismissible; the
+  exit survey's BackHandler early-returns in safe mode; Settings row 47
+  offers the same report door any time a crash record exists.
+  🟡 device: force the startup crash twice → loop sentence at the 3rd
+  launch → [TRY … SETTINGS] boots → projects intact (`ls -R` before/after)
+  → export works in safe mode → next normal launch clean.
+- **Export-everything** — `ProjectTransfer.exportAllZip/importAllZip`:
+  one ZIP over EVERY project root (filesDir + external-files + legacy
+  shared, canonical-deduped), shared budgets (10k entries total,
+  128 MB/file, 1.28 GB whole), flattening collisions → deterministic
+  `-2` suffix + reported renames, unsanitizable names skipped loudly;
+  hub ⋮ menu rows with failure deleting the partial SAF file.
+  `ProjectTransferExportAllTest` 7/7 (byte-exact two-root round trip,
+  collision, empty file, shared cap erroring loudly, path guard).
+  🟡 device: clean-install re-import + 3 files spot-checked byte-identical.
+- **Privacy/permissions** — `ManifestPermissionsTest` 7/7 pins the 14-perm
+  set (with reasons), the privacy-doc table (a permission with no row or
+  no reader fails), camera-feature optional, no debuggable/cleartext,
+  exactly one exported component, no data-sewer permissions; About rows
+  48–60 (build date `BUILD_DATE` UTC, authors, 10-row permission table +
+  pointer); `docs/DATA_AND_PRIVACY.md` + `docs/BETA.md` written for a
+  stranger; release notes already link BETA.md.
+- 🟢 **unit**: 9 suites 85/85 in the local harness; CI runs the full set.
 
 Three small things that separate "a tool I trust" from "an app I'll delete
 after it eats something". None of them is glamorous; item 1 and 2 are the two
