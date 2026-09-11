@@ -23,8 +23,16 @@ set -o pipefail
 LOG="app/build/measure-build.log"
 if ! KEYSTORE_PATH="$KEY" STORE_PASSWORD=measure-only-key KEY_PASSWORD=measure-only-key \
     ./gradlew :app:assembleRelease --no-daemon 2>&1 | tee "$LOG"; then
-  tail -40 "$LOG" | while IFS= read -r line; do echo "::error::$line"; done
-  echo "::error::measure-only release assemble FAILED (full tail above)"
+  # GitHub caps check-run ERROR annotations at ~10 per step; a kotlin
+  # warning storm eats that budget and hides the real cause (run
+  # 34576978791). Filter the warning noise, then print the strongest
+  # failure lines, capped tight.
+  pick=$(grep -vE '^w: file' "$LOG" | grep -iE "whatever went wrong|went wrong|FAILURE:|execution failed|missing class|error in|caused by|e: file|keystore|exit" | tail -8)
+  if [ -z "$pick" ]; then
+    pick=$(grep -vE '^w: file' "$LOG" | tail -8)
+  fi
+  echo "$pick" | while IFS= read -r line; do echo "::error::$line"; done
+  echo "::error::measure-only release assemble FAILED (filtered failure lines above)"
   exit 1
 fi
 
