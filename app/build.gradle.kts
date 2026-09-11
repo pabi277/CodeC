@@ -170,18 +170,29 @@ android {
     includeInBundle = true
   }
 
-  // Phase 42.2 — APK file names follow the update-channel grammar the
-  // in-app updater already parses (UpdatePolicy): CodeC-IDE-<version>-
-  // <abi>.apk, the universal one named -universal.apk (the updater's
-  // default). Publishing AGP's raw app-<abi>-release.apk names would
-  // resurrect the "updater picks the first .apk" support ticket.
-  // versionName may carry " (GITHUB_RUN_NUMBER)" — strip before naming.
-  applicationVariants.all { variant ->
-    variant.outputs.configureEach { output ->
-      val abi = output.getFilter("ABI") ?: "universal"
-      val version = (variant.versionName ?: "unknown").substringBefore(' ')
-      val suffix = if (variant.buildType.name == "release") "" else "-${variant.buildType.name}"
-      outputFileName = "CodeC-IDE-$version-$abi$suffix.apk"
+}
+
+// Phase 42.2 — APK file names follow the update-channel grammar the
+// in-app updater already parses (UpdatePolicy): CodeC-IDE-<version>-
+// <abi>.apk, the universal one named -universal.apk (the updater's
+// default). Publishing AGP's raw app-<abi>-release.apk names would
+// resurrect the "updater picks the first .apk" support ticket.
+// versionName may carry " (GITHUB_RUN_NUMBER)" — strip before naming.
+// AGP 9 note: the legacy android.applicationVariants API is REMOVED
+// (run 34570360926: 'Unresolved reference: applicationVariants'); the
+// onVariants + VariantOutputImpl route below is the AGP 9 surface — and
+// the outputFileName property still lives on the impl class, so the hard
+// error guards a future AGP bump from silently shipping
+// app-<abi>-release.apk names under a "green" build again.
+androidComponents {
+  onVariants { variant ->
+    variant.outputs.forEach { output ->
+      val impl = output as? com.android.build.api.variant.impl.VariantOutputImpl
+        ?: error("42.2 APK naming: output is not VariantOutputImpl — AGP surface changed?")
+      val abi = impl.filters.firstOrNull { it.filterType.name == "ABI" }?.identifier ?: "universal"
+      val version = (output.versionName.get() ?: "unknown").substringBefore(' ')
+      val suffix = if (variant.buildType == "release") "" else "-${variant.buildType}"
+      impl.outputFileName = "CodeC-IDE-$version-$abi$suffix.apk"
     }
   }
 }
