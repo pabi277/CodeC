@@ -248,6 +248,41 @@ class MainActivity : ComponentActivity() {
             // ignore
         }
 
+        // Phase 44.2 — repair a userland install that a process kill
+        // interrupted, and sweep its orphans. `UserlandInstaller.swapPrefix`
+        // needs two renames (`usr` → `usr.old-<ts>`, staging → `usr`); a kill
+        // between them used to leave NO `usr` at all plus an orphan nobody ever
+        // cleaned, and the next launch answered "offline — using built-in cc"
+        // (which reads like success) while `pkg` was gone. Same daemon-thread
+        // shape as the TempGc sweep above: never delays the first frame, never
+        // throws, and the installer waits for it (SetupRecoveryGate) so the two
+        // never write the same directories at once.
+        try {
+            val setupThread = Thread {
+                try {
+                    val report = com.codeci.ide.ui.terminal.SetupRecovery.recover(
+                        filesDir = filesDir,
+                        prefixDir = ShellEnvironment.prefixDir(filesDir),
+                        ledger = com.codeci.ide.ui.terminal.SetupLedgerPrefs.ledger(this),
+                        log = { msg -> AppLogger.i("SetupRecovery", msg) }
+                    )
+                    // One honest line when CodeC had to put a previous userland
+                    // back; the live setup bar covers everything else.
+                    if (report.restored != null) {
+                        com.codeci.ide.ui.terminal.SetupNoticeBridge.post(report.message)
+                    }
+                } catch (_: Throwable) {
+                    // A repair must never be the reason the app does not start.
+                    com.codeci.ide.ui.terminal.SetupRecoveryGate.finished()
+                }
+            }
+            setupThread.isDaemon = true
+            setupThread.name = "codec-setup-recovery"
+            setupThread.start()
+        } catch (_: Throwable) {
+            com.codeci.ide.ui.terminal.SetupRecoveryGate.finished()
+        }
+
 
         // Phase 29.1 — preload the TextMate grammar sets (VS Code grammars)
         // on a background thread while the user is still navigating to the
@@ -670,6 +705,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     LaunchedEffect(settingsManager) {
         firstLaunchComplete = settingsManager.firstLaunchCompleteFlow.first()
     }
+    // Phase 44.1 — set once, when the first-run welcome hands over: this is
+    // the launch where the one-time userland download should be ON SCREEN
+    // while it happens (the owner's own solution to the invisible install).
+    var setupDiverted by remember { mutableStateOf(false) }
 
     if (firstLaunchComplete == false) {
         WelcomeScreen(
@@ -686,6 +725,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                         // Persist for the NEXT launch, then flip the local state
                         // so the normal shell replaces the welcome right away.
                         settingsManager.setFirstLaunchComplete(true)
+                        // Set BEFORE the flag that swaps the welcome for the
+                        // shell: the shell's first composition decides the
+                        // start destination from it.
+                        setupDiverted = true
                         firstLaunchComplete = true
                     }
                 }
@@ -708,9 +751,44 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     val launchState = remember {
         if (com.codeci.ide.ui.crash.SafeMode.active) null else EditorLaunchState.load(activity)
     }
-    val startDestination = remember(launchState) {
-        launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
-            ?: Screen.FileManager.route
+    // Phase 44.1 — the setup truth, read ONCE for the start destination and
+    // then observed by the setup bar below. A fresh install (welcome just
+    // handed over, no usable Linux tools yet, and this device does have a
+    // bootstrap) starts on the Terminal tab so the download is visible while
+    // it runs; every other launch keeps the pre-44 behaviour. Computed once on
+    // purpose: a startDestination that changed later would rebuild the nav
+    // graph and throw away the user's navigation state.
+    val setupProgress by terminalViewModel.setupProgress.collectAsState()
+    val setupFacts by terminalViewModel.setupFacts.collectAsState()
+    val startDestination = remember {
+        val setupFirstRun = setupDiverted &&
+            !setupFacts.usable &&
+            setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.UNSUPPORTED
+        when {
+            setupFirstRun -> Screen.Terminal.createRoute(null)
+            launchState != null -> Screen.Editor.createRoute(launchState.fileName, launchState.projectName)
+            else -> Screen.FileManager.route
+        }
+    }
+    // The welcome promised a starter file. Once the setup settles (finished,
+    // failed, or impossible on this device) open it — but only while the user
+    // is still on the tab we diverted them to, so nothing is ever yanked out
+    // from under a tap. C works offline either way (TCC is in the APK), which
+    // is why a FAILED setup still releases the user into the editor.
+    LaunchedEffect(setupDiverted, setupProgress.stage) {
+        if (!setupDiverted) return@LaunchedEffect
+        val target = launchState
+        if (target == null) {
+            setupDiverted = false
+            return@LaunchedEffect
+        }
+        if (!setupProgress.settled) return@LaunchedEffect
+        val current = navController.currentDestination?.route.orEmpty()
+        if (!current.startsWith("terminal")) return@LaunchedEffect
+        setupDiverted = false
+        navController.navigate(Screen.Editor.createRoute(target.fileName, target.projectName)) {
+            launchSingleTop = true
+        }
     }
 
     // Phase 24.7 — an "Open with CodeC" file/ZIP arrives outside navigation
@@ -859,6 +937,25 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     onDismiss = { safeModeBannerVisible = false }
                 )
             }
+            // Phase 44.1 — the setup bar: one slim non-modal line, visible
+            // from EVERY tab, with the moving percentage and a VIEW action to
+            // the terminal. Not dismissible while the setup is in flight
+            // (dismissing it would recreate the invisible-download bug); the ✕
+            // appears once it has settled, and always for the boot repair's
+            // one-time note.
+            val setupNote by com.codeci.ide.ui.terminal.SetupNoticeBridge.message.collectAsState()
+            com.codeci.ide.ui.components.SetupBar(
+                progress = setupProgress,
+                facts = setupFacts,
+                note = setupNote,
+                onViewSetup = {
+                    navController.navigate(Screen.Terminal.createRoute(null)) {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onDismissNote = { com.codeci.ide.ui.terminal.SetupNoticeBridge.clear() }
+            )
             NavHost(
                 navController = navController,
                 startDestination = startDestination,

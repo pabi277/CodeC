@@ -13,7 +13,18 @@ import com.codeci.ide.ui.theme.TerminalThemeType
 import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.ui.terminal.CodecApiBridge
 import com.codeci.ide.ui.terminal.CodecApiProtocol
+import com.codeci.ide.ui.terminal.InstallProgress
 import com.codeci.ide.ui.terminal.PreparedShell
+import com.codeci.ide.ui.terminal.SetupAnnouncer
+import com.codeci.ide.ui.terminal.SetupFacts
+import com.codeci.ide.ui.terminal.SetupGatePolicy
+import com.codeci.ide.ui.terminal.SetupIssue
+import com.codeci.ide.ui.terminal.SetupLedger
+import com.codeci.ide.ui.terminal.SetupLedgerPrefs
+import com.codeci.ide.ui.terminal.SetupPhase
+import com.codeci.ide.ui.terminal.SetupRecoveryGate
+import com.codeci.ide.ui.terminal.SetupStage
+import com.codeci.ide.ui.terminal.SetupTracker
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalLine
@@ -65,8 +76,41 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private val settings = SettingsManager(application)
     private val themeManager = ThemeManager(application)
     private val bootstrap = ShellBootstrap(application)
-    private val userland = UserlandInstaller(application)
+    private val prefixDir = ShellEnvironment.prefixDir(application.filesDir)
+
+    /**
+     * Phase 44.2 — the durable install ledger (SharedPreferences + commit()).
+     * The SAME store the boot repair in `MainActivity.onCreate` reads, so a
+     * kill between the two renames of `swapPrefix` is describable on the next
+     * launch instead of leaving a phone with no `usr` at all.
+     */
+    private val setupLedger = SetupLedgerPrefs.ledger(application)
+    private val userland = UserlandInstaller(application, ledger = setupLedger)
     private val manager = TerminalSessionManager()
+
+    // ---- Phase 44.1 — the setup truth every tab can render -----------------
+
+    /**
+     * Seeded from the disk, not from optimism: a returning user with a working
+     * prefix starts at READY (no bar, no false "don't close the app"), a fresh
+     * install starts at CHECKING and moves as the installer reports.
+     */
+    private val setupTracker = SetupTracker(initialSetupProgress(prefixDir, setupLedger))
+    private val _setupProgress = MutableStateFlow(setupTracker.state)
+
+    /** What is happening with the one-time setup, in structured form. */
+    val setupProgress: StateFlow<InstallProgress> = _setupProgress.asStateFlow()
+
+    private val _setupFacts = MutableStateFlow(computeSetupFacts(setupTracker.state))
+
+    /** Stage + the two cheap filesystem capabilities the gate needs. */
+    val setupFacts: StateFlow<SetupFacts> = _setupFacts.asStateFlow()
+
+    /** True while THIS ViewModel owns the foreground service for the setup. */
+    @Volatile private var setupKeepAlive = false
+    private val notificationLock = Any()
+    private var lastAnnounced: InstallProgress? = null
+    private var lastAnnouncedAtMs = 0L
 
     private val codecApiDir = ShellEnvironment.codecApiDir(
         ShellEnvironment.prefixDir(application.filesDir)
@@ -180,11 +224,19 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     init {
+        // Phase 44.1 — publish the disk-derived truth immediately, so a
+        // surface that asks before the installer has spoken (the editor's
+        // install prompt) never falls back to an optimistic guess.
+        com.codeci.ide.ui.terminal.SetupStateBridge.publish(_setupFacts.value)
         // Phase 6.1 wake lock, Phase 7 (D8): held while ANY session is alive.
         viewModelScope.launch(Dispatchers.Main) {
             manager.anyAlive.collect { anyAlive ->
                 try {
                     if (anyAlive) {
+                        // Phase 44.1 — a live shell means the session keep-alive
+                        // owns the service from here (the setup's own copy is
+                        // replaced by the plain terminal notification below).
+                        setupKeepAlive = false
                         // The foreground service protects the app process when
                         // the activity is backgrounded; the partial wake lock
                         // keeps a package download/PTY reader moving through
@@ -192,7 +244,12 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                         // package transaction can legitimately run longer.
                         TerminalForegroundService.start(getApplication<Application>())
                         wakeLock?.let { if (!it.isHeld) it.acquire() }
-                    } else {
+                    } else if (!setupKeepAlive) {
+                        // Phase 44.1 — while the setup owns the keep-alive the
+                        // session teardown must not stop it: the download runs
+                        // BEFORE any PTY exists, so `anyAlive` is false for the
+                        // whole install (and this collector's first emission is
+                        // exactly that false).
                         TerminalForegroundService.stop(getApplication<Application>())
                         wakeLock?.let { if (it.isHeld) it.release() }
                     }
@@ -350,11 +407,20 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             item.session.resize(terminalCols, terminalRows)
             item.session.start(prepared)
             _started.value = true
+            // Phase 44.1 — the setup keep-alive ends here: either the shell is
+            // up (the session keep-alive takes over) or it never will be, and a
+            // foreground service protecting nothing is a battery lie.
+            if (item.session.alive.value) {
+                setupKeepAlive = false
+            } else {
+                stopSetupKeepAliveIfIdle()
+            }
             // A very fast shell can emit the marker before the collector is
             // scheduled. The state check makes that path lossless as well.
             if (item.session.shellReady.value) flushSessionCommands(item)
         } catch (e: Exception) {
             _started.value = false
+            stopSetupKeepAliveIfIdle()
             item.session.startupFailed("shell startup failed: ${e.message ?: e.javaClass.simpleName}")
             AppLogger.e("TerminalViewModel", "start failed", e)
         }
@@ -434,19 +500,170 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun installUserlandInternal(target: TerminalSession, force: Boolean) {
-        val status = userland.installIfNeeded(
-            force = force,
-            // Opening a terminal is not an update check. The explicit
-            // "Install userland" action uses force=true and remains the
-            // deliberate upgrade/reinstall path.
-            checkForUpgrade = false
-        ) { msg ->
-            target.notice(msg)
+        // Phase 44.2 — never race the boot repair: an orphan sweep or a
+        // mid-swap restore touches the same directories (bounded wait).
+        SetupRecoveryGate.awaitFinished()
+        if (force) publishSetup(setupTracker.restart("reinstall requested"))
+        // Phase 44.1 — protect the download BEFORE it starts. Today the
+        // service (and the wake lock) only came up with the first live PTY,
+        // i.e. after the install, so Android could kill the process mid-download
+        // with nothing on screen and nothing holding it.
+        val usableBefore = SetupGatePolicy.packageManagerPresent(prefixDir) &&
+            SetupGatePolicy.shellPresent(prefixDir)
+        if (force || !usableBefore) startSetupKeepAlive()
+        val status = try {
+            userland.installIfNeeded(
+                force = force,
+                // Opening a terminal is not an update check. The explicit
+                // "Install userland" action uses force=true and remains the
+                // deliberate upgrade/reinstall path.
+                checkForUpgrade = false
+            ) { msg ->
+                target.notice(msg)
+                // The SAME strings the terminal prints, now structured for
+                // every other tab (SetupGatePolicy.parse is the only reader).
+                publishSetup(setupTracker.observe(msg))
+            }
+        } catch (t: Throwable) {
+            publishSetup(setupTracker.fail(t.message ?: t.javaClass.simpleName))
+            throw t
         }
         when (status) {
-            is UserlandStatus.Installed -> preparedShellCache = null
-            is UserlandStatus.Failed -> target.notice("userland: failed — ${status.message}")
-            else -> { }
+            is UserlandStatus.Installed -> {
+                preparedShellCache = null
+                // The install is complete and consistent: the ledger goes
+                // quiet so the next boot repairs nothing.
+                setupLedger.clear()
+                publishSetup(setupTracker.ready(status.releaseTag))
+            }
+            is UserlandStatus.AlreadyInstalled -> publishSetup(setupTracker.ready("installed"))
+            is UserlandStatus.SkippedOffline -> {
+                // Was: "userland: offline — using built-in cc (TCC)" and
+                // nothing else — a sentence that reads like success while the
+                // phone has no `pkg` at all.
+                publishSetup(setupTracker.fail("offline", SetupIssue.OFFLINE))
+            }
+            is UserlandStatus.SkippedNoRelease ->
+                publishSetup(setupTracker.unsupported("no bootstrap for this device"))
+            is UserlandStatus.Failed -> {
+                target.notice("userland: failed — ${status.message}")
+                publishSetup(setupTracker.fail(status.message))
+            }
+        }
+        refreshSetupFacts()
+        // The keep-alive is NOT stopped here on purpose: `startItem` continues
+        // straight into the shell that the setup exists for, and tearing the
+        // service down in between would leave a window (Android 12+ refuses a
+        // background FGS start) with no protection at all. `startItem` hands it
+        // over when the PTY is up, and stops it when startup fails.
+    }
+
+    // ---- Phase 44.1/44.2 setup plumbing ------------------------------------
+
+    /**
+     * Publishes to the StateFlows and to the notification, both throttled: the
+     * installer reports one line per 16 KiB, and neither Compose nor the
+     * notification may be rewritten that often. The filesystem facts are
+     * re-read only when the published state actually moved.
+     */
+    private fun publishSetup(progress: InstallProgress) {
+        if (SetupAnnouncer.shouldPublishState(_setupProgress.value, progress)) {
+            _setupProgress.value = progress
+            val facts = computeSetupFacts(progress)
+            _setupFacts.value = facts
+            // Surfaces that do not own this ViewModel (the editor's install
+            // prompt) read the same truth instead of guessing.
+            com.codeci.ide.ui.terminal.SetupStateBridge.publish(facts)
+        }
+        announceSetupNotification(progress)
+    }
+
+    /** Re-reads the filesystem capabilities (after an install, a repair, …). */
+    private fun refreshSetupFacts() {
+        val facts = computeSetupFacts(_setupProgress.value)
+        _setupFacts.value = facts
+        com.codeci.ide.ui.terminal.SetupStateBridge.publish(facts)
+    }
+
+    private fun computeSetupFacts(progress: InstallProgress): SetupFacts {
+        val phase = runCatching { setupLedger.read().phase }.getOrDefault(SetupPhase.IDLE)
+        return SetupGatePolicy.factsFor(prefixDir, phase, progress)
+    }
+
+    private fun announceSetupNotification(progress: InstallProgress) {
+        if (!setupKeepAlive) return
+        val now = SystemClock.elapsedRealtime()
+        val publish = synchronized(notificationLock) {
+            val ok = SetupAnnouncer.shouldPublish(lastAnnounced, progress, now, lastAnnouncedAtMs)
+            if (ok) {
+                lastAnnounced = progress
+                lastAnnouncedAtMs = now
+            }
+            ok
+        }
+        if (!publish) return
+        try {
+            TerminalForegroundService.updateStatus(
+                getApplication<Application>(),
+                SetupGatePolicy.notificationText(progress),
+                progress.percent
+            )
+        } catch (e: Exception) {
+            AppLogger.e("TerminalViewModel", "setup notification update failed", e)
+        }
+    }
+
+    private fun startSetupKeepAlive() {
+        if (setupKeepAlive) return
+        try {
+            val app = getApplication<Application>()
+            setupKeepAlive = true
+            TerminalForegroundService.start(
+                app,
+                SetupGatePolicy.notificationText(_setupProgress.value),
+                _setupProgress.value.percent
+            )
+            wakeLock?.let { if (!it.isHeld) it.acquire() }
+            AppLogger.i("TerminalViewModel", "setup keep-alive started (foreground service + wake lock)")
+        } catch (e: Exception) {
+            // A denied notification permission or a background-start refusal
+            // must never stop the install: the in-app bar is the real surface.
+            setupKeepAlive = false
+            AppLogger.e("TerminalViewModel", "setup keep-alive failed", e)
+        }
+    }
+
+    private fun stopSetupKeepAliveIfIdle() {
+        if (!setupKeepAlive) return
+        setupKeepAlive = false
+        try {
+            val app = getApplication<Application>()
+            if (manager.anyAlive.value) {
+                // A live shell is what the service protects now: restore the
+                // plain terminal copy and hand the service to the session
+                // keep-alive (which also owns the wake lock from here).
+                TerminalForegroundService.updateStatus(app, null, null)
+                return
+            }
+            TerminalForegroundService.stop(app)
+            wakeLock?.let { if (it.isHeld) it.release() }
+        } catch (e: Exception) {
+            AppLogger.e("TerminalViewModel", "setup keep-alive stop failed", e)
+        }
+    }
+
+    /** The setup state to show before the installer has said anything. */
+    private fun initialSetupProgress(prefix: File, ledger: SetupLedger): InstallProgress {
+        val phase = runCatching { ledger.read().phase }.getOrDefault(SetupPhase.IDLE)
+        if (phase == SetupPhase.SWAPPING) {
+            return InstallProgress(SetupStage.CHECKING, detail = "repairing an interrupted setup")
+        }
+        val usable = SetupGatePolicy.packageManagerPresent(prefix) &&
+            SetupGatePolicy.shellPresent(prefix)
+        return if (usable) {
+            InstallProgress(SetupStage.READY, detail = "installed")
+        } else {
+            InstallProgress(SetupStage.CHECKING)
         }
     }
 

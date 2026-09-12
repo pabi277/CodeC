@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +71,9 @@ import com.codeci.ide.ui.modules.PackageItem
 import com.codeci.ide.ui.modules.PackageSection
 import com.codeci.ide.ui.modules.QuickAction
 import com.codeci.ide.ui.services.EmbeddedCompiler
+import com.codeci.ide.ui.terminal.SetupAction
+import com.codeci.ide.ui.terminal.SetupGatePolicy
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import java.io.File
 
@@ -83,6 +87,39 @@ fun ModulesScreen(
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var customCommand by remember { mutableStateOf("") }
+    // Phase 44.1 — the Packages tab stops lying. Every row here fires
+    // `pkg …` into the terminal shell; while the one-time userland setup has
+    // not produced a working `bin/pkg`, that produced a bare
+    // "pkg: not found" — the owner's exact report. One gate
+    // (SetupGatePolicy) now decides, one sentence explains, and the button
+    // becomes VIEW SETUP instead of queueing a command that cannot work.
+    val setupFacts by terminalViewModel.setupFacts.collectAsState()
+    val installVerdict = remember(setupFacts) {
+        SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, setupFacts)
+    }
+    val setupRefusal = installVerdict.message?.takeIf { !installVerdict.allowed }
+    val prefixDir = remember(context) { ShellEnvironment.prefixDir(context.filesDir) }
+    val runGated: (String, String) -> Unit = { command, label ->
+        // A command that could actually run (CodeC's own `cc`, a compiled
+        // executable, anything present in the userland or in /system/bin) is
+        // never gated; only one that needs the missing `bin/pkg` is.
+        val action = SetupGatePolicy.actionForCommand(command, prefixDir)
+        val verdict = SetupGatePolicy.can(action, setupFacts)
+        if (verdict.allowed) {
+            Toast.makeText(context, "Running: $label", Toast.LENGTH_SHORT).show()
+            terminalViewModel.sendCommand(command)
+            onNavigateToTerminal()
+        } else {
+            // Refused out loud, never queued silently: a `pkg install` that
+            // fires 40 s later with no visible cause is the same surprise this
+            // phase exists to remove.
+            Toast.makeText(
+                context,
+                verdict.message ?: NOT_READY,
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
     // Phase 33.2 — the "Unix tools" section is collapsed by default; a tap on
     // its header expands it. The language section is always open.
     var unixToolsExpanded by remember { mutableStateOf(false) }
@@ -112,6 +149,16 @@ fun ModulesScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Phase 44.1 — the setup notice, once, at the top: what is
+            // happening, and the tap that gets the user to where it happens.
+            if (setupRefusal != null) {
+                item(key = "setup_gate") {
+                    SetupGateCard(
+                        message = setupRefusal,
+                        onViewSetup = onNavigateToTerminal
+                    )
+                }
+            }
             // SEARCH BAR
             item {
                 OutlinedTextField(
@@ -160,6 +207,7 @@ fun ModulesScreen(
                         context = context,
                         terminalViewModel = terminalViewModel,
                         onNavigateToTerminal = onNavigateToTerminal,
+                        setupRefusal = setupRefusal,
                     )
                 }
             } else {
@@ -182,6 +230,7 @@ fun ModulesScreen(
                                 context = context,
                                 terminalViewModel = terminalViewModel,
                                 onNavigateToTerminal = onNavigateToTerminal,
+                                setupRefusal = setupRefusal,
                             )
                         }
                     }
@@ -207,9 +256,7 @@ fun ModulesScreen(
                         QuickActionChip(
                             action = action,
                             onClick = {
-                                Toast.makeText(context, "Running: ${action.command}", Toast.LENGTH_SHORT).show()
-                                terminalViewModel.sendCommand(action.command)
-                                onNavigateToTerminal()
+                                runGated(action.command, action.command)
                             }
                         )
                     }
@@ -258,9 +305,7 @@ fun ModulesScreen(
                                 onClick = {
                                     if (customCommand.isNotBlank()) {
                                         val cmd = customCommand.trim()
-                                        Toast.makeText(context, "Running in terminal: $cmd", Toast.LENGTH_SHORT).show()
-                                        terminalViewModel.sendCommand(cmd)
-                                        onNavigateToTerminal()
+                                        runGated(cmd, cmd)
                                     }
                                 },
                                 enabled = customCommand.isNotBlank(),
@@ -291,31 +336,103 @@ private fun PackageCardRow(
     context: Context,
     terminalViewModel: TerminalViewModel,
     onNavigateToTerminal: () -> Unit,
+    setupRefusal: String? = null,
 ) {
     val isInstalled = remember(item.id) { checkIsInstalled(context, item) }
+    // Phase 44.1 — a built-in package (the APK's own TCC `cc`) needs no
+    // userland at all, so the setup gate never applies to it: C is never gated.
+    val gated = setupRefusal != null && !item.isBuiltIn
+    // Capability, not optimism, in both directions: `pkg install` and
+    // `pkg uninstall` genuinely need the missing `bin/pkg`, but a binary that
+    // is ALREADY in the prefix runs fine — so RUN stays live for an installed
+    // package even while the setup gate is up.
+    val runBlocked = gated && !isInstalled
+    val refuse: () -> Unit = {
+        Toast.makeText(context, setupRefusal ?: NOT_READY, Toast.LENGTH_LONG).show()
+        onNavigateToTerminal()
+    }
     PackageItemCard(
         item = item,
         isInstalled = isInstalled,
+        setupRefusal = setupRefusal?.takeIf { gated && !isInstalled },
+        packageActionsBlocked = gated,
+        onViewSetup = onNavigateToTerminal,
         onInstall = {
-            Toast.makeText(context, "Installing ${item.name}…", Toast.LENGTH_SHORT).show()
-            terminalViewModel.sendCommand(item.installCommand)
-            onNavigateToTerminal()
+            if (gated) {
+                refuse()
+            } else {
+                Toast.makeText(context, "Installing ${item.name}…", Toast.LENGTH_SHORT).show()
+                terminalViewModel.sendCommand(item.installCommand)
+                onNavigateToTerminal()
+            }
         },
         onRun = {
-            Toast.makeText(context, "Launching ${item.name}…", Toast.LENGTH_SHORT).show()
-            terminalViewModel.sendCommand(item.runCommand)
-            onNavigateToTerminal()
+            if (runBlocked) {
+                refuse()
+            } else {
+                Toast.makeText(context, "Launching ${item.name}…", Toast.LENGTH_SHORT).show()
+                terminalViewModel.sendCommand(item.runCommand)
+                onNavigateToTerminal()
+            }
         },
         onUninstall = {
-            Toast.makeText(context, "Uninstalling ${item.name}…", Toast.LENGTH_SHORT).show()
-            terminalViewModel.sendCommand("pkg uninstall -y ${item.id}")
-            onNavigateToTerminal()
+            if (gated) {
+                refuse()
+            } else {
+                Toast.makeText(context, "Uninstalling ${item.name}…", Toast.LENGTH_SHORT).show()
+                terminalViewModel.sendCommand("pkg uninstall -y ${item.id}")
+                onNavigateToTerminal()
+            }
         },
         onCopyCommand = { cmd ->
             copyToClipboard(context, cmd)
             Toast.makeText(context, "Copied: $cmd", Toast.LENGTH_SHORT).show()
         },
     )
+}
+
+/**
+ * Phase 44.1 — the one place the Packages tab explains why nothing can be
+ * installed yet. The sentence is [SetupGatePolicy]'s, i.e. the same one the
+ * setup bar and the terminal show; the button takes the user to the setup
+ * instead of firing a command into a prefix that has no `pkg`.
+ */
+@Composable
+private fun SetupGateCard(
+    message: String,
+    onViewSetup: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Download,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onViewSetup) {
+                Text("VIEW SETUP")
+            }
+        }
+    }
 }
 
 /**
@@ -402,7 +519,10 @@ private fun PackageItemCard(
     onInstall: () -> Unit,
     onRun: () -> Unit,
     onUninstall: () -> Unit,
-    onCopyCommand: (String) -> Unit
+    onCopyCommand: (String) -> Unit,
+    setupRefusal: String? = null,
+    packageActionsBlocked: Boolean = false,
+    onViewSetup: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -533,7 +653,11 @@ private fun PackageItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isInstalled) {
-                    if (!item.isBuiltIn) {
+                    // Phase 44.1 — UNINSTALL/REINSTALL are `pkg` transactions:
+                    // they disappear while the setup gate is up rather than
+                    // failing with "pkg: not found". RUN stays: the binary is
+                    // already in the prefix.
+                    if (!item.isBuiltIn && !packageActionsBlocked) {
                         TextButton(onClick = onUninstall) {
                             Text("UNINSTALL", color = MaterialTheme.colorScheme.error)
                         }
@@ -551,6 +675,18 @@ private fun PackageItemCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(if (item.isBuiltIn) "RUN CC" else "RUN")
+                    }
+                } else if (setupRefusal != null) {
+                    // Phase 44.1 — no `pkg` command is fired, silently queued
+                    // or pretended to work: the row says where the setup is.
+                    OutlinedButton(onClick = onViewSetup) {
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("VIEW SETUP")
                     }
                 } else {
                     Button(onClick = onInstall) {
@@ -590,6 +726,9 @@ private fun checkIsInstalled(context: Context, item: PackageItem): Boolean {
     }
     return false
 }
+
+/** Fallback for a refusal whose sentence is somehow missing (never expected). */
+private const val NOT_READY = "CodeC's Linux tools aren't ready yet."
 
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager

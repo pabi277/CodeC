@@ -80,3 +80,55 @@ data class TerminalStartMeasurement(
     private fun elapsed(from: Long?, to: Long?): Long? =
         if (from != null && to != null) (to - from).coerceAtLeast(0L) else null
 }
+
+/**
+ * Phase 44.1 — the terminal status chip tells the truth.
+ *
+ * Before this the chip mapped `TerminalLifecycle.STARTING` to the fixed string
+ * `"starting shell…"`, which during a 200 MB one-time bootstrap download is a
+ * lie by omission — and it was the only status a user who DID open the Terminal
+ * tab could see. The mapping is pure so CI pins the whole
+ * `(lifecycle, stage) → label` table, including FAILED and UNSUPPORTED.
+ */
+object TerminalStatusLabel {
+
+    /** Which colour family the screen should use (no Compose in this file). */
+    enum class Kind { SETUP, STARTING, RUNNING, FAILED, EXITED }
+
+    data class Label(val text: String, val kind: Kind)
+
+    fun label(
+        lifecycle: TerminalLifecycle,
+        stage: SetupStage,
+        percent: Int? = null,
+        exitCode: Int? = null
+    ): Label = when (lifecycle) {
+        TerminalLifecycle.EXITED -> Label(
+            text = "exited" + (exitCode?.let { " ($it)" } ?: ""),
+            kind = Kind.EXITED
+        )
+        TerminalLifecycle.FAILED -> Label("shell failed", Kind.FAILED)
+        TerminalLifecycle.RUNNING -> Label("running", Kind.RUNNING)
+        TerminalLifecycle.STARTING -> when (stage) {
+            SetupStage.DOWNLOADING ->
+                if (percent != null) {
+                    Label("downloading userland $percent %", Kind.SETUP)
+                } else {
+                    Label("downloading userland…", Kind.SETUP)
+                }
+            SetupStage.VERIFYING -> Label("verifying download…", Kind.SETUP)
+            SetupStage.EXTRACTING -> Label("unpacking userland…", Kind.SETUP)
+            SetupStage.FAILED -> Label("setup incomplete — tap ⬇ to retry", Kind.FAILED)
+            SetupStage.UNSUPPORTED -> Label("no Linux tools for this device", Kind.SETUP)
+            SetupStage.CHECKING, SetupStage.READY -> Label("starting shell…", Kind.STARTING)
+        }
+    }
+
+    /**
+     * The "don't close the app" warning above the chip — the owner's own
+     * solution to the invisible download, kept almost verbatim. Driven by the
+     * setup stage alone, so it also covers an upgrade that starts while a shell
+     * is already running.
+     */
+    fun showsDontCloseBar(stage: SetupStage): Boolean = stage != SetupStage.READY
+}

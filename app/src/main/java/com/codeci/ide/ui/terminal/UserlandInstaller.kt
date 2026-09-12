@@ -94,7 +94,15 @@ class UserlandInstaller(
     private val freeSpaceProvider: (File) -> Long = { freeSpaceBytes(it) },
     private val launchChecker: (File, File, Boolean) -> ShellEnvironment.LaunchDiagnostic =
         ShellEnvironment::launchDiagnostic,
-    private val candidates: List<UserlandManifest> = UserlandManifest.ORDER
+    private val candidates: List<UserlandManifest> = UserlandManifest.ORDER,
+    /**
+     * Phase 44.2 — the durable install ledger. Optional so every existing
+     * caller (and `UserlandInstallerTest`) keeps compiling unchanged; when
+     * present, each risky step is recorded BEFORE it runs so a process kill
+     * inside the two-rename swap window can be repaired on boot
+     * ([SetupRecovery.recover]).
+     */
+    private val ledger: SetupLedger? = null
 ) {
     constructor(
         context: Context,
@@ -257,6 +265,9 @@ class UserlandInstaller(
             )
         }
 
+        // Phase 44.2 — recorded BEFORE the work it names (commit(), not
+        // apply()): a kill during the download must be describable on boot.
+        ledger?.note(SetupPhase.DOWNLOADING, manifest.releaseTag)
         onProgress("userland: downloading $name…")
         try {
             downloadFile(manifest.tarballUrl(arch), partial) { pct, bytes ->
@@ -291,8 +302,9 @@ class UserlandInstaller(
             )
         }
 
+        ledger?.note(SetupPhase.EXTRACTING, manifest.releaseTag)
         onProgress("userland: extracting into $prefix")
-        val staged = File(filesDir, STAGING_DIR + "-" + System.currentTimeMillis())
+        val staged = File(filesDir, SetupRecovery.stagingName(System.currentTimeMillis(), STAGING_DIR))
         try {
             TarGzExtractor.extract(finalTar, staged)
             requireLaunchable(staged, "staged userland cannot start")
@@ -376,19 +388,32 @@ class UserlandInstaller(
      */
     internal fun swapPrefix(staged: File, prefix: File) {
         if (!prefix.exists()) {
+            // Phase 44.2 — the window is recorded, which is what makes the
+            // boot repair possible: SWAPPING before the rename, DONE after.
+            ledger?.note(SetupPhase.SWAPPING)
             if (!staged.renameTo(prefix)) {
                 throw IllegalStateException("cannot install userland (rename failed)")
             }
+            ledger?.note(SetupPhase.DONE)
             return
         }
-        val old = File(prefix.parentFile, prefix.name + ".old-" + System.currentTimeMillis())
+        val old = File(
+            prefix.parentFile,
+            SetupRecovery.oldPrefixName(prefix.name, System.currentTimeMillis())
+        )
+        ledger?.note(SetupPhase.SWAPPING)
         if (!prefix.renameTo(old)) {
             throw IllegalStateException("cannot move old userland aside")
         }
         if (!staged.renameTo(prefix)) {
-            old.renameTo(prefix) // roll back: previous userland is untouched
+            // Roll back: the previous userland is in place again, so there is
+            // nothing for a boot repair to do — the ledger goes quiet instead
+            // of claiming a swap is still pending.
+            old.renameTo(prefix)
+            ledger?.clear()
             throw IllegalStateException("cannot replace userland; previous userland restored")
         }
+        ledger?.note(SetupPhase.DONE)
         old.deleteRecursively()
     }
 
@@ -535,7 +560,8 @@ class UserlandInstaller(
     }
 
     companion object {
-        private const val STAGING_DIR = ".userland-staging"
+        /** Phase 44.2 — one source for the orphan names the boot sweep matches. */
+        private const val STAGING_DIR = SetupRecovery.STAGING_PREFIX
         private const val MARKER_RELEASE = ".userland-release"
         private const val MARKER_ARCH = ".userland-arch"
         // Phase 2 wrote `.userland-v${UserlandManifest.RELEASE_TAG}` with no

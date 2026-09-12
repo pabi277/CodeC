@@ -82,6 +82,10 @@ import com.codeci.ide.ui.services.LanAddress
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.PtyNative
+import com.codeci.ide.ui.terminal.SetupAction
+import com.codeci.ide.ui.terminal.SetupGatePolicy
+import com.codeci.ide.ui.terminal.SetupLedgerPrefs
+import com.codeci.ide.ui.terminal.SetupStateBridge
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalHandoff
@@ -816,6 +820,23 @@ class EditorViewModel : ViewModel() {
         if (_outputState.value.busy) return
         val ctx = context.applicationContext
         captureContext(ctx)
+        // Phase 44.1 — this streams `pkg install -y <pkg>` into the Output
+        // Panel. While the one-time userland setup has not produced a working
+        // `bin/pkg` that produced a bare shell error and a user who believed
+        // Python was broken. The gate's sentence replaces the run; nothing is
+        // queued, and C is never on this path (TCC is in the APK, no prompt).
+        val setupVerdict = SetupGatePolicy.can(
+            SetupAction.INSTALL_PACKAGE,
+            SetupStateBridge.factsOrDisk(
+                ShellEnvironment.prefixDir(ctx.filesDir),
+                SetupLedgerPrefs.ledger(ctx).read().phase
+            )
+        )
+        if (!setupVerdict.allowed) {
+            _outputExpanded.value = true
+            failRun(ctx, setupVerdict.message ?: "CodeC's Linux tools are not ready yet.")
+            return
+        }
         val command = LanguageRunPlanner.installCommand(prompt.packageName)
         _outputExpanded.value = true
         _outputState.value = OutputRunState(

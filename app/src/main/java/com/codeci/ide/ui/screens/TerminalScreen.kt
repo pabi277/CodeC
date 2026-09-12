@@ -14,12 +14,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GetApp
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,6 +55,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -64,9 +68,11 @@ import com.codeci.ide.ui.components.TerminalEmulatorView
 import com.codeci.ide.ui.components.TerminalExtraKeys
 import com.codeci.ide.ui.components.openTerminalUrl
 import com.codeci.ide.ui.components.parseExtraKeysMacros
+import com.codeci.ide.ui.terminal.SetupGatePolicy
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalLifecycle
 import com.codeci.ide.ui.terminal.TerminalSessionItem
+import com.codeci.ide.ui.terminal.TerminalStatusLabel
 import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.theme.getTerminalTheme
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -89,6 +95,10 @@ fun TerminalScreen(
     val snapshot by viewModel.snapshot.collectAsState()
     val lifecycle by viewModel.lifecycle.collectAsState()
     val exitCode by viewModel.exitCode.collectAsState()
+    // Phase 44.1 — the setup truth, so this screen can say "downloading
+    // userland 62 %" instead of the fixed "starting shell…" that hid a 200 MB
+    // one-time download behind a lie by omission.
+    val setupProgress by viewModel.setupProgress.collectAsState()
     val fontSize by viewModel.fontSizeSp.collectAsState()
     val fontFamily by viewModel.fontFamily.collectAsState()
     val terminalThemeType by viewModel.terminalTheme.collectAsState()
@@ -297,11 +307,44 @@ fun TerminalScreen(
                 navigationIconContentColor = Color.White
             )
         )
-        val (statusText, statusColor) = when (lifecycle) {
-            TerminalLifecycle.STARTING -> "starting shell…" to Color(0xFFFFC107)
-            TerminalLifecycle.RUNNING -> "running" to Color(0xFF66BB6A)
-            TerminalLifecycle.FAILED -> "shell failed" to Color(CodecPalette.ERROR_TEXT)
-            TerminalLifecycle.EXITED -> "exited${exitCode?.let { " ($it)" } ?: ""}" to Color(0xFF9E9E9E)
+        // Phase 44.1 — the chip tells the truth: pure (lifecycle, setup stage)
+        // → label, pinned by TerminalStatusLabelTest.
+        val statusLabel = TerminalStatusLabel.label(
+            lifecycle = lifecycle,
+            stage = setupProgress.stage,
+            percent = setupProgress.percent,
+            exitCode = exitCode
+        )
+        val statusColor = when (statusLabel.kind) {
+            TerminalStatusLabel.Kind.RUNNING -> Color(0xFF66BB6A)
+            TerminalStatusLabel.Kind.FAILED -> Color(CodecPalette.ERROR_TEXT)
+            TerminalStatusLabel.Kind.EXITED -> Color(0xFF9E9E9E)
+            TerminalStatusLabel.Kind.SETUP, TerminalStatusLabel.Kind.STARTING -> Color(0xFFFFC107)
+        }
+        // The owner's own solution to the invisible download, kept almost
+        // verbatim: one line, no dialog, and NO dismiss — closing it would not
+        // stop the download, and hiding the information is the bug this removes.
+        SetupGatePolicy.dontCloseText(setupProgress)?.let { warning ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF2E2A1E))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = Color(0xFFFFC107),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = warning,
+                    color = Color(0xFFFFC107),
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
         }
         Row(
             modifier = Modifier
@@ -310,7 +353,7 @@ fun TerminalScreen(
                 .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
             Text(
-                text = statusText,
+                text = statusLabel.text,
                 color = statusColor,
                 style = MaterialTheme.typography.labelMedium
             )
