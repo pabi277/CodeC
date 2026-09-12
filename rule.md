@@ -198,7 +198,20 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44-50 are 📋 PLANNED (docs-only, the owner's test-phase bug report — next: "Start Phase 44"); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **the Phases 44-50 plan is ✅ MERGED to `main` via [PR #75](https://github.com/pabi277/CodeC/pull/75) (docs-only, CI green on the branch and on `main` after the merge) — next: "Start Phase 44"; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+
+- **Phases 44-50 plan ✅ MERGED (2026-09-12, owner: "If everything done merge
+  it") — [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit
+  `8eff438`.** CI green three times (`Build APK` `34689859665` push,
+  `34689923817` PR, `34690414244` on `main` post-merge). 28 files,
+  +3 896/−538, **zero `app/src` files** — a docs-only change, verified by
+  citation sweep (259 `file:line` refs, all in-repo ones resolve) and link
+  sweep (168, all resolve) rather than by a device round. One correction rode
+  in the same PR: the plan first claimed five not-yet-written host tests
+  "run in CI", and offered Paparazzi + Robolectric as new dependencies when
+  **Roborazzi 1.59.0 is already applied to `:app`** and **Robolectric 4.16.1
+  already has 8 users**. Open follow-up: PR #74's `web_docs` v2.2 still calls
+  Phase 43 *planned* and needs a v2.3 sync under the website's own ceremony.
 
 - **Phases 44-50 PLANNED (2026-09-12, docs-only, no app code)** — the owner's
   **test-phase bug report** (seven rows: the invisible one-time download, no
