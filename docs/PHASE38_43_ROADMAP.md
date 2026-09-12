@@ -1,5 +1,14 @@
 # CodeC — Phases 38–43 · share-readiness roadmap
 
+> **STATUS 2026-09-12 — this series is CLOSED.** 38, 39, 40, 41 and 42 are
+> ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71)).
+> **Phase 43 is ❌ CANCELLED and will not be built** — the owner's test-phase
+> report row 3 was *"remove the open a folder option… completely"*. Its
+> tombstone is [`chat-phase43/README.md`](chat-phase43/README.md); what it was
+> solving is re-solved better by **Phase 46** (projects, not folders —
+> [`PHASE44_50_ROADMAP.md`](PHASE44_50_ROADMAP.md)). The 43 research below is
+> kept because 46.1 cites it for exactly what to delete and what to keep.
+
 > **Owner (2026-09-10, verbatim):** *"Yes working — But before i merge i have some
 > new future phases idea analysis every idea research throughly and also check
 > open source for solutions, my ideas- … Please you also full thought one time i
@@ -27,7 +36,7 @@
 | # | Owner's words (verbatim) | Phase | Title | Effort |
 |---|---|---|---|---|
 | 1 | "Github integration update now Github is working but it's not user friendly if i try to clone a repo and didn't download the git it shows error in the background i can't see it, sometimes it's push stay local, new branch create mostly stays local" | **40** | GitHub that tells the truth | M/L |
-| 2 | "Now the file system is good but i want it more stronger, i can't open a project in the editor from project folder, open a folder crash the app" | **43** | File system strength (open any folder) | L |
+| 2 | "Now the file system is good but i want it more stronger, i can't open a project in the editor from project folder, open a folder crash the app" | **43** ❌ **CANCELLED** (2026-09-12) | ~~File system strength (open any folder)~~ → superseded by **Phase 46** | — |
 | 3 | "I the output files as temporarily file and don't come to add in github push find all languages temporarily file and remove from git push also the .codec file" | **39** | Outputs are temporary, never in your repo | S/M |
 | 4 | "For testing i have to add a feedback page give the best way, i am willing to give my WhatsApp number" | **41** | Feedback that reaches you (WhatsApp) | S/M |
 | 5 | "From the settings remove unessesary Termux bridge" | **38** | Identity & Settings trim (icon first) | S/M |
@@ -39,7 +48,7 @@ Phase numbers 38+ continue the 34–37 UX/UI series; 37 is done (✅ CI green +
 
 ---
 
-## Execution order: **38 → 39 → 40 → 41 → 42 → 43**
+## Execution order: **38 → 39 → 40 → 41 → 42** ~~→ 43~~ (43 ❌ cancelled)
 
 The numbers **are** the order — renamed on the owner's request (*"Rename the
 phases so i can continue 38 to 43"*) so one command per phase, in sequence, is
@@ -61,10 +70,11 @@ embarrassing-things-first; the deep refactor last:
    it is a Settings row, a pure draft builder and a `wa.me` link.
 5. **42 — share-readiness.** Signing, non-debuggable release artifact, size, the
    broken in-app updater, backup rules. This is the gate for "sharing" itself.
-6. **43 — file system strength.** The only phase that changes an architectural
-   law ("a project lives under `filesDir/CodeC/projects`"), so it goes last and
-   gets the most test surface. Its 43.1 half (the crash) is separately
-   shippable and can be pulled forward if the owner prefers.
+6. ~~**43 — file system strength.**~~ ❌ **CANCELLED 2026-09-12.** The owner
+   asked for "open a folder" to be removed outright rather than hardened, so
+   the architectural law it was going to change ("a project lives under
+   `filesDir/CodeC/projects`") **stays as it is** — which also retires the
+   39-before-43 ordering rule below. Phase 46 owns the replacement.
 
 The numbers were assigned to that order, so **the only rule to remember is
 "go in order"**: 39 before 43, because a linked user folder must never be where
@@ -104,7 +114,12 @@ through `POST /user/repos` — or, when the token cannot, says precisely which
 permission is missing (GitHub returns it in `X-Accepted-GitHub-Permissions`)
 and offers the browser fallback.
 
-**43 — File system strength.** Two halves. **43.1** makes "Open folder" never
+**43 — File system strength.** ❌ **CANCELLED 2026-09-12 — do not build this.**
+Kept as research only: Phase 46.1's deletion checklist cites the call sites
+named here (`ProjectTransfer.copyDocumentChildren`, the missing
+`takePersistableUriPermission`, the `StackOverflowError` path), and the
+"open in place" rejection below is the reason 46 keeps projects inside
+`filesDir/CodeC/projects`. Two halves. **43.1** makes "Open folder" never
 crash: the SAF copy today is a plain recursion (`ProjectTransfer.copyDocumentChildren`)
 with no visited set, no depth/file/byte budget, no cancellation, and its
 caller catches only `Exception` — a provider that returns the parent as its own
@@ -210,6 +225,10 @@ reality, and a written known-issues page for testers.
 
 ## State of record (when this plan was written)
 
+> **Update 2026-09-12:** the series is closed — 38/39/40/41/42 ✅ COMPLETE &
+> MERGED (42 via PR #71), **43 ❌ CANCELLED** and superseded by Phase 46. The
+> queue is now [`PHASE44_50_ROADMAP.md`](PHASE44_50_ROADMAP.md).
+>
 > **Update 2026-09-10:** Phase 38 (Identity) is ✅ COMPLETE, DEVICE-PASSED
 > & MERGED to `main` — CI `34442522565`/`34443027257` green, owner device
 > round "All device test pass", merge commanded. 39 is next. The bullets

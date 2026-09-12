@@ -1,0 +1,207 @@
+# CodeC Phase 44.1 — The install is visible everywhere
+
+> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Owner row (verbatim):** *"the test user don't know it's installing so they
+> close app before it complete"* → **owner's solution, kept almost verbatim:**
+> *"If it opens the terminal 1st and show a warning don't close the terminal
+> while userland is installing"*
+
+## Symptom & first move
+
+A tester installs the APK, opens it, sees a normal editor, does something else,
+swipes the app away — and later every `pkg` command fails. **First move is
+evidence, not code** (`rule.md` §4.2): reproduce on a device with a *clean
+install* and capture (a) the log lines from `AppLogger`/`LogsScreen`, and (b)
+whether the failure after the kill is `pkg: not found` (missing prefix) or a
+dpkg error (partial prefix). The two answers lead to 44.2's two different
+repairs, and both are plausible from the code (`UserlandInstaller.kt:377-395`).
+
+The rest of this part needs no repro: it is a *visibility* gap, and the code
+proves it — progress goes to `TerminalSession.notice()`
+(`TerminalSession.kt:260`), which only the Terminal tab renders.
+
+## Design
+
+### 1. One observable truth: `SetupState`
+
+A new Android-free policy object plus a ViewModel-exposed flow. The installer
+already reports through a single `onProgress: (String) -> Unit` callback
+(`UserlandInstaller.installIfNeeded`, `:116-125`) — 44.1 turns those strings
+into structure *without* changing the installer's contract:
+
+```kotlin
+// ui/terminal/SetupState.kt  (pure)
+enum class SetupStage { CHECKING, DOWNLOADING, VERIFYING, EXTRACTING, READY, FAILED, UNSUPPORTED }
+data class InstallProgress(
+    val stage: SetupStage, val percent: Int?, val bytes: Long?, val detail: String
+)
+object SetupGatePolicy {
+    /** The one place "what may the user do right now" is answered. */
+    fun can(action: SetupAction, stage: SetupStage, userlandRunnable: Boolean): SetupVerdict
+    /** Parses the installer's existing progress lines (single source, no drift). */
+    fun parse(progressLine: String): InstallProgress
+}
+enum class SetupAction { RUN_C, RUN_LANGUAGE, INSTALL_PACKAGE, OPEN_TERMINAL, EDIT_FILE }
+sealed interface SetupVerdict {
+    object Allowed : SetupVerdict
+    data class AllowedWithNote(val message: String) : SetupVerdict
+    data class Refused(val message: String) : SetupVerdict
+}
+```
+
+`SetupGatePolicy.parse` keys off the *existing* installer strings
+(`"userland: download 41 % (…) bytes"`, `"userland: verifying SHA-256…"`,
+`"userland: extracting into …"`, `"userland: ready"`,
+`"userland: no bootstrap for this ABI"`, …) so the installer stays untouched and
+the parser is host-testable against the real lines. If a line does not parse,
+the stage is `CHECKING` with the raw text as `detail` — never a crash, never a
+fake percentage.
+
+**The gate law (pinned by `SetupGatePolicyTest`):** `RUN_C` and `EDIT_FILE` are
+`Allowed` in **every** stage. Everything else is `Refused` while
+`!userlandRunnable`, with a message that says what is happening and what to do:
+
+| Stage | `INSTALL_PACKAGE` verdict |
+|---|---|
+| DOWNLOADING 41 % | `Refused` — *"CodeC is downloading its Linux tools (41 %). Don't close the app — this happens once."* |
+| EXTRACTING | `Refused` — *"Unpacking the Linux tools… Don't close the app."* |
+| READY | `Allowed` |
+| FAILED | `Refused` — *"Setup didn't finish (disk space / network). Open the Terminal tab and tap ⬇ to try again."* |
+| UNSUPPORTED (no bootstrap for this ABI) | `Refused` — *"Extra languages aren't available on this device. C works offline."* |
+
+### 2. The first-run setup surface (all tabs, not just Terminal)
+
+- **`MainApp`**: a slim, non-modal **setup bar** under the safe-mode banner's
+  slot (the same `Column` at `MainActivity.kt:857-866`) rendered while
+  `SetupStage ∈ {CHECKING, DOWNLOADING, VERIFYING, EXTRACTING}`:
+  `⬇ Setting up CodeC's Linux tools — 62 % · C works right now`, with a
+  **VIEW** action that navigates to the Terminal tab. It disappears on `READY`.
+  It never blocks the UI (the owner's row 1 is about *knowing*, not about
+  waiting), and it is exactly the surface a user sees no matter which tab they
+  are on.
+- **Terminal tab first on a fresh install.** The owner asked for this and it is
+  cheap: `MainApp`'s `startDestination` (`MainActivity.kt:712-717`) currently
+  prefers the saved editor file and falls back to the hub. Add: when
+  `firstLaunchComplete == false` **and** the setup is not `READY`, the post-
+  welcome destination is the **Terminal** tab, so the download is on screen
+  while it happens. The welcome tiles still come first (Phase 33.1) — this
+  changes only what follows them, and only until the setup finishes once.
+- **The "don't close" bar.** Inside `TerminalScreen`, above the status chip,
+  while setup is not `READY`:
+  `⚠ Don't close CodeC — it is finishing a one-time setup (62 %)`
+  in the terminal's own chrome colours. One line, no dialog, no dismiss (there
+  is nothing to dismiss: closing it does not stop the download, and a dismiss
+  would recreate the original bug).
+- **The status chip tells the truth.** `TerminalScreen.kt:300-304`'s fixed
+  `"starting shell…"` becomes stage-aware:
+  `downloading userland 62 %` / `unpacking…` / `starting shell…` /
+  `shell failed`. `TerminalUx` (already pure) is the right home for the
+  `(lifecycle, stage) → label` function, next to `TerminalLifecycle`.
+
+### 3. The notification (and its honest degradation)
+
+`TerminalForegroundService` already exists and is exactly the right shape
+(channel `codec_terminal`, `IMPORTANCE_LOW`, `ic_stat_codec`, `setOngoing`).
+Two changes:
+
+1. **Start it before the download**, not after: in `startItem`
+   (`TerminalViewModel.kt:323`) call `TerminalForegroundService.start(...)`
+   *before* `installUserlandInternal(...)` when the userland is not yet
+   runnable, and stop it after if no session ends up alive. The wake lock moves
+   with it (same condition), so Doze cannot stall the download.
+2. **The notification text carries progress**: `setContentText("Downloading
+   CodeC's Linux tools — 62 %")`, updated at most once per 5 % or 2 s (the
+   existing `setOnlyAlertOnce(true)` keeps it silent), and
+   `"CodeC terminal"`/`"Terminal running in the background"` restored when a
+   shell is what is actually running. The service gains an optional
+   `EXTRA_STATUS` extra; no new service, no new channel, no new permission.
+
+**Degradation law:** if `POST_NOTIFICATIONS` is denied (Android 13+), the
+service still runs (a foreground service does not need the notification
+permission to *run*; the notification is simply not shown) and the in-app bar is
+the surface. No crash, no retry loop, no "notifications required" dialog — the
+app never asks for a permission to protect its own download.
+
+### 4. The Packages tab stops lying
+
+`ModulesScreen.kt:301-302` (`terminalViewModel.sendCommand(item.installCommand)`
++ `onNavigateToTerminal()`) is gated on `SetupGatePolicy.can(INSTALL_PACKAGE,
+…)`:
+
+- `Allowed` → unchanged.
+- `Refused` → no command is sent; the card shows the refusal sentence and the
+  row's button becomes **VIEW SETUP**, which navigates to the Terminal tab.
+  The command is **not** queued silently: a queued `pkg install` that runs 40
+  seconds later with no visible cause is the same class of surprise this phase
+  exists to remove.
+
+The same gate covers the Quick Actions row (`ModulesScreen.kt:211`) and the
+editor's "Install X?" prompt path (`EditorViewModel.confirmInstall`), which
+today streams `pkg update && pkg install -y <pkg>` into the Output Panel
+without knowing whether a prefix exists.
+
+## Exit condition
+
+```text
+1. Clean install, online: within 2 s of the welcome tiles a setup surface is
+   visible WITHOUT opening the Terminal tab, and its percentage moves.
+2. The Terminal tab shows "downloading userland NN %" in the chip and the
+   "Don't close CodeC" bar above it.
+3. A status-bar notification shows the same percentage and disappears at READY.
+   With notifications denied: no crash, no permission dialog, in-app bar works.
+4. A .c file compiles and runs during the install (TCC path untouched).
+5. Packages tab during install: install rows refuse with the named sentence and
+   offer VIEW SETUP; no `pkg` command reaches the shell.
+6. At READY every surface clears on its own — no restart, no manual refresh.
+7. Force-stop mid-download, relaunch: the surface returns with the truth
+   (resuming / restarting), never a stale 62 %.
+PASS = all seven.
+```
+
+## Tests (plan)
+
+- `SetupGatePolicyTest` (host, the important one): the full
+  `SetupAction × SetupStage × userlandRunnable` matrix; **`RUN_C` and
+  `EDIT_FILE` allowed in every stage** (the regression pin for "C is never
+  gated"); every refusal message names either a percentage or a reason; no
+  message contains the word "error" without also containing what to do.
+- `SetupProgressParseTest` (host): each real installer line parses to the right
+  stage/percent; unknown lines → `CHECKING` + raw detail; a `null` size never
+  produces a fake percent; the byte-count line at 0 % is not "ready".
+- `TerminalStatusLabelTest` (host, in `TerminalUxTest`'s file): the
+  `(lifecycle, stage)` label table, including `FAILED` and `UNSUPPORTED`.
+- Robolectric `SetupStateVmTest`: progress lines publish `InstallProgress`;
+  the FGS start/stop condition is "not runnable → start before install";
+  a `Throwable` from the installer clears the busy flag and publishes `FAILED`.
+- Source-scan test: `ModulesScreen.kt` contains no `sendCommand(` call for an
+  install command that is not preceded by a `SetupGatePolicy.can(` check — the
+  cheap guard against a future row bypassing the gate (the shape of
+  `StageAllHygieneTest`).
+
+## Sources (record)
+
+- CodeC 2026-09-12: `TerminalViewModel.kt:185-205,323-345,436-451`,
+  `TerminalSession.kt:117,260`, `TerminalSessionManager.kt:200-202`,
+  `TerminalScreen.kt:280,300-304`, `ModulesScreen.kt:211,301-302`,
+  `UserlandInstaller.kt:116-125,538-552`, `MainActivity.kt:629,712-717,857-866`,
+  `TerminalForegroundService.kt` (whole file).
+- [developer.android.com/develop/background-work/services/fgs](https://developer.android.com/develop/background-work/services/fgs)
+  (fetched 2026-09-12) — "noticeable to the user" is the test for a FGS, and the
+  notification *is* the affordance.
+- `docs/PHASE44_50_UX_RESEARCH.md` §2.2 — Termux's full-screen bootstrap gate,
+  Pydroid's zero-setup C-analogue, Acode's per-item progress.
+
+## Deferred / rejected with reasons
+
+- **A blocking full-screen setup activity** (Termux's literal model) — rejected:
+  CodeC's C story works with no setup, so blocking the app would make the
+  majority case worse to protect the minority one. The bar + first-launch
+  terminal gets the awareness without the wall.
+- **A dialog the user must dismiss** — rejected: a modal on first launch is the
+  first thing a tester closes, and closing it would hide the very information
+  this part exists to show.
+- **Progress in a snackbar** — rejected: snackbars time out; a download outlives
+  them.
+- **Renaming the notification channel** — rejected: the channel exists and is
+  already `IMPORTANCE_LOW`; a second channel would let the user mute one and
+  not the other.
