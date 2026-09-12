@@ -21,7 +21,12 @@
 > root causes are fixed and pinned by tests, and CI round 4 (`34695797493`, tip
 > `4bf3c4c`) is ✅ GREEN; **round 2
 > ([`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md) R1-R8, then
-> D1-D12) is the gate.** 45-50 are still plan-only. Phase 43 is
+> D1-D12) is the gate.** Phase **45 is 🚧 IMPLEMENTED** as well (both layers the
+> owner chose: the five-slide first-run guide with three doors back to it, and five
+> coach marks that may only point at an anchor the layout says is really on
+> screen); CI pending, device round
+> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G14 NOT run.
+> 46-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
 > [`chat-phase43/README.md`](chat-phase43/README.md).
@@ -56,16 +61,22 @@ Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
 The numbers **are** the order. Why this order:
 
 1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
-   2026-09-12** (`arena/01a0955a-codec`; both parts, 109 host cases,
-   CI pending, device round not run). It goes first because it
+   2026-09-12** (`arena/01a0955a-codec`; both parts, 109 host cases, CI ✅ GREEN
+   round 4 `34695797493`; device round 1 🔴 FAILED four rows → three root causes
+   fixed; **round 2 not run**). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git
    missing). It is also the only phase in the series with a data-loss-shaped
    bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
    all**, `UserlandInstaller.kt:377-395`).
-2. **45 — the guide.** First impression for every tester you have not met yet,
+2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12** (`arena/01a0955a-codec`;
+   both parts, 50 new host cases = 159 green locally, CI pending, device round
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G14 not
+   run). First impression for every tester you have not met yet,
    and its slide 3 is where the *"one-time download, don't close the app"*
-   mental model is planted that 44 enforces.
+   mental model is planted that 44 enforces — which is why the guide gate runs
+   *before* 44.1's terminal-first divert and never shares a screen with the setup
+   bar.
 3. **46 — projects, not folders.** Deletes the incomplete Phase 43 feature and
    re-shapes the hub around the new file/project split. It goes before 47
    because the drawer's in-drawer project picker and the hub's *Open in editor*

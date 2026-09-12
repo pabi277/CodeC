@@ -1,6 +1,6 @@
 # CodeC Phase 45.1 — The first-run guide, and three ways back to it
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI pending · device round required · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"Set a step by step user guide after opening the app
 > 1st time with a open view again[ing]"*
 
@@ -154,3 +154,101 @@ PASS = all five.
 - **Showing the guide again after a crash-loop safe start** — safe mode exists to
   reduce startup work (`SafeModeBanner`, `StartupLedger`); a guide is the
   opposite of that.
+
+---
+
+## Implementation (2026-09-12)
+
+Shipped as planned: a pure plan, a plain `Column`, no dependency, no pager, no
+navigation route.
+
+### The five slides as built
+
+| # | id | Title | Body | Action |
+|---|---|---|---|---|
+| 1 | `files` | Your files live in the ☰ menu | Tap ☰ in the editor for the file tree. Tap the project name at the top to switch projects. | GOT IT |
+| 2 | `run` | RUN ▶ compiles and runs | Output appears at the bottom of the same screen. C works offline — no setup, no download. | GOT IT |
+| 3 | `download` | One download, one time | Python, Node and the Linux tools download once on first use. Keep CodeC open while it finishes. | GOT IT |
+| 4 | `terminal` | A real terminal | The Terminal tab is a Linux shell: pkg install, git, cc. Its status chip tells you what it is doing. | GOT IT |
+| 5 | `projects` | Projects vs single files | In Projects, tap a file to edit it. Tap a card, or its ⋮ → Open, for the whole project. | START CODING |
+
+Caps, all pinned: title ≤ 34 chars, body ≤ 22 counted words and ≤ 130 chars.
+`wordCount` ignores punctuation-only tokens, so "⋮ → Open" is one named control
+and not three words.
+
+**One copy change from the plan, made by the pin and not by taste:** slide 5 said
+*"the card's ⋮ → Open in editor"*, and the hub's real overflow label is
+`hub_open_action` = **"Open"** (`FileManagerScreen.kt` → `HubCardAction.OPEN` →
+`selectProject`). `GuideVocabulary` proves every product noun a slide names
+against a real file and substring, so the invented label would have failed the
+build; the copy now names the label the user will actually read.
+
+### The vocabulary pin (the drift guard this part is really about)
+
+`GuideVocabulary.candidateTerms(text)` extracts what a slide *names*: control
+symbols (☰ ▶ ⋮ ⬇), `backticked` spans, ALL-CAPS words anywhere (RUN), and
+capitalised words that are **not** their sentence's first word. Every extracted
+term must have a `GuideTermProof(term, path, needle)`, and `GuidePlanTest` reads
+the REAL repo tree (`RepoFiles`) to check the needle is still there. Eleven proofs
+today (☰ → `Icons.Default.Menu`, RUN → `<string name="run">RUN</string>`,
+Terminal/Projects → `Screen.kt`, Open → `hub_open_action`, Python/Node →
+`ModuleCatalog.kt`, Linux → `TerminalUx.kt`, CodeC → `app_name`, ▶ →
+`Icons.Default.PlayArrow`, ⋮ → `Icons.Default.MoreVert`), plus three
+`commandProofs` for the shell commands slide 4 names (`pkg install`, `git`, `cc`),
+checked in **both** directions: a listed command no slide names fails, and a proof
+whose needle vanished fails.
+
+Two honest limits, both recorded here so nobody "fixes" them by accident:
+single-letter tokens are not extracted ("C works offline" is pinned by the
+C-never-gated tests instead), and lowercase prose cannot be told from a command,
+which is why the commands are an explicit pinned list rather than extracted.
+
+### The gate, the flag and the three doors
+
+```text
+firstLaunchComplete == false  -> WelcomeScreen (Phase 33.1 tiles)
+!SafeMode.active && (guideRequested || guideCompleted == false) -> GuideScreen
+guideCompleted == null && !guideRequested -> one frame of nothing
+otherwise                                  -> the shell (44.1 divert included)
+```
+
+The guide gate sits **after** the welcome and **before** `setupLaunchDivert` and
+the `NavHost`, so it can never be on screen with the Phase 44 setup bar
+(`GuideWiringTest` pins the order). `guide_completed` is written in exactly one
+place — the guide's own `onFinished`, which SKIP, START CODING and back all call
+— and read in exactly one place outside the store (`MainActivity`, once at
+startup, so "Reset tips" affects the NEXT launch instead of yanking the user out
+of Settings).
+
+The three doors are the same local `guideRequested = true`: Settings → About →
+**Help & guide** (a `SettingsItem`, audit row 53), the Projects hub's ⋮ →
+**Guide** (present in both hub states), and the editor ☰ drawer footer → **Guide**
+(a `DrawerFooterRow` with `SpckIcons.BookLine`). **Reset tips** (audit row 54)
+calls `SettingsManager.resetGuideTips()`: one atomic `dataStore.edit` writing
+exactly `guide_completed = false` and `coach_marks_seen_csv = ""`, pinned to touch
+no third key.
+
+### Deviations
+
+- **Safe mode skips the gate and does not write the flag** (the plan only
+  rejected showing the guide *after* a safe start): a reduced start does less at
+  startup, and the guide still arrives exactly once on a normal launch.
+- **Re-opening swaps the shell out** rather than navigating: the same
+  `GuideScreen`, the same early `return`. The `NavController` is remembered above
+  the gate, so the user lands back on the tab they came from. A route would have
+  put the guide in the back stack and handed it to Phase 49's `BackRouter`.
+- **The slide index survives rotation/process death** through `rememberSaveable`
+  sanitised by `GuidePlan.resume` (a build with fewer slides cannot strand the
+  user past the end). No preference is added for it — a DataStore key needs a
+  reader, and this one would have had none.
+
+### Tests (15 cases, `GuidePlanTest`)
+
+Shape and order · the caps · the last slide is the only START CODING · slide 2
+says C works offline and slide 3 carries the download law · SKIP on every slide ·
+`next` terminates and never wraps · `resume` never restarts or overruns · the
+progress fractions · `wordCount` ignores punctuation · the extractor finds product
+nouns and ignores prose · an invented feature is caught · every proof exists in
+the real source · no proof is left over · commands are both named and real. Plus
+the wiring half in `GuideWiringTest` (gate order, single writer, no copy in the
+Compose edge, three doors, no route, atomic reset, readers outside the store).

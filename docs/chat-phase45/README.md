@@ -1,6 +1,8 @@
 # CodeC Phase 45 — The guide (slides on first run + coach marks on first arrival)
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
+> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`; owner:
+> *"Start Phase 45"*) · CI pending · device round required
+> ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
 > where should they change the project or file and the tap to the open down side
@@ -18,8 +20,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [45.1](PART_45_1_GUIDE_SLIDES.md) | The first-run guide + "View guide again" | M | 📋 PLANNED |
-| [45.2](PART_45_2_COACH_MARKS.md) | Coach marks on first arrival | S/M | 📋 PLANNED |
+| [45.1](PART_45_1_GUIDE_SLIDES.md) | The first-run guide + "View guide again" | M | 🚧 IMPLEMENTED |
+| [45.2](PART_45_2_COACH_MARKS.md) | Coach marks on first arrival | S/M | 🚧 IMPLEMENTED |
 
 ---
 
@@ -175,3 +177,91 @@ PASS = all eight.
 - `docs/PHASE44_50_UX_RESEARCH.md` §3 (OSS survey + licences, the two rules).
 - Behaviour-only precedent (clean-room, `rule.md` §6): Acode's per-screen
   highlights, VS Code's Get Started, Pydroid's zero-setup first run.
+
+---
+
+## Implementation (2026-09-12, `arena/01a0955a-codec`)
+
+Both parts shipped in one pass, in the house shape: **pure plan + thin Android
+edge**, host-tested, no new dependency, no new permission, no new navigation
+route.
+
+### What landed
+
+| Layer | File | What it is |
+|---|---|---|
+| pure | `ui/guide/GuidePlan.kt` | `GuideSlide` ×5, the caps, `at/canSkip/next/isLast/isDone/resume/progress/wordCount`, and **`GuideVocabulary`** — the pin that the copy may only name controls, tabs and commands that really exist |
+| pure | `ui/guide/CoachMarkPlan.kt` | `GuideSurface`, `GuideAnchors`, `CoachStep` ×5, `ChromeState` (+ `ChromeState.of(visibleAnchors, blocked)`), `stepsFor/nextUnseen/canShow/markSeen/parseSeen/serializeSeen/surfaceForRoute/stepForArrival`, and `TooltipPlacement.place` over pure `GuideRect`/`GuideSize` |
+| Android | `ui/guide/GuideScreen.kt` | the five slides: `SKIP` on every slide, `LinearProgressIndicator`, `GOT IT` → `START CODING`, back = SKIP, index survives rotation/process death via `rememberSaveable` + `GuidePlan.resume` |
+| Android | `ui/guide/CoachMarks.kt` | `GuideAnchorRegistry` (window rects, snapshot-state), `GuideAnchor.modifier(id)` (publish on layout, **withdraw on dispose**), `GuideCoachMarks` (the host: chrome → plan → counter), `CoachMarkOverlay` (scrim with a hole + a placed card) |
+| Android | `SettingsManager` | `guide_completed` (default **false**) + `coach_marks_seen_csv` (default **empty**) + `resetGuideTips()` (one atomic edit, exactly those two keys) |
+| Android | `MainActivity` | the guide as the **second** first-launch gate (tiles → guide → shell, before the Phase 44 divert and the NavHost); the overlay host in a root `Box` **above** the `Scaffold`; the `NAV_HANDLE` anchor on the reveal handle; the three `onOpenGuide` doors |
+| Android | screens | `EditorScreen` (☰ + RUN anchors, `onOpenGuide`), `EditorProjectDrawer` (footer **Guide** row), `FileManagerScreen` (hub ⋮ → **Guide**), `SettingsScreen` (**Help & guide** + **Reset tips**), `TerminalScreen` (chip anchor), `ModulesScreen` (first card anchor) |
+
+### Tests: 50 new host cases in four classes
+
+`GuidePlanTest` 15 · `CoachMarkPlanTest` 12 · `TooltipPlacementTest` 10 ·
+`GuideWiringTest` 13 (source pins). The local `rule.md` §9 kotlinc harness runs
+**159 cases / 0 failures** (Phase 44's 109 + these 50); CI's `Build APK`
+(`assembleDebug` + `testDebugUnitTest` + `lintDebug`) is the executor of record
+for the whole suite, including the Compose edges the sandbox cannot compile at
+all.
+
+`SettingsAuditTest` stays green by construction: the two new Settings controls
+(**Help & guide**, **Reset tips**) got rows 53-54 in
+`docs/chat-phase38/SETTINGS_AUDIT.md` in the same commit, and
+`SettingsKeysHaveReadersTest` is satisfied by real out-of-store readers
+(`MainActivity` reads both flows; `SettingsScreen` calls `resetGuideTips`).
+
+### Deviations from the plan, recorded not hidden
+
+1. **Slide 5's copy names the real label.** The plan said *"the card's ⋮ → Open
+   in editor"*; the hub's overflow item is `hub_open_action` = **"Open"**
+   (`FileManagerScreen.kt`, `HubCardAction.OPEN` → `selectProject`). The copy now
+   says *"Tap a card, or its ⋮ → Open, for the whole project"* — and this is
+   exactly what the vocabulary pin is for: `GuideVocabulary` proves every named
+   noun against a real file, so "Open in editor" would have failed the build.
+2. **The spotlight hole is four rectangles, not `BlendMode.Clear`.** A clear-blend
+   hole needs `graphicsLayer(compositingStrategy = Offscreen)` on the canvas; four
+   rects plus a rounded stroke need nothing exotic and look the same. Recorded
+   because it is the kind of simplification a reviewer should see, not discover.
+3. **Anchors live in a process-wide bridge, not a CompositionLocal.**
+   `GuideAnchorRegistry` follows the codebase's existing idiom
+   (`SetupNoticeBridge`, `EditorChromeState`, `IncomingImportBridge`) instead of
+   threading a registry parameter through five composables — and it is snapshot
+   state, so publishing a rect recomposes the overlay.
+4. **The card's height is an estimate (150 dp), not a measurement.** Measuring the
+   card and then placing it is a layout feedback loop; the gap reads the same
+   either way. `TooltipPlacement` is pure and pinned for the top / middle / bottom
+   / landscape / clamped cases.
+5. **Two marks per *arrival*, and the editor has three candidates.** The plan's
+   "cap: two per surface, five total" is honoured as: five marks in total, at most
+   two shown per arrival at a surface (`MAX_PER_ARRIVAL`, the counter resets when
+   the destination changes). So the first editor arrival teaches ☰ and RUN ▶, and
+   the **Show tabs** mark lands on a later arrival — the one where the handle is
+   actually on screen, which is the only moment it is useful (45.2 exit 2).
+6. **"Blocked" covers the surfaces `MainActivity` owns.** The exit survey, safe
+   mode, and a Phase 44 download that is *actually moving* (DOWNLOADING /
+   VERIFYING / EXTRACTING — CHECKING is a startup transient, not work, or no mark
+   would ever appear on a fresh phone). A screen's own dialogs and sheets are
+   separate windows: they cover the overlay, and the pending step is not consumed
+   while they are up, which is what exit condition 6 asks for.
+7. **Safe mode never shows the guide.** The plan rejected "the guide after a
+   crash-loop safe start"; the implementation goes one better — in safe mode the
+   gate is skipped *and the flag is not written*, so a normal launch still shows
+   it exactly once.
+8. **Re-opening the guide swaps the shell out** (the same `GuideScreen`, the same
+   `return` before the `NavHost`) instead of adding a navigation destination: a
+   route would put the guide in the back stack and hand it to Phase 49's
+   `BackRouter`. The `NavController` is remembered above the gate, so closing the
+   guide lands the user back on the tab they were on.
+
+### What is still open
+
+The exit condition is a **device** condition: the eight rows of 45.1/45.2 plus the
+fresh-install rows are written as [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G14)
+and have **not** been run. Until the owner reports them, Phase 45 is 🚧
+IMPLEMENTED, not ✅ COMPLETE, and nothing here may be described as tested on
+hardware. Phase 44's round 2 is still pending too, and the two compose on one
+phone: the guide shows **before** the terminal-first divert, and slide 3 is the
+one that explains the download the divert is about to show.

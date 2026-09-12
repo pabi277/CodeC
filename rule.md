@@ -198,8 +198,58 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phase 44 is 🚧 IMPLEMENTED on `arena/01a0955a-codec` (CI pending, device round NOT run — next: the owner's [`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md), then "Start Phase 45"); 45-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI pending, device round NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G14) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
+- **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
+  Phase 45")** — *the guide: five slides on first run, five spotlights on first
+  arrival*, both layers the owner chose (*"Both layers"*). **45.1** pure
+  `ui/guide/GuidePlan.kt` (five slides in the order the user meets the features,
+  caps 34/22/130, `at/canSkip/next/isLast/isDone/resume/progress/wordCount`, and
+  `GuideVocabulary` — every product noun a slide names needs a
+  `GuideTermProof(term, path, needle)` verified against the REAL tree, so the copy
+  cannot promise a control that moved) + `ui/guide/GuideScreen.kt` (a plain
+  `Column`: SKIP on every slide, back = SKIP, `rememberSaveable` index sanitised by
+  `resume`) as the **second** first-launch gate — tiles → guide → shell, decided
+  BEFORE Phase 44's `setupLaunchDivert` and the `NavHost`, so it never shares a
+  screen with the setup bar; `guide_completed` (default false ⇒ an upgrader sees it
+  once) written only by the guide's own `onFinished` and read once at startup (a
+  reset affects the NEXT launch); three doors back to it (Settings → About → **Help
+  & guide**, Projects ⋮ → **Guide**, editor ☰ drawer footer → **Guide**), all one
+  local `guideRequested`, and deliberately **not** a navigation route. **45.2** pure
+  `ui/guide/CoachMarkPlan.kt` (five steps / three surfaces, `ChromeState.of`,
+  `stepsFor/nextUnseen/canShow/markSeen/parseSeen/serializeSeen/surfaceForRoute/
+  stepForArrival`, `MAX_PER_ARRIVAL = 2`, `TooltipPlacement.place` over pure
+  `GuideRect`/`GuideSize`) + `ui/guide/CoachMarks.kt` (`GuideAnchorRegistry`
+  bridge, `GuideAnchor.modifier(id)` publishing `boundsInWindow()` and
+  **withdrawing on dispose**, `GuideCoachMarks` host, `CoachMarkOverlay`). **The
+  law:** `nextUnseen` only returns a step whose anchor the caller reports visible,
+  and an all-hidden surface marks nothing seen — so the "Show tabs" mark (the
+  owner's *"tap to the open down side of the keyboard"*) can never point at a
+  handle that is not there. Never a trap: the scrim is a drawing-only `Canvas`
+  (four rects + a rounded stroke, no `BlendMode.Clear` offscreen layer), and the tap
+  layer consumes only OUTSIDE the hole, so tapping the highlighted control performs
+  its own action and closes the mark. The overlay lives in a root `Box` ABOVE the
+  `Scaffold` (the handle is in `bottomBar`). Suppressed by the exit survey, safe
+  mode, and a Phase 44 stage that is actually moving (DOWNLOADING/VERIFYING/
+  EXTRACTING — **not** CHECKING, the tracker's startup value, or no mark would ever
+  appear on a fresh phone). `coach_marks_seen_csv` + `guide_completed` are the two
+  new keys, both with out-of-store readers; Settings → **Reset tips** clears exactly
+  those two in one atomic edit. **50 new host cases** (`GuidePlanTest` 15 ·
+  `CoachMarkPlanTest` 12 · `TooltipPlacementTest` 10 · `GuideWiringTest` 13 source
+  pins) = **159 green locally**; `SettingsAuditTest` kept green by adding rows 53-54
+  to `docs/chat-phase38/SETTINGS_AUDIT.md` in the same commit (About 20, total 62).
+  No new dependency (pinned: every `ui/guide` import + no
+  `showcase/intro/onboarding/tooltip` in `libs.versions.toml`), no permission, no
+  route, no telemetry. **The pin caught the plan's own copy:** slide 5 was specced
+  *"⋮ → Open in editor"*; the hub's real label is `hub_open_action` = **"Open"**, so
+  that is what the slide says. Eight deviations recorded in the part docs (four-rect
+  hole, bridge not CompositionLocal, estimated card height, the two-per-arrival
+  reading of the cap, what "blocked" can see, safe mode skips the gate without
+  writing the flag, re-opening swaps the shell out, `BackRouter` precedence still a
+  fact not a law until Phase 49). **CI pending on this push; the exit condition is a
+  DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
+  G1-G14 written and **NOT run**. **Do not call Phase 45 tested until the owner
+  reports the round.**
 - **Phase 44 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 44")** — *setup you can see, and cannot half-finish*. Both parts in one
   round: **44.1** the one-time userland install is visible on every tab (pure
@@ -708,7 +758,14 @@ Every update updates the docs **in the same commit**:
   a lookbehind needed so `NotificationChannel(` does not also match
   `createNotificationChannel(`, and a source-scan count that was off by one
   because `ModulesScreen` has **four** `sendCommand` sites, not three). The
-  script itself is throwaway (`/tmp`); the *shape* is the reusable part. **Its
+  script itself is throwaway (`/tmp`); the *shape* is the reusable part. **Phase
+  45 reused it unchanged** — two pure files (`ui/guide/GuidePlan.kt`,
+  `ui/guide/CoachMarkPlan.kt`) plus four test classes appended to the same
+  script's file list: **159/159 green**, and it caught one real fault before CI
+  (a source-scan window of a fixed 400 characters around `resetGuideTips` ran
+  into the *next* setter and counted its DataStore key, so the pin now slices to
+  the function's own closing brace — general rule: a source-scan window ends at a
+  structural boundary, never at a character count). **Its
   blind spot, found by Phase 44's CI round 2:** the harness runs on a host JVM,
   so it cannot see `minSdk` — a *pure* file that used `java.nio.file`
   (`Files.isSymbolicLink`) compiled and passed locally and then died in

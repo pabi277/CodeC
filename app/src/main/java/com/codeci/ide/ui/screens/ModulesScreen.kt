@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -66,6 +67,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codeci.ide.R
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.modules.PackageCatalog
 import com.codeci.ide.ui.modules.PackageItem
 import com.codeci.ide.ui.modules.PackageSection
@@ -224,13 +227,25 @@ fun ModulesScreen(
                         )
                     }
                     if (expanded) {
-                        items(sectionItems, key = { it.id }) { item ->
+                        // Phase 45.2 — the Packages surface gets ONE coach mark,
+                        // on the first card of the first section: "adding a
+                        // language downloads once" is Phase 44's teaching moment
+                        // at the point of action. Only a card that is really laid
+                        // out publishes an anchor, so a collapsed or empty
+                        // section produces no mark (and marks nothing seen).
+                        val isFirstSection = section == PackageSection.ordered.first()
+                        itemsIndexed(sectionItems, key = { _, item -> item.id }) { index, item ->
                             PackageCardRow(
                                 item = item,
                                 context = context,
                                 terminalViewModel = terminalViewModel,
                                 onNavigateToTerminal = onNavigateToTerminal,
                                 setupRefusal = setupRefusal,
+                                guideAnchorId = if (isFirstSection && index == 0) {
+                                    GuideAnchors.PACKAGES_CARD
+                                } else {
+                                    null
+                                },
                             )
                         }
                     }
@@ -337,6 +352,8 @@ private fun PackageCardRow(
     terminalViewModel: TerminalViewModel,
     onNavigateToTerminal: () -> Unit,
     setupRefusal: String? = null,
+    /** Phase 45.2 — non-null on the one card a coach mark may spotlight. */
+    guideAnchorId: String? = null,
 ) {
     val isInstalled = remember(item.id) { checkIsInstalled(context, item) }
     // Phase 44.1 — a built-in package (the APK's own TCC `cc`) needs no
@@ -353,6 +370,7 @@ private fun PackageCardRow(
     }
     PackageItemCard(
         item = item,
+        guideAnchorId = guideAnchorId,
         isInstalled = isInstalled,
         setupRefusal = setupRefusal?.takeIf { gated && !isInstalled },
         packageActionsBlocked = gated,
@@ -515,6 +533,8 @@ private fun QuickActionChip(
 @Composable
 private fun PackageItemCard(
     item: PackageItem,
+    /** Phase 45.2 — the coach-mark anchor id, or null for an ordinary card. */
+    guideAnchorId: String? = null,
     isInstalled: Boolean,
     onInstall: () -> Unit,
     onRun: () -> Unit,
@@ -524,8 +544,15 @@ private fun PackageItemCard(
     packageActionsBlocked: Boolean = false,
     onViewSetup: () -> Unit = {}
 ) {
+    // Phase 45.2 — the anchored card publishes its window rect while it is laid
+    // out; the pure CoachMarkPlan decides whether a mark may use it.
+    val cardModifier = if (guideAnchorId != null) {
+        Modifier.fillMaxWidth().then(GuideAnchor.modifier(guideAnchorId))
+    } else {
+        Modifier.fillMaxWidth()
+    }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = cardModifier,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

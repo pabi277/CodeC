@@ -1,6 +1,6 @@
 # CodeC Phase 45.2 — Coach marks on first arrival (three or four, then never again)
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI pending · device round required · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row:** the second half of *"It has 0 guide features to give the user a
 > real knowledge how to use the app, user don't know where should they change the
 > project or file and the tap to the open down side of the keyboard"* — plus the
@@ -134,3 +134,95 @@ PASS = all six.
   the status bar's job, and it re-nags by definition.
 - **Per-feature "what's new" marks after each release** — a support channel, not
   a guide; `docs/RELEASE_NOTES.md` already covers it.
+
+---
+
+## Implementation (2026-09-12)
+
+Five marks, one per anchor, no library: a `Canvas` that draws a scrim with a hole,
+a `Card` placed by pure maths, and one tap to finish.
+
+### The five marks as built
+
+| Surface | Anchor id | Title | Body | Published by |
+|---|---|---|---|---|
+| EDITOR | `editor_drawer` | Your files | Tap here for the file tree. The project name at the top switches projects. | `EditorScreen`'s ☰ `IconButton` |
+| EDITOR | `editor_run` | Run your code | Compiles and runs. The result opens at the bottom. | `EditorScreen`'s RUN ▶ `Row` |
+| EDITOR | `nav_handle` | The tabs are here | They hide while you type. Tap or swipe up to bring them back. | `MainActivity`'s `EditorNavRevealHandle` |
+| PACKAGES | `packages_card` | One-time download | Adding a language downloads once. Keep CodeC open while it finishes. | `ModulesScreen`'s first card of the first section |
+| TERMINAL | `terminal_chip` | What it is doing | Starting, downloading or running. If it says downloading, do not close CodeC. | `TerminalScreen`'s status-chip `Row` |
+
+Caps pinned: title ≤ 24 chars, body ≤ 90, and the coach copy goes through the same
+`GuideVocabulary` pin as the slides (a mark that names a renamed control fails the
+build).
+
+### The visibility law, implemented
+
+`GuideAnchor.modifier(id)` publishes `boundsInWindow()` from
+`onGloballyPositioned` and — the half that matters — **withdraws the id in
+`DisposableEffect.onDispose`**, so a control that leaves composition is not
+"visible". `GuideAnchorRegistry.visibleIds()` feeds
+`ChromeState.of(visibleAnchors, blockedByForeground)`, and
+`CoachMarkPlan.nextUnseen` returns only steps whose anchor that state reports
+visible. A hidden tab bar therefore yields no step *and* no `seen` entry, and the
+**Show tabs** mark arrives on the first arrival where the handle is really on
+screen (45.2 exit 2). Empty rects are never published.
+
+### Never a trap, never a wall
+
+- The scrim is a `Canvas`: drawing only, so it takes no pointer input and the
+  control under the hole keeps working.
+- One `pointerInput` layer above it uses `awaitFirstDown(requireUnconsumed =
+  false)`: a tap **inside** the hole is left unconsumed (the real control performs
+  its own action) and the mark closes; a tap **outside** is consumed and closes it
+  too. `GOT IT` on the card and `BackHandler` are the other two exits.
+- The card never blocks the control it teaches, and the overlay is composed in a
+  root `Box` **above** the `Scaffold` — the handle it spotlights lives in the
+  scaffold's `bottomBar`, so an overlay inside the content column could never
+  reach it.
+- Two marks per arrival (`MAX_PER_ARRIVAL`, the counter resets on destination
+  change); a step is marked seen only when it was actually shown, so a blocked or
+  all-hidden arrival consumes nothing.
+
+### Deviations
+
+1. **Four rectangles, not `BlendMode.Clear`.** A clear-blend hole needs
+   `graphicsLayer(compositingStrategy = Offscreen)`; four scrim rects plus a
+   rounded white stroke need nothing exotic, cannot fail on a driver that ignores
+   the offscreen layer, and read the same on a phone.
+2. **A process-wide bridge, not a CompositionLocal.** `GuideAnchorRegistry`
+   follows the codebase's idiom (`SetupNoticeBridge`, `EditorChromeState`,
+   `IncomingImportBridge`) — six screens publish without a parameter threaded
+   through five signatures. It is snapshot state, so publishing recomposes the
+   overlay.
+3. **The card's height is an estimate (150 dp).** Measuring the card and then
+   placing it is a layout feedback loop; `TooltipPlacement` is pure and pinned for
+   anchor-at-top / middle / bottom, both horizontal clamps, a landscape box, a card
+   wider than the screen, and a degenerate zero-size anchor.
+4. **"Blocked" is what `MainActivity` can see:** the exit survey, safe mode, and a
+   Phase 44 stage that is *actually moving* (DOWNLOADING / VERIFYING / EXTRACTING).
+   CHECKING deliberately does not block — it is the tracker's startup value, and
+   blocking on it would mean no mark ever appears on a fresh phone. A screen's own
+   dialogs and sheets are separate windows: they cover the overlay, and the pending
+   step is not consumed while they are up (exit 6).
+5. **`BackRouter` precedence is a fact, not yet a law.** Back closes the mark
+   before the exit survey because the overlay's `BackHandler` is composed later;
+   Phase 49 turns that into `BackRouterTest`'s `CloseCoachMark` case as planned.
+
+### Tests (22 cases + 10 + the wiring half)
+
+`CoachMarkPlanTest` 12: the plan's shape and order · the cap · copy caps + the
+vocabulary pin · only visible anchors are returned · an all-hidden surface marks
+nothing seen · the Show-tabs mark waits for the handle · a blocked screen
+suppresses without consuming · the seen set suppresses a surface permanently ·
+`markSeen` monotonic and ignores unknown ids · the CSV round-trip (order, blanks,
+garbage, null) · `ChromeState.of` · routes → surfaces.
+`TooltipPlacementTest` 10: below / above / clamped / both horizontal clamps /
+landscape / card wider than the screen / degenerate anchor / purity.
+`GuideWiringTest` (shared with 45.1) pins the Android half: every anchor has a
+publisher on the control it names and no id is left unpublished · withdrawal on
+dispose · the overlay is above the scaffold and asks the plan · the tap layer
+consumes only outside the hole · the blocked rule names the exit survey, safe mode
+and the three working stages · no foreign import in any `ui/guide` file · no
+`showcase`/`intro`/`onboarding`/`tooltip` entry in `libs.versions.toml` · the
+guide is not a navigation route · Phase 44's setup surfaces are untouched.

@@ -72,6 +72,8 @@ import com.codeci.ide.ui.terminal.SetupGatePolicy
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalLifecycle
 import com.codeci.ide.ui.terminal.TerminalSessionItem
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.terminal.TerminalStatusLabel
 import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.theme.getTerminalTheme
@@ -351,6 +353,10 @@ fun TerminalScreen(
                 .fillMaxWidth()
                 .background(Color(0xFF292929))
                 .padding(horizontal = 12.dp, vertical = 4.dp)
+                // Phase 45.2 — the chip Phase 44.1 made stage-aware gets one
+                // mark: "starting / downloading / running" is the sentence that
+                // stops a user closing the app mid-download.
+                .then(GuideAnchor.modifier(GuideAnchors.TERMINAL_CHIP))
         ) {
             Text(
                 text = statusLabel.text,

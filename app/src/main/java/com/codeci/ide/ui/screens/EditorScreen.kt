@@ -119,6 +119,8 @@ import com.codeci.ide.ui.components.EditorTabUi
 import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.components.OutputPanelView
 import com.codeci.ide.ui.components.RunKeysRow
 import com.codeci.ide.ui.components.SuggestionStrip
@@ -193,6 +195,8 @@ fun EditorScreen(
     onOpenPreviewUrl: (projectName: String?, url: String) -> Unit = { _, _ -> },
     /** Phase 16 — the drawer footer jumps to the app Settings screen. */
     onOpenSettings: () -> Unit = {},
+    /** Phase 45.1 — the drawer footer's Guide row: the third door back to the guide. */
+    onOpenGuide: () -> Unit = {},
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -907,6 +911,7 @@ fun EditorScreen(
             gesturesEnabled = activeTabPath == null && currentFileName.isEmpty(),
             drawerContent = {
                 EditorProjectDrawer(
+                    onOpenGuide = onOpenGuide,
                     projectName = currentProject,
                     branch = gitBranch,
                     changeCount = gitChangeCount,
@@ -1057,11 +1062,17 @@ fun EditorScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        uiScope.launch {
-                            if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
+                    IconButton(
+                        // Phase 45.2 — the owner's *"user don't know where
+                        // should they change the project or file"*: the ☰ is
+                        // spotlit once, on the first arrival at the editor.
+                        modifier = GuideAnchor.modifier(GuideAnchors.EDITOR_DRAWER),
+                        onClick = {
+                            uiScope.launch {
+                                if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
+                            }
                         }
-                    }) {
+                    ) {
                         Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.project_files))
                     }
                 },
@@ -1332,7 +1343,10 @@ fun EditorScreen(
                                     runOpenFile()
                                 }
                             }
-                            .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+                            .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
+                            // Phase 45.2 — RUN ▶ is the 30-second loop; the
+                            // second of the editor's two first-arrival marks.
+                            .then(GuideAnchor.modifier(GuideAnchors.EDITOR_RUN)),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(

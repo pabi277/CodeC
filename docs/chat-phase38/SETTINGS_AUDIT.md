@@ -84,6 +84,8 @@ change nothing and say so).
 | 32 | Storage | Clear temporary files | action | `TempGc.clearIdle` (idle run dirs only) | space freed; live stamps kept; Phase 39.1 | keep |
 | 33 | Storage | Clear Cache | action | deletes `cacheDir` | space freed; toast confirms | keep |
 | 34 | About | Show the welcome screen again | action | `first_launch_complete=false` | `firstLaunchCompleteFlow` → MainActivity welcome | keep |
+| 53 | About | Help & guide | item | nothing stored — opens the Phase 45.1 five-slide guide on the spot | `GuideScreen` through MainActivity's `guideRequested` (the flag is written only by SKIP / START CODING) | keep |
+| 54 | About | Reset tips | action | `guide_completed=false` + `coach_marks_seen_csv=""` and nothing else (no project, file or other preference) | `guideCompletedFlow` → the guide gate on next launch; `coachMarksSeenCsvFlow` → `GuideCoachMarks` (45.2) | keep |
 | 35 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |
 | 36 | About | GitHub | item | — (info) | — | keep |
 | 48 | About | Build date | item | — (info; `BuildConfig.BUILD_DATE` UTC — 42.3: "which build is this?" from inside the app) | — | keep |

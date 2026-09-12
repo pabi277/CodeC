@@ -81,6 +81,11 @@ import com.codeci.ide.ui.screens.SettingsScreen
 import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.screens.WebPreviewScreen
+import com.codeci.ide.ui.guide.CoachMarkPlan
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
+import com.codeci.ide.ui.guide.GuideCoachMarks
+import com.codeci.ide.ui.guide.GuideScreen
 import com.codeci.ide.ui.screens.WelcomeScreen
 import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.NavBarPolicy
@@ -705,6 +710,21 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     LaunchedEffect(settingsManager) {
         firstLaunchComplete = settingsManager.firstLaunchCompleteFlow.first()
     }
+    // Phase 45.1 — the guide's flag is read ONCE at startup, for the same reason
+    // the welcome's is: Settings → "Reset tips" must affect the NEXT launch, not
+    // yank the user out of Settings mid-session. `guideRequested` is the three
+    // "view the guide again" doors (Settings → Help & guide, Projects ⋮ → Guide,
+    // the editor ☰ drawer's footer): it shows the SAME screen without changing
+    // what the flag means. null = still reading; false = show the guide.
+    var guideCompleted by remember { mutableStateOf<Boolean?>(null) }
+    var guideRequested by remember { mutableStateOf(false) }
+    // Phase 45.2 — the coach marks already seen (a CSV of step ids). The plan is
+    // pure; this is only its persistence.
+    var coachSeen by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(settingsManager) {
+        guideCompleted = settingsManager.guideCompletedFlow.first()
+        coachSeen = CoachMarkPlan.parseSeen(settingsManager.coachMarksSeenCsvFlow.first())
+    }
     // Phase 44.1 — set once, when the first-run welcome hands over: this is
     // the launch where the one-time userland download should be ON SCREEN
     // while it happens (the owner's own solution to the invisible install).
@@ -740,6 +760,34 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
         // The flag is still reading: render nothing for the one frame so a
         // returning user never flashes the welcome and a new user never
         // flashes the hub.
+        return
+    }
+    // Phase 45.1 — the SECOND first-launch gate: tiles → guide → shell. It is
+    // decided before the setup divert and before the NavHost exists, so the
+    // guide can never compete with the Phase 44 setup bar (PART_45_1's ordering
+    // rule: the guide explains the download the terminal is about to show, and a
+    // user who has not been told what the app is should not be dropped into a
+    // shell watching a progress bar). Safe mode is the one exception — a reduced
+    // start exists to do LESS at startup, and the flag stays false so a normal
+    // launch still shows the guide exactly once.
+    if (!com.codeci.ide.ui.crash.SafeMode.active &&
+        (guideRequested || guideCompleted == false)
+    ) {
+        GuideScreen(
+            onFinished = {
+                // SKIP and START CODING are the same act: the guide is over and
+                // it does not come back on its own (the no-nag law). Re-opening
+                // it later writes a flag that is already true — no-op.
+                guideRequested = false
+                guideCompleted = true
+                scope.launch { settingsManager.setGuideCompleted(true) }
+            }
+        )
+        return
+    }
+    if (guideCompleted == null && !guideRequested) {
+        // Still reading the guide flag: one frame of nothing, exactly like the
+        // welcome above — a returning user never flashes the guide.
         return
     }
     // "Open where I left off": the last project file wins as the start
@@ -914,6 +962,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
         }
     }
 
+    // Phase 45.2 — the coach marks' overlay sits ABOVE the scaffold, because
+    // the "Show tabs" handle it spotlights lives in the scaffold's bottomBar, and
+    // at the window origin, because anchors publish boundsInWindow().
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
@@ -1072,7 +1124,11 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    // Phase 45.1 — the third door back to the guide: the ☰
+                    // drawer's footer, where a user who is lost in the editor
+                    // looks first (the owner's "open view again[ing]").
+                    onOpenGuide = { guideRequested = true }
                 )
             }
             composable(
@@ -1092,6 +1148,9 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             composable(Screen.FileManager.route) {
                 val context = LocalContext.current
                 FileManagerScreen(
+                    // Phase 45.1 — the second door back to the guide: the
+                    // Projects hub's ⋮ menu.
+                    onOpenGuide = { guideRequested = true },
                     onFileSelected = { selectedFile ->
                         navController.navigate(Screen.Editor.createRoute(selectedFile))
                     },
@@ -1202,6 +1261,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(
+                    // Phase 45.1 — the first door back to the guide: Settings →
+                    // About → Help & guide (its "Reset tips" neighbour brings the
+                    // coach marks back too).
+                    onOpenGuide = { guideRequested = true },
                     onNavigateToLogs = {
                         navController.navigate(Screen.Logs.route) {
                             launchSingleTop = true
@@ -1239,6 +1302,27 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             }
             }
         }
+    }
+        // Phase 45.2 — one spotlight at a time, at most two per arrival, and
+        // never while another surface owns the screen: the exit survey, safe
+        // mode, or a Phase 44 download that is actually moving (CHECKING is a
+        // startup transient, not work, so it does not suppress a mark).
+        GuideCoachMarks(
+            surface = CoachMarkPlan.surfaceForRoute(currentDestination?.route),
+            seen = coachSeen,
+            blockedByForeground = exitPromptVisible ||
+                com.codeci.ide.ui.crash.SafeMode.active ||
+                setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.DOWNLOADING ||
+                setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.VERIFYING ||
+                setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.EXTRACTING,
+            arrivalKey = currentDestination?.route,
+            onSeen = { next ->
+                coachSeen = next
+                scope.launch {
+                    settingsManager.setCoachMarksSeenCsv(CoachMarkPlan.serializeSeen(next))
+                }
+            }
+        )
     }
 }
 
@@ -1334,7 +1418,11 @@ private fun EditorNavRevealHandle(onReveal: () -> Unit) {
                     }
                 )
             }
-            .clickable(onClick = onReveal),
+            .clickable(onClick = onReveal)
+            // Phase 45.2 — the owner's *"the tap to the open down side of the
+            // keyboard"*: this handle is spotlit the first time it is really on
+            // screen (it exists only while the bar is hidden), and never before.
+            .then(GuideAnchor.modifier(GuideAnchors.NAV_HANDLE)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

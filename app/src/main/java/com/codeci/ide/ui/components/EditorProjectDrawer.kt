@@ -91,6 +91,12 @@ fun EditorProjectDrawer(
     onSetLaunchDefault: (EditorFileEntry) -> Unit,
     onClearLaunchDefault: () -> Unit,
     onCopyPath: (EditorFileEntry) -> Unit,
+    /**
+     * Phase 45.1 — the footer's Guide row: the third of the three doors back to
+     * the first-run guide, and the one a user who is lost IN THE EDITOR finds
+     * (they are already looking at this drawer).
+     */
+    onOpenGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -273,6 +279,14 @@ fun EditorProjectDrawer(
             label = stringResource(R.string.editor_drawer_switch_branch),
             badge = 0,
             onClick = onSwitchBranch
+        )
+        // Phase 45.1 — "open view again[ing]" (the owner's words): the guide is
+        // one tap from the drawer the guide's own slide 1 is about.
+        DrawerFooterRow(
+            icon = SpckIcons.BookLine,
+            label = "Guide",
+            badge = 0,
+            onClick = onOpenGuide
         )
         Spacer(Modifier.height(10.dp))
     }
