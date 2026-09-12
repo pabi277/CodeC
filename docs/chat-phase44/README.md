@@ -274,6 +274,23 @@ real filesystem (`a symlink shaped like an orphan is never scanned`,
 → **100 host cases**, green locally before the re-push. Runbook:
 TROUBLESHOOTING §34.
 
+### CI round 3 — `34693462725` (tip `ba51382`): **observed green, not re-read**
+
+`gh run watch 34693462725 --exit-status` returned **0** (success) and the run's
+final steps were listed — `Report APK sizes (Phase 42.1)`, `Upload debug APK
+artifact`, `Upload release APK artifact`, `Verify tag against the binary`,
+`Publish app release (Phase 42.1)` — with **no error annotations at all**. Those
+steps only run after assemble + `:app:testDebugUnitTest` + `:app:lintDebug`
+succeed, so the two rounds of faults above are fixed.
+
+**Honest caveat:** the GitHub token expired immediately afterwards
+(`HTTP 401: Bad credentials`, and `git ls-remote` lost its credential too), so
+the run's `conclusion` field, duration and APK-size delta could **not** be
+re-read. Until the next session can run
+`gh run view 34693462725 --json conclusion,updatedAt` and paste the answer here,
+this line reads *observed green, unconfirmed* — not "CI ✅ GREEN". Nothing was
+merged, no PR was opened, and the branch was not pushed again after `ba51382`.
+
 **What is still open:** the nine-row exit condition below is a **device**
 condition and has not been run — no device, no emulator, no Gradle in this
 sandbox. Until the owner runs it, Phase 44 is 🚧 IMPLEMENTED, not ✅ COMPLETE,
