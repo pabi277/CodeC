@@ -55,14 +55,22 @@
 > the Linux tools work** instead of on the stage, so it is on from the first frame
 > (`USERLAND_STARTING` also covers a boot-time repair of an interrupted swap), while a
 > usable prefix, a stopped setup (`FAILED`/`UNSUPPORTED`) and Phase 42.3's **safe mode**
-> still pause nothing. Round 5 is implemented with **197 host cases green locally**
-> (76 guide/demo + 121 Phase 44); CI is ✅ **GREEN** on rounds 1-4 (`34698914219`;
+> still pause nothing. **He then ran round 5 and reported the pause outliving the work it
+> protected** (*"even after unpacking the userland it still stay lock if i refresh it it's
+> the open the editor"*): round 5 had keyed the pause on a disk **reading** beside the
+> installer's **verdict**, and a reading can be stale — so round 6 made a **settled stage
+> always reopen the app** and added a fourth reading, taken the moment a shell comes alive
+> (a running bash *is* the proof the tools work). Round 5's "on from the first frame" is
+> untouched, because `CHECKING` is still in flight. Round 6 is implemented with **199 host
+> cases green locally** (76 guide/demo + 123 Phase 44); CI is ✅ **GREEN** on rounds 1-4
+> (`34698914219`;
 > `34704379023`; `34707337429`; `34711827176` on tip `e7759f1`, release APK
 > 6,675,258 B = +0.08% over round 3) and **all five rounds** now (round 5 =
 > `34714305062` on tip `6c3cfea`, release APK 6,675,254 B), and device round
-> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G40** is NOT
+> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G41** is NOT
 > run (start it from Settings → About → Reset tips; G29-G33 the one-tap rule, G34-G38
-> the lock, G39-G40 its first-frame timing).
+> the lock, G39-G40 its first-frame timing, **G41 its release** — and G41 needs the
+> round-6 build, which is the only one that has the fix).
 > 46-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
@@ -102,7 +110,7 @@ The numbers **are** the order. Why this order:
    Phase 45's rounds 4-5 added the chrome lock here, CI ✅ GREEN
    round 4 `34695797493`; device round 1 🔴 FAILED four rows → three root causes
    fixed; **round 2 not run**, and its lock rows live in
-   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G34-G40**). It goes first because it
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G34-G41**). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git
    missing). It is also the only phase in the series with a data-loss-shaped

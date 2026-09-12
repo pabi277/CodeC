@@ -823,3 +823,28 @@ The lock itself is specified in
 25 steps, 10m47s, **zero annotations**. Release APK **6,675,254 B**, which is **−4 B**
 against round 4: the change is one enum constant, a reordered `when`, one parameter and
 one sentence, and nothing in 45.2 moved at all. Debug 25,693,272 B, v1.3.17.
+
+## Round 6 (2026-09-13) — the tour is untouched; the lock it waits for now ends by itself
+
+Round 6 changed nothing in 45.2. The owner's report was about the chrome lock again —
+*"One problem even after unpacking the userland it still stay lock if i refresh it it's
+the open the editor check the problem"* — and the fix is in the lock's own policy: a
+**settled** stage (`READY` / `FAILED` / `UNSUPPORTED`) never pauses the app, and
+`TerminalViewModel` re-reads the disk the moment a shell goes alive. Round 5's
+"pause on a `READY` the disk contradicts" is reversed; round 5's "pause from the first
+frame" is untouched, because `CHECKING` is in flight.
+
+One consequence for this file, and it is the good kind: **deviation 20 now has an end.**
+The tour pauses while the chrome is locked (`blockedByForeground … || chromeLock.locked`)
+and resumes on its own beat when it unlocks — and round 6 guarantees that the unlock
+happens in the same session as the install that caused it. On round 5's build a tour that
+started on a fresh install could sit paused behind a lock that only a process restart
+cleared, which would have looked exactly like the "guide boxes felt half-missing" report
+of round 1, with a different cause. Nothing in `CoachMarkPlan`, `CoachMarks`, the anchor
+registry, `GuideTapPolicy` or the 76 guide/demo host cases moved.
+
+The lock itself is specified in
+[`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+§"Round 6 — *even after unpacking the userland it still stay lock*"; the owner-facing text
+is [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §40; the device rows are
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) **G41** (with **G34** and **G38** amended).

@@ -237,6 +237,19 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                         // owns the service from here (the setup's own copy is
                         // replaced by the plain terminal notification below).
                         setupKeepAlive = false
+                        // Phase 45 round 6 — a shell that is ALIVE is the proof
+                        // the userland works, so re-read the disk here. The owner's
+                        // report on round 5 was a lock that outlived the unpack
+                        // (*"even after unpacking the userland it still stay lock
+                        // if i refresh it it's the open the editor"*): the facts
+                        // are re-read at construction, on every published stage
+                        // change and at the end of an install, and a phone that
+                        // misses the last one keeps a stale "not usable" — which
+                        // the chrome lock reads as "keep pausing". This is the
+                        // fourth reading, and it is the one that cannot be early:
+                        // nothing is alive until the prefix really runs. Off the
+                        // main thread because it is three filesystem stats.
+                        viewModelScope.launch(Dispatchers.IO) { refreshSetupFacts() }
                         // The foreground service protects the app process when
                         // the activity is backgrounded; the partial wake lock
                         // keeps a package download/PTY reader moving through

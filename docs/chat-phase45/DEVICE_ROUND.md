@@ -1,6 +1,6 @@
 # CodeC Phase 45 — device round (the guide: slides, then the tour)
 
-> **Status:** 📋 ROUND 5 WRITTEN, **NOT RUN** (2026-09-12). Round 1 came back with
+> **Status:** 📋 ROUND 6 WRITTEN, **NOT RUN** (2026-09-13). Round 1 came back with
 > four reports and 45.2 became **one ordered tour**; round 2 came back with *"You add
 > the skip option and it's not a trough guide mean it got cut"* and the tour became
 > **first beat to last with no exit until the end**; round 3 came back with *"1st click
@@ -9,14 +9,21 @@
 > and added **the chrome lock**; round 4 came back with *"The lock option is good but
 > still it late user can switch before the start of userland download … Make it
 > instantly after 1st open"*, so round 5 made the pause **prefix-keyed instead of
-> stage-keyed** — on from the first frame (see [`README.md`](README.md) §"Round 4" and
-> §"Round 5"). 45.1's slides are unchanged — the owner's own decision: *"Slides stay
+> stage-keyed** — on from the first frame; round 5 came back with *"even after unpacking
+> the userland it still stay lock if i refresh it it's the open the editor"*, so round 6
+> made the pause **bounded by the setup** — a settled stage always reopens the app, and a
+> shell coming alive re-reads the disk (see [`README.md`](README.md) §"Round 4",
+> §"Round 5" and §"Round 6"). 45.1's slides are unchanged — the owner's own decision: *"Slides stay
 > as they are (GOT IT / START CODING / SKIP)."*
 >
-> **The build to install:** `Build APK` **`34714305062`** on `arena/01a0955a-codec`
-> — round-5 commit `6c3cfea`, ✅ `success`, job `build` 10m47s, release APK
-> 6,675,254 B, debug 25,693,272 B (Actions → that run → **Artifacts** →
-> `CodeC-IDE-debug`). Round 4's build (`34711827176`, commit `e7759f1`) has the
+> **The build to install:** the **round-6** `Build APK` run on `arena/01a0955a-codec`
+> (recorded here with its run id, commit and APK bytes as soon as CI is green — it is the
+> only build that has the release fix, so G41 cannot be run on an older one). The newest
+> round-5 build was `Build APK` **`34714305062`** — commit `6c3cfea`, ✅ `success`, job
+> `build` 10m47s, release APK 6,675,254 B, debug 25,693,272 B (Actions → that run →
+> **Artifacts** → `CodeC-IDE-debug`), but on that build the pause **does not release when
+> the unpack finishes** — exactly what the owner reported, and what row G41 exists for.
+> Round 4's build (`34711827176`, commit `e7759f1`) has the
 > one-tap tour and the lock, but that lock **waits for the download to start**, so the
 > first seconds after opening the app are still switchable — exactly what the owner
 > reported. Round 3's build (`34707337429`) needs two taps per beat and has no lock.
@@ -52,7 +59,8 @@
    the Linux tools, the **Editor** for a package install. Round 5 made that pause
    **instant**: it is decided by whether the Linux tools work, not by whether the
    download has started, so it is already on in the first second after the app opens.
-   Rows G34-G40.
+   Round 6 made it **bounded**: it lasts only while the setup is in flight, so it ends by
+   itself when the install settles — no restart, no refresh. Rows G34-G41.
 
 ## The rows — 45.1, the five slides (unchanged)
 
@@ -95,7 +103,7 @@ section has a button on it** — that is the point of the round.
 | G27 | Settings → About → **Reset tips** → kill → relaunch | The slides return **and** the tour restarts at **1 of 10**. No project, file, theme or other setting changed |
 | G28 *(optional, 20 s)* | At G11, choose **some other project** instead of `demo_flask` | Beat 3 cannot exist (its row is `demo_flask/app.py`), so the tour waits about **20 seconds** and then teaches **4 of 10** on RUN ▶. Beat 3 is *owed, not spent*: it returns on the next launch, or via Reset tips |
 
-## The rows — rounds 4 and 5 (one tap does both halves; an install pauses the app, instantly)
+## The rows — rounds 4, 5 and 6 (one tap does both halves; an install pauses the app, instantly, and releases by itself)
 
 G29-G33 are the owner's *"1st click disappear the massage and i have to click 2nd time
 to really work but if someone don't click 2nd time it just cut off the flow of
@@ -103,9 +111,11 @@ tutorial"*; G34-G38 are *"When the userland is installing and unpacking the user
 not access any other other option and it will show a sweet massage of why"*; **G39-G40
 are round 5's** *"still it late user can switch before the start of userland download
 because is takes a little time to connect and user can switch task between them / Make
-it instantly after 1st open and others are ok"*. Walk G29-G33 on the same tour as
-G9-G19 — they are the same ten beats, tapped once each. G34, G38 and G39 want a
-**fresh install**: they are about the first seconds.
+it instantly after 1st open and others are ok"*; **G41 is round 6's** *"even after
+unpacking the userland it still stay lock if i refresh it it's the open the editor"*.
+Walk G29-G33 on the same tour as G9-G19 — they are the same ten beats, tapped once each.
+G34, G38, G39 and G41 want a **fresh install**: they are about the first seconds and the
+last one.
 
 | # | What to do | PASS looks like |
 |---|---|---|
@@ -114,13 +124,14 @@ G9-G19 — they are the same ten beats, tapped once each. G34, G38 and G39 want 
 | G31 | On **6 of 10** with the **whole bar** lit, tap the **Packages tab** inside the hole | The Packages tab opens **and** the tour advances to **7 of 10**. Then tap a tab the tour does NOT use (Projects, Editor, Settings) while a bar-wide box is up: **that tab opens** (the tap is left to it) and the tour still advances |
 | G32 | On **6 of 10** with the thin **handle** lit (keyboard up), TAP it, then SWIPE it up | The tap reveals the bar **and** advances. A swipe while the box is up does **nothing at all** — the box stays, no beat is spent — and the card's copy tells you to tap, not swipe. With the tour over, the swipe works as it always did |
 | G33 | On **8 of 10** (the Packages card), start a scroll **inside** the hole and drag out | **Nothing happens**: no install starts, the box stays on the same beat. Only a tap performs the card's button. If Python is already installed, the card publishes no click at all — the tap behaves like an ordinary tap on the card and the tour advances |
-| G34 | Fresh install (or Terminal → ⬇ to repair), stay on the **Terminal** tab while it downloads/unpacks | The other four tabs are **dimmed with a small 🔒** on each, **already at the first frame** — before any percentage exists (round 5). The sentence arrives by itself as the app opens: first *"Hang tight — CodeC is getting ready to set up its Linux tools. Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step."*, then the download's own version with the moving *(NN %)*. The **Terminal tab stays open**, and the setup bar keeps the percentage |
+| G34 | Fresh install (or Terminal → ⬇ to repair), stay on the **Terminal** tab while it downloads/unpacks | The other four tabs are **dimmed with a small 🔒** on each, **already at the first frame** — before any percentage exists (round 5). The sentence arrives by itself as the app opens: first *"Hang tight — CodeC is getting ready to set up its Linux tools. Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step."*, then the download's own version with the moving *(NN %)*. The **Terminal tab stays open**, and the setup bar keeps the percentage. When the unpack finishes the four tabs **unlock by themselves, in that same session** — no restart, no refresh (round 6) |
 | G35 | During that pause, tap **Projects**, **Editor**, **Packages** and **Settings** | Each shows the same sentence and **does not navigate** — you stay on the Terminal. No box from the tour appears either (the tour pauses with the chrome), and it comes back on the same beat once the setup settles |
 | G36 | In the editor, RUN ▶ a Python file → **Install** | The install streams into the Output Panel; **Projects / Packages / Settings / Terminal are paused** with *"Hang tight — CodeC is installing what you asked for … The Output panel shows every step."*, while the **Editor stays open** (that is where the panel is). ☰ and RUN ▶ show the same sentence instead of acting, and the drawer's edge swipe is dead. When the install finishes, **everything unlocks by itself** and the Flask run/preview continues |
 | G37 | Run a program of your own (C, or a Flask server) and leave it running | **Nothing is paused.** A run or a server is not an install: tabs, ☰ and RUN ▶ all work while the Output Panel streams |
-| G38 | Kill the app mid-install and relaunch | No stale pause: the app opens on the **Terminal** tab (44.1's divert), the other tabs are paused from the first frame, and the download resumes or restarts. An in-flight **upgrade** of a working userland pauses nothing at all (its own line is *"everything still works"*) |
+| G38 | Kill the app mid-install and relaunch | No stale pause: the app opens on the **Terminal** tab (44.1's divert), the other tabs are paused from the first frame, and the download resumes or restarts — and when that install finishes the pause **releases in this session** (round 6: a kill-and-relaunch must not be the only way out). An in-flight **upgrade** of a working userland pauses nothing at all (its own line is *"everything still works"*) |
 | G39 | **Fresh install, first second:** the moment the app opens — before any percentage, and with the network slow or OFF, before any progress at all — tap **Projects**, **Packages** and **Settings** | Each is already dimmed with a 🔒, already answers *"Hang tight — CodeC is getting ready to set up its Linux tools … The Terminal tab shows every step."*, and **does not navigate**. There is no window in which a tab can be switched. With the network OFF the taps stay paused only until the setup reports *offline* — then the app reopens and the refusal sentence + the ⬇ retry take over, because a setup that has stopped never keeps the app paused |
 | G40 | On an **installed** phone: kill, relaunch, watch the first frame; then run a program of your own | **No pause flashes at launch** — the prefix is read from the disk before the first frame is drawn, so a working phone never sees the lock. With a C build or a Flask server running, nothing is paused either |
+| G41 | **Round 6, the release.** Fresh install: let the whole one-time setup finish (download → verify → unpack) and **stay in the app — do NOT kill it**. Watch the tabs the second the bar says the tools are ready; then tap **Projects**, **Packages**, **Settings** and **Editor** | All four tabs **unlock by themselves in the same session**: the 🔒 and the dimming are gone, each tap navigates, and no *"Hang tight"* sentence appears. The app opens on the **Editor** if that is what the launch default says, exactly as it would after a restart. Repeat once with the network slow (the pause simply lasts longer, then releases), and once by tapping Terminal → ⬇ to re-run a finished setup: same release, no restart |
 
 ## Also worth one look each (not rows)
 
@@ -184,5 +195,8 @@ r5    rows G39-G40  (the pause is on in the FIRST SECOND — before any percenta
                      and before the network answers — a stopped setup reopens the
                      app, safe mode is never funnelled, and a working prefix
                      never flashes a pause at launch)
-PASS = all forty, plus Phase 44's round 2 on the same phone.
+r6    row  G41      (the pause RELEASES by itself when the one-time setup
+                     finishes — same session, no kill, no refresh — and G34/G38
+                     amended to say so)
+PASS = all forty-one, plus Phase 44's round 2 on the same phone.
 ```

@@ -393,13 +393,23 @@ class SetupGateWiringTest {
     @Test
     fun `the lock is decided by the prefix, not by the stage, and safe mode is exempt`() {
         val policy = source(setupState)
-        // The userland branch no longer waits for DOWNLOADING: only the two
-        // stages that mean "setup stopped" answer NONE, and everything else with
-        // no usable prefix is the first-frame reason. If CHECKING ever comes back
-        // into the "no lock" list, the window the owner reported is open again.
+        // The userland branch no longer waits for DOWNLOADING, and ROUND 6 moved
+        // the boundary from a hand-listed pair of stages to the settled flag:
+        // nothing IN FLIGHT with no usable prefix answers NONE. If CHECKING ever
+        // comes back into the "no lock" list, the window the owner reported in
+        // round 5 is open again; if the settled guard goes, the lock outlives the
+        // unpack again (*"even after unpacking the userland it still stay lock"*).
         assertTrue(
-            "FAILED/UNSUPPORTED must be the only stages that pause nothing",
+            "the settled stage must be the boundary",
+            policy.contains("if (progress.settled) return ChromeLockReason.NONE")
+        )
+        assertFalse(
+            "round 5's hand-listed pair is gone",
             policy.contains("SetupStage.FAILED, SetupStage.UNSUPPORTED -> ChromeLockReason.NONE")
+        )
+        assertFalse(
+            "round 5's READY pause is gone",
+            policy.contains("SetupStage.READY -> ChromeLockReason.USERLAND_STARTING")
         )
         assertTrue(policy.contains("else -> ChromeLockReason.USERLAND_STARTING"))
         assertFalse(
@@ -407,8 +417,14 @@ class SetupGateWiringTest {
             policy.contains("SetupStage.CHECKING -> ChromeLockReason.NONE")
         )
         // A usable prefix short-circuits BEFORE the stage table, which is what
-        // keeps a launch on an installed phone from flashing a pause.
+        // keeps a launch on an installed phone from flashing a pause — and before
+        // the settled guard, so the two cannot disagree about the order.
         before(policy, "if (facts.usable) return ChromeLockReason.NONE", "return when (progress.stage)")
+        before(
+            policy,
+            "if (facts.usable) return ChromeLockReason.NONE",
+            "if (progress.settled) return ChromeLockReason.NONE"
+        )
         // The first-frame reason has its own sentence, and it points at the watch
         // surface like every other one.
         assertTrue(policy.contains("ChromeLockReason.USERLAND_STARTING ->"))
@@ -432,6 +448,30 @@ class SetupGateWiringTest {
             vm.contains("MutableStateFlow(computeSetupFacts(setupTracker.state))")
         )
         assertTrue(vm.contains("SetupGatePolicy.factsFor(prefixDir, phase, progress)"))
+    }
+
+    // ---- Phase 45 round 6: the lock must die with the setup -----------------
+    // Owner, after running round 5: *"One problem even after unpacking the
+    // userland it still stay lock if i refresh it it's the open the editor check
+    // the problem."*
+
+    @Test
+    fun `a shell that is alive re-reads the disk facts`() {
+        // Round 6's second half: the facts are re-read a FOURTH time when a
+        // session goes alive, because a running bash IS the proof the userland
+        // works — and it is the reading that cannot be early, since nothing is
+        // alive until the prefix really runs. A stale "not usable" then heals in
+        // this session instead of at the next launch, which is what the owner had
+        // to do by hand ("if i refresh it it's the open the editor").
+        val vm = source(terminalVm)
+        val from = vm.indexOf("manager.anyAlive.collect")
+        val to = vm.indexOf("Phase 44.2 (device round 1)")
+        assertTrue("the anyAlive collector is gone", from >= 0 && to > from)
+        val region = vm.substring(from, to)
+        assertTrue(region.take(500), region.contains("refreshSetupFacts()"))
+        // Off the main thread: three filesystem stats, but the collector is Main.
+        assertTrue(region.take(500), region.contains("Dispatchers.IO"))
+        assertTrue(region.take(500), region.contains("round 6"))
     }
 
     @Test

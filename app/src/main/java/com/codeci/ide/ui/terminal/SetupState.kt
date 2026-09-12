@@ -633,8 +633,26 @@ object SetupGatePolicy {
  * way. The rule now is decided by the PREFIX, not by the stage: no usable
  * prefix and setup not given up on ⇒ paused, whatever the stage says.
  *
+ * **Round 6 adds the boundary that matters most: a SETTLED stage never pauses
+ * the app.** The owner ran round 5 and reported *"even after unpacking the
+ * userland it still stay lock if i refresh it it's the open the editor"* — the
+ * unpack finished, the stage said done, and the lock stayed because the facts
+ * beside it were stale. Facts are a READING, re-computed at four moments (the
+ * ViewModel's constructor, every published stage change, the end of an install,
+ * and — added by round 6 — the instant a shell goes alive), and a phone that
+ * misses the last one is paused with no way out but the Terminal, which is a trap
+ * wearing a courtesy. The stage is the installer's own verdict
+ * and it cannot be stale, so round 6 reads it as the boundary: `progress.settled`
+ * ⇒ open, and a `READY` whose prefix does not run belongs to Phase 44.1's C4
+ * correction (*"Setup didn't finish"* + ⬇), not to the lock. `TerminalViewModel`
+ * also re-reads the disk when a shell goes alive, because a running bash IS the
+ * proof the tools work — that heals the stale facts in-session instead of at the
+ * next launch. Round 5's *"instantly after 1st open"* survives intact: `CHECKING`
+ * is in flight, so the first frame is still paused.
+ *
  * Three things still pause nothing, and all three are about a phone that can
  * be used, or must be repairable:
+ *  - a SETTLED stage (`READY`, `FAILED`, `UNSUPPORTED`) — see above.
  *  - `facts.usable` — a launch on an installed device, and an in-flight upgrade,
  *    read `READY`/`CHECKING` with a usable prefix and are untouched. This is why
  *    the rule cannot flash a pause on every launch: `TerminalViewModel` computes
@@ -662,9 +680,10 @@ enum class ChromeLockReason {
     NONE,
 
     /**
-     * The one-time setup has not started producing work yet (or the stage says
-     * done while the disk disagrees): no usable prefix, and nothing given up on.
-     * Round 5's answer to *"make it instantly after 1st open"*.
+     * The one-time setup has not started producing work yet: no usable prefix,
+     * nothing given up on, and the stage still in flight. Round 5's answer to
+     * *"make it instantly after 1st open"* — the probe window, the reach for the
+     * network, and a boot-time repair all read as this.
      */
     USERLAND_STARTING,
     USERLAND_DOWNLOAD,
@@ -701,9 +720,11 @@ object SetupLockPolicy {
      * reason to name. `facts.usable` short-circuits the userland branch — a
      * working prefix (and an upgrade of one) pauses nothing.
      *
-     * Below that the PREFIX decides, not the stage: with no usable prefix, every
-     * stage except the two that mean "setup stopped" is paused, so the lock is on
-     * from the first composition instead of from the first byte downloaded.
+     * Below that the PREFIX decides, bounded by the STAGE: with no usable prefix
+     * every stage that is still IN FLIGHT is paused — so the lock is on from the
+     * first composition instead of from the first byte downloaded — and a SETTLED
+     * stage opens the app, because a reading that says "not usable" beside a
+     * verdict that says "done" is a stale reading (round 6).
      *
      * [reducedStart] is Phase 42.3's safe mode. It exempts the userland branch
      * only — a crash-loop phone must stay able to reach Settings (export,
@@ -719,18 +740,30 @@ object SetupLockPolicy {
         if (packageInstallRunning) return ChromeLockReason.PACKAGE_INSTALL
         if (facts.usable) return ChromeLockReason.NONE
         if (reducedStart) return ChromeLockReason.NONE
+        // ROUND 6, and the owner's device report on round 5: *"even after
+        // unpacking the userland it still stay lock if i refresh it it's the open
+        // the editor"*. A SETTLED stage never pauses the app. Round 5 locked a
+        // `READY` whose facts still said "not usable" — and facts can be stale in
+        // a way the stage cannot (they are re-read at four moments, and a phone
+        // that missed the last one stays paused with no in-session escape but the
+        // Terminal, which is a trap wearing a courtesy). When the setup is over,
+        // whatever it ended in, the app is open:
+        //  - READY with a prefix that does not run is Phase 44.1's own C4 case —
+        //    it is FAILED into *"Setup didn't finish"* with a ⬇ retry, and the
+        //    gate refuses the acts that would fail;
+        //  - FAILED / UNSUPPORTED have their sentence at the point of use, and
+        //    **C still compiles offline**.
+        // Round 5's "instantly after 1st open" is untouched by this: `CHECKING`
+        // is IN FLIGHT (`InstallProgress.settled` is false for it), so the first
+        // frame of a fresh install is still paused.
+        if (progress.settled) return ChromeLockReason.NONE
         return when (progress.stage) {
             SetupStage.DOWNLOADING -> ChromeLockReason.USERLAND_DOWNLOAD
             SetupStage.VERIFYING -> ChromeLockReason.USERLAND_VERIFY
             SetupStage.EXTRACTING -> ChromeLockReason.USERLAND_UNPACK
-            // Setup has stopped: their own sentence at the point of use
-            // (SetupGatePolicy.refusal), their own retry (⬇ in the terminal
-            // toolbar), and C still compiles offline — so nothing is paused.
-            SetupStage.FAILED, SetupStage.UNSUPPORTED -> ChromeLockReason.NONE
-            // CHECKING (the probe / the reach for the network — the window the
-            // owner could switch tabs in) and a READY the disk contradicts
-            // (transient: Phase 44.1's correction fails it) both mean "the tools
-            // are not there yet and have not been given up on".
+            // CHECKING: the probe of the disk, the reach for the network, the
+            // server's first answer — the window the owner could switch tabs in
+            // (round 5), and a boot-time repair of an interrupted swap.
             else -> ChromeLockReason.USERLAND_STARTING
         }
     }

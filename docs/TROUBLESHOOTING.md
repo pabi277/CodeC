@@ -1612,6 +1612,11 @@ The Terminal tab shows every step."* The **Terminal** tab is open from frame one
 is also where the download, the percentage, the *don't close the app* line and the ⬇
 retry live.
 
+> **Round 6 tightened this paragraph's condition — read it with §40.** The pause applies
+> while the setup is *still working*. "Has not given up" turned out to be too loose a test
+> on a device: a finished setup whose disk reading was a moment stale stayed paused for
+> the whole session. The stage label is now the boundary.
+
 **Three things still pause nothing,** and each one protects a phone you can use:
 
 - **A working tool set.** If your Linux tools are installed, nothing is paused at any
@@ -1634,3 +1639,56 @@ puts the prefix back — same reason, same sentence, Terminal open.
 the first percentage) and **G39** (the first-second window). Specification:
 `docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Round 5 — *Make it instantly after 1st
 open*".
+
+## 40. "Even after unpacking the userland it still stay lock" (owner device report; Phase 45 round 5 → round 6, 2026-09-13)
+
+**The report:** *"One problem even after unpacking the userland it still stay lock if i
+refresh it it's the open the editor check the problem."*
+
+**What was wrong:** the pause read two different kinds of thing as if they were the same
+kind.
+
+- The **stage** (checking / downloading / verifying / unpacking / ready / failed) is the
+  installer's own *verdict*: the same code that finished the work sets it, so it is never
+  out of date.
+- The **facts** — "is `bin/pkg` there, non-empty and executable?" — are a *reading* of the
+  disk, and a reading is only as fresh as the last time it was taken. Round 5 took it
+  three times: when the app started, whenever a new stage was published, and at the end of
+  an install.
+
+Round 5's rule was "no usable tools and the setup has not given up ⇒ pause, whatever the
+stage says", so a **stale reading** could hold the app shut *after* the verdict said the
+work was done. Miss one of the three re-readings and the four tabs stay dimmed with their
+🔒 for the rest of the session — with the Terminal the only open surface and nothing in it
+that re-reads the disk on demand. Killing the app fixed it, which is exactly what the
+owner found: relaunch, the reading taken again at construction, tools usable, app opens on
+the Editor.
+
+**What it does now — two independent guarantees:**
+
+1. **A finished setup never keeps the app paused.** The boundary is the stage: while the
+   setup is *in flight* (checking, downloading, verifying, unpacking) and the tools are
+   not usable, the other tabs pause; the moment it is *settled* — ready, failed, or no
+   bootstrap for this device — the app is open. A "ready" whose tools do not actually run
+   is handled where it always was: the bar says *"Setup didn't finish"* with a ⬇ retry,
+   and the acts that would fail are refused one by one with their own sentence. **C still
+   compiles offline** in every one of those states.
+2. **CodeC re-checks its tools the moment a shell comes alive.** A running bash *is* the
+   proof the tool set works, so the disk is read a fourth time then — the reading that
+   cannot be early, because nothing is alive until the prefix really runs. A stale "not
+   usable" now heals inside the same session instead of at the next launch.
+
+Either guarantee alone would have released the owner's phone; together, "locked while the
+tools work" is not a state the app can reach.
+
+**Unchanged by this fix:** the pause is still there **from the first frame** of a fresh
+install (§39), the Terminal is still never paused, the sentences are the same, an install
+*you* asked for still pauses the other tabs while it streams into the Output Panel (that
+one is a live signal — it ends when the stream ends), a working tool set and an upgrade of
+one still pause nothing, and safe mode is still exempt.
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` **G34** and **G38** (amended: the pause must
+release without a restart) and **G41** (new: release at the end of the unpack, on the
+phone, without killing the app). Specification:
+`docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Round 6 — *even after unpacking the
+userland it still stay lock*".

@@ -1,10 +1,11 @@
 # CodeC Phase 45 — The guide (slides on first run + coach marks on first arrival)
 
-> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 5** (2026-09-12, `arena/01a0955a-codec`;
-> owner: *"Start Phase 45"* → four device reports → four rebuilds) · CI ✅ GREEN on
-> **all five rounds** (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
+> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 6** (2026-09-13, `arena/01a0955a-codec`;
+> owner: *"Start Phase 45"* → five device reports → five rebuilds) · CI ✅ GREEN on
+> **all five shipped rounds** (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
 > `34707337429` tip `0fcb3b6`; `34711827176` tip `e7759f1`; `34714305062` tip
-> `6c3cfea`, release APK 6,675,254 B) · device round required (**G1-G40**, NOT run)
+> `6c3cfea`, release APK 6,675,254 B) — round 6's run is recorded below when it lands ·
+> device round required (**G1-G41**, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
@@ -489,7 +490,8 @@ untouched ([`PART_45_1_GUIDE_SLIDES.md`](PART_45_1_GUIDE_SLIDES.md)).
 
 CI on the round-4 commit is ✅ GREEN (`34711827176`, tip `e7759f1`, job `build`
 11m29s, zero annotations, release APK 6,675,258 B = **+5,400 B / +0.08%** over round 3),
-and round 4 is superseded by round 5 below — the device round to run is **G1-G40**.
+and round 4 is superseded by round 5 below (and round 5 by round 6) — the device round to
+run is **G1-G41**.
 
 ---
 
@@ -545,11 +547,78 @@ locally** (76 guide/demo + 121 Phase 44).
 CI on the round-5 commit is ✅ GREEN (`34714305062`, tip `6c3cfea`, job `build` 25
 steps 10m47s, zero annotations, release APK 6,675,254 B — **−4 B** against round 4: one
 enum constant, a reordered `when` and one extra parameter are below what R8 can
-measure), so only the device round is open: rows **G1-G40** in
+measure). Round 5 is superseded by round 6 below: its `READY`-is-paused rule is the one
+round 6 reverses, so the build to install is the round-6 one.
+
+---
+
+## Round 6 (2026-09-13) — the lock must die with the setup
+
+The owner installed round 5 (`34714305062`), accepted the instant pause, and reported one
+problem:
+
+> *"One problem even after unpacking the userland it still stay lock if i refresh it it's
+> the open the editor check the problem."*
+
+The one-time install finished and the four tabs stayed dimmed with their 🔒 — until the
+app was killed and relaunched, which opened it normally on the Editor.
+
+### The diagnosis: a verdict and a reading are not the same kind of thing
+
+The lock reads two inputs:
+
+| | What it is | Can it be stale? |
+|---|---|---|
+| `progress.stage` | the installer's own **verdict** — set by the code that did the work, in the call that finished it | No |
+| `facts` (`bin/pkg` / `bin/sh` present, non-empty, executable) | a **reading** of the disk — three `stat` calls, fresh only as of the last re-computation | **Yes** |
+
+Round 5's law was *"no usable prefix and setup not given up on ⇒ paused, whatever the
+stage says"* — which let a **stale reading hold the app shut after the verdict said the
+work was done**. Round 5 re-read the disk at three moments (the `TerminalViewModel`'s
+constructor, every *published* stage change, the end of an install); miss one — a publish
+throttled because the stage had not changed, a path that returns before the final
+`refreshSetupFacts()`, exec bits landing a beat after the reading — and the lock had no
+in-session exit, because the only surface left open is the Terminal and nothing in it
+re-reads the disk on demand. Killing the process took the reading again, which is why a
+restart "fixed" it.
+
+### What changed
+
+| Round 5 | Round 6 |
+|---|---|
+| `FAILED`/`UNSUPPORTED` hand-listed as the only stages that pause nothing; a `READY` the disk contradicted paused as `USERLAND_STARTING` | **`if (progress.settled) return ChromeLockReason.NONE`** — the installer's own verdict is the boundary. `settled` is `!inFlight`, and `inFlight` is `CHECKING \| DOWNLOADING \| VERIFYING \| EXTRACTING`, so the userland branch pauses only while the setup is *actually doing something* |
+| Facts re-read three times | **Four times**: the `anyAlive` collector now calls `refreshSetupFacts()` on `Dispatchers.IO` when a shell goes alive — the reading that *cannot* be early, because nothing is alive until the prefix really runs a bash |
+| "Done but the tools do not run" was the lock's problem | It is Phase 44.1's **C4** problem, where it always had an honest surface: the bar fails it into *"Setup didn't finish"* with a ⬇ retry, `SetupGatePolicy.can` refuses the acts that would fail, and **C still compiles offline** |
+
+Guarantee 1 makes the lock unable to outlive the verdict; guarantee 2 makes the reading
+unable to outlive the shell. Either alone would have released the owner's phone; together
+"locked while the tools work" is not a reachable state.
+
+**Round 5 is intact where it mattered:** `CHECKING` is *in flight*, so the first frame of
+a fresh install is still paused, the probe window and the reach for the network are still
+paused, a boot-time swap repair is still paused, and `lock()` with no arguments still
+answers PAUSED. A package install still outranks everything (it is a **live** signal —
+`busy && installing` — that clears when the stream ends and on the screen's dispose), the
+watch surface is still never paused, the sentences are unchanged, `reducedStart` still
+exempts the userland branch, and the lock still never weakens the gate beside it. The tour
+and 45.1's slides are untouched for a sixth time.
+
+### Files touched in round 6
+
+`ui/terminal/SetupState.kt` (the settled boundary in `reasonFor`, its KDoc and the law
+comment rewritten around verdict-vs-reading) · `ui/viewmodels/TerminalViewModel.kt` (the
+fourth facts reading, in the `anyAlive` collector) · tests: `SetupGatePolicyTest` **34**,
+`SetupGateWiringTest` **25** → **199 host cases green locally** (76 guide/demo + 123
+Phase 44).
+
+### What is still open
+
+CI on the round-6 commit and the device round: rows **G1-G41** in
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour, G29-G38 round
-4, **G39-G40 round 5** — G39 wants a fresh install and a slow or absent network, G40
-wants an installed phone). Test the tour after **Settings → About → Reset tips**. Phase
-44's round 2 is still pending on the same phone, and its lock rows are G34-G40 here.
+4, G39-G40 round 5, **G41 round 6** — the release at the end of the unpack, with G34 and
+G38 amended to say the pause must end without a restart). G34, G38, G39 and G41 want a
+**fresh install**. Test the tour after **Settings → About → Reset tips**. Phase 44's
+round 2 is still pending on the same phone, and its lock rows are G34-G41 here.
 Specification: [`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
-§"Round 5 — *Make it instantly after 1st open*"; owner-facing:
-[`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §39.
+§"Round 6 — *even after unpacking the userland it still stay lock*"; owner-facing:
+[`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §40.

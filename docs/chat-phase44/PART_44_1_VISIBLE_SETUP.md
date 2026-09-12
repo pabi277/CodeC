@@ -516,12 +516,85 @@ Three consequences worth stating, because each is a decision and not an accident
    while it lasts the tools are not there and nothing has been given up on, so it reads
    as `USERLAND_STARTING` rather than as an open app.
 
+   **REVERSED BY ROUND 6 (below).** "Transient" was the assumption, and a device
+   disproved it: the state lasted as long as the session, and a lock whose only exit is
+   one tab is not a transient inconvenience, it is a trap. Round 5's other two points
+   stand; this one does not.
+
 What round 5 does **not** change: the watch surface is still never paused, the sentence
 is still one per reason and still never invents a percentage (the starting sentence has
 no `%` in it at all), the editor still keeps typing and `cc` while the *userland* is
 being built (`editorChromeLocked` is a package-install-only answer), and
 `SetupGatePolicy.can` is still the only answer about capability — the lock beside it
 never weakens it.
+
+### Round 6 (2026-09-13) — *"even after unpacking the userland it still stay lock"*
+
+The owner ran round 5 on a device and reported:
+
+> *"One problem even after unpacking the userland it still stay lock if i refresh it
+> it's the open the editor check the problem."*
+
+Read plainly: the one-time install finished, the unpack was over, and the four tabs
+stayed dimmed with their 🔒 — until the process was killed and relaunched, after which
+the app opened normally, on the Editor.
+
+#### The diagnosis
+
+The lock reads two things, and they are not the same kind of thing:
+
+- **the stage** (`InstallProgress.stage`) is the installer's own *verdict*. It is set by
+  the code that did the work, in the same call that finished it. It cannot be stale.
+- **the facts** (`SetupFacts`) are a *reading* of the disk — three `stat` calls asking
+  whether `bin/pkg` and `bin/sh` are there, non-empty and executable. A reading is only
+  as fresh as its last re-computation, and round 5 re-computed it at three moments: the
+  `TerminalViewModel`'s constructor, every *published* stage change, and the end of an
+  install.
+
+Round 5's law was *"no usable prefix and setup not given up on ⇒ paused, whatever the
+stage says"* — so it made a **stale reading** able to hold the app shut *after* the
+verdict said the work was done. Any one missed re-computation (a publish throttled
+because the stage had not changed, an install path that returns before the final
+`refreshSetupFacts()`, a prefix whose exec bits land a moment after the reading) turns
+into a lock with no in-session exit, because the only surface left open is the Terminal
+and nothing in it re-reads the disk on demand.
+
+That is the whole bug: **a courtesy that outlives the work it was protecting.**
+
+#### The fix — two independent guarantees
+
+1. **A settled stage never pauses the app** (`SetupLockPolicy.reasonFor`). The boundary
+   moved from a hand-listed pair (`FAILED, UNSUPPORTED`) to the installer's own verdict:
+   `if (progress.settled) return ChromeLockReason.NONE`, where `settled` is
+   `!inFlight` and `inFlight` is `CHECKING | DOWNLOADING | VERIFYING | EXTRACTING`.
+   So the userland branch now pauses only while the setup is *actually doing something*.
+   A `READY` whose reading says "not usable" is this part's own **C4** case and C4
+   already has an honest surface: it is failed into *"Setup didn't finish"* with a ⬇
+   retry, and `SetupGatePolicy.can` refuses the acts that would fail. `FAILED` and
+   `UNSUPPORTED` keep their sentence at the point of use, and **C still compiles
+   offline**. A package install still outranks all of it — `busy && installing` is a
+   *live* signal from the Output Panel, not a reading, and it clears itself when the
+   stream ends (and on the screen's dispose).
+2. **A shell that is alive re-reads the disk** (`TerminalViewModel`'s `anyAlive`
+   collector → `refreshSetupFacts()` on `Dispatchers.IO`). This is the fourth reading,
+   and it is the one that **cannot be early**: nothing reports alive until the prefix
+   really runs a bash. So even if a future path misses every other re-computation, the
+   facts heal the moment the shell starts — in this session, instead of at the next
+   launch, which is what the owner was doing by hand.
+
+Guarantee 1 makes the lock impossible to outlive the verdict; guarantee 2 makes the
+reading impossible to outlive the shell. Either one alone would have released the
+owner's phone; together the state "locked while the tools work" is not reachable.
+
+#### What round 6 does **not** change
+
+Round 5's *"make it instantly after 1st open"* survives untouched, because `CHECKING`
+is **in flight**: the first frame of a fresh install is still paused, the probe window
+and the reach for the network are still paused, a boot-time swap repair is still paused,
+and `lock()` with no arguments still answers PAUSED. The watch surface is still never
+paused, the sentences are unchanged, `reducedStart` still exempts the userland branch,
+`editorChromeLocked` is still a package-install-only answer, and the lock still never
+weakens `SetupGatePolicy.can` beside it.
 
 ### Not locked, on purpose (the owner may overrule this list)
 
@@ -536,7 +609,7 @@ automatically, and which 44.1 already diverts to the Terminal tab) a waiting roo
 
 ### Tests added
 
-`SetupGatePolicyTest` 25 → **33** (30 in round 4, +3 in round 5): the three userland stages pause the chrome and
+`SetupGatePolicyTest` 25 → **34** (30 in round 4, +3 in round 5, +1 in round 6): the three userland stages pause the chrome and
 explain themselves (sentence, percentage, watch surface, every other option refused
 with the SAME sentence) · a probe, three settled stages and an upgrade of a working
 prefix pause nothing · a package install keeps the Editor and pauses the rest,
@@ -556,12 +629,19 @@ editor's ☰ / RUN ▶ / edge swipe answer the same policy; round 5 pins that
 `FAILED, UNSUPPORTED` are the ONLY stages answering `NONE`, that `facts.usable`
 short-circuits **before** the stage table, that `MainActivity` passes
 `reducedStart = SafeMode.active`, and that the facts really are built in the
-ViewModel's constructor from the disk. **121 Phase 44 host cases green locally** (197
-with Phase 45's 76), CI ✅ GREEN on the round-4 commit (`34711827176`, tip `e7759f1`,
+ViewModel's constructor from the disk. Round 6 added **`round 6 - the lock dies with the
+setup even when the facts are stale`** (all three settled stages open every option with
+unusable facts beside them; all four in-flight stages still pause; a package install
+still outranks a settled stage; safe mode still outranks everything), reversed round 5's
+`READY`-is-paused assertion, and added a wiring pin that the settled guard exists (and
+that round 5's hand-listed pair and its `READY → USERLAND_STARTING` mapping are gone),
+that `facts.usable` still short-circuits **before** it, and **`a shell that is alive
+re-reads the disk facts`** (`SetupGateWiringTest` 24 → **25**). **123 Phase 44 host
+cases green locally** (199 with Phase 45's 76), CI ✅ GREEN on the round-4 commit (`34711827176`, tip `e7759f1`,
 release APK 6,675,258 B) and on the round-5 commit (`34714305062`, tip `6c3cfea`, job
 `build` 25 steps 10m47s, zero annotations, release APK 6,675,254 B — **−4 B**, because
 one enum constant, a reordered `when` and one extra parameter are below what R8 can
 measure). Device rows:
-[`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G40**.
-Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38 (round 4)
-and §39 (round 5).
+[`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G41**.
+Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38 (round 4),
+§39 (round 5) and §40 (round 6).

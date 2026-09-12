@@ -150,6 +150,12 @@ you Python is "not installed" on its way.
   and those live in Settings. Typing and `cc` never wait for a download either: you can
   write and compile C offline while the Linux tools arrive.
 
+The pause is bounded by the **setup itself**, so it cannot outlive the work it was
+protecting: it lasts only while the one-time install is *in flight*, and it ends the
+moment that install settles — ready, failed, or unsupported — with no restart needed.
+CodeC also re-reads its tools from the disk the instant a shell comes alive, because a
+running bash is the proof the tool set works.
+
 The rule behind all of it: **the screen that shows the install is never the one
 that is paused**, so there is always somewhere to watch and nowhere to get lost.
 

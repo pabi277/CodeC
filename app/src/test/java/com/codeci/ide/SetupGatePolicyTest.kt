@@ -687,15 +687,85 @@ class SetupGatePolicyTest {
         )
         assertTrue("an interrupted swap being repaired must pause the chrome", repairing.locked)
 
-        // A stage that says READY while the disk says otherwise is transient
-        // (Phase 44.1's correction fails it) but it is not "done": paused.
-        assertTrue(
+        // ROUND 6 reverses round 5 on exactly this line. A stage that says READY
+        // is SETTLED, and a settled setup never pauses the app — not even when the
+        // facts beside it still say "not usable", because the facts can be stale
+        // in a way the stage cannot. That pairing is the owner's device report:
+        // *"even after unpacking the userland it still stay lock if i refresh it
+        // it's the open the editor"*. Phase 44.1's C4 correction owns the honest
+        // surface for "the marker says ready but the tools do not run": FAILED
+        // with its own sentence and a ⬇ retry — never a pause with no way out.
+        assertFalse(
             SetupLockPolicy.lock(InstallProgress(SetupStage.READY), facts(SetupStage.READY)).locked
         )
 
         // And the Phase 44.1 guarantee holds while it is paused: the userland
         // being built never reaches inside the editor.
         assertFalse(SetupLockPolicy.editorChromeLocked(firstFrame))
+    }
+
+    @Test
+    fun `round 6 - the lock dies with the setup even when the facts are stale`() {
+        // The owner's report on round 5, verbatim: *"even after unpacking the
+        // userland it still stay lock if i refresh it it's the open the editor"*.
+        // Round 5 paused a READY whose facts still read "not usable", and facts
+        // are a READING — re-computed at construction, on every published stage
+        // change, at the end of an install, and (round 6) when a shell goes alive.
+        // A phone that misses the last one stayed paused with no in-session escape
+        // but the Terminal tab: a trap wearing a courtesy. The STAGE is the
+        // installer's own verdict and it cannot be stale, so it is the boundary.
+        for (stage in listOf(SetupStage.READY, SetupStage.FAILED, SetupStage.UNSUPPORTED)) {
+            val lock = SetupLockPolicy.lock(
+                progress = InstallProgress(stage),
+                facts = facts(stage)
+            )
+            assertFalse("a settled stage must open the app ($stage)", lock.locked)
+            assertEquals(ChromeLockReason.NONE, lock.reason)
+            // Nothing is refused at a settled stage, whichever surface it is —
+            // `watchOption` only matters while something IS paused.
+            for (option in ChromeOption.entries) {
+                assertTrue(
+                    "$option must be open after setup ($stage)",
+                    SetupLockPolicy.option(option, lock).allowed
+                )
+            }
+        }
+
+        // "Make it instantly after 1st open" survives the reversal untouched:
+        // every IN FLIGHT stage still pauses with unusable facts.
+        for (stage in listOf(
+            SetupStage.CHECKING,
+            SetupStage.DOWNLOADING,
+            SetupStage.VERIFYING,
+            SetupStage.EXTRACTING
+        )) {
+            assertTrue(
+                "an in-flight stage must pause the app ($stage)",
+                SetupLockPolicy.lock(InstallProgress(stage), facts(stage)).locked
+            )
+        }
+
+        // A package install outranks a settled userland stage: that is a LIVE
+        // signal from the Output Panel (`busy && installing`), not a reading, so
+        // it clears itself the moment the stream ends.
+        assertEquals(
+            ChromeLockReason.PACKAGE_INSTALL,
+            SetupLockPolicy.reasonFor(
+                InstallProgress(SetupStage.READY),
+                facts(SetupStage.READY),
+                packageInstallRunning = true
+            )
+        )
+
+        // And safe mode still outranks everything: a crash-loop phone must reach
+        // Settings even mid-setup.
+        assertFalse(
+            SetupLockPolicy.lock(
+                InstallProgress(SetupStage.EXTRACTING),
+                facts(SetupStage.EXTRACTING),
+                reducedStart = true
+            ).locked
+        )
     }
 
     @Test

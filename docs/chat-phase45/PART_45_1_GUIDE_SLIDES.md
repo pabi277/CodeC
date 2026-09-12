@@ -293,6 +293,19 @@ as a claim about the whole guide:
 
 ---
 
+## Round 6 note (2026-09-13) — unchanged for a sixth time
+
+Round 6 (the lock must die with the setup) touched nothing in 45.1 either: the slides
+still run before Phase 44's terminal divert, and on a fresh install the order is still
+tiles → five slides → the shell on the Terminal tab with the other four tabs paused and
+explaining themselves.
+
+What round 6 changes is the **end** of that pause, which slide 3 (*one download, one
+time*) is the slide that promises: the tools arrive, the setup settles, and the app opens
+— in the same session, without the restart round 5 turned out to need. A slide that says
+"one time" is only honest if the app behaves like a phone that is done setting up the
+moment it is done setting up.
+
 ## Round 5 note (2026-09-12, later still) — unchanged for a fifth time
 
 Round 5 (the chrome lock is on from the first frame) touched nothing in 45.1 either.
