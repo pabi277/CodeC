@@ -913,10 +913,15 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     // Output Panel is streaming). One sentence, shown on the tap that was
     // refused, so a paused option is never a dead one.
     val editorInstallRunning by EditorChromeState.installRunning.collectAsState()
+    // `reducedStart` is safe mode: a phone that crashed three times must still be
+    // able to reach Settings (export all projects, report the crash), so the
+    // startup-shaped userland lock does not apply there. The tour is exempt for
+    // the same reason (see `blockedByForeground` below).
     val chromeLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock(
         progress = setupProgress,
         facts = setupFacts,
-        packageInstallRunning = editorInstallRunning
+        packageInstallRunning = editorInstallRunning,
+        reducedStart = com.codeci.ide.ui.crash.SafeMode.active
     )
     val snackbarHostState = remember { SnackbarHostState() }
     val showLockMessage: (String) -> Unit = { message ->

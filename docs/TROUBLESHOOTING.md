@@ -1588,3 +1588,49 @@ starts this download automatically.
 G34-G38 the lock). Specification: `docs/chat-phase45/PART_45_2_COACH_MARKS.md` §Round 4
 and `docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Phase 45 round 4 — the chrome
 lock" (deviations 17-20).
+
+## 39. "The lock arrives a beat late — make it instant" (owner device report; Phase 45 round 4 → round 5, 2026-09-12)
+
+**The report:** *"The lock option is good but still it late user can switch before the
+start of userland download because is takes a little time to connect and user can switch
+task between them / Make it instantly after 1st open and others are ok"*
+
+**What was wrong:** round 4's lock waited for a stage that means *work is moving* —
+downloading, checking the download, unpacking. Before the first byte there is a window
+where the app is reading the disk, reaching the network and waiting for the server's
+first answer, and in that window nothing was paused. On a cold phone with a cold radio
+that window is seconds long, which is exactly how long it takes to tap **Packages** and
+read *"not installed"* about tools that are already on their way — and then to be
+looking at the wrong screen when the download starts.
+
+**What it does now:** the pause is decided by **your prefix, not by the stage label**.
+From the very first frame after the app opens, if the Linux tools are not usable yet and
+the setup has not given up, the four other tabs are already dimmed with their 🔒 and
+already answer a tap with *"Hang tight — CodeC is getting ready to set up its Linux
+tools. Other options are paused for a moment so this one-time setup finishes cleanly.
+The Terminal tab shows every step."* The **Terminal** tab is open from frame one, which
+is also where the download, the percentage, the *don't close the app* line and the ⬇
+retry live.
+
+**Three things still pause nothing,** and each one protects a phone you can use:
+
+- **A working tool set.** If your Linux tools are installed, nothing is paused at any
+  stage — including while an **upgrade** of them downloads and unpacks (*"everything
+  still works"*). This is read from the disk when the app starts, not guessed, so an
+  installed phone never sees a pause flash on launch.
+- **A setup that has stopped.** Failed (offline, out of disk, corrupt download) or
+  unsupported (no bootstrap for this device) have their own sentence and their own ⬇
+  retry, and **C still compiles offline** — so the app stays open.
+- **Safe mode.** After three failed launches the app starts reduced so you can export
+  your projects and report the crash, both of which live in Settings. A crash-loop phone
+  is the last phone that should be funnelled to one tab, so the startup pause does not
+  apply there. An install you asked for still pauses the rest, even in safe mode.
+
+**Also covered by the same rule, without being asked for:** a boot-time **repair** of an
+install a process kill interrupted (44.2's restore) now pauses the other tabs while it
+puts the prefix back — same reason, same sentence, Terminal open.
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` **G34** (amended: the pause is there before
+the first percentage) and **G39** (the first-second window). Specification:
+`docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Round 5 — *Make it instantly after 1st
+open*".

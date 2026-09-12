@@ -623,9 +623,35 @@ object SetupGatePolicy {
  *    true, its own note says "everything still works", and taking the app away
  *    from a user who can use it would be a lie in the other direction.
  *
- * `CHECKING` never locks either. It is the startup probe, not work: locking on
- * it would pause the app on every launch, including launches where there is
- * nothing to install.
+ * **The lock is on from the first frame of a fresh install** (round 5, owner:
+ * *"still it late user can switch before the start of userland download because
+ * is takes a little time to connect and user can switch task between them … Make
+ * it instantly after 1st open"*). Round 4 waited for `DOWNLOADING`, so the whole
+ * `CHECKING` window — the probe of the disk, the reach for the network, the
+ * server's first answer — was open, and that is seconds on a cold phone: enough
+ * to switch to Packages and read "not installed" about tools that are on their
+ * way. The rule now is decided by the PREFIX, not by the stage: no usable
+ * prefix and setup not given up on ⇒ paused, whatever the stage says.
+ *
+ * Three things still pause nothing, and all three are about a phone that can
+ * be used, or must be repairable:
+ *  - `facts.usable` — a launch on an installed device, and an in-flight upgrade,
+ *    read `READY`/`CHECKING` with a usable prefix and are untouched. This is why
+ *    the rule cannot flash a pause on every launch: `TerminalViewModel` computes
+ *    the facts **synchronously from the disk** in its constructor
+ *    (`computeSetupFacts(setupTracker.state)` → `SetupGatePolicy.factsFor`), so
+ *    the first composition already knows the prefix works.
+ *  - a REDUCED START (Phase 42.3's safe mode) — its whole purpose is to do less
+ *    at startup and to reach *export all projects* and *report a crash*, which
+ *    live in Settings. A phone that has crashed three times is exactly the phone
+ *    that must not be funnelled to one tab by a startup-shaped lock, so
+ *    `reducedStart` short-circuits the userland branch. An install the user
+ *    ASKED for still pauses the chrome in safe mode: one runner, one job.
+ *  - `FAILED` / `UNSUPPORTED` — setup has stopped, each has its own sentence at
+ *    the point of use and its own retry (⬇ in the terminal toolbar), and
+ *    **C works offline right now** is a Phase 44.1 promise: pausing every tab
+ *    for a setup that already gave up would strand the user in an app that could
+ *    still compile their file.
  */
 
 /** One chrome destination the lock can pause. */
@@ -634,6 +660,13 @@ enum class ChromeOption { PROJECTS, EDITOR, PACKAGES, SETTINGS, TERMINAL }
 /** Why the chrome is paused. [ChromeLockReason.NONE] means it is not. */
 enum class ChromeLockReason {
     NONE,
+
+    /**
+     * The one-time setup has not started producing work yet (or the stage says
+     * done while the disk disagrees): no usable prefix, and nothing given up on.
+     * Round 5's answer to *"make it instantly after 1st open"*.
+     */
+    USERLAND_STARTING,
     USERLAND_DOWNLOAD,
     USERLAND_VERIFY,
     USERLAND_UNPACK,
@@ -665,35 +698,56 @@ object SetupLockPolicy {
      *
      * A package install wins over the userland stage: it is the thing the user
      * just asked for and the thing streaming on screen, so it is the honest
-     * reason to name. `facts.usable` short-circuits the userland branch — an
-     * upgrade of a working prefix pauses nothing.
+     * reason to name. `facts.usable` short-circuits the userland branch — a
+     * working prefix (and an upgrade of one) pauses nothing.
+     *
+     * Below that the PREFIX decides, not the stage: with no usable prefix, every
+     * stage except the two that mean "setup stopped" is paused, so the lock is on
+     * from the first composition instead of from the first byte downloaded.
+     *
+     * [reducedStart] is Phase 42.3's safe mode. It exempts the userland branch
+     * only — a crash-loop phone must stay able to reach Settings (export,
+     * report), and the userland lock is startup-shaped, not something the user
+     * asked for. A package install still outranks it.
      */
     fun reasonFor(
         progress: InstallProgress,
         facts: SetupFacts,
-        packageInstallRunning: Boolean
+        packageInstallRunning: Boolean,
+        reducedStart: Boolean = false
     ): ChromeLockReason {
         if (packageInstallRunning) return ChromeLockReason.PACKAGE_INSTALL
         if (facts.usable) return ChromeLockReason.NONE
+        if (reducedStart) return ChromeLockReason.NONE
         return when (progress.stage) {
             SetupStage.DOWNLOADING -> ChromeLockReason.USERLAND_DOWNLOAD
             SetupStage.VERIFYING -> ChromeLockReason.USERLAND_VERIFY
             SetupStage.EXTRACTING -> ChromeLockReason.USERLAND_UNPACK
-            // CHECKING is a probe, READY is done, FAILED/UNSUPPORTED have their
-            // own sentence at the point of use (SetupGatePolicy.refusal) and
-            // their own retry (⬇ in the terminal toolbar). Pausing the app for
-            // a setup that has already stopped would strand the user.
-            else -> ChromeLockReason.NONE
+            // Setup has stopped: their own sentence at the point of use
+            // (SetupGatePolicy.refusal), their own retry (⬇ in the terminal
+            // toolbar), and C still compiles offline — so nothing is paused.
+            SetupStage.FAILED, SetupStage.UNSUPPORTED -> ChromeLockReason.NONE
+            // CHECKING (the probe / the reach for the network — the window the
+            // owner could switch tabs in) and a READY the disk contradicts
+            // (transient: Phase 44.1's correction fails it) both mean "the tools
+            // are not there yet and have not been given up on".
+            else -> ChromeLockReason.USERLAND_STARTING
         }
     }
 
-    /** The lock, with its sentence. Defaults are the "nothing is happening" case. */
+    /**
+     * The lock, with its sentence. The defaults are the first frame of a fresh
+     * install — `CHECKING` with no facts yet — and they answer PAUSED, which is
+     * the point of round 5: a caller that has not heard anything yet must not
+     * default to "everything is open".
+     */
     fun lock(
         progress: InstallProgress = InstallProgress(SetupStage.CHECKING),
         facts: SetupFacts = SetupFacts(),
-        packageInstallRunning: Boolean = false
+        packageInstallRunning: Boolean = false,
+        reducedStart: Boolean = false
     ): ChromeLock {
-        val reason = reasonFor(progress, facts, packageInstallRunning)
+        val reason = reasonFor(progress, facts, packageInstallRunning, reducedStart)
         if (reason == ChromeLockReason.NONE) return ChromeLock.OPEN
         return ChromeLock(reason, sweetMessage(reason, progress.percent))
     }
@@ -706,6 +760,10 @@ object SetupLockPolicy {
      */
     fun sweetMessage(reason: ChromeLockReason, percent: Int? = null): String? = when (reason) {
         ChromeLockReason.NONE -> null
+        ChromeLockReason.USERLAND_STARTING ->
+            "Hang tight \u2014 CodeC is getting ready to set up its Linux tools. " +
+                "Other options are paused for a moment so this one-time setup finishes " +
+                "cleanly. The Terminal tab shows every step."
         ChromeLockReason.USERLAND_DOWNLOAD ->
             if (percent != null) {
                 "Hang tight \u2014 CodeC is downloading its Linux tools ($percent %). " +

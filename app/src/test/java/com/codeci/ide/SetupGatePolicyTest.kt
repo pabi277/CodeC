@@ -543,18 +543,21 @@ class SetupGatePolicyTest {
     }
 
     @Test
-    fun `a probe, a settled setup and an upgrade of a working prefix pause nothing`() {
-        // CHECKING is the startup probe, not work: pausing on it would lock the
-        // app on every launch, including launches with nothing to install.
-        assertFalse(SetupLockPolicy.lock(InstallProgress(SetupStage.CHECKING), facts(SetupStage.CHECKING)).locked)
+    fun `a settled setup and an upgrade of a working prefix pause nothing`() {
         // Settled states have their own sentence at the point of use, and their
         // own retry (⬇ in the terminal toolbar): pausing the app for a setup
-        // that already stopped would strand the user with no way out.
-        for (stage in listOf(SetupStage.READY, SetupStage.FAILED, SetupStage.UNSUPPORTED)) {
-            assertFalse(
-                "$stage must not pause the chrome",
-                SetupLockPolicy.lock(InstallProgress(stage), facts(stage)).locked
+        // that already stopped would strand the user with no way out — and C
+        // still compiles offline, which is a Phase 44.1 promise.
+        for (stage in listOf(SetupStage.FAILED, SetupStage.UNSUPPORTED)) {
+            val settled = SetupLockPolicy.lock(
+                InstallProgress(stage, issue = SetupIssue.OFFLINE),
+                facts(stage, issue = SetupIssue.OFFLINE)
             )
+            assertFalse("$stage must not pause the chrome", settled.locked)
+            assertEquals(ChromeLockReason.NONE, settled.reason)
+            for (option in ChromeOption.entries) {
+                assertTrue("$option must stay open at $stage", SetupLockPolicy.option(option, settled).allowed)
+            }
         }
         // An in-flight UPGRADE of a working prefix: Phase 44.1's own sentence is
         // "everything still works", and taking the app away from a user who can
@@ -632,15 +635,160 @@ class SetupGatePolicyTest {
         assertNull(SetupLockPolicy.optionForRoute(""))
     }
 
+    // ---- Phase 45 round 5: the lock is on from the FIRST FRAME --------------
+    // Owner, after running round 4 on his phone: *"The lock option is good but
+    // still it late user can switch before the start of userland download because
+    // is takes a little time to connect and user can switch task between them /
+    // Make it instantly after 1st open and others are ok."*
+
+    @Test
+    fun `the lock is on from the first frame of a fresh install`() {
+        // The defaults ARE the first frame: CHECKING with no facts yet. A caller
+        // that has heard nothing must not default to "everything is open".
+        val firstFrame = SetupLockPolicy.lock()
+        assertTrue("a fresh install must pause the chrome before any byte moves", firstFrame.locked)
+        assertEquals(ChromeLockReason.USERLAND_STARTING, firstFrame.reason)
+        assertEquals(ChromeOption.TERMINAL, SetupLockPolicy.watchOption(firstFrame.reason))
+
+        // The window the owner could switch tabs in: the probe of the disk and
+        // the reach for the network, before DOWNLOADING is ever published.
+        val probing = SetupLockPolicy.lock(
+            InstallProgress(SetupStage.CHECKING),
+            facts(SetupStage.CHECKING)
+        )
+        assertTrue("the probe window must be paused too", probing.locked)
+        assertEquals(ChromeLockReason.USERLAND_STARTING, probing.reason)
+
+        // Sweet, and it answers WHY and WHERE — and it never invents a
+        // percentage before there is one.
+        val message = firstFrame.message
+        assertNotNull(message)
+        assertTrue(message!!.contains("Hang tight"))
+        assertTrue(message.contains("paused"))
+        assertTrue(message.contains("Terminal tab"))
+        assertFalse("no percentage exists yet", message.contains("%"))
+
+        // Every option but the watch surface refuses with that same sentence.
+        for (option in ChromeOption.entries) {
+            val verdict = SetupLockPolicy.option(option, firstFrame)
+            if (option == ChromeOption.TERMINAL) {
+                assertTrue("$option must stay open on the first frame", verdict.allowed)
+            } else {
+                assertFalse("$option must be paused on the first frame", verdict.allowed)
+                assertEquals(message, verdict.message)
+            }
+        }
+
+        // A boot-time REPAIR of an interrupted swap is the same case: no usable
+        // prefix, nothing given up on, and the Terminal is where it is watched.
+        val repairing = SetupLockPolicy.lock(
+            InstallProgress(SetupStage.CHECKING),
+            facts(SetupStage.CHECKING, runnable = true, pkg = true, swapping = true)
+        )
+        assertTrue("an interrupted swap being repaired must pause the chrome", repairing.locked)
+
+        // A stage that says READY while the disk says otherwise is transient
+        // (Phase 44.1's correction fails it) but it is not "done": paused.
+        assertTrue(
+            SetupLockPolicy.lock(InstallProgress(SetupStage.READY), facts(SetupStage.READY)).locked
+        )
+
+        // And the Phase 44.1 guarantee holds while it is paused: the userland
+        // being built never reaches inside the editor.
+        assertFalse(SetupLockPolicy.editorChromeLocked(firstFrame))
+    }
+
+    @Test
+    fun `a working prefix pauses nothing, whatever the stage says`() {
+        // The other half of round 5, and the reason the rule is keyed on the
+        // PREFIX rather than the stage: pausing the probe must not flash a lock
+        // on every launch of an installed app. `TerminalViewModel` computes the
+        // facts synchronously from the disk in its constructor, so the first
+        // composition of a working phone already knows the prefix runs.
+        for (stage in SetupStage.entries) {
+            val lock = SetupLockPolicy.lock(
+                progress = InstallProgress(stage),
+                facts = facts(stage, runnable = true, pkg = true)
+            )
+            assertFalse("$stage on a usable prefix must pause nothing", lock.locked)
+            assertEquals(ChromeLockReason.NONE, lock.reason)
+            for (option in ChromeOption.entries) {
+                assertTrue(SetupLockPolicy.option(option, lock).allowed)
+            }
+        }
+        // An in-flight upgrade of that prefix is the case that matters most: it
+        // moves through DOWNLOADING/VERIFYING/EXTRACTING with `usable` true, and
+        // Phase 44.1's own sentence there is "everything still works".
+        for (stage in listOf(SetupStage.DOWNLOADING, SetupStage.VERIFYING, SetupStage.EXTRACTING)) {
+            assertFalse(
+                "an upgrade at $stage must pause nothing",
+                SetupLockPolicy.lock(
+                    InstallProgress(stage, percent = 40),
+                    facts(stage, percent = 40, runnable = true, pkg = true)
+                ).locked
+            )
+        }
+        // A package install still outranks all of it, working prefix or not: it
+        // is the thing the user asked for and the thing on screen.
+        assertEquals(
+            ChromeLockReason.PACKAGE_INSTALL,
+            SetupLockPolicy.reasonFor(
+                InstallProgress(SetupStage.CHECKING),
+                facts(SetupStage.CHECKING, runnable = true, pkg = true),
+                packageInstallRunning = true
+            )
+        )
+    }
+
+    @Test
+    fun `a reduced start pauses nothing, so safe mode can still reach Settings`() {
+        // Phase 42.3's safe mode exists to do LESS at startup and to reach
+        // *export all projects* / *report a crash* — both in Settings. A phone
+        // that crashed three times is the last phone that may be funnelled to one
+        // tab by a startup-shaped lock, so round 5's first-frame rule exempts it.
+        val fresh = InstallProgress(SetupStage.CHECKING)
+        val noPrefix = facts(SetupStage.CHECKING)
+        assertTrue(SetupLockPolicy.lock(fresh, noPrefix).locked)
+        assertFalse(SetupLockPolicy.lock(fresh, noPrefix, reducedStart = true).locked)
+        for (stage in SetupStage.entries) {
+            assertFalse(
+                "$stage in a reduced start must pause nothing",
+                SetupLockPolicy.lock(
+                    InstallProgress(stage),
+                    facts(stage),
+                    reducedStart = true
+                ).locked
+            )
+        }
+        // But an install the user ASKED for still pauses the chrome in safe mode:
+        // one runner, one job at a time, and the Output Panel is where it shows.
+        assertEquals(
+            ChromeLockReason.PACKAGE_INSTALL,
+            SetupLockPolicy.reasonFor(
+                InstallProgress(SetupStage.CHECKING),
+                facts(SetupStage.CHECKING),
+                packageInstallRunning = true,
+                reducedStart = true
+            )
+        )
+    }
+
     @Test
     fun `the chrome lock never weakens the gate it sits beside`() {
         // Two different questions, two different answers, and the older law wins
         // wherever they meet: the lock is about CHROME, SetupGatePolicy.can is
         // about CAPABILITY. While a first-time install pauses the tabs, C still
         // compiles, files still save and the terminal still opens.
+        for (stage in listOf(SetupStage.CHECKING, SetupStage.EXTRACTING)) {
+            val lockFacts = facts(stage)
+            assertTrue(SetupLockPolicy.lock(InstallProgress(stage), lockFacts).locked)
+            assertTrue(SetupGatePolicy.can(SetupAction.RUN_C, lockFacts).allowed)
+            assertTrue(SetupGatePolicy.can(SetupAction.EDIT_FILE, lockFacts).allowed)
+            assertTrue(SetupGatePolicy.can(SetupAction.OPEN_TERMINAL, lockFacts).allowed)
+            assertFalse(SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, lockFacts).allowed)
+        }
         val stage = SetupStage.EXTRACTING
         val lockFacts = facts(stage)
-        assertTrue(SetupLockPolicy.lock(InstallProgress(stage), lockFacts).locked)
         assertTrue(SetupGatePolicy.can(SetupAction.RUN_C, lockFacts).allowed)
         assertTrue(SetupGatePolicy.can(SetupAction.EDIT_FILE, lockFacts).allowed)
         assertTrue(SetupGatePolicy.can(SetupAction.OPEN_TERMINAL, lockFacts).allowed)

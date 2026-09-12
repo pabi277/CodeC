@@ -33,6 +33,7 @@ class SetupGateWiringTest {
     private val terminalScreen = "app/src/main/java/com/codeci/ide/ui/screens/TerminalScreen.kt"
     private val fgs = "app/src/main/java/com/codeci/ide/ui/services/TerminalForegroundService.kt"
     private val setupBar = "app/src/main/java/com/codeci/ide/ui/components/SetupBar.kt"
+    private val setupState = "app/src/main/java/com/codeci/ide/ui/terminal/SetupState.kt"
 
     private fun before(src: String, first: String, then: String) {
         val a = src.indexOf(first)
@@ -382,6 +383,56 @@ class SetupGateWiringTest {
     // Owner, after running the tour: *"When the userland is installing and
     // unpacking the user can not access any other option and it will show a
     // sweet massage of why can't access any other option."*
+
+    // ---- Phase 45 round 5: the lock is on from the FIRST FRAME --------------
+    // Owner, after running round 4: *"The lock option is good but still it late
+    // user can switch before the start of userland download because is takes a
+    // little time to connect and user can switch task between them / Make it
+    // instantly after 1st open and others are ok."*
+
+    @Test
+    fun `the lock is decided by the prefix, not by the stage, and safe mode is exempt`() {
+        val policy = source(setupState)
+        // The userland branch no longer waits for DOWNLOADING: only the two
+        // stages that mean "setup stopped" answer NONE, and everything else with
+        // no usable prefix is the first-frame reason. If CHECKING ever comes back
+        // into the "no lock" list, the window the owner reported is open again.
+        assertTrue(
+            "FAILED/UNSUPPORTED must be the only stages that pause nothing",
+            policy.contains("SetupStage.FAILED, SetupStage.UNSUPPORTED -> ChromeLockReason.NONE")
+        )
+        assertTrue(policy.contains("else -> ChromeLockReason.USERLAND_STARTING"))
+        assertFalse(
+            "CHECKING must not be exempted any more",
+            policy.contains("SetupStage.CHECKING -> ChromeLockReason.NONE")
+        )
+        // A usable prefix short-circuits BEFORE the stage table, which is what
+        // keeps a launch on an installed phone from flashing a pause.
+        before(policy, "if (facts.usable) return ChromeLockReason.NONE", "return when (progress.stage)")
+        // The first-frame reason has its own sentence, and it points at the watch
+        // surface like every other one.
+        assertTrue(policy.contains("ChromeLockReason.USERLAND_STARTING ->"))
+        val starting = policy.substring(
+            policy.indexOf("ChromeLockReason.USERLAND_STARTING ->"),
+            policy.indexOf("ChromeLockReason.USERLAND_DOWNLOAD ->")
+        )
+        assertTrue(starting.contains("Hang tight"))
+        assertTrue(starting.contains("Terminal tab"))
+
+        // The Android edge: the lock is computed in the shell's composition from
+        // the flows the ViewModel fills SYNCHRONOUSLY from the disk, so frame one
+        // already knows — and safe mode is passed in, because a crash-loop phone
+        // must still be able to reach Settings (export, report).
+        val mainSrc = source(main)
+        assertTrue(mainSrc.contains("reducedStart = com.codeci.ide.ui.crash.SafeMode.active"))
+        before(mainSrc, "val chromeLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock(", "SnackbarHostState()")
+        val vm = source(terminalVm)
+        assertTrue(
+            "the facts must be read from the disk at construction, not later",
+            vm.contains("MutableStateFlow(computeSetupFacts(setupTracker.state))")
+        )
+        assertTrue(vm.contains("SetupGatePolicy.factsFor(prefixDir, phase, progress)"))
+    }
 
     @Test
     fun `an install pauses the other tabs, and a paused tab says why`() {

@@ -46,13 +46,22 @@
 > [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](chat-phase44/PART_44_1_VISIBLE_SETUP.md))
 > pauses the options an install cannot serve, dimmed with a 🔒, each answering a tap
 > with one sentence that says what is happening, why, and where to watch it — the
-> surface that shows the install is never paused. Round 4 is implemented with **193
-> host cases green locally** (76 guide/demo + 117 Phase 44); CI is ✅ **GREEN** on
-> all four rounds (`34698914219`; `34704379023`; `34707337429`; `34711827176` on tip
-> `e7759f1`, release APK 6,675,258 B = +0.08% over round 3), and device round
-> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G38** is NOT
+> surface that shows the install is never paused. **He then ran round 4 and accepted
+> it with one correction** (*"The lock option is good but still it late user can switch
+> before the start of userland download because is takes a little time to connect … Make
+> it instantly after 1st open and others are ok"*): round 4's lock waited for a stage
+> that meant *work is moving*, so the seconds before the first byte — the disk probe,
+> the reach for the network — were still switchable. Round 5 keys the pause on **whether
+> the Linux tools work** instead of on the stage, so it is on from the first frame
+> (`USERLAND_STARTING` also covers a boot-time repair of an interrupted swap), while a
+> usable prefix, a stopped setup (`FAILED`/`UNSUPPORTED`) and Phase 42.3's **safe mode**
+> still pause nothing. Round 5 is implemented with **197 host cases green locally**
+> (76 guide/demo + 121 Phase 44); CI is ✅ **GREEN** on rounds 1-4 (`34698914219`;
+> `34704379023`; `34707337429`; `34711827176` on tip `e7759f1`, release APK
+> 6,675,258 B = +0.08% over round 3) with round 5's run pending, and device round
+> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G40** is NOT
 > run (start it from Settings → About → Reset tips; G29-G33 the one-tap rule, G34-G38
-> the lock).
+> the lock, G39-G40 its first-frame timing).
 > 46-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
@@ -88,21 +97,22 @@ Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
 The numbers **are** the order. Why this order:
 
 1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
-   2026-09-12** (`arena/01a0955a-codec`; both parts, **117 host cases** after
-   Phase 45's round 4 added the chrome lock here, CI ✅ GREEN
+   2026-09-12** (`arena/01a0955a-codec`; both parts, **121 host cases** after
+   Phase 45's rounds 4-5 added the chrome lock here, CI ✅ GREEN
    round 4 `34695797493`; device round 1 🔴 FAILED four rows → three root causes
    fixed; **round 2 not run**, and its lock rows live in
-   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G34-G38**). It goes first because it
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G34-G40**). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git
    missing). It is also the only phase in the series with a data-loss-shaped
    bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
    all**, `UserlandInstaller.kt:377-395`).
 2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 4**
-   (`arena/01a0955a-codec`; both parts, **193 host cases green locally**, CI ✅
-   GREEN on all four rounds
-   `34698914219`/`34704379023`/`34707337429`/`34711827176`, device round
-   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G38** not
+   (`arena/01a0955a-codec`; both parts, **197 host cases green locally**, CI ✅
+   GREEN on rounds 1-4
+   `34698914219`/`34704379023`/`34707337429`/`34711827176` with round 5's run
+   pending, device round
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G40** not
    run). Round 4 came from the owner's own two requests after he ran round 3:
    *one tap on a highlighted control must really work it* (it now performs the
    control's own published click and then advances, in one gesture), and *"when

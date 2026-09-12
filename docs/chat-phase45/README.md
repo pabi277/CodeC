@@ -1,10 +1,10 @@
 # CodeC Phase 45 — The guide (slides on first run + coach marks on first arrival)
 
-> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 4** (2026-09-12, `arena/01a0955a-codec`;
-> owner: *"Start Phase 45"* → three device reports → three rebuilds of 45.2) · CI ✅
-> GREEN on **all four rounds** (`34698914219` tip `3c597b2`; `34704379023` tip
-> `acadaee`; `34707337429` tip `0fcb3b6`; `34711827176` tip `e7759f1`, release APK
-> 6,675,258 B) · device round required (**G1-G38**, NOT run)
+> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 5** (2026-09-12, `arena/01a0955a-codec`;
+> owner: *"Start Phase 45"* → four device reports → four rebuilds) · CI ✅ GREEN on
+> **rounds 1-4** (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
+> `34707337429` tip `0fcb3b6`; `34711827176` tip `e7759f1`, release APK 6,675,258 B),
+> round 5's run pending · device round required (**G1-G40**, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
@@ -488,9 +488,65 @@ untouched ([`PART_45_1_GUIDE_SLIDES.md`](PART_45_1_GUIDE_SLIDES.md)).
 ### What is still open
 
 CI on the round-4 commit is ✅ GREEN (`34711827176`, tip `e7759f1`, job `build`
-11m29s, zero annotations, release APK 6,675,258 B = **+5,400 B / +0.08%** over round 3
-— the measured price of an anchor-click registry with ownership, a pure tap policy and
-a chrome lock wired across five screens), so only the device round is open: rows
-**G1-G38** in [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour,
-G29-G38 round 4). Test it after **Settings → About → Reset tips**. Phase 44's round 2
-is still pending on the same phone, and its lock rows are G34-G38 here.
+11m29s, zero annotations, release APK 6,675,258 B = **+5,400 B / +0.08%** over round 3),
+and round 4 is superseded by round 5 below — the device round to run is **G1-G40**.
+
+---
+
+## Round 5 (2026-09-12, later still) — the lock is on from the first frame
+
+The owner installed round 4 (`34711827176`), accepted both halves of it, and corrected
+one thing:
+
+> *"The lock option is good but still it late user can switch before the start of
+> userland download because is takes a little time to connect and user can switch task
+> between them / Make it instantly after 1st open and others are ok"*
+
+Round 4's `SetupLockPolicy.reasonFor` was **stage-keyed**: it paused only once a stage
+said work was moving (`DOWNLOADING` / `VERIFYING` / `EXTRACTING`). Everything before the
+first byte — the ledger read, the probe of `bin/pkg` and `bin/bash`, the reach for the
+network, the server's first answer — reported `CHECKING`, which round 4 had deliberately
+exempted (*"the startup probe, not work"*). The exemption was right about a working
+phone and wrong about a fresh one: on a cold radio the window is seconds, and Phase
+44.1's launch divert only picks the *starting* tab, so one tap in that window landed the
+user on Packages reading *"not installed"* about tools already on their way.
+
+### What changed
+
+| Round 4 | Round 5 |
+|---|---|
+| Stage-keyed: `DOWNLOADING`/`VERIFYING`/`EXTRACTING` **and** `!facts.usable` | **Prefix-keyed**: `!facts.usable` and not given up on ⇒ paused, whatever the stage says. New reason `USERLAND_STARTING` covers `CHECKING` and a `READY` the disk contradicts |
+| `CHECKING` exempted, so the first seconds were switchable | The first frame is paused; the sentence is *"Hang tight — CodeC is getting ready to set up its Linux tools. … The Terminal tab shows every step."* (no `%` — none exists yet, and none is invented) |
+| `lock()`'s defaults meant "nothing is happening" | The defaults **are** the first frame of a fresh install (`CHECKING`, empty facts) and they answer **PAUSED** — a caller that has heard nothing yet must not default to open |
+| `lock(progress, facts, packageInstallRunning)` | `lock(progress, facts, packageInstallRunning, reducedStart)` — **safe mode is exempt** from the userland branch: a crash-loop phone must still reach Settings (export all projects, report a crash). A package install still outranks it |
+| — | A boot-time **repair** of an interrupted swap (`swapping` ⇒ `!usable`) is now paused too, with the Terminal open where 44.2 logs the restore |
+
+Nothing else moved: the watch surface is still never paused, `FAILED`/`UNSUPPORTED`
+still pause nothing (a stopped setup has its own sentence, its own ⬇ retry, and **C
+still compiles offline**), a usable prefix still short-circuits before the stage table —
+which is why an installed phone never sees a pause flash at launch (`TerminalViewModel`
+builds the facts **synchronously from the disk** in its constructor) — and
+`SetupGatePolicy.can` is still the only answer about capability.
+
+The tour is unaffected except that it now pauses with the lock a few seconds earlier
+(`blockedByForeground … || chromeLock.locked`), and 45.1's slides are untouched for a
+fifth time.
+
+### Files touched in round 5
+
+`ui/terminal/SetupState.kt` (`ChromeLockReason.USERLAND_STARTING`, the prefix-keyed
+`reasonFor`, the `reducedStart` parameter, the starting sentence, the law comment
+rewritten) · `MainActivity.kt` (`reducedStart = SafeMode.active`) · tests:
+`SetupGatePolicyTest` **33**, `SetupGateWiringTest` **24** → **197 host cases green
+locally** (76 guide/demo + 121 Phase 44).
+
+### What is still open
+
+CI on the round-5 commit, then the device round: rows **G1-G40** in
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour, G29-G38 round
+4, **G39-G40 round 5** — G39 wants a fresh install and a slow or absent network, G40
+wants an installed phone). Test the tour after **Settings → About → Reset tips**. Phase
+44's round 2 is still pending on the same phone, and its lock rows are G34-G40 here.
+Specification: [`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+§"Round 5 — *Make it instantly after 1st open*"; owner-facing:
+[`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §39.

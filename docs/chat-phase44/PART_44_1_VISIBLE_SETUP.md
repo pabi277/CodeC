@@ -355,7 +355,7 @@ Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §35.
 
 ---
 
-## Phase 45 round 4 (2026-09-12) — the chrome lock: *"the user can not access any other option"*
+## Phase 45 rounds 4-5 (2026-09-12) — the chrome lock: *"the user can not access any other option"*
 
 ### The request, verbatim
 
@@ -382,11 +382,12 @@ button.
 
 ### The lock
 
-`SetupLockPolicy.lock(progress, facts, packageInstallRunning)` → `ChromeLock(reason,
-message)`. Two triggers, one shape:
+`SetupLockPolicy.lock(progress, facts, packageInstallRunning, reducedStart)` →
+`ChromeLock(reason, message)`. Two triggers, one shape:
 
 | Reason | When | Paused | Never paused |
 |---|---|---|---|
+| `USERLAND_STARTING` (round 5) | **no usable prefix and setup not given up on** — from the first frame, before any byte moves: the disk probe, the reach for the network, the server's first answer | Projects, Editor, Packages, Settings | **Terminal** — `watchOption` |
 | `USERLAND_DOWNLOAD` / `_VERIFY` / `_UNPACK` | the bootstrap is moving **and** `!facts.usable` (a first install or a repair) | Projects, Editor, Packages, Settings | **Terminal** — `watchOption`, where the download, the percentage, the "don't close" line and the ⬇ retry live |
 | `PACKAGE_INSTALL` | an install the user asked for is streaming into the editor's Output Panel (`OutputRunState.installing && busy`) | Projects, Packages, Settings, **Terminal**, and inside the editor ☰ + RUN ▶ + the drawer's edge swipe | **Editor** — `watchOption`, where the Output Panel is |
 
@@ -394,16 +395,25 @@ message)`. Two triggers, one shape:
 with no way to watch the thing you are waiting for is how an app looks bricked, and
 "it looks bricked" is the failure this whole part exists to remove.
 
-Three states deliberately pause **nothing**:
+Three things deliberately pause **nothing** (round 4 exempted `CHECKING` too; round 5
+took that exemption away — see below):
 
-- `CHECKING` — the startup probe, not work. Pausing on it would lock the app on every
-  launch, including launches with nothing to install.
-- `READY` / `FAILED` / `UNSUPPORTED` — settled. Each has its own sentence at the point
+- **A usable prefix**, whatever the stage says. `facts.usable` short-circuits the whole
+  userland branch, so a launch on an installed phone pauses nothing — including an
+  **in-flight upgrade** (`facts.usable == true` while the stage moves), whose own 44.1
+  sentence is *"everything still works"*. Taking the app away from a user who can use it
+  would be a lie in the other direction. This is also why locking the probe cannot flash
+  a pause on every launch: the facts are read **synchronously from the disk** in
+  `TerminalViewModel`'s constructor, so frame one of a working phone already knows.
+- `FAILED` / `UNSUPPORTED` — settled, and stopped. Each has its own sentence at the point
   of use (`refusal`) and its own retry (⬇ in the terminal toolbar); pausing the app for
-  a setup that has already stopped would strand the user with no way out.
-- **An in-flight upgrade of a working prefix** (`facts.usable == true` while the stage
-  moves). 44.1's own sentence for that is *"everything still works"*, and taking the
-  app away from a user who can use it would be a lie in the other direction.
+  a setup that has already given up would strand the user in an app that could still
+  compile their file (**C works offline right now** is a 44.1 promise).
+- **A reduced start** (Phase 42.3's safe mode, `reducedStart`). Its whole purpose is to
+  do *less* at startup and to reach **export all projects** and **report a crash**, both
+  in Settings; a phone that has crashed three times is the last phone that may be
+  funnelled to one tab by a startup-shaped lock. An install the user **asked for** still
+  pauses the chrome in safe mode — one runner, one job.
 
 And two 44.1 guarantees are untouched, because a lock is an answer about **chrome**,
 not about capability: `RUN_C` and `EDIT_FILE` are still allowed in every stage, and
@@ -423,6 +433,7 @@ watch*:
 
 | Reason | Sentence |
 |---|---|
+| starting (round 5) | *Hang tight — CodeC is getting ready to set up its Linux tools. Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step.* |
 | download (with %) | *Hang tight — CodeC is downloading its Linux tools (62 %). Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step.* |
 | download (no %) | same, without the percentage — **never invented** (44.1's rule) |
 | verify | *Hang tight — CodeC is checking the download it just made. …* |
@@ -457,6 +468,61 @@ the moving percentage is the setup bar's job), and again on every refused tap.
   §Round 4, deviation 20): a box on a paused control could only be spent by a tap that
   merely shows the sentence.
 
+### Round 5 (2026-09-12, later) — *"Make it instantly after 1st open"*
+
+The owner ran round 4 on his phone and accepted the lock, with one correction:
+
+> The lock option is good but still it late user can switch before the start of userland
+> download because is takes a little time to connect and user can switch task between
+> them
+>
+> Make it instantly after 1st open and others are ok
+
+He is right, and the gap was round 4's own doing: `reasonFor` waited for a stage that
+means *work is moving*, so the whole `CHECKING` window was open — the ledger read, the
+probe of `bin/pkg` and `bin/bash`, the reach for the network, the server's first answer.
+On a cold phone with a cold radio that is seconds, and Phase 44.1's launch divert only
+decides the *starting* tab: one tap in that window walked the user to Packages, where
+every language reads "not installed" about tools that are already on their way.
+
+**The rule changed from stage-keyed to prefix-keyed.** With no usable prefix, every
+stage except the two that mean "setup stopped" is paused:
+
+```kotlin
+if (packageInstallRunning) return PACKAGE_INSTALL   // what the user just asked for
+if (facts.usable)          return NONE              // a working phone, incl. upgrades
+if (reducedStart)          return NONE              // safe mode must reach Settings
+return when (progress.stage) {
+    DOWNLOADING -> USERLAND_DOWNLOAD
+    VERIFYING   -> USERLAND_VERIFY
+    EXTRACTING  -> USERLAND_UNPACK
+    FAILED, UNSUPPORTED -> NONE                     // stopped: own sentence, own retry
+    else        -> USERLAND_STARTING                // CHECKING, and a READY the disk denies
+}
+```
+
+Three consequences worth stating, because each is a decision and not an accident:
+
+1. **The defaults are the paused case.** `lock()` with no arguments *is* the first frame
+   of a fresh install (`CHECKING`, empty facts) and it answers PAUSED. A caller that has
+   not heard anything yet must not default to "everything is open" — that default is how
+   the window existed at all.
+2. **A boot-time repair is the same case.** An interrupted swap leaves `swapping` true,
+   which makes `usable` false, so the restore that 44.2 runs on boot now pauses the
+   chrome while it puts the prefix back — with the Terminal open, where the repair is
+   logged.
+3. **A `READY` the disk contradicts is not "done".** That state is transient (this
+   part's own C4 correction turns it into `FAILED` with *"Setup didn't finish"*), but
+   while it lasts the tools are not there and nothing has been given up on, so it reads
+   as `USERLAND_STARTING` rather than as an open app.
+
+What round 5 does **not** change: the watch surface is still never paused, the sentence
+is still one per reason and still never invents a percentage (the starting sentence has
+no `%` in it at all), the editor still keeps typing and `cc` while the *userland* is
+being built (`editorChromeLocked` is a package-install-only answer), and
+`SetupGatePolicy.can` is still the only answer about capability — the lock beside it
+never weakens it.
+
 ### Not locked, on purpose (the owner may overrule this list)
 
 Read literally, *"any other option"* would also close the editor's file tree, the
@@ -470,18 +536,29 @@ automatically, and which 44.1 already diverts to the Terminal tab) a waiting roo
 
 ### Tests added
 
-`SetupGatePolicyTest` 25 → **30**: the three userland stages pause the chrome and
+`SetupGatePolicyTest` 25 → **33** (30 in round 4, +3 in round 5): the three userland stages pause the chrome and
 explain themselves (sentence, percentage, watch surface, every other option refused
 with the SAME sentence) · a probe, three settled stages and an upgrade of a working
 prefix pause nothing · a package install keeps the Editor and pauses the rest,
 including the editor's own chrome · routes → options, and a non-tab route → none ·
 **the lock never weakens the gate beside it** (`RUN_C` / `EDIT_FILE` / `OPEN_TERMINAL`
-still allowed while the chrome is paused). `SetupGateWiringTest` 20 → **23**: the bar
+still allowed while the chrome is paused). Round 5 added: **the first frame of a fresh
+install is paused** (`lock()` with no arguments, the probe window, an interrupted swap
+being repaired, a `READY` the disk denies — each with the watch surface open, the same
+sentence everywhere, and no invented percentage); **a usable prefix pauses nothing at
+any stage**, including an upgrade moving through all three stages; and **a reduced start
+pauses nothing** while a package install still outranks it. `SetupGateWiringTest` 20 →
+**24**: the bar
 asks the policy and a paused tab does not navigate · a paused tab looks paused · the
 sentence arrives when the pause begins · the editor reports the install only it can see
 and clears it on dispose · `installing` has exactly one writer and two clears · the
-editor's ☰ / RUN ▶ / edge swipe answer the same policy. **117 Phase 44 host cases green
-locally** (193 with Phase 45's 76), and CI ✅ GREEN on the round-4 commit
-(`34711827176`, tip `e7759f1`, release APK 6,675,258 B). Device rows:
-[`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G38**.
-Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38.
+editor's ☰ / RUN ▶ / edge swipe answer the same policy; round 5 pins that
+`FAILED, UNSUPPORTED` are the ONLY stages answering `NONE`, that `facts.usable`
+short-circuits **before** the stage table, that `MainActivity` passes
+`reducedStart = SafeMode.active`, and that the facts really are built in the
+ViewModel's constructor from the disk. **121 Phase 44 host cases green locally** (197
+with Phase 45's 76), CI ✅ GREEN on the round-4 commit (`34711827176`, tip `e7759f1`,
+release APK 6,675,258 B), round 5's run pending. Device rows:
+[`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G39**.
+Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38 (round 4)
+and §39 (round 5).

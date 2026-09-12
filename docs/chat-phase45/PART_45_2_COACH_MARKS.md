@@ -785,3 +785,34 @@ halves; whole phase **+23,576 B / +0.35%** over Phase 44 round 4's 6,651,682 B),
 debug 25,692,976 B, mapping.txt 56,258,512 B, v1.3.17.
 
 Pushed with this section; the run and its APK numbers are recorded here when it lands.
+
+---
+
+## Round 5 (2026-09-12, later still) — the tour is untouched; the lock it pauses for is earlier
+
+Round 5 changed nothing in 45.2. The owner's report was about the chrome lock from
+round 4 — *"The lock option is good but still it late user can switch before the start of
+userland download because is takes a little time to connect and user can switch task
+between them / Make it instantly after 1st open and others are ok"* — and *"others are
+ok"* included the one-tap tour, which is now shipped as specified in §Round 4.
+
+Two consequences for this file, both recorded rather than repeated:
+
+1. **Deviation 20 fires earlier.** The tour pauses whenever the chrome is locked
+   (`blockedByForeground … || chromeLock.locked`), and the lock is now on from the first
+   frame of a fresh install instead of from the first downloaded byte. So on a cold
+   phone the tour waits a few seconds longer before beat 1 can appear — which is the
+   same behaviour it already had during the download, and the reason deviation 20 exists
+   (a box on a paused control could only be spent by a tap that merely shows the
+   sentence).
+2. **Beat 1's start gate is unchanged.** The tour still begins at the editor's ☰, and on
+   a fresh install Phase 44.1's divert puts the user on the Terminal tab while the
+   tools arrive; the first beat arrives when the editor is really on screen and the
+   chrome is really unlocked. Nothing in `CoachMarkPlan`, `CoachMarks`, the anchor
+   registry or `GuideTapPolicy` moved, and their 76 host cases are byte-identical.
+
+The lock itself is specified in
+[`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+§"Round 5 — *Make it instantly after 1st open*"; the owner-facing text is
+[`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §39; the device rows are
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) **G39-G40**.

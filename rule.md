@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, device round G1-G38 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G38) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI pending, device round G1-G40 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G40) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -376,7 +376,51 @@ Every update updates the docs **in the same commit**:
   APK 6,675,258 B (**+5,400 B / +0.08% over round 3** — an anchor-click registry with
   ownership, a pure tap policy and a chrome lock wired across five screens; whole phase
   **+23,576 B / +0.35%** over Phase 44 round 4), debug 25,692,976 B, v1.3.17. **Device
-  rows are now G1-G38 and are NOT run.**
+  rows were G1-G38 for round 4; round 5 extends them to G1-G40.**
+
+  **ROUND 5 (2026-09-12, later still — the owner ran round 4): THE LOCK IS ON FROM THE
+  FIRST FRAME.** He accepted both halves of round 4 and corrected one thing: *"The lock
+  option is good but still it late user can switch before the start of userland download
+  because is takes a little time to connect and user can switch task between them / Make
+  it instantly after 1st open and others are ok"*. The gap was round 4's own exemption:
+  `reasonFor` was **stage-keyed**, so the whole `CHECKING` window — the ledger read, the
+  probe of `bin/pkg` and `bin/bash`, the reach for the network, the server's first
+  answer — was open, and 44.1's launch divert only picks the *starting* tab, so one tap
+  in that window landed the user on Packages reading *"not installed"* about tools
+  already on their way. **The rule is now prefix-keyed:** `!facts.usable` and not given
+  up on ⇒ paused, whatever the stage says. New reason `USERLAND_STARTING` covers
+  `CHECKING` and a `READY` the disk contradicts (transient — 44.1's C4 correction fails
+  it); `FAILED`/`UNSUPPORTED` still answer `NONE` (a stopped setup has its own sentence,
+  its own ⬇ retry, and **C still compiles offline**), and `facts.usable` still
+  short-circuits BEFORE the stage table — which is what keeps an installed phone from
+  flashing a pause at launch, because `TerminalViewModel` builds the facts
+  **synchronously from the disk** in its constructor
+  (`MutableStateFlow(computeSetupFacts(setupTracker.state))` →
+  `SetupGatePolicy.factsFor(prefixDir, phase, progress)`). Three consequences recorded as
+  decisions: `lock()`'s **defaults are now the paused case** (they *are* the first frame
+  of a fresh install — a caller that has heard nothing yet must not default to open); a
+  boot-time **repair** of an interrupted swap (`swapping` ⇒ `!usable`) is paused too,
+  with the Terminal open where 44.2 logs the restore; and `lock`/`reasonFor` grew
+  **`reducedStart`** — Phase 42.3's safe mode is exempt from the userland branch, because
+  a phone that crashed three times must still reach Settings (export all projects, report
+  the crash), while an install the user ASKED for still outranks it. The starting
+  sentence carries **no percentage** (none exists yet; 44.1's rule is never invent one).
+  Nothing else moved: the watch surface is never paused, the editor keeps typing and `cc`
+  while the *userland* is built, `SetupGatePolicy.can` remains the only answer about
+  capability, and 45.2's 76 guide/demo cases are byte-identical (the tour just pauses a
+  few seconds earlier, which is deviation 20 doing its job). Specified in
+  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+  §"Round 5 — *Make it instantly after 1st open*", owner-facing in
+  [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §39. **197 host cases green locally**
+  (`SetupGatePolicyTest` 33 — the first frame is paused incl. the probe window, a repair
+  and a disk-denied READY; a usable prefix pauses nothing at ANY stage incl. an upgrade
+  moving through all three; a reduced start pauses nothing while a package install still
+  outranks it; `SetupGateWiringTest` 24 — `FAILED, UNSUPPORTED` are the ONLY stages
+  answering NONE, `facts.usable` short-circuits before the stage table, `MainActivity`
+  passes `reducedStart = SafeMode.active`, and the facts really are built in the
+  constructor). **CI on the round-5 commit is pending; device rows are now G1-G40 and are
+  NOT run** (G39 wants a fresh install with a slow or absent network, G40 an installed
+  phone).
   **CI round 1 (`34698914219`, tip `3c597b2`) is
   ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
   per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
@@ -384,9 +428,10 @@ Every update updates the docs **in the same commit**:
   6,664,474 B (**+12,792 B / +0.19%** over Phase 44 round 4 — the measured cost of
   the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
-  **G1-G38** written through round 4 and **NOT run** (G28 the optional 20-second
-  stall-guard row, G29-G33 the one-tap rule, G34-G38 the chrome lock); CI is ✅ GREEN on
-  all four rounds (round 4 = `34711827176`, tip `e7759f1`), and the round-2 commit
+  **G1-G40** written through round 5 and **NOT run** (G28 the optional 20-second
+  stall-guard row, G29-G33 the one-tap rule, G34-G38 the chrome lock, G39-G40 its
+  first-frame timing); CI is ✅ GREEN on rounds 1-4 (round 4 = `34711827176`, tip
+  `e7759f1`) and pending on round 5, and the round-2 commit
   (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
   10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
   release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the
@@ -918,7 +963,17 @@ Every update updates the docs **in the same commit**:
   caught two more real faults: a host call still passing an argument the redesign
   had deleted (`arrivalKey` — a hard compile error waiting in CI), and a pin that
   grepped the bare word `GOT IT` and so failed on the comment promising there is no
-  GOT IT — **pin the button (`Text("GOT IT")`), never the word**. **Round 4 of
+  GOT IT — **pin the button (`Text("GOT IT")`), never the word**. **Round 5 grew it to
+  197/197** (`SetupGatePolicyTest` 33, `SetupGateWiringTest` 24) after the sandbox lost
+  `/tmp` and the harness had to be rebuilt from scratch — which produced its own reusable
+  lessons: **a harness runner must build a FRESH test-class instance per test method**
+  (JUnit's rule), because reusing one instance made five `DemoProjectSeedTest` cases fail
+  on state leaked through a shared `TemporaryFolder` root, and those failures looked
+  exactly like production bugs (`expected true`, `FileNotFoundException: … demo_flask (Is
+  a directory)`); the shim `Assert` needs JUnit's **`assertEquals(Double, Double,
+  delta)`** overload (without it every `assertEquals(0.5, x, 0.01)` resolves to
+  `(String?, Any?)` and does not compile); and `@get:Rule` needs
+  `AnnotationTarget.PROPERTY_GETTER` on the shim annotation. **Round 4 of
   Phase 45 grew it to 193/193** (`CoachMarkPlanTest` 25, `GuideWiringTest` 19,
   `SetupGatePolicyTest` 30, `SetupGateWiringTest` 23) and added a third pin shape:
   round 3's pins on the tap handler (`hole.contains(down.position)`, `onAdvance()`,

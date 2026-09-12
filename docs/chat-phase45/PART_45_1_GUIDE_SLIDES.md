@@ -293,6 +293,15 @@ as a claim about the whole guide:
 
 ---
 
+## Round 5 note (2026-09-12, later still) — unchanged for a fifth time
+
+Round 5 (the chrome lock is on from the first frame) touched nothing in 45.1 either.
+The slides still run before Phase 44's terminal divert, so on a fresh install the order
+is: tiles → five slides → the shell, which opens on the Terminal tab with the other four
+tabs already paused and already explaining themselves. Slide 3 (*one download, one
+time*) is the slide that promises this, and round 5 removed the last second in which the
+app did not behave like slide 3 says.
+
 ## Round 4 note (2026-09-12, later still) — still unchanged, and now also paused by an install
 
 Round 4 (one tap per beat; the chrome lock) touched **nothing** in 45.1:
@@ -311,4 +320,4 @@ Two things round 4 changes *around* the slides:
    download, and the tour resumes on its own beat once the install settles. Slide 3 is
    the slide that promised this, and round 4 made the app behave like slide 3 says.
    Specified in [`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
-   §"Phase 45 round 4 — the chrome lock"; device rows **G34-G38**.
+   §"Phase 45 rounds 4-5 — the chrome lock"; device rows **G34-G40**.

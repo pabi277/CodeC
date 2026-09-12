@@ -125,7 +125,11 @@ when you are back online.
 #### While an install is running, the rest of the app pauses
 
 An install is one job at a time, so the options that cannot work right now are
-**paused** instead of failing silently — and a paused option always says why.
+**paused** instead of failing silently — and a paused option always says why. The pause
+is there **from the moment the app opens**, not from the first byte downloaded: if the
+Linux tools are not usable yet, the other tabs are already dimmed while CodeC reaches
+the network, so there is no first second in which you can wander to a tab that will tell
+you Python is "not installed" on its way.
 
 - **The one-time Linux tools** (downloading, checking, unpacking): the tabs other
   than **Terminal** are dimmed with a small 🔒, and tapping one answers
@@ -139,11 +143,12 @@ An install is one job at a time, so the options that cannot work right now are
   RUN ▶ and the drawer's edge swipe answer with the same sentence until it
   finishes. Then everything unlocks by itself.
 - **Never paused:** running a program of your own (a C build, a Flask server — a
-  run is not an install), the quick startup check, a setup that has finished or
-  failed (those have their own sentence and their own retry), and an **upgrade**
-  of a working tool set (*"everything still works"*). Typing and `cc` never wait
-  for a download either — you can write and compile C offline while the Linux
-  tools arrive.
+  run is not an install), a setup that has finished, failed, or has no bootstrap for
+  your device (those have their own sentence and their own ⬇ retry), an **upgrade** of a
+  working tool set (*"everything still works"*), and **safe mode** — after three failed
+  launches the app starts reduced so you can export your projects and report the crash,
+  and those live in Settings. Typing and `cc` never wait for a download either: you can
+  write and compile C offline while the Linux tools arrive.
 
 The rule behind all of it: **the screen that shows the install is never the one
 that is paused**, so there is always somewhere to watch and nowhere to get lost.
