@@ -1,6 +1,6 @@
 # CodeC Phase 44.1 — The install is visible everywhere
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI pending · device round required · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"the test user don't know it's installing so they
 > close app before it complete"* → **owner's solution, kept almost verbatim:**
 > *"If it opens the terminal 1st and show a warning don't close the terminal
@@ -177,6 +177,73 @@ PASS = all seven.
   install command that is not preceded by a `SetupGatePolicy.can(` check — the
   cheap guard against a future row bypassing the gate (the shape of
   `StageAllHygieneTest`).
+
+## Implementation (2026-09-12, `arena/01a0955a-codec`)
+
+Shipped as specified, with six recorded deviations at the end of this section.
+Every policy is pure Kotlin in `app/src/main/java/com/codeci/ide/ui/terminal/`;
+the Android edge only publishes and draws it.
+
+### New files
+
+| File | What it holds |
+|---|---|
+| `ui/terminal/SetupState.kt` (660 lines) | `SetupStage` (`CHECKING/DOWNLOADING/EXTRACTING/SWAPPING/READY/FAILED/OFFLINE/UNSUPPORTED`), `InstallProgress` (+ `percent`, `settled`, `copyWithStage`), `SetupCapability`, `SetupAction`, `SetupVerdict` (`Allowed/Refused/Blocked`), `SetupFacts`, `SetupProgressParser.parse:176`, `SetupGatePolicy.can:270/:289`, `.refusal:308`, `.barText:380`, `.dontCloseText:409`, `.notificationText:428`, `.actionForCommand:459`, `.userlandUsable:484`, `.diskFacts:510`, `SetupTracker:551`, `SetupAnnouncer:621` |
+| `ui/terminal/SetupStateBridge.kt` | `TerminalViewModel` → any other ViewModel: the live `SetupFacts`, or `diskFacts` as fallback (`factsOrDisk`) |
+| `ui/terminal/SetupNoticeBridge.kt` | `TerminalViewModel` → `MainActivity`: the setup notice row (text + action) |
+| `ui/components/SetupBar.kt` (133 lines) | the bar itself — `Surface` + progress row (percent only, never bytes/speed), a dismiss ✕ when the stage is settled and usable, optional `noticeText`/`onNoticeClick` |
+
+### Changed files (the wiring)
+
+| Site | Change |
+|---|---|
+| `TerminalViewModel.kt` | `setupProgress: StateFlow<InstallProgress>` + `setupNotice`; `publishSetup` runs the real parser through `SetupTracker` and re-derives facts; `startSetupKeepAlive()` / `stopSetupKeepAliveIfIdle()` acquire the wake lock and start the FGS **before** the first byte is written; `announceSetupNotification()` (throttled by `SetupAnnouncer`) drives the FGS text; `userlandUsable()` = `SetupGatePolicy.userlandUsable(prefix, ledgerPhase)` |
+| `ui/services/TerminalForegroundService.kt` | `start(context, status, percent)` + `updateStatus(...)`; the setup sentence replaces the terminal copy, percent becomes `setProgress`; **one** channel (`codec_terminal`), the small icon stays `ic_stat_codec`; a refused `startForegroundService` (Android 12+ background start, denied `POST_NOTIFICATIONS`) is caught and logged via `AppLogger` |
+| `ui/screens/TerminalScreen.kt:574` | `statusLabel = TerminalStatusLabel.label(setupProgress.stage, anyAlive)` — the chip is now stage-aware; `:762` renders `SetupGatePolicy.dontCloseText(progress)` |
+| `ui/terminal/TerminalUx.kt` | `TerminalStatusLabel` (stage → chip text + tone), appended to the existing `TerminalUxTest.kt` as `TerminalStatusLabelTest` |
+| `MainActivity.kt:761,763,778,947` | collects `setupProgress`; `startDestination` = terminal on a fresh, incomplete setup; `LaunchedEffect` opens the starter C file once setup settles; `SetupBar` sits between `SafeModeBanner` and `NavHost` so it is visible on every tab; `onStarterChosen` sets `setupDiverted` before `firstLaunchComplete` |
+| `ui/screens/ModulesScreen.kt:63,69,159-164,195` | `setupRefusal = remember { mutableStateOf<String?>(null) }` + `runGated(action, command)`; `verdict`/`gated`/`runBlocked` decide the actions row (an already-installed package keeps **RUN**, a `pkg` transaction is refused and **VIEW SETUP** replaces INSTALL); all four `terminalViewModel.sendCommand(` sites are inside the gate |
+| `ui/viewmodels/EditorViewModel.kt:2178` | `confirmInstall` refuses through `SetupGatePolicy.can(INSTALL_PACKAGE, SetupStateBridge.factsOrDisk(...))` and prints the honest sentence into the Output Panel; `installUserland()` still works in every stage |
+
+### The capability rule as implemented (`actionForCommand`)
+
+`RUN_C` and `EDIT_FILE` are **never** gated. Everything else derives its
+capability from the command's own words:
+
+* `install`/`update`/`remove`/`uninstall`/`search`/`show`/`list`/`upgrade`/`clean`/`autoclean`/`autoremove`/`files`/`depends`/`policy`/`dpkg` → `PACKAGE_MANAGER`
+* `clang`/`clang++`/`python`/`python3`/`node`/`npm`/`bash`/`sh`/`zsh`/`gdb`/`make`/`cmake`/`git` → `USERLAND_SHELL`
+* anything else → `NONE` (no gate).
+
+### Deviations from this part's spec (recorded, not silent)
+
+1. **`OPEN_TERMINAL` is never refused.** The Terminal tab is where the setup is
+   watched; refusing it would trap the user outside the only progress surface.
+   Its verdict is `Allowed` in every stage and `SetupGatePolicyTest` pins that.
+2. **The Robolectric `SetupStateVmTest` was not written.** Driving
+   `TerminalViewModel.init` under Robolectric spawns a PTY/JNI session and would
+   *really* download and install a userland — the same instability class as
+   TROUBLESHOOTING §31. Replaced by (a) pure `SetupTracker` tests inside
+   `SetupProgressParseTest` and (b) `SetupGateWiringTest`, a source-scan class
+   that pins the eleven wirings above (every `sendCommand` gated, keep-alive
+   before the download, progress lines → `publishSetup`, the boot repair next to
+   `TempGc`, the bar between `SafeModeBanner` and `NavHost`, one notification
+   channel, the chip using `TerminalStatusLabel.label`, …).
+3. **The bar and the notice row are dismissible once the stage is settled and
+   usable**, and the FGS is dismissed only when `setupKeepAlive` is false. A
+   device with a READY-but-unusable prefix is never trapped behind the bar (the
+   spec's "never dismissible" would have made the bar a wall).
+4. **First-run diversion also opens the starter C file** when setup settles
+   (`LaunchedEffect` at `MainActivity.kt:778`), so a user who never left the
+   Terminal tab still lands in the editor. Phase 45.1's guide will own this
+   moment properly; the hook is one place.
+5. **`announceSetupNotification` runs on every progress line** (the 5 % / 2 s
+   throttle lives in `SetupAnnouncer`), while facts are only republished when
+   the tracker says something a gate cares about changed — a long download must
+   not cost thousands of `stat` calls and `SharedPreferences` writes.
+6. **The keep-alive hands over instead of stopping**: when a real session starts
+   during setup, `setupKeepAlive` goes false and the FGS/wake lock stay held by
+   the session path; otherwise a failed install releases them
+   (`stopSetupKeepAliveIfIdle`).
 
 ## Sources (record)
 

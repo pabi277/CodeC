@@ -97,6 +97,31 @@ CodeC ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`):
    bootstrap release `userland-v2-dev` (SHA-256 verified, staged, atomic) and
    provides 25+ packages including `git`, `python`, `clang`, `nano`, `make`, `ripgrep`, `tmux`, and more.
 
+#### The one-time setup you can see (Phase 44)
+
+The first launch downloads CodeC's Linux tools **once** (SHA-256-verified,
+staged, atomic). While that runs:
+
+- a slim **setup bar sits at the top of every tab** —
+  `Setting up CodeC's Linux tools — 42 % · C works right now`;
+- a **fresh install opens the Terminal tab first**, with
+  `Don't close CodeC — it is finishing a one-time setup (42 %)` above a status
+  chip that reads `downloading userland 42 %`;
+- the **status bar shows the same percentage** for the whole download (a
+  foreground service + wake lock keep it alive while the screen is off);
+- **C keeps working** — `RUN ▶` on a `.c` file and `cc` in the terminal are
+  never gated by setup, at any percentage;
+- the **Packages** tab refuses an install with one honest sentence and a
+  **VIEW SETUP** button, instead of silently queuing `pkg` into a prefix that
+  has none;
+- if the app **is** killed mid-install, the next launch repairs the prefix (an
+  interrupted swap is renamed back, orphan `usr.old-*` / `.userland-staging-*`
+  directories are swept) and says so once in the bar.
+
+Offline during setup: `CodeC needs the network once to finish setting up its
+Linux tools. C works offline right now.` — tap **⬇** in the terminal toolbar
+when you are back online.
+
 ### Package & Command Hub (Packages tab)
 
 The **Packages** tab provides a visual 1-tap package manager and command hub:

@@ -1,7 +1,8 @@
 # CodeC Phase 44 — Setup you can see, and cannot half-finish
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"Userland is
+> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) — code
+> + tests written, CI (`Build APK`) pending, device round required before it is
+> called tested · **Cost:** `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"Userland is
 > installing but the test user don't know it's installing so they close app
 > before it complete than letter when they try to install any other pkg got
 > errors"* → **owner's own solution:** *"If it opens the terminal 1st and show a
@@ -14,8 +15,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [44.1](PART_44_1_VISIBLE_SETUP.md) | The install is visible everywhere | M | 📋 PLANNED |
-| [44.2](PART_44_2_ATOMIC_SETUP.md) | The install cannot half-finish | M | 📋 PLANNED |
+| [44.1](PART_44_1_VISIBLE_SETUP.md) | The install is visible everywhere | M | 🚧 IMPLEMENTED (CI pending) |
+| [44.2](PART_44_2_ATOMIC_SETUP.md) | The install cannot half-finish | M | 🚧 IMPLEMENTED (CI pending) |
 
 ---
 
@@ -175,6 +176,52 @@ PASS = all nine, on the owner's device.
   times with backoff (`MAX_DOWNLOAD_ATTEMPTS`, `UserlandInstaller.kt:552`); the
   explicit button already exists in the terminal toolbar
   (`TerminalScreen.kt:280`). 44.1 only surfaces it better.
+
+## Implementation record (2026-09-12, `arena/01a0955a-codec`)
+
+Both parts are written. Code lives in the repo, not in this doc; the part docs
+carry the file-by-file record
+([44.1](PART_44_1_VISIBLE_SETUP.md#implementation-2026-09-12-arena01a0955a-codec),
+[44.2](PART_44_2_ATOMIC_SETUP.md#implementation-2026-09-12-arena01a0955a-codec))
+and their **deviations are listed there**, not hidden. Summary:
+
+```text
+new   ui/terminal/SetupState.kt        660   parser + gate policy + tracker + announcer (pure)
+new   ui/terminal/SetupLedger.kt       155   durable attempt record + resumePlan (pure)
+new   ui/terminal/SetupRecovery.kt     292   boot repair: restore / sweep / gate  (pure + File)
+new   ui/terminal/SetupLedgerPrefs.kt   48   the SharedPreferences store (commit, never apply)
+new   ui/terminal/SetupStateBridge.kt   35   VM → VM facts
+new   ui/terminal/SetupNoticeBridge.kt  30   VM → activity notice
+new   ui/components/SetupBar.kt        133   the bar (all tabs, percentage only)
+new   6 test classes + 1 appended      ~1600 97 host cases
+mod   TerminalViewModel · UserlandInstaller · TerminalForegroundService · MainActivity
+mod   TerminalScreen · TerminalUx · ModulesScreen · EditorViewModel
+```
+
+Nothing new was added to the dependency list, no DataStore key was created (the
+ledger is its own `SharedPreferences` file, which `SettingsKeysHaveReadersTest`
+does not scan), no Settings control was added (so `SETTINGS_AUDIT.md` is
+unchanged), no permission was added, and the notification small icon is still
+`ic_stat_codec`. `MANAGE_EXTERNAL_STORAGE` is not involved.
+
+**Host pre-validation (`rule.md` §9, optional):** 97 cases green locally through
+`kotlinc` + `jdk4py` + shimmed `org.junit`/`flow`
+(`SetupGatePolicyTest` 21 · `SetupProgressParseTest` 22 · `SetupLedgerTest` 13 ·
+`SwapRecoveryTest` 14 · `UserlandUsableTest` 9 · `SetupGateWiringTest` 14 ·
+`TerminalStatusLabelTest` 4). The Compose/JNI edges cannot compile in this
+sandbox at all (no `android.jar`), so **CI's `Build APK` is the executor of
+record** and this round is a pre-check only — never a claim of passing tests.
+
+**Test-name deviation:** the plan's `InstallLedgerTest` shipped as
+`SetupLedgerTest`; the plan's Robolectric `SetupStateVmTest` was replaced by pure
+`SetupTracker` tests + `SetupGateWiringTest` source pins (reason recorded in
+PART_44_1's deviation 2 — a Robolectric `TerminalViewModel` would really spawn a
+PTY and really install a userland).
+
+**What is still open:** the nine-row exit condition below is a **device**
+condition and has not been run — no device, no emulator, no Gradle in this
+sandbox. Until the owner runs it, Phase 44 is 🚧 IMPLEMENTED, not ✅ COMPLETE,
+and nothing here may be described as tested on hardware.
 
 ## Sources
 

@@ -13,7 +13,10 @@
 > (symptom → root cause → design → exit condition → tests → deferred →
 > sources).
 >
-> **This is a plan. No app code was written for it.** Phase 43 is
+> **Status (2026-09-12):** Phase **44 is 🚧 IMPLEMENTED** on
+> `arena/01a0955a-codec` (CI pending; the device round
+> [`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md) has **not**
+> been run). 45-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
 > [`chat-phase43/README.md`](chat-phase43/README.md).
@@ -47,7 +50,9 @@ Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
 
 The numbers **are** the order. Why this order:
 
-1. **44 — setup you can see, and cannot half-finish.** It goes first because it
+1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
+   2026-09-12** (`arena/01a0955a-codec`; both parts, 97 host cases,
+   CI pending, device round not run). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git
    missing). It is also the only phase in the series with a data-loss-shaped

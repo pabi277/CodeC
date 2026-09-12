@@ -198,8 +198,40 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44-50 are 📋 PLANNED (docs-only, the owner's test-phase bug report — next: "Start Phase 44"); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phase 44 is 🚧 IMPLEMENTED on `arena/01a0955a-codec` (CI pending, device round NOT run — next: the owner's [`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md), then "Start Phase 45"); 45-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
+- **Phase 44 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
+  Phase 44")** — *setup you can see, and cannot half-finish*. Both parts in one
+  round: **44.1** the one-time userland install is visible on every tab (pure
+  `ui/terminal/SetupState.kt`: `SetupProgressParser` over the installer's
+  existing progress lines, `SetupGatePolicy.can/refusal/barText/dontCloseText/
+  notificationText/actionForCommand/userlandUsable/diskFacts`, `SetupTracker`,
+  `SetupAnnouncer`; `ui/components/SetupBar.kt` rendered between
+  `SafeModeBanner` and `NavHost`; Terminal-first on a fresh install; the
+  owner's `Don't close CodeC — …` row; a stage-aware chip via
+  `TerminalStatusLabel`; the same sentence in the notification via
+  `TerminalForegroundService.start(context, status, percent)`; wake lock + FGS
+  taken **before the first byte**; Packages and the editor's install path refuse
+  with one honest sentence), and **44.2** a kill is harmless (`SetupLedger` on
+  its own SharedPreferences file with `commit()` never `apply()`, pure
+  `resumePlan()`, `SetupRecovery.recover()` from `MainActivity.onCreate` next to
+  `TempGc` with a bounded orphan sweep, `SetupRecoveryGate.awaitFinished()` so
+  the installer waits for the boot repair, the post-install marker written
+  **after** the swap, and `userlandUsable` checking the real `$PREFIX/bin/pkg`
+  instead of a marker). **C is never gated** in any stage. **97 host cases** in
+  seven classes were green locally through this section's kotlinc harness; the
+  Compose/JNI edges cannot compile in-sandbox at all (no `android.jar`), so
+  **CI's `Build APK` is the executor of record** and the nine-row exit condition
+  is a **device** condition — `docs/chat-phase44/DEVICE_ROUND.md` (12 rows, incl.
+  the three kill points) is written and **NOT run**. Deviations are recorded in
+  the part docs (`OPEN_TERMINAL` never refused; the planned Robolectric
+  `SetupStateVmTest` replaced by pure tracker tests + `SetupGateWiringTest`
+  source pins; the bar is dismissible only once settled **and** usable;
+  `swapPrefix`'s names untouched so `UserlandInstallerTest` stays green; one
+  repair entry point). No new dependency, DataStore key, Settings control,
+  permission or telemetry; small icon still `ic_stat_codec`. Owner-facing
+  explanation: TROUBLESHOOTING §32. **Do not call Phase 44 tested until the
+  owner reports the device round.**
 - **Phases 44-50 PLANNED (2026-09-12, docs-only, no app code)** — the owner's
   **test-phase bug report** (seven rows: the invisible one-time download, no
   guide, "remove open-a-folder", four editor complaints, three "other"
@@ -625,7 +657,17 @@ Every update updates the docs **in the same commit**:
   written, and 124 host tests then ran green over the real production files. **CI is still the executor of
   record** (Gradle/AGP, real Robolectric, lint, the APK) — Maven Central and
   Google Maven are unreachable in-sandbox, so nothing that needs Gradle can run
-  here, and the toolchain lives in `/tmp` (not persisted).
+  here, and the toolchain lives in `/tmp` (not persisted). **Phase 44 used the
+  same loop as a single reusable script** (re-extract the pure test classes out
+  of the Compose-coupled test files, compile the real production files + the
+  real test sources against the shims, run them from `app/` so `RepoFiles.root()`
+  resolves): **97/97 green**, and it caught four real faults before CI (a
+  `CountDownLatch` needed where a Kotlin `Any()` lock cannot `wait()`, an
+  interface default `val` that a `data class` constructor property cannot hide,
+  a lookbehind needed so `NotificationChannel(` does not also match
+  `createNotificationChannel(`, and a source-scan count that was off by one
+  because `ModulesScreen` has **four** `sendCommand` sites, not three). The
+  script itself is throwaway (`/tmp`); the *shape* is the reusable part.
 
 ---
 

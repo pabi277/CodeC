@@ -1185,3 +1185,57 @@ If it recurs, the for-cause fix is a bounded retry-on-reset around
 `DownloadManager`'s connect (which would ALSO make real-device downloads
 more robust on flaky mobile networks) — recorded here so the next
 occurrence starts at the root cause, not at the symptom.
+
+## 32. `pkg: not found` after you closed CodeC during the one-time install — and the setup bar that prevents it (Phase 44, 2026-09-12)
+
+**Symptom (the owner's report, verbatim):** *"Userland is installing but the test
+user don't know it's installing so they close app before it complete than letter
+when they try to install any other pkg got errors"* → *"If it opens the terminal
+1st and show a warning don't close the terminal while userland is installi[ng]"*.
+
+**What was actually wrong — three separate things, all in the code:**
+
+1. The download started at *process start* (`TerminalViewModel.init`) and its
+   progress only ever reached the terminal emulator's buffer, so a user who
+   never opened the **Term** tab never saw it happening.
+2. No foreground service and no wake lock during the download (both were gated
+   on "a session is alive", which is false while the install runs), so Android
+   could doze or kill it mid-flight.
+3. `UserlandInstaller.swapPrefix` had a kill window between its two renames:
+   killed there, `usr` is **gone** and an orphan `usr.old-*` stays forever —
+   next launch offline → the install is skipped → `pkg: not found`. That is the
+   owner's exact symptom, and nothing ever cleaned the orphan.
+
+**What you see now (any build containing Phase 44):**
+
+| Surface | Text |
+|---|---|
+| Setup bar, **every tab** | `Setting up CodeC's Linux tools — 42 % · C works right now` (no ✕ until setup is finished and the tools really work) |
+| Fresh install | the **Terminal tab opens first**; above the chip: `Don't close CodeC — it is finishing a one-time setup (42 %)`; the chip itself: `downloading userland 42 %` → `verifying download…` → `unpacking userland…` → `running` |
+| Status bar | `Downloading CodeC's Linux tools — 42 %` with a progress bar, for the whole download (when notifications are allowed; nothing crashes when they are not) |
+| Packages tab | one honest sentence — `CodeC is downloading its Linux tools (58 %). Don't close the app — this happens once.` — plus **VIEW SETUP**. Nothing is silently queued |
+| Editor (non-C run / install) | the same sentence in the Output Panel, ending `C works offline right now.` |
+| Offline | `CodeC needs the network once to finish setting up its Linux tools. C works offline right now.` — never "using built-in cc" |
+| After a kill | on the next launch CodeC repairs itself and says so **once**: `Setup was interrupted; CodeC restored your Linux tools.` |
+
+**C is never gated.** `RUN ▶` on a `.c` file and `cc hello.c -o hello` in the
+terminal work at every percentage of the download (TCC lives in the APK).
+
+**If you still get `pkg: not found`:** open the **Term** tab and tap **⬇**
+(install / repair the Linux tools). If the bar claims the tools are ready but
+`pkg` still fails, that is a Phase 44 bug worth reporting — the gate now checks
+the **real** `$PREFIX/bin/pkg` (exists, executable, non-empty) instead of a
+marker file, so a false "ready" means the check itself is wrong. Include the bar
+text and Settings → **Logs**.
+
+**Why the repair is safe:** the ledger records the attempt phase with
+`commit()` (never `apply()`), the boot repair restores the newest `usr.old-*`
+only when `usr` is missing, and the sweep touches **only** `usr.old-<digits>`
+and `.userland-staging-<digits>` directories directly inside the app's files
+directory — never `projects/`, never a live prefix, never anything newer than
+the repair itself.
+
+**Device round:** [`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md)
+— 12 rows including the three kill points (mid-download, mid-extract, mid-swap)
+and the owner's `pkg install python` afterwards. **Not yet run** (no device in
+the agent sandbox), so Phase 44 is 🚧 IMPLEMENTED, not tested on hardware.

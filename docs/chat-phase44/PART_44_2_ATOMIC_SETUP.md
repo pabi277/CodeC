@@ -1,6 +1,6 @@
 # CodeC Phase 44.2 — The install cannot half-finish
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI pending · device round required · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"they close app before it complete than letter when
 > they try to install any other pkg got errors"*
 >
@@ -169,6 +169,63 @@ PASS = all seven; 3-4 are the core promise.
   **true** (a working prefix beats a missing marker — the honest direction).
 - Existing `UserlandInstallerTest` keeps passing **untouched** (its loopback
   keep-alive flake is `TROUBLESHOOTING.md` §31; this part must not "fix" it).
+
+## Implementation (2026-09-12, `arena/01a0955a-codec`)
+
+### New files
+
+| File | What it holds |
+|---|---|
+| `ui/terminal/SetupLedger.kt` (155 lines) | `SetupPhase` (`IDLE/DOWNLOADING/EXTRACTING/SWAPPING/DONE`), `SetupRecord` (+ `wasInProgress`), `SetupLedger` over an injected `Store` (`readPhase/readRelease/readStartedAt/note/clear`): `note:86` stamps `startedAt` only on the **first** in-progress write of an attempt and re-stamps it when a `DONE` record is followed by a new `DOWNLOADING`; `read:97` maps a corrupt or throwing store to `IDLE`; `clear:109`; `resumePlan:120`; `resumeMessage:144` |
+| `ui/terminal/SetupLedgerPrefs.kt` (48 lines) | the Android `Store`: `SharedPreferences("setup_ledger")`, **`commit()` on every write, never `apply()`** |
+| `ui/terminal/SetupRecovery.kt` (292 lines) | `SetupRecovery.recover:92` (one entry point: read the ledger → `restoreOldPrefix:161` when the kill window was hit → `sweep:187` bounded by `scan:220` → mark the ledger `DONE`), `SetupRecoveryGate:266` + `awaitFinished:282` (5 s) |
+
+### The kill matrix as implemented (`resumePlan`)
+
+| Ledger | `usr` | `usr.old-*` | Action |
+|---|---|---|---|
+| `SWAPPING` | absent | ≥1 | **`RestoreOld`** (newest stamp) → then sweep |
+| `SWAPPING` | present | ≥1 | `SweepOnly` — the swap completed |
+| `SWAPPING` | absent | 0 | `FreshInstall` + a one-time notice |
+| `DOWNLOADING`/`EXTRACTING` | absent | ≥1 | **`RestoreOld`** (an older interrupted swap still owned the prefix) |
+| `DOWNLOADING`/`EXTRACTING` | absent | 0 | `FreshInstall` + notice |
+| `DOWNLOADING`/`EXTRACTING` | present | any | `SweepOnly` (the install can continue from cache) |
+| `DONE`/`IDLE`/corrupt | any | ≥1 | `SweepOnly` |
+| any | any | 0 | `None` |
+
+The sweep deletes **only** `usr.old-<digits>` and `.userland-staging-<digits>`
+that are real directories directly inside `filesDir`, never the live `usr`, and
+never anything newer than the repair's own `startedAt` (a concurrent install's
+staging directory is untouchable). Three interrupted swaps leave one prefix and
+zero orphans — pinned by `SwapRecoveryTest`.
+
+### Changed files
+
+| Site | Change |
+|---|---|
+| `MainActivity.kt:258-284` | the repair runs on a daemon thread **next to `TempGc`**, before the Compose tree, and always calls `SetupRecoveryGate.finished()` (even on a throwing store) |
+| `ui/terminal/UserlandInstaller.kt:308-328` | `SetupRecoveryGate.awaitFinished()` before touching the prefix; ledger `EXTRACTING` note before the extract and `SWAPPING` immediately before `swapPrefix` |
+| `ui/terminal/UserlandInstaller.kt:378-390` | the post-install marker is now written **after** the swap — the old order made `installUserlandInternal` believe the tools existed while `usr` was mid-rename. `swapPrefix` itself keeps its byte-identical staging/old names via `SetupRecovery.stagingName`/`oldPrefixName` |
+| `ui/viewmodels/TerminalViewModel.kt` | ledger notes on the stage transitions (`DOWNLOADING`/`EXTRACTING`/`DONE` on a working prefix, `IDLE` on `SkippedOffline`), and `userlandUsable()` = `SetupGatePolicy.userlandUsable(prefix, ledgerPhase)` — the real `bin/pkg`, not the marker |
+| `ui/viewmodels/EditorViewModel.kt:2224` | the offline refusal names the network and offers **RUN C** and **VIEW SETUP**; the sentence comes from `SetupGatePolicy.refusal`, not from the installer's `"using built-in cc"` wording |
+
+### Deviations from this part's spec (recorded, not silent)
+
+1. **One public repair entry point.** The spec's
+   `UserlandInstaller.restoreAfterInterruptedSwap()` + `sweepOrphanSetupDirs()`
+   are implemented as `SetupRecovery.recover(...)`, because the repair must run
+   from `MainActivity` (which has no `UserlandInstaller` instance) and must not
+   depend on the JNI session classes. `UserlandInstaller` keeps its existing
+   public API — `UserlandInstallerTest` is **untouched** (its staging/old names
+   are byte-identical, produced by `SetupRecovery.stagingName`/`oldPrefixName`).
+2. **`SetupRecoveryGate` was added** (not in the spec): the installer waits up to
+   5 s for the boot repair to finish, so a repair renaming `usr.old-*` → `usr`
+   can never interleave with a fresh install's swap. Both directions are safe by
+   construction (different directories, stamps guard the sweep), but the wait
+   removes the ambiguity entirely.
+3. **The repair notice is one-time and non-nagging** (`SetupNoticeBridge` →
+   the setup bar's notice row), and only appears when the repair actually
+   restored or cleaned something.
 
 ## Sources (record)
 
