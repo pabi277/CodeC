@@ -48,8 +48,8 @@
 > with one sentence that says what is happening, why, and where to watch it — the
 > surface that shows the install is never paused. Round 4 is implemented with **193
 > host cases green locally** (76 guide/demo + 117 Phase 44); CI is ✅ **GREEN** on
-> rounds 1-3 (`34698914219`; `34704379023`; `34707337429` on tip `0fcb3b6`, release
-> APK 6,669,858 B) with round 4's run pending, and device round
+> all four rounds (`34698914219`; `34704379023`; `34707337429`; `34711827176` on tip
+> `e7759f1`, release APK 6,675,258 B = +0.08% over round 3), and device round
 > [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G38** is NOT
 > run (start it from Settings → About → Reset tips; G29-G33 the one-tap rule, G34-G38
 > the lock).
@@ -100,8 +100,8 @@ The numbers **are** the order. Why this order:
    all**, `UserlandInstaller.kt:377-395`).
 2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 4**
    (`arena/01a0955a-codec`; both parts, **193 host cases green locally**, CI ✅
-   GREEN on rounds 1-3 `34698914219`/`34704379023`/`34707337429` with round 4's
-   run pending, device round
+   GREEN on all four rounds
+   `34698914219`/`34704379023`/`34707337429`/`34711827176`, device round
    [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G38** not
    run). Round 4 came from the owner's own two requests after he ran round 3:
    *one tap on a highlighted control must really work it* (it now performs the

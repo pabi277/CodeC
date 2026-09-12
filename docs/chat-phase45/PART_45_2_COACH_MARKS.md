@@ -772,6 +772,16 @@ of its exits. `GuidePlanTest` 15, `TooltipPlacementTest` 10, `DemoProjectSeedTes
 unchanged. **193 = 76 guide/demo + 117 Phase 44** (180 + 13 new: 4 tap-policy, 1 wiring,
 5 lock-policy, 3 lock-wiring).
 
-### CI round 4: ⏳ pending
+### CI round 4: ✅ GREEN
+
+`Build APK` **`34711827176`** on tip `e7759f1` — `conclusion: success`, job `build`
+25 steps, 11m29s (18:38:49Z → 18:50:18Z), **zero annotations**, assemble +
+`testDebugUnitTest` + `lintDebug` per `rule.md` §5, so the 193 host cases ran on real
+Gradle/JUnit/Robolectric and lint is clean. Artifacts: **release APK 6,675,258 B**
+(**+5,400 B / +0.08%** over round 3's 6,669,858 B — this round added an anchor-click
+registry with ownership, a pure tap policy, a chrome-lock policy and its wiring across
+five screens, so five and a half kilobytes is the measured price of one tap doing both
+halves; whole phase **+23,576 B / +0.35%** over Phase 44 round 4's 6,651,682 B),
+debug 25,692,976 B, mapping.txt 56,258,512 B, v1.3.17.
 
 Pushed with this section; the run and its APK numbers are recorded here when it lands.

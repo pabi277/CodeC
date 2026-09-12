@@ -10,11 +10,12 @@
 > slides are unchanged — the owner's own decision: *"Slides stay as they are (GOT IT /
 > START CODING / SKIP)."*
 >
-> **The build to install:** the newest `Build APK` run on `arena/01a0955a-codec` after
-> the round-4 commit (Actions → that run → **Artifacts** → `CodeC-IDE-debug`). Round
-> 3's build (`34707337429`, commit `0fcb3b6`) still needs **two taps per beat** — the
-> first dismisses the box, the second does the work — and has **no install pause**;
-> installing it repeats exactly what the owner reported.
+> **The build to install:** `Build APK` **`34711827176`** on `arena/01a0955a-codec`
+> — round-4 commit `e7759f1`, ✅ `success`, job `build` 11m29s, release APK
+> 6,675,258 B (**+5,400 B / +0.08%** over round 3), debug 25,692,976 B (Actions →
+> that run → **Artifacts** → `CodeC-IDE-debug`). Round 3's build (`34707337429`) still
+> needs **two taps per beat** — the first dismisses the box, the second does the work —
+> and has **no install pause**; installing it repeats exactly what the owner reported.
 >
 > **Two ways to get a first run** (rows G1-G5 and the whole tour need one):
 > install as a **fresh install** (uninstall first, or a second profile), **or**

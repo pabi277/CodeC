@@ -481,6 +481,7 @@ asks the policy and a paused tab does not navigate · a paused tab looks paused 
 sentence arrives when the pause begins · the editor reports the install only it can see
 and clears it on dispose · `installing` has exactly one writer and two clears · the
 editor's ☰ / RUN ▶ / edge swipe answer the same policy. **117 Phase 44 host cases green
-locally** (193 with Phase 45's 76). Device rows:
+locally** (193 with Phase 45's 76), and CI ✅ GREEN on the round-4 commit
+(`34711827176`, tip `e7759f1`, release APK 6,675,258 B). Device rows:
 [`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G38**.
 Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38.

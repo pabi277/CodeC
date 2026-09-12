@@ -2,9 +2,9 @@
 
 > **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 4** (2026-09-12, `arena/01a0955a-codec`;
 > owner: *"Start Phase 45"* → three device reports → three rebuilds of 45.2) · CI ✅
-> GREEN on rounds 1-3 (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
-> `34707337429` tip `0fcb3b6`, release APK 6,669,858 B), round 4's run pending ·
-> device round required (**G1-G38**, NOT run)
+> GREEN on **all four rounds** (`34698914219` tip `3c597b2`; `34704379023` tip
+> `acadaee`; `34707337429` tip `0fcb3b6`; `34711827176` tip `e7759f1`, release APK
+> 6,675,258 B) · device round required (**G1-G38**, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
@@ -487,7 +487,10 @@ untouched ([`PART_45_1_GUIDE_SLIDES.md`](PART_45_1_GUIDE_SLIDES.md)).
 
 ### What is still open
 
-CI on the round-4 commit, then the device round: rows **G1-G38** in
-[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour, G29-G38 round
-4). Test it after **Settings → About → Reset tips**. Phase 44's round 2 is still
-pending on the same phone, and its lock rows are G34-G38 here.
+CI on the round-4 commit is ✅ GREEN (`34711827176`, tip `e7759f1`, job `build`
+11m29s, zero annotations, release APK 6,675,258 B = **+5,400 B / +0.08%** over round 3
+— the measured price of an anchor-click registry with ownership, a pure tap policy and
+a chrome lock wired across five screens), so only the device round is open: rows
+**G1-G38** in [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour,
+G29-G38 round 4). Test it after **Settings → About → Reset tips**. Phase 44's round 2
+is still pending on the same phone, and its lock rows are G34-G38 here.

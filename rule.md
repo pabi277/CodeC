@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI pending, device round G1-G38 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G38) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, device round G1-G38 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G38) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -370,8 +370,13 @@ Every update updates the docs **in the same commit**:
   [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §38. **193 host cases green locally**
   (`CoachMarkPlanTest` 25, `GuideWiringTest` 19, `SetupGatePolicyTest` 30,
   `SetupGateWiringTest` 23, `GuidePlanTest` 15, `TooltipPlacementTest` 10,
-  `DemoProjectSeedTest` 7 = 76 guide/demo + 117 Phase 44). **CI on the round-4 commit is
-  pending; device rows are now G1-G38 and are NOT run.**
+  `DemoProjectSeedTest` 7 = 76 guide/demo + 117 Phase 44). **CI on the round-4 commit
+  (`34711827176`, tip `e7759f1`) is ✅ GREEN** — `conclusion: success`, job `build` 25
+  steps 11m29s, assemble + `testDebugUnitTest` + `lintDebug`, zero annotations, release
+  APK 6,675,258 B (**+5,400 B / +0.08% over round 3** — an anchor-click registry with
+  ownership, a pure tap policy and a chrome lock wired across five screens; whole phase
+  **+23,576 B / +0.35%** over Phase 44 round 4), debug 25,692,976 B, v1.3.17. **Device
+  rows are now G1-G38 and are NOT run.**
   **CI round 1 (`34698914219`, tip `3c597b2`) is
   ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
   per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
@@ -381,8 +386,7 @@ Every update updates the docs **in the same commit**:
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
   **G1-G38** written through round 4 and **NOT run** (G28 the optional 20-second
   stall-guard row, G29-G33 the one-tap rule, G34-G38 the chrome lock); CI is ✅ GREEN on
-  rounds 1-3 (round 3 = `34707337429`, tip `0fcb3b6`) and pending on round 4, and the
-  round-2 commit
+  all four rounds (round 4 = `34711827176`, tip `e7759f1`), and the round-2 commit
   (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
   10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
   release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the
