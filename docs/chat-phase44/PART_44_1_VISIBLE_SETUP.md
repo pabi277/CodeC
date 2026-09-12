@@ -558,7 +558,10 @@ short-circuits **before** the stage table, that `MainActivity` passes
 `reducedStart = SafeMode.active`, and that the facts really are built in the
 ViewModel's constructor from the disk. **121 Phase 44 host cases green locally** (197
 with Phase 45's 76), CI ✅ GREEN on the round-4 commit (`34711827176`, tip `e7759f1`,
-release APK 6,675,258 B), round 5's run pending. Device rows:
-[`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G39**.
+release APK 6,675,258 B) and on the round-5 commit (`34714305062`, tip `6c3cfea`, job
+`build` 25 steps 10m47s, zero annotations, release APK 6,675,254 B — **−4 B**, because
+one enum constant, a reordered `when` and one extra parameter are below what R8 can
+measure). Device rows:
+[`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G40**.
 Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38 (round 4)
 and §39 (round 5).

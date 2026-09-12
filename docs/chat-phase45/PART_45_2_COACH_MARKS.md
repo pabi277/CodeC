@@ -816,3 +816,10 @@ The lock itself is specified in
 §"Round 5 — *Make it instantly after 1st open*"; the owner-facing text is
 [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §39; the device rows are
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) **G39-G40**.
+
+### CI round 5: ✅ GREEN
+
+`Build APK` **`34714305062`** on tip `6c3cfea` — `conclusion: success`, job `build`
+25 steps, 10m47s, **zero annotations**. Release APK **6,675,254 B**, which is **−4 B**
+against round 4: the change is one enum constant, a reordered `when`, one parameter and
+one sentence, and nothing in 45.2 moved at all. Debug 25,693,272 B, v1.3.17.

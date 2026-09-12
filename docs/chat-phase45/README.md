@@ -2,9 +2,9 @@
 
 > **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 5** (2026-09-12, `arena/01a0955a-codec`;
 > owner: *"Start Phase 45"* → four device reports → four rebuilds) · CI ✅ GREEN on
-> **rounds 1-4** (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
-> `34707337429` tip `0fcb3b6`; `34711827176` tip `e7759f1`, release APK 6,675,258 B),
-> round 5's run pending · device round required (**G1-G40**, NOT run)
+> **all five rounds** (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
+> `34707337429` tip `0fcb3b6`; `34711827176` tip `e7759f1`; `34714305062` tip
+> `6c3cfea`, release APK 6,675,254 B) · device round required (**G1-G40**, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
@@ -542,7 +542,10 @@ locally** (76 guide/demo + 121 Phase 44).
 
 ### What is still open
 
-CI on the round-5 commit, then the device round: rows **G1-G40** in
+CI on the round-5 commit is ✅ GREEN (`34714305062`, tip `6c3cfea`, job `build` 25
+steps 10m47s, zero annotations, release APK 6,675,254 B — **−4 B** against round 4: one
+enum constant, a reordered `when` and one extra parameter are below what R8 can
+measure), so only the device round is open: rows **G1-G40** in
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour, G29-G38 round
 4, **G39-G40 round 5** — G39 wants a fresh install and a slow or absent network, G40
 wants an installed phone). Test the tour after **Settings → About → Reset tips**. Phase

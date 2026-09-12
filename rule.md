@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI pending, device round G1-G40 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G40) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, device round G1-G40 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G40) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -418,9 +418,13 @@ Every update updates the docs **in the same commit**:
   outranks it; `SetupGateWiringTest` 24 — `FAILED, UNSUPPORTED` are the ONLY stages
   answering NONE, `facts.usable` short-circuits before the stage table, `MainActivity`
   passes `reducedStart = SafeMode.active`, and the facts really are built in the
-  constructor). **CI on the round-5 commit is pending; device rows are now G1-G40 and are
-  NOT run** (G39 wants a fresh install with a slow or absent network, G40 an installed
-  phone).
+  constructor). **CI on the round-5 commit (`34714305062`, tip `6c3cfea`) is ✅ GREEN** —
+  `conclusion: success`, job `build` 25 steps 10m47s, assemble + `testDebugUnitTest` +
+  `lintDebug`, zero annotations, release APK 6,675,254 B (**−4 B against round 4**: one
+  enum constant, a reordered `when` and one extra parameter are below what R8 can
+  measure; whole phase **+23,572 B / +0.35%** over Phase 44 round 4), debug
+  25,693,272 B, v1.3.17. **Device rows are now G1-G40 and are NOT run** (G39 wants a
+  fresh install with a slow or absent network, G40 an installed phone).
   **CI round 1 (`34698914219`, tip `3c597b2`) is
   ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
   per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
@@ -430,8 +434,8 @@ Every update updates the docs **in the same commit**:
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
   **G1-G40** written through round 5 and **NOT run** (G28 the optional 20-second
   stall-guard row, G29-G33 the one-tap rule, G34-G38 the chrome lock, G39-G40 its
-  first-frame timing); CI is ✅ GREEN on rounds 1-4 (round 4 = `34711827176`, tip
-  `e7759f1`) and pending on round 5, and the round-2 commit
+  first-frame timing); CI is ✅ GREEN on all five rounds (round 5 = `34714305062`, tip
+  `6c3cfea`), and the round-2 commit
   (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
   10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
   release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the

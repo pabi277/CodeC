@@ -58,7 +58,8 @@
 > still pause nothing. Round 5 is implemented with **197 host cases green locally**
 > (76 guide/demo + 121 Phase 44); CI is ✅ **GREEN** on rounds 1-4 (`34698914219`;
 > `34704379023`; `34707337429`; `34711827176` on tip `e7759f1`, release APK
-> 6,675,258 B = +0.08% over round 3) with round 5's run pending, and device round
+> 6,675,258 B = +0.08% over round 3) and **all five rounds** now (round 5 =
+> `34714305062` on tip `6c3cfea`, release APK 6,675,254 B), and device round
 > [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G40** is NOT
 > run (start it from Settings → About → Reset tips; G29-G33 the one-tap rule, G34-G38
 > the lock, G39-G40 its first-frame timing).
@@ -109,9 +110,9 @@ The numbers **are** the order. Why this order:
    all**, `UserlandInstaller.kt:377-395`).
 2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 4**
    (`arena/01a0955a-codec`; both parts, **197 host cases green locally**, CI ✅
-   GREEN on rounds 1-4
-   `34698914219`/`34704379023`/`34707337429`/`34711827176` with round 5's run
-   pending, device round
+   GREEN on all five rounds
+   `34698914219`/`34704379023`/`34707337429`/`34711827176`/`34714305062`,
+   device round
    [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G40** not
    run). Round 4 came from the owner's own two requests after he ran round 3:
    *one tap on a highlighted control must really work it* (it now performs the

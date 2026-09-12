@@ -13,8 +13,9 @@
 > §"Round 5"). 45.1's slides are unchanged — the owner's own decision: *"Slides stay
 > as they are (GOT IT / START CODING / SKIP)."*
 >
-> **The build to install:** the newest `Build APK` run on `arena/01a0955a-codec`
-> **after the round-5 commit** (Actions → that run → **Artifacts** →
+> **The build to install:** `Build APK` **`34714305062`** on `arena/01a0955a-codec`
+> — round-5 commit `6c3cfea`, ✅ `success`, job `build` 10m47s, release APK
+> 6,675,254 B, debug 25,693,272 B (Actions → that run → **Artifacts** →
 > `CodeC-IDE-debug`). Round 4's build (`34711827176`, commit `e7759f1`) has the
 > one-tap tour and the lock, but that lock **waits for the download to start**, so the
 > first seconds after opening the app are still switchable — exactly what the owner
