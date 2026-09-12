@@ -218,7 +218,7 @@ Every update updates the docs **in the same commit**:
   `TempGc` with a bounded orphan sweep, `SetupRecoveryGate.awaitFinished()` so
   the installer waits for the boot repair, the post-install marker written
   **after** the swap, and `userlandUsable` checking the real `$PREFIX/bin/pkg`
-  instead of a marker). **C is never gated** in any stage. **98 host cases** in
+  instead of a marker). **C is never gated** in any stage. **100 host cases** in
   seven classes were green locally through this section's kotlinc harness; the
   Compose/JNI edges cannot compile in-sandbox at all (no `android.jar`), so
   **CI's `Build APK` is the executor of record** and the nine-row exit condition
@@ -235,7 +235,7 @@ Every update updates the docs **in the same commit**:
   parameter — `ledger` was added to `UserlandInstaller`'s primary constructor
   but not to the secondary `(Context)` one, so the construction failed and every
   member on `userland` looked missing. Fixed + pinned by a source-scan case
-  (**98 host cases** green locally); the runbook is TROUBLESHOOTING §33 (*sort
+  (**100 host cases** green locally); the runbook is TROUBLESHOOTING §33 (*sort
   the errors by line number, fix the first one; a constructor-signature change
   must be applied to EVERY constructor and every call site grepped by hand*).
   **Do not call Phase 44 tested until the owner reports the device round.**
@@ -668,13 +668,20 @@ Every update updates the docs **in the same commit**:
   same loop as a single reusable script** (re-extract the pure test classes out
   of the Compose-coupled test files, compile the real production files + the
   real test sources against the shims, run them from `app/` so `RepoFiles.root()`
-  resolves): **98/98 green**, and it caught four real faults before CI (a
+  resolves): **100/100 green**, and it caught four real faults before CI (a
   `CountDownLatch` needed where a Kotlin `Any()` lock cannot `wait()`, an
   interface default `val` that a `data class` constructor property cannot hide,
   a lookbehind needed so `NotificationChannel(` does not also match
   `createNotificationChannel(`, and a source-scan count that was off by one
   because `ModulesScreen` has **four** `sendCommand` sites, not three). The
-  script itself is throwaway (`/tmp`); the *shape* is the reusable part.
+  script itself is throwaway (`/tmp`); the *shape* is the reusable part. **Its
+  blind spot, found by Phase 44's CI round 2:** the harness runs on a host JVM,
+  so it cannot see `minSdk` — a *pure* file that used `java.nio.file`
+  (`Files.isSymbolicLink`) compiled and passed locally and then died in
+  `:app:lintDebug` with two `NewApi` errors. Rule: in `app/src/main`, **no
+  `java.nio.file.*`, no `java.time.*`** (both API 26 vs `minSdk 24`), and grep
+  the changed main sources for them before pushing — TROUBLESHOOTING §34 has the
+  replacement table and the one-line check.
 
 ---
 

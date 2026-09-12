@@ -201,13 +201,11 @@ object SetupRecovery {
                 kept.add(candidate.name)
                 continue
             }
-            val ok = try {
-                candidate.deleteRecursively()
-            } catch (t: Throwable) {
-                log("sweep failed for ${candidate.name}: ${t.message ?: t.javaClass.simpleName}")
-                false
+            if (deleteOrphan(candidate, log)) {
+                deleted.add(candidate.name)
+            } else {
+                failed.add(candidate.name)
             }
-            if (ok) deleted.add(candidate.name) else failed.add(candidate.name)
         }
         return SweepResult(deleted, failed, kept)
     }
@@ -244,9 +242,35 @@ object SetupRecovery {
         }
     }
 
-    private fun isSymlink(file: File): Boolean = try {
-        java.nio.file.Files.isSymbolicLink(file.toPath())
+    /**
+     * **minSdk 24 — `java.nio.file` is API 26**, the rule `TarGzExtractor`
+     * already follows (and `ShellEnvironment` only reaches `Files` through
+     * reflection). So the check is by canonical name: a link's canonical file is
+     * its TARGET, so a `usr.old-<ts>` whose canonical name is not
+     * `usr.old-<ts>` is not the directory it claims to be. Anything that cannot
+     * be resolved counts as a link, i.e. is never deleted.
+     *
+     * Belt and braces: [deleteOrphan] also tries a plain [File.delete] first,
+     * which `unlink`s a symlink WITHOUT following it — so even a link pointing
+     * at a same-named directory (creatable only by root) cannot make the sweep
+     * walk into a target tree.
+     */
+    internal fun isSymlink(file: File): Boolean = try {
+        file.canonicalFile.name != file.name
     } catch (t: Throwable) {
+        true
+    }
+
+    /**
+     * Removes one orphan. The plain [File.delete] goes first on purpose: it
+     * unlinks a symlink without following it and removes an empty directory, so
+     * `deleteRecursively` — which DOES follow a link to a directory — only ever
+     * runs on a real, non-empty tree.
+     */
+    private fun deleteOrphan(candidate: File, log: (String) -> Unit): Boolean = try {
+        candidate.delete() || candidate.deleteRecursively()
+    } catch (t: Throwable) {
+        log("sweep failed for ${candidate.name}: ${t.message ?: t.javaClass.simpleName}")
         false
     }
 

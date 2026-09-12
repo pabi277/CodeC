@@ -308,6 +308,43 @@ class SwapRecoveryTest {
         assertEquals(listOf("usr.old-100", ".userland-staging-500"), names)
     }
 
+    @Test
+    fun `a symlink shaped like an orphan is never scanned`() {
+        val files = tmp.newFolder("files-k")
+        val target = tmp.newFolder("target-k")
+        File(target, "payload.txt").writeText("keep me")
+        val link = File(files, "usr.old-900")
+        java.nio.file.Files.createSymbolicLink(link.toPath(), target.toPath())
+
+        // minSdk 24 has no java.nio in production code, so the check is by
+        // canonical NAME: a link's canonical file is its target.
+        assertTrue(SetupRecovery.isSymlink(link))
+        assertEquals(emptyList<String>(), SetupRecovery.scan(files, "usr").map { it.name })
+        assertTrue("the link's target must be untouched", File(target, "payload.txt").isFile)
+    }
+
+    @Test
+    fun `a same-named symlink target survives the sweep because delete() unlinks first`() {
+        // The pathological case the canonical-name check cannot see: a link
+        // whose TARGET carries the same orphan-shaped name. `File.delete()`
+        // still unlinks the link and never walks into the target tree, which is
+        // why `deleteOrphan` tries it before `deleteRecursively()`.
+        val files = tmp.newFolder("files-l")
+        val elsewhere = tmp.newFolder("elsewhere-l")
+        val target = File(elsewhere, "usr.old-777")
+        target.mkdirs()
+        File(target, "bin").mkdirs()
+        File(target, "bin/pkg").writeText("#!/bin/sh")
+        val link = File(files, "usr.old-777")
+        java.nio.file.Files.createSymbolicLink(link.toPath(), target.toPath())
+
+        val report = SetupRecovery.sweep(files, "usr")
+
+        assertEquals(listOf("usr.old-777"), report.deleted)
+        assertFalse("the link itself is gone", link.exists())
+        assertTrue("the target tree must survive", File(target, "bin/pkg").isFile)
+    }
+
     // ---- the gate that keeps the installer and the repair apart -------------
 
     @Test

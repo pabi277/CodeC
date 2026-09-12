@@ -234,6 +234,17 @@ zero orphans — pinned by `SwapRecoveryTest`.
    member access on it reports `Unresolved reference` (seven errors from one
    missing parameter). `SetupGateWiringTest` now pins the forwarding, so the
    next refactor of that constructor fails on the host, not on CI.
+5. **"Never a symlink" is enforced with API-1 mechanisms.** The first
+   implementation used `java.nio.file.Files.isSymbolicLink` and CI's lint
+   rejected it (`NewApi`: `java.nio.file` is API 26, `minSdk` is 24 — a *pure*
+   file is still linted). `isSymlink` now compares the canonical name with the
+   name (a link's canonical file is its target) and treats an unresolvable path
+   as a link, and `deleteOrphan` calls a plain `File.delete()` **before**
+   `deleteRecursively()`: `delete()` unlinks a symlink without following it,
+   while `deleteRecursively()` does follow one. Together they also cover the case
+   the name check cannot see — a link whose target has the *same* orphan-shaped
+   name — and both are pinned by `SwapRecoveryTest` cases that create **real
+   symlinks**. Runbook: TROUBLESHOOTING §34.
 
 ## Sources (record)
 

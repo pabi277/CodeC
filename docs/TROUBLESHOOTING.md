@@ -1292,3 +1292,52 @@ class of fault is cheaper than a compiler: **when a change touches a
 constructor signature, grep every call site of that constructor and read each
 one.** For Phase 44 that is two sites (`TerminalViewModel.kt:88` and
 `UserlandInstallerTest`, which uses the primary constructor and was unaffected).
+
+## 34. `NewApi` lint errors in a "pure" Kotlin file — the host harness cannot see `minSdk` (agent runbook; Phase 44, 2026-09-12)
+
+**Symptom:** `Build APK` gets **past** the Kotlin compile and the unit tests and
+then dies in `:app:lintDebug` (run `34692963464`):
+
+```text
+Lint found 2 errors and 210 warnings. First failure:
+LINT ERROR [NewApi] app/src/main/java/com/codeci/ide/ui/terminal/SetupRecovery.kt:248:
+  Call requires API level 26, or core library desugaring (current min is 24):
+  java.nio.file.Files#isSymbolicLink
+  … java.io.File#toPath
+```
+
+**Cause:** the new "pure" policy file used `java.nio.file` for a symlink check.
+It compiles and passes on the host JVM (where `java.nio.file` exists), and it
+compiles fine under `kotlinc` in the `rule.md` §9 harness — **but lint checks
+every file in `app/src/main` against `minSdk 24`, pure or not.** "No Android
+imports" is not the same as "no Android rules".
+
+**The law (already written in the codebase, now written here too):** in
+`app/src/main`, **no `java.nio.file.*` and no `java.time.*`** — both are API 26.
+`TarGzExtractor.kt:64` carries the comment `/** minSdk 24 — avoid java.nio.file
+(API 26). */`, and `ShellEnvironment` reaches `java.nio.file.Files` **only
+through reflection** (`Class.forName("java.nio.file.Files")`, with a comment
+saying why). Test sources may use them (`CodecApiProtocolTest`, `CrashLogTest`,
+`SwapRecoveryTest` do) — unit tests run on the host JVM and lint does not apply
+`NewApi` there.
+
+**API-1 replacements that came out of this fix:**
+
+| Needed | Not allowed (26+) | Use instead |
+|---|---|---|
+| "is this a symlink?" | `Files.isSymbolicLink(f.toPath())` | `f.canonicalFile.name != f.name` (a link's canonical file is its target); treat an unresolvable path as a link |
+| "delete this tree without following links" | `Files.walk` / `walkFileTree` | `f.delete()` **first** — it `unlink`s a symlink without following it — and only then `f.deleteRecursively()` (which DOES follow a link to a directory) |
+| "copy/move a file" | `Files.copy` / `Files.move` | `FileInputStream`/`FileOutputStream`, `File.renameTo` |
+| "now, as an instant" | `java.time.*` | `System.currentTimeMillis()`, `SystemClock.elapsedRealtime()` |
+
+**Pre-push check that costs nothing** (a red CI round is ~6 minutes):
+
+```bash
+git diff --name-only <base> -- 'app/src/main/**.kt' |
+  xargs grep -n "java\.nio\|java\.time\|List\.of(\|Map\.of(\|Set\.of(\|toPath()\|Files\."
+```
+
+Anything it prints in `app/src/main` is either a lint error or needs an
+`SDK_INT` guard. Guarded calls (`if (Build.VERSION.SDK_INT >= O)`) are accepted
+by lint; that is why `TerminalForegroundService`'s `createNotificationChannel`
+and `startForegroundService` never trip it.

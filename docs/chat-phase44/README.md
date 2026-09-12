@@ -193,7 +193,7 @@ new   ui/terminal/SetupLedgerPrefs.kt   48   the SharedPreferences store (commit
 new   ui/terminal/SetupStateBridge.kt   35   VM → VM facts
 new   ui/terminal/SetupNoticeBridge.kt  30   VM → activity notice
 new   ui/components/SetupBar.kt        133   the bar (all tabs, percentage only)
-new   6 test classes + 1 appended      ~1600 98 host cases
+new   6 test classes + 1 appended      ~1700  100 host cases
 mod   TerminalViewModel · UserlandInstaller · TerminalForegroundService · MainActivity
 mod   TerminalScreen · TerminalUx · ModulesScreen · EditorViewModel
 ```
@@ -204,10 +204,10 @@ does not scan), no Settings control was added (so `SETTINGS_AUDIT.md` is
 unchanged), no permission was added, and the notification small icon is still
 `ic_stat_codec`. `MANAGE_EXTERNAL_STORAGE` is not involved.
 
-**Host pre-validation (`rule.md` §9, optional):** 98 cases green locally through
+**Host pre-validation (`rule.md` §9, optional):** 100 cases green locally through
 `kotlinc` + `jdk4py` + shimmed `org.junit`/`flow`
 (`SetupGatePolicyTest` 21 · `SetupProgressParseTest` 22 · `SetupLedgerTest` 13 ·
-`SwapRecoveryTest` 14 · `UserlandUsableTest` 9 · `SetupGateWiringTest` 15 ·
+`SwapRecoveryTest` 16 · `UserlandUsableTest` 9 · `SetupGateWiringTest` 15 ·
 `TerminalStatusLabelTest` 4). The Compose/JNI edges cannot compile in this
 sandbox at all (no `android.jar`), so **CI's `Build APK` is the executor of
 record** and this round is a pre-check only — never a claim of passing tests.
@@ -234,10 +234,45 @@ constructor takes `ledger: SetupLedger? = null` and forwards it
 
 Pinned so it cannot regress: `SetupGateWiringTest`'s new
 `the installer's Context constructor accepts and forwards the ledger`
-(**98 host cases**, green locally before the re-push). Lesson recorded as
+(**100 host cases**, green locally before the re-push). Lesson recorded as
 TROUBLESHOOTING §33 — *a cascade of "Unresolved reference" errors on one
 receiver is a single constructor/signature fault; fix the first error and the
 rest disappear.*
+
+### CI round 2 — 🔴 `34692963464`, lint `NewApi` in a *pure* file
+
+The Kotlin compile and the unit tests passed; `:app:lintDebug` aborted the build
+with **two** errors, both on one line of the pure recovery policy:
+
+```text
+LINT ERROR [NewApi] ui/terminal/SetupRecovery.kt:248:
+  Call requires API level 26 (current min is 24): java.nio.file.Files#isSymbolicLink
+  Call requires API level 26 (current min is 24): java.io.File#toPath
+```
+
+`isSymlink` used `java.nio.file` to honour the sweep law's "never a symlink"
+clause — legal on the host JVM the local harness runs on, illegal on
+`minSdk 24`. **A file being "pure Kotlin" does not put it outside Android lint.**
+Fixed the way `TarGzExtractor` already does (`/** minSdk 24 — avoid
+java.nio.file (API 26). */`), with two API-1 mechanisms that are together
+*stronger* than the nio call:
+
+1. `isSymlink` compares the **canonical name** with the name — a link's
+   canonical file is its TARGET, so `usr.old-900` → `target-k` is caught; and
+   anything that cannot be resolved now counts as a link (never deleted) instead
+   of the old "assume it is fine".
+2. `deleteOrphan` tries a plain `File.delete()` **before** `deleteRecursively()`.
+   `delete()` `unlink`s a symlink without following it, and `deleteRecursively()`
+   DOES follow a link to a directory — so the recursive walk now only ever runs
+   on a real, non-empty tree. That covers the case the name check cannot see: a
+   link whose target carries the *same* orphan-shaped name (creatable only by
+   root).
+
+Both are pinned by two new `SwapRecoveryTest` cases with **real symlinks** on a
+real filesystem (`a symlink shaped like an orphan is never scanned`,
+`a same-named symlink target survives the sweep because delete() unlinks first`)
+→ **100 host cases**, green locally before the re-push. Runbook:
+TROUBLESHOOTING §34.
 
 **What is still open:** the nine-row exit condition below is a **device**
 condition and has not been run — no device, no emulator, no Gradle in this

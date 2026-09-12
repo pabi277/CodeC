@@ -51,7 +51,7 @@ Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
 The numbers **are** the order. Why this order:
 
 1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
-   2026-09-12** (`arena/01a0955a-codec`; both parts, 98 host cases,
+   2026-09-12** (`arena/01a0955a-codec`; both parts, 100 host cases,
    CI pending, device round not run). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git
