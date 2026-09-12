@@ -199,8 +199,8 @@ Every update updates the docs **in the same commit**:
 7. Stop — the owner merges to `main` (or commands the merge).
 
 ## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` on tip `3c597b2`, then the owner's device
-  report rebuilt 45.2 as ONE TEN-BEAT TOUR (round 2 implemented, CI pending, device
-  round G1-G23 NOT run) ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G14) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+  report rebuilt 45.2 as ONE TEN-BEAT TOUR (round 2 implemented, CI ✅ GREEN
+  `34704379023` on tip `acadaee`, device round G1-G23 NOT run) ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G14) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -279,7 +279,7 @@ Every update updates the docs **in the same commit**:
   and the *Install Python?* prompt are taught by the copy of the beat before them
   (deviation 9); screen-absolute anchors are the follow-up. **Delegated decision
   (owner: *"you do as you like"*):** Phase 44.1's terminal-first divert stays.
-  **175 host cases green locally** (`CoachMarkPlanTest` 17, `GuideWiringTest` 15,
+  **175 host cases green locally** (`CoachMarkPlanTest` 18, `GuideWiringTest` 16,
   `DemoProjectSeedTest` 7 — newly in the harness — `GuidePlanTest` 15,
   `TooltipPlacementTest` 10), and the round caught two faults before CI: the host
   still passed the deleted `arrivalKey` argument (a compile error a wiring pin
@@ -292,8 +292,12 @@ Every update updates the docs **in the same commit**:
   6,664,474 B (**+12,792 B / +0.19%** over Phase 44 round 4 — the measured cost of
   the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
-  **G1-G23** written for round 2 and **NOT run**; CI on the round-2 commit is
-  pending. **Do not call Phase 45 tested until the owner reports the round** — and
+  **G1-G23** written for round 2 and **NOT run**; CI on the round-2 commit
+  (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
+  10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
+  release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the
+  spotlights mostly by deleting: the cap, the surface filter, the card's forward
+  button, the estimated-height branch), debug 25,665,688 B, v1.3.17. **Do not call Phase 45 tested until the owner reports the round** — and
   the round must start from Settings → About → **Reset tips**, or the beats round 1
   already marked seen will hide half the tour.
 - **Phase 44 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start

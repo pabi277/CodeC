@@ -348,13 +348,17 @@ height, inert outside taps, `Tour · n of 10`) · `ui/editor/EditorChromeState.k
 them on dispose) · `ui/components/EditorProjectDrawer.kt` (two anchors) ·
 `ui/screens/WebPreviewScreen.kt` (Back anchor) · `MainActivity.kt` (two tab anchors,
 the new host call) · `ui/projects/DemoProjects.kt` (always present, `ENTRY_FILE`) ·
-tests: `CoachMarkPlanTest` 17, `GuideWiringTest` 15, `DemoProjectSeedTest` 7 (now in
-the local harness too) → **175 host cases green locally**. 45.1 is untouched by
+tests: `CoachMarkPlanTest` 18, `GuideWiringTest` 16, `DemoProjectSeedTest` 7 (now in
+the local harness too) → **175 host cases green locally**, and on CI: run
+**`34704379023`** ✅ `success` (job `build` 10m41s, assemble + `testDebugUnitTest` +
+`lintDebug`, release APK 6,664,570 B = **+96 B over round 1** — the tour is mostly
+deletions, so the redesign cost the APK nothing). 45.1 is untouched by
 decision ([`PART_45_1_GUIDE_SLIDES.md`](PART_45_1_GUIDE_SLIDES.md) §Round 2 note).
 
 ### What is still open
 
-CI on the round-2 commit, then the device round: rows **G1-G23** in
+CI on the round-2 commit is ✅ GREEN (`34704379023`, tip `acadaee`), so only the
+device round is open: rows **G1-G23** in
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G23 the tour). Test it
 after **Settings → About → Reset tips**, or the beats round 1 already marked seen
 will not come back. Phase 44's round 2 is still pending on the same phone.

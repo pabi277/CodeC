@@ -31,7 +31,9 @@
 > preview → close → the reveal-tabs handle → a small tour of Packages and Terminal;
 > no next button — the highlighted control is the only way on, outside taps are
 > inert, `demo_flask` is always present). Round 2 is implemented with **175 host
-> cases green locally**; CI on the round-2 commit is pending and device round
+> cases green locally**; CI on the round-2 commit is ✅ **GREEN** (`34704379023` on
+> tip `acadaee`, job `build` 10m41s, release APK 6,664,570 B = +96 B over round 1)
+> and device round
 > [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G23** is NOT
 > run (start it from Settings → About → Reset tips).
 > 46-50 are still plan-only. Phase 43 is
@@ -79,7 +81,7 @@ The numbers **are** the order. Why this order:
    all**, `UserlandInstaller.kt:377-395`).
 2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 2**
    (`arena/01a0955a-codec`; both parts, 175 host cases green locally, CI ✅ GREEN
-   round 1 `34698914219` and round 2 pending, device round
+   round 1 `34698914219` and round 2 `34704379023`, device round
    [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G14 not
    run). First impression for every tester you have not met yet,
    and its slide 3 is where the *"one-time download, don't close the app"*

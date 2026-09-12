@@ -6,10 +6,12 @@
 > unchanged — the owner's own decision: *"Slides stay as they are (GOT IT / START
 > CODING / SKIP)."*
 >
-> **The build to install:** the newest green `Build APK` run on
-> `arena/01a0955a-codec` **after the round-2 commit** (Actions → the run →
-> **Artifacts** → `CodeC-IDE-debug`). Round 1's build (`34698914219`) does NOT
-> contain the tour — installing it repeats the round-1 behaviour.
+> **The build to install:** `Build APK` run **`34704379023`** on
+> `arena/01a0955a-codec` — round-2 commit `acadaee`, ✅ `success`, job `build`
+> 10m41s, release APK 6,664,570 B (+96 B over round 1), debug 25,665,688 B
+> (Actions → that run → **Artifacts** → `CodeC-IDE-debug`). Round 1's build
+> (`34698914219`) does NOT contain the tour — installing it repeats the round-1
+> behaviour.
 >
 > **Two ways to get a first run** (rows G1-G5 and the whole tour need one):
 > install as a **fresh install** (uninstall first, or a second profile), **or**

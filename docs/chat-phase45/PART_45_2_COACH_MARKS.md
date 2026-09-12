@@ -1,6 +1,6 @@
 # CodeC Phase 45.2 — Coach marks on first arrival (three or four, then never again)
 
-> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) · device round required (NOT run) · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 2** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) and round 2 (`34704379023`, tip `acadaee`) · device round required (NOT run — G1-G23) · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row:** the second half of *"It has 0 guide features to give the user a
 > real knowledge how to use the app, user don't know where should they change the
 > project or file and the tap to the open down side of the keyboard"* — plus the
@@ -353,7 +353,7 @@ shut.
 
 ### Tests (round 2): 175 host cases green locally
 
-`CoachMarkPlanTest` **17** (was 12): the tour is the owner's ten beats in the
+`CoachMarkPlanTest` **18** (was 12): the tour is the owner's ten beats in the
 owner's order · each beat's surface · `waits` is set on exactly the four
 always-there controls · every box fits the card · the tour cannot start anywhere but
 the editor's ☰ · a box only when its anchor is on screen · a passed-over beat is
@@ -364,7 +364,7 @@ whole tour · `markSeen` monotonic and ignores unknown ids · the CSV round-trip
 tour order and drops garbage (including round 1's ids, which are all still valid, so
 an upgraded install keeps what it saw and gains the five new beats) ·
 `ChromeState.of` · routes → the two tabs the tour teaches · the drawer helpers.
-`GuideWiringTest` **15** (was 13): all ten anchors have publishers (four by pure
+`GuideWiringTest` **16** (was 13): all ten anchors have publishers (four by pure
 helper) · no box behind a dialog or a closed drawer (the editor's modal list names
 the picker, the Install? prompt and the RUN ▶ chooser; both signals clear on
 dispose) · the card has no `Text("GOT IT")`/`Text("NEXT")`, exactly one
@@ -377,3 +377,18 @@ demo comes back** · the marker is a record, not a gate · a plain file named
 `demo_flask` blocks the seed · `ENTRY_FILE` agrees with `ProjectScaffold.filesFor`
 and with the config's `entry` (so RUN ▶ runs the file the tour told the user to
 open).
+
+### CI round 2: ✅ GREEN — `34704379023` (tip `acadaee`, 2026-09-12)
+
+`conclusion: success`, job `build`, 25 steps, 16:09:42 → 16:20:23Z (**10m41s**), zero
+error annotations (one notice: `setup-java@v4` is deprecated). Per rule §5 that is
+`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so all 66 guide/demo cases
+ran on real Gradle/JUnit/Robolectric and lint is clean. Artifacts: release
+`CodeC-IDE-1.3.17-universal.apk` **6,664,570 B**, debug **25,665,688 B**,
+`mapping.txt` 55,977,938 B, release manifest has no `android:debuggable`.
+
+The interesting number is the delta: **+96 B (+0.001%) over round 1.** Ten beats
+replaced five, five new anchors appeared, and the card gained a measured height — and
+the APK did not move, because round 2 mostly *deleted* (the per-arrival cap, the
+surface filter, the card's forward button, the estimated-height branch). A redesign
+that makes the guide a tour instead of a set of one-offs cost nothing to ship.
