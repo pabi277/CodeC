@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-13, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), CI ✅ GREEN `34719753700` on tip `8c3c10d` (release APK 6,675,154 B), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-13, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), CI ✅ GREEN `34719753700` on tip `8c3c10d` (release APK 6,675,154 B), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED (the plan doc itself ✅ MERGED to `main` via [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit `8eff438`); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -571,6 +571,19 @@ Every update updates the docs **in the same commit**:
   (the sandbox could not download the run log — `results-receiver.actions…` EOF
   — so the evidence is the conclusion plus the empty error-annotation list).
   **Do not call Phase 44 tested until the owner reports round 2.**
+- **Phases 44-50 plan ✅ MERGED (2026-09-12, owner: "If everything done merge
+  it") — [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit
+  `8eff438`.** CI green three times (`Build APK` `34689859665` push,
+  `34689923817` PR, `34690414244` on `main` post-merge). 28 files,
+  +3 896/−538, **zero `app/src` files** — a docs-only change, verified by
+  citation sweep (259 `file:line` refs, all in-repo ones resolve) and link
+  sweep (168, all resolve) rather than by a device round. One correction rode
+  in the same PR: the plan first claimed five not-yet-written host tests
+  "run in CI", and offered Paparazzi + Robolectric as new dependencies when
+  **Roborazzi 1.59.0 is already applied to `:app`** and **Robolectric 4.16.1
+  already has 8 users**. Open follow-up: PR #74's `web_docs` v2.2 still calls
+  Phase 43 *planned* and needs a v2.3 sync under the website's own ceremony.
+
 - **Phases 44-50 PLANNED (2026-09-12, docs-only, no app code)** — the owner's
   **test-phase bug report** (seven rows: the invisible one-time download, no
   guide, "remove open-a-folder", four editor complaints, three "other"
