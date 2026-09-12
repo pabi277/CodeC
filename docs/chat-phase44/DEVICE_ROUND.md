@@ -2,8 +2,11 @@
 
 > **Status:** 🔴 **ROUND 1 RUN BY THE OWNER (2026-09-12) — FAILED on 4 rows, three
 > root causes found and fixed; round 2 pending.** This sandbox has no device, no
-> emulator and no Gradle, so nothing below is claimed as tested by the agent. Install the CI artifact
-> (`CodeC-IDE`) from the green `Build APK` run on `arena/01a0955a-codec`.
+> emulator and no Gradle, so nothing below is claimed as tested by the agent. The code is
+> ✅ MERGED to `main` via [PR #77](https://github.com/pabi277/CodeC/pull/77) (merge commit
+> `a475fe4`) and **a merge is not a device pass**. Install the CI artifact (`CodeC-IDE`)
+> from the green `Build APK` run on `main` (`34721779445`) or on `arena/01a0955a-codec`
+> (`34719753700`).
 > Every row names the **exact on-screen text** that means PASS; anything else
 > is a FAIL worth reporting verbatim (screenshot beats description).
 >

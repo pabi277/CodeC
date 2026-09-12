@@ -1,6 +1,6 @@
 # CodeC Phase 45 — device round (the guide: slides, then the tour)
 
-> **Status:** 📋 ROUND 6 WRITTEN, **NOT RUN** (2026-09-13). Round 1 came back with
+> **Status:** 📋 ROUND 6 WRITTEN, **NOT RUN** (2026-09-13) — the code is ✅ MERGED to `main` via [PR #77](https://github.com/pabi277/CodeC/pull/77) (merge commit `a475fe4`), and **a merge is not a device pass**: every row below is still unrun. Round 1 came back with
 > four reports and 45.2 became **one ordered tour**; round 2 came back with *"You add
 > the skip option and it's not a trough guide mean it got cut"* and the tour became
 > **first beat to last with no exit until the end**; round 3 came back with *"1st click

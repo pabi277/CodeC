@@ -1,7 +1,9 @@
 # CodeC Phase 45 — The guide (slides on first run + coach marks on first arrival)
 
-> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 6** (2026-09-13, `arena/01a0955a-codec`;
-> owner: *"Start Phase 45"* → five device reports → five rebuilds) · CI ✅ GREEN on
+> **Status:** ✅ **MERGED to `main` via [PR #77](https://github.com/pabi277/CodeC/pull/77)**
+> (2026-09-13, owner: *"Merge it"*, merge commit `a475fe4`; `main` post-merge CI ✅
+> `34721779445`) — implemented **through round 6** on `arena/01a0955a-codec`
+> (owner: *"Start Phase 45"* → five device reports → five rebuilds) · CI ✅ GREEN on
 > **all five shipped rounds** (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
 > `34707337429` tip `0fcb3b6`; `34711827176` tip `e7759f1`; `34714305062` tip
 > `6c3cfea`, release APK 6,675,254 B) and ✅ GREEN on **round 6** (`34719753700` tip

@@ -198,7 +198,31 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-13, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), CI ✅ GREEN `34719753700` on tip `8c3c10d` (release APK 6,675,154 B), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED (the plan doc itself ✅ MERGED to `main` via [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit `8eff438`); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-13, **Phases 44 AND 45 are ✅ MERGED to `main` via [PR #77](https://github.com/pabi277/CodeC/pull/77) (owner: *"Merge it"*, merge commit `a475fe4`; CI ✅ GREEN on the branch, on the PR and on `main` after the merge) — **DEVICE ROUNDS NOT RUN, so neither phase may be described as device-tested**; 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), CI ✅ GREEN `34719753700` on tip `8c3c10d` (release APK 6,675,154 B), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED (the plan doc itself ✅ MERGED to `main` via [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit `8eff438`); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+
+- **Phases 44 + 45 ✅ MERGED to `main` (2026-09-13, owner: *"Merge it"*) —
+  [PR #77](https://github.com/pabi277/CodeC/pull/77) from `arena/01a0955a-codec`, merge
+  commit `a475fe4`, 21 commits.** CI green four times over: the round-6 branch run
+  (`34719753700`, tip `8c3c10d`, job `build` 25 steps 10m48s, zero annotations), the
+  docs backfill (`34720490002`, tip `935fe41`), the **PR** run on the merge commit
+  (`34721374151`, tip `6b5ba21`, 7m52s, check `build` pass) and **`main` after the merge**
+  (`34721779445` on `a475fe4`) — the executor of record (§3), which is what makes a merge
+  verifiable at all. Release APK **6,675,150 B** on `main` (whole Phase 44+45 arc
+  **+23,468 B / +0.35%** over Phase 44 round 4's 6,651,682 B), debug 25,693,528 B,
+  mapping 56,257,804 B, v1.3.17, zero error annotations. **199 host cases green locally**
+  (123 Phase 44 + 76 guide/demo) and, per §5, on real Gradle/JUnit/Robolectric in every
+  one of those runs. **`main` had moved while the branch was open** (PR #76 recorded the
+  Phases 44-50 plan's merge in `rule.md` §9, `docs/NEXT_STEPS.md` and `docs/JOURNEY.md` —
+  the same three files this branch's round records touch), so GitHub reported the PR as
+  conflicting: main was merged INTO the session branch (`6b5ba21`) and the three conflicts
+  resolved by hand under one rule — **keep both truths, newest state on top, drop nothing**.
+  Main's `JOURNEY` `59a` entry, its `NEXT_STEPS` head paragraph and its `rule.md` PR #75
+  bullet are all preserved verbatim; no entry was renumbered, so every `JOURNEY §60`…`§66`
+  citation still resolves. **DEVICE ROUNDS ARE STILL NOT RUN** — Phase 44's round 2
+  ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8, then D1-D12)
+  and Phase 45's ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
+  **G1-G41**, where **G41** is round 6's release row and needs a build that has the fix).
+  Merging is not a device pass and is never recorded as one.
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first

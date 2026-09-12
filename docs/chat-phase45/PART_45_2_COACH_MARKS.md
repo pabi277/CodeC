@@ -1,6 +1,6 @@
 # CodeC Phase 45.2 — Coach marks on first arrival (three or four, then never again)
 
-> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 3** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`; `34707337429` tip `0fcb3b6`) · device round required (NOT run — **G1-G28**) · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** ✅ **MERGED to `main` via [PR #77](https://github.com/pabi277/CodeC/pull/77)** (merge commit `a475fe4`, 2026-09-13) · 🚧 **IMPLEMENTED THROUGH ROUND 6** (rounds 4-6 are recorded below; 2026-09-12/13, `arena/01a0955a-codec`) · CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`; `34707337429` tip `0fcb3b6`) · device round required (NOT run — **G1-G28**) · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row:** the second half of *"It has 0 guide features to give the user a
 > real knowledge how to use the app, user don't know where should they change the
 > project or file and the tap to the open down side of the keyboard"* — plus the

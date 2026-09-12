@@ -1,6 +1,6 @@
 # CodeC Phase 44.1 — The install is visible everywhere
 
-> **Status:** 🚧 **IMPLEMENTED + CORRECTED** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN (`34693462725`) · **device round 1 🔴 FAILED four rows → three root causes fixed (see "Device round 1 corrections" below); round 2 pending** · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ **MERGED to `main` via [PR #77](https://github.com/pabi277/CodeC/pull/77)** (merge commit `a475fe4`, 2026-09-13; `main` post-merge CI ✅ `34721779445`) · 🚧 **IMPLEMENTED + CORRECTED** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN (`34693462725`) · **device round 1 🔴 FAILED four rows → three root causes fixed (see "Device round 1 corrections" below); round 2 pending** · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"the test user don't know it's installing so they
 > close app before it complete"* → **owner's solution, kept almost verbatim:**
 > *"If it opens the terminal 1st and show a warning don't close the terminal

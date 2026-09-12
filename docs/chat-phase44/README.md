@@ -1,8 +1,10 @@
 # CodeC Phase 44 — Setup you can see, and cannot half-finish
 
-> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) — code
-> + tests written, CI (`Build APK`) pending, device round required before it is
-> called tested · **Cost:** `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"Userland is
+> **Status:** ✅ **MERGED to `main` via [PR #77](https://github.com/pabi277/CodeC/pull/77)**
+> (2026-09-13, owner: *"Merge it"*, merge commit `a475fe4`; `main` post-merge CI ✅
+> `34721779445`, release APK 6,675,150 B) — implemented 2026-09-12 on
+> `arena/01a0955a-codec`, **device round 2 NOT run**, so this phase is not
+> device-tested and must not be described as tested · **Cost:** `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"Userland is
 > installing but the test user don't know it's installing so they close app
 > before it complete than letter when they try to install any other pkg got
 > errors"* → **owner's own solution:** *"If it opens the terminal 1st and show a

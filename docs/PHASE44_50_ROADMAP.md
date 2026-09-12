@@ -61,7 +61,12 @@
 > installer's **verdict**, and a reading can be stale — so round 6 made a **settled stage
 > always reopen the app** and added a fourth reading, taken the moment a shell comes alive
 > (a running bash *is* the proof the tools work). Round 5's "on from the first frame" is
-> untouched, because `CHECKING` is still in flight. Round 6 is implemented with **199 host
+> untouched, because `CHECKING` is still in flight. **Phases 44 and 45 are now ✅ MERGED
+> to `main`** via [PR #77](https://github.com/pabi277/CodeC/pull/77) (owner: *"Merge it"*,
+> merge commit `a475fe4`, 21 commits; CI ✅ GREEN on the branch `34719753700`, on the PR
+> `34721374151` and on `main` after the merge `34721779445`, zero annotations, release APK
+> 6,675,150 B) — **the device rounds are still NOT run, and a merge is not a device
+> pass.** Round 6 is implemented with **199 host
 > cases green locally** (76 guide/demo + 123 Phase 44); CI is ✅ **GREEN** on rounds 1-4
 > (`34698914219`;
 > `34704379023`; `34707337429`; `34711827176` on tip `e7759f1`, release APK
@@ -107,18 +112,20 @@ Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
 
 The numbers **are** the order. Why this order:
 
-1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
-   2026-09-12** (`arena/01a0955a-codec`; both parts, **121 host cases** after
-   Phase 45's rounds 4-5 added the chrome lock here, CI ✅ GREEN
+1. **44 — setup you can see, and cannot half-finish.** ✅ **MERGED to `main`
+   2026-09-13** via [PR #77](https://github.com/pabi277/CodeC/pull/77), merge commit
+   `a475fe4`, `main` post-merge CI ✅ `34721779445` (`arena/01a0955a-codec`; both parts,
+   **123 host cases** after Phase 45's rounds 4-6 added the chrome lock here, CI ✅ GREEN
    round 4 `34695797493`; device round 1 🔴 FAILED four rows → three root causes
-   fixed; **round 2 not run**, and its lock rows live in
+   fixed; **round 2 not run** — a merge is not a device pass, and its lock rows live in
    [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G34-G41**). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git
    missing). It is also the only phase in the series with a data-loss-shaped
    bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
    all**, `UserlandInstaller.kt:377-395`).
-2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-13, THROUGH ROUND 6**
+2. **45 — the guide.** ✅ **MERGED to `main` 2026-09-13, THROUGH ROUND 6** —
+   [PR #77](https://github.com/pabi277/CodeC/pull/77), merge commit `a475fe4`
    (`arena/01a0955a-codec`; both parts, **199 host cases green locally**, CI ✅
    GREEN on all six rounds
    `34698914219`/`34704379023`/`34707337429`/`34711827176`/`34714305062`/`34719753700`,
