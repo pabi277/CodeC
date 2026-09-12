@@ -218,7 +218,7 @@ Every update updates the docs **in the same commit**:
   `TempGc` with a bounded orphan sweep, `SetupRecoveryGate.awaitFinished()` so
   the installer waits for the boot repair, the post-install marker written
   **after** the swap, and `userlandUsable` checking the real `$PREFIX/bin/pkg`
-  instead of a marker). **C is never gated** in any stage. **97 host cases** in
+  instead of a marker). **C is never gated** in any stage. **98 host cases** in
   seven classes were green locally through this section's kotlinc harness; the
   Compose/JNI edges cannot compile in-sandbox at all (no `android.jar`), so
   **CI's `Build APK` is the executor of record** and the nine-row exit condition
@@ -230,8 +230,15 @@ Every update updates the docs **in the same commit**:
   `swapPrefix`'s names untouched so `UserlandInstallerTest` stays green; one
   repair entry point). No new dependency, DataStore key, Settings control,
   permission or telemetry; small icon still `ic_stat_codec`. Owner-facing
-  explanation: TROUBLESHOOTING §32. **Do not call Phase 44 tested until the
-  owner reports the device round.**
+  explanation: TROUBLESHOOTING §32. **CI round 1 was 🔴 (`34692621773`):** seven
+  `Unresolved reference` errors in `TerminalViewModel` from ONE missing
+  parameter — `ledger` was added to `UserlandInstaller`'s primary constructor
+  but not to the secondary `(Context)` one, so the construction failed and every
+  member on `userland` looked missing. Fixed + pinned by a source-scan case
+  (**98 host cases** green locally); the runbook is TROUBLESHOOTING §33 (*sort
+  the errors by line number, fix the first one; a constructor-signature change
+  must be applied to EVERY constructor and every call site grepped by hand*).
+  **Do not call Phase 44 tested until the owner reports the device round.**
 - **Phases 44-50 PLANNED (2026-09-12, docs-only, no app code)** — the owner's
   **test-phase bug report** (seven rows: the invisible one-time download, no
   guide, "remove open-a-folder", four editor complaints, three "other"
@@ -661,7 +668,7 @@ Every update updates the docs **in the same commit**:
   same loop as a single reusable script** (re-extract the pure test classes out
   of the Compose-coupled test files, compile the real production files + the
   real test sources against the shims, run them from `app/` so `RepoFiles.root()`
-  resolves): **97/97 green**, and it caught four real faults before CI (a
+  resolves): **98/98 green**, and it caught four real faults before CI (a
   `CountDownLatch` needed where a Kotlin `Any()` lock cannot `wait()`, an
   interface default `val` that a `data class` constructor property cannot hide,
   a lookbehind needed so `NotificationChannel(` does not also match

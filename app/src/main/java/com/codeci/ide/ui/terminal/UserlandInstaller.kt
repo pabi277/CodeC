@@ -106,12 +106,16 @@ class UserlandInstaller(
 ) {
     constructor(
         context: Context,
-        candidates: List<UserlandManifest> = UserlandManifest.ORDER
+        candidates: List<UserlandManifest> = UserlandManifest.ORDER,
+        /** Phase 44.2 — forwarded to the primary constructor; `null` keeps the
+         *  pre-44 behaviour (no ledger notes, nothing to repair on boot). */
+        ledger: SetupLedger? = null
     ) : this(
         filesDir = context.filesDir,
         cacheDir = File(context.cacheDir, "userland"),
         onlineProvider = { isOnline(context) },
-        candidates = candidates
+        candidates = candidates,
+        ledger = ledger
     )
 
     fun hasRealUserland(prefix: File = ShellEnvironment.prefixDir(filesDir)): Boolean =

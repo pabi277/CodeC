@@ -1239,3 +1239,56 @@ the repair itself.
 — 12 rows including the three kill points (mid-download, mid-extract, mid-swap)
 and the owner's `pkg install python` afterwards. **Not yet run** (no device in
 the agent sandbox), so Phase 44 is 🚧 IMPLEMENTED, not tested on hardware.
+
+## 33. Seven `Unresolved reference` errors from ONE missing constructor parameter (agent runbook; Phase 44, 2026-09-12)
+
+**Symptom:** `Build APK` red with a burst of errors that all point at *member
+accesses* in a single file — run `34692621773` (tip `e3d1e64`):
+
+```text
+TerminalViewModel.kt:88:28   None of the following candidates is applicable:
+TerminalViewModel.kt:515:22  Unresolved reference 'installIfNeeded'.
+TerminalViewModel.kt:521:17  Cannot infer type for this parameter. Specify it explicitly.
+TerminalViewModel.kt:537:56  Unresolved reference 'releaseTag'.
+TerminalViewModel.kt:549:60  Unresolved reference 'message'.
+TerminalViewModel.kt:550:55  Unresolved reference 'message'.
+TerminalViewModel.kt:672:32  Unresolved reference 'installedRelease'.
+```
+
+Every one of those members **exists**: `installIfNeeded` and `installedRelease`
+are public in `UserlandInstaller`, `releaseTag` and `message` are `UserlandStatus`
+properties that the same file had been using since Phase 2.
+
+**Cause:** the error with the **smallest line number** was the only real one.
+Line 88 was `UserlandInstaller(application, ledger = setupLedger)`; Phase 44.2
+added `ledger` to the *primary* constructor but not to the secondary
+`(Context)` constructor the ViewModel actually uses. The call did not resolve →
+`userland`'s type was unknown → **every** member access on it reported
+`Unresolved reference`. One missing parameter, seven errors, six of them noise.
+
+**The rule (read before fixing any red run):**
+
+1. **Sort by line number and fix the first error.** A receiver whose
+   construction failed makes all of its members look missing; the member errors
+   are consequences, not faults.
+2. `None of the following candidates is applicable` / `Cannot infer type for
+   this parameter` on a **construction** line is a *signature* fault, not a
+   missing import and not a missing dependency.
+3. When a parameter is added to a class the local harness cannot compile
+   (anything needing `android.*` or Compose), add it to **every** constructor —
+   secondary constructors are the ones that get forgotten, because the primary
+   is where the new field lives.
+4. **Pin the signature** with a source-scan case (`SetupGateWiringTest`'s *the
+   installer's Context constructor accepts and forwards the ledger*) so the next
+   refactor fails on the host instead of on CI.
+
+**Why the local pre-validation did not catch it:** the `rule.md` §9 harness
+compiles the pure policy files and the real test sources; `UserlandInstaller`
+and `TerminalViewModel` need `android.content.Context`, so they are outside it.
+A `kotlinc` pass over the Android files *without* `android.jar` does surface
+these, but inside a flood of unresolved-type cascades — and the filter used
+("show me syntax errors only") hid them. The durable pre-push check for this
+class of fault is cheaper than a compiler: **when a change touches a
+constructor signature, grep every call site of that constructor and read each
+one.** For Phase 44 that is two sites (`TerminalViewModel.kt:88` and
+`UserlandInstallerTest`, which uses the primary constructor and was unaffected).

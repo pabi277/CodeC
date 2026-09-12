@@ -193,7 +193,7 @@ new   ui/terminal/SetupLedgerPrefs.kt   48   the SharedPreferences store (commit
 new   ui/terminal/SetupStateBridge.kt   35   VM → VM facts
 new   ui/terminal/SetupNoticeBridge.kt  30   VM → activity notice
 new   ui/components/SetupBar.kt        133   the bar (all tabs, percentage only)
-new   6 test classes + 1 appended      ~1600 97 host cases
+new   6 test classes + 1 appended      ~1600 98 host cases
 mod   TerminalViewModel · UserlandInstaller · TerminalForegroundService · MainActivity
 mod   TerminalScreen · TerminalUx · ModulesScreen · EditorViewModel
 ```
@@ -204,10 +204,10 @@ does not scan), no Settings control was added (so `SETTINGS_AUDIT.md` is
 unchanged), no permission was added, and the notification small icon is still
 `ic_stat_codec`. `MANAGE_EXTERNAL_STORAGE` is not involved.
 
-**Host pre-validation (`rule.md` §9, optional):** 97 cases green locally through
+**Host pre-validation (`rule.md` §9, optional):** 98 cases green locally through
 `kotlinc` + `jdk4py` + shimmed `org.junit`/`flow`
 (`SetupGatePolicyTest` 21 · `SetupProgressParseTest` 22 · `SetupLedgerTest` 13 ·
-`SwapRecoveryTest` 14 · `UserlandUsableTest` 9 · `SetupGateWiringTest` 14 ·
+`SwapRecoveryTest` 14 · `UserlandUsableTest` 9 · `SetupGateWiringTest` 15 ·
 `TerminalStatusLabelTest` 4). The Compose/JNI edges cannot compile in this
 sandbox at all (no `android.jar`), so **CI's `Build APK` is the executor of
 record** and this round is a pre-check only — never a claim of passing tests.
@@ -217,6 +217,27 @@ record** and this round is a pre-check only — never a claim of passing tests.
 `SetupTracker` tests + `SetupGateWiringTest` source pins (reason recorded in
 PART_44_1's deviation 2 — a Robolectric `TerminalViewModel` would really spawn a
 PTY and really install a userland).
+
+### CI round 1 — 🔴 `34692621773`, one signature, seven errors
+
+`Build APK` on tip `e3d1e64` failed with **seven** `Unresolved reference`
+errors, all in `TerminalViewModel.kt` (`installIfNeeded`, `installedRelease`,
+`releaseTag`, `message` ×2, "cannot infer type", "none of the following
+candidates is applicable"). Read together they are **one** fault: `userland` was
+built as `UserlandInstaller(application, ledger = setupLedger)`, but the
+installer's *secondary* `(Context)` constructor did not declare a `ledger`
+parameter, so the constructor call did not resolve, so `userland`'s type was
+unknown, so every member access on it reported "unresolved". Fix: the secondary
+constructor takes `ledger: SetupLedger? = null` and forwards it
+(`UserlandInstaller.kt:107-121`) — every pre-existing caller, including
+`UserlandInstallerTest`, keeps compiling unchanged.
+
+Pinned so it cannot regress: `SetupGateWiringTest`'s new
+`the installer's Context constructor accepts and forwards the ledger`
+(**98 host cases**, green locally before the re-push). Lesson recorded as
+TROUBLESHOOTING §33 — *a cascade of "Unresolved reference" errors on one
+receiver is a single constructor/signature fault; fix the first error and the
+rest disappear.*
 
 **What is still open:** the nine-row exit condition below is a **device**
 condition and has not been run — no device, no emulator, no Gradle in this

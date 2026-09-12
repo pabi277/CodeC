@@ -44,6 +44,29 @@ class SetupGateWiringTest {
     // ---- Packages tab -------------------------------------------------------
 
     @Test
+    fun `the installer's Context constructor accepts and forwards the ledger`() {
+        val src = source(installer)
+        // `TerminalViewModel` builds the installer as
+        // `UserlandInstaller(application, ledger = setupLedger)`. If the
+        // secondary (Context) constructor does not declare AND forward that
+        // parameter, the whole `userland` value fails to resolve and every
+        // member call on it cascades into an "Unresolved reference" — exactly
+        // what CI run 34692621773 reported as seven errors in one file.
+        val at = src.indexOf("constructor(")
+        assertTrue("no secondary constructor found", at >= 0)
+        val signature = src.substring(at, src.indexOf(") : this(", at))
+        assertTrue(
+            "the Context constructor must accept `ledger: SetupLedger?`",
+            signature.contains("ledger: SetupLedger?")
+        )
+        val forwarded = src.substring(at).substringAfter(") : this(").substringBefore("\n    fun ")
+        assertTrue(
+            "the Context constructor must forward `ledger = ledger`",
+            forwarded.contains("ledger = ledger")
+        )
+    }
+
+    @Test
     fun `every command the Packages tab sends is behind the gate`() {
         val src = source(modules)
         assertTrue(src.contains("SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, setupFacts)"))

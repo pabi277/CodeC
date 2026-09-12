@@ -226,6 +226,14 @@ zero orphans — pinned by `SwapRecoveryTest`.
 3. **The repair notice is one-time and non-nagging** (`SetupNoticeBridge` →
    the setup bar's notice row), and only appears when the repair actually
    restored or cleaned something.
+4. **The ledger rides on BOTH installer constructors.** The primary constructor
+   takes `ledger: SetupLedger? = null`; the secondary `(Context)` constructor —
+   the one `TerminalViewModel` actually uses — must declare and forward it too.
+   CI round 1 (`34692621773`) proved what happens otherwise: the constructor
+   call does not resolve, `userland`'s type becomes unknown, and **every**
+   member access on it reports `Unresolved reference` (seven errors from one
+   missing parameter). `SetupGateWiringTest` now pins the forwarding, so the
+   next refactor of that constructor fails on the host, not on CI.
 
 ## Sources (record)
 
