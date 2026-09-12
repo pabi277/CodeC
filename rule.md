@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-13, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-13, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), CI ✅ GREEN `34719753700` on tip `8c3c10d` (release APK 6,675,154 B), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -472,8 +472,12 @@ Every update updates the docs **in the same commit**:
   outranks everything; `SetupGateWiringTest` 25 — the settled guard is pinned, round 5's
   hand-listed pair and its `READY → USERLAND_STARTING` mapping are pinned GONE,
   `facts.usable` still short-circuits before it, and *a shell that is alive re-reads the
-  disk facts*). **CI on the round-6 commit and the device round (G1-G41) are the open
-  items**; G41 is the release row (fresh install, let the whole setup finish, do NOT kill
+  disk facts*). **CI on the round-6 commit is ✅ GREEN — `34719753700` on tip `8c3c10d`,
+  `conclusion: success`, job `build` 25 steps 10m48s, assemble + `testDebugUnitTest` +
+  `lintDebug`, zero error annotations, release APK 6,675,154 B (**−100 B against round 5**:
+  a settled guard, one reversed `when` branch and a fourth disk reading; whole phase
+  **+23,472 B / +0.35%** over Phase 44 round 4), debug 25,693,520 B, v1.3.17 — so the only
+  open item is the device round (G1-G41)**; G41 is the release row (fresh install, let the whole setup finish, do NOT kill
   the app, all four tabs must unlock by themselves), with G34 and G38 amended to say the
   same.
   **CI round 1 (`34698914219`, tip `3c597b2`) is
@@ -485,8 +489,8 @@ Every update updates the docs **in the same commit**:
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
   **G1-G41** written through round 6 and **NOT run** (G28 the optional 20-second
   stall-guard row, G29-G33 the one-tap rule, G34-G38 the chrome lock, G39-G40 its
-  first-frame timing, G41 its release); CI is ✅ GREEN on all five shipped rounds (round 5
-  = `34714305062`, tip `6c3cfea`), and the round-2 commit
+  first-frame timing, G41 its release); CI is ✅ GREEN on all six rounds (round 6 =
+  `34719753700`, tip `8c3c10d`), and the round-2 commit
   (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
   10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
   release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the

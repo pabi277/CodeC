@@ -4,7 +4,8 @@
 > owner: *"Start Phase 45"* → five device reports → five rebuilds) · CI ✅ GREEN on
 > **all five shipped rounds** (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
 > `34707337429` tip `0fcb3b6`; `34711827176` tip `e7759f1`; `34714305062` tip
-> `6c3cfea`, release APK 6,675,254 B) — round 6's run is recorded below when it lands ·
+> `6c3cfea`, release APK 6,675,254 B) and ✅ GREEN on **round 6** (`34719753700` tip
+> `8c3c10d`, job `build` 25 steps 10m48s, zero annotations, release APK 6,675,154 B) ·
 > device round required (**G1-G41**, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
@@ -613,7 +614,12 @@ Phase 44).
 
 ### What is still open
 
-CI on the round-6 commit and the device round: rows **G1-G41** in
+CI on the round-6 commit is ✅ GREEN (`34719753700`, tip `8c3c10d`, job `build` 25 steps
+10m48s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations, release APK
+**6,675,154 B** — **−100 B** against round 5, i.e. a settled guard, one reversed `when`
+branch and a fourth disk reading are again below what R8 can measure; whole phase
+**+23,472 B / +0.35%** over Phase 44 round 4; debug 25,693,520 B, v1.3.17), so only the
+device round is open: rows **G1-G41** in
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour, G29-G38 round
 4, G39-G40 round 5, **G41 round 6** — the release at the end of the unpack, with G34 and
 G38 amended to say the pause must end without a restart). G34, G38, G39 and G41 want a

@@ -641,7 +641,9 @@ cases green locally** (199 with Phase 45's 76), CI ✅ GREEN on the round-4 comm
 release APK 6,675,258 B) and on the round-5 commit (`34714305062`, tip `6c3cfea`, job
 `build` 25 steps 10m47s, zero annotations, release APK 6,675,254 B — **−4 B**, because
 one enum constant, a reordered `when` and one extra parameter are below what R8 can
-measure). Device rows:
+measure) and on the round-6 commit (`34719753700`, tip `8c3c10d`, job `build` 25 steps
+10m48s, zero annotations, release APK 6,675,154 B — **−100 B**; whole phase **+23,472 B /
++0.35%** over Phase 44 round 4). Device rows:
 [`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G41**.
 Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38 (round 4),
 §39 (round 5) and §40 (round 6).

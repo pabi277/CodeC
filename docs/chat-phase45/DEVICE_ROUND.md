@@ -16,13 +16,14 @@
 > §"Round 5" and §"Round 6"). 45.1's slides are unchanged — the owner's own decision: *"Slides stay
 > as they are (GOT IT / START CODING / SKIP)."*
 >
-> **The build to install:** the **round-6** `Build APK` run on `arena/01a0955a-codec`
-> (recorded here with its run id, commit and APK bytes as soon as CI is green — it is the
-> only build that has the release fix, so G41 cannot be run on an older one). The newest
-> round-5 build was `Build APK` **`34714305062`** — commit `6c3cfea`, ✅ `success`, job
-> `build` 10m47s, release APK 6,675,254 B, debug 25,693,272 B (Actions → that run →
-> **Artifacts** → `CodeC-IDE-debug`), but on that build the pause **does not release when
-> the unpack finishes** — exactly what the owner reported, and what row G41 exists for.
+> **The build to install:** `Build APK` **`34719753700`** on `arena/01a0955a-codec`
+> — round-6 commit `8c3c10d`, ✅ `success`, job `build` 25 steps 10m48s, **zero error
+> annotations**, release APK 6,675,154 B, debug 25,693,520 B (Actions → that run →
+> **Artifacts** → `CodeC-IDE-debug`). It is the **only** build with the release fix, so
+> **G41 cannot be run on an older one**. The round-5 build was `34714305062` (commit
+> `6c3cfea`, release APK 6,675,254 B), and on that build the pause **does not release
+> when the unpack finishes** — exactly what the owner reported, and what row G41 exists
+> for.
 > Round 4's build (`34711827176`, commit `e7759f1`) has the
 > one-tap tour and the lock, but that lock **waits for the download to start**, so the
 > first seconds after opening the app are still switchable — exactly what the owner

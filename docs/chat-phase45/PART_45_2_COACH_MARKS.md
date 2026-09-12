@@ -848,3 +848,13 @@ The lock itself is specified in
 §"Round 6 — *even after unpacking the userland it still stay lock*"; the owner-facing text
 is [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §40; the device rows are
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) **G41** (with **G34** and **G38** amended).
+
+### CI round 6: ✅ GREEN
+
+`Build APK` **`34719753700`** on tip `8c3c10d` — `conclusion: success`, job `build`
+25 steps, 10m48s, **zero error annotations** (per `rule.md` §5 that is
+`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the 199 host cases ran on
+real Gradle/JUnit/Robolectric). Release APK **6,675,154 B**, **−100 B** against round 5:
+the whole change is one settled guard, one reversed `when` branch, one added
+`refreshSetupFacts()` call and their comments — and nothing in 45.2 moved at all. Debug
+25,693,520 B, mapping 56,257,804 B, v1.3.17.
