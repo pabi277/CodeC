@@ -198,8 +198,379 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **the Phases 44-50 plan is ✅ MERGED to `main` via [PR #75](https://github.com/pabi277/CodeC/pull/75) (docs-only, CI green on the branch and on `main` after the merge) — next: "Start Phase 44"; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-13, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), CI ✅ GREEN `34719753700` on tip `8c3c10d` (release APK 6,675,154 B), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED (the plan doc itself ✅ MERGED to `main` via [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit `8eff438`); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
+- **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
+  Phase 45")** — *the guide: five slides on first run, five spotlights on first
+  arrival*, both layers the owner chose (*"Both layers"*). **45.1** pure
+  `ui/guide/GuidePlan.kt` (five slides in the order the user meets the features,
+  caps 34/22/130, `at/canSkip/next/isLast/isDone/resume/progress/wordCount`, and
+  `GuideVocabulary` — every product noun a slide names needs a
+  `GuideTermProof(term, path, needle)` verified against the REAL tree, so the copy
+  cannot promise a control that moved) + `ui/guide/GuideScreen.kt` (a plain
+  `Column`: SKIP on every slide, back = SKIP, `rememberSaveable` index sanitised by
+  `resume`) as the **second** first-launch gate — tiles → guide → shell, decided
+  BEFORE Phase 44's `setupLaunchDivert` and the `NavHost`, so it never shares a
+  screen with the setup bar; `guide_completed` (default false ⇒ an upgrader sees it
+  once) written only by the guide's own `onFinished` and read once at startup (a
+  reset affects the NEXT launch); three doors back to it (Settings → About → **Help
+  & guide**, Projects ⋮ → **Guide**, editor ☰ drawer footer → **Guide**), all one
+  local `guideRequested`, and deliberately **not** a navigation route. **45.2** pure
+  `ui/guide/CoachMarkPlan.kt` (five steps / three surfaces, `ChromeState.of`,
+  `stepsFor/nextUnseen/canShow/markSeen/parseSeen/serializeSeen/surfaceForRoute/
+  stepForArrival`, `MAX_PER_ARRIVAL = 2`, `TooltipPlacement.place` over pure
+  `GuideRect`/`GuideSize`) + `ui/guide/CoachMarks.kt` (`GuideAnchorRegistry`
+  bridge, `GuideAnchor.modifier(id)` publishing `boundsInWindow()` and
+  **withdrawing on dispose**, `GuideCoachMarks` host, `CoachMarkOverlay`). **The
+  law:** `nextUnseen` only returns a step whose anchor the caller reports visible,
+  and an all-hidden surface marks nothing seen — so the "Show tabs" mark (the
+  owner's *"tap to the open down side of the keyboard"*) can never point at a
+  handle that is not there. Never a trap: the scrim is a drawing-only `Canvas`
+  (four rects + a rounded stroke, no `BlendMode.Clear` offscreen layer), and the tap
+  layer consumes only OUTSIDE the hole, so tapping the highlighted control performs
+  its own action and closes the mark. The overlay lives in a root `Box` ABOVE the
+  `Scaffold` (the handle is in `bottomBar`). Suppressed by the exit survey, safe
+  mode, and a Phase 44 stage that is actually moving (DOWNLOADING/VERIFYING/
+  EXTRACTING — **not** CHECKING, the tracker's startup value, or no mark would ever
+  appear on a fresh phone). `coach_marks_seen_csv` + `guide_completed` are the two
+  new keys, both with out-of-store readers; Settings → **Reset tips** clears exactly
+  those two in one atomic edit. **50 new host cases** (`GuidePlanTest` 15 ·
+  `CoachMarkPlanTest` 12 · `TooltipPlacementTest` 10 · `GuideWiringTest` 13 source
+  pins) = **159 green locally**; `SettingsAuditTest` kept green by adding rows 53-54
+  to `docs/chat-phase38/SETTINGS_AUDIT.md` in the same commit (About 20, total 62).
+  No new dependency (pinned: every `ui/guide` import + no
+  `showcase/intro/onboarding/tooltip` in `libs.versions.toml`), no permission, no
+  route, no telemetry. **The pin caught the plan's own copy:** slide 5 was specced
+  *"⋮ → Open in editor"*; the hub's real label is `hub_open_action` = **"Open"**, so
+  that is what the slide says. Eight deviations recorded in the part docs (four-rect
+  hole, bridge not CompositionLocal, estimated card height, the two-per-arrival
+  reading of the cap, what "blocked" can see, safe mode skips the gate without
+  writing the flag, re-opening swaps the shell out, `BackRouter` precedence still a
+  fact not a law until Phase 49). **ROUND 2 (2026-09-12, the owner's device report): 45.2 rebuilt as ONE ORDERED
+  TOUR.** The report — *"the guided box are not consistent with flow … Not showing
+  the full box guide at one and you didn't add all … remove the next option only the
+  guide will show click the option where showing the guide to the next … make it like
+  demo_flask is always present"* — plus the dictated flow (*"☰ bar → change the
+  project folder to demo_flask → selected app.py → run → install → python → it will
+  open the flusk web → close → tap to reveal the keyboard below option → then a small
+  tour of package and terminal"*). **Four causes, all in round 1's own code**
+  (TROUBLESHOOTING §36): a fresh install blocked every box during Phase 44's
+  download; `MAX_PER_ARRIVAL = 2` + the surface filter hid most beats; the card was
+  placed with a **150dp estimated height** and clamped over its own hole; a box could
+  be cut **behind a dialog or a closed drawer** (the scrim draws in the activity
+  window, an `AlertDialog` is its own window, M3 keeps a closed drawer's rows laid
+  out). **Now:** ten beats (five new anchors: the drawer's project header, the
+  drawer's `app.py` row, the preview's Back, the bottom bar's Packages + Terminal
+  tabs) under three pure laws — order, `waits` (the four always-there controls stop
+  the tour until they are on screen; that is also the start gate, so the tour can
+  only begin at the editor's ☰), and pass-over-**without**-spending (a
+  sometimes-there control is skipped and NOT marked seen, so the tour can neither
+  stall nor lose the lesson) — plus `EditorChromeState.dialogOpen`/`drawerOpen` above
+  the anchor check. **The highlighted control is the only way forward:** no
+  NEXT/GOT IT, outside taps swallow the whole gesture and do nothing (owner: *"even
+  tap outside will not end that box"*), **SKIP TOUR**/back call `markAllSeen` (one
+  tap ends it; Reset tips is the door back), every card reads `Tour · n of 10`, and
+  its height is **measured** (`onSizeChanged`). The slides are untouched by the
+  owner's own decision. **`demo_flask` is ALWAYS present** now (re-seeded when
+  missing, never overwritten — a recorded reversal of Phase 14's one-time law).
+  **Recorded limit:** no box can point into an `AlertDialog`, so the project picker
+  and the *Install Python?* prompt are taught by the copy of the beat before them
+  (deviation 9); screen-absolute anchors are the follow-up. **Delegated decision
+  (owner: *"you do as you like"*):** Phase 44.1's terminal-first divert stays.
+  **175 host cases green locally** (`CoachMarkPlanTest` 18, `GuideWiringTest` 16,
+  `DemoProjectSeedTest` 7 — newly in the harness — `GuidePlanTest` 15,
+  `TooltipPlacementTest` 10), and the round caught two faults before CI: the host
+  still passed the deleted `arrivalKey` argument (a compile error a wiring pin
+  found), and a pin on the bare word "GOT IT" failed on the file's own sentence
+  promising there is none — **a source pin must name the button, not the word**.
+  **ROUND 3 (2026-09-12, later — the owner ran round 2): THE TOUR HAS NO SKIP.**
+  His report: *"You add the skip option and it's not a trough guide mean it got cut /
+  I want a full process 1st to last without skip anything in this / At the end option
+  to close and view again."* **Four causes, again all in the shipped code**
+  (TROUBLESHOOTING §37): SKIP TOUR was the most visible thing on every card and one
+  tap wrote all ten beats as seen; the pass-over law skipped any beat whose control
+  was not laid out at that instant, so the Packages box could arrive before the Flask
+  preview did; two beats had no target when needed (the project-name box only when a
+  switch would teach something, the tabs box only while the keyboard hid the bar);
+  and the project picker closes the drawer that the next beat lives in. **Now:**
+  every beat waits, in order, and a later beat never jumps the queue; a tour card has
+  **no button at all** (no next, no skip) and `markAllSeen` is deleted, so nothing can
+  spend a beat the user never saw; Back navigates instead of ending anything (the same
+  beat is there on return, unspent); while a beat waits **nothing is drawn**, which is
+  the safety argument that replaces the skip — the overlay can never cover the app;
+  and the finish card is the only one with buttons (**VIEW AGAIN** = an empty seen set
+  + navigate to the editor, **CLOSE** = in-memory, so an owed beat is still owed).
+  Two beats got real targets (the drawer header in every project state; the tab bar as
+  well as the reveal handle), the editor reopens the drawer after a project pick
+  (`nextBeatIsInDrawer` → `tourWaitsInDrawer`), and **the stall guard**
+  (`STALL_GUARD_MS = 20s`, `waitingOn`, `anchorsPossibleOn(route)`) is the one thing
+  that can pass a beat: only a control that COULD be on this route and is missing,
+  never one the user must travel to or wait an install out for (that is what would
+  cascade), and a passed beat is never marked seen. **The no-nag law's
+  "skippable with a single tap" is reversed for the tour by the owner's own
+  instruction** — the slides keep SKIP; recorded as deviation 13. **180 host cases
+  green locally** (`CoachMarkPlanTest` 21, `GuideWiringTest` 18, `GuidePlanTest` 15,
+  `TooltipPlacementTest` 10, `DemoProjectSeedTest` 7). **CI on the round-3 commit
+  (`34707337429`, tip `0fcb3b6`) is ✅ GREEN** — `conclusion: success`, job `build`
+  10m51s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
+  release APK 6,669,858 B (**+5,288 B / +0.08% over round 2**: this round added a
+  finish card, a route-aware stall guard, a second publisher for beat 6 and a drawer
+  reopen — five kilobytes is the measured price of a guide that cannot be skipped;
+  whole phase **+18,176 B / +0.27%** over Phase 44 round 4), debug 25,676,356 B,
+  v1.3.17. **Device rows were G1-G28 for round 3; round 4 extends them to G1-G38.**
+
+  **ROUND 4 (2026-09-12, later still — the owner ran round 3): ONE TAP DOES BOTH
+  HALVES, AND AN INSTALL PAUSES THE OTHER OPTIONS.** His two requests: *"When the
+  userland is installing and unpacking the user can not access any other other option
+  and it will show a sweet massage of why can't access any other option"* and *"Now the
+  steps feel like an overlay on the botton so 1st click disappear the massage and i have
+  to click 2nd time to really work but if someone don't click 2nd time it just cut off
+  the flow of tutorial"*. The second is a bug in round 3's own mechanism: the overlay
+  advanced on the **press** and left the tap **unconsumed**, trusting Compose to deliver
+  the rest of the gesture to the control underneath — but the advance's own
+  recomposition (`coachSeen` → `tourWaitsInDrawer` → the next box) can rebuild that
+  control before the **lift**, and a `clickable` whose node was rebuilt is cancelled.
+  The box went away, the beat was spent, nothing opened, and the tour then waited in
+  silence (deviation 14). **The fix is not a nudge, it is a change of mechanism:** an
+  anchor now publishes its control's **own click** beside its rect
+  (`GuideAnchor.modifier(id, onClick)`, registry `actions` + `owners`), the PURE
+  `GuideTapPolicy.targetFor` picks the most specific anchored click under the press
+  (smallest box, ties on tour order — beat 6's bar-wide hole resolves to the tab under
+  the finger), `isTap` refuses a drag that travels and lifts outside the hole (a scroll
+  spends no beat), and the overlay **performs the click, then advances**, swallowing the
+  gesture so nothing fires twice. Two anchors deliberately publish no click: the
+  terminal's status chip (a label) and a Packages card whose language is already
+  installed (its buttons are RUN/UNINSTALL/REINSTALL — publishing `onInstall` there
+  would turn a tap into a reinstall nobody asked for). Beat 6's copy now says *"tap this
+  handle"* instead of *"swipe up"*: while a box is up the tour accepts a tap, and a box
+  that teaches a gesture the overlay swallows is a box that never moves. The registry
+  also learned **ownership** (`owners`): one id with two publishers that swap in the
+  same recomposition (bar ↔ handle) must not let the leaving site wipe the arriving
+  site's rect *and* click. **The chrome lock** (request 1) is a Phase 44 surface built
+  beside the gate: pure `SetupLockPolicy` (`ChromeOption`, `ChromeLockReason`,
+  `ChromeLock`, `lock/reasonFor/sweetMessage/watchOption/option/editorChromeLocked/
+  optionForRoute`) pauses the tabs that cannot work while an install moves — the
+  userland's own (downloading/verifying/unpacking **and** `!facts.usable`) pauses all
+  but **Terminal**, and a package install the user asked for
+  (`OutputRunState.installing && busy`, reported through `EditorChromeState.
+  installRunning`) pauses all but the **Editor** plus ☰ / RUN ▶ / the drawer's edge
+  swipe inside it. The law: **the surface that shows the install is never paused**;
+  `CHECKING`, settled stages and an in-flight **upgrade** of a working prefix pause
+  nothing; and 44.1's guarantees stand (`RUN_C`/`EDIT_FILE` allowed in every stage —
+  the lock answers CHROME, `SetupGatePolicy.can` still answers CAPABILITY). One
+  sentence per reason, shown once when the pause begins and on every refused tap
+  (scaffold `snackbarHost`; paused tabs dimmed to 0.45 with a small 🔒 before they are
+  tapped). The tour pauses with the chrome (`blockedByForeground … || chromeLock.
+  locked`): a box on a paused control could only be spent by a tap that merely shows the
+  sentence. Deviations **17-20**; the lock is specified in
+  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+  §"Phase 45 round 4 — the chrome lock", the tap fix in
+  [`chat-phase45/PART_45_2_COACH_MARKS.md`](docs/chat-phase45/PART_45_2_COACH_MARKS.md)
+  §Round 4, and the owner-facing text in
+  [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §38. **193 host cases green locally**
+  (`CoachMarkPlanTest` 25, `GuideWiringTest` 19, `SetupGatePolicyTest` 30,
+  `SetupGateWiringTest` 23, `GuidePlanTest` 15, `TooltipPlacementTest` 10,
+  `DemoProjectSeedTest` 7 = 76 guide/demo + 117 Phase 44). **CI on the round-4 commit
+  (`34711827176`, tip `e7759f1`) is ✅ GREEN** — `conclusion: success`, job `build` 25
+  steps 11m29s, assemble + `testDebugUnitTest` + `lintDebug`, zero annotations, release
+  APK 6,675,258 B (**+5,400 B / +0.08% over round 3** — an anchor-click registry with
+  ownership, a pure tap policy and a chrome lock wired across five screens; whole phase
+  **+23,576 B / +0.35%** over Phase 44 round 4), debug 25,692,976 B, v1.3.17. **Device
+  rows were G1-G38 for round 4; round 5 extends them to G1-G40.**
+
+  **ROUND 5 (2026-09-12, later still — the owner ran round 4): THE LOCK IS ON FROM THE
+  FIRST FRAME.** He accepted both halves of round 4 and corrected one thing: *"The lock
+  option is good but still it late user can switch before the start of userland download
+  because is takes a little time to connect and user can switch task between them / Make
+  it instantly after 1st open and others are ok"*. The gap was round 4's own exemption:
+  `reasonFor` was **stage-keyed**, so the whole `CHECKING` window — the ledger read, the
+  probe of `bin/pkg` and `bin/bash`, the reach for the network, the server's first
+  answer — was open, and 44.1's launch divert only picks the *starting* tab, so one tap
+  in that window landed the user on Packages reading *"not installed"* about tools
+  already on their way. **The rule is now prefix-keyed:** `!facts.usable` and not given
+  up on ⇒ paused, whatever the stage says. New reason `USERLAND_STARTING` covers
+  `CHECKING` and a `READY` the disk contradicts (transient — 44.1's C4 correction fails
+  it); `FAILED`/`UNSUPPORTED` still answer `NONE` (a stopped setup has its own sentence,
+  its own ⬇ retry, and **C still compiles offline**), and `facts.usable` still
+  short-circuits BEFORE the stage table — which is what keeps an installed phone from
+  flashing a pause at launch, because `TerminalViewModel` builds the facts
+  **synchronously from the disk** in its constructor
+  (`MutableStateFlow(computeSetupFacts(setupTracker.state))` →
+  `SetupGatePolicy.factsFor(prefixDir, phase, progress)`). Three consequences recorded as
+  decisions: `lock()`'s **defaults are now the paused case** (they *are* the first frame
+  of a fresh install — a caller that has heard nothing yet must not default to open); a
+  boot-time **repair** of an interrupted swap (`swapping` ⇒ `!usable`) is paused too,
+  with the Terminal open where 44.2 logs the restore; and `lock`/`reasonFor` grew
+  **`reducedStart`** — Phase 42.3's safe mode is exempt from the userland branch, because
+  a phone that crashed three times must still reach Settings (export all projects, report
+  the crash), while an install the user ASKED for still outranks it. The starting
+  sentence carries **no percentage** (none exists yet; 44.1's rule is never invent one).
+  Nothing else moved: the watch surface is never paused, the editor keeps typing and `cc`
+  while the *userland* is built, `SetupGatePolicy.can` remains the only answer about
+  capability, and 45.2's 76 guide/demo cases are byte-identical (the tour just pauses a
+  few seconds earlier, which is deviation 20 doing its job). Specified in
+  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+  §"Round 5 — *Make it instantly after 1st open*", owner-facing in
+  [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §39. **197 host cases green locally**
+  (`SetupGatePolicyTest` 33 — the first frame is paused incl. the probe window, a repair
+  and a disk-denied READY; a usable prefix pauses nothing at ANY stage incl. an upgrade
+  moving through all three; a reduced start pauses nothing while a package install still
+  outranks it; `SetupGateWiringTest` 24 — `FAILED, UNSUPPORTED` are the ONLY stages
+  answering NONE, `facts.usable` short-circuits before the stage table, `MainActivity`
+  passes `reducedStart = SafeMode.active`, and the facts really are built in the
+  constructor). **CI on the round-5 commit (`34714305062`, tip `6c3cfea`) is ✅ GREEN** —
+  `conclusion: success`, job `build` 25 steps 10m47s, assemble + `testDebugUnitTest` +
+  `lintDebug`, zero annotations, release APK 6,675,254 B (**−4 B against round 4**: one
+  enum constant, a reordered `when` and one extra parameter are below what R8 can
+  measure; whole phase **+23,572 B / +0.35%** over Phase 44 round 4), debug
+  25,693,272 B, v1.3.17. **Device rows were G1-G40 for round 5; round 6 extends them to
+  G1-G41.**
+
+  **ROUND 6 (2026-09-13 — the owner ran round 5): THE LOCK MUST DIE WITH THE SETUP.** He
+  accepted the instant pause and reported one problem: *"One problem even after unpacking
+  the userland it still stay lock if i refresh it it's the open the editor check the
+  problem."* The install finished and the four tabs stayed dimmed until the process was
+  killed. **The diagnosis is a category error round 5 made:** the lock reads a **verdict**
+  and a **reading** as if they were the same kind of thing. `progress.stage` is the
+  installer's own verdict — set by the code that did the work, never stale. `facts` is a
+  reading of the disk (three `stat` calls: is `bin/pkg` there, non-empty, executable?) and
+  it is only as fresh as its last re-computation, which round 5 did at three moments (the
+  ViewModel's constructor, every *published* stage change, the end of an install). Round
+  5's law — *"no usable prefix and not given up on ⇒ paused, whatever the stage says"* —
+  therefore let a **stale reading hold the app shut after the verdict said the work was
+  done**, and because the only open surface was the Terminal and nothing in it re-reads the
+  disk on demand, the lock had no in-session exit. **Two independent guarantees replace
+  it.** (1) **A settled stage never pauses the app:** the boundary moved from a
+  hand-listed pair to the installer's own verdict — `if (progress.settled) return
+  ChromeLockReason.NONE`, where `settled` is `!inFlight` and `inFlight` is
+  `CHECKING | DOWNLOADING | VERIFYING | EXTRACTING` — so the userland branch pauses only
+  while the setup is *actually doing something*, and a `READY` whose reading says
+  "unusable" goes back to where it always had an honest surface: 44.1's **C4** correction
+  fails it into *"Setup didn't finish"* with a ⬇ retry, `SetupGatePolicy.can` refuses the
+  acts that would fail, and **C still compiles offline**. (2) **A shell that is alive
+  re-reads the disk:** `TerminalViewModel`'s `anyAlive` collector now calls
+  `refreshSetupFacts()` on `Dispatchers.IO` — the fourth reading, and the one that *cannot*
+  be early, because nothing reports alive until the prefix really runs a bash. Guarantee 1
+  makes the lock unable to outlive the verdict; guarantee 2 makes the reading unable to
+  outlive the shell; either alone would have released the owner's phone, and together
+  "locked while the tools work" is not a reachable state. **Round 5 survives intact where
+  it mattered:** `CHECKING` is in flight, so the first frame of a fresh install is still
+  paused, `lock()`'s defaults still answer PAUSED, the probe window / the reach for the
+  network / a boot-time swap repair are still paused, and the sentence is unchanged. A
+  package install still outranks everything — `busy && installing` is a *live* signal that
+  clears when the stream ends and on the screen's dispose — the watch surface is still
+  never paused, `reducedStart` still exempts safe mode, `editorChromeLocked` is still a
+  package-install-only answer, and the lock still never weakens the gate beside it.
+  Specified in
+  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+  §"Round 6 — *even after unpacking the userland it still stay lock*", owner-facing in
+  [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §40. **199 host cases green locally**
+  (`SetupGatePolicyTest` 34 — round 5's `READY`-is-paused assertion reversed and
+  *round 6 - the lock dies with the setup even when the facts are stale* added: all three
+  settled stages open every option with unusable facts beside them, all four in-flight
+  stages still pause, a package install still outranks a settled stage, safe mode still
+  outranks everything; `SetupGateWiringTest` 25 — the settled guard is pinned, round 5's
+  hand-listed pair and its `READY → USERLAND_STARTING` mapping are pinned GONE,
+  `facts.usable` still short-circuits before it, and *a shell that is alive re-reads the
+  disk facts*). **CI on the round-6 commit is ✅ GREEN — `34719753700` on tip `8c3c10d`,
+  `conclusion: success`, job `build` 25 steps 10m48s, assemble + `testDebugUnitTest` +
+  `lintDebug`, zero error annotations, release APK 6,675,154 B (**−100 B against round 5**:
+  a settled guard, one reversed `when` branch and a fourth disk reading; whole phase
+  **+23,472 B / +0.35%** over Phase 44 round 4), debug 25,693,520 B, v1.3.17 — so the only
+  open item is the device round (G1-G41)**; G41 is the release row (fresh install, let the whole setup finish, do NOT kill
+  the app, all four tabs must unlock by themselves), with G34 and G38 amended to say the
+  same.
+  **CI round 1 (`34698914219`, tip `3c597b2`) is
+  ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
+  per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
+  50 new cases ran on real Gradle/JUnit/Robolectric and lint is clean; release APK
+  6,664,474 B (**+12,792 B / +0.19%** over Phase 44 round 4 — the measured cost of
+  the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
+  DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
+  **G1-G41** written through round 6 and **NOT run** (G28 the optional 20-second
+  stall-guard row, G29-G33 the one-tap rule, G34-G38 the chrome lock, G39-G40 its
+  first-frame timing, G41 its release); CI is ✅ GREEN on all six rounds (round 6 =
+  `34719753700`, tip `8c3c10d`), and the round-2 commit
+  (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
+  10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
+  release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the
+  spotlights mostly by deleting: the cap, the surface filter, the card's forward
+  button, the estimated-height branch), debug 25,665,688 B, v1.3.17. **Do not call Phase 45 tested until the owner reports the round** — and
+  the round must start from Settings → About → **Reset tips**, or the beats round 1
+  already marked seen will hide half the tour.
+- **Phase 44 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
+  Phase 44")** — *setup you can see, and cannot half-finish*. Both parts in one
+  round: **44.1** the one-time userland install is visible on every tab (pure
+  `ui/terminal/SetupState.kt`: `SetupProgressParser` over the installer's
+  existing progress lines, `SetupGatePolicy.can/refusal/barText/dontCloseText/
+  notificationText/actionForCommand/userlandUsable/diskFacts`, `SetupTracker`,
+  `SetupAnnouncer`; `ui/components/SetupBar.kt` rendered between
+  `SafeModeBanner` and `NavHost`; Terminal-first on a fresh install; the
+  owner's `Don't close CodeC — …` row; a stage-aware chip via
+  `TerminalStatusLabel`; the same sentence in the notification via
+  `TerminalForegroundService.start(context, status, percent)`; wake lock + FGS
+  taken **before the first byte**; Packages and the editor's install path refuse
+  with one honest sentence), and **44.2** a kill is harmless (`SetupLedger` on
+  its own SharedPreferences file with `commit()` never `apply()`, pure
+  `resumePlan()`, `SetupRecovery.recover()` from `MainActivity.onCreate` next to
+  `TempGc` with a bounded orphan sweep, `SetupRecoveryGate.awaitFinished()` so
+  the installer waits for the boot repair, the post-install marker written
+  **after** the swap, and `userlandUsable` checking the real `$PREFIX/bin/pkg`
+  instead of a marker). **C is never gated** in any stage. **109 host cases** in
+  seven classes were green locally through this section's kotlinc harness; the
+  Compose/JNI edges cannot compile in-sandbox at all (no `android.jar`), so
+  **CI's `Build APK` is the executor of record** and the nine-row exit condition
+  is a **device** condition — `docs/chat-phase44/DEVICE_ROUND.md` (12 rows, incl.
+  the three kill points) is written and **NOT run**. Deviations are recorded in
+  the part docs (`OPEN_TERMINAL` never refused; the planned Robolectric
+  `SetupStateVmTest` replaced by pure tracker tests + `SetupGateWiringTest`
+  source pins; the bar is dismissible only once settled **and** usable;
+  `swapPrefix`'s names untouched so `UserlandInstallerTest` stays green; one
+  repair entry point). No new dependency, DataStore key, Settings control,
+  permission or telemetry; small icon still `ic_stat_codec`. Owner-facing
+  explanation: TROUBLESHOOTING §32. **CI round 1 was 🔴 (`34692621773`):** seven
+  `Unresolved reference` errors in `TerminalViewModel` from ONE missing
+  parameter — `ledger` was added to `UserlandInstaller`'s primary constructor
+  but not to the secondary `(Context)` one, so the construction failed and every
+  member on `userland` looked missing. Fixed + pinned by a source-scan case
+  (**109 host cases** green locally); the runbook is TROUBLESHOOTING §33 (*sort
+  the errors by line number, fix the first one; a constructor-signature change
+  must be applied to EVERY constructor and every call site grepped by hand*).
+  **CI round 3 (`34693462725`) is ✅ GREEN**
+  (`conclusion: success`, confirmed by `gh run view` once the token was restored
+  — and by the owner installing its APK). **Device round 1 was then RUN BY THE
+  OWNER and 🔴 FAILED four rows** (*"I couldn't not open the terminal it's opening
+  the editor"* · the bar *"is not closing or opening terminal"* · *"Every package
+  saying view setup but terminal not opening editor opening"*). Three root
+  causes, all fixed: **(1) a marker is not a prefix** — `installIfNeeded(force =
+  false)` answers `AlreadyInstalled` from the release marker alone, and a *pre-44*
+  build wrote that marker before the swap, so the stage said READY over a prefix
+  with no working `bin/pkg`; the branch now asks the disk (`userlandUsable` →
+  `FAILED(BROKEN_USERLAND)`, wording *"the Linux tools aren't working"*) and
+  `refreshSetupFromDiskWhenIdle()` re-reads once the boot repair is finished;
+  **(2) the bar was a wall in that state** — its action rendered only when in
+  flight/FAILED and its ✕ cleared a note that was not there; the bar is now one
+  tap to the terminal, always shows VIEW SETUP, and its ✕ is real
+  (`SetupGatePolicy.barDismissAllowed` = `progress.settled`, remembering the
+  dismissed text so a changed state brings it back); **(3) `restoreState = true`
+  restores a whole saved sub-stack, not a tab** — so "go to the terminal" arrived
+  at an editor the user had opened above it; every *show-me-the-terminal*
+  navigation is now `restoreState = false` (the other four tabs keep their pre-44
+  behaviour; Phase 49 is the systematic pass). The launch divert also stopped
+  being keyed on the first-run welcome: it is
+  `SetupGatePolicy.startOnTerminal(usable, abiSupported)` decided from the
+  **disk**, applied by `navigate()` after the first composition, never by an
+  argument-carrying `startDestination`. **109 host cases** green locally;
+  owner-facing record TROUBLESHOOTING §35, re-test rows R1-R8 in
+  `docs/chat-phase44/DEVICE_ROUND.md`. **CI round 4 (`34695797493`, tip
+  `4bf3c4c`) is ✅ GREEN** — `conclusion: success`, job `build` 10m53s, zero
+  error annotations, artifacts `CodeC-IDE-release` (6,651,682 B) and
+  `CodeC-IDE-debug` (25,608,360 B), v1.3.17. Per §5 the green run means
+  `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` all passed, so the
+  109 host cases ran on real Gradle/JUnit, not just on the local kotlinc harness
+  (the sandbox could not download the run log — `results-receiver.actions…` EOF
+  — so the evidence is the conclusion plus the empty error-annotation list).
+  **Do not call Phase 44 tested until the owner reports round 2.**
 - **Phases 44-50 plan ✅ MERGED (2026-09-12, owner: "If everything done merge
   it") — [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit
   `8eff438`.** CI green three times (`Build APK` `34689859665` push,
@@ -638,7 +1009,76 @@ Every update updates the docs **in the same commit**:
   written, and 124 host tests then ran green over the real production files. **CI is still the executor of
   record** (Gradle/AGP, real Robolectric, lint, the APK) — Maven Central and
   Google Maven are unreachable in-sandbox, so nothing that needs Gradle can run
-  here, and the toolchain lives in `/tmp` (not persisted).
+  here, and the toolchain lives in `/tmp` (not persisted). **Phase 44 used the
+  same loop as a single reusable script** (re-extract the pure test classes out
+  of the Compose-coupled test files, compile the real production files + the
+  real test sources against the shims, run them from `app/` so `RepoFiles.root()`
+  resolves): **109/109 green**, and it caught four real faults before CI (a
+  `CountDownLatch` needed where a Kotlin `Any()` lock cannot `wait()`, an
+  interface default `val` that a `data class` constructor property cannot hide,
+  a lookbehind needed so `NotificationChannel(` does not also match
+  `createNotificationChannel(`, and a source-scan count that was off by one
+  because `ModulesScreen` has **four** `sendCommand` sites, not three). The
+  script itself is throwaway (`/tmp`); the *shape* is the reusable part. **Phase
+  45 reused it unchanged** — two pure files (`ui/guide/GuidePlan.kt`,
+  `ui/guide/CoachMarkPlan.kt`) plus four test classes appended to the same
+  script's file list: **159/159 green**, and it caught one real fault before CI
+  (a source-scan window of a fixed 400 characters around `resetGuideTips` ran
+  into the *next* setter and counted its DataStore key, so the pin now slices to
+  the function's own closing brace — general rule: a source-scan window ends at a
+  structural boundary, never at a character count). **Phase 45's round 2 grew it
+  to 175/175** by adding the demo-project chain (`ProjectConfig`,
+  `FileTreeRepository`, `ProjectScaffold`, `ProjectPathUtils`, `DemoProjects` — all
+  `java.io`-pure, so `DemoProjectSeedTest` runs on the host too, which is what
+  *proved* the "always present" reversal instead of asserting it) and by teaching
+  the `TemporaryFolder` shim JUnit's vararg `newFolder("CodeC", "projects")`. It
+  caught two more real faults: a host call still passing an argument the redesign
+  had deleted (`arrivalKey` — a hard compile error waiting in CI), and a pin that
+  grepped the bare word `GOT IT` and so failed on the comment promising there is no
+  GOT IT — **pin the button (`Text("GOT IT")`), never the word**. **Round 6 grew it to
+  199/199** (`SetupGatePolicyTest` 34, `SetupGateWiringTest` 25) — and round 6's two new
+  cases are the shape a *stale-state* bug needs: one asserts the **whole settled set**
+  opens the app with unusable facts beside it (a single-stage assertion would have passed
+  on round 5's code for `FAILED`/`UNSUPPORTED` and missed `READY`, which is the stage the
+  device actually reached), and one pins the **fourth facts reading** in the `anyAlive`
+  collector by slicing the source between two structural markers (`manager.anyAlive.collect`
+  → `Phase 44.2 (device round 1)`) rather than by counting characters. **Round 5 grew it
+  to 197/197** (`SetupGatePolicyTest` 33, `SetupGateWiringTest` 24) after the sandbox lost
+  `/tmp` and the harness had to be rebuilt from scratch — which produced its own reusable
+  lessons: **a harness runner must build a FRESH test-class instance per test method**
+  (JUnit's rule), because reusing one instance made five `DemoProjectSeedTest` cases fail
+  on state leaked through a shared `TemporaryFolder` root, and those failures looked
+  exactly like production bugs (`expected true`, `FileNotFoundException: … demo_flask (Is
+  a directory)`); the shim `Assert` needs JUnit's **`assertEquals(Double, Double,
+  delta)`** overload (without it every `assertEquals(0.5, x, 0.01)` resolves to
+  `(String?, Any?)` and does not compile); and `@get:Rule` needs
+  `AnnotationTarget.PROPERTY_GETTER` on the shim annotation. **Round 4 of
+  Phase 45 grew it to 193/193** (`CoachMarkPlanTest` 25, `GuideWiringTest` 19,
+  `SetupGatePolicyTest` 30, `SetupGateWiringTest` 23) and added a third pin shape:
+  round 3's pins on the tap handler (`hole.contains(down.position)`, `onAdvance()`,
+  "not consumed") all passed on code whose taps were dead on a phone, because they
+  pinned the *mechanism's prose* and the mechanism was the bug. Round 4 pins **which
+  lambda each beat performs** (`onClick = onDrawerTap`, `onTabTap`, `cardClick`, …),
+  **which anchors must publish none** (the bar as a whole, the chip, an installed card),
+  and the **ORDER of two calls by index** (`perform(target.id)` before `onAdvance()`).
+  A host JVM has no pointer dispatch, so "does the tap land" is a device row — but
+  "does each beat have a click to perform, and does it perform before it advances" is
+  pinnable, and that is the half that regressed. **Round 3 of
+  Phase 45 grew it to 180/180** (`CoachMarkPlanTest` 21, `GuideWiringTest` 18) and
+  re-proved the same lesson from the other side: a pin that greps a word fails on the
+  prose that forbids it, so round 3 pins *counts* instead — `2` publishers of the
+  beat-6 anchor (the handle AND the bar), `1` writer of the seen set (`onSeen(`),
+  `2` drawer gates (`nextStep` and `waitingOn`) — and slices source between two
+  markers (`fun TourFinishedCard(` … `fun CoachMarkOverlay(`) to prove a *region* has
+  no button rather than the whole file. A whole-file `assertFalse(contains("Button("))`
+  would have been true of the finish card and useless. **Its
+  blind spot, found by Phase 44's CI round 2:** the harness runs on a host JVM,
+  so it cannot see `minSdk` — a *pure* file that used `java.nio.file`
+  (`Files.isSymbolicLink`) compiled and passed locally and then died in
+  `:app:lintDebug` with two `NewApi` errors. Rule: in `app/src/main`, **no
+  `java.nio.file.*`, no `java.time.*`** (both API 26 vs `minSdk 24`), and grep
+  the changed main sources for them before pushing — TROUBLESHOOTING §34 has the
+  replacement table and the one-line check.
 
 ---
 

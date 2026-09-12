@@ -82,6 +82,10 @@ import com.codeci.ide.ui.services.LanAddress
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.stats.StatsManager
 import com.codeci.ide.ui.terminal.PtyNative
+import com.codeci.ide.ui.terminal.SetupAction
+import com.codeci.ide.ui.terminal.SetupGatePolicy
+import com.codeci.ide.ui.terminal.SetupLedgerPrefs
+import com.codeci.ide.ui.terminal.SetupStateBridge
 import com.codeci.ide.ui.terminal.ShellBootstrap
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalHandoff
@@ -154,6 +158,16 @@ data class OutputRunState(
     val lastTerminalCommand: String? = null,
     /** Phase 24.6 — true when the current output belongs to a Test ▷ run. */
     val testRun: Boolean = false,
+    /**
+     * Phase 45 round 4 — true while the panel is streaming an INSTALL the user
+     * asked for (RUN ▶ → Install, i.e. `pkg install -y <pkg>`), as opposed to a
+     * compile, a run or a long-lived server. It is the only signal that says
+     * "one job is being installed right now", which is what the chrome lock
+     * pauses the other options for ([com.codeci.ide.ui.terminal.SetupLockPolicy]).
+     * A plain run never sets it: locking the app while the user's own program —
+     * or a Flask server — is running would be a prison, not a courtesy.
+     */
+    val installing: Boolean = false,
     /** Phase 14 — the live loopback URL of a running server project (Open Preview). */
     val serverUrl: String? = null,
     /** Phase 14 — true while the panel is attached to a long-lived server, not a batch run. */
@@ -816,6 +830,23 @@ class EditorViewModel : ViewModel() {
         if (_outputState.value.busy) return
         val ctx = context.applicationContext
         captureContext(ctx)
+        // Phase 44.1 — this streams `pkg install -y <pkg>` into the Output
+        // Panel. While the one-time userland setup has not produced a working
+        // `bin/pkg` that produced a bare shell error and a user who believed
+        // Python was broken. The gate's sentence replaces the run; nothing is
+        // queued, and C is never on this path (TCC is in the APK, no prompt).
+        val setupVerdict = SetupGatePolicy.can(
+            SetupAction.INSTALL_PACKAGE,
+            SetupStateBridge.factsOrDisk(
+                ShellEnvironment.prefixDir(ctx.filesDir),
+                SetupLedgerPrefs.ledger(ctx).read().phase
+            )
+        )
+        if (!setupVerdict.allowed) {
+            _outputExpanded.value = true
+            failRun(ctx, setupVerdict.message ?: "CodeC's Linux tools are not ready yet.")
+            return
+        }
         val command = LanguageRunPlanner.installCommand(prompt.packageName)
         _outputExpanded.value = true
         _outputState.value = OutputRunState(
@@ -823,7 +854,10 @@ class EditorViewModel : ViewModel() {
             busy = true,
             lines = listOf(OutputLine("$ $command", OutputLineKind.COMMAND)),
             summary = ctx.getString(R.string.output_installing, prompt.displayName),
-            lastTerminalCommand = command
+            lastTerminalCommand = command,
+            // Phase 45 round 4 — the chrome lock's input: while this install
+            // streams, the other options are paused and say why.
+            installing = true
         )
         runJob = viewModelScope.launch {
             val settings = compilerSettingsFrom(SettingsManager(ctx))
@@ -854,6 +888,7 @@ class EditorViewModel : ViewModel() {
             if (installExit == 0) {
                 _outputState.value = _outputState.value.copy(
                     busy = false,
+                    installing = false,
                     lines = _outputState.value.lines + OutputLine(
                         ctx.getString(R.string.output_install_ok, prompt.displayName),
                         OutputLineKind.STATS
@@ -872,6 +907,7 @@ class EditorViewModel : ViewModel() {
                 _outputState.value = _outputState.value.copy(
                     phase = OutputPhase.FAILED,
                     busy = false,
+                    installing = false,
                     summary = ctx.getString(R.string.output_install_failed, prompt.displayName),
                     lines = _outputState.value.lines + OutputLine(
                         ctx.getString(R.string.output_install_failed, prompt.displayName),

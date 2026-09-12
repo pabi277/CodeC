@@ -13,7 +13,67 @@
 > (symptom → root cause → design → exit condition → tests → deferred →
 > sources).
 >
-> **This is a plan. No app code was written for it.** Phase 43 is
+> **Status (2026-09-12):** Phase **44 is 🚧 IMPLEMENTED** on
+> `arena/01a0955a-codec`; CI is ✅ GREEN (`34693462725`) and the owner **ran
+> device round 1** on that artifact — it 🔴 **failed four rows** (a marker-only
+> prefix read as READY, a setup bar with no working action, and
+> `restoreState = true` sending "go to the terminal" to the editor). All three
+> root causes are fixed and pinned by tests, and CI round 4 (`34695797493`, tip
+> `4bf3c4c`) is ✅ GREEN; **round 2
+> ([`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md) R1-R8, then
+> D1-D12) is the gate.** Phase **45 is 🚧 IMPLEMENTED** as well (both layers the
+> owner chose: the five-slide first-run guide with three doors back to it, and
+> coach marks that may only point at an anchor the layout says is really on screen;
+> **CI round 1 ✅ GREEN** — `34698914219` on tip `3c597b2`: assemble +
+> `testDebugUnitTest` + `lintDebug`, release APK +12,792 B / +0.19%). **The owner
+> then ran round 1 on his phone and 45.2 was rebuilt as ONE TEN-BEAT TOUR** (his
+> flow: ☰ → change project to `demo_flask` → `app.py` → RUN ▶ → Install → the Flask
+> preview → close → the tab bar / reveal handle → a small tour of Packages and
+> Terminal; no next button — the highlighted control is the only way on, outside taps
+> are inert, `demo_flask` is always present). **He then ran round 2 and the tour lost
+> its skip** (*"You add the skip option and it's not a trough guide mean it got cut …
+> I want a full process 1st to last without skip anything in this … At the end option
+> to close and view again"*): every beat now waits in order, a tour card has **no
+> button at all**, Back pauses without spending a beat, and the finish card offers
+> **VIEW AGAIN** + **CLOSE**. **He then ran round 3 and asked for two things**
+> (*"1st click disappear the massage and i have to click 2nd time to really work but if
+> someone don't click 2nd time it just cut off the flow of tutorial"* and *"when the
+> userland is installing and unpacking the user can not access any other other option
+> and it will show a sweet massage of why"*): every anchor now publishes its
+> control's **own click** and the overlay performs it before advancing — one tap, both
+> halves, a drag spends nothing — and a new pure **`SetupLockPolicy`** (shipped beside
+> the 44 gate, specified in
+> [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](chat-phase44/PART_44_1_VISIBLE_SETUP.md))
+> pauses the options an install cannot serve, dimmed with a 🔒, each answering a tap
+> with one sentence that says what is happening, why, and where to watch it — the
+> surface that shows the install is never paused. **He then ran round 4 and accepted
+> it with one correction** (*"The lock option is good but still it late user can switch
+> before the start of userland download because is takes a little time to connect … Make
+> it instantly after 1st open and others are ok"*): round 4's lock waited for a stage
+> that meant *work is moving*, so the seconds before the first byte — the disk probe,
+> the reach for the network — were still switchable. Round 5 keys the pause on **whether
+> the Linux tools work** instead of on the stage, so it is on from the first frame
+> (`USERLAND_STARTING` also covers a boot-time repair of an interrupted swap), while a
+> usable prefix, a stopped setup (`FAILED`/`UNSUPPORTED`) and Phase 42.3's **safe mode**
+> still pause nothing. **He then ran round 5 and reported the pause outliving the work it
+> protected** (*"even after unpacking the userland it still stay lock if i refresh it it's
+> the open the editor"*): round 5 had keyed the pause on a disk **reading** beside the
+> installer's **verdict**, and a reading can be stale — so round 6 made a **settled stage
+> always reopen the app** and added a fourth reading, taken the moment a shell comes alive
+> (a running bash *is* the proof the tools work). Round 5's "on from the first frame" is
+> untouched, because `CHECKING` is still in flight. Round 6 is implemented with **199 host
+> cases green locally** (76 guide/demo + 123 Phase 44); CI is ✅ **GREEN** on rounds 1-4
+> (`34698914219`;
+> `34704379023`; `34707337429`; `34711827176` on tip `e7759f1`, release APK
+> 6,675,258 B = +0.08% over round 3) and **all six rounds** now (round 5 =
+> `34714305062` on tip `6c3cfea`, release APK 6,675,254 B; round 6 = `34719753700` on tip
+> `8c3c10d`, job `build` 25 steps 10m48s, zero annotations, release APK 6,675,154 B =
+> −100 B, whole phase +23,472 B / +0.35% over Phase 44 round 4), and device round
+> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G41** is NOT
+> run (start it from Settings → About → Reset tips; G29-G33 the one-tap rule, G34-G38
+> the lock, G39-G40 its first-frame timing, **G41 its release** — and G41 needs the
+> round-6 build, which is the only one that has the fix).
+> 46-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
 > [`chat-phase43/README.md`](chat-phase43/README.md).
@@ -47,15 +107,34 @@ Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
 
 The numbers **are** the order. Why this order:
 
-1. **44 — setup you can see, and cannot half-finish.** It goes first because it
+1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
+   2026-09-12** (`arena/01a0955a-codec`; both parts, **121 host cases** after
+   Phase 45's rounds 4-5 added the chrome lock here, CI ✅ GREEN
+   round 4 `34695797493`; device round 1 🔴 FAILED four rows → three root causes
+   fixed; **round 2 not run**, and its lock rows live in
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G34-G41**). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git
    missing). It is also the only phase in the series with a data-loss-shaped
    bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
    all**, `UserlandInstaller.kt:377-395`).
-2. **45 — the guide.** First impression for every tester you have not met yet,
+2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-13, THROUGH ROUND 6**
+   (`arena/01a0955a-codec`; both parts, **199 host cases green locally**, CI ✅
+   GREEN on all six rounds
+   `34698914219`/`34704379023`/`34707337429`/`34711827176`/`34714305062`/`34719753700`,
+   device round
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G41** not
+   run). Round 4 came from the owner's own two requests after he ran round 3:
+   *one tap on a highlighted control must really work it* (it now performs the
+   control's own published click and then advances, in one gesture), and *"when
+   the userland is installing and unpacking the user can not access any other
+   option"* — which is a **44 surface** shipped beside the gate as pure
+   `SetupLockPolicy` (`chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Phase 45 round
+   4 — the chrome lock"). First impression for every tester you have not met yet,
    and its slide 3 is where the *"one-time download, don't close the app"*
-   mental model is planted that 44 enforces.
+   mental model is planted that 44 enforces — which is why the guide gate runs
+   *before* 44.1's terminal-first divert and never shares a screen with the setup
+   bar.
 3. **46 — projects, not folders.** Deletes the incomplete Phase 43 feature and
    re-shapes the hub around the new file/project split. It goes before 47
    because the drawer's in-drawer project picker and the hub's *Open in editor*

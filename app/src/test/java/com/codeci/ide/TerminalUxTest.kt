@@ -7,6 +7,9 @@ import com.codeci.ide.ui.components.findWordBoundaries
 import com.codeci.ide.ui.components.parseExtraKeysMacros
 import com.codeci.ide.ui.components.selectedText
 import com.codeci.ide.ui.terminal.OrderedReadinessQueue
+import com.codeci.ide.ui.terminal.SetupStage
+import com.codeci.ide.ui.terminal.TerminalLifecycle
+import com.codeci.ide.ui.terminal.TerminalStatusLabel
 import com.codeci.ide.ui.terminal.PreparedShellCacheKey
 import com.codeci.ide.ui.terminal.TerminalEmulator
 import com.codeci.ide.ui.terminal.TerminalStartMeasurement
@@ -134,5 +137,91 @@ class TerminalUxTest {
         emu.feed("\u001b]2;build-job\u0007")
         assertEquals("build-job", emu.title)
         assertEquals("build-job", emu.snapshot().title)
+    }
+}
+
+/**
+ * Phase 44.1 — the terminal status chip's `(lifecycle, setup stage) → label`
+ * table. Before this the chip said the fixed "starting shell…" for the whole
+ * one-time bootstrap download: a lie by omission on the ONE surface that could
+ * have told the truth.
+ */
+class TerminalStatusLabelTest {
+
+    @Test
+    fun `a starting shell reports the download it is actually waiting for`() {
+        assertEquals(
+            TerminalStatusLabel.Label("downloading userland 62 %", TerminalStatusLabel.Kind.SETUP),
+            TerminalStatusLabel.label(TerminalLifecycle.STARTING, SetupStage.DOWNLOADING, 62)
+        )
+        assertEquals(
+            "downloading userland…",
+            TerminalStatusLabel.label(TerminalLifecycle.STARTING, SetupStage.DOWNLOADING, null).text
+        )
+        assertEquals(
+            "verifying download…",
+            TerminalStatusLabel.label(TerminalLifecycle.STARTING, SetupStage.VERIFYING).text
+        )
+        assertEquals(
+            "unpacking userland…",
+            TerminalStatusLabel.label(TerminalLifecycle.STARTING, SetupStage.EXTRACTING).text
+        )
+    }
+
+    @Test
+    fun `the pre-44 wording survives exactly where it was true`() {
+        assertEquals(
+            TerminalStatusLabel.Label("starting shell…", TerminalStatusLabel.Kind.STARTING),
+            TerminalStatusLabel.label(TerminalLifecycle.STARTING, SetupStage.CHECKING)
+        )
+        assertEquals(
+            "starting shell…",
+            TerminalStatusLabel.label(TerminalLifecycle.STARTING, SetupStage.READY).text
+        )
+        assertEquals(
+            TerminalStatusLabel.Label("running", TerminalStatusLabel.Kind.RUNNING),
+            TerminalStatusLabel.label(TerminalLifecycle.RUNNING, SetupStage.READY)
+        )
+        // A shell that is up stays "running" even while an UPGRADE downloads;
+        // the don't-close bar above it carries that news.
+        assertEquals(
+            "running",
+            TerminalStatusLabel.label(TerminalLifecycle.RUNNING, SetupStage.DOWNLOADING, 40).text
+        )
+    }
+
+    @Test
+    fun `failure and exit keep their wording, and an unsupported device is told so`() {
+        assertEquals(
+            TerminalStatusLabel.Label("shell failed", TerminalStatusLabel.Kind.FAILED),
+            TerminalStatusLabel.label(TerminalLifecycle.FAILED, SetupStage.READY)
+        )
+        assertEquals(
+            "exited (130)",
+            TerminalStatusLabel.label(TerminalLifecycle.EXITED, SetupStage.READY, null, 130).text
+        )
+        assertEquals(
+            "exited",
+            TerminalStatusLabel.label(TerminalLifecycle.EXITED, SetupStage.READY).text
+        )
+        assertEquals(
+            "setup incomplete — tap ⬇ to retry",
+            TerminalStatusLabel.label(TerminalLifecycle.STARTING, SetupStage.FAILED).text
+        )
+        assertEquals(
+            "no Linux tools for this device",
+            TerminalStatusLabel.label(TerminalLifecycle.STARTING, SetupStage.UNSUPPORTED).text
+        )
+    }
+
+    @Test
+    fun `the warning bar is up for every stage except ready`() {
+        for (stage in SetupStage.entries) {
+            assertEquals(
+                stage.name,
+                stage != SetupStage.READY,
+                TerminalStatusLabel.showsDontCloseBar(stage)
+            )
+        }
     }
 }

@@ -106,6 +106,8 @@ import java.io.File
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
+    /** Phase 45.1 — Settings → About → "Help & guide": the first-run guide again. */
+    onOpenGuide: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
     /** reportCrash=true is the crash-loop hand-off: feedback pre-ticks both attachments. */
     onNavigateToFeedback: (reportCrash: Boolean) -> Unit = {}
@@ -951,6 +953,33 @@ fun SettingsScreen(
                 onClick = {
                     scope.launch { settingsManager.setFirstLaunchComplete(false) }
                     Toast.makeText(context, "The welcome screen will show on the next launch", Toast.LENGTH_SHORT).show()
+                }
+            )
+            // Phase 45.1 — the owner's "open view again[ing]": the five-slide
+            // guide is one tap away, for a first-time user who skipped it and
+            // for anyone who has forgotten where something lives. The row opens
+            // it immediately (it does not wait for the next launch), and opening
+            // it never changes `guide_completed`'s meaning.
+            SettingsItem(
+                title = "Help & guide",
+                subtitle = "Five slides: your files, RUN \u25B6, the one-time download, the terminal, projects",
+                onClick = onOpenGuide
+            )
+            // Phase 45.2 — "Reset tips" is the only way a dismissed coach mark
+            // comes back. It clears exactly two preferences (the guide flag and
+            // the seen-marks list) and touches no project, file or other
+            // setting; both return on the NEXT launch, so nothing is yanked out
+            // from under the user mid-session.
+            SettingsAction(
+                title = "Reset tips",
+                actionText = "RESET",
+                onClick = {
+                    scope.launch { settingsManager.resetGuideTips() }
+                    Toast.makeText(
+                        context,
+                        "The guide and the tips will show again on the next launch",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             )
 

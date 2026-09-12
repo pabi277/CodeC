@@ -119,6 +119,8 @@ import com.codeci.ide.ui.components.EditorTabUi
 import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.components.OutputPanelView
 import com.codeci.ide.ui.components.RunKeysRow
 import com.codeci.ide.ui.components.SuggestionStrip
@@ -193,6 +195,17 @@ fun EditorScreen(
     onOpenPreviewUrl: (projectName: String?, url: String) -> Unit = { _, _ -> },
     /** Phase 16 — the drawer footer jumps to the app Settings screen. */
     onOpenSettings: () -> Unit = {},
+    /** Phase 45.1 — the drawer footer's Guide row: the third door back to the guide. */
+    onOpenGuide: () -> Unit = {},
+    /**
+     * Phase 45.2 round 3 — the guided tour is waiting on a beat that lives inside
+     * this drawer (`CoachMarkPlan.nextBeatIsInDrawer`, passed down by the host
+     * that owns the seen set). Opening the project picker closes the drawer, so
+     * without this the owner's *"change the project folder to demo_flask →
+     * selected app.py"* would go silent after the pick and wait for the user to
+     * find ☰ again. False for everybody else, always: no tour, no change.
+     */
+    tourWaitsInDrawer: Boolean = false,
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -369,6 +382,37 @@ fun EditorScreen(
     var runChooserDefault by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Phase 45 round 4 — the chrome lock's EDITOR half (owner: *"When the
+    // userland is installing and unpacking the user can not access any other
+    // option and it will show a sweet massage of why can't access any other
+    // option"*). While an install the user asked for streams into the Output
+    // Panel, ☰ and RUN ▶ are paused and the tap says why, in one sentence,
+    // instead of doing nothing at all — RUN ▶ during a busy panel was already a
+    // silent `return`. The PURE policy decides (SetupLockPolicy), and the
+    // userland's own one-time install deliberately does NOT reach in here:
+    // typing and `cc` never wait for a download (Phase 44.1's law).
+    val packageInstallRunning = outputState.busy && outputState.installing
+    val editorLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock(
+        packageInstallRunning = packageInstallRunning
+    )
+    val editorChromeLocked =
+        com.codeci.ide.ui.terminal.SetupLockPolicy.editorChromeLocked(editorLock)
+    val showChromeLock: () -> Unit = {
+        val message = editorLock.message
+        if (message != null) uiScope.launch { snackbarHostState.showSnackbar(message) }
+    }
+    // ☰'s own click in ONE place: the button uses it and the guided tour
+    // performs it (round 4 — an anchor publishes its click beside its rect, so a
+    // single tap on the highlighted control does both halves).
+    val toggleDrawer: () -> Unit = {
+        uiScope.launch {
+            if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
+        }
+    }
+    val onDrawerTap: () -> Unit = {
+        if (editorChromeLocked) showChromeLock() else toggleDrawer()
+    }
+
     // Phase 12 — language-aware editing: the file's extension selects the
     // syntax highlighter and the completion engine's snippet set. (Phase 27:
     // suggestions render as ghost text / strip chips / the ⌄-more panel; the
@@ -406,8 +450,40 @@ fun EditorScreen(
     // the 5-tab bar can hide (one meaning row: code → strip → keys). Cleared
     // on dispose so no other surface inherits a stale "keys visible" signal.
     LaunchedEffect(codecKeysUp) { EditorChromeState.setKeysVisible(codecKeysUp) }
+    // Phase 45.2 (device round) — the guided tour must never cut a box behind
+    // something the editor owns. The scrim is drawn in the ACTIVITY window while
+    // an AlertDialog is a window of its own, so a box "on" RUN ▶ while the
+    // Install? prompt is up is a hole underneath what the user is looking at —
+    // the owner's *"the guided box are not consistent with flow"*. Same for the
+    // drawer: M3 keeps its rows laid out while it is closed, so an anchor rect
+    // alone does not prove the row is visible. The editor reports both facts and
+    // the pure plan decides (CoachMarkPlan.nextStep).
+    val editorModalOpen = showUnsavedDialog || showRenameDialog || showMoreMenu ||
+        showSaveToProject || showContextPicker || showGoToLineDialog ||
+        showCodecConfig || showDiagnosticsDialog ||
+        installPrompt != null || runChooserDefault != null
+    LaunchedEffect(editorModalOpen) { EditorChromeState.setDialogOpen(editorModalOpen) }
+    // `isAnimationRunning` is what keeps the closing animation honest: while the
+    // drawer slides shut its rows are still laid out, and `currentValue` only
+    // flips at the END of the animation, so without it a box could be cut on a
+    // control the panel is still covering for ~200ms.
+    val editorDrawerOpen = drawerState.currentValue == DrawerValue.Open ||
+        drawerState.isAnimationRunning
+    LaunchedEffect(editorDrawerOpen) { EditorChromeState.setDrawerOpen(editorDrawerOpen) }
+    // Phase 45 round 4 — the scaffold locks the OTHER TABS while this install
+    // runs, and the editor is the only surface that knows it is running.
+    LaunchedEffect(packageInstallRunning) {
+        EditorChromeState.setInstallRunning(packageInstallRunning)
+    }
     DisposableEffect(Unit) {
-        onDispose { EditorChromeState.setKeysVisible(false) }
+        onDispose {
+            EditorChromeState.setKeysVisible(false)
+            EditorChromeState.setDialogOpen(false)
+            EditorChromeState.setDrawerOpen(false)
+            // A stale "installing" would leave the whole app paused behind an
+            // install that finished with the screen.
+            EditorChromeState.setInstallRunning(false)
+        }
     }
     var codecKeysLayer by remember { mutableStateOf(KeyboardLayers.LETTERS) }
     var codecKeysShift by remember { mutableStateOf(ShiftState.OFF) }
@@ -904,9 +980,13 @@ fun EditorScreen(
             // starting there (any slight horizontal drift) opened the file
             // drawer mid-scroll. The gesture stays available only when no
             // file is on screen; with a file open, use the folder button.
-            gesturesEnabled = activeTabPath == null && currentFileName.isEmpty(),
+            // Phase 45 round 4 — the edge swipe is the same option as ☰, so the
+            // chrome lock closes it too (a lock you can swipe around is not one).
+            gesturesEnabled = activeTabPath == null && currentFileName.isEmpty() &&
+                !editorChromeLocked,
             drawerContent = {
                 EditorProjectDrawer(
+                    onOpenGuide = onOpenGuide,
                     projectName = currentProject,
                     branch = gitBranch,
                     changeCount = gitChangeCount,
@@ -1057,11 +1137,18 @@ fun EditorScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        uiScope.launch {
-                            if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
-                        }
-                    }) {
+                    IconButton(
+                        // Phase 45.2 — the owner's *"user don't know where
+                        // should they change the project or file"*: the ☰ is
+                        // spotlit on the tour's first beat. Round 4 publishes its
+                        // click beside its rect, so the ONE tap that dismisses the
+                        // box is the same tap that opens the drawer.
+                        modifier = GuideAnchor.modifier(
+                            GuideAnchors.EDITOR_DRAWER,
+                            onClick = onDrawerTap
+                        ),
+                        onClick = onDrawerTap
+                    ) {
                         Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.project_files))
                     }
                 },
@@ -1317,22 +1404,40 @@ fun EditorScreen(
                     }
                     // Mockup-exact RUN: green ▶ + green "RUN" text, no filled
                     // button chrome (Spck's run affordance).
+                    // Phase 45 round 4 — RUN ▶'s own click in ONE place: the
+                    // button uses it and the guided tour performs it, so beat 4
+                    // costs one tap instead of two. While an install streams into
+                    // the Output Panel the same tap explains itself rather than
+                    // starting a second job on the one runner.
+                    val onRunTap: () -> Unit = {
+                        if (editorChromeLocked) {
+                            showChromeLock()
+                        } else {
+                            // Phase 33 — ask "default file or the open
+                            // file" when the user has set a default that
+                            // differs from it; otherwise run the open file
+                            // by its own type (runOpenFile).
+                            val defaultEntry = runChooserEntryOrNull()
+                            if (defaultEntry != null) {
+                                runChooserDefault = defaultEntry
+                            } else {
+                                runOpenFile()
+                            }
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                // Phase 33 — ask "default file or the open
-                                // file" when the user has set a default that
-                                // differs from it; otherwise run the open file
-                                // by its own type (runOpenFile).
-                                val defaultEntry = runChooserEntryOrNull()
-                                if (defaultEntry != null) {
-                                    runChooserDefault = defaultEntry
-                                } else {
-                                    runOpenFile()
-                                }
-                            }
-                            .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+                            .clickable(onClick = onRunTap)
+                            .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
+                            // Phase 45.2 — RUN ▶ is the 30-second loop; the
+                            // tour's fourth beat.
+                            .then(
+                                GuideAnchor.modifier(
+                                    GuideAnchors.EDITOR_RUN,
+                                    onClick = onRunTap
+                                )
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -1944,6 +2049,15 @@ fun EditorScreen(
                                     showContextPicker = false
                                     ProjectManager(context).project(project.name)?.let(onProjectSelected)
                                     viewModel.switchContext(context, project.name)
+                                    // Phase 45.2 round 3 — the tour's next beat is
+                                    // the demo's `app.py` row, which is inside this
+                                    // drawer, and launching the picker closed it.
+                                    // Reopen it so the tour's next box is already
+                                    // there instead of the user having to work out
+                                    // which button brings the files back.
+                                    if (tourWaitsInDrawer) {
+                                        uiScope.launch { drawerState.open() }
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {

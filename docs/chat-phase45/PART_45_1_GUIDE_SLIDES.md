@@ -1,6 +1,6 @@
 # CodeC Phase 45.1 — The first-run guide, and three ways back to it
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) · device round required (NOT run) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"Set a step by step user guide after opening the app
 > 1st time with a open view again[ing]"*
 
@@ -154,3 +154,183 @@ PASS = all five.
 - **Showing the guide again after a crash-loop safe start** — safe mode exists to
   reduce startup work (`SafeModeBanner`, `StartupLedger`); a guide is the
   opposite of that.
+
+---
+
+## Implementation (2026-09-12)
+
+Shipped as planned: a pure plan, a plain `Column`, no dependency, no pager, no
+navigation route.
+
+### The five slides as built
+
+| # | id | Title | Body | Action |
+|---|---|---|---|---|
+| 1 | `files` | Your files live in the ☰ menu | Tap ☰ in the editor for the file tree. Tap the project name at the top to switch projects. | GOT IT |
+| 2 | `run` | RUN ▶ compiles and runs | Output appears at the bottom of the same screen. C works offline — no setup, no download. | GOT IT |
+| 3 | `download` | One download, one time | Python, Node and the Linux tools download once on first use. Keep CodeC open while it finishes. | GOT IT |
+| 4 | `terminal` | A real terminal | The Terminal tab is a Linux shell: pkg install, git, cc. Its status chip tells you what it is doing. | GOT IT |
+| 5 | `projects` | Projects vs single files | In Projects, tap a file to edit it. Tap a card, or its ⋮ → Open, for the whole project. | START CODING |
+
+Caps, all pinned: title ≤ 34 chars, body ≤ 22 counted words and ≤ 130 chars.
+`wordCount` ignores punctuation-only tokens, so "⋮ → Open" is one named control
+and not three words.
+
+**One copy change from the plan, made by the pin and not by taste:** slide 5 said
+*"the card's ⋮ → Open in editor"*, and the hub's real overflow label is
+`hub_open_action` = **"Open"** (`FileManagerScreen.kt` → `HubCardAction.OPEN` →
+`selectProject`). `GuideVocabulary` proves every product noun a slide names
+against a real file and substring, so the invented label would have failed the
+build; the copy now names the label the user will actually read.
+
+### The vocabulary pin (the drift guard this part is really about)
+
+`GuideVocabulary.candidateTerms(text)` extracts what a slide *names*: control
+symbols (☰ ▶ ⋮ ⬇), `backticked` spans, ALL-CAPS words anywhere (RUN), and
+capitalised words that are **not** their sentence's first word. Every extracted
+term must have a `GuideTermProof(term, path, needle)`, and `GuidePlanTest` reads
+the REAL repo tree (`RepoFiles`) to check the needle is still there. Eleven proofs
+today (☰ → `Icons.Default.Menu`, RUN → `<string name="run">RUN</string>`,
+Terminal/Projects → `Screen.kt`, Open → `hub_open_action`, Python/Node →
+`ModuleCatalog.kt`, Linux → `TerminalUx.kt`, CodeC → `app_name`, ▶ →
+`Icons.Default.PlayArrow`, ⋮ → `Icons.Default.MoreVert`), plus three
+`commandProofs` for the shell commands slide 4 names (`pkg install`, `git`, `cc`),
+checked in **both** directions: a listed command no slide names fails, and a proof
+whose needle vanished fails.
+
+Two honest limits, both recorded here so nobody "fixes" them by accident:
+single-letter tokens are not extracted ("C works offline" is pinned by the
+C-never-gated tests instead), and lowercase prose cannot be told from a command,
+which is why the commands are an explicit pinned list rather than extracted.
+
+### The gate, the flag and the three doors
+
+```text
+firstLaunchComplete == false  -> WelcomeScreen (Phase 33.1 tiles)
+!SafeMode.active && (guideRequested || guideCompleted == false) -> GuideScreen
+guideCompleted == null && !guideRequested -> one frame of nothing
+otherwise                                  -> the shell (44.1 divert included)
+```
+
+The guide gate sits **after** the welcome and **before** `setupLaunchDivert` and
+the `NavHost`, so it can never be on screen with the Phase 44 setup bar
+(`GuideWiringTest` pins the order). `guide_completed` is written in exactly one
+place — the guide's own `onFinished`, which SKIP, START CODING and back all call
+— and read in exactly one place outside the store (`MainActivity`, once at
+startup, so "Reset tips" affects the NEXT launch instead of yanking the user out
+of Settings).
+
+The three doors are the same local `guideRequested = true`: Settings → About →
+**Help & guide** (a `SettingsItem`, audit row 53), the Projects hub's ⋮ →
+**Guide** (present in both hub states), and the editor ☰ drawer footer → **Guide**
+(a `DrawerFooterRow` with `SpckIcons.BookLine`). **Reset tips** (audit row 54)
+calls `SettingsManager.resetGuideTips()`: one atomic `dataStore.edit` writing
+exactly `guide_completed = false` and `coach_marks_seen_csv = ""`, pinned to touch
+no third key.
+
+### Deviations
+
+- **Safe mode skips the gate and does not write the flag** (the plan only
+  rejected showing the guide *after* a safe start): a reduced start does less at
+  startup, and the guide still arrives exactly once on a normal launch.
+- **Re-opening swaps the shell out** rather than navigating: the same
+  `GuideScreen`, the same early `return`. The `NavController` is remembered above
+  the gate, so the user lands back on the tab they came from. A route would have
+  put the guide in the back stack and handed it to Phase 49's `BackRouter`.
+- **The slide index survives rotation/process death** through `rememberSaveable`
+  sanitised by `GuidePlan.resume` (a build with fewer slides cannot strand the
+  user past the end). No preference is added for it — a DataStore key needs a
+  reader, and this one would have had none.
+
+### Tests (15 cases, `GuidePlanTest`)
+
+Shape and order · the caps · the last slide is the only START CODING · slide 2
+says C works offline and slide 3 carries the download law · SKIP on every slide ·
+`next` terminates and never wraps · `resume` never restarts or overruns · the
+progress fractions · `wordCount` ignores punctuation · the extractor finds product
+nouns and ignores prose · an invented feature is caught · every proof exists in
+the real source · no proof is left over · commands are both named and real. Plus
+the wiring half in `GuideWiringTest` (gate order, single writer, no copy in the
+Compose edge, three doors, no route, atomic reset, readers outside the store).
+
+---
+
+## Round 2 note (2026-09-12) — 45.1 is deliberately UNCHANGED
+
+The owner's device round rebuilt 45.2 (see
+[`PART_45_2_COACH_MARKS.md`](PART_45_2_COACH_MARKS.md) §"Round 2"), and was asked
+how far *"remove the next option"* goes. The answer kept this part exactly as built:
+
+> *"Keep the 5 slides, boxes lose their button. Slides stay as they are (GOT IT /
+> START CODING / SKIP)."*
+
+So: five slides, `Guide · n of 5`, a progress bar, SKIP on every slide including the
+first, back = SKIP, `guide_completed` written only by a tap, and the same three doors
+back. One consistency change rides along, in the other layer only: the tour's cards
+now carry `Tour · n of 10` in the same shape as `Guide · 1 of 5`, so the two layers
+read as one guide instead of a deck plus ten popups.
+
+## Round 3 note (2026-09-12, later) — still unchanged
+
+Round 3 rebuilt the tour again (no SKIP anywhere on a tour card, every beat waits in
+order, and a finish card with **VIEW AGAIN** + **CLOSE** —
+[`PART_45_2_COACH_MARKS.md`](PART_45_2_COACH_MARKS.md) §"Round 3"). **45.1 is untouched
+a second time**, and the owner's decision still stands: the slides keep
+**GOT IT / START CODING / SKIP** exactly as built, so rows **G1-G8** of the device round
+are unchanged and every statement in this file still describes the shipped behaviour.
+
+Two things round 3 changes *around* the slides, recorded here so this file is not read
+as a claim about the whole guide:
+
+1. One clause of the no-nag law is amended **for the tour only** (deviation 13, owner's
+   instruction). The slides remain one-time and single-tap skippable; the tour's exit
+   moved to its end.
+2. What happens after slide 5 is different: the tour that follows can no longer be
+   skipped away, and it finishes with a card offering **VIEW AGAIN** (all ten beats from
+   the first, and the app navigates to the editor where beat 1 lives). `GuideScreen`
+   itself, `GuidePlan`, its 15 cases and its vocabulary pin are byte-identical to
+   round 1.
+
+---
+
+## Round 6 note (2026-09-13) — unchanged for a sixth time
+
+Round 6 (the lock must die with the setup) touched nothing in 45.1 either: the slides
+still run before Phase 44's terminal divert, and on a fresh install the order is still
+tiles → five slides → the shell on the Terminal tab with the other four tabs paused and
+explaining themselves.
+
+What round 6 changes is the **end** of that pause, which slide 3 (*one download, one
+time*) is the slide that promises: the tools arrive, the setup settles, and the app opens
+— in the same session, without the restart round 5 turned out to need. A slide that says
+"one time" is only honest if the app behaves like a phone that is done setting up the
+moment it is done setting up.
+
+## Round 5 note (2026-09-12, later still) — unchanged for a fifth time
+
+Round 5 (the chrome lock is on from the first frame) touched nothing in 45.1 either.
+The slides still run before Phase 44's terminal divert, so on a fresh install the order
+is: tiles → five slides → the shell, which opens on the Terminal tab with the other four
+tabs already paused and already explaining themselves. Slide 3 (*one download, one
+time*) is the slide that promises this, and round 5 removed the last second in which the
+app did not behave like slide 3 says.
+
+## Round 4 note (2026-09-12, later still) — still unchanged, and now also paused by an install
+
+Round 4 (one tap per beat; the chrome lock) touched **nothing** in 45.1:
+`GuidePlan.kt`, `GuideScreen.kt`, `GuidePlanTest`'s 15 cases and the vocabulary pin are
+byte-identical to round 1, and rows **G1-G8** still describe the shipped behaviour.
+
+Two things round 4 changes *around* the slides:
+
+1. The tour's taps now **perform the control's own click** and advance in the same
+   gesture (deviation 17) — the slides keep their own plain buttons.
+2. **A real install pauses the app's chrome, including the tour.** While the one-time
+   Linux tools are downloading/checking/unpacking, or while a package install streams
+   into the Output Panel, the options that cannot work are paused with one explanatory
+   sentence and the tour pauses with them — so on a fresh install the slides (which run
+   *before* Phase 44's terminal divert) are followed by a Terminal tab that shows the
+   download, and the tour resumes on its own beat once the install settles. Slide 3 is
+   the slide that promised this, and round 4 made the app behave like slide 3 says.
+   Specified in [`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+   §"Phase 45 rounds 4-5 — the chrome lock"; device rows **G34-G40**.

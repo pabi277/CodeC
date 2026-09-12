@@ -97,6 +97,107 @@ CodeC ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`):
    bootstrap release `userland-v2-dev` (SHA-256 verified, staged, atomic) and
    provides 25+ packages including `git`, `python`, `clang`, `nano`, `make`, `ripgrep`, `tmux`, and more.
 
+#### The one-time setup you can see (Phase 44)
+
+The first launch downloads CodeC's Linux tools **once** (SHA-256-verified,
+staged, atomic). While that runs:
+
+- a slim **setup bar sits at the top of every tab** —
+  `Setting up CodeC's Linux tools — 42 % · C works right now`;
+- a **fresh install opens the Terminal tab first**, with
+  `Don't close CodeC — it is finishing a one-time setup (42 %)` above a status
+  chip that reads `downloading userland 42 %`;
+- the **status bar shows the same percentage** for the whole download (a
+  foreground service + wake lock keep it alive while the screen is off);
+- **C keeps working** — `RUN ▶` on a `.c` file and `cc` in the terminal are
+  never gated by setup, at any percentage;
+- the **Packages** tab refuses an install with one honest sentence and a
+  **VIEW SETUP** button, instead of silently queuing `pkg` into a prefix that
+  has none;
+- if the app **is** killed mid-install, the next launch repairs the prefix (an
+  interrupted swap is renamed back, orphan `usr.old-*` / `.userland-staging-*`
+  directories are swept) and says so once in the bar.
+
+Offline during setup: `CodeC needs the network once to finish setting up its
+Linux tools. C works offline right now.` — tap **⬇** in the terminal toolbar
+when you are back online.
+
+#### While an install is running, the rest of the app pauses
+
+An install is one job at a time, so the options that cannot work right now are
+**paused** instead of failing silently — and a paused option always says why. The pause
+is there **from the moment the app opens**, not from the first byte downloaded: if the
+Linux tools are not usable yet, the other tabs are already dimmed while CodeC reaches
+the network, so there is no first second in which you can wander to a tab that will tell
+you Python is "not installed" on its way.
+
+- **The one-time Linux tools** (downloading, checking, unpacking): the tabs other
+  than **Terminal** are dimmed with a small 🔒, and tapping one answers
+  *"Hang tight — CodeC is downloading its Linux tools (62 %). Other options are
+  paused for a moment so this one-time setup finishes cleanly. The Terminal tab
+  shows every step."* The Terminal tab is never paused — that is where the
+  download, the percentage, the *don't close the app* line and the ⬇ retry live.
+- **A language or tool you asked for** (RUN ▶ → **Install**, streaming into the
+  editor's Output Panel): the other tabs pause the same way, the **Editor stays
+  open** because the Output Panel is where that install can be watched, and ☰,
+  RUN ▶ and the drawer's edge swipe answer with the same sentence until it
+  finishes. Then everything unlocks by itself.
+- **Never paused:** running a program of your own (a C build, a Flask server — a
+  run is not an install), a setup that has finished, failed, or has no bootstrap for
+  your device (those have their own sentence and their own ⬇ retry), an **upgrade** of a
+  working tool set (*"everything still works"*), and **safe mode** — after three failed
+  launches the app starts reduced so you can export your projects and report the crash,
+  and those live in Settings. Typing and `cc` never wait for a download either: you can
+  write and compile C offline while the Linux tools arrive.
+
+The pause is bounded by the **setup itself**, so it cannot outlive the work it was
+protecting: it lasts only while the one-time install is *in flight*, and it ends the
+moment that install settles — ready, failed, or unsupported — with no restart needed.
+CodeC also re-reads its tools from the disk the instant a shell comes alive, because a
+running bash is the proof the tool set works.
+
+The rule behind all of it: **the screen that shows the install is never the one
+that is paused**, so there is always somewhere to watch and nowhere to get lost.
+
+#### The guide: five slides, then one tour (Phase 45)
+
+The first launch teaches the app in two layers, and neither one nags:
+
+- **Five slides** after the starter tiles — *your files live in the ☰ menu* →
+  *RUN ▶ compiles and runs (C works offline)* → *one download, one time* →
+  *a real terminal* → *projects vs single files* — with **SKIP** on every slide
+  (back is SKIP too). They appear once; an upgrade shows them once as well.
+- **One guided tour** of ten boxes over the real controls, in the order you would
+  actually use them: **☰** → *change project* → **demo_flask → app.py** → **RUN ▶**
+  (and the *Install Python?* prompt it can lead to) → the **preview's Back** once
+  your Flask page is live → the **tab bar** (or its reveal handle) → the **Packages**
+  tab → its install card → the **Terminal** tab → its **status chip**. Every box is
+  labelled `Tour · n of 10`, and **the highlighted control is the only way forward**:
+  a tour box has **no button on it at all** — no next, and no skip. **One tap does both
+  halves** — it works the control (the drawer opens, the file opens, RUN ▶ runs, the tab
+  switches) and moves the tour on in the same gesture, so no beat ever needs tapping
+  twice. Scrolling is not a tap: a drag that starts in the hole and ends outside it does
+  nothing and spends nothing. The tour runs first beat to last, and the card at the end
+  is the one with buttons: **VIEW AGAIN** (all ten from the first) and **CLOSE**. Each box
+  is shown once. Where a control genuinely has nothing to do — the terminal's status chip
+  is a label, and a Packages card whose language is already installed — the tap simply
+  moves the tour on instead of pretending to press a button.
+- A box is never cut on a control you cannot see, and the tour never invents one: it
+  waits for the real control, drawing **nothing** while it waits, so the app is fully
+  usable in between. It never appears behind a dialog, behind the ☰ drawer, over the
+  exit survey, in safe mode, or while an install is in flight (it resumes on the same
+  beat once the install settles). The back button navigates as it always does — it
+  pauses the tour, and the same beat is there when you come back.
+
+**demo_flask is always there.** The bundled Flask demo the tour walks you through is
+re-created if you delete it — your own edits to it are never touched — so the tour
+can never teach a tap that leads nowhere.
+
+**See the guide again** from any of three places: Settings → About → **Help &
+guide**, the Projects tab's **⋮ → Guide**, or the editor's **☰** drawer footer →
+**Guide**. Settings → About → **Reset tips** brings the slides and the whole tour
+back (it changes nothing else — no project, file or other setting).
+
 ### Package & Command Hub (Packages tab)
 
 The **Packages** tab provides a visual 1-tap package manager and command hub:

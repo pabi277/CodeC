@@ -134,6 +134,8 @@ import kotlinx.coroutines.withContext
 fun FileManagerScreen(
     modifier: Modifier = Modifier,
     viewModel: FileManagerViewModel = viewModel(),
+    /** Phase 45.1 — the hub's ⋮ → Guide: the second door back to the first-run guide. */
+    onOpenGuide: () -> Unit = {},
     onFileSelected: (String) -> Unit = {},
     onProjectFileSelected: (projectName: String, relativePath: String) -> Unit = { _, path -> onFileSelected(path) },
     onProjectSelected: (ProjectInfo) -> Unit = {},
@@ -414,6 +416,19 @@ fun FileManagerScreen(
                                 }
                             )
                         }
+                        HorizontalDivider()
+                        // Phase 45.1 — the guide is reachable from the hub in
+                        // both states (no project open, project open): a new
+                        // user lands here first, and "where do I change
+                        // project?" is exactly what slide 1 answers.
+                        DropdownMenuItem(
+                            text = { Text("Guide") },
+                            leadingIcon = { Icon(SpckIcons.BookLine, contentDescription = null) },
+                            onClick = {
+                                showActionsMenu = false
+                                onOpenGuide()
+                            }
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

@@ -49,6 +49,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.guide.CoachMarkPlan
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
+import com.codeci.ide.ui.projects.DemoProjects
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.components.FileIconView
@@ -91,6 +95,12 @@ fun EditorProjectDrawer(
     onSetLaunchDefault: (EditorFileEntry) -> Unit,
     onClearLaunchDefault: () -> Unit,
     onCopyPath: (EditorFileEntry) -> Unit,
+    /**
+     * Phase 45.1 — the footer's Guide row: the third of the three doors back to
+     * the first-run guide, and the one a user who is lost IN THE EDITOR finds
+     * (they are already looking at this drawer).
+     */
+    onOpenGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -100,11 +110,31 @@ fun EditorProjectDrawer(
             .padding(top = 24.dp)
     ) {
         // ---- header: project name + source-control glyph ------------------
+        // Phase 45.2, round 3 — beat 2 of the guided tour ("change the project
+        // folder to demo_flask"), published in EVERY state of this header:
+        // another project, the demo already open, scratch mode. The header always
+        // opens the project picker, so the beat is always reachable — and a tour
+        // the owner wants "1st to last without skip anything" must not depend on
+        // which project happens to be open (round 2 published it only where a
+        // switch would teach something, which parked the beat forever on a phone
+        // already in demo_flask). The picker is an AlertDialog (its own window),
+        // so the box names demo_flask in its copy instead of cutting a hole over a
+        // row inside the dialog — PART_45_2, deviation 9.
+        // Round 4 publishes the header's OWN click beside its rect: the tour's
+        // second beat is one tap that both opens the picker and moves the tour
+        // on, instead of a tap that only dismisses the box.
+        val anchoredHeader: Modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSwitchProject)
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
+            .then(
+                GuideAnchor.modifier(
+                    GuideAnchors.DRAWER_PROJECT,
+                    onClick = onSwitchProject
+                )
+            )
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onSwitchProject)
-                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
+            modifier = anchoredHeader,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
@@ -235,6 +265,16 @@ fun EditorProjectDrawer(
                 items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
                     DrawerRow(
                         entry = entry,
+                        // Phase 45.2 — step 3 of the tour: the demo's own entry
+                        // file, and only it (a box on some other row would teach
+                        // the wrong tap).
+                        guideAnchorId = CoachMarkPlan.drawerFileAnchor(
+                            projectName = entry.projectName,
+                            relativePath = entry.relativePath,
+                            isDirectory = entry.isDirectory,
+                            demoProjectName = DemoProjects.NAME,
+                            demoEntryFile = DemoProjects.ENTRY_FILE
+                        ),
                         expanded = !collapsedDirs.contains(entry.relativePath),
                         selected = entry.relativePath == selectedPath,
                         isLaunchDefault = entry.relativePath == launchDefault,
@@ -274,6 +314,14 @@ fun EditorProjectDrawer(
             badge = 0,
             onClick = onSwitchBranch
         )
+        // Phase 45.1 — "open view again[ing]" (the owner's words): the guide is
+        // one tap from the drawer the guide's own slide 1 is about.
+        DrawerFooterRow(
+            icon = SpckIcons.BookLine,
+            label = "Guide",
+            badge = 0,
+            onClick = onOpenGuide
+        )
         Spacer(Modifier.height(10.dp))
     }
 }
@@ -287,6 +335,8 @@ private enum class RowAction {
 @Composable
 private fun DrawerRow(
     entry: EditorFileEntry,
+    /** Phase 45.2 — non-null on the one row the guided tour spotlights. */
+    guideAnchorId: String? = null,
     expanded: Boolean,
     selected: Boolean,
     isLaunchDefault: Boolean,
@@ -297,10 +347,23 @@ private fun DrawerRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    // Phase 45.2 — the anchored row publishes its rect while it is laid out and
+    // withdraws it when the drawer closes, so the tour can never point at a row
+    // that is not on screen.
+    // Round 4: the anchored row publishes the click it already has, so the
+    // tour's third beat ("Open app.py") opens the file with the same tap that
+    // dismisses the box. Long-press stays the row's own (the overlay only ever
+    // performs a tap).
+    val rowAnchor: Modifier = if (guideAnchorId != null) {
+        GuideAnchor.modifier(guideAnchorId, onClick = onOpenOrToggle)
+    } else {
+        Modifier
+    }
     Box {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(rowAnchor)
                 .padding(horizontal = 6.dp, vertical = 1.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(

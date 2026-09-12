@@ -9,15 +9,32 @@ import java.io.File
  *
  * [ensure] is pure and host-testable. It seeds the project exactly like the
  * wizard would (`ProjectConfig.defaultFor` + `ProjectScaffold.writeFiles`),
- * plus a short README. It runs once per app install: a marker file in the
- * projects root records the seed, so deleting the demo project does NOT make
- * it reappear, and a user-created project with the same name is never
- * overwritten.
+ * plus a short README.
+ *
+ * **Change of law (2026-09-12, owner, Phase 45 device round): the demo is
+ * ALWAYS present.** It used to be seeded once per install — a marker file in the
+ * projects root meant deleting `demo_flask` never brought it back. The Phase 45
+ * guided tour walks the user through this project by name (*"change the project
+ * folder to demo_flask → select app.py → run"*), so a missing demo would make
+ * the tour teach a tap that leads nowhere. [ensure] therefore re-seeds whenever
+ * the directory is gone. What it still never does: overwrite or touch an
+ * existing `demo_flask` (the user's edits are theirs), or replace a plain FILE
+ * of the same name. The marker survives as a *record* of the first seed, not as
+ * a gate.
  */
 object DemoProjects {
 
     const val NAME = "demo_flask"
     const val TYPE = "python-flask"
+
+    /**
+     * The demo's entry file — the one the guided tour tells the user to open and
+     * RUN ▶, and the one `ProjectScaffold` writes for [TYPE]. Named here so the
+     * tour's copy, the drawer's coach-mark anchor and the scaffold cannot drift
+     * apart (`DemoProjectSeedTest` pins it against `ProjectScaffold.filesFor`).
+     */
+    const val ENTRY_FILE = "app.py"
+
     private const val MARKER = ".demo-flask-seeded-v1"
 
     private val README = """
@@ -38,23 +55,28 @@ object DemoProjects {
     """.trimIndent() + "\n"
 
     /**
-     * One-time seed of the demo project. Returns the project directory when
-     * this call created it, or null when already seeded / already present.
-     * Never overwrites existing content; a failed seed leaves no marker so it
-     * can be retried on the next list.
+     * Makes sure the demo project exists, and returns the directory when THIS
+     * call created it (null when it was already there, or the filesystem
+     * refused). Idempotent and safe to call from every list refresh:
+     *  - an existing `demo_flask` directory is never read, rewritten or touched;
+     *  - a missing one is seeded again (the "always present" law above);
+     *  - a plain file named `demo_flask` blocks the seed and is left alone;
+     *  - a seed that throws is rolled back, so a half-written demo can never be
+     *    mistaken for a real project (and the next list retries).
      */
     fun ensure(projectsRoot: File): File? {
-        if (File(projectsRoot, MARKER).exists()) return null
         val project = File(projectsRoot, NAME)
-        val created = if (project.isDirectory) {
-            null
-        } else {
-            if (project.exists() || !project.mkdirs()) return null
+        if (project.isDirectory) return null
+        if (project.exists()) return null
+        if (!project.mkdirs()) return null
+        return try {
             writeProject(project)
+            File(projectsRoot, MARKER).writeText("seeded 2026-08-31")
             project
+        } catch (e: Exception) {
+            project.deleteRecursively()
+            null
         }
-        File(projectsRoot, MARKER).writeText("seeded 2026-08-31")
-        return created
     }
 
     private fun writeProject(project: File) {

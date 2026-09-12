@@ -35,11 +35,15 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -81,6 +85,11 @@ import com.codeci.ide.ui.screens.SettingsScreen
 import com.codeci.ide.ui.screens.TemplatesScreen
 import com.codeci.ide.ui.screens.TerminalScreen
 import com.codeci.ide.ui.screens.WebPreviewScreen
+import com.codeci.ide.ui.guide.CoachMarkPlan
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
+import com.codeci.ide.ui.guide.GuideCoachMarks
+import com.codeci.ide.ui.guide.GuideScreen
 import com.codeci.ide.ui.screens.WelcomeScreen
 import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.NavBarPolicy
@@ -246,6 +255,41 @@ class MainActivity : ComponentActivity() {
             gcThread.start()
         } catch (_: Throwable) {
             // ignore
+        }
+
+        // Phase 44.2 — repair a userland install that a process kill
+        // interrupted, and sweep its orphans. `UserlandInstaller.swapPrefix`
+        // needs two renames (`usr` → `usr.old-<ts>`, staging → `usr`); a kill
+        // between them used to leave NO `usr` at all plus an orphan nobody ever
+        // cleaned, and the next launch answered "offline — using built-in cc"
+        // (which reads like success) while `pkg` was gone. Same daemon-thread
+        // shape as the TempGc sweep above: never delays the first frame, never
+        // throws, and the installer waits for it (SetupRecoveryGate) so the two
+        // never write the same directories at once.
+        try {
+            val setupThread = Thread {
+                try {
+                    val report = com.codeci.ide.ui.terminal.SetupRecovery.recover(
+                        filesDir = filesDir,
+                        prefixDir = ShellEnvironment.prefixDir(filesDir),
+                        ledger = com.codeci.ide.ui.terminal.SetupLedgerPrefs.ledger(this),
+                        log = { msg -> AppLogger.i("SetupRecovery", msg) }
+                    )
+                    // One honest line when CodeC had to put a previous userland
+                    // back; the live setup bar covers everything else.
+                    if (report.restored != null) {
+                        com.codeci.ide.ui.terminal.SetupNoticeBridge.post(report.message)
+                    }
+                } catch (_: Throwable) {
+                    // A repair must never be the reason the app does not start.
+                    com.codeci.ide.ui.terminal.SetupRecoveryGate.finished()
+                }
+            }
+            setupThread.isDaemon = true
+            setupThread.name = "codec-setup-recovery"
+            setupThread.start()
+        } catch (_: Throwable) {
+            com.codeci.ide.ui.terminal.SetupRecoveryGate.finished()
         }
 
 
@@ -670,6 +714,25 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     LaunchedEffect(settingsManager) {
         firstLaunchComplete = settingsManager.firstLaunchCompleteFlow.first()
     }
+    // Phase 45.1 — the guide's flag is read ONCE at startup, for the same reason
+    // the welcome's is: Settings → "Reset tips" must affect the NEXT launch, not
+    // yank the user out of Settings mid-session. `guideRequested` is the three
+    // "view the guide again" doors (Settings → Help & guide, Projects ⋮ → Guide,
+    // the editor ☰ drawer's footer): it shows the SAME screen without changing
+    // what the flag means. null = still reading; false = show the guide.
+    var guideCompleted by remember { mutableStateOf<Boolean?>(null) }
+    var guideRequested by remember { mutableStateOf(false) }
+    // Phase 45.2 — the coach marks already seen (a CSV of step ids). The plan is
+    // pure; this is only its persistence.
+    var coachSeen by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(settingsManager) {
+        guideCompleted = settingsManager.guideCompletedFlow.first()
+        coachSeen = CoachMarkPlan.parseSeen(settingsManager.coachMarksSeenCsvFlow.first())
+    }
+    // Phase 44.1 — set once, when the first-run welcome hands over: this is
+    // the launch where the one-time userland download should be ON SCREEN
+    // while it happens (the owner's own solution to the invisible install).
+    var setupDiverted by remember { mutableStateOf(false) }
 
     if (firstLaunchComplete == false) {
         WelcomeScreen(
@@ -686,6 +749,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                         // Persist for the NEXT launch, then flip the local state
                         // so the normal shell replaces the welcome right away.
                         settingsManager.setFirstLaunchComplete(true)
+                        // Set BEFORE the flag that swaps the welcome for the
+                        // shell: the shell's first composition decides the
+                        // start destination from it.
+                        setupDiverted = true
                         firstLaunchComplete = true
                     }
                 }
@@ -699,6 +766,34 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
         // flashes the hub.
         return
     }
+    // Phase 45.1 — the SECOND first-launch gate: tiles → guide → shell. It is
+    // decided before the setup divert and before the NavHost exists, so the
+    // guide can never compete with the Phase 44 setup bar (PART_45_1's ordering
+    // rule: the guide explains the download the terminal is about to show, and a
+    // user who has not been told what the app is should not be dropped into a
+    // shell watching a progress bar). Safe mode is the one exception — a reduced
+    // start exists to do LESS at startup, and the flag stays false so a normal
+    // launch still shows the guide exactly once.
+    if (!com.codeci.ide.ui.crash.SafeMode.active &&
+        (guideRequested || guideCompleted == false)
+    ) {
+        GuideScreen(
+            onFinished = {
+                // SKIP and START CODING are the same act: the guide is over and
+                // it does not come back on its own (the no-nag law). Re-opening
+                // it later writes a flag that is already true — no-op.
+                guideRequested = false
+                guideCompleted = true
+                scope.launch { settingsManager.setGuideCompleted(true) }
+            }
+        )
+        return
+    }
+    if (guideCompleted == null && !guideRequested) {
+        // Still reading the guide flag: one frame of nothing, exactly like the
+        // welcome above — a returning user never flashes the guide.
+        return
+    }
     // "Open where I left off": the last project file wins as the start
     // destination; a fresh install with no last file lands on the hub.
     // Phase 42.3 — safe mode NEVER reopens the saved session: a
@@ -708,9 +803,72 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     val launchState = remember {
         if (com.codeci.ide.ui.crash.SafeMode.active) null else EditorLaunchState.load(activity)
     }
+    // Phase 44.1 — the setup truth, read ONCE for the start destination and
+    // then observed by the setup bar below. A fresh install (welcome just
+    // handed over, no usable Linux tools yet, and this device does have a
+    // bootstrap) starts on the Terminal tab so the download is visible while
+    // it runs; every other launch keeps the pre-44 behaviour. Computed once on
+    // purpose: a startDestination that changed later would rebuild the nav
+    // graph and throw away the user's navigation state.
+    val setupProgress by terminalViewModel.setupProgress.collectAsState()
+    val setupFacts by terminalViewModel.setupFacts.collectAsState()
     val startDestination = remember(launchState) {
         launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
             ?: Screen.FileManager.route
+    }
+    // Phase 44.1 (device round 1) — "it opens the terminal 1st", decided from
+    // the DISK, not from the ViewModel's first (possibly stale) facts, and done
+    // with the SAME navigate() the bottom tab bar uses. Two reasons for the
+    // shape: a `startDestination` that has to resolve a route carrying
+    // arguments is graph-construction risk we do not need to take, and the
+    // owner's report was about an UPDATED install (no first-run welcome), where
+    // a rule keyed on "is this the welcome hand-over" could not fire at all.
+    val setupLaunchDivert = remember {
+        val prefix = ShellEnvironment.prefixDir(activity.filesDir)
+        val phase = runCatching {
+            com.codeci.ide.ui.terminal.SetupLedgerPrefs.ledger(activity).read().phase
+        }.getOrDefault(com.codeci.ide.ui.terminal.SetupPhase.IDLE)
+        setupDiverted || com.codeci.ide.ui.terminal.SetupGatePolicy.startOnTerminal(
+            usable = com.codeci.ide.ui.terminal.SetupGatePolicy.userlandUsable(prefix, phase),
+            abiSupported = com.codeci.ide.ui.terminal.UserlandManifest.archName() != null
+        )
+    }
+    LaunchedEffect(setupLaunchDivert) {
+        if (!setupLaunchDivert) return@LaunchedEffect
+        if (navController.currentDestination?.route.orEmpty().startsWith("terminal")) {
+            return@LaunchedEffect
+        }
+        navController.navigate(Screen.Terminal.createRoute(null)) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = false
+        }
+    }
+    // The welcome promised a starter file. Once the setup settles, open it — but
+    // only while the user is still on the tab we diverted them to (nothing is
+    // yanked out from under a tap), and never while the setup is settled-but-
+    // unusable: in that state the terminal is the only way out, so sending the
+    // user to the editor is how the bar becomes a wall (device round 1).
+    // C works offline either way (TCC is in the APK), which is why a FAILED or
+    // UNSUPPORTED setup still releases the user into the editor.
+    LaunchedEffect(setupDiverted, setupProgress.stage, setupFacts.usable) {
+        if (!setupDiverted) return@LaunchedEffect
+        val target = launchState
+        if (target == null) {
+            setupDiverted = false
+            return@LaunchedEffect
+        }
+        if (!setupProgress.settled) return@LaunchedEffect
+        val stuck = !setupFacts.usable &&
+            setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.FAILED &&
+            setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.UNSUPPORTED
+        if (stuck) return@LaunchedEffect
+        val current = navController.currentDestination?.route.orEmpty()
+        if (!current.startsWith("terminal")) return@LaunchedEffect
+        setupDiverted = false
+        navController.navigate(Screen.Editor.createRoute(target.fileName, target.projectName)) {
+            launchSingleTop = true
+        }
     }
 
     // Phase 24.7 — an "Open with CodeC" file/ZIP arrives outside navigation
@@ -738,6 +896,46 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     val inEditor = currentDestination?.route
         ?.startsWith(Screen.Editor.route.substringBefore("?")) == true
     val editorKeysVisible by EditorChromeState.keysVisible.collectAsState()
+    // Phase 45.2 (device round) — the two facts the tour cannot observe from
+    // anchors: is a dialog open (a box would be cut underneath it), and is the
+    // drawer open (only its own two beats may show then).
+    val editorDialogOpen by EditorChromeState.dialogOpen.collectAsState()
+    val editorDrawerOpen by EditorChromeState.drawerOpen.collectAsState()
+    // Phase 45 round 4 — the CHROME LOCK (owner: *"When the userland is
+    // installing and unpacking the user can not access any other option and it
+    // will show a sweet massage of why can't access any other option"*). Two
+    // installs pause the other tabs: the one-time userland setup, and a
+    // language/tool install the user just asked for (which the editor reports,
+    // because only the editor knows). The PURE policy decides which options are
+    // paused and what the sentence is; the Terminal tab is never paused while
+    // the userland installs (that is where the download can be watched), and the
+    // Editor tab is never paused while a package installs (that is where the
+    // Output Panel is streaming). One sentence, shown on the tap that was
+    // refused, so a paused option is never a dead one.
+    val editorInstallRunning by EditorChromeState.installRunning.collectAsState()
+    // `reducedStart` is safe mode: a phone that crashed three times must still be
+    // able to reach Settings (export all projects, report the crash), so the
+    // startup-shaped userland lock does not apply there. The tour is exempt for
+    // the same reason (see `blockedByForeground` below).
+    val chromeLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock(
+        progress = setupProgress,
+        facts = setupFacts,
+        packageInstallRunning = editorInstallRunning,
+        reducedStart = com.codeci.ide.ui.crash.SafeMode.active
+    )
+    val snackbarHostState = remember { SnackbarHostState() }
+    val showLockMessage: (String) -> Unit = { message ->
+        scope.launch { snackbarHostState.showSnackbar(message) }
+    }
+    // The sentence arrives ONCE when the pause begins, not only when the user
+    // discovers it by tapping something: a lock that only explains itself after
+    // a refused tap feels like a broken button for the first second. Keyed on
+    // `locked`, so the three stages of one download (downloading → checking →
+    // unpacking) do not stack three snackbars — the setup bar above already
+    // carries the moving percentage.
+    LaunchedEffect(chromeLock.locked) {
+        if (chromeLock.locked) chromeLock.message?.let(showLockMessage)
+    }
     var navRevealed by remember { mutableStateOf(false) }
     LaunchedEffect(inEditor) {
         if (!inEditor) navRevealed = false
@@ -808,8 +1006,16 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
         }
     }
 
+    // Phase 45.2 — the coach marks' overlay sits ABOVE the scaffold, because
+    // the "Show tabs" handle it spotlights lives in the scaffold's bottomBar, and
+    // at the window origin, because anchors publish boundsInWindow().
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        // Phase 45 round 4 — where a paused option says why. Above the bar,
+        // below the tour's scrim, and it never blocks anything: a snackbar is a
+        // sentence, not a wall.
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             when {
                 // Phase 32.1 — the bar is visible (or was revealed by the
@@ -817,6 +1023,18 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                 !hideNav -> FlatBottomBar(
                     screens = screens,
                     currentDestination = currentDestination,
+                    // Phase 45 round 4 — the bar asks the pure lock policy which
+                    // of its tabs an install has paused, and what to say about it.
+                    verdictFor = { screen ->
+                        val option = com.codeci.ide.ui.terminal.SetupLockPolicy
+                            .optionForRoute(screen.route)
+                        if (option == null) {
+                            com.codeci.ide.ui.terminal.SetupVerdict.Allowed
+                        } else {
+                            com.codeci.ide.ui.terminal.SetupLockPolicy.option(option, chromeLock)
+                        }
+                    },
+                    onLockMessage = showLockMessage,
                     onNavigate = { screen ->
                         navController.navigate(
                             when (screen) {
@@ -829,7 +1047,16 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                                 saveState = true
                             }
                             launchSingleTop = true
-                            restoreState = true
+                            // Phase 44 device round 1 (owner: *"terminal not
+                            // opening editor opening"*): `restoreState = true`
+                            // restores the WHOLE saved sub-stack for that
+                            // destination, so a user who had opened a file after
+                            // using the terminal came back to the EDITOR when
+                            // they tapped Terminal. A tab tap means "show me
+                            // this tab", so the Terminal tab never restores;
+                            // every other tab keeps the pre-44 behaviour
+                            // (Phase 49 is the systematic nav pass).
+                            restoreState = screen !is Screen.Terminal
                         }
                         // A tab tap is a deliberate navigation: the reveal is
                         // over (leaving the editor also resets it below).
@@ -857,6 +1084,49 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             if (safeModeBannerVisible) {
                 com.codeci.ide.ui.crash.SafeModeBanner(
                     onDismiss = { safeModeBannerVisible = false }
+                )
+            }
+            // Phase 44.1 — the setup bar: one slim non-modal line, visible
+            // from EVERY tab, with the moving percentage and a VIEW action to
+            // the terminal. Not dismissible while the setup is in flight
+            // (dismissing it would recreate the invisible-download bug); the ✕
+            // appears once it has settled, and always for the boot repair's
+            // one-time note.
+            val setupNote by com.codeci.ide.ui.terminal.SetupNoticeBridge.message.collectAsState()
+            // Device round 1: the bar was a wall in the settled-but-unusable
+            // state — no action button, and a ✕ that cleared a note which was
+            // not there. Now: one tap anywhere goes to the setup, and the ✕
+            // (only while settled, per SetupGatePolicy.barDismissAllowed) really
+            // removes the bar until its TEXT changes, so a new install or a
+            // repair brings it back.
+            val setupBarText = setupNote
+                ?: com.codeci.ide.ui.terminal.SetupGatePolicy.barText(setupProgress, setupFacts)
+            var dismissedSetupBar by remember { mutableStateOf<String?>(null) }
+            val goToSetup: () -> Unit = {
+                navController.navigate(Screen.Terminal.createRoute(null)) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    // No restoreState: "VIEW SETUP" means the terminal, not
+                    // whatever happened to be above it last time (device round 1).
+                    restoreState = false
+                }
+            }
+            val dismissSetupBar: () -> Unit = {
+                if (setupNote != null) {
+                    com.codeci.ide.ui.terminal.SetupNoticeBridge.clear()
+                } else {
+                    dismissedSetupBar = setupBarText
+                }
+            }
+            val setupBarDismissible = setupNote != null ||
+                com.codeci.ide.ui.terminal.SetupGatePolicy.barDismissAllowed(setupProgress)
+            if (setupBarText != null && setupBarText != dismissedSetupBar) {
+                com.codeci.ide.ui.components.SetupBar(
+                    progress = setupProgress,
+                    facts = setupFacts,
+                    note = setupNote,
+                    onViewSetup = goToSetup,
+                    onDismiss = if (setupBarDismissible) dismissSetupBar else null
                 )
             }
             NavHost(
@@ -887,7 +1157,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     onOpenInTerminal = { cmd ->
                         navController.navigate(Screen.Terminal.createRoute(cmd)) {
                             launchSingleTop = true
-                            restoreState = true
+                            // Phase 44 device round 1: this hand-off carries a
+                            // command that only the terminal can run, so it must
+                            // arrive there — never on a restored sub-stack.
+                            restoreState = false
                         }
                     },
                     onOpenPreview = { previewProject, name ->
@@ -911,7 +1184,17 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    // Phase 45.1 — the third door back to the guide: the ☰
+                    // drawer's footer, where a user who is lost in the editor
+                    // looks first (the owner's "open view again[ing]").
+                    onOpenGuide = { guideRequested = true },
+                    // Phase 45.2 round 3 — the tour's next beat is a row inside
+                    // the editor's ☰ drawer and the project picker closes that
+                    // drawer, so the editor reopens it after a pick. A pure
+                    // question asked of the plan, and false whenever the tour is
+                    // not mid-flight: no tour, no change for anybody.
+                    tourWaitsInDrawer = CoachMarkPlan.nextBeatIsInDrawer(coachSeen)
                 )
             }
             composable(
@@ -931,6 +1214,9 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             composable(Screen.FileManager.route) {
                 val context = LocalContext.current
                 FileManagerScreen(
+                    // Phase 45.1 — the second door back to the guide: the
+                    // Projects hub's ⋮ menu.
+                    onOpenGuide = { guideRequested = true },
                     onFileSelected = { selectedFile ->
                         navController.navigate(Screen.Editor.createRoute(selectedFile))
                     },
@@ -1029,13 +1315,22 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                                 saveState = true
                             }
                             launchSingleTop = true
-                            restoreState = true
+                            // Phase 44 device round 1: the Packages tab's
+                            // "VIEW SETUP" must arrive at the terminal. With
+                            // restoreState the previously saved sub-stack came
+                            // back on top of it — an editor the user had opened
+                            // earlier — which is what the owner reported.
+                            restoreState = false
                         }
                     }
                 )
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(
+                    // Phase 45.1 — the first door back to the guide: Settings →
+                    // About → Help & guide (its "Reset tips" neighbour brings the
+                    // coach marks back too).
+                    onOpenGuide = { guideRequested = true },
                     onNavigateToLogs = {
                         navController.navigate(Screen.Logs.route) {
                             launchSingleTop = true
@@ -1074,6 +1369,67 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             }
         }
     }
+        // Phase 45.2, device rounds 2 and 3 — ONE ordered tour, first beat to
+        // last: ☰ → project → app.py → RUN ▶ → the preview's Back → the reveal
+        // handle → Packages tab → its install card → Terminal tab → its chip, and
+        // the highlighted control is the only forward button. No `surface`, no
+        // per-arrival counter, and no SKIP (round 3: the owner's *"it's not a
+        // trough guide mean it got cut"*): the pure plan decides from the anchors
+        // that are really laid out, and the only card with buttons is the one at
+        // the end.
+        GuideCoachMarks(
+            seen = coachSeen,
+            blockedByForeground = exitPromptVisible ||
+                com.codeci.ide.ui.crash.SafeMode.active ||
+                editorDialogOpen ||
+                setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.DOWNLOADING ||
+                setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.VERIFYING ||
+                setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.EXTRACTING ||
+                // Phase 45 round 4 — the chrome lock pauses the tour as well as
+                // the tabs: a box on a paused control could be spent by a tap
+                // that only shows the "hang tight" sentence, and a beat spent is
+                // a lesson lost. (This also covers a package install streaming
+                // into the Output Panel, which no setup stage reports.)
+                chromeLock.locked,
+            drawerOpen = editorDrawerOpen,
+            // Where the user is, so the stall guard knows the difference between
+            // a control that is missing and a control that lives on a screen they
+            // have not reached yet.
+            route = currentDestination?.route,
+            onSeen = { next ->
+                coachSeen = next
+                scope.launch {
+                    settingsManager.setCoachMarksSeenCsv(CoachMarkPlan.serializeSeen(next))
+                }
+            },
+            onReplay = {
+                // VIEW AGAIN on the finish card: the whole tour from beat 1, and
+                // beat 1 is the editor's ☰, so that is where the replay starts.
+                // One key, one meaning — the replay is an empty seen set, not a
+                // second flag.
+                val fresh = CoachMarkPlan.replay()
+                coachSeen = fresh
+                scope.launch {
+                    settingsManager.setCoachMarksSeenCsv(CoachMarkPlan.serializeSeen(fresh))
+                }
+                val onEditor = navController.currentDestination?.route.orEmpty()
+                    .startsWith(Screen.Editor.route.substringBefore("?"))
+                if (!onEditor) {
+                    // The bar's own idiom for "show me the editor tab" (the same
+                    // createRoute + restoreState the tab tap uses, so a replay
+                    // arrives the way a tap would).
+                    navController.navigate(Screen.Editor.createRoute(null)) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                    // A deliberate navigation: the reveal is over, exactly as it
+                    // is for a tab tap (Phase 32.1).
+                    navRevealed = false
+                }
+            }
+        )
+    }
 }
 
 /**
@@ -1085,12 +1441,28 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
 private fun FlatBottomBar(
     screens: List<Screen>,
     currentDestination: NavDestination?,
+    /**
+     * Phase 45 round 4 — the chrome lock's answer per tab: [SetupVerdict.Refused]
+     * (with the sweet sentence) while an install has paused that tab.
+     */
+    verdictFor: (Screen) -> com.codeci.ide.ui.terminal.SetupVerdict = {
+        com.codeci.ide.ui.terminal.SetupVerdict.Allowed
+    },
+    /** A tap on a paused tab: show the sentence, do not navigate. */
+    onLockMessage: (String) -> Unit = {},
     onNavigate: (Screen) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
+            // Phase 45.2 round 3 — beat 6 ("the tabs are here") teaches the BAR
+            // while the bar is visible and the thin reveal handle while it is
+            // hidden: one lesson, one anchor id, and a target that exists on every
+            // screen the tour walks. Round 2 anchored only the handle, so the beat
+            // existed just while the keyboard happened to be up — and a tour that
+            // is "1st to last without skip anything" cannot depend on that.
+            .then(GuideAnchor.modifier(GuideAnchors.NAV_HANDLE))
     ) {
         Box(
             modifier = Modifier
@@ -1112,24 +1484,71 @@ private fun FlatBottomBar(
                 // Phase 40.5 — 0.65 measured 3.53:1 on the LIGHT nav bar; 0.8 is 6.86:1
                 // dark and 5.23:1 light, so the labels stay readable in both themes.
                 val idleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                // Phase 45.2 — the tour's "small tour of package and terminal"
+                // walks the user by spotlighting the tabs themselves, so the bar
+                // publishes exactly the two rects the tour can use (the pure
+                // plan maps route → anchor; the other three tabs publish
+                // nothing). When Phase 32.1 hides the bar these withdraw, which
+                // is why the reveal-handle step comes first in the tour.
+                val tabAnchorId = CoachMarkPlan.tabAnchorFor(screen.route)
+                // Phase 45 round 4 — a paused tab: dimmed, with a small lock so
+                // the state is visible BEFORE the tap, and a tap that says why
+                // instead of navigating. The tab the install can be watched from
+                // is never paused (SetupLockPolicy.watchOption).
+                val verdict = verdictFor(screen)
+                val locked = !verdict.allowed
+                val tabColor = when {
+                    locked -> idleColor.copy(alpha = 0.45f)
+                    selected -> activeColor
+                    else -> idleColor
+                }
+                // ONE lambda for the tab and for the guided tour, which performs
+                // the click of the control it spotlights (round 4): beats 7 and 9
+                // are these two tabs, and the tap that dismisses the box must be
+                // the tap that opens them.
+                val onTabTap: () -> Unit = {
+                    if (locked) {
+                        verdict.message?.let(onLockMessage)
+                    } else {
+                        onNavigate(screen)
+                    }
+                }
+                val tabModifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onTabTap)
+                    .padding(vertical = 7.dp)
+                val anchoredTab: Modifier = if (tabAnchorId != null) {
+                    tabModifier.then(GuideAnchor.modifier(tabAnchorId, onClick = onTabTap))
+                } else {
+                    tabModifier
+                }
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onNavigate(screen) }
-                        .padding(vertical = 7.dp),
+                    modifier = anchoredTab,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        screen.icon,
-                        contentDescription = screen.title,
-                        modifier = Modifier.size(24.dp),
-                        tint = if (selected) activeColor else idleColor
-                    )
+                    Box {
+                        Icon(
+                            screen.icon,
+                            contentDescription = screen.title,
+                            modifier = Modifier.size(24.dp),
+                            tint = tabColor
+                        )
+                        if (locked) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(11.dp)
+                                    .align(Alignment.BottomEnd),
+                                tint = idleColor
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(3.dp))
                     Text(
                         text = screen.title,
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (selected) activeColor else idleColor,
+                        color = tabColor,
                         maxLines = 1
                     )
                 }
@@ -1168,7 +1587,13 @@ private fun EditorNavRevealHandle(onReveal: () -> Unit) {
                     }
                 )
             }
-            .clickable(onClick = onReveal),
+            .clickable(onClick = onReveal)
+            // Phase 45.2 — the owner's *"the tap to the open down side of the
+            // keyboard"*: this handle is spotlit the first time it is really on
+            // screen (it exists only while the bar is hidden), and never before.
+            // Round 4 publishes its click, so the tour's sixth beat is one tap
+            // that reveals the bar instead of one that only dismisses the box.
+            .then(GuideAnchor.modifier(GuideAnchors.NAV_HANDLE, onClick = onReveal)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -1185,3 +1185,510 @@ If it recurs, the for-cause fix is a bounded retry-on-reset around
 `DownloadManager`'s connect (which would ALSO make real-device downloads
 more robust on flaky mobile networks) — recorded here so the next
 occurrence starts at the root cause, not at the symptom.
+
+## 32. `pkg: not found` after you closed CodeC during the one-time install — and the setup bar that prevents it (Phase 44, 2026-09-12)
+
+**Symptom (the owner's report, verbatim):** *"Userland is installing but the test
+user don't know it's installing so they close app before it complete than letter
+when they try to install any other pkg got errors"* → *"If it opens the terminal
+1st and show a warning don't close the terminal while userland is installi[ng]"*.
+
+**What was actually wrong — three separate things, all in the code:**
+
+1. The download started at *process start* (`TerminalViewModel.init`) and its
+   progress only ever reached the terminal emulator's buffer, so a user who
+   never opened the **Term** tab never saw it happening.
+2. No foreground service and no wake lock during the download (both were gated
+   on "a session is alive", which is false while the install runs), so Android
+   could doze or kill it mid-flight.
+3. `UserlandInstaller.swapPrefix` had a kill window between its two renames:
+   killed there, `usr` is **gone** and an orphan `usr.old-*` stays forever —
+   next launch offline → the install is skipped → `pkg: not found`. That is the
+   owner's exact symptom, and nothing ever cleaned the orphan.
+
+**What you see now (any build containing Phase 44):**
+
+| Surface | Text |
+|---|---|
+| Setup bar, **every tab** | `Setting up CodeC's Linux tools — 42 % · C works right now` (no ✕ until setup is finished and the tools really work) |
+| Fresh install | the **Terminal tab opens first**; above the chip: `Don't close CodeC — it is finishing a one-time setup (42 %)`; the chip itself: `downloading userland 42 %` → `verifying download…` → `unpacking userland…` → `running` |
+| Status bar | `Downloading CodeC's Linux tools — 42 %` with a progress bar, for the whole download (when notifications are allowed; nothing crashes when they are not) |
+| Packages tab | one honest sentence — `CodeC is downloading its Linux tools (58 %). Don't close the app — this happens once.` — plus **VIEW SETUP**. Nothing is silently queued |
+| Editor (non-C run / install) | the same sentence in the Output Panel, ending `C works offline right now.` |
+| Offline | `CodeC needs the network once to finish setting up its Linux tools. C works offline right now.` — never "using built-in cc" |
+| After a kill | on the next launch CodeC repairs itself and says so **once**: `Setup was interrupted; CodeC restored your Linux tools.` |
+
+**C is never gated.** `RUN ▶` on a `.c` file and `cc hello.c -o hello` in the
+terminal work at every percentage of the download (TCC lives in the APK).
+
+**If you still get `pkg: not found`:** open the **Term** tab and tap **⬇**
+(install / repair the Linux tools). If the bar claims the tools are ready but
+`pkg` still fails, that is a Phase 44 bug worth reporting — the gate now checks
+the **real** `$PREFIX/bin/pkg` (exists, executable, non-empty) instead of a
+marker file, so a false "ready" means the check itself is wrong. Include the bar
+text and Settings → **Logs**.
+
+**Why the repair is safe:** the ledger records the attempt phase with
+`commit()` (never `apply()`), the boot repair restores the newest `usr.old-*`
+only when `usr` is missing, and the sweep touches **only** `usr.old-<digits>`
+and `.userland-staging-<digits>` directories directly inside the app's files
+directory — never `projects/`, never a live prefix, never anything newer than
+the repair itself.
+
+**Device round:** [`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md)
+— 12 rows including the three kill points (mid-download, mid-extract, mid-swap)
+and the owner's `pkg install python` afterwards. **Not yet run** (no device in
+the agent sandbox), so Phase 44 is 🚧 IMPLEMENTED, not tested on hardware.
+
+## 33. Seven `Unresolved reference` errors from ONE missing constructor parameter (agent runbook; Phase 44, 2026-09-12)
+
+**Symptom:** `Build APK` red with a burst of errors that all point at *member
+accesses* in a single file — run `34692621773` (tip `e3d1e64`):
+
+```text
+TerminalViewModel.kt:88:28   None of the following candidates is applicable:
+TerminalViewModel.kt:515:22  Unresolved reference 'installIfNeeded'.
+TerminalViewModel.kt:521:17  Cannot infer type for this parameter. Specify it explicitly.
+TerminalViewModel.kt:537:56  Unresolved reference 'releaseTag'.
+TerminalViewModel.kt:549:60  Unresolved reference 'message'.
+TerminalViewModel.kt:550:55  Unresolved reference 'message'.
+TerminalViewModel.kt:672:32  Unresolved reference 'installedRelease'.
+```
+
+Every one of those members **exists**: `installIfNeeded` and `installedRelease`
+are public in `UserlandInstaller`, `releaseTag` and `message` are `UserlandStatus`
+properties that the same file had been using since Phase 2.
+
+**Cause:** the error with the **smallest line number** was the only real one.
+Line 88 was `UserlandInstaller(application, ledger = setupLedger)`; Phase 44.2
+added `ledger` to the *primary* constructor but not to the secondary
+`(Context)` constructor the ViewModel actually uses. The call did not resolve →
+`userland`'s type was unknown → **every** member access on it reported
+`Unresolved reference`. One missing parameter, seven errors, six of them noise.
+
+**The rule (read before fixing any red run):**
+
+1. **Sort by line number and fix the first error.** A receiver whose
+   construction failed makes all of its members look missing; the member errors
+   are consequences, not faults.
+2. `None of the following candidates is applicable` / `Cannot infer type for
+   this parameter` on a **construction** line is a *signature* fault, not a
+   missing import and not a missing dependency.
+3. When a parameter is added to a class the local harness cannot compile
+   (anything needing `android.*` or Compose), add it to **every** constructor —
+   secondary constructors are the ones that get forgotten, because the primary
+   is where the new field lives.
+4. **Pin the signature** with a source-scan case (`SetupGateWiringTest`'s *the
+   installer's Context constructor accepts and forwards the ledger*) so the next
+   refactor fails on the host instead of on CI.
+
+**Why the local pre-validation did not catch it:** the `rule.md` §9 harness
+compiles the pure policy files and the real test sources; `UserlandInstaller`
+and `TerminalViewModel` need `android.content.Context`, so they are outside it.
+A `kotlinc` pass over the Android files *without* `android.jar` does surface
+these, but inside a flood of unresolved-type cascades — and the filter used
+("show me syntax errors only") hid them. The durable pre-push check for this
+class of fault is cheaper than a compiler: **when a change touches a
+constructor signature, grep every call site of that constructor and read each
+one.** For Phase 44 that is two sites (`TerminalViewModel.kt:88` and
+`UserlandInstallerTest`, which uses the primary constructor and was unaffected).
+
+## 34. `NewApi` lint errors in a "pure" Kotlin file — the host harness cannot see `minSdk` (agent runbook; Phase 44, 2026-09-12)
+
+**Symptom:** `Build APK` gets **past** the Kotlin compile and the unit tests and
+then dies in `:app:lintDebug` (run `34692963464`):
+
+```text
+Lint found 2 errors and 210 warnings. First failure:
+LINT ERROR [NewApi] app/src/main/java/com/codeci/ide/ui/terminal/SetupRecovery.kt:248:
+  Call requires API level 26, or core library desugaring (current min is 24):
+  java.nio.file.Files#isSymbolicLink
+  … java.io.File#toPath
+```
+
+**Cause:** the new "pure" policy file used `java.nio.file` for a symlink check.
+It compiles and passes on the host JVM (where `java.nio.file` exists), and it
+compiles fine under `kotlinc` in the `rule.md` §9 harness — **but lint checks
+every file in `app/src/main` against `minSdk 24`, pure or not.** "No Android
+imports" is not the same as "no Android rules".
+
+**The law (already written in the codebase, now written here too):** in
+`app/src/main`, **no `java.nio.file.*` and no `java.time.*`** — both are API 26.
+`TarGzExtractor.kt:64` carries the comment `/** minSdk 24 — avoid java.nio.file
+(API 26). */`, and `ShellEnvironment` reaches `java.nio.file.Files` **only
+through reflection** (`Class.forName("java.nio.file.Files")`, with a comment
+saying why). Test sources may use them (`CodecApiProtocolTest`, `CrashLogTest`,
+`SwapRecoveryTest` do) — unit tests run on the host JVM and lint does not apply
+`NewApi` there.
+
+**API-1 replacements that came out of this fix:**
+
+| Needed | Not allowed (26+) | Use instead |
+|---|---|---|
+| "is this a symlink?" | `Files.isSymbolicLink(f.toPath())` | `f.canonicalFile.name != f.name` (a link's canonical file is its target); treat an unresolvable path as a link |
+| "delete this tree without following links" | `Files.walk` / `walkFileTree` | `f.delete()` **first** — it `unlink`s a symlink without following it — and only then `f.deleteRecursively()` (which DOES follow a link to a directory) |
+| "copy/move a file" | `Files.copy` / `Files.move` | `FileInputStream`/`FileOutputStream`, `File.renameTo` |
+| "now, as an instant" | `java.time.*` | `System.currentTimeMillis()`, `SystemClock.elapsedRealtime()` |
+
+**Pre-push check that costs nothing** (a red CI round is ~6 minutes):
+
+```bash
+git diff --name-only <base> -- 'app/src/main/**.kt' |
+  xargs grep -n "java\.nio\|java\.time\|List\.of(\|Map\.of(\|Set\.of(\|toPath()\|Files\."
+```
+
+Anything it prints in `app/src/main` is either a lint error or needs an
+`SDK_INT` guard. Guarded calls (`if (Build.VERSION.SDK_INT >= O)`) are accepted
+by lint; that is why `TerminalForegroundService`'s `createNotificationChannel`
+and `startForegroundService` never trip it.
+
+## 35. "The bar says open Terminal but the terminal doesn't open — the editor does" (owner device report; Phase 44 round 1, 2026-09-12)
+
+**The owner's words:** *"It have bugs · I couldn't not open the terminal it's
+opening the editor · The top a massage 'C works right now. The linux tool need
+one install- open terminal and tap download' · But it's not closing or opening
+terminal · Every package saying view setup but terminal not opening editor
+opening."*
+
+He had installed the Phase 44 build **over an existing install** (no first-run
+welcome), on a phone whose userland had been killed mid-install during earlier
+testing — the original bug, already baked into the data directory.
+
+**What was actually wrong (three faults, in the order they bite):**
+
+1. **The install marker lied.** `UserlandInstaller.installIfNeeded(force = false)`
+   answers `AlreadyInstalled` from the **release marker alone** — the fast
+   warm-open path, which must not touch the network or launch a probe. A pre-44
+   build wrote that marker **before** the two-rename swap, so a kill between them
+   left a valid marker over a prefix with no working `bin/pkg`. The setup stage
+   therefore said `READY` while the disk said *not usable*, and the bar showed the
+   only sentence it had for that: *"C works right now · the Linux tools still need
+   one install — open Terminal and tap ⬇"*. Nothing ever re-decided it, so it
+   stayed forever.
+2. **That bar was a wall.** Its action button was rendered only while the setup
+   was *in flight* or `FAILED` — not in this state — and its ✕ called the
+   *note*-dismiss, which cleared a note that was not there. So: a sentence with no
+   button and a close button that did nothing. Exactly *"it's not closing or
+   opening terminal"*.
+3. **"Go to the terminal" arrived at the editor.** Every such navigation used the
+   bottom-nav idiom `popUpTo(startDestination) { saveState = true }` **plus
+   `restoreState = true`**. `restoreState` does not mean "show that tab": it
+   restores the *whole previously saved sub-stack* for that destination — and if
+   the user had opened a file in the editor after using the terminal, the editor
+   was the top of that saved stack. Hence *"terminal not opening editor opening"*.
+
+**What to do now (build with the round-1 fixes):**
+
+- Update to the new build. On launch CodeC checks the **disk**, not the marker:
+  if `$PREFIX/bin/pkg` or a shell is missing, the app **opens the Terminal tab
+  itself** and the bar says *"Setup didn't finish — the Linux tools aren't
+  working. Open the Terminal tab and tap ⬇ to install them again."*
+- Tap **anywhere on the bar** (or **VIEW SETUP**, now always present) → the
+  terminal opens and stays open.
+- Tap **⬇** in the terminal toolbar → the download runs with a visible
+  percentage → afterwards `pkg --version` works and the bar disappears.
+- The ✕ now really removes a settled bar; it returns as soon as the state
+  changes (a new install, a repair).
+- C keeps working the whole time (`RUN ▶` on a `.c` file, `cc` in the terminal) —
+  that was never gated and still is not.
+
+**Which build to install for round 2:** the fixes are in CI run
+[`34695797493`](https://github.com/pabi277/CodeC/actions/runs/34695797493)
+(commit `4bf3c4c`, green) → **Artifacts** → `CodeC-IDE-debug`
+(or `CodeC-IDE-release`, signed, 6.65 MB, v1.3.17). Install it **over** the
+current install and **do not clear app data first**: recognising the
+marker-only prefix is the whole point of the fix, and wiping data would hide it.
+
+**If it still misbehaves:** Settings → **Logs** → COPY (or the crash dialog →
+COPY REPORT) and send it. The lines that matter are tagged `SetupRecovery`,
+`TerminalViewModel` (`setup keep-alive …`, `post-repair setup refresh failed`)
+and `TerminalFgs`.
+
+**Law recorded for future work (nav):** *`restoreState = true` restores a
+sub-stack, not a destination.* Any navigation whose meaning is "show me X now"
+must not use it. Phase 49 (`BackRouter`) is where the whole navigation model gets
+the systematic pass; until then the Terminal-tab navigations are pinned by
+`SetupGateWiringTest`'s `every go-to-the-terminal navigation arrives at the
+terminal`.
+
+## 36. "The guide boxes felt random, half-missing, and one was cut in half" (owner device report; Phase 45 round 1 → round 2, 2026-09-12)
+
+**The report:** *"Working but some problem the guided box are not consistent with
+flow like / Not showing the full box guide at one and you didn't add all / remove
+the next option only the guide will show click the option where showing the guide to
+the next / make it like demo_flask is always present."*
+
+**What was actually wrong (four things, all in the shipped code — not the phone):**
+
+1. **A fresh install showed almost nothing.** Phase 44's download counts as
+   "someone else owns the screen", and on a first run the download *is* most of the
+   session. Correct rule, wrong net effect: the guide was silent exactly when the
+   user was newest.
+2. **Two boxes per screen, per visit.** `MAX_PER_ARRIVAL = 2` plus a surface filter
+   meant the editor taught ☰ and RUN ▶ and then stopped; the *Show tabs* beat needs
+   the keyboard up, and Packages/Terminal need you to walk there. Hence *"you didn't
+   add all"* — five beats existed, but rarely in one sit.
+3. **The card was placed using a guessed height (150dp).** A taller card fell into
+   the "neither above nor below fits" branch and was clamped over its own hole —
+   *"Not showing the full box guide at one"*.
+4. **A box could be cut behind a dialog or a closed drawer.** The scrim is drawn in
+   the activity window; an `AlertDialog` is a window of its own, and Material keeps a
+   closed drawer's rows laid out (so they still report a position). Both produce a
+   hole you cannot see — *"not consistent with flow"*.
+
+**What it does now:** one **tour of ten beats** in the order you would use the app
+(☰ → change project → `demo_flask` → `app.py` → RUN ▶ → the preview's Back → the
+reveal-tabs handle → the Packages tab → its install card → the Terminal tab → its
+status chip), each card labelled `Tour · n of 10`. **The highlighted control is the
+only way forward** — there is no NEXT/GOT IT button, a tap outside does nothing at
+all, and **SKIP TOUR** (or back) ends the whole tour in one tap. A beat whose control
+is not on screen is either waited for (the four controls that are always there) or
+passed over **without being spent**, so the tour can neither stall nor point at
+nothing. No box is drawn while a dialog, the drawer, the exit survey, safe mode or a
+moving download owns the screen. And **`demo_flask` is always present** — delete it
+and it comes back on the next list refresh (your edits to it are never touched),
+because beats 2-3 teach it by name.
+
+**If you are re-testing on a phone that already ran round 1:** tap **Settings → About
+→ Reset tips** and kill the app first. The five round-1 beat ids are unchanged, so an
+upgraded install would otherwise show only the five NEW beats.
+
+**Known limit (recorded, not hidden):** a box cannot point *into* a dialog — Compose
+dialogs are their own window, so a hole cut from the activity window would land in the
+wrong place. The two beats that live in dialogs (the "Open folder" project picker and
+the *Install Python?* prompt) are therefore taught by the copy of the beat before them
+(*"choose demo_flask"*, *"tap **Install**"*). Lifting the limit means publishing every
+anchor in absolute screen coordinates; that is a deliberate follow-up, not an
+oversight (`docs/chat-phase45/PART_45_2_COACH_MARKS.md`, deviation 9).
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` G1-G23 (G9-G23 are the tour).
+
+## 37. "The tour had a skip on it, so it got cut" (owner device report; Phase 45 round 2 → round 3, 2026-09-12)
+
+**The report:** *"You add the skip option and it's not a trough guide mean it got cut /
+I want a full process 1st to last without skip anything in this / At the end option to
+close and view again."*
+
+**What was wrong (four things, all in round 2's shipped code):**
+
+1. **SKIP TOUR was the most visible thing on the card.** Every one of the ten beats
+   carried a button whose only job was to end the tour, and one tap on it wrote all ten
+   beat ids as seen. The guide read as something to dismiss, not something to walk.
+2. **Beats were passed over the moment their control was not laid out.** Round 2 split
+   the tour into four "waiting" beats and six "pass over" beats so it could never
+   stall. Passing over is instant and silent, so: tap RUN ▶, the Flask server takes a
+   few seconds, and the tour had already walked on to the tab bar and the Packages tab.
+   Boxes arrived out of the order the app was doing things in — a *full process* with
+   the middle missing.
+3. **Two beats had no target exactly when they were needed.** The project-name box was
+   published only when switching projects would teach something, so a phone already in
+   `demo_flask` (or in scratch mode) never saw it. The *tabs are here* box was anchored
+   to the thin reveal handle, which exists only while the keyboard hides the bar.
+4. **The project picker closes the drawer** (it always has), and the next beat is a row
+   *inside* that drawer — so after choosing `demo_flask` the tour went silent and waited
+   for the user to work out which button brings the files back.
+
+**What it does now:** ten beats, in order, and **nothing is skipped**. A tour card has
+no button at all: the highlighted control is the only way on, a tap outside does
+nothing, and the back button navigates instead of ending anything (the same beat is
+there when you come back, unspent). While a beat waits for its control, **nothing is
+drawn** — no scrim, no card — so the app is never covered and never trapped. The card
+at the end is the only one with buttons: **VIEW AGAIN** (all ten beats from the first,
+and the app takes you to the editor where beat 1 lives) and **CLOSE**.
+
+**The one thing that can still move the tour past a beat** is a 20-second *stall
+guard*, and it is narrow on purpose: it fires only for a control that **could be on
+this screen and is not** (the Packages card behind a collapsed section, the `app.py`
+row after you picked some other project). It never fires for a beat you have to travel
+to or wait an install out for — timing those out is what would cascade (the Flask
+preview stalls during a Python install, then every beat behind it, and the tour
+"finishes" on a screen the flow never reached). A stalled beat is **passed, not spent**:
+it is never written to the seen set, so it comes back on the next launch or on VIEW
+AGAIN.
+
+**If you are re-testing on a phone that ran round 1 or 2:** Settings → About → **Reset
+tips**, then kill the app. The beat ids are unchanged, so without a reset you would
+only see the beats you never reached.
+
+**Known limits (recorded, not hidden):** a box still cannot point *into* a dialog
+(Compose dialogs are their own window), so the project picker and the *Install Python?*
+prompt are taught by the copy of the beat before them; and a tour parked on a beat whose
+control never appears — no Python and the install declined, so no Flask preview — waits
+there silently, with the beats behind it, until it does. Both are deliberate: the
+alternative is the skipping the owner just reported
+(`docs/chat-phase45/PART_45_2_COACH_MARKS.md`, deviations 9 and 13-16).
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` G1-G28 (G9-G28 are the tour).
+
+## 38. "The first tap only closed the box", and "an install should pause the rest" (owner device report; Phase 45 round 3 → round 4, 2026-09-12)
+
+**The report:** *"It's good but i have 2 request- / 1. When the userland is installing
+and unpacking the user can not access any other other option and it will show a sweet
+massage of why can't access any other option / 2. Now the steps feel like an overlay on
+the botton so 1st click disappear the massage and i have to click 2nd time to really
+work but if someone don't click 2nd time it just cut off the flow of tutorial / So do
+something"*
+
+**What was wrong (request 2 — a bug in round 3's own mechanism):** the tour's box left
+your tap **unconsumed** and advanced on the **press**, trusting the framework to hand
+the rest of the gesture to the control underneath. But advancing writes state, the app
+recomposes from it (the next box, the drawer plumbing), and a control rebuilt in the
+middle of a gesture is **cancelled** — so the box went away, the beat was recorded as
+taught, and nothing opened. The second tap was not the same lesson again: the tour had
+already moved to a beat whose control was not on screen, and it then waits in silence.
+One dead tap = one lost lesson and a parked tour.
+
+**What it does now:** every control the tour spotlights **publishes its own click**, and
+the box performs that click and swallows the gesture — so **one tap does both halves**
+(the drawer opens, the file opens, RUN ▶ runs, the tab switches) and the tour moves on
+in the same tap, with the click first and the advance after it. Nothing can fire twice.
+Two honest exceptions: the terminal's status chip is a **label**, so its box advances
+and performs nothing; and a Packages card whose language is **already installed**
+publishes no click either, because its buttons are RUN / UNINSTALL / REINSTALL and none
+of them is what the box is teaching — your tap behaves like an ordinary tap on the card.
+A **drag** that starts inside the hole and lifts outside is not a tap: nothing is
+performed and no beat is spent (that is a scroll, and answering a scroll with an
+install would be worse than the bug). Beat 6's copy now says *"tap this handle"* instead
+of *"swipe up"*, because while a box is up the tour only accepts a tap — the swipe still
+works the moment the tour is over.
+
+**What it does now (request 1 — the chrome lock):** while an install is really moving,
+the options that cannot work are **paused**, and a paused option **says why** instead of
+doing nothing.
+
+- **The one-time Linux tools** (downloading / checking / unpacking, with no working
+  prefix yet): the four tabs that are not **Terminal** are dimmed with a small 🔒, and
+  a tap on one shows *"Hang tight — CodeC is downloading its Linux tools (NN %). Other
+  options are paused for a moment so this one-time setup finishes cleanly. The Terminal
+  tab shows every step."* and does not navigate. The Terminal tab is never paused — that
+  is where the download, the percentage, the "don't close" line and the ⬇ retry live.
+- **A language or tool you asked for** (RUN ▶ → **Install**, streaming into the Output
+  Panel): the other four tabs pause — including Terminal — and **the Editor stays
+  open**, because the Output Panel is where that install can be watched. Inside the
+  editor, ☰ and RUN ▶ answer with the same sentence, and the drawer's edge swipe is
+  closed (a lock you can swipe around is not a lock).
+- The sentence appears **once when the pause begins** and again on every refused tap.
+- **Nothing is paused** for: a run of your own program, a Flask server you started (a
+  run is not an install), the startup probe, a setup that has already finished or
+  failed, or an in-flight **upgrade** of a working tool set (its own line is
+  *"everything still works"*). And the older guarantee stands: **typing and `cc` never
+  wait for a download** — while the Linux tools are being built the editor keeps both.
+- The guided tour pauses with the chrome: a box on a paused control could only be spent
+  by a tap that merely shows the sentence.
+
+**Known limits (recorded, not hidden):** the lock answers taps on **chrome** — the tabs,
+☰, RUN ▶, the edge swipe. It is not a full-screen wall: the file you have open stays
+open and editable, a `.c` file still compiles, and the setup bar's VIEW action still
+works, because a pause with no way to watch the install is how an app looks bricked. If
+you want the harder version (one "setting up" screen with nothing else tappable), that
+is a small change to one pure function and it is worth knowing that a first launch
+starts this download automatically.
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` **G29-G38** (G29-G33 the one-tap rule,
+G34-G38 the lock). Specification: `docs/chat-phase45/PART_45_2_COACH_MARKS.md` §Round 4
+and `docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Phase 45 round 4 — the chrome
+lock" (deviations 17-20).
+
+## 39. "The lock arrives a beat late — make it instant" (owner device report; Phase 45 round 4 → round 5, 2026-09-12)
+
+**The report:** *"The lock option is good but still it late user can switch before the
+start of userland download because is takes a little time to connect and user can switch
+task between them / Make it instantly after 1st open and others are ok"*
+
+**What was wrong:** round 4's lock waited for a stage that means *work is moving* —
+downloading, checking the download, unpacking. Before the first byte there is a window
+where the app is reading the disk, reaching the network and waiting for the server's
+first answer, and in that window nothing was paused. On a cold phone with a cold radio
+that window is seconds long, which is exactly how long it takes to tap **Packages** and
+read *"not installed"* about tools that are already on their way — and then to be
+looking at the wrong screen when the download starts.
+
+**What it does now:** the pause is decided by **your prefix, not by the stage label**.
+From the very first frame after the app opens, if the Linux tools are not usable yet and
+the setup has not given up, the four other tabs are already dimmed with their 🔒 and
+already answer a tap with *"Hang tight — CodeC is getting ready to set up its Linux
+tools. Other options are paused for a moment so this one-time setup finishes cleanly.
+The Terminal tab shows every step."* The **Terminal** tab is open from frame one, which
+is also where the download, the percentage, the *don't close the app* line and the ⬇
+retry live.
+
+> **Round 6 tightened this paragraph's condition — read it with §40.** The pause applies
+> while the setup is *still working*. "Has not given up" turned out to be too loose a test
+> on a device: a finished setup whose disk reading was a moment stale stayed paused for
+> the whole session. The stage label is now the boundary.
+
+**Three things still pause nothing,** and each one protects a phone you can use:
+
+- **A working tool set.** If your Linux tools are installed, nothing is paused at any
+  stage — including while an **upgrade** of them downloads and unpacks (*"everything
+  still works"*). This is read from the disk when the app starts, not guessed, so an
+  installed phone never sees a pause flash on launch.
+- **A setup that has stopped.** Failed (offline, out of disk, corrupt download) or
+  unsupported (no bootstrap for this device) have their own sentence and their own ⬇
+  retry, and **C still compiles offline** — so the app stays open.
+- **Safe mode.** After three failed launches the app starts reduced so you can export
+  your projects and report the crash, both of which live in Settings. A crash-loop phone
+  is the last phone that should be funnelled to one tab, so the startup pause does not
+  apply there. An install you asked for still pauses the rest, even in safe mode.
+
+**Also covered by the same rule, without being asked for:** a boot-time **repair** of an
+install a process kill interrupted (44.2's restore) now pauses the other tabs while it
+puts the prefix back — same reason, same sentence, Terminal open.
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` **G34** (amended: the pause is there before
+the first percentage) and **G39** (the first-second window). Specification:
+`docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Round 5 — *Make it instantly after 1st
+open*".
+
+## 40. "Even after unpacking the userland it still stay lock" (owner device report; Phase 45 round 5 → round 6, 2026-09-13)
+
+**The report:** *"One problem even after unpacking the userland it still stay lock if i
+refresh it it's the open the editor check the problem."*
+
+**What was wrong:** the pause read two different kinds of thing as if they were the same
+kind.
+
+- The **stage** (checking / downloading / verifying / unpacking / ready / failed) is the
+  installer's own *verdict*: the same code that finished the work sets it, so it is never
+  out of date.
+- The **facts** — "is `bin/pkg` there, non-empty and executable?" — are a *reading* of the
+  disk, and a reading is only as fresh as the last time it was taken. Round 5 took it
+  three times: when the app started, whenever a new stage was published, and at the end of
+  an install.
+
+Round 5's rule was "no usable tools and the setup has not given up ⇒ pause, whatever the
+stage says", so a **stale reading** could hold the app shut *after* the verdict said the
+work was done. Miss one of the three re-readings and the four tabs stay dimmed with their
+🔒 for the rest of the session — with the Terminal the only open surface and nothing in it
+that re-reads the disk on demand. Killing the app fixed it, which is exactly what the
+owner found: relaunch, the reading taken again at construction, tools usable, app opens on
+the Editor.
+
+**What it does now — two independent guarantees:**
+
+1. **A finished setup never keeps the app paused.** The boundary is the stage: while the
+   setup is *in flight* (checking, downloading, verifying, unpacking) and the tools are
+   not usable, the other tabs pause; the moment it is *settled* — ready, failed, or no
+   bootstrap for this device — the app is open. A "ready" whose tools do not actually run
+   is handled where it always was: the bar says *"Setup didn't finish"* with a ⬇ retry,
+   and the acts that would fail are refused one by one with their own sentence. **C still
+   compiles offline** in every one of those states.
+2. **CodeC re-checks its tools the moment a shell comes alive.** A running bash *is* the
+   proof the tool set works, so the disk is read a fourth time then — the reading that
+   cannot be early, because nothing is alive until the prefix really runs. A stale "not
+   usable" now heals inside the same session instead of at the next launch.
+
+Either guarantee alone would have released the owner's phone; together, "locked while the
+tools work" is not a state the app can reach.
+
+**Unchanged by this fix:** the pause is still there **from the first frame** of a fresh
+install (§39), the Terminal is still never paused, the sentences are the same, an install
+*you* asked for still pauses the other tabs while it streams into the Output Panel (that
+one is a live signal — it ends when the stream ends), a working tool set and an upgrade of
+one still pause nothing, and safe mode is still exempt.
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` **G34** and **G38** (amended: the pause must
+release without a restart) and **G41** (new: release at the end of the unpack, on the
+phone, without killing the app). Specification:
+`docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Round 6 — *even after unpacking the
+userland it still stay lock*".
