@@ -16,7 +16,11 @@ the presets' real build/run commands + `ServerRunner` + loopback HTTP +
 edit-index.html-hot-read, all verified on CI; **tip `33360571874` green with
 Auto (detect) + bundled demo**. The app now
 also **ships a bundled `demo_flask` project** in the Files tab (D9 — one-time
-seed, never overwrites; `DemoProjectSeedTest`: 4) and the **New Project
+seed, never overwrites; `DemoProjectSeedTest`: 4 — **the one-time half was
+reversed by Phase 45 round 2, 2026-09-12: the demo is now ALWAYS present, because
+the guided tour teaches it by name; "never overwrites" still holds**, see
+[`../chat-phase45/PART_45_2_COACH_MARKS.md`](../chat-phase45/PART_45_2_COACH_MARKS.md)
+deviation 11) and the **New Project
 wizard defaults to Auto (detect)** (D10, owner request 2026-08-31): no type
 selection — RUN ▶ infers Flask/FastAPI/C-microservice/static-web/Python/C
 from the project's files (`ProjectRunDetectorTest`: 13 + E2E auto→Flask).

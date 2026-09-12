@@ -198,7 +198,9 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` on tip `3c597b2`, device round NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G14) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` on tip `3c597b2`, then the owner's device
+  report rebuilt 45.2 as ONE TEN-BEAT TOUR (round 2 implemented, CI pending, device
+  round G1-G23 NOT run) ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G14) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -246,15 +248,54 @@ Every update updates the docs **in the same commit**:
   hole, bridge not CompositionLocal, estimated card height, the two-per-arrival
   reading of the cap, what "blocked" can see, safe mode skips the gate without
   writing the flag, re-opening swaps the shell out, `BackRouter` precedence still a
-  fact not a law until Phase 49). **CI round 1 (`34698914219`, tip `3c597b2`) is
+  fact not a law until Phase 49). **ROUND 2 (2026-09-12, the owner's device report): 45.2 rebuilt as ONE ORDERED
+  TOUR.** The report — *"the guided box are not consistent with flow … Not showing
+  the full box guide at one and you didn't add all … remove the next option only the
+  guide will show click the option where showing the guide to the next … make it like
+  demo_flask is always present"* — plus the dictated flow (*"☰ bar → change the
+  project folder to demo_flask → selected app.py → run → install → python → it will
+  open the flusk web → close → tap to reveal the keyboard below option → then a small
+  tour of package and terminal"*). **Four causes, all in round 1's own code**
+  (TROUBLESHOOTING §36): a fresh install blocked every box during Phase 44's
+  download; `MAX_PER_ARRIVAL = 2` + the surface filter hid most beats; the card was
+  placed with a **150dp estimated height** and clamped over its own hole; a box could
+  be cut **behind a dialog or a closed drawer** (the scrim draws in the activity
+  window, an `AlertDialog` is its own window, M3 keeps a closed drawer's rows laid
+  out). **Now:** ten beats (five new anchors: the drawer's project header, the
+  drawer's `app.py` row, the preview's Back, the bottom bar's Packages + Terminal
+  tabs) under three pure laws — order, `waits` (the four always-there controls stop
+  the tour until they are on screen; that is also the start gate, so the tour can
+  only begin at the editor's ☰), and pass-over-**without**-spending (a
+  sometimes-there control is skipped and NOT marked seen, so the tour can neither
+  stall nor lose the lesson) — plus `EditorChromeState.dialogOpen`/`drawerOpen` above
+  the anchor check. **The highlighted control is the only way forward:** no
+  NEXT/GOT IT, outside taps swallow the whole gesture and do nothing (owner: *"even
+  tap outside will not end that box"*), **SKIP TOUR**/back call `markAllSeen` (one
+  tap ends it; Reset tips is the door back), every card reads `Tour · n of 10`, and
+  its height is **measured** (`onSizeChanged`). The slides are untouched by the
+  owner's own decision. **`demo_flask` is ALWAYS present** now (re-seeded when
+  missing, never overwritten — a recorded reversal of Phase 14's one-time law).
+  **Recorded limit:** no box can point into an `AlertDialog`, so the project picker
+  and the *Install Python?* prompt are taught by the copy of the beat before them
+  (deviation 9); screen-absolute anchors are the follow-up. **Delegated decision
+  (owner: *"you do as you like"*):** Phase 44.1's terminal-first divert stays.
+  **175 host cases green locally** (`CoachMarkPlanTest` 17, `GuideWiringTest` 15,
+  `DemoProjectSeedTest` 7 — newly in the harness — `GuidePlanTest` 15,
+  `TooltipPlacementTest` 10), and the round caught two faults before CI: the host
+  still passed the deleted `arrivalKey` argument (a compile error a wiring pin
+  found), and a pin on the bare word "GOT IT" failed on the file's own sentence
+  promising there is none — **a source pin must name the button, not the word**.
+  **CI round 1 (`34698914219`, tip `3c597b2`) is
   ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
   per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
   50 new cases ran on real Gradle/JUnit/Robolectric and lint is clean; release APK
   6,664,474 B (**+12,792 B / +0.19%** over Phase 44 round 4 — the measured cost of
   the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
-  G1-G14 written and **NOT run**. **Do not call Phase 45 tested until the owner
-  reports the round.**
+  **G1-G23** written for round 2 and **NOT run**; CI on the round-2 commit is
+  pending. **Do not call Phase 45 tested until the owner reports the round** — and
+  the round must start from Settings → About → **Reset tips**, or the beats round 1
+  already marked seen will hide half the tour.
 - **Phase 44 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 44")** — *setup you can see, and cannot half-finish*. Both parts in one
   round: **44.1** the one-time userland install is visible on every tab (pure
@@ -770,7 +811,16 @@ Every update updates the docs **in the same commit**:
   (a source-scan window of a fixed 400 characters around `resetGuideTips` ran
   into the *next* setter and counted its DataStore key, so the pin now slices to
   the function's own closing brace — general rule: a source-scan window ends at a
-  structural boundary, never at a character count). **Its
+  structural boundary, never at a character count). **Phase 45's round 2 grew it
+  to 175/175** by adding the demo-project chain (`ProjectConfig`,
+  `FileTreeRepository`, `ProjectScaffold`, `ProjectPathUtils`, `DemoProjects` — all
+  `java.io`-pure, so `DemoProjectSeedTest` runs on the host too, which is what
+  *proved* the "always present" reversal instead of asserting it) and by teaching
+  the `TemporaryFolder` shim JUnit's vararg `newFolder("CodeC", "projects")`. It
+  caught two more real faults: a host call still passing an argument the redesign
+  had deleted (`arrivalKey` — a hard compile error waiting in CI), and a pin that
+  grepped the bare word `GOT IT` and so failed on the comment promising there is no
+  GOT IT — **pin the button (`Text("GOT IT")`), never the word**. **Its
   blind spot, found by Phase 44's CI round 2:** the harness runs on a host JVM,
   so it cannot see `minSdk` — a *pure* file that used `java.nio.file`
   (`Files.isSymbolicLink`) compiled and passed locally and then died in

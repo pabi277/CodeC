@@ -1410,3 +1410,55 @@ must not use it. Phase 49 (`BackRouter`) is where the whole navigation model get
 the systematic pass; until then the Terminal-tab navigations are pinned by
 `SetupGateWiringTest`'s `every go-to-the-terminal navigation arrives at the
 terminal`.
+
+## 36. "The guide boxes felt random, half-missing, and one was cut in half" (owner device report; Phase 45 round 1 → round 2, 2026-09-12)
+
+**The report:** *"Working but some problem the guided box are not consistent with
+flow like / Not showing the full box guide at one and you didn't add all / remove
+the next option only the guide will show click the option where showing the guide to
+the next / make it like demo_flask is always present."*
+
+**What was actually wrong (four things, all in the shipped code — not the phone):**
+
+1. **A fresh install showed almost nothing.** Phase 44's download counts as
+   "someone else owns the screen", and on a first run the download *is* most of the
+   session. Correct rule, wrong net effect: the guide was silent exactly when the
+   user was newest.
+2. **Two boxes per screen, per visit.** `MAX_PER_ARRIVAL = 2` plus a surface filter
+   meant the editor taught ☰ and RUN ▶ and then stopped; the *Show tabs* beat needs
+   the keyboard up, and Packages/Terminal need you to walk there. Hence *"you didn't
+   add all"* — five beats existed, but rarely in one sit.
+3. **The card was placed using a guessed height (150dp).** A taller card fell into
+   the "neither above nor below fits" branch and was clamped over its own hole —
+   *"Not showing the full box guide at one"*.
+4. **A box could be cut behind a dialog or a closed drawer.** The scrim is drawn in
+   the activity window; an `AlertDialog` is a window of its own, and Material keeps a
+   closed drawer's rows laid out (so they still report a position). Both produce a
+   hole you cannot see — *"not consistent with flow"*.
+
+**What it does now:** one **tour of ten beats** in the order you would use the app
+(☰ → change project → `demo_flask` → `app.py` → RUN ▶ → the preview's Back → the
+reveal-tabs handle → the Packages tab → its install card → the Terminal tab → its
+status chip), each card labelled `Tour · n of 10`. **The highlighted control is the
+only way forward** — there is no NEXT/GOT IT button, a tap outside does nothing at
+all, and **SKIP TOUR** (or back) ends the whole tour in one tap. A beat whose control
+is not on screen is either waited for (the four controls that are always there) or
+passed over **without being spent**, so the tour can neither stall nor point at
+nothing. No box is drawn while a dialog, the drawer, the exit survey, safe mode or a
+moving download owns the screen. And **`demo_flask` is always present** — delete it
+and it comes back on the next list refresh (your edits to it are never touched),
+because beats 2-3 teach it by name.
+
+**If you are re-testing on a phone that already ran round 1:** tap **Settings → About
+→ Reset tips** and kill the app first. The five round-1 beat ids are unchanged, so an
+upgraded install would otherwise show only the five NEW beats.
+
+**Known limit (recorded, not hidden):** a box cannot point *into* a dialog — Compose
+dialogs are their own window, so a hole cut from the activity window would land in the
+wrong place. The two beats that live in dialogs (the "Open folder" project picker and
+the *Install Python?* prompt) are therefore taught by the copy of the beat before them
+(*"choose demo_flask"*, *"tap **Install**"*). Lifting the limit means publishing every
+anchor in absolute screen coordinates; that is a deliberate follow-up, not an
+oversight (`docs/chat-phase45/PART_45_2_COACH_MARKS.md`, deviation 9).
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` G1-G23 (G9-G23 are the tour).

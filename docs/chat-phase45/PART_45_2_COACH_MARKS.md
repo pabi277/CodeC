@@ -226,3 +226,154 @@ consumes only outside the hole · the blocked rule names the exit survey, safe m
 and the three working stages · no foreign import in any `ui/guide` file · no
 `showcase`/`intro`/`onboarding`/`tooltip` entry in `libs.versions.toml` · the
 guide is not a navigation route · Phase 44's setup surfaces are untouched.
+
+---
+
+## Round 2 (2026-09-12) — the owner ran round 1, and 45.2 became ONE TOUR
+
+### The report, verbatim
+
+> *"Working but some problem the guided box are not consistent with flow like /
+> Not showing the full box guide at one and you didn't add all / Ok listen remove
+> the next option only the guide will show click the option where showing the
+> guide to the next / Ok now make it like demo_flask is always present so whatever
+> user chose to start guide the user to start the demo project from the editor
+> only"*
+
+and, asked what the flow should be:
+
+> *"☰ bar → change the project folder to demo_flask → selected app.py → run →
+> install → python → it will open the flusk web → close → tap to reveal the
+> keyboard below option → then a small tour of package and terminal"*
+
+### Diagnosis first: four causes, all in round 1's own code
+
+1. **A fresh install blocked every box.** `blockedByForeground` counts Phase 44's
+   DOWNLOADING/VERIFYING/EXTRACTING as "someone else owns the screen" — right in
+   itself, but on a first run that is most of the session, so almost nothing could
+   appear while the download ran.
+2. **`MAX_PER_ARRIVAL = 2`** capped the editor at ☰ + RUN ▶, the handle beat needs
+   the keyboard up, and Packages/Terminal need the user to wander there. *"you
+   didn't add all"* was the cap **and** the per-surface filter, not missing anchors.
+3. **The card height was a 150dp estimate** inside the placement maths, so a taller
+   card fell into the "neither above nor below fits" clamp and was pushed over its
+   own hole — *"Not showing the full box guide at one"*.
+4. **A box could be cut behind a dialog or a closed drawer.** The scrim draws in the
+   activity window; an `AlertDialog` is a window of its own, and M3 keeps a closed
+   drawer's rows laid out (so they still publish rects). Both give a hole the user
+   cannot see — *"not consistent with flow"*.
+
+### The owner's four decisions (asked, answered, recorded)
+
+| Question | Answer |
+|---|---|
+| How far does "remove the next option" go? | *"Keep the 5 slides, boxes lose their button … tap the highlighted control to advance, **even tap outside will not end that box**"* → 45.1 untouched; the card's GOT IT is gone and outside taps are inert |
+| What should one run cover? | The dictated ten-beat flow above → the per-arrival cap and the surface filter are **deleted** |
+| demo_flask as the start | Option C: the tiles keep their own starter project, **the tour runs on demo_flask** (beats 2-3 walk the user there) — and demo_flask is **always present** |
+| Editor-only vs Phase 44's terminal-first divert | *"Don't understand you do as you like"* → **agent's call: keep 44.1's divert.** A fresh install still sees the download first, because beat 4 (RUN ▶ on `app.py`) needs Python and the bar is the owner's own Phase 44 requirement. The tour simply starts when the editor opens |
+
+### The tour as built (ten beats, `CoachMarkPlan.steps`)
+
+| # | Anchor | Where | Beat | waits | inDrawer |
+|---|---|---|---|---|---|
+| 1 | `editor_drawer` | Editor ☰ | *Your files* | ✅ | – |
+| 2 | `drawer_project` | Drawer header (project name) | *Change project* → names `demo_flask` in copy | – | ✅ |
+| 3 | `drawer_file` | Drawer row, **only** `demo_flask/app.py` | *Open app.py* | – | ✅ |
+| 4 | `editor_run` | Editor RUN ▶ | *Run it* → names **Install** in copy | ✅ | – |
+| 5 | `preview_close` | Web Preview's Back arrow | *Your app is running* | – | – |
+| 6 | `nav_handle` | Phase 32.1's reveal handle | *The tabs are here* | – | – |
+| 7 | `nav_tab_packages` | Bottom bar, Packages tab | *Packages* | ✅ | – |
+| 8 | `packages_card` | Packages, first install card | *One-time download* | – | – |
+| 9 | `nav_tab_terminal` | Bottom bar, Terminal tab | *Terminal* | – | – |
+| 10 | `terminal_chip` | Terminal status chip | *What it is doing* | – | – |
+
+Three pure laws replace the cap:
+
+- **order** — `nextStep` returns the first unseen step whose anchor is on screen, so
+  the beats teach in the owner's sequence wherever the screen allows;
+- **`waits`** — a step flagged `waits` (the four controls that are always there on
+  their own screen: ☰, RUN ▶, the two tabs) **stops the tour** while its anchor is
+  absent. This is also the start gate: beat 1 waits, so nothing at all is shown on
+  the Terminal tab or the hub — the tour cannot begin out of order;
+- **pass-over without spending** — a step that does not wait is skipped when its
+  control is absent and is **not** marked seen, so the tour can never stall on a
+  control that only sometimes exists (a drawer row, the preview's Back, the reveal
+  handle, the install card) and the lesson is still there later.
+
+Two "someone else owns the screen" inputs sit above the anchor check:
+`blockedByForeground` (exit survey, safe mode, a moving Phase 44 stage, **and now
+any editor dialog** via `EditorChromeState.dialogOpen`) and `drawerOpen`
+(`EditorChromeState.drawerOpen`, `currentValue == Open || isAnimationRunning`): a
+drawer beat shows only while the drawer is open, every other beat only while it is
+shut.
+
+### The card: one exit, no way on but the control
+
+- **No NEXT/GOT IT.** Tapping the hole leaves the tap unconsumed (the control does
+  its own job) and that same tap advances the tour.
+- **Outside taps are swallowed whole** — the down *and* the rest of the gesture are
+  consumed, so nothing reaches the UI under the scrim and the box does not close.
+- **SKIP TOUR** (one tap) and **Back** end the *whole* tour: `markAllSeen` writes
+  every beat id, so nothing returns until Settings → About → **Reset tips**. A box
+  that Back merely closed would come straight back (the plan would still return the
+  same unseen step) — that is why the exit is the tour, not the beat, and why the
+  no-nag law is still satisfied with a single tap.
+- **`Tour · n of 10`** is on every card, in the same shape as the slides'
+  `Guide · 1 of 5`: the round-1 boxes read as ten unrelated popups.
+- **The card height is measured** (`onSizeChanged`) and only *seeded* by the 150dp
+  constant, so `TooltipPlacement` places the real box: fully on screen, never over
+  its own hole. The card's size does not depend on its offset, so there is no
+  layout feedback loop.
+
+### Deviations added in round 2 (kept with round 1's eight)
+
+9. **No box can point into an `AlertDialog`.** Compose dialogs are their own window,
+   so `boundsInWindow()` inside one is dialog-relative and an activity-window scrim
+   would cut its hole in the wrong place. Two of the owner's beats live in dialogs —
+   the "Open folder" project picker and the *Install Python?* prompt — so they are
+   taught by the copy of the beat before them (beat 2 names `demo_flask`, beat 4
+   names **Install**, the real `install_prompt_confirm` label). The alternative
+   (publishing every anchor in absolute screen coordinates and converting in the
+   overlay) is a coordinate-system change to all ten anchors and should not ride
+   along with a flow redesign; it is the recorded follow-up if the owner wants a hole
+   on **Install** itself.
+10. **The Output Panel gets no beat.** The owner's "install → python" moment is
+    covered by beat 4's copy and beat 8 (*One-time download*) instead of an eleventh
+    anchor on a panel that is often collapsed.
+11. **`demo_flask` is now ALWAYS present** — a reversal of Phase 14's documented
+    one-time law (`.demo-flask-seeded-v1` meant "never seed again"). The tour teaches
+    this project by name, so a deleted demo would make beat 2/3 point at nothing.
+    `DemoProjects.ensure` re-seeds when the directory is missing, still never touches
+    an existing one (the user's edits are theirs), still refuses to replace a plain
+    *file* of that name, and now rolls back a seed that throws so a half-written demo
+    can never be mistaken for a project. The marker survives as a record, not a gate.
+12. **`ChromeState` lost its five per-anchor booleans** for one `visibleAnchors` set
+    (+ `blockedByForeground`, `drawerOpen`): ten anchors would have meant ten
+    hand-maintained flags and a mapping that could drift from `GuideAnchors`.
+
+### Tests (round 2): 175 host cases green locally
+
+`CoachMarkPlanTest` **17** (was 12): the tour is the owner's ten beats in the
+owner's order · each beat's surface · `waits` is set on exactly the four
+always-there controls · every box fits the card · the tour cannot start anywhere but
+the editor's ☰ · a box only when its anchor is on screen · a passed-over beat is
+never marked seen · a waiting beat holds the tour · the small tour of Packages and
+Terminal walks tab → card → tab → chip · blocked suppresses without consuming ·
+drawer beats need the drawer open and covered beats need it shut · SKIP/Back end the
+whole tour · `markSeen` monotonic and ignores unknown ids · the CSV round-trips in
+tour order and drops garbage (including round 1's ids, which are all still valid, so
+an upgraded install keeps what it saw and gains the five new beats) ·
+`ChromeState.of` · routes → the two tabs the tour teaches · the drawer helpers.
+`GuideWiringTest` **15** (was 13): all ten anchors have publishers (four by pure
+helper) · no box behind a dialog or a closed drawer (the editor's modal list names
+the picker, the Install? prompt and the RUN ▶ chooser; both signals clear on
+dispose) · the card has no `Text("GOT IT")`/`Text("NEXT")`, exactly one
+`TextButton`, a measured height · the tour's copy names only real labels
+(`demo_flask`, `app.py` = the scaffold's real Flask entry file, **Install** =
+`install_prompt_confirm`, **Packages**/**Terminal** = the tab titles in `Screen.kt`).
+`DemoProjectSeedTest` **7** (was 4, and now runs in the local harness too): first
+seed · idempotent, never overwrites · an existing project is respected · **a deleted
+demo comes back** · the marker is a record, not a gate · a plain file named
+`demo_flask` blocks the seed · `ENTRY_FILE` agrees with `ProjectScaffold.filesFor`
+and with the config's `entry` (so RUN ▶ runs the file the tour told the user to
+open).

@@ -19,9 +19,15 @@ import org.junit.Test
  *  - `guide_completed` is written only by SKIP / START CODING (and reset only by
  *    "Reset tips", which touches exactly two keys);
  *  - the three doors back to the guide are wired;
- *  - every coach-mark anchor has a publisher on the control it names, withdraws
- *    when that control leaves composition, and the overlay never swallows the tap
- *    on the control it is teaching;
+ *  - the tour's ten anchors each have a publisher on the control they name, and
+ *    withdraw when that control leaves composition;
+ *  - the card has NO forward button and a tap outside does nothing: the
+ *    highlighted control is the only way on, SKIP TOUR / Back the only way out
+ *    (owner, device round: *"remove the next option … click the option where
+ *    showing the guide to the next … even tap outside will not end that box"*);
+ *  - the tour's copy names only labels the product really has (`demo_flask`,
+ *    `app.py`, `Install`, `Packages`, `Terminal`) — the coach-mark twin of
+ *    [com.codeci.ide.ui.guide.GuideVocabulary];
  *  - no third-party showcase library, no new navigation route, no copy in the
  *    Compose edge.
  */
@@ -39,6 +45,11 @@ class GuideWiringTest {
     private val drawer = "app/src/main/java/com/codeci/ide/ui/components/EditorProjectDrawer.kt"
     private val terminalScreen = "app/src/main/java/com/codeci/ide/ui/screens/TerminalScreen.kt"
     private val modules = "app/src/main/java/com/codeci/ide/ui/screens/ModulesScreen.kt"
+    private val preview = "app/src/main/java/com/codeci/ide/ui/screens/WebPreviewScreen.kt"
+    private val plan = "app/src/main/java/com/codeci/ide/ui/guide/CoachMarkPlan.kt"
+    private val demoProjects = "app/src/main/java/com/codeci/ide/ui/projects/DemoProjects.kt"
+    private val scaffold = "app/src/main/java/com/codeci/ide/ui/projects/ProjectScaffold.kt"
+    private val strings = "app/src/main/res/values/strings.xml"
     private val screenRoutes = "app/src/main/java/com/codeci/ide/ui/navigation/Screen.kt"
 
     private fun before(src: String, first: String, then: String) {
@@ -172,36 +183,82 @@ class GuideWiringTest {
     // ---- 45.2 the coach marks ---------------------------------------------
 
     @Test
-    fun `every anchor is published by the control the plan names`() {
+    fun `every anchor of the tour is published by the control the plan names`() {
         assertTrue(
-            "the editor's ☰ is not anchored",
+            "beat 1: the editor's ☰ is not anchored",
             source(editor).contains("GuideAnchor.modifier(GuideAnchors.EDITOR_DRAWER)")
         )
+        // Beats 2 and 3 are decided by the PURE plan, not by an `if` in the
+        // drawer: the project box only where switching teaches something, the
+        // file box only on the demo's own entry file.
         assertTrue(
-            "RUN ▶ is not anchored",
+            "beat 2: the drawer's project header is not anchored",
+            source(drawer).contains("CoachMarkPlan.drawerProjectAnchor(projectName, DemoProjects.NAME)") &&
+                source(drawer).contains("headerModifier.then(GuideAnchor.modifier(projectAnchorId))")
+        )
+        assertTrue(
+            "beat 3: the demo's app.py row is not anchored",
+            source(drawer).contains("CoachMarkPlan.drawerFileAnchor(") &&
+                source(drawer).contains("demoEntryFile = DemoProjects.ENTRY_FILE") &&
+                source(drawer).contains("GuideAnchor.modifier(guideAnchorId)")
+        )
+        assertTrue(
+            "beat 4: RUN ▶ is not anchored",
             source(editor).contains("GuideAnchor.modifier(GuideAnchors.EDITOR_RUN)")
         )
         assertTrue(
-            "the 'Show tabs' handle is not anchored",
+            "beat 5: the preview's Back is not anchored",
+            source(preview).contains("GuideAnchor.modifier(GuideAnchors.PREVIEW_CLOSE)")
+        )
+        assertTrue(
+            "beat 6: the 'Show tabs' handle is not anchored",
             source(main).contains("GuideAnchor.modifier(GuideAnchors.NAV_HANDLE)")
         )
+        // Beats 7 and 9 are the bottom bar's own tabs — the tour walks the user
+        // to Packages and Terminal instead of hoping they wander there.
         assertTrue(
-            "the terminal status chip is not anchored",
-            source(terminalScreen).contains("GuideAnchor.modifier(GuideAnchors.TERMINAL_CHIP)")
+            "beats 7+9: the bottom bar does not ask the plan which tab to anchor",
+            source(main).contains("CoachMarkPlan.tabAnchorFor(screen.route)") &&
+                source(main).contains("tabModifier.then(GuideAnchor.modifier(tabAnchorId))")
         )
         assertTrue(
-            "the Packages install card is not anchored",
+            "beat 8: the Packages install card is not anchored",
             source(modules).contains("GuideAnchors.PACKAGES_CARD") &&
                 source(modules).contains("GuideAnchor.modifier(guideAnchorId)")
+        )
+        assertTrue(
+            "beat 10: the terminal status chip is not anchored",
+            source(terminalScreen).contains("GuideAnchor.modifier(GuideAnchors.TERMINAL_CHIP)")
         )
         // And no anchor id is left without a publisher (a spotlight on nothing).
         val all = RepoFiles.mainKotlinSources()
             .filter { it.name != "CoachMarkPlan.kt" }
             .joinToString("\n") { it.readText() }
-        for (name in listOf("EDITOR_DRAWER", "EDITOR_RUN", "NAV_HANDLE", "PACKAGES_CARD", "TERMINAL_CHIP")) {
-            assertTrue("GuideAnchors.$name has no publisher in the app", all.contains("GuideAnchors.$name"))
+        for (step in com.codeci.ide.ui.guide.CoachMarkPlan.steps) {
+            // Published either by naming the constant at the control, or by
+            // asking one of the plan's pure helpers (the two drawer beats and the
+            // two tab beats, where "which control" is a decision, not a literal).
+            val byConstant = all.contains("GuideAnchors." + constantFor(step.anchorId))
+            val byHelper = all.contains(helperFor(step.anchorId))
+            assertTrue(
+                "anchor '${step.anchorId}' has no publisher in the app",
+                byConstant || byHelper
+            )
         }
     }
+
+    /** The pure helper that decides whether this anchor is published at all. */
+    private fun helperFor(anchorId: String): String = when (anchorId) {
+        com.codeci.ide.ui.guide.GuideAnchors.DRAWER_PROJECT -> "CoachMarkPlan.drawerProjectAnchor("
+        com.codeci.ide.ui.guide.GuideAnchors.DRAWER_FILE -> "CoachMarkPlan.drawerFileAnchor("
+        com.codeci.ide.ui.guide.GuideAnchors.NAV_TAB_PACKAGES,
+        com.codeci.ide.ui.guide.GuideAnchors.NAV_TAB_TERMINAL -> "CoachMarkPlan.tabAnchorFor("
+        else -> "\u0000nothing-publishes-it"
+    }
+
+    /** `editor_drawer` → `EDITOR_DRAWER`: the constant name for an anchor id. */
+    private fun constantFor(anchorId: String): String =
+        anchorId.split('_').joinToString("_") { it.uppercase() }
 
     @Test
     fun `an anchor withdraws when its control leaves composition`() {
@@ -223,37 +280,110 @@ class GuideWiringTest {
         // boundsInWindow().
         before(src, "Box(modifier = Modifier.fillMaxSize()) {", "Scaffold(")
         before(src, "Scaffold(", "GuideCoachMarks(")
-        // The host asks the plan — it does not re-implement it.
-        assertTrue(src.contains("surface = CoachMarkPlan.surfaceForRoute(currentDestination?.route)"))
-        assertTrue(src.contains("arrivalKey = currentDestination?.route"))
-        assertTrue(src.contains("CoachMarkPlan.serializeSeen(next)"))
+        // The host asks the plan — it does not re-implement it. One tour, so no
+        // `surface` argument and no per-arrival counter any more.
         assertTrue(src.contains("seen = coachSeen"))
+        assertTrue(src.contains("CoachMarkPlan.serializeSeen(next)"))
+        assertFalse(
+            "the two-marks-per-arrival host is gone",
+            src.contains("arrivalKey") || src.contains("surfaceForRoute")
+        )
         val overlay = source(coachMarks)
         assertTrue(overlay.contains("ChromeState.of("))
-        assertTrue(overlay.contains("CoachMarkPlan.stepForArrival(surface, seen, chrome, shownThisArrival)"))
-        assertTrue(overlay.contains("CoachMarkPlan.markSeen(seen, step.id)"))
-        // Two per arrival: the counter resets when the destination changes.
-        assertTrue(overlay.contains("LaunchedEffect(arrivalKey) { shownThisArrival = 0 }"))
-        // Back closes the mark before anything else (Phase 49's BackRouter
-        // inherits this precedence).
-        assertTrue(overlay.contains("BackHandler { finish() }"))
+        assertTrue(overlay.contains("CoachMarkPlan.nextStep(seen, chrome)"))
+        // Tapping the control advances one step; SKIP TOUR / Back end the tour.
+        assertTrue(overlay.contains("onAdvance = { onSeen(CoachMarkPlan.markSeen(seen, step.id)) }"))
+        assertTrue(overlay.contains("CoachMarkPlan.markAllSeen(seen)"))
+        // Back ends the TOUR before anything else (Phase 49's BackRouter inherits
+        // this precedence): a box that Back merely closes would come straight
+        // back, because the plan would still return the same unseen step.
+        assertTrue(overlay.contains("BackHandler { endTour() }"))
+        // The counter that makes it read as one flow instead of ten popups.
+        assertTrue(overlay.contains("stepNumber = CoachMarkPlan.steps.indexOf(step) + 1"))
+        assertTrue(overlay.contains("stepCount = CoachMarkPlan.steps.size"))
     }
 
     @Test
-    fun `a coach mark never swallows the tap on the control it teaches`() {
+    fun `the highlighted control is the only way on, and a tap outside does nothing`() {
         val src = source(coachMarks)
         // The scrim only draws: a Canvas takes no pointer input.
         assertTrue(src.contains("Canvas(Modifier.fillMaxSize())"))
-        // The tap layer consumes ONLY outside the hole, so the highlighted
-        // control performs its own action while the mark closes (45.2 exit 1).
         assertTrue(src.contains("awaitFirstDown(requireUnconsumed = false)"))
-        assertTrue(src.contains("if (!hole.contains(down.position)) down.consume()"))
-        assertTrue(src.contains("onDismiss()"))
+        // Inside the hole the tap is NOT consumed, so the real control performs
+        // its own action, and that same tap advances the tour.
+        assertTrue(src.contains("if (hole.contains(down.position)) {"))
+        assertTrue(src.contains("onAdvance()"))
+        // Outside: the whole gesture is swallowed — no dismiss (owner: "even tap
+        // outside will not end that box") and nothing reaches the UI underneath.
+        assertTrue(src.contains("down.consume()"))
+        assertTrue(src.contains("event.changes.forEach { it.consume() }"))
+        assertTrue(src.contains("if (event.changes.none { it.pressed }) break"))
+        assertFalse("a tap outside must not end the box", src.contains("onDismiss"))
         // The hole is the anchor rect padded, never a hard-coded position: the
         // plan is pure and the layout is observed (tablets, landscape, split).
         assertTrue(src.contains("anchorRect.left - padPx"))
         assertTrue(src.contains("TooltipPlacement.place("))
         assertFalse("the overlay must not hard-code a position", src.contains("IntOffset(0, 0)"))
+    }
+
+    @Test
+    fun `the card has no next button, one exit, and is measured so it fits`() {
+        val src = source(coachMarks)
+        // "remove the next option": the card carries no forward button at all.
+        // Pinned as the BUTTON, not the word: the file's own doc says "the card
+        // has no NEXT/GOT IT", and a pin on the bare string would fail on that
+        // sentence forever.
+        assertFalse("the card still has a GOT IT button", src.contains("Text(\"GOT IT\")"))
+        assertFalse("the card must not offer a NEXT", src.contains("Text(\"NEXT\")"))
+        // The one button left is an exit, and it says what it exits.
+        assertTrue(src.contains("Text(\"SKIP TOUR\")"))
+        assertTrue(src.contains("TextButton(onClick = onSkip)"))
+        assertEquals("exactly one button on the card", 1, Regex("TextButton\\(").findAll(src).count())
+        // The owner's "Not showing the full box guide at one": the height that
+        // places the card is MEASURED, so the clamp branch cannot push a taller
+        // card over its own hole. The 150dp constant is a first-frame seed only.
+        assertTrue(src.contains("onSizeChanged { cardHeightPx = it.height.toFloat() }"))
+        assertTrue(src.contains("height = cardHeightPx"))
+        assertTrue(src.contains("var cardHeightPx by remember(step.id)"))
+    }
+
+    @Test
+    fun `the tour's copy names only labels the product really has`() {
+        // The coach-mark twin of GuideVocabulary: a box that names a project, a
+        // file or a button the app does not have is a lie the user can tap.
+        val copy = com.codeci.ide.ui.guide.CoachMarkPlan.steps
+        // A box is its title AND its body: "Open app.py" names the file in the
+        // title, and pinning only the body would demand the copy say it twice.
+        fun bodyOf(anchorId: String): String = copy.first { it.anchorId == anchorId }
+            .let { it.title + " " + it.body }
+        val demo = source(demoProjects)
+        val names = com.codeci.ide.ui.projects.DemoProjects.NAME
+        val entry = com.codeci.ide.ui.projects.DemoProjects.ENTRY_FILE
+        // demo_flask is the bundled demo's real name, and the box says it.
+        assertTrue(demo.contains("const val NAME = \"$names\""))
+        assertTrue(bodyOf(com.codeci.ide.ui.guide.GuideAnchors.DRAWER_PROJECT).contains(names))
+        // app.py is really what the scaffold writes for python-flask.
+        assertTrue(demo.contains("const val ENTRY_FILE = \"$entry\""))
+        assertTrue(
+            "the scaffold no longer writes $entry for the demo's type",
+            source(scaffold).contains("ScaffoldFile(\"$entry\", FLASK_APP)")
+        )
+        assertTrue(bodyOf(com.codeci.ide.ui.guide.GuideAnchors.DRAWER_FILE).contains(entry))
+        // "Install" is the real confirm label of the Phase 21.2 prompt (a dialog
+        // the scrim cannot point into, so the RUN box names the button instead).
+        assertTrue(source(strings).contains("<string name=\"install_prompt_confirm\">Install</string>"))
+        assertTrue(bodyOf(com.codeci.ide.ui.guide.GuideAnchors.EDITOR_RUN).contains("Install"))
+        // The two tabs the tour walks to are named by their real titles.
+        val routes = source(screenRoutes)
+        assertTrue(routes.contains("\"Packages\""))
+        assertTrue(routes.contains("\"Terminal\""))
+        assertTrue(bodyOf(com.codeci.ide.ui.guide.GuideAnchors.NAV_TAB_PACKAGES).contains("Packages"))
+        assertTrue(bodyOf(com.codeci.ide.ui.guide.GuideAnchors.NAV_TAB_TERMINAL).contains("Terminal"))
+        // The chip's own three words are the labels Phase 44.1 really renders.
+        assertTrue(
+            "the chip box names states the terminal does not render",
+            bodyOf(com.codeci.ide.ui.guide.GuideAnchors.TERMINAL_CHIP).contains("downloading")
+        )
     }
 
     @Test
@@ -270,6 +400,59 @@ class GuideWiringTest {
         assertTrue(block.contains("SetupStage.VERIFYING"))
         assertTrue(block.contains("SetupStage.EXTRACTING"))
         assertFalse("CHECKING is not work", block.contains("SetupStage.CHECKING"))
+    }
+
+    @Test
+    fun `no box is ever cut behind a dialog or a closed drawer`() {
+        // The scrim lives in the activity window; an AlertDialog is a window of
+        // its own. Without these two signals a box would be drawn UNDER the
+        // prompt the user is reading — the owner's "not consistent with flow".
+        val editorSrc = source(editor)
+        assertTrue(
+            "the editor must report its modals",
+            editorSrc.contains("EditorChromeState.setDialogOpen(editorModalOpen)")
+        )
+        val at = editorSrc.indexOf("val editorModalOpen =")
+        assertTrue("the editor's modal list is gone", at >= 0)
+        val end = editorSrc.indexOf("\n    LaunchedEffect(editorModalOpen)", at)
+        assertTrue("the modal list is not followed by its publisher", end > at)
+        val modals = editorSrc.substring(at, end)
+        for (flag in listOf(
+            "showContextPicker",   // the project picker beat 2 opens
+            "installPrompt != null", // the Install? prompt beat 4 opens
+            "runChooserDefault != null", // the RUN ▶ chooser beat 4 can open
+            "showUnsavedDialog",
+            "showSaveToProject"
+        )) {
+            assertTrue("a dialog the editor can open is not reported: $flag", modals.contains(flag))
+        }
+        assertTrue(
+            "the editor must report its drawer",
+            editorSrc.contains("EditorChromeState.setDrawerOpen(editorDrawerOpen)") &&
+                editorSrc.contains("drawerState.currentValue == DrawerValue.Open")
+        )
+        assertTrue(
+            "leaving the editor must clear both signals",
+            editorSrc.contains("EditorChromeState.setDialogOpen(false)") &&
+                editorSrc.contains("EditorChromeState.setDrawerOpen(false)")
+        )
+        // The host hands them to the plan: the dialog suppresses everything, the
+        // drawer decides which beats may show.
+        val main = source(main)
+        assertTrue(main.contains("val editorDialogOpen by EditorChromeState.dialogOpen.collectAsState()"))
+        assertTrue(main.contains("val editorDrawerOpen by EditorChromeState.drawerOpen.collectAsState()"))
+        val blockedAt = main.indexOf("blockedByForeground = exitPromptVisible ||")
+        assertTrue(blockedAt >= 0)
+        assertTrue(
+            "a dialog must block the tour",
+            main.substring(blockedAt, blockedAt + 400).contains("editorDialogOpen ||")
+        )
+        assertTrue(main.contains("drawerOpen = editorDrawerOpen,"))
+        assertTrue(source(coachMarks).contains("drawerOpen = drawerOpen"))
+        // And the pure plan is what acts on them.
+        val planSrc = source(plan)
+        assertTrue(planSrc.contains("if (step.inDrawer != chrome.drawerOpen) {"))
+        assertTrue(planSrc.contains("val inDrawer: Boolean = false"))
     }
 
     // ---- the house rules ---------------------------------------------------

@@ -892,6 +892,11 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     val inEditor = currentDestination?.route
         ?.startsWith(Screen.Editor.route.substringBefore("?")) == true
     val editorKeysVisible by EditorChromeState.keysVisible.collectAsState()
+    // Phase 45.2 (device round) — the two facts the tour cannot observe from
+    // anchors: is a dialog open (a box would be cut underneath it), and is the
+    // drawer open (only its own two beats may show then).
+    val editorDialogOpen by EditorChromeState.dialogOpen.collectAsState()
+    val editorDrawerOpen by EditorChromeState.drawerOpen.collectAsState()
     var navRevealed by remember { mutableStateOf(false) }
     LaunchedEffect(inEditor) {
         if (!inEditor) navRevealed = false
@@ -1307,15 +1312,21 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
         // never while another surface owns the screen: the exit survey, safe
         // mode, or a Phase 44 download that is actually moving (CHECKING is a
         // startup transient, not work, so it does not suppress a mark).
+        // Phase 45.2 (device round) — ONE ordered tour, not two-marks-per-screen:
+        // the plan walks ☰ → project → app.py → RUN ▶ → preview Back → the reveal
+        // handle → Packages tab → its install card → Terminal tab → its chip, and
+        // the highlighted control is the only forward button. No `surface` and no
+        // per-arrival counter any more; the pure plan decides from the anchors
+        // that are really laid out.
         GuideCoachMarks(
-            surface = CoachMarkPlan.surfaceForRoute(currentDestination?.route),
             seen = coachSeen,
             blockedByForeground = exitPromptVisible ||
                 com.codeci.ide.ui.crash.SafeMode.active ||
+                editorDialogOpen ||
                 setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.DOWNLOADING ||
                 setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.VERIFYING ||
                 setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.EXTRACTING,
-            arrivalKey = currentDestination?.route,
+            drawerOpen = editorDrawerOpen,
             onSeen = { next ->
                 coachSeen = next
                 scope.launch {
@@ -1362,11 +1373,24 @@ private fun FlatBottomBar(
                 // Phase 40.5 — 0.65 measured 3.53:1 on the LIGHT nav bar; 0.8 is 6.86:1
                 // dark and 5.23:1 light, so the labels stay readable in both themes.
                 val idleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                // Phase 45.2 — the tour's "small tour of package and terminal"
+                // walks the user by spotlighting the tabs themselves, so the bar
+                // publishes exactly the two rects the tour can use (the pure
+                // plan maps route → anchor; the other three tabs publish
+                // nothing). When Phase 32.1 hides the bar these withdraw, which
+                // is why the reveal-handle step comes first in the tour.
+                val tabAnchorId = CoachMarkPlan.tabAnchorFor(screen.route)
+                val tabModifier = Modifier
+                    .weight(1f)
+                    .clickable { onNavigate(screen) }
+                    .padding(vertical = 7.dp)
+                val anchoredTab: Modifier = if (tabAnchorId != null) {
+                    tabModifier.then(GuideAnchor.modifier(tabAnchorId))
+                } else {
+                    tabModifier
+                }
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onNavigate(screen) }
-                        .padding(vertical = 7.dp),
+                    modifier = anchoredTab,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(

@@ -279,8 +279,82 @@ infrastructure, not app code.
 
 CI round 1 is ✅ GREEN, so what is left is **only** the device condition: the
 eight rows of 45.1/45.2 plus the fresh-install rows are written as
-[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G14) and have **not** been run. Until the owner reports them, Phase 45 is 🚧
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) and have **not** been run — and note that **round 2
+rewrote those rows as G1-G23** (the tour replaced the five spotlights), so use the current file, not this
+round-1 list. Until the owner reports them, Phase 45 is 🚧
 IMPLEMENTED, not ✅ COMPLETE, and nothing here may be described as tested on
 hardware. Phase 44's round 2 is still pending too, and the two compose on one
 phone: the guide shows **before** the terminal-first divert, and slide 3 is the
 one that explains the download the divert is about to show.
+
+---
+
+## Round 2 (2026-09-12) — the owner ran it: 45.2 rebuilt as ONE TOUR
+
+Round 1 shipped five spotlights, two per screen per visit, each with a **GOT IT**
+button. The owner installed it and reported:
+
+> *"Working but some problem the guided box are not consistent with flow like / Not
+> showing the full box guide at one and you didn't add all / Ok listen remove the
+> next option only the guide will show click the option where showing the guide to
+> the next / Ok now make it like demo_flask is always present so whatever user chose
+> to start guide the user to start the demo project from the editor only"*
+
+Four causes were found in round 1's own code before anything was changed (the full
+diagnosis is in [`PART_45_2_COACH_MARKS.md`](PART_45_2_COACH_MARKS.md) §Round 2):
+a fresh install blocks every box while Phase 44's download runs; `MAX_PER_ARRIVAL =
+2` plus the per-surface filter meant most beats could not appear in one sit; the
+card height was a **150dp estimate**, so a taller card was clamped over its own
+hole; and a box could be cut **behind a dialog or a closed drawer** (the scrim draws
+in the activity window, an `AlertDialog` is its own window, and M3 keeps a closed
+drawer's rows laid out).
+
+### What changed
+
+| Round 1 | Round 2 |
+|---|---|
+| 5 marks, ≤2 per screen per visit, surface-filtered | **10 beats in one ordered tour**, no cap, no surface filter (`MAX_PER_ARRIVAL` and `surfaceForRoute` deleted) |
+| Card with **GOT IT**; tap outside closes | **No forward button.** Tap the highlighted control = its own action + next beat. Tap outside = **nothing** (the whole gesture is swallowed). **SKIP TOUR** / back end the tour |
+| Card height estimated at 150dp | **Measured** (`onSizeChanged`); the constant only seeds the first frame |
+| Boxes could appear behind a dialog / closed drawer | `EditorChromeState.dialogOpen` blocks everything; `drawerOpen` decides drawer beats vs the rest |
+| Marks numbered by nothing | `Tour · n of 10` on every card (the slides' `Guide · n of 5` shape) |
+| `demo_flask` seeded once per install | **Always present** — re-seeded when missing, never overwritten |
+
+The tour is the flow the owner dictated: ☰ → change the project to `demo_flask` →
+`app.py` → RUN ▶ → (Install Python) → the Flask preview → close → the reveal-tabs
+handle → a small tour of Packages → Terminal. Five new anchors were added for it
+(the drawer's project header, the drawer's `app.py` row, the preview's Back, and the
+bottom bar's Packages and Terminal tabs); the five round-1 ids are unchanged, so an
+upgraded install keeps the beats it already saw and gains the new ones.
+
+**One limit, recorded not hidden:** a box cannot point into an `AlertDialog` (its own
+window), so the two beats that live in dialogs — the "Open folder" project picker and
+the *Install Python?* prompt — are taught by the copy of the beat before them
+(*"choose demo_flask"*, *"tap **Install**"*). Making every anchor screen-absolute is
+the follow-up if the owner wants a hole on **Install** itself.
+
+**One decision the owner delegated** (*"Don't understand you do as you like"*): Phase
+44.1's terminal-first divert **stays**. A fresh install still watches the download
+first, because beat 4 runs `app.py` and needs Python, and the visible download is the
+owner's own Phase 44 requirement. The tour starts when the editor opens.
+
+### Files touched in round 2
+
+`ui/guide/CoachMarkPlan.kt` (the tour: beats, `waits`, `inDrawer`, `nextStep`,
+`markAllSeen`, `tabAnchorFor`, the two drawer helpers, `ChromeState` simplified to
+one anchor set) · `ui/guide/CoachMarks.kt` (card without a forward button, measured
+height, inert outside taps, `Tour · n of 10`) · `ui/editor/EditorChromeState.kt`
+(`dialogOpen`, `drawerOpen`) · `ui/screens/EditorScreen.kt` (reports both, clears
+them on dispose) · `ui/components/EditorProjectDrawer.kt` (two anchors) ·
+`ui/screens/WebPreviewScreen.kt` (Back anchor) · `MainActivity.kt` (two tab anchors,
+the new host call) · `ui/projects/DemoProjects.kt` (always present, `ENTRY_FILE`) ·
+tests: `CoachMarkPlanTest` 17, `GuideWiringTest` 15, `DemoProjectSeedTest` 7 (now in
+the local harness too) → **175 host cases green locally**. 45.1 is untouched by
+decision ([`PART_45_1_GUIDE_SLIDES.md`](PART_45_1_GUIDE_SLIDES.md) §Round 2 note).
+
+### What is still open
+
+CI on the round-2 commit, then the device round: rows **G1-G23** in
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G23 the tour). Test it
+after **Settings → About → Reset tips**, or the beats round 1 already marked seen
+will not come back. Phase 44's round 2 is still pending on the same phone.

@@ -252,3 +252,20 @@ nouns and ignores prose · an invented feature is caught · every proof exists i
 the real source · no proof is left over · commands are both named and real. Plus
 the wiring half in `GuideWiringTest` (gate order, single writer, no copy in the
 Compose edge, three doors, no route, atomic reset, readers outside the store).
+
+---
+
+## Round 2 note (2026-09-12) — 45.1 is deliberately UNCHANGED
+
+The owner's device round rebuilt 45.2 (see
+[`PART_45_2_COACH_MARKS.md`](PART_45_2_COACH_MARKS.md) §"Round 2"), and was asked
+how far *"remove the next option"* goes. The answer kept this part exactly as built:
+
+> *"Keep the 5 slides, boxes lose their button. Slides stay as they are (GOT IT /
+> START CODING / SKIP)."*
+
+So: five slides, `Guide · n of 5`, a progress bar, SKIP on every slide including the
+first, back = SKIP, `guide_completed` written only by a tap, and the same three doors
+back. One consistency change rides along, in the other layer only: the tour's cards
+now carry `Tour · n of 10` in the same shape as `Guide · 1 of 5`, so the two layers
+read as one guide instead of a deck plus ten popups.

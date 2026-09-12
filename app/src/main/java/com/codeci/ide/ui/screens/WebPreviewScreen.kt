@@ -48,6 +48,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.ServerSharePanel
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.services.LanAddressProvider
 import com.codeci.ide.ui.services.LanSharePolicy
 import com.codeci.ide.ui.services.ServerHost
@@ -170,7 +172,13 @@ fun WebPreviewScreen(
                 Text(htmlFile?.name ?: (fileName ?: if (isLive) "Live server" else "Preview"))
             },
             navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
+                IconButton(
+                    // Phase 45.2 — step 5 of the guided tour: the demo's Flask
+                    // page is being served by the phone itself, and this is the
+                    // way back to the code.
+                    modifier = GuideAnchor.modifier(GuideAnchors.PREVIEW_CLOSE),
+                    onClick = onNavigateBack
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
             },

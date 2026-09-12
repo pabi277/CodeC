@@ -1,38 +1,38 @@
-# CodeC Phase 45 — device round (the guide: slides + coach marks)
+# CodeC Phase 45 — device round (the guide: slides, then the tour)
 
-> **Status:** 📋 WRITTEN, **NOT RUN** (2026-09-12). Phase 45 is 🚧 IMPLEMENTED on
-> `arena/01a0955a-codec` (tip `3c597b2`) with **CI round 1 ✅ GREEN** (`Build APK`
-> `34698914219`: assemble + `testDebugUnitTest` + `lintDebug`); nothing in this
-> file may be described as tested on hardware until the owner reports these rows.
+> **Status:** 📋 ROUND 2 WRITTEN, **NOT RUN** (2026-09-12). Round 1 was run by the
+> owner and came back with four reports; 45.2 was rebuilt as **one ordered tour**
+> in response (see [`README.md`](README.md) §"Round 2"). 45.1's slides are
+> unchanged — the owner's own decision: *"Slides stay as they are (GOT IT / START
+> CODING / SKIP)."*
 >
-> **The build to install:** the `CodeC-IDE-debug` artifact of run **`34698914219`**
-> (`CodeC-IDE-1.3.17-universal-debug.apk`, 25,661,856 B) — or the release
-> `CodeC-IDE-1.3.17-universal.apk` (6,664,474 B) from the same run. G1 needs a
-> **fresh install** (`pm clear com.codeci.ide` or uninstall first), because the
-> guide only shows when `guide_completed` is still false.
+> **The build to install:** the newest green `Build APK` run on
+> `arena/01a0955a-codec` **after the round-2 commit** (Actions → the run →
+> **Artifacts** → `CodeC-IDE-debug`). Round 1's build (`34698914219`) does NOT
+> contain the tour — installing it repeats the round-1 behaviour.
 >
-> **Why a device round:** both parts are *first-impression* features. A host test
-> can prove the plan is right (which slide, which anchor, which order) and the
-> source pins can prove the Android edge asks it — only a phone can say whether a
-> new user actually reads slide 1, whether the spotlight lands on the ☰ instead of
-> next to it, and whether the card is reachable on a 5" screen at the largest font.
+> **Two ways to get a first run** (rows G1-G5 and the whole tour need one):
+> install as a **fresh install** (uninstall first, or a second profile), **or**
+> Settings → About → **Reset tips** (+ **Show the welcome screen again** for the
+> tiles), then kill and relaunch.
+>
+> **If you already ran round 1 on this phone:** the five beats you saw keep their
+> ids, so an upgraded install shows only the NEW beats. Tap **Reset tips** first
+> and the whole tour starts at 1 of 10 — that is the way to test this round.
 
 ## Before you start
 
-1. **Build:** the newest green `Build APK` run on `arena/01a0955a-codec`
-   (Actions → the run → **Artifacts** → `CodeC-IDE-debug`, or `CodeC-IDE-release`).
-2. **Rows G1-G5 need a first run.** Two ways to get one:
-   - install the APK as a **fresh install** (uninstall first, or use a second
-     profile / another phone), **or**
-   - in the installed build: Settings → About → **Reset tips** *and* **Show the
-     welcome screen again**, then kill and relaunch the app.
-3. **Phase 44 shares the phone.** If the Linux tools are not working, the app opens
-   the Terminal tab first *after* the guide — that is intended: the guide explains
-   the download the terminal is about to show. Phase 44's own rows are
+1. **Phase 44 shares the phone.** On a fresh install the Linux tools download
+   first, and while a download is actually moving **no box appears at all** (a
+   spotlight over a progress bar is noise). The tour starts when the editor opens
+   after the download settles. Phase 44's own rows are
    [`../chat-phase44/DEVICE_ROUND.md`](../chat-phase44/DEVICE_ROUND.md) (R1-R8,
    then D1-D12) and are still pending.
+2. **The tour needs `demo_flask`.** It is seeded on first list and — new in round
+   2 — **re-seeded whenever it is missing** (row G22), because beats 2-3 teach it
+   by name.
 
-## The rows
+## The rows — 45.1, the five slides (unchanged)
 
 | # | What to do | PASS looks like |
 |---|---|---|
@@ -44,42 +44,64 @@
 | G6 | Settings → About → **Help & guide** | The guide opens **at slide 1**; finishing or skipping it changes nothing (it stays re-openable) |
 | G7 | Projects tab → ⋮ → **Guide** | Same guide, same behaviour (with a project open *and* with none) |
 | G8 | Editor → ☰ → footer → **Guide** | Same guide; the drawer's footer row is labelled **Guide** with a book icon |
-| G9 | Reset tips → kill → relaunch → arrive at the **Editor** | **At most two** spotlights: ☰ (*Your files*), then RUN ▶ (*Run your code*) — a dark scrim with a hole around the control and a card beside it |
-| G10 | On a spotlight, tap **the highlighted control itself** | The control does its own job (the drawer opens / the file runs) **and** the mark closes |
-| G11 | On a spotlight, tap anywhere else, or **GOT IT**, or back | The mark closes; nothing else is tapped through |
-| G12 | In the editor, bring up the keyboard so the tab bar hides and the **Show tabs** handle appears | The *The tabs are here* mark appears **only now** — never while the tab bar is visible, never pointing at empty space |
-| G13 | First arrival at **Terminal**, then at **Packages** | Terminal: the status chip spotlit (*What it is doing*). Packages: the first install card spotlit (*One-time download*). Each **once** — second arrival shows nothing |
-| G14 | Settings → About → **Reset tips** → kill → relaunch | The slides return **and** every coach mark returns. No project, file, theme or other setting changed |
+
+## The rows — 45.2, the tour (round 2: ten beats, one flow, no next button)
+
+Walk it in order; the counter on each card tells you where you are.
+
+| # | What to do | PASS looks like |
+|---|---|---|
+| G9 | After the slides, arrive at the **Editor** | **Tour · 1 of 10** — a dark scrim, a hole exactly around **☰**, a card beside it: *Your files*. The card's **only** button is **SKIP TOUR**: no NEXT, no GOT IT |
+| G10 | Tap the highlighted **☰** | The drawer opens (its own action) **and** the box moves on its own to the project name: **2 of 10** *Change project* |
+| G11 | Tap the project name, then choose **demo_flask** | The "Open folder" picker opens with **no box cut into it** (a dialog is its own window — the tour teaches it in copy instead). After choosing, the editor is on `demo_flask` |
+| G12 | Tap **☰** again | **3 of 10** *Open app.py* — the hole is on the `app.py` row and on **no other row** |
+| G13 | Tap `app.py`, then tap the highlighted **RUN ▶** (**4 of 10**) | `app.py` opens; RUN runs it. If Python is missing the *Install Python?* prompt appears with **no box over it**; its body already told you to tap **Install**. The install/run streams into the Output Panel |
+| G14 | Let the Flask server start and the preview open | **5 of 10** *Your app is running* on the preview's **Back** arrow; tapping it closes the preview and the tour carries on |
+| G15 | In the editor, bring up the keyboard so the tab bar hides | **6 of 10** *The tabs are here* on the thin reveal handle — **only** while the handle is really on screen, never at the visible tab bar |
+| G16 | Tap the handle | The bar comes back and **7 of 10** *Packages* is on the **Packages tab itself**; tapping it navigates to Packages |
+| G17 | On the Packages tab | **8 of 10** *One-time download* on the first install card |
+| G18 | Continue | **9 of 10** *Terminal* on the **Terminal tab** → tap it → **10 of 10** *What it is doing* on the terminal's status chip. After beat 10 no box ever returns on its own |
+| G19 | On any box, tap **outside** the hole | **Nothing happens.** The box stays exactly as it was, and the tap does NOT reach the UI under the scrim (owner: *"even tap outside will not end that box"*) |
+| G20 | On any box, tap **SKIP TOUR** (or press back) | The **whole tour** ends — no further boxes on any tab, ever, until Reset tips. One tap, no confirmation, nothing returns on its own |
+| G21 | While a box is pending, open an editor dialog (⋮ menu, Save to project, Go to line, the Install? prompt) | **No box is drawn under the dialog.** It comes back when the dialog closes, on the same beat (nothing was consumed) |
+| G22 | Projects tab → ⋮ on **demo_flask** → Delete | It is **back on the next list refresh** (pull to refresh, or leave and return to the tab). A demo you edit is never touched — only a missing one is re-seeded |
+| G23 | Settings → About → **Reset tips** → kill → relaunch | The slides return **and** the tour restarts at **1 of 10**. No project, file, theme or other setting changed |
 
 ## Also worth one look each (not rows)
 
-- **Small screen / largest font:** slide 5 and a coach-mark card are both fully
-  readable, the copy column scrolls if it must, and the button is reachable
-  (45.1 exit 5).
-- **Both themes and safe mode:** the guide and the marks are legible in light and
-  dark; **in safe mode (crash-loop start) neither appears** — and a normal launch
-  afterwards still shows the guide once.
-- **Rotation / split screen:** a spotlight's hole stays on its control and the card
-  stays on screen after a rotation (anchors are window rects, placement is pure).
-- **An upgrade, not a fresh install:** an existing user sees the guide exactly once
-  after updating, with SKIP visible on slide 1.
-- **A download in flight:** while the Phase 44 bar is actually downloading, no
-  coach mark appears; when it settles, the pending mark does (nothing was
-  consumed).
-- **A dialog or sheet open:** the mark is covered, not stacked on top, and it is
-  still pending when the dialog closes.
+- **The card is fully on screen** — round 1's *"Not showing the full box guide at
+  one"*: the card's height is now measured instead of guessed, so on a 5" screen
+  at the largest font the whole card (counter, title, body, SKIP TOUR) is visible
+  and never covers its own hole.
+- **Small screen / largest font:** slide 5 and every box are readable; the slides'
+  copy column scrolls if it must and the button stays reachable (45.1 exit 5).
+- **Both themes and safe mode:** legible in light and dark; **in safe mode
+  (crash-loop start) neither the slides nor a box appears** — and a normal launch
+  afterwards still shows them once.
+- **Rotation / split screen:** a hole stays on its control and the card stays on
+  screen after a rotation (anchors are window rects, placement is pure).
+- **A download in flight:** while the Phase 44 bar is really downloading,
+  verifying or extracting, no box appears; when it settles the pending beat does.
+- **Leaving mid-tour:** kill the app after beat 4 and relaunch — the tour resumes
+  at beat 5 (beats are recorded one at a time; nothing repeats, nothing is lost).
+- **Wandering off-order:** go straight to the Terminal tab before finishing the
+  editor's beats — no box appears there (beat 1 waits for the editor's ☰), and the
+  terminal beats are still pending when you get back to the flow.
 
 ## If a row fails
 
 Say which row, in your own words, and **COPY the logs**: Settings → **Logs** →
-COPY (or the crash dialog → COPY REPORT). For a misplaced spotlight, one extra
-detail helps more than any log: **which control was lit, and where the hole
-actually was** (above/below/left of it).
+COPY (or the crash dialog → COPY REPORT). For a misplaced box, one detail helps
+more than any log: **which control was lit, and where the hole actually was**
+(above/below/left of it, or on the wrong control entirely).
 
 ## Exit condition (from the part docs)
 
 ```text
-45.1  rows G1-G8   (guide once, never again, three doors, upgrade path, small screen)
-45.2  rows G9-G14  (two per surface, tap-through, the handle waits, once each, reset)
-PASS = all fourteen, plus Phase 44's round 2 on the same phone.
+45.1  rows G1-G8    (guide once, never again, three doors, upgrade path)
+45.2  rows G9-G23   (ten beats in order, the control is the only way on,
+                     outside taps inert, SKIP TOUR ends it, no box behind a
+                     dialog or a closed drawer, demo_flask always present,
+                     Reset tips restarts everything)
+PASS = all twenty-three, plus Phase 44's round 2 on the same phone.
 ```

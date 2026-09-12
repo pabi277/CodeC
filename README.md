@@ -122,7 +122,7 @@ Offline during setup: `CodeC needs the network once to finish setting up its
 Linux tools. C works offline right now.` — tap **⬇** in the terminal toolbar
 when you are back online.
 
-#### The guide: five slides, then five spotlights (Phase 45)
+#### The guide: five slides, then one tour (Phase 45)
 
 The first launch teaches the app in two layers, and neither one nags:
 
@@ -130,17 +130,26 @@ The first launch teaches the app in two layers, and neither one nags:
   *RUN ▶ compiles and runs (C works offline)* → *one download, one time* →
   *a real terminal* → *projects vs single files* — with **SKIP** on every slide
   (back is SKIP too). They appear once; an upgrade shows them once as well.
-- **Five spotlights** (coach marks), the first time you reach each screen: the
-  editor's **☰** and **RUN ▶**, the **Show tabs** handle that appears while you
-  type, the **Packages** install card (*adding a language downloads once*), and
-  the terminal's **status chip**. At most two per visit, one per control for the
-  app's life, and a spotlight never points at a control that is not on screen.
-  Tapping the highlighted control does its own job *and* closes the mark.
+- **One guided tour** of ten boxes over the real controls, in the order you would
+  actually use them: **☰** → *change project* → **demo_flask → app.py** → **RUN ▶**
+  (and the *Install Python?* prompt it can lead to) → the **preview's Back** once
+  your Flask page is live → the **Show tabs** handle → the **Packages** tab → its
+  install card → the **Terminal** tab → its **status chip**. Every box is labelled
+  `Tour · n of 10`, and **the highlighted control is the only way forward**: there
+  is no next button, a tap outside does nothing at all, and one tap on **SKIP TOUR**
+  (or the back button) ends the tour for good. Each box is shown once.
+- A box is never cut on a control you cannot see. It waits for the real control to
+  be on screen, and it never appears behind a dialog, behind the ☰ drawer, over the
+  exit survey, in safe mode, or while a download is in flight.
+
+**demo_flask is always there.** The bundled Flask demo the tour walks you through is
+re-created if you delete it — your own edits to it are never touched — so the tour
+can never teach a tap that leads nowhere.
 
 **See the guide again** from any of three places: Settings → About → **Help &
 guide**, the Projects tab's **⋮ → Guide**, or the editor's **☰** drawer footer →
-**Guide**. Settings → About → **Reset tips** brings the slides and every
-spotlight back (it changes nothing else — no project, file or other setting).
+**Guide**. Settings → About → **Reset tips** brings the slides and the whole tour
+back (it changes nothing else — no project, file or other setting).
 
 ### Package & Command Hub (Packages tab)
 

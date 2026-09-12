@@ -23,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +39,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -47,30 +47,39 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
 /**
- * Phase 45.2 — the coach marks' Android edge: where a control is, and what the
- * spotlight looks like. All the *decisions* live in the pure [CoachMarkPlan];
- * this file only observes layout and draws.
+ * Phase 45.2 — the tour's Android edge: where a control is, and what a box looks
+ * like. All the *decisions* live in the pure [CoachMarkPlan]; this file only
+ * observes layout and draws.
  *
- * Three rules the drawing must not break:
+ * Four rules the drawing must not break (all owner-given, all pinned by
+ * `GuideWiringTest`):
  *  - **never point at nothing** — an anchor publishes its window rect while it
  *    is laid out and withdraws it when it leaves composition, so a control that
- *    is gone (the tab bar's "Show tabs" handle, which exists only while the bar
- *    is hidden) is not "visible" and cannot be spotlit;
- *  - **never trap the user** — the scrim only draws; a tap inside the hole is
- *    left unconsumed so the real control performs its own action, and a tap
- *    anywhere else ends the mark;
+ *    is gone (the tab bar's reveal handle, a drawer row, the preview's Back) is
+ *    not "visible" and cannot be spotlit;
+ *  - **the highlighted control is the only forward button** — a tap inside the
+ *    hole is left unconsumed so the real control performs its own action, and
+ *    that same tap advances the tour. The card has no NEXT/GOT IT;
+ *  - **a tap outside does nothing** — it is swallowed. It neither dismisses the
+ *    box (owner: *"even tap outside will not end that box"*) nor reaches the UI
+ *    under the scrim. The exits are SKIP TOUR, one tap, and Back;
  *  - **never cover the screen's own work** — the host passes
  *    [ChromeState.blockedByForeground] and the plan returns nothing while it is
  *    set (the exit survey, safe mode, an in-flight Phase 44 download).
  */
 
 /**
- * The window rects of the controls a coach mark may spotlight, keyed by
- * [GuideAnchors] id. A process-wide bridge in the codebase's existing shape
- * (`SetupNoticeBridge`, `EditorChromeState`, `IncomingImportBridge`): screens
- * publish without a parameter being threaded through five composables, and the
- * overlay reads them from the root. Snapshot-state backed, so publishing a rect
- * recomposes the overlay.
+ * The window rects of the controls a box may spotlight, keyed by [GuideAnchors]
+ * id. A process-wide bridge in the codebase's existing shape (`SetupNoticeBridge`,
+ * `EditorChromeState`, `IncomingImportBridge`): screens publish without a
+ * parameter being threaded through five composables, and the overlay reads them
+ * from the root. Snapshot-state backed, so publishing a rect recomposes the
+ * overlay — which is what makes the tour follow the user (tap ☰ → the drawer's
+ * rows publish → the next box is already positioned).
+ *
+ * Dialogs are the one thing this cannot see: an `AlertDialog` is its own window,
+ * so a rect measured inside one is dialog-relative and would put the hole in the
+ * wrong place (PART_45_2, deviation 9).
  */
 object GuideAnchorRegistry {
 
@@ -117,61 +126,73 @@ object GuideAnchor {
 }
 
 /**
- * The whole coach-mark surface for one arrival: which step the plan allows, the
- * per-arrival counter, and the overlay. Composed once, at the root, ABOVE the
- * scaffold — the tab bar's reveal handle lives in the scaffold's `bottomBar`, so
- * an overlay inside the content column could never spotlight it.
+ * The whole tour surface: which step the plan allows right now, and the overlay.
+ * Composed once, at the root, ABOVE the scaffold — the tab bar and its reveal
+ * handle live in the scaffold's `bottomBar`, so an overlay inside the content
+ * column could never spotlight them.
  *
- * @param surface the current destination's teaching surface, or null
- * @param seen step ids already shown (from `coach_marks_seen_csv`)
- * @param arrivalKey changes when the destination changes; resets the counter
+ * There is no per-arrival counter any more (the owner's *"you didn't add all"*):
+ * one tour, in order, as far as the screen allows.
+ *
+ * @param seen step ids already taught (from `coach_marks_seen_csv`)
+ * @param blockedByForeground a dialog, the exit survey, safe mode or a moving
+ *   Phase 44 download owns the screen: no box at all
+ * @param drawerOpen the editor's ☰ drawer is open, so only its own two beats may
+ *   show and every other beat waits for it to close
  * @param onSeen called with the new seen-set; the host persists it
  */
 @Composable
 fun GuideCoachMarks(
-    surface: GuideSurface?,
     seen: Set<String>,
     blockedByForeground: Boolean,
-    arrivalKey: Any?,
+    drawerOpen: Boolean,
     onSeen: (Set<String>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Reading the registry here is what makes the overlay follow layout: a
-    // control appearing (the keyboard hiding the tab bar) recomposes this.
+    // control appearing (the drawer opening, the keyboard hiding the tab bar)
+    // recomposes this and the tour takes its next step.
     val chrome = ChromeState.of(
         visibleAnchors = GuideAnchorRegistry.visibleIds(),
-        blockedByForeground = blockedByForeground
+        blockedByForeground = blockedByForeground,
+        drawerOpen = drawerOpen
     )
-    var shownThisArrival by remember { mutableStateOf(0) }
-    LaunchedEffect(arrivalKey) { shownThisArrival = 0 }
+    val step = CoachMarkPlan.nextStep(seen, chrome) ?: return
+    val anchorRect = GuideAnchorRegistry.rect(step.anchorId) ?: return
 
-    val step = CoachMarkPlan.stepForArrival(surface, seen, chrome, shownThisArrival)
-    LaunchedEffect(step?.id) {
-        if (step != null) shownThisArrival++
-    }
-    if (step == null) return
+    // Back ends the TOUR, not just this box: a box that Back closes and the plan
+    // immediately returns would be a loop, and the no-nag law wants one exit that
+    // really exits. Settings → Reset tips is the door back.
+    val endTour: () -> Unit = { onSeen(CoachMarkPlan.markAllSeen(seen)) }
+    BackHandler { endTour() }
 
-    val anchorRect = GuideAnchorRegistry.rect(step.anchorId)
-    val finish: () -> Unit = { onSeen(CoachMarkPlan.markSeen(seen, step.id)) }
-    // Back closes the mark before anything else (Phase 49's BackRouter will own
-    // this precedence; until then it is a fact, pinned by GuideWiringTest).
-    BackHandler { finish() }
-    if (anchorRect != null) {
-        CoachMarkOverlay(
-            step = step,
-            anchorRect = anchorRect,
-            onDismiss = finish,
-            modifier = modifier
-        )
-    }
+    CoachMarkOverlay(
+        step = step,
+        stepNumber = CoachMarkPlan.steps.indexOf(step) + 1,
+        stepCount = CoachMarkPlan.steps.size,
+        anchorRect = anchorRect,
+        onAdvance = { onSeen(CoachMarkPlan.markSeen(seen, step.id)) },
+        onSkip = endTour,
+        modifier = modifier
+    )
 }
 
-/** The spotlight: a scrim with a hole, a card beside it, one tap to finish. */
+/**
+ * One box: a scrim with a hole, a card beside it, and the tour's single forward
+ * gesture — tap the highlighted control.
+ *
+ * [stepNumber]/[stepCount] are on the card so the tour reads as one flow instead
+ * of ten unrelated popups (the owner's *"not consistent with flow"*), in the same
+ * "Guide · 1 of 5" shape the slides use.
+ */
 @Composable
 fun CoachMarkOverlay(
     step: CoachStep,
+    stepNumber: Int,
+    stepCount: Int,
     anchorRect: Rect,
-    onDismiss: () -> Unit,
+    onAdvance: () -> Unit,
+    onSkip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -187,15 +208,20 @@ fun CoachMarkOverlay(
             right = anchorRect.right + padPx,
             bottom = anchorRect.bottom + padPx
         )
+        // The card's height is MEASURED, not estimated: the owner's *"Not showing
+        // the full box guide at one"* was a 150dp guess placing a taller card, so
+        // the clamp branch pushed it over its own hole. The estimate only seeds
+        // the first frame; `onSizeChanged` below replaces it, and the card's size
+        // does not depend on its offset, so there is no layout feedback loop.
+        var cardHeightPx by remember(step.id) {
+            mutableStateOf(with(density) { CARD_HEIGHT_DP.toPx() })
+        }
         val placement = TooltipPlacement.place(
             anchor = GuideRect(hole.left, hole.top, hole.right, hole.bottom),
             screen = screen,
             tooltip = GuideSize(
                 width = with(density) { CARD_WIDTH_DP.toPx() },
-                // An estimate, not a measurement: measuring the card and then
-                // placing it is a layout feedback loop for a gap that reads the
-                // same either way (PART_45_2 records the simplification).
-                height = with(density) { CARD_HEIGHT_DP.toPx() }
+                height = cardHeightPx
             ),
             gap = with(density) { CARD_GAP_DP.toPx() },
             margin = with(density) { SCREEN_MARGIN_DP.toPx() }
@@ -244,17 +270,26 @@ fun CoachMarkOverlay(
             )
         }
 
-        // Tap handling, above the scrim and below the card: inside the hole the
-        // tap is NOT consumed (the real control performs its own action, and the
-        // lesson is over); anywhere else it is consumed and simply ends.
+        // Tap handling, above the scrim and below the card:
+        //  - inside the hole → NOT consumed, so the real control performs its own
+        //    action, and the tour advances (this is the only forward gesture);
+        //  - outside → the whole gesture is swallowed. No dismiss, no pass-through.
         Box(
             Modifier
                 .fillMaxSize()
-                .pointerInput(hole) {
+                .pointerInput(hole, step.id) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        onDismiss()
-                        if (!hole.contains(down.position)) down.consume()
+                        if (hole.contains(down.position)) {
+                            onAdvance()
+                        } else {
+                            down.consume()
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                event.changes.forEach { it.consume() }
+                                if (event.changes.none { it.pressed }) break
+                            }
+                        }
                     }
                 }
         )
@@ -262,12 +297,19 @@ fun CoachMarkOverlay(
         Card(
             modifier = Modifier
                 .offset { IntOffset(placement.left.roundToInt(), placement.top.roundToInt()) }
-                .width(CARD_WIDTH_DP),
+                .width(CARD_WIDTH_DP)
+                .onSizeChanged { cardHeightPx = it.height.toFloat() },
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Tour \u00B7 $stepNumber of $stepCount",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = step.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -284,8 +326,9 @@ fun CoachMarkOverlay(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("GOT IT")
+                    // The only button on the card, and it is an exit, not a "next".
+                    TextButton(onClick = onSkip) {
+                        Text("SKIP TOUR")
                     }
                 }
             }
@@ -299,6 +342,8 @@ private val HOLE_STROKE_DP = 2.dp
 private const val SCRIM_ALPHA = 0.6f
 private const val HIGHLIGHT_ALPHA = 0.9f
 private val CARD_WIDTH_DP = 260.dp
+
+/** First-frame seed only; replaced by the measured height after layout. */
 private val CARD_HEIGHT_DP = 150.dp
 private val CARD_GAP_DP = 12.dp
 private val SCREEN_MARGIN_DP = 16.dp

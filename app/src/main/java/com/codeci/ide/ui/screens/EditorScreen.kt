@@ -410,8 +410,32 @@ fun EditorScreen(
     // the 5-tab bar can hide (one meaning row: code → strip → keys). Cleared
     // on dispose so no other surface inherits a stale "keys visible" signal.
     LaunchedEffect(codecKeysUp) { EditorChromeState.setKeysVisible(codecKeysUp) }
+    // Phase 45.2 (device round) — the guided tour must never cut a box behind
+    // something the editor owns. The scrim is drawn in the ACTIVITY window while
+    // an AlertDialog is a window of its own, so a box "on" RUN ▶ while the
+    // Install? prompt is up is a hole underneath what the user is looking at —
+    // the owner's *"the guided box are not consistent with flow"*. Same for the
+    // drawer: M3 keeps its rows laid out while it is closed, so an anchor rect
+    // alone does not prove the row is visible. The editor reports both facts and
+    // the pure plan decides (CoachMarkPlan.nextStep).
+    val editorModalOpen = showUnsavedDialog || showRenameDialog || showMoreMenu ||
+        showSaveToProject || showContextPicker || showGoToLineDialog ||
+        showCodecConfig || showDiagnosticsDialog ||
+        installPrompt != null || runChooserDefault != null
+    LaunchedEffect(editorModalOpen) { EditorChromeState.setDialogOpen(editorModalOpen) }
+    // `isAnimationRunning` is what keeps the closing animation honest: while the
+    // drawer slides shut its rows are still laid out, and `currentValue` only
+    // flips at the END of the animation, so without it a box could be cut on a
+    // control the panel is still covering for ~200ms.
+    val editorDrawerOpen = drawerState.currentValue == DrawerValue.Open ||
+        drawerState.isAnimationRunning
+    LaunchedEffect(editorDrawerOpen) { EditorChromeState.setDrawerOpen(editorDrawerOpen) }
     DisposableEffect(Unit) {
-        onDispose { EditorChromeState.setKeysVisible(false) }
+        onDispose {
+            EditorChromeState.setKeysVisible(false)
+            EditorChromeState.setDialogOpen(false)
+            EditorChromeState.setDrawerOpen(false)
+        }
     }
     var codecKeysLayer by remember { mutableStateOf(KeyboardLayers.LETTERS) }
     var codecKeysShift by remember { mutableStateOf(ShiftState.OFF) }

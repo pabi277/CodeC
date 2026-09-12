@@ -49,6 +49,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.guide.CoachMarkPlan
+import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.projects.DemoProjects
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.components.FileIconView
@@ -106,11 +109,24 @@ fun EditorProjectDrawer(
             .padding(top = 24.dp)
     ) {
         // ---- header: project name + source-control glyph ------------------
+        // Phase 45.2 — step 2 of the guided tour ("change the project folder to
+        // demo_flask"). Published only while a project is open and it is not the
+        // demo already: a box telling you to switch to where you already are is
+        // noise. The picker this opens is an AlertDialog (its own window), so the
+        // box names demo_flask in its copy instead of cutting a hole over a row
+        // inside the dialog — PART_45_2, deviation 9.
+        val projectAnchorId = CoachMarkPlan.drawerProjectAnchor(projectName, DemoProjects.NAME)
+        val headerModifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSwitchProject)
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
+        val anchoredHeader: Modifier = if (projectAnchorId != null) {
+            headerModifier.then(GuideAnchor.modifier(projectAnchorId))
+        } else {
+            headerModifier
+        }
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onSwitchProject)
-                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
+            modifier = anchoredHeader,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
@@ -241,6 +257,16 @@ fun EditorProjectDrawer(
                 items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
                     DrawerRow(
                         entry = entry,
+                        // Phase 45.2 — step 3 of the tour: the demo's own entry
+                        // file, and only it (a box on some other row would teach
+                        // the wrong tap).
+                        guideAnchorId = CoachMarkPlan.drawerFileAnchor(
+                            projectName = entry.projectName,
+                            relativePath = entry.relativePath,
+                            isDirectory = entry.isDirectory,
+                            demoProjectName = DemoProjects.NAME,
+                            demoEntryFile = DemoProjects.ENTRY_FILE
+                        ),
                         expanded = !collapsedDirs.contains(entry.relativePath),
                         selected = entry.relativePath == selectedPath,
                         isLaunchDefault = entry.relativePath == launchDefault,
@@ -301,6 +327,8 @@ private enum class RowAction {
 @Composable
 private fun DrawerRow(
     entry: EditorFileEntry,
+    /** Phase 45.2 — non-null on the one row the guided tour spotlights. */
+    guideAnchorId: String? = null,
     expanded: Boolean,
     selected: Boolean,
     isLaunchDefault: Boolean,
@@ -311,10 +339,19 @@ private fun DrawerRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    // Phase 45.2 — the anchored row publishes its rect while it is laid out and
+    // withdraws it when the drawer closes, so the tour can never point at a row
+    // that is not on screen.
+    val rowAnchor: Modifier = if (guideAnchorId != null) {
+        GuideAnchor.modifier(guideAnchorId)
+    } else {
+        Modifier
+    }
     Box {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(rowAnchor)
                 .padding(horizontal = 6.dp, vertical = 1.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(

@@ -72,7 +72,11 @@ Delivered (all client-only — **no `[repo-build]` dispatch**):
   can be opened and RUN ▶ immediately — no wizard steps. Seeding is pure and
   host-tested (`DemoProjects.ensure`): runs once per app install (marker
   `.demo-flask-seeded-v1`), never overwrites a user's `demo_flask`, and
-  deleting it does not make it reappear. `ProjectScaffold.writeFiles` is now
+  deleting it does not make it reappear. **(Superseded 2026-09-12 by Phase 45
+  round 2, owner: *"make it like demo_flask is always present"* — the marker is
+  now a record, not a gate, and a missing `demo_flask` is seeded again because the
+  guided tour's beats 2-3 teach this project by name. "Never overwrites a user's
+  `demo_flask`" is unchanged.)** `ProjectScaffold.writeFiles` is now
   the single write path for ProjectManager, the wizard and the demo.
 - **D10 — Auto projects (owner request, 2026-08-31: "no selection … just
   created and run any type").** The New Project wizard's default is now

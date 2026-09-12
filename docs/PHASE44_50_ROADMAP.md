@@ -22,11 +22,18 @@
 > `4bf3c4c`) is ✅ GREEN; **round 2
 > ([`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md) R1-R8, then
 > D1-D12) is the gate.** Phase **45 is 🚧 IMPLEMENTED** as well (both layers the
-> owner chose: the five-slide first-run guide with three doors back to it, and five
-> coach marks that may only point at an anchor the layout says is really on
-> screen); **CI round 1 ✅ GREEN** (`34698914219` on tip `3c597b2`: assemble +
-> `testDebugUnitTest` + `lintDebug`, release APK +12,792 B / +0.19%), device round
-> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G14 NOT run.
+> owner chose: the five-slide first-run guide with three doors back to it, and
+> coach marks that may only point at an anchor the layout says is really on screen;
+> **CI round 1 ✅ GREEN** — `34698914219` on tip `3c597b2`: assemble +
+> `testDebugUnitTest` + `lintDebug`, release APK +12,792 B / +0.19%). **The owner
+> then ran round 1 on his phone and 45.2 was rebuilt as ONE TEN-BEAT TOUR** (his
+> flow: ☰ → change project to `demo_flask` → `app.py` → RUN ▶ → Install → the Flask
+> preview → close → the reveal-tabs handle → a small tour of Packages and Terminal;
+> no next button — the highlighted control is the only way on, outside taps are
+> inert, `demo_flask` is always present). Round 2 is implemented with **175 host
+> cases green locally**; CI on the round-2 commit is pending and device round
+> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G23** is NOT
+> run (start it from Settings → About → Reset tips).
 > 46-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
@@ -70,9 +77,9 @@ The numbers **are** the order. Why this order:
    missing). It is also the only phase in the series with a data-loss-shaped
    bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
    all**, `UserlandInstaller.kt:377-395`).
-2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12** (`arena/01a0955a-codec`;
-   both parts, 50 new host cases = 159 green locally, CI ✅ GREEN round 1
-   `34698914219`, device round
+2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 2**
+   (`arena/01a0955a-codec`; both parts, 175 host cases green locally, CI ✅ GREEN
+   round 1 `34698914219` and round 2 pending, device round
    [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G14 not
    run). First impression for every tester you have not met yet,
    and its slide 3 is where the *"one-time download, don't close the app"*
