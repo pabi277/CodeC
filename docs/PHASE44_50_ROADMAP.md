@@ -14,9 +14,13 @@
 > sources).
 >
 > **Status (2026-09-12):** Phase **44 is 🚧 IMPLEMENTED** on
-> `arena/01a0955a-codec` (CI pending; the device round
-> [`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md) has **not**
-> been run). 45-50 are still plan-only. Phase 43 is
+> `arena/01a0955a-codec`; CI is ✅ GREEN (`34693462725`) and the owner **ran
+> device round 1** on that artifact — it 🔴 **failed four rows** (a marker-only
+> prefix read as READY, a setup bar with no working action, and
+> `restoreState = true` sending "go to the terminal" to the editor). All three
+> root causes are fixed and pinned by tests; **round 2
+> ([`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md) R1-R8, then
+> D1-D12) is the gate.** 45-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
 > [`chat-phase43/README.md`](chat-phase43/README.md).
@@ -51,7 +55,7 @@ Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
 The numbers **are** the order. Why this order:
 
 1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
-   2026-09-12** (`arena/01a0955a-codec`; both parts, 100 host cases,
+   2026-09-12** (`arena/01a0955a-codec`; both parts, 109 host cases,
    CI pending, device round not run). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git

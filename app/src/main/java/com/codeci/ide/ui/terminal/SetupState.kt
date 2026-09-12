@@ -331,7 +331,13 @@ object SetupGatePolicy {
                     "Setup didn't finish — not enough storage for the Linux tools. " +
                         "Free some space, then open the Terminal tab and tap ⬇."
                 SetupIssue.BROKEN_USERLAND ->
-                    "Setup didn't finish — the Linux tools can't start on this device. " +
+                    // Covers both shapes of the same fault: a tree whose shell
+                    // cannot launch, and the owner's device-round-1 phone — a
+                    // valid install marker on top of a prefix with no working
+                    // `bin/pkg` (a pre-44 kill wrote the marker before the swap).
+                    // "can't start on this device" read like an unsupported
+                    // phone, which is a different sentence with a different fix.
+                    "Setup didn't finish — the Linux tools aren't working. " +
                         "Open the Terminal tab and tap ⬇ to install them again."
                 SetupIssue.CORRUPT ->
                     "The download didn't verify (corrupt or truncated), so CodeC discarded it. " +
@@ -400,6 +406,45 @@ object SetupGatePolicy {
     /** True while the bar should be on screen (the caller may add a dismiss ✕). */
     fun barVisible(progress: InstallProgress, facts: SetupFacts): Boolean =
         barText(progress, facts) != null
+
+    /**
+     * May the user put the bar away? (device round 1, 2026-09-12)
+     *
+     * The owner's report: *"The top a massage 'C works right now…' But it's not
+     * closing or opening terminal."* The bar was showing a **settled** state
+     * (READY with a prefix the facts did not call usable) in which the old rule
+     * — dismissible only when settled *and* usable — left no ✕ that did anything
+     * and no action button at all: a wall with a sentence on it.
+     *
+     * The law now: **in flight means not dismissible** (hiding a running
+     * download is the exact bug this phase exists to remove), and **settled
+     * means dismissible whatever the verdict** — READY, FAILED, UNSUPPORTED and
+     * READY-but-unusable alike. Nothing is lost by dismissing a settled bar: the
+     * gate still refuses at the point of use with the same sentence, and the
+     * bar comes back as soon as the text changes (a new install, a repair).
+     */
+    fun barDismissAllowed(progress: InstallProgress): Boolean = progress.settled
+
+    /**
+     * Which tab a cold start lands on (device round 1, 2026-09-12).
+     *
+     * The owner's row 1 verbatim: *"If it opens the terminal 1st and show a
+     * warning don't close the terminal while userland is installi[ng]"*. The
+     * first implementation diverted only on the launch where the first-run
+     * welcome handed over, so an updated install with an unfinished or broken
+     * userland still opened the editor — and the bar on top of it said "open
+     * Terminal and tap ⬇", which is what he reported.
+     *
+     * The rule is now about the **state of the tools**, not about which launch
+     * it is: not usable → the Terminal tab, because that is where the progress,
+     * the "don't close" line and the ⬇ retry live. A device with no bootstrap
+     * for its ABI is excluded ([abiSupported] false): there is nothing to
+     * install there, so diverting would strand the user on a tab that can never
+     * finish. An in-flight *upgrade* of a working prefix keeps `usable` true
+     * (see [userlandUsable]), so it never hijacks the launch.
+     */
+    fun startOnTerminal(usable: Boolean, abiSupported: Boolean): Boolean =
+        !usable && abiSupported
 
     /**
      * The terminal's own "don't close" warning — the owner's idea, kept almost

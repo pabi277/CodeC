@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,12 +38,18 @@ import com.codeci.ide.ui.terminal.SetupStage
  * Packages tab never learned it was running, swiped the app away, and every
  * later `pkg install` failed with `pkg: not found`.
  *
- * Laws (all pinned by `SetupGatePolicyTest`):
+ * Laws (all pinned by `SetupGatePolicyTest` + `SetupGateWiringTest`):
  *  - it NEVER blocks the UI — the owner's row is about *knowing*, not waiting,
  *    and C works with no setup at all (TCC is in the APK);
- *  - it is not dismissible while the setup is in flight: dismissing it would
- *    recreate exactly the bug it exists to remove. Once the setup has settled
- *    (READY / FAILED / UNSUPPORTED) the ✕ appears;
+ *  - **it is always actionable**: the whole bar is one tap to the Terminal tab
+ *    and the VIEW SETUP button is there in every stage. Device round 1 (owner:
+ *    *"it's not closing or opening terminal"*) found a state — settled but not
+ *    usable — where the button was hidden and the ✕ cleared a note that was not
+ *    there, so the bar was a wall with a sentence on it;
+ *  - it is not dismissible while the setup is in flight
+ *    ([SetupGatePolicy.barDismissAllowed]): dismissing a running download would
+ *    recreate exactly the bug this phase exists to remove. Once settled, the ✕
+ *    really removes the bar until its text changes;
  *  - the sentence comes from [SetupGatePolicy.barText] — the same vocabulary
  *    the Packages-tab refusal and the terminal's "don't close" bar use, so
  *    there is one truth in the whole app;
@@ -55,7 +62,8 @@ fun SetupBar(
     facts: SetupFacts,
     note: String? = null,
     onViewSetup: () -> Unit = {},
-    onDismissNote: () -> Unit = {}
+    /** `null` = not dismissible (the setup is in flight); non-null shows the ✕. */
+    onDismiss: (() -> Unit)? = null
 ) {
     val stageText = SetupGatePolicy.barText(progress, facts)
     val text = note ?: stageText ?: return
@@ -80,7 +88,13 @@ fun SetupBar(
     }
 
     Surface(color = container, contentColor = onContainer) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                // The owner's row 1 in one tap: the WHOLE bar goes to the setup,
+                // not just a small button (device round 1).
+                .clickable(onClickLabel = "Open the Terminal tab") { onViewSetup() }
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -102,14 +116,13 @@ fun SetupBar(
                         .weight(1f)
                         .padding(vertical = 6.dp)
                 )
-                // The owner's row 1 in one tap: get to where the setup is.
-                if (inFlight || progress.stage == SetupStage.FAILED) {
-                    TextButton(onClick = onViewSetup) {
-                        Text("VIEW", color = onContainer)
-                    }
+                // Always present: there is no state in which "go and look at the
+                // setup" is the wrong answer.
+                TextButton(onClick = onViewSetup) {
+                    Text("VIEW SETUP", color = onContainer)
                 }
-                if (!inFlight) {
-                    IconButton(onClick = onDismissNote) {
+                if (onDismiss != null) {
+                    IconButton(onClick = onDismiss) {
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Dismiss",

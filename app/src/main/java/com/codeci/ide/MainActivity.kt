@@ -760,22 +760,46 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     // graph and throw away the user's navigation state.
     val setupProgress by terminalViewModel.setupProgress.collectAsState()
     val setupFacts by terminalViewModel.setupFacts.collectAsState()
-    val startDestination = remember {
-        val setupFirstRun = setupDiverted &&
-            !setupFacts.usable &&
-            setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.UNSUPPORTED
-        when {
-            setupFirstRun -> Screen.Terminal.createRoute(null)
-            launchState != null -> Screen.Editor.createRoute(launchState.fileName, launchState.projectName)
-            else -> Screen.FileManager.route
+    val startDestination = remember(launchState) {
+        launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
+            ?: Screen.FileManager.route
+    }
+    // Phase 44.1 (device round 1) — "it opens the terminal 1st", decided from
+    // the DISK, not from the ViewModel's first (possibly stale) facts, and done
+    // with the SAME navigate() the bottom tab bar uses. Two reasons for the
+    // shape: a `startDestination` that has to resolve a route carrying
+    // arguments is graph-construction risk we do not need to take, and the
+    // owner's report was about an UPDATED install (no first-run welcome), where
+    // a rule keyed on "is this the welcome hand-over" could not fire at all.
+    val setupLaunchDivert = remember {
+        val prefix = ShellEnvironment.prefixDir(activity.filesDir)
+        val phase = runCatching {
+            com.codeci.ide.ui.terminal.SetupLedgerPrefs.ledger(activity).read().phase
+        }.getOrDefault(com.codeci.ide.ui.terminal.SetupPhase.IDLE)
+        setupDiverted || com.codeci.ide.ui.terminal.SetupGatePolicy.startOnTerminal(
+            usable = com.codeci.ide.ui.terminal.SetupGatePolicy.userlandUsable(prefix, phase),
+            abiSupported = com.codeci.ide.ui.terminal.UserlandManifest.archName() != null
+        )
+    }
+    LaunchedEffect(setupLaunchDivert) {
+        if (!setupLaunchDivert) return@LaunchedEffect
+        if (navController.currentDestination?.route.orEmpty().startsWith("terminal")) {
+            return@LaunchedEffect
+        }
+        navController.navigate(Screen.Terminal.createRoute(null)) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = false
         }
     }
-    // The welcome promised a starter file. Once the setup settles (finished,
-    // failed, or impossible on this device) open it — but only while the user
-    // is still on the tab we diverted them to, so nothing is ever yanked out
-    // from under a tap. C works offline either way (TCC is in the APK), which
-    // is why a FAILED setup still releases the user into the editor.
-    LaunchedEffect(setupDiverted, setupProgress.stage) {
+    // The welcome promised a starter file. Once the setup settles, open it — but
+    // only while the user is still on the tab we diverted them to (nothing is
+    // yanked out from under a tap), and never while the setup is settled-but-
+    // unusable: in that state the terminal is the only way out, so sending the
+    // user to the editor is how the bar becomes a wall (device round 1).
+    // C works offline either way (TCC is in the APK), which is why a FAILED or
+    // UNSUPPORTED setup still releases the user into the editor.
+    LaunchedEffect(setupDiverted, setupProgress.stage, setupFacts.usable) {
         if (!setupDiverted) return@LaunchedEffect
         val target = launchState
         if (target == null) {
@@ -783,6 +807,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             return@LaunchedEffect
         }
         if (!setupProgress.settled) return@LaunchedEffect
+        val stuck = !setupFacts.usable &&
+            setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.FAILED &&
+            setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.UNSUPPORTED
+        if (stuck) return@LaunchedEffect
         val current = navController.currentDestination?.route.orEmpty()
         if (!current.startsWith("terminal")) return@LaunchedEffect
         setupDiverted = false
@@ -907,7 +935,16 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                                 saveState = true
                             }
                             launchSingleTop = true
-                            restoreState = true
+                            // Phase 44 device round 1 (owner: *"terminal not
+                            // opening editor opening"*): `restoreState = true`
+                            // restores the WHOLE saved sub-stack for that
+                            // destination, so a user who had opened a file after
+                            // using the terminal came back to the EDITOR when
+                            // they tapped Terminal. A tab tap means "show me
+                            // this tab", so the Terminal tab never restores;
+                            // every other tab keeps the pre-44 behaviour
+                            // (Phase 49 is the systematic nav pass).
+                            restoreState = screen !is Screen.Terminal
                         }
                         // A tab tap is a deliberate navigation: the reveal is
                         // over (leaving the editor also resets it below).
@@ -944,18 +981,42 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             // appears once it has settled, and always for the boot repair's
             // one-time note.
             val setupNote by com.codeci.ide.ui.terminal.SetupNoticeBridge.message.collectAsState()
-            com.codeci.ide.ui.components.SetupBar(
-                progress = setupProgress,
-                facts = setupFacts,
-                note = setupNote,
-                onViewSetup = {
-                    navController.navigate(Screen.Terminal.createRoute(null)) {
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onDismissNote = { com.codeci.ide.ui.terminal.SetupNoticeBridge.clear() }
-            )
+            // Device round 1: the bar was a wall in the settled-but-unusable
+            // state — no action button, and a ✕ that cleared a note which was
+            // not there. Now: one tap anywhere goes to the setup, and the ✕
+            // (only while settled, per SetupGatePolicy.barDismissAllowed) really
+            // removes the bar until its TEXT changes, so a new install or a
+            // repair brings it back.
+            val setupBarText = setupNote
+                ?: com.codeci.ide.ui.terminal.SetupGatePolicy.barText(setupProgress, setupFacts)
+            var dismissedSetupBar by remember { mutableStateOf<String?>(null) }
+            val goToSetup: () -> Unit = {
+                navController.navigate(Screen.Terminal.createRoute(null)) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    // No restoreState: "VIEW SETUP" means the terminal, not
+                    // whatever happened to be above it last time (device round 1).
+                    restoreState = false
+                }
+            }
+            val dismissSetupBar: () -> Unit = {
+                if (setupNote != null) {
+                    com.codeci.ide.ui.terminal.SetupNoticeBridge.clear()
+                } else {
+                    dismissedSetupBar = setupBarText
+                }
+            }
+            val setupBarDismissible = setupNote != null ||
+                com.codeci.ide.ui.terminal.SetupGatePolicy.barDismissAllowed(setupProgress)
+            if (setupBarText != null && setupBarText != dismissedSetupBar) {
+                com.codeci.ide.ui.components.SetupBar(
+                    progress = setupProgress,
+                    facts = setupFacts,
+                    note = setupNote,
+                    onViewSetup = goToSetup,
+                    onDismiss = if (setupBarDismissible) dismissSetupBar else null
+                )
+            }
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
@@ -984,7 +1045,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     onOpenInTerminal = { cmd ->
                         navController.navigate(Screen.Terminal.createRoute(cmd)) {
                             launchSingleTop = true
-                            restoreState = true
+                            // Phase 44 device round 1: this hand-off carries a
+                            // command that only the terminal can run, so it must
+                            // arrive there — never on a restored sub-stack.
+                            restoreState = false
                         }
                     },
                     onOpenPreview = { previewProject, name ->
@@ -1126,7 +1190,12 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                                 saveState = true
                             }
                             launchSingleTop = true
-                            restoreState = true
+                            // Phase 44 device round 1: the Packages tab's
+                            // "VIEW SETUP" must arrive at the terminal. With
+                            // restoreState the previously saved sub-stack came
+                            // back on top of it — an editor the user had opened
+                            // earlier — which is what the owner reported.
+                            restoreState = false
                         }
                     }
                 )

@@ -258,6 +258,15 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
+        // Phase 44.2 (device round 1) — the boot repair runs on a daemon thread
+        // in MainActivity.onCreate and can clear a stale ledger AFTER this
+        // ViewModel has already read it. Take one more look from the disk when
+        // the repair is done, or a phone whose tools are fine keeps showing the
+        // "still need one install" bar until something else happens to refresh.
+        viewModelScope.launch(Dispatchers.IO) {
+            SetupRecoveryGate.awaitFinished()
+            refreshSetupFromDiskWhenIdle()
+        }
         // Auto-start the first session exactly as before Phase 7.
         viewModelScope.launch(Dispatchers.IO) { startInternal() }
     }
@@ -536,7 +545,32 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 setupLedger.clear()
                 publishSetup(setupTracker.ready(status.releaseTag))
             }
-            is UserlandStatus.AlreadyInstalled -> publishSetup(setupTracker.ready("installed"))
+            is UserlandStatus.AlreadyInstalled -> {
+                // 44.2's whole principle, applied to the transition and not only
+                // to the facts: `installIfNeeded(force = false)` answers
+                // AlreadyInstalled from the MARKER alone (the fast warm-open
+                // path), and a marker written by a pre-44 build — or by a kill
+                // after the marker but before the swap landed — can sit on top of
+                // a tree with no working `bin/pkg`. That is the owner's device
+                // report of 2026-09-12: the bar said "the Linux tools still need
+                // one install" forever, because the stage said READY while the
+                // disk said not usable. The disk decides.
+                val phase = runCatching { setupLedger.read().phase }
+                    .getOrDefault(SetupPhase.IDLE)
+                if (SetupGatePolicy.userlandUsable(prefixDir, phase)) {
+                    publishSetup(setupTracker.ready("installed"))
+                } else {
+                    target.notice(
+                        "userland: marker present but the tools do not run — tap ⬇ to install again"
+                    )
+                    publishSetup(
+                        setupTracker.fail(
+                            "installed marker but bin/pkg does not run",
+                            SetupIssue.BROKEN_USERLAND
+                        )
+                    )
+                }
+            }
             is UserlandStatus.SkippedOffline -> {
                 // Was: "userland: offline — using built-in cc (TCC)" and
                 // nothing else — a sentence that reads like success while the
@@ -576,6 +610,27 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             com.codeci.ide.ui.terminal.SetupStateBridge.publish(facts)
         }
         announceSetupNotification(progress)
+    }
+
+    /**
+     * Re-reads stage + capabilities from the disk once the boot repair has
+     * finished. Never touches an install that is actually in flight: while the
+     * tracker says DOWNLOADING/EXTRACTING the installer owns the state.
+     */
+    private fun refreshSetupFromDiskWhenIdle() {
+        try {
+            val current = _setupProgress.value
+            if (current.inFlight) return
+            val phase = runCatching { setupLedger.read().phase }.getOrDefault(SetupPhase.IDLE)
+            if (SetupGatePolicy.userlandUsable(prefixDir, phase) &&
+                current.stage != SetupStage.READY
+            ) {
+                publishSetup(setupTracker.ready("installed"))
+            }
+            refreshSetupFacts()
+        } catch (t: Throwable) {
+            AppLogger.w("TerminalViewModel", "post-repair setup refresh failed: ${t.message}")
+        }
     }
 
     /** Re-reads the filesystem capabilities (after an install, a repair, …). */

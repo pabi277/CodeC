@@ -193,7 +193,7 @@ new   ui/terminal/SetupLedgerPrefs.kt   48   the SharedPreferences store (commit
 new   ui/terminal/SetupStateBridge.kt   35   VM → VM facts
 new   ui/terminal/SetupNoticeBridge.kt  30   VM → activity notice
 new   ui/components/SetupBar.kt        133   the bar (all tabs, percentage only)
-new   6 test classes + 1 appended      ~1700  100 host cases
+new   6 test classes + 1 appended      ~1700  109 host cases
 mod   TerminalViewModel · UserlandInstaller · TerminalForegroundService · MainActivity
 mod   TerminalScreen · TerminalUx · ModulesScreen · EditorViewModel
 ```
@@ -204,10 +204,10 @@ does not scan), no Settings control was added (so `SETTINGS_AUDIT.md` is
 unchanged), no permission was added, and the notification small icon is still
 `ic_stat_codec`. `MANAGE_EXTERNAL_STORAGE` is not involved.
 
-**Host pre-validation (`rule.md` §9, optional):** 100 cases green locally through
+**Host pre-validation (`rule.md` §9, optional):** 109 cases green locally through
 `kotlinc` + `jdk4py` + shimmed `org.junit`/`flow`
-(`SetupGatePolicyTest` 21 · `SetupProgressParseTest` 22 · `SetupLedgerTest` 13 ·
-`SwapRecoveryTest` 16 · `UserlandUsableTest` 9 · `SetupGateWiringTest` 15 ·
+(`SetupGatePolicyTest` 25 · `SetupProgressParseTest` 22 · `SetupLedgerTest` 13 ·
+`SwapRecoveryTest` 16 · `UserlandUsableTest` 9 · `SetupGateWiringTest` 20 ·
 `TerminalStatusLabelTest` 4). The Compose/JNI edges cannot compile in this
 sandbox at all (no `android.jar`), so **CI's `Build APK` is the executor of
 record** and this round is a pre-check only — never a claim of passing tests.
@@ -234,7 +234,7 @@ constructor takes `ledger: SetupLedger? = null` and forwards it
 
 Pinned so it cannot regress: `SetupGateWiringTest`'s new
 `the installer's Context constructor accepts and forwards the ledger`
-(**100 host cases**, green locally before the re-push). Lesson recorded as
+(**109 host cases**, green locally before the re-push). Lesson recorded as
 TROUBLESHOOTING §33 — *a cascade of "Unresolved reference" errors on one
 receiver is a single constructor/signature fault; fix the first error and the
 rest disappear.*
@@ -271,7 +271,7 @@ java.nio.file (API 26). */`), with two API-1 mechanisms that are together
 Both are pinned by two new `SwapRecoveryTest` cases with **real symlinks** on a
 real filesystem (`a symlink shaped like an orphan is never scanned`,
 `a same-named symlink target survives the sweep because delete() unlinks first`)
-→ **100 host cases**, green locally before the re-push. Runbook:
+→ **109 host cases**, green locally before the re-push. Runbook:
 TROUBLESHOOTING §34.
 
 ### CI round 3 — `34693462725` (tip `ba51382`): **observed green, not re-read**
@@ -291,10 +291,60 @@ re-read. Until the next session can run
 this line reads *observed green, unconfirmed* — not "CI ✅ GREEN". Nothing was
 merged, no PR was opened, and the branch was not pushed again after `ba51382`.
 
-**What is still open:** the nine-row exit condition below is a **device**
-condition and has not been run — no device, no emulator, no Gradle in this
-sandbox. Until the owner runs it, Phase 44 is 🚧 IMPLEMENTED, not ✅ COMPLETE,
-and nothing here may be described as tested on hardware.
+### Device round 1 — 🔴 the owner ran it (2026-09-12) and four rows failed
+
+The owner installed the round-3 artifact on his phone (an **updated** install, so
+no first-run welcome) and reported: *"I couldn't not open the terminal it's
+opening the editor"* · *"The top a massage 'C works right now. The linux tool
+need one install- open terminal and tap download'"* · *"But it's not closing or
+opening terminal"* · *"Every package saying view setup but terminal not opening
+editor opening"*. Full record with the eight re-test rows:
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md#round-1-result--failed-on-4-of-the-owners-own-rows-2026-09-12).
+
+Three root causes, all provable from the code, all fixed in this round:
+
+1. **A marker is not a prefix.** `installIfNeeded(force = false)` answers
+   `AlreadyInstalled` from the release **marker** alone, and the VM turned that
+   into stage `READY`. His phone has a marker written by a *pre-44* build (which
+   wrote it **before** the swap) over a prefix with no working `bin/pkg` — the
+   exact half-finished state 44.2 exists to repair. `READY` (marker) + not usable
+   (disk) = the sentence he quoted, permanently. Now the `AlreadyInstalled`
+   branch asks the disk and publishes `FAILED(BROKEN_USERLAND)` when the marker
+   lies, the wording says *"the Linux tools aren't working"* (not *"can't start on
+   this device"*, which reads like an unsupported phone), and
+   `refreshSetupFromDiskWhenIdle()` takes a second look once the boot repair is
+   finished so a stale ledger cannot pin the bar either.
+2. **The bar was a wall in exactly that state.** The action rendered only
+   `if (inFlight || stage == FAILED)` and the ✕ cleared a *note* that was not
+   there. Now the whole bar is one tap to the terminal, **VIEW SETUP** is always
+   rendered, and the ✕ is real (`SetupGatePolicy.barDismissAllowed` =
+   `progress.settled`; the dismissal remembers the bar's text, so a changed state
+   brings it back).
+3. **`restoreState = true` restores a whole sub-stack, not a tab.** Navigating to
+   the terminal with `popUpTo(start) { saveState = true }` + `restoreState = true`
+   put back a saved stack whose top was an editor the user had opened above the
+   terminal — so "go to the terminal" arrived at the editor. Every navigation
+   that means *show me the terminal* (setup bar, Packages' VIEW SETUP, the
+   editor's terminal hand-off, the launch divert, the bottom bar's Terminal tab)
+   now uses `restoreState = false`; the other four tabs keep their pre-44
+   behaviour and Phase 49 remains the systematic navigation pass.
+
+Plus the launch-tab gap behind *"it's opening the editor"*: the divert was keyed
+on the welcome hand-over, so an updated install never got "terminal first". It is
+now `SetupGatePolicy.startOnTerminal(usable, abiSupported)` decided
+**synchronously from the disk** and applied with a `navigate()` after the first
+composition — not by putting an argument-carrying route into `startDestination`.
+
+**Deliberately not done:** an automatic re-download when the marker-only state is
+detected (~40 MB on possibly mobile data, and this phase's law is *no surprises*).
+The one-tap path is signposted instead; if the owner wants auto-repair on launch
+it is one call (`installUserland(force = true)`) in that branch.
+
+**What is still open:** the exit condition is a **device** condition. Round 1 was
+run by the owner and **failed four rows** (above); the fixes are implemented and
+**109 host cases** are green locally, but round 2 has not been run and CI has not
+yet built the fixes. Until the owner reports round 2, Phase 44 is 🚧 IMPLEMENTED,
+not ✅ COMPLETE, and nothing here may be described as tested on hardware.
 
 ## Sources
 

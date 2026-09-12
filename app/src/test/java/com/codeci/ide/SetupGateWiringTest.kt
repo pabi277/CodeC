@@ -32,6 +32,7 @@ class SetupGateWiringTest {
     private val ledgerPrefs = "app/src/main/java/com/codeci/ide/ui/terminal/SetupLedgerPrefs.kt"
     private val terminalScreen = "app/src/main/java/com/codeci/ide/ui/screens/TerminalScreen.kt"
     private val fgs = "app/src/main/java/com/codeci/ide/ui/services/TerminalForegroundService.kt"
+    private val setupBar = "app/src/main/java/com/codeci/ide/ui/components/SetupBar.kt"
 
     private fun before(src: String, first: String, then: String) {
         val a = src.indexOf(first)
@@ -42,6 +43,110 @@ class SetupGateWiringTest {
     }
 
     // ---- Packages tab -------------------------------------------------------
+
+    // ---- device round 1 (owner report, 2026-09-12) -------------------------
+
+    @Test
+    fun `the setup bar is always actionable and its close button really closes it`() {
+        val bar = source(setupBar)
+        // "it's not closing or opening terminal": the VIEW button used to be
+        // rendered only `if (inFlight || stage == FAILED)`, so the
+        // settled-but-unusable state had a sentence and no way to act on it.
+        assertTrue("the bar must offer the setup action", bar.contains("TextButton(onClick = onViewSetup)"))
+        val before = bar.substring(0, bar.indexOf("TextButton(onClick = onViewSetup)"))
+        val tail = before.substring(maxOf(0, before.length - 400))
+        assertFalse(
+            "the VIEW action must not be conditional on the stage (context: …${tail.takeLast(80)})",
+            tail.contains("if (inFlight")
+        )
+        // The whole bar is one tap, not just a small button.
+        assertTrue(bar.contains(".clickable(onClickLabel = \"Open the Terminal tab\") { onViewSetup() }"))
+        // The ✕ is driven by a dismiss the CALLER owns (note cleared, or the
+        // bar's text remembered as dismissed) — never by a no-op note clear.
+        assertTrue(bar.contains("onDismiss: (() -> Unit)? = null"))
+        assertTrue(bar.contains("if (onDismiss != null)"))
+        assertFalse("the dead note-only dismiss is gone", bar.contains("onDismissNote"))
+
+        val main = source(this.main)
+        assertTrue(main.contains("SetupGatePolicy.barDismissAllowed(setupProgress)"))
+        assertTrue(main.contains("var dismissedSetupBar by remember { mutableStateOf<String?>(null) }"))
+        assertTrue(main.contains("dismissedSetupBar = setupBarText"))
+        assertTrue(main.contains("setupBarText != dismissedSetupBar"))
+        assertTrue(main.contains("onDismiss = if (setupBarDismissible) dismissSetupBar else null"))
+    }
+
+    @Test
+    fun `every go-to-the-terminal navigation arrives at the terminal`() {
+        val main = source(this.main)
+        // "terminal not opening editor opening": `restoreState = true` restores
+        // the WHOLE saved sub-stack for a destination, so an editor the user had
+        // opened above the terminal came back on top of it. Every navigation
+        // that means "show me the terminal" must not restore.
+        val needle = "navigate(Screen.Terminal.createRoute("
+        var index = main.indexOf(needle)
+        var count = 0
+        while (index >= 0) {
+            count++
+            val block = main.substring(index, minOf(main.length, index + 400))
+            assertFalse(
+                "terminal navigation at $index may restore a stale sub-stack: $block",
+                block.contains("restoreState = true")
+            )
+            index = main.indexOf(needle, index + 1)
+        }
+        assertTrue("expected at least four terminal navigations, found $count", count >= 4)
+        // The bottom tab bar itself: the Terminal tab never restores.
+        assertTrue(main.contains("restoreState = screen !is Screen.Terminal"))
+    }
+
+    @Test
+    fun `a cold start is diverted to the terminal from the disk, not from a flag`() {
+        val main = source(this.main)
+        assertTrue(main.contains("SetupGatePolicy.startOnTerminal("))
+        assertTrue(main.contains("SetupGatePolicy.userlandUsable(prefix, phase)"))
+        assertTrue(main.contains("UserlandManifest.archName() != null"))
+        assertTrue(main.contains("SetupLedgerPrefs.ledger(activity).read().phase"))
+        // The start destination itself stays the pre-44 one: a route with
+        // arguments as `startDestination` is graph-construction risk, and a
+        // navigate() after the first composition is the proven path.
+        assertTrue(main.contains("val startDestination = remember(launchState) {"))
+        assertTrue(main.contains("?: Screen.FileManager.route"))
+        assertFalse(
+            "a route with arguments must not become the graph's start destination",
+            main.contains("setupFirstRun -> Screen.Terminal.createRoute(null)")
+        )
+        // The welcome's starter file is still opened — but never out of the
+        // settled-but-unusable state, where the terminal is the only way out.
+        assertTrue(main.contains("if (stuck) return@LaunchedEffect"))
+    }
+
+    @Test
+    fun `an install marker alone is never accepted as ready`() {
+        val vm = source(terminalVm)
+        // `installIfNeeded(force = false)` answers AlreadyInstalled from the
+        // MARKER; the owner's phone had a marker and no working `bin/pkg`, so
+        // the stage said READY while the disk said unusable — forever.
+        val at = vm.indexOf("is UserlandStatus.AlreadyInstalled ->")
+        assertTrue("the AlreadyInstalled branch is gone", at >= 0)
+        val block = vm.substring(at, minOf(vm.length, at + 1600))
+        assertTrue(block.contains("SetupGatePolicy.userlandUsable(prefixDir, phase)"))
+        assertTrue(block.contains("SetupIssue.BROKEN_USERLAND"))
+        assertTrue(block.contains("setupTracker.ready(\"installed\")"))
+    }
+
+    @Test
+    fun `the setup truth is re-read once the boot repair is finished`() {
+        val vm = source(terminalVm)
+        // The repair runs on a daemon thread and can clear a stale ledger AFTER
+        // the ViewModel read it; without a second look the bar would keep
+        // claiming a repair that already happened.
+        assertTrue(vm.contains("refreshSetupFromDiskWhenIdle()"))
+        before(vm, "SetupRecoveryGate.awaitFinished()\n            refreshSetupFromDiskWhenIdle()", "private fun refreshSetupFromDiskWhenIdle()")
+        val at = vm.indexOf("private fun refreshSetupFromDiskWhenIdle()")
+        val block = vm.substring(at, minOf(vm.length, at + 700))
+        assertTrue("an install in flight owns the state", block.contains("if (current.inFlight) return"))
+        assertTrue(block.contains("refreshSetupFacts()"))
+    }
 
     @Test
     fun `the installer's Context constructor accepts and forwards the ledger`() {

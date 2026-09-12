@@ -1341,3 +1341,65 @@ Anything it prints in `app/src/main` is either a lint error or needs an
 `SDK_INT` guard. Guarded calls (`if (Build.VERSION.SDK_INT >= O)`) are accepted
 by lint; that is why `TerminalForegroundService`'s `createNotificationChannel`
 and `startForegroundService` never trip it.
+
+## 35. "The bar says open Terminal but the terminal doesn't open — the editor does" (owner device report; Phase 44 round 1, 2026-09-12)
+
+**The owner's words:** *"It have bugs · I couldn't not open the terminal it's
+opening the editor · The top a massage 'C works right now. The linux tool need
+one install- open terminal and tap download' · But it's not closing or opening
+terminal · Every package saying view setup but terminal not opening editor
+opening."*
+
+He had installed the Phase 44 build **over an existing install** (no first-run
+welcome), on a phone whose userland had been killed mid-install during earlier
+testing — the original bug, already baked into the data directory.
+
+**What was actually wrong (three faults, in the order they bite):**
+
+1. **The install marker lied.** `UserlandInstaller.installIfNeeded(force = false)`
+   answers `AlreadyInstalled` from the **release marker alone** — the fast
+   warm-open path, which must not touch the network or launch a probe. A pre-44
+   build wrote that marker **before** the two-rename swap, so a kill between them
+   left a valid marker over a prefix with no working `bin/pkg`. The setup stage
+   therefore said `READY` while the disk said *not usable*, and the bar showed the
+   only sentence it had for that: *"C works right now · the Linux tools still need
+   one install — open Terminal and tap ⬇"*. Nothing ever re-decided it, so it
+   stayed forever.
+2. **That bar was a wall.** Its action button was rendered only while the setup
+   was *in flight* or `FAILED` — not in this state — and its ✕ called the
+   *note*-dismiss, which cleared a note that was not there. So: a sentence with no
+   button and a close button that did nothing. Exactly *"it's not closing or
+   opening terminal"*.
+3. **"Go to the terminal" arrived at the editor.** Every such navigation used the
+   bottom-nav idiom `popUpTo(startDestination) { saveState = true }` **plus
+   `restoreState = true`**. `restoreState` does not mean "show that tab": it
+   restores the *whole previously saved sub-stack* for that destination — and if
+   the user had opened a file in the editor after using the terminal, the editor
+   was the top of that saved stack. Hence *"terminal not opening editor opening"*.
+
+**What to do now (build with the round-1 fixes):**
+
+- Update to the new build. On launch CodeC checks the **disk**, not the marker:
+  if `$PREFIX/bin/pkg` or a shell is missing, the app **opens the Terminal tab
+  itself** and the bar says *"Setup didn't finish — the Linux tools aren't
+  working. Open the Terminal tab and tap ⬇ to install them again."*
+- Tap **anywhere on the bar** (or **VIEW SETUP**, now always present) → the
+  terminal opens and stays open.
+- Tap **⬇** in the terminal toolbar → the download runs with a visible
+  percentage → afterwards `pkg --version` works and the bar disappears.
+- The ✕ now really removes a settled bar; it returns as soon as the state
+  changes (a new install, a repair).
+- C keeps working the whole time (`RUN ▶` on a `.c` file, `cc` in the terminal) —
+  that was never gated and still is not.
+
+**If it still misbehaves:** Settings → **Logs** → COPY (or the crash dialog →
+COPY REPORT) and send it. The lines that matter are tagged `SetupRecovery`,
+`TerminalViewModel` (`setup keep-alive …`, `post-repair setup refresh failed`)
+and `TerminalFgs`.
+
+**Law recorded for future work (nav):** *`restoreState = true` restores a
+sub-stack, not a destination.* Any navigation whose meaning is "show me X now"
+must not use it. Phase 49 (`BackRouter`) is where the whole navigation model gets
+the systematic pass; until then the Terminal-tab navigations are pinned by
+`SetupGateWiringTest`'s `every go-to-the-terminal navigation arrives at the
+terminal`.

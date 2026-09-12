@@ -1,6 +1,6 @@
 # CodeC Phase 44.1 — The install is visible everywhere
 
-> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI pending · device round required · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 **IMPLEMENTED + CORRECTED** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN (`34693462725`) · **device round 1 🔴 FAILED four rows → three root causes fixed (see "Device round 1 corrections" below); round 2 pending** · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"the test user don't know it's installing so they
 > close app before it complete"* → **owner's solution, kept almost verbatim:**
 > *"If it opens the terminal 1st and show a warning don't close the terminal
@@ -272,3 +272,83 @@ capability from the command's own words:
 - **Renaming the notification channel** — rejected: the channel exists and is
   already `IMPORTANCE_LOW`; a second channel would let the user mute one and
   not the other.
+
+---
+
+## Device round 1 corrections (2026-09-12, same day)
+
+The owner installed the round-3 artifact (`ba51382`) **over an existing install**
+and four of this part's own acceptance rows failed. Everything below is a
+correction to code written *above*, with the new law pinned by a test.
+
+### C1. The bar was a wall in exactly the state it was written for
+
+The action button rendered only `if (inFlight || stage == FAILED)`, and the ✕
+called `onDismissNote`, which clears a *note* — so in the state the owner was in
+(the bar showing a `detail` sentence, stage `READY`), the bar was **neither
+tappable nor closeable**. That is not a visibility feature; that is a wall, and
+it is the opposite of the owner's own instruction (*"show a warning"*).
+
+**Law (pinned):** the setup bar is always actionable — the whole row is one tap
+to the Terminal tab, **VIEW SETUP** always renders, and the close button only
+exists when `SetupGatePolicy.barDismissAllowed(progress)` (= `progress.settled`)
+allows it, and it then really removes the bar for that text
+(`dismissedSetupBar` remembers the dismissed *sentence*, so a changed state
+brings the bar back).
+
+### C2. "Terminal tab first" did not apply to an updated install
+
+The launch divert was keyed on the first-run welcome handing over, so a phone
+with a *pre-44* install (exactly the owner's) never got terminal-first.
+**Law (pinned):** `startDestination` stays pre-44 (an argument-carrying route in
+`startDestination` risks graph construction for no gain); the divert is decided
+**synchronously from the disk** —
+`SetupGatePolicy.startOnTerminal(userlandUsable(prefix, ledgerPhase), UserlandManifest.archName() != null)`
+— and applied with a single `navigate()` after the first composition. The starter
+auto-open is skipped when the divert happened, so a fresh phone gets the terminal,
+not the starter dialog over an editor.
+
+### C3. `restoreState = true` restores a whole saved sub-stack, not a tab
+
+`navigate(Screen.Terminal.createRoute()) { popUpTo(graph.startDestinationRoute) {
+saveState = true }; restoreState = true }` puts back the *saved stack* for that
+destination — so if the user had opened the editor above the terminal earlier,
+"go to the terminal" arrived at the **editor**. This is why *"Every package
+saying view setup but terminal not opening editor opening"* was true and not a
+misreport.
+**Law (pinned):** every navigation whose intent is *show me the terminal* is
+`restoreState = false` — the launch divert, the setup bar's `goToSetup`,
+ModulesScreen's VIEW SETUP, the editor's `onOpenInTerminal`. The bottom bar uses
+`restoreState = screen !is Screen.Terminal`, so the other four tabs keep their
+pre-44 behaviour (Phase 49 is the systematic navigation pass).
+
+### C4. A marker was accepted as a working prefix
+
+This one belongs to 44.2's law but surfaced as a 44.1 symptom (the bar saying
+*"the Linux tool need one install"* forever): `installIfNeeded(force = false)`
+answers `AlreadyInstalled` from the release **marker** alone — the fast warm-open
+path, deliberately no disk probe — and a *pre-44* build wrote that marker
+**before** the two-rename swap. The ViewModel published `READY` on that answer,
+so the facts said "not usable" while the stage said "done", and nothing ever
+re-decided it.
+**Law (pinned):** the `AlreadyInstalled` branch re-checks
+`SetupGatePolicy.userlandUsable(prefixDir, phase)`; false ⇒
+`setupTracker.fail("installed marker but bin/pkg does not run",
+SetupIssue.BROKEN_USERLAND)` + a notice, and the refusal sentence now reads
+*"Setup didn't finish — the Linux tools aren't working…"* (the old *"can't start
+on this device"* reads like an unsupported phone). `init` also runs
+`SetupRecoveryGate.awaitFinished(); refreshSetupFromDiskWhenIdle()` so a
+post-repair disk state replaces the boot-time reading. **Not done on purpose:**
+auto re-download in that branch (~40 MB on possibly mobile data — this phase's
+law is *no surprises*); it is one call, `installUserland(force = true)`, away.
+
+### Tests added by the corrections
+
+`SetupGatePolicyTest` 21 → **25** (the `startOnTerminal` matrix, the
+`barDismissAllowed` matrix, the exact bar sentence the owner quoted, stale-vs-
+swapping facts). `SetupGateWiringTest` 15 → **20** (bar always actionable; no
+*show-me-the-terminal* navigation may carry `restoreState = true`; the divert is
+disk-based and uses the pattern route; `AlreadyInstalled` re-checks the disk;
+post-repair refresh exists). **109 host cases green locally.** Re-test rows:
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) **R1-R8**, then D1-D12 on a fresh install.
+Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §35.

@@ -218,7 +218,7 @@ Every update updates the docs **in the same commit**:
   `TempGc` with a bounded orphan sweep, `SetupRecoveryGate.awaitFinished()` so
   the installer waits for the boot repair, the post-install marker written
   **after** the swap, and `userlandUsable` checking the real `$PREFIX/bin/pkg`
-  instead of a marker). **C is never gated** in any stage. **100 host cases** in
+  instead of a marker). **C is never gated** in any stage. **109 host cases** in
   seven classes were green locally through this section's kotlinc harness; the
   Compose/JNI edges cannot compile in-sandbox at all (no `android.jar`), so
   **CI's `Build APK` is the executor of record** and the nine-row exit condition
@@ -235,10 +235,37 @@ Every update updates the docs **in the same commit**:
   parameter — `ledger` was added to `UserlandInstaller`'s primary constructor
   but not to the secondary `(Context)` one, so the construction failed and every
   member on `userland` looked missing. Fixed + pinned by a source-scan case
-  (**100 host cases** green locally); the runbook is TROUBLESHOOTING §33 (*sort
+  (**109 host cases** green locally); the runbook is TROUBLESHOOTING §33 (*sort
   the errors by line number, fix the first one; a constructor-signature change
   must be applied to EVERY constructor and every call site grepped by hand*).
-  **Do not call Phase 44 tested until the owner reports the device round.**
+  **CI round 3 (`34693462725`) is ✅ GREEN**
+  (`conclusion: success`, confirmed by `gh run view` once the token was restored
+  — and by the owner installing its APK). **Device round 1 was then RUN BY THE
+  OWNER and 🔴 FAILED four rows** (*"I couldn't not open the terminal it's opening
+  the editor"* · the bar *"is not closing or opening terminal"* · *"Every package
+  saying view setup but terminal not opening editor opening"*). Three root
+  causes, all fixed: **(1) a marker is not a prefix** — `installIfNeeded(force =
+  false)` answers `AlreadyInstalled` from the release marker alone, and a *pre-44*
+  build wrote that marker before the swap, so the stage said READY over a prefix
+  with no working `bin/pkg`; the branch now asks the disk (`userlandUsable` →
+  `FAILED(BROKEN_USERLAND)`, wording *"the Linux tools aren't working"*) and
+  `refreshSetupFromDiskWhenIdle()` re-reads once the boot repair is finished;
+  **(2) the bar was a wall in that state** — its action rendered only when in
+  flight/FAILED and its ✕ cleared a note that was not there; the bar is now one
+  tap to the terminal, always shows VIEW SETUP, and its ✕ is real
+  (`SetupGatePolicy.barDismissAllowed` = `progress.settled`, remembering the
+  dismissed text so a changed state brings it back); **(3) `restoreState = true`
+  restores a whole saved sub-stack, not a tab** — so "go to the terminal" arrived
+  at an editor the user had opened above it; every *show-me-the-terminal*
+  navigation is now `restoreState = false` (the other four tabs keep their pre-44
+  behaviour; Phase 49 is the systematic pass). The launch divert also stopped
+  being keyed on the first-run welcome: it is
+  `SetupGatePolicy.startOnTerminal(usable, abiSupported)` decided from the
+  **disk**, applied by `navigate()` after the first composition, never by an
+  argument-carrying `startDestination`. **109 host cases** green locally;
+  owner-facing record TROUBLESHOOTING §35, re-test rows R1-R8 in
+  `docs/chat-phase44/DEVICE_ROUND.md`. **Do not call Phase 44 tested until the
+  owner reports round 2.**
 - **Phases 44-50 PLANNED (2026-09-12, docs-only, no app code)** — the owner's
   **test-phase bug report** (seven rows: the invisible one-time download, no
   guide, "remove open-a-folder", four editor complaints, three "other"
@@ -668,7 +695,7 @@ Every update updates the docs **in the same commit**:
   same loop as a single reusable script** (re-extract the pure test classes out
   of the Compose-coupled test files, compile the real production files + the
   real test sources against the shims, run them from `app/` so `RepoFiles.root()`
-  resolves): **100/100 green**, and it caught four real faults before CI (a
+  resolves): **109/109 green**, and it caught four real faults before CI (a
   `CountDownLatch` needed where a Kotlin `Any()` lock cannot `wait()`, an
   interface default `val` that a `data class` constructor property cannot hide,
   a lookbehind needed so `NotificationChannel(` does not also match

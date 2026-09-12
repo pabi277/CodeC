@@ -1,7 +1,8 @@
 # Phase 44 — device round (setup you can see, and cannot half-finish)
 
-> **Status:** ⏳ **NOT RUN** — this sandbox has no device, no emulator and no
-> Gradle, so nothing below is claimed as tested. Install the CI artifact
+> **Status:** 🔴 **ROUND 1 RUN BY THE OWNER (2026-09-12) — FAILED on 4 rows, three
+> root causes found and fixed; round 2 pending.** This sandbox has no device, no
+> emulator and no Gradle, so nothing below is claimed as tested by the agent. Install the CI artifact
 > (`CodeC-IDE`) from the green `Build APK` run on `arena/01a0955a-codec`.
 > Every row names the **exact on-screen text** that means PASS; anything else
 > is a FAIL worth reporting verbatim (screenshot beats description).
@@ -11,6 +12,91 @@
 > before D1, and again before D8/D10/D12 where noted. 20–30 minutes, one
 > phone, mobile data or Wi-Fi (a slower connection makes the percentages
 > easier to watch — that is a feature of the round, not a problem).
+
+## Round 1 result — 🔴 FAILED on 4 of the owner's own rows (2026-09-12)
+
+The owner installed the round-3 artifact (`ba51382`, CI ✅ `34693462725`) on his
+phone — an **updated** install, so no first-run welcome — and reported, verbatim:
+
+> *"It have bugs · I couldn't not open the terminal it's opening the editor ·
+> The top a massage "C works right now. The linux tool need one install- open
+> terminal and tap download " · But it's not closing or opening terminal · Every
+> package saying view setup but terminal not opening editor opening"*
+
+Three root causes, all provable from the code, all fixed:
+
+**1. A marker is not a prefix.** `installIfNeeded(force = false,
+checkForUpgrade = false)` answers `AlreadyInstalled` from the **release marker
+alone** (the fast warm-open path, `UserlandInstaller.kt:145-149`) and the
+ViewModel turned that into stage `READY`. His phone carries a marker written by
+a **pre-44 build** — which wrote the marker *before* the swap — on top of a
+prefix whose `bin/pkg` is gone: exactly the half-finished state 44.2 exists to
+repair. Stage `READY` (marker) + facts *not usable* (disk) = the sentence he
+quoted, permanently, because nothing ever re-decided it.
+**Fix:** the `AlreadyInstalled` branch now asks the disk
+(`SetupGatePolicy.userlandUsable`) and publishes `FAILED(BROKEN_USERLAND)` when
+the marker lies; the wording became *"Setup didn't finish — the Linux tools
+aren't working. Open the Terminal tab and tap ⬇ to install them again."* (the old
+*"can't start on this device"* reads like an unsupported phone, which has a
+different fix). Plus a second look from the disk once the boot repair is
+finished (`refreshSetupFromDiskWhenIdle`), so a stale ledger cannot pin the bar
+either.
+
+**2. The bar was a wall in exactly that state.** The action button rendered only
+`if (inFlight || stage == FAILED)` and the ✕ called `onDismissNote` — which
+cleared a note that was not there. In `READY`-but-unusable: **no button, dead
+✕**. **Fix:** the whole bar is one tap to the Terminal tab, **VIEW SETUP** is
+always rendered, and the ✕ is real (`SetupGatePolicy.barDismissAllowed` =
+`progress.settled`; dismissing remembers the bar's *text*, so a changed state —
+a new install, a repair — brings it back).
+
+**3. `restoreState = true` restores a whole sub-stack, not a tab.**
+`navigate(terminal) { popUpTo(start) { saveState = true }; restoreState = true }`
+puts back the previously saved stack *for that destination*, whose top can be an
+editor the user opened above the terminal earlier — so "go to the terminal"
+arrived at **the editor**. **Fix:** every navigation that means *show me the
+terminal* now uses `restoreState = false` — the setup bar, Packages' VIEW SETUP,
+the editor's terminal hand-off, the launch divert, and the bottom bar's Terminal
+tab. The other four tabs keep their pre-44 restore behaviour (Phase 49 is the
+systematic navigation pass).
+
+**And the launch-tab gap behind "it's opening the editor":** the divert was keyed
+on the first-run welcome handing over (`setupDiverted`), so an *updated* install
+with unfinished tools still launched into the editor — under a bar telling him to
+open the terminal. **Fix:** `SetupGatePolicy.startOnTerminal(usable, abiSupported)`,
+decided **synchronously from the disk** (`userlandUsable(prefix, ledgerPhase)` +
+`UserlandManifest.archName() != null`) and applied with a `navigate()` after the
+first composition — not by putting an argument-carrying route into
+`startDestination`, which is graph-construction risk for no gain.
+
+**Deliberately NOT done:** an automatic re-download when the marker-only state is
+detected. A forced reinstall is ~40 MB on possibly mobile data and this phase's
+law is *no surprises*; the one-tap path (terminal first → VIEW SETUP → ⬇) is
+signposted instead. If the owner wants auto-repair on launch it is one call
+(`installUserland(force = true)`) in that same branch — say the word.
+
+**109 host cases** green locally after the fixes (`SetupGatePolicyTest` 25 — incl.
+the launch rule, the dismiss rule and the exact sentence he quoted;
+`SetupGateWiringTest` 20 — incl. "the bar is always actionable", "every
+go-to-the-terminal navigation arrives at the terminal", "an install marker alone
+is never accepted as ready").
+
+### Round 2 — re-test these eight rows first (new build)
+
+| # | What to do | PASS looks like |
+|---|---|---|
+| R1 | Launch CodeC (updated install, tools not working) | The **Terminal** tab opens — not the editor — with the bar above it |
+| R2 | Read the bar | `Setup didn't finish — the Linux tools aren't working. Open the Terminal tab and tap ⬇ to install them again.` (or the download percentage once it is downloading) |
+| R3 | Tap **anywhere** on the bar, then tap **VIEW SETUP** | The terminal opens **and stays open** (round 1: the editor opened) |
+| R4 | Tap the ✕ on the bar, then tap ⬇ to start the install | The bar goes away; it comes back with the download percentage (a changed state is never hidden) |
+| R5 | Packages tab → any card → **VIEW SETUP** | The terminal opens (round 1: the editor opened) |
+| R6 | Terminal tab → open a file in the editor → tap the **Terminal** tab in the bottom bar | The terminal opens (round 1: the editor stayed on top) |
+| R7 | Tap **⬇** in the terminal toolbar | The download runs with a moving percentage, the notification shows it, and at the end `pkg --version` prints a version and the bar is gone |
+| R8 | `pkg install python` then `python3 -V` | It installs and runs — the original row 1 failure |
+
+Then the twelve rows below (D1-D12) on a **fresh** install, as written.
+
+---
 
 ## The three surfaces to watch
 
