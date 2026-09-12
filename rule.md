@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` (tip `3c597b2`) and round 2 `34704379023` (tip `acadaee`), then the owner ran round 2 and 45.2 became A TOUR WITH NO SKIP — round 3 implemented, CI ✅ GREEN `34707337429` on tip `0fcb3b6`, device round G1-G28 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G28) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI pending, device round G1-G38 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G38) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -317,7 +317,61 @@ Every update updates the docs **in the same commit**:
   finish card, a route-aware stall guard, a second publisher for beat 6 and a drawer
   reopen — five kilobytes is the measured price of a guide that cannot be skipped;
   whole phase **+18,176 B / +0.27%** over Phase 44 round 4), debug 25,676,356 B,
-  v1.3.17. **Device rows are now G1-G28 and are NOT run.**
+  v1.3.17. **Device rows were G1-G28 for round 3; round 4 extends them to G1-G38.**
+
+  **ROUND 4 (2026-09-12, later still — the owner ran round 3): ONE TAP DOES BOTH
+  HALVES, AND AN INSTALL PAUSES THE OTHER OPTIONS.** His two requests: *"When the
+  userland is installing and unpacking the user can not access any other other option
+  and it will show a sweet massage of why can't access any other option"* and *"Now the
+  steps feel like an overlay on the botton so 1st click disappear the massage and i have
+  to click 2nd time to really work but if someone don't click 2nd time it just cut off
+  the flow of tutorial"*. The second is a bug in round 3's own mechanism: the overlay
+  advanced on the **press** and left the tap **unconsumed**, trusting Compose to deliver
+  the rest of the gesture to the control underneath — but the advance's own
+  recomposition (`coachSeen` → `tourWaitsInDrawer` → the next box) can rebuild that
+  control before the **lift**, and a `clickable` whose node was rebuilt is cancelled.
+  The box went away, the beat was spent, nothing opened, and the tour then waited in
+  silence (deviation 14). **The fix is not a nudge, it is a change of mechanism:** an
+  anchor now publishes its control's **own click** beside its rect
+  (`GuideAnchor.modifier(id, onClick)`, registry `actions` + `owners`), the PURE
+  `GuideTapPolicy.targetFor` picks the most specific anchored click under the press
+  (smallest box, ties on tour order — beat 6's bar-wide hole resolves to the tab under
+  the finger), `isTap` refuses a drag that travels and lifts outside the hole (a scroll
+  spends no beat), and the overlay **performs the click, then advances**, swallowing the
+  gesture so nothing fires twice. Two anchors deliberately publish no click: the
+  terminal's status chip (a label) and a Packages card whose language is already
+  installed (its buttons are RUN/UNINSTALL/REINSTALL — publishing `onInstall` there
+  would turn a tap into a reinstall nobody asked for). Beat 6's copy now says *"tap this
+  handle"* instead of *"swipe up"*: while a box is up the tour accepts a tap, and a box
+  that teaches a gesture the overlay swallows is a box that never moves. The registry
+  also learned **ownership** (`owners`): one id with two publishers that swap in the
+  same recomposition (bar ↔ handle) must not let the leaving site wipe the arriving
+  site's rect *and* click. **The chrome lock** (request 1) is a Phase 44 surface built
+  beside the gate: pure `SetupLockPolicy` (`ChromeOption`, `ChromeLockReason`,
+  `ChromeLock`, `lock/reasonFor/sweetMessage/watchOption/option/editorChromeLocked/
+  optionForRoute`) pauses the tabs that cannot work while an install moves — the
+  userland's own (downloading/verifying/unpacking **and** `!facts.usable`) pauses all
+  but **Terminal**, and a package install the user asked for
+  (`OutputRunState.installing && busy`, reported through `EditorChromeState.
+  installRunning`) pauses all but the **Editor** plus ☰ / RUN ▶ / the drawer's edge
+  swipe inside it. The law: **the surface that shows the install is never paused**;
+  `CHECKING`, settled stages and an in-flight **upgrade** of a working prefix pause
+  nothing; and 44.1's guarantees stand (`RUN_C`/`EDIT_FILE` allowed in every stage —
+  the lock answers CHROME, `SetupGatePolicy.can` still answers CAPABILITY). One
+  sentence per reason, shown once when the pause begins and on every refused tap
+  (scaffold `snackbarHost`; paused tabs dimmed to 0.45 with a small 🔒 before they are
+  tapped). The tour pauses with the chrome (`blockedByForeground … || chromeLock.
+  locked`): a box on a paused control could only be spent by a tap that merely shows the
+  sentence. Deviations **17-20**; the lock is specified in
+  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+  §"Phase 45 round 4 — the chrome lock", the tap fix in
+  [`chat-phase45/PART_45_2_COACH_MARKS.md`](docs/chat-phase45/PART_45_2_COACH_MARKS.md)
+  §Round 4, and the owner-facing text in
+  [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §38. **193 host cases green locally**
+  (`CoachMarkPlanTest` 25, `GuideWiringTest` 19, `SetupGatePolicyTest` 30,
+  `SetupGateWiringTest` 23, `GuidePlanTest` 15, `TooltipPlacementTest` 10,
+  `DemoProjectSeedTest` 7 = 76 guide/demo + 117 Phase 44). **CI on the round-4 commit is
+  pending; device rows are now G1-G38 and are NOT run.**
   **CI round 1 (`34698914219`, tip `3c597b2`) is
   ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
   per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
@@ -325,9 +379,10 @@ Every update updates the docs **in the same commit**:
   6,664,474 B (**+12,792 B / +0.19%** over Phase 44 round 4 — the measured cost of
   the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
-  **G1-G28** written for round 3 and **NOT run** (G28 is the optional 20-second
-  stall-guard row); CI is ✅ GREEN on all three rounds (round 3 = `34707337429`, tip
-  `0fcb3b6`), and the round-2 commit
+  **G1-G38** written through round 4 and **NOT run** (G28 the optional 20-second
+  stall-guard row, G29-G33 the one-tap rule, G34-G38 the chrome lock); CI is ✅ GREEN on
+  rounds 1-3 (round 3 = `34707337429`, tip `0fcb3b6`) and pending on round 4, and the
+  round-2 commit
   (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
   10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
   release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the
@@ -859,7 +914,18 @@ Every update updates the docs **in the same commit**:
   caught two more real faults: a host call still passing an argument the redesign
   had deleted (`arrivalKey` — a hard compile error waiting in CI), and a pin that
   grepped the bare word `GOT IT` and so failed on the comment promising there is no
-  GOT IT — **pin the button (`Text("GOT IT")`), never the word**. **Round 3 of
+  GOT IT — **pin the button (`Text("GOT IT")`), never the word**. **Round 4 of
+  Phase 45 grew it to 193/193** (`CoachMarkPlanTest` 25, `GuideWiringTest` 19,
+  `SetupGatePolicyTest` 30, `SetupGateWiringTest` 23) and added a third pin shape:
+  round 3's pins on the tap handler (`hole.contains(down.position)`, `onAdvance()`,
+  "not consumed") all passed on code whose taps were dead on a phone, because they
+  pinned the *mechanism's prose* and the mechanism was the bug. Round 4 pins **which
+  lambda each beat performs** (`onClick = onDrawerTap`, `onTabTap`, `cardClick`, …),
+  **which anchors must publish none** (the bar as a whole, the chip, an installed card),
+  and the **ORDER of two calls by index** (`perform(target.id)` before `onAdvance()`).
+  A host JVM has no pointer dispatch, so "does the tap land" is a device row — but
+  "does each beat have a click to perform, and does it perform before it advances" is
+  pinnable, and that is the half that regressed. **Round 3 of
   Phase 45 grew it to 180/180** (`CoachMarkPlanTest` 21, `GuideWiringTest` 18) and
   re-proved the same lesson from the other side: a pin that greps a word fails on the
   prose that forbids it, so round 3 pins *counts* instead — `2` publishers of the

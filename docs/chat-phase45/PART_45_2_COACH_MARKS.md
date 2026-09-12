@@ -575,3 +575,203 @@ grew a finish card, a stall guard with a route map, a second publisher for beat 
 a drawer reopen. Five kilobytes is the measured price of a guide that cannot be
 skipped. Whole-phase cost, for the record: **+18,176 B (+0.27%) over Phase 44 round 4**
 (6,664,474 − 12,792 = 6,651,682 B), for the slides and all three rounds of the tour.
+
+---
+
+## Round 4 (2026-09-12, later still) — one tap does both halves, and an install pauses the app
+
+### The report, verbatim
+
+> It's good but i have 2 request-
+>
+> 1. When the userland is installing and unpacking the user can not access any other
+>    other option and it will show a sweet massage of why can't access any other option
+>
+> 2. Now the steps feel like an overlay on the botton so 1st click disappear the massage
+>    and i have to click 2nd time to really work but if someone don't click 2nd time it
+>    just cut off the flow of tutorial
+>
+> So do something
+
+Request 2 is a bug report against round 3's central mechanism, and it is right.
+Request 1 is a new behaviour, and it belongs to Phase 44's setup as much as to the
+tour — it is specified in
+[`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+§"Phase 45 round 4 — the chrome lock" and summarised here because it changes what the
+tour may do.
+
+### Diagnosis first (request 2): the pass-through WAS the design, and the design was wrong
+
+Round 3's overlay, on a tap inside the hole:
+
+```kotlin
+val down = awaitFirstDown(requireUnconsumed = false)
+if (hole.contains(down.position)) { onAdvance() }   // left unconsumed: "the control gets the rest"
+```
+
+Three consequences, and the first alone reproduces the report:
+
+1. **The advance ran before the click.** `onAdvance()` writes the seen set on the
+   DOWN event — a state write in the middle of a gesture. The host recomposes from it
+   (`coachSeen` → `tourWaitsInDrawer` → the editor's drawer plumbing → the next beat's
+   box), while a `clickable` fires on the LIFT, 80-150 ms later, and only if the node
+   that took the press is still the node that takes the lift. When that recomposition
+   rebuilds it, Compose cancels the gesture: **the box went away, the lesson was
+   spent, and nothing opened.**
+2. **Pass-through is a hope, not a contract.** It depends on hit-test order, on the
+   control not being covered by the next beat's scrim, and on the drawer/dialog
+   plumbing underneath it. Round 3 already carries four deviations about controls that
+   are laid out but not tappable; the tap path had the same class of problem, and no
+   host test can see it (a JVM has no pointer dispatch).
+3. ***"if someone don't click 2nd time it just cut off the flow"*** — and worse than
+   it sounds. The first tap marked the beat SEEN, so the second tap was not the same
+   lesson again: the tour had moved to a beat whose control was not on screen and then
+   (deviation 14) waited in silence. **One dead tap = one lost lesson + a parked
+   tour.** That is the exact failure mode round 3 was written to remove, arriving
+   through the tap handler instead of through a skip button.
+
+### The fix: an anchor publishes its own click, and the overlay performs it
+
+`GuideAnchor.modifier(id, onClick)` now publishes **two** things per anchor: the window
+rect (as before) and the control's **own click**. The registry stores them side by side
+(`rects`, `actions`) and offers them to the overlay as pure boxes
+(`tapTargets(): List<GuideTapTarget>`) plus one verb (`perform(id)`).
+
+The gesture, rewritten:
+
+- **press inside the hole** → the PURE policy ([`GuideTapPolicy.targetFor`]) picks the
+  control under the finger: the **most specific** anchored click whose box contains the
+  press (smallest area; ties break on tour order, so the answer never depends on map
+  iteration), and only inside the hole. The gesture is then **consumed**, so the
+  control cannot also fire it — one tap, one action, never two.
+- **lift** → if [`GuideTapPolicy.isTap`] says the gesture was a tap (it barely moved,
+  or it lifted inside the hole), the overlay performs that control's click **and then**
+  advances the tour. Action first, beat second: the click runs against the state the
+  user is looking at, and the advance's recomposition comes after it, never through it.
+- **a drag that travels and lifts outside the hole** → not a tap. Nothing is performed,
+  **no beat is spent**, the box stays. Answering a scroll with an install — or with an
+  advance and no action — is the same bug wearing a different hat.
+- **press inside the hole where no anchored click lives** → the gesture is left ALONE
+  (Compose delivers it to the real control) and the tour advances **on the lift**. This
+  is beat 6's bar-wide hole over a tab the tour does not use (Projects, Editor,
+  Settings): that tap still opens that tab.
+- **press outside the hole** → swallowed, unchanged (owner, round 1: *"even tap outside
+  will not end that box"*).
+
+The slop comes from `LocalViewConfiguration.current.touchSlop` — the platform's, passed
+into the pure policy, never a number invented in the guide.
+
+#### What each beat performs
+
+| # | Anchor | Published click | One tap now does |
+|---|---|---|---|
+| 1 | `editor_drawer` | `onDrawerTap` (☰'s own toggle, lock-aware) | opens the drawer **+** beat 2 |
+| 2 | `drawer_project` | `onSwitchProject` | opens the project picker **+** beat 3 waits for the pick |
+| 3 | `drawer_file` | `onOpenOrToggle` (the row's own click; long-press stays the row's) | opens `app.py` **+** beat 4 |
+| 4 | `editor_run` | `onRunTap` (RUN ▶'s own click, lock-aware) | runs the file / opens the chooser **+** beat 5 waits for the preview |
+| 5 | `preview_close` | `onNavigateBack` | closes the Flask preview **+** beat 6 |
+| 6 | `nav_handle` (handle) | `onReveal` | reveals the bar **+** beat 7 |
+| 6 | `nav_handle` (the visible bar) | **none** — the bar is not a control | resolves to the tab under the finger, or passes through |
+| 7 | `nav_tab_packages` | `onTabTap` (the tab's own click, lock-aware) | opens Packages **+** beat 8 |
+| 8 | `packages_card` | the button the card is really showing: `onInstall`, or `onViewSetup` while the userland is unusable, or **none** when the package is installed | starts the one-time download **+** beat 9 |
+| 9 | `nav_tab_terminal` | `onTabTap` | opens Terminal **+** beat 10 |
+| 10 | `terminal_chip` | **none** — a label, not a control | advances (nothing to perform) |
+
+Two of those rows are honesty rules rather than conveniences:
+
+- **Beat 8 publishes the click of the button the card is SHOWING.** An installed card's
+  buttons are RUN / UNINSTALL / REINSTALL; publishing `onInstall` there would turn a tap
+  on a highlighted card into a reinstall nobody asked for, so it publishes nothing and
+  the tap is left to the card.
+- **Beat 10 publishes nothing** because the status chip is a label. A fake click on it
+  would be a lie the user can tap.
+
+#### One id, two publishers: the registry learned about owners
+
+Beat 6 has two publishers that are never on screen together (the bar while it is
+visible, the thin handle while it is hidden), and a swap between them disposes one site
+and composes the other **in the same recomposition**. A blind `withdraw(id)` from the
+leaving site could therefore wipe the arriving site's rect *and* click, and the beat
+would go dark on exactly the keyboard transition it exists to teach. The registry now
+records which composition site owns an id (`owners`) and honours a withdrawal only from
+that site. Round 3 shipped without this and round 4 could not ship with it: round 3's
+withdrawal lost a rect for a frame, round 4's would lose the click as well.
+
+### Request 1: the chrome lock (summary — the spec is in PART_44_1)
+
+While an install is moving, the options that cannot work are **paused**, and a paused
+option **says why** instead of doing nothing:
+
+- the one-time **userland** setup (downloading / checking / unpacking, with no working
+  prefix yet) pauses the four tabs that are not the Terminal;
+- a **package install** the user asked for (RUN ▶ → Install, streaming into the Output
+  Panel) pauses the four tabs that are not the Editor, plus ☰ and RUN ▶ inside it;
+- the sentence is one per reason, from the pure `SetupLockPolicy.sweetMessage`, and it
+  arrives **once when the pause begins** and again on every refused tap;
+- the surface the install can be watched from is **never** paused
+  (`SetupLockPolicy.watchOption`), an in-flight **upgrade** of a working prefix pauses
+  nothing, `CHECKING` (the startup probe) pauses nothing, and Phase 44.1's guarantees
+  are untouched: typing and `cc` never wait for a download.
+
+**And the tour pauses with the chrome** (`blockedByForeground … || chromeLock.locked`):
+a box on a paused control could only be *spent* by a tap that merely shows the
+sentence, and after request 2 a spent beat is precisely what this round exists to
+prevent. Nothing is drawn during an install (already true for the userland stages in
+round 3); now it is also true for a package install, which no setup stage reports.
+
+### Deviations added in round 4 (17-20, kept with rounds 1-3's sixteen)
+
+17. **The overlay performs the control's click instead of letting Compose deliver the
+    tap.** Round 1-3's law was "a tap inside the hole is left unconsumed so the real
+    control performs its own action". Round 4 keeps the *law* (the highlighted control
+    is the only way on, and it really acts) and replaces the *mechanism*: the anchor
+    publishes its click, the overlay performs it and swallows the gesture. Cost: an
+    anchor whose click is not published can only dismiss its box — which is why the
+    wiring test now names the lambda each beat performs, and why two anchors
+    deliberately publish none.
+18. **Beat 6's copy says TAP, not "swipe up".** While a box is up the overlay owns the
+    gesture, so a swipe that leaves the hole is not a tap and does nothing: a box that
+    told the user to swipe would be a box that never moves. New body: *"Five tabs, one
+    tap away. They hide while you type — tap this handle to bring them back."* The
+    swipe itself still works the moment the tour is over (`NavBarPolicy.revealOnSwipe`
+    is untouched), and the owner's own words for this beat were *"the tap to the open
+    down side of the keyboard"*.
+19. **A card that is already installed, and a label, publish no click.** See the two
+    honesty rules above. Consequence: on those two beats the tap is passed through
+    (card) or does nothing but advance (chip).
+20. **The chrome lock pauses the tour.** An install is now a fourth "someone else owns
+    the screen" signal, beside the exit survey, safe mode, a moving Phase 44 download
+    and any editor dialog — and it is the only one that can arrive from inside the
+    editor's own Output Panel.
+
+### Tests (round 4): 193 host cases green locally
+
+`CoachMarkPlanTest` **25** (was 21): the tap resolves to the most specific anchored
+click (bar-wide hole → the tab under the finger; card → its own button) · a tap on an
+unanchored part of the hole resolves to nothing · equal areas break on tour order ·
+nothing outside the hole is performed · a label performs nothing · **a drag that leaves
+the hole is not a tap and spends no beat** · the slop and the lift-inside rule · beat
+6's copy teaches a gesture the tour accepts (and no box teaches "swipe").
+`GuideWiringTest` **19** (was 18): every clickable anchor publishes **the lambda named
+here** (`onDrawerTap`, `onSwitchProject`, `onOpenOrToggle`, `onRunTap`,
+`onNavigateBack`, `onTabTap`, `onReveal`, `cardClick`) · the bar and the chip publish
+**no** click · the overlay resolves at the press, performs **before** it advances
+(order pinned by index, not by prose) · a drag is refused · the slop is the platform's ·
+withdrawal is ownership-checked and clears rect, click **and** owner · the lock pauses
+the tour. `SetupGatePolicyTest` **30** (was 25): the userland stages pause the chrome
+with one sentence that names the work, the percentage when there is one, and where to
+watch · Terminal is never paused · a probe, a settled setup and an upgrade of a working
+prefix pause nothing · a package install pauses the chrome and keeps the **Editor** ·
+routes map to options and a non-tab route maps to none · **the lock never weakens the
+gate beside it** (`RUN_C`, `EDIT_FILE`, `OPEN_TERMINAL` still allowed while the chrome
+is paused). `SetupGateWiringTest` **23** (was 20): the bar asks the policy, a paused tab
+does not navigate, it looks paused, the scaffold grew a snackbar host, the sentence
+arrives when the pause begins, the editor reports the install only it can see and
+clears it on the way out, `installing` is set on exactly one path and cleared by both
+of its exits. `GuidePlanTest` 15, `TooltipPlacementTest` 10, `DemoProjectSeedTest` 7
+unchanged. **193 = 76 guide/demo + 117 Phase 44** (180 + 13 new: 4 tap-policy, 1 wiring,
+5 lock-policy, 3 lock-wiring).
+
+### CI round 4: ⏳ pending
+
+Pushed with this section; the run and its APK numbers are recorded here when it lands.

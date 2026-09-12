@@ -382,6 +382,37 @@ fun EditorScreen(
     var runChooserDefault by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Phase 45 round 4 — the chrome lock's EDITOR half (owner: *"When the
+    // userland is installing and unpacking the user can not access any other
+    // option and it will show a sweet massage of why can't access any other
+    // option"*). While an install the user asked for streams into the Output
+    // Panel, ☰ and RUN ▶ are paused and the tap says why, in one sentence,
+    // instead of doing nothing at all — RUN ▶ during a busy panel was already a
+    // silent `return`. The PURE policy decides (SetupLockPolicy), and the
+    // userland's own one-time install deliberately does NOT reach in here:
+    // typing and `cc` never wait for a download (Phase 44.1's law).
+    val packageInstallRunning = outputState.busy && outputState.installing
+    val editorLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock(
+        packageInstallRunning = packageInstallRunning
+    )
+    val editorChromeLocked =
+        com.codeci.ide.ui.terminal.SetupLockPolicy.editorChromeLocked(editorLock)
+    val showChromeLock: () -> Unit = {
+        val message = editorLock.message
+        if (message != null) uiScope.launch { snackbarHostState.showSnackbar(message) }
+    }
+    // ☰'s own click in ONE place: the button uses it and the guided tour
+    // performs it (round 4 — an anchor publishes its click beside its rect, so a
+    // single tap on the highlighted control does both halves).
+    val toggleDrawer: () -> Unit = {
+        uiScope.launch {
+            if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
+        }
+    }
+    val onDrawerTap: () -> Unit = {
+        if (editorChromeLocked) showChromeLock() else toggleDrawer()
+    }
+
     // Phase 12 — language-aware editing: the file's extension selects the
     // syntax highlighter and the completion engine's snippet set. (Phase 27:
     // suggestions render as ghost text / strip chips / the ⌄-more panel; the
@@ -439,11 +470,19 @@ fun EditorScreen(
     val editorDrawerOpen = drawerState.currentValue == DrawerValue.Open ||
         drawerState.isAnimationRunning
     LaunchedEffect(editorDrawerOpen) { EditorChromeState.setDrawerOpen(editorDrawerOpen) }
+    // Phase 45 round 4 — the scaffold locks the OTHER TABS while this install
+    // runs, and the editor is the only surface that knows it is running.
+    LaunchedEffect(packageInstallRunning) {
+        EditorChromeState.setInstallRunning(packageInstallRunning)
+    }
     DisposableEffect(Unit) {
         onDispose {
             EditorChromeState.setKeysVisible(false)
             EditorChromeState.setDialogOpen(false)
             EditorChromeState.setDrawerOpen(false)
+            // A stale "installing" would leave the whole app paused behind an
+            // install that finished with the screen.
+            EditorChromeState.setInstallRunning(false)
         }
     }
     var codecKeysLayer by remember { mutableStateOf(KeyboardLayers.LETTERS) }
@@ -941,7 +980,10 @@ fun EditorScreen(
             // starting there (any slight horizontal drift) opened the file
             // drawer mid-scroll. The gesture stays available only when no
             // file is on screen; with a file open, use the folder button.
-            gesturesEnabled = activeTabPath == null && currentFileName.isEmpty(),
+            // Phase 45 round 4 — the edge swipe is the same option as ☰, so the
+            // chrome lock closes it too (a lock you can swipe around is not one).
+            gesturesEnabled = activeTabPath == null && currentFileName.isEmpty() &&
+                !editorChromeLocked,
             drawerContent = {
                 EditorProjectDrawer(
                     onOpenGuide = onOpenGuide,
@@ -1098,13 +1140,14 @@ fun EditorScreen(
                     IconButton(
                         // Phase 45.2 — the owner's *"user don't know where
                         // should they change the project or file"*: the ☰ is
-                        // spotlit once, on the first arrival at the editor.
-                        modifier = GuideAnchor.modifier(GuideAnchors.EDITOR_DRAWER),
-                        onClick = {
-                            uiScope.launch {
-                                if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
-                            }
-                        }
+                        // spotlit on the tour's first beat. Round 4 publishes its
+                        // click beside its rect, so the ONE tap that dismisses the
+                        // box is the same tap that opens the drawer.
+                        modifier = GuideAnchor.modifier(
+                            GuideAnchors.EDITOR_DRAWER,
+                            onClick = onDrawerTap
+                        ),
+                        onClick = onDrawerTap
                     ) {
                         Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.project_files))
                     }
@@ -1361,25 +1404,40 @@ fun EditorScreen(
                     }
                     // Mockup-exact RUN: green ▶ + green "RUN" text, no filled
                     // button chrome (Spck's run affordance).
+                    // Phase 45 round 4 — RUN ▶'s own click in ONE place: the
+                    // button uses it and the guided tour performs it, so beat 4
+                    // costs one tap instead of two. While an install streams into
+                    // the Output Panel the same tap explains itself rather than
+                    // starting a second job on the one runner.
+                    val onRunTap: () -> Unit = {
+                        if (editorChromeLocked) {
+                            showChromeLock()
+                        } else {
+                            // Phase 33 — ask "default file or the open
+                            // file" when the user has set a default that
+                            // differs from it; otherwise run the open file
+                            // by its own type (runOpenFile).
+                            val defaultEntry = runChooserEntryOrNull()
+                            if (defaultEntry != null) {
+                                runChooserDefault = defaultEntry
+                            } else {
+                                runOpenFile()
+                            }
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                // Phase 33 — ask "default file or the open
-                                // file" when the user has set a default that
-                                // differs from it; otherwise run the open file
-                                // by its own type (runOpenFile).
-                                val defaultEntry = runChooserEntryOrNull()
-                                if (defaultEntry != null) {
-                                    runChooserDefault = defaultEntry
-                                } else {
-                                    runOpenFile()
-                                }
-                            }
+                            .clickable(onClick = onRunTap)
                             .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
                             // Phase 45.2 — RUN ▶ is the 30-second loop; the
-                            // second of the editor's two first-arrival marks.
-                            .then(GuideAnchor.modifier(GuideAnchors.EDITOR_RUN)),
+                            // tour's fourth beat.
+                            .then(
+                                GuideAnchor.modifier(
+                                    GuideAnchors.EDITOR_RUN,
+                                    onClick = onRunTap
+                                )
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(

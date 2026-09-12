@@ -173,10 +173,14 @@ fun WebPreviewScreen(
             },
             navigationIcon = {
                 IconButton(
-                    // Phase 45.2 — step 5 of the guided tour: the demo's Flask
-                    // page is being served by the phone itself, and this is the
-                    // way back to the code.
-                    modifier = GuideAnchor.modifier(GuideAnchors.PREVIEW_CLOSE),
+                    // Phase 45.2 — the tour's fifth beat: the demo's Flask page
+                    // is being served by the phone itself, and this is the way
+                    // back to the code. Round 4 publishes the click, so closing
+                    // the preview and moving the tour on are ONE tap.
+                    modifier = GuideAnchor.modifier(
+                        GuideAnchors.PREVIEW_CLOSE,
+                        onClick = onNavigateBack
+                    ),
                     onClick = onNavigateBack
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

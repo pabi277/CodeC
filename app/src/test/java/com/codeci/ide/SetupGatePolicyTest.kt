@@ -1,7 +1,10 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.terminal.ChromeLockReason
+import com.codeci.ide.ui.terminal.ChromeOption
 import com.codeci.ide.ui.terminal.InstallProgress
 import com.codeci.ide.ui.terminal.SetupAction
+import com.codeci.ide.ui.terminal.SetupLockPolicy
 import com.codeci.ide.ui.terminal.SetupFacts
 import com.codeci.ide.ui.terminal.SetupGatePolicy
 import com.codeci.ide.ui.terminal.SetupIssue
@@ -472,5 +475,175 @@ class SetupGatePolicyTest {
         val verdict = SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, stale)
         assertFalse(verdict.allowed)
         assertTrue(verdict.message!!.contains("Terminal"))
+    }
+
+    // ---- Phase 45 round 4: the chrome lock --------------------------------
+    // Owner, after running the tour on his phone: *"When the userland is
+    // installing and unpacking the user can not access any other option and it
+    // will show a sweet massage of why can't access any other option."*
+
+    @Test
+    fun `a first-time userland install pauses the other tabs and says why`() {
+        for (stage in listOf(SetupStage.DOWNLOADING, SetupStage.VERIFYING, SetupStage.EXTRACTING)) {
+            val lock = SetupLockPolicy.lock(
+                progress = InstallProgress(stage),
+                facts = facts(stage),
+                packageInstallRunning = false
+            )
+            assertTrue("$stage must pause the chrome", lock.locked)
+            val message = lock.message
+            assertNotNull("$stage must explain itself", message)
+            // Sweet, and it answers WHY (a one-time setup finishing cleanly) and
+            // WHERE to watch (the Terminal tab) — not just "wait".
+            assertTrue(message!!.contains("Hang tight"))
+            assertTrue(message.contains("paused"))
+            assertTrue(message.contains("Terminal tab"))
+            // Every tab but the watch surface refuses with that same sentence.
+            for (option in ChromeOption.entries) {
+                val verdict = SetupLockPolicy.option(option, lock)
+                if (option == SetupLockPolicy.watchOption(lock.reason)) {
+                    assertTrue("$option must stay open at $stage", verdict.allowed)
+                } else {
+                    assertFalse("$option must be paused at $stage", verdict.allowed)
+                    assertEquals(message, verdict.message)
+                }
+            }
+            // While the USERLAND is missing, the editor keeps its Phase 44.1
+            // guarantees: typing and `cc` never wait for a download.
+            assertFalse(
+                "the userland install must not reach inside the editor",
+                SetupLockPolicy.editorChromeLocked(lock)
+            )
+            assertEquals(ChromeOption.TERMINAL, SetupLockPolicy.watchOption(lock.reason))
+        }
+        // The percentage is shown when the server gave one, and never invented.
+        val withPercent = SetupLockPolicy.lock(
+            progress = InstallProgress(SetupStage.DOWNLOADING, percent = 62),
+            facts = facts(SetupStage.DOWNLOADING, percent = 62)
+        )
+        val downloadMessage = withPercent.message
+        assertNotNull(downloadMessage)
+        assertTrue(downloadMessage!!.contains("62 %"))
+        assertFalse(
+            SetupLockPolicy.lock(
+                progress = InstallProgress(SetupStage.DOWNLOADING),
+                facts = facts(SetupStage.DOWNLOADING)
+            ).message!!.contains("%")
+        )
+        // Each stage names its own work: downloading, checking, unpacking.
+        assertTrue(downloadMessage.contains("downloading"))
+        assertTrue(
+            SetupLockPolicy.lock(InstallProgress(SetupStage.VERIFYING), facts(SetupStage.VERIFYING))
+                .message!!.contains("checking")
+        )
+        assertTrue(
+            SetupLockPolicy.lock(InstallProgress(SetupStage.EXTRACTING), facts(SetupStage.EXTRACTING))
+                .message!!.contains("unpacking")
+        )
+    }
+
+    @Test
+    fun `a probe, a settled setup and an upgrade of a working prefix pause nothing`() {
+        // CHECKING is the startup probe, not work: pausing on it would lock the
+        // app on every launch, including launches with nothing to install.
+        assertFalse(SetupLockPolicy.lock(InstallProgress(SetupStage.CHECKING), facts(SetupStage.CHECKING)).locked)
+        // Settled states have their own sentence at the point of use, and their
+        // own retry (⬇ in the terminal toolbar): pausing the app for a setup
+        // that already stopped would strand the user with no way out.
+        for (stage in listOf(SetupStage.READY, SetupStage.FAILED, SetupStage.UNSUPPORTED)) {
+            assertFalse(
+                "$stage must not pause the chrome",
+                SetupLockPolicy.lock(InstallProgress(stage), facts(stage)).locked
+            )
+        }
+        // An in-flight UPGRADE of a working prefix: Phase 44.1's own sentence is
+        // "everything still works", and taking the app away from a user who can
+        // use it would be a lie in the other direction.
+        val upgrade = SetupLockPolicy.lock(
+            progress = InstallProgress(SetupStage.EXTRACTING),
+            facts = facts(SetupStage.EXTRACTING, runnable = true, pkg = true)
+        )
+        assertFalse(upgrade.locked)
+        assertEquals(ChromeLockReason.NONE, upgrade.reason)
+        assertNull(upgrade.message)
+        // Nothing locked → every option is allowed and there is nothing to say.
+        for (option in ChromeOption.entries) {
+            assertTrue(SetupLockPolicy.option(option, upgrade).allowed)
+            assertNull(SetupLockPolicy.option(option, upgrade).message)
+        }
+    }
+
+    @Test
+    fun `a package install pauses the chrome and keeps the editor, where it streams`() {
+        // RUN ▶ → Install streams `pkg install -y python` into the editor's
+        // Output Panel: THAT is the surface to watch, so the editor stays open
+        // and the other tabs pause.
+        val lock = SetupLockPolicy.lock(
+            progress = InstallProgress(SetupStage.READY),
+            facts = facts(SetupStage.READY, runnable = true, pkg = true),
+            packageInstallRunning = true
+        )
+        assertTrue(lock.locked)
+        assertEquals(ChromeLockReason.PACKAGE_INSTALL, lock.reason)
+        assertEquals(ChromeOption.EDITOR, SetupLockPolicy.watchOption(lock.reason))
+        assertTrue(SetupLockPolicy.option(ChromeOption.EDITOR, lock).allowed)
+        for (option in listOf(
+            ChromeOption.PROJECTS,
+            ChromeOption.PACKAGES,
+            ChromeOption.SETTINGS,
+            ChromeOption.TERMINAL
+        )) {
+            assertFalse("$option must be paused during a package install", SetupLockPolicy.option(option, lock).allowed)
+            assertEquals(lock.message, SetupLockPolicy.option(option, lock).message)
+        }
+        val installMessage = lock.message
+        assertNotNull(installMessage)
+        assertTrue(installMessage!!.contains("Output panel"))
+        assertTrue(installMessage.contains("Hang tight"))
+        // And this IS the one pause that reaches inside the editor: one runner,
+        // one job at a time — RUN ▶ during an install was already a silent
+        // no-op, and a sentence beats a tap that does nothing.
+        assertTrue(SetupLockPolicy.editorChromeLocked(lock))
+        // The install outranks the userland stage as the reason to name: it is
+        // the thing the user just asked for and the thing on screen.
+        assertEquals(
+            ChromeLockReason.PACKAGE_INSTALL,
+            SetupLockPolicy.reasonFor(
+                InstallProgress(SetupStage.DOWNLOADING),
+                facts(SetupStage.DOWNLOADING),
+                packageInstallRunning = true
+            )
+        )
+    }
+
+    @Test
+    fun `the lock reads routes, so the bar asks instead of keeping its own list`() {
+        assertEquals(ChromeOption.PROJECTS, SetupLockPolicy.optionForRoute("file_manager"))
+        assertEquals(ChromeOption.EDITOR, SetupLockPolicy.optionForRoute("editor?projectName=demo_flask&fileName=app.py"))
+        assertEquals(ChromeOption.TERMINAL, SetupLockPolicy.optionForRoute("terminal?cmd={cmd}&nonce={nonce}"))
+        assertEquals(ChromeOption.PACKAGES, SetupLockPolicy.optionForRoute("modules"))
+        assertEquals(ChromeOption.SETTINGS, SetupLockPolicy.optionForRoute("settings"))
+        // A route that is not one of the five tabs is reached from inside a
+        // screen: the lock answers taps on chrome, never programmatic navigation,
+        // so it has no opinion (and cannot trap the user on a sub-screen).
+        assertNull(SetupLockPolicy.optionForRoute("preview?fileName=app.py&projectName=demo_flask"))
+        assertNull(SetupLockPolicy.optionForRoute("feedback?rating=0&crash=0"))
+        assertNull(SetupLockPolicy.optionForRoute(null))
+        assertNull(SetupLockPolicy.optionForRoute(""))
+    }
+
+    @Test
+    fun `the chrome lock never weakens the gate it sits beside`() {
+        // Two different questions, two different answers, and the older law wins
+        // wherever they meet: the lock is about CHROME, SetupGatePolicy.can is
+        // about CAPABILITY. While a first-time install pauses the tabs, C still
+        // compiles, files still save and the terminal still opens.
+        val stage = SetupStage.EXTRACTING
+        val lockFacts = facts(stage)
+        assertTrue(SetupLockPolicy.lock(InstallProgress(stage), lockFacts).locked)
+        assertTrue(SetupGatePolicy.can(SetupAction.RUN_C, lockFacts).allowed)
+        assertTrue(SetupGatePolicy.can(SetupAction.EDIT_FILE, lockFacts).allowed)
+        assertTrue(SetupGatePolicy.can(SetupAction.OPEN_TERMINAL, lockFacts).allowed)
+        assertFalse(SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, lockFacts).allowed)
     }
 }

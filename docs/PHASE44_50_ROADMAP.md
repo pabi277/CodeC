@@ -35,13 +35,24 @@
 > I want a full process 1st to last without skip anything in this … At the end option
 > to close and view again"*): every beat now waits in order, a tour card has **no
 > button at all**, Back pauses without spending a beat, and the finish card offers
-> **VIEW AGAIN** + **CLOSE**. Round 3 is implemented with **180 host cases green
-> locally**; CI is ✅ **GREEN** on all three rounds (`34698914219`; `34704379023`;
-> `34707337429` on tip `0fcb3b6`, job `build` 10m51s, release APK
-> 6,669,858 B = +5,288 B / +0.08% over round 2 and +18,176 B / +0.27% for the whole
-> phase), and device round
-> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G28** is NOT
-> run (start it from Settings → About → Reset tips).
+> **VIEW AGAIN** + **CLOSE**. **He then ran round 3 and asked for two things**
+> (*"1st click disappear the massage and i have to click 2nd time to really work but if
+> someone don't click 2nd time it just cut off the flow of tutorial"* and *"when the
+> userland is installing and unpacking the user can not access any other other option
+> and it will show a sweet massage of why"*): every anchor now publishes its
+> control's **own click** and the overlay performs it before advancing — one tap, both
+> halves, a drag spends nothing — and a new pure **`SetupLockPolicy`** (shipped beside
+> the 44 gate, specified in
+> [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](chat-phase44/PART_44_1_VISIBLE_SETUP.md))
+> pauses the options an install cannot serve, dimmed with a 🔒, each answering a tap
+> with one sentence that says what is happening, why, and where to watch it — the
+> surface that shows the install is never paused. Round 4 is implemented with **193
+> host cases green locally** (76 guide/demo + 117 Phase 44); CI is ✅ **GREEN** on
+> rounds 1-3 (`34698914219`; `34704379023`; `34707337429` on tip `0fcb3b6`, release
+> APK 6,669,858 B) with round 4's run pending, and device round
+> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G38** is NOT
+> run (start it from Settings → About → Reset tips; G29-G33 the one-tap rule, G34-G38
+> the lock).
 > 46-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
@@ -77,19 +88,28 @@ Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
 The numbers **are** the order. Why this order:
 
 1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
-   2026-09-12** (`arena/01a0955a-codec`; both parts, 109 host cases, CI ✅ GREEN
+   2026-09-12** (`arena/01a0955a-codec`; both parts, **117 host cases** after
+   Phase 45's round 4 added the chrome lock here, CI ✅ GREEN
    round 4 `34695797493`; device round 1 🔴 FAILED four rows → three root causes
-   fixed; **round 2 not run**). It goes first because it
+   fixed; **round 2 not run**, and its lock rows live in
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G34-G38**). It goes first because it
    breaks every other test round: a tester whose userland is half-installed
    reports *everything* as broken (`pkg` missing, Python "not installed", git
    missing). It is also the only phase in the series with a data-loss-shaped
    bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
    all**, `UserlandInstaller.kt:377-395`).
-2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 3**
-   (`arena/01a0955a-codec`; both parts, 180 host cases green locally, CI ✅ GREEN
-   on all three rounds `34698914219`/`34704379023`/`34707337429`, device round
-   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G28 not
-   run). First impression for every tester you have not met yet,
+2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 4**
+   (`arena/01a0955a-codec`; both parts, **193 host cases green locally**, CI ✅
+   GREEN on rounds 1-3 `34698914219`/`34704379023`/`34707337429` with round 4's
+   run pending, device round
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G38** not
+   run). Round 4 came from the owner's own two requests after he ran round 3:
+   *one tap on a highlighted control must really work it* (it now performs the
+   control's own published click and then advances, in one gesture), and *"when
+   the userland is installing and unpacking the user can not access any other
+   option"* — which is a **44 surface** shipped beside the gate as pure
+   `SetupLockPolicy` (`chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Phase 45 round
+   4 — the chrome lock"). First impression for every tester you have not met yet,
    and its slide 3 is where the *"one-time download, don't close the app"*
    mental model is planted that 44 enforces — which is why the guide gate runs
    *before* 44.1's terminal-first divert and never shares a screen with the setup

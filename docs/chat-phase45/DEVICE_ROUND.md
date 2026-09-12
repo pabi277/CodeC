@@ -1,18 +1,20 @@
 # CodeC Phase 45 — device round (the guide: slides, then the tour)
 
-> **Status:** 📋 ROUND 3 WRITTEN, **NOT RUN** (2026-09-12). Round 1 came back with
+> **Status:** 📋 ROUND 4 WRITTEN, **NOT RUN** (2026-09-12). Round 1 came back with
 > four reports and 45.2 became **one ordered tour**; round 2 came back with *"You add
 > the skip option and it's not a trough guide mean it got cut"* and the tour became
-> **first beat to last with no exit until the end** (see [`README.md`](README.md)
-> §"Round 3"). 45.1's slides are unchanged — the owner's own decision: *"Slides stay
-> as they are (GOT IT / START CODING / SKIP)."*
+> **first beat to last with no exit until the end**; round 3 came back with *"1st click
+> disappear the massage and i have to click 2nd time to really work"* plus a request
+> that an install pause the other options, so round 4 made **one tap do both halves**
+> and added **the chrome lock** (see [`README.md`](README.md) §"Round 4"). 45.1's
+> slides are unchanged — the owner's own decision: *"Slides stay as they are (GOT IT /
+> START CODING / SKIP)."*
 >
-> **The build to install:** `Build APK` **`34707337429`** on `arena/01a0955a-codec`
-> — round-3 commit `0fcb3b6`, ✅ `success`, job `build` 10m51s, release APK
-> 6,669,858 B (**+5,288 B / +0.08%** over round 2), debug 25,676,356 B (Actions →
-> that run → **Artifacts** → `CodeC-IDE-debug`). Round 2's build (`34704379023`)
-> still has **SKIP TOUR on every card** and still passes beats over — installing it
-> repeats exactly what the owner reported.
+> **The build to install:** the newest `Build APK` run on `arena/01a0955a-codec` after
+> the round-4 commit (Actions → that run → **Artifacts** → `CodeC-IDE-debug`). Round
+> 3's build (`34707337429`, commit `0fcb3b6`) still needs **two taps per beat** — the
+> first dismisses the box, the second does the work — and has **no install pause**;
+> installing it repeats exactly what the owner reported.
 >
 > **Two ways to get a first run** (rows G1-G5 and the whole tour need one):
 > install as a **fresh install** (uninstall first, or a second profile), **or**
@@ -38,6 +40,11 @@
    screen the tour draws *nothing* — no scrim, no card — and the app works normally.
    The box appears the moment the control does. Round 2 instead walked on to a later
    beat, which is how the flow got holes in it.
+4. **Round 4 added the chrome lock.** While an install is really moving — the
+   one-time Linux tools, or a language you asked for — the options that cannot work
+   are **paused** and say why in one sentence, and the tour pauses with them. The
+   surface the install can be watched from is never paused: the **Terminal** tab for
+   the Linux tools, the **Editor** for a package install. Rows G34-G38.
 
 ## The rows — 45.1, the five slides (unchanged)
 
@@ -65,7 +72,7 @@ section has a button on it** — that is the point of the round.
 | G12 | Tap `app.py`, then tap the highlighted **RUN ▶** (**4 of 10**) | `app.py` opens in the editor; RUN ▶ runs it. Its card says *Runs the open file. If Python is missing, tap **Install** — one download, one time.* |
 | G13 | If the *Install Python?* prompt appears, tap **Install** | The prompt has **no box over it**; the install streams into the Output Panel. **During the install no box appears and beat 5 is NOT skipped** — the tour waits for the preview (round 2 would have walked past it) |
 | G14 | Let the run finish and the Flask preview open | **5 of 10** *Your app is running* on the preview's **Back** arrow. Tapping it closes the preview (its own action) and the tour carries on |
-| G15 | Back in the editor, look at the bottom | **6 of 10** *The tabs are here* — on the **whole tab bar** while the bar is visible, or on the thin reveal handle if the keyboard is hiding it. Both are the same beat: *"Five tabs, one tap away. They hide while you type — swipe up to bring them back."* |
+| G15 | Back in the editor, look at the bottom | **6 of 10** *The tabs are here* — on the **whole tab bar** while the bar is visible, or on the thin reveal handle if the keyboard is hiding it. Both are the same beat: *"Five tabs, one tap away. They hide while you type — tap this handle to bring them back."* (round 4: the copy says **tap**, because while a box is up a swipe is not a tap — see G32) |
 | G16 | Tap inside that hole (a tab, or the handle) | The bar does its own job (navigate / reveal) **and** the tour advances: **7 of 10** *Packages* on the **Packages tab itself**. Tap it → the Packages tab opens |
 | G17 | On the Packages tab | **8 of 10** *One-time download* on the first install card |
 | G18 | Continue | **9 of 10** *Terminal* on the **Terminal tab** → tap it → **10 of 10** *What it is doing* on the terminal's status chip → tap it |
@@ -80,6 +87,27 @@ section has a button on it** — that is the point of the round.
 | G27 | Settings → About → **Reset tips** → kill → relaunch | The slides return **and** the tour restarts at **1 of 10**. No project, file, theme or other setting changed |
 | G28 *(optional, 20 s)* | At G11, choose **some other project** instead of `demo_flask` | Beat 3 cannot exist (its row is `demo_flask/app.py`), so the tour waits about **20 seconds** and then teaches **4 of 10** on RUN ▶. Beat 3 is *owed, not spent*: it returns on the next launch, or via Reset tips |
 
+## The rows — round 4 (one tap does both halves, and an install pauses the app)
+
+G29-G33 are the owner's *"1st click disappear the massage and i have to click 2nd time
+to really work but if someone don't click 2nd time it just cut off the flow of
+tutorial"*; G34-G38 are *"When the userland is installing and unpacking the user can
+not access any other other option and it will show a sweet massage of why"*. Walk
+G29-G33 on the same tour as G9-G19 — they are the same ten beats, tapped once each.
+
+| # | What to do | PASS looks like |
+|---|---|---|
+| G29 | On **1 of 10**, tap the highlighted **☰** ONCE | The drawer opens **and** the box is already **2 of 10** on the project name — one tap, both halves. Round 3 needed a second tap for the drawer |
+| G30 | Continue with ONE tap per beat: project name → `demo_flask` → `app.py` → **RUN ▶** | Each tap does its own work *and* moves the counter: the picker opens, `app.py` opens in the editor, RUN ▶ runs (its Output Panel opens). **Nothing runs twice** — one `$ python app.py`, one file opened, no double toast |
+| G31 | On **6 of 10** with the **whole bar** lit, tap the **Packages tab** inside the hole | The Packages tab opens **and** the tour advances to **7 of 10**. Then tap a tab the tour does NOT use (Projects, Editor, Settings) while a bar-wide box is up: **that tab opens** (the tap is left to it) and the tour still advances |
+| G32 | On **6 of 10** with the thin **handle** lit (keyboard up), TAP it, then SWIPE it up | The tap reveals the bar **and** advances. A swipe while the box is up does **nothing at all** — the box stays, no beat is spent — and the card's copy tells you to tap, not swipe. With the tour over, the swipe works as it always did |
+| G33 | On **8 of 10** (the Packages card), start a scroll **inside** the hole and drag out | **Nothing happens**: no install starts, the box stays on the same beat. Only a tap performs the card's button. If Python is already installed, the card publishes no click at all — the tap behaves like an ordinary tap on the card and the tour advances |
+| G34 | Fresh install (or Terminal → ⬇ to repair), stay on the **Terminal** tab while it downloads/unpacks | The other four tabs are **dimmed with a small 🔒** on each. One sentence appears by itself as the pause begins: *"Hang tight — CodeC is downloading its Linux tools (NN %). Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step."* The **Terminal tab stays open**, and the setup bar keeps the moving percentage |
+| G35 | During that pause, tap **Projects**, **Editor**, **Packages** and **Settings** | Each shows the same sentence and **does not navigate** — you stay on the Terminal. No box from the tour appears either (the tour pauses with the chrome), and it comes back on the same beat once the setup settles |
+| G36 | In the editor, RUN ▶ a Python file → **Install** | The install streams into the Output Panel; **Projects / Packages / Settings / Terminal are paused** with *"Hang tight — CodeC is installing what you asked for … The Output panel shows every step."*, while the **Editor stays open** (that is where the panel is). ☰ and RUN ▶ show the same sentence instead of acting, and the drawer's edge swipe is dead. When the install finishes, **everything unlocks by itself** and the Flask run/preview continues |
+| G37 | Run a program of your own (C, or a Flask server) and leave it running | **Nothing is paused.** A run or a server is not an install: tabs, ☰ and RUN ▶ all work while the Output Panel streams |
+| G38 | Kill the app mid-install and relaunch | No stale pause: the app opens on the **Terminal** tab (44.1's divert), the download resumes or restarts, and the other tabs are paused only while it is really moving. An in-flight **upgrade** of a working userland pauses nothing at all (its own line is *"everything still works"*) |
+
 ## Also worth one look each (not rows)
 
 - **The card is fully on screen** — round 1's *"Not showing the full box guide at
@@ -88,7 +116,14 @@ section has a button on it** — that is the point of the round.
   own hole.
 - **Beat 6's hole is the whole bottom bar** when the bar is visible. That is
   deliberate (deviation 16): the lesson is the bar, and a tap inside it lands on a
-  tab, which is where beat 7 wanted you anyway.
+  tab, which is where beat 7 wanted you anyway. Round 4 made that literal — the tap
+  resolves to the tab under the finger and performs **that tab's** click.
+- **One tap per beat, everywhere.** Round 4's rule is that the highlighted control
+  performs its own action *and* the tour advances, in the same gesture, with the
+  gesture swallowed so nothing can fire twice. If any beat ever needs two taps again,
+  that is the bug this round exists to remove — say which beat.
+- **The tour's tenth beat is a label.** The terminal's status chip has no click, so
+  its box advances on a tap and performs nothing: that is intended, not a dead tap.
 - **Small screen / largest font:** slide 5, every box and the finish card are
   readable; the slides' copy column scrolls if it must and its button stays
   reachable (45.1 exit 5).
@@ -125,5 +160,11 @@ the useful detail is **which number it stopped on and what was on screen**.
                      or not, the finish card with VIEW AGAIN + CLOSE, no box
                      behind a dialog or a closed drawer, demo_flask always
                      present, Reset tips restarts everything)
-PASS = all twenty-eight, plus Phase 44's round 2 on the same phone.
+r4    rows G29-G38  (ONE tap per beat does both halves and nothing fires twice,
+                     a bar-wide hole resolves to the tab under the finger, a
+                     drag is not a tap, an installed card performs nothing, and
+                     the chrome lock: an install pauses the other options with a
+                     sweet sentence, keeps the surface that shows it open, never
+                     pauses a run or a server, and clears by itself)
+PASS = all thirty-eight, plus Phase 44's round 2 on the same phone.
 ```

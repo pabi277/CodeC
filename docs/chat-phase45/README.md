@@ -1,10 +1,10 @@
 # CodeC Phase 45 — The guide (slides on first run + coach marks on first arrival)
 
-> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 3** (2026-09-12, `arena/01a0955a-codec`;
-> owner: *"Start Phase 45"* → two device reports → two rebuilds of 45.2) · CI ✅ GREEN
-> on all three rounds (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
-> `34707337429` tip `0fcb3b6`, release APK 6,669,858 B) · device round required
-> (**G1-G28**, NOT run)
+> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 4** (2026-09-12, `arena/01a0955a-codec`;
+> owner: *"Start Phase 45"* → three device reports → three rebuilds of 45.2) · CI ✅
+> GREEN on rounds 1-3 (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
+> `34707337429` tip `0fcb3b6`, release APK 6,669,858 B), round 4's run pending ·
+> device round required (**G1-G38**, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
@@ -86,7 +86,7 @@ decides it: if it can be a pure function, it is one.
 1. **The no-nag law** (`ExitSurvey.kt:11-18` states it): every guide surface is
    one-time, skippable with a single tap, and re-openable by the user. Nothing
    returns after dismissal unless asked.
-   **Round 3 amends one clause, on the owner's own instruction.** The *slides* keep
+   **Rounds 3 and 4 amend one clause, on the owner's own instruction.** The *slides* keep
    SKIP (unchanged, and still single-tap). The *tour* no longer has a mid-tour exit —
    *"You add the skip option and it's not a trough guide mean it got cut. I want a
    full process 1st to last without skip anything in this"* — so its exit moved to the
@@ -424,11 +424,70 @@ locally**. 45.1 is still untouched
 
 ### What is still open
 
-CI on the round-3 commit is ✅ GREEN (`34707337429`, tip `0fcb3b6`, job `build` 10m51s,
-release APK 6,669,858 B = **+5,288 B / +0.08%** over round 2 — this round added a
-finish card, a route-aware stall guard, a second publisher for beat 6 and a drawer
-reopen, so five kilobytes is the measured price of a guide that cannot be skipped), so
-only the device round is open: rows **G1-G28** in
-[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour). Test it
-after **Settings → About → Reset tips**, or the beats round 2 already marked seen will
-not come back. Phase 44's round 2 is still pending on the same phone.
+CI on the round-3 commit is ✅ GREEN (`34707337429`, tip `0fcb3b6`), and round 3 is
+superseded by round 4 below — the device round to run is **G1-G38**.
+
+---
+
+## Round 4 (2026-09-12, later still) — one tap does both halves, and an install pauses the app
+
+The owner installed round 3 (`34707337429`), walked the tour, and came back with two
+requests:
+
+> *"1. When the userland is installing and unpacking the user can not access any other
+> other option and it will show a sweet massage of why can't access any other option /
+> 2. Now the steps feel like an overlay on the botton so 1st click disappear the massage
+> and i have to click 2nd time to really work but if someone don't click 2nd time it
+> just cut off the flow of tutorial / So do something"*
+
+Request 2 is a bug in round 3's central mechanism, and the diagnosis is in
+[`PART_45_2_COACH_MARKS.md`](PART_45_2_COACH_MARKS.md) §Round 4: the overlay advanced
+the tour on the **press** and left the tap **unconsumed**, trusting Compose to deliver
+the rest of the gesture to the real control. The advance's own recomposition
+(`coachSeen` → `tourWaitsInDrawer` → the next box) could rebuild that control before
+the **lift**, and a `clickable` whose node was rebuilt is cancelled: the box went away,
+the beat was spent, nothing opened. And because the beat was spent, the tour then
+waited in silence (deviation 14) — *"it just cut off the flow of tutorial"*.
+
+### What changed
+
+| Round 3 | Round 4 |
+|---|---|
+| A tap inside the hole was left unconsumed; the control *should* have performed its own action | **An anchor publishes its own click beside its rect**, and the overlay performs it and swallows the gesture: one tap = one action + one beat, and nothing can fire twice |
+| The tour advanced on the **press** | The tour advances on the **lift**, after the click — the advance's recomposition can no longer cancel the click it rides on |
+| A drag inside the hole was a tap | **A drag that travels and lifts outside the hole is not a tap**: nothing is performed, no beat is spent, the box stays |
+| Beat 6's bar-wide hole left the tap to Compose | The tap resolves to the **most specific anchored click under the finger** (the Packages tab inside the bar); a tap on a tab the tour does not use is still left to that tab |
+| Beat 6's copy said *"swipe up to bring them back"* | *"tap this handle to bring them back"* — while a box is up a swipe is not a tap, so the copy must teach the gesture the tour accepts (the swipe still works with the tour over) |
+| One id, two publishers, a blind `withdraw(id)` | The registry records **which composition site owns an id**, so a bar↔handle swap cannot wipe the arriving publisher's rect *and* click |
+| An install was invisible to everything but the setup bar and the gate | **The chrome lock**: while an install moves, the options that cannot work are paused, dimmed with a small 🔒, and answer a tap with one sweet sentence that says what is happening, why, and where to watch it. The tour pauses with them |
+
+The lock is a Phase 44 surface as much as a Phase 45 one, so it is specified in
+[`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+§"Phase 45 round 4 — the chrome lock". Its law: **the surface that shows the install is
+never paused** (Terminal for the Linux tools, Editor for a package install), a settled
+setup pauses nothing, an in-flight **upgrade** of a working prefix pauses nothing, and
+44.1's guarantees stand — typing and `cc` never wait for a download.
+
+### Files touched in round 4
+
+`ui/guide/CoachMarkPlan.kt` (`GuideTapTarget`, `GuideTapPolicy.targetFor` /
+`isTap`, `GuideRect.contains` / `area`, beat 6's copy) · `ui/guide/CoachMarks.kt`
+(the registry's `actions` + `owners`, `GuideAnchor.modifier(id, onClick)`, the
+gesture rewritten) · the eight anchor sites that publish a click (`EditorScreen` ☰ +
+RUN ▶, `EditorProjectDrawer` header + row, `WebPreviewScreen` Back, `MainActivity`
+tabs + reveal handle, `ModulesScreen` card) · `ui/terminal/SetupState.kt`
+(`ChromeOption`, `ChromeLockReason`, `ChromeLock`, `SetupLockPolicy`) ·
+`MainActivity.kt` (the lock, the bar's paused tabs, the scaffold's snackbar host,
+`blockedByForeground … || chromeLock.locked`) · `ui/screens/EditorScreen.kt` (☰ / RUN ▶
+/ edge swipe answer the lock, and report the install) · `ui/editor/EditorChromeState.kt`
+(`installRunning`) · `ui/viewmodels/EditorViewModel.kt` (`OutputRunState.installing`) ·
+tests: `CoachMarkPlanTest` **25**, `GuideWiringTest` **19**, `SetupGatePolicyTest`
+**30**, `SetupGateWiringTest` **23** → **193 host cases green locally**. 45.1 is still
+untouched ([`PART_45_1_GUIDE_SLIDES.md`](PART_45_1_GUIDE_SLIDES.md)).
+
+### What is still open
+
+CI on the round-4 commit, then the device round: rows **G1-G38** in
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour, G29-G38 round
+4). Test it after **Settings → About → Reset tips**. Phase 44's round 2 is still
+pending on the same phone, and its lock rows are G34-G38 here.

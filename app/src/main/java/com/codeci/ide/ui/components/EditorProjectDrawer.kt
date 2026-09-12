@@ -120,11 +120,19 @@ fun EditorProjectDrawer(
         // already in demo_flask). The picker is an AlertDialog (its own window),
         // so the box names demo_flask in its copy instead of cutting a hole over a
         // row inside the dialog — PART_45_2, deviation 9.
+        // Round 4 publishes the header's OWN click beside its rect: the tour's
+        // second beat is one tap that both opens the picker and moves the tour
+        // on, instead of a tap that only dismisses the box.
         val anchoredHeader: Modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onSwitchProject)
             .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
-            .then(GuideAnchor.modifier(GuideAnchors.DRAWER_PROJECT))
+            .then(
+                GuideAnchor.modifier(
+                    GuideAnchors.DRAWER_PROJECT,
+                    onClick = onSwitchProject
+                )
+            )
         Row(
             modifier = anchoredHeader,
             verticalAlignment = Alignment.CenterVertically
@@ -342,8 +350,12 @@ private fun DrawerRow(
     // Phase 45.2 — the anchored row publishes its rect while it is laid out and
     // withdraws it when the drawer closes, so the tour can never point at a row
     // that is not on screen.
+    // Round 4: the anchored row publishes the click it already has, so the
+    // tour's third beat ("Open app.py") opens the file with the same tap that
+    // dismisses the box. Long-press stays the row's own (the overlay only ever
+    // performs a tap).
     val rowAnchor: Modifier = if (guideAnchorId != null) {
-        GuideAnchor.modifier(guideAnchorId)
+        GuideAnchor.modifier(guideAnchorId, onClick = onOpenOrToggle)
     } else {
         Modifier
     }

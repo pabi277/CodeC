@@ -3,7 +3,10 @@ package com.codeci.ide
 import com.codeci.ide.ui.guide.ChromeState
 import com.codeci.ide.ui.guide.CoachMarkPlan
 import com.codeci.ide.ui.guide.GuideAnchors
+import com.codeci.ide.ui.guide.GuideRect
 import com.codeci.ide.ui.guide.GuideSurface
+import com.codeci.ide.ui.guide.GuideTapPolicy
+import com.codeci.ide.ui.guide.GuideTapTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -659,5 +662,105 @@ class CoachMarkPlanTest {
         assertNull(
             CoachMarkPlan.drawerFileAnchor("demo_flask", "src/app.py", false, "demo_flask", "app.py")
         )
+    }
+
+    // ---- round 4: ONE tap does both halves --------------------------------
+
+    @Test
+    fun `a tap performs the most specific anchored control under the finger`() {
+        // Beat 6 spotlights the whole bottom bar, so its hole CONTAINS the tabs:
+        // the tap has to resolve to the control the finger is really on, or the
+        // tour either does nothing or does the wrong thing.
+        val bar = GuideRect(0f, 900f, 1080f, 1050f)
+        val tabs = listOf(
+            GuideTapTarget(GuideAnchors.NAV_TAB_PACKAGES, GuideRect(648f, 900f, 864f, 1050f)),
+            GuideTapTarget(GuideAnchors.NAV_TAB_TERMINAL, GuideRect(864f, 900f, 1080f, 1050f))
+        )
+        assertEquals(
+            GuideAnchors.NAV_TAB_PACKAGES,
+            GuideTapPolicy.targetFor(700f, 950f, bar, tabs)?.id
+        )
+        assertEquals(
+            GuideAnchors.NAV_TAB_TERMINAL,
+            GuideTapPolicy.targetFor(900f, 950f, bar, tabs)?.id
+        )
+        // A tap on the part of the bar the tour does not anchor (Projects,
+        // Editor, Settings) resolves to NOTHING: the overlay leaves that gesture
+        // alone and the real tab performs it.
+        assertNull(GuideTapPolicy.targetFor(100f, 950f, bar, tabs))
+        // Nested anchors: the innermost is what the user aimed at (a package card
+        // contains its own INSTALL button).
+        val card = GuideTapTarget(GuideAnchors.PACKAGES_CARD, GuideRect(50f, 400f, 1000f, 700f))
+        val button = GuideTapTarget("install_button", GuideRect(700f, 600f, 950f, 680f))
+        assertEquals(
+            "install_button",
+            GuideTapPolicy.targetFor(800f, 640f, card.rect, listOf(card, button))?.id
+        )
+        assertEquals(
+            GuideAnchors.PACKAGES_CARD,
+            GuideTapPolicy.targetFor(120f, 450f, card.rect, listOf(card, button))?.id
+        )
+        // Equal areas fall back to TOUR ORDER, so the answer never depends on the
+        // order a map happened to be iterated in.
+        val same = GuideRect(0f, 0f, 100f, 100f)
+        assertEquals(
+            GuideAnchors.NAV_TAB_PACKAGES,
+            GuideTapPolicy.targetFor(
+                50f,
+                50f,
+                same,
+                listOf(
+                    GuideTapTarget(GuideAnchors.NAV_TAB_TERMINAL, same),
+                    GuideTapTarget(GuideAnchors.NAV_TAB_PACKAGES, same)
+                )
+            )?.id
+        )
+    }
+
+    @Test
+    fun `nothing outside the hole is performed, and a label performs nothing`() {
+        val hole = GuideRect(0f, 0f, 100f, 100f)
+        val run = GuideTapTarget(GuideAnchors.EDITOR_RUN, GuideRect(150f, 150f, 250f, 250f))
+        // The finger is inside that control but OUTSIDE the hole: the overlay
+        // never acts on a control it is not teaching.
+        assertNull(GuideTapPolicy.targetFor(200f, 200f, hole, listOf(run)))
+        // Beat 10's status chip is a label with no click of its own: null, so the
+        // overlay leaves the gesture to Compose and only advances the tour.
+        assertNull(GuideTapPolicy.targetFor(50f, 50f, hole, emptyList()))
+    }
+
+    @Test
+    fun `a drag that leaves the hole is not a tap, so it spends no beat`() {
+        val handle = GuideRect(0f, 900f, 1080f, 1000f)
+        // A press and a lift in the same place is a tap.
+        assertTrue(GuideTapPolicy.isTap(500f, 950f, 504f, 952f, handle, 20f))
+        // A swipe up to reveal the bar travels and lifts OUTSIDE the hole: not a
+        // tap. Answering it with the control's action — or with an advance and no
+        // action — is exactly the owner's "the message went away and nothing
+        // happened", so the box stays and the beat is not spent.
+        assertFalse(GuideTapPolicy.isTap(500f, 950f, 500f, 700f, handle, 20f))
+        // A long travel that ends INSIDE the hole is still a tap on the control.
+        assertTrue(GuideTapPolicy.isTap(100f, 100f, 300f, 300f, GuideRect(0f, 0f, 1000f, 1000f), 20f))
+        // A drift past the slop, lifted inside the hole: a tap.
+        assertTrue(GuideTapPolicy.isTap(500f, 950f, 512f, 960f, handle, 8f))
+        // A drift inside the slop: a tap wherever it lifts.
+        assertTrue(GuideTapPolicy.isTap(500f, 950f, 506f, 956f, handle, 8f))
+    }
+
+    @Test
+    fun `the tour's copy teaches the gesture the tour actually accepts`() {
+        // Round 4: while a box is up the overlay owns the gesture, so a beat that
+        // told the user to SWIPE would be a beat that never moves. The handle's
+        // swipe still works the moment the tour is over (NavBarPolicy).
+        val beat6 = CoachMarkPlan.step(GuideAnchors.NAV_HANDLE)!!
+        assertTrue(beat6.body.contains("tap"))
+        assertFalse(
+            "a box must not teach a gesture the overlay swallows: ${beat6.body}",
+            beat6.body.contains("swipe")
+        )
+        for (step in CoachMarkPlan.steps) {
+            assertTrue("title too long: ${step.title}", step.title.length <= CoachMarkPlan.MAX_TITLE_CHARS)
+            assertTrue("body too long: ${step.body}", step.body.length <= CoachMarkPlan.MAX_BODY_CHARS)
+        }
     }
 }

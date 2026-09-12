@@ -35,11 +35,15 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -897,6 +901,36 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     // drawer open (only its own two beats may show then).
     val editorDialogOpen by EditorChromeState.dialogOpen.collectAsState()
     val editorDrawerOpen by EditorChromeState.drawerOpen.collectAsState()
+    // Phase 45 round 4 — the CHROME LOCK (owner: *"When the userland is
+    // installing and unpacking the user can not access any other option and it
+    // will show a sweet massage of why can't access any other option"*). Two
+    // installs pause the other tabs: the one-time userland setup, and a
+    // language/tool install the user just asked for (which the editor reports,
+    // because only the editor knows). The PURE policy decides which options are
+    // paused and what the sentence is; the Terminal tab is never paused while
+    // the userland installs (that is where the download can be watched), and the
+    // Editor tab is never paused while a package installs (that is where the
+    // Output Panel is streaming). One sentence, shown on the tap that was
+    // refused, so a paused option is never a dead one.
+    val editorInstallRunning by EditorChromeState.installRunning.collectAsState()
+    val chromeLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock(
+        progress = setupProgress,
+        facts = setupFacts,
+        packageInstallRunning = editorInstallRunning
+    )
+    val snackbarHostState = remember { SnackbarHostState() }
+    val showLockMessage: (String) -> Unit = { message ->
+        scope.launch { snackbarHostState.showSnackbar(message) }
+    }
+    // The sentence arrives ONCE when the pause begins, not only when the user
+    // discovers it by tapping something: a lock that only explains itself after
+    // a refused tap feels like a broken button for the first second. Keyed on
+    // `locked`, so the three stages of one download (downloading → checking →
+    // unpacking) do not stack three snackbars — the setup bar above already
+    // carries the moving percentage.
+    LaunchedEffect(chromeLock.locked) {
+        if (chromeLock.locked) chromeLock.message?.let(showLockMessage)
+    }
     var navRevealed by remember { mutableStateOf(false) }
     LaunchedEffect(inEditor) {
         if (!inEditor) navRevealed = false
@@ -973,6 +1007,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        // Phase 45 round 4 — where a paused option says why. Above the bar,
+        // below the tour's scrim, and it never blocks anything: a snackbar is a
+        // sentence, not a wall.
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             when {
                 // Phase 32.1 — the bar is visible (or was revealed by the
@@ -980,6 +1018,18 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                 !hideNav -> FlatBottomBar(
                     screens = screens,
                     currentDestination = currentDestination,
+                    // Phase 45 round 4 — the bar asks the pure lock policy which
+                    // of its tabs an install has paused, and what to say about it.
+                    verdictFor = { screen ->
+                        val option = com.codeci.ide.ui.terminal.SetupLockPolicy
+                            .optionForRoute(screen.route)
+                        if (option == null) {
+                            com.codeci.ide.ui.terminal.SetupVerdict.Allowed
+                        } else {
+                            com.codeci.ide.ui.terminal.SetupLockPolicy.option(option, chromeLock)
+                        }
+                    },
+                    onLockMessage = showLockMessage,
                     onNavigate = { screen ->
                         navController.navigate(
                             when (screen) {
@@ -1329,7 +1379,13 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                 editorDialogOpen ||
                 setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.DOWNLOADING ||
                 setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.VERIFYING ||
-                setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.EXTRACTING,
+                setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.EXTRACTING ||
+                // Phase 45 round 4 — the chrome lock pauses the tour as well as
+                // the tabs: a box on a paused control could be spent by a tap
+                // that only shows the "hang tight" sentence, and a beat spent is
+                // a lesson lost. (This also covers a package install streaming
+                // into the Output Panel, which no setup stage reports.)
+                chromeLock.locked,
             drawerOpen = editorDrawerOpen,
             // Where the user is, so the stall guard knows the difference between
             // a control that is missing and a control that lives on a screen they
@@ -1380,6 +1436,15 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
 private fun FlatBottomBar(
     screens: List<Screen>,
     currentDestination: NavDestination?,
+    /**
+     * Phase 45 round 4 — the chrome lock's answer per tab: [SetupVerdict.Refused]
+     * (with the sweet sentence) while an install has paused that tab.
+     */
+    verdictFor: (Screen) -> com.codeci.ide.ui.terminal.SetupVerdict = {
+        com.codeci.ide.ui.terminal.SetupVerdict.Allowed
+    },
+    /** A tap on a paused tab: show the sentence, do not navigate. */
+    onLockMessage: (String) -> Unit = {},
     onNavigate: (Screen) -> Unit
 ) {
     Column(
@@ -1421,12 +1486,34 @@ private fun FlatBottomBar(
                 // nothing). When Phase 32.1 hides the bar these withdraw, which
                 // is why the reveal-handle step comes first in the tour.
                 val tabAnchorId = CoachMarkPlan.tabAnchorFor(screen.route)
+                // Phase 45 round 4 — a paused tab: dimmed, with a small lock so
+                // the state is visible BEFORE the tap, and a tap that says why
+                // instead of navigating. The tab the install can be watched from
+                // is never paused (SetupLockPolicy.watchOption).
+                val verdict = verdictFor(screen)
+                val locked = !verdict.allowed
+                val tabColor = when {
+                    locked -> idleColor.copy(alpha = 0.45f)
+                    selected -> activeColor
+                    else -> idleColor
+                }
+                // ONE lambda for the tab and for the guided tour, which performs
+                // the click of the control it spotlights (round 4): beats 7 and 9
+                // are these two tabs, and the tap that dismisses the box must be
+                // the tap that opens them.
+                val onTabTap: () -> Unit = {
+                    if (locked) {
+                        verdict.message?.let(onLockMessage)
+                    } else {
+                        onNavigate(screen)
+                    }
+                }
                 val tabModifier = Modifier
                     .weight(1f)
-                    .clickable { onNavigate(screen) }
+                    .clickable(onClick = onTabTap)
                     .padding(vertical = 7.dp)
                 val anchoredTab: Modifier = if (tabAnchorId != null) {
-                    tabModifier.then(GuideAnchor.modifier(tabAnchorId))
+                    tabModifier.then(GuideAnchor.modifier(tabAnchorId, onClick = onTabTap))
                 } else {
                     tabModifier
                 }
@@ -1434,17 +1521,29 @@ private fun FlatBottomBar(
                     modifier = anchoredTab,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        screen.icon,
-                        contentDescription = screen.title,
-                        modifier = Modifier.size(24.dp),
-                        tint = if (selected) activeColor else idleColor
-                    )
+                    Box {
+                        Icon(
+                            screen.icon,
+                            contentDescription = screen.title,
+                            modifier = Modifier.size(24.dp),
+                            tint = tabColor
+                        )
+                        if (locked) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(11.dp)
+                                    .align(Alignment.BottomEnd),
+                                tint = idleColor
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(3.dp))
                     Text(
                         text = screen.title,
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (selected) activeColor else idleColor,
+                        color = tabColor,
                         maxLines = 1
                     )
                 }
@@ -1487,7 +1586,9 @@ private fun EditorNavRevealHandle(onReveal: () -> Unit) {
             // Phase 45.2 — the owner's *"the tap to the open down side of the
             // keyboard"*: this handle is spotlit the first time it is really on
             // screen (it exists only while the bar is hidden), and never before.
-            .then(GuideAnchor.modifier(GuideAnchors.NAV_HANDLE)),
+            // Round 4 publishes its click, so the tour's sixth beat is one tap
+            // that reveals the bar instead of one that only dismisses the box.
+            .then(GuideAnchor.modifier(GuideAnchors.NAV_HANDLE, onClick = onReveal)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

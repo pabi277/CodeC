@@ -182,11 +182,25 @@ class GuideWiringTest {
 
     // ---- 45.2 the coach marks ---------------------------------------------
 
+    /**
+     * The `GuideAnchor.modifier( … )` call that publishes [idExpr], as source.
+     * Round 4 made these calls multi-line (an anchor publishes its click beside
+     * its rect), so a pin on the old one-line shape would pass on a call that no
+     * longer publishes anything.
+     */
+    private fun anchorCall(src: String, idExpr: String): String {
+        val at = src.indexOf(idExpr)
+        assertTrue("'$idExpr' is not published anywhere", at >= 0)
+        val start = src.lastIndexOf("GuideAnchor.modifier(", at)
+        assertTrue("'$idExpr' is not inside a GuideAnchor.modifier call", start >= 0)
+        return src.substring(start, (start + 320).coerceAtMost(src.length))
+    }
+
     @Test
     fun `every anchor of the tour is published by the control the plan names`() {
         assertTrue(
             "beat 1: the editor's ☰ is not anchored",
-            source(editor).contains("GuideAnchor.modifier(GuideAnchors.EDITOR_DRAWER)")
+            anchorCall(source(editor), "GuideAnchors.EDITOR_DRAWER").isNotEmpty()
         )
         // Beat 2 is published in EVERY state of the drawer header — another
         // project, the demo already open, scratch mode — because the header always
@@ -195,7 +209,7 @@ class GuideWiringTest {
         // stays a PURE decision: the file box only on the demo's own entry file.
         assertTrue(
             "beat 2: the drawer's project header is not anchored unconditionally",
-            source(drawer).contains("GuideAnchor.modifier(GuideAnchors.DRAWER_PROJECT)") &&
+            anchorCall(source(drawer), "GuideAnchors.DRAWER_PROJECT").isNotEmpty() &&
                 !source(drawer).contains("drawerProjectAnchor") &&
                 !source(drawer).contains("projectAnchorId")
         )
@@ -203,15 +217,15 @@ class GuideWiringTest {
             "beat 3: the demo's app.py row is not anchored",
             source(drawer).contains("CoachMarkPlan.drawerFileAnchor(") &&
                 source(drawer).contains("demoEntryFile = DemoProjects.ENTRY_FILE") &&
-                source(drawer).contains("GuideAnchor.modifier(guideAnchorId)")
+                anchorCall(source(drawer), "GuideAnchor.modifier(guideAnchorId").isNotEmpty()
         )
         assertTrue(
             "beat 4: RUN ▶ is not anchored",
-            source(editor).contains("GuideAnchor.modifier(GuideAnchors.EDITOR_RUN)")
+            anchorCall(source(editor), "GuideAnchors.EDITOR_RUN").isNotEmpty()
         )
         assertTrue(
             "beat 5: the preview's Back is not anchored",
-            source(preview).contains("GuideAnchor.modifier(GuideAnchors.PREVIEW_CLOSE)")
+            anchorCall(source(preview), "GuideAnchors.PREVIEW_CLOSE").isNotEmpty()
         )
         // Beat 6 has TWO publishers and one id: the thin reveal handle while the
         // bar is hidden, and the bar itself while it is visible. Round 2 anchored
@@ -220,23 +234,25 @@ class GuideWiringTest {
         assertEquals(
             "beat 6: the reveal handle AND the visible bar must both anchor it",
             2,
-            source(main).split("GuideAnchor.modifier(GuideAnchors.NAV_HANDLE)").size - 1
+            // The call is multi-line now (round 4 publishes a click beside the
+            // rect), so the pin counts the PUBLISHERS, not one exact shape.
+            source(main).split("GuideAnchor.modifier(GuideAnchors.NAV_HANDLE").size - 1
         )
         // Beats 7 and 9 are the bottom bar's own tabs — the tour walks the user
         // to Packages and Terminal instead of hoping they wander there.
         assertTrue(
             "beats 7+9: the bottom bar does not ask the plan which tab to anchor",
             source(main).contains("CoachMarkPlan.tabAnchorFor(screen.route)") &&
-                source(main).contains("tabModifier.then(GuideAnchor.modifier(tabAnchorId))")
+                source(main).contains("GuideAnchor.modifier(tabAnchorId, onClick = onTabTap)")
         )
         assertTrue(
             "beat 8: the Packages install card is not anchored",
             source(modules).contains("GuideAnchors.PACKAGES_CARD") &&
-                source(modules).contains("GuideAnchor.modifier(guideAnchorId)")
+                anchorCall(source(modules), "GuideAnchor.modifier(guideAnchorId").isNotEmpty()
         )
         assertTrue(
             "beat 10: the terminal status chip is not anchored",
-            source(terminalScreen).contains("GuideAnchor.modifier(GuideAnchors.TERMINAL_CHIP)")
+            anchorCall(source(terminalScreen), "GuideAnchors.TERMINAL_CHIP").isNotEmpty()
         )
         // And no anchor id is left without a publisher (a spotlight on nothing).
         val all = RepoFiles.mainKotlinSources()
@@ -271,12 +287,105 @@ class GuideWiringTest {
     fun `an anchor withdraws when its control leaves composition`() {
         val src = source(coachMarks)
         // Without this the "Show tabs" mark would fire at a handle that is gone:
-        // the exact failure the visibility law exists to prevent.
-        assertTrue(src.contains("DisposableEffect(id)"))
-        assertTrue(src.contains("onDispose { GuideAnchorRegistry.withdraw(id) }"))
+        // the exact failure the visibility law exists to prevent. Round 4 keys
+        // the effect on the click's PRESENCE too, so an anchor that stops being
+        // clickable also stops offering one to the overlay.
+        assertTrue(src.contains("DisposableEffect(id, actionable)"))
+        assertTrue(src.contains("onDispose { GuideAnchorRegistry.withdraw(id, owner) }"))
         assertTrue(src.contains("coordinates.boundsInWindow()"))
+        // ONE id can have two publishers that are never on screen together (beat
+        // 6: the bar while it is visible, the thin handle while it is hidden), and
+        // a swap disposes one and composes the other in the same recomposition. A
+        // withdrawal is honoured only by the site that still owns the id, or the
+        // leaving site wipes the arriving one's rect and click and the beat goes
+        // dark on the keyboard transition it exists to teach.
+        assertTrue(src.contains("private val owners: SnapshotStateMap<String, Any>"))
+        assertTrue(src.contains("val owner = remember(id) { Any() }"))
+        val withdraw = src.substring(
+            src.indexOf("fun withdraw(id: String, owner: Any)"),
+            src.indexOf("fun rect(id: String)")
+        )
+        assertTrue(withdraw.contains("if (owners[id] !== owner) return"))
         // An empty rect is never a visible anchor.
         assertTrue(src.contains("if (rect.width <= 0f || rect.height <= 0f) return"))
+        // Leaving composition withdraws the CLICK as well as the rect — a stale
+        // lambda in a process-wide map is a tap on a control that is gone.
+        assertTrue(withdraw.contains("rects.remove(id)"))
+        assertTrue(withdraw.contains("actions.remove(id)"))
+        assertTrue(withdraw.contains("owners.remove(id)"))
+    }
+
+    @Test
+    fun `every clickable anchor publishes the click the tour performs`() {
+        // Round 4, from the owner's phone: *"1st click disappear the massage and
+        // i have to click 2nd time to really work but if someone don't click 2nd
+        // time it just cut off the flow of tutorial"*. The overlay no longer
+        // leaves the tap to Compose's pass-through (the advance recomposes the
+        // host, and a click whose node is rebuilt mid-gesture never lands): each
+        // anchor publishes its control's OWN click and the overlay performs it.
+        // So an anchor without a click is a beat that can only dismiss its box —
+        // which is the bug. These pins name the lambda each beat performs.
+        val expected = listOf(
+            editor to ("GuideAnchors.EDITOR_DRAWER" to "onClick = onDrawerTap"),
+            drawer to ("GuideAnchors.DRAWER_PROJECT" to "onClick = onSwitchProject"),
+            drawer to ("GuideAnchor.modifier(guideAnchorId" to "onClick = onOpenOrToggle"),
+            editor to ("GuideAnchors.EDITOR_RUN" to "onClick = onRunTap"),
+            preview to ("GuideAnchors.PREVIEW_CLOSE" to "onClick = onNavigateBack"),
+            main to ("GuideAnchor.modifier(tabAnchorId" to "onClick = onTabTap"),
+            modules to ("GuideAnchor.modifier(guideAnchorId" to "onClick = cardClick")
+        )
+        for ((path, pair) in expected) {
+            val (idExpr, click) = pair
+            assertTrue(
+                "${path.substringAfterLast('/')} publishes $idExpr without $click",
+                anchorCall(source(path), idExpr).contains(click)
+            )
+        }
+        // Beat 6's TWO publishers, and why only one of them has a click: the
+        // thin handle IS the control (tap = reveal the bar), while the bar as a
+        // whole is not — a bar-wide hole resolves a tap to the tab underneath
+        // (GuideTapPolicy picks the most specific anchored click), and a tap on
+        // a tab the tour does not use is left to that tab.
+        val handle = source(main).substring(source(main).indexOf("private fun EditorNavRevealHandle("))
+        assertTrue(
+            "the reveal handle must publish its own click",
+            anchorCall(handle, "GuideAnchors.NAV_HANDLE").contains("onClick = onReveal")
+        )
+        val bar = source(main).substring(
+            source(main).indexOf("private fun FlatBottomBar("),
+            source(main).indexOf("private fun EditorNavRevealHandle(")
+        )
+        assertFalse(
+            "the bar as a whole must not own a click — its tabs do",
+            anchorCall(bar, "GuideAnchors.NAV_HANDLE").contains("onClick")
+        )
+        // Beat 8's card publishes the click of the button it is REALLY showing:
+        // INSTALL, or VIEW SETUP while the userland is not usable, or nothing at
+        // all when the package is installed (its buttons are RUN / UNINSTALL /
+        // REINSTALL, and none of them is what the box teaches). Publishing
+        // `onInstall` unconditionally would turn a tap on a highlighted card into
+        // a REINSTALL the user never asked for.
+        val modulesSrc = source(modules)
+        val cardClick = modulesSrc.substring(
+            modulesSrc.indexOf("val cardClick: (() -> Unit)? = when {"),
+            modulesSrc.indexOf("val cardModifier =")
+        )
+        assertTrue(cardClick.contains("isInstalled -> null"))
+        assertTrue(cardClick.contains("setupRefusal != null -> onViewSetup"))
+        assertTrue(cardClick.contains("else -> onInstall"))
+        // Beat 10 is a label, not a control: nothing to perform, and publishing
+        // a fake click would be a lie the user can tap.
+        assertFalse(
+            "the terminal status chip has no click to publish",
+            anchorCall(source(terminalScreen), "GuideAnchors.TERMINAL_CHIP").contains("onClick")
+        )
+        // The registry keeps ONE stable wrapper per anchor, reading the latest
+        // click through rememberUpdatedState: a process-wide map must never hold
+        // a lambda that captured last frame's state.
+        val src = source(coachMarks)
+        assertTrue(src.contains("val current by rememberUpdatedState(onClick)"))
+        assertTrue(src.contains("GuideAnchorRegistry.publishAction(id, { current?.invoke() }, owner)"))
+        assertTrue(src.contains("fun perform(id: String): Boolean"))
     }
 
     @Test
@@ -329,21 +438,38 @@ class GuideWiringTest {
     }
 
     @Test
-    fun `the highlighted control is the only way on, and a tap outside does nothing`() {
+    fun `one tap inside the hole does both halves, and a tap outside does nothing`() {
         val src = source(coachMarks)
         // The scrim only draws: a Canvas takes no pointer input.
         assertTrue(src.contains("Canvas(Modifier.fillMaxSize())"))
         assertTrue(src.contains("awaitFirstDown(requireUnconsumed = false)"))
-        // Inside the hole the tap is NOT consumed, so the real control performs
-        // its own action, and that same tap advances the tour.
-        assertTrue(src.contains("if (hole.contains(down.position)) {"))
-        assertTrue(src.contains("onAdvance()"))
         // Outside: the whole gesture is swallowed — no dismiss (owner: "even tap
         // outside will not end that box") and nothing reaches the UI underneath.
+        assertTrue(src.contains("if (!hole.contains(down.position)) {"))
         assertTrue(src.contains("down.consume()"))
         assertTrue(src.contains("event.changes.forEach { it.consume() }"))
         assertTrue(src.contains("if (event.changes.none { it.pressed }) break"))
         assertFalse("a tap outside must not end the box", src.contains("onDismiss"))
+        // Inside: the PURE policy picks the control under the finger, the
+        // registry performs that control's own click, and only then does the
+        // tour advance — one tap, both halves, in that order. The order is the
+        // whole fix: advancing first is what let round 3 recompose the host
+        // mid-gesture and lose the click it was riding on.
+        assertTrue(src.contains("GuideTapPolicy.targetFor("))
+        assertTrue(src.contains("targets = GuideAnchorRegistry.tapTargets()"))
+        assertTrue(src.contains("GuideAnchorRegistry.perform(target.id)"))
+        assertTrue(src.contains("onAdvance()"))
+        val performAt = src.indexOf("GuideAnchorRegistry.perform(target.id)")
+        val advanceAt = src.indexOf("onAdvance()", performAt)
+        assertTrue("the overlay never performs the control's click", performAt >= 0)
+        assertTrue("the tour must advance AFTER the click, not before", advanceAt > performAt)
+        // A gesture that travels and lifts outside the hole is a scroll, not a
+        // tap: it spends no beat and performs no click, so the box stays.
+        assertTrue(src.contains("GuideTapPolicy.isTap("))
+        assertTrue(src.contains("touchSlop = touchSlop"))
+        assertTrue(src.contains("val touchSlop = LocalViewConfiguration.current.touchSlop"))
+        // The press decides WHICH control, before anything can move.
+        assertTrue(src.contains("tapX = down.position.x"))
         // The hole is the anchor rect padded, never a hard-coded position: the
         // plan is pure and the layout is observed (tablets, landscape, split).
         assertTrue(src.contains("anchorRect.left - padPx"))
@@ -499,7 +625,9 @@ class GuideWiringTest {
         val src = source(main)
         val at = src.indexOf("blockedByForeground = exitPromptVisible ||")
         assertTrue("the blocked-by-foreground rule is gone", at >= 0)
-        val block = src.substring(at, at + 500)
+        // 1000, not 500: round 4 added the chrome lock to the list, and the
+        // comment that says why is part of the block being pinned.
+        val block = src.substring(at, at + 1000)
         assertTrue("the exit survey must block marks", block.contains("exitPromptVisible"))
         assertTrue("safe mode must block marks", block.contains("com.codeci.ide.ui.crash.SafeMode.active"))
         // A download that is actually moving blocks; CHECKING (a startup
@@ -508,6 +636,10 @@ class GuideWiringTest {
         assertTrue(block.contains("SetupStage.VERIFYING"))
         assertTrue(block.contains("SetupStage.EXTRACTING"))
         assertFalse("CHECKING is not work", block.contains("SetupStage.CHECKING"))
+        // Round 4: the chrome lock pauses the tour too. A box on a tab an install
+        // has paused could be spent by a tap that only shows the "hang tight"
+        // sentence — and a beat spent is a lesson the tour never teaches again.
+        assertTrue("an install that pauses the tabs must pause the tour", block.contains("chromeLock.locked"))
     }
 
     @Test

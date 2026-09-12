@@ -546,8 +546,27 @@ private fun PackageItemCard(
 ) {
     // Phase 45.2 — the anchored card publishes its window rect while it is laid
     // out; the pure CoachMarkPlan decides whether a mark may use it.
+    // Phase 45 round 4 — and it publishes the click of the button the card is
+    // REALLY showing, so the tour's eighth beat is one tap that starts the
+    // one-time download instead of a tap that only dismisses the box:
+    //  - not installed → INSTALL (`onInstall`, which already carries the
+    //    Phase 44.1 setup gate, so performing it from the overlay cannot
+    //    bypass that);
+    //  - not installed and the userland is not usable → the card shows VIEW
+    //    SETUP, so that is the click published;
+    //  - already installed → the card's buttons are RUN / UNINSTALL / REINSTALL
+    //    and none of them is what the box is teaching, so NO click is published:
+    //    the tap is left to the card (and still advances the tour). Publishing
+    //    `onInstall` here would turn a tap on a highlighted card into a
+    //    REINSTALL the user never asked for.
+    val cardClick: (() -> Unit)? = when {
+        isInstalled -> null
+        setupRefusal != null -> onViewSetup
+        else -> onInstall
+    }
     val cardModifier = if (guideAnchorId != null) {
-        Modifier.fillMaxWidth().then(GuideAnchor.modifier(guideAnchorId))
+        Modifier.fillMaxWidth()
+            .then(GuideAnchor.modifier(guideAnchorId, onClick = cardClick))
     } else {
         Modifier.fillMaxWidth()
     }

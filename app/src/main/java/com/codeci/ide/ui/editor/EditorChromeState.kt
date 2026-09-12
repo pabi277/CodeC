@@ -47,4 +47,23 @@ object EditorChromeState {
     fun setDrawerOpen(open: Boolean) {
         _drawerOpen.value = open
     }
+
+    private val _installRunning = MutableStateFlow(false)
+
+    /**
+     * Phase 45 round 4 — true while an install the user asked for is streaming
+     * into the editor's Output Panel (`OutputRunState.installing && busy`). The
+     * editor is the only surface that knows, and the app scaffold needs it: the
+     * owner's *"When the userland is installing and unpacking the user can not
+     * access any other option and it will show a sweet massage of why"* means
+     * the OTHER TABS pause too, and they live in `MainActivity`, not here.
+     *
+     * `false` on dispose, like every fact in this object: a stale "installing"
+     * would leave the whole app locked behind an install that finished.
+     */
+    val installRunning: StateFlow<Boolean> = _installRunning.asStateFlow()
+
+    fun setInstallRunning(running: Boolean) {
+        _installRunning.value = running
+    }
 }

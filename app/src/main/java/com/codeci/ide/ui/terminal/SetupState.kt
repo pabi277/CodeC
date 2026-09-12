@@ -589,6 +589,195 @@ object SetupGatePolicy {
 }
 
 /**
+ * Phase 45 round 4 — the CHROME LOCK, written for the owner's request after he
+ * ran the tour on his phone (2026-09-12):
+ *
+ * > "When the userland is installing and unpacking the user can not access any
+ * > other option and it will show a sweet massage of why can't access any other
+ * > option"
+ *
+ * Two installs answer to that sentence, and both are covered:
+ *  - the ONE-TIME USERLAND setup (Phase 44's bootstrap: downloading, verifying,
+ *    unpacking) — while it moves and no working prefix exists yet, the tabs that
+ *    cannot work are paused;
+ *  - a LANGUAGE/TOOL install the user just asked for (RUN ▶ → Install, or the
+ *    Packages tab) — it streams into the editor's Output Panel, so everything
+ *    that would walk the user away from it, or start a second job on the same
+ *    runner, is paused until it finishes.
+ *
+ * The law this file keeps (pinned by `SetupGatePolicyTest`): **the surface that
+ * SHOWS the install is never locked** ([watchOption]) — Terminal for the
+ * userland, the Editor for a package install. A pause with no way to watch the
+ * thing you are waiting for is how an app looks bricked, and "it looks bricked"
+ * is the failure Phase 44.1 exists to remove.
+ *
+ * Two Phase 44.1 guarantees stay untouched, because a lock is an answer about
+ * CHROME, not about capability — [SetupGatePolicy.can] still decides that:
+ *  - `RUN_C` and `EDIT_FILE` are allowed in every stage, and while the USERLAND
+ *    is being built the editor keeps both ([editorChromeLocked] is false). A
+ *    package install is the one pause that reaches inside the editor, and it is
+ *    not the userland's fault: one runner, one job at a time, and RUN ▶ during
+ *    an install was already a silent no-op (`if (_outputState.value.busy)
+ *    return`). A sentence beats a tap that does nothing.
+ *  - an in-flight UPGRADE of a working prefix locks nothing: `facts.usable` is
+ *    true, its own note says "everything still works", and taking the app away
+ *    from a user who can use it would be a lie in the other direction.
+ *
+ * `CHECKING` never locks either. It is the startup probe, not work: locking on
+ * it would pause the app on every launch, including launches where there is
+ * nothing to install.
+ */
+
+/** One chrome destination the lock can pause. */
+enum class ChromeOption { PROJECTS, EDITOR, PACKAGES, SETTINGS, TERMINAL }
+
+/** Why the chrome is paused. [ChromeLockReason.NONE] means it is not. */
+enum class ChromeLockReason {
+    NONE,
+    USERLAND_DOWNLOAD,
+    USERLAND_VERIFY,
+    USERLAND_UNPACK,
+    PACKAGE_INSTALL
+}
+
+/** The lock's whole answer: why, and the one sentence that says so. */
+data class ChromeLock(
+    val reason: ChromeLockReason = ChromeLockReason.NONE,
+    val message: String? = null
+) {
+    val locked: Boolean get() = reason != ChromeLockReason.NONE
+
+    companion object {
+        /** Nothing is installing: every option is open and there is nothing to say. */
+        val OPEN = ChromeLock(ChromeLockReason.NONE, null)
+    }
+}
+
+/**
+ * The chrome lock's decisions. Pure, so "which options are paused, and what does
+ * the user read when they tap one" is host-tested instead of being discovered on
+ * a phone mid-download.
+ */
+object SetupLockPolicy {
+
+    /**
+     * Why the chrome is paused right now, or [ChromeLockReason.NONE].
+     *
+     * A package install wins over the userland stage: it is the thing the user
+     * just asked for and the thing streaming on screen, so it is the honest
+     * reason to name. `facts.usable` short-circuits the userland branch — an
+     * upgrade of a working prefix pauses nothing.
+     */
+    fun reasonFor(
+        progress: InstallProgress,
+        facts: SetupFacts,
+        packageInstallRunning: Boolean
+    ): ChromeLockReason {
+        if (packageInstallRunning) return ChromeLockReason.PACKAGE_INSTALL
+        if (facts.usable) return ChromeLockReason.NONE
+        return when (progress.stage) {
+            SetupStage.DOWNLOADING -> ChromeLockReason.USERLAND_DOWNLOAD
+            SetupStage.VERIFYING -> ChromeLockReason.USERLAND_VERIFY
+            SetupStage.EXTRACTING -> ChromeLockReason.USERLAND_UNPACK
+            // CHECKING is a probe, READY is done, FAILED/UNSUPPORTED have their
+            // own sentence at the point of use (SetupGatePolicy.refusal) and
+            // their own retry (⬇ in the terminal toolbar). Pausing the app for
+            // a setup that has already stopped would strand the user.
+            else -> ChromeLockReason.NONE
+        }
+    }
+
+    /** The lock, with its sentence. Defaults are the "nothing is happening" case. */
+    fun lock(
+        progress: InstallProgress = InstallProgress(SetupStage.CHECKING),
+        facts: SetupFacts = SetupFacts(),
+        packageInstallRunning: Boolean = false
+    ): ChromeLock {
+        val reason = reasonFor(progress, facts, packageInstallRunning)
+        if (reason == ChromeLockReason.NONE) return ChromeLock.OPEN
+        return ChromeLock(reason, sweetMessage(reason, progress.percent))
+    }
+
+    /**
+     * The "sweet message": what is happening, why everything else is paused,
+     * and where the user can watch. One sentence per reason — the same sentence
+     * on every locked option, because three different explanations for one
+     * install is how an app starts talking to itself.
+     */
+    fun sweetMessage(reason: ChromeLockReason, percent: Int? = null): String? = when (reason) {
+        ChromeLockReason.NONE -> null
+        ChromeLockReason.USERLAND_DOWNLOAD ->
+            if (percent != null) {
+                "Hang tight \u2014 CodeC is downloading its Linux tools ($percent %). " +
+                    "Other options are paused for a moment so this one-time setup finishes " +
+                    "cleanly. The Terminal tab shows every step."
+            } else {
+                "Hang tight \u2014 CodeC is downloading its Linux tools. " +
+                    "Other options are paused for a moment so this one-time setup finishes " +
+                    "cleanly. The Terminal tab shows every step."
+            }
+        ChromeLockReason.USERLAND_VERIFY ->
+            "Hang tight \u2014 CodeC is checking the download it just made. " +
+                "Other options are paused for a moment so this one-time setup finishes " +
+                "cleanly. The Terminal tab shows every step."
+        ChromeLockReason.USERLAND_UNPACK ->
+            "Hang tight \u2014 CodeC is unpacking its Linux tools \u2014 the last step. " +
+                "Other options are paused for a moment so this one-time setup finishes " +
+                "cleanly. The Terminal tab shows every step."
+        ChromeLockReason.PACKAGE_INSTALL ->
+            "Hang tight \u2014 CodeC is installing what you asked for. " +
+                "Other options are paused for a moment so this one install finishes " +
+                "cleanly. The Output panel shows every step."
+    }
+
+    /**
+     * The one option that stays open while locked: where the install can be
+     * watched. Never null, never locked — see the law in this file's header.
+     */
+    fun watchOption(reason: ChromeLockReason): ChromeOption =
+        if (reason == ChromeLockReason.PACKAGE_INSTALL) ChromeOption.EDITOR else ChromeOption.TERMINAL
+
+    /**
+     * May this option be used right now? The watch surface is always
+     * [SetupVerdict.Allowed]; everything else refuses with the sweet message
+     * while an install is moving, and is allowed the moment it is not.
+     */
+    fun option(option: ChromeOption, lock: ChromeLock): SetupVerdict = when {
+        !lock.locked -> SetupVerdict.Allowed
+        option == watchOption(lock.reason) -> SetupVerdict.Allowed
+        else -> SetupVerdict.Refused(
+            lock.message ?: sweetMessage(lock.reason) ?: "Hang tight \u2014 CodeC is installing."
+        )
+    }
+
+    /**
+     * Are the editor's OWN chrome options (☰ and RUN ▶) paused? Only for a
+     * package install: while the userland itself is being built the editor keeps
+     * its Phase 44.1 guarantees (typing and `cc` never wait for a download).
+     */
+    fun editorChromeLocked(lock: ChromeLock): Boolean =
+        lock.reason == ChromeLockReason.PACKAGE_INSTALL
+
+    /**
+     * Route → chrome option, so the bar asks the policy instead of keeping its
+     * own list. `null` for a route that is not one of the five tabs (preview,
+     * feedback, templates, logs): those are reached from inside a screen, and
+     * the lock answers taps on chrome, never programmatic navigation.
+     */
+    fun optionForRoute(route: String?): ChromeOption? {
+        val r = route?.substringBefore('?')?.trim().orEmpty()
+        return when {
+            r.startsWith("file_manager") -> ChromeOption.PROJECTS
+            r.startsWith("editor") -> ChromeOption.EDITOR
+            r.startsWith("modules") -> ChromeOption.PACKAGES
+            r.startsWith("settings") -> ChromeOption.SETTINGS
+            r.startsWith("terminal") -> ChromeOption.TERMINAL
+            else -> null
+        }
+    }
+}
+
+/**
  * The setup state machine. One instance per process, fed by the installer's
  * progress lines; the terminal event always wins, so no busy flag can survive
  * (the "spinner forever" bug class the spec pins).

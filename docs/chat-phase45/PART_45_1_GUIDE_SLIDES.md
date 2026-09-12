@@ -290,3 +290,25 @@ as a claim about the whole guide:
    the first, and the app navigates to the editor where beat 1 lives). `GuideScreen`
    itself, `GuidePlan`, its 15 cases and its vocabulary pin are byte-identical to
    round 1.
+
+---
+
+## Round 4 note (2026-09-12, later still) — still unchanged, and now also paused by an install
+
+Round 4 (one tap per beat; the chrome lock) touched **nothing** in 45.1:
+`GuidePlan.kt`, `GuideScreen.kt`, `GuidePlanTest`'s 15 cases and the vocabulary pin are
+byte-identical to round 1, and rows **G1-G8** still describe the shipped behaviour.
+
+Two things round 4 changes *around* the slides:
+
+1. The tour's taps now **perform the control's own click** and advance in the same
+   gesture (deviation 17) — the slides keep their own plain buttons.
+2. **A real install pauses the app's chrome, including the tour.** While the one-time
+   Linux tools are downloading/checking/unpacking, or while a package install streams
+   into the Output Panel, the options that cannot work are paused with one explanatory
+   sentence and the tour pauses with them — so on a fresh install the slides (which run
+   *before* Phase 44's terminal divert) are followed by a Terminal tab that shows the
+   download, and the tour resumes on its own beat once the install settles. Slide 3 is
+   the slide that promised this, and round 4 made the app behave like slide 3 says.
+   Specified in [`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+   §"Phase 45 round 4 — the chrome lock"; device rows **G34-G38**.

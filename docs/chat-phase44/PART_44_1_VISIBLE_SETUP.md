@@ -352,3 +352,135 @@ disk-based and uses the pattern route; `AlreadyInstalled` re-checks the disk;
 post-repair refresh exists). **109 host cases green locally.** Re-test rows:
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) **R1-R8**, then D1-D12 on a fresh install.
 Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §35.
+
+---
+
+## Phase 45 round 4 (2026-09-12) — the chrome lock: *"the user can not access any other option"*
+
+### The request, verbatim
+
+> When the userland is installing and unpacking the user can not access any other other
+> option and it will show a sweet massage of why can't access any other option
+
+It arrived as a Phase 45 note (the owner had just run the guided tour), but it is a
+44.1 question — *"what may the user do right now"* — so it is specified here and
+implemented beside the gate: one new pure object, `SetupLockPolicy`, in `SetupState.kt`,
+with the same shape as everything else in this part (a stage in, one honest sentence
+out, host-tested).
+
+### What the gate already answered, and what was missing
+
+`SetupGatePolicy.can(action, facts)` answers **capability**: may this *act* run — a
+`pkg` install, a language run, a `.c` compile. It has always refused with a sentence,
+and it has always allowed `RUN_C`, `EDIT_FILE` and `OPEN_TERMINAL`.
+
+What nothing answered was **chrome**: while the one-time setup is moving, every tab is
+still tappable, and the taps that "work" are the ones that walk the user away from the
+only place the install can be watched. That is the option the owner wants closed, and
+closed *with an explanation* — a refused tap that says nothing reads as a broken
+button.
+
+### The lock
+
+`SetupLockPolicy.lock(progress, facts, packageInstallRunning)` → `ChromeLock(reason,
+message)`. Two triggers, one shape:
+
+| Reason | When | Paused | Never paused |
+|---|---|---|---|
+| `USERLAND_DOWNLOAD` / `_VERIFY` / `_UNPACK` | the bootstrap is moving **and** `!facts.usable` (a first install or a repair) | Projects, Editor, Packages, Settings | **Terminal** — `watchOption`, where the download, the percentage, the "don't close" line and the ⬇ retry live |
+| `PACKAGE_INSTALL` | an install the user asked for is streaming into the editor's Output Panel (`OutputRunState.installing && busy`) | Projects, Packages, Settings, **Terminal**, and inside the editor ☰ + RUN ▶ + the drawer's edge swipe | **Editor** — `watchOption`, where the Output Panel is |
+
+**The law (pinned):** *the surface that shows the install is never paused.* A pause
+with no way to watch the thing you are waiting for is how an app looks bricked, and
+"it looks bricked" is the failure this whole part exists to remove.
+
+Three states deliberately pause **nothing**:
+
+- `CHECKING` — the startup probe, not work. Pausing on it would lock the app on every
+  launch, including launches with nothing to install.
+- `READY` / `FAILED` / `UNSUPPORTED` — settled. Each has its own sentence at the point
+  of use (`refusal`) and its own retry (⬇ in the terminal toolbar); pausing the app for
+  a setup that has already stopped would strand the user with no way out.
+- **An in-flight upgrade of a working prefix** (`facts.usable == true` while the stage
+  moves). 44.1's own sentence for that is *"everything still works"*, and taking the
+  app away from a user who can use it would be a lie in the other direction.
+
+And two 44.1 guarantees are untouched, because a lock is an answer about **chrome**,
+not about capability: `RUN_C` and `EDIT_FILE` are still allowed in every stage, and
+while the *userland* is being built the editor keeps both (`editorChromeLocked` is
+false — typing and `cc` never wait for a download). A package install is the one pause
+that reaches inside the editor, and it is not the userland's fault: one runner, one job
+at a time. RUN ▶ during a busy panel was already a silent `return`
+(`EditorViewModel.confirmInstall` / `runActiveFile`), so the choice was between a tap
+that does nothing and a tap that explains itself.
+
+### The sentence
+
+One per reason, from `sweetMessage(reason, percent)`, and the same sentence on every
+paused option — three explanations for one install is how an app starts talking to
+itself. It answers *what is happening*, *why everything else is paused*, and *where to
+watch*:
+
+| Reason | Sentence |
+|---|---|
+| download (with %) | *Hang tight — CodeC is downloading its Linux tools (62 %). Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step.* |
+| download (no %) | same, without the percentage — **never invented** (44.1's rule) |
+| verify | *Hang tight — CodeC is checking the download it just made. …* |
+| unpack | *Hang tight — CodeC is unpacking its Linux tools — the last step. …* |
+| package install | *Hang tight — CodeC is installing what you asked for. Other options are paused for a moment so this one install finishes cleanly. The Output panel shows every step.* |
+
+It arrives **twice**: once when the pause begins (`LaunchedEffect(chromeLock.locked)`,
+keyed on `locked` so the three stages of one download do not stack three snackbars —
+the moving percentage is the setup bar's job), and again on every refused tap.
+
+### Where it is wired
+
+- `MainActivity` computes `chromeLock` from the two live signals (`setupProgress` +
+  `setupFacts` from `TerminalViewModel`, `EditorChromeState.installRunning` from the
+  editor) and hands the bar a per-tab `verdictFor`; `FlatBottomBar` dims a paused tab
+  (0.45 alpha), draws a small `Icons.Default.Lock` on it **before** it is tapped, and
+  routes the tap to the sentence instead of to `navigate`. The scaffold grew a
+  `snackbarHost` — a line of text, not a wall, and it blocks nothing.
+- `EditorChromeState` grew a third fact, `installRunning`, because the tabs live in
+  `MainActivity` and the install lives in the editor; it is cleared on dispose, since a
+  stale "installing" would leave the whole app paused behind an install that finished
+  with the screen.
+- `OutputRunState` grew `installing` (default false, set on the ONE install path,
+  cleared by both of its exits). `busy` alone is not enough: a run — or the Flask
+  server the guided tour itself starts — keeps `busy` true for minutes, and pausing the
+  app for the user's own program would be a prison, not a courtesy.
+- `EditorScreen` uses the same policy for ☰ (`onDrawerTap`), RUN ▶ (`onRunTap`) and
+  `ModalNavigationDrawer.gesturesEnabled` — a lock you can edge-swipe around is not a
+  lock — and shows the same sentence through its own snackbar host.
+- The guided tour pauses with the chrome (`blockedByForeground … || chromeLock.locked`,
+  [`../chat-phase45/PART_45_2_COACH_MARKS.md`](../chat-phase45/PART_45_2_COACH_MARKS.md)
+  §Round 4, deviation 20): a box on a paused control could only be spent by a tap that
+  merely shows the sentence.
+
+### Not locked, on purpose (the owner may overrule this list)
+
+Read literally, *"any other option"* would also close the editor's file tree, the
+keyboard, saving, `cc`, the Terminal during a bootstrap install, and the setup bar's
+VIEW action. This round locks **chrome that leads away from, or collides with, the
+install** and keeps everything the 44.1 laws guarantee. If the owner wants the harder
+version — one full-screen "setting up" surface with nothing tappable but the progress —
+that is a small change to `SetupLockPolicy.option` plus a veil composable, and it is
+worth saying out loud that it would make a first launch (which starts the download
+automatically, and which 44.1 already diverts to the Terminal tab) a waiting room.
+
+### Tests added
+
+`SetupGatePolicyTest` 25 → **30**: the three userland stages pause the chrome and
+explain themselves (sentence, percentage, watch surface, every other option refused
+with the SAME sentence) · a probe, three settled stages and an upgrade of a working
+prefix pause nothing · a package install keeps the Editor and pauses the rest,
+including the editor's own chrome · routes → options, and a non-tab route → none ·
+**the lock never weakens the gate beside it** (`RUN_C` / `EDIT_FILE` / `OPEN_TERMINAL`
+still allowed while the chrome is paused). `SetupGateWiringTest` 20 → **23**: the bar
+asks the policy and a paused tab does not navigate · a paused tab looks paused · the
+sentence arrives when the pause begins · the editor reports the install only it can see
+and clears it on dispose · `installing` has exactly one writer and two clears · the
+editor's ☰ / RUN ▶ / edge swipe answer the same policy. **117 Phase 44 host cases green
+locally** (193 with Phase 45's 76). Device rows:
+[`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G38**.
+Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38.

@@ -232,7 +232,11 @@ object CoachMarkPlan {
             surface = GuideSurface.EDITOR,
             anchorId = GuideAnchors.NAV_HANDLE,
             title = "The tabs are here",
-            body = "Five tabs, one tap away. They hide while you type \u2014 swipe up to bring them back.",
+            // Round 4: the copy says TAP, not "swipe up", because while a box is
+            // up the overlay owns the gesture (it performs the control's click
+            // itself) and a swipe that leaves the hole is not a tap. The swipe
+            // still works the moment the tour is over (NavBarPolicy).
+            body = "Five tabs, one tap away. They hide while you type \u2014 tap this handle to bring them back.",
         ),
         // 7-8 — "then a small tour of package".
         CoachStep(
@@ -506,6 +510,10 @@ data class GuideRect(val left: Float, val top: Float, val right: Float, val bott
     val width: Float get() = right - left
     val height: Float get() = bottom - top
     val centerX: Float get() = (left + right) / 2f
+    val area: Float get() = width * height
+
+    fun contains(x: Float, y: Float): Boolean =
+        x >= left && x <= right && y >= top && y <= bottom
 }
 
 /** A size in window pixels — the pure twin of Compose's `Size`. */
@@ -542,5 +550,96 @@ object TooltipPlacement {
         val maxLeft = (screen.width - tooltip.width - margin).coerceAtLeast(margin)
         val left = (anchor.centerX - tooltip.width / 2f).coerceIn(margin, maxLeft)
         return GuidePlacement(below = fitsBelow, left = left, top = top)
+    }
+}
+
+/**
+ * One anchored control the tour may act on: its id and where it is. The Android
+ * edge builds these from the anchor registry (`GuideAnchorRegistry.tapTargets`),
+ * so the DECISION — which control a tap performs — stays here and is host-tested
+ * (`CoachMarkPlanTest`) instead of being discovered on a phone.
+ */
+data class GuideTapTarget(val id: String, val rect: GuideRect)
+
+/**
+ * Phase 45 round 4 — the tap that does BOTH halves at once.
+ *
+ * The owner, after running round 3: *"Now the steps feel like an overlay on the
+ * botton so 1st click disappear the massage and i have to click 2nd time to
+ * really work but if someone don't click 2nd time it just cut off the flow of
+ * tutorial."*
+ *
+ * Round 3 left the tap inside the hole UNCONSUMED and asked Compose to deliver
+ * the rest of the gesture to the real control. That depends on the control still
+ * being the same node when the finger lifts — and the tour's own advance is what
+ * recomposes the host (`coachSeen` → `tourWaitsInDrawer`, the next beat's box),
+ * so the first tap could spend the lesson and lose the click. The overlay now
+ * performs the anchored control's OWN click (published beside its rect) and
+ * swallows the gesture, so one tap is one action plus one beat, in that order,
+ * with no double-fire.
+ *
+ * Two decisions, both pure:
+ *  - [targetFor]: which control a tap performs — the MOST SPECIFIC actionable
+ *    box under the finger, so beat 6's bar-wide hole resolves a tap on the
+ *    Packages tab to the Packages tab (and a tap on a tab the tour does not use
+ *    resolves to nothing, which leaves that tap to the real control);
+ *  - [isTap]: whether the gesture meant "tap the highlighted control" at all. A
+ *    finger that travels and lifts outside the hole was a scroll or a swipe, and
+ *    answering it with the control's action — or with an advance and no action —
+ *    is the exact "the message went away and nothing happened" the owner
+ *    reported. Such a gesture does nothing at all: the box stays.
+ */
+object GuideTapPolicy {
+
+    /**
+     * The control a tap at (`tapX`, `tapY`) performs, or null when no anchored
+     * control with a click of its own is under the finger.
+     *
+     * Smallest box wins: anchors nest (the bottom bar contains its tabs, a
+     * package card contains its INSTALL button), and the innermost one is what
+     * the user aimed at. Equal areas fall back to tour order, so the answer
+     * never depends on the order a map happened to be iterated in.
+     */
+    fun targetFor(
+        tapX: Float,
+        tapY: Float,
+        hole: GuideRect,
+        targets: List<GuideTapTarget>
+    ): GuideTapTarget? {
+        if (!hole.contains(tapX, tapY)) return null
+        return targets
+            .filter { it.rect.contains(tapX, tapY) }
+            .minWithOrNull(compareBy({ it.rect.area }, { beatOrder(it.id) }))
+    }
+
+    /**
+     * Was this gesture a tap on the highlighted control?
+     *
+     * True when the finger barely moved (a press-and-lift anywhere in the hole)
+     * or when it lifted inside the hole; false for a drag that travelled and
+     * ended outside, which is a scroll or a swipe and must not spend a beat.
+     * Movement is measured as the larger of dx/dy — no square root on the
+     * pointer path, and a conservative test (a diagonal move counts as the
+     * longer of its two sides).
+     */
+    fun isTap(
+        downX: Float,
+        downY: Float,
+        upX: Float,
+        upY: Float,
+        hole: GuideRect,
+        touchSlop: Float
+    ): Boolean {
+        val dx = if (upX > downX) upX - downX else downX - upX
+        val dy = if (upY > downY) upY - downY else downY - upY
+        val moved = if (dx > dy) dx else dy
+        if (moved <= touchSlop) return true
+        return hole.contains(upX, upY)
+    }
+
+    /** Earlier lesson wins a tie; an id outside the tour sorts last. */
+    private fun beatOrder(id: String): Int {
+        val index = CoachMarkPlan.steps.indexOfFirst { it.id == id }
+        return if (index < 0) Int.MAX_VALUE else index
     }
 }

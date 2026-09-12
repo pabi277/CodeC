@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
@@ -44,6 +45,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -61,9 +63,17 @@ import kotlinx.coroutines.delay
  *    is laid out and withdraws it when it leaves composition, so a control that
  *    is gone (the tab bar's reveal handle, a drawer row, the preview's Back) is
  *    not "visible" and cannot be spotlit;
- *  - **the highlighted control is the only forward button** — a tap inside the
- *    hole is left unconsumed so the real control performs its own action, and
- *    that same tap advances the tour. A mid-tour card has NO button at all:
+ *  - **the highlighted control is the only forward button, and ONE tap is the
+ *    whole answer** (round 4) — the anchor publishes its own click beside its
+ *    rect, so a tap inside the hole performs that control's action and advances
+ *    the tour in the same gesture, with the gesture swallowed so nothing can
+ *    fire twice. Round 3 instead left the tap unconsumed and trusted Compose to
+ *    deliver the rest of it to the control underneath; the owner ran that and
+ *    reported *"1st click disappear the massage and i have to click 2nd time to
+ *    really work but if someone don't click 2nd time it just cut off the flow of
+ *    tutorial"* — the advance recomposes the host, and a click whose node is
+ *    rebuilt mid-gesture never lands. See [GuideTapPolicy].
+ *    A mid-tour card has NO button at all:
  *    round 2's SKIP TOUR is gone, and with it the BackHandler that ended the
  *    tour, because the owner ran that build and reported *"You add the skip
  *    option and it's not a trough guide mean it got cut. I want a full process
@@ -107,18 +117,79 @@ object GuideAnchorRegistry {
 
     private val rects: SnapshotStateMap<String, Rect> = mutableStateMapOf()
 
+    /**
+     * The click of each anchored control, published beside its rect (round 4).
+     * The overlay performs THIS instead of leaving the tap to Compose's
+     * pass-through, so one tap on the highlighted control does both halves —
+     * the control's own action and the tour's next beat. See [GuideTapPolicy].
+     */
+    private val actions: SnapshotStateMap<String, () -> Unit> = mutableStateMapOf()
+
+    /**
+     * Which composition site owns an id right now. ONE id can have two
+     * publishers that are never on screen together — beat 6 is the bottom bar
+     * while the bar is visible and the thin "Show tabs" handle while it is
+     * hidden — and a swap between them disposes one site and composes the other
+     * in the SAME recomposition. A withdrawal is therefore honoured only by the
+     * site that still owns the id: without that, the leaving site can wipe the
+     * arriving site's rect and click, and the beat goes dark on the exact
+     * keyboard transition it exists to teach.
+     */
+    private val owners: SnapshotStateMap<String, Any> = mutableStateMapOf()
+
     /** Called from `onGloballyPositioned`; empty rects are ignored. */
-    fun publish(id: String, rect: Rect) {
+    fun publish(id: String, rect: Rect, owner: Any) {
         if (rect.width <= 0f || rect.height <= 0f) return
+        owners[id] = owner
         if (rects[id] != rect) rects[id] = rect
     }
 
-    /** Called when the anchored control leaves composition. */
-    fun withdraw(id: String) {
+    /**
+     * Called from the anchor's composition with ONE stable wrapper that reads
+     * the latest click (see [GuideAnchor.modifier]): a process-wide map must
+     * never hold a lambda that captured last frame's state.
+     */
+    fun publishAction(id: String, action: () -> Unit, owner: Any) {
+        owners[id] = owner
+        if (actions[id] !== action) actions[id] = action
+    }
+
+    /** An anchor that has no click of its own (the bar as a whole, a label). */
+    fun withdrawAction(id: String, owner: Any) {
+        if (owners[id] !== owner) return
+        actions.remove(id)
+    }
+
+    /** Called when the anchored control leaves composition: rect AND click. */
+    fun withdraw(id: String, owner: Any) {
+        if (owners[id] !== owner) return
+        owners.remove(id)
         rects.remove(id)
+        actions.remove(id)
     }
 
     fun rect(id: String): Rect? = rects[id]
+
+    /**
+     * The anchored controls that have BOTH a click of their own and a rect to
+     * aim at, as pure boxes — the whole input of [GuideTapPolicy.targetFor].
+     */
+    fun tapTargets(): List<GuideTapTarget> = actions.keys.mapNotNull { id ->
+        val rect = rects[id] ?: return@mapNotNull null
+        GuideTapTarget(id, GuideRect(rect.left, rect.top, rect.right, rect.bottom))
+    }
+
+    /**
+     * Perform one anchored control's own click; true when there was one. Called
+     * from the overlay's lift handler, so it runs on the UI thread inside the
+     * gesture that asked for it — the same thread and moment a real tap on the
+     * control would have used.
+     */
+    fun perform(id: String): Boolean {
+        val action = actions[id] ?: return false
+        action()
+        return true
+    }
 
     /** The anchors currently laid out with a non-empty rect. */
     fun visibleIds(): Set<String> = rects
@@ -136,13 +207,33 @@ object GuideAnchorRegistry {
  */
 object GuideAnchor {
 
+    /**
+     * @param onClick the control's OWN click, published beside the rect so one
+     *   tap on the highlighted control performs it (round 4). Null for an anchor
+     *   that is not itself clickable — the bottom bar as a whole (its tabs
+     *   publish their own clicks, and a bar-wide hole resolves a tap to the tab
+     *   under the finger) and the terminal's status chip (a label).
+     */
     @Composable
-    fun modifier(id: String): Modifier {
-        DisposableEffect(id) {
-            onDispose { GuideAnchorRegistry.withdraw(id) }
+    fun modifier(id: String, onClick: (() -> Unit)? = null): Modifier {
+        // One stable wrapper per anchor, reading the LATEST click through this
+        // state: an onClick rebuilt on every recomposition must not leave a
+        // stale capture (an old project, a closed drawer) in a process-wide map.
+        val current by rememberUpdatedState(onClick)
+        val actionable = onClick != null
+        // This site's identity in the registry, stable across recompositions and
+        // unique per publisher: see [GuideAnchorRegistry]'s `owners`.
+        val owner = remember(id) { Any() }
+        DisposableEffect(id, actionable) {
+            if (actionable) {
+                GuideAnchorRegistry.publishAction(id, { current?.invoke() }, owner)
+            } else {
+                GuideAnchorRegistry.withdrawAction(id, owner)
+            }
+            onDispose { GuideAnchorRegistry.withdraw(id, owner) }
         }
         return Modifier.onGloballyPositioned { coordinates ->
-            GuideAnchorRegistry.publish(id, coordinates.boundsInWindow())
+            GuideAnchorRegistry.publish(id, coordinates.boundsInWindow(), owner)
         }
     }
 }
@@ -321,7 +412,8 @@ fun TourFinishedCard(
 
 /**
  * One box: a scrim with a hole, a card beside it, and the tour's single forward
- * gesture — tap the highlighted control.
+ * gesture — tap the highlighted control, which performs its own action and
+ * moves the tour on in the SAME tap (round 4).
  *
  * [stepNumber]/[stepCount] are on the card so the tour reads as one flow instead
  * of ten unrelated popups (the owner's *"not consistent with flow"*), in the same
@@ -416,25 +508,69 @@ fun CoachMarkOverlay(
         }
 
         // Tap handling, above the scrim and below the card:
-        //  - inside the hole → NOT consumed, so the real control performs its own
-        //    action, and the tour advances (this is the only forward gesture);
+        //  - inside the hole → ONE tap does both halves: the anchored control's
+        //    own click (performed from the registry, not left to Compose's
+        //    pass-through) and then the tour's next beat. The gesture is
+        //    swallowed while we own it, so the control cannot fire a second
+        //    time. Where no anchored click lives under the finger (a tab the
+        //    tour does not use, inside beat 6's bar-wide hole) the gesture is
+        //    left ALONE so the real control still performs it — and the advance
+        //    happens on the LIFT either way, never on the press, because
+        //    advancing on the press is what let round 3 recompose the host
+        //    mid-gesture and lose the click ("i have to click 2nd time");
+        //  - a drag that travels and lifts outside the hole is a scroll, not a
+        //    tap: it does nothing at all, so the box stays and no beat is spent;
         //  - outside → the whole gesture is swallowed. No dismiss, no pass-through.
+        val touchSlop = LocalViewConfiguration.current.touchSlop
         Box(
             Modifier
                 .fillMaxSize()
-                .pointerInput(hole, step.id) {
+                .pointerInput(hole, step.id, touchSlop) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        if (hole.contains(down.position)) {
-                            onAdvance()
-                        } else {
+                        val holeRect = GuideRect(hole.left, hole.top, hole.right, hole.bottom)
+                        if (!hole.contains(down.position)) {
                             down.consume()
                             while (true) {
                                 val event = awaitPointerEvent()
                                 event.changes.forEach { it.consume() }
                                 if (event.changes.none { it.pressed }) break
                             }
+                            return@awaitEachGesture
                         }
+                        // Which control the finger is on, decided at the PRESS
+                        // (before anything can move): the pure policy picks the
+                        // most specific anchored click under it.
+                        val target = GuideTapPolicy.targetFor(
+                            tapX = down.position.x,
+                            tapY = down.position.y,
+                            hole = holeRect,
+                            targets = GuideAnchorRegistry.tapTargets()
+                        )
+                        if (target != null) down.consume()
+                        var lift = down.position
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (target != null) event.changes.forEach { it.consume() }
+                            event.changes.firstOrNull()?.let { lift = it.position }
+                            if (event.changes.none { it.pressed }) break
+                        }
+                        if (!GuideTapPolicy.isTap(
+                                downX = down.position.x,
+                                downY = down.position.y,
+                                upX = lift.x,
+                                upY = lift.y,
+                                hole = holeRect,
+                                touchSlop = touchSlop
+                            )
+                        ) {
+                            return@awaitEachGesture
+                        }
+                        // Action first, then the beat: the click runs against the
+                        // state the user is looking at, and the advance's
+                        // recomposition comes after it, never through it.
+                        if (target != null) GuideAnchorRegistry.perform(target.id)
+                        onAdvance()
                     }
                 }
         )

@@ -122,6 +122,32 @@ Offline during setup: `CodeC needs the network once to finish setting up its
 Linux tools. C works offline right now.` — tap **⬇** in the terminal toolbar
 when you are back online.
 
+#### While an install is running, the rest of the app pauses
+
+An install is one job at a time, so the options that cannot work right now are
+**paused** instead of failing silently — and a paused option always says why.
+
+- **The one-time Linux tools** (downloading, checking, unpacking): the tabs other
+  than **Terminal** are dimmed with a small 🔒, and tapping one answers
+  *"Hang tight — CodeC is downloading its Linux tools (62 %). Other options are
+  paused for a moment so this one-time setup finishes cleanly. The Terminal tab
+  shows every step."* The Terminal tab is never paused — that is where the
+  download, the percentage, the *don't close the app* line and the ⬇ retry live.
+- **A language or tool you asked for** (RUN ▶ → **Install**, streaming into the
+  editor's Output Panel): the other tabs pause the same way, the **Editor stays
+  open** because the Output Panel is where that install can be watched, and ☰,
+  RUN ▶ and the drawer's edge swipe answer with the same sentence until it
+  finishes. Then everything unlocks by itself.
+- **Never paused:** running a program of your own (a C build, a Flask server — a
+  run is not an install), the quick startup check, a setup that has finished or
+  failed (those have their own sentence and their own retry), and an **upgrade**
+  of a working tool set (*"everything still works"*). Typing and `cc` never wait
+  for a download either — you can write and compile C offline while the Linux
+  tools arrive.
+
+The rule behind all of it: **the screen that shows the install is never the one
+that is paused**, so there is always somewhere to watch and nowhere to get lost.
+
 #### The guide: five slides, then one tour (Phase 45)
 
 The first launch teaches the app in two layers, and neither one nags:
@@ -136,15 +162,21 @@ The first launch teaches the app in two layers, and neither one nags:
   your Flask page is live → the **tab bar** (or its reveal handle) → the **Packages**
   tab → its install card → the **Terminal** tab → its **status chip**. Every box is
   labelled `Tour · n of 10`, and **the highlighted control is the only way forward**:
-  a tour box has **no button on it at all** — no next, and no skip. The tour runs
-  first beat to last, and the card at the end is the one with buttons: **VIEW AGAIN**
-  (all ten from the first) and **CLOSE**. Each box is shown once.
+  a tour box has **no button on it at all** — no next, and no skip. **One tap does both
+  halves** — it works the control (the drawer opens, the file opens, RUN ▶ runs, the tab
+  switches) and moves the tour on in the same gesture, so no beat ever needs tapping
+  twice. Scrolling is not a tap: a drag that starts in the hole and ends outside it does
+  nothing and spends nothing. The tour runs first beat to last, and the card at the end
+  is the one with buttons: **VIEW AGAIN** (all ten from the first) and **CLOSE**. Each box
+  is shown once. Where a control genuinely has nothing to do — the terminal's status chip
+  is a label, and a Packages card whose language is already installed — the tap simply
+  moves the tour on instead of pretending to press a button.
 - A box is never cut on a control you cannot see, and the tour never invents one: it
   waits for the real control, drawing **nothing** while it waits, so the app is fully
   usable in between. It never appears behind a dialog, behind the ☰ drawer, over the
-  exit survey, in safe mode, or while a download is in flight. The back button
-  navigates as it always does — it pauses the tour, and the same beat is there when
-  you come back.
+  exit survey, in safe mode, or while an install is in flight (it resumes on the same
+  beat once the install settles). The back button navigates as it always does — it
+  pauses the tour, and the same beat is there when you come back.
 
 **demo_flask is always there.** The bundled Flask demo the tour walks you through is
 re-created if you delete it — your own edits to it are never touched — so the tour

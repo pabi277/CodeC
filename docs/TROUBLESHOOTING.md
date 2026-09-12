@@ -1519,3 +1519,72 @@ alternative is the skipping the owner just reported
 (`docs/chat-phase45/PART_45_2_COACH_MARKS.md`, deviations 9 and 13-16).
 
 **Rows:** `docs/chat-phase45/DEVICE_ROUND.md` G1-G28 (G9-G28 are the tour).
+
+## 38. "The first tap only closed the box", and "an install should pause the rest" (owner device report; Phase 45 round 3 → round 4, 2026-09-12)
+
+**The report:** *"It's good but i have 2 request- / 1. When the userland is installing
+and unpacking the user can not access any other other option and it will show a sweet
+massage of why can't access any other option / 2. Now the steps feel like an overlay on
+the botton so 1st click disappear the massage and i have to click 2nd time to really
+work but if someone don't click 2nd time it just cut off the flow of tutorial / So do
+something"*
+
+**What was wrong (request 2 — a bug in round 3's own mechanism):** the tour's box left
+your tap **unconsumed** and advanced on the **press**, trusting the framework to hand
+the rest of the gesture to the control underneath. But advancing writes state, the app
+recomposes from it (the next box, the drawer plumbing), and a control rebuilt in the
+middle of a gesture is **cancelled** — so the box went away, the beat was recorded as
+taught, and nothing opened. The second tap was not the same lesson again: the tour had
+already moved to a beat whose control was not on screen, and it then waits in silence.
+One dead tap = one lost lesson and a parked tour.
+
+**What it does now:** every control the tour spotlights **publishes its own click**, and
+the box performs that click and swallows the gesture — so **one tap does both halves**
+(the drawer opens, the file opens, RUN ▶ runs, the tab switches) and the tour moves on
+in the same tap, with the click first and the advance after it. Nothing can fire twice.
+Two honest exceptions: the terminal's status chip is a **label**, so its box advances
+and performs nothing; and a Packages card whose language is **already installed**
+publishes no click either, because its buttons are RUN / UNINSTALL / REINSTALL and none
+of them is what the box is teaching — your tap behaves like an ordinary tap on the card.
+A **drag** that starts inside the hole and lifts outside is not a tap: nothing is
+performed and no beat is spent (that is a scroll, and answering a scroll with an
+install would be worse than the bug). Beat 6's copy now says *"tap this handle"* instead
+of *"swipe up"*, because while a box is up the tour only accepts a tap — the swipe still
+works the moment the tour is over.
+
+**What it does now (request 1 — the chrome lock):** while an install is really moving,
+the options that cannot work are **paused**, and a paused option **says why** instead of
+doing nothing.
+
+- **The one-time Linux tools** (downloading / checking / unpacking, with no working
+  prefix yet): the four tabs that are not **Terminal** are dimmed with a small 🔒, and
+  a tap on one shows *"Hang tight — CodeC is downloading its Linux tools (NN %). Other
+  options are paused for a moment so this one-time setup finishes cleanly. The Terminal
+  tab shows every step."* and does not navigate. The Terminal tab is never paused — that
+  is where the download, the percentage, the "don't close" line and the ⬇ retry live.
+- **A language or tool you asked for** (RUN ▶ → **Install**, streaming into the Output
+  Panel): the other four tabs pause — including Terminal — and **the Editor stays
+  open**, because the Output Panel is where that install can be watched. Inside the
+  editor, ☰ and RUN ▶ answer with the same sentence, and the drawer's edge swipe is
+  closed (a lock you can swipe around is not a lock).
+- The sentence appears **once when the pause begins** and again on every refused tap.
+- **Nothing is paused** for: a run of your own program, a Flask server you started (a
+  run is not an install), the startup probe, a setup that has already finished or
+  failed, or an in-flight **upgrade** of a working tool set (its own line is
+  *"everything still works"*). And the older guarantee stands: **typing and `cc` never
+  wait for a download** — while the Linux tools are being built the editor keeps both.
+- The guided tour pauses with the chrome: a box on a paused control could only be spent
+  by a tap that merely shows the sentence.
+
+**Known limits (recorded, not hidden):** the lock answers taps on **chrome** — the tabs,
+☰, RUN ▶, the edge swipe. It is not a full-screen wall: the file you have open stays
+open and editable, a `.c` file still compiles, and the setup bar's VIEW action still
+works, because a pause with no way to watch the install is how an app looks bricked. If
+you want the harder version (one "setting up" screen with nothing else tappable), that
+is a small change to one pure function and it is worth knowing that a first launch
+starts this download automatically.
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` **G29-G38** (G29-G33 the one-tap rule,
+G34-G38 the lock). Specification: `docs/chat-phase45/PART_45_2_COACH_MARKS.md` §Round 4
+and `docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Phase 45 round 4 — the chrome
+lock" (deviations 17-20).

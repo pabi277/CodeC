@@ -377,4 +377,98 @@ class SetupGateWiringTest {
         assertTrue(body.contains("SetupStateBridge.factsOrDisk("))
         assertTrue(body.contains("failRun(ctx, setupVerdict.message"))
     }
+
+    // ---- Phase 45 round 4: the chrome lock --------------------------------
+    // Owner, after running the tour: *"When the userland is installing and
+    // unpacking the user can not access any other option and it will show a
+    // sweet massage of why can't access any other option."*
+
+    @Test
+    fun `an install pauses the other tabs, and a paused tab says why`() {
+        val src = source(main)
+        // The bar ASKS the pure policy which tabs an install has paused; it does
+        // not keep its own list of stages, and it does not guess a sentence.
+        assertTrue(src.contains("val chromeLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock("))
+        assertTrue(src.contains("progress = setupProgress,"))
+        assertTrue(src.contains("facts = setupFacts,"))
+        assertTrue(src.contains("packageInstallRunning = editorInstallRunning"))
+        assertTrue(src.contains(".optionForRoute(screen.route)"))
+        assertTrue(src.contains("SetupLockPolicy.option(option, chromeLock)"))
+        // A paused tab does not navigate: the tap shows the sentence instead.
+        val barStart = src.indexOf("private fun FlatBottomBar(")
+        val barEnd = src.indexOf("private fun EditorNavRevealHandle(")
+        assertTrue("the bottom bar is gone", barStart >= 0 && barEnd > barStart)
+        val bar = src.substring(barStart, barEnd)
+        assertTrue(bar.contains("val locked = !verdict.allowed"))
+        assertTrue(bar.contains("if (locked) {"))
+        assertTrue(bar.contains("verdict.message?.let(onLockMessage)"))
+        assertTrue(bar.contains("onNavigate(screen)"))
+        // ONE lambda for the tab and for the guided tour, which performs the click
+        // of the control it spotlights (round 4): beats 7 and 9 are these tabs.
+        assertTrue(bar.contains("val onTabTap: () -> Unit = {"))
+        assertTrue(bar.contains("GuideAnchor.modifier(tabAnchorId, onClick = onTabTap)"))
+        // A paused tab also LOOKS paused, before it is tapped.
+        assertTrue(bar.contains("Icons.Default.Lock"))
+        assertTrue(bar.contains("idleColor.copy(alpha = 0.45f)"))
+        // The sentence has somewhere to appear: the scaffold grew a snackbar host
+        // — a line of text, not a wall, and it blocks nothing.
+        assertTrue(src.contains("snackbarHost = { SnackbarHost(snackbarHostState) }"))
+        assertTrue(src.contains("scope.launch { snackbarHostState.showSnackbar(message) }"))
+        // The sentence arrives once when the pause BEGINS, not only after a
+        // refused tap — and once per episode, so the three stages of one download
+        // do not stack three snackbars.
+        assertTrue(src.contains("LaunchedEffect(chromeLock.locked) {"))
+        assertTrue(src.contains("if (chromeLock.locked) chromeLock.message?.let(showLockMessage)"))
+        // The law that keeps a pause from being a prison: the surface that SHOWS
+        // the install is never paused, and the POLICY says which one that is.
+        val policy = source("app/src/main/java/com/codeci/ide/ui/terminal/SetupState.kt")
+        assertTrue(policy.contains("fun watchOption(reason: ChromeLockReason): ChromeOption"))
+        assertTrue(policy.contains("if (reason == ChromeLockReason.PACKAGE_INSTALL) ChromeOption.EDITOR else ChromeOption.TERMINAL"))
+        assertTrue(policy.contains("option == watchOption(lock.reason) -> SetupVerdict.Allowed"))
+    }
+
+    @Test
+    fun `the editor reports the install only it can see, and clears it on the way out`() {
+        val editor = source("app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt")
+        // The Output Panel's install flag is the only signal that says "one job is
+        // being installed right now". `busy` alone is not enough: a run — or a
+        // Flask server the tour itself starts — keeps it true for minutes, and
+        // pausing the app for the user's own program would be a prison.
+        assertTrue(editor.contains("val packageInstallRunning = outputState.busy && outputState.installing"))
+        assertTrue(editor.contains("EditorChromeState.setInstallRunning(packageInstallRunning)"))
+        // Cleared on dispose: a stale "installing" would leave the whole app
+        // paused behind an install that finished with the screen.
+        assertTrue(editor.contains("EditorChromeState.setInstallRunning(false)"))
+        // The bridge, and why it exists: the tabs live in MainActivity, the
+        // install lives in the editor, and no parameter reaches between them.
+        val bridge = source("app/src/main/java/com/codeci/ide/ui/editor/EditorChromeState.kt")
+        assertTrue(bridge.contains("val installRunning: StateFlow<Boolean>"))
+        assertTrue(bridge.contains("fun setInstallRunning(running: Boolean)"))
+        assertTrue(source(main).contains("val editorInstallRunning by EditorChromeState.installRunning.collectAsState()"))
+        // The flag itself: default false, set true on the ONE install path, and
+        // cleared by both of its exits.
+        val vm = source("app/src/main/java/com/codeci/ide/ui/viewmodels/EditorViewModel.kt")
+        assertTrue(vm.contains("val installing: Boolean = false"))
+        assertEquals("only confirmInstall may set installing = true", 1, vm.split("installing = true").size - 1)
+        assertEquals("both exits of an install clear the flag", 2, vm.split("installing = false,").size - 1)
+    }
+
+    @Test
+    fun `the editor's own chrome pauses for a package install and never for the userland`() {
+        val editor = source("app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt")
+        // ☰ and RUN ▶ answer the lock with the SAME sentence the tabs use, from
+        // the SAME pure policy — one install, one explanation.
+        assertTrue(editor.contains("com.codeci.ide.ui.terminal.SetupLockPolicy.editorChromeLocked(editorLock)"))
+        assertTrue(editor.contains("if (editorChromeLocked) showChromeLock() else toggleDrawer()"))
+        assertTrue(editor.contains("val onRunTap: () -> Unit = {"))
+        assertTrue(editor.contains("snackbarHostState.showSnackbar(message)"))
+        // The edge swipe is the same option as ☰: a lock you can swipe around is
+        // not a lock.
+        assertTrue(editor.contains("!editorChromeLocked,"))
+        // And the reason the editor is reached at all is a PACKAGE install, never
+        // the userland's own: typing and `cc` do not wait for a download
+        // (Phase 44.1's law, pinned by SetupGatePolicyTest).
+        val policy = source("app/src/main/java/com/codeci/ide/ui/terminal/SetupState.kt")
+        assertTrue(policy.contains("lock.reason == ChromeLockReason.PACKAGE_INSTALL"))
+    }
 }
