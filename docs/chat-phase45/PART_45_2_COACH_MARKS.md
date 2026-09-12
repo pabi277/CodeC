@@ -1,6 +1,6 @@
 # CodeC Phase 45.2 — Coach marks on first arrival (three or four, then never again)
 
-> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 3** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) and round 2 (`34704379023`, tip `acadaee`), round 3 pending · device round required (NOT run — **G1-G28**) · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 3** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`; `34707337429` tip `0fcb3b6`) · device round required (NOT run — **G1-G28**) · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row:** the second half of *"It has 0 guide features to give the user a
 > real knowledge how to use the app, user don't know where should they change the
 > project or file and the tap to the open down side of the keyboard"* — plus the
@@ -561,3 +561,17 @@ earned, not remembered · the drawer reopens after a pick and still closes for t
 picker. `GuidePlanTest` 15, `TooltipPlacementTest` 10, `DemoProjectSeedTest` 7
 unchanged; Phase 44's 109 unchanged. **180 = 71 guide/demo + 109.**
 
+### CI round 3: ✅ GREEN — `34707337429` (tip `0fcb3b6`, 2026-09-12)
+
+`conclusion: success`, job `build`, 25 steps, 17:08:44 → 17:19:35Z (**10m51s**), zero
+error annotations (two deprecation notices: Node 20 on the runner, `setup-java@v4`).
+Per rule §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so all
+71 guide/demo cases ran on real Gradle/JUnit/Robolectric and lint is clean. Artifacts:
+release `CodeC-IDE-1.3.17-universal.apk` **6,669,858 B**, debug **25,676,356 B**,
+`mapping.txt` 56,101,847 B, release manifest has no `android:debuggable`.
+
+**+5,288 B (+0.08%) over round 2**, and this round was not mostly deletion: the tour
+grew a finish card, a stall guard with a route map, a second publisher for beat 6, and
+a drawer reopen. Five kilobytes is the measured price of a guide that cannot be
+skipped. Whole-phase cost, for the record: **+18,176 B (+0.27%) over Phase 44 round 4**
+(6,664,474 − 12,792 = 6,651,682 B), for the slides and all three rounds of the tour.

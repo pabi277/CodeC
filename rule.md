@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` (tip `3c597b2`) and round 2 `34704379023` (tip `acadaee`), then the owner ran round 2 and 45.2 became A TOUR WITH NO SKIP — round 3 implemented, CI pending, device round G1-G28 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G28) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` (tip `3c597b2`) and round 2 `34704379023` (tip `acadaee`), then the owner ran round 2 and 45.2 became A TOUR WITH NO SKIP — round 3 implemented, CI ✅ GREEN `34707337429` on tip `0fcb3b6`, device round G1-G28 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G28) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -310,8 +310,14 @@ Every update updates the docs **in the same commit**:
   "skippable with a single tap" is reversed for the tour by the owner's own
   instruction** — the slides keep SKIP; recorded as deviation 13. **180 host cases
   green locally** (`CoachMarkPlanTest` 21, `GuideWiringTest` 18, `GuidePlanTest` 15,
-  `TooltipPlacementTest` 10, `DemoProjectSeedTest` 7). **CI on the round-3 commit is
-  pending; device rows are now G1-G28.**
+  `TooltipPlacementTest` 10, `DemoProjectSeedTest` 7). **CI on the round-3 commit
+  (`34707337429`, tip `0fcb3b6`) is ✅ GREEN** — `conclusion: success`, job `build`
+  10m51s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
+  release APK 6,669,858 B (**+5,288 B / +0.08% over round 2**: this round added a
+  finish card, a route-aware stall guard, a second publisher for beat 6 and a drawer
+  reopen — five kilobytes is the measured price of a guide that cannot be skipped;
+  whole phase **+18,176 B / +0.27%** over Phase 44 round 4), debug 25,676,356 B,
+  v1.3.17. **Device rows are now G1-G28 and are NOT run.**
   **CI round 1 (`34698914219`, tip `3c597b2`) is
   ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
   per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
@@ -320,7 +326,8 @@ Every update updates the docs **in the same commit**:
   the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
   **G1-G28** written for round 3 and **NOT run** (G28 is the optional 20-second
-  stall-guard row); CI on the round-2 commit
+  stall-guard row); CI is ✅ GREEN on all three rounds (round 3 = `34707337429`, tip
+  `0fcb3b6`), and the round-2 commit
   (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
   10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
   release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the

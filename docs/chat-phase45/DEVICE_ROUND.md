@@ -7,11 +7,12 @@
 > §"Round 3"). 45.1's slides are unchanged — the owner's own decision: *"Slides stay
 > as they are (GOT IT / START CODING / SKIP)."*
 >
-> **The build to install:** the newest green `Build APK` run on
-> `arena/01a0955a-codec` **after the round-3 commit** (Actions → the run →
-> **Artifacts** → `CodeC-IDE-debug`). Round 2's build (`34704379023`) still has
-> **SKIP TOUR on every card** and still passes beats over — installing it repeats
-> exactly what the owner reported.
+> **The build to install:** `Build APK` **`34707337429`** on `arena/01a0955a-codec`
+> — round-3 commit `0fcb3b6`, ✅ `success`, job `build` 10m51s, release APK
+> 6,669,858 B (**+5,288 B / +0.08%** over round 2), debug 25,676,356 B (Actions →
+> that run → **Artifacts** → `CodeC-IDE-debug`). Round 2's build (`34704379023`)
+> still has **SKIP TOUR on every card** and still passes beats over — installing it
+> repeats exactly what the owner reported.
 >
 > **Two ways to get a first run** (rows G1-G5 and the whole tour need one):
 > install as a **fresh install** (uninstall first, or a second profile), **or**

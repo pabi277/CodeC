@@ -2,8 +2,9 @@
 
 > **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 3** (2026-09-12, `arena/01a0955a-codec`;
 > owner: *"Start Phase 45"* → two device reports → two rebuilds of 45.2) · CI ✅ GREEN
-> round 1 (`34698914219`, tip `3c597b2`) and round 2 (`34704379023`, tip `acadaee`),
-> round 3 pending · device round required (**G1-G28**, NOT run)
+> on all three rounds (`34698914219` tip `3c597b2`; `34704379023` tip `acadaee`;
+> `34707337429` tip `0fcb3b6`, release APK 6,669,858 B) · device round required
+> (**G1-G28**, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
@@ -423,7 +424,11 @@ locally**. 45.1 is still untouched
 
 ### What is still open
 
-CI on the round-3 commit, then the device round: rows **G1-G28** in
+CI on the round-3 commit is ✅ GREEN (`34707337429`, tip `0fcb3b6`, job `build` 10m51s,
+release APK 6,669,858 B = **+5,288 B / +0.08%** over round 2 — this round added a
+finish card, a route-aware stall guard, a second publisher for beat 6 and a drawer
+reopen, so five kilobytes is the measured price of a guide that cannot be skipped), so
+only the device round is open: rows **G1-G28** in
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour). Test it
 after **Settings → About → Reset tips**, or the beats round 2 already marked seen will
 not come back. Phase 44's round 2 is still pending on the same phone.

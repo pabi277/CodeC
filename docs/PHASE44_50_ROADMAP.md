@@ -36,9 +36,10 @@
 > to close and view again"*): every beat now waits in order, a tour card has **no
 > button at all**, Back pauses without spending a beat, and the finish card offers
 > **VIEW AGAIN** + **CLOSE**. Round 3 is implemented with **180 host cases green
-> locally**; CI is ✅ **GREEN** on rounds 1-2 (`34698914219`; `34704379023` on tip
-> `acadaee`, job `build` 10m41s, release APK 6,664,570 B = +96 B over round 1) and
-> pending on round 3, and device round
+> locally**; CI is ✅ **GREEN** on all three rounds (`34698914219`; `34704379023`;
+> `34707337429` on tip `0fcb3b6`, job `build` 10m51s, release APK
+> 6,669,858 B = +5,288 B / +0.08% over round 2 and +18,176 B / +0.27% for the whole
+> phase), and device round
 > [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G28** is NOT
 > run (start it from Settings → About → Reset tips).
 > 46-50 are still plan-only. Phase 43 is
@@ -86,7 +87,7 @@ The numbers **are** the order. Why this order:
    all**, `UserlandInstaller.kt:377-395`).
 2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 3**
    (`arena/01a0955a-codec`; both parts, 180 host cases green locally, CI ✅ GREEN
-   rounds 1-2 `34698914219`/`34704379023` and round 3 pending, device round
+   on all three rounds `34698914219`/`34704379023`/`34707337429`, device round
    [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G28 not
    run). First impression for every tester you have not met yet,
    and its slide 3 is where the *"one-time download, don't close the app"*
