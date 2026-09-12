@@ -1,142 +1,85 @@
-# CodeC Phase 43 — File system strength (open any folder, never crash)
+# CodeC Phase 43 — ❌ CANCELLED (2026-09-12) · "Open a folder" is removed from the app
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** L · **Owner row:** *"Now the file system is good
-> but i want it more stronger, i can't open a project in the editor from project
-> folder, open a folder crash the app"*
+> **Status:** ❌ **CANCELLED BY THE OWNER** — never implemented (it was
+> 📋 PLANNED only; zero app code ever existed for it). ·
+> **Owner (2026-09-12, verbatim):** *"The project have a feature open a folder
+> (phase 43, incomplete) i want to remove it completely and make the project
+> section more optimization features like file single click to open in a editor
+> screen with real path and same file edit but not full project to editor. To
+> open a full project in editor the 3 dot will have the option to open in
+> editor."*
+>
+> The replacement work is **Phase 46 — Projects, not folders**
+> ([`../chat-phase46/`](../chat-phase46/README.md)). The roadmap for the whole
+> test-phase series is [`../PHASE44_50_ROADMAP.md`](../PHASE44_50_ROADMAP.md).
 
-```text
-  43.1  "Open folder" that cannot crash (safe SAF walk)
-  43.2  Open a folder as a project (ProjectLink + link/sync, in place where legal)
-```
+---
 
-| Part | Title | Effort | Status |
+## What was cancelled, exactly
+
+Phase 43 was two planned parts, both **spec-only**:
+
+| Part | Title | What it promised | Fate |
 |---|---|---|---|
-| [43.1](PART_43_1_SAFE_FOLDER_WALK.md) | Crash-proof folder import + cancel/progress | M | 📋 PLANNED |
-| [43.2](PART_43_2_OPEN_FOLDER_AS_PROJECT.md) | Open a folder as a project, in place | L | 📋 PLANNED |
+| 43.1 | "Open folder" that cannot crash | Replace `ProjectTransfer.copyDocumentTree`'s unbounded recursion with a bounded, cancellable, `Throwable`-safe walk | ❌ **Not needed** — the feature it hardened is deleted in 46.1 |
+| 43.2 | Open a folder as a project (link + sync) | A `ProjectLink` record, a persisted SAF grant, two-way sync between a user folder and a CodeC working copy | ❌ **Cancelled** — the owner does not want folder linking |
 
-## What exists today (evidence, read 2026-09-10)
+Both part docs (`PART_43_1_SAFE_FOLDER_WALK.md`,
+`PART_43_2_OPEN_FOLDER_AS_PROJECT.md`) are **deleted in the same commit** as
+this tombstone, on the owner's *"remove it completely"*. Their full text is in
+git history (`docs/chat-phase43/` at `f3a6e32` and earlier) — nothing is lost,
+and this file records the parts a future chat must not silently resurrect.
 
-- **Projects live in app-private storage, enforced in code.**
-  `ProjectManager.projectsRoot()` is `filesDir/CodeC/projects`, and
-  `project(name)` refuses anything whose `canonicalFile.parentFile` is not
-  exactly that root — so **by construction, no folder anywhere else on the
-  device can be a project**. `FileManager.getProjectDir()` documents *why* the
-  fallback candidates are a last resort: emulated storage (including
-  `getExternalFilesDir`) is mounted **`noexec`**, so `./a.out` dies with
-  "Permission denied" even after a successful `cc` — the same reason Termux
-  keeps `$HOME` under `/data/data`.
-- **The one way in is a copy, and it is fragile.** Hub → *Open folder*
-  (`FileManagerScreen:1013-1016`, `ActivityResultContracts.OpenDocumentTree`) →
-  `FileManagerViewModel.importFolder`, which creates an empty project and runs
-  `ProjectTransfer.copyDocumentTree`. That walker
-  (`ProjectTransfer.copyDocumentChildren`) is a **plain recursion per
-  directory** with: no visited set, no depth limit, no file-count/byte budget,
-  no cancellation, no progress, and it opens every file's stream serially.
-  `importFolder` catches `Exception` only. A file provider that lists the
-  parent among its own children (documented for provider-backed "directories"
-  like *Downloads*) therefore produces a `StackOverflowError` — an `Error`, not
-  an `Exception` — which sails past the `catch` and **kills the app**. That is
-  the owner's second sentence, and it is a plausible, code-visible cause; 43.1
-  must still confirm it on device with the crash record before fixing (no
-  blind patch).
-- **Compare the ZIP path, which is already guarded**: `importZip` has
-  `MAX_ZIP_ENTRIES = 10_000`, `MAX_ZIP_ENTRY_BYTES = 128 MB`, a total-bytes
-  cap, a path-escape check per entry, and `finally { temporaryZip.delete() }`.
-  The tree walk deserves the same maturity and nothing more exotic.
-- **The picker is half-right: the contract is correct, the persistence is
-  missing.** `FileManagerScreen.kt:177-185` uses
-  `ActivityResultContracts.OpenDocumentTree()` — the *only* action whose grant
-  can be persisted — and hands the URI to `viewModel.importFolder(context, uri)`
-  which copies and forgets. `takePersistableUriPermission` has **zero call
-  sites** in the app (verified 2026-09-10), so nothing SAF-selected survives
-  process death — which is why "link a folder" is impossible today and why
-  import-by-copy is the only story. 43.2 adds the call; 43.1 does not (one-shot
-  copy needs no lingering permission).
-- **Storage is already two-track, and 39 must not pretend otherwise.**
-  `MainActivity.kt:354-360`, `SettingsScreen.kt:846-852` and
-  `ShellEnvironment.kt:1771-1775` each check `Environment.isExternalStorageManager()`
-  and route to `ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION` — i.e. CodeC
-  **already declares and already offers** `MANAGE_EXTERNAL_STORAGE`
-  (`AndroidManifest.xml:12`, with `READ_EXTERNAL_STORAGE` and
-  `WRITE_EXTERNAL_STORAGE maxSdkVersion="32"` as the legacy pair). So plain
-  `File` access to `/sdcard` is a supported path here, not a fallback: 43's
-  walker therefore takes a `File` **or** a `Uri` and never proposes changing that
-  permission story (42.3 audits the list instead, honestly).
-- **The in-app file tree has no such action at all**: a directory row's ⋮ menu
-  offers New file / New folder / Rename / Delete — there is no "use as
-  project", "open here", or "link".
+## What Phase 46 deletes from the *app* (the code that exists today)
 
-## Research that shaped the design
+| File:line (verified 2026-09-12, `main` @ `f3a6e32`) | What it is |
+|---|---|
+| `FileManagerScreen.kt:180-188` | `folderImportLauncher` (`ActivityResultContracts.OpenDocumentTree()`) |
+| `FileManagerScreen.kt:1077-1080` | the `+`-sheet's `onOpenFolder` branch |
+| `FileManagerScreen.kt:1474-1481` | the "Open Folder" row itself (green tile, `SpckIcons.FolderLine`) |
+| `FileManagerScreen.kt:1431` | the `onOpenFolder` parameter of `ProjectsHubAddSheet` |
+| `FileManagerViewModel.kt:357-382` | `importFolder()` — creates an empty project, copies the tree, `catch (e: Exception)` |
+| `ProjectTransfer.kt:20-29` | `copyDocumentTree()` |
+| `ProjectTransfer.kt:313-345` | `copyDocumentChildren()` — the unbounded recursion (no visited set, no depth/file/byte budget, no cancel, no progress) |
+| `strings.xml:348-349` | `hub_sheet_folder` ("Open Folder") + `hub_sheet_folder_subtitle` ("Pick an existing folder") |
 
-Dossier: [`../PHASE38_43_OSS_RESEARCH.md`](../PHASE38_43_OSS_RESEARCH.md) §2.
-The short version: `androidx.documentfile` (Apache-2.0) is the platform's own
-helper and its `TreeDocumentFile` is exactly the shape CodeC already avoids for
-performance (one provider query per child; `findFile()` is O(children) queries
-and sub-tree roots lose write permission) — CodeC keeps its
-`DocumentsContract`-based walk and *fixes* it. `MANAGE_EXTERNAL_STORAGE`, Rclone
-and third-party pickers were rejected. Persisting the grant
-(`takePersistableUriPermission`) is mandatory for anything that must survive a
-reboot; the flags on the *intent* are not the grant.
+**Kept on purpose** (they are not part of 43 and the owner did not ask for them
+to go): `Import ZIP`, `Import file` (into the open project), `Export ZIP`,
+"Export all projects", and the Phase 24.7 `Open with CodeC` intent filters
+(`AndroidManifest.xml` `ACTION_VIEW`/`ACTION_SEND` for text, python and zip).
 
-## The two rules this phase must not break
+**Test impact:** none. `grep -rln copyDocumentTree app/src/test/` returns
+nothing — no host test covers the folder walk, which is itself part of why the
+crash survived to a device.
 
-1. **`noexec` is physics.** A project's *sources* may live outside
-   `filesDir`; anything that must be **executed** (a compiled binary, a
-   `python3` child run against it) runs from app-private storage. 43.2's
-   mirror exists only for that, and the phase states it as such instead of
-   pretending the app edits the SD card in place.
-2. **A crash is a failure of the boundary, not of the provider.** Every
-   SAF-facing entry point ends in `catch (t: Throwable)` → a message + a
-   cleanup, and *no unbounded recursion, anywhere*. If a host test can feed a
-   cyclic tree and the code does not terminate, the phase is not done.
+## Why this is a good cancellation, not just an owner preference
 
-## Exit condition (device matrix matters here)
+1. **It promised less than it appeared to.** `importFolder` is a **one-way
+   copy**: after it, the user's folder and CodeC's copy are unrelated — no link,
+   no write-back. Phase 43's own README admitted it (*"one-way copy into a new
+   project"*), and 43.2 existed only to fix that. Without 43.2 the row in the
+   `+` sheet over-promises.
+2. **It was the app's only unbounded recursion.** A document provider that lists
+   a parent among its own children (documented for provider-backed "directories"
+   such as *Downloads*) makes `copyDocumentChildren` recurse forever; the
+   resulting `StackOverflowError` is an `Error`, and the VM catches only
+   `Exception` (`FileManagerViewModel.kt:375`) — so it kills the app with no
+   message. Deleting the caller deletes the crash class.
+3. **It needed a permission story CodeC does not have.**
+   `takePersistableUriPermission` has **zero call sites** in `app/src/main`
+   (verified 2026-09-12), so nothing SAF-selected survived process death; the
+   feature only ever worked until the next launch.
+4. **The owner's replacement is a better product.** "Tap a file → edit that
+   file; ⋮ → Open in editor → the whole project" (Phase 46.2) covers the real
+   need — *get at my code fast* — without SAF, without a copy, and without a
+   second project model to explain.
 
-```text
-1. A normal folder (~2 000 files, nested) imports with a progress line and a
-   final count; tapping Cancel leaves no half-copied project behind.
-2. Pick *Downloads* (a provider, not a directory) → a clear message, no crash.
-3. Pick a huge tree (a folder with a node_modules or a 1 GB video) → stopped
-   by a budget with the reason named; the app stays alive; nothing partial.
-4. Force-stop the app mid-import, relaunch → no ghost project in the hub.
-5. (43.2) Open a folder that already has code from `Download/` (or an SD card)
-   as a project: it appears in the hub, edits, and RUN works — python/HTML
-   directly, C through the mirror — and saving syncs back to the same folder.
-6. (43.2) Kill the app and reopen: the linked folder still works (persisted
-   grant). Revoke the permission in system settings: CodeC says "the link to
-   <folder> is gone" and offers to re-pick — it must not crash and must not
-   silently edit a stale mirror.
-PASS = 1-4 for 43.1; 5-6 additionally for 43.2.
-```
+## The one thing a future chat must remember
 
-## Risks to watch (multi-device round)
-
-- Provider behaviour differs by OEM (AOSP DocumentsUI vs Samsung *My Files* vs
-  Xiaomi's file manager vs Total Commander): the budgets must be enforced by
-  CodeC, never trusted from the provider.
-- Cloud providers (Google Drive, Nextcloud) return URIs whose reads fail
-  mid-stream (`FileNotFoundException`, `SocketTimeoutException`): per-file
-  failure must skip-and-report, never abort the whole import.
-- Android 11+ scoped storage means the app can *see* nothing outside its dirs
-  without SAF: no code path may assume `/storage/emulated/0/…` is readable
-  just because `ShellEnvironment` can `ls` it in the terminal (different
-  mechanism, and users will notice the inconsistency).
-- Symlink-ish documents (`application/vnd.document.android.document` oddities)
-  and `OTAs`: never follow a child URI built from an *un*sanitised name —
-  `ProjectPathUtils.resolveInside` stays the only way to make a target path.
-
-## Deferred, recorded on purpose
-
-- **Editing an SD-card project fully in place** (no mirror) — needs every
-  editor/git/process path to speak `ContentResolver`, gives up local
-  `exec`/`cc`, and makes `git status` on a slow provider unusable. 43.2's
-  mirror-and-sync is the honest 80 %.
-- **"Storage access" via `Environment.isExternalStorageManager()`** —
-  over-broad and Play-sensitive; never.
-- **A custom full-featured file manager** replacing `FileManagerScreen` —
-  out of scope; SAF is the file manager.
-- **Watching the linked folder for external changes** (`FileObserver` /
-  `ContentObserver` on the tree) — deferred; 43.2 ships an explicit
-  "Re-check folder" action instead of a background observer that will miss
-  events on some OEMs.
+If anyone ever asks for "open my SD-card folder as a project" again, the honest
+answer is in git history: `noexec` on emulated storage means anything CodeC
+**executes** must live in app-private storage, so an in-place SAF project would
+need a mirror anyway, plus `takePersistableUriPermission`, plus a
+`ProjectManager.project()` audit (today it refuses any root whose canonical
+parent is not `projectsRoot()`). That is a large phase, not a row in a sheet.
+Do not re-add the cheap version — it is the version that crashed.

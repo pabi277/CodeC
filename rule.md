@@ -198,7 +198,54 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-11, **Phase 41 is ✅ COMPLETE & MERGED to `main` via PR #70 (round 1 device-passed 8/8; round-2 device pass not separately reported — the owner's call); 38/39/40 are ✅ COMPLETE & MERGED; 42-43 are 📋 PLANNED — next: "Start Phase 42"**)
+## 9. State snapshot (2026-09-12, **Phases 44-50 are 📋 PLANNED (docs-only, the owner's test-phase bug report — next: "Start Phase 44"); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+
+- **Phases 44-50 PLANNED (2026-09-12, docs-only, no app code)** — the owner's
+  **test-phase bug report** (seven rows: the invisible one-time download, no
+  guide, "remove open-a-folder", four editor complaints, three "other"
+  complaints) became seven researched phases, **numbered so the numbers are
+  the order of work**: **44** setup is visible and cannot half-finish (44.1 the
+  setup bar + `SetupVerdict`; 44.2 `SetupLedger` + an atomic, resumable,
+  self-repairing install) → **45** the guide (45.1 five slides + three re-open
+  doors; 45.2 coach marks on first arrival, ≤2 per surface, 5 total) → **46**
+  projects, not folders (46.1 delete "open a folder" everywhere; 46.2 one tap on
+  a file opens *that file*, "Open in editor" moves to the card ⋮ menu) →
+  **47** editor chrome (47.1 the drawer gets a close ✕ + an in-drawer project
+  list, and the `"Open folder"`-titled switcher dialog is deleted; 47.2 the
+  system keyboard becomes the default and CodeC Keys becomes opt-in) → **48**
+  the caret is always above the keyboard (`CaretVisibilityPolicy` + sora's
+  `ensurePositionVisible`) → **49** back does the obvious thing everywhere
+  (49.1 `BackRouter` precedence table; 49.2 the exit prompt decided from state,
+  kept ON per the owner, plus a Settings door for gesture-nav devices) →
+  **50** the cross-device round (`DEVICE_MATRIX.md`, 4 device classes, 50
+  rows). Records: [`docs/PHASE44_50_UX_RESEARCH.md`](docs/PHASE44_50_UX_RESEARCH.md)
+  (the dossier — every claim carries a `file:line`), `docs/PHASE44_50_ROADMAP.md`,
+  and `docs/chat-phase44/` … `docs/chat-phase50/`. **Owner clarifications of
+  record:** 4.iv = *both* the editor drawer and the hub file tree (plus an audit
+  of every screen); 5.B = *keep the exit prompt ON, make it consistent*;
+  4.ii = *in-drawer project picker, not a SAF folder picker*; the guide =
+  *both* slides and coach marks. Standing decisions for the series: no new
+  dependencies (the guide and coach marks are built in-house per §6), the
+  keyboard default flip is a **reversal** of the Phase 28 "DEFAULT ON per owner
+  round 2" decision on the owner's explicit instruction (recorded in
+  `chat-phase47/PART_47_2`), and **no phase in this series may show a modal
+  nag more than once**. Phase 50 exists because four of these fixes are only
+  meaningful on hardware and this sandbox has no device, no emulator and no
+  Gradle cache.
+
+- **Phase 43 CANCELLED (2026-09-12)** — the owner's test-phase report row 3 was
+  *"remove the open a folder option… completely"*, so "open a folder as a
+  project" is removed from the queue and from the app's surface. Its two part
+  docs are deleted and `docs/chat-phase43/README.md` is the tombstone
+  (❌ CANCELLED, with the reason and what replaces it). What Phase 43 was
+  solving is re-solved better by **Phase 46**: instead of importing an external
+  folder (an unbounded recursive copy with no resumability —
+  `ProjectTransfer.copyDocumentChildren` has no depth or size bound, and no test
+  covers it), CodeC keeps *projects it owns* and makes opening a single file
+  first-class. Kept from the Phase 43 research: Import ZIP, Import file,
+  Export ZIP, and Phase 24.7's "Open with CodeC" share target — none of those
+  are "open a folder".
+
 
 - **Phase 41 MERGED (2026-09-11, owner: "Merge it") — [PR #70](https://github.com/pabi277/CodeC/pull/70)
   from `arena/01a08cc6-codec`** (7 commits, all CI green; the merge record:
