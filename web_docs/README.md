@@ -14,7 +14,7 @@ handoff file (the website's `prompt.md`).
 | File | What it is | Update when… |
 |---|---|---|
 | [`README.md`](README.md) | This index — what the folder is, how it works | the folder's structure changes |
-| [`WEBSITE_PLAN.md`](WEBSITE_PLAN.md) | **The master spec (v2)**: two wings — product site (7 pages) + learning wing ("Master CodeC from Zero to Advanced", `/learn` + 17 chapters) — per-page content, self-dependent rules, design, stack, repo layout, deployment, phases W1–W6, acceptance criteria | the owner changes scope/design/stack |
+| [`WEBSITE_PLAN.md`](WEBSITE_PLAN.md) | **The master spec (v2.2, 2026-09-12)**: two wings — product site (7 pages) + learning wing ("Master CodeC from Zero to Advanced", `/learn` + 17 chapters) — per-page content (synced with app Phases 21–43: universal APK 6.6 MB, Auto engine only, >_ mark, file icons, LAN server, outputs temporary, GitHub truth, feedback hardcoded, backup include-list, crash-loop guard, export-all, safe walk planned), self-dependent rules, design, stack, repo layout, deployment, phases W1–W6, acceptance criteria | the owner changes scope/design/stack or app Phases add new facts (sync to v2.2 done 2026-09-12) |
 | [`DECISIONS.md`](DECISIONS.md) | Decision log (numbered D1, D2, …) with date, owner/agent attribution, and rationale | any decision is made or reversed |
 | [`NEXT_STEPS.md`](NEXT_STEPS.md) | Head state line + what happens next (what the owner says to move) | every session that closes a gate |
 | [`WEB_JOURNEY.md`](WEB_JOURNEY.md) | Narrative timeline of all website work (numbered entries, like `docs/JOURNEY.md`) | every session that closed something |
@@ -43,7 +43,8 @@ records (what happened), `web-phaseN` = planned phases (what will be built).
 3. **Append, don't destructively rewrite history** — session folders are
    permanent; living docs (`NEXT_STEPS.md`, `WEB_JOURNEY.md`, `WEBSITE_PLAN.md`)
    get their state summaries updated.
-4. **Clean-room:** content is distilled from the repo's own public files; the
+4. **Clean-room:** content is distilled from the repo's own public files (`README.md`, `docs/TROUBLESHOOTING.md`, `docs/BETA.md`, `docs/RELEASE_NOTES.md`, `docs/JOURNEY.md`); the
    Termux site is a structural reference only — never copy its source.
 5. **The website writes no code until the owner commands implementation**
    ("Build the website" / "start W1"). Until then this folder is edited only.
+6. **v2.2 sync (2026-09-12):** app Phases 21–43 reflected in `WEBSITE_PLAN.md` v2.2, `DECISIONS.md` D14–D22 + O8, `NEXT_STEPS.md` v2.2, `WEB_JOURNEY.md` W0.3, `web_prompt.md` v2.2, and critical product pages `web-phase2/PART_2_1_INSTALL.md` + `web-phase3/PART_3_1_ENGINES.md` + `PART_3_3_FAQ.md` + `PART_3_4_ABOUT.md` + `web-phase4/PART_4_2_VERIFY_GATE.md`. Remaining chapter PART docs inherit v2.2 via plan §3.2 and verification gate.

@@ -19,23 +19,24 @@
    never an artifact URL, they rot); secondary button **"Read the README"**
    → `https://github.com/pabi277/CodeC`.
 3. **Feature callout grid** — 6 cards (2-col → 1-col), each a short title +
-   2–3 sentences + one link. Copy per plan §3.1, every sentence sourced:
+   2–3 sentences + one link. Copy per plan §3.1 v2.2, every sentence sourced:
 
-   | Card | Claim basis (README) | Link |
+   | Card | Claim basis (README v2.2) | Link |
    |---|---|---|
-   | Built-in compiler | TCC embedded in APK; offline, instant, no Termux; arm64 + x86_64 | `engines.html` |
-   | Real terminal | VT/ANSI terminal, PTY; `cc file.c` → `./a.out` | `start.html` |
-   | Package hub | 25+ signed packages, 1-tap install & run, live badges | `packages.html` |
-   | Spck-grade editor | Projects hub, tabs, file tree, honest git, autosave | `about.html` |
-   | Web preview | HTML projects preview in-app, live reload, console | `start.html` |
-   | Always updatable | Settings → Install APK from GitHub; Releases/CI builds | `install.html` |
+   | Built-in compiler | TCC embedded APK offline instant no Termux arm64 + x86_64 (null on armeabi-v7a/x86) universal APK 6.6 MB -74% R8+shrink | `engines.html` |
+   | Real terminal + LAN server | VT/ANSI terminal PTY multi-session TerminalSessionManager 8-cap + Device as server LAN opt-in 0.0.0.0 two URLs QR ZXing open in browser keep-alive foreground service; `cc file.c` → `./a.out` | `start.html` |
+   | Package hub | 25+ signed packages 1-tap INSTALL/RUN live badges INSTALLED ✓/AVAILABLE quick system actions pkg update/upgrade/heal/status | `packages.html` |
+   | Spck-grade editor | Projects hub tabs file tree with official file icons Seti MIT + ghost text TAB ▸ + suggestion strip ƒ/λ/≠ chips + ⌄ more + 29 snippet packs MIT + Emmet + TextMate Dark+ + typing feel + honest git + autosave ~2s + safe walk + ProjectLink + export-all | `about.html` |
+   | Web preview | HTML projects preview in-app loopback + LAN live reload console fetch/modules work | `start.html` |
+   | Always updatable & safe | Settings → About → Check for updates looks only at app-v* releases compares numerically verifies sha256 refuses downgrade opens Releases when no checksum + export-all ZIP over both roots + backup include-list-only projects only token not backed up + crash-loop guard safe mode 3rd launch + feedback hardcoded +91 62967 46606 | `install.html` |
 
 4. **Learning banner** (`.learning-banner`, visually distinct — the course
    is a first-class citizen): "New to the command line — or to C? **Master
-   CodeC from Zero to Advanced.** 17 hands-on chapters, free, on this site."
+   CodeC from Zero to Advanced.** 17 hands-on chapters, free, on this site. 6.6 MB universal, offline C, feedback reaches developer."
    → `learn.html`.
-5. **Footnote strip** — "Free & open source · Built-in compiler · No Termux
-   required" + GitHub link.
+5. **Footnote strip** — "Free & open source · Built-in compiler · No Termux required · 6.6 MB universal · >_ mark" + GitHub link + icon source docs/icon/codec-512.png.
+
+> **v2.2 update:** cards now reflect Phases 34–43: file icons, typing feel, ghost+strip+snippets+Emmet+TextMate, LAN server QR+open-in-browser+keep-alive, safe features backup include-list + crash-loop guard + export-all + feedback hardcoded, universal APK 6.6 MB -74% per-ABI reverted assets/tcc not filtered, Auto engine only.
 
 ### Meta
 

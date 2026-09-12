@@ -1,63 +1,52 @@
 # CodeC Website Phase W3.3 — FAQ & troubleshooting (`/faq`)
 
-**Status:** 📋 **PLANNED** · **Cost:** `[static]` · **Effort:** S
+**Status:** 📋 **PLANNED** · **Cost:** `[static]` · **Effort:** M
 · **Depends on:** W1
 · **Target file:** `website/faq.html`
 
-> Source: `README.md` §Troubleshooting + `docs/TROUBLESHOOTING.md` (depth
-> links). Website-length answers; the repo docs stay authoritative.
+> Source: `README.md` §Troubleshooting + `docs/TROUBLESHOOTING.md` (depth links) + `docs/BETA.md` (B-1…B-8 known issues, honest list) + `docs/RELEASE_NOTES.md` (SHA256 lines, versionCode) + Phase 42.3 backup/crash-loop/export-all + Phase 38.2 Settings trim + Phase 21 Auto engine.
+> Website-length answers; the repo docs stay authoritative.
+> **v2.2 update:** adds BETA known issues, debug vs release, signature change fresh install, backup include-list-only, crash-loop safe mode, export-all, huge folder slow, 32-bit TCC null, feedback channel hardcoded, outputs temporary.
 
 ---
 
 ## 1. Design — page structure
 
-H1: "Problems, and the honest answers." + intro line (each answer below is
-distilled from the repo docs — "go deeper" links go to the exact doc).
-`.faq-item` blocks (heading + anchor), in this order:
+H1: "Problems, and the honest answers." + intro line (each answer below distilled from repo docs — "go deeper" links go to exact doc: TROUBLESHOOTING.md section, BETA.md, RELEASE_NOTES.md, DATA_AND_PRIVACY.md). `.faq-item` blocks (heading + anchor), in this order (v2.2 expanded from 9 to 15):
 
-1. **"The built-in compiler could not start"** — ABI mismatch or corrupted
-   install; reinstall; Auto falls back in the meantime.
-2. **"Permission denied" when compiling** — the two real causes (Android
-   10+ W^X policy → fixed by the targetSdk-28 compatibility mode the new
-   builds use; noexec storage → nothing can execute there, Termux included);
-   fixes in order: update (Settings → Install APK from GitHub), uninstall +
-   reinstall once, Termux engine, real phone.
-3. **"Exec format error" when compiling** — CPU mismatch; ARM64 TCC in the
-   APK; x86/x86_64 emulators → TCC covers x86_64 automatically, 32-bit or
-   stuck emulator → Termux engine; reinstall the module to rule out
-   corruption.
-4. **"Runtime libraries missing" when compiling** — interrupted/corrupt
-   toolchain; Modules → Uninstall → Download (checksum-verified); or Termux.
-5. **Install or compile hangs** — compile capped at 30 s, execution at 10 s,
-   both killed automatically; a 30 s "hang" usually means the toolchain
-   can't start (check above).
-6. **"Do I need Termux?"** — No. Auto + built-in TCC work with no Termux,
-   no downloads, offline; Termux is an optional engine (→ `/install`).
-7. **Keyboard input on a phone** — the extra-keys row (ESC, TAB, CTRL, ALT,
-   arrows) + custom macros in Settings; hardware keyboards supported.
-8. **Where do my projects live? Can I get them out?** — app-private project
-   folders; SAF folder/file/ZIP import & export; ZIP share (→ `/about`).
-9. **Where do I report a bug?** — GitHub Issues; include the "Device: …"
-   line from Settings → Developer Options → Logs (ABI + storage mount
-   flags).
+1. **"The built-in compiler could not start"** — ABI mismatch or corrupted install; reinstall; Auto falls back to Clang module / Termux in meantime; note `tccBinary()` null on armeabi-v7a/x86 by design (Phase 33.3) — not a bug, use Clang module or Termux.
+2. **"Permission denied" when compiling** — two real causes (Android 10+ W^X policy → fixed by targetSdk-28 compatibility mode new builds use (same that Termux uses); noexec storage → nothing can execute there, Termux included); fixes in order: update to latest universal APK 6.6 MB (Settings → About → Check for updates looks only at app-v* releases, verifies sha256, refuses downgrade), uninstall + reinstall once (Android labels sandbox at install time, in-place update may keep old restriction), Termux fallback automatic (four steps appear in Output Panel exactly when needed — TROUBLESHOOTING.md §27, Phase 38.2 moved from Settings card), real phone. Note picker deleted Phase 21, Termux card deleted Phase 38.2.
+3. **"Exec format error" when compiling** — CPU mismatch; CodeC ships ARM64 + x86_64 TCC (assets/tcc/{arm64-v8a 3.7M, x86_64 3.6M} + jniLibs libtcc.so 581600+405352 B), but Clang module arm64-only; x86_64 emulator → TCC covers automatically, 32-bit or stuck emulator → Clang module or Termux engine; reinstall module to rule out corruption; universal APK only, per-ABI splits reverted because assets/tcc not filtered (<2% saving).
+4. **"Runtime libraries missing" when compiling** — interrupted/corrupt toolchain; Packages → Uninstall → Download again (checksum-verified); or Termux.
+5. **Install or compile hangs** — compile capped 30s, execution 10s, both killed automatically; 30s "hang" usually means toolchain can't start (check above); editor RUN on program that calls scanf will hit 10s cap exit 124 waiting for input not infinite loop — run in Term with `./a.out`.
+6. **"Do I need Termux?"** — No. Auto + built-in TCC work with no Termux, no downloads, offline; Termux is optional fallback automatic (→ `/install`). No Settings card anymore (Phase 38.2).
+7. **Keyboard input on a phone** — extra-keys row (ESC, TAB, CTRL, ALT, arrows) + custom macros in Settings; CodeC Keys keyboard auto-closes ()[]{}""'' — { + Enter indented line with } below; hold-repeat + swipe popups; hardware keyboards supported; Editor typing feel Phase 35: keyboard stays open toggle, smooth typing, non-blinky caret while typing, no cursor on open until tap.
+8. **Where do my projects live? Can I get them out?** — app-private project folders `filesDir/CodeC/projects/<name>` + externalFilesDir fallback candidate (FileManager.projectDirCandidates) — "all projects" means both roots; SAF folder/file/ZIP import & export; ZIP share; **export-all ZIP** (Projects hub → ⋮ → Export all projects backup ZIP) over both roots byte-identical round-trip host test ProjectTransferExportAllTest, re-imports into clean install; build outputs kept out of git automatically by repo-local ignore + RunArtifacts temp/runs/<stamp>/ + TempGc (Phase 39) — your .gitignore never touched; .codec/ excluded.
+9. **Backup & restore — what travels?** — Phase 42.3 backup XMLs re-architected include-list-only after FullBackupContent lint law bit (exclude-under-include hard error). Projects only — toolchain, packages, GitHub token DataStore `files/datastore/settings.preferences_pb` (git_token) not backup-eligible (deliberate: token never rides to another device, prevents GitRedactor bypass). Device-to-device restore and cloud backup carry projects only; fresh install downloads userland again and asks sign in again. `adb backup`/device-transfer no longer tries to move userland; no allowBackup warning in lint.
+10. **Crash-loop after update: app closes at splash twice** — Persisted settings from mismatched build #1 cause proven across device rounds. Third launch: loop sentence + [Try starting without my settings] (Phase 42.3) boots app without settings — projects untouched; counter resets on clean start; banner + hand-off built, export + report hand-off to FeedbackScreen.
+11. **Debug vs release APK, signature change** — CI's only app task previously `assembleDebug` (debug.keystore pinned committed) debug APK means debuggable=true any adb/root can run-as and read whole sandbox including stored GitHub token, no optimisation, debug runtime. Release now: `assembleRelease` signed with upload key kept in Actions secrets (KEYSTORE_PATH/STORE_PASSWORD/KEY_PASSWORD env, my-upload-key.jks not in repo so release build cannot run without secrets), published as GitHub Release app-v* tags only, tag must equal versionName versionCode must exceed shipped, non-debuggable, R8 + shrinkResources 25.5 MB → 6.6 MB -74%, mapping.txt 54.9 MB CI-only, manifest machine-proven non-debuggable every run via aapt on measure lane. Debug→release signing change is uninstall for existing testers same signature same key forever new upload key means lose app data — must say in release notes before switch, upload key backed up in password manager because losing it means no updates ever. First release-signed build does NOT share key with old debug-signed CI builds: switching debug→release is fresh install. Export first (Files → Export all). BETA.md.
+12. **"Parse error / package appears invalid" on install** — Download interrupted or partial APK handed to installer. Updater verifies SHA-256 before any install since 42.1; if refuses, re-download from release page in browser — checksums in release notes sha256: <hex> <asset> lines (RELEASE_NOTES template {{SHA256_LINES}} asserted by check_release_notes.sh). UpdatePolicy digestsFromNotes: no checksum line no auto-install.
+13. **Huge folder, cursor wrong on very long lines, 32-bit built-in not available** — BETA B-1…B-8: B-1 opening huge folder thousands files node_modules-sized stalls file tree single-threaded on purpose storage document APIs slow per file open subfolder instead repo root tree rescans on demand if sits 30s+ force-stop reopen files fine scan read-only; B-2 32-bit ARM older tablets install or boot fails older SoCs need 32-bit userland universal APK includes native libs for armeabi-v7a 42.2 kept four ABI lanes universal-only artifacts install universal APK from release page only APK per-ABI splits measured and reverted PART_42_2 if boot still fails attach log; B-3 long-running builds die screen off OS kills process despite foreground notification keep notification visible tap it don't swipe it away foreground service + wake lock hold do-not-disturb fine battery-saver killer; B-4 git push asks key again after update credentials store wiped if Android backup restore only partially ran Settings → GitHub Account → reconnect PATs never uploaded anywhere; B-5 Parse error (covered above); B-6 cursor/highlight wrong very long lines >10kB single line editor line-length guard 39.x readable substitute split line file on disk untouched display throttle never edit; B-7 crash-loop (covered above); B-8 32-bit ARM devices built-in C compiler not available bundled offline TCC toolchain ships only arm64-v8a/x86_64 Phase 33.3 typed null EmbeddedCompiler.tccBinary() returns null on other ABIs app never pretends otherwise install C toolchain module from modules screen or use Termux everything except offline C compilation works.
+14. **Where do I report a bug? Feedback that reaches you** — GitHub Issues include "Device: …" line from Settings → Developer Options → Logs (ABI + storage mount flags) + versionName with CI run number (Phase 29 lesson version-in-About CI run number). In-app: Settings → Feedback & Support → Send feedback (since 41.2) attaches crash log if you tick it (crash-log.txt header-first frame-capped COPY ALL yields complete record dialog title = exception line versionName carries CI run number). After crash: 📧 crash report overlay COPY ALL pastes into any chat [Send a report] (42.3) opens feedback form with record attached. Report channels order fastest fixed: in-app FeedbackScreen, crash overlay, GitHub issue https://github.com/pabi277/CodeC/issues same template info. **Hardcoded developer contact** DeveloperContact.kt WHATSAPP_E164 916296746606 display +91 62967 46606 EMAIL chakraborttypabi2772006@gmail.com single source every channel reads — WhatsApp chat via https://wa.me/<digits>?text= url-encoded report, email, copy report, GitHub issue fallbacks, no-handler-means-nothing-is-lost OpenInBrowser already there, nothing sent automatically no telemetry three honest disclosure lines above checkboxes, ephemeral checkboxes privacy law, checkboxes not persisted, exit survey rating rides info line · Rating: 4/5 NOTHING uploaded by itself GIVE A REVIEW opens public repo whole prompt off-able feedback_exit_prompt_enabled default ON. Never paste token — GitHub PATs live in app credential store never appear in crash log but screenshots of YOUR own terminal can contain one.
+15. **Outputs in my repo? .codec folder?** — Phase 39 outputs temporary never in repo: RunArtifacts routes every language's build output to filesDir/CodeC/temp/runs/<stamp>/ + TempGc age/capacity/newest-N prunes on start and after Stop. RepoHygiene ~60 patterns incl .codec/ derived from CC0 github/gitignore templates plus CodeC own .codec/ .codec.json applied at single choke point stageAll instead of one call site in GitControlViewModel.refresh() with git rm --cached for anything already tracked and what will be committed list before commit button. User's own .gitignore always wins law kept and tested.
 
-Every block ends with a **go deeper →** link (README anchor or
-`docs/TROUBLESHOOTING.md` section).
+Every block ends with **go deeper →** link (README anchor or docs/TROUBLESHOOTING.md section or BETA.md or RELEASE_NOTES.md or DATA_AND_PRIVACY.md).
 
-### Meta: title "FAQ & troubleshooting — CodeC".
+### Meta: title "FAQ & troubleshooting — CodeC (BETA B-1…B-8 + backup + crash-loop + feedback)", description mentions honest answers distilled from repo docs.
 
 ## 2. Implementation steps
 
-1. Build the page (active nav: FAQ) with the 9 blocks.
-2. For each answer record: source doc + section (traceability table in
-   `chat-web3/`).
-3. Self-dependent sweep (plan §5.5).
+1. Build the page (active nav: FAQ, >_ mark) with 15 blocks v2.2 (was 9).
+2. For each answer record: source doc + section (traceability table in chat-web3/ 15/15 rows) — README Troubleshooting, TROUBLESHOOTING.md, BETA.md, RELEASE_NOTES.md template, Phase 38 SETTINGS_AUDIT.md, Phase 39 RepoHygiene, Phase 40 GitReadiness/PushOutcome, Phase 41 FeedbackDraft/DeveloperContact/CrashLog, Phase 42 backup/crash-loop/export-all/UpdatePolicy.
+3. Ensure no answer contradicts README/TROUBLESHOOTING.md/BETA.md (spot-diff recorded); mention Auto only, picker deleted, Termux card deleted, fallback automatic, universal APK 6.6 MB, per-ABI reverted reason, backup include-list-only, crash-loop safe mode 3rd launch, export-all over both roots, huge folder, 32-bit null, debug vs release, signature change fresh install, SHA256 verification.
+4. Self-dependent sweep (plan §5.5).
 
 ## 3. Exit condition
 
 ```text
-1. All 9 blocks present, in order, 360/1440 clean; anchors work.
-2. Traceability table complete in chat-web3/ (9/9 rows).
-3. No answer contradicts README/TROUBLESHOOTING.md (spot-diff recorded).
-4. Sweep PASS.
+1. All 15 blocks present in order v2.2, 360/1440 clean; anchors work.
+2. Traceability table complete in chat-web3/ (15/15 rows) with source doc+section per block.
+3. No answer contradicts README/TROUBLESHOOTING.md/BETA.md/RELEASE_NOTES.md (spot-diff recorded).
+4. New facts from Phases 21–43 reflected: Auto only no picker, Termux card deleted but mechanism stays fallback automatic four steps appear in Output Panel, universal APK 6.6 MB -74% per-ABI splits reverted assets/tcc not filtered, backup include-list-only token not backed up, crash-loop safe mode 3rd launch export+report hand-off, export-all over both roots byte-identical, huge folder slow open subfolder, 32-bit TCC null, debug vs release debuggable flag run-as risk signature change fresh install, SHA256 verification since 42.1, feedback hardcoded +91 62967 46606 / email + exit survey + crash-log header-first COPY ALL, outputs temporary RunArtifacts + RepoHygiene ~60 patterns incl .codec/ user's .gitignore wins.
+5. Sweep PASS.
 ```
