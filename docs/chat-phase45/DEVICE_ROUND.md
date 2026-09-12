@@ -1,8 +1,15 @@
 # CodeC Phase 45 — device round (the guide: slides + coach marks)
 
 > **Status:** 📋 WRITTEN, **NOT RUN** (2026-09-12). Phase 45 is 🚧 IMPLEMENTED on
-> `arena/01a0955a-codec`; nothing in this file may be described as tested on
-> hardware until the owner reports these rows.
+> `arena/01a0955a-codec` (tip `3c597b2`) with **CI round 1 ✅ GREEN** (`Build APK`
+> `34698914219`: assemble + `testDebugUnitTest` + `lintDebug`); nothing in this
+> file may be described as tested on hardware until the owner reports these rows.
+>
+> **The build to install:** the `CodeC-IDE-debug` artifact of run **`34698914219`**
+> (`CodeC-IDE-1.3.17-universal-debug.apk`, 25,661,856 B) — or the release
+> `CodeC-IDE-1.3.17-universal.apk` (6,664,474 B) from the same run. G1 needs a
+> **fresh install** (`pm clear com.codeci.ide` or uninstall first), because the
+> guide only shows when `guide_completed` is still false.
 >
 > **Why a device round:** both parts are *first-impression* features. A host test
 > can prove the plan is right (which slide, which anchor, which order) and the

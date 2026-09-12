@@ -24,7 +24,8 @@
 > D1-D12) is the gate.** Phase **45 is 🚧 IMPLEMENTED** as well (both layers the
 > owner chose: the five-slide first-run guide with three doors back to it, and five
 > coach marks that may only point at an anchor the layout says is really on
-> screen); CI pending, device round
+> screen); **CI round 1 ✅ GREEN** (`34698914219` on tip `3c597b2`: assemble +
+> `testDebugUnitTest` + `lintDebug`, release APK +12,792 B / +0.19%), device round
 > [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G14 NOT run.
 > 46-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
@@ -70,7 +71,8 @@ The numbers **are** the order. Why this order:
    bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
    all**, `UserlandInstaller.kt:377-395`).
 2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12** (`arena/01a0955a-codec`;
-   both parts, 50 new host cases = 159 green locally, CI pending, device round
+   both parts, 50 new host cases = 159 green locally, CI ✅ GREEN round 1
+   `34698914219`, device round
    [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G14 not
    run). First impression for every tester you have not met yet,
    and its slide 3 is where the *"one-time download, don't close the app"*

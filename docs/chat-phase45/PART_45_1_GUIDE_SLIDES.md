@@ -1,6 +1,6 @@
 # CodeC Phase 45.1 — The first-run guide, and three ways back to it
 
-> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI pending · device round required · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) · device round required (NOT run) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"Set a step by step user guide after opening the app
 > 1st time with a open view again[ing]"*
 

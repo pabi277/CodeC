@@ -198,7 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI pending, device round NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G14) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` on tip `3c597b2`, device round NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G14) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -246,7 +246,12 @@ Every update updates the docs **in the same commit**:
   hole, bridge not CompositionLocal, estimated card height, the two-per-arrival
   reading of the cap, what "blocked" can see, safe mode skips the gate without
   writing the flag, re-opening swaps the shell out, `BackRouter` precedence still a
-  fact not a law until Phase 49). **CI pending on this push; the exit condition is a
+  fact not a law until Phase 49). **CI round 1 (`34698914219`, tip `3c597b2`) is
+  ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
+  per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
+  50 new cases ran on real Gradle/JUnit/Robolectric and lint is clean; release APK
+  6,664,474 B (**+12,792 B / +0.19%** over Phase 44 round 4 — the measured cost of
+  the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
   G1-G14 written and **NOT run**. **Do not call Phase 45 tested until the owner
   reports the round.**

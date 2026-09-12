@@ -1,7 +1,8 @@
 # CodeC Phase 45 — The guide (slides on first run + coach marks on first arrival)
 
 > **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`; owner:
-> *"Start Phase 45"*) · CI pending · device round required
+> *"Start Phase 45"*) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) ·
+> device round required (G1-G14, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
@@ -207,6 +208,24 @@ route.
 for the whole suite, including the Compose edges the sandbox cannot compile at
 all.
 
+### CI round 1 ✅ GREEN (2026-09-12, run `34698914219`, tip `3c597b2`)
+
+`Build APK` on the implementation commit: **`conclusion: success`**, job `build`
+9m55s (14:18:47Z → 14:28:42Z), **zero error annotations**. Per `rule.md` §5 the
+legacy `gradle :app:assembleDebug` step delegates through the `gradle-bootstrap`
+shim to `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so
+a green run means the **50 new cases ran on real Gradle/JUnit** (not only on the
+local kotlinc harness), the Compose edges compile in both variants, and
+`lintDebug` is clean. Artifacts: `CodeC-IDE-1.3.17-universal.apk`
+**6,664,474 B** (Phase 44 round 4 was 6,651,682 B → **+12,792 B, +0.19%** for
+the whole guide: two pure files, two Compose files, five anchor sites and three
+doors), `CodeC-IDE-1.3.17-universal-debug.apk` 25,661,856 B, `mapping.txt`
+55,913,362 B, release manifest with **no `android:debuggable`**. The only
+annotations are the repo-wide runner deprecations (Node 20 → 24 for
+`actions/checkout@v4`, `setup-java@v4`, `upload-artifact@v4`,
+`gradle/actions/setup-gradle@v4`), which predate this phase and are CI
+infrastructure, not app code.
+
 `SettingsAuditTest` stays green by construction: the two new Settings controls
 (**Help & guide**, **Reset tips**) got rows 53-54 in
 `docs/chat-phase38/SETTINGS_AUDIT.md` in the same commit, and
@@ -258,9 +277,9 @@ all.
 
 ### What is still open
 
-The exit condition is a **device** condition: the eight rows of 45.1/45.2 plus the
-fresh-install rows are written as [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G14)
-and have **not** been run. Until the owner reports them, Phase 45 is 🚧
+CI round 1 is ✅ GREEN, so what is left is **only** the device condition: the
+eight rows of 45.1/45.2 plus the fresh-install rows are written as
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G14) and have **not** been run. Until the owner reports them, Phase 45 is 🚧
 IMPLEMENTED, not ✅ COMPLETE, and nothing here may be described as tested on
 hardware. Phase 44's round 2 is still pending too, and the two compose on one
 phone: the guide shows **before** the terminal-first divert, and slide 3 is the
