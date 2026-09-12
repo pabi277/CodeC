@@ -139,9 +139,11 @@ Phase 50.
   honest claim.
 - **No emulator here.** This sandbox has no device, no emulator and no Gradle
   cache, so rows A, B6, E and F are unrunnable by the agent and belong to the
-  owner's handsets. Rows already covered by host tests (`CaretVisibilityPolicyTest`,
-  `BackRouterTest`, `DrawerPolicyTest`, `SetupGatePolicy`, `FolderImportRemovedTest`)
-  run in CI and are **not** repeated here.
+  owner's handsets. **Nothing here is automated today** — the host tests that
+  44-49 plan (`CaretVisibilityPolicyTest`, `BackRouterTest`, `DrawerPolicyTest`,
+  `SetupGatePolicyTest`, `FolderImportRemovedTest`) **do not exist yet**; they
+  land with their phases. And even once they do, they check *pure policy*, not
+  what a finger sees — so no device row is ever excused by them.
 - **Battery-manager kills** (Xiaomi/Oppo/Vivo/Samsung) are not reproducible on
   demand. A8 is the closest proxy; a real answer needs a device with an
   aggressive OEM skin and 10 idle minutes.

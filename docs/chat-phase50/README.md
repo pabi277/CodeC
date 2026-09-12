@@ -33,26 +33,37 @@ checks that remained pending. Phase 50 does them.
 
 ## What Phase 50 is
 
-1. **[DEVICE_MATRIX.md](DEVICE_MATRIX.md)** — the device classes, the 40-odd
-   checks, and a fixed record format (device, OS, nav mode, RAM, result,
-   evidence).
+1. **[DEVICE_MATRIX.md](DEVICE_MATRIX.md)** — the device classes, the **49
+   checks** (A1-A8, B1-B7, C1-C6, D1-D8, E1-E8, F1-F12), and a fixed record
+   format (device, OS, nav mode, RAM, result, evidence).
 2. **The rule that makes it durable:** each row's result is pasted back into the
    *owning* phase's part file (under a `## Test log` heading), not into a
    scratchpad — so a fix and its proof live in the same file, the way every
    merged phase does today.
 3. **A CI-side half that *can* run headless** — so the matrix is not pure
-   manual labour:
-   - pure-policy unit tests already written in 44-49 (they run on every PR);
-   - **screenshot tests via Paparazzi** for the *static* parts of the new UI: the
-     setup bar in each verdict state, the coach-mark overlay geometry, the
-     single-file status bar, the drawer's PROJECTS section. Paparazzi renders
-     layouts on the JVM with no device and is the standard for exactly this. It
-     is a **new test dependency**, so it is listed as a decision for the owner
-     (below), not assumed.
-   - **Robolectric** for the back stack and the exit-prompt states, if the
-     existing test harness tolerates it (`ExitSurveyTest` and the settings tests
-     already run on the JVM; adding Robolectric is an additive
-     `testImplementation`).
+   manual labour. **The toolchain is already in the repo; nothing new is
+   needed** (verified 2026-09-12):
+   - **The pure-policy tests that 44-49 each write** — they are *planned*, not
+     written yet (this is a docs-only plan), but every one of them is a plain
+     JVM test, and CI already runs `:app:testDebugUnitTest`
+     (`gradle-bootstrap/build.gradle.kts:15`), so they execute on every push the
+     moment their phase lands.
+   - **Screenshot tests — the stack is declared and applied but unused.**
+     Roborazzi **1.59.0** is in the version catalog
+     (`gradle/libs.versions.toml:30,75-77,121`), wired as `testImplementation`
+     (`app/build.gradle.kts:272-274`) and the Gradle plugin is **applied to
+     `:app`** (`app/build.gradle.kts:8`, declared at root
+     `build.gradle.kts:5` with `apply false`) — yet `grep -rln roborazzi
+     app/src/test` returns **nothing**. Phase 50 should use it for the *static*
+     parts of the new UI (the setup bar in each verdict state, the coach-mark
+     overlay geometry, the single-file status bar, the drawer's PROJECTS
+     section) instead of adding a rival library.
+   - **Robolectric 4.16.1 is already a test dependency**
+     (`gradle/libs.versions.toml:29`, `app/build.gradle.kts:271`) and **8 test
+     files already use `RobolectricTestRunner`** — including
+     `EditorLaunchMeasureReproTest`, which drives a real `NavHost` +
+     `rememberNavController` through `createComposeRule`. That is the precedent
+     for 49's back-stack test, so no harness question is open there.
 
 ## The honest limits, stated up front
 
@@ -60,23 +71,35 @@ checks that remained pending. Phase 50 does them.
   behaviour, OEM battery management or predictive-back gestures **cannot be
   verified here** and must be run on the owner's handsets. The matrix exists so
   that this is a scheduled task with a record, not a hope.
-- **Screenshot tests do not prove insets.** Paparazzi renders a fixed window;
+- **Screenshot tests do not prove insets.** Roborazzi renders a fixed window;
   the caret-above-keyboard fix (48) is precisely about a window that changes
-  size under a real IME. Paparazzi can pin the *layout* of the new chrome, and
-  the matrix pins the *behaviour*.
+  size under a real IME. A screenshot can pin the *layout* of the new chrome,
+  and the matrix pins the *behaviour*.
+- **Roborazzi's verify mode is not yet wired.** CI runs `testDebugUnitTest`
+  with no `roborazzi.test.*` property, so a first screenshot test would
+  *record* rather than *compare* unless the phase that adds it also sets the
+  verify flag (or adds a `verifyRoborazziDebug` step). Recorded here so the
+  first author does not believe a green run means a golden was checked.
 - **One device class is not enough for cause C in 49.2** (gesture-nav home
   swipe). The matrix requires at least one 3-button-nav device *and* one
   gesture-nav device for the back rows.
 
 ## Decision for the owner (asked, not assumed)
 
+**There is nothing to decide about dependencies** — an earlier draft of this
+section asked whether to add Paparazzi and Robolectric. That question was
+wrong: both capabilities are already in the repo (Roborazzi 1.59.0 applied to
+`:app`, Robolectric 4.16.1 with 8 existing users). The only real choice left is
+*effort*, and it is the owner's:
+
 | Option | Cost | Verdict |
 |---|---|---|
-| **Manual matrix only** (no new dependency) | 0 | ✅ default — start here |
-| Add **Paparazzi** (`testImplementation`) for static layouts | one dependency, JVM-only, no runtime cost | recommended *if* the owner wants layout regressions caught in CI; it is the only way 44.1's setup-bar states and 45.2's overlay get an automated check |
-| Add **Robolectric** for back-stack behaviour | one dependency, slower JVM tests | optional; the source-scan pins in 49.1 cover most of the risk without it |
+| **Manual matrix only** | 0 | ✅ default — start here; every row is a human check |
+| **+ Roborazzi screenshots** for the static chrome (44.1's setup bar, 45.2's overlay, 46.2's status bar, 47.1's drawer) | one golden set per state; the verify-mode wiring noted above | recommended — it is the only automated check those four surfaces will ever get, and the dependency is already paid for |
+| **+ a Robolectric back-stack test** (49) | one test class | optional; 49.1's source-scan pin covers most of the risk, but `EditorLaunchMeasureReproTest` proves the harness can do it |
 
-No new dependency is added without the owner saying so — `rule.md` §6.
+Adding a *new* library would still need the owner's say-so (`rule.md` §6). Using
+the ones already declared does not.
 
 ## Exit condition
 

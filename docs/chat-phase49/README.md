@@ -215,10 +215,13 @@ PASS = all ten, on at least two devices (Phase 50 owns the matrix).
 - `ExitPromptPolicyTest`: the four situations in 49.2's table, and the
   invariants list (no upload, NOT NOW stays, EXIT closes, outside taps inert).
 - `ExitSurveyTest` (existing) keeps passing untouched.
-- Robolectric `BackWiringTest` (if the harness allows): each screen's
-  `BackHandler` is enabled exactly when the router says so — otherwise a
-  source-scan test asserting every `BackHandler(` in `app/src/main` calls
-  `BackRouter.decide(` (the cheap, certain version).
+- Robolectric `BackWiringTest`: each screen's `BackHandler` is enabled exactly
+  when the router says so. **The harness already does this** — Robolectric
+  4.16.1 is a test dependency (`app/build.gradle.kts:271`), 8 test files use
+  `RobolectricTestRunner`, and `EditorLaunchMeasureReproTest` drives a real
+  `NavHost` + `rememberNavController` through `createComposeRule`. The cheap,
+  certain fallback if it turns out flaky is a source-scan test asserting every
+  `BackHandler(` in `app/src/main` calls `BackRouter.decide(`.
 
 ## Sources
 

@@ -99,8 +99,12 @@ The phase README's ten device checks. The three that this part owns outright:
 - Source scan (`BackHandlerWiringTest`): every `BackHandler(` in `app/src/main`
   is either in `MainActivity`'s root handler or calls `BackRouter.decide(` — so
   a future screen cannot add an ad-hoc handler that contradicts the table.
-- Robolectric, if the harness allows: press back in each of the four states and
-  assert the resulting screen. The source scan is the fallback if it does not.
+- Robolectric: press back in each of the four states and assert the resulting
+  screen. This is not speculative — Robolectric 4.16.1 is already a test
+  dependency (`app/build.gradle.kts:271`), 8 tests use `RobolectricTestRunner`,
+  and `EditorLaunchMeasureReproTest` already drives `NavHost` +
+  `rememberNavController` under `createComposeRule`. The source scan is the
+  fallback if a Compose back-press proves unreliable under Robolectric.
 
 ## Sources (record)
 

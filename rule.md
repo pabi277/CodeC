@@ -217,7 +217,7 @@ Every update updates the docs **in the same commit**:
   `ensurePositionVisible`) → **49** back does the obvious thing everywhere
   (49.1 `BackRouter` precedence table; 49.2 the exit prompt decided from state,
   kept ON per the owner, plus a Settings door for gesture-nav devices) →
-  **50** the cross-device round (`DEVICE_MATRIX.md`, 4 device classes, 50
+  **50** the cross-device round (`DEVICE_MATRIX.md`, 4 device classes, 49
   rows). Records: [`docs/PHASE44_50_UX_RESEARCH.md`](docs/PHASE44_50_UX_RESEARCH.md)
   (the dossier — every claim carries a `file:line`), `docs/PHASE44_50_ROADMAP.md`,
   and `docs/chat-phase44/` … `docs/chat-phase50/`. **Owner clarifications of
