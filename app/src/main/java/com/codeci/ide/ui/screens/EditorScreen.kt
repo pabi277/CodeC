@@ -197,6 +197,15 @@ fun EditorScreen(
     onOpenSettings: () -> Unit = {},
     /** Phase 45.1 — the drawer footer's Guide row: the third door back to the guide. */
     onOpenGuide: () -> Unit = {},
+    /**
+     * Phase 45.2 round 3 — the guided tour is waiting on a beat that lives inside
+     * this drawer (`CoachMarkPlan.nextBeatIsInDrawer`, passed down by the host
+     * that owns the seen set). Opening the project picker closes the drawer, so
+     * without this the owner's *"change the project folder to demo_flask →
+     * selected app.py"* would go silent after the pick and wait for the user to
+     * find ☰ again. False for everybody else, always: no tour, no change.
+     */
+    tourWaitsInDrawer: Boolean = false,
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -1982,6 +1991,15 @@ fun EditorScreen(
                                     showContextPicker = false
                                     ProjectManager(context).project(project.name)?.let(onProjectSelected)
                                     viewModel.switchContext(context, project.name)
+                                    // Phase 45.2 round 3 — the tour's next beat is
+                                    // the demo's `app.py` row, which is inside this
+                                    // drawer, and launching the picker closed it.
+                                    // Reopen it so the tour's next box is already
+                                    // there instead of the user having to work out
+                                    // which button brings the files back.
+                                    if (tourWaitsInDrawer) {
+                                        uiScope.launch { drawerState.open() }
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {

@@ -28,13 +28,18 @@
 > `testDebugUnitTest` + `lintDebug`, release APK +12,792 B / +0.19%). **The owner
 > then ran round 1 on his phone and 45.2 was rebuilt as ONE TEN-BEAT TOUR** (his
 > flow: ☰ → change project to `demo_flask` → `app.py` → RUN ▶ → Install → the Flask
-> preview → close → the reveal-tabs handle → a small tour of Packages and Terminal;
-> no next button — the highlighted control is the only way on, outside taps are
-> inert, `demo_flask` is always present). Round 2 is implemented with **175 host
-> cases green locally**; CI on the round-2 commit is ✅ **GREEN** (`34704379023` on
-> tip `acadaee`, job `build` 10m41s, release APK 6,664,570 B = +96 B over round 1)
-> and device round
-> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G23** is NOT
+> preview → close → the tab bar / reveal handle → a small tour of Packages and
+> Terminal; no next button — the highlighted control is the only way on, outside taps
+> are inert, `demo_flask` is always present). **He then ran round 2 and the tour lost
+> its skip** (*"You add the skip option and it's not a trough guide mean it got cut …
+> I want a full process 1st to last without skip anything in this … At the end option
+> to close and view again"*): every beat now waits in order, a tour card has **no
+> button at all**, Back pauses without spending a beat, and the finish card offers
+> **VIEW AGAIN** + **CLOSE**. Round 3 is implemented with **180 host cases green
+> locally**; CI is ✅ **GREEN** on rounds 1-2 (`34698914219`; `34704379023` on tip
+> `acadaee`, job `build` 10m41s, release APK 6,664,570 B = +96 B over round 1) and
+> pending on round 3, and device round
+> [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) **G1-G28** is NOT
 > run (start it from Settings → About → Reset tips).
 > 46-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
@@ -79,10 +84,10 @@ The numbers **are** the order. Why this order:
    missing). It is also the only phase in the series with a data-loss-shaped
    bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
    all**, `UserlandInstaller.kt:377-395`).
-2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 2**
-   (`arena/01a0955a-codec`; both parts, 175 host cases green locally, CI ✅ GREEN
-   round 1 `34698914219` and round 2 `34704379023`, device round
-   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G14 not
+2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-12, THROUGH ROUND 3**
+   (`arena/01a0955a-codec`; both parts, 180 host cases green locally, CI ✅ GREEN
+   rounds 1-2 `34698914219`/`34704379023` and round 3 pending, device round
+   [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md) G1-G28 not
    run). First impression for every tester you have not met yet,
    and its slide 3 is where the *"one-time download, don't close the app"*
    mental model is planted that 44 enforces — which is why the guide gate runs

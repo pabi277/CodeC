@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
 import com.codeci.ide.ui.guide.CoachMarkPlan
 import com.codeci.ide.ui.guide.GuideAnchor
+import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.projects.DemoProjects
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
@@ -109,22 +110,21 @@ fun EditorProjectDrawer(
             .padding(top = 24.dp)
     ) {
         // ---- header: project name + source-control glyph ------------------
-        // Phase 45.2 — step 2 of the guided tour ("change the project folder to
-        // demo_flask"). Published only while a project is open and it is not the
-        // demo already: a box telling you to switch to where you already are is
-        // noise. The picker this opens is an AlertDialog (its own window), so the
-        // box names demo_flask in its copy instead of cutting a hole over a row
-        // inside the dialog — PART_45_2, deviation 9.
-        val projectAnchorId = CoachMarkPlan.drawerProjectAnchor(projectName, DemoProjects.NAME)
-        val headerModifier = Modifier
+        // Phase 45.2, round 3 — beat 2 of the guided tour ("change the project
+        // folder to demo_flask"), published in EVERY state of this header:
+        // another project, the demo already open, scratch mode. The header always
+        // opens the project picker, so the beat is always reachable — and a tour
+        // the owner wants "1st to last without skip anything" must not depend on
+        // which project happens to be open (round 2 published it only where a
+        // switch would teach something, which parked the beat forever on a phone
+        // already in demo_flask). The picker is an AlertDialog (its own window),
+        // so the box names demo_flask in its copy instead of cutting a hole over a
+        // row inside the dialog — PART_45_2, deviation 9.
+        val anchoredHeader: Modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onSwitchProject)
             .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
-        val anchoredHeader: Modifier = if (projectAnchorId != null) {
-            headerModifier.then(GuideAnchor.modifier(projectAnchorId))
-        } else {
-            headerModifier
-        }
+            .then(GuideAnchor.modifier(GuideAnchors.DRAWER_PROJECT))
         Row(
             modifier = anchoredHeader,
             verticalAlignment = Alignment.CenterVertically

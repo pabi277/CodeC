@@ -1,6 +1,6 @@
 # CodeC Phase 45.2 — Coach marks on first arrival (three or four, then never again)
 
-> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 2** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) and round 2 (`34704379023`, tip `acadaee`) · device round required (NOT run — G1-G23) · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 3** (2026-09-12, `arena/01a0955a-codec`) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) and round 2 (`34704379023`, tip `acadaee`), round 3 pending · device round required (NOT run — **G1-G28**) · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row:** the second half of *"It has 0 guide features to give the user a
 > real knowledge how to use the app, user don't know where should they change the
 > project or file and the tap to the open down side of the keyboard"* — plus the
@@ -274,6 +274,9 @@ and, asked what the flow should be:
 
 ### The tour as built (ten beats, `CoachMarkPlan.steps`)
 
+*(Round 3 deleted the `waits` column: **every** beat waits now — the split below is
+kept as the record of what round 2 shipped.)*
+
 | # | Anchor | Where | Beat | waits | inDrawer |
 |---|---|---|---|---|---|
 | 1 | `editor_drawer` | Editor ☰ | *Your files* | ✅ | – |
@@ -295,8 +298,11 @@ Three pure laws replace the cap:
   their own screen: ☰, RUN ▶, the two tabs) **stops the tour** while its anchor is
   absent. This is also the start gate: beat 1 waits, so nothing at all is shown on
   the Terminal tab or the hub — the tour cannot begin out of order;
-- **pass-over without spending** — a step that does not wait is skipped when its
-  control is absent and is **not** marked seen, so the tour can never stall on a
+- **pass-over without spending** *(superseded by round 3: this is the law that
+  punched holes in the owner's flow — a beat whose control was not laid out at that
+  instant was skipped and a later beat taught instead, so the Packages box could
+  arrive before the Flask preview did)* — a step that does not wait is skipped when
+  its control is absent and is **not** marked seen, so the tour can never stall on a
   control that only sometimes exists (a drawer row, the preview's Back, the reveal
   handle, the install card) and the lesson is still there later.
 
@@ -313,11 +319,11 @@ shut.
   its own job) and that same tap advances the tour.
 - **Outside taps are swallowed whole** — the down *and* the rest of the gesture are
   consumed, so nothing reaches the UI under the scrim and the box does not close.
-- **SKIP TOUR** (one tap) and **Back** end the *whole* tour: `markAllSeen` writes
-  every beat id, so nothing returns until Settings → About → **Reset tips**. A box
-  that Back merely closed would come straight back (the plan would still return the
-  same unseen step) — that is why the exit is the tour, not the beat, and why the
-  no-nag law is still satisfied with a single tap.
+- ~~**SKIP TOUR** (one tap) and **Back** end the *whole* tour: `markAllSeen` writes
+  every beat id, so nothing returns until Settings → About → **Reset tips**.~~
+  **Superseded by round 3 — the owner ran this build and the skip is exactly what
+  cut the tour: both exits are deleted, `markAllSeen` no longer exists, and the
+  only card with buttons is the one at the end.**
 - **`Tour · n of 10`** is on every card, in the same shape as the slides'
   `Guide · 1 of 5`: the round-1 boxes read as ten unrelated popups.
 - **The card height is measured** (`onSizeChanged`) and only *seeded* by the 150dp
@@ -392,3 +398,166 @@ replaced five, five new anchors appeared, and the card gained a measured height 
 the APK did not move, because round 2 mostly *deleted* (the per-arrival cap, the
 surface filter, the card's forward button, the estimated-height branch). A redesign
 that makes the guide a tour instead of a set of one-offs cost nothing to ship.
+
+---
+
+## Round 3 (2026-09-12, later) — no skip: first beat to last, and a close at the end
+
+### The report, verbatim
+
+The owner installed round 2 (`34704379023`), walked the tour, and wrote:
+
+> *"You add the skip option and it's not a trough guide mean it got cut*
+>
+> *I want a full process 1st to last without skip anything in this*
+>
+> *3 ber->change the project folder to demo_flask->selected app.py->run->install->python->it
+> will open the flusk web->close->tap to reveal the keyboard below option->then a small tour of
+> package and terminal*
+>
+> *At the end option to close and view again"*
+
+("3 ber" = the ☰ three-bar menu; the flow is the same ten beats round 2 already had.)
+
+### Diagnosis first: four causes, again all in the shipped code
+
+1. **SKIP TOUR was the most visible thing on the card.** Every beat carried a button
+   whose only job was to end the tour, so the guide read as something to dismiss
+   rather than something to walk — and one tap on it *did* dismiss all ten beats
+   (`markAllSeen`), which is precisely *"it got cut"*.
+2. **The pass-over law punched holes in the flow.** Round 2 split the beats into
+   "wait" (four controls that are always there) and "pass over" (everything else).
+   Passing over is instant and silent: tap RUN ▶, the Flask server takes three
+   seconds to start, and the tour had already walked on to the reveal handle and the
+   Packages tab. The boxes arrived **out of the order the app was actually doing
+   things in** — *"not a full process 1st to last"*.
+3. **Two beats had no target exactly when the user needed them.** Beat 2 published
+   its anchor only when a project switch would teach something, so a phone already
+   in `demo_flask` (or in scratch mode) never saw the box at all; beat 6 was anchored
+   to Phase 32.1's *reveal handle*, which exists only while the bar is hidden, so the
+   beat existed only while the keyboard happened to be up.
+4. **The project picker closes the drawer.** It always has (the dialog needs the
+   room), and beat 3 is a row *inside* that drawer — so after choosing `demo_flask`
+   the tour went silent and waited for the user to work out which button brings the
+   files back.
+
+### The four laws now
+
+| Law | Round 2 | Round 3 |
+|---|---|---|
+| Order | first unseen step whose anchor is on screen | **the first unseen step, full stop** — a later beat never jumps the queue |
+| Missing control | `waits` beats hold; the rest pass over instantly | **every beat holds**, and holds *silently*: nothing is drawn while a beat waits, so the app is never covered |
+| Exit | SKIP TOUR + Back, both ending all ten beats | **no exit mid-tour.** The highlighted control is the only way on; Back navigates as it always does and the tour resumes, unspent, on the same beat |
+| The end | the tenth box just stopped | **the finish card**: `CLOSE` and `VIEW AGAIN` — *"At the end option to close and view again"* |
+
+`markAllSeen` is **deleted**: nothing in the product can now spend a beat the user
+never saw. The only writer of the seen set is the tap on the highlighted control
+(`GuideWiringTest` counts the writers: exactly one).
+
+### The stall guard, and why "every beat waits" needs one
+
+A beat that waits forever is not a brick — it draws nothing, so the app stays fully
+usable — but it *is* a dead end: park on a control that never appears and every beat
+behind it goes untaught. So the host times a wait, in memory, and may pass a beat for
+**this session** (`CoachMarkPlan.STALL_GUARD_MS = 20_000L`). Three rules make that
+safe, and all three are pure and host-tested:
+
+- **A passed beat is never marked seen.** It is still owed, and the next pass (next
+  launch, or VIEW AGAIN) walks it. `remaining()` still lists it; `isComplete` is
+  still false; only `isFinished` — "this session's tour has run to its end" — is true.
+- **The plan names what the host times** (`waitingOn`), and it names nothing in three
+  cases: another surface owns the screen (a dialog, the exit survey, safe mode, a
+  moving Phase 44 download — a Python install takes minutes and must not cost the
+  beat after it); the drawer is simply in the other state (the user's own next tap
+  ends it); and **the beat's control cannot exist on this route**.
+- **That last one is the anti-cascade rule** (`anchorsPossibleOn(route)`, and
+  `ChromeState` grew a `route` for it). Timing out a beat the user has to *travel* to
+  would cascade: the Flask preview stalls during the install, then the reveal handle,
+  then the Packages tab, then everything — and the tour would "finish" on a screen the
+  owner's flow has not reached. So the guard fires only for a control that **could be
+  here and is not**: the Packages card behind a collapsed section, the `app.py` row
+  when the user picked some other project. The bar and its tabs are possible on every
+  route; the preview's Back only on `preview`; the card only on `modules`; the chip
+  only on `terminal`; the editor's four only on `editor`.
+
+### Two beats that needed a real target
+
+- **Beat 2 is now published in every state of the drawer header** — another project,
+  `demo_flask` already open, scratch mode. The header always opens the picker, so the
+  beat is always reachable, and `drawerProjectAnchor` (the pure "is a switch worth
+  teaching?" question) is deleted. A tour that is "1st to last without skip anything"
+  must not depend on which project happens to be open.
+- **Beat 6 has two publishers and one id**: the thin reveal handle while the bar is
+  hidden, and **the bar itself** while it is visible. Same lesson (*"Five tabs, one
+  tap away. They hide while you type — swipe up to bring them back."*), and now a
+  target on every screen the tour walks. A tap inside that hole lands on a tab, which
+  is where beat 7 wanted the user anyway.
+
+### The drawer the picker closes
+
+`CoachMarkPlan.nextBeatIsInDrawer(seen)` is a pure question — *is the beat the tour is
+waiting for a row inside the ☰ drawer?* — and the host that owns the seen set passes
+the answer to `EditorScreen(tourWaitsInDrawer = …)`. When it is true, the project
+picker's "a project was chosen" branch reopens the drawer after the switch, so
+beat 3's box is already there. When the tour is over, or has not started, the flag is
+false and the picker behaves exactly as it always did. The drawer still closes for the
+picker itself; that is not the tour's to change.
+
+### The finish card
+
+`TourFinishedCard` — the only card with buttons, and not a dialog (a dialog is a window
+of its own; this belongs to the same layer as the tour). Dim backdrop, taps swallowed
+(the tour's own rule), `Tour · 10 of 10`, one line of summary, then **VIEW AGAIN** and
+**CLOSE**.
+
+- It is **earned**, not remembered: `isFinished(seen, stalled)` *and* a
+  `ranThisSession` flag that only becomes true when this composition watched the tour
+  being incomplete. An install that starts with all ten beats taught — the owner's
+  phone after round 2 — is not greeted by "that is the whole tour" on every launch.
+- **CLOSE** is in-memory. It does not write the seen set, so a beat the guard passed
+  is still owed and comes back on the next pass.
+- **VIEW AGAIN** clears the seen set (`CoachMarkPlan.replay()`, one key, one meaning),
+  clears the guard's set, and the host navigates to the editor — where beat 1 lives —
+  with the bar's own idiom (`createRoute(null)`, `restoreState = true`,
+  `navRevealed = false`), so a replay arrives the way a tab tap would.
+- Outside the tour, **Settings → About → Reset tips** is the same door (it resets the
+  slides too). No new Settings control, so no new audit row; no new DataStore key, so
+  `SettingsKeysHaveReadersTest` is untouched.
+
+### Deviations added in round 3 (13-16, kept with round 1-2's twelve)
+
+13. **The no-nag law's "skippable with a single tap" is reversed for the tour, by the
+    owner.** The slides keep SKIP (his round-2 decision, unchanged). The tour's exit
+    moved to the end. The safety argument that replaces the skip: *a waiting beat
+    draws nothing*, so the overlay can never cover the app — the user is never trapped,
+    only ever accompanied. Recorded in `chat-phase45/README.md` §"two rules" and in
+    TROUBLESHOOTING §37.
+14. **A parked tour is silent, and the beats behind a park wait too.** If the Flask
+    preview never opens (Python missing and the install declined), beat 5 waits and
+    beats 6-10 are not taught until it does — or until Reset tips. That is the direct
+    cost of "without skip anything"; round 2's answer (teach what is available) is the
+    thing the owner called *cut*.
+15. **The stall guard can still pass a beat** (possible on this route, missing for 20s).
+    It is invisible, rare, and never spends the lesson. It exists so deviation 14
+    cannot become a dead end on the screen the user is actually looking at.
+16. **Beat 6 spotlights the whole bottom bar when the bar is visible** — a much bigger
+    hole than the thin handle. Same lesson, and the tap inside it lands on a tab.
+
+### Tests (round 3): 180 host cases green locally
+
+`CoachMarkPlanTest` **21** (was 18): every beat waits and no later beat jumps the
+queue (all ten positions) · a stalled beat is passed without being spent · the drawer
+law (both `nextStep` and `waitingOn` gate on it) · the guard is armed only by a control
+that is not laid out, and never by a blocked screen or a drawer-state wait · **the
+guard never times out a beat the user has to travel to** (the cascade case) · **the
+route map** route by route, plus "every beat is possible somewhere" ·
+`nextBeatIsInDrawer` in all five tour states · nothing ends the tour early and VIEW
+AGAIN restarts all ten · the seen CSV round-trip. `GuideWiringTest` **18** (was 16):
+beat 2's unconditional anchor · beat 6's **two** publishers · the host passes `route` ·
+a tour card has **no button at all** and the only buttons are `VIEW AGAIN`/`CLOSE` on
+the finish card · no `markAllSeen`, no `BackHandler`, exactly one writer of the seen
+set · the guard's wiring (`waitingOn` → `delay` → in-memory set) · the finish card is
+earned, not remembered · the drawer reopens after a pick and still closes for the
+picker. `GuidePlanTest` 15, `TooltipPlacementTest` 10, `DemoProjectSeedTest` 7
+unchanged; Phase 44's 109 unchanged. **180 = 71 guide/demo + 109.**
+

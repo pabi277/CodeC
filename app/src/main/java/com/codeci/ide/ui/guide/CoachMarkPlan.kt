@@ -14,21 +14,35 @@ package com.codeci.ide.ui.guide
  * Pure, so the rules that decide *does a box appear, and on what* are
  * host-testable (`CoachMarkPlanTest`) instead of being discovered on a phone.
  *
- * Three laws, all owner-given:
- *  - **the box is the only forward button** — the card carries no NEXT/GOT IT;
- *    tapping the highlighted control performs that control's own action AND
- *    advances the tour. Tapping outside does nothing at all (the owner: *"even
- *    tap outside will not end that box"*), so a box can never be dismissed by
- *    accident. SKIP (one tap) and Back end the whole tour — the no-nag law
- *    (`ui/support/ExitSurvey.kt`) still requires an exit, and it must never be
- *    a wall: ending the tour marks every step seen, so nothing comes back until
- *    the user asks (Settings → About → Reset tips).
- *  - **never point at nothing** — [nextStep] only returns a step whose anchor
- *    the caller reports visible (an anchor publishes its window rect while it
- *    is laid out and withdraws it when it leaves composition).
- *  - **never stall** — a step that is not on screen is either *waited for*
- *    ([CoachStep.waits]) or *passed over*, and a passed-over step is NOT marked
- *    seen, so it can still teach its lesson later.
+ * Four laws. The first three are the owner's (round 3, after he ran round 2);
+ * the fourth is the valve that makes them safe on a phone that cannot produce
+ * the control a beat is waiting for:
+ *  - **first beat to last, nothing skipped** — *"You add the skip option and
+ *    it's not a trough guide mean it got cut. I want a full process 1st to last
+ *    without skip anything in this."* So there is NO SKIP button and Back does
+ *    not end the tour either: a mid-tour card carries no button at all, every
+ *    beat waits for its own control, and the ten boxes arrive in the owner's
+ *    order instead of whichever two happened to be on screen.
+ *  - **the box is the only forward button** — tapping the highlighted control
+ *    performs that control's own action AND advances the tour. Tapping outside
+ *    does nothing at all (*"even tap outside will not end that box"*), so a box
+ *    can never be dismissed by accident.
+ *  - **at the end, a close and a way back** — *"At the end option to close and
+ *    view again."* The finish card is the only card with buttons: **CLOSE** (the
+ *    tour is over and nothing returns on its own) and **VIEW AGAIN** (all ten
+ *    beats from the first). Outside the tour, Settings → About → Reset tips is
+ *    the same door.
+ *  - **never point at nothing, never brick** — [nextStep] only returns a step
+ *    whose anchor the caller reports visible (an anchor publishes its window
+ *    rect while it is laid out and withdraws it when it leaves composition), and
+ *    while a beat waits nothing is drawn at all, so the app stays usable. A
+ *    control that can never appear — no Python, so no Flask preview; the tab bar
+ *    never hidden, so no reveal handle — would otherwise hold the tour on that
+ *    beat forever, so the HOST may declare a beat *stalled* after
+ *    [STALL_GUARD_MS]: a stalled beat is passed for this session and is never
+ *    marked seen, so it is still taught on the next pass. Stalling is the only
+ *    thing that can move the tour past a beat, and it is a host decision with a
+ *    pure signature ([waitingOn]), so this file stays testable.
  *
  * Recorded limit (PART_45_2, deviation 9): a box cannot point into an
  * `AlertDialog`. Compose dialogs live in their own window, so `boundsInWindow()`
@@ -98,13 +112,12 @@ object GuideAnchors {
  * drawer is open, and every other beat only while it is closed — a box on a
  * control the drawer is covering is a hole cut in nothing.
  *
- * [waits] is the anti-stall rule. `true` = the tour stops here until this
- * control is really on screen (used for controls that are always there on their
- * own screen, so waiting is self-healing: ☰, RUN ▶, the two tabs). `false` =
- * pass over it when it is absent and let a later step teach now (used for
- * controls that only sometimes exist: the drawer's rows, the preview's Back,
- * the reveal handle, the install card). A passed-over step is never marked
- * seen, so it can still show on a later pass.
+ * There is no per-beat "wait or pass over" flag any more (round 2 had one, and
+ * it is what let the tour skip the owner's beats): **every beat waits**. The
+ * tour stops on the first beat that is neither taught nor stalled and shows it
+ * the moment its control is laid out, so the order the owner dictated is the
+ * order the boxes arrive in. The one escape is the host's stall guard, which
+ * passes a beat for the session WITHOUT spending it.
  */
 data class CoachStep(
     val id: String,
@@ -112,7 +125,6 @@ data class CoachStep(
     val anchorId: String,
     val title: String,
     val body: String,
-    val waits: Boolean,
     val inDrawer: Boolean = false
 )
 
@@ -125,18 +137,26 @@ data class CoachStep(
  * stage that is actually moving (DOWNLOADING/VERIFYING/EXTRACTING — not
  * CHECKING, which is a startup transient that would otherwise mean no box ever
  * shows on a fresh phone). A box under any of them is noise at best.
+ *
+ * [route] is the navigation destination the user is on. It decides ONE thing:
+ * whether the stall guard may time a beat out (see [CoachMarkPlan.waitingOn] and
+ * [CoachMarkPlan.anchorsPossibleOn]). It is never a gate on showing a box —
+ * round 2 filtered beats by surface and that is part of why the tour arrived
+ * with holes in it.
  */
 data class ChromeState(
     val visibleAnchors: Set<String> = emptySet(),
     val blockedByForeground: Boolean = false,
-    val drawerOpen: Boolean = false
+    val drawerOpen: Boolean = false,
+    val route: String? = null
 ) {
     companion object {
         fun of(
             visibleAnchors: Set<String>,
             blockedByForeground: Boolean,
-            drawerOpen: Boolean = false
-        ): ChromeState = ChromeState(visibleAnchors, blockedByForeground, drawerOpen)
+            drawerOpen: Boolean = false,
+            route: String? = null
+        ): ChromeState = ChromeState(visibleAnchors, blockedByForeground, drawerOpen, route)
     }
 
     fun anchorVisible(anchorId: String): Boolean = anchorId in visibleAnchors
@@ -155,26 +175,27 @@ object CoachMarkPlan {
      */
     val steps: List<CoachStep> = listOf(
         // 1 — the owner's row: "user don't know where should they change the
-        // project or file". Always there in the editor, so the tour waits for it
-        // and cannot start anywhere else.
+        // project or file". Always there in the editor, so the tour cannot start
+        // anywhere else — and every later beat waits behind this one.
         CoachStep(
             id = GuideAnchors.EDITOR_DRAWER,
             surface = GuideSurface.EDITOR,
             anchorId = GuideAnchors.EDITOR_DRAWER,
             title = "Your files",
             body = "Tap \u2630 for the file tree and the project switcher.",
-            waits = true
         ),
         // 2 — "change the project folder to demo_flask". The picker itself is an
         // AlertDialog (its own window), so the box names the destination instead
-        // of pointing at it.
+        // of pointing at it. Its anchor is the drawer header in EVERY state
+        // (another project, the demo already, scratch mode), because the header
+        // always opens the picker: a beat that only exists in one project state
+        // is a beat a "1st to last" tour would have to skip.
         CoachStep(
             id = GuideAnchors.DRAWER_PROJECT,
             surface = GuideSurface.EDITOR,
             anchorId = GuideAnchors.DRAWER_PROJECT,
             title = "Change project",
             body = "Tap the project name, then choose demo_flask \u2014 the Flask demo CodeC ships with.",
-            waits = false,
             inDrawer = true
         ),
         // 3 — "selected app.py". Only ever published for the demo project's own
@@ -185,7 +206,6 @@ object CoachMarkPlan {
             anchorId = GuideAnchors.DRAWER_FILE,
             title = "Open app.py",
             body = "The demo's entry file. Tap it and it opens in the editor.",
-            waits = false,
             inDrawer = true
         ),
         // 4 — "run -> install -> python". The Install? prompt is a dialog, so
@@ -196,7 +216,6 @@ object CoachMarkPlan {
             anchorId = GuideAnchors.EDITOR_RUN,
             title = "Run it",
             body = "Runs the open file. If Python is missing, tap Install \u2014 one download, one time.",
-            waits = true
         ),
         // 5 — "it will open the flusk web -> close".
         CoachStep(
@@ -205,7 +224,6 @@ object CoachMarkPlan {
             anchorId = GuideAnchors.PREVIEW_CLOSE,
             title = "Your app is running",
             body = "Served by your own phone. Tap Back to close the preview and keep editing.",
-            waits = false
         ),
         // 6 — "tap to reveal the keyboard below option" (the owner's original
         // row: "the tap to the open down side of the keyboard").
@@ -214,8 +232,7 @@ object CoachMarkPlan {
             surface = GuideSurface.EDITOR,
             anchorId = GuideAnchors.NAV_HANDLE,
             title = "The tabs are here",
-            body = "They hide while you type. Tap or swipe up to bring them back.",
-            waits = false
+            body = "Five tabs, one tap away. They hide while you type \u2014 swipe up to bring them back.",
         ),
         // 7-8 — "then a small tour of package".
         CoachStep(
@@ -224,7 +241,6 @@ object CoachMarkPlan {
             anchorId = GuideAnchors.NAV_TAB_PACKAGES,
             title = "Packages",
             body = "Tap to add a language or a tool. It downloads once, then works offline.",
-            waits = true
         ),
         CoachStep(
             id = GuideAnchors.PACKAGES_CARD,
@@ -232,7 +248,6 @@ object CoachMarkPlan {
             anchorId = GuideAnchors.PACKAGES_CARD,
             title = "One-time download",
             body = "Adding a language downloads once. Keep CodeC open while it finishes.",
-            waits = false
         ),
         // 9-10 — "and terminal".
         CoachStep(
@@ -241,7 +256,6 @@ object CoachMarkPlan {
             anchorId = GuideAnchors.NAV_TAB_TERMINAL,
             title = "Terminal",
             body = "A real Linux shell: pkg install, git, cc.",
-            waits = true
         ),
         CoachStep(
             id = GuideAnchors.TERMINAL_CHIP,
@@ -249,7 +263,6 @@ object CoachMarkPlan {
             anchorId = GuideAnchors.TERMINAL_CHIP,
             title = "What it is doing",
             body = "Starting, downloading or running. If it says downloading, do not close CodeC.",
-            waits = false
         )
     )
 
@@ -258,14 +271,20 @@ object CoachMarkPlan {
     fun step(id: String): CoachStep? = byId[id]
 
     /**
-     * The step to show, or null. In tour order, the first step that is not yet
-     * seen and whose anchor is on screen — except that a step with
-     * [CoachStep.waits] stops the tour while its anchor is absent (the box
-     * appears the moment the control does), and a step without it is passed over
-     * so the tour can never stall on a control that only sometimes exists.
+     * The step to show, or null: in tour order, the FIRST beat that is neither
+     * taught nor stalled — shown when its anchor is on screen (and, for a drawer
+     * beat, when the drawer is open), waited for otherwise. Nothing is passed
+     * over just because some later control happens to be laid out; that was
+     * round 2's *"it got cut"*.
      *
-     * A null here marks nothing seen. That is the whole safety argument: a box
-     * never points at nothing, and a skipped lesson is never spent.
+     * A null here marks nothing seen and draws nothing, so the app stays usable
+     * while a beat waits. That is the whole safety argument: a box never points
+     * at nothing, and a beat that has not been taught is never spent.
+     *
+     * [stalled] is the host's anti-brick valve (see [waitingOn] and
+     * [STALL_GUARD_MS]): beats the host stopped waiting for are passed for this
+     * session only. The plan itself never stalls a beat and never marks one
+     * seen.
      *
      * Two "someone else owns the screen" rules sit above the anchor check:
      * [ChromeState.blockedByForeground] (the exit survey, safe mode, an in-flight
@@ -275,28 +294,129 @@ object CoachMarkPlan {
      * dialog, or on a control the closed drawer still covers, is a hole in
      * nothing. That was the owner's *"not consistent with flow"*.
      */
-    fun nextStep(seen: Set<String>, chrome: ChromeState): CoachStep? {
+    fun nextStep(
+        seen: Set<String>,
+        chrome: ChromeState,
+        stalled: Set<String> = emptySet()
+    ): CoachStep? {
         if (chrome.blockedByForeground) return null
         for (step in steps) {
-            if (step.id in seen) continue
+            if (step.id in seen || step.id in stalled) continue
             // The drawer's beats need the drawer open; every other beat needs it
             // closed (it would otherwise be cut on a control the drawer covers).
-            if (step.inDrawer != chrome.drawerOpen) {
-                if (step.waits) return null else continue
-            }
+            if (step.inDrawer != chrome.drawerOpen) return null
             if (chrome.anchorVisible(step.anchorId)) return step
-            if (step.waits) return null
+            return null
         }
         return null
     }
 
+    /**
+     * The beat the tour is stopped on because ITS CONTROL IS NOT LAID OUT, or
+     * null. This is what the host times: after [STALL_GUARD_MS] it may add the
+     * beat to `stalled`, and the tour moves on without spending the lesson.
+     *
+     * Deliberately null for the three waits that need no guard:
+     *  - while another surface owns the screen ([ChromeState.blockedByForeground])
+     *    — a Python download takes minutes and must not cost the beat after it;
+     *  - while the drawer is simply in the other state ([CoachStep.inDrawer]) —
+     *    the user's own next tap ends it;
+     *  - while the beat's control CANNOT exist on this route
+     *    ([anchorsPossibleOn]) — the user has to travel (or wait for a run to
+     *    open the preview), and timing that out is what would cascade: the Flask
+     *    preview would stall, then every beat behind it, and the tour would
+     *    "finish" on a screen the owner's flow has not reached yet.
+     *
+     * None of the three draws anything, so none of them can trap the user.
+     */
+    fun waitingOn(
+        seen: Set<String>,
+        chrome: ChromeState,
+        stalled: Set<String> = emptySet()
+    ): CoachStep? {
+        if (chrome.blockedByForeground) return null
+        for (step in steps) {
+            if (step.id in seen || step.id in stalled) continue
+            if (step.inDrawer != chrome.drawerOpen) return null
+            if (chrome.anchorVisible(step.anchorId)) return null
+            return if (step.anchorId in anchorsPossibleOn(chrome.route)) step else null
+        }
+        return null
+    }
+
+    /**
+     * The anchors that CAN be laid out on a route — the stall guard's whole
+     * input. A beat whose control is possible here and still missing is the one
+     * hopeless case worth timing out (the Packages card behind a collapsed
+     * section, the demo's `app.py` row when the user picked some other project);
+     * a beat whose control belongs to a screen the user is not on is not
+     * hopeless, it is simply early, and the tour waits for them to arrive.
+     *
+     * The bottom bar is on every route (Phase 32.1 hides it only inside the
+     * editor, and beat 6 doubles as the bar itself), so its three anchors are
+     * possible everywhere.
+     */
+    fun anchorsPossibleOn(route: String?): Set<String> {
+        val r = route?.substringBefore('?')?.trim().orEmpty()
+        val bar = setOf(
+            GuideAnchors.NAV_HANDLE,
+            GuideAnchors.NAV_TAB_PACKAGES,
+            GuideAnchors.NAV_TAB_TERMINAL
+        )
+        return when {
+            r.startsWith("preview") -> bar + GuideAnchors.PREVIEW_CLOSE
+            r.startsWith("editor") -> bar + setOf(
+                GuideAnchors.EDITOR_DRAWER,
+                GuideAnchors.DRAWER_PROJECT,
+                GuideAnchors.DRAWER_FILE,
+                GuideAnchors.EDITOR_RUN
+            )
+            r.startsWith("modules") -> bar + GuideAnchors.PACKAGES_CARD
+            r.startsWith("terminal") -> bar + GuideAnchors.TERMINAL_CHIP
+            else -> bar
+        }
+    }
+
+    /**
+     * True when the beat the tour is waiting for lives INSIDE the ☰ drawer.
+     *
+     * One honest use: the editor's project picker closes the drawer before it
+     * opens (it always has), and beat 3 — the demo's `app.py` row — is a drawer
+     * beat, so the owner's *"change the project folder to demo_flask → selected
+     * app.py"* would otherwise go silent and wait for the user to guess which
+     * button brings the files back. While this is true the editor reopens the
+     * drawer after a project is chosen, and the walk stays one walk. When the tour
+     * is over (or has not started) this is false and nothing changes for anybody.
+     */
+    fun nextBeatIsInDrawer(seen: Set<String>, stalled: Set<String> = emptySet()): Boolean {
+        for (step in steps) {
+            if (step.id in seen || step.id in stalled) continue
+            return step.inDrawer
+        }
+        return false
+    }
+
     /** True when the tour has something to teach right now. */
-    fun canShow(seen: Set<String>, chrome: ChromeState): Boolean = nextStep(seen, chrome) != null
+    fun canShow(
+        seen: Set<String>,
+        chrome: ChromeState,
+        stalled: Set<String> = emptySet()
+    ): Boolean = nextStep(seen, chrome, stalled) != null
 
     /** Lessons still unseen — what "Reset tips" gives back. */
     fun remaining(seen: Set<String>): List<CoachStep> = steps.filter { it.id !in seen }
 
     fun isComplete(seen: Set<String>): Boolean = steps.all { it.id in seen }
+
+    /**
+     * True when THIS SESSION's tour has run to its end: every beat is either
+     * taught or stalled. That is when the finish card — the only card with
+     * buttons, the owner's *"At the end option to close and view again"* — is
+     * earned. Finished is not complete: a stalled beat stays unseen, so a
+     * finished tour can still have a lesson left for the next pass.
+     */
+    fun isFinished(seen: Set<String>, stalled: Set<String> = emptySet()): Boolean =
+        steps.all { it.id in seen || it.id in stalled }
 
     /**
      * Record a step as seen (the user tapped the control it teaches). Unknown
@@ -308,12 +428,17 @@ object CoachMarkPlan {
         if (byId.containsKey(stepId)) seen + stepId else seen
 
     /**
-     * SKIP and Back: the whole tour is over, so nothing returns on its own (the
-     * no-nag law). Deliberately marks *unseen* steps seen rather than writing a
-     * second flag — one key, one meaning, and Settings → Reset tips is the one
-     * door back.
+     * **VIEW AGAIN** on the finish card: the whole tour from beat 1. Clearing the
+     * seen set IS the replay — no second flag, so the one key keeps one meaning,
+     * and Settings → About → Reset tips does the same thing from the other end.
+     *
+     * There is deliberately no `markAllSeen` any more. Round 2 ended the tour
+     * with SKIP and Back by marking every unseen beat seen; the owner's round 3
+     * (*"it's not a trough guide mean it got cut"*) removed both exits, so
+     * nothing in the product can now spend a beat the user never saw. The only
+     * way a beat is marked seen is by tapping the control it teaches.
      */
-    fun markAllSeen(seen: Set<String>): Set<String> = seen + steps.map { it.id }
+    fun replay(): Set<String> = emptySet()
 
     /** `coach_marks_seen_csv` → ids. Blank/garbage tokens drop out. */
     fun parseSeen(csv: String?): Set<String> = csv
@@ -342,12 +467,16 @@ object CoachMarkPlan {
     }
 
     /**
-     * The drawer header's anchor: published only while a project is open AND it
-     * is not the demo project already (switching to what you are already in is
-     * not a lesson). Scratch mode gets no box.
+     * How long the host lets a beat wait for a control that has not appeared
+     * before passing it for this session (see [waitingOn]). Long enough that the
+     * tour the owner described never hits it — his walk-through is a few seconds
+     * per beat, and a Python download does not count, because a moving setup
+     * stage blocks the tour without arming the guard — and short enough that a
+     * phone which genuinely cannot produce the control (no Python, so no Flask
+     * preview; the tab bar never hidden, so no reveal handle) is not held on one
+     * beat forever with no exit on the card.
      */
-    fun drawerProjectAnchor(projectName: String?, demoProjectName: String): String? =
-        if (projectName != null && projectName != demoProjectName) GuideAnchors.DRAWER_PROJECT else null
+    const val STALL_GUARD_MS = 20_000L
 
     /**
      * The drawer row the tour spotlights: the demo project's entry file, and

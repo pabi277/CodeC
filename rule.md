@@ -198,9 +198,7 @@ Every update updates the docs **in the same commit**:
 6. Report says: what changed, tip sha, run id, any **device pass required**.
 7. Stop — the owner merges to `main` (or commands the merge).
 
-## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` on tip `3c597b2`, then the owner's device
-  report rebuilt 45.2 as ONE TEN-BEAT TOUR (round 2 implemented, CI ✅ GREEN
-  `34704379023` on tip `acadaee`, device round G1-G23 NOT run) ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G14) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+## 9. State snapshot (2026-09-12, **Phases 44 AND 45 are 🚧 IMPLEMENTED on `arena/01a0955a-codec` — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN round 1 `34698914219` (tip `3c597b2`) and round 2 `34704379023` (tip `acadaee`), then the owner ran round 2 and 45.2 became A TOUR WITH NO SKIP — round 3 implemented, CI pending, device round G1-G28 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G28) — next: "Start Phase 46"; 46-50 are 📋 PLANNED; Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -285,6 +283,35 @@ Every update updates the docs **in the same commit**:
   still passed the deleted `arrivalKey` argument (a compile error a wiring pin
   found), and a pin on the bare word "GOT IT" failed on the file's own sentence
   promising there is none — **a source pin must name the button, not the word**.
+  **ROUND 3 (2026-09-12, later — the owner ran round 2): THE TOUR HAS NO SKIP.**
+  His report: *"You add the skip option and it's not a trough guide mean it got cut /
+  I want a full process 1st to last without skip anything in this / At the end option
+  to close and view again."* **Four causes, again all in the shipped code**
+  (TROUBLESHOOTING §37): SKIP TOUR was the most visible thing on every card and one
+  tap wrote all ten beats as seen; the pass-over law skipped any beat whose control
+  was not laid out at that instant, so the Packages box could arrive before the Flask
+  preview did; two beats had no target when needed (the project-name box only when a
+  switch would teach something, the tabs box only while the keyboard hid the bar);
+  and the project picker closes the drawer that the next beat lives in. **Now:**
+  every beat waits, in order, and a later beat never jumps the queue; a tour card has
+  **no button at all** (no next, no skip) and `markAllSeen` is deleted, so nothing can
+  spend a beat the user never saw; Back navigates instead of ending anything (the same
+  beat is there on return, unspent); while a beat waits **nothing is drawn**, which is
+  the safety argument that replaces the skip — the overlay can never cover the app;
+  and the finish card is the only one with buttons (**VIEW AGAIN** = an empty seen set
+  + navigate to the editor, **CLOSE** = in-memory, so an owed beat is still owed).
+  Two beats got real targets (the drawer header in every project state; the tab bar as
+  well as the reveal handle), the editor reopens the drawer after a project pick
+  (`nextBeatIsInDrawer` → `tourWaitsInDrawer`), and **the stall guard**
+  (`STALL_GUARD_MS = 20s`, `waitingOn`, `anchorsPossibleOn(route)`) is the one thing
+  that can pass a beat: only a control that COULD be on this route and is missing,
+  never one the user must travel to or wait an install out for (that is what would
+  cascade), and a passed beat is never marked seen. **The no-nag law's
+  "skippable with a single tap" is reversed for the tour by the owner's own
+  instruction** — the slides keep SKIP; recorded as deviation 13. **180 host cases
+  green locally** (`CoachMarkPlanTest` 21, `GuideWiringTest` 18, `GuidePlanTest` 15,
+  `TooltipPlacementTest` 10, `DemoProjectSeedTest` 7). **CI on the round-3 commit is
+  pending; device rows are now G1-G28.**
   **CI round 1 (`34698914219`, tip `3c597b2`) is
   ✅ GREEN** — `conclusion: success`, job `build` 9m55s, zero error annotations;
   per §5 that is `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, so the
@@ -292,7 +319,8 @@ Every update updates the docs **in the same commit**:
   6,664,474 B (**+12,792 B / +0.19%** over Phase 44 round 4 — the measured cost of
   the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
   DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
-  **G1-G23** written for round 2 and **NOT run**; CI on the round-2 commit
+  **G1-G28** written for round 3 and **NOT run** (G28 is the optional 20-second
+  stall-guard row); CI on the round-2 commit
   (`34704379023`, tip `acadaee`) is ✅ **GREEN** — `conclusion: success`, job `build`
   10m41s, assemble + `testDebugUnitTest` + `lintDebug`, zero error annotations,
   release APK 6,664,570 B (**+96 B / +0.001% over round 1** — the tour replaced the
@@ -824,7 +852,15 @@ Every update updates the docs **in the same commit**:
   caught two more real faults: a host call still passing an argument the redesign
   had deleted (`arrivalKey` — a hard compile error waiting in CI), and a pin that
   grepped the bare word `GOT IT` and so failed on the comment promising there is no
-  GOT IT — **pin the button (`Text("GOT IT")`), never the word**. **Its
+  GOT IT — **pin the button (`Text("GOT IT")`), never the word**. **Round 3 of
+  Phase 45 grew it to 180/180** (`CoachMarkPlanTest` 21, `GuideWiringTest` 18) and
+  re-proved the same lesson from the other side: a pin that greps a word fails on the
+  prose that forbids it, so round 3 pins *counts* instead — `2` publishers of the
+  beat-6 anchor (the handle AND the bar), `1` writer of the seen set (`onSeen(`),
+  `2` drawer gates (`nextStep` and `waitingOn`) — and slices source between two
+  markers (`fun TourFinishedCard(` … `fun CoachMarkOverlay(`) to prove a *region* has
+  no button rather than the whole file. A whole-file `assertFalse(contains("Button("))`
+  would have been true of the finish card and useless. **Its
   blind spot, found by Phase 44's CI round 2:** the harness runs on a host JVM,
   so it cannot see `minSdk` — a *pure* file that used `java.nio.file`
   (`Files.isSymbolicLink`) compiled and passed locally and then died in

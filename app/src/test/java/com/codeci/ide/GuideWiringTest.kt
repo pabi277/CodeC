@@ -188,13 +188,16 @@ class GuideWiringTest {
             "beat 1: the editor's ☰ is not anchored",
             source(editor).contains("GuideAnchor.modifier(GuideAnchors.EDITOR_DRAWER)")
         )
-        // Beats 2 and 3 are decided by the PURE plan, not by an `if` in the
-        // drawer: the project box only where switching teaches something, the
-        // file box only on the demo's own entry file.
+        // Beat 2 is published in EVERY state of the drawer header — another
+        // project, the demo already open, scratch mode — because the header always
+        // opens the picker, and a tour the owner wants "1st to last without skip
+        // anything" must not depend on which project happens to be open. Beat 3
+        // stays a PURE decision: the file box only on the demo's own entry file.
         assertTrue(
-            "beat 2: the drawer's project header is not anchored",
-            source(drawer).contains("CoachMarkPlan.drawerProjectAnchor(projectName, DemoProjects.NAME)") &&
-                source(drawer).contains("headerModifier.then(GuideAnchor.modifier(projectAnchorId))")
+            "beat 2: the drawer's project header is not anchored unconditionally",
+            source(drawer).contains("GuideAnchor.modifier(GuideAnchors.DRAWER_PROJECT)") &&
+                !source(drawer).contains("drawerProjectAnchor") &&
+                !source(drawer).contains("projectAnchorId")
         )
         assertTrue(
             "beat 3: the demo's app.py row is not anchored",
@@ -210,9 +213,14 @@ class GuideWiringTest {
             "beat 5: the preview's Back is not anchored",
             source(preview).contains("GuideAnchor.modifier(GuideAnchors.PREVIEW_CLOSE)")
         )
-        assertTrue(
-            "beat 6: the 'Show tabs' handle is not anchored",
-            source(main).contains("GuideAnchor.modifier(GuideAnchors.NAV_HANDLE)")
+        // Beat 6 has TWO publishers and one id: the thin reveal handle while the
+        // bar is hidden, and the bar itself while it is visible. Round 2 anchored
+        // only the handle, so the beat existed just while the keyboard happened to
+        // be up — a tour that is "1st to last" cannot depend on that.
+        assertEquals(
+            "beat 6: the reveal handle AND the visible bar must both anchor it",
+            2,
+            source(main).split("GuideAnchor.modifier(GuideAnchors.NAV_HANDLE)").size - 1
         )
         // Beats 7 and 9 are the bottom bar's own tabs — the tour walks the user
         // to Packages and Terminal instead of hoping they wander there.
@@ -249,7 +257,6 @@ class GuideWiringTest {
 
     /** The pure helper that decides whether this anchor is published at all. */
     private fun helperFor(anchorId: String): String = when (anchorId) {
-        com.codeci.ide.ui.guide.GuideAnchors.DRAWER_PROJECT -> "CoachMarkPlan.drawerProjectAnchor("
         com.codeci.ide.ui.guide.GuideAnchors.DRAWER_FILE -> "CoachMarkPlan.drawerFileAnchor("
         com.codeci.ide.ui.guide.GuideAnchors.NAV_TAB_PACKAGES,
         com.codeci.ide.ui.guide.GuideAnchors.NAV_TAB_TERMINAL -> "CoachMarkPlan.tabAnchorFor("
@@ -290,17 +297,35 @@ class GuideWiringTest {
         )
         val overlay = source(coachMarks)
         assertTrue(overlay.contains("ChromeState.of("))
-        assertTrue(overlay.contains("CoachMarkPlan.nextStep(seen, chrome)"))
-        // Tapping the control advances one step; SKIP TOUR / Back end the tour.
+        assertTrue(overlay.contains("CoachMarkPlan.nextStep(seen, chrome, stalled)"))
+        // Tapping the highlighted control advances one beat — and that is the
+        // ONLY thing that moves the tour. Round 3 deleted both of round 2's
+        // exits, so nothing in the product can spend a beat the user never saw.
+        // Pinned as CODE, not as a word: this file's own comments quote the
+        // owner's "skip" sentence, so a pin on the bare string would pass prose.
         assertTrue(overlay.contains("onAdvance = { onSeen(CoachMarkPlan.markSeen(seen, step.id)) }"))
-        assertTrue(overlay.contains("CoachMarkPlan.markAllSeen(seen)"))
-        // Back ends the TOUR before anything else (Phase 49's BackRouter inherits
-        // this precedence): a box that Back merely closes would come straight
-        // back, because the plan would still return the same unseen step.
-        assertTrue(overlay.contains("BackHandler { endTour() }"))
+        assertFalse("round 2's tour-ending skip is gone", overlay.contains("markAllSeen"))
+        assertFalse("Back must not end the tour", overlay.contains("BackHandler {"))
+        assertFalse(
+            "Back must not be imported for the tour",
+            overlay.contains("androidx.activity.compose.BackHandler")
+        )
         // The counter that makes it read as one flow instead of ten popups.
         assertTrue(overlay.contains("stepNumber = CoachMarkPlan.steps.indexOf(step) + 1"))
         assertTrue(overlay.contains("stepCount = CoachMarkPlan.steps.size"))
+        // VIEW AGAIN is the host's job: clear the one key, and start the replay
+        // where beat 1 lives (the editor), not on whatever tab the tour ended on.
+        assertTrue(src.contains("onReplay = {"))
+        assertTrue(src.contains("val fresh = CoachMarkPlan.replay()"))
+        assertTrue(src.contains("setCoachMarksSeenCsv(CoachMarkPlan.serializeSeen(fresh))"))
+        assertTrue(src.contains("navController.navigate(Screen.Editor.createRoute(null))"))
+        // The replay arrives the way a tab tap would — same route factory, same
+        // restoreState — instead of inventing a navigation of its own.
+        val replayAt = src.indexOf("onReplay = {")
+        assertTrue("the host has no replay branch", replayAt >= 0)
+        val replayNav = src.substring(replayAt, src.indexOf("\n        )", replayAt))
+        assertTrue(replayNav.contains("restoreState = true"))
+        assertTrue(replayNav.contains("navRevealed = false"))
     }
 
     @Test
@@ -327,24 +352,107 @@ class GuideWiringTest {
     }
 
     @Test
-    fun `the card has no next button, one exit, and is measured so it fits`() {
+    fun `a tour card has no button at all, and the only buttons are at the end`() {
         val src = source(coachMarks)
-        // "remove the next option": the card carries no forward button at all.
-        // Pinned as the BUTTON, not the word: the file's own doc says "the card
-        // has no NEXT/GOT IT", and a pin on the bare string would fail on that
-        // sentence forever.
+        // Round 1: "remove the next option". Round 3: "You add the skip option
+        // and it's not a trough guide mean it got cut". Both are pinned as the
+        // BUTTON, never as the word — this file's own comments quote the owner's
+        // sentences, so a pin on the bare string would fail on prose forever.
         assertFalse("the card still has a GOT IT button", src.contains("Text(\"GOT IT\")"))
         assertFalse("the card must not offer a NEXT", src.contains("Text(\"NEXT\")"))
-        // The one button left is an exit, and it says what it exits.
-        assertTrue(src.contains("Text(\"SKIP TOUR\")"))
-        assertTrue(src.contains("TextButton(onClick = onSkip)"))
-        assertEquals("exactly one button on the card", 1, Regex("TextButton\\(").findAll(src).count())
+        assertFalse("the tour must not offer a SKIP", src.contains("Text(\"SKIP TOUR\")"))
+        assertFalse("no onSkip parameter survives", src.contains("onSkip"))
+        // A mid-tour card is copy and a hole, nothing else: the way on is the
+        // highlighted control, and there is no way out until the end.
+        val tourCard = src.substring(src.indexOf("fun CoachMarkOverlay("))
+        assertFalse("a mid-tour card carries no button", tourCard.contains("Button("))
+        // "At the end option to close and view again": the finish card is the one
+        // card with buttons, and it is drawn only after the last beat.
+        val finishCard = src.substring(
+            src.indexOf("fun TourFinishedCard("),
+            src.indexOf("fun CoachMarkOverlay(")
+        )
+        assertTrue(finishCard.contains("Text(\"VIEW AGAIN\")"))
+        assertTrue(finishCard.contains("Text(\"CLOSE\")"))
+        assertTrue(finishCard.contains("TextButton(onClick = onViewAgain)"))
+        assertTrue(finishCard.contains("Button(onClick = onClose)"))
         // The owner's "Not showing the full box guide at one": the height that
         // places the card is MEASURED, so the clamp branch cannot push a taller
         // card over its own hole. The 150dp constant is a first-frame seed only.
         assertTrue(src.contains("onSizeChanged { cardHeightPx = it.height.toFloat() }"))
         assertTrue(src.contains("height = cardHeightPx"))
         assertTrue(src.contains("var cardHeightPx by remember(step.id)"))
+    }
+
+    @Test
+    fun `the tour does not go silent where the picker closed the drawer`() {
+        // Beat 2's tap opens the project picker, and the editor has always closed
+        // the drawer to do it. Beat 3 is a row inside that drawer, so the walk the
+        // owner dictated would stop dead after the pick — no box, nothing to tap,
+        // and a lesson that only appears if the user guesses ☰. The host asks the
+        // PURE plan whether the beat it waits for is behind the drawer, and the
+        // editor reopens it after a project is chosen. Nothing else changes: with
+        // no tour mid-flight the flag is false and the picker behaves as before.
+        val main = source(main)
+        assertTrue(
+            "the host must ask the plan, not keep its own idea of the tour",
+            main.contains("tourWaitsInDrawer = CoachMarkPlan.nextBeatIsInDrawer(coachSeen)")
+        )
+        val editorSrc = source(editor)
+        assertTrue(
+            "EditorScreen must take the fact as a parameter with a safe default",
+            editorSrc.contains("tourWaitsInDrawer: Boolean = false")
+        )
+        val at = editorSrc.indexOf("viewModel.switchContext(context, project.name)")
+        assertTrue("the picker's project-chosen branch is gone", at >= 0)
+        val afterPick = editorSrc.substring(at, at + 700)
+        assertTrue(
+            "the drawer must reopen after a pick, and only while the tour waits there",
+            afterPick.contains("if (tourWaitsInDrawer) {") &&
+                afterPick.contains("uiScope.launch { drawerState.open() }")
+        )
+        // And the drawer still closes for the picker itself: that behaviour is not
+        // the tour's to change.
+        assertTrue(editorSrc.contains("uiScope.launch { drawerState.close() }"))
+    }
+
+    @Test
+    fun `the stall guard passes a beat without spending it, and the end is earned`() {
+        val src = source(coachMarks)
+        // "Every beat waits" is only safe because of this: a control that can
+        // never appear (no Python, so no Flask preview; the tab bar never hidden,
+        // so no reveal handle) would otherwise park the tour on that beat with a
+        // scrim over the app and no button on the card. The guard times the beat
+        // the PLAN names, in memory, and the plan passes it without marking seen.
+        assertTrue(src.contains("CoachMarkPlan.waitingOn(seen, chrome, stalled)"))
+        assertTrue(src.contains("LaunchedEffect(waiting?.id)"))
+        assertTrue(src.contains("delay(CoachMarkPlan.STALL_GUARD_MS)"))
+        assertTrue(src.contains("stalled = stalled + id"))
+        assertTrue(src.contains("var stalled by remember { mutableStateOf(setOf<String>()) }"))
+        // One writer of the seen set, and it is the tap on the control: a stalled
+        // beat stays a lesson for the next pass.
+        assertEquals(
+            "the seen set has exactly one writer",
+            1,
+            Regex("onSeen\\(").findAll(src).count()
+        )
+        // The finish card is earned by a tour this composition watched run, not by
+        // the preference — or an install that starts complete would be greeted by
+        // "that is the whole tour" on every launch.
+        assertTrue(src.contains("CoachMarkPlan.isFinished(seen, stalled)"))
+        assertTrue(src.contains("var ranThisSession by remember { mutableStateOf(!finished) }"))
+        assertTrue(src.contains("LaunchedEffect(finished) { if (!finished) ranThisSession = true }"))
+        assertTrue(
+            src.contains("if (finished && ranThisSession && !finishClosed && !blockedByForeground)")
+        )
+        // VIEW AGAIN resets the guard too, so a replay really is all ten beats.
+        val replay = src.substring(
+            src.indexOf("onViewAgain = {"),
+            src.indexOf("modifier = modifier", src.indexOf("onViewAgain = {"))
+        )
+        assertTrue(replay.contains("stalled = emptySet()"))
+        assertTrue(replay.contains("finishClosed = false"))
+        assertTrue(replay.contains("onReplay()"))
     }
 
     @Test
@@ -448,10 +556,20 @@ class GuideWiringTest {
             main.substring(blockedAt, blockedAt + 400).contains("editorDialogOpen ||")
         )
         assertTrue(main.contains("drawerOpen = editorDrawerOpen,"))
+        // The route is the stall guard's only input: it is what tells "this
+        // control is missing" from "this control lives on a screen the user has
+        // not reached yet".
+        assertTrue(main.contains("route = currentDestination?.route,"))
         assertTrue(source(coachMarks).contains("drawerOpen = drawerOpen"))
-        // And the pure plan is what acts on them.
+        // And the pure plan is what acts on them — in BOTH of its decisions, the
+        // box and the stall guard: a drawer beat with the drawer shut must neither
+        // be cut nor be timed out and skipped.
         val planSrc = source(plan)
-        assertTrue(planSrc.contains("if (step.inDrawer != chrome.drawerOpen) {"))
+        assertEquals(
+            "nextStep and waitingOn both gate on the drawer state",
+            2,
+            planSrc.split("if (step.inDrawer != chrome.drawerOpen) return null").size - 1
+        )
         assertTrue(planSrc.contains("val inDrawer: Boolean = false"))
     }
 

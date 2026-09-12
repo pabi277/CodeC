@@ -269,3 +269,24 @@ first, back = SKIP, `guide_completed` written only by a tap, and the same three 
 back. One consistency change rides along, in the other layer only: the tour's cards
 now carry `Tour · n of 10` in the same shape as `Guide · 1 of 5`, so the two layers
 read as one guide instead of a deck plus ten popups.
+
+## Round 3 note (2026-09-12, later) — still unchanged
+
+Round 3 rebuilt the tour again (no SKIP anywhere on a tour card, every beat waits in
+order, and a finish card with **VIEW AGAIN** + **CLOSE** —
+[`PART_45_2_COACH_MARKS.md`](PART_45_2_COACH_MARKS.md) §"Round 3"). **45.1 is untouched
+a second time**, and the owner's decision still stands: the slides keep
+**GOT IT / START CODING / SKIP** exactly as built, so rows **G1-G8** of the device round
+are unchanged and every statement in this file still describes the shipped behaviour.
+
+Two things round 3 changes *around* the slides, recorded here so this file is not read
+as a claim about the whole guide:
+
+1. One clause of the no-nag law is amended **for the tour only** (deviation 13, owner's
+   instruction). The slides remain one-time and single-tap skippable; the tour's exit
+   moved to its end.
+2. What happens after slide 5 is different: the tour that follows can no longer be
+   skipped away, and it finishes with a card offering **VIEW AGAIN** (all ten beats from
+   the first, and the app navigates to the editor where beat 1 lives). `GuideScreen`
+   itself, `GuidePlan`, its 15 cases and its vocabulary pin are byte-identical to
+   round 1.

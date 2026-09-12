@@ -1462,3 +1462,60 @@ anchor in absolute screen coordinates; that is a deliberate follow-up, not an
 oversight (`docs/chat-phase45/PART_45_2_COACH_MARKS.md`, deviation 9).
 
 **Rows:** `docs/chat-phase45/DEVICE_ROUND.md` G1-G23 (G9-G23 are the tour).
+
+## 37. "The tour had a skip on it, so it got cut" (owner device report; Phase 45 round 2 → round 3, 2026-09-12)
+
+**The report:** *"You add the skip option and it's not a trough guide mean it got cut /
+I want a full process 1st to last without skip anything in this / At the end option to
+close and view again."*
+
+**What was wrong (four things, all in round 2's shipped code):**
+
+1. **SKIP TOUR was the most visible thing on the card.** Every one of the ten beats
+   carried a button whose only job was to end the tour, and one tap on it wrote all ten
+   beat ids as seen. The guide read as something to dismiss, not something to walk.
+2. **Beats were passed over the moment their control was not laid out.** Round 2 split
+   the tour into four "waiting" beats and six "pass over" beats so it could never
+   stall. Passing over is instant and silent, so: tap RUN ▶, the Flask server takes a
+   few seconds, and the tour had already walked on to the tab bar and the Packages tab.
+   Boxes arrived out of the order the app was doing things in — a *full process* with
+   the middle missing.
+3. **Two beats had no target exactly when they were needed.** The project-name box was
+   published only when switching projects would teach something, so a phone already in
+   `demo_flask` (or in scratch mode) never saw it. The *tabs are here* box was anchored
+   to the thin reveal handle, which exists only while the keyboard hides the bar.
+4. **The project picker closes the drawer** (it always has), and the next beat is a row
+   *inside* that drawer — so after choosing `demo_flask` the tour went silent and waited
+   for the user to work out which button brings the files back.
+
+**What it does now:** ten beats, in order, and **nothing is skipped**. A tour card has
+no button at all: the highlighted control is the only way on, a tap outside does
+nothing, and the back button navigates instead of ending anything (the same beat is
+there when you come back, unspent). While a beat waits for its control, **nothing is
+drawn** — no scrim, no card — so the app is never covered and never trapped. The card
+at the end is the only one with buttons: **VIEW AGAIN** (all ten beats from the first,
+and the app takes you to the editor where beat 1 lives) and **CLOSE**.
+
+**The one thing that can still move the tour past a beat** is a 20-second *stall
+guard*, and it is narrow on purpose: it fires only for a control that **could be on
+this screen and is not** (the Packages card behind a collapsed section, the `app.py`
+row after you picked some other project). It never fires for a beat you have to travel
+to or wait an install out for — timing those out is what would cascade (the Flask
+preview stalls during a Python install, then every beat behind it, and the tour
+"finishes" on a screen the flow never reached). A stalled beat is **passed, not spent**:
+it is never written to the seen set, so it comes back on the next launch or on VIEW
+AGAIN.
+
+**If you are re-testing on a phone that ran round 1 or 2:** Settings → About → **Reset
+tips**, then kill the app. The beat ids are unchanged, so without a reset you would
+only see the beats you never reached.
+
+**Known limits (recorded, not hidden):** a box still cannot point *into* a dialog
+(Compose dialogs are their own window), so the project picker and the *Install Python?*
+prompt are taught by the copy of the beat before them; and a tour parked on a beat whose
+control never appears — no Python and the install declined, so no Flask preview — waits
+there silently, with the beats behind it, until it does. Both are deliberate: the
+alternative is the skipping the owner just reported
+(`docs/chat-phase45/PART_45_2_COACH_MARKS.md`, deviations 9 and 13-16).
+
+**Rows:** `docs/chat-phase45/DEVICE_ROUND.md` G1-G28 (G9-G28 are the tour).

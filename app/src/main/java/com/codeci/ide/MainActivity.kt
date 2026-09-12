@@ -1133,7 +1133,13 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     // Phase 45.1 — the third door back to the guide: the ☰
                     // drawer's footer, where a user who is lost in the editor
                     // looks first (the owner's "open view again[ing]").
-                    onOpenGuide = { guideRequested = true }
+                    onOpenGuide = { guideRequested = true },
+                    // Phase 45.2 round 3 — the tour's next beat is a row inside
+                    // the editor's ☰ drawer and the project picker closes that
+                    // drawer, so the editor reopens it after a pick. A pure
+                    // question asked of the plan, and false whenever the tour is
+                    // not mid-flight: no tour, no change for anybody.
+                    tourWaitsInDrawer = CoachMarkPlan.nextBeatIsInDrawer(coachSeen)
                 )
             }
             composable(
@@ -1308,16 +1314,14 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
             }
         }
     }
-        // Phase 45.2 — one spotlight at a time, at most two per arrival, and
-        // never while another surface owns the screen: the exit survey, safe
-        // mode, or a Phase 44 download that is actually moving (CHECKING is a
-        // startup transient, not work, so it does not suppress a mark).
-        // Phase 45.2 (device round) — ONE ordered tour, not two-marks-per-screen:
-        // the plan walks ☰ → project → app.py → RUN ▶ → preview Back → the reveal
+        // Phase 45.2, device rounds 2 and 3 — ONE ordered tour, first beat to
+        // last: ☰ → project → app.py → RUN ▶ → the preview's Back → the reveal
         // handle → Packages tab → its install card → Terminal tab → its chip, and
-        // the highlighted control is the only forward button. No `surface` and no
-        // per-arrival counter any more; the pure plan decides from the anchors
-        // that are really laid out.
+        // the highlighted control is the only forward button. No `surface`, no
+        // per-arrival counter, and no SKIP (round 3: the owner's *"it's not a
+        // trough guide mean it got cut"*): the pure plan decides from the anchors
+        // that are really laid out, and the only card with buttons is the one at
+        // the end.
         GuideCoachMarks(
             seen = coachSeen,
             blockedByForeground = exitPromptVisible ||
@@ -1327,10 +1331,40 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                 setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.VERIFYING ||
                 setupProgress.stage == com.codeci.ide.ui.terminal.SetupStage.EXTRACTING,
             drawerOpen = editorDrawerOpen,
+            // Where the user is, so the stall guard knows the difference between
+            // a control that is missing and a control that lives on a screen they
+            // have not reached yet.
+            route = currentDestination?.route,
             onSeen = { next ->
                 coachSeen = next
                 scope.launch {
                     settingsManager.setCoachMarksSeenCsv(CoachMarkPlan.serializeSeen(next))
+                }
+            },
+            onReplay = {
+                // VIEW AGAIN on the finish card: the whole tour from beat 1, and
+                // beat 1 is the editor's ☰, so that is where the replay starts.
+                // One key, one meaning — the replay is an empty seen set, not a
+                // second flag.
+                val fresh = CoachMarkPlan.replay()
+                coachSeen = fresh
+                scope.launch {
+                    settingsManager.setCoachMarksSeenCsv(CoachMarkPlan.serializeSeen(fresh))
+                }
+                val onEditor = navController.currentDestination?.route.orEmpty()
+                    .startsWith(Screen.Editor.route.substringBefore("?"))
+                if (!onEditor) {
+                    // The bar's own idiom for "show me the editor tab" (the same
+                    // createRoute + restoreState the tab tap uses, so a replay
+                    // arrives the way a tap would).
+                    navController.navigate(Screen.Editor.createRoute(null)) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                    // A deliberate navigation: the reveal is over, exactly as it
+                    // is for a tab tap (Phase 32.1).
+                    navRevealed = false
                 }
             }
         )
@@ -1352,6 +1386,13 @@ private fun FlatBottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
+            // Phase 45.2 round 3 — beat 6 ("the tabs are here") teaches the BAR
+            // while the bar is visible and the thin reveal handle while it is
+            // hidden: one lesson, one anchor id, and a target that exists on every
+            // screen the tour walks. Round 2 anchored only the handle, so the beat
+            // existed just while the keyboard happened to be up — and a tour that
+            // is "1st to last without skip anything" cannot depend on that.
+            .then(GuideAnchor.modifier(GuideAnchors.NAV_HANDLE))
     ) {
         Box(
             modifier = Modifier

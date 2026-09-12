@@ -133,14 +133,18 @@ The first launch teaches the app in two layers, and neither one nags:
 - **One guided tour** of ten boxes over the real controls, in the order you would
   actually use them: **☰** → *change project* → **demo_flask → app.py** → **RUN ▶**
   (and the *Install Python?* prompt it can lead to) → the **preview's Back** once
-  your Flask page is live → the **Show tabs** handle → the **Packages** tab → its
-  install card → the **Terminal** tab → its **status chip**. Every box is labelled
-  `Tour · n of 10`, and **the highlighted control is the only way forward**: there
-  is no next button, a tap outside does nothing at all, and one tap on **SKIP TOUR**
-  (or the back button) ends the tour for good. Each box is shown once.
-- A box is never cut on a control you cannot see. It waits for the real control to
-  be on screen, and it never appears behind a dialog, behind the ☰ drawer, over the
-  exit survey, in safe mode, or while a download is in flight.
+  your Flask page is live → the **tab bar** (or its reveal handle) → the **Packages**
+  tab → its install card → the **Terminal** tab → its **status chip**. Every box is
+  labelled `Tour · n of 10`, and **the highlighted control is the only way forward**:
+  a tour box has **no button on it at all** — no next, and no skip. The tour runs
+  first beat to last, and the card at the end is the one with buttons: **VIEW AGAIN**
+  (all ten from the first) and **CLOSE**. Each box is shown once.
+- A box is never cut on a control you cannot see, and the tour never invents one: it
+  waits for the real control, drawing **nothing** while it waits, so the app is fully
+  usable in between. It never appears behind a dialog, behind the ☰ drawer, over the
+  exit survey, in safe mode, or while a download is in flight. The back button
+  navigates as it always does — it pauses the tour, and the same beat is there when
+  you come back.
 
 **demo_flask is always there.** The bundled Flask demo the tour walks you through is
 re-created if you delete it — your own edits to it are never touched — so the tour

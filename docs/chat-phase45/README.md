@@ -1,8 +1,9 @@
 # CodeC Phase 45 — The guide (slides on first run + coach marks on first arrival)
 
-> **Status:** 🚧 **IMPLEMENTED** (2026-09-12, `arena/01a0955a-codec`; owner:
-> *"Start Phase 45"*) · CI ✅ GREEN round 1 (`34698914219`, tip `3c597b2`) ·
-> device round required (G1-G14, NOT run)
+> **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 3** (2026-09-12, `arena/01a0955a-codec`;
+> owner: *"Start Phase 45"* → two device reports → two rebuilds of 45.2) · CI ✅ GREEN
+> round 1 (`34698914219`, tip `3c597b2`) and round 2 (`34704379023`, tip `acadaee`),
+> round 3 pending · device round required (**G1-G28**, NOT run)
 > ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"It has 0 guide
 > features to give the user a real knowledge how to use the app, user don't know
@@ -84,6 +85,15 @@ decides it: if it can be a pure function, it is one.
 1. **The no-nag law** (`ExitSurvey.kt:11-18` states it): every guide surface is
    one-time, skippable with a single tap, and re-openable by the user. Nothing
    returns after dismissal unless asked.
+   **Round 3 amends one clause, on the owner's own instruction.** The *slides* keep
+   SKIP (unchanged, and still single-tap). The *tour* no longer has a mid-tour exit —
+   *"You add the skip option and it's not a trough guide mean it got cut. I want a
+   full process 1st to last without skip anything in this"* — so its exit moved to the
+   end (**CLOSE** / **VIEW AGAIN**), and Back navigates instead of ending it. The law's
+   *purpose* (never trap the user, never return unasked) is kept by a different means:
+   **a waiting beat draws nothing at all**, so the overlay can never cover the app, and
+   the tour still shows once and only comes back when asked (VIEW AGAIN, or Settings →
+   About → Reset tips). Recorded as deviation 13.
 2. **No dead key, no unaudited row.** A new DataStore key needs an out-of-store
    reader (`SettingsKeysHaveReadersTest`); a new Settings control needs a row in
    `docs/chat-phase38/SETTINGS_AUDIT.md` in the same commit
@@ -280,8 +290,8 @@ infrastructure, not app code.
 CI round 1 is ✅ GREEN, so what is left is **only** the device condition: the
 eight rows of 45.1/45.2 plus the fresh-install rows are written as
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) and have **not** been run — and note that **round 2
-rewrote those rows as G1-G23** (the tour replaced the five spotlights), so use the current file, not this
-round-1 list. Until the owner reports them, Phase 45 is 🚧
+rewrote those rows as G1-G23 and round 3 rewrote them again as G1-G28** (the tour replaced the five
+spotlights, then lost its skip), so use the current file, not this round-1 list. Until the owner reports them, Phase 45 is 🚧
 IMPLEMENTED, not ✅ COMPLETE, and nothing here may be described as tested on
 hardware. Phase 44's round 2 is still pending too, and the two compose on one
 phone: the guide shows **before** the terminal-first divert, and slide 3 is the
@@ -357,8 +367,63 @@ decision ([`PART_45_1_GUIDE_SLIDES.md`](PART_45_1_GUIDE_SLIDES.md) §Round 2 not
 
 ### What is still open
 
-CI on the round-2 commit is ✅ GREEN (`34704379023`, tip `acadaee`), so only the
-device round is open: rows **G1-G23** in
-[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G23 the tour). Test it
-after **Settings → About → Reset tips**, or the beats round 1 already marked seen
-will not come back. Phase 44's round 2 is still pending on the same phone.
+CI on the round-2 commit is ✅ GREEN (`34704379023`, tip `acadaee`). **Round 3 then
+superseded this section's behaviour** (the owner ran that build: the skip cut the tour)
+— see §Round 3 below, and use the current rows **G1-G28** in
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md), not the G1-G23 list this round was written
+against. Phase 44's round 2 is still pending on the same phone.
+
+---
+
+## Round 3 (2026-09-12, later) — no skip: the tour runs first beat to last
+
+The owner installed round 2 (`34704379023`), walked the tour, and reported:
+
+> *"You add the skip option and it's not a trough guide mean it got cut / I want a
+> full process 1st to last without skip anything in this / 3 ber->change the project
+> folder to demo_flask->selected app.py->run->install->python->it will open the flusk
+> web->close->tap to reveal the keyboard below option->then a small tour of package and
+> terminal / At the end option to close and view again"*
+
+The ten beats were already his flow; what round 2 did to them was let them be left.
+Four causes, all in round 2's own code (the full diagnosis is in
+[`PART_45_2_COACH_MARKS.md`](PART_45_2_COACH_MARKS.md) §Round 3): **SKIP TOUR was the
+most visible thing on every card** and one tap ended all ten beats; the **pass-over
+law** skipped any beat whose control was not laid out at that instant, so the Packages
+box could arrive before the Flask preview did; **two beats had no target when they were
+needed** (beat 2 only when a project switch would teach something, beat 6 only while
+the keyboard hid the bar); and **the project picker closes the drawer**, so after
+choosing `demo_flask` the tour went silent until the user found ☰ again.
+
+### What changed
+
+| Round 2 | Round 3 |
+|---|---|
+| SKIP TOUR on every card; Back ended all ten beats | **No exit mid-tour.** A tour card has no button at all; Back navigates and the tour resumes on the same beat, unspent. `markAllSeen` is **deleted** — nothing can spend a beat the user never saw |
+| Beats split into "wait" (4) and "pass over" (6) | **Every beat waits**, in order; a later beat never jumps the queue. While a beat waits, **nothing is drawn**, so the app is never covered |
+| The tenth box just stopped | **The finish card**: `Tour · 10 of 10`, *That is the whole tour*, **VIEW AGAIN** (all ten from the first, and the app navigates to the editor where beat 1 lives) and **CLOSE** |
+| Beat 2 anchored only where a switch taught something | Anchored on the drawer header in **every** state (other project, `demo_flask`, scratch) — it always opens the picker |
+| Beat 6 anchored only to the reveal handle | Anchored to the handle **and to the visible bar** — one id, two publishers, a target on every screen |
+| The picker closed the drawer and the tour went silent | The host asks the pure plan `nextBeatIsInDrawer` and the editor **reopens the drawer** after a project is chosen |
+| — | **The stall guard**: a beat whose control *could be on this route* and is missing for 20 s is passed for the session, **never marked seen**. A beat the user has to travel to (or wait an install out for) is never timed out — that is what stops a cascade |
+
+### Files touched in round 3
+
+`ui/guide/CoachMarkPlan.kt` (`waits` deleted; `stalled` + `waitingOn` +
+`anchorsPossibleOn` + `isFinished` + `replay` + `nextBeatIsInDrawer` +
+`STALL_GUARD_MS`; `markAllSeen` and `drawerProjectAnchor` deleted; `ChromeState.route`)
+· `ui/guide/CoachMarks.kt` (no SKIP, no BackHandler, no buttons mid-tour, the stall
+timer, `TourFinishedCard`) · `MainActivity.kt` (`route`, `onReplay` + the editor
+navigation, `tourWaitsInDrawer`, the bar's NAV_HANDLE anchor) ·
+`ui/screens/EditorScreen.kt` (`tourWaitsInDrawer`, the drawer reopen after a pick) ·
+`ui/components/EditorProjectDrawer.kt` (beat 2's unconditional anchor) · tests:
+`CoachMarkPlanTest` **21**, `GuideWiringTest` **18** → **180 host cases green
+locally**. 45.1 is still untouched
+([`PART_45_1_GUIDE_SLIDES.md`](PART_45_1_GUIDE_SLIDES.md)).
+
+### What is still open
+
+CI on the round-3 commit, then the device round: rows **G1-G28** in
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (G1-G8 the slides, G9-G28 the tour). Test it
+after **Settings → About → Reset tips**, or the beats round 2 already marked seen will
+not come back. Phase 44's round 2 is still pending on the same phone.
