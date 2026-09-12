@@ -264,8 +264,15 @@ Every update updates the docs **in the same commit**:
   **disk**, applied by `navigate()` after the first composition, never by an
   argument-carrying `startDestination`. **109 host cases** green locally;
   owner-facing record TROUBLESHOOTING §35, re-test rows R1-R8 in
-  `docs/chat-phase44/DEVICE_ROUND.md`. **Do not call Phase 44 tested until the
-  owner reports round 2.**
+  `docs/chat-phase44/DEVICE_ROUND.md`. **CI round 4 (`34695797493`, tip
+  `4bf3c4c`) is ✅ GREEN** — `conclusion: success`, job `build` 10m53s, zero
+  error annotations, artifacts `CodeC-IDE-release` (6,651,682 B) and
+  `CodeC-IDE-debug` (25,608,360 B), v1.3.17. Per §5 the green run means
+  `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` all passed, so the
+  109 host cases ran on real Gradle/JUnit, not just on the local kotlinc harness
+  (the sandbox could not download the run log — `results-receiver.actions…` EOF
+  — so the evidence is the conclusion plus the empty error-annotation list).
+  **Do not call Phase 44 tested until the owner reports round 2.**
 - **Phases 44-50 PLANNED (2026-09-12, docs-only, no app code)** — the owner's
   **test-phase bug report** (seven rows: the invisible one-time download, no
   guide, "remove open-a-folder", four editor complaints, three "other"

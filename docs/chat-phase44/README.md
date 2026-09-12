@@ -341,10 +341,15 @@ The one-tap path is signposted instead; if the owner wants auto-repair on launch
 it is one call (`installUserland(force = true)`) in that branch.
 
 **What is still open:** the exit condition is a **device** condition. Round 1 was
-run by the owner and **failed four rows** (above); the fixes are implemented and
-**109 host cases** are green locally, but round 2 has not been run and CI has not
-yet built the fixes. Until the owner reports round 2, Phase 44 is 🚧 IMPLEMENTED,
-not ✅ COMPLETE, and nothing here may be described as tested on hardware.
+run by the owner and **failed four rows** (above); the fixes are implemented,
+**109 host cases** are green locally **and CI round 4 (`34695797493`, tip
+`4bf3c4c`) is ✅ GREEN** (job `build` 10m53s, zero error annotations, artifacts
+`CodeC-IDE-release` 6,651,682 B / `CodeC-IDE-debug` 25,608,360 B, v1.3.17 — per
+`rule.md` §5 that green run means `assembleDebug` + `testDebugUnitTest` +
+`lintDebug` all passed, so the host suite ran on real Gradle/JUnit/Robolectric).
+**Round 2 (R1-R8, then D1-D12 on a fresh install) has NOT been run.** Until the
+owner reports it, Phase 44 is 🚧 IMPLEMENTED, not ✅ COMPLETE, and nothing here
+may be described as tested on hardware.
 
 ## Sources
 

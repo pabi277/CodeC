@@ -81,7 +81,15 @@ the launch rule, the dismiss rule and the exact sentence he quoted;
 go-to-the-terminal navigation arrives at the terminal", "an install marker alone
 is never accepted as ready").
 
-### Round 2 — re-test these eight rows first (new build)
+**CI round 4 (`34695797493`, tip `4bf3c4c`) is ✅ GREEN** — `conclusion: success`, job `build` 10m53s, zero error annotations, artifacts `CodeC-IDE-release` 6,651,682 B / `CodeC-IDE-debug` 25,608,360 B (v1.3.17). Per `rule.md` §5 the green run means `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` all passed, so the **109 host cases ran on real Gradle/JUnit/Robolectric**, not only on the local kotlinc harness. (The sandbox could not download the run log — `results-receiver.actions.githubusercontent.com` answered EOF twice — so the evidence is the conclusion plus the empty error-annotation list.)
+
+### Round 2 — re-test these eight rows first (build `4bf3c4c`)
+
+Download the artifact from the run: <https://github.com/pabi277/CodeC/actions/runs/34695797493>
+→ **Artifacts** → `CodeC-IDE-debug` (or `CodeC-IDE-release`, signed, 6.65 MB).
+Install it **over** the current install — round 1's whole lesson is that the
+marker-only state must be recognised by the *new* build, so do not clear app data
+first.
 
 | # | What to do | PASS looks like |
 |---|---|---|

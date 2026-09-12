@@ -1392,6 +1392,13 @@ testing — the original bug, already baked into the data directory.
 - C keeps working the whole time (`RUN ▶` on a `.c` file, `cc` in the terminal) —
   that was never gated and still is not.
 
+**Which build to install for round 2:** the fixes are in CI run
+[`34695797493`](https://github.com/pabi277/CodeC/actions/runs/34695797493)
+(commit `4bf3c4c`, green) → **Artifacts** → `CodeC-IDE-debug`
+(or `CodeC-IDE-release`, signed, 6.65 MB, v1.3.17). Install it **over** the
+current install and **do not clear app data first**: recognising the
+marker-only prefix is the whole point of the fix, and wiping data would hide it.
+
 **If it still misbehaves:** Settings → **Logs** → COPY (or the crash dialog →
 COPY REPORT) and send it. The lines that matter are tagged `SetupRecovery`,
 `TerminalViewModel` (`setup keep-alive …`, `post-repair setup refresh failed`)

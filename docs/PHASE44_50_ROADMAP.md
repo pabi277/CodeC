@@ -18,7 +18,8 @@
 > device round 1** on that artifact — it 🔴 **failed four rows** (a marker-only
 > prefix read as READY, a setup bar with no working action, and
 > `restoreState = true` sending "go to the terminal" to the editor). All three
-> root causes are fixed and pinned by tests; **round 2
+> root causes are fixed and pinned by tests, and CI round 4 (`34695797493`, tip
+> `4bf3c4c`) is ✅ GREEN; **round 2
 > ([`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md) R1-R8, then
 > D1-D12) is the gate.** 45-50 are still plan-only. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
