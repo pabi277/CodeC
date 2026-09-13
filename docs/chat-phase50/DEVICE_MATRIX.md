@@ -17,7 +17,7 @@
 ## 0. Before you start (2 minutes per device)
 
 1. **Get the APK** — GitHub → **Actions** → latest green `Build APK` on
-   `arena/01a094e5-codec` → **Artifacts** → **`CodeC-IDE`** → unzip →
+   `arena/01a099b4-codec` → **Artifacts** → **`CodeC-IDE`** → unzip →
    `app-debug.apk` → install (allow *Install unknown apps*).
 2. **Identify the device without guessing.** Settings → **Feedback &
    Support** → **COPY REPORT** → paste anywhere → **line 1** is
