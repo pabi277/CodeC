@@ -145,8 +145,9 @@ class DeviceMatrixTest {
         assertTrue("$partFile is missing", file.isFile)
         val text = file.readText()
         val start = text.indexOf(TEST_LOG_HEADING)
+        val headingTitle = TEST_LOG_HEADING.removePrefix("## ")
         assertTrue(
-            "$partFile has no `${TEST_LOG_HEADING.removePrefix("## ")}` section — Phase 50's exit 4 " +
+            "$partFile has no `## $headingTitle` section — Phase 50's exit 4 " +
                 "needs one per part, so a device result lands beside the spec it proves",
             start >= 0
         )
@@ -224,7 +225,7 @@ class DeviceMatrixTest {
         unescape(raw)
             .replace(Regex("""\$\{[^}]*\}"""), " ")
             .replace(Regex("""\$[A-Za-z_][A-Za-z0-9_]*"""), " ")
-            .replace(Regex("""%\d+\$s"""), " ")
+            .replace(Regex("""%\d+${'$'}s"""), " ")
             .replace(Regex("""%[ds]"""), " ")
             .lowercase()
             .replace(Regex("""[^a-z0-9]+"""), " ")
