@@ -1,6 +1,10 @@
 # CodeC Phase 49 — Back does the obvious thing, everywhere
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
+> **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner: "Start
+> phase 48 and 49"; CI ✅ GREEN `34740245825` tip `a592295` — round 1 red
+> for-cause: one stale Phase-41 wiring pin in `ExitSurveyTest`, moved with its
+> reason; the ten-check device round pending — the diagnostic log ships in the
+> build) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner rows (verbatim):**
 > *"iv. After clicking 3 ber if user use back botton it will [close] the file
 > view and show the editor not full app close"* · *"B. My phone showing the

@@ -1,8 +1,10 @@
 # CodeC Phase 48.1 — `CaretVisibilityPolicy` + one call to sora
 
 > **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner:
-> "Start phase 48 and 49"; CI = executor of record, device round pending —
-> the eight checks at the bottom of the phase README are the round) ·
+> "Start phase 48 and 49"; CI ✅ GREEN `34740245825` tip `a592295` — round 1
+> red for-cause, one stale Phase-41 pin in `ExitSurveyTest`, moved with its
+> reason; device round pending — the eight checks at the bottom of the phase
+> README are the round) ·
 > **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"If the code is very big it's last line go under the
 > keyboard, when i use a suggestion it go down and hide behind the keyboard"*

@@ -74,9 +74,12 @@
 > the lock, G39-G40 its first-frame timing, **G41 its release** — and G41 needs the
 > round-6 build, which is the only one that has the fix).
 > 48 AND 49 are 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner:
-"Start phase 48 and 49", tip `b094b28`; CI run `34739938499` = executor of
-record; device rounds pending — 48's eight checks and 49's ten + 49.2's
-eight on two nav modes). **50 is still plan-only.** Phase 43 is
+"Start phase 48 and 49", tip `a592295`; CI round 1 (`34739938499`) red
+for-cause — one stale Phase-41 wiring pin in `ExitSurveyTest`, moved with
+its reason — round 2 ✅ GREEN `34740245825` (25 steps 10m6s, zero error
+annotations, release APK 6,681,018 B = +4,072 B / +0.06% over the merged
+46/47 tip `34737610972`, both phases combined); device rounds pending —
+48's eight checks and 49's ten + 49.2's eight on two nav modes). **50 is still plan-only.** Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
 > [`chat-phase43/README.md`](chat-phase43/README.md).

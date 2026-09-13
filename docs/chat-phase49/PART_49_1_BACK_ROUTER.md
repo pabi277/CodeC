@@ -1,9 +1,10 @@
 # CodeC Phase 49.1 — The back router
 
 > **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner:
-> "Start phase 48 and 49"; CI = executor of record, the ten-check device
-> round pending — the diagnostic log now ships IN the build, see the
-> implementation record) · **Cost:** `[client-only]` · **Effort:** M ·
+> "Start phase 48 and 49"; CI ✅ GREEN `34740245825` tip `a592295` — round 1
+> red for-cause, one stale Phase-41 pin in `ExitSurveyTest`, moved with its
+> reason; the ten-check device round pending — the diagnostic log now ships
+> IN the build, see the implementation record) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"iv. After clicking 3 ber if user use back botton it
 > will [close] the file view and show the editor not full app close"* —
 > clarification 2026-09-12: **both** the editor drawer and the hub file tree,

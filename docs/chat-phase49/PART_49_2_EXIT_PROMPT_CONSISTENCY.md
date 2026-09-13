@@ -1,8 +1,8 @@
 # CodeC Phase 49.2 — The exit prompt on every device, or nowhere
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`; CI =
-> executor of record, the eight-check device round below is pending — at
-> least two devices, one 3-button-nav and one gesture-nav) ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`; CI ✅
+> GREEN `34740245825` tip `a592295`; the eight-check device round below is
+> pending — at least two devices, one 3-button-nav and one gesture-nav) ·
 > **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"B. My phone showing the option when try to close
 > not now option but in most phone no option like not now or exit"* —
