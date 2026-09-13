@@ -1882,3 +1882,9 @@ pick row performs the row's own switch) and copy pins (the pick box names
 row computes) — fixed in `c5e73ac`; then ✅ GREEN **`34742868395`** tip
 `c5e73ac`, 8m35s, release APK **6,681,306 B** (+2,240 B over the blink-fix
 build — the eleventh beat).
+
+**Device round (2026-09-13, later).** ✅ **ALL PASSED** — owner, verbatim:
+*"All device passed. Now merge it."* One pass covered this section's two
+rows, §44's blink re-check, Phase 48's eight checks and Phase 49's ten +
+49.2's eight. Merge commanded via
+[PR #79](https://github.com/pabi277/CodeC/pull/79).

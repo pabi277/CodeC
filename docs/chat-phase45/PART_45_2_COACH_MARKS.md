@@ -911,3 +911,11 @@ row computes) — both fixed in `c5e73ac` with their reasons in the commit.
 Tests: `CoachMarkPlanTest` (11-beat order, surfaces, route map, in-drawer
 set, stalled walk, `take()` prefixes, + 2 new: pick gating, post-drop
 sequence) and `GuideWiringTest` (publisher pins + copy pins).
+
+### Device round 7: ✅ ALL PASSED
+
+The owner ran the 11-beat tour on the fix build and passed everything —
+verbatim *"All device passed. Now merge it."* (2026-09-13) — the re-round,
+the blink re-check, 48's eight checks and 49's ten + 49.2's eight in one
+pass. Merge commanded via
+[`PR #79`](https://github.com/pabi277/CodeC/pull/79).
