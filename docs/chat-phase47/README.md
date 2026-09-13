@@ -28,6 +28,8 @@ the same session; the annotations carried nothing else, so the whole
 production diff compiled first try. (The §9 lesson generalises: an import
 audit is greppable — run it before the push, not on CI's dime.)
 
+**CI round 3 ✅ GREEN: run `34735450676` on tip `76026b5` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug` all passed (so ≈50 new cases ran on real Gradle/JUnit/Robolectric and lint is clean), artifacts `CodeC-IDE-release` 6,120,774 B / `CodeC-IDE-debug` 24,840,052 B. Exit conditions 5 of 46.1 and the automated halves of 46.2/47.1/47.2 hold; the device rows are the owner's.**
+
 ---
 
 ## What exists today (evidence, read 2026-09-12 against `main` @ `f3a6e32`)
