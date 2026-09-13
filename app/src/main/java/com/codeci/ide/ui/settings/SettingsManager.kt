@@ -136,9 +136,13 @@ class SettingsManager(private val context: Context) {
     val imeGuideDismissedFlow: Flow<Boolean> = context.dataStore.data.map { it[IME_GUIDE_DISMISSED] ?: false }
     suspend fun setImeGuideDismissed(v: Boolean) { context.dataStore.edit { it[IME_GUIDE_DISMISSED] = v } }
 
-    // Phase 28.2 — CodeC Keys. DEFAULT ON (owner round 2); turning it off
-    // returns the L0 strip (26/27) + the system IME exactly as before.
-    val codecKeysEnabledFlow: Flow<Boolean> = context.dataStore.data.map { it[CODEC_KEYS_ENABLED] ?: true }
+    // Phase 28.2 — CodeC Keys. Phase 47.2 (owner instruction: "System
+    // keyboard make default user can change to app keyboard if they want")
+    // reversed the DEFAULT to OFF; the feature itself is unchanged (Phases
+    // 26/27/28/30). The absent key IS the default — never write the default
+    // at startup, so anyone who ever chose CodeC Keys keeps it (a stored
+    // `true` still yields true; that is the upgrader promise).
+    val codecKeysEnabledFlow: Flow<Boolean> = context.dataStore.data.map { it[CODEC_KEYS_ENABLED] ?: false }
     // New installs keep CodeC Keys open by default. Missing legacy values
     // intentionally resolve to true so an upgrade does not change the editor
     // surface under the user's fingers.

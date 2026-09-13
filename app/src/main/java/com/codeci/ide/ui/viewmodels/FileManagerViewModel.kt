@@ -17,6 +17,7 @@ import com.codeci.ide.ui.projects.ProjectHubStats
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.ProjectEntryFile
 import com.codeci.ide.ui.projects.RepoHygiene
 import com.codeci.ide.ui.projects.ProjectRunDetector
 import com.codeci.ide.ui.projects.ProjectsHub
@@ -195,6 +196,45 @@ class FileManagerViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Phase 46.2 — which file "Open in editor" opens (card ⋮): the project's
+     * launch default if set, else the newest source file, else the first
+     * source file alphabetically, else null (empty/no-source project — the
+     * caller falls back to the hub's own tree view). The rule is pure
+     * ([ProjectEntryFile.pick]); this is only its IO walk. All ViewModel IO,
+     * exactly like the rest of this class.
+     */
+    fun entryFileForEditor(context: Context, projectName: String, onReady: (String?) -> Unit) {
+        viewModelScope.launch {
+            val entry = withContext(Dispatchers.IO) {
+                runCatching {
+                    val info = ProjectManager(context).project(projectName) ?: return@runCatching null
+                    val leaves = ArrayList<ProjectEntryFile.Candidate>()
+                    fun walk(nodes: List<FileNode>) {
+                        for (node in nodes) {
+                            when (node) {
+                                is FileNode.DirectoryNode -> walk(node.children)
+                                is FileNode.FileLeaf ->
+                                    if (!node.file.name.startsWith(".") &&
+                                        node.relativePath != "bin" &&
+                                        !node.relativePath.startsWith("bin/")
+                                    ) {
+                                        leaves += ProjectEntryFile.Candidate(
+                                            node.relativePath,
+                                            node.file.lastModified()
+                                        )
+                                    }
+                            }
+                        }
+                    }
+                    walk(FileTreeRepository.buildTree(info.root).children)
+                    ProjectEntryFile.pick(leaves, info.config.launchDefault)
+                }.getOrNull()
+            }
+            onReady(entry)
+        }
+    }
+
     fun closeProject() {
         _activeProject.value = null
         _tree.value = emptyList()
@@ -354,33 +394,10 @@ class FileManagerViewModel : ViewModel() {
         }
     }
 
-    fun importFolder(context: Context, uri: Uri, onImported: (ProjectInfo) -> Unit = {}) {
-        viewModelScope.launch {
-            _isBusy.value = true
-            try {
-                val manager = ProjectManager(context)
-                val baseName = withContext(Dispatchers.IO) {
-                    queryDisplayName(context, uri) ?: "imported_project"
-                }
-                val name = uniqueProjectName(manager, baseName)
-                val project = withContext(Dispatchers.IO) {
-                    manager.createProject(name, includeStarter = false).getOrThrow().also {
-                        File(it.root, ".codec/project.json").delete()
-                    }
-                }
-                val result = withContext(Dispatchers.IO) {
-                    ProjectTransfer.copyDocumentTree(context.contentResolver, uri, project.root)
-                }
-                result.getOrThrow()
-                ensureImportedConfig(manager, project)
-                finishImport(context, manager, project, onImported)
-            } catch (e: Exception) {
-                _userMessage.value = "Import failed: ${e.message ?: "unknown error"}"
-            } finally {
-                _isBusy.value = false
-            }
-        }
-    }
+    // Phase 46.1 — the folder-import action is deleted (owner: "remove it
+    // completely"). It created an empty project and walked a SAF tree into
+    // it — an unbounded, one-way copy with no persisted grant. Import ZIP
+    // (below) and Import file are different features and stay.
 
     fun importFile(context: Context, uri: Uri, onImported: (ProjectInfo) -> Unit = {}) {
         val active = _activeProject.value

@@ -1,6 +1,8 @@
 # CodeC Phase 46.2 — One file is one file; the project is an explicit action
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`, owner:
+> "Start phase 46 and 47"; CI = executor of record, device round pending) ·
+> **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"file single click to open in a editor screen with
 > real path and same file edit but not full project to editor. To open a full
 > project in editor the 3 dot will have the option to open in editor"*
@@ -157,3 +159,120 @@ PASS = all eight; 2 and 6 are the ones that lose work if they fail.
   honesty about what mode you are in.
 - **"Open in editor" on the file's own row menu** — the owner asked for the
   project card's ⋮; a per-file duplicate would make the two paths disagree.
+
+## Implementation (2026-09-12)
+
+**New pure code (host-tested):**
+- `ui/editor/EditorOpenMode.kt` — the enum (`PROJECT / SINGLE_FILE / SCRATCH`)
+  and the policy (`forOpen`, `showsProjectChrome`, `writesLaunchState`,
+  `showsGit`, `usesProjectTabList`, `statusBarPath`). One decision home, no
+  Android imports.
+- `ui/projects/ProjectEntryFile.kt` — `pick(candidates, launchDefault)`:
+  launch default (if still present) → newest source (mtime, ties broken
+  alphabetically on the full relative path) → first source → null. "Source" =
+  a `LanguageRegistry` profile, so binaries/assets are never chosen.
+
+**The Android edge:**
+- Route: `Screen.Editor` grew the nullable `single={single}` flag;
+  `createRoute(…, single: Boolean = false)` emits `single=1`. Every existing
+  caller is untouched and still builds PROJECT routes
+  (`EditorRouteCompatTest` pins: `single: Boolean = false` default, exactly
+  ONE `single = true` call site in the app — the hub's file tap — and no
+  `EditorLaunchState.save` may mention the flag).
+- `EditorViewModel`: new `_openMode`/`openMode` state; new
+  `openSingleProjectFile` (read/save path shared with `openProjectFile`:
+  `sanitizeRelativePath` → `resolveInside` → `canRead` → `LineEndings`, ONE
+  tab) skipping `refreshFileEntries`, `refreshGitMeta`,
+  `bootstrapRemainingTabs` and `EditorLaunchState.save`. `_projectName` STAYS
+  SET in SINGLE_FILE mode (the design note: null-ing it would turn a save
+  into a scratch save) — chrome consumers read the mode through
+  `EditorOpenModePolicy`, not the project name. `openProjectFile` /
+  `openScratchFile` / `switchContext`'s terminal branches set the mode.
+- Mode flips on one back-stack entry (launchSingleTop editor→editor) flush
+  the autosave and RELOAD FROM DISK in both directions; undo stacks are
+  cleared at the boundary (no dirty-flag/history leak). A same-file PROJECT
+  re-open re-affirms the launch point, so a peek of that file can never leave
+  it stale.
+- `EditorScreen`: the route effect dispatches the peek (and deliberately does
+  NOT call `onProjectSelected` — the hub tap already set the terminal cwd; a
+  peek must not flip the editor's project session). Chrome consumers gate on
+  `projectChrome`: the RUN ▶ default-vs-open chooser, the web-default
+  preview, the set/clear launch-default + run-config menu items, the drawer's
+  tree/git (46.2 + 47.1's list give the peek's drawer its PROJECTS section
+  and a one-line hint instead of the tree). The status bar gains the leading
+  `~proj/<p>/<rel>` segment in SINGLE_FILE only (PROJECT/SCRATCH rendering is
+  byte-identical to today); long-press copies the ABSOLUTE path (the drawer's
+  Copy path behaviour and toast, reused).
+- Hub: file tap → new `onProjectFilePeek` callback (the ⋮ keeps the PROJECT
+  `onProjectFileSelected`); card ⋮ gains **Open in editor** at the top (under
+  Open, above Source Control) → `FileManagerViewModel.entryFileForEditor`
+  (all ViewModel IO) → `ProjectEntryFile.pick` → PROJECT route.
+
+**Deviations (all recorded, none silent):**
+1. The specced `object EditorOpenMode` cannot share the enum's name in one
+   package — the object is `EditorOpenModePolicy`. Naming only.
+2. The specced `StatusBarPathTest` merged into `EditorOpenModeTest` — the
+   function lives in the same policy object; one file, all six specced cases
+   (short, deep→`~proj/`, scratch, PROJECT-null, blank, spaces/unicode).
+3. **Empty project + ⋮ Open in editor** falls back to the hub's own tree view
+   (the plain OPEN action) rather than a fileless editor route: the editor
+   with no `fileName` shows whatever scratch state the last session left —
+   a destination that could look like a bug. `ProjectEntryFile.pick` still
+   answers null (pinned), and the fallback is the hub's honest surface.
+4. The peek keeps ☰: the drawer opens WITHOUT tree/git (hint text +
+   47.1's PROJECTS list + Guide footer) — the owner's exit says "☰ shows no
+   project tree", and 47.1's list is also the in-editor way back to the whole
+   project. `gesturesEnabled` stays off with a file open (the 25.2 law).
+5. The hub tap still calls `onProjectSelected(project)` (terminal cwd — RUN
+   in terminal keeps working from a peek); the EDITOR's own session callback
+   is the one skipped in single mode.
+
+**Tests:** `EditorOpenModeTest` ×15 (route shapes, the four booleans per
+mode, statusBarPath) · `ProjectEntryFileTest` ×9 (default wins / deleted
+default falls through / non-source default falls through / newest-beats-first
+/ tie → alphabetical / no sources → null / binaries never / html is source /
+nested paths) · `SingleFileSaveTest` ×5 (Robolectric, real VM + real project:
+**save-from-peek writes the real project path and not the scratch folder**,
+peek never writes the launch state, PROJECT flip reloads from disk with the
+edit intact and the launch point written, back-flip reloads from disk with
+one tab and no git/launch chrome, traversal path refused) ·
+`EditorRouteCompatTest` ×4 (source pins). `SettingsAuditTest` untouched.
+
+**Exit condition status:** 1-3, 5-8 are the device round (owner); 4
+(back) is covered structurally by the nav stack + the unsaved-changes
+handler and verified on device in the same round. CI green = the eight
+automated halves of those rows.
+
+
+## Device round 1 (2026-09-13) — "files rules are not strong enough"
+
+**Owner report:** *"I open demo_flask then the starter python it opens both in
+the editor but 2 projects are different so don't open together."*
+
+**Two causes, one law (the owner's: two projects never share an editor):**
+
+1. **The navigation restored another project's session.** Both hub file
+   navigations (⋮ → Open in editor, and the file tap) used
+   `restoreState = true` — which restores a saved editor entry with its OLD
+   arguments and its OLD ViewModel: another project's tabs. Tapping a file is
+   an instruction to open THAT file, so both are now `restoreState = false`
+   (the Templates hand-off had the same disease and got the same fix; the
+   bottom-bar tab taps keep `restoreState = true` — "show me my editor where
+   I left off" is a restore, not an instruction).
+2. **The ViewModel could MIX two projects' tabs.** `openProjectFile` appends
+   its tab to whatever list the surviving VM holds and bootstraps the new
+   project's files alongside it — and its same-file/existing-tab early
+   returns matched another project's identically-named file. New guard at the
+   top of `openProjectFile`: when the tab list is non-empty and belongs to a
+   different project, save everything (flush + saveAllTabs, while
+   `_projectName` still names the old project), then clear tabs, undo stacks
+   and git/launch state — exactly the rule `switchContext` applies — before
+   opening. The peek path already replaced the list wholesale.
+
+**Tests:** `SingleFileSaveTest` +3 (A's session → open B: B's tab list, no
+marker of A; peek of one project → open another: no ride-along; peek replaces
+the list wholesale and the flip back starts clean) · `EditorRouteCompatTest`
++1 (both hub file navigations pinned `restoreState = false`) ·
+`DrawerWiringTest` +1 (the New-project hand-off, see PART_47_1).
+
+**Device-round fix CI ✅ GREEN: run `34736668771` on tip `ce4044d` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug`, artifacts `CodeC-IDE-release` / `CodeC-IDE-debug` (the owner's re-round build).**

@@ -554,50 +554,6 @@ class CoachMarkPlanTest {
     }
 
     @Test
-    fun `the plan says when the beat it waits for is behind the drawer`() {
-        // The editor's project picker closes the drawer before it opens, and
-        // beat 3 (`app.py`) is a drawer beat. Without this the owner's "change
-        // the project folder to demo_flask → selected app.py" would go silent
-        // after the pick and wait for the user to find ☰ again — the tour
-        // feeling cut, which is the whole complaint round 3 exists to fix.
-        assertTrue(
-            "a cold tour waits on beat 1, which is not in the drawer",
-            !CoachMarkPlan.nextBeatIsInDrawer(emptySet())
-        )
-        assertTrue(
-            "after ☰ is taught, the tour waits inside the drawer",
-            CoachMarkPlan.nextBeatIsInDrawer(setOf(GuideAnchors.EDITOR_DRAWER))
-        )
-        assertTrue(
-            "and it still does after the header tap, which is when the picker closes the drawer",
-            CoachMarkPlan.nextBeatIsInDrawer(
-                setOf(GuideAnchors.EDITOR_DRAWER, GuideAnchors.DRAWER_PROJECT)
-            )
-        )
-        assertFalse(
-            "once app.py is open the drawer beats are behind us",
-            CoachMarkPlan.nextBeatIsInDrawer(
-                setOf(
-                    GuideAnchors.EDITOR_DRAWER,
-                    GuideAnchors.DRAWER_PROJECT,
-                    GuideAnchors.DRAWER_FILE
-                )
-            )
-        )
-        assertFalse(
-            "a finished tour reopens nothing",
-            CoachMarkPlan.nextBeatIsInDrawer(tourOrder.toSet())
-        )
-        assertTrue(
-            "a stalled drawer beat is not a beat the tour waits for",
-            !CoachMarkPlan.nextBeatIsInDrawer(
-                setOf(GuideAnchors.EDITOR_DRAWER),
-                setOf(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DRAWER_FILE)
-            )
-        )
-    }
-
-    @Test
     fun `the stall guard is armed only by a control that is not laid out`() {
         // A moving Phase 44 download, a dialog, the exit survey: the tour is
         // blocked, and the guard must NOT time that — a five-minute Python

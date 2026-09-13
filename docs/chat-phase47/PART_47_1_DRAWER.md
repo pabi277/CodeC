@@ -1,6 +1,8 @@
 # CodeC Phase 47.1 — A drawer you can always close, with the project list inside it
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`; CI =
+> executor of record, device round pending) · **Cost:** `[client-only]` ·
+> **Effort:** M ·
 > **Owner rows:** *"the file ber can't close without opening any file"* ·
 > *"I can switch project but can't directly open folder"* → owner's chosen shape
 > (2026-09-12): **in-drawer project picker**.
@@ -152,3 +154,121 @@ PASS = all nine.
   and the false title survives.
 - **Showing per-project git badges in the list** — cost (a `git status` per
   project on expand) for decoration; the hub already shows them.
+
+## Implementation (2026-09-12)
+
+**New pure code (host-tested):** `ui/editor/DrawerPolicy.kt` —
+`DrawerCloseReason { CLOSE_BUTTON, SCRIM, BACK, FILE_OPENED, PROJECT_SWITCHED }`
++ `DrawerPolicy.shouldClose` (an open drawer closes for every reason; a closed
+drawer no-ops — the double-animation class) + `closesAndSwitches` (only
+`PROJECT_SWITCHED`), and `DrawerProjectList.build` (Single files first with
+the null context, then projects alphabetically case-insensitive, the current
+context marked; `EMPTY_PROJECTS_COPY` keeps the retired dialog's copy
+verbatim).
+
+**The edge:**
+- `EditorProjectDrawer`: the header row gains a 38 dp ✕ (`onClose`) mirroring
+  the source-control glyph; the header's tap now EXPANDS the PROJECTS section
+  instead of opening the dialog (the GuideAnchor stays on the header, so tour
+  beat 2 = one tap that expands — the anchor click is the same lambda); the
+  section (between the header and the tree toolbar) renders the rows, the ●
+  marker, the empty copy and `＋ New project…`; `showProjectTree = false`
+  (46.2's SINGLE_FILE) hides the toolbar/tree/git rows and shows a one-line
+  hint instead — PROJECTS + Guide remain.
+- `EditorScreen`: ONE `closeDrawer(reason)` callback over `DrawerPolicy` for
+  everything the app controls (✕ = CLOSE_BUTTON and nothing else; a file row
+  = FILE_OPENED; a pick = PROJECT_SWITCHED). The scrim stays Material3's own
+  affordance (same result; the enum keeps SCRIM so the matrix is complete).
+  Back: the interim `BackHandler(enabled = drawerState.isOpen)` registered
+  BEFORE the unsaved-changes handler, so 49's precedence (unsaved → drawer)
+  already holds — 49 later folds it into the router, exactly as the spec
+  records. The list is read ONCE per expansion in `remember` (the dialog's
+  old shape), and the expansion flag resets when the drawer closes.
+- The pick calls the SAME pair the dialog ran — `onProjectSelected(project)`
+  + `viewModel.switchContext(context, contextName)` — then closes the drawer,
+  EXCEPT while `tourWaitsInDrawer` (45.2 round 3): the tour's next beat lives
+  in the drawer, so it stays open (the old close-then-reopen dance, replaced
+  because there is nothing to reopen). `GuideWiringTest`'s two picker pins
+  were updated in the same commit and now pin the picker GONE.
+- `＋ New project…` → `onOpenProjects()` → the Projects tab with the hub's `+`
+  sheet already up: `Screen.FileManager` grew the optional `openSheet` arg
+  (`createRoute(openAddSheet)`), the bottom bar was taught to navigate the
+  PLAIN route (never the literal pattern), and `FileManagerScreen` consumes
+  the flag in a `LaunchedEffect`. Project creation keeps its wizard in the
+  hub — the drawer never creates projects.
+- `grep -rn '"Open folder"' app/src` → **0 hits** (comments included — they
+  say "Open-folder" now); pinned by `DrawerWiringTest` along with: the ✕ and
+  its CLOSE_BUTTON wiring, the BACK handler, the PROJECTS callbacks, the
+  switchContext one-code-path pin, and the openSheet route shape.
+
+**Deviations:**
+1. The tour stay-open replaces close-then-reopen (above); the two affected
+   `GuideWiringTest` pins were updated with their reasoning, not deleted.
+2. The `+ New project…` hand-off needed a route argument — the spec's
+   "onOpenProjects callback, new" made concrete as `openSheet=1` (an optional
+   arg on the existing destination, so deep links/state survive).
+3. The peek's drawer (46.2) reuses this section — one switcher everywhere,
+   which is why 46.2 and 47.1 landed in the same push.
+
+**Exit condition status:** 1-9 are the device round (owner); the automated
+halves (the ✕/BACK/scrim wiring pins, the list order/marker/empty-copy pins,
+the grep pins, the switchContext drift guard) run in CI.
+
+
+## Device round 1 (2026-09-13) — the New-project hand-off was broken
+
+**Owner report:** *"I could not create new project from the editor when i click
+the option of new project it just close and open editor."*
+
+**Root cause — the Phase 44 round-1 lesson repeating:** the `＋ New project…`
+navigation used `restoreState = true`. That flag restores the WHOLE saved
+sub-stack for the destination, not a fresh screen: the restored sub-stack's
+top could be an **editor** entry (the owner saw the drawer close and the
+editor "just open" again), or a plain `file_manager` entry whose ORIGINAL
+arguments carry no `openSheet` — so no sheet either. A `rememberSaveable`
+consumed-flag then kept it closed after the first arrival.
+
+**Fix:** the row is an INSTRUCTION ("show me the Projects tab with the create
+sheet up"), so it is `restoreState = false` — popUpTo(start){saveState} still
+saves the editor for the tab's return, but the destination is a fresh
+Projects instance whose `openSheet=1` opens the sheet. Pinned by
+`DrawerWiringTest.the New-project hand-off is an instruction - it restores
+nothing` (slices the wiring window: `createRoute(openAddSheet = true)` +
+`restoreState = false`, and the broken flag gone).
+
+**Device-round fix CI ✅ GREEN: run `34736668771` on tip `ce4044d` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug`, artifacts `CodeC-IDE-release` / `CodeC-IDE-debug` (the owner's re-round build).**
+
+
+## Device round 2 (2026-09-13) — a project pick must never close the drawer
+
+**Owner report (guide beat 2):** *"when i click the project to select
+demo_flask it closes the pop up of the file selection option it should drop
+down all the available projects."*
+
+**Root cause:** the pick ran `closeDrawer(PROJECT_SWITCHED)` UNLESS a
+seen-set guard (`CoachMarkPlan.nextBeatIsInDrawer` → `tourWaitsInDrawer`)
+predicted that the guided tour was waiting on a beat inside the drawer
+(45.2 round 3's close-then-stay compromise). A prediction is exactly as good
+as its inputs: on the owner's phone it said "no tour waiting" mid-tour, the
+drawer closed, and the tour went silent between its own beats — the exact
+failure the guard existed to prevent.
+
+**Fix — the unconditional law (supersedes the 45.2 round-3 guard):** a
+project pick is not a close at all. It switches the context BEHIND the
+drawer: the list stays dropped-down with the new project ●-marked, the tree
+refreshes under it, and the tour's drawer beats are unreachable-to-break by
+construction — for everybody, tour or no tour. Removed with it:
+`tourWaitsInDrawer` (EditorScreen param + host arg),
+`CoachMarkPlan.nextBeatIsInDrawer` (pure, its only consumer gone),
+`DrawerPolicy.closesAndSwitches` (a pick no longer closes, so "the close
+that also switches" no longer exists), and `DrawerPolicy.shouldClose` now
+answers `drawerOpen && reason != PROJECT_SWITCHED`.
+
+**Tests:** `DrawerPolicyTest` rewritten to the new matrix (a pick never
+closes — open or closed; the other three reasons still close; closed-drawer
+no-op kept) · `GuideWiringTest` pick pin rewritten (switchContext stays the
+one code path; NO close call after the switch; the guard and its predictor
+pinned gone) · the `nextBeatIsInDrawer` CoachMarkPlanTest case removed with
+its function. `step.inDrawer` stays (nextStep/remaining still use it).
+
+**Device-round-2 fix CI ✅ GREEN: run `34737610972` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug` (the owner's re-round build).**

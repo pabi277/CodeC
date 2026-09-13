@@ -131,6 +131,18 @@ object GuideVocabulary {
             path = "app/src/main/res/values/strings.xml",
             needle = "<string name=\"hub_open_action\">Open</string>"
         ),
+        // Phase 47.2 — the keyboard default's two proper nouns: the tab that
+        // hosts the switch, and the section header it lives under.
+        GuideTermProof(
+            term = "Settings",
+            path = "app/src/main/java/com/codeci/ide/ui/navigation/Screen.kt",
+            needle = "\"Settings\""
+        ),
+        GuideTermProof(
+            term = "Keys",
+            path = "app/src/main/java/com/codeci/ide/ui/screens/SettingsScreen.kt",
+            needle = "SettingsSectionHeader(\"CodeC Keys\")"
+        ),
         // What the one-time download actually fetches.
         GuideTermProof(
             term = "Python",
@@ -195,10 +207,13 @@ object GuidePlan {
             actionLabel = "GOT IT"
         ),
         // Slide 2 is the reason the app is worth opening: C needs no setup.
+        // Phase 47.2 — the same slide also teaches the keyboard default in one
+        // clause (the owner's sentence, compressed to fit the copy caps): the
+        // SYSTEM keyboard is the default; CodeC Keys is the opt-in.
         GuideSlide(
             id = "run",
             title = "RUN \u25B6 compiles and runs",
-            body = "Output appears at the bottom of the same screen. C works offline \u2014 no setup, no download.",
+            body = "Output appears at the bottom. C works offline \u2014 no download. Your phone's keyboard types; Settings \u2192 CodeC Keys has a code one.",
             actionLabel = "GOT IT"
         ),
         // Slide 3 is Phase 44's teaching moment: without it the setup bar looks
@@ -215,11 +230,13 @@ object GuidePlan {
             body = "The Terminal tab is a Linux shell: pkg install, git, cc. Its status chip tells you what it is doing.",
             actionLabel = "GOT IT"
         ),
-        // Slide 5 is the Projects-hub distinction (and Phase 46's subject).
+        // Slide 5 is the Projects-hub distinction — and Phase 46.2's new
+        // model, stated as it now behaves: a file tap edits THAT file; the
+        // card's ⋮ → Open in editor is the whole-project action.
         GuideSlide(
             id = "projects",
             title = "Projects vs single files",
-            body = "In Projects, tap a file to edit it. Tap a card, or its \u22EE \u2192 Open, for the whole project.",
+            body = "In Projects, tap a file to edit just that file. A card's \u22EE \u2192 Open in editor opens the whole project.",
             actionLabel = "START CODING"
         )
     )

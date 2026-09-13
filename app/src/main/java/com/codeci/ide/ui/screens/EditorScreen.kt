@@ -131,8 +131,13 @@ import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompletionSurface
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.editor.DiagnosticSeverity
+import com.codeci.ide.ui.editor.DrawerCloseReason
+import com.codeci.ide.ui.editor.DrawerPolicy
+import com.codeci.ide.ui.editor.DrawerProjectList
 import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.EditorDiagnostic
+import com.codeci.ide.ui.editor.EditorOpenMode
+import com.codeci.ide.ui.editor.EditorOpenModePolicy
 import com.codeci.ide.ui.editor.KeysStayPolicy
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
@@ -181,6 +186,12 @@ fun EditorScreen(
     modifier: Modifier = Modifier,
     projectName: String? = null,
     fileName: String? = null,
+    /**
+     * Phase 46.2 — the route's `single=1` flag: open [fileName] of
+     * [projectName] as a SINGLE_FILE peek (one tab, real path in the status
+     * bar, no project chrome, no launch-state write). Absent → PROJECT.
+     */
+    singleFile: Boolean = false,
     onNavigateBack: () -> Unit = {},
     onFileRenamed: (String) -> Unit = {},
     onProjectSelected: (ProjectInfo) -> Unit = {},
@@ -198,14 +209,11 @@ fun EditorScreen(
     /** Phase 45.1 — the drawer footer's Guide row: the third door back to the guide. */
     onOpenGuide: () -> Unit = {},
     /**
-     * Phase 45.2 round 3 — the guided tour is waiting on a beat that lives inside
-     * this drawer (`CoachMarkPlan.nextBeatIsInDrawer`, passed down by the host
-     * that owns the seen set). Opening the project picker closes the drawer, so
-     * without this the owner's *"change the project folder to demo_flask →
-     * selected app.py"* would go silent after the pick and wait for the user to
-     * find ☰ again. False for everybody else, always: no tour, no change.
+     * Phase 47.1 — the drawer's `+ New project…` row: the Projects tab with
+     * its `+` sheet open. Project creation keeps its wizard in the hub; the
+     * drawer never creates projects (one truth about how projects begin).
      */
-    tourWaitsInDrawer: Boolean = false,
+    onOpenProjects: () -> Unit = {},
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -236,10 +244,17 @@ fun EditorScreen(
         else -> FontFamily.Monospace
     }
 
-    LaunchedEffect(projectName, fileName) {
+    LaunchedEffect(projectName, fileName, singleFile) {
         if (projectName != null && fileName != null) {
-            viewModel.openFile(context, projectName, fileName)
-            ProjectManager(context).project(projectName)?.let(onProjectSelected)
+            if (singleFile) {
+                // Phase 46.2 — the peek: no onProjectSelected (the hub tap
+                // already set the terminal cwd; a peek must not flip the
+                // editor's project session), no launch state, no chrome.
+                viewModel.openSingleProjectFile(context, projectName, fileName)
+            } else {
+                viewModel.openFile(context, projectName, fileName)
+                ProjectManager(context).project(projectName)?.let(onProjectSelected)
+            }
         } else if (fileName != null) {
             viewModel.openFile(context, null, fileName)
         }
@@ -264,6 +279,23 @@ fun EditorScreen(
     val openTabs by viewModel.openTabs.collectAsState()
     val activeTabPath by viewModel.activeTabPath.collectAsState()
     val currentProject by viewModel.projectName.collectAsState()
+    // Phase 46.2 — the mode decides the chrome; `_projectName` staying set in
+    // SINGLE_FILE is the save/run root, NOT chrome (see EditorViewModel note).
+    val openMode by viewModel.openMode.collectAsState()
+    val projectChrome = EditorOpenModePolicy.showsProjectChrome(openMode)
+    // The peek's real path for the status bar — null outside SINGLE_FILE, so
+    // PROJECT/SCRATCH rendering is byte-identical to today. Project lookup is
+    // remembered (it touches disk), keyed on the triple that can change it.
+    val statusBarPathLabel = remember(openMode, currentProject, currentFileName) {
+        if (openMode != EditorOpenMode.SINGLE_FILE) {
+            null
+        } else {
+            val root = currentProject?.let { name ->
+                runCatching { ProjectManager(context).project(name)?.root }.getOrNull()
+            }?.absolutePath
+            EditorOpenModePolicy.statusBarPath(openMode, root, currentFileName)
+        }
+    }
     // Phase 16 — drawer + shell state.
     val collapsedDirs by viewModel.collapsedDirs.collectAsState()
     val gitBranch by viewModel.gitBranch.collectAsState()
@@ -276,11 +308,12 @@ fun EditorScreen(
     val imeGuideDismissed by settingsManager.imeGuideDismissedFlow.collectAsState(initial = true)
     // Phase 26.1 — persisted strip overrides (JSON) — when empty, defaults are used.
     val keyStripJson by settingsManager.editorKeyStripJsonFlow.collectAsState(initial = "")
-    // Phase 28.2 — CodeC Keys: master (DEFAULT ON per owner round 2 — the
-    // keyboard IS the product now; Settings can still turn it off and the
-    // 22.x system-IME experience returns intact), haptics, row height, and
-    // the dev-build layout JSON override.
-    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = true)
+    // Phase 28.2 — CodeC Keys: master (default OFF since Phase 47.2 — the
+    // SYSTEM keyboard is the default; a stored ON wins, and the feature is
+    // unchanged), haptics, row height, and the dev-build layout JSON
+    // override. The `initial = false` matches the store default so the first
+    // frame never flashes the code keyboard for a user who never chose it.
+    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = false)
     val keepKeysOpen by settingsManager.editorKeepKeysOpenFlow.collectAsState(initial = true)
     val codecKeysHaptics by settingsManager.codecKeysHapticsFlow.collectAsState(initial = true)
     val codecKeysHeight by settingsManager.codecKeysHeightFlow.collectAsState(initial = 1f)
@@ -352,7 +385,23 @@ fun EditorScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showSaveToProject by remember { mutableStateOf(false) }
-    var showContextPicker by remember { mutableStateOf(false) }
+    // Phase 47.1 — the Open-folder-titled context-picker DIALOG is retired;
+    // its list lives in the drawer (EditorProjectDrawer's PROJECTS section).
+    // The section's expanded flag is local and resets when the drawer closes.
+    var drawerProjectsExpanded by remember { mutableStateOf(false) }
+    // Read ONCE per expansion (and on a context change, for the ● marker) —
+    // exactly how the retired dialog read its list once in `remember`; never
+    // lazily per recomposition (PART_47_1 §4).
+    val drawerProjectRows = remember(drawerProjectsExpanded, currentProject) {
+        if (!drawerProjectsExpanded) {
+            emptyList()
+        } else {
+            val names = runCatching {
+                ProjectManager(context).listProjects().map { it.name }
+            }.getOrDefault(emptyList())
+            DrawerProjectList.build(names, currentProject)
+        }
+    }
     // Phase 16 — drawer dialogs: create entry (parent, isFolder), per-row rename,
     // delete confirm, go-to-line and the git sheet for the footer row.
     var pendingCreate by remember { mutableStateOf<Pair<String?, Boolean>?>(null) }
@@ -409,6 +458,16 @@ fun EditorScreen(
             if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
         }
     }
+    // Phase 47.1 — every close the app controls routes through ONE callback
+    // over the pure DrawerPolicy, so ✕ / back / file-opened cannot drift (the
+    // scrim stays Material3's own affordance, same result). Closing and
+    // NOTHING else; a project pick is not a close at all — it switches the
+    // context and the drawer stays open (device round 2).
+    val closeDrawer: (DrawerCloseReason) -> Unit = { reason ->
+        if (DrawerPolicy.shouldClose(reason, drawerState.isOpen)) {
+            uiScope.launch { drawerState.close() }
+        }
+    }
     val onDrawerTap: () -> Unit = {
         if (editorChromeLocked) showChromeLock() else toggleDrawer()
     }
@@ -459,7 +518,7 @@ fun EditorScreen(
     // alone does not prove the row is visible. The editor reports both facts and
     // the pure plan decides (CoachMarkPlan.nextStep).
     val editorModalOpen = showUnsavedDialog || showRenameDialog || showMoreMenu ||
-        showSaveToProject || showContextPicker || showGoToLineDialog ||
+        showSaveToProject || showGoToLineDialog ||
         showCodecConfig || showDiagnosticsDialog ||
         installPrompt != null || runChooserDefault != null
     LaunchedEffect(editorModalOpen) { EditorChromeState.setDialogOpen(editorModalOpen) }
@@ -561,6 +620,9 @@ fun EditorScreen(
     // ▶ keeps its Phase 11/14 behavior (this only refines WHICH page opens).
     fun webDefaultEntryOrNull(): String? {
         val project = currentProject ?: return null
+        // Phase 46.2 — a peek previews only its own file; project-default
+        // resolution is PROJECT chrome.
+        if (!projectChrome) return null
         if (!viewModel.saveFile(context)) return null
         val info = ProjectManager(context).project(project) ?: return null
         val isWeb = info.config.type.equals("web", ignoreCase = true)
@@ -590,6 +652,9 @@ fun EditorScreen(
     // decision is pure (ProjectRunTarget); the helpers below carry it out.
     fun runChooserEntryOrNull(): String? {
         val project = currentProject ?: return null
+        // Phase 46.2 — in SINGLE_FILE mode RUN ▶ means THIS file; the
+        // default-vs-open chooser is PROJECT chrome.
+        if (!projectChrome) return null
         val info = ProjectManager(context).project(project) ?: return null
         return ProjectRunTarget.chooserDefault(info.root, info.config.launchDefault, currentFileName)
     }
@@ -709,14 +774,31 @@ fun EditorScreen(
 
     // Phase 16 — the drawer tree + git meta refresh on open (and the tree once
     // per folder switch so the launch-default marker is live even when closed).
+    // Phase 46.2 — a SINGLE_FILE peek carries no tree and no git, so neither
+    // refresh runs in that mode (the PROJECTS list reads its own data).
     LaunchedEffect(currentProject) {
-        viewModel.refreshFileEntries(context)
+        if (projectChrome) viewModel.refreshFileEntries(context)
     }
     LaunchedEffect(drawerState.currentValue, currentProject) {
         if (drawerState.currentValue == DrawerValue.Open) {
-            viewModel.refreshFileEntries(context)
-            viewModel.refreshGitMeta(context)
+            if (projectChrome) {
+                viewModel.refreshFileEntries(context)
+                viewModel.refreshGitMeta(context)
+            }
+        } else {
+            // Phase 47.1 — the PROJECTS section's expansion is local; a
+            // closed drawer forgets it (fresh read on the next expansion).
+            drawerProjectsExpanded = false
         }
+    }
+
+    // Phase 47.1 — Back closes the drawer (the interim one-line handler; the
+    // spec records it as deliberate until Phase 49's BackRouter folds it into
+    // the router). Registered BEFORE the unsaved-changes handler below, so
+    // 49's precedence — unsaved → drawer — already holds: a dirty buffer's
+    // back press still asks, even over an open drawer.
+    BackHandler(enabled = drawerState.isOpen) {
+        closeDrawer(DrawerCloseReason.BACK)
     }
 
     BackHandler(enabled = isDirty) {
@@ -996,9 +1078,40 @@ fun EditorScreen(
                     launchDefault = launchDefault,
                     gitBadges = gitBadges,
                     allCollapsed = allCollapsed,
-                    onSwitchProject = {
+                    // Phase 46.2 — the peek's drawer has no tree and no git.
+                    showProjectTree = projectChrome,
+                    // Phase 47.1 — the header tap EXPANDS the list (the
+                    // Open-folder dialog is retired); the ✕ closes and does
+                    // nothing else.
+                    onSwitchProject = { drawerProjectsExpanded = !drawerProjectsExpanded },
+                    onClose = { closeDrawer(DrawerCloseReason.CLOSE_BUTTON) },
+                    projects = drawerProjectRows,
+                    projectsExpanded = drawerProjectsExpanded,
+                    onToggleProjects = { drawerProjectsExpanded = !drawerProjectsExpanded },
+                    onSelectProject = { contextName ->
+                        // Exactly the pair the retired dialog ran — one code
+                        // path, two entry points (PART_47_1 §2).
+                        contextName?.let { name ->
+                            runCatching { ProjectManager(context).project(name) }
+                                .getOrNull()?.let(onProjectSelected)
+                        }
+                        viewModel.switchContext(context, contextName)
+                        // Device round 2 (owner: a pick "closes the pop up of
+                        // the file selection option [but] it should drop down
+                        // all the available projects") — a pick STAYS: the
+                        // switch happens behind the drawer, the list stays
+                        // dropped-down with the new current project marked,
+                        // and the tree refreshes under it. The old
+                        // close-unless-the-tour-waits guard is gone: staying
+                        // is the behaviour for EVERYBODY, which also makes
+                        // the tour's drawer beats unreachable-to-break.
+                    },
+                    onNewProject = {
+                        // Navigation-driven close (not a policy reason): the
+                        // row's action is the Projects tab, where project
+                        // creation lives — the drawer never creates projects.
                         uiScope.launch { drawerState.close() }
-                        showContextPicker = true
+                        onOpenProjects()
                     },
                     onSourceControl = {
                         val root = currentProject?.let {
@@ -1040,7 +1153,7 @@ fun EditorScreen(
                             viewModel.toggleDirectory(entry.relativePath)
                         } else {
                             viewModel.openFile(context, entry.projectName, entry.relativePath)
-                            uiScope.launch { drawerState.close() }
+                            closeDrawer(DrawerCloseReason.FILE_OPENED)
                         }
                     },
                     onRenameEntry = { pendingRenameEntry = it },
@@ -1268,13 +1381,16 @@ fun EditorScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.line_endings, activeLineEnding)) },
-                                enabled = currentProject != null && activeTabPath != null,
+                                enabled = activeTabPath != null,
                                 onClick = {
                                     showMoreMenu = false
                                     viewModel.toggleLineEnding(context)
                                 }
                             )
-                            if (currentProject != null) {
+                            // Phase 46.2 — set/clear launch default and the
+                            // per-project run-config editor are PROJECT chrome:
+                            // a single-file peek never mutates project config.
+                            if (projectChrome) {
                                 // Phase 33 — any run target (C, Python, HTML,
                                 // JS, shell, …) can be the project's default
                                 // run file, so RUN can offer "default vs open".
@@ -1324,13 +1440,19 @@ fun EditorScreen(
                                     }
                                 )
                             }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.save_to_project)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    showSaveToProject = true
-                                }
-                            )
+                            // 46.2 device round — "Save to project" is the
+                            // scratch/PROJECT session's move-into-a-project
+                            // action; a SINGLE_FILE peek already saves into
+                            // its own project, so the row hides there.
+                            if (currentProject == null || projectChrome) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.save_to_project)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        showSaveToProject = true
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.share_file)) },
                                 onClick = {
@@ -1715,8 +1837,27 @@ fun EditorScreen(
                     },
                     languageLabel = language.label,
                     lineEnding = activeLineEnding,
-                    onLineEndingClick = if (currentProject != null && activeTabPath != null) {
+                    onLineEndingClick = if (activeTabPath != null) {
                         { viewModel.toggleLineEnding(context) }
+                    } else {
+                        null
+                    },
+                    // Phase 46.2 — the SINGLE_FILE peek's real path; long-press
+                    // copies the absolute one (the drawer's Copy path behaviour).
+                    pathLabel = statusBarPathLabel,
+                    onPathLongClick = if (openMode == EditorOpenMode.SINGLE_FILE) {
+                        {
+                            val absolute = currentProject?.let { name ->
+                                runCatching {
+                                    ProjectManager(context).project(name)?.root
+                                }.getOrNull()
+                            }?.let { root ->
+                                runCatching { ProjectPathUtils.resolveInside(root, currentFileName) }
+                                    .getOrNull()?.absolutePath
+                            } ?: currentFileName
+                            clipboard.setText(AnnotatedString(absolute))
+                            Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
+                        }
                     } else {
                         null
                     }
@@ -2016,75 +2157,11 @@ fun EditorScreen(
             )
         }
 
-        // Phase 9.2: open a project folder (or back to single files) without
-        // leaving the editor.
-        if (showContextPicker) {
-            val pickerProjects = remember {
-                runCatching { ProjectManager(context).listProjects() }.getOrDefault(emptyList())
-            }
-            AlertDialog(
-                onDismissRequest = { showContextPicker = false },
-                title = { Text("Open folder") },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        Text(
-                            "The editor works inside one folder at a time. Everything you open " +
-                                "from it becomes a tab.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        TextButton(
-                            onClick = {
-                                showContextPicker = false
-                                viewModel.switchContext(context, null)
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(if (currentProject == null) "●  Single files" else "Single files")
-                        }
-                        pickerProjects.forEach { project ->
-                            TextButton(
-                                onClick = {
-                                    showContextPicker = false
-                                    ProjectManager(context).project(project.name)?.let(onProjectSelected)
-                                    viewModel.switchContext(context, project.name)
-                                    // Phase 45.2 round 3 — the tour's next beat is
-                                    // the demo's `app.py` row, which is inside this
-                                    // drawer, and launching the picker closed it.
-                                    // Reopen it so the tour's next box is already
-                                    // there instead of the user having to work out
-                                    // which button brings the files back.
-                                    if (tourWaitsInDrawer) {
-                                        uiScope.launch { drawerState.open() }
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = if (currentProject == project.name) "●  ${project.name}" else project.name,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        if (pickerProjects.isEmpty()) {
-                            Text(
-                                "No projects yet — create one in the Projects tab, or keep working " +
-                                    "with single files here.",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { showContextPicker = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                }
-            )
-        }
+        // Phase 9.2 / 47.1 — the editor's project switcher DIALOG ("Open
+        // folder") is RETIRED: it could not open a folder after 46.1, and its
+        // list now lives in the drawer's PROJECTS section — reachable without
+        // a modal, closeable without a file tap. The grep pin
+        // (DrawerWiringTest) keeps the title from coming back.
 
         // Phase 9.1: save the current buffer into a real project folder —
         // scratch saves land outside every project, which is why the terminal

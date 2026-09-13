@@ -1,7 +1,9 @@
 package com.codeci.ide.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +35,7 @@ private val WarningAmber = Color(0xFFFFB347)
  * errors/warnings badges appearing only when present (tap jumps to the
  * first diagnostic).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EditorStatusBar(
     line: Int,
@@ -45,6 +48,15 @@ fun EditorStatusBar(
     languageLabel: String? = null,
     lineEnding: String = "LF",
     onLineEndingClick: (() -> Unit)? = null,
+    /**
+     * Phase 46.2 — the leading path segment: non-null only in the editor's
+     * SINGLE_FILE mode, where it shows the file's real path (`~proj/<p>/<rel>`,
+     * the FeedbackDraft alias vocabulary) at the head of the same muted line.
+     * Long-press copies the ABSOLUTE path (the drawer's Copy path behaviour
+     * and toast, reused).
+     */
+    pathLabel: String? = null,
+    onPathLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -68,6 +80,27 @@ fun EditorStatusBar(
             .padding(start = 12.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Phase 46.2 — the real path, first segment, only when the screen
+        // supplies one (SINGLE_FILE). Long-press copies the absolute path.
+        if (pathLabel != null) {
+            Text(
+                text = pathLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = onStrip(muted),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = if (onPathLongClick != null) {
+                    Modifier
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = onPathLongClick
+                        )
+                } else {
+                    Modifier
+                }
+            )
+            StatusDot()
+        }
         StatusSegment(stringResource(R.string.status_ln_col, line, column))
         StatusDot()
         StatusSegment("UTF-8")

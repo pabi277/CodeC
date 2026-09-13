@@ -511,35 +511,43 @@ class GuideWiringTest {
     }
 
     @Test
-    fun `the tour does not go silent where the picker closed the drawer`() {
-        // Beat 2's tap opens the project picker, and the editor has always closed
-        // the drawer to do it. Beat 3 is a row inside that drawer, so the walk the
-        // owner dictated would stop dead after the pick — no box, nothing to tap,
-        // and a lesson that only appears if the user guesses ☰. The host asks the
-        // PURE plan whether the beat it waits for is behind the drawer, and the
-        // editor reopens it after a project is chosen. Nothing else changes: with
-        // no tour mid-flight the flag is false and the picker behaves as before.
-        val main = source(main)
-        assertTrue(
-            "the host must ask the plan, not keep its own idea of the tour",
-            main.contains("tourWaitsInDrawer = CoachMarkPlan.nextBeatIsInDrawer(coachSeen)")
-        )
+    fun `a project pick switches the context and the drawer stays open`() {
+        // Device round 2 (owner: the pick "closes the pop up of the file
+        // selection option [but] it should drop down all the available
+        // projects"). The old law closed the drawer after a pick unless a
+        // seen-set guard (tourWaitsInDrawer / nextBeatIsInDrawer) said the
+        // tour was waiting — a prediction that failed on the owner's phone
+        // and cut the tour between its drawer beats. The new law is
+        // unconditional: the switch happens BEHIND the drawer, the list
+        // stays dropped-down with the new project marked, and the tree
+        // refreshes under it — for everybody, tour or no tour.
         val editorSrc = source(editor)
-        assertTrue(
-            "EditorScreen must take the fact as a parameter with a safe default",
-            editorSrc.contains("tourWaitsInDrawer: Boolean = false")
-        )
-        val at = editorSrc.indexOf("viewModel.switchContext(context, project.name)")
-        assertTrue("the picker's project-chosen branch is gone", at >= 0)
+        val at = editorSrc.indexOf("viewModel.switchContext(context, contextName)")
+        assertTrue("the pick must still route through switchContext (one code path)", at >= 0)
         val afterPick = editorSrc.substring(at, at + 700)
         assertTrue(
-            "the drawer must reopen after a pick, and only while the tour waits there",
-            afterPick.contains("if (tourWaitsInDrawer) {") &&
-                afterPick.contains("uiScope.launch { drawerState.open() }")
+            "the pick must NOT close the drawer - no close call after the switch",
+            !afterPick.contains("closeDrawer(")
         )
-        // And the drawer still closes for the picker itself: that behaviour is not
-        // the tour's to change.
-        assertTrue(editorSrc.contains("uiScope.launch { drawerState.close() }"))
+        assertTrue(
+            "the pick must not restore the retired close-unless-guard shape",
+            !afterPick.contains("tourWaitsInDrawer")
+        )
+        // The host-side guard and its pure predictor are gone with it.
+        val main = source(main)
+        assertTrue(
+            "the host must not compute the drawer-wait flag any more",
+            !main.contains("nextBeatIsInDrawer")
+        )
+        assertTrue(
+            "the pure predictor must be gone from the plan",
+            !source(plan).contains("nextBeatIsInDrawer")
+        )
+        // 47.1 — the picker dialog stays gone: the pick happens IN the drawer.
+        assertTrue(
+            "the retired picker must not come back",
+            !editorSrc.contains("showContextPicker")
+        )
     }
 
     @Test
@@ -658,7 +666,8 @@ class GuideWiringTest {
         assertTrue("the modal list is not followed by its publisher", end > at)
         val modals = editorSrc.substring(at, end)
         for (flag in listOf(
-            "showContextPicker",   // the project picker beat 2 opens
+            // 47.1: the "Open folder" picker is retired — beat 2 now expands
+            // the drawer's own PROJECTS list (reported by drawerOpen, below).
             "installPrompt != null", // the Install? prompt beat 4 opens
             "runChooserDefault != null", // the RUN ▶ chooser beat 4 can open
             "showUnsavedDialog",

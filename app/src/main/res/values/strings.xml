@@ -345,8 +345,6 @@
     <string name="hub_sheet_clone">Clone Git Repository</string>
     <string name="hub_sheet_clone_subtitle">Import from GitHub, GitLab, Bitbucket</string>
     <string name="hub_sheet_zip_subtitle">From device storage</string>
-    <string name="hub_sheet_folder">Open Folder</string>
-    <string name="hub_sheet_folder_subtitle">Pick an existing folder</string>
     <string name="clone_title">Clone Git Repository</string>
     <string name="clone_advanced">Advanced</string>
     <string name="clone_branch_label">Branch</string>
@@ -358,6 +356,7 @@
     <string name="clone_qr">Scan repository QR code</string>
     <string name="clone_fetching_branches">Fetching branches…</string>
     <string name="hub_open_action">Open</string>
+    <string name="hub_open_in_editor">Open in editor</string>
     <string name="hub_rename_project">Rename Project</string>
     <string name="hub_copy_remote_url">Copy remote URL</string>
     <string name="hub_remote_url_copied">Remote URL copied</string>
@@ -385,6 +384,12 @@
     <string name="editor_drawer_switch_hint">Tap to switch folder</string>
     <string name="editor_drawer_source_control">Source Control</string>
     <string name="editor_drawer_switch_branch">Switch Branch</string>
+    <!-- Phase 47.1 — the closeable drawer + in-drawer project switcher. -->
+    <string name="editor_drawer_close">Close drawer</string>
+    <string name="editor_drawer_projects">PROJECTS</string>
+    <string name="editor_drawer_new_project">＋ New project…</string>
+    <!-- Phase 46.2 — the SINGLE_FILE peek drawer has no tree to show. -->
+    <string name="editor_single_file_drawer_hint">This file is open on its own — one tab, no project tree, no git. Use PROJECTS above to open a whole project, or Guide below for help.</string>
     <string name="editor_drawer_expand_all">Expand All</string>
     <string name="editor_drawer_collapse_all">Collapse All</string>
     <string name="editor_drawer_empty">This folder has no files yet.</string>

@@ -1,7 +1,8 @@
 # CodeC Phase 46 — Projects, not folders
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"The project have
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`, owner:
+> "Start phase 46 and 47"; CI = executor of record, device round pending) ·
+> **Cost:** `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"The project have
 > a feature open a folder (phase 43, incomplete) i want to remove it completely
 > and make the project section more optimization features like file single click
 > to open in a editor screen with real path and same file edit but not full
@@ -15,8 +16,19 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [46.1](PART_46_1_REMOVE_OPEN_FOLDER.md) | Delete the folder-import feature | S | 📋 PLANNED |
-| [46.2](PART_46_2_SINGLE_FILE_EDITOR.md) | Single-file editor + "Open in editor" | M | 📋 PLANNED |
+| [46.1](PART_46_1_REMOVE_OPEN_FOLDER.md) | Delete the folder-import feature | S | ✅ MERGED |
+| [46.2](PART_46_2_SINGLE_FILE_EDITOR.md) | Single-file editor + "Open in editor" | M | ✅ MERGED |
+
+**CI round 2 🔴 for-cause (run `34735166887`, commit `81ca938`):** one test
+failure, and it was in the PIN, not the product —
+`EditorRouteCompatTest` joined the main sources as a list of **paths**
+(`joinToString("\n")` without the `{ it.readText() }` transform), so its
+"exactly one `single = true` call site" count read file names and found 0.
+The production change compiled and everything else passed. Fixed by the
+transform; an audit over every `joinToString`-over-file-list in the tests
+confirmed the other three scans already had it.
+
+**CI round 3 ✅ GREEN: run `34735450676` on tip `76026b5` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug` all passed (so ≈50 new cases ran on real Gradle/JUnit/Robolectric and lint is clean), artifacts `CodeC-IDE-release` 6,120,774 B / `CodeC-IDE-debug` 24,840,052 B. Exit conditions 5 of 46.1 and the automated halves of 46.2/47.1/47.2 hold; the device rows are the owner's.**
 
 **Ordering rule: 46.1 before 46.2.** Both touch the hub's tap routing and the
 `+` sheet; deleting first keeps 46.2's diff about the new model only.

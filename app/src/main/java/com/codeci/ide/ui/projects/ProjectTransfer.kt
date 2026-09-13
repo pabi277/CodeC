@@ -17,16 +17,11 @@ object ProjectTransfer {
     private const val MAX_ZIP_ENTRIES = 10_000
     private const val MAX_ZIP_ENTRY_BYTES = 128L * 1024L * 1024L
 
-    fun copyDocumentTree(
-        resolver: ContentResolver,
-        treeUri: Uri,
-        destination: File
-    ): Result<Int> = runCatching {
-        require(DocumentsContract.isTreeUri(treeUri)) { "The selected location is not a folder" }
-        if (!destination.exists() && !destination.mkdirs()) error("Could not create import project")
-        val rootId = DocumentsContract.getTreeDocumentId(treeUri)
-        copyDocumentChildren(resolver, treeUri, rootId, destination)
-    }
+    // Phase 46.1 — the SAF *tree* import walk is deleted (owner: "remove it
+    // completely"): a plain recursion with no visited set, no depth/file/byte
+    // budget and no cancel is a crash class, and the one-way copy it produced
+    // was indistinguishable from a link. `copySingleDocument` and the ZIP
+    // paths are different features and stay.
 
     fun copySingleDocument(
         resolver: ContentResolver,
@@ -310,44 +305,8 @@ object ProjectTransfer {
         }
     }
 
-    private fun copyDocumentChildren(
-        resolver: ContentResolver,
-        treeUri: Uri,
-        parentDocumentId: String,
-        destination: File
-    ): Int {
-        var copied = 0
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocumentId)
-        val projection = arrayOf(
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_MIME_TYPE
-        )
-        resolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
-            val idColumn = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-            val nameColumn = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-            val mimeColumn = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
-            while (cursor.moveToNext()) {
-                val id = cursor.getString(idColumn)
-                val rawName = cursor.getString(nameColumn) ?: "untitled"
-                val name = ProjectPathUtils.sanitizeArchiveSegment(rawName) ?: continue
-                val mime = cursor.getString(mimeColumn)
-                val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
-                val target = File(destination, name)
-                if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
-                    if (!target.exists() && !target.mkdirs()) error("Could not create imported folder")
-                    copied += copyDocumentChildren(resolver, treeUri, id, target)
-                } else {
-                    if (target.exists()) continue
-                    resolver.openInputStream(childUri)?.use { input ->
-                        target.outputStream().use { output -> input.copyTo(output, BUFFER_SIZE) }
-                    } ?: continue
-                    copied++
-                }
-            }
-        } ?: error("Could not read the selected folder")
-        return copied
-    }
+    // Phase 46.1 — the unbounded recursion behind the deleted tree walk is
+    // gone with it.
 
     private fun isZipDocument(resolver: ContentResolver, uri: Uri): Boolean = runCatching {
         resolver.openInputStream(uri)?.use { input ->

@@ -48,7 +48,7 @@ package com.codeci.ide.ui.guide
  * `AlertDialog`. Compose dialogs live in their own window, so `boundsInWindow()`
  * inside one is dialog-relative and an activity-window scrim would cut its hole
  * in the wrong place. Two of the owner's beats live in dialogs — the project
- * picker ("Open folder") and the Python `Install?` prompt — so those are taught
+ * picker (the Open-folder dialog) and the Python `Install?` prompt — so those are taught
  * by the copy of the box before them (step 2 names `demo_flask`, step 4 names
  * **Install**) instead of by a hole in the scrim.
  */
@@ -381,25 +381,6 @@ object CoachMarkPlan {
         }
     }
 
-    /**
-     * True when the beat the tour is waiting for lives INSIDE the ☰ drawer.
-     *
-     * One honest use: the editor's project picker closes the drawer before it
-     * opens (it always has), and beat 3 — the demo's `app.py` row — is a drawer
-     * beat, so the owner's *"change the project folder to demo_flask → selected
-     * app.py"* would otherwise go silent and wait for the user to guess which
-     * button brings the files back. While this is true the editor reopens the
-     * drawer after a project is chosen, and the walk stays one walk. When the tour
-     * is over (or has not started) this is false and nothing changes for anybody.
-     */
-    fun nextBeatIsInDrawer(seen: Set<String>, stalled: Set<String> = emptySet()): Boolean {
-        for (step in steps) {
-            if (step.id in seen || step.id in stalled) continue
-            return step.inDrawer
-        }
-        return false
-    }
-
     /** True when the tour has something to teach right now. */
     fun canShow(
         seen: Set<String>,
@@ -572,8 +553,8 @@ data class GuideTapTarget(val id: String, val rect: GuideRect)
  * Round 3 left the tap inside the hole UNCONSUMED and asked Compose to deliver
  * the rest of the gesture to the real control. That depends on the control still
  * being the same node when the finger lifts — and the tour's own advance is what
- * recomposes the host (`coachSeen` → `tourWaitsInDrawer`, the next beat's box),
- * so the first tap could spend the lesson and lose the click. The overlay now
+ * recomposes the host (`coachSeen` → the next beat's box), so the first tap
+ * could spend the lesson and lose the click. The overlay now
  * performs the anchored control's OWN click (published beside its rect) and
  * swallows the gesture, so one tap is one action plus one beat, in that order,
  * with no double-fire.

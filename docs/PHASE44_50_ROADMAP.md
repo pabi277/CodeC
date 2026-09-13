@@ -193,30 +193,37 @@ card) — three or four, one per surface, never a tour. Both layers are pure pla
 the re-open paths. The no-nag law holds: one tap skips, nothing returns unless
 asked. Specs: [`chat-phase45/`](chat-phase45/README.md).
 
-### Phase 46 — Projects, not folders
+### Phase 46 — Projects, not folders ✅ COMPLETE & MERGED (PR #78; device-approved "All working" 2026-09-13)
 
-**46.1 Remove "Open Folder" completely** — the `+`-sheet row
-(`FileManagerScreen.kt:1474-1481`), the launcher (`:180-188`), `importFolder`
-(`FileManagerViewModel.kt:357`), `copyDocumentTree`/`copyDocumentChildren`
-(`ProjectTransfer.kt:20`, `:313`), the two strings, and the Phase 43 docs —
-with a tombstone recording *why* (a one-way copy that crashes on provider
-trees, and no persisted grant anywhere in the app). **46.2 The new split:**
-a single tap on a file in the hub opens **that one file** (real path in the
-status bar, edit + save, no project chrome), and the project card's **⋮ → Open
-in editor** loads the whole project. Pure part: `EditorOpenMode`.
-Specs: [`chat-phase46/`](chat-phase46/README.md).
+**46.1 Remove "Open Folder" completely** — the `+`-sheet row, the SAF tree
+launcher, `importFolder`, `copyDocumentTree`/`copyDocumentChildren`, the two
+strings — all deleted (grep = 0), pinned by `FolderImportRemovedTest`.
+**46.2 The new split:** a single tap on a file in the hub opens **that one
+file** (`single=1` editor route, real `~proj/…` path in the status bar, edit +
+save + autosave, no project chrome, no launch-state write), and the project
+card's **⋮ → Open in editor** loads the whole project (launch default → newest
+source → first source, `ProjectEntryFile`). Pure parts: `EditorOpenMode`,
+`EditorOpenModePolicy`, `ProjectEntryFile`; host tests `EditorOpenModeTest` ×15,
+`ProjectEntryFileTest` ×9, `SingleFileSaveTest` ×5 (Robolectric: the
+save-writes-the-real-path money test), `EditorRouteCompatTest` ×4.
+Specs + implementation record: [`chat-phase46/`](chat-phase46/README.md).
 
-### Phase 47 — Editor chrome that behaves
+### Phase 47 — Editor chrome that behaves ✅ COMPLETE & MERGED (PR #78; device-approved "All working" 2026-09-13)
 
-**47.1 The drawer:** a visible close affordance (✕ in the header + scrim tap
-kept), `BackHandler(enabled = drawerState.isOpen)` so back never exits, and the
-**in-drawer project picker** the owner asked for (the list opens inside the
-drawer; tapping a project switches the editor's context without navigating).
+**47.1 The drawer:** a visible ✕ (38 dp, header end) whose only job is close,
+the interim `BackHandler(enabled = drawerState.isOpen)` (49's router folds it
+in later), and the **in-drawer PROJECTS section** — Single files + every
+project, current marked, the retired Open-folder dialog deleted with its false
+title, `＋ New project…` handing off to the hub with its `+` sheet up. Pure
+parts: `DrawerPolicy`, `DrawerProjectList`; tests `DrawerPolicyTest`,
+`DrawerProjectListTest`, `DrawerWiringTest` (+ two `GuideWiringTest` pins
+updated to pin the picker GONE).
 **47.2 The keyboard:** `codec_keys_enabled` defaults to **false** (system
-keyboard), CodeC Keys becomes an opt-in with an honest one-line description, and
-the first-run guide mentions it. Existing users keep whatever they chose (a
-stored value always wins over a new default).
-Specs: [`chat-phase47/`](chat-phase47/README.md).
+keyboard), CodeC Keys is the opt-in with honest Settings copy ("Off by
+default — …"), the guide's slide 2 carries the owner's sentence, and existing
+users keep whatever they chose (the absent key IS the default; never written
+at startup). Tests `KeyboardDefaultTest` ×5, `ImeLeverTest`, `KeysStayPolicyTest`
++2. Specs + implementation records: [`chat-phase47/`](chat-phase47/README.md).
 
 ### Phase 48 — Nothing hides behind the keyboard
 

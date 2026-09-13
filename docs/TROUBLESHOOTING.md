@@ -1692,3 +1692,82 @@ release without a restart) and **G41** (new: release at the end of the unpack, o
 phone, without killing the app). Specification:
 `docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Round 6 — *even after unpacking the
 userland it still stay lock*".
+
+## 41. "Open Folder is gone", "a file tap opens one file", "the keyboard changed" (Phases 46 + 47, 2026-09-12)
+
+Three intentional behaviour changes landed together (owner: "Start phase 46 and
+47"), recorded here so a future report of any of them reads this first:
+
+- **The `+` sheet has three rows** — New Project / Clone Git Repository /
+  Import ZIP. **"Open Folder" is gone completely** (the owner's own
+  instruction: *"i want to remove it completely"*). Importing a folder's
+  contents = zip it, then Import ZIP. Everything else that opens things
+  (Import file, Export, "Open with CodeC" from another app) is untouched.
+- **A file tap in Projects opens THAT file only** — one tab, the real path
+  (`~proj/<project>/<file>`) in the status bar (long-press copies the full
+  path), no file tree, no git badges. Edit + save + autosave all work on the
+  real file. To open the WHOLE project (tree, git, run targets), use the
+  card's **⋮ → Open in editor** — it opens the project's launch default, or
+  the newest source file.
+- **The system keyboard is the editor's default.** CodeC Keys (the in-app
+  code keyboard) is now OFF by default — the owner's instruction — and turns
+  on in Settings → CodeC Keys exactly as before. **Anyone who had turned it
+  on keeps it** after the update: the stored choice always wins. Nothing
+  about the keyboard itself changed.
+- **The editor's ☰ drawer** now has a ✕ that just closes it, Back closes it,
+  and the project switcher lives INSIDE the drawer (tap the project name or
+  the PROJECTS row): Single files first, then every project, current one
+  marked, ＋ New project… jumps to the Projects tab. The old "Open folder"
+  dialog is gone — it could never open a folder.
+
+**Rows:** the device checks are the exit conditions in
+`docs/chat-phase46/` and `docs/chat-phase47/` (each part doc); the automated
+halves run in CI (`FolderImportRemovedTest`, `EditorOpenModeTest`,
+`ProjectEntryFileTest`, `SingleFileSaveTest`, `EditorRouteCompatTest`,
+`DrawerPolicyTest`, `DrawerProjectListTest`, `DrawerWiringTest`,
+`KeyboardDefaultTest`, `ImeLeverTest`).
+
+
+## 42. "New project just closes the drawer" / "two projects opened together" (Phases 46+47 device round 1, 2026-09-13)
+
+Two fixes from the owner's first device round on the 46+47 build:
+
+- **☰ drawer → ＋ New project… closed the drawer and re-opened the editor.**
+  The navigation restored a previously-saved tab state instead of opening the
+  Projects tab fresh (`restoreState = true` restores a whole saved sub-stack,
+  whose top can be an editor). It is now `restoreState = false`: the row
+  always lands on a fresh Projects tab **with the `+` sheet already open**.
+  Your editor session is saved and comes back when you tap the Editor tab.
+- **Opening a second project could show both projects' files in one editor.**
+  Two causes, both fixed: tapping a file/project no longer restores a stale
+  editor session (`restoreState = false` on every open-a-file navigation — a
+  tap means "open THAT file"), and the editor now enforces the owner's rule
+  directly: **a tab list belongs to one project — opening a different project
+  saves what is open and starts that project's own session.** Tabs from
+  demo_flask and a starter project can never be on screen together. The
+  bottom-bar tabs still restore normally (Editor tab = "where I left off").
+
+**Rows:** the fixes are pinned by `SingleFileSaveTest` (tab law),
+`EditorRouteCompatTest` + `DrawerWiringTest` (the navigations restore
+nothing); fix build CI ✅ GREEN `34736668771` tip `ce4044d` — re-test the two
+reports above on that build, plus a normal round of the five-tab switching.
+
+
+## 43. "Picking a project in the guide's drawer closes the file list" (Phases 46+47 device round 2, 2026-09-13)
+
+**Report:** in the guide's 2nd step, tapping **demo_flask** in the drawer's
+project list *"closes the pop up of the file selection option"* — it should
+drop down all the available projects (and stay).
+
+**Fixed:** tapping a project in the ☰ drawer's PROJECTS list now switches the
+project **without closing the drawer** — the list stays open with the new
+project marked, and the file tree behind it refreshes to that project. (It
+used to close the drawer unless the guide happened to be mid-tour; now it
+never closes, tour or no tour.) Tapping a FILE row still closes the drawer —
+that is the "open it and go" action.
+
+**Rows:** re-run the guide from Settings → About → Reset tips: beat 2 (tap the
+project header) → the list drops down → tap demo_flask → the drawer STAYS,
+showing demo_flask's tree with demo_flask marked → beat 3 (tap app.py) closes
+the drawer as before.
+Fix build: CI ✅ GREEN `34737610972` — test on that build.

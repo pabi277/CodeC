@@ -15,15 +15,20 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.codeci.ide.ui.support.ExitSurvey
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
+    // Phase 46.2 — one destination, three modes: the nullable `single=1` flag
+    // turns an editor route into a SINGLE_FILE peek (one file, real path in
+    // the status bar, no project chrome). Absent → PROJECT, exactly as every
+    // pre-46 route built.
     object Editor : Screen(
-        "editor?projectName={projectName}&fileName={fileName}",
+        "editor?projectName={projectName}&fileName={fileName}&single={single}",
         "Editor",
         Icons.Default.Create
     ) {
-        fun createRoute(fileName: String? = null, projectName: String? = null): String {
+        fun createRoute(fileName: String? = null, projectName: String? = null, single: Boolean = false): String {
             val args = buildList {
                 projectName?.takeIf { it.isNotBlank() }?.let { add("projectName=${Uri.encode(it)}") }
                 fileName?.takeIf { it.isNotBlank() }?.let { add("fileName=${Uri.encode(it)}") }
+                if (single) add("single=1")
             }
             return if (args.isEmpty()) "editor" else "editor?${args.joinToString("&")}"
         }
@@ -59,7 +64,17 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     }
     // Phase 15 — the Files screen became the Projects Hub (Spck-style); the
     // route keeps its historical name so deep links and saved state survive.
-    object FileManager : Screen("file_manager", "Projects", Icons.Default.Folder)
+    // Phase 47.1 — `openSheet=1` is the editor drawer's `+ New project…`
+    // hand-off: the hub opens with its `+` sheet already up. Absent on the
+    // plain tab route, so a normal tab tap opens nothing.
+    object FileManager : Screen(
+        "file_manager?openSheet={openSheet}",
+        "Projects",
+        Icons.Default.Folder
+    ) {
+        fun createRoute(openAddSheet: Boolean = false): String =
+            if (openAddSheet) "file_manager?openSheet=1" else "file_manager"
+    }
     object Templates : Screen("templates", "Templates", Icons.Default.AutoAwesomeMosaic)
     object Modules : Screen("modules", "Packages", Icons.Default.Download)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)
