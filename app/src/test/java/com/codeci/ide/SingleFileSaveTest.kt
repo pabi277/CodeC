@@ -132,4 +132,62 @@ class SingleFileSaveTest {
         assertEquals(EditorOpenMode.SCRATCH, vm.openMode.value)
         assertEquals(scratchName, vm.fileName.value)
     }
+
+    // ---- 46.2 device round: the owner's tab law ---------------------------
+    // "2 projects are different so don't open together." A PROJECT open of a
+    // different project starts that project's own session; no tab list may
+    // ever hold two projects' files.
+
+    @Test
+    fun `opening project B from project A's session starts B's tab list - no mixing`() {
+        newProjectWithFile("tabs_a", "aaa_marker.c", "A\n")
+        newProjectWithFile("tabs_b", "bbb_marker.c", "B\n")
+        val vm = EditorViewModel()
+
+        vm.openFile(context, "tabs_a", "aaa_marker.c")
+        assertEquals(EditorOpenMode.PROJECT, vm.openMode.value)
+        assertTrue(vm.openTabs.value.any { it.relativePath == "aaa_marker.c" })
+
+        vm.openFile(context, "tabs_b", "bbb_marker.c")
+        assertEquals("tabs_b", vm.projectName.value)
+        val paths = vm.openTabs.value.map { it.relativePath }
+        assertTrue("B's file must be open", paths.contains("bbb_marker.c"))
+        assertFalse(
+            "A's tabs must be gone - two projects never share an editor",
+            paths.contains("aaa_marker.c")
+        )
+    }
+
+    @Test
+    fun `opening a project from a peek of another project never mixes`() {
+        newProjectWithFile("peek_src", "src/peeked.py", "x = 1\n")
+        newProjectWithFile("whole_dst", "main.c", "C\n")
+        val vm = EditorViewModel()
+
+        vm.openSingleProjectFile(context, "peek_src", "src/peeked.py")
+        assertEquals(EditorOpenMode.SINGLE_FILE, vm.openMode.value)
+
+        vm.openFile(context, "whole_dst", "main.c")
+        assertEquals("whole_dst", vm.projectName.value)
+        val paths = vm.openTabs.value.map { it.relativePath }
+        assertFalse("the peeked file must not ride along", paths.contains("src/peeked.py"))
+        assertTrue(paths.contains("main.c"))
+        assertEquals(EditorOpenMode.PROJECT, vm.openMode.value)
+    }
+
+    @Test
+    fun `a peek of project B replaces project A's tab list - one file, one project`() {
+        newProjectWithFile("mix_a", "aaa_marker.c", "A\n")
+        newProjectWithFile("mix_b", "bbb_marker.c", "B\n")
+        val vm = EditorViewModel()
+
+        vm.openFile(context, "mix_a", "aaa_marker.c")
+        vm.openSingleProjectFile(context, "mix_b", "bbb_marker.c")
+        val paths = vm.openTabs.value.map { it.relativePath }
+        assertEquals(listOf("bbb_marker.c"), paths)
+        // Flip back to PROJECT on A: its session starts clean, with no memory
+        // of the list the B peek replaced.
+        vm.openFile(context, "mix_a", "aaa_marker.c")
+        assertFalse(vm.openTabs.value.any { it.relativePath == "bbb_marker.c" })
+    }
 }

@@ -242,3 +242,35 @@ one tab and no git/launch chrome, traversal path refused) ·
 (back) is covered structurally by the nav stack + the unsaved-changes
 handler and verified on device in the same round. CI green = the eight
 automated halves of those rows.
+
+
+## Device round 1 (2026-09-13) — "files rules are not strong enough"
+
+**Owner report:** *"I open demo_flask then the starter python it opens both in
+the editor but 2 projects are different so don't open together."*
+
+**Two causes, one law (the owner's: two projects never share an editor):**
+
+1. **The navigation restored another project's session.** Both hub file
+   navigations (⋮ → Open in editor, and the file tap) used
+   `restoreState = true` — which restores a saved editor entry with its OLD
+   arguments and its OLD ViewModel: another project's tabs. Tapping a file is
+   an instruction to open THAT file, so both are now `restoreState = false`
+   (the Templates hand-off had the same disease and got the same fix; the
+   bottom-bar tab taps keep `restoreState = true` — "show me my editor where
+   I left off" is a restore, not an instruction).
+2. **The ViewModel could MIX two projects' tabs.** `openProjectFile` appends
+   its tab to whatever list the surviving VM holds and bootstraps the new
+   project's files alongside it — and its same-file/existing-tab early
+   returns matched another project's identically-named file. New guard at the
+   top of `openProjectFile`: when the tab list is non-empty and belongs to a
+   different project, save everything (flush + saveAllTabs, while
+   `_projectName` still names the old project), then clear tabs, undo stacks
+   and git/launch state — exactly the rule `switchContext` applies — before
+   opening. The peek path already replaced the list wholesale.
+
+**Tests:** `SingleFileSaveTest` +3 (A's session → open B: B's tab list, no
+marker of A; peek of one project → open another: no ride-along; peek replaces
+the list wholesale and the flip back starts clean) · `EditorRouteCompatTest`
++1 (both hub file navigations pinned `restoreState = false`) ·
+`DrawerWiringTest` +1 (the New-project hand-off, see PART_47_1).

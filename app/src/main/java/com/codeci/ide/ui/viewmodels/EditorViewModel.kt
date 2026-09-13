@@ -1290,6 +1290,27 @@ class EditorViewModel : ViewModel() {
         // Phase 46.2 — arriving here from another mode is a mode flip; the
         // PROJECT side of it is decided before any early return.
         _openMode.value = EditorOpenMode.PROJECT
+        // 46.2 device round — the owner's law: "2 projects are different so
+        // don't open together." The tab list belongs to ONE project context.
+        // A PROJECT open of a DIFFERENT project (the VM can survive across
+        // destinations when navigation restores it) starts that project's
+        // fresh session — saving what is open first, exactly the rule
+        // switchContext applies. Without this, the append below (+
+        // bootstrapRemainingTabs) mixed two projects' files in one editor,
+        // and the same-file/existing-tab lookups could match another
+        // project's identically-named file.
+        if (_openTabs.value.isNotEmpty() && _projectName.value != info.name) {
+            flushAutoSave()
+            saveAllTabs(context.applicationContext)
+            _openTabs.value = emptyList()
+            undoManagers.clear()
+            _activeTabPath.value = null
+            _collapsedDirs.value = emptySet()
+            _gitBranch.value = null
+            _gitBadges.value = emptyMap()
+            _gitChangeCount.value = 0
+            _launchDefault.value = null
+        }
         if (_activeTabPath.value == safe && _projectName.value == info.name) {
             // Re-opening the current file is still a new viewing session.
             resetCaretForOpen()

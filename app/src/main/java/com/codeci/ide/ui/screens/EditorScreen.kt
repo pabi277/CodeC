@@ -1446,13 +1446,19 @@ fun EditorScreen(
                                     }
                                 )
                             }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.save_to_project)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    showSaveToProject = true
-                                }
-                            )
+                            // 46.2 device round — "Save to project" is the
+                            // scratch/PROJECT session's move-into-a-project
+                            // action; a SINGLE_FILE peek already saves into
+                            // its own project, so the row hides there.
+                            if (currentProject == null || projectChrome) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.save_to_project)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        showSaveToProject = true
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.share_file)) },
                                 onClick = {

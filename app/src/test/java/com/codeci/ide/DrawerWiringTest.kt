@@ -105,4 +105,25 @@ class DrawerWiringTest {
             main.contains("is Screen.FileManager -> Screen.FileManager.createRoute()")
         )
     }
+
+    @Test
+    fun `the New-project hand-off is an instruction - it restores nothing`() {
+        // 47.1 device round: restoreState = true let the navigation come back
+        // with a saved sub-stack whose top was an EDITOR (the owner saw the
+        // drawer close and the editor "just open"), or a plain hub entry with
+        // no openSheet arg. The row must land a FRESH Projects instance.
+        val main = source("app/src/main/java/com/codeci/ide/MainActivity.kt")
+        val at = main.indexOf("onOpenProjects = {")
+        assertTrue("the onOpenProjects wiring is gone", at >= 0)
+        val window = main.substring(at, main.indexOf("},", at) + 2)
+        assertTrue(
+            "the + New project navigation must be restoreState = false",
+            window.contains("createRoute(openAddSheet = true)") &&
+                window.contains("restoreState = false")
+        )
+        assertFalse(
+            "the broken restoreState = true must be gone from this row",
+            window.contains("restoreState = true")
+        )
+    }
 }

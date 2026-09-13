@@ -58,6 +58,25 @@ class EditorRouteCompatTest {
     }
 
     @Test
+    fun `both hub file navigations are instructions - they restore nothing`() {
+        // 46.2 device round (owner: "2 projects are different so don't open
+        // together"): restoreState = true on the hub's file taps restored a
+        // saved editor entry with its OLD arguments and its OLD ViewModel -
+        // another project's tabs. Both the whole-project open and the peek
+        // must be restoreState = false.
+        val main = source("app/src/main/java/com/codeci/ide/MainActivity.kt")
+        for (hook in listOf("onProjectFileSelected = { projectName, path ->", "onProjectFilePeek = { projectName, path ->")) {
+            val at = main.indexOf(hook)
+            assertTrue("the $hook wiring is gone", at >= 0)
+            val window = main.substring(at, main.indexOf("},", at) + 2)
+            assertTrue(
+                "$hook must navigate with restoreState = false",
+                window.contains("restoreState = false")
+            )
+        }
+    }
+
+    @Test
     fun `launch-state writers are untouched by the flag`() {
         // EditorLaunchState.save exists ONLY in the editor's PROJECT-mode
         // writers (openProjectFile's two paths + rememberLaunchPoint) and the

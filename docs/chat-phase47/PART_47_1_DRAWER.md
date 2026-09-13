@@ -213,3 +213,25 @@ verbatim).
 **Exit condition status:** 1-9 are the device round (owner); the automated
 halves (the ✕/BACK/scrim wiring pins, the list order/marker/empty-copy pins,
 the grep pins, the switchContext drift guard) run in CI.
+
+
+## Device round 1 (2026-09-13) — the New-project hand-off was broken
+
+**Owner report:** *"I could not create new project from the editor when i click
+the option of new project it just close and open editor."*
+
+**Root cause — the Phase 44 round-1 lesson repeating:** the `＋ New project…`
+navigation used `restoreState = true`. That flag restores the WHOLE saved
+sub-stack for the destination, not a fresh screen: the restored sub-stack's
+top could be an **editor** entry (the owner saw the drawer close and the
+editor "just open" again), or a plain `file_manager` entry whose ORIGINAL
+arguments carry no `openSheet` — so no sheet either. A `rememberSaveable`
+consumed-flag then kept it closed after the first arrival.
+
+**Fix:** the row is an INSTRUCTION ("show me the Projects tab with the create
+sheet up"), so it is `restoreState = false` — popUpTo(start){saveState} still
+saves the editor for the tab's return, but the destination is a fresh
+Projects instance whose `openSheet=1` opens the sheet. Pinned by
+`DrawerWiringTest.the New-project hand-off is an instruction - it restores
+nothing` (slices the wiring window: `createRoute(openAddSheet = true)` +
+`restoreState = false`, and the broken flag gone).

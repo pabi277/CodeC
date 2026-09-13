@@ -1726,3 +1726,28 @@ halves run in CI (`FolderImportRemovedTest`, `EditorOpenModeTest`,
 `ProjectEntryFileTest`, `SingleFileSaveTest`, `EditorRouteCompatTest`,
 `DrawerPolicyTest`, `DrawerProjectListTest`, `DrawerWiringTest`,
 `KeyboardDefaultTest`, `ImeLeverTest`).
+
+
+## 42. "New project just closes the drawer" / "two projects opened together" (Phases 46+47 device round 1, 2026-09-13)
+
+Two fixes from the owner's first device round on the 46+47 build:
+
+- **☰ drawer → ＋ New project… closed the drawer and re-opened the editor.**
+  The navigation restored a previously-saved tab state instead of opening the
+  Projects tab fresh (`restoreState = true` restores a whole saved sub-stack,
+  whose top can be an editor). It is now `restoreState = false`: the row
+  always lands on a fresh Projects tab **with the `+` sheet already open**.
+  Your editor session is saved and comes back when you tap the Editor tab.
+- **Opening a second project could show both projects' files in one editor.**
+  Two causes, both fixed: tapping a file/project no longer restores a stale
+  editor session (`restoreState = false` on every open-a-file navigation — a
+  tap means "open THAT file"), and the editor now enforces the owner's rule
+  directly: **a tab list belongs to one project — opening a different project
+  saves what is open and starts that project's own session.** Tabs from
+  demo_flask and a starter project can never be on screen together. The
+  bottom-bar tabs still restore normally (Editor tab = "where I left off").
+
+**Rows:** the fixes are pinned by `SingleFileSaveTest` (tab law),
+`EditorRouteCompatTest` + `DrawerWiringTest` (the navigations restore
+nothing); re-test the two reports above plus a normal round of the five-tab
+switching.

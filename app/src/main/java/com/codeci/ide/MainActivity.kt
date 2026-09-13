@@ -1208,7 +1208,17 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                         navController.navigate(Screen.FileManager.createRoute(openAddSheet = true)) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
-                            restoreState = true
+                            // 47.1 device round (owner: the ✕ row "just close
+                            // and open editor"). This row is an INSTRUCTION —
+                            // "show me the Projects tab with the create sheet
+                            // up" — not a tab restore. Restoring saved
+                            // state here brought back a sub-stack whose top
+                            // was an EDITOR entry (the Phase 44 round-1
+                            // lesson), or a plain hub entry whose original
+                            // arguments carry no openSheet. A fresh Projects
+                            // instance consumes openSheet=1 and opens the
+                            // sheet.
+                            restoreState = false
                         }
                     },
                     // Phase 45.2 round 3 — the tour's next beat is a row inside
@@ -1254,15 +1264,24 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     onProjectFileSelected = { projectName, path ->
                         navController.navigate(Screen.Editor.createRoute(path, projectName)) {
                             launchSingleTop = true
-                            restoreState = true
+                            // 46.2 device round (owner: "2 projects are
+                            // different so don't open together"). Tapping a
+                            // file is an INSTRUCTION to open THAT file;
+                            // restoring saved state here brought back a
+                            // saved editor entry with its OLD arguments and
+                            // its OLD ViewModel — another project's tabs.
+                            // Fresh entry, fresh VM, the tapped file opens.
+                            restoreState = false
                         }
                     },
                     onProjectFilePeek = { projectName, path ->
                         // Phase 46.2 — a file tap is a SINGLE_FILE peek: the
                         // same editor destination, one flag of difference.
+                        // restoreState = false for the same reason as the
+                        // whole-project open above: a peek restores nothing.
                         navController.navigate(Screen.Editor.createRoute(path, projectName, single = true)) {
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState = false
                         }
                     },
                     onProjectPreviewFile = { projectName, path ->
@@ -1337,7 +1356,13 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                                     navController.navigate(Screen.Editor.createRoute(safe, project.name)) {
                                         popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                         launchSingleTop = true
-                                        restoreState = true
+                                        // 46.2 device round — an instruction
+                                        // ("open THIS template file"), so it
+                                        // restores nothing: restoring saved
+                                        // state could bring back a saved
+                                        // editor entry with old arguments and
+                                        // another project's session.
+                                        restoreState = false
                                     }
                                 }
                             }
