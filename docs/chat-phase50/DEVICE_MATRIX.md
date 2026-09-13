@@ -9,7 +9,7 @@
 > FILLED.** Nothing in the sandbox has a handset, an IME or an OEM battery
 > manager, so every row below belongs to the owner's devices. The deliverable of
 > this phase is a **filled matrix**, and filling it is a two-minute paste per
-> device (§4) — the results live in the owning part file's `## Test log`, and
+> device (§3) — the results live in the owning part file's `## Test log`, and
 > `DeviceMatrixTest` fails the build if this file and those logs ever disagree.
 >
 > **The build to install:** the latest green `Build APK` on **`main`**
@@ -52,7 +52,7 @@
    | the eleven-beat tour again | Settings → About → **Reset tips** + kill + relaunch (the beats you already saw stay spent otherwise) |
    | a stuck half-install | Terminal tab → **⬇** re-runs the setup over what is on disk |
    | no network at all | airplane mode **before** launching (round B, row B5) |
-   | the log of a back press | Settings → Logs, or the crash dialog's **COPY REPORT** (round I, row I14) |
+   | the log of a back press | Settings → Logs, or the crash dialog's **COPY REPORT** (round I, row I15 — the line a ❌ needs) |
 5. **Rows marked `★` are the ones whose answer differs by device class** — run
    those on every device you have before spending time on the rest. The
    shortlist for a second phone is §3's **20-minute pass**.
