@@ -96,6 +96,7 @@ instructions instead of the app — so the fix is not only "correct the rows" bu
 - **One device class is not enough for 49.2's cause C** (a gesture-nav home swipe
   sends no back event at all). The matrix requires both nav modes for the back and
   prompt rows, which is the whole point of D1 vs D2.
+- **The app is still moving under it.** The rows were written from the sources as merged at `62cfe7b` (PR #79 — the eleven-beat tour with the demo pick, the drawer that never closes on a project switch, the non-blinking incremental edit, the second door), and every one of those was taken from the code, not from the part doc, where the two disagreed. A later change to 44-49's copy will move the rows that quote it: that is the case `DeviceMatrixTest` names by row id, and `DEVICE_MATRIX.md` §4 states the re-sync law — re-quote or rewrite the row, move its `## Test log` line in the same commit, re-point the install line at a green `main` build that contains the change, and mark a row the change made moot `n/a (superseded by <sha>)`, never ✅.
 - **Battery-manager kills are not reproducible on demand** (Xiaomi / Oppo / Vivo /
   Samsung). J2 is the closest proxy.
 - **The results table starts empty and stays empty until a human runs it.** The

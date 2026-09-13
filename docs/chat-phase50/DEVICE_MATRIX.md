@@ -296,6 +296,41 @@ silently:**
   route shape) and `BackHandlerWiringTest` (every `BackHandler(` in the app is the
   root or router-driven), which is the property a UI test would re-derive.
 
+### When the app moves under the runbook (the owner keeps changing 44-49)
+
+These rows were written from the sources **as merged at `62cfe7b`** (PR #79), so
+they already carry the owner's newest laws — the eleven-beat tour *with* the
+demo_flask pick (`CoachMarkPlan.kt:226` `Pick the demo`), the drawer that never
+closes on a project switch (`DrawerPolicy.kt:52`, `reason != PROJECT_SWITCHED`),
+the non-blinking incremental edit path (`ui/editor/IncrementalEdit.kt`) and the
+second door (`SettingsScreen.kt:1223` `Tell us before you go`). Nothing was
+inferred from the part docs where the two disagreed; the code won.
+
+Any change made **after** `62cfe7b` will move rows, and that is the case the pin
+exists for. The re-sync is four steps, and no one has to remember them — CI
+remembers:
+
+1. Change the app in your own commit, the way you would anyway.
+2. Run `:app:testDebugUnitTest --tests '*DeviceMatrixTest*'` (or just push; the
+   failing message **names the row ids**, e.g. `A1: 'Setting up CodeC · C works
+   right now' is not an app string (re-worded in code, or invented)`).
+3. For each named row, decide which side is wrong. If the copy moved, re-quote the
+   span from the shipped source (`NN` for a number, `…` for the variable part); if
+   the behaviour is gone, rewrite the row to the new behaviour, or delete it and
+   say why in one line here. **Never** de-backtick a real sentence to silence the
+   test, and never lower the ≥ 30 verbatim floor — `../TROUBLESHOOTING.md` §46 has
+   the four failure shapes and their fixes.
+4. Land it in the commit that changed the code: the row, its owning part file's
+   `## Test log` (add or rename the row there in the same commit, or the two-way
+   pin fails), plus the header's install pointer below — the round must be run on a
+   green `main` build **that contains the change**, because a round against an
+   older APK is a wasted scarce round.
+
+A row whose subject a device pass already covered, and which the change then made
+moot, gets `n/a (superseded by <sha>)` in the part's `## Test log` — not `✅`. A
+matrix is a record of what was seen, so an unfilled row that no longer applies is
+closed with a reason, never with a tick.
+
 ## 5. What this matrix cannot prove (kept in the file so nobody over-reads a pass)
 
 - **Nothing about a home swipe.** A gesture-nav home swipe and a Recents swipe
