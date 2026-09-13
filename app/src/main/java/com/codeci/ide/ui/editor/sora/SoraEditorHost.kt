@@ -10,12 +10,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.ui.editor.AcceptGranularity
 import com.codeci.ide.ui.editor.CaretBlinkPolicy
+import com.codeci.ide.ui.editor.CaretVisibilityPolicy
+import com.codeci.ide.ui.editor.EditorViewport
 import com.codeci.ide.ui.editor.GhostState
 import com.codeci.ide.ui.viewmodels.CompletionModel
 import com.codeci.ide.ui.viewmodels.EditorViewModel
@@ -80,7 +83,17 @@ fun SoraEditorHost(
     ghostPanelEnabled: Boolean = true,
     /** Ghost text ARGB (comment color @ 38% — G5) from the active theme. */
     ghostColorArgb: Int = 0x5575715E,
-    onBrowseVisibilityChanged: (Boolean) -> Unit = {}
+    onBrowseVisibilityChanged: (Boolean) -> Unit = {},
+    // ---- Phase 48 — the viewport rescroll (PART_48_1) ----
+    // The chrome facts around the box. [CaretVisibilityPolicy] decides on
+    // the box's HEIGHT (the effect); these booleans are the causes, carried
+    // so the snapshot struct is honest (and normalised() can pin the
+    // CodeC-Keys/IME exclusivity EditorScreen guarantees).
+    imeVisible: Boolean = false,
+    codecKeysVisible: Boolean = false,
+    stripVisible: Boolean = true,
+    outputExpanded: Boolean = false,
+    statusVisible: Boolean = true
 ) {
     val codeText by viewModel.codeText.collectAsState()
     val caretPlaced by viewModel.caretPlaced.collectAsState()
@@ -380,6 +393,33 @@ fun SoraEditorHost(
     }
 
     // VM → Sora replay.
+
+    // Phase 48 — the ONE rescroll owner in the app (`CaretCallSiteTest`
+    // pins the single ensurePositionVisible call site). A chrome change
+    // resizes the sora box (imePadding / CodeC Keys / the keys row / the
+    // output panel / the status bar), and sora never re-scrolls on a
+    // resize: only its own edits and selection changes scroll
+    // (CAUSE_MAKE_POSITION_VISIBLE). The pure CaretVisibilityPolicy decides
+    // WHEN the caret is owed a re-scroll; this edge performs it AFTER the
+    // new layout pass (`postDelayed`, never inline — inside onSizeChanged
+    // sora still holds the OLD metrics), with noAnimation (a chrome-driven
+    // scroll must not animate — the README's seasickness risk), coalesced
+    // (cancel-and-replace: the IME animation reports many sizes), and
+    // crash-proof (runCatching — the editor can be mid-release() when a
+    // late size change lands; a cosmetic call must never kill the app, the
+    // Phase 44 law applied to a layout callback).
+    val lastViewport = remember(editor) { arrayOf<EditorViewport?>(null) }
+    val pendingRescroll = remember(editor) { arrayOf<Runnable?>(null) }
+    fun scheduleCaretRescroll(line: Int, column: Int, delayMs: Long) {
+        pendingRescroll[0]?.let { editor.removeCallbacks(it) }
+        val task = Runnable {
+            pendingRescroll[0] = null
+            runCatching { editor.ensurePositionVisible(line, column, true) }
+        }
+        pendingRescroll[0] = task
+        editor.postDelayed(task, if (delayMs < 0L) 0L else delayMs)
+    }
+
     AndroidView(
         factory = { editor },
         update = { ed ->
@@ -429,6 +469,15 @@ fun SoraEditorHost(
                                 endPos.line, endPos.column
                             )
                         }
+                        // Phase 48 — a replayed caret move (suggestion
+                        // accept, snippet, undo, keys-row insert) is NOT one
+                        // of sora's own edits, so sora never scrolls for it
+                        // and the caret can land below the fold exactly as
+                        // the owner described (*"when i use a suggestion it
+                        // go down and hide behind the keyboard"*). Follow
+                        // it — selection end, the side the eye is on. The
+                        // quiet-on-open branch below stays scroll-free.
+                        scheduleCaretRescroll(endPos.line, endPos.column, 0L)
                     } else if (!caretPlaced) {
                         ed.clearFocus()
                     }
@@ -454,8 +503,38 @@ fun SoraEditorHost(
                     )
                 }
                 syncedSelection = target.selection
+                // Phase 48 — same follow for the text-unchanged moves
+                // (find-next, quick fix, the CodeC Keys caret trackpad):
+                // the caret the VM just moved is the caret that must be on
+                // screen.
+                scheduleCaretRescroll(endPos.line, endPos.column, 0L)
             }
         },
-        modifier = modifier
+        modifier = modifier.onSizeChanged { size ->
+            // Phase 48 — the chrome edge: every resize of the sora box is
+            // observed; the pure policy answers whether the caret is owed a
+            // re-scroll into the new, smaller (or bigger) viewport.
+            val previous = lastViewport[0]
+            val vp = EditorViewport(
+                heightPx = size.height,
+                imeVisible = imeVisible,
+                codecKeysVisible = codecKeysVisible,
+                stripVisible = stripVisible,
+                outputExpanded = outputExpanded,
+                statusVisible = statusVisible,
+                fontSizeSp = fontSizeSp
+            )
+            lastViewport[0] = vp
+            if (CaretVisibilityPolicy.owesRescroll(previous, vp)) {
+                // Sora's own caret (0-based) — not the VM's readout: the
+                // scroll target must be what sora will actually draw.
+                runCatching { editor.cursor.left() }.getOrNull()?.let { at ->
+                    scheduleCaretRescroll(
+                        at.line, at.column,
+                        CaretVisibilityPolicy.debounceMs(previous, vp)
+                    )
+                }
+            }
+        }
     )
 }

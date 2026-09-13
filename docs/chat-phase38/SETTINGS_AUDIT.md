@@ -105,6 +105,7 @@ change nothing and say so).
 | 38 | About | Check for updates | action | app-release channel check (app-v* only), versioned/SHA-256-verified download or a named refusal | `ApkUpdateManager`+`UpdatePolicy`+`ReleaseFetch` (42.1: the updater no longer installs a bootstrap's "latest") | keep |
 | 39 | Feedback & Support | Send feedback, rate, or report a bug | action | navigates to `Screen.Feedback` | `FeedbackScreen` (Phase 41 follow-up moved the card to its own screen; the exit-prompt switch lives there) | keep |
 | 47 | Feedback & Support | Report the last crash | action | navigates to `Screen.Feedback?crash=1` (both attachments pre-ticked); row exists only while `crash-log.txt` has a record | `CrashLog` presence (42.3: the Settings twin of the overlay's SEND REPORT) | keep |
+| 48 | Feedback & Support | Tell us before you go | action | opens the host's exit-feedback dialog on demand (`onShowExitPrompt` → the one `exitPromptVisible`) | Phase 49.2's SECOND DOOR (PART_49_2): cause C — a gesture-nav home swipe sends no back event, so the prompt can never appear on some devices; this row makes the dialog reachable everywhere (exit 7). No new dialog, no new copy, no new store key | keep |
 | 41 | Developer Options | Show File Paths | switch | `show_file_paths` | `showFilePathsFlow` → file tree labels | keep |
 | 41 | Developer Options | Export App Logs | action | ACTION_SHARE with `AppLogger` logs | share sheet | keep |
 | 42 | Developer Options | View App Logs | action | navigates to log screen | `onNavigateToLogs` | keep |

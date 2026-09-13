@@ -70,6 +70,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.core.content.IntentCompat
+import com.codeci.ide.ui.navigation.BackAction
+import com.codeci.ide.ui.navigation.BackRouter
+import com.codeci.ide.ui.navigation.BackState
 import com.codeci.ide.ui.navigation.Screen
 import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.IncomingImportBridge
@@ -991,18 +994,45 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     // Registered BEFORE the Scaffold/NavHost so anything composed inside
     // them (NavHost's own pop handling, dialogs, sheets) wins while it can
     // consume the back press; this handler only decides what back does AT
-    // THE ROOT: the exit survey, or a direct close when it is switched off.
+    // THE ROOT — and since Phase 49 it decides from STATE, not from
+    // popBackStack()'s return value (PART_49_2: the prompt is decided from
+    // "am I at a root with nothing open", so a tab-tapped stack
+    // (`popUpTo(start) { saveState }` pushes a second entry) and a
+    // per-install start destination can no longer hide it — the two causes
+    // behind *"in most phone no option like not now or exit"*).
+    // While the prompt is up the handler stays OFF: the dialog's own back
+    // IS the second press (ExitFeedbackDialog's onDismissRequest = exit) —
+    // exactly one exit path, kept from Phase 41.
     // Phase 42.3 — the exit survey is a BRIDGE/SNACKS surface outside the
-    // safe-mode boundary: while safe mode is on, the last thing a user in a
-    // reduced session needs is a "how was your experience" prompt whose
-    // [NOT NOW] would have to write a preference; back exits directly.
-    BackHandler(enabled = !exitPromptVisible) {
-        if (!navController.popBackStack()) {
-            when {
-                com.codeci.ide.ui.crash.SafeMode.active -> activity.finish()
-                exitPromptEnabled -> exitPromptVisible = true
-                else -> activity.finish()
-            }
+    // safe-mode boundary; the router's row 9 carries the rule (safe mode →
+    // ExitApp), so it survives the refactor as policy, not as a when-branch.
+    val rootBackAction = BackRouter.decide(
+        BackState(
+            canPopRoute = navController.previousBackStackEntry != null,
+            atRootDestination = BackRouter.isRoot(
+                currentDestination?.route,
+                screens.map { it.route }
+            ),
+            exitPromptEnabled = exitPromptEnabled,
+            exitPromptVisible = exitPromptVisible,
+            safeMode = com.codeci.ide.ui.crash.SafeMode.active
+        )
+    )
+    BackHandler(enabled = !exitPromptVisible && rootBackAction != BackAction.None) {
+        // PART_49_2's evidence gate, on every device: the numbers that
+        // settle causes A, B and D without guessing (the 49.1 device round
+        // reads these from View App Logs).
+        AppLogger.i(
+            "Back",
+            "root press route=${currentDestination?.route} " +
+                "promptEnabled=$exitPromptEnabled promptVisible=$exitPromptVisible " +
+                "-> $rootBackAction"
+        )
+        when (rootBackAction) {
+            BackAction.PopRoute -> navController.popBackStack()
+            BackAction.ShowExitPrompt -> exitPromptVisible = true
+            BackAction.ExitApp -> activity.finish()
+            else -> Unit
         }
     }
 
@@ -1403,7 +1433,12 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                         navController.navigate(Screen.Feedback.createRoute(reportCrash = reportCrash)) {
                             launchSingleTop = true
                         }
-                    }
+                    },
+                    // Phase 49.2 — the exit prompt's second door (PART_49_2):
+                    // the same dialog, on demand, for the devices whose home
+                    // swipe never sends a back event. Not NOW state, no new
+                    // dialog: the host's one exitPromptVisible flips.
+                    onShowExitPrompt = { exitPromptVisible = true }
                 )
             }
             composable(Screen.Logs.route) {

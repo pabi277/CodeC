@@ -2,6 +2,7 @@ package com.codeci.ide.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.core.content.FileProvider
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -124,6 +125,10 @@ import com.codeci.ide.ui.projects.ProjectsHub
 import com.codeci.ide.ui.projects.WelcomeStarter
 import com.codeci.ide.ui.projects.WelcomeStarters
 import com.codeci.ide.ui.viewmodels.FileManagerViewModel
+import com.codeci.ide.ui.navigation.BackAction
+import com.codeci.ide.ui.navigation.BackRouter
+import com.codeci.ide.ui.navigation.BackState
+import com.codeci.ide.ui.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -203,6 +208,39 @@ fun FileManagerScreen(
         if (openAddSheet && !sheetArgConsumed) {
             sheetArgConsumed = true
             showHubSheet = true
+        }
+    }
+
+    // Phase 49.1 — the hub's file tree is ViewModel state (activeProject),
+    // not a navigation entry, so back at an open project used to fall
+    // through to the root handler and EXIT THE APP (owner 4.iv, hub half:
+    // *"After clicking 3 ber if user use back botton it will [close] the
+    // file view and show the editor not full app close"*). The router gives
+    // back a row for the tree: close it — the same closeProject() the
+    // breadcrumb's root runs — never the app. Sheets and dialogs own their
+    // own back (row 4 → None), and the list view (activeProject == null)
+    // leaves back to the root handler (pop / exit prompt).
+    val hubDialogOpen = showHubSheet || showActionsMenu || showCreateProject ||
+        showCreateItem || showCloneDialog || showZipNameDialog ||
+        renameTarget != null || deleteTarget != null ||
+        deleteProjectTarget != null || renameProjectTarget != null ||
+        gitSheetProject != null || branchSheetProject != null
+    val hubBackAction = BackRouter.decide(
+        BackState(
+            hubProjectOpen = activeProject != null,
+            sheetOrDialogOpen = hubDialogOpen
+        )
+    )
+    BackHandler(enabled = hubBackAction != BackAction.None) {
+        when (hubBackAction) {
+            BackAction.CloseHubProject -> {
+                AppLogger.i(
+                    "Back",
+                    "hub press closing project tree (activeProject=${activeProject?.name})"
+                )
+                viewModel.closeProject()
+            }
+            else -> Unit
         }
     }
 

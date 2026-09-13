@@ -99,7 +99,10 @@ class GuideWiringTest {
         val screen = source(guideScreen)
         assertFalse("the guide must not dismiss itself on a timer", screen.contains("delay("))
         assertFalse(screen.contains("LaunchedEffect"))
-        assertTrue(screen.contains("BackHandler { onFinished() }"))
+        // Phase 49.1 — the handler is router-driven now: back leaves the
+        // guide one level (the same onFinished SKIP runs), never the app.
+        assertTrue(screen.contains("BackRouter.decide(BackState(canPopRoute = true))"))
+        assertTrue(screen.contains("BackAction.PopRoute -> onFinished()"))
     }
 
     @Test

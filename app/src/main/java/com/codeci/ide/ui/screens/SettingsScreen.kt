@@ -110,7 +110,16 @@ fun SettingsScreen(
     onOpenGuide: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
     /** reportCrash=true is the crash-loop hand-off: feedback pre-ticks both attachments. */
-    onNavigateToFeedback: (reportCrash: Boolean) -> Unit = {}
+    onNavigateToFeedback: (reportCrash: Boolean) -> Unit = {},
+    /**
+     * Phase 49.2 — the exit prompt's SECOND DOOR: the same
+     * "Enjoying CodeC?" dialog the root back press shows, on demand. A
+     * tester whose device never surfaces the prompt (a gesture-nav home
+     * swipe sends no back event at all — PART_49_2 cause C) can still
+     * reach it, and the exit-survey funnel does not depend on which phone
+     * is in hand.
+     */
+    onShowExitPrompt: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val themeManager = remember { ThemeManager(context) }
@@ -1202,6 +1211,18 @@ fun SettingsScreen(
                 title = "Send feedback, rate, or report a bug",
                 actionText = "OPEN",
                 onClick = { onNavigateToFeedback(false) }
+            )
+            // Phase 49.2 — the exit prompt's SECOND DOOR (PART_49_2): the
+            // same dialog the back press at a root tab shows, on demand.
+            // Cause C is not fixable in code — a gesture-nav home swipe
+            // sends no back event — so the honest promise is "the prompt
+            // appears on every BACK press at the root" and this row is the
+            // compensation: a tester who never sees it can still open it.
+            // No new dialog, no new copy — the host shows the one dialog.
+            SettingsAction(
+                title = "Tell us before you go",
+                actionText = "SHOW",
+                onClick = { onShowExitPrompt() }
             )
             // Phase 42.3 §2 — the same [Send a report] the crash overlay
             // offers, reachable from Settings any time a crash record
