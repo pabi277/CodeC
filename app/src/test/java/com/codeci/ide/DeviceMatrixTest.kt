@@ -153,7 +153,7 @@ class DeviceMatrixTest {
         )
         val rest = text.substring(start + TEST_LOG_HEADING.length)
         val sectionEnd = rest.indexOf("\n## ").let { if (it < 0) rest.length else it }
-        return Regex("""^\|\s*([A-J]\d+)\s*\|""")
+        return Regex("""^\|\s*([A-J]\d+)\s*\|""", RegexOption.MULTILINE)
             .findAll(rest.substring(0, sectionEnd))
             .map { it.groupValues[1] }
             .toList()
@@ -231,55 +231,141 @@ class DeviceMatrixTest {
             .replace(Regex("""[^a-z0-9]+"""), " ")
             .trim()
 
-    /** Every string literal in `app/src/main`, with `"a " + "b"` runs joined. */
+    /** Every string literal in `app/src/main`, with `"a " + "b"` runs joined.
+     *
+     *  Hand-written on purpose: this reads every production source on every commit,
+     *  and the JVM regex engine recurses once per quantified step — the lazy
+     *  `[\s\S]*?` that used to sit here threw `StackOverflowError` in CI (run
+     *  `34751860341`). The rule is unchanged: a literal is `"…"` (escapes honoured,
+     *  so `\"` does not end it) or `"""…"""`, and consecutive literals whose gap is
+     *  only whitespace and `+` are ONE entry, because that is how a sentence is
+     *  written across lines in this codebase. */
     private fun kotlinLiterals(srcRaw: String): List<String> {
         val src = stripKotlinComments(srcRaw)
-        val literal = Regex("\"\"\"[\\s\\S]*?\"\"\"|\"(?:\\\\.|[^\"\\\\])*\"")
-        val out = mutableListOf<String>()
-        var group: StringBuilder? = null
-        var lastEnd = -1
-        for (m in literal.findAll(src)) {
-            val joined = lastEnd >= 0 && Regex("""[\s+]*""").matches(src.substring(lastEnd, m.range.first))
-            if (joined) {
-                group!!.append(' ').append(m.value)
-            } else {
-                group?.let { out += it.toString() }
-                group = StringBuilder(m.value)
+        val found = ArrayList<Triple<Int, Int, String>>()       // start, end, content
+        var i = 0
+        while (i < src.length) {
+            if (src.startsWith("\"\"\"", i)) {
+                val stop = src.indexOf("\"\"\"", i + 3)
+                if (stop < 0) {
+                    found += Triple(i, src.length, src.substring(i + 3))
+                    break
+                }
+                found += Triple(i, stop + 3, src.substring(i + 3, stop))
+                i = stop + 3
+                continue
             }
-            lastEnd = m.range.last + 1
+            if (src[i] == '"') {
+                val body = StringBuilder()
+                var j = i + 1
+                while (j < src.length && src[j] != '"') {
+                    if (src[j] == '\\' && j + 1 < src.length) {
+                        // keep the pair verbatim — normalize() is what unescapes
+                        body.append(src[j]).append(src[j + 1])
+                        j += 2
+                    } else {
+                        body.append(src[j])
+                        j++
+                    }
+                }
+                val end = (j + 1).coerceAtMost(src.length)
+                found += Triple(i, end, body.toString())
+                i = end
+                continue
+            }
+            i++
         }
-        group?.let { out += it.toString() }
+        val out = ArrayList<String>()
+        var run: StringBuilder? = null
+        var runEnd = -1
+        for ((start, end, text) in found) {
+            val joins = runEnd >= 0 && start >= runEnd &&
+                src.subSequence(runEnd, start).all { c ->
+                    c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '+'
+                }
+            val pending = run
+            if (joins && pending != null) {
+                pending.append(' ').append(text)
+            } else {
+                pending?.let { out += it.toString() }
+                run = StringBuilder(text)
+            }
+            runEnd = end
+        }
+        run?.let { out += it.toString() }
         return out
     }
 
     private fun mainKotlinFiles(): List<File> = RepoFiles.mainKotlinSources()
 
+    /** The `<string name="…">…</string>` resources as (name, value). A loop for the
+     *  same reason as `kotlinLiterals`, and it matches only real single strings —
+     *  `<string-array>` and `<plurals>` are skipped, because their `</string-array>`
+     *  would otherwise swallow the next entry. */
+    private fun stringResources(xml: String): List<Pair<String, String>> {
+        val out = ArrayList<Pair<String, String>>()
+        val name = Regex("name=\"([^\"]+)\"")
+        var i = 0
+        while (i < xml.length) {
+            val open = xml.indexOf("<string", i)
+            if (open < 0) break
+            val tagEnd = xml.indexOf('>', open)
+            val close = if (tagEnd < 0) -1 else xml.indexOf("</string>", tagEnd + 1)
+            if (tagEnd < 0 || close < 0) break
+            val tag = xml.substring(open, tagEnd)
+            if (tag != "<string>" && !tag.startsWith("<string ")) {
+                i = open + 7
+                continue
+            }
+            val resName = name.find(tag)?.groupValues?.get(1)?.lowercase() ?: ""
+            out += resName to xml.substring(tagEnd + 1, close)
+            i = close + 9
+        }
+        return out
+    }
+
     /** Normalized app strings: every production literal (joins included) + every resource value. */
     private fun corpus(): List<String> {
-        val entries = mutableListOf<String>()
+        val entries = ArrayList<String>()
         for (f in mainKotlinFiles()) entries += kotlinLiterals(f.readText()).map { normalize(it) }
         val xml = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
-        for (m in Regex("""<string name="[^"]+"[^>]*>([\s\S]*?)</string>""").findAll(xml)) {
-            val v = m.groupValues[1]
-                .replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+        for ((_, value) in stringResources(xml)) {
+            val v = value.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
                 .replace("&quot;", "\"")
             entries += normalize(v)
         }
         return entries.filter { it.isNotBlank() }
     }
 
-    /** Identifier words of the whole production tree — for one-word spans (`running`). */
+    /** Identifier words of the whole production tree — for one-word spans (`running`).
+     *  `strings.xml` contributes its resource NAMES only: a value is the corpus's job,
+     *  and letting it widen the word index would quietly weaken the one-word rule. */
     private fun wordIndex(): Set<String> {
-        val words = mutableSetOf<String>()
-        val word = Regex("""[A-Za-z][A-Za-z0-9_]*""")
-        for (f in mainKotlinFiles()) word.findAll(stripKotlinComments(f.readText()))
-            .forEach { words += it.value.lowercase() }
-        word.findAll(RepoFiles.mainSource("app/src/main/AndroidManifest.xml").readText())
-            .forEach { words += it.value.lowercase() }
-        Regex("name=\"([^\"]+)\"")
-            .findAll(RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText())
-            .forEach { words += it.groupValues[1].lowercase() }
+        val words = HashSet<String>()
+        for (f in mainKotlinFiles()) words += wordsIn(stripKotlinComments(f.readText()))
+        words += wordsIn(RepoFiles.mainSource("app/src/main/AndroidManifest.xml").readText())
+        val xml = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
+        words += stringResources(xml).mapNotNull { (resName, _) -> resName.ifBlank { null } }
         return words
+    }
+
+    /** `[A-Za-z][A-Za-z0-9_]*`, lowercased — a loop, for the reason in `kotlinLiterals`. */
+    private fun wordsIn(text: String): List<String> {
+        fun isLetter(c: Char) = c in 'a'..'z' || c in 'A'..'Z'
+        fun isPart(c: Char) = isLetter(c) || c in '0'..'9' || c == '_'
+        val out = ArrayList<String>()
+        var i = 0
+        while (i < text.length) {
+            if (isLetter(text[i])) {
+                var j = i + 1
+                while (j < text.length && isPart(text[j])) j++
+                out += text.substring(i, j).lowercase()
+                i = j
+            } else {
+                i++
+            }
+        }
+        return out
     }
 
     private fun isNonUi(span: String): Boolean {
