@@ -20,6 +20,7 @@ import com.codeci.ide.ui.editor.CaretBlinkPolicy
 import com.codeci.ide.ui.editor.CaretVisibilityPolicy
 import com.codeci.ide.ui.editor.EditorViewport
 import com.codeci.ide.ui.editor.GhostState
+import com.codeci.ide.ui.editor.IncrementalEdit
 import com.codeci.ide.ui.viewmodels.CompletionModel
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 import io.github.rosemoe.sora.event.EventReceiver
@@ -431,27 +432,54 @@ fun SoraEditorHost(
                     // Phase 27.1 — a full replay invalidates ghost anchors;
                     // the effect above repaints from the fresh VM state.
                     ed.setInlayHints(null)
-                    // 2026-09-06 (crash 2 follow-up, device round): ATOMIC
-                    // wholesale replacement. The old incremental delete-all +
-                    // insert dispatched afterDelete into sora's layout at a
-                    // moment it can legitimately be empty-handed:
-                    // createLayout() — run by setTextSize / setText /
-                    // wordwrap / inlay-renderer changes, i.e. by our own
-                    // config effects around a file open — rebuilds the
-                    // per-line width lists ASYNCHRONOUSLY (LineBreakLayout.
-                    // measureAllLines uses a TaskMonitor). A multi-line
-                    // delete in that window hits BlockIntList.removeRange
-                    // on an EMPTY list → IndexOutOfBoundsException
-                    // (reproduced in CI by EditorLaunchMeasureReproTest's
-                    // nav-transition case; the same mid-measure churn fed
-                    // the on-device detached-LayoutNode crash). setText
-                    // replaces the Content object wholesale — one
-                    // ACTION_SET_NEW_TEXT event, no incremental delete
-                    // dispatch — and rebuilds the layout AFTER the new
-                    // content is set. Our listener follows the Content
-                    // object, so re-attach it to the new instance.
-                    ed.setText(target.text)
-                    ed.text.addContentListener(contentListener)
+                    // Device round 2026-09-13 (owner: *"when i use app
+                    // dedicate keyboard and typing it's blinking the full
+                    // code"*): a small programmatic edit must NOT go through
+                    // setText. Every CodeC Keys keystroke / keys-row tap /
+                    // snippet / ghost accept landed here and setText (sora
+                    // 0.24.6, CodeEditor.java:3951) builds a NEW Content,
+                    // RESETS the analyzer (full re-tokenize — the colors
+                    // flash), rebuilds the layout asynchronously (big files
+                    // draw empty rows until the TaskMonitor lands), restarts
+                    // input and invalidates every render node — the whole
+                    // code blinking once per keystroke. The pure
+                    // IncrementalEdit plan turns the change into ONE
+                    // Content.replace — the same delta primitive normal
+                    // typing uses, applied incrementally by sora's layout
+                    // and analyzer. The atomic path below stays for the
+                    // first replay (known == null: the listener must follow
+                    // the new Content object), a formatter-sized rewrite,
+                    // replace-all, and any failure (the VM text is the
+                    // source of truth, so a wholesale setText is always a
+                    // safe recovery).
+                    val plan = if (known != null) IncrementalEdit.between(known, target.text) else null
+                    val appliedIncrementally = plan != null && runCatching {
+                        ed.text.replace(plan.start, plan.end, plan.replacement)
+                        true
+                    }.getOrDefault(false)
+                    if (!appliedIncrementally) {
+                        // 2026-09-06 (crash 2 follow-up, device round): ATOMIC
+                        // wholesale replacement. The old incremental delete-all +
+                        // insert dispatched afterDelete into sora's layout at a
+                        // moment it can legitimately be empty-handed:
+                        // createLayout() — run by setTextSize / setText /
+                        // wordwrap / inlay-renderer changes, i.e. by our own
+                        // config effects around a file open — rebuilds the
+                        // per-line width lists ASYNCHRONOUSLY (LineBreakLayout.
+                        // measureAllLines uses a TaskMonitor). A multi-line
+                        // delete in that window hits BlockIntList.removeRange
+                        // on an EMPTY list → IndexOutOfBoundsException
+                        // (reproduced in CI by EditorLaunchMeasureReproTest's
+                        // nav-transition case; the same mid-measure churn fed
+                        // the on-device detached-LayoutNode crash). setText
+                        // replaces the Content object wholesale — one
+                        // ACTION_SET_NEW_TEXT event, no incremental delete
+                        // dispatch — and rebuilds the layout AFTER the new
+                        // content is set. Our listener follows the Content
+                        // object, so re-attach it to the new instance.
+                        ed.setText(target.text)
+                        ed.text.addContentListener(contentListener)
+                    }
                     // Opening a file must not replay its default zero
                     // selection into a visible caret. A placed edit replays
                     // only when sora does not already hold that selection.
