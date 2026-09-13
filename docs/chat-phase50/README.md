@@ -1,6 +1,6 @@
 # CodeC Phase 50 — The cross-device round
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S (a day of
+> **Status:** 🚧 IN PROGRESS · **Started:** 2026-09-13 · **Cost:** `[docs + device validation]` · **Effort:** S (a day of
 > testing) + M (the bugs it finds) · **Owner rows it closes (verbatim):** *"A.
 > If the code is very big it's last line go under the keyboard…"*, *"B. My phone
 > showing the option when try to close… but in most phone no option"*, and the

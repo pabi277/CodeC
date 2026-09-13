@@ -1,10 +1,13 @@
 # Phase 50 — cross-device matrix (owner runbook)
 
-> **Branch:** `arena/01a094e5-codec` · **Functional round:** *TBD — filled in
-> when the phase's implementation commits exist* · **CI ✅ GREEN:** *TBD*
+> **Branch:** `arena/01a099b4-codec` · **Functional round:** *not yet run* · **CI ✅ GREEN:** *to be recorded after the docs validation build*
 > (`Build APK` run ID, per `rule.md` §3 — no runbook is worth anything on a red
-> build) · **Status:** 📋 PLANNED — the rows below are the *procedure*; the
+> build) · **Status:** 🚧 IN PROGRESS — the rows below are the procedure; the
 > results get pasted back into each part file's `## Test log`.
+>
+> **Started:** 2026-09-13. This phase adds no app behaviour. The agent has no
+> attached Android handset or emulator, so it must not invent device results;
+> the owner/device operator fills the result block in §Result format.
 >
 > Same rule as Phases 40 and 41 (`docs/chat-phase40/DEVICE_TEST_PLAN.md`,
 > `docs/chat-phase41/DEVICE_TEST_PLAN.md`): **every row has a "PASS looks like"
@@ -65,7 +68,7 @@ At least **class 1 and class 2** are mandatory; 3 and 4 if a device is at hand.
 
 | # | What to do | PASS looks like |
 |---|---|---|
-| C1 | Projects tab → **+** sheet | Rows: **New project**, **Import ZIP**, **Import file**, **Clone from URL** — and **no "Open folder"** row |
+| C1 | Projects tab → **+** sheet | Rows: **New project**, **Clone**, **Import ZIP** — and **no "Open folder"** row |
 | C2 | Projects tab → card ⋮ menu | Contains **Open in editor** (full project), plus the existing Source control / Switch branch / Pull / Push / Copy remote URL / Export / Share ZIP / Rename / Delete |
 | C3 | **Single tap a file** in an open project's tree | The **editor opens with that one file**; the status bar shows its **real path** (`~proj/…` style) |
 | C4 | Edit + save in that single-file editor, then go back | The file on disk changed; no whole-project load happened (no project tabs bar) |
