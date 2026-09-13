@@ -1571,17 +1571,31 @@ fun EditorScreen(
                             }
                         }
                     }
+                    // 2026-09-13 round (single-click law) — the TOUR's tap on
+                    // RUN ▶ performs the lesson ("Runs the open file") straight
+                    // away and never detours through the Phase 33 chooser: a
+                    // second screen between the box and the code is a second
+                    // tap the tour does not teach, the exact "one click closes
+                    // the box, next click does the thing" the owner reported.
+                    // A normal tap on RUN ▶ (onRunTap, above) keeps the chooser.
+                    val onGuideRunTap: () -> Unit = {
+                        if (editorChromeLocked) {
+                            showChromeLock()
+                        } else {
+                            runOpenFile()
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable(onClick = onRunTap)
                             .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
                             // Phase 45.2 — RUN ▶ is the 30-second loop; the
-                            // tour's fourth beat.
+                            // tour's fifth beat.
                             .then(
                                 GuideAnchor.modifier(
                                     GuideAnchors.EDITOR_RUN,
-                                    onClick = onRunTap
+                                    onClick = onGuideRunTap
                                 )
                             ),
                         verticalAlignment = Alignment.CenterVertically

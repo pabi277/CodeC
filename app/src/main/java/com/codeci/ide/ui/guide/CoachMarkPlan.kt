@@ -7,7 +7,7 @@ package com.codeci.ide.ui.guide
  * the next option only the guide will show click the option where showing the
  * guide to the next"*, then the flow spelled out:
  *
- * > ☰ → change the project folder to `demo_flask` → select `app.py` → RUN →
+ * > ☰ → the project name → `demo_flask` → `app.py` → RUN →
  * > Install (Python) → the Flask web page opens → close it → the "reveal the
  * > tabs" handle → a small tour of Packages and Terminal.
  *
@@ -47,10 +47,13 @@ package com.codeci.ide.ui.guide
  * Recorded limit (PART_45_2, deviation 9): a box cannot point into an
  * `AlertDialog`. Compose dialogs live in their own window, so `boundsInWindow()`
  * inside one is dialog-relative and an activity-window scrim would cut its hole
- * in the wrong place. Two of the owner's beats live in dialogs — the project
- * picker (the Open-folder dialog) and the Python `Install?` prompt — so those are taught
- * by the copy of the box before them (step 2 names `demo_flask`, step 4 names
- * **Install**) instead of by a hole in the scrim.
+ * in the wrong place. One beat still brushes a dialog — the Python `Install?`
+ * prompt, so step 5 names **Install** instead of pointing into the window.
+ * The Open-folder dialog two beats once pointed past is gone since Phase 47.1
+ * (the drawer's own PROJECTS list replaced it), and the 2026-09-13 round
+ * turned that old copy-only gap into a real beat on the demo row itself
+ * (DEMO_PICK), so every hop of the project chain — header → list → demo row →
+ * entry file — is its own single click.
  */
 
 /** Which screen teaches a step. Documentation and test vocabulary, not a gate. */
@@ -61,8 +64,17 @@ object GuideAnchors {
     /** The editor's ☰ (file tree + the project-name switcher). */
     const val EDITOR_DRAWER = "editor_drawer"
 
-    /** The drawer header's project name — tap it to switch projects. */
+    /** The drawer header's project name — tap it to drop down the projects list. */
     const val DRAWER_PROJECT = "drawer_project"
+
+    /**
+     * The PROJECTS row for the bundled demo itself. Round 1 (2026-09-13) — the
+     * owner: "give the demo_flask also a guide box after opening projects".
+     * Between this beat and beat 2 there used to be a gap with no box at all,
+     * which is exactly the two-tap feel he reported: one tap dropped the list
+     * down, then he had to find and tap `demo_flask` unguided.
+     */
+    const val DEMO_PICK = "drawer_demo_pick"
 
     /** The drawer's row for the demo project's entry file (`app.py`). */
     const val DRAWER_FILE = "drawer_file"
@@ -91,6 +103,7 @@ object GuideAnchors {
     val all: List<String> = listOf(
         EDITOR_DRAWER,
         DRAWER_PROJECT,
+        DEMO_PICK,
         DRAWER_FILE,
         EDITOR_RUN,
         PREVIEW_CLOSE,
@@ -184,21 +197,37 @@ object CoachMarkPlan {
             title = "Your files",
             body = "Tap \u2630 for the file tree and the project switcher.",
         ),
-        // 2 — "change the project folder to demo_flask". The picker itself is an
-        // AlertDialog (its own window), so the box names the destination instead
-        // of pointing at it. Its anchor is the drawer header in EVERY state
-        // (another project, the demo already, scratch mode), because the header
-        // always opens the picker: a beat that only exists in one project state
-        // is a beat a "1st to last" tour would have to skip.
+        // 2 — "change the project folder to demo_flask". The tap drops the
+        // drawer's own PROJECTS list down (Phase 47.1 retired the Open-folder
+        // dialog); the pick itself is the next beat, so the owner's single-
+        // click law holds at every hop — one tap, one lesson, tour moves.
+        // Its anchor is the drawer header in EVERY state (another project,
+        // the demo already, scratch mode), because the header always toggles
+        // the list: a beat that only exists in one project state is a beat a
+        // "1st to last" tour would have to skip.
         CoachStep(
             id = GuideAnchors.DRAWER_PROJECT,
             surface = GuideSurface.EDITOR,
             anchorId = GuideAnchors.DRAWER_PROJECT,
             title = "Change project",
-            body = "Tap the project name, then choose demo_flask \u2014 the Flask demo CodeC ships with.",
+            body = "Tap the project name to drop down the projects list.",
             inDrawer = true
         ),
-        // 3 — "selected app.py". Only ever published for the demo project's own
+        // 3 — the owner's 2026-09-13 row: "give the demo_flask also a guide
+        // box after opening projects". The row exists only while the list is
+        // down — which is exactly when this beat can be taught, so no extra
+        // gate is needed. EditorProjectDrawer publishes the row's own tap
+        // beside its rect, so dismissing this box IS the switch into the
+        // demo: the same single click as everywhere else in the tour.
+        CoachStep(
+            id = GuideAnchors.DEMO_PICK,
+            surface = GuideSurface.EDITOR,
+            anchorId = GuideAnchors.DEMO_PICK,
+            title = "Pick the demo",
+            body = "Tap demo_flask \u2014 the working demo CodeC ships with.",
+            inDrawer = true
+        ),
+        // 4 — "selected app.py". Only ever published for the demo project's own
         // entry file, so the box cannot land on some other row.
         CoachStep(
             id = GuideAnchors.DRAWER_FILE,
@@ -208,7 +237,7 @@ object CoachMarkPlan {
             body = "The demo's entry file. Tap it and it opens in the editor.",
             inDrawer = true
         ),
-        // 4 — "run -> install -> python". The Install? prompt is a dialog, so
+        // 5 — "run -> install -> python". The Install? prompt is a dialog, so
         // the box teaches the tap that leads to it and names the real button.
         CoachStep(
             id = GuideAnchors.EDITOR_RUN,
@@ -217,7 +246,7 @@ object CoachMarkPlan {
             title = "Run it",
             body = "Runs the open file. If Python is missing, tap Install \u2014 one download, one time.",
         ),
-        // 5 — "it will open the flusk web -> close".
+        // 6 — "it will open the flusk web -> close".
         CoachStep(
             id = GuideAnchors.PREVIEW_CLOSE,
             surface = GuideSurface.PREVIEW,
@@ -225,7 +254,7 @@ object CoachMarkPlan {
             title = "Your app is running",
             body = "Served by your own phone. Tap Back to close the preview and keep editing.",
         ),
-        // 6 — "tap to reveal the keyboard below option" (the owner's original
+        // 7 — "tap to reveal the keyboard below option" (the owner's original
         // row: "the tap to the open down side of the keyboard").
         CoachStep(
             id = GuideAnchors.NAV_HANDLE,
@@ -372,6 +401,7 @@ object CoachMarkPlan {
             r.startsWith("editor") -> bar + setOf(
                 GuideAnchors.EDITOR_DRAWER,
                 GuideAnchors.DRAWER_PROJECT,
+                GuideAnchors.DEMO_PICK,
                 GuideAnchors.DRAWER_FILE,
                 GuideAnchors.EDITOR_RUN
             )
@@ -481,6 +511,22 @@ object CoachMarkPlan {
         relativePath == demoEntryFile
     ) {
         GuideAnchors.DRAWER_FILE
+    } else {
+        null
+    }
+
+    /**
+     * The drawer's PROJECTS row the tour spotlights as beat 3: the bundled
+     * demo itself, and only it (2026-09-13 round). Same law as
+     * [drawerFileAnchor] — a box on some other project's row would teach the
+     * wrong tap. The demo's name is passed in (the caller reads it from
+     * `DemoProjects`) so this file stays free of file-system types.
+     */
+    fun drawerDemoPickAnchor(
+        contextName: String?,
+        demoProjectName: String
+    ): String? = if (contextName != null && contextName == demoProjectName) {
+        GuideAnchors.DEMO_PICK
     } else {
         null
     }
