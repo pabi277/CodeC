@@ -193,7 +193,7 @@ card) — three or four, one per surface, never a tour. Both layers are pure pla
 the re-open paths. The no-nag law holds: one tap skips, nothing returns unless
 asked. Specs: [`chat-phase45/`](chat-phase45/README.md).
 
-### Phase 46 — Projects, not folders 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`)
+### Phase 46 — Projects, not folders ✅ COMPLETE & MERGED (PR #78; device-approved "All working" 2026-09-13)
 
 **46.1 Remove "Open Folder" completely** — the `+`-sheet row, the SAF tree
 launcher, `importFolder`, `copyDocumentTree`/`copyDocumentChildren`, the two
@@ -208,7 +208,7 @@ source → first source, `ProjectEntryFile`). Pure parts: `EditorOpenMode`,
 save-writes-the-real-path money test), `EditorRouteCompatTest` ×4.
 Specs + implementation record: [`chat-phase46/`](chat-phase46/README.md).
 
-### Phase 47 — Editor chrome that behaves 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`)
+### Phase 47 — Editor chrome that behaves ✅ COMPLETE & MERGED (PR #78; device-approved "All working" 2026-09-13)
 
 **47.1 The drawer:** a visible ✕ (38 dp, header end) whose only job is close,
 the interim `BackHandler(enabled = drawerState.isOpen)` (49's router folds it

@@ -1,6 +1,6 @@
 # CodeC Phase 47 — Editor chrome that behaves
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`, owner:
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`, owner:
 > "Start phase 46 and 47"; CI = executor of record, device round pending) ·
 > **Cost:**
 > `[client-only]` · **Effort:** M · **Owner rows (verbatim):**
@@ -18,8 +18,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [47.1](PART_47_1_DRAWER.md) | Closable drawer + in-drawer project picker | M | 🚧 IMPLEMENTED |
-| [47.2](PART_47_2_KEYBOARD_DEFAULT.md) | System keyboard by default | S | 🚧 IMPLEMENTED |
+| [47.1](PART_47_1_DRAWER.md) | Closable drawer + in-drawer project picker | M | ✅ MERGED |
+| [47.2](PART_47_2_KEYBOARD_DEFAULT.md) | System keyboard by default | S | ✅ MERGED |
 
 **CI round 1 🔴 for-cause (run `34734918994`, commit `f72d859`):** three
 `Unresolved reference 'assertEquals'` compile errors — `DrawerPolicyTest` and

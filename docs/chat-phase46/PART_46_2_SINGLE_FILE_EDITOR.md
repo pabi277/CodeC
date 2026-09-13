@@ -1,6 +1,6 @@
 # CodeC Phase 46.2 — One file is one file; the project is an explicit action
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`, owner:
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`, owner:
 > "Start phase 46 and 47"; CI = executor of record, device round pending) ·
 > **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"file single click to open in a editor screen with

@@ -1,6 +1,6 @@
 # CodeC Phase 47.2 — The system keyboard is the default; CodeC Keys is an opt-in
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`; CI =
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`; CI =
 > executor of record, device round pending) · **Cost:** `[client-only]` ·
 > **Effort:** S ·
 > **Owner row (verbatim):** *"System keyboard make default user can change to app

@@ -1,6 +1,6 @@
 # CodeC Phase 46 — Projects, not folders
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`, owner:
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`, owner:
 > "Start phase 46 and 47"; CI = executor of record, device round pending) ·
 > **Cost:** `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"The project have
 > a feature open a folder (phase 43, incomplete) i want to remove it completely
@@ -16,8 +16,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [46.1](PART_46_1_REMOVE_OPEN_FOLDER.md) | Delete the folder-import feature | S | 🚧 IMPLEMENTED |
-| [46.2](PART_46_2_SINGLE_FILE_EDITOR.md) | Single-file editor + "Open in editor" | M | 🚧 IMPLEMENTED |
+| [46.1](PART_46_1_REMOVE_OPEN_FOLDER.md) | Delete the folder-import feature | S | ✅ MERGED |
+| [46.2](PART_46_2_SINGLE_FILE_EDITOR.md) | Single-file editor + "Open in editor" | M | ✅ MERGED |
 
 **CI round 2 🔴 for-cause (run `34735166887`, commit `81ca938`):** one test
 failure, and it was in the PIN, not the product —

@@ -1,6 +1,6 @@
 # CodeC Phase 46.1 — "Open Folder" removed completely
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`, owner:
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`, owner:
 > "Start phase 46 and 47"; CI = executor of record, device spot-check pending)
 > · **Cost:** `[client-only]` · **Effort:** S ·
 > **Owner row (verbatim):** *"The project have a feature open a folder (phase 43,

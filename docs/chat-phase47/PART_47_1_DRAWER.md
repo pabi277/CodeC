@@ -1,6 +1,6 @@
 # CodeC Phase 47.1 — A drawer you can always close, with the project list inside it
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`; CI =
+> **Status:** ✅ COMPLETE & MERGED via PR #78 (2026-09-13; device rounds 1-2 owner-approved "All working"; implemented 2026-09-12, `arena/01a097b5-codec`; CI =
 > executor of record, device round pending) · **Cost:** `[client-only]` ·
 > **Effort:** M ·
 > **Owner rows:** *"the file ber can't close without opening any file"* ·
