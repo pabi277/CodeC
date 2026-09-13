@@ -1770,3 +1770,4 @@ that is the "open it and go" action.
 project header) → the list drops down → tap demo_flask → the drawer STAYS,
 showing demo_flask's tree with demo_flask marked → beat 3 (tap app.py) closes
 the drawer as before.
+Fix build: CI ✅ GREEN `34737610972` — test on that build.

@@ -270,3 +270,5 @@ no-op kept) · `GuideWiringTest` pick pin rewritten (switchContext stays the
 one code path; NO close call after the switch; the guard and its predictor
 pinned gone) · the `nextBeatIsInDrawer` CoachMarkPlanTest case removed with
 its function. `step.inDrawer` stays (nextStep/remaining still use it).
+
+**Device-round-2 fix CI ✅ GREEN: run `34737610972` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug` (the owner's re-round build).**
