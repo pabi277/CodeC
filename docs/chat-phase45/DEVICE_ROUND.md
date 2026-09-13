@@ -36,7 +36,7 @@
 >
 > **If you already ran round 1 or 2 on this phone:** the beats you saw keep their
 > ids, so an upgraded install shows only the beats you never reached. Tap **Reset
-> tips** first and the whole tour starts at 1 of 10 — that is the way to test this
+> tips** first and the whole tour starts at 1 of 11 — that is the way to test this
 > round.
 
 ## Before you start
@@ -48,7 +48,7 @@
    [`../chat-phase44/DEVICE_ROUND.md`](../chat-phase44/DEVICE_ROUND.md) (R1-R8,
    then D1-D12) and are still pending.
 2. **The tour needs `demo_flask`.** It is seeded on first list and **re-seeded
-   whenever it is missing** (row G25), because beats 2-3 teach it by name.
+   whenever it is missing** (row G25), because beats 3-4 teach the demo and its entry file by name.
 3. **Waiting is silent, and that is the design.** While a beat's control is not on
    screen the tour draws *nothing* — no scrim, no card — and the app works normally.
    The box appears the moment the control does. Round 2 instead walked on to a later
@@ -76,33 +76,33 @@
 | G7 | Projects tab → ⋮ → **Guide** | Same guide, same behaviour (with a project open *and* with none) |
 | G8 | Editor → ☰ → footer → **Guide** | Same guide; the drawer's footer row is labelled **Guide** with a book icon |
 
-## The rows — 45.2, the tour (round 3: ten beats, no skip, a close at the end)
+## The rows — 45.2, the tour (round 7: eleven beats, no skip, a close at the end)
 
 Walk it in order; the counter on each card tells you where you are. **No card in this
 section has a button on it** — that is the point of the round.
 
 | # | What to do | PASS looks like |
 |---|---|---|
-| G9 | After the slides, arrive at the **Editor** | **Tour · 1 of 10** — a dark scrim, a hole exactly around **☰**, a card beside it: *Your files*. The card has **no button at all**: no SKIP TOUR, no NEXT, no GOT IT |
-| G10 | Tap the highlighted **☰** | The drawer opens (its own action) **and** the box moves on its own to the project name: **2 of 10** *Change project*. This box appears whatever is open — another project, `demo_flask` already, or scratch mode |
-| G11 | Tap the project name, then choose **demo_flask** | The "Open folder" picker opens with **no box cut into it** (a dialog is its own window — the tour teaches it in copy instead). After choosing, **the drawer reopens by itself** and **3 of 10** *Open app.py* is already on the `app.py` row — no second ☰ tap, no silence |
-| G12 | Tap `app.py`, then tap the highlighted **RUN ▶** (**4 of 10**) | `app.py` opens in the editor; RUN ▶ runs it. Its card says *Runs the open file. If Python is missing, tap **Install** — one download, one time.* |
-| G13 | If the *Install Python?* prompt appears, tap **Install** | The prompt has **no box over it**; the install streams into the Output Panel. **During the install no box appears and beat 5 is NOT skipped** — the tour waits for the preview (round 2 would have walked past it) |
-| G14 | Let the run finish and the Flask preview open | **5 of 10** *Your app is running* on the preview's **Back** arrow. Tapping it closes the preview (its own action) and the tour carries on |
-| G15 | Back in the editor, look at the bottom | **6 of 10** *The tabs are here* — on the **whole tab bar** while the bar is visible, or on the thin reveal handle if the keyboard is hiding it. Both are the same beat: *"Five tabs, one tap away. They hide while you type — tap this handle to bring them back."* (round 4: the copy says **tap**, because while a box is up a swipe is not a tap — see G32) |
-| G16 | Tap inside that hole (a tab, or the handle) | The bar does its own job (navigate / reveal) **and** the tour advances: **7 of 10** *Packages* on the **Packages tab itself**. Tap it → the Packages tab opens |
-| G17 | On the Packages tab | **8 of 10** *One-time download* on the first install card |
-| G18 | Continue | **9 of 10** *Terminal* on the **Terminal tab** → tap it → **10 of 10** *What it is doing* on the terminal's status chip → tap it |
-| G19 | After the tenth tap | **The finish card**: a dim backdrop, `Tour · 10 of 10`, *That is the whole tour*, one line of summary, and the tour's only two buttons — **VIEW AGAIN** and **CLOSE** (owner: *"At the end option to close and view again"*) |
+| G9 | After the slides, arrive at the **Editor** | **Tour · 1 of 11** — a dark scrim, a hole exactly around **☰**, a card beside it: *Your files*. The card has **no button at all**: no SKIP TOUR, no NEXT, no GOT IT |
+| G10 | Tap the highlighted **☰** | The drawer opens (its own action) **and** the box moves on its own to the project name: **2 of 11** *Change project*. This box appears whatever is open — another project, `demo_flask` already, or scratch mode |
+| G11 | Tap the project name, then **demo_flask** in the list that drops down | Tapping the header **drops the drawer's own PROJECTS list down** (the Open-folder dialog is retired since Phase 47.1) and **3 of 11** *Pick the demo* is already on the **demo_flask row** — the 2026-09-13 box the owner asked for. Tap the row: the switch happens behind the drawer (the list stays down, the tree refreshes) **and** **4 of 11** *Open app.py* is already on the `app.py` row — no unguided tap anywhere on the chain |
+| G12 | Tap `app.py`, then tap the highlighted **RUN ▶** (**5 of 11**) | `app.py` opens in the editor; RUN ▶ runs it. Its card says *Runs the open file. If Python is missing, tap **Install** — one download, one time.* |
+| G13 | If the *Install Python?* prompt appears, tap **Install** | The prompt has **no box over it**; the install streams into the Output Panel. **During the install no box appears and the preview beat is NOT skipped** — the tour waits for the preview (round 2 would have walked past it) |
+| G14 | Let the run finish and the Flask preview open | **6 of 11** *Your app is running* on the preview's **Back** arrow. Tapping it closes the preview (its own action) and the tour carries on |
+| G15 | Back in the editor, look at the bottom | **7 of 11** *The tabs are here* — on the **whole tab bar** while the bar is visible, or on the thin reveal handle if the keyboard is hiding it. Both are the same beat: *"Five tabs, one tap away. They hide while you type — tap this handle to bring them back."* (round 4: the copy says **tap**, because while a box is up a swipe is not a tap — see G32) |
+| G16 | Tap inside that hole (a tab, or the handle) | The bar does its own job (navigate / reveal) **and** the tour advances: **8 of 11** *Packages* on the **Packages tab itself**. Tap it → the Packages tab opens |
+| G17 | On the Packages tab | **9 of 11** *One-time download* on the first install card |
+| G18 | Continue | **10 of 11** *Terminal* on the **Terminal tab** → tap it → **11 of 11** *What it is doing* on the terminal's status chip → tap it |
+| G19 | After the eleventh tap | **The finish card**: a dim backdrop, `Tour · 11 of 11`, *That is the whole tour*, one line of summary, and the tour's only two buttons — **VIEW AGAIN** and **CLOSE** (owner: *"At the end option to close and view again"*) |
 | G20 | Tap **CLOSE** | The card goes and **nothing returns**: no box on any tab, and after kill + relaunch still none (the beats are recorded, one per tap) |
-| G21 | Instead, tap **VIEW AGAIN** | The card goes, the app **navigates to the Editor**, and the tour restarts at **1 of 10** on ☰ — all ten beats, nothing remembered |
+| G21 | Instead, tap **VIEW AGAIN** | The card goes, the app **navigates to the Editor**, and the tour restarts at **1 of 11** on ☰ — all eleven beats, nothing remembered |
 | G22 | Relaunch after G21's replay, mid-tour | **No finish card greets you.** The card is earned by watching a tour end, not by a preference — an install that starts complete never sees it |
 | G23 | On any box, tap **outside** the hole | **Nothing happens.** The box stays exactly as it was, and the tap does NOT reach the UI under the scrim (owner: *"even tap outside will not end that box"*) |
 | G24 | On any box, press the **back button** | You navigate away as normal (editor → hub) and **no box follows you**. Come back to the editor: the **same beat, same number** — Back pauses a tour, it cannot cut one, and nothing was spent |
 | G25 | Projects tab → ⋮ on **demo_flask** → Delete | It is **back on the next list refresh** (pull to refresh, or leave and return to the tab). A demo you edit is never touched — only a missing one is re-seeded |
 | G26 | While a box is pending, open an editor dialog (⋮ menu, Save to project, Go to line, the Install? prompt) | **No box is drawn under the dialog.** It comes back when the dialog closes, on the same beat (nothing was consumed) |
-| G27 | Settings → About → **Reset tips** → kill → relaunch | The slides return **and** the tour restarts at **1 of 10**. No project, file, theme or other setting changed |
-| G28 *(optional, 20 s)* | At G11, choose **some other project** instead of `demo_flask` | Beat 3 cannot exist (its row is `demo_flask/app.py`), so the tour waits about **20 seconds** and then teaches **4 of 10** on RUN ▶. Beat 3 is *owed, not spent*: it returns on the next launch, or via Reset tips |
+| G27 | Settings → About → **Reset tips** → kill → relaunch | The slides return **and** the tour restarts at **1 of 11**. No project, file, theme or other setting changed |
+| G28 *(optional, ~40 s)* | At G11, choose **some other project** instead of `demo_flask` | Beats 3 and 4 cannot exist on another project's tree — no `demo_flask` row, no demo `app.py` row. The tour waits ~**20 s**, passes beat 3 *owed, not spent*, waits ~**20 s** more, passes beat 4 the same way, and then teaches **5 of 11** on RUN ▶. Both return on the next launch, or via Reset tips |
 
 ## The rows — rounds 4, 5 and 6 (one tap does both halves; an install pauses the app, instantly, and releases by itself)
 
@@ -114,17 +114,17 @@ are round 5's** *"still it late user can switch before the start of userland dow
 because is takes a little time to connect and user can switch task between them / Make
 it instantly after 1st open and others are ok"*; **G41 is round 6's** *"even after
 unpacking the userland it still stay lock if i refresh it it's the open the editor"*.
-Walk G29-G33 on the same tour as G9-G19 — they are the same ten beats, tapped once each.
+Walk G29-G33 on the same tour as G9-G19 — they are the same eleven beats, tapped once each.
 G34, G38, G39 and G41 want a **fresh install**: they are about the first seconds and the
 last one.
 
 | # | What to do | PASS looks like |
 |---|---|---|
-| G29 | On **1 of 10**, tap the highlighted **☰** ONCE | The drawer opens **and** the box is already **2 of 10** on the project name — one tap, both halves. Round 3 needed a second tap for the drawer |
-| G30 | Continue with ONE tap per beat: project name → `demo_flask` → `app.py` → **RUN ▶** | Each tap does its own work *and* moves the counter: the picker opens, `app.py` opens in the editor, RUN ▶ runs (its Output Panel opens). **Nothing runs twice** — one `$ python app.py`, one file opened, no double toast |
-| G31 | On **6 of 10** with the **whole bar** lit, tap the **Packages tab** inside the hole | The Packages tab opens **and** the tour advances to **7 of 10**. Then tap a tab the tour does NOT use (Projects, Editor, Settings) while a bar-wide box is up: **that tab opens** (the tap is left to it) and the tour still advances |
-| G32 | On **6 of 10** with the thin **handle** lit (keyboard up), TAP it, then SWIPE it up | The tap reveals the bar **and** advances. A swipe while the box is up does **nothing at all** — the box stays, no beat is spent — and the card's copy tells you to tap, not swipe. With the tour over, the swipe works as it always did |
-| G33 | On **8 of 10** (the Packages card), start a scroll **inside** the hole and drag out | **Nothing happens**: no install starts, the box stays on the same beat. Only a tap performs the card's button. If Python is already installed, the card publishes no click at all — the tap behaves like an ordinary tap on the card and the tour advances |
+| G29 | On **1 of 11**, tap the highlighted **☰** ONCE | The drawer opens **and** the box is already **2 of 11** on the project name — one tap, both halves. Round 3 needed a second tap for the drawer |
+| G30 | Continue with ONE tap per beat: project name → `demo_flask` → `app.py` → **RUN ▶** | Each tap does its own work *and* moves the counter: the list drops, the switch lands behind the drawer, `app.py` opens in the editor, RUN ▶ runs (its Output Panel opens). **Nothing runs twice** — one `$ python app.py`, one file opened, no double toast |
+| G31 | On **7 of 11** with the **whole bar** lit, tap the **Packages tab** inside the hole | The Packages tab opens **and** the tour advances to **8 of 11**. Then tap a tab the tour does NOT use (Projects, Editor, Settings) while a bar-wide box is up: **that tab opens** (the tap is left to it) and the tour still advances |
+| G32 | On **7 of 11** with the thin **handle** lit (keyboard up), TAP it, then SWIPE it up | The tap reveals the bar **and** advances. A swipe while the box is up does **nothing at all** — the box stays, no beat is spent — and the card's copy tells you to tap, not swipe. With the tour over, the swipe works as it always did |
+| G33 | On **9 of 11** (the Packages card), start a scroll **inside** the hole and drag out | **Nothing happens**: no install starts, the box stays on the same beat. Only a tap performs the card's button. If Python is already installed, the card publishes no click at all — the tap behaves like an ordinary tap on the card and the tour advances |
 | G34 | Fresh install (or Terminal → ⬇ to repair), stay on the **Terminal** tab while it downloads/unpacks | The other four tabs are **dimmed with a small 🔒** on each, **already at the first frame** — before any percentage exists (round 5). The sentence arrives by itself as the app opens: first *"Hang tight — CodeC is getting ready to set up its Linux tools. Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step."*, then the download's own version with the moving *(NN %)*. The **Terminal tab stays open**, and the setup bar keeps the percentage. When the unpack finishes the four tabs **unlock by themselves, in that same session** — no restart, no refresh (round 6) |
 | G35 | During that pause, tap **Projects**, **Editor**, **Packages** and **Settings** | Each shows the same sentence and **does not navigate** — you stay on the Terminal. No box from the tour appears either (the tour pauses with the chrome), and it comes back on the same beat once the setup settles |
 | G36 | In the editor, RUN ▶ a Python file → **Install** | The install streams into the Output Panel; **Projects / Packages / Settings / Terminal are paused** with *"Hang tight — CodeC is installing what you asked for … The Output panel shows every step."*, while the **Editor stays open** (that is where the panel is). ☰ and RUN ▶ show the same sentence instead of acting, and the drawer's edge swipe is dead. When the install finishes, **everything unlocks by itself** and the Flask run/preview continues |
@@ -179,11 +179,11 @@ the useful detail is **which number it stopped on and what was on screen**.
 
 ```text
 45.1  rows G1-G8    (guide once, never again, three doors, upgrade path)
-45.2  rows G9-G28   (ten beats in order and nothing skipped, no button on a tour
+45.2  rows G9-G28   (eleven beats in order and nothing skipped, no button on a tour
                      card, the control is the only way on, outside taps inert,
-                     Back pauses without spending, the drawer reopens after the
-                     project pick, beat 6 has a target whether the bar is hidden
-                     or not, the finish card with VIEW AGAIN + CLOSE, no box
+                     Back pauses without spending, a project pick never closes
+                     the drawer (46/47 round 2), beat 7 has a target whether
+                     the bar is hidden or not, the finish card with VIEW AGAIN + CLOSE, no box
                      behind a dialog or a closed drawer, demo_flask always
                      present, Reset tips restarts everything)
 r4    rows G29-G38  (ONE tap per beat does both halves and nothing fires twice,

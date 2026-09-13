@@ -20,7 +20,7 @@ import org.junit.rules.TemporaryFolder
  * **Phase 45 device round (2026-09-12) changed one law here.** The owner: *"make
  * it like demo_flask is always present so whatever user chose to start guide the
  * user to start the demo project from the editor only"*. The guided tour teaches
- * this project BY NAME (beat 2 "choose demo_flask", beat 3 "Open app.py"), so a
+ * this project BY NAME (beat 3 "Pick the demo", beat 4 "Open app.py"), so a
  * demo the user once deleted would make the tour point at a row that does not
  * exist. The seed is therefore no longer once-per-install: a missing
  * `demo_flask` is seeded again, the marker file survives only as a record of the

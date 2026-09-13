@@ -56,13 +56,24 @@ class DrawerWiringTest {
 
     @Test
     fun `Back closes the drawer inside the editor`() {
+        // Phase 49.1 — 47.1's interim one-line handler is FOLDED INTO the
+        // BackRouter (one table for every back press in the app); the pin
+        // moves with it: the editor's handler still closes the drawer and
+        // still routes through the one close callback with BACK, but the
+        // DECISION now comes from BackRouter.decide (pinned mechanically by
+        // BackHandlerWiringTest — every handler in the app is either the
+        // root or router-driven).
         assertTrue(
-            "the interim BackHandler must close the drawer while it is open",
-            editor.contains("BackHandler(enabled = drawerState.isOpen)")
+            "the editor's handler must close the drawer through the router",
+            editor.contains("BackAction.CloseEditorDrawer -> closeDrawer(DrawerCloseReason.BACK)")
         )
         assertTrue(
-            "the handler must route through the one close callback (BACK)",
-            editor.contains("closeDrawer(DrawerCloseReason.BACK)")
+            "the drawer row must key on targetValue (a back press inside the open animation still closes)",
+            editor.contains("editorDrawerOpen = drawerState.targetValue == DrawerValue.Open")
+        )
+        assertTrue(
+            "the one close callback must ask the policy with the same targetValue semantics",
+            editor.contains("DrawerPolicy.shouldClose(reason, drawerState.targetValue == DrawerValue.Open)")
         )
     }
 

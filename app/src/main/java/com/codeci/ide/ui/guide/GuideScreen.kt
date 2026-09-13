@@ -28,6 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.codeci.ide.ui.navigation.BackAction
+import com.codeci.ide.ui.navigation.BackRouter
+import com.codeci.ide.ui.navigation.BackState
 
 /**
  * Phase 45.1 — the five-slide first-run guide, and the same screen the three
@@ -56,7 +59,18 @@ fun GuideScreen(
     val index = GuidePlan.resume(savedIndex)
     val slide = GuidePlan.at(index) ?: GuidePlan.slides.last()
 
-    BackHandler { onFinished() }
+    // Phase 49.1 — back leaves the guide one level (the same onFinished SKIP
+    // runs), decided by the ONE back table instead of an always-on ad-hoc
+    // handler. The guide is a full-screen surface above the shell, so the
+    // honest row is PopRoute: one level out, never the app (rows 7-9 are
+    // root-only fields this screen never fills).
+    val guideBackAction = BackRouter.decide(BackState(canPopRoute = true))
+    BackHandler(enabled = guideBackAction != BackAction.None) {
+        when (guideBackAction) {
+            BackAction.PopRoute -> onFinished()
+            else -> Unit
+        }
+    }
 
     Column(
         modifier = modifier

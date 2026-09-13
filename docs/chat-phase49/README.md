@@ -1,6 +1,10 @@
 # CodeC Phase 49 — Back does the obvious thing, everywhere
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
+> **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner: "Start
+> phase 48 and 49"; CI ✅ GREEN `34740245825` tip `a592295` — round 1 red
+> for-cause: one stale Phase-41 wiring pin in `ExitSurveyTest`, moved with its
+> reason; the ten-check device round pending — the diagnostic log ships in the
+> build) · **Cost:**
 > `[client-only]` · **Effort:** M · **Owner rows (verbatim):**
 > *"iv. After clicking 3 ber if user use back botton it will [close] the file
 > view and show the editor not full app close"* · *"B. My phone showing the
@@ -19,8 +23,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [49.1](PART_49_1_BACK_ROUTER.md) | The back router (policy + wiring) | M | 📋 PLANNED |
-| [49.2](PART_49_2_EXIT_PROMPT_CONSISTENCY.md) | Exit prompt on every device, or nowhere | S/M | 📋 PLANNED |
+| [49.1](PART_49_1_BACK_ROUTER.md) | The back router (policy + wiring) | M | 🚧 IMPLEMENTED |
+| [49.2](PART_49_2_EXIT_PROMPT_CONSISTENCY.md) | Exit prompt on every device, or nowhere | S/M | 🚧 IMPLEMENTED |
 
 ---
 
@@ -40,7 +44,7 @@ Only **two** `BackHandler` call sites exist in the whole app
 | 6 | Web Preview / Logs / Feedback | `onNavigateBack` → `popBackStack()` | `MainActivity.kt:1013,1101,1136` | ✅ |
 | 7 | Hub `+` sheet / git sheet / branch sheet | Material3 `ModalBottomSheet` defaults | `FileManagerScreen.kt:1062,1044,1053` | ⚠️ unverified per device |
 | 8 | Editor ⋮ dropdown / card ⋮ dropdown | `DropdownMenu` default (closes) | `EditorScreen.kt:1071`, `FileManagerScreen.kt:1360` | ✅ |
-| 9 | Coach mark (Phase 45.2) | must close the mark | new | ✅ by design (pinned in the router) |
+| 9 | Coach mark (Phase 45.2) | Back navigates normally — the tour waits at the same beat, unspent | 45.2 rounds 2-3 (owner: no skip; GuideWiringTest pins it) | ✅ corrected 2026-09-13: the spec's `CloseCoachMark` row was NOT built — the later owner law wins (PART_49_1 deviation 1) |
 | 10 | Crash overlay / safe-mode banner | overlay owns it; safe mode never shows the exit prompt | `MainActivity.kt:338` (`CrashReportOverlay`), `:857-859` (`SafeModeBanner`), `:804` (the safe-mode branch) | ✅ |
 
 **Rows 4 and 5 are the owner's bugs. Row 2 is 5.B's mechanism.** The rest are

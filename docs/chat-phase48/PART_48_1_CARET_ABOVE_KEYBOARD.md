@@ -1,6 +1,11 @@
 # CodeC Phase 48.1 — `CaretVisibilityPolicy` + one call to sora
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner:
+> "Start phase 48 and 49"; CI ✅ GREEN `34740245825` tip `a592295` — round 1
+> red for-cause, one stale Phase-41 pin in `ExitSurveyTest`, moved with its
+> reason; device round pending — the eight checks at the bottom of the phase
+> README are the round) ·
+> **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"If the code is very big it's last line go under the
 > keyboard, when i use a suggestion it go down and hide behind the keyboard"*
 
@@ -152,3 +157,86 @@ The eight device checks in the phase README. The two that matter most:
   wrong for a collapsed caret at the end of a long line and no better otherwise;
   `ensurePositionVisible(line, column)` is the precise one.
 - **Waiting for a sora fix** — the API is public and already used elsewhere.
+
+## Implementation (2026-09-13)
+
+**New pure code (host-tested):** `ui/editor/CaretVisibilityPolicy.kt` —
+`EditorViewport` (`heightPx`, the five chrome booleans, `fontSizeSp`, plus
+`normalised()`) and `CaretVisibilityPolicy` (`KEEP_LINES_BELOW = 1`,
+`RESCROLL_DEBOUNCE_MS = 90`, `owesRescroll`, `debounceMs`). The spec's
+decision shape kept exactly: **the policy keys on the box's height (and font
+size) only** — the booleans are the causes, the height is the effect, and
+only the effect can hide the caret, so a future chrome row is covered without
+touching this file. `previous == null` never owes (the Phase 35.4
+quiet-on-open state is a law this policy must not break).
+
+**The Android edge (ONE owner):** `SoraEditorHost` — the app's single
+`ensurePositionVisible(` call site (pinned by `CaretCallSiteTest`):
+
+- `Modifier.onSizeChanged` on the sora `AndroidView` builds the viewport
+  snapshot, asks `owesRescroll`, and schedules
+  `ensurePositionVisible(editor.cursor.left().line, .column, noAnimation =
+  true)` through one `scheduleCaretRescroll(line, column, delayMs)` helper —
+  `postDelayed` (never inline: inside `onSizeChanged` sora still holds the
+  OLD layout metrics), cancel-and-replace coalescing (the IME animation
+  reports many sizes; the pending task is removed before the next is posted),
+  and `runCatching` (the editor can be mid-`release()` when a late size
+  change lands — a cosmetic call must never kill the app).
+- The five chrome facts arrive as new `SoraEditorHost` params
+  (`imeVisible`, `codecKeysVisible`, `stripVisible`, `outputExpanded`,
+  `statusVisible`), passed by `EditorScreen` from the same states its own
+  chrome rows read (`statusVisible` is the exact condition of the status
+  bar's `if`).
+
+**The suggestion half of 5.A — one deviation, recorded.** The spec attributed
+"accept a suggestion and it goes down" to the strip re-render (a height
+change). That is not always true: accepting a ghost/chip usually swaps row
+for row at constant height, so a height-only policy would miss the owner's
+second sentence. The fix rides the SAME single owner: both VM→sora replay
+paths (the batch replay that applies a new selection, and the selection-only
+replay) schedule `scheduleCaretRescroll(endPos.line, endPos.column, 0L)`
+after they set the selection — sora auto-scrolls on ITS OWN edits
+(`CAUSE_MAKE_POSITION_VISIBLE`) and a replayed batch is not one; typing
+echoes still hit the reference-equality fast path and never schedule; the
+quiet-on-open branch (`!caretPlaced` → `clearFocus`) stays scroll-free.
+`CaretCallSiteTest` pins exactly two such schedule sites so a third caller
+cannot grow outside the one owner. CodeC Keys typing now behaves like
+sora-native typing (caret kept visible per commit), which is the same
+contract sora itself implements for user edits; find-next/quick-fix/trackpad
+caret moves gain "the caret comes into view", which they never had.
+
+**Exit condition status:** the eight device checks in the phase README are
+the owner's round (run them with the SYSTEM keyboard — the 47.2 default —
+and with CodeC Keys). The automated halves run in CI:
+`CaretVisibilityPolicyTest` (the five triggers both directions, the
+narrowness pin — every boolean flipping at constant height owes nothing —
+the font-size row, the debounce split, the constants),
+`ViewportSnapshotTest` (reachable combinations distinct; the
+CodeC-Keys/IME exclusivity normalised, not represented twice),
+`CaretCallSiteTest` (one `ensurePositionVisible(` in `app/src/main`, in
+`SoraEditorHost.kt`, scheduled post-layout, `runCatching`, noAnimation; the
+screen hands over the chrome facts). Real pixel positions after a real IME
+animation are deliberately NOT unit-tested — that is Phase 50's device
+matrix, as planned.
+
+## Device round (2026-09-13) — *"when i use app dedicate keyboard and typing it's blinking the full code"*
+
+The owner confirmed the caret fix and reported a second, bigger sora-host
+bug: with **CodeC Keys** up (opt-in — the system keyboard is the default
+since 47.2), every keystroke blinked the WHOLE code. This part's rescroll
+was ruled out first (evidence, not guesswork): sora 0.24.6's
+`ensurePositionVisible(line, column, noAnimation)` early-returns with a
+bare `invalidate()` when the target is within 1 px (CodeEditor.java:2287),
+so the per-keystroke caret-follow never scrolls a visible caret.
+
+The real mechanism was the replay path itself: every programmatic edit
+(CodeC Keys keystroke, keys-row tap, snippet, ghost accept) went through
+`CodeEditor.setText` — new Content, `AnalyzeManager.reset` (full
+re-tokenize: the colors flash), an async full layout rebuild (empty rows on
+big files), a render-context reset, an input restart, full invalidation.
+Once per keystroke. The fix is pure `IncrementalEdit` + one
+`Content.replace` delta per small edit, with the atomic `setText` kept as
+the fallback (first replay, formatter-sized rewrites, any failure). Full
+record: [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §44.
+Tests: `IncrementalEditTest` ×13, `ReplayPathWiringTest` ×5. This also
+makes 48's exit check #8 (CodeC Keys round) usable on big files at all.

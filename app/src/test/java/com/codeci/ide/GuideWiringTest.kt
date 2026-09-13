@@ -19,7 +19,7 @@ import org.junit.Test
  *  - `guide_completed` is written only by SKIP / START CODING (and reset only by
  *    "Reset tips", which touches exactly two keys);
  *  - the three doors back to the guide are wired;
- *  - the tour's ten anchors each have a publisher on the control they name, and
+ *  - the tour's eleven anchors each have a publisher on the control they name, and
  *    withdraw when that control leaves composition;
  *  - the card has NO forward button and a tap outside does nothing: the
  *    highlighted control is the only way on, SKIP TOUR / Back the only way out
@@ -99,7 +99,10 @@ class GuideWiringTest {
         val screen = source(guideScreen)
         assertFalse("the guide must not dismiss itself on a timer", screen.contains("delay("))
         assertFalse(screen.contains("LaunchedEffect"))
-        assertTrue(screen.contains("BackHandler { onFinished() }"))
+        // Phase 49.1 — the handler is router-driven now: back leaves the
+        // guide one level (the same onFinished SKIP runs), never the app.
+        assertTrue(screen.contains("BackRouter.decide(BackState(canPopRoute = true))"))
+        assertTrue(screen.contains("BackAction.PopRoute -> onFinished()"))
     }
 
     @Test
@@ -204,9 +207,12 @@ class GuideWiringTest {
         )
         // Beat 2 is published in EVERY state of the drawer header — another
         // project, the demo already open, scratch mode — because the header always
-        // opens the picker, and a tour the owner wants "1st to last without skip
-        // anything" must not depend on which project happens to be open. Beat 3
-        // stays a PURE decision: the file box only on the demo's own entry file.
+        // toggles the in-drawer PROJECTS list, and a tour the owner wants "1st to
+        // last without skip anything" must not depend on which project happens to
+        // be open. Beats 3 and 4 stay PURE decisions: the pick box only on the
+        // demo's own PROJECTS row (the 2026-09-13 ask — "give the demo_flask also
+        // a guide box after opening projects"), the file box only on the demo's
+        // own entry file.
         assertTrue(
             "beat 2: the drawer's project header is not anchored unconditionally",
             anchorCall(source(drawer), "GuideAnchors.DRAWER_PROJECT").isNotEmpty() &&
@@ -214,44 +220,50 @@ class GuideWiringTest {
                 !source(drawer).contains("projectAnchorId")
         )
         assertTrue(
-            "beat 3: the demo's app.py row is not anchored",
+            "beat 3: the demo's PROJECTS row is not anchored",
+            source(drawer).contains("CoachMarkPlan.drawerDemoPickAnchor(") &&
+                source(drawer).contains("DemoProjects.NAME") &&
+                source(drawer).contains("pickAnchorId")
+        )
+        assertTrue(
+            "beat 4: the demo's app.py row is not anchored",
             source(drawer).contains("CoachMarkPlan.drawerFileAnchor(") &&
                 source(drawer).contains("demoEntryFile = DemoProjects.ENTRY_FILE") &&
                 anchorCall(source(drawer), "GuideAnchor.modifier(guideAnchorId").isNotEmpty()
         )
         assertTrue(
-            "beat 4: RUN ▶ is not anchored",
+            "beat 5: RUN ▶ is not anchored",
             anchorCall(source(editor), "GuideAnchors.EDITOR_RUN").isNotEmpty()
         )
         assertTrue(
-            "beat 5: the preview's Back is not anchored",
+            "beat 6: the preview's Back is not anchored",
             anchorCall(source(preview), "GuideAnchors.PREVIEW_CLOSE").isNotEmpty()
         )
-        // Beat 6 has TWO publishers and one id: the thin reveal handle while the
+        // Beat 7 has TWO publishers and one id: the thin reveal handle while the
         // bar is hidden, and the bar itself while it is visible. Round 2 anchored
         // only the handle, so the beat existed just while the keyboard happened to
         // be up — a tour that is "1st to last" cannot depend on that.
         assertEquals(
-            "beat 6: the reveal handle AND the visible bar must both anchor it",
+            "beat 7: the reveal handle AND the visible bar must both anchor it",
             2,
             // The call is multi-line now (round 4 publishes a click beside the
             // rect), so the pin counts the PUBLISHERS, not one exact shape.
             source(main).split("GuideAnchor.modifier(GuideAnchors.NAV_HANDLE").size - 1
         )
-        // Beats 7 and 9 are the bottom bar's own tabs — the tour walks the user
+        // Beats 8 and 10 are the bottom bar's own tabs — the tour walks the user
         // to Packages and Terminal instead of hoping they wander there.
         assertTrue(
-            "beats 7+9: the bottom bar does not ask the plan which tab to anchor",
+            "beats 8+10: the bottom bar does not ask the plan which tab to anchor",
             source(main).contains("CoachMarkPlan.tabAnchorFor(screen.route)") &&
                 source(main).contains("GuideAnchor.modifier(tabAnchorId, onClick = onTabTap)")
         )
         assertTrue(
-            "beat 8: the Packages install card is not anchored",
+            "beat 9: the Packages install card is not anchored",
             source(modules).contains("GuideAnchors.PACKAGES_CARD") &&
                 anchorCall(source(modules), "GuideAnchor.modifier(guideAnchorId").isNotEmpty()
         )
         assertTrue(
-            "beat 10: the terminal status chip is not anchored",
+            "beat 11: the terminal status chip is not anchored",
             anchorCall(source(terminalScreen), "GuideAnchors.TERMINAL_CHIP").isNotEmpty()
         )
         // And no anchor id is left without a publisher (a spotlight on nothing).
@@ -274,6 +286,7 @@ class GuideWiringTest {
     /** The pure helper that decides whether this anchor is published at all. */
     private fun helperFor(anchorId: String): String = when (anchorId) {
         com.codeci.ide.ui.guide.GuideAnchors.DRAWER_FILE -> "CoachMarkPlan.drawerFileAnchor("
+        com.codeci.ide.ui.guide.GuideAnchors.DEMO_PICK -> "CoachMarkPlan.drawerDemoPickAnchor("
         com.codeci.ide.ui.guide.GuideAnchors.NAV_TAB_PACKAGES,
         com.codeci.ide.ui.guide.GuideAnchors.NAV_TAB_TERMINAL -> "CoachMarkPlan.tabAnchorFor("
         else -> "\u0000nothing-publishes-it"
@@ -327,9 +340,20 @@ class GuideWiringTest {
         // which is the bug. These pins name the lambda each beat performs.
         val expected = listOf(
             editor to ("GuideAnchors.EDITOR_DRAWER" to "onClick = onDrawerTap"),
-            drawer to ("GuideAnchors.DRAWER_PROJECT" to "onClick = onSwitchProject"),
+            // Beat 2's guided tap is GOAL-DIRECTED (2026-09-13 round): it only
+            // ever drops the list down, never folds one that is already down —
+            // the header's own tap, one line up, stays a toggle.
+            drawer to (
+                "GuideAnchors.DRAWER_PROJECT" to
+                    "onClick = { if (!projectsExpanded) onSwitchProject() }"
+                ),
             drawer to ("GuideAnchor.modifier(guideAnchorId" to "onClick = onOpenOrToggle"),
-            editor to ("GuideAnchors.EDITOR_RUN" to "onClick = onRunTap"),
+            // Beat 5's guided tap RUNS the open file and never detours through
+            // the Phase 33 chooser — a second screen between the box and the
+            // code is a second tap the tour does not teach (the owner's
+            // "one click close the guides box and again have click"). A normal
+            // tap keeps the chooser (onRunTap).
+            editor to ("GuideAnchors.EDITOR_RUN" to "onClick = onGuideRunTap"),
             preview to ("GuideAnchors.PREVIEW_CLOSE" to "onClick = onNavigateBack"),
             main to ("GuideAnchor.modifier(tabAnchorId" to "onClick = onTabTap"),
             modules to ("GuideAnchor.modifier(guideAnchorId" to "onClick = cardClick")
@@ -341,7 +365,23 @@ class GuideWiringTest {
                 anchorCall(source(path), idExpr).contains(click)
             )
         }
-        // Beat 6's TWO publishers, and why only one of them has a click: the
+        // Beat 3's publisher is the demo row itself; its id is computed per row
+        // (the plan gates it to the demo's contextName), so the table above
+        // can't name it. The pin: the anchor publishes the row's OWN tap —
+        // dismissing the box IS the switch into the demo, one click end to end.
+        run {
+            val drawerSrc = source(drawer)
+            val pickAt = drawerSrc.indexOf("pickAnchorId != null")
+            assertTrue("beat 3: the demo row's pick anchor is gone", pickAt >= 0)
+            val anchorAt = drawerSrc.indexOf("GuideAnchor.modifier(", pickAt)
+            assertTrue("beat 3: no GuideAnchor.modifier after the pick gate", anchorAt >= 0)
+            assertTrue(
+                "beat 3: the pick anchor must perform the row's own switch",
+                drawerSrc.substring(anchorAt, (anchorAt + 320).coerceAtMost(drawerSrc.length))
+                    .contains("onClick = { onSelectProject(row.contextName) }")
+            )
+        }
+        // Beat 7's TWO publishers, and why only one of them has a click: the
         // thin handle IS the control (tap = reveal the bar), while the bar as a
         // whole is not — a bar-wide hole resolves a tap to the tab underneath
         // (GuideTapPolicy picks the most specific anchored click), and a tap on
@@ -419,7 +459,7 @@ class GuideWiringTest {
             "Back must not be imported for the tour",
             overlay.contains("androidx.activity.compose.BackHandler")
         )
-        // The counter that makes it read as one flow instead of ten popups.
+        // The counter that makes it read as one flow instead of eleven popups.
         assertTrue(overlay.contains("stepNumber = CoachMarkPlan.steps.indexOf(step) + 1"))
         assertTrue(overlay.contains("stepCount = CoachMarkPlan.steps.size"))
         // VIEW AGAIN is the host's job: clear the one key, and start the replay
@@ -579,7 +619,7 @@ class GuideWiringTest {
         assertTrue(
             src.contains("if (finished && ranThisSession && !finishClosed && !blockedByForeground)")
         )
-        // VIEW AGAIN resets the guard too, so a replay really is all ten beats.
+        // VIEW AGAIN resets the guard too, so a replay really is all eleven beats.
         val replay = src.substring(
             src.indexOf("onViewAgain = {"),
             src.indexOf("modifier = modifier", src.indexOf("onViewAgain = {"))
@@ -602,8 +642,12 @@ class GuideWiringTest {
         val names = com.codeci.ide.ui.projects.DemoProjects.NAME
         val entry = com.codeci.ide.ui.projects.DemoProjects.ENTRY_FILE
         // demo_flask is the bundled demo's real name, and the box says it.
+        // The 2026-09-13 round gave the demo its own beat (DEMO_PICK), so the
+        // pick box names it and the header box no longer does — each beat has
+        // one job: the header teaches the tap, the pick box names the row.
         assertTrue(demo.contains("const val NAME = \"$names\""))
-        assertTrue(bodyOf(com.codeci.ide.ui.guide.GuideAnchors.DRAWER_PROJECT).contains(names))
+        assertTrue(bodyOf(com.codeci.ide.ui.guide.GuideAnchors.DEMO_PICK).contains(names))
+        assertFalse(bodyOf(com.codeci.ide.ui.guide.GuideAnchors.DRAWER_PROJECT).contains(names))
         // app.py is really what the scaffold writes for python-flask.
         assertTrue(demo.contains("const val ENTRY_FILE = \"$entry\""))
         assertTrue(
@@ -668,8 +712,8 @@ class GuideWiringTest {
         for (flag in listOf(
             // 47.1: the "Open folder" picker is retired — beat 2 now expands
             // the drawer's own PROJECTS list (reported by drawerOpen, below).
-            "installPrompt != null", // the Install? prompt beat 4 opens
-            "runChooserDefault != null", // the RUN ▶ chooser beat 4 can open
+            "installPrompt != null", // the Install? prompt beat 5 opens
+            "runChooserDefault != null", // the RUN ▶ chooser (a normal tap; the tour's tap runs straight)
             "showUnsavedDialog",
             "showSaveToProject"
         )) {

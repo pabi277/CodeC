@@ -140,13 +140,22 @@ class ExitSurveyTest {
     fun `back at root shows the prompt and a second back exits - the wiring exists`() {
         val main = source("app/src/main/java/com/codeci/ide/MainActivity.kt")
         assertTrue("the BackHandler must exist", main.contains("BackHandler("))
+        // Phase 49.2 — the decision moved INTO the BackRouter (a state
+        // question, not a popBackStack() question); the pin moved with it.
+        // The intent is unchanged: back at a root decides between the
+        // prompt and a direct exit.
         assertTrue(
-            "back at root decides between the prompt and a direct exit",
-            main.contains("exitPromptEnabled -> exitPromptVisible = true")
+            "back at root decides from the route (BackRouter.isRoot), not from popBackStack()",
+            main.contains("BackRouter.isRoot(")
         )
         assertTrue(
-            "Phase 42.3: safe mode is outside the survey boundary — back exits directly",
-            main.contains("SafeMode.active -> activity.finish()")
+            "back at root shows the prompt (the router's ShowExitPrompt action)",
+            main.contains("BackAction.ShowExitPrompt -> exitPromptVisible = true")
+        )
+        assertTrue(
+            "Phase 42.3: safe mode is outside the survey boundary — it feeds the router's ExitApp row",
+            main.contains("safeMode = com.codeci.ide.ui.crash.SafeMode.active") &&
+                main.contains("BackAction.ExitApp -> activity.finish()")
         )
         assertTrue(
             "the prompt is off-able via the SettingsManager flow",

@@ -137,20 +137,25 @@ fun EditorProjectDrawer(
         // ---- header: project name + source-control glyph ------------------
         // Phase 45.2, round 3 — beat 2 of the guided tour ("change the project
         // folder to demo_flask"), published in EVERY state of this header:
-        // another project, the demo already open, scratch mode. The header always
-        // opens the project picker, so the beat is always reachable — and a tour
-        // the owner wants "1st to last without skip anything" must not depend on
-        // which project happens to be open (round 2 published it only where a
-        // switch would teach something, which parked the beat forever on a phone
-        // already in demo_flask). The picker is an AlertDialog (its own window),
-        // so the box names demo_flask in its copy instead of cutting a hole over a
-        // row inside the dialog — PART_45_2, deviation 9.
+        // another project, the demo already open, scratch mode. The header
+        // always toggles the in-drawer PROJECTS list, so the beat is always
+        // reachable — and a tour the owner wants "1st to last without skip
+        // anything" must not depend on which project happens to be open
+        // (round 2 published it only where a switch would teach something,
+        // which parked the beat forever on a phone already in demo_flask).
         // Round 4 publishes the header's OWN click beside its rect: the tour's
-        // second beat is one tap that both opens the project list and moves
-        // the tour on, instead of a tap that only dismisses the box.
+        // second beat is one tap that both drops the list down and moves the
+        // tour on, instead of a tap that only dismisses the box.
         // Phase 47.1 — the tap now EXPANDS the in-drawer PROJECTS list (the
         // Open-folder-titled dialog is retired); the ✕ at the row's end is
         // the close affordance the drawer never had.
+        // 2026-09-13 round (single-click law) — the TOUR's tap is
+        // goal-directed: it only ever DROPS the list down, never collapses
+        // one that is already down. (The header's own tap, one line up,
+        // stays a toggle.) Without this guard, a phone that already had the
+        // list open would make the guided tap fold it away — the tour would
+        // teach the opposite of its box and strand beat 3 behind a second
+        // tap, the exact two-click feel the owner reported.
         val anchoredHeader: Modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onSwitchProject)
@@ -158,7 +163,7 @@ fun EditorProjectDrawer(
             .then(
                 GuideAnchor.modifier(
                     GuideAnchors.DRAWER_PROJECT,
-                    onClick = onSwitchProject
+                    onClick = { if (!projectsExpanded) onSwitchProject() }
                 )
             )
         Row(
@@ -254,9 +259,33 @@ fun EditorProjectDrawer(
                     )
                 }
                 projects.forEach { row ->
+                    // 2026-09-13 round — beat 3 of the tour (DEMO_PICK), the
+                    // owner's row: "give the demo_flask also a guide box after
+                    // opening projects". The demo's own row publishes its tap
+                    // beside its rect, so the box's dismissal IS the switch —
+                    // one click end to end. Every other row stays anchorless
+                    // (a box would teach the wrong tap; CoachMarkPlan
+                    // .drawerDemoPickAnchor names the demo and only the demo).
+                    // The row exists only while the list is down, which is
+                    // exactly when beat 3 can be taught — no extra gate.
+                    val pickAnchorId = CoachMarkPlan.drawerDemoPickAnchor(
+                        row.contextName,
+                        DemoProjects.NAME
+                    )
                     TextButton(
                         onClick = { onSelectProject(row.contextName) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (pickAnchorId != null) {
+                                    GuideAnchor.modifier(
+                                        pickAnchorId,
+                                        onClick = { onSelectProject(row.contextName) }
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            )
                     ) {
                         Text(
                             text = if (row.isCurrent) "\u25CF  ${row.label}" else row.label,

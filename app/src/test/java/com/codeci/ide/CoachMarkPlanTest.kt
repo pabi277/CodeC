@@ -38,7 +38,7 @@ import org.junit.Test
  *    any dialog) suppresses boxes without consuming them, and does NOT arm the
  *    stall guard — a five-minute Python install must not cost the beat after it;
  *  - nothing ends the tour early: there is no `markAllSeen`, and **VIEW AGAIN**
- *    is an empty seen set, so all ten beats come back;
+ *    is an empty seen set, so all eleven beats come back;
  *  - the CSV preference round-trips, keeps tour order and drops garbage.
  */
 class CoachMarkPlanTest {
@@ -47,6 +47,7 @@ class CoachMarkPlanTest {
     private val tourOrder = listOf(
         GuideAnchors.EDITOR_DRAWER,
         GuideAnchors.DRAWER_PROJECT,
+        GuideAnchors.DEMO_PICK,
         GuideAnchors.DRAWER_FILE,
         GuideAnchors.EDITOR_RUN,
         GuideAnchors.PREVIEW_CLOSE,
@@ -78,6 +79,7 @@ class CoachMarkPlanTest {
     private val allVisible = chrome(
         GuideAnchors.EDITOR_DRAWER,
         GuideAnchors.DRAWER_PROJECT,
+        GuideAnchors.DEMO_PICK,
         GuideAnchors.DRAWER_FILE,
         GuideAnchors.EDITOR_RUN,
         GuideAnchors.PREVIEW_CLOSE,
@@ -91,7 +93,7 @@ class CoachMarkPlanTest {
     // ---- the tour itself ---------------------------------------------------
 
     @Test
-    fun `the tour is the owner's ten beats, in the owner's order`() {
+    fun `the tour is the owner's eleven beats, in the owner's order`() {
         assertEquals(tourOrder, CoachMarkPlan.steps.map { it.anchorId })
         assertEquals(
             "ids must be unique",
@@ -114,6 +116,7 @@ class CoachMarkPlanTest {
     fun `each beat is taught on the screen that owns it`() {
         assertEquals(
             listOf(
+                GuideSurface.EDITOR,
                 GuideSurface.EDITOR,
                 GuideSurface.EDITOR,
                 GuideSurface.EDITOR,
@@ -150,7 +153,7 @@ class CoachMarkPlanTest {
             )
         }
         // The concrete case the owner hit: beat 1 taught, the drawer shut, RUN ▶
-        // (beat 4) on screen — and still no box, because beats 2 and 3 come first.
+        // (beat 5) on screen — and still no box, because beats 2, 3 and 4 come first.
         assertNull(
             "a later beat must not jump the queue",
             CoachMarkPlan.nextStep(
@@ -203,25 +206,37 @@ class CoachMarkPlanTest {
         val seen = setOf(GuideAnchors.EDITOR_DRAWER)
         val drawerOpen = chrome(
             GuideAnchors.DRAWER_PROJECT,
+            GuideAnchors.DEMO_PICK,
             GuideAnchors.DRAWER_FILE,
             GuideAnchors.EDITOR_RUN,
             drawer = true
         )
-        // The drawer is shut: beats 2 and 3 are not on screen, so nothing is —
+        // The drawer is shut: beats 2, 3 and 4 are not on screen, so nothing is —
         // RUN ▶ is laid out and still waits its turn.
         assertNull(CoachMarkPlan.nextStep(seen, chrome(GuideAnchors.EDITOR_RUN)))
         // The drawer opens: beat 2 (the header, published in every project state)
-        // comes before beat 3, because order is the tour.
+        // comes before beats 3 and 4, because order is the tour.
         assertEquals(GuideAnchors.DRAWER_PROJECT, CoachMarkPlan.nextStep(seen, drawerOpen)?.id)
+        // The list drops: the demo row is beat 3 and the entry file beat 4 — the
+        // 2026-09-13 gap (tap the header, then hunt for demo_flask unguided) is
+        // a taught beat now.
         assertEquals(
-            GuideAnchors.DRAWER_FILE,
+            GuideAnchors.DEMO_PICK,
             CoachMarkPlan.nextStep(seen + GuideAnchors.DRAWER_PROJECT, drawerOpen)?.id
         )
-        // Both drawer beats taught and the drawer closed again: RUN ▶ at last.
+        assertEquals(
+            GuideAnchors.DRAWER_FILE,
+            CoachMarkPlan.nextStep(
+                seen + GuideAnchors.DRAWER_PROJECT + GuideAnchors.DEMO_PICK,
+                drawerOpen
+            )?.id
+        )
+        // All drawer beats taught and the drawer closed again: RUN ▶ at last.
         assertEquals(
             GuideAnchors.EDITOR_RUN,
             CoachMarkPlan.nextStep(
-                seen + GuideAnchors.DRAWER_PROJECT + GuideAnchors.DRAWER_FILE,
+                seen + GuideAnchors.DRAWER_PROJECT + GuideAnchors.DEMO_PICK +
+                    GuideAnchors.DRAWER_FILE,
                 chrome(GuideAnchors.EDITOR_RUN)
             )?.id
         )
@@ -234,17 +249,22 @@ class CoachMarkPlanTest {
         // The drawer never opens. Nothing shows, and the plan itself will never
         // move on: passing a beat is the HOST's decision, after a timed wait.
         assertNull(CoachMarkPlan.nextStep(seen, shut))
-        val stalled = setOf(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DRAWER_FILE)
+        val stalled = setOf(
+            GuideAnchors.DRAWER_PROJECT,
+            GuideAnchors.DEMO_PICK,
+            GuideAnchors.DRAWER_FILE
+        )
         assertEquals(
             GuideAnchors.EDITOR_RUN,
             CoachMarkPlan.nextStep(seen, shut, stalled)?.id
         )
-        // Passed, not taught: neither beat is seen, so `remaining` still lists
-        // them and the next pass (next launch, or VIEW AGAIN) still walks them.
+        // Passed, not taught: no beat is seen, so `remaining` still lists them
+        // and the next pass (next launch, or VIEW AGAIN) still walks them.
         assertFalse(GuideAnchors.DRAWER_PROJECT in seen)
+        assertFalse(GuideAnchors.DEMO_PICK in seen)
         assertFalse(GuideAnchors.DRAWER_FILE in seen)
         assertEquals(
-            listOf(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DRAWER_FILE),
+            listOf(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DEMO_PICK, GuideAnchors.DRAWER_FILE),
             CoachMarkPlan.remaining(seen).filter { it.inDrawer }.map { it.id }
         )
         // Later the user opens the drawer with nothing stalled: beat 2 is there.
@@ -269,23 +289,32 @@ class CoachMarkPlanTest {
                 chrome(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DRAWER_FILE, GuideAnchors.EDITOR_RUN)
             )
         )
-        // Drawer open: the header teaches, then the row — and RUN ▶, which the
-        // drawer is covering, waits instead of getting a hole cut behind it.
+        // Drawer open: the header teaches, then the demo row, then the file —
+        // and RUN ▶, which the drawer is covering, waits instead of getting a
+        // hole cut behind it.
         assertEquals(
             GuideAnchors.DRAWER_PROJECT,
             CoachMarkPlan.nextStep(
                 seen,
-                chrome(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DRAWER_FILE, GuideAnchors.EDITOR_RUN, drawer = true)
+                chrome(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DEMO_PICK, GuideAnchors.DRAWER_FILE, GuideAnchors.EDITOR_RUN, drawer = true)
+            )?.id
+        )
+        assertEquals(
+            GuideAnchors.DEMO_PICK,
+            CoachMarkPlan.nextStep(
+                seen + GuideAnchors.DRAWER_PROJECT,
+                chrome(GuideAnchors.DEMO_PICK, GuideAnchors.DRAWER_FILE, GuideAnchors.EDITOR_RUN, drawer = true)
             )?.id
         )
         assertEquals(
             GuideAnchors.DRAWER_FILE,
             CoachMarkPlan.nextStep(
-                seen + GuideAnchors.DRAWER_PROJECT,
+                seen + GuideAnchors.DRAWER_PROJECT + GuideAnchors.DEMO_PICK,
                 chrome(GuideAnchors.DRAWER_FILE, GuideAnchors.EDITOR_RUN, drawer = true)
             )?.id
         )
-        val drawerBeatsSeen = seen + GuideAnchors.DRAWER_PROJECT + GuideAnchors.DRAWER_FILE
+        val drawerBeatsSeen = seen + GuideAnchors.DRAWER_PROJECT + GuideAnchors.DEMO_PICK +
+            GuideAnchors.DRAWER_FILE
         assertNull(
             "a waiting beat covered by the open drawer must not be cut",
             CoachMarkPlan.nextStep(drawerBeatsSeen, chrome(GuideAnchors.EDITOR_RUN, drawer = true))
@@ -295,17 +324,17 @@ class CoachMarkPlanTest {
             CoachMarkPlan.nextStep(drawerBeatsSeen, chrome(GuideAnchors.EDITOR_RUN))?.id
         )
         assertEquals(
-            "exactly the two beats inside the ☰ drawer are drawer beats",
-            listOf(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DRAWER_FILE),
+            "exactly the three beats inside the ☰ drawer are drawer beats",
+            listOf(GuideAnchors.DRAWER_PROJECT, GuideAnchors.DEMO_PICK, GuideAnchors.DRAWER_FILE),
             CoachMarkPlan.steps.filter { it.inDrawer }.map { it.anchorId }
         )
     }
 
     @Test
     fun `a beat holds the tour until its control appears, and names itself while it waits`() {
-        val seen = tourOrder.take(5).toSet() // through the preview's Back
+        val seen = tourOrder.take(6).toSet() // through the preview's Back
         // The tab bar is hidden by the keyboard and the reveal handle is not laid
-        // out yet, so beat 6 holds the tour. Round 2 walked past it to Packages,
+        // out yet, so beat 7 holds the tour. Round 2 walked past it to Packages,
         // which is exactly how a beat went missing on the owner's phone.
         assertNull(CoachMarkPlan.nextStep(seen, chrome(GuideAnchors.PACKAGES_CARD)))
         assertEquals(
@@ -333,7 +362,7 @@ class CoachMarkPlanTest {
 
     @Test
     fun `the small tour of packages and terminal walks tab, card, tab, chip`() {
-        var seen = tourOrder.take(6).toSet()
+        var seen = tourOrder.take(7).toSet()
         val bar = chrome(GuideAnchors.NAV_TAB_PACKAGES, GuideAnchors.NAV_TAB_TERMINAL)
         assertEquals(GuideAnchors.NAV_TAB_PACKAGES, CoachMarkPlan.nextStep(seen, bar)?.id)
         seen += GuideAnchors.NAV_TAB_PACKAGES
@@ -372,7 +401,7 @@ class CoachMarkPlanTest {
     // ---- the seen set ------------------------------------------------------
 
     @Test
-    fun `nothing ends the tour early, and VIEW AGAIN restarts all ten beats`() {
+    fun `nothing ends the tour early, and VIEW AGAIN restarts all eleven beats`() {
         // Round 2 ended the tour with SKIP and Back by marking every unseen beat
         // seen. Round 3 (*"it's not a trough guide mean it got cut"*) removes both
         // exits, so the plan has no such function any more: the only way a beat is
@@ -391,7 +420,7 @@ class CoachMarkPlanTest {
             GuideAnchors.EDITOR_DRAWER,
             CoachMarkPlan.nextStep(CoachMarkPlan.replay(), chrome(GuideAnchors.EDITOR_DRAWER))?.id
         )
-        // All ten taught: finished AND complete, and it never comes back on its
+        // All eleven taught: finished AND complete, and it never comes back on its
         // own (the finish card's CLOSE is in-memory, the seen set is the record).
         val all = tourOrder.toSet()
         assertTrue(CoachMarkPlan.isFinished(all))
@@ -477,32 +506,32 @@ class CoachMarkPlanTest {
     @Test
     fun `the guard never times out a beat the user has to travel to`() {
         // The cascade this prevents: RUN ▶ is tapped, Python installs for two
-        // minutes, and the tour is sitting on beat 5 — the Flask preview's Back,
+        // minutes, and the tour is sitting on beat 6 — the Flask preview's Back,
         // which does not exist on the editor route. Timing that out would stall
-        // beat 5, then beat 6, then every beat behind it, and the tour would
+        // beat 6, then beat 7, then every beat behind it, and the tour would
         // "finish" before the owner's flow ever reached the web page. A beat
         // that is merely early draws nothing and waits.
-        val fourSeen = tourOrder.take(4).toSet()
+        val throughRun = tourOrder.take(5).toSet()
         assertNull(
             "the preview's Back is not possible on the editor route, so it is not hopeless",
-            CoachMarkPlan.waitingOn(fourSeen, chrome(GuideAnchors.EDITOR_RUN, route = editorRoute))
+            CoachMarkPlan.waitingOn(throughRun, chrome(GuideAnchors.EDITOR_RUN, route = editorRoute))
         )
-        assertNull(CoachMarkPlan.nextStep(fourSeen, chrome(GuideAnchors.EDITOR_RUN, route = editorRoute)))
+        assertNull(CoachMarkPlan.nextStep(throughRun, chrome(GuideAnchors.EDITOR_RUN, route = editorRoute)))
         // Arrive at the preview and the beat is taught at once.
         assertEquals(
             GuideAnchors.PREVIEW_CLOSE,
             CoachMarkPlan.nextStep(
-                fourSeen,
+                throughRun,
                 chrome(GuideAnchors.PREVIEW_CLOSE, route = previewRoute)
             )?.id
         )
         // The same law for the beats behind a screen the user has not reached:
         // the Packages card is only possible on the Packages tab, so waiting for
         // the user to walk there is not a stall.
-        val sevenSeen = tourOrder.take(7).toSet()
+        val throughPackagesTab = tourOrder.take(8).toSet()
         assertNull(
             CoachMarkPlan.waitingOn(
-                sevenSeen,
+                throughPackagesTab,
                 chrome(GuideAnchors.NAV_TAB_TERMINAL, route = editorRoute)
             )
         )
@@ -511,7 +540,7 @@ class CoachMarkPlanTest {
         assertEquals(
             GuideAnchors.PACKAGES_CARD,
             CoachMarkPlan.waitingOn(
-                sevenSeen,
+                throughPackagesTab,
                 chrome(GuideAnchors.NAV_TAB_TERMINAL, route = modulesRoute)
             )?.id
         )
@@ -520,7 +549,7 @@ class CoachMarkPlanTest {
     @Test
     fun `the route map says where each beat can exist at all`() {
         // The whole input to the stall guard, pinned route by route: the bar is
-        // on every screen (Phase 32.1 hides it only inside the editor, and beat 6
+        // on every screen (Phase 32.1 hides it only inside the editor, and beat 7
         // doubles as the bar), everything else belongs to one screen.
         val bar = setOf(
             GuideAnchors.NAV_HANDLE,
@@ -537,6 +566,7 @@ class CoachMarkPlanTest {
             bar + setOf(
                 GuideAnchors.EDITOR_DRAWER,
                 GuideAnchors.DRAWER_PROJECT,
+                GuideAnchors.DEMO_PICK,
                 GuideAnchors.DRAWER_FILE,
                 GuideAnchors.EDITOR_RUN
             ),
@@ -569,17 +599,17 @@ class CoachMarkPlanTest {
         // A control that COULD be on this route and is simply not laid out is the
         // one thing worth timing: the beat that could otherwise hold the tour
         // forever while the user looks at the screen it belongs to.
-        val fiveSeen = tourOrder.take(5).toSet()
+        val throughPreview = tourOrder.take(6).toSet()
         assertEquals(
             GuideAnchors.NAV_HANDLE,
-            CoachMarkPlan.waitingOn(fiveSeen, chrome(GuideAnchors.NAV_TAB_PACKAGES))?.id
+            CoachMarkPlan.waitingOn(throughPreview, chrome(GuideAnchors.NAV_TAB_PACKAGES))?.id
         )
         // Once the host has stalled that beat, the guard names the next missing
         // control instead — one beat at a time, never the whole tour at once.
         assertEquals(
             GuideAnchors.NAV_TAB_PACKAGES,
             CoachMarkPlan.waitingOn(
-                fiveSeen,
+                throughPreview,
                 chrome(GuideAnchors.TERMINAL_CHIP),
                 setOf(GuideAnchors.NAV_HANDLE)
             )?.id
@@ -618,6 +648,75 @@ class CoachMarkPlanTest {
         assertNull(
             CoachMarkPlan.drawerFileAnchor("demo_flask", "src/app.py", false, "demo_flask", "app.py")
         )
+    }
+
+    @Test
+    fun `the demo box lands on the demo's own PROJECTS row and nothing else`() {
+        // The owner's 2026-09-13 row: "give the demo_flask also a guide box
+        // after opening projects". Same law as the file box above — a box on
+        // some other project's row would teach the wrong tap.
+        assertEquals(
+            GuideAnchors.DEMO_PICK,
+            CoachMarkPlan.drawerDemoPickAnchor("demo_flask", "demo_flask")
+        )
+        assertNull(
+            "another project's row is not the demo",
+            CoachMarkPlan.drawerDemoPickAnchor("C Starter", "demo_flask")
+        )
+        assertNull(
+            "scratch mode has no project row at all",
+            CoachMarkPlan.drawerDemoPickAnchor(null, "demo_flask")
+        )
+        // And the beat itself: it teaches on the editor, inside the drawer,
+        // right between the header and the entry file.
+        val pick = CoachMarkPlan.step(GuideAnchors.DEMO_PICK)
+        assertEquals(GuideSurface.EDITOR, pick?.surface)
+        assertTrue(pick?.inDrawer == true)
+        assertEquals(
+            listOf(
+                GuideAnchors.DRAWER_PROJECT,
+                GuideAnchors.DEMO_PICK,
+                GuideAnchors.DRAWER_FILE
+            ),
+            CoachMarkPlan.steps.map { it.anchorId }.let { full ->
+                val at = full.indexOf(GuideAnchors.DEMO_PICK)
+                full.subList(at - 1, at + 2)
+            }
+        )
+        // The box names the demo the app really ships (GuideWiringTest pins
+        // the copy to DemoProjects.NAME).
+        assertTrue(
+            (pick?.title + " " + pick?.body).contains("demo_flask")
+        )
+    }
+
+    @Test
+    fun `after the list drops, the very next box is the demo row`() {
+        // The owner's two-click report, pinned as sequencing: beat 2's tap
+        // drops the list, and beat 3 must appear ON the demo row in that same
+        // drawer state — no unguided tap in between.
+        val afterListDown = chrome(
+            GuideAnchors.EDITOR_DRAWER,
+            GuideAnchors.DRAWER_PROJECT,
+            GuideAnchors.DEMO_PICK,
+            drawer = true
+        )
+        assertEquals(
+            GuideAnchors.DEMO_PICK,
+            CoachMarkPlan.nextStep(setOf(GuideAnchors.EDITOR_DRAWER, GuideAnchors.DRAWER_PROJECT), afterListDown)?.id
+        )
+        // While the list is UP (header not tapped yet), the pick beat cannot
+        // exist — the drawer gate holds it back, and the tour waits on beat 2.
+        val listStillUp = chrome(
+            GuideAnchors.EDITOR_DRAWER,
+            GuideAnchors.DRAWER_PROJECT,
+            drawer = true
+        )
+        assertEquals(
+            GuideAnchors.DRAWER_PROJECT,
+            CoachMarkPlan.nextStep(setOf(GuideAnchors.EDITOR_DRAWER), listStillUp)?.id
+        )
+        assertNull(CoachMarkPlan.nextStep(setOf(GuideAnchors.EDITOR_DRAWER, GuideAnchors.DRAWER_PROJECT), listStillUp))
     }
 
     // ---- round 4: ONE tap does both halves --------------------------------

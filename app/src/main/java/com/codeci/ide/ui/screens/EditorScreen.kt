@@ -154,6 +154,9 @@ import com.codeci.ide.ui.editor.StripContext
 import com.codeci.ide.ui.editor.SuggestionStripModel
 import com.codeci.ide.ui.editor.RunKey
 import com.codeci.ide.ui.editor.sora.SoraEditorHost
+import com.codeci.ide.ui.navigation.BackAction
+import com.codeci.ide.ui.navigation.BackRouter
+import com.codeci.ide.ui.navigation.BackState
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import com.codeci.ide.ui.projects.ProjectInfo
@@ -463,8 +466,13 @@ fun EditorScreen(
     // scrim stays Material3's own affordance, same result). Closing and
     // NOTHING else; a project pick is not a close at all — it switches the
     // context and the drawer stays open (device round 2).
+    // Phase 49.1 (H2) — "open" means open or OPENING (targetValue): a
+    // back/✕ inside the ~200 ms open animation CANCELS it instead of losing
+    // the press (currentValue flips only at the animation's end). A closing
+    // animation still refuses (targetValue == Closed) — never two close()
+    // calls (the 47.1 law, unchanged).
     val closeDrawer: (DrawerCloseReason) -> Unit = { reason ->
-        if (DrawerPolicy.shouldClose(reason, drawerState.isOpen)) {
+        if (DrawerPolicy.shouldClose(reason, drawerState.targetValue == DrawerValue.Open)) {
             uiScope.launch { drawerState.close() }
         }
     }
@@ -792,17 +800,33 @@ fun EditorScreen(
         }
     }
 
-    // Phase 47.1 — Back closes the drawer (the interim one-line handler; the
-    // spec records it as deliberate until Phase 49's BackRouter folds it into
-    // the router). Registered BEFORE the unsaved-changes handler below, so
-    // 49's precedence — unsaved → drawer — already holds: a dirty buffer's
-    // back press still asks, even over an open drawer.
-    BackHandler(enabled = drawerState.isOpen) {
-        closeDrawer(DrawerCloseReason.BACK)
-    }
-
-    BackHandler(enabled = isDirty) {
-        showUnsavedDialog = true
+    // Phase 49.1 — ONE router-driven handler replaces 47.1's interim drawer
+    // handler AND the old dirty-buffer handler: the pure table decides, and
+    // the precedence — unsaved → drawer → sheet/dialog → find bar → output
+    // panel — is pinned by BackRouterTest instead of living in registration
+    // order. editorDrawerOpen keys on targetValue (H2, same as closeDrawer
+    // above). With the soft keyboard up, back is the user closing it — the
+    // platform owns that press (the router's row-6 guard, and rows 8+ are
+    // root-only fields this screen never fills, so the editor's handler can
+    // never pop navigation or exit the app).
+    val editorBackAction = BackRouter.decide(
+        BackState(
+            unsavedChanges = isDirty,
+            editorDrawerOpen = drawerState.targetValue == DrawerValue.Open,
+            sheetOrDialogOpen = editorModalOpen || pendingCloseTab != null,
+            findBarOpen = findState.visible,
+            outputPanelExpanded = outputExpanded,
+            keyboardVisible = imeVisible
+        )
+    )
+    BackHandler(enabled = editorBackAction != BackAction.None) {
+        when (editorBackAction) {
+            BackAction.ShowUnsavedDialog -> showUnsavedDialog = true
+            BackAction.CloseEditorDrawer -> closeDrawer(DrawerCloseReason.BACK)
+            BackAction.CloseFindBar -> viewModel.hideFind()
+            BackAction.CollapseOutputPanel -> viewModel.toggleOutput()
+            else -> Unit
+        }
     }
 
     // Phase 21.2 — RUN ▶ on a file whose toolchain package is missing asks
@@ -1547,17 +1571,31 @@ fun EditorScreen(
                             }
                         }
                     }
+                    // 2026-09-13 round (single-click law) — the TOUR's tap on
+                    // RUN ▶ performs the lesson ("Runs the open file") straight
+                    // away and never detours through the Phase 33 chooser: a
+                    // second screen between the box and the code is a second
+                    // tap the tour does not teach, the exact "one click closes
+                    // the box, next click does the thing" the owner reported.
+                    // A normal tap on RUN ▶ (onRunTap, above) keeps the chooser.
+                    val onGuideRunTap: () -> Unit = {
+                        if (editorChromeLocked) {
+                            showChromeLock()
+                        } else {
+                            runOpenFile()
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable(onClick = onRunTap)
                             .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
                             // Phase 45.2 — RUN ▶ is the 30-second loop; the
-                            // tour's fourth beat.
+                            // tour's fifth beat.
                             .then(
                                 GuideAnchor.modifier(
                                     GuideAnchors.EDITOR_RUN,
-                                    onClick = onRunTap
+                                    onClick = onGuideRunTap
                                 )
                             ),
                         verticalAlignment = Alignment.CenterVertically
@@ -1712,6 +1750,15 @@ fun EditorScreen(
                     tabSize = tabSize,
                     wordWrap = wordWrap,
                     showLineNumbers = showLineNumbers,
+                    // Phase 48 — the chrome facts the viewport snapshot
+                    // carries (the pure policy decides on the HEIGHT these
+                    // cause; statusVisible is the same condition the status
+                    // bar's own `if` below runs).
+                    imeVisible = imeVisible,
+                    codecKeysVisible = codecKeysUp,
+                    stripVisible = keysVisible,
+                    outputExpanded = outputExpanded,
+                    statusVisible = caretPlaced && !imeVisible && !codecKeysUp,
                     modifier = Modifier
                         .fillMaxSize(),
                     // Phase 29 — the file's own path: .ts vs .tsx pick

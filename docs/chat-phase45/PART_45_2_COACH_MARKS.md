@@ -858,3 +858,64 @@ real Gradle/JUnit/Robolectric). Release APK **6,675,154 B**, **−100 B** agains
 the whole change is one settled guard, one reversed `when` branch, one added
 `refreshSetupFacts()` call and their comments — and nothing in 45.2 moved at all. Debug
 25,693,520 B, mapping 56,257,804 B, v1.3.17.
+
+## Round 7 (2026-09-13, device round on the 48+49 build) — the single-click law restated, and the demo gets its own beat
+
+Round 7 changed the plan for the first time since round 4. The owner ran the
+blink-fix build and came back with two rows: *"you repeated a previous
+mistake — the guide should be single click to work but now one click close
+the guides box and again have click the option to work make it single
+click"*, and *"one guide box if possible give the demo_flask also a guide
+box after opening projects."*
+
+The investigation (recorded in
+[`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §45) exonerated the
+machinery rounds 2-4 built — press-resolve, published click, advance — and
+convicted the PLAN's remaining gaps: the pick of `demo_flask` had no box at
+all (an unguided tap stood between beats 2 and 3 since 47.1 retired the
+Open-folder dialog), beat 5's published click could detour through the Phase
+33 run chooser, and the header's guided tap was still a toggle in disguise.
+
+**What changed in the plan: the tour is ELEVEN beats.** New step 3
+**DEMO_PICK** — *"Pick the demo — Tap demo_flask — the working demo CodeC
+ships with."* — anchored on the demo's own PROJECTS row (`drawerDemoPickAnchor`,
+the same pure-gate law as `drawerFileAnchor`), published with the row's own
+tap so dismissing the box IS the switch. Beat 2's copy now teaches only the
+tap (*"Tap the project name to drop down the projects list."*); the demo's
+name moved to the beat that points at it. The project chain the owner
+dictated — ☰ → project name → `demo_flask` → `app.py` → RUN — is now four
+beats, each its own single click, with no unguided hop anywhere on it.
+
+**Two wiring corrections serve the same law.** The header's GUIDED tap is
+goal-directed (`if (!projectsExpanded) onSwitchProject()`) — it can only
+drop the list, never fold one that is already down; the header's own tap
+stays a toggle. And the tour's RUN tap runs the open file directly
+(`onGuideRunTap`) — the Phase 33 chooser is a real feature for real use, but
+a second screen between the box and the code is a second tap the tour does
+not teach.
+
+**Every round 1-6 invariant holds.** Strict order (the pick waits for the
+dropped list; nothing skips); the drawer gates; `blockedByForeground`; the
+dialog blind spot (the pick is a drawer row, never a dialog row — deviation
+9 stays honest); no SKIP, no Back exit, `CoachMarks.kt` still has NO
+BackHandler; tap-through performs the control's own action and advances.
+
+### CI round 7: ✅ GREEN
+
+`Build APK` **`34742868395`** on tip `c5e73ac` — `conclusion: success`, job
+`build` 8m35s, release APK **6,681,306 B** (+2,240 B against the blink-fix
+build `34741213510` — the eleventh beat). The round's first push (`77fb04f`,
+run `34742573726`) was red for-cause: two test pins travelled stale (the
+surfaces list still showed ten beats; the beat-3 pin demanded a literal the
+row computes) — both fixed in `c5e73ac` with their reasons in the commit.
+Tests: `CoachMarkPlanTest` (11-beat order, surfaces, route map, in-drawer
+set, stalled walk, `take()` prefixes, + 2 new: pick gating, post-drop
+sequence) and `GuideWiringTest` (publisher pins + copy pins).
+
+### Device round 7: ✅ ALL PASSED
+
+The owner ran the 11-beat tour on the fix build and passed everything —
+verbatim *"All device passed. Now merge it."* (2026-09-13) — the re-round,
+the blink re-check, 48's eight checks and 49's ten + 49.2's eight in one
+pass. Merge commanded via
+[`PR #79`](https://github.com/pabi277/CodeC/pull/79).

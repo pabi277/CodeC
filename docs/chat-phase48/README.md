@@ -1,6 +1,9 @@
 # CodeC Phase 48 — Nothing hides behind the keyboard
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
+> **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner:
+> "Start phase 48 and 49"; CI ✅ GREEN `34740245825` tip `a592295` — round 1
+> red for-cause: one stale Phase-41 wiring pin in `ExitSurveyTest`, moved with
+> its reason; the eight-check device round below is pending) · **Cost:**
 > `[client-only]` · **Effort:** S/M · **Owner row (verbatim):** *"If the code is
 > very big it's last line go under the keyboard, when i use a suggestion it go
 > down and hide behind the keyboard"*
@@ -11,7 +14,7 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [48.1](PART_48_1_CARET_ABOVE_KEYBOARD.md) | `CaretVisibilityPolicy` + one sora call | S/M | 📋 PLANNED |
+| [48.1](PART_48_1_CARET_ABOVE_KEYBOARD.md) | `CaretVisibilityPolicy` + one sora call | S/M | 🚧 IMPLEMENTED |
 
 ---
 

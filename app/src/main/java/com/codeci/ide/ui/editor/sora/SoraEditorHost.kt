@@ -10,13 +10,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.ui.editor.AcceptGranularity
 import com.codeci.ide.ui.editor.CaretBlinkPolicy
+import com.codeci.ide.ui.editor.CaretVisibilityPolicy
+import com.codeci.ide.ui.editor.EditorViewport
 import com.codeci.ide.ui.editor.GhostState
+import com.codeci.ide.ui.editor.IncrementalEdit
 import com.codeci.ide.ui.viewmodels.CompletionModel
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 import io.github.rosemoe.sora.event.EventReceiver
@@ -80,7 +84,17 @@ fun SoraEditorHost(
     ghostPanelEnabled: Boolean = true,
     /** Ghost text ARGB (comment color @ 38% — G5) from the active theme. */
     ghostColorArgb: Int = 0x5575715E,
-    onBrowseVisibilityChanged: (Boolean) -> Unit = {}
+    onBrowseVisibilityChanged: (Boolean) -> Unit = {},
+    // ---- Phase 48 — the viewport rescroll (PART_48_1) ----
+    // The chrome facts around the box. [CaretVisibilityPolicy] decides on
+    // the box's HEIGHT (the effect); these booleans are the causes, carried
+    // so the snapshot struct is honest (and normalised() can pin the
+    // CodeC-Keys/IME exclusivity EditorScreen guarantees).
+    imeVisible: Boolean = false,
+    codecKeysVisible: Boolean = false,
+    stripVisible: Boolean = true,
+    outputExpanded: Boolean = false,
+    statusVisible: Boolean = true
 ) {
     val codeText by viewModel.codeText.collectAsState()
     val caretPlaced by viewModel.caretPlaced.collectAsState()
@@ -380,6 +394,33 @@ fun SoraEditorHost(
     }
 
     // VM → Sora replay.
+
+    // Phase 48 — the ONE rescroll owner in the app (`CaretCallSiteTest`
+    // pins the single ensurePositionVisible call site). A chrome change
+    // resizes the sora box (imePadding / CodeC Keys / the keys row / the
+    // output panel / the status bar), and sora never re-scrolls on a
+    // resize: only its own edits and selection changes scroll
+    // (CAUSE_MAKE_POSITION_VISIBLE). The pure CaretVisibilityPolicy decides
+    // WHEN the caret is owed a re-scroll; this edge performs it AFTER the
+    // new layout pass (`postDelayed`, never inline — inside onSizeChanged
+    // sora still holds the OLD metrics), with noAnimation (a chrome-driven
+    // scroll must not animate — the README's seasickness risk), coalesced
+    // (cancel-and-replace: the IME animation reports many sizes), and
+    // crash-proof (runCatching — the editor can be mid-release() when a
+    // late size change lands; a cosmetic call must never kill the app, the
+    // Phase 44 law applied to a layout callback).
+    val lastViewport = remember(editor) { arrayOf<EditorViewport?>(null) }
+    val pendingRescroll = remember(editor) { arrayOf<Runnable?>(null) }
+    fun scheduleCaretRescroll(line: Int, column: Int, delayMs: Long) {
+        pendingRescroll[0]?.let { editor.removeCallbacks(it) }
+        val task = Runnable {
+            pendingRescroll[0] = null
+            runCatching { editor.ensurePositionVisible(line, column, true) }
+        }
+        pendingRescroll[0] = task
+        editor.postDelayed(task, if (delayMs < 0L) 0L else delayMs)
+    }
+
     AndroidView(
         factory = { editor },
         update = { ed ->
@@ -391,27 +432,54 @@ fun SoraEditorHost(
                     // Phase 27.1 — a full replay invalidates ghost anchors;
                     // the effect above repaints from the fresh VM state.
                     ed.setInlayHints(null)
-                    // 2026-09-06 (crash 2 follow-up, device round): ATOMIC
-                    // wholesale replacement. The old incremental delete-all +
-                    // insert dispatched afterDelete into sora's layout at a
-                    // moment it can legitimately be empty-handed:
-                    // createLayout() — run by setTextSize / setText /
-                    // wordwrap / inlay-renderer changes, i.e. by our own
-                    // config effects around a file open — rebuilds the
-                    // per-line width lists ASYNCHRONOUSLY (LineBreakLayout.
-                    // measureAllLines uses a TaskMonitor). A multi-line
-                    // delete in that window hits BlockIntList.removeRange
-                    // on an EMPTY list → IndexOutOfBoundsException
-                    // (reproduced in CI by EditorLaunchMeasureReproTest's
-                    // nav-transition case; the same mid-measure churn fed
-                    // the on-device detached-LayoutNode crash). setText
-                    // replaces the Content object wholesale — one
-                    // ACTION_SET_NEW_TEXT event, no incremental delete
-                    // dispatch — and rebuilds the layout AFTER the new
-                    // content is set. Our listener follows the Content
-                    // object, so re-attach it to the new instance.
-                    ed.setText(target.text)
-                    ed.text.addContentListener(contentListener)
+                    // Device round 2026-09-13 (owner: *"when i use app
+                    // dedicate keyboard and typing it's blinking the full
+                    // code"*): a small programmatic edit must NOT go through
+                    // setText. Every CodeC Keys keystroke / keys-row tap /
+                    // snippet / ghost accept landed here and setText (sora
+                    // 0.24.6, CodeEditor.java:3951) builds a NEW Content,
+                    // RESETS the analyzer (full re-tokenize — the colors
+                    // flash), rebuilds the layout asynchronously (big files
+                    // draw empty rows until the TaskMonitor lands), restarts
+                    // input and invalidates every render node — the whole
+                    // code blinking once per keystroke. The pure
+                    // IncrementalEdit plan turns the change into ONE
+                    // Content.replace — the same delta primitive normal
+                    // typing uses, applied incrementally by sora's layout
+                    // and analyzer. The atomic path below stays for the
+                    // first replay (known == null: the listener must follow
+                    // the new Content object), a formatter-sized rewrite,
+                    // replace-all, and any failure (the VM text is the
+                    // source of truth, so a wholesale setText is always a
+                    // safe recovery).
+                    val plan = if (known != null) IncrementalEdit.between(known, target.text) else null
+                    val appliedIncrementally = plan != null && runCatching {
+                        ed.text.replace(plan.start, plan.end, plan.replacement)
+                        true
+                    }.getOrDefault(false)
+                    if (!appliedIncrementally) {
+                        // 2026-09-06 (crash 2 follow-up, device round): ATOMIC
+                        // wholesale replacement. The old incremental delete-all +
+                        // insert dispatched afterDelete into sora's layout at a
+                        // moment it can legitimately be empty-handed:
+                        // createLayout() — run by setTextSize / setText /
+                        // wordwrap / inlay-renderer changes, i.e. by our own
+                        // config effects around a file open — rebuilds the
+                        // per-line width lists ASYNCHRONOUSLY (LineBreakLayout.
+                        // measureAllLines uses a TaskMonitor). A multi-line
+                        // delete in that window hits BlockIntList.removeRange
+                        // on an EMPTY list → IndexOutOfBoundsException
+                        // (reproduced in CI by EditorLaunchMeasureReproTest's
+                        // nav-transition case; the same mid-measure churn fed
+                        // the on-device detached-LayoutNode crash). setText
+                        // replaces the Content object wholesale — one
+                        // ACTION_SET_NEW_TEXT event, no incremental delete
+                        // dispatch — and rebuilds the layout AFTER the new
+                        // content is set. Our listener follows the Content
+                        // object, so re-attach it to the new instance.
+                        ed.setText(target.text)
+                        ed.text.addContentListener(contentListener)
+                    }
                     // Opening a file must not replay its default zero
                     // selection into a visible caret. A placed edit replays
                     // only when sora does not already hold that selection.
@@ -429,6 +497,15 @@ fun SoraEditorHost(
                                 endPos.line, endPos.column
                             )
                         }
+                        // Phase 48 — a replayed caret move (suggestion
+                        // accept, snippet, undo, keys-row insert) is NOT one
+                        // of sora's own edits, so sora never scrolls for it
+                        // and the caret can land below the fold exactly as
+                        // the owner described (*"when i use a suggestion it
+                        // go down and hide behind the keyboard"*). Follow
+                        // it — selection end, the side the eye is on. The
+                        // quiet-on-open branch below stays scroll-free.
+                        scheduleCaretRescroll(endPos.line, endPos.column, 0L)
                     } else if (!caretPlaced) {
                         ed.clearFocus()
                     }
@@ -454,8 +531,38 @@ fun SoraEditorHost(
                     )
                 }
                 syncedSelection = target.selection
+                // Phase 48 — same follow for the text-unchanged moves
+                // (find-next, quick fix, the CodeC Keys caret trackpad):
+                // the caret the VM just moved is the caret that must be on
+                // screen.
+                scheduleCaretRescroll(endPos.line, endPos.column, 0L)
             }
         },
-        modifier = modifier
+        modifier = modifier.onSizeChanged { size ->
+            // Phase 48 — the chrome edge: every resize of the sora box is
+            // observed; the pure policy answers whether the caret is owed a
+            // re-scroll into the new, smaller (or bigger) viewport.
+            val previous = lastViewport[0]
+            val vp = EditorViewport(
+                heightPx = size.height,
+                imeVisible = imeVisible,
+                codecKeysVisible = codecKeysVisible,
+                stripVisible = stripVisible,
+                outputExpanded = outputExpanded,
+                statusVisible = statusVisible,
+                fontSizeSp = fontSizeSp
+            )
+            lastViewport[0] = vp
+            if (CaretVisibilityPolicy.owesRescroll(previous, vp)) {
+                // Sora's own caret (0-based) — not the VM's readout: the
+                // scroll target must be what sora will actually draw.
+                runCatching { editor.cursor.left() }.getOrNull()?.let { at ->
+                    scheduleCaretRescroll(
+                        at.line, at.column,
+                        CaretVisibilityPolicy.debounceMs(previous, vp)
+                    )
+                }
+            }
+        }
     )
 }
