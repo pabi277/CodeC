@@ -120,6 +120,7 @@ class CoachMarkPlanTest {
                 GuideSurface.EDITOR,
                 GuideSurface.EDITOR,
                 GuideSurface.EDITOR,
+                GuideSurface.EDITOR,
                 GuideSurface.PREVIEW,
                 GuideSurface.EDITOR,
                 GuideSurface.PACKAGES,

@@ -223,7 +223,7 @@ class GuideWiringTest {
             "beat 3: the demo's PROJECTS row is not anchored",
             source(drawer).contains("CoachMarkPlan.drawerDemoPickAnchor(") &&
                 source(drawer).contains("DemoProjects.NAME") &&
-                source(drawer).contains("GuideAnchors.DEMO_PICK")
+                source(drawer).contains("pickAnchorId")
         )
         assertTrue(
             "beat 4: the demo's app.py row is not anchored",
