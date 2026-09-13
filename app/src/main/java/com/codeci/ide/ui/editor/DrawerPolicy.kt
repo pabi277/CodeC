@@ -28,25 +28,28 @@ enum class DrawerCloseReason {
     /** Tapping a file row opened the file; the drawer leaves with it. */
     FILE_OPENED,
 
-    /** A project (or Single files) was picked from the in-drawer list. */
+    /**
+     * A project (or Single files) was picked from the in-drawer list. The
+     * switch happens BEHIND the drawer: the list stays dropped-down and the
+     * tree refreshes under it — a pick must never close the list it was
+     * tapped in (device round 2, owner: *"it closes the pop up of the file
+     * selection option it should drop down all the available projects"*).
+     */
     PROJECT_SWITCHED
 }
 
 object DrawerPolicy {
 
     /**
-     * Every close reason closes an OPEN drawer; a close when already closed is
-     * a no-op (the "double animation" bug class — never two `close()` calls).
+     * An OPEN drawer closes for every reason except a project pick — the
+     * pick switches the context and the drawer STAYS open (device round 2:
+     * closing it threw the user out of the list they were choosing from,
+     * and cut the guided tour between its drawer beats). A close when
+     * already closed is still a no-op (the "double animation" bug class —
+     * never two `close()` calls).
      */
-    fun shouldClose(reason: DrawerCloseReason, drawerOpen: Boolean): Boolean = drawerOpen
-
-    /**
-     * The one close that ALSO changes the editor's context. Nothing else may
-     * switch projects as a side effect of closing (and ✕ in particular must
-     * never open a dialog or navigate — PART_47_1 exit 1).
-     */
-    fun closesAndSwitches(reason: DrawerCloseReason): Boolean =
-        reason == DrawerCloseReason.PROJECT_SWITCHED
+    fun shouldClose(reason: DrawerCloseReason, drawerOpen: Boolean): Boolean =
+        drawerOpen && reason != DrawerCloseReason.PROJECT_SWITCHED
 }
 
 /**

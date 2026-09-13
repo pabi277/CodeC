@@ -237,3 +237,36 @@ nothing` (slices the wiring window: `createRoute(openAddSheet = true)` +
 `restoreState = false`, and the broken flag gone).
 
 **Device-round fix CI ✅ GREEN: run `34736668771` on tip `ce4044d` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug`, artifacts `CodeC-IDE-release` / `CodeC-IDE-debug` (the owner's re-round build).**
+
+
+## Device round 2 (2026-09-13) — a project pick must never close the drawer
+
+**Owner report (guide beat 2):** *"when i click the project to select
+demo_flask it closes the pop up of the file selection option it should drop
+down all the available projects."*
+
+**Root cause:** the pick ran `closeDrawer(PROJECT_SWITCHED)` UNLESS a
+seen-set guard (`CoachMarkPlan.nextBeatIsInDrawer` → `tourWaitsInDrawer`)
+predicted that the guided tour was waiting on a beat inside the drawer
+(45.2 round 3's close-then-stay compromise). A prediction is exactly as good
+as its inputs: on the owner's phone it said "no tour waiting" mid-tour, the
+drawer closed, and the tour went silent between its own beats — the exact
+failure the guard existed to prevent.
+
+**Fix — the unconditional law (supersedes the 45.2 round-3 guard):** a
+project pick is not a close at all. It switches the context BEHIND the
+drawer: the list stays dropped-down with the new project ●-marked, the tree
+refreshes under it, and the tour's drawer beats are unreachable-to-break by
+construction — for everybody, tour or no tour. Removed with it:
+`tourWaitsInDrawer` (EditorScreen param + host arg),
+`CoachMarkPlan.nextBeatIsInDrawer` (pure, its only consumer gone),
+`DrawerPolicy.closesAndSwitches` (a pick no longer closes, so "the close
+that also switches" no longer exists), and `DrawerPolicy.shouldClose` now
+answers `drawerOpen && reason != PROJECT_SWITCHED`.
+
+**Tests:** `DrawerPolicyTest` rewritten to the new matrix (a pick never
+closes — open or closed; the other three reasons still close; closed-drawer
+no-op kept) · `GuideWiringTest` pick pin rewritten (switchContext stays the
+one code path; NO close call after the switch; the guard and its predictor
+pinned gone) · the `nextBeatIsInDrawer` CoachMarkPlanTest case removed with
+its function. `step.inDrawer` stays (nextStep/remaining still use it).

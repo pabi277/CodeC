@@ -1751,3 +1751,22 @@ Two fixes from the owner's first device round on the 46+47 build:
 `EditorRouteCompatTest` + `DrawerWiringTest` (the navigations restore
 nothing); fix build CI ✅ GREEN `34736668771` tip `ce4044d` — re-test the two
 reports above on that build, plus a normal round of the five-tab switching.
+
+
+## 43. "Picking a project in the guide's drawer closes the file list" (Phases 46+47 device round 2, 2026-09-13)
+
+**Report:** in the guide's 2nd step, tapping **demo_flask** in the drawer's
+project list *"closes the pop up of the file selection option"* — it should
+drop down all the available projects (and stay).
+
+**Fixed:** tapping a project in the ☰ drawer's PROJECTS list now switches the
+project **without closing the drawer** — the list stays open with the new
+project marked, and the file tree behind it refreshes to that project. (It
+used to close the drawer unless the guide happened to be mid-tour; now it
+never closes, tour or no tour.) Tapping a FILE row still closes the drawer —
+that is the "open it and go" action.
+
+**Rows:** re-run the guide from Settings → About → Reset tips: beat 2 (tap the
+project header) → the list drops down → tap demo_flask → the drawer STAYS,
+showing demo_flask's tree with demo_flask marked → beat 3 (tap app.py) closes
+the drawer as before.

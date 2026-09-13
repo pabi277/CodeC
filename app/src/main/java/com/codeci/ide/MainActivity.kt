@@ -1226,7 +1226,6 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     // drawer, so the editor reopens it after a pick. A pure
                     // question asked of the plan, and false whenever the tour is
                     // not mid-flight: no tour, no change for anybody.
-                    tourWaitsInDrawer = CoachMarkPlan.nextBeatIsInDrawer(coachSeen)
                 )
             }
             composable(

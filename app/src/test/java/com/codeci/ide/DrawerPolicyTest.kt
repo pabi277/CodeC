@@ -8,23 +8,38 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 47.1 — the close-affordance matrix (PART_47_1 §Tests). Every close
- * path the app controls answers through [DrawerPolicy]; the matrix pins that
- * they all agree and that a project switch is the ONLY close that also
- * changes context.
+ * Phase 47.1 — the close-affordance matrix (PART_47_1 §Tests, amended by the
+ * device round 2): every close path the app controls answers through
+ * [DrawerPolicy]; a project pick is the ONE event that does not close —
+ * the switch happens behind the drawer, list dropped-down.
  */
 class DrawerPolicyTest {
 
     private val reasons = DrawerCloseReason.values()
 
     @Test
-    fun `every reason closes an open drawer`() {
+    fun `every reason except a project pick closes an open drawer`() {
         for (reason in reasons) {
-            assertTrue(
-                "$reason must close an open drawer",
+            assertEquals(
+                "$reason vs an open drawer",
+                reason != DrawerCloseReason.PROJECT_SWITCHED,
                 DrawerPolicy.shouldClose(reason, drawerOpen = true)
             )
         }
+    }
+
+    @Test
+    fun `a project pick never closes the drawer - open or closed`() {
+        // Device round 2 (owner: the pick "closes the pop up of the file
+        // selection option [but] it should drop down all the available
+        // projects"). The switch happens behind the drawer; the guided tour's
+        // drawer beats are unreachable-to-break by construction.
+        assertFalse(
+            DrawerPolicy.shouldClose(DrawerCloseReason.PROJECT_SWITCHED, drawerOpen = true)
+        )
+        assertFalse(
+            DrawerPolicy.shouldClose(DrawerCloseReason.PROJECT_SWITCHED, drawerOpen = false)
+        )
     }
 
     @Test
@@ -38,20 +53,9 @@ class DrawerPolicyTest {
     }
 
     @Test
-    fun `only PROJECT_SWITCHED closes and switches context`() {
-        for (reason in reasons) {
-            assertEquals(
-                "$reason closesAndSwitches",
-                reason == DrawerCloseReason.PROJECT_SWITCHED,
-                DrawerPolicy.closesAndSwitches(reason)
-            )
-        }
-    }
-
-    @Test
     fun `the close button is a pure close - no dialog, no navigation, no switch`() {
         // PART_47_1 exit 1: ✕ closes it "and does nothing else".
         assertTrue(DrawerPolicy.shouldClose(DrawerCloseReason.CLOSE_BUTTON, drawerOpen = true))
-        assertFalse(DrawerPolicy.closesAndSwitches(DrawerCloseReason.CLOSE_BUTTON))
+        assertFalse(DrawerPolicy.shouldClose(DrawerCloseReason.CLOSE_BUTTON, drawerOpen = false))
     }
 }

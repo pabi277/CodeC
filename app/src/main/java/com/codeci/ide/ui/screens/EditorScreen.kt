@@ -214,15 +214,6 @@ fun EditorScreen(
      * drawer never creates projects (one truth about how projects begin).
      */
     onOpenProjects: () -> Unit = {},
-    /**
-     * Phase 45.2 round 3 — the guided tour is waiting on a beat that lives inside
-     * this drawer (`CoachMarkPlan.nextBeatIsInDrawer`, passed down by the host
-     * that owns the seen set). Opening the project picker closes the drawer, so
-     * without this the owner's *"change the project folder to demo_flask →
-     * selected app.py"* would go silent after the pick and wait for the user to
-     * find ☰ again. False for everybody else, always: no tour, no change.
-     */
-    tourWaitsInDrawer: Boolean = false,
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -468,10 +459,10 @@ fun EditorScreen(
         }
     }
     // Phase 47.1 — every close the app controls routes through ONE callback
-    // over the pure DrawerPolicy, so ✕ / back / file-opened / project-switched
-    // cannot drift (the scrim stays Material3's own affordance, same result).
-    // Closing and NOTHING else: the context-changing close is
-    // PROJECT_SWITCHED, and DrawerPolicy.closesAndSwitches is the only yes.
+    // over the pure DrawerPolicy, so ✕ / back / file-opened cannot drift (the
+    // scrim stays Material3's own affordance, same result). Closing and
+    // NOTHING else; a project pick is not a close at all — it switches the
+    // context and the drawer stays open (device round 2).
     val closeDrawer: (DrawerCloseReason) -> Unit = { reason ->
         if (DrawerPolicy.shouldClose(reason, drawerState.isOpen)) {
             uiScope.launch { drawerState.close() }
@@ -1105,12 +1096,15 @@ fun EditorScreen(
                                 .getOrNull()?.let(onProjectSelected)
                         }
                         viewModel.switchContext(context, contextName)
-                        // A project switch closes the drawer — except while
-                        // the tour waits on a beat inside it (45.2 round 3):
-                        // stay open so the next box is already there.
-                        if (!tourWaitsInDrawer) {
-                            closeDrawer(DrawerCloseReason.PROJECT_SWITCHED)
-                        }
+                        // Device round 2 (owner: a pick "closes the pop up of
+                        // the file selection option [but] it should drop down
+                        // all the available projects") — a pick STAYS: the
+                        // switch happens behind the drawer, the list stays
+                        // dropped-down with the new current project marked,
+                        // and the tree refreshes under it. The old
+                        // close-unless-the-tour-waits guard is gone: staying
+                        // is the behaviour for EVERYBODY, which also makes
+                        // the tour's drawer beats unreachable-to-break.
                     },
                     onNewProject = {
                         // Navigation-driven close (not a policy reason): the
