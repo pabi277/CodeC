@@ -1888,3 +1888,59 @@ build — the eleventh beat).
 rows, §44's blink re-check, Phase 48's eight checks and Phase 49's ten +
 49.2's eight. Merge commanded via
 [PR #79](https://github.com/pabi277/CodeC/pull/79).
+
+## 46. Running a device round, and what a red `DeviceMatrixTest` means (agent runbook; Phase 50, 2026-09-13)
+
+**The problem this section exists for.** Phases 44–49 each ran their device
+rounds as prose: the owner pasted reports, and a human read them into ✅ in a
+part doc. Nothing counted the rows, and the runbooks themselves rotted — Phase
+44's first round was run against a plan that quoted sentences the app had never
+had (`Preparing Python (1/3) · 0 %`, `Offline — setup paused · Retry`, NEXT/SKIP
+buttons on tour cards), so the round spent its scarcest resource — a person
+with a phone — discovering its own instructions were wrong. Phase 50 replaced
+that with one runbook, `docs/chat-phase50/DEVICE_MATRIX.md`: 90 rows in ten
+rounds (A–J), four device classes, both destructive cases, and every row
+belonging to exactly one part file, whose `## Test log` table is where the
+result lands.
+
+**Running a round (owner procedure; the short form is `docs/BETA.md`).** Install
+the latest green `Build APK` **from `main`** — never a session branch, that is
+how a round gets run against a stale APK. Copy the identity line (line 1 of
+COPY REPORT) into the top of the record, so a ❌ can be tied to a build. Then run
+§3's 20-minute shortlist first, then the rounds, one row at a time: ✅ needs
+nothing, ❌ needs the device, the OS, the nav mode and what was actually seen,
+pasted and not paraphrased. Paste each row's result into its part file's
+`## Test log` in the same commit as any fix, and give every failure either a fix
+or a dated deferral with a reason. One device is not a pass: the phase wants
+≥ 2, one gesture-nav and one 3-button-nav, because back/exit behaviour differs
+between them and that difference is bug 5.B.
+
+**`DeviceMatrixTest` is red — read it before you touch anything.** The test
+checks the document, so a failure is almost always the runbook lying, not the
+app breaking. Four shapes, and the fix for each:
+
+1. *“… is not an app string (re-worded in code, or invented)”* — the quoted span
+   in a `PASS looks like` cell no longer exists in `app/src/main`. If the code
+   moved, re-quote the code (grep the literal / `strings.xml`, use `NN` for a
+   number and `…` for an elision). If the sentence never existed, the row is a
+   promise someone typed: rewrite the row to what the app does.
+2. *“… has N columns”* / *“row X has Run on …”* — the markdown shape drifted
+   (the round tables are `# | Part | Run on | What to do | PASS looks like`, and
+   `Run on` is `ALL` or a `+`-joined list of D1–D4).
+3. *“row X … is NOT listed in its own Test log”* — a row was added, renamed or
+   dropped in the matrix without regenerating the eleven `## Test log` tables.
+   Regenerate them from the doc; never hand-type a row list.
+4. *“the runbook tells the tester to install a build off an `arena/*` branch”* /
+   the `main`-pointer assert — the header drifted back to a branch build. Point
+   it at the green `main` artifact and its run id.
+
+Do **not** weaken a pin to get green: no lowering the ≥ 30-verbatim-row floor, no
+de-backticking a real sentence to dodge a mismatch, no deleting a row because it
+is hard. (Two spans are exempt on purpose — typed commands and code filenames,
+via `isNonUi` — and negative expectations like `Open folder` must be written
+*without* backticks, because a back-ticked span asserts the string ships.)
+
+**What this test cannot do.** It proves the runbook is true, not that the app is
+right. No row of the matrix is a pass until a human with a handset pastes one, so
+a green `Build APK` with an empty `## Test log` means exactly one thing: **device
+pass required**.

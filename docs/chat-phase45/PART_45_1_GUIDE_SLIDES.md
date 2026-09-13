@@ -334,3 +334,23 @@ Two things round 4 changes *around* the slides:
    the slide that promised this, and round 4 made the app behave like slide 3 says.
    Specified in [`../chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../chat-phase44/PART_44_1_VISIBLE_SETUP.md)
    §"Phase 45 rounds 4-5 — the chrome lock"; device rows **G34-G40**.
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 7 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `45.1` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| C1 | ⏳ | |
+| C2 | ⏳ | |
+| C3 | ⏳ | |
+| C4 | ⏳ | |
+| C5 | ⏳ | |
+| C6 | ⏳ | |
+| J7 | ⏳ | |
+
+**Already on record:** the five slides survived six rounds *unchanged* by
+owner decision (*"Slides stay as they are (GOT IT / START CODING / SKIP)."*), and
+round 1 of the phase's device round covered the guide's shape on one phone.
+Nothing here is a per-row pass: C1-C6 and J7 are.
+

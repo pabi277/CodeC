@@ -647,3 +647,37 @@ measure) and on the round-6 commit (`34719753700`, tip `8c3c10d`, job `build` 25
 [`../chat-phase45/DEVICE_ROUND.md`](../chat-phase45/DEVICE_ROUND.md) **G34-G41**.
 Owner-facing explanation: [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §38 (round 4),
 §39 (round 5) and §40 (round 6).
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 20 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `44.1` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| A1 | ⏳ | |
+| A2 | ⏳ | |
+| A3 | ⏳ | |
+| A4 | ⏳ | |
+| A5 | ⏳ | |
+| A6 | ⏳ | |
+| A7 | ⏳ | |
+| A8 | ⏳ | |
+| A9 | ⏳ | |
+| A10 | ⏳ | |
+| A11 | ⏳ | |
+| A12 | ⏳ | |
+| E1 | ⏳ | |
+| E2 | ⏳ | |
+| E3 | ⏳ | |
+| E4 | ⏳ | |
+| E5 | ⏳ | |
+| E6 | ⏳ | |
+| E7 | ⏳ | |
+| J2 | ⏳ | |
+
+**Already on record:** 44's *device round 1* ran (the owner, 2026-09-12) and
+FAILED three root causes, all fixed in the shipped build — see
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) §"Round 1 result". **Round 2 (R1-R8) and the
+twelve D-rows have never been run per row**, on any device: rounds A and E here
+are their first pass, and E1/E6 are the lock's first pass anywhere.
+

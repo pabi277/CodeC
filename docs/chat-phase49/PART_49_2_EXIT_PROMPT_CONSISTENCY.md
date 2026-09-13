@@ -201,3 +201,25 @@ mode / the second-press shape), `BackRouterRootTest`, the second-door pins in
 `BackHandlerWiringTest`, `SettingsAuditTest` (row 48 in the same commit),
 `SettingsKeysHaveReadersTest` (no new key — untouched by construction),
 `ExitSurveyTest` (the upload invariant).
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 8 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `49.2` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| I9 | ⏳ | |
+| I10 | ⏳ | |
+| I11 | ⏳ | |
+| I12 | ⏳ | |
+| I13 | ⏳ | |
+| I14 | ⏳ | |
+| I15 | ⏳ | |
+| J6 | ⏳ | |
+
+**Already on record:** the eight prompt checks passed on the owner's phone
+at round level (2026-09-13). 5.B was *literally* a "different on other phones"
+report, so I9-I12 on **both** nav modes and both start destinations are the whole
+point of this phase — a one-device pass does not close 5.B. I15 is the diagnostic
+the fix ships with: paste the line with any failure.
+

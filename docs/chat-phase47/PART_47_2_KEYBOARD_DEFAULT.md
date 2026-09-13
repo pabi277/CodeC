@@ -208,3 +208,19 @@ a REVERSED-BY-47.2 note so no future chat "restores" it.
 
 **Exit condition status:** 1-3, 5-7 are the device round (owner; 4 = the
 absent-key rule, pinned); CI green = the automated halves.
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 4 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `47.2` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| G7 | ⏳ | |
+| G8 | ⏳ | |
+| G9 | ⏳ | |
+| J4 | ⏳ | |
+
+**Already on record:** the owner's round confirmed the system-keyboard
+default (*"All working"*) and then reported the CodeC Keys blink, which H9
+carries; the stored-choice promise (G9) has never been run as its own row.
+

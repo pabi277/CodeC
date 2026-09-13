@@ -132,3 +132,20 @@ above, which the spec asked for only in prose.
 (one tap each: New project / Clone / Import ZIP / Import file / Export /
 Export all / "Open with CodeC" / the drawer's New folder) — **pending, owner
 round**; 5 = CI; 6 ✓.
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 3 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `46.1` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| F1 | ⏳ | |
+| F2 | ⏳ | |
+| J1 | ⏳ | |
+
+**Already on record:** ✅ **device-passed** — phases 46+47 went through the
+owner's rounds 1-2 (2026-09-13) and merged on *"All working merge it"* (PR #78),
+round level, one phone. F1/F2/J1 are the cross-device half of that: the deletion
+is grep-pinned (`FolderImportRemovedTest`), and J1 (file access revoked) has
+never been run on any device.
+

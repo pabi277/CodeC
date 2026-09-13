@@ -198,3 +198,25 @@ If this were my project I would stop adding IDE surface area and spend the next 
 The engines for 1–4 are listed in `docs/OSS_REPLACEMENT_RESEARCH.md`. This file is the **product** order: ease first, marketplace second.
 
 Nothing here starts until you say **Start Phase N**. Specs: Phases **29–33** in `docs/chat-phase29/` … `docs/chat-phase33/` (planned 2026-09-05). Recommended first: **Start Phase 29**.
+
+---
+
+## 10. Where the phone checks live now (2026-09-13, Phase 50)
+
+This file was written as an **analysis**, and it has no pending-check list — the
+Phase 50 plan cited its "§12" for one, which does not exist (the file ends at §9).
+That citation is closed rather than deferred, and the checks themselves have real
+homes now:
+
+- **the cross-device runbook** → [`chat-phase50/DEVICE_MATRIX.md`](chat-phase50/DEVICE_MATRIX.md)
+  (90 rows, four device classes, both nav modes, the destructive pair, and a CI pin
+  that proves every quoted sentence exists in the app);
+- **per-phase device rounds** → [`chat-phase44/DEVICE_ROUND.md`](chat-phase44/DEVICE_ROUND.md)
+  (R1-R8, D1-D12) and [`chat-phase45/DEVICE_ROUND.md`](chat-phase45/DEVICE_ROUND.md)
+  (G1-G41), with every phase's part file carrying its own `## Test log`;
+- **the tester-facing short list** → [`BETA.md`](BETA.md) §"What a tester should
+  compare, every time" (now six items, plus "paste COPY REPORT line 1").
+
+§8's five risks (IME insets, OEM battery management, SAF/storage revocation, small
+screens, gesture-nav back) are rows A11, J1-J2, J1, D1/C6/J7 and I9-I11 of the
+matrix respectively — the analysis became a procedure, which is what it asked for.

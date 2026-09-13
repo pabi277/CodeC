@@ -79,7 +79,10 @@ for-cause — one stale Phase-41 wiring pin in `ExitSurveyTest`, moved with
 its reason — round 2 ✅ GREEN `34740245825` (25 steps 10m6s, zero error
 annotations, release APK 6,681,018 B = +4,072 B / +0.06% over the merged
 46/47 tip `34737610972`, both phases combined); device rounds pending —
-48's eight checks and 49's ten + 49.2's eight on two nav modes). **50 is still plan-only.** Phase 43 is
+48's eight checks and 49's ten + 49.2's eight on two nav modes). **50 is 🚧 IMPLEMENTED** (2026-09-13, `arena/01a099d8-codec`): the
+> runbook, the eleven per-part `## Test log` tables and the CI pin that keeps them honest
+> are shipped — **the matrix itself is owed by the owner's handsets**, and the record is
+> in the section below. Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
 > [`chat-phase43/README.md`](chat-phase43/README.md).
@@ -153,7 +156,11 @@ The numbers **are** the order. Why this order:
    4.iv + 5.B + 5.C: one pure `BackRouter`, one precedence table, every screen
    wired to it. It goes last of the feature phases because 46/47 change which
    surfaces exist.
-7. **50 — cross-device test round.** One runbook over 44–49, on at least three
+7. **50 — cross-device test round.** 🚧 **IMPLEMENTED 2026-09-13**
+   (`arena/01a099d8-codec`; the 90-row matrix, eleven per-part `## Test log`
+   tables and `DeviceMatrixTest` pinning the runbook to the shipped strings —
+   **the matrix's own cells are the owner's**, and stay `⏳` until two devices,
+   one of them 3-button-nav, are pasted in). One runbook over 44–49, on at least three
    devices including one gesture-nav and one 3-button-nav phone, because 5.B is
    literally a *"why is it different on other phones"* bug.
 
@@ -278,7 +285,7 @@ the spec's `CloseCoachMark` row is NOT built — the 45.2 round-2 owner law
 prompt from state + the second door (Settings → Feedback & Support → "Tell
 us before you go", audit row 48 in the same commit).
 
-### Phase 50 — Cross-device test round
+### Phase 50 — Cross-device test round · 🚧 IMPLEMENTED 2026-09-13 (matrix pending devices)
 
 No new features. One runbook (`chat-phase50/DEVICE_MATRIX.md`) that walks
 44–49's exit conditions on a matrix: a gesture-nav phone, a 3-button-nav phone,
@@ -287,6 +294,53 @@ available, plus the two destructive cases that matter (kill during install,
 revoke storage). The deliverable is a **filled matrix**, not a promise — the
 same standard `docs/BETA.md` and Phase 41's device rounds set.
 Specs: [`chat-phase50/`](chat-phase50/README.md).
+
+**Shipped (2026-09-13, `arena/01a099d8-codec`).** Three artifacts, and the first
+is the one the plan did not anticipate: **the planned matrix quoted text the app has
+never had.** Re-read against the shipped sources on the day it was implemented,
+round A asked the tester to look for "Preparing Python (1/3) · 0 %", "Ready ✓",
+"Offline — setup paused · Retry" and "Setup is running — open Terminal to watch
+it" — the bar really says `Setting up CodeC's Linux tools — 42 % · C works right
+now` (`SetupGatePolicy.barText`); round B demanded a **SKIP on every tour card** six
+rounds after the owner deleted the skip; round C described a four-row `+` sheet (it
+has three rows: New Project / Clone Git Repository / Import ZIP); B4 still described
+"three or four coach marks, one per surface" with NEXT/SKIP instead of the
+eleven-beat tour; and the plan still claimed the 44–49 host tests "do not exist
+yet" (271 `@Test` cases across 27 files are green in CI). That is Phase 44's device
+round 1 over again — a round burned discovering the instructions — so:
+
+1. **[`chat-phase50/DEVICE_MATRIX.md`](chat-phase50/DEVICE_MATRIX.md)** rewritten:
+   **90 rows / 10 rounds** (A 44.1, B 44.2, C 45.1, D 45.2, E the chrome lock,
+   F 46, G 47, H 48, I 49, J the hostile environment), four device classes with a
+   per-device record sheet, a **20-minute pass** for every device after the first,
+   and the destructive pair the roadmap asked for — kill mid-install **and**
+   revoke file access (the plan carried only the first). Every row names its
+   `Part`, the classes it must run on, and the **verbatim** on-screen text.
+2. **The paste-back law, made real:** a `## Test log` table in **each of the eleven
+   part files** (44.1 … 49.2), pre-filled with the rows that part owns and `⏳`,
+   plus a note recording what the merged rounds *actually* proved (46/47 and
+   48/49 passed at round level on one phone whose model was never supplied; 44's
+   round 2 and 45's G1-G41 were never recorded row by row) — so nothing is
+   invented as ✅.
+3. **`DeviceMatrixTest`** — 10 host cases that re-read the runbook on every push:
+   row shape and contiguity, part ownership (≥ 3 rows per part and per round), the
+   device-class floors, the both-nav-modes rule on the prompt rows, the destructive
+   pair, an honest results table, the `main` build pointer — and **the verbatim
+   pin**: every back-ticked span in a `PASS looks like` cell must exist as an app
+   string (strings.xml values + production Kotlin literals, comments stripped,
+   interpolations as holes, `NN`/`…` as the doc's wildcards; paths, typed shell
+   commands, file names and test-class names exempt by shape). **A stale row now
+   fails CI**, which is the difference between a runbook and a runbook that can rot.
+
+**Not built, with the reason recorded** (README §"Decisions"): Roborazzi screenshot
+goldens (a headless-JVM golden measures Robolectric's layout; the four surfaces are
+already behaviour-pinned; CI has no `roborazzi.test.*` wiring, so a first run would
+*record* and look green while proving nothing) and a Robolectric back-stack test
+(`BackRouterTest` + `BackRouterRootTest` + `BackHandlerWiringTest` already own that
+property). `PHONE_UX_ANALYSIS.md`'s cited "§12 pending checks" **do not exist** (the
+file ends at §9) — closed as a bad citation, not deferred.
+**Open, and the owner's:** the phase stays 🚧 until ≥ 2 devices — one gesture-nav,
+one 3-button-nav — are pasted back into the part files.
 
 ---
 

@@ -240,3 +240,27 @@ the fallback (first replay, formatter-sized rewrites, any failure). Full
 record: [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §44.
 Tests: `IncrementalEditTest` ×13, `ReplayPathWiringTest` ×5. This also
 makes 48's exit check #8 (CodeC Keys round) usable on big files at all.
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 9 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `48.1` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| H1 | ⏳ | |
+| H2 | ⏳ | |
+| H3 | ⏳ | |
+| H4 | ⏳ | |
+| H5 | ⏳ | |
+| H6 | ⏳ | |
+| H7 | ⏳ | |
+| H8 | ⏳ | |
+| H9 | ⏳ | |
+
+**Already on record:** the eight checks and the blink row were run by the
+owner on **one** phone (2026-09-13) and reported *"All device passed"* — round
+level, no per-row text, device model not supplied, so nothing here is marked ✅ on
+his word alone: H1-H9 must be re-read on a second device class, and H8/H9 are the
+rows that only mean something on hardware (the caret's pixels and the replay path
+under a real IME).
+

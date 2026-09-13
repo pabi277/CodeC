@@ -276,3 +276,22 @@ the list wholesale and the flip back starts clean) · `EditorRouteCompatTest`
 `DrawerWiringTest` +1 (the New-project hand-off, see PART_47_1).
 
 **Device-round fix CI ✅ GREEN: run `34736668771` on tip `ce4044d` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug`, artifacts `CodeC-IDE-release` / `CodeC-IDE-debug` (the owner's re-round build).**
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 5 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `46.2` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| F3 | ⏳ | |
+| F4 | ⏳ | |
+| F5 | ⏳ | |
+| F6 | ⏳ | |
+| F7 | ⏳ | |
+
+**Already on record:** ✅ **device-passed at round level** on the owner's
+phone (PR #78, 2026-09-13), *including* the two round-1 fixes this part owns — the
+single-tap file open and *"2 projects are different so don't open together"* (F7
+is that law's row). F3-F6 on a tablet, and the long-press clipboard row F6, are
+new.
+

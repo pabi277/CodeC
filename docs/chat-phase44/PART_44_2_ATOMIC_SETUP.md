@@ -273,3 +273,25 @@ zero orphans — pinned by `SwapRecoveryTest`.
 - **Making `pkg` a shim that self-heals the prefix** — violates the standing law
   *never overwrite `cc` or the real ELF `bash` with a shim* (`rule.md` §6) in
   spirit; the repair belongs at boot, in one place, with a log line.
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 8 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `44.2` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| B1 | ⏳ | |
+| B2 | ⏳ | |
+| B3 | ⏳ | |
+| B4 | ⏳ | |
+| B5 | ⏳ | |
+| B6 | ⏳ | |
+| B7 | ⏳ | |
+| J3 | ⏳ | |
+
+**Already on record:** the ledger, the swap and the sweep are CI-pinned
+(`SetupLedgerTest`, `SwapRecoveryTest` — real temp directories, all three kill
+points) and the owner's half-finished-prefix report is what the phase was built
+for. **No 44.2 device row has ever been run** — B1-B4 and J3 are the device half
+of the promise, and B3 is the data-loss case.
+

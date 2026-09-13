@@ -246,3 +246,24 @@ from the same inputs the wiring builds), `BackHandlerWiringTest` (every
 enabled condition and its three actions; the editor's four actions and the
 targetValue semantics; the hub's close; the guide's pop; the second door),
 plus the moved `DrawerWiringTest` / `GuideWiringTest` pins.
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 8 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `49.1` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| I1 | ⏳ | |
+| I2 | ⏳ | |
+| I3 | ⏳ | |
+| I4 | ⏳ | |
+| I5 | ⏳ | |
+| I6 | ⏳ | |
+| I7 | ⏳ | |
+| I8 | ⏳ | |
+
+**Already on record:** the ten back checks ran on the owner's phone and
+passed at round level (2026-09-13, *"All device passed"*). One phone is one nav
+mode: I1-I8 on the other mode, and I2 (the sub-200 ms press) on a slow device,
+are the cross-device half.
+

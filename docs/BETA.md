@@ -80,5 +80,20 @@ the same phone.
 3. The backup ZIP round-trip above on a spare folder
 4. Settings → About reads the version the release notes announce
 
+5. The one-time setup is visible and finishes — a bar that says
+   `Setting up CodeC's Linux tools — 42 % · C works right now` on **every** tab,
+   and at the end `pkg --version` works in the terminal (Phase 44)
+6. Back does the obvious thing: an open drawer closes, an open project tree
+   closes, and the exit prompt appears on the **back** button (not on a home
+   swipe — no app can) — Phase 49
+
 Anything else that misbehaves — see the list above, and if it's not
 there, it IS a report. Thank you for testing.
+
+> **Which device you have is part of the report.** The cross-device round
+> (Phase 50) is a matrix of small/large, gesture-nav/3-button-nav, Android 13+
+> and tablets, because several fixes are only visible on hardware:
+> [the runbook](chat-phase50/DEVICE_MATRIX.md). You do not have to run all 90
+> rows — the numbers above are its short form — but please paste
+> Settings → Feedback & Support → **COPY REPORT**'s first line so the model and
+> Android version are in it.

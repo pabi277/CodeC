@@ -272,3 +272,22 @@ pinned gone) · the `nextBeatIsInDrawer` CoachMarkPlanTest case removed with
 its function. `step.inDrawer` stays (nextStep/remaining still use it).
 
 **Device-round-2 fix CI ✅ GREEN: run `34737610972` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug` (the owner's re-round build).**
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 6 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `47.1` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| G1 | ⏳ | |
+| G2 | ⏳ | |
+| G3 | ⏳ | |
+| G4 | ⏳ | |
+| G5 | ⏳ | |
+| G6 | ⏳ | |
+
+**Already on record:** ✅ **device-passed at round level** (PR #78,
+2026-09-13), with two fixes that came *out of* the device rounds: the `＋ New
+project…` hand-off (G5) and *"a pick never closes the drawer"* (G4). G3/G6 on a
+wide layout are new.
+

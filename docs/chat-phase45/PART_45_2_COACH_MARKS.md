@@ -919,3 +919,30 @@ verbatim *"All device passed. Now merge it."* (2026-09-13) — the re-round,
 the blink re-check, 48's eight checks and 49's ten + 49.2's eight in one
 pass. Merge commanded via
 [`PR #79`](https://github.com/pabi277/CodeC/pull/79).
+
+## Test log (Phase 50 — the cross-device matrix)
+
+> The 12 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `45.2` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+
+| Row | Result | Evidence (device · OS · nav mode · what was seen) |
+|---|---|---|
+| D1 | ⏳ | |
+| D2 | ⏳ | |
+| D3 | ⏳ | |
+| D4 | ⏳ | |
+| D5 | ⏳ | |
+| D6 | ⏳ | |
+| D7 | ⏳ | |
+| D8 | ⏳ | |
+| D9 | ⏳ | |
+| D10 | ⏳ | |
+| D11 | ⏳ | |
+| J5 | ⏳ | |
+
+**Already on record:** the tour's flow rows were walked by the owner across
+rounds 1-7 (each report produced a fix — one tour, no skip, one tap both halves,
+the eleven beats with `demo_flask`'s own box), and his verdict on the final build
+was *"All device passed"* (2026-09-13, one phone, model not supplied, round
+level). **G1-G41 were never recorded row by row**, so every row here stays open
+until it is: D2-D5 are the one-tap law on hardware that is not his.
+
