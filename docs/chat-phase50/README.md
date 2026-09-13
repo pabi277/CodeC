@@ -132,6 +132,19 @@ Phase 50 is 🚧 IMPLEMENTED, never ✅ COMPLETE: this phase's deliverable is a
 filled matrix, not a promise.
 ```
 
+**CI, as it stands at the commit (`fe88de0`, 2026-09-13).** The push landed on
+`arena/01a099d8-codec`; the run id is **not** recorded here, because the sandbox's
+GitHub credential died (HTTP 401) immediately after the push and no run could be
+read. That matters more than usual for a docs phase: `Build APK` runs the app's
+unit tests, so **that run is also the first compile of `DeviceMatrixTest.kt`** —
+this file was written without a Gradle in reach, its rules mirrored in a throwaway
+parser over the same inputs (0 problems across all 90 rows). Exit 5 therefore stays
+open until either the run is read (reconnect GitHub, `gh run list --branch
+arena/01a099d8-codec`) or the owner runs
+`./gradlew :app:testDebugUnitTest --tests '*DeviceMatrixTest*'` and pastes the
+result. If it is red, `docs/TROUBLESHOOTING.md` §46 lists the four shapes a failure
+comes in and what each one means — and the fix is the document, not the pin.
+
 **Row census** (measured from the file, and the floors `DeviceMatrixTest` enforces):
 90 rows / 10 rounds; per part 44.1 ×20, 44.2 ×8, 45.1 ×7, 45.2 ×12, 46.1 ×3,
 46.2 ×5, 47.1 ×6, 47.2 ×4, 48.1 ×9, 49.1 ×8, 49.2 ×8; 33 rows quote a

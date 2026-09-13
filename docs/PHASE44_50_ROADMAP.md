@@ -322,7 +322,7 @@ round 1 over again — a round burned discovering the instructions — so:
    48/49 passed at round level on one phone whose model was never supplied; 44's
    round 2 and 45's G1-G41 were never recorded row by row) — so nothing is
    invented as ✅.
-3. **`DeviceMatrixTest`** — 10 host cases that re-read the runbook on every push:
+3. **`DeviceMatrixTest`** — 11 host cases that re-read the runbook on every push:
    row shape and contiguity, part ownership (≥ 3 rows per part and per round), the
    device-class floors, the both-nav-modes rule on the prompt rows, the destructive
    pair, an honest results table, the `main` build pointer — and **the verbatim
