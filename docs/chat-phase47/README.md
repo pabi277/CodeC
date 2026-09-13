@@ -21,6 +21,13 @@
 | [47.1](PART_47_1_DRAWER.md) | Closable drawer + in-drawer project picker | M | 🚧 IMPLEMENTED |
 | [47.2](PART_47_2_KEYBOARD_DEFAULT.md) | System keyboard by default | S | 🚧 IMPLEMENTED |
 
+**CI round 1 🔴 for-cause (run `34734918994`, commit `f72d859`):** three
+`Unresolved reference 'assertEquals'` compile errors — `DrawerPolicyTest` and
+`KeyboardDefaultTest` used assertions they never imported. Test-only, fixed in
+the same session; the annotations carried nothing else, so the whole
+production diff compiled first try. (The §9 lesson generalises: an import
+audit is greppable — run it before the push, not on CI's dime.)
+
 ---
 
 ## What exists today (evidence, read 2026-09-12 against `main` @ `f3a6e32`)

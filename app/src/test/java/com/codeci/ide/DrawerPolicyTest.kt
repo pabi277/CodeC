@@ -2,6 +2,7 @@ package com.codeci.ide
 
 import com.codeci.ide.ui.editor.DrawerCloseReason
 import com.codeci.ide.ui.editor.DrawerPolicy
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
