@@ -1816,3 +1816,69 @@ re-attach preserved).
 consulted BEFORE `ed.setText` in `SoraEditorHost` (ReplayPathWiringTest
 fails first), and that no new caller introduced a second full-replace path
 (`grep -n "ed.setText(" app/src/main` → 1 hit).
+
+## 45. "you repeated a previous mistake — the guide should be single click to work but now one click close the guides box and again have click the option to work make it single click" + "one guide box if possible give the demo_flask also a guide box after opening projects" (owner device round 1 on the 48+49 build, 2026-09-13)
+
+**Symptom.** Two rows in one report. (a) The round-4 single-click law — the
+tap that dismisses a guide box must PERFORM the whole thing the box teaches —
+read broken again: tapping a box closed it, and the thing it taught needed a
+second, unguided tap. (b) Between the "change project" box and the "open
+app.py" box there is a step with no box at all: picking `demo_flask` itself.
+The owner asked for that box explicitly.
+
+**Evidence (reads and greps only — no code until the mechanism was named).**
+The overlay machinery is sound: a tap resolves its target at PRESS
+(`GuideTapPolicy.targetFor` — smallest box wins, then beat order), consumes
+the gesture, performs the anchor's published click on lift, then advances.
+The two-click feel came from the PLAN, not the plumbing — three shapes:
+
+1. **The pick had no box.** Beat 2 (the drawer header) teaches "change the
+   project folder to `demo_flask`", but since Phase 47.1 its tap only DROPS
+   the in-drawer PROJECTS list down. The pick itself — find `demo_flask` in
+   the fresh list, tap it — stood between beats 2 and 3 completely unguided.
+   That unguided tap IS the owner's "again have click the option to work".
+2. **RUN ▶ could detour through the chooser.** Beat 5 published the button's
+   whole click, and since Phase 33 that click may open the run-chooser
+   dialog (`runChooserEntryOrNull`) when a differing launch default exists —
+   the tour's dismissal could land on a second screen the tour never teaches.
+3. **The header's guided tap was a toggle.** On a phone that already had the
+   list down, the "lesson" tap would have folded it back up — teaching the
+   opposite of its box.
+
+**Fix (pure policy + thin wiring; the tour is now 11 beats).**
+
+- `CoachMarkPlan`: new `GuideAnchors.DEMO_PICK` (`drawer_demo_pick`) + step 3
+  **"Pick the demo"** — *"Tap demo_flask — the working demo CodeC ships
+  with."* — `inDrawer = true`, between the header and the entry file (the
+  owner's second row, verbatim). Beat 2's copy now teaches only the tap
+  (*"Tap the project name to drop down the projects list."*). The pure gate
+  `drawerDemoPickAnchor(contextName, demoProjectName)` puts the box on the
+  demo's own PROJECTS row and no other (same law as `drawerFileAnchor`).
+- `EditorProjectDrawer`: the demo row publishes its OWN tap beside its rect
+  — dismissing the pick box IS the switch into the demo (round-4 law, one
+  click end to end). The header's GUIDED tap is goal-directed:
+  `{ if (!projectsExpanded) onSwitchProject() }` — it only ever drops the
+  list; the header's own tap one line up stays a toggle.
+- `EditorScreen`: the tour's RUN tap is `onGuideRunTap` = chrome-lock guard +
+  `runOpenFile()` — it never opens the Phase 33 chooser. A normal tap on
+  RUN ▶ keeps the chooser.
+
+**Invariants kept.** Strict first-to-last order (the pick beat waits for the
+dropped list exactly the way the file beat waits for its row); the dialog
+blind spot (PART_45_2 deviation 9) respected — the pick is a real drawer row,
+never a dialog row; the chooser still exists for real use; the drawer /
+blocked-by-foreground gates and the no-BackHandler rule untouched.
+
+**Tests.** `CoachMarkPlanTest`: 11-beat order, surfaces (five EDITORs before
+PREVIEW), route map, in-drawer set (three beats), stalled-beats walk and the
+`take()` prefixes, plus two new cases — the pick box lands only on the demo's
+row, and after the list drops the very next box IS the demo row.
+`GuideWiringTest`: publisher pins (goal-directed header, `onGuideRunTap`, the
+pick row performs the row's own switch) and copy pins (the pick box names
+`demo_flask`, the header box no longer does — each beat one job).
+
+**CI.** Round 1 `34742573726` red for-cause — two pins were committed stale
+(the surfaces list still 10 beats; the beat-3 pin demanding a literal the
+row computes) — fixed in `c5e73ac`; then ✅ GREEN **`34742868395`** tip
+`c5e73ac`, 8m35s, release APK **6,681,306 B** (+2,240 B over the blink-fix
+build — the eleventh beat).
