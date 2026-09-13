@@ -44,8 +44,10 @@ import org.junit.Test
  *  6. **the destructive pair** — a kill during the install and a revoked file
  *     access are both in the runbook (the roadmap's two cases), and a results row
  *     cannot carry a ✅/❌ without a device, class and build.
- *  7. **the build is real** — the runbook points at `main`, never at an `arena/*`
- *     branch build (the stale-branch pointer is exactly how round 1 went astray).
+ *  7. **the build is real** — the runbook points at `main`, never at an `arena/…`
+ *     session-branch build (the stale-branch pointer is exactly how round 1 went astray;
+ *     a literal star after that slash would open a nested block comment and Kotlin would
+ *     call the whole file unclosed — this file learned that the hard way, CI run 34751062038).
  *
  * What this test cannot do, stated so nobody over-reads it: it proves the runbook is
  * *true*, not that the app is *right*. Every device row stays owed until a human
