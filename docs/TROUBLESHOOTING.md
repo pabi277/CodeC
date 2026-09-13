@@ -1771,3 +1771,48 @@ project header) → the list drops down → tap demo_flask → the drawer STAYS,
 showing demo_flask's tree with demo_flask marked → beat 3 (tap app.py) closes
 the drawer as before.
 Fix build: CI ✅ GREEN `34737610972` — test on that build.
+
+## 44. "When i use app dedicate keyboard and typing it's blinking the full code" (owner device report, 2026-09-13)
+
+**Symptom.** With CodeC Keys up (the opt-in app keyboard — the SYSTEM
+keyboard is the default since Phase 47.2), every keystroke makes the whole
+code area flash: colors re-paint, and on a large file rows draw empty for a
+moment. Worst exactly where Phase 48 was aimed — a very big file.
+
+**Root cause (verified against the pinned sora 0.24.6 tag before changing a
+line).** The VM→sora replay in `SoraEditorHost` used `CodeEditor.setText`
+for EVERY programmatic edit — each CodeC Keys keystroke, keys-row tap,
+snippet insert and ghost accept. `setText` (`CodeEditor.java:3951`, tag
+`0.24.6`) is the nuclear option: it builds a brand-new `Content`, calls
+`AnalyzeManager.reset(...)` (a FULL re-tokenize — the syntax colors flash),
+`createLayout()` (async full re-measure via LineBreakLayout's TaskMonitor —
+big files draw empty rows until it lands), `renderContext.reset(...)`,
+`invalidateRenderNodes()`, `restartInput()` and `invalidate()`. Once per
+keystroke = the whole code blinking. Normal typing never goes through it:
+sora edits the `Content` in place and its layout/analyzer listeners process
+a DELTA (`ACTION_INSERT`/`ACTION_DELETE`) — `LineBreakLayout` adjusts
+measured rows incrementally.
+
+**Fix.** Pure `ui/editor/IncrementalEdit.kt`: the minimal delta between the
+text sora holds and the text the VM holds (maximal common prefix + suffix,
+never overlapping), applied as ONE `Content.replace(start, end,
+replacement)` — `deleteInternal` short-circuits zero-width ranges, so the
+same call is safe for insert / delete / replace shapes. Budget:
+`MAX_AFFECTED_CHARS = 2048` — keystrokes, auto-indent and snippets ride the
+delta path; a formatter rewrite or replace-all is one visible event anyway
+and keeps the atomic `setText` (whose 2026-09-06 crash story — wholesale
+replacement to avoid the mid-async-measure `BlockIntList` crash — is
+untouched and still the FALLBACK: the first replay (`known == null`) and
+any `runCatching` failure go through it, because the VM text is the source
+of truth and a wholesale `setText` is always a safe recovery).
+
+**Pins.** `IncrementalEditTest` (13 pure cases — every keystroke shape,
+the owner's 5000-char-file scene, the budget, the exactness round-trip) +
+`ReplayPathWiringTest` (the attempt precedes the fallback; exactly ONE
+`ed.setText(` in the host; the runCatching recovery; the listener
+re-attach preserved).
+
+**If it ever comes back:** check that `IncrementalEdit.between` is still
+consulted BEFORE `ed.setText` in `SoraEditorHost` (ReplayPathWiringTest
+fails first), and that no new caller introduced a second full-replace path
+(`grep -n "ed.setText(" app/src/main` → 1 hit).

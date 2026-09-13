@@ -218,3 +218,25 @@ CodeC-Keys/IME exclusivity normalised, not represented twice),
 screen hands over the chrome facts). Real pixel positions after a real IME
 animation are deliberately NOT unit-tested — that is Phase 50's device
 matrix, as planned.
+
+## Device round (2026-09-13) — *"when i use app dedicate keyboard and typing it's blinking the full code"*
+
+The owner confirmed the caret fix and reported a second, bigger sora-host
+bug: with **CodeC Keys** up (opt-in — the system keyboard is the default
+since 47.2), every keystroke blinked the WHOLE code. This part's rescroll
+was ruled out first (evidence, not guesswork): sora 0.24.6's
+`ensurePositionVisible(line, column, noAnimation)` early-returns with a
+bare `invalidate()` when the target is within 1 px (CodeEditor.java:2287),
+so the per-keystroke caret-follow never scrolls a visible caret.
+
+The real mechanism was the replay path itself: every programmatic edit
+(CodeC Keys keystroke, keys-row tap, snippet, ghost accept) went through
+`CodeEditor.setText` — new Content, `AnalyzeManager.reset` (full
+re-tokenize: the colors flash), an async full layout rebuild (empty rows on
+big files), a render-context reset, an input restart, full invalidation.
+Once per keystroke. The fix is pure `IncrementalEdit` + one
+`Content.replace` delta per small edit, with the atomic `setText` kept as
+the fallback (first replay, formatter-sized rewrites, any failure). Full
+record: [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §44.
+Tests: `IncrementalEditTest` ×13, `ReplayPathWiringTest` ×5. This also
+makes 48's exit check #8 (CodeC Keys round) usable on big files at all.
