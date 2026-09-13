@@ -1,6 +1,9 @@
 # CodeC Phase 49.2 — The exit prompt on every device, or nowhere
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`; CI =
+> executor of record, the eight-check device round below is pending — at
+> least two devices, one 3-button-nav and one gesture-nav) ·
+> **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"B. My phone showing the option when try to close
 > not now option but in most phone no option like not now or exit"* —
 > clarification 2026-09-12: **keep it ON, make it consistent.**
@@ -150,3 +153,51 @@ PASS = all eight on at least two devices — one 3-button-nav, one gesture-nav.
 - **Remembering the start destination across launches** — `EditorLaunchState`
   already does this; making it user-visible would add a preference nobody asked
   for.
+
+## Implementation (2026-09-13)
+
+**The decision moved from navigation to state — row 9/10 of the router.**
+`MainActivity`'s root handler no longer asks `popBackStack()`; it asks
+`BackRouter.isRoot(currentDestination?.route, screens.map { it.route })`
+(parameterised-route safe, `BackRouterRootTest`), so:
+
+- **Cause A (tab taps push a second entry)** dies: back on a non-start tab
+  is `PopRoute` (the platform's own bottom-nav behaviour, now a tested row
+  instead of an accident), and the back AFTER that — at the root route —
+  shows the prompt on every device, because the route says "root" whether or
+  not the stack happens to have a second entry under it.
+- **Cause B (per-install start destination)** dies the same way: `editor`,
+  `file_manager`, safe mode — all five tab patterns answer `isRoot` true, so
+  "first back at the start" behaves identically everywhere.
+- **Cause C (home/Recents swipe)** is not code-fixable and stays honestly
+  documented — with its compensation built (below).
+
+**The second door:** Settings → **Feedback & Support** → **"Tell us before
+you go"** (`SettingsAction`, SHOW) → `onShowExitPrompt` → the host's ONE
+`exitPromptVisible` flip — the same dialog, zero new copy, zero new keys. A
+tester whose phone never shows the prompt can still reach it, and the
+exit-survey funnel stops depending on which device is in hand. The
+`SETTINGS_AUDIT.md` row (row 48) was added in the same commit, so
+`SettingsAuditTest` stays green — the mechanism working as intended.
+
+**The `tap again to exit` contract kept:** the root handler is
+`BackHandler(enabled = !exitPromptVisible && rootBackAction != None)` — while
+the dialog is up the handler stands down and the dialog's
+`onDismissRequest = onExit` IS the second press. Exactly one exit path, as
+Phase 41 pinned it; `ExitSurveyTest` (nothing uploads by itself) untouched
+and passing.
+
+**The evidence gate:** every root press now logs
+`AppLogger.i("Back", "root press route=… promptEnabled=… promptVisible=… ->
+…")` — the three numbers (route, switch, decision) that settle causes A, B
+and D per device without guessing, readable from Settings → Developer
+Options → View App Logs during the owner's round.
+
+**Exit condition status:** the eight device checks are the owner's round on
+at least two devices (one 3-button-nav, one gesture-nav — check 7 is the
+gesture-nav compensation). Automated halves in CI: `ExitPromptPolicyTest`
+(fresh install / upgrade / tab-tap / root-arg variants / switch off / safe
+mode / the second-press shape), `BackRouterRootTest`, the second-door pins in
+`BackHandlerWiringTest`, `SettingsAuditTest` (row 48 in the same commit),
+`SettingsKeysHaveReadersTest` (no new key — untouched by construction),
+`ExitSurveyTest` (the upload invariant).

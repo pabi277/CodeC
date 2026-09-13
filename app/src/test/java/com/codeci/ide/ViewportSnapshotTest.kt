@@ -73,7 +73,7 @@ class ViewportSnapshotTest {
         assertEquals(false, n.stripVisible)
         assertEquals(true, n.outputExpanded)
         assertEquals(false, n.statusVisible)
-        assertEquals(18f, n.fontSizeSp)
+        assertEquals(18f, n.fontSizeSp, 1e-6f)
     }
 
     @Test

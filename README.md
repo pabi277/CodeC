@@ -225,6 +225,20 @@ Spck-grade skin:
   status bar, full editing/saving/autosave, no project chrome. The card's
   **⋮ → Open in editor** is the whole-project action (launch default → newest
   source file).
+- **Nothing hides behind the keyboard (Phase 48)**: when the keyboard, CodeC
+  Keys, the output panel, the status bar or the keys row changes the editor's
+  size, the caret is brought back into view — a suggestion accepted on the
+  last line keeps the caret on screen instead of hiding it under the
+  keyboard. Scrolling away to read is never punished: the view only follows
+  the caret when the editor's box actually changed.
+- **Back does the obvious thing, everywhere (Phase 49)**: one rule table for
+  every screen — unsaved changes ask first, then the editor drawer, the hub's
+  project tree (**back closes the tree, never the app**), open sheets, the
+  find bar, the output panel. At a root tab the exit prompt appears on every
+  device (the decision comes from where you are, not from the navigation
+  stack), and Settings → Feedback & Support → **"Tell us before you go"**
+  opens the same dialog any time — even on phones whose home swipe never
+  sends a back event.
 - **Spck-style editor**: nav-drawer file tree with in-tree git status letters,
   tabs in the app bar (dirty dot, close), a snippet/extra-keys row above the
   status bar, and a Source Control sheet with per-file stage toggle. The app

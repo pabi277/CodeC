@@ -1,6 +1,9 @@
 # CodeC Phase 49.1 — The back router
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner:
+> "Start phase 48 and 49"; CI = executor of record, the ten-check device
+> round pending — the diagnostic log now ships IN the build, see the
+> implementation record) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"iv. After clicking 3 ber if user use back botton it
 > will [close] the file view and show the editor not full app close"* —
 > clarification 2026-09-12: **both** the editor drawer and the hub file tree,
@@ -21,6 +24,18 @@ changes 49.2's wording rather than its code.
 
 Until that log exists, every hypothesis in this part stays a hypothesis. The
 design below works for H1, H2 and H3; only H4 is a non-bug.
+
+**How this step was actually discharged (implementation record, 2026-09-13):**
+the diagnostic is not a throwaway build — the shipped root handler logs every
+press it sees (`AppLogger.i("Back", …)`: the route, the prompt switch, the
+prompt visibility and the decision) and the two screen-local handlers log the
+presses they claim (the hub's tree close names the project), so the owner's
+device round produces the exact log this step asked for from the REAL build,
+via Settings → Developer Options → **View App Logs** — no second APK, and the
+ten checks run against the code that has to pass them. The drawer/hub rows
+make the chain's winners explicit (H1), key on `targetValue` (H2), and the
+sora key-path is untouched (H3 unchanged); H4 remains a wording question for
+49.2, answered by the same log.
 
 ## Design
 
@@ -132,3 +147,101 @@ The phase README's ten device checks. The three that this part owns outright:
   door open.
 - **A "press back twice to exit" toast instead of the dialog** — 5.B's owner
   instruction is to keep the prompt; a toast is a different product decision.
+
+## Implementation (2026-09-13)
+
+**New pure code (host-tested):** `ui/navigation/BackRouter.kt` — `BackState`
+(12 fields, everything defaulted so a screen fills only what it owns),
+`BackAction` (9 values) and `BackRouter.decide` — the spec's precedence
+table, verbatim:
+
+```text
+1  unsavedChanges                          -> ShowUnsavedDialog
+2  editorDrawerOpen                        -> CloseEditorDrawer
+3  hubProjectOpen                          -> CloseHubProject
+4  sheetOrDialogOpen                       -> None
+5  findBarOpen                             -> CloseFindBar
+6  outputPanelExpanded && !keyboardVisible -> CollapseOutputPanel
+7  exitPromptVisible                       -> ExitApp
+8  canPopRoute                             -> PopRoute
+9  atRootDestination                       -> ShowExitPrompt / ExitApp
+10 else                                    -> None
+```
+
+Three laws kept from the spec: `None` = "let the library own it" (sheets and
+dropdowns keep their handlers); row 6 is guarded by the keyboard (back with
+the keyboard up is the user closing it — the router must not eat it); rows
+7-9 are ROOT-ONLY fields (a screen-local state leaves them defaulted, so a
+screen's handler can never pop navigation or exit the app behind its own
+screen's back).
+
+**`isRoot` (49.2's half of this file):** `BackRouter.isRoot(route,
+rootRoutePatterns)` compares the segment before any query, by equality —
+parameterised patterns (`editor?projectName={projectName}&…`) report
+themselves as destination routes, and a substring `startsWith` would be the
+trap the 45.2 replay idiom worked around. It takes plain route-pattern
+strings (the app passes `screens.map { it.route }`) instead of `List<Screen>`
+so the file stays a pure, compose-free policy. Pinned by `BackRouterRootTest`
+against the exact five patterns `Screen.kt` builds, plus the forgery cases
+(`preview?url=https://x/settings` is NOT a root).
+
+**Wiring, screen by screen (one handler per surface, every one of them
+router-driven — pinned by `BackHandlerWiringTest`):**
+
+- `MainActivity` (root, the last in the chain): fills `canPopRoute`
+  (`previousBackStackEntry != null`), `atRootDestination` (`isRoot`),
+  `exitPromptEnabled/Visible`, `safeMode`. Performs PopRoute / ShowExitPrompt
+  / ExitApp. While the prompt is up the handler stays OFF
+  (`enabled = !exitPromptVisible && …`) — the dialog's own back IS the second
+  press, exactly one exit path, kept from Phase 41. Every press logs the
+  49.1/49.2 diagnostic line (route, prompt switch, prompt visibility,
+  decision) — View App Logs reads it.
+- `EditorScreen`: fills `unsavedChanges`, `editorDrawerOpen`
+  (`drawerState.targetValue == DrawerValue.Open` — H2), `sheetOrDialogOpen`
+  (`editorModalOpen || pendingCloseTab != null`), `findBarOpen`,
+  `outputPanelExpanded`, `keyboardVisible`. Performs the four closes. The old
+  `BackHandler(enabled = drawerState.isOpen)` and `BackHandler(enabled =
+  isDirty)` are gone; `closeDrawer` now asks `DrawerPolicy.shouldClose` with
+  the same targetValue semantics, so a back/✕ inside the ~200 ms open
+  animation CANCELS it (a closing animation still refuses — never two
+  `close()` calls).
+- `FileManagerScreen` (NEW handler — the owner's 4.iv hub half): fills
+  `hubProjectOpen` (`activeProject != null`) and its sheet/dialog set;
+  performs `viewModel.closeProject()` — the same close the breadcrumb's root
+  runs. Back at an open tree can never exit the app again.
+- `GuideScreen`: fills `canPopRoute` (the guide is a full-screen surface
+  above the shell) → PopRoute → `onFinished()` — the same act SKIP runs,
+  "back = SKIP" unchanged.
+- `WebPreview` / `Logs` / `Feedback`: unchanged (`onNavigateBack`); their
+  hardware back now reaches the root handler and pops the same way it always
+  did (canPopRoute → PopRoute).
+- Coach marks: NO handler, by design — see the deviation below.
+
+**Deviations from the written spec, each with its reason:**
+
+1. **The coach-mark row is NOT built.** The spec's table row 2
+   (`coachMarkVisible → CloseCoachMark`) was written before Phase 45's owner
+   rounds 2-3 rebuilt the tour as ONE unbreakable flow (*"I want a full
+   process 1st to last without skip anything in this"*) — Back there
+   navigates and the tour resumes unspent, pinned by `GuideWiringTest`
+   ("Back must not end the tour"). A close-the-mark row would contradict
+   that later, owner-given law, so `BackState`/`BackAction` have no
+   coach-mark members and the audit table's row 9 is corrected to
+   "navigates; the tour waits unspent" instead of "must close the mark".
+2. **The replay-follow rescroll of Phase 48** touched `SoraEditorHost`, not
+   this phase — noted here only because 49's wiring tests were written to
+   coexist with it (both phases landed in one push).
+3. **The diagnostic log ships in the root/hub handlers** (AppLogger, tag
+   `Back`) instead of a throwaway debug APK — see Step 1 above.
+
+**Exit condition status:** the ten device checks in the phase README are the
+owner's round, with the sub-200 ms drawer variant covered by construction
+(targetValue). Automated halves in CI: `BackRouterTest` (the precedence
+pairs, the total-function cases, the row-6 guard, safe mode),
+`BackRouterRootTest` (the five tab patterns plain + parameterised, non-tab
+routes, the forgery cases), `ExitPromptPolicyTest` (the four prompt states
+from the same inputs the wiring builds), `BackHandlerWiringTest` (every
+`BackHandler(` in the app is either the root or router-driven; the root's
+enabled condition and its three actions; the editor's four actions and the
+targetValue semantics; the hub's close; the guide's pop; the second door),
+plus the moved `DrawerWiringTest` / `GuideWiringTest` pins.

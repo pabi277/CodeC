@@ -73,7 +73,10 @@
 > run (start it from Settings → About → Reset tips; G29-G33 the one-tap rule, G34-G38
 > the lock, G39-G40 its first-frame timing, **G41 its release** — and G41 needs the
 > round-6 build, which is the only one that has the fix).
-> 46-50 are still plan-only. Phase 43 is
+> 48 AND 49 are 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner:
+"Start phase 48 and 49", tip `b094b28`; CI run `34739938499` = executor of
+record; device rounds pending — 48's eight checks and 49's ten + 49.2's
+eight on two nav modes). **50 is still plan-only.** Phase 43 is
 > **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
 > reason is kept as a tombstone in
 > [`chat-phase43/README.md`](chat-phase43/README.md).
@@ -225,7 +228,7 @@ users keep whatever they chose (the absent key IS the default; never written
 at startup). Tests `KeyboardDefaultTest` ×5, `ImeLeverTest`, `KeysStayPolicyTest`
 +2. Specs + implementation records: [`chat-phase47/`](chat-phase47/README.md).
 
-### Phase 48 — Nothing hides behind the keyboard
+### Phase 48 — Nothing hides behind the keyboard 🚧 IMPLEMENTED (2026-09-13; device round pending)
 
 The editor column is correctly `imePadding()`'d (`EditorScreen.kt:1016`), so
 sora is resized — but nothing ever asks sora to bring the caret back into the
@@ -235,9 +238,18 @@ new, smaller viewport, and sora only auto-scrolls on *selection* change
 calling the public `CodeEditor.ensurePositionVisible(line, column,
 noAnimation = true)` after the layout settles. Also covers the "accept a
 suggestion and the caret disappears" half of 5.A.
-Spec: [`chat-phase48/`](chat-phase48/README.md).
+Spec: [`chat-phase48/`](chat-phase48/README.md). **Implemented
+2026-09-13:** pure `CaretVisibilityPolicy`/`EditorViewport` (keys on the
+box's HEIGHT; `previous == null` never owes) + ONE rescroll owner in
+`SoraEditorHost` — the app's single `ensurePositionVisible(` site, pinned by
+`CaretCallSiteTest`, API verified against the pinned sora 0.24.6 tag — with
+`postDelayed` after layout, `noAnimation = true`, cancel-and-replace
+coalescing, `runCatching`. Recorded deviation: both VM→sora replay paths
+follow the caret they move (a ghost/chip accept swaps row for row at
+constant height, so height alone would miss the owner's second sentence);
+typing echoes skip on reference equality; quiet-on-open stays scroll-free.
 
-### Phase 49 — Back does the obvious thing, everywhere
+### Phase 49 — Back does the obvious thing, everywhere 🚧 IMPLEMENTED (2026-09-13; device round pending)
 
 Two `BackHandler` call sites exist in the whole app today
 (`MainActivity.kt:801`, `EditorScreen.kt:646`). Replace the ad-hoc set with one
@@ -247,7 +259,21 @@ pop route → exit prompt → exit. Then **5.B's real answer**: the exit prompt 
 decided from *state* ("am I at a root with nothing open"), not from
 `popBackStack()`'s return value, so it behaves the same on every device; the
 silent "first back hops to the start tab" behaviour gets a decision of its own.
-Specs: [`chat-phase49/`](chat-phase49/README.md).
+Specs: [`chat-phase49/`](chat-phase49/README.md). **Implemented 2026-09-13:**
+`BackRouter.decide` over defaulted `BackState` (rows pinned by
+`BackRouterTest`; rows 7-9 root-only; `isRoot` = base-segment equality — the
+startsWith trap dead), one router-driven handler per surface
+(`BackHandlerWiringTest` pins every `BackHandler(` in the app is the root or
+router-driven): the root decides from STATE (`isRoot`, not `popBackStack()` —
+49.2 causes A/B die; the prompt-up state keeps the handler OFF, the dialog's
+own back is the second press; every press logs the diagnostic), the editor's
+two ad-hoc handlers folded into one (drawer on `targetValue`, H2), the hub
+GAINED its handler (back at an open tree = `closeProject()`, never exit —
+owner 4.iv), the guide routes PopRoute (= back = SKIP). Recorded deviation:
+the spec's `CloseCoachMark` row is NOT built — the 45.2 round-2 owner law
+(back must not end the tour) wins; audit row 9 corrected. 49.2: the exit
+prompt from state + the second door (Settings → Feedback & Support → "Tell
+us before you go", audit row 48 in the same commit).
 
 ### Phase 50 — Cross-device test round
 
