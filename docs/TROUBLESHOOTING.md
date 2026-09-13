@@ -1692,3 +1692,37 @@ release without a restart) and **G41** (new: release at the end of the unpack, o
 phone, without killing the app). Specification:
 `docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Round 6 — *even after unpacking the
 userland it still stay lock*".
+
+## 41. "Open Folder is gone", "a file tap opens one file", "the keyboard changed" (Phases 46 + 47, 2026-09-12)
+
+Three intentional behaviour changes landed together (owner: "Start phase 46 and
+47"), recorded here so a future report of any of them reads this first:
+
+- **The `+` sheet has three rows** — New Project / Clone Git Repository /
+  Import ZIP. **"Open Folder" is gone completely** (the owner's own
+  instruction: *"i want to remove it completely"*). Importing a folder's
+  contents = zip it, then Import ZIP. Everything else that opens things
+  (Import file, Export, "Open with CodeC" from another app) is untouched.
+- **A file tap in Projects opens THAT file only** — one tab, the real path
+  (`~proj/<project>/<file>`) in the status bar (long-press copies the full
+  path), no file tree, no git badges. Edit + save + autosave all work on the
+  real file. To open the WHOLE project (tree, git, run targets), use the
+  card's **⋮ → Open in editor** — it opens the project's launch default, or
+  the newest source file.
+- **The system keyboard is the editor's default.** CodeC Keys (the in-app
+  code keyboard) is now OFF by default — the owner's instruction — and turns
+  on in Settings → CodeC Keys exactly as before. **Anyone who had turned it
+  on keeps it** after the update: the stored choice always wins. Nothing
+  about the keyboard itself changed.
+- **The editor's ☰ drawer** now has a ✕ that just closes it, Back closes it,
+  and the project switcher lives INSIDE the drawer (tap the project name or
+  the PROJECTS row): Single files first, then every project, current one
+  marked, ＋ New project… jumps to the Projects tab. The old "Open folder"
+  dialog is gone — it could never open a folder.
+
+**Rows:** the device checks are the exit conditions in
+`docs/chat-phase46/` and `docs/chat-phase47/` (each part doc); the automated
+halves run in CI (`FolderImportRemovedTest`, `EditorOpenModeTest`,
+`ProjectEntryFileTest`, `SingleFileSaveTest`, `EditorRouteCompatTest`,
+`DrawerPolicyTest`, `DrawerProjectListTest`, `DrawerWiringTest`,
+`KeyboardDefaultTest`, `ImeLeverTest`).

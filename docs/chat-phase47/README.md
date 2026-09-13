@@ -1,6 +1,8 @@
 # CodeC Phase 47 — Editor chrome that behaves
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
+> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`, owner:
+> "Start phase 46 and 47"; CI = executor of record, device round pending) ·
+> **Cost:**
 > `[client-only]` · **Effort:** M · **Owner rows (verbatim):**
 > *"i. the file ber can't close without opening any file"* · *"ii. I can switch
 > project but can't directly open folder"* · *"iii. System keyboard make default
@@ -16,8 +18,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [47.1](PART_47_1_DRAWER.md) | Closable drawer + in-drawer project picker | M | 📋 PLANNED |
-| [47.2](PART_47_2_KEYBOARD_DEFAULT.md) | System keyboard by default | S | 📋 PLANNED |
+| [47.1](PART_47_1_DRAWER.md) | Closable drawer + in-drawer project picker | M | 🚧 IMPLEMENTED |
+| [47.2](PART_47_2_KEYBOARD_DEFAULT.md) | System keyboard by default | S | 🚧 IMPLEMENTED |
 
 ---
 

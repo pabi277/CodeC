@@ -137,7 +137,7 @@ fun SettingsScreen(
 
     // Phase 28.2 — CodeC Keys (the dedicated in-app code keyboard; opt-in
     // until the device round flips the default).
-    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = true)
+    val codecKeysOn by settingsManager.codecKeysEnabledFlow.collectAsState(initial = false) // 47.2 default OFF
     val keepKeysOpen by settingsManager.editorKeepKeysOpenFlow.collectAsState(initial = true)
     val codecKeysHaptics by settingsManager.codecKeysHapticsFlow.collectAsState(initial = true)
     val codecKeysHeight by settingsManager.codecKeysHeightFlow.collectAsState(initial = 1f)
@@ -232,19 +232,22 @@ fun SettingsScreen(
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // CODEC KEYS — Phase 28.2. The editor draws its own code
-            // keyboard; while it is ON the system IME steps aside for the
-            // editor surface (a run waiting for stdin always gets it back,
-            // and leaving the editor restores it: exit condition 5 — "OFF →
-            // system IME returns exactly as before"). DEFAULT ON per owner
-            // round 2 — turn this off any time to go back to the strip + IME.
+            // CODEC KEYS — Phase 28.2, default flipped by Phase 47.2 (owner:
+            // "System keyboard make default user can change to app keyboard
+            // if they want"). The SYSTEM keyboard is the default now; this
+            // switch turns the code keyboard ON and it works exactly as
+            // Phases 26/27/28/30 built it (ghost accept, popups, haptics,
+            // space-bar trackpad). While it is ON the system IME steps aside
+            // for the editor surface (a run waiting for stdin always gets it
+            // back, and leaving the editor restores it). A stored value
+            // always wins over the default: nobody who chose CodeC Keys
+            // loses it on upgrade.
             SettingsSectionHeader("CodeC Keys")
             SettingsItem(
                 title = "Dedicated in-app code keyboard",
-                subtitle = "A data-driven code-QWERTY the app draws itself: flick up for digits/symbols, " +
-                    "hold for popups, ⌫ hold-repeats, flick-up on ⌫ deletes a word. Suggestions ride above " +
-                    "it; it is NOT a system IME and exists only inside the editor. Layout defaults are " +
-                    "built-in; dev builds can override the rows with a layout JSON (Settings → Developer)."
+                subtitle = "Off by default — CodeC uses your phone's keyboard. Turn it on for a code-QWERTY " +
+                    "the app draws itself: flick up for digits and symbols, hold for popups, ⌫ hold-repeats, " +
+                    "flick-up on ⌫ deletes a word. It exists only inside the editor and is not a system IME."
             )
             SettingsSwitch(
                 title = "CodeC Keys",

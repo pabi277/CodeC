@@ -529,15 +529,21 @@ class GuideWiringTest {
             "EditorScreen must take the fact as a parameter with a safe default",
             editorSrc.contains("tourWaitsInDrawer: Boolean = false")
         )
-        val at = editorSrc.indexOf("viewModel.switchContext(context, project.name)")
-        assertTrue("the picker's project-chosen branch is gone", at >= 0)
+        val at = editorSrc.indexOf("viewModel.switchContext(context, contextName)")
+        assertTrue("the pick must still route through switchContext (one code path)", at >= 0)
         val afterPick = editorSrc.substring(at, at + 700)
         assertTrue(
-            "the drawer must reopen after a pick, and only while the tour waits there",
-            afterPick.contains("if (tourWaitsInDrawer) {") &&
-                afterPick.contains("uiScope.launch { drawerState.open() }")
+            "the drawer STAYS open after a pick while the tour waits there, and closes otherwise",
+            afterPick.contains("if (!tourWaitsInDrawer) {") &&
+                afterPick.contains("closeDrawer(DrawerCloseReason.PROJECT_SWITCHED)")
         )
-        // And the drawer still closes for the picker itself: that behaviour is not
+        // 47.1 — the picker dialog is gone: the pick happens IN the drawer, so
+        // the old close-then-reopen dance is replaced by a stay-open.
+        assertTrue(
+            "the retired picker must not come back",
+            !editorSrc.contains("showContextPicker")
+        )
+        // And the drawer still closes for ordinary actions: that behaviour is not
         // the tour's to change.
         assertTrue(editorSrc.contains("uiScope.launch { drawerState.close() }"))
     }
@@ -658,7 +664,8 @@ class GuideWiringTest {
         assertTrue("the modal list is not followed by its publisher", end > at)
         val modals = editorSrc.substring(at, end)
         for (flag in listOf(
-            "showContextPicker",   // the project picker beat 2 opens
+            // 47.1: the "Open folder" picker is retired — beat 2 now expands
+            // the drawer's own PROJECTS list (reported by drawerOpen, below).
             "installPrompt != null", // the Install? prompt beat 4 opens
             "runChooserDefault != null", // the RUN ▶ chooser beat 4 can open
             "showUnsavedDialog",

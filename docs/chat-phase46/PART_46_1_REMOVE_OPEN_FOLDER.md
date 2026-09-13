@@ -1,6 +1,8 @@
 # CodeC Phase 46.1 — "Open Folder" removed completely
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`, owner:
+> "Start phase 46 and 47"; CI = executor of record, device spot-check pending)
+> · **Cost:** `[client-only]` · **Effort:** S ·
 > **Owner row (verbatim):** *"The project have a feature open a folder (phase 43,
 > incomplete) i want to remove it completely"*
 
@@ -96,3 +98,37 @@ PASS = all six.
   a crash path; deletion is the honest option.
 - **Keeping `copyDocumentTree` "for later"** — dead code with an unbounded
   recursion is a liability; git history is the archive.
+
+## Implementation (2026-09-12)
+
+Done in the checklist's order, each step leaving the tree consistent:
+
+| # | Spec row | What happened |
+|---|---|---|
+| 1 | the `+`-sheet's "Open Folder" `HubSheetRow` | deleted; the sheet now has exactly three rows (New Project / Clone / Import ZIP), with a comment where the fourth row was |
+| 2 | `ProjectsHubAddSheet`'s `onOpenFolder` parameter | deleted |
+| 3 | the sheet call's `onOpenFolder = { … }` argument | deleted |
+| 4 | `folderImportLauncher` (+ its `OpenDocumentTree` contract) | deleted; the launcher block replaced by a boundary comment (Import ZIP / Import file / Export / "Open with CodeC" all stay) |
+| 5 | `FileManagerViewModel.importFolder()` | deleted (same boundary comment) |
+| 6 | `ProjectTransfer.copyDocumentTree()` | deleted (boundary comment: the *tree* walk goes; `copySingleDocument` and the ZIP paths stay) |
+| 7 | `ProjectTransfer.copyDocumentChildren()` | deleted with it |
+| 8 | `strings.xml` `hub_sheet_folder` / `hub_sheet_folder_subtitle` | both deleted |
+| 9-10 | the Phase 43 tombstone / roadmap row | already done before this phase (verified) |
+| 11 | the source-scan pin | **`FolderImportRemovedTest`** — three cases: (a) zero occurrences of all eight identifiers in `app/src/main` (scan via the shared `RepoFiles.mainKotlinSources()`), (b) neither key in `strings.xml`, (c) the honest boundary pinned the other way — `ActivityResultContracts.OpenDocument()` and `copySingleDocument` must STILL exist, so the deletion cannot silently eat a live feature |
+
+**The grep exit condition holds:** `grep -rn "OpenDocumentTree\|copyDocumentTree\|
+copyDocumentChildren\|importFolder\|onOpenFolder\|hub_sheet_folder\|
+folderImportLauncher" app/src/main` → **0 hits**. One writing lesson cost a
+reword: the first pass left the identifiers inside the explanatory *comments*,
+which made the pin fail on its own documentation — the §9 lesson ("a source pin
+must name the button, not the word") applied to a deletion; the comments now
+describe the feature without spelling the dead identifiers.
+
+**Deviation from the spec's test plan:** none of substance. The specced
+`FolderImportRemovedTest` is exactly what shipped, plus the boundary case (c)
+above, which the spec asked for only in prose.
+
+**Exit condition status:** 1 ✓ (pin in CI), 2-4 are device spot-checks
+(one tap each: New project / Clone / Import ZIP / Import file / Export /
+Export all / "Open with CodeC" / the drawer's New folder) — **pending, owner
+round**; 5 = CI; 6 ✓.

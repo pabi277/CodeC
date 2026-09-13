@@ -1040,6 +1040,10 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                             when (screen) {
                                 is Screen.Editor -> Screen.Editor.createRoute(null)
                                 is Screen.Terminal -> Screen.Terminal.createRoute(null)
+                                // Phase 47.1 — the hub route now carries the
+                                // optional `openSheet` arg; a tab tap is the
+                                // plain route, never a literal pattern.
+                                is Screen.FileManager -> Screen.FileManager.createRoute()
                                 else -> screen.route
                             }
                         ) {
@@ -1138,17 +1142,25 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                 route = Screen.Editor.route,
                 arguments = listOf(
                     navArgument("projectName") { nullable = true },
-                    navArgument("fileName") { nullable = true }
+                    navArgument("fileName") { nullable = true },
+                    navArgument("single") { nullable = true }
                 )
             ) { backStackEntry ->
                 val projectName = backStackEntry.arguments?.getString("projectName")
                 val fileName = backStackEntry.arguments?.getString("fileName")
+                // Phase 46.2 — `single=1` is the SINGLE_FILE peek flag; absent
+                // on every pre-46 route shape, so launch state, "Open with
+                // CodeC", templates and renames all stay PROJECT mode.
+                val singleFile = backStackEntry.arguments?.getString("single") == "1"
                 EditorScreen(
                     projectName = projectName,
                     fileName = fileName,
+                    singleFile = singleFile,
                     onNavigateBack = { navController.popBackStack() },
                     onFileRenamed = { newName ->
-                        navController.navigate(Screen.Editor.createRoute(newName, projectName)) {
+                        navController.navigate(
+                            Screen.Editor.createRoute(newName, projectName, singleFile)
+                        ) {
                             popUpTo(Screen.Editor.route) { inclusive = true }
                             launchSingleTop = true
                         }
@@ -1189,6 +1201,16 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     // drawer's footer, where a user who is lost in the editor
                     // looks first (the owner's "open view again[ing]").
                     onOpenGuide = { guideRequested = true },
+                    // Phase 47.1 — the drawer's `+ New project…`: the Projects
+                    // tab with the hub's `+` sheet open (tab-style navigation,
+                    // so the editor's back stack is not stacked under it).
+                    onOpenProjects = {
+                        navController.navigate(Screen.FileManager.createRoute(openAddSheet = true)) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     // Phase 45.2 round 3 — the tour's next beat is a row inside
                     // the editor's ☰ drawer and the project picker closes that
                     // drawer, so the editor reopens it after a pick. A pure
@@ -1211,18 +1233,34 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     commandNonce = backStackEntry.arguments?.getString("nonce")
                 )
             }
-            composable(Screen.FileManager.route) {
+            composable(
+                route = Screen.FileManager.route,
+                arguments = listOf(
+                    navArgument("openSheet") { nullable = true }
+                )
+            ) {
                 val context = LocalContext.current
                 FileManagerScreen(
                     // Phase 45.1 — the second door back to the guide: the
                     // Projects hub's ⋮ menu.
                     onOpenGuide = { guideRequested = true },
+                    // Phase 47.1 — the editor drawer's `+ New project…` lands
+                    // here with the hub's `+` sheet already up.
+                    openAddSheet = it.arguments?.getString("openSheet") == "1",
                     onFileSelected = { selectedFile ->
                         navController.navigate(Screen.Editor.createRoute(selectedFile))
                     },
                     onProjectSelected = { project -> terminalViewModel.setProjectCwd(project.root) },
                     onProjectFileSelected = { projectName, path ->
                         navController.navigate(Screen.Editor.createRoute(path, projectName)) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onProjectFilePeek = { projectName, path ->
+                        // Phase 46.2 — a file tap is a SINGLE_FILE peek: the
+                        // same editor destination, one flag of difference.
+                        navController.navigate(Screen.Editor.createRoute(path, projectName, single = true)) {
                             launchSingleTop = true
                             restoreState = true
                         }

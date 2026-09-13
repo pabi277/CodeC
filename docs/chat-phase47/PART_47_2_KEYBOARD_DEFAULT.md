@@ -1,6 +1,8 @@
 # CodeC Phase 47.2 — The system keyboard is the default; CodeC Keys is an opt-in
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`; CI =
+> executor of record, device round pending) · **Cost:** `[client-only]` ·
+> **Effort:** S ·
 > **Owner row (verbatim):** *"System keyboard make default user can change to app
 > keyboard if they want"*
 
@@ -158,3 +160,51 @@ PASS = all seven; 4 is the compatibility promise.
 - **Making the code keyboard a real system IME (`InputMethodService`)** — a
   large, permission-sensitive surface (it would type into *other* apps);
   `EDITOR_MOBILE_RESEARCH.md` §9 rejected it then and nothing changed.
+
+## Implementation (2026-09-12)
+
+- `SettingsManager.codecKeysEnabledFlow`: `it[CODEC_KEYS_ENABLED] ?: true` →
+  **`?: false`** — the whole change is the elvis. The stale "DEFAULT ON per
+  owner round 2" comment was rewritten in the same commit (a comment that
+  contradicts the code is how the next agent re-breaks it); the new comment
+  states the reversal, its owner instruction, and the never-write-the-default
+  rule. No migration, no startup write: `setCodecKeysEnabled` still has
+  exactly ONE call site (the Settings switch), pinned by test.
+- `SettingsScreen`: the section comment now tells the truth; the
+  `SettingsItem` subtitle leads with the default — *"Off by default — CodeC
+  uses your phone's keyboard. Turn it on for a code-QWERTY the app draws
+  itself: flick up for digits and symbols, hold for popups, ⌫ hold-repeats,
+  flick-up on ⌫ deletes a word. It exists only inside the editor and is not a
+  system IME."* Same switch, same section, same sub-controls →
+  **`SettingsAuditTest` counts unchanged by construction** (run, not edited).
+  Both `collectAsState(initial = true)` readers (Editor + Settings) are now
+  `initial = false`, so the first frame never flashes the code keyboard for a
+  user who never chose it.
+- The guide: slide 2 carries the owner's sentence compressed to fit the copy
+  caps — *"Output appears at the bottom. C works offline — no download. Your
+  phone's keyboard types; Settings → CodeC Keys has a code one."* (21 words /
+  127 chars, caps 22/130 — "offline" and "no download" kept, so the existing
+  slide-2 assertions hold). Two new vocabulary proofs pin the nouns:
+  `Settings` (Screen.kt `"Settings"`) and `Keys`
+  (`SettingsScreen.kt` `SettingsSectionHeader("CodeC Keys")`). The coach
+  mark stays NONE by default, as recorded in the spec.
+- Nothing in `ui/keyboard/` changed; `KeysStayPolicy` is untouched (pinned),
+  `codecKeysUp = codecKeysOn && keysVisible` is pinned, and the two
+  `setSoftKeyboardEnabled` sites (the lever + the dispose restore) are pinned
+  by `ImeLeverTest`.
+
+**Tests:** `KeyboardDefaultTest` ×5 (the `?: false` shape and the old
+default's absence; the single setter; the single call site; no "DEFAULT ON"
+comment anywhere in SettingsManager; the editor's `initial = false`) ·
+`ImeLeverTest` ×1 (single-lever invariant) · `KeysStayPolicyTest` +2 (the
+policy signature unchanged; `codecKeysUp` still the conjunction, so with the
+preference off the strip's law governs what remains and stdin always wins).
+
+**Deviation:** the spec's slide-2 sentence was long for the caps; the
+compressed clause above carries the same two facts (default = system;
+opt-in = Settings → CodeC Keys) within `GuidePlanTest`'s limits — and the
+`PHONE_UX_ANALYSIS.md` §5 "default ON was right" recommendation now carries
+a REVERSED-BY-47.2 note so no future chat "restores" it.
+
+**Exit condition status:** 1-3, 5-7 are the device round (owner; 4 = the
+absent-key rule, pinned); CI green = the automated halves.

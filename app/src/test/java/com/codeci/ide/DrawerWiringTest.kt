@@ -1,0 +1,108 @@
+package com.codeci.ide
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Phase 47.1 — the wiring pins (PART_47_1 §Tests, the SettingsAuditTest
+ * shape): the retired "Open folder" picker cannot come back, the drawer has
+ * its ✕ and its in-drawer PROJECTS list, and Back closes the drawer.
+ */
+class DrawerWiringTest {
+
+    private fun source(relative: String): String =
+        RepoFiles.mainSource(relative).readText()
+
+    private val editor: String
+        get() = source("app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt")
+
+    private val drawer: String
+        get() = source("app/src/main/java/com/codeci/ide/ui/components/EditorProjectDrawer.kt")
+
+    @Test
+    fun `no dialog anywhere is titled Open folder - the string is gone from the app`() {
+        val all = RepoFiles.mainKotlinSources().joinToString("\n") { it.readText() }
+        val stringsXml = source("app/src/main/res/values/strings.xml")
+        assertFalse(
+            "the Open-folder dialog title must not exist in code",
+            all.contains("\"Open folder\"")
+        )
+        assertFalse(
+            "the Open-folder dialog title must not exist in resources",
+            stringsXml.contains(">Open Folder<") || stringsXml.contains(">Open folder<")
+        )
+        assertFalse(
+            "the retired picker identifier must not exist",
+            all.contains("showContextPicker")
+        )
+    }
+
+    @Test
+    fun `the drawer header carries the close button and it only closes`() {
+        assertTrue(
+            "EditorProjectDrawer must take an onClose callback",
+            drawer.contains("onClose: () -> Unit")
+        )
+        assertTrue(
+            "the ✕ must be a real icon in the header",
+            drawer.contains("Icons.Default.Close")
+        )
+        assertTrue(
+            "EditorScreen must wire onClose to the policy's CLOSE_BUTTON",
+            editor.contains("onClose = { closeDrawer(DrawerCloseReason.CLOSE_BUTTON) }")
+        )
+    }
+
+    @Test
+    fun `Back closes the drawer inside the editor`() {
+        assertTrue(
+            "the interim BackHandler must close the drawer while it is open",
+            editor.contains("BackHandler(enabled = drawerState.isOpen)")
+        )
+        assertTrue(
+            "the handler must route through the one close callback (BACK)",
+            editor.contains("closeDrawer(DrawerCloseReason.BACK)")
+        )
+    }
+
+    @Test
+    fun `the PROJECTS section exists with its callbacks`() {
+        assertTrue(
+            "the drawer takes the built rows",
+            drawer.contains("projects: List<DrawerProjectList.Row>")
+        )
+        assertTrue(
+            "the header tap expands the list (the retired dialog's entry point)",
+            editor.contains("onSwitchProject = { drawerProjectsExpanded = !drawerProjectsExpanded }")
+        )
+        assertTrue(
+            "a pick routes through switchContext - one code path, two entry points",
+            editor.contains("viewModel.switchContext(context, contextName)")
+        )
+        assertTrue(
+            "the + New project row hands off to the Projects tab",
+            drawer.contains("R.string.editor_drawer_new_project") &&
+                editor.contains("onOpenProjects()")
+        )
+    }
+
+    @Test
+    fun `the hub route carries the optional openSheet arg and the tab tap stays plain`() {
+        val screen = source("app/src/main/java/com/codeci/ide/ui/navigation/Screen.kt")
+        val main = source("app/src/main/java/com/codeci/ide/MainActivity.kt")
+        assertTrue(
+            "Screen.FileManager exposes createRoute(openAddSheet)",
+            screen.contains("file_manager?openSheet={openSheet}") &&
+                screen.contains("fun createRoute(openAddSheet: Boolean = false)")
+        )
+        assertTrue(
+            "MainActivity reads the flag into openAddSheet",
+            main.contains("openAddSheet = it.arguments?.getString(\"openSheet\") == \"1\"")
+        )
+        assertTrue(
+            "the bottom bar never navigates the literal pattern",
+            main.contains("is Screen.FileManager -> Screen.FileManager.createRoute()")
+        )
+    }
+}

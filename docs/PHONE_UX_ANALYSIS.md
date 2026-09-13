@@ -57,7 +57,7 @@ README still says **“A C programming IDE for Android.”** The product is alre
 - 12 **run** profiles (`LanguageRegistry`: C, C++, Python, JS, TS, Go, Rust, PHP, Ruby, Lua, Shell, HTML)
 - 9 **colour** buckets (`LanguageType`) — Go/Rust/PHP/Ruby/Lua = plain text
 - Completions: 8 items, this-file identifiers, ~10 snippets (`CodeCompletionEngine`)
-- Editor: Sora 0.24.6, ghost + chip strip, CodeC Keys (default ON), Spck drawer
+- Editor: Sora 0.24.6, ghost + chip strip, CodeC Keys (default ON — REVERSED BY Phase 47.2, 2026-09-12: the system keyboard is the default now, CodeC Keys the opt-in; the owner's instruction), Spck drawer
 - Bottom bar: **Projects · Editor · Terminal · Packages · Settings** (5 destinations; Templates/Logs exist off-bar)
 - `EditorScreen.kt` ~2k lines, `SettingsScreen.kt` ~1.3k lines
 - First C file: **TCC in APK, offline RUN** — this is the Pydroid-class jewel and it is buried under “universal IDE” chrome
@@ -139,7 +139,7 @@ Stealing these would make it *harder*:
 
 - **Sora core** (25.1 numbers). Never go back to Compose `BasicTextField` or Monaco/WebView.
 - **Ghost + chips + Enter-is-Enter** (Phase 27). Desktop popup is the Acode/Sora default and it fails on thumbs.
-- **CodeC Keys** (Phase 28) as default ON with IME escape. Unexpected-Keyboard density without leaving the app.
+- **CodeC Keys** (Phase 28) as default ON with IME escape — **REVERSED BY Phase 47.2 (2026-09-12, owner instruction: "System keyboard make default user can change to app keyboard if they want")**: the SYSTEM keyboard is the default and CodeC Keys is the opt-in. The feature itself (ghost accept, popups, haptics, space-bar trackpad) is untouched; this list item's default clause is historical. See `docs/chat-phase47/PART_47_2_KEYBOARD_DEFAULT.md`.
 - **TCC in the APK** for `.c`. This is the Pydroid trick. Never gate Hello World on clang.
 - **Autosave, last-file launch, RUN = HTML preview** (Phase 16).
 - **Clean-room vs Termux GPL.** Keep our emulator.

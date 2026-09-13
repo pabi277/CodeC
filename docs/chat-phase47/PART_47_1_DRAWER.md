@@ -1,6 +1,8 @@
 # CodeC Phase 47.1 — A drawer you can always close, with the project list inside it
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`; CI =
+> executor of record, device round pending) · **Cost:** `[client-only]` ·
+> **Effort:** M ·
 > **Owner rows:** *"the file ber can't close without opening any file"* ·
 > *"I can switch project but can't directly open folder"* → owner's chosen shape
 > (2026-09-12): **in-drawer project picker**.
@@ -152,3 +154,62 @@ PASS = all nine.
   and the false title survives.
 - **Showing per-project git badges in the list** — cost (a `git status` per
   project on expand) for decoration; the hub already shows them.
+
+## Implementation (2026-09-12)
+
+**New pure code (host-tested):** `ui/editor/DrawerPolicy.kt` —
+`DrawerCloseReason { CLOSE_BUTTON, SCRIM, BACK, FILE_OPENED, PROJECT_SWITCHED }`
++ `DrawerPolicy.shouldClose` (an open drawer closes for every reason; a closed
+drawer no-ops — the double-animation class) + `closesAndSwitches` (only
+`PROJECT_SWITCHED`), and `DrawerProjectList.build` (Single files first with
+the null context, then projects alphabetically case-insensitive, the current
+context marked; `EMPTY_PROJECTS_COPY` keeps the retired dialog's copy
+verbatim).
+
+**The edge:**
+- `EditorProjectDrawer`: the header row gains a 38 dp ✕ (`onClose`) mirroring
+  the source-control glyph; the header's tap now EXPANDS the PROJECTS section
+  instead of opening the dialog (the GuideAnchor stays on the header, so tour
+  beat 2 = one tap that expands — the anchor click is the same lambda); the
+  section (between the header and the tree toolbar) renders the rows, the ●
+  marker, the empty copy and `＋ New project…`; `showProjectTree = false`
+  (46.2's SINGLE_FILE) hides the toolbar/tree/git rows and shows a one-line
+  hint instead — PROJECTS + Guide remain.
+- `EditorScreen`: ONE `closeDrawer(reason)` callback over `DrawerPolicy` for
+  everything the app controls (✕ = CLOSE_BUTTON and nothing else; a file row
+  = FILE_OPENED; a pick = PROJECT_SWITCHED). The scrim stays Material3's own
+  affordance (same result; the enum keeps SCRIM so the matrix is complete).
+  Back: the interim `BackHandler(enabled = drawerState.isOpen)` registered
+  BEFORE the unsaved-changes handler, so 49's precedence (unsaved → drawer)
+  already holds — 49 later folds it into the router, exactly as the spec
+  records. The list is read ONCE per expansion in `remember` (the dialog's
+  old shape), and the expansion flag resets when the drawer closes.
+- The pick calls the SAME pair the dialog ran — `onProjectSelected(project)`
+  + `viewModel.switchContext(context, contextName)` — then closes the drawer,
+  EXCEPT while `tourWaitsInDrawer` (45.2 round 3): the tour's next beat lives
+  in the drawer, so it stays open (the old close-then-reopen dance, replaced
+  because there is nothing to reopen). `GuideWiringTest`'s two picker pins
+  were updated in the same commit and now pin the picker GONE.
+- `＋ New project…` → `onOpenProjects()` → the Projects tab with the hub's `+`
+  sheet already up: `Screen.FileManager` grew the optional `openSheet` arg
+  (`createRoute(openAddSheet)`), the bottom bar was taught to navigate the
+  PLAIN route (never the literal pattern), and `FileManagerScreen` consumes
+  the flag in a `LaunchedEffect`. Project creation keeps its wizard in the
+  hub — the drawer never creates projects.
+- `grep -rn '"Open folder"' app/src` → **0 hits** (comments included — they
+  say "Open-folder" now); pinned by `DrawerWiringTest` along with: the ✕ and
+  its CLOSE_BUTTON wiring, the BACK handler, the PROJECTS callbacks, the
+  switchContext one-code-path pin, and the openSheet route shape.
+
+**Deviations:**
+1. The tour stay-open replaces close-then-reopen (above); the two affected
+   `GuideWiringTest` pins were updated with their reasoning, not deleted.
+2. The `+ New project…` hand-off needed a route argument — the spec's
+   "onOpenProjects callback, new" made concrete as `openSheet=1` (an optional
+   arg on the existing destination, so deep links/state survive).
+3. The peek's drawer (46.2) reuses this section — one switcher everywhere,
+   which is why 46.2 and 47.1 landed in the same push.
+
+**Exit condition status:** 1-9 are the device round (owner); the automated
+halves (the ✕/BACK/scrim wiring pins, the list order/marker/empty-copy pins,
+the grep pins, the switchContext drift guard) run in CI.

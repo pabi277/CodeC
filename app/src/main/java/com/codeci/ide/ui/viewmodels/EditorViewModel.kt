@@ -29,6 +29,8 @@ import com.codeci.ide.ui.editor.TestOutputParser
 import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorLineOps
+import com.codeci.ide.ui.editor.EditorOpenMode
+import com.codeci.ide.ui.editor.EditorOpenModePolicy
 import com.codeci.ide.ui.editor.EditorTab
 import com.codeci.ide.ui.editor.EditorUndoManager
 import com.codeci.ide.ui.editor.FileTreeCollapse
@@ -294,6 +296,16 @@ class EditorViewModel : ViewModel() {
 
     private val _projectName = MutableStateFlow<String?>(null)
     val projectName: StateFlow<String?> = _projectName.asStateFlow()
+
+    // Phase 46.2 — which kind of open this session is. The editor screen's
+    // chrome consumers read it through EditorOpenModePolicy (showsProjectChrome
+    // / showsGit / writesLaunchState); `_projectName` itself STAYS SET in
+    // SINGLE_FILE mode so save/run keep resolving the real project root —
+    // null-ing it would silently turn a save into a scratch save (the exact
+    // bug class Phase 22.5's "the active tab's truth is the live buffer"
+    // comment warns about).
+    private val _openMode = MutableStateFlow(EditorOpenMode.SCRATCH)
+    val openMode: StateFlow<EditorOpenMode> = _openMode.asStateFlow()
 
     private val _outputState = MutableStateFlow(OutputRunState())
     val outputState: StateFlow<OutputRunState> = _outputState.asStateFlow()
@@ -1275,9 +1287,16 @@ class EditorViewModel : ViewModel() {
     private fun openProjectFile(context: Context, projectName: String, relativePath: String) {
         val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return
         val info = ProjectManager(context).project(projectName) ?: return
+        // Phase 46.2 — arriving here from another mode is a mode flip; the
+        // PROJECT side of it is decided before any early return.
+        _openMode.value = EditorOpenMode.PROJECT
         if (_activeTabPath.value == safe && _projectName.value == info.name) {
             // Re-opening the current file is still a new viewing session.
             resetCaretForOpen()
+            // Phase 46.2 — a PROJECT (re)open re-affirms the launch point, so
+            // a SINGLE_FILE peek of the same file can never leave it stale
+            // (the mode flip on one back-stack entry lands here).
+            EditorLaunchState.save(context, info.name, safe)
             return
         }
         val existing = _openTabs.value.firstOrNull { it.relativePath == safe }
@@ -1309,8 +1328,65 @@ class EditorViewModel : ViewModel() {
         EditorLaunchState.save(context, info.name, safe)
     }
 
+    /**
+     * Phase 46.2 — the SINGLE_FILE open: the project-file READ/SAVE path
+     * (`resolveInside` guard, LineEndings handling, one tab) with the project
+     * chrome suppressed. Four things are deliberately skipped, per spec:
+     * `refreshFileEntries` (no drawer tree), `refreshGitMeta` (no badges),
+     * `bootstrapRemainingTabs` (ONE tab), and `EditorLaunchState.save` (a
+     * peek must never become the app's launch point). `_projectName` stays
+     * set so save/run resolve the real root — see the [openMode] note.
+     */
+    fun openSingleProjectFile(context: Context, projectName: String, relativePath: String) {
+        captureContext(context)
+        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return
+        val info = ProjectManager(context).project(projectName) ?: return
+        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return
+        if (!file.isFile || !file.canRead()) return
+        val alreadyThisSingleFile = _openMode.value == EditorOpenMode.SINGLE_FILE &&
+            _projectName.value == info.name && _activeTabPath.value == safe
+        if (alreadyThisSingleFile) {
+            // Re-opening the same peek is still a new viewing session.
+            resetCaretForOpen()
+            return
+        }
+        // Mode flip (PROJECT ⇄ SINGLE_FILE on one back-stack entry): a buffer
+        // opened in the other mode is stale by definition — flush any pending
+        // autosave so un-typed keystrokes land on disk, then read the file's
+        // truth from disk (PART_46_2 exit 6; the money test).
+        flushAutoSave()
+        val content = runCatching { file.readText() }.getOrNull() ?: return
+        val ending = LineEndings.detect(content)
+        val normalized = LineEndings.normalizeToLf(content)
+        resetCaretForOpen()
+        val tab = EditorTab(safe, TextFieldValue(normalized), normalized, ending)
+        _openTabs.value = listOf(tab)
+        _activeTabPath.value = safe
+        _projectName.value = info.name
+        _fileName.value = safe
+        _codeText.value = tab.buffer
+        _activeLineEnding.value = ending
+        _isDirty.value = false
+        // The undo stacks belong to the session we are leaving (the same rule
+        // switchContext applies); neither the dirty flag nor history may leak
+        // across the mode boundary.
+        undoManagers.clear()
+        // No project chrome: drop whatever git/launch-default state a previous
+        // PROJECT session left in this VM. Flipping back to PROJECT rebuilds
+        // it from disk (drawer-open refresh, exactly as a fresh open does).
+        _gitBranch.value = null
+        _gitBadges.value = emptyMap()
+        _gitChangeCount.value = 0
+        _launchDefault.value = null
+        _collapsedDirs.value = emptySet()
+        resetDecorationsForNewBuffer()
+        syncUndoFlags(undoManager())
+        _openMode.value = EditorOpenMode.SINGLE_FILE
+    }
+
     private fun openScratchFile(context: Context, name: String) {
         val safe = FileNameUtils.sanitizeFileName(name) ?: return
+        _openMode.value = EditorOpenMode.SCRATCH
         if (_activeTabPath.value == null && _fileName.value == safe && _projectName.value == null) {
             resetCaretForOpen()
             return
@@ -1439,6 +1515,8 @@ class EditorViewModel : ViewModel() {
      */
     private fun rememberLaunchPoint(relativePath: String) {
         val project = _projectName.value ?: return
+        // Phase 46.2 — a single-file peek never becomes the launch point.
+        if (!EditorOpenModePolicy.writesLaunchState(_openMode.value)) return
         val ctx = appContext ?: return
         EditorLaunchState.save(ctx, project, relativePath)
     }
@@ -1730,6 +1808,7 @@ class EditorViewModel : ViewModel() {
                 openFile(appContext, info.name, entry.relativePath)
             } else {
                 // Empty project: the buffer stays, and Save creates main.c in it.
+                _openMode.value = EditorOpenMode.PROJECT
                 _fileName.value = "main.c"
                 _isDirty.value = true
                 resetDecorationsForNewBuffer()
@@ -1748,6 +1827,7 @@ class EditorViewModel : ViewModel() {
         if (first != null) {
             openFile(appContext, null, first)
         } else {
+            _openMode.value = EditorOpenMode.SCRATCH
             _fileName.value = "untitled.c"
             scratchSavedText = _codeText.value.text
             _isDirty.value = false

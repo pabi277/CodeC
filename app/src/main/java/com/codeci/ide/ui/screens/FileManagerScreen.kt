@@ -136,8 +136,21 @@ fun FileManagerScreen(
     viewModel: FileManagerViewModel = viewModel(),
     /** Phase 45.1 — the hub's ⋮ → Guide: the second door back to the first-run guide. */
     onOpenGuide: () -> Unit = {},
+    /**
+     * Phase 47.1 — the editor drawer's `+ New project…` lands on the hub with
+     * the `+` sheet already up (the route's `openSheet=1`); a plain tab tap
+     * leaves it false.
+     */
+    openAddSheet: Boolean = false,
     onFileSelected: (String) -> Unit = {},
     onProjectFileSelected: (projectName: String, relativePath: String) -> Unit = { _, path -> onFileSelected(path) },
+    /**
+     * Phase 46.2 — the single-file peek: tapping a file in the hub's tree
+     * opens THAT file in the editor (one buffer, real path, no project
+     * chrome). "Open in editor" on the card's ⋮ is the whole-project action
+     * and keeps riding [onProjectFileSelected].
+     */
+    onProjectFilePeek: (projectName: String, relativePath: String) -> Unit = { _, path -> onFileSelected(path) },
     onProjectSelected: (ProjectInfo) -> Unit = {},
     onPreviewFile: (String) -> Unit = {},
     onProjectPreviewFile: (projectName: String, relativePath: String) -> Unit = { _, path -> onPreviewFile(path) },
@@ -179,15 +192,26 @@ fun FileManagerScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showHubSheet by remember { mutableStateOf(false) }
 
-    val folderImportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            viewModel.importFolder(context, uri) { imported ->
-                onProjectSelected(imported)
-            }
+    // Phase 47.1 — the editor drawer's `+ New project…` hand-off (openSheet=1):
+    // the sheet opens once on arrival. Route args survive state restore, so
+    // the flag is consumed ONCE per arrival (rememberSaveable) — otherwise a
+    // rotation would reopen a sheet the user had just dismissed.
+    var sheetArgConsumed by androidx.compose.runtime.saveable.rememberSaveable {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    LaunchedEffect(openAddSheet) {
+        if (openAddSheet && !sheetArgConsumed) {
+            sheetArgConsumed = true
+            showHubSheet = true
         }
     }
+
+    // Phase 46.1 — the folder-import launcher is GONE (owner: "i want to
+    // remove it completely"): the `+` sheet's Open Folder row, its SAF tree
+    // picker and the ViewModel's folder walk were all deleted together.
+    // Import ZIP, Import file, Export and "Open with CodeC" are different
+    // features and all stay (PART_46_1 §boundary).
+
     val fileImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -469,6 +493,20 @@ fun FileManagerScreen(
                         val project = projects.firstOrNull { it.name == entry.name } ?: return@ProjectsHubList
                         when (action) {
                             HubCardAction.OPEN -> selectProject(project)
+                            HubCardAction.OPEN_IN_EDITOR -> {
+                                // Phase 46.2 — the explicit whole-project open:
+                                // launch default → newest source → first source
+                                // (ProjectEntryFile); an empty project falls
+                                // back to the hub's own tree view.
+                                viewModel.entryFileForEditor(context, project.name) { entry ->
+                                    if (entry != null) {
+                                        onProjectSelected(project)
+                                        onProjectFileSelected(project.name, entry)
+                                    } else {
+                                        selectProject(project)
+                                    }
+                                }
+                            }
                             HubCardAction.RENAME -> renameProjectTarget = project
                             HubCardAction.EXPORT -> {
                                 exportProjectName = project.name
@@ -534,8 +572,10 @@ fun FileManagerScreen(
                     viewModel = viewModel,
                     onDirectoryClick = { viewModel.toggleDirectory(it) },
                     onFileClick = { path ->
+                        // Phase 46.2 — one file is one file: the tap routes the
+                        // SINGLE_FILE editor (peek), not the whole project.
                         onProjectSelected(activeProject!!)
-                        onProjectFileSelected(activeProject!!.name, path)
+                        onProjectFilePeek(activeProject!!.name, path)
                     },
                     onCreateIn = { parent, folder ->
                         newItemParent = parent
@@ -1088,10 +1128,6 @@ fun FileManagerScreen(
             onImportZip = {
                 showHubSheet = false
                 zipImportLauncher.launch(arrayOf("*/*"))
-            },
-            onOpenFolder = {
-                showHubSheet = false
-                folderImportLauncher.launch(null)
             }
         )
     }
@@ -1125,9 +1161,14 @@ fun FileManagerScreen(
     }
 }
 
-/** Per-project overflow actions (spec §2.4). */
+/**
+ * Per-project overflow actions (spec §2.4). Phase 46.2 adds OPEN_IN_EDITOR —
+ * the explicit "open the WHOLE project" action, at the top of the menu
+ * (PART_46_2 §4) — and gives OPEN's old job a clearer neighbour: a file tap
+ * now peeks, so the full project editor needs its own row.
+ */
 private enum class HubCardAction {
-    OPEN, RENAME, EXPORT, SHARE_ZIP, DELETE, SOURCE_CONTROL, PULL, PUSH, COPY_REMOTE_URL, SWITCH_BRANCH
+    OPEN, OPEN_IN_EDITOR, RENAME, EXPORT, SHARE_ZIP, DELETE, SOURCE_CONTROL, PULL, PUSH, COPY_REMOTE_URL, SWITCH_BRANCH
 }
 
 @Composable
@@ -1377,6 +1418,14 @@ private fun ProjectHubCard(
                         leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
                         onClick = { menuOpen = false; onAction(entry, HubCardAction.OPEN) }
                     )
+                    // Phase 46.2 — at the top, above SOURCE CONTROL: the
+                    // explicit "open the project" action sits next to the
+                    // card's primary tap.
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.hub_open_in_editor)) },
+                        leadingIcon = { Icon(Icons.Default.Code, contentDescription = null) },
+                        onClick = { menuOpen = false; onAction(entry, HubCardAction.OPEN_IN_EDITOR) }
+                    )
                     if (entry.isGit) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.source_control_title)) },
@@ -1433,8 +1482,9 @@ private fun ProjectHubCard(
 
 /**
  * Phase 15 — the unified `+` sheet: exactly one place to New Project /
- * Clone Git Repository / Import ZIP / Open Folder (Spck's add-menu, rebuilt
- * clean-room on CodeC's own flows).
+ * Clone Git Repository / Import ZIP (Spck's add-menu, rebuilt clean-room on
+ * CodeC's own flows). Phase 46.1 — the fourth row ("Open Folder") is deleted
+ * with the feature; the sheet has three rows.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1442,8 +1492,7 @@ private fun ProjectsHubAddSheet(
     onDismiss: () -> Unit,
     onNewProject: () -> Unit,
     onCloneGit: () -> Unit,
-    onImportZip: () -> Unit,
-    onOpenFolder: () -> Unit
+    onImportZip: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1486,14 +1535,8 @@ private fun ProjectsHubAddSheet(
                 subtitle = stringResource(R.string.hub_sheet_zip_subtitle),
                 onClick = onImportZip
             )
-            HubSheetRow(
-                color = Color(CodecPalette.TILE_GREEN),
-                iconTint = Color.White,
-                icon = SpckIcons.FolderLine,
-                title = stringResource(R.string.hub_sheet_folder),
-                subtitle = stringResource(R.string.hub_sheet_folder_subtitle),
-                onClick = onOpenFolder
-            )
+            // Phase 46.1 — no fourth row. "Open Folder" (the Phase 43 SAF tree
+            // import) is removed completely; see the FolderImportRemovedTest pin.
         }
     }
 }

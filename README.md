@@ -217,7 +217,14 @@ Spck-grade skin:
 - **Projects Hub**: the Projects tab is a card list (type mark, `⌥ branch · N
   files · age`, change badge, amber **↑N** when commits never reached the
   remote) with filter chips + search and ONE `+` sheet —
-  New Project / Clone Git Repo / Import ZIP / Open Folder.
+  New Project / Clone Git Repo / Import ZIP. (The old fourth row, "Open
+  Folder", was removed completely in Phase 46 — import a folder by zipping it
+  and using Import ZIP.)
+- **Projects vs single files (Phase 46)**: tapping a file in a project opens
+  **that one file** — one tab, its real path (`~proj/<project>/<file>`) in the
+  status bar, full editing/saving/autosave, no project chrome. The card's
+  **⋮ → Open in editor** is the whole-project action (launch default → newest
+  source file).
 - **Spck-style editor**: nav-drawer file tree with in-tree git status letters,
   tabs in the app bar (dirty dot, close), a snippet/extra-keys row above the
   status bar, and a Source Control sheet with per-file stage toggle. The app
@@ -240,7 +247,7 @@ Spck-grade skin:
 The earlier foundations:
 
 - **Projects**: private project folders (`files/CodeC/projects/<name>`) with a hierarchical
-  tree, SAF folder/file/ZIP import & export, breadcrumbs, per-project run configuration,
+  tree, SAF file/ZIP import & export, breadcrumbs, per-project run configuration,
   and **"Run in terminal"** on any `.c` file straight from the tree.
 - **Editor foundation**: multi-file tabs (per-tab undo/redo + dirty state, save-all,
   reload), undo/redo with typing-burst coalescing, find & replace (literal + regex,
@@ -265,9 +272,11 @@ The earlier foundations:
   declarations. Up to **50 candidates** per keystroke — 8 chips above the
   keyboard, **⌄ more** for the rest, plus the inline ghost (**TAB ▸** accepts;
   **Enter always inserts a newline**, it never accepts). Accepting replaces
-  exactly what you typed (`#in` → `#include <stdio.h>`), and the built-in
-  **CodeC Keys** keyboard auto-closes `()` `[]` `{}` `""` `''` — `{` + Enter
-  leaves you on an indented line with `}` below it.
+  exactly what you typed (`#in` → `#include <stdio.h>`). The built-in
+  **CodeC Keys** keyboard (Settings → CodeC Keys; **off by default** since
+  Phase 47 — your phone's keyboard is the default) auto-closes
+  `()` `[]` `{}` `""` `''` — `{` + Enter leaves you on an indented line with
+  `}` below it.
 - **Single files without a project**: the editor's file sheet treats the shared
   single-files folder as a first-class context — new file, open, run, delete, and
   "Save to project…" when a file graduates.

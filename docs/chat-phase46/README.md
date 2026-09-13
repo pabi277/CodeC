@@ -1,7 +1,8 @@
 # CodeC Phase 46 — Projects, not folders
 
-> **Status:** 📋 PLANNED (researched + specced, no code) · **Cost:**
-> `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"The project have
+> **Status:** 🚧 IMPLEMENTED (2026-09-12, `arena/01a097b5-codec`, owner:
+> "Start phase 46 and 47"; CI = executor of record, device round pending) ·
+> **Cost:** `[client-only]` · **Effort:** M · **Owner row (verbatim):** *"The project have
 > a feature open a folder (phase 43, incomplete) i want to remove it completely
 > and make the project section more optimization features like file single click
 > to open in a editor screen with real path and same file edit but not full
@@ -15,8 +16,8 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [46.1](PART_46_1_REMOVE_OPEN_FOLDER.md) | Delete the folder-import feature | S | 📋 PLANNED |
-| [46.2](PART_46_2_SINGLE_FILE_EDITOR.md) | Single-file editor + "Open in editor" | M | 📋 PLANNED |
+| [46.1](PART_46_1_REMOVE_OPEN_FOLDER.md) | Delete the folder-import feature | S | 🚧 IMPLEMENTED |
+| [46.2](PART_46_2_SINGLE_FILE_EDITOR.md) | Single-file editor + "Open in editor" | M | 🚧 IMPLEMENTED |
 
 **Ordering rule: 46.1 before 46.2.** Both touch the hub's tap routing and the
 `+` sheet; deleting first keeps 46.2's diff about the new model only.

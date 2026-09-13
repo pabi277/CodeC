@@ -48,7 +48,7 @@ package com.codeci.ide.ui.guide
  * `AlertDialog`. Compose dialogs live in their own window, so `boundsInWindow()`
  * inside one is dialog-relative and an activity-window scrim would cut its hole
  * in the wrong place. Two of the owner's beats live in dialogs — the project
- * picker ("Open folder") and the Python `Install?` prompt — so those are taught
+ * picker (the Open-folder dialog) and the Python `Install?` prompt — so those are taught
  * by the copy of the box before them (step 2 names `demo_flask`, step 4 names
  * **Install**) instead of by a hole in the scrim.
  */

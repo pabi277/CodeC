@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.CallMerge
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -32,6 +33,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
@@ -42,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -49,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.editor.DrawerProjectList
 import com.codeci.ide.ui.guide.CoachMarkPlan
 import com.codeci.ide.ui.guide.GuideAnchor
 import com.codeci.ide.ui.guide.GuideAnchors
@@ -79,9 +83,30 @@ fun EditorProjectDrawer(
     selectedPath: String?,
     launchDefault: String?,
     gitBadges: Map<String, String>,
+    /**
+     * Phase 46.2 — false in the editor's SINGLE_FILE mode: a peek carries no
+     * project tree, no git rows and no create/rename toolbar. What remains is
+     * the header, the PROJECTS list (47.1) and the Guide footer.
+     */
+    showProjectTree: Boolean = true,
     onSourceControl: () -> Unit,
     onSwitchBranch: () -> Unit,
+    /**
+     * Phase 47.1 — the header's tap now EXPANDS the in-drawer PROJECTS list
+     * instead of opening the retired Open-folder dialog: one behaviour,
+     * two entry points (header tap and the section row itself).
+     */
     onSwitchProject: () -> Unit,
+    /** Phase 47.1 — the ✕: closes the drawer and does NOTHING else. */
+    onClose: () -> Unit = {},
+    /** Phase 47.1 — the in-drawer project list (built by [DrawerProjectList]). */
+    projects: List<DrawerProjectList.Row> = emptyList(),
+    projectsExpanded: Boolean = false,
+    onToggleProjects: () -> Unit = {},
+    /** null picks the Single files context — the old dialog's exact behaviour. */
+    onSelectProject: (String?) -> Unit = {},
+    /** Phase 47.1 — jumps to the Projects tab with the `+` sheet open. */
+    onNewProject: () -> Unit = {},
     onNewFile: (String?) -> Unit,
     onNewFolder: (String?) -> Unit,
     onRefresh: () -> Unit,
@@ -121,8 +146,11 @@ fun EditorProjectDrawer(
         // so the box names demo_flask in its copy instead of cutting a hole over a
         // row inside the dialog — PART_45_2, deviation 9.
         // Round 4 publishes the header's OWN click beside its rect: the tour's
-        // second beat is one tap that both opens the picker and moves the tour
-        // on, instead of a tap that only dismisses the box.
+        // second beat is one tap that both opens the project list and moves
+        // the tour on, instead of a tap that only dismisses the box.
+        // Phase 47.1 — the tap now EXPANDS the in-drawer PROJECTS list (the
+        // Open-folder-titled dialog is retired); the ✕ at the row's end is
+        // the close affordance the drawer never had.
         val anchoredHeader: Modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onSwitchProject)
@@ -146,29 +174,110 @@ fun EditorProjectDrawer(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            if (showProjectTree) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onSourceControl),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.BadgedBox(
+                        badge = { if (changeCount > 0) Badge { Text(changeCount.toString()) } }
+                    ) {
+                        // Mockup-exact: the same purple branch glyph as the chip.
+                        Icon(
+                            SpckIcons.GitBranch,
+                            contentDescription = stringResource(R.string.editor_drawer_source_control),
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+            // Phase 47.1 — the explicit close. Mirrors the source-control
+            // glyph's 38 dp hit target so the header stays balanced. Closing
+            // and NOTHING else: no dialog, no navigation, no autosave flush
+            // (the screen's DisposableEffect owns leaving).
             Box(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onSourceControl),
+                    .clickable(onClick = onClose),
                 contentAlignment = Alignment.Center
             ) {
-                androidx.compose.material3.BadgedBox(
-                    badge = { if (changeCount > 0) Badge { Text(changeCount.toString()) } }
-                ) {
-                    // Mockup-exact: the same purple branch glyph as the chip.
-                    Icon(
-                        SpckIcons.GitBranch,
-                        contentDescription = stringResource(R.string.editor_drawer_source_control),
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.editor_drawer_close),
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
+        // ---- Phase 47.1: the PROJECTS section (the in-drawer switcher) -----
+        // The retired dialog's list, living where the owner chose: expand,
+        // see "Single files" + every project with the current one marked, tap
+        // to switch. Read once per expansion by the screen (this composable
+        // never touches disk).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggleProjects)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.ExpandMore,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(18.dp)
+                    .rotate(if (projectsExpanded) 0f else -90f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.editor_drawer_projects),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (projectsExpanded) {
+            Column(Modifier.padding(bottom = 6.dp)) {
+                if (projects.none { it.contextName != null }) {
+                    Text(
+                        text = DrawerProjectList.EMPTY_PROJECTS_COPY,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+                projects.forEach { row ->
+                    TextButton(
+                        onClick = { onSelectProject(row.contextName) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (row.isCurrent) "\u25CF  ${row.label}" else row.label,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                TextButton(
+                    onClick = onNewProject,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.editor_drawer_new_project))
+                }
+            }
+            HorizontalDivider()
+        }
+
         // ---- branch chip ----------------------------------------------------
-        if (branch != null) {
+        // Phase 46.2 — gated on showProjectTree: a peek shows no git.
+        if (showProjectTree && branch != null) {
             Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp)) {
                 Box(
                     modifier = Modifier
@@ -211,109 +320,123 @@ fun EditorProjectDrawer(
         HorizontalDivider()
 
         // ---- tree toolbar (four equal columns) ------------------------------
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            DrawerToolAction(
-                icon = Icons.Default.NoteAdd,
-                label = stringResource(R.string.new_file),
-                onClick = { onNewFile(null) },
-                modifier = Modifier.weight(1f)
-            )
-            DrawerToolAction(
-                icon = Icons.Default.CreateNewFolder,
-                label = stringResource(R.string.new_folder),
-                onClick = { onNewFolder(null) },
-                modifier = Modifier.weight(1f)
-            )
-            DrawerToolAction(
-                icon = Icons.Default.Refresh,
-                label = stringResource(R.string.refresh),
-                onClick = onRefresh,
-                modifier = Modifier.weight(1f)
-            )
-            DrawerToolAction(
-                icon = SpckIcons.CollapseAll,
-                label = stringResource(
-                    if (allCollapsed) R.string.editor_drawer_expand_all else R.string.editor_drawer_collapse_all
-                ),
-                onClick = onToggleCollapseAll,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        HorizontalDivider()
+        // Phase 46.2 — toolbar + tree + the two git footer rows exist only in
+        // PROJECT mode; a SINGLE_FILE peek gets a one-line hint instead.
+        if (showProjectTree) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DrawerToolAction(
+                    icon = Icons.Default.NoteAdd,
+                    label = stringResource(R.string.new_file),
+                    onClick = { onNewFile(null) },
+                    modifier = Modifier.weight(1f)
+                )
+                DrawerToolAction(
+                    icon = Icons.Default.CreateNewFolder,
+                    label = stringResource(R.string.new_folder),
+                    onClick = { onNewFolder(null) },
+                    modifier = Modifier.weight(1f)
+                )
+                DrawerToolAction(
+                    icon = Icons.Default.Refresh,
+                    label = stringResource(R.string.refresh),
+                    onClick = onRefresh,
+                    modifier = Modifier.weight(1f)
+                )
+                DrawerToolAction(
+                    icon = SpckIcons.CollapseAll,
+                    label = stringResource(
+                        if (allCollapsed) R.string.editor_drawer_expand_all else R.string.editor_drawer_collapse_all
+                    ),
+                    onClick = onToggleCollapseAll,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            HorizontalDivider()
 
-        // ---- the tree ---------------------------------------------------------
-        if (entries.isEmpty()) {
+            // ---- the tree ---------------------------------------------------------
+            if (entries.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.editor_drawer_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 6.dp,
+                        vertical = 4.dp
+                    )
+                ) {
+                    items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
+                        DrawerRow(
+                            entry = entry,
+                            // Phase 45.2 — step 3 of the tour: the demo's own entry
+                            // file, and only it (a box on some other row would teach
+                            // the wrong tap).
+                            guideAnchorId = CoachMarkPlan.drawerFileAnchor(
+                                projectName = entry.projectName,
+                                relativePath = entry.relativePath,
+                                isDirectory = entry.isDirectory,
+                                demoProjectName = DemoProjects.NAME,
+                                demoEntryFile = DemoProjects.ENTRY_FILE
+                            ),
+                            expanded = !collapsedDirs.contains(entry.relativePath),
+                            selected = entry.relativePath == selectedPath,
+                            isLaunchDefault = entry.relativePath == launchDefault,
+                            hasLaunchDefault = launchDefault != null,
+                            badge = gitBadges[entry.relativePath],
+                            onOpenOrToggle = { onOpenEntry(entry) },
+                            onAction = { action ->
+                                when (action) {
+                                    RowAction.Open -> onOpenEntry(entry)
+                                    RowAction.Rename -> onRenameEntry(entry)
+                                    RowAction.Delete -> onDeleteEntry(entry)
+                                    RowAction.Run -> onRunInTerminal(entry)
+                                    RowAction.Launch -> onLaunchEntry(entry)
+                                    RowAction.SetDefault -> onSetLaunchDefault(entry)
+                                    RowAction.ClearDefault -> onClearLaunchDefault()
+                                    RowAction.CopyPath -> onCopyPath(entry)
+                                    RowAction.NewFileHere -> onNewFile(entry.relativePath)
+                                    RowAction.NewFolderHere -> onNewFolder(entry.relativePath)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+            HorizontalDivider()
+
+            // ---- footer -----------------------------------------------------------
+            DrawerFooterRow(
+                icon = SpckIcons.GitBranch,
+                label = stringResource(R.string.editor_drawer_source_control),
+                badge = changeCount,
+                onClick = onSourceControl
+            )
+            DrawerFooterRow(
+                icon = SpckIcons.GitBranch,
+                label = stringResource(R.string.editor_drawer_switch_branch),
+                badge = 0,
+                onClick = onSwitchBranch
+            )
+        } else {
+            // Phase 46.2 — SINGLE_FILE: the peek's drawer. No create/rename
+            // toolbar, no tree, no git rows — the PROJECTS list above and the
+            // Guide footer below are the whole surface.
             Text(
-                text = stringResource(R.string.editor_drawer_empty),
-                style = MaterialTheme.typography.bodyMedium,
+                text = stringResource(R.string.editor_single_file_drawer_hint),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp)
             )
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    horizontal = 6.dp,
-                    vertical = 4.dp
-                )
-            ) {
-                items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
-                    DrawerRow(
-                        entry = entry,
-                        // Phase 45.2 — step 3 of the tour: the demo's own entry
-                        // file, and only it (a box on some other row would teach
-                        // the wrong tap).
-                        guideAnchorId = CoachMarkPlan.drawerFileAnchor(
-                            projectName = entry.projectName,
-                            relativePath = entry.relativePath,
-                            isDirectory = entry.isDirectory,
-                            demoProjectName = DemoProjects.NAME,
-                            demoEntryFile = DemoProjects.ENTRY_FILE
-                        ),
-                        expanded = !collapsedDirs.contains(entry.relativePath),
-                        selected = entry.relativePath == selectedPath,
-                        isLaunchDefault = entry.relativePath == launchDefault,
-                        hasLaunchDefault = launchDefault != null,
-                        badge = gitBadges[entry.relativePath],
-                        onOpenOrToggle = { onOpenEntry(entry) },
-                        onAction = { action ->
-                            when (action) {
-                                RowAction.Open -> onOpenEntry(entry)
-                                RowAction.Rename -> onRenameEntry(entry)
-                                RowAction.Delete -> onDeleteEntry(entry)
-                                RowAction.Run -> onRunInTerminal(entry)
-                                RowAction.Launch -> onLaunchEntry(entry)
-                                RowAction.SetDefault -> onSetLaunchDefault(entry)
-                                RowAction.ClearDefault -> onClearLaunchDefault()
-                                RowAction.CopyPath -> onCopyPath(entry)
-                                RowAction.NewFileHere -> onNewFile(entry.relativePath)
-                                RowAction.NewFolderHere -> onNewFolder(entry.relativePath)
-                            }
-                        }
-                    )
-                }
-            }
         }
-        HorizontalDivider()
-
-        // ---- footer -----------------------------------------------------------
-        DrawerFooterRow(
-            icon = SpckIcons.GitBranch,
-            label = stringResource(R.string.editor_drawer_source_control),
-            badge = changeCount,
-            onClick = onSourceControl
-        )
-        DrawerFooterRow(
-            icon = SpckIcons.GitBranch,
-            label = stringResource(R.string.editor_drawer_switch_branch),
-            badge = 0,
-            onClick = onSwitchBranch
-        )
         // Phase 45.1 — "open view again[ing]" (the owner's words): the guide is
         // one tap from the drawer the guide's own slide 1 is about.
         DrawerFooterRow(
