@@ -274,3 +274,5 @@ marker of A; peek of one project → open another: no ride-along; peek replaces
 the list wholesale and the flip back starts clean) · `EditorRouteCompatTest`
 +1 (both hub file navigations pinned `restoreState = false`) ·
 `DrawerWiringTest` +1 (the New-project hand-off, see PART_47_1).
+
+**Device-round fix CI ✅ GREEN: run `34736668771` on tip `ce4044d` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug`, artifacts `CodeC-IDE-release` / `CodeC-IDE-debug` (the owner's re-round build).**

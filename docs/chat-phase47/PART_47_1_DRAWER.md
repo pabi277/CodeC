@@ -235,3 +235,5 @@ Projects instance whose `openSheet=1` opens the sheet. Pinned by
 `DrawerWiringTest.the New-project hand-off is an instruction - it restores
 nothing` (slices the wiring window: `createRoute(openAddSheet = true)` +
 `restoreState = false`, and the broken flag gone).
+
+**Device-round fix CI ✅ GREEN: run `34736668771` on tip `ce4044d` — `conclusion: success`, assemble + `testDebugUnitTest` + `lintDebug`, artifacts `CodeC-IDE-release` / `CodeC-IDE-debug` (the owner's re-round build).**

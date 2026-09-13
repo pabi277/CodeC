@@ -1749,5 +1749,5 @@ Two fixes from the owner's first device round on the 46+47 build:
 
 **Rows:** the fixes are pinned by `SingleFileSaveTest` (tab law),
 `EditorRouteCompatTest` + `DrawerWiringTest` (the navigations restore
-nothing); re-test the two reports above plus a normal round of the five-tab
-switching.
+nothing); fix build CI ✅ GREEN `34736668771` tip `ce4044d` — re-test the two
+reports above on that build, plus a normal round of the five-tab switching.
