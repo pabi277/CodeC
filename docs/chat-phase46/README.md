@@ -19,6 +19,15 @@
 | [46.1](PART_46_1_REMOVE_OPEN_FOLDER.md) | Delete the folder-import feature | S | 🚧 IMPLEMENTED |
 | [46.2](PART_46_2_SINGLE_FILE_EDITOR.md) | Single-file editor + "Open in editor" | M | 🚧 IMPLEMENTED |
 
+**CI round 2 🔴 for-cause (run `34735166887`, commit `81ca938`):** one test
+failure, and it was in the PIN, not the product —
+`EditorRouteCompatTest` joined the main sources as a list of **paths**
+(`joinToString("\n")` without the `{ it.readText() }` transform), so its
+"exactly one `single = true` call site" count read file names and found 0.
+The production change compiled and everything else passed. Fixed by the
+transform; an audit over every `joinToString`-over-file-list in the tests
+confirmed the other three scans already had it.
+
 **Ordering rule: 46.1 before 46.2.** Both touch the hub's tap routing and the
 `+` sheet; deleting first keeps 46.2's diff about the new model only.
 

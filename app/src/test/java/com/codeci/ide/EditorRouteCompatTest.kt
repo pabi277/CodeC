@@ -30,7 +30,7 @@ class EditorRouteCompatTest {
 
     @Test
     fun `exactly one call site passes single = true - the hub's file tap`() {
-        val callSites = mainSources().joinToString("\n")
+        val callSites = mainSources().joinToString("\n") { it.readText() }
         val hits = Regex("""single\s*=\s*true""").findAll(callSites).count()
         assertEquals(
             "only the Projects hub's peek navigation may pass single = true",
