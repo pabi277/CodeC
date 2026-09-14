@@ -339,4 +339,9 @@ justifies it).
 - **Anything that touches `targetSdk`, the bootstrap, or the userland.** Out of
   scope by invariant.
 - **Phase 50's cross-device matrix** stays its own phase; 53.4 **reuses** its
-  record format and does not replace it.
+  record format and does not replace it. (**Status corrected 2026-09-14:** while
+  this dossier was being written, Phase 50's matrix became 🚧 IMPLEMENTED on
+  `arena/01a099d8-codec` — `DeviceMatrixTest.kt` (627 lines), CI ✅ GREEN
+  `34753000709` tip `69a70ec` — pinning rounds A-J for **44.1-49.2**. The 51-53
+  rounds adopt its `## Test log` convention; extending its fixed `PART_FILES`
+  map to 51-53 is out of scope here.)

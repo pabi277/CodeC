@@ -175,6 +175,14 @@ Each phase ends with owner-run rows; the format is Phase 50's
 (`docs/chat-phase50/DEVICE_MATRIX.md`), and each row's result is pasted back
 into the **owning part doc**, not a scratchpad.
 
+> **Concurrent work (recorded 2026-09-14):** while this plan was written,
+> Phase 50's cross-device matrix became 🚧 IMPLEMENTED on `arena/01a099d8-codec`
+> — `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` pins ten rounds A-J
+> for phases **44.1-49.2**, CI ✅ GREEN `34753000709` tip `69a70ec`. 51-53 are
+> unaffected (its `PART_FILES` map is fixed and covers 44.1-49.2 only), and the
+> three rounds below deliberately adopt its `## Test log (Phase NN — …)`
+> convention so the two systems compose instead of competing.
+
 | Phase | Round | Rows |
 |---|---|---|
 | 51 | `docs/chat-phase51/DEVICE_ROUND.md` | L1-L12 — one screen per row, dark + light, small + large phone: spacing looks even, corners match, the accent is visible, nothing regressed in contrast |

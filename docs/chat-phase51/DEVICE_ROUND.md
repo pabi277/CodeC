@@ -3,15 +3,27 @@
 > **Status:** 📋 WRITTEN, **NOT RUN.** Per `rule.md` §5: nothing here can be
 > verified in the agent sandbox (no device, no emulator, no IME). CI proves the
 > pure policies; **this round proves the look**. Paste each row's result back
-> into the owning part doc (`PART_51_x_*.md`) under a `## Device round`
-> heading — not into a scratchpad.
+> into the owning part doc (`PART_51_x_*.md`) under a `## Test log (Phase 51 — the look)`
+> heading — the convention Phase 50 pinned with `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt`,
+> not into a scratchpad.
+>
+> **Concurrent work (2026-09-13):** Phase 50's cross-device matrix is 🚧
+> IMPLEMENTED on `arena/01a099d8-codec` — `DeviceMatrixTest.kt` (627 lines)
+> pins ten rounds A-J for **44.1-49.2 only** (a fixed `PART_FILES` map), CI ✅
+> GREEN `34753000709` tip `69a70ec`. Nothing in 51-53 is scanned by it today;
+> if the owner ever wants these rows machine-pinned the same way, the map and
+> the `## Test log (Phase 51 — the look)` heading are already the right shape.
+>
+> The log table is `# | Part | Run on | What to do | PASS looks like` — five columns,
+> one row per result, one part doc per row.
 >
 > **Build to test:** the CI `Build APK` artifact of the phase-51 branch
 > (`CodeC-IDE-debug`, installed **over** the current install — no data wipe).
 > Record the run id and the version name (Settings → About) at the top of your
 > report; a row reported from the wrong build is not evidence.
 
-**How to record:** `L<n> — device / OS / theme (dark|light) / result (PASS|FAIL) /
+
+**How to record:** (Phase 50's exact format, so the rounds stay machine-checkable:) `L<n> — device / OS / theme (dark|light) / result (PASS|FAIL) /
 one sentence of evidence (photo or the exact words on screen).`
 
 | # | Row | Owning part | How to check |

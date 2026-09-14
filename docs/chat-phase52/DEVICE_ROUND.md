@@ -3,13 +3,24 @@
 > **Status:** 📋 WRITTEN, **NOT RUN.** Same law as every round:
 > `rule.md` §5 — the sandbox has no device, no emulator, no IME. CI proves the
 > policies; **you** prove the feel. Paste each row's result into the owning part
-> doc under a `## Device round` heading.
+> doc under a `## Test log (Phase 52 — the feel)` heading.
+>
+> **Concurrent work (2026-09-13):** Phase 50's cross-device matrix is 🚧
+> IMPLEMENTED on `arena/01a099d8-codec` — `DeviceMatrixTest.kt` (627 lines)
+> pins ten rounds A-J for **44.1-49.2 only** (a fixed `PART_FILES` map), CI ✅
+> GREEN `34753000709` tip `69a70ec`. Nothing in 51-53 is scanned by it today;
+> if the owner ever wants these rows machine-pinned the same way, the map and
+> the `## Test log (Phase 52 — the feel)` heading are already the right shape.
+>
+> The log table is `# | Part | Run on | What to do | PASS looks like` — five columns,
+> one row per result, one part doc per row.
 >
 > **Build:** the CI `Build APK` artifact of the phase-52 branch
 > (`CodeC-IDE-debug`, installed **over** the current install — no data wipe).
 > Write the run id + version name (Settings → About) at the top of your report.
 
-**Record format:** `F<n> — device / OS / theme / result (PASS|FAIL) / one
+
+**Record format:** (Phase 50's exact format, so the rounds stay machine-checkable:) `F<n> — device / OS / theme / result (PASS|FAIL) / one
 sentence (or a photo).`
 
 | # | Row | Owning part | How to check |

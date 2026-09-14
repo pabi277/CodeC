@@ -92,10 +92,17 @@ section, with a test before the fix — the 44-49 discipline.
 
 ### D — Where this leaves Phase 50
 
-Phase 50 (the cross-device matrix) is **still owed** and is not replaced by
-this. 53.4 adopts its record format and its rule (*results are pasted into the
-owning part doc*), and the two can be run together: the matrix proves 44-49 on
-every device class, this round proves 51-53 on the owner's phones.
+Phase 50 (the cross-device matrix) is **🚧 IMPLEMENTED on `arena/01a099d8-codec`**
+(2026-09-13): `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` (627 lines)
+pins the ten rounds A-J for phases **44.1-49.2**, CI ✅ GREEN `34753000709` tip
+`69a70ec`. It is **not** replaced by this round — the two compose: the matrix
+proves 44-49 on every device class, this round proves 51-53 on the owner's
+phones. 53.4 therefore adopts its format verbatim — the `## Test log (Phase NN
+— …)` heading, the five-column table (`# | Part | Run on | What to do | PASS
+looks like`), one part doc per row — and the three `DEVICE_ROUND.md` files in
+this series already say so. Extending `DeviceMatrixTest` itself to cover 51-53
+is deliberately **not** in this phase: it carries a fixed `PART_FILES` map over
+44.1-49.2, and these rows do not exist until their phases are built.
 
 ## The Android edge
 
