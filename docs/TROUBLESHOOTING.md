@@ -1994,3 +1994,25 @@ prefix) and `reducedStart` (safe mode). Quote the sentence the pause answers wit
 (`Hang tight — CodeC is getting ready to set up its Linux tools. …`), because "the
 tab did nothing" and "the tab explained itself" are different reports and only one
 of them is a bug.
+
+### If the filler site's export comes back rejected (Phase 50.2, 2026-09-14)
+
+The site is outside the repo; the repo's only stake in it is that the markdown it downloads must paste
+clean. Four shapes, and which side is at fault:
+
+- **`row A7 (part 44.1) is NOT listed in its own Test log`** — the export skipped
+  unanswered rows. It must list **all** of a part's rows, with `⏳` for anything not run. A
+  filler that only exports what was answered is a half-report; re-export, don't hand-edit.
+- **`row A1 ★ …` / `Round A row 1`** in a first column — the id must be the bare
+  `A1`. The `★` is a badge, not part of the id (`^[|]\s*([A-J]\d+)\s*[|]` is what reads
+  it back).
+- **a ✅ with no device line, class or build** — the pin refuses a result that cannot be
+  attributed. The site is supposed to refuse it first (§6c); if it exported anyway, the bug is in the
+  site, and the fix is to fill the identity panel, not to delete the ticks.
+- **`quote not found: …` naming a row nobody touched** — then someone let the *site*
+  or a chat agent edit `DEVICE_MATRIX.md` to match its own wording. The runbook is the source of
+  truth and the site copies from it; the direction never reverses. Revert the doc, re-export.
+
+And the standing rule from §46 still governs: a red `DeviceMatrixTest` is fixed in the document
+or in the test's reading of it — never by lowering a floor, and a device row is only ever ticked by
+someone holding the phone.

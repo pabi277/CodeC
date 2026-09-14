@@ -1,7 +1,9 @@
 # CodeC Phase 50 — The cross-device round
 
 > **Status:** 🚧 **IMPLEMENTED** (2026-09-13, this branch; owner: *"Start phase 50"*)
-> — the **instrument** ships: a 90-row runbook over 44–49's exit conditions, eleven
+> — the **instrument** ships: a 100-row runbook over 44–49's exit conditions (90 at the
+> first cut; rounds 2-3 grew it by ten reachability rows and ten taken from 44's and 45's own
+> device rounds), eleven
 > `## Test log` tables (one per part file, Phase 50's exit 4), and a host test that
 > pins the runbook to the app so a quoted sentence can never go stale again. What
 > it deliberately **cannot** ship is the filled matrix: no sandbox has a handset, an
@@ -17,11 +19,14 @@
 ```text
   50.1  DEVICE_MATRIX.md — every fix from 44-49, checked on every device class,
         pinned to the app by DeviceMatrixTest so the runbook cannot rot
+  50.2  WEBSITE_PROMPT.md — the paste-ready brief that turns the runbook into a
+        fill-in site, so a device round is answered as questions and exported as MD
 ```
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
 | [50.1](DEVICE_MATRIX.md) | The matrix + the record format + the CI pin | S + M | 🚧 IMPLEMENTED (matrix pending devices) |
+| [50.2](WEBSITE_PROMPT.md) | The matrix-filler brief: one offline HTML page, built by an outside AI from the runbook, that asks the 100 rows as questions and downloads filled markdown | S (docs) | ✅ BRIEF SHIPPED — the page is deliberately not committed |
 
 ---
 
@@ -116,6 +121,17 @@ that checks quotes is not a doc test that checks steps.
    `DeviceMatrixTest.kt`** — the rules were mirrored in a throwaway Python parser
    over the same files to de-risk that (0 problems on all 90 rows), but the
    compile itself is CI's.
+4. **[WEBSITE_PROMPT.md](WEBSITE_PROMPT.md)** — the intake half, added 2026-09-14 on the
+   owner's instruction: *"everything manually will be headache"*. A paste-ready brief for any
+   website-building AI: it parses `DEVICE_MATRIX.md` at build time and returns **one
+   offline HTML file** that asks every row as a pre-made question (big matched / different /
+   could-not-run buttons, the PASS text verbatim on screen, answers in `localStorage`), and
+   **downloads markdown** in exactly the four shapes this phase's record needs — the `## Test log` tables, the §3 per-device sheet, the results row, the failure list with each
+   ❌'s fix-or-deferral. The site is **not** in the repo on purpose: it is a generated artifact of a
+   document that moves, it needs a browser and a handset, and the repo's contract is the markdown,
+   not the form. The brief carries the parse contract, the verbatim rule, the export shapes and a
+   self-check the page runs against its own baked source — so a hand-improved form cannot
+   produce a report that passes CI by luck.
 
 ## The honest limits, stated up front
 

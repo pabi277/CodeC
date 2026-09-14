@@ -295,7 +295,9 @@ revoke storage). The deliverable is a **filled matrix**, not a promise — the
 same standard `docs/BETA.md` and Phase 41's device rounds set.
 Specs: [`chat-phase50/`](chat-phase50/README.md).
 
-**Shipped (2026-09-13, `arena/01a099d8-codec`).** Three artifacts, and the first
+**Shipped (2026-09-13, `arena/01a099d8-codec`).** Four artifacts (the fourth, the 50.2
+intake brief, came 2026-09-14 because filling 100 rows by hand is a headache, not a
+method), and the first
 is the one the plan did not anticipate: **the planned matrix quoted text the app has
 never had.** Re-read against the shipped sources on the day it was implemented,
 round A asked the tester to look for "Preparing Python (1/3) · 0 %", "Ready ✓",
@@ -331,6 +333,14 @@ round 1 over again — a round burned discovering the instructions — so:
    interpolations as holes, `NN`/`…` as the doc's wildcards; paths, typed shell
    commands, file names and test-class names exempt by shape). **A stale row now
    fails CI**, which is the difference between a runbook and a runbook that can rot.
+
+4. **[`chat-phase50/WEBSITE_PROMPT.md`](chat-phase50/WEBSITE_PROMPT.md)** — the intake tool: a
+   brief that makes some other AI build a **single offline HTML page** from the runbook — one
+   question per row, the expectation text copied verbatim, `✅ / ❌ / n/a` as buttons, state in
+   `localStorage`, resume-by-import — which then **downloads** markdown in the four shapes the
+   record is made of. The page is not committed and the repo builds nothing from it: the
+   deliverable is the contract (parse rules, the verbatim law, the export shapes, a self-check), which
+   is the part that would otherwise rot.
 
 **Not built, with the reason recorded** (README §"Decisions"): Roborazzi screenshot
 goldens (a headless-JVM golden measures Robolectric's layout; the four surfaces are
