@@ -1944,3 +1944,53 @@ via `isNonUi` — and negative expectations like `Open folder` must be written
 right. No row of the matrix is a pass until a human with a handset pastes one, so
 a green `Build APK` with an empty `## Test log` means exactly one thing: **device
 pass required**.
+
+**And the four shapes the *checker* fails with — all four were paid for in CI on
+this very file, and none of them is a document bug.** Reading one as a runbook
+problem wastes a round:
+
+- `Syntax error: Unclosed comment`, pointing at the **last line** of the file.
+  Somewhere above it a KDoc contains `/*` — Kotlin block comments **nest**, so
+  prose like `` `arena/*` `` opens a second comment whose `*/` only closes the
+  inner one. Write `arena/…`. (CI `34751062038`.)
+- `Unresolved reference 's'` on a line holding a `"""…"""`. A raw string ignores
+  backslashes but **not** templates, so `"""\$s"""` asks for a variable named `s`.
+  Spell the dollar `${'$'}`. (CI `34751405760`.)
+- `java.lang.StackOverflowError` in a test that regexes whole source files. The
+  JVM engine recurses once per quantified step, so a lazy `[\s\S]*?` applied to
+  every file in `app/src/main` eventually blows the stack — and it will do it on
+  a CI machine and nowhere else. Hand-write the scanner (a char loop with
+  `indexOf`), keep regexes for short inputs like one line or one table cell.
+  (CI `34751860341`.)
+- `row A1 … NOT listed in its own Test log` for **every** row, while the document
+  is demonstrably fine. A `^`-anchored pattern applied to a multi-line *block*
+  needs `RegexOption.MULTILINE`; applied per line it does not, which is why the
+  same file can hold four correct scans and one wrong one. (CI `34751860341`.)
+
+The last one carries the lesson this phase learned the expensive way: the rules
+were mirrored in a throwaway Python parser to de-risk a sandbox with no Gradle,
+and that mirror used `re.M` — so it agreed with the document and disagreed with
+the JVM. A mirror catches what the **rules** get wrong; only the executor of
+record catches what the **language** gets wrong. Both are worth having, and
+neither excuses the other.
+**The fifth shape is not a CI failure at all, and it is the one that wastes a round:
+a row whose quoted text is real and whose STEP is impossible.** `DeviceMatrixTest`
+proves a sentence *exists*; nothing proves a gesture is *reachable*. Phase 50 round
+2 found ten such rows, all of them written before the chrome lock's rule was
+applied to the runbook: while a **fresh** install downloads the userland,
+`SetupLockPolicy` pauses `PROJECTS`, `EDITOR`, `PACKAGES` and `SETTINGS` from the
+first frame (only the watch surface stays open — Terminal for the userland, the
+editor for a package install, `watchOption`), and the tour is suppressed for the
+same span. So "mid-download, tap the Packages tab and press INSTALL" is not a test
+you can run; it is a row to delete or re-scope.
+
+The audit to run whenever a runbook cites a setup state: read the **gating** policy
+for that surface (`SetupLockPolicy.reasonFor`/`option`, `SetupGatePolicy.can`), not
+only the strings, and name the state the step needs — "after the bar settles", or
+"on a phone whose tools already work, as an upgrade". Three states lock nothing and
+are the honest places to test the locked surfaces later: `progress.settled`
+(`READY`/`FAILED`/`UNSUPPORTED`), `facts.usable` (an in-flight upgrade of a working
+prefix) and `reducedStart` (safe mode). Quote the sentence the pause answers with
+(`Hang tight — CodeC is getting ready to set up its Linux tools. …`), because "the
+tab did nothing" and "the tab explained itself" are different reports and only one
+of them is a bug.

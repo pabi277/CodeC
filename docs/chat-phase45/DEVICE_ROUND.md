@@ -201,3 +201,17 @@ r6    row  G41      (the pause RELEASES by itself when the one-time setup
                      amended to say so)
 PASS = all forty-one, plus Phase 44's round 2 on the same phone.
 ```
+
+## Where these 41 rows live for the next pass (2026-09-13, Phase 50 round 3)
+
+They were never recorded row by row on a handset, and Phase 50 is where they are.
+**G1-G8** (the five slides) → [`../../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)
+round **C**; **G9-G33** (the eleven-beat tour) → round **D**, whose rows **D12-D19** are exactly
+this file's G20, G22, G26, G27, G28, G31, G32, G33 — the eight tour behaviours that had no
+matrix row when round 1 was written; **G34-G41** (the chrome lock, rounds 4-6) → round **E**
+plus **A13/A14** for 44's own bar rows. Results still land in each part file's `## Test log`,
+not here; this file stays the record of what the rounds asked.
+
+One correction while mapping them: G34 and G39 say "dimmed with a small 🔒". The glyph is the
+Material **lock icon** (`Icons.Default.Lock`) drawn on the tab, not an emoji — **E1** was
+re-worded accordingly, because a tester hunting an emoji reports its absence as a bug.

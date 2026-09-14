@@ -2,7 +2,7 @@
 
 > **What this is:** one runbook that walks **44 · 45 · 46 · 47 · 48 · 49**'s exit
 > conditions on a matrix of hardware, so "it works on my phone" stops being the
-> evidence. **90 rows in ten rounds**, each row naming the part it tests, the
+> evidence. **100 rows in ten rounds**, each row naming the part it tests, the
 > device class it must run on, and the **exact on-screen text** that means PASS.
 >
 > **Status (2026-09-13):** 🚧 **THE INSTRUMENT IS SHIPPED; THE MATRIX IS NOT YET
@@ -49,13 +49,27 @@
    |---|---|
    | a fresh install | uninstall, or Settings → Apps → CodeC → Storage → **Clear data** |
    | the five slides again | **Clear data**, or Settings → About → **Show the welcome screen again** + kill + relaunch |
-   | the eleven-beat tour again | Settings → About → **Reset tips** + kill + relaunch (the beats you already saw stay spent otherwise) |
+   | the eleven-beat tour again | Settings → About → **Reset tips** + kill + relaunch (the beats you already saw stay spent otherwise) — Settings is *paused* while a first download runs, so do this with the tools in place |
+   | a second download to watch, with the app usable | the ⬇ in the Terminal toolbar on a phone whose tools already work — that is an **upgrade**: the bar shows its own sentence and nothing is paused |
    | a stuck half-install | Terminal tab → **⬇** re-runs the setup over what is on disk |
    | no network at all | airplane mode **before** launching (round B, row B5) |
    | the log of a back press | Settings → Logs, or the crash dialog's **COPY REPORT** (round I, row I15 — the line a ❌ needs) |
-5. **Rows marked `★` are the ones whose answer differs by device class** — run
+5. **What is reachable while the first download runs, and what is not.** The
+   one-time setup **pauses every tab except Terminal** (round E: a lock icon on the
+   tab and one "hang tight" sentence), and the tour waits unspent while that is on.
+   So a row that says "mid-download, open the Packages tab" is not a test — it is
+   impossible. Every row that needs Projects, Editor, Packages or Settings is run
+   either **after the bar settles** or on a phone whose tools already work, where a
+   *re-download* (Terminal → ⬇, an upgrade) pauses nothing — that is how the
+   "C never waits" promise is checked at all. A settled stage (`READY`, `FAILED`,
+   `UNSUPPORTED`), an upgrade of a working prefix and safe mode all pause nothing.
+6. **Rows marked `★` are the ones whose answer differs by device class** — run
    those on every device you have before spending time on the rest. The
    shortlist for a second phone is §3's **20-minute pass**.
+7. **Round 2 and round 3 grew this file** (the owner's own app changes, read back
+   out of the 44-49 docs): **A13-A14** are 44's round-2 rows R1-R3/R5-R6, and
+   **D12-D19** are 45's G20/G22/G26/G27/G28/G31/G32/G33. Those ten are
+   **primary-device** rows — the 24-row pass on a second phone is unchanged.
 
 ## 1. The four device classes
 
@@ -82,18 +96,20 @@ the app's own number and its own variable part.
 
 | # | Part | Run on | What to do | PASS looks like |
 |---|---|---|---|---|
-| A1 ★ | 44.1 | ALL | Clear data, launch, finish the starter tile, **stay on the Terminal tab** | The app opened on **Terminal**, not the editor, and the bar already reads `Setting up CodeC · C works right now`, then `Setting up CodeC's Linux tools — NN % · C works right now` with the number moving |
-| A2 ★ | 44.1 | ALL | While it downloads, tap Projects, Editor, Packages, Settings | The **same bar with the same number** is at the top of every one of them; the number never restarts from 0 |
+| A1 ★ | 44.1 | ALL | Clear data, launch, pick one of the welcome's three starter tiles, walk the five slides — and **stay on the Terminal tab** the shell drops you on | The shell opens on **Terminal**, not the editor, and the bar already reads `Setting up CodeC · C works right now`, then `Setting up CodeC's Linux tools — NN % · C works right now` with the number moving. Nothing else can be opened yet — that is E1, by design |
+| A2 ★ | 44.1 | ALL | On a phone whose tools ALREADY work, start a re-download — Terminal → ⬇ (an upgrade) — and tap Projects, Editor, Packages, Settings while its number climbs | The **same bar with the same number** is at the top of every one of them and the number never restarts from 0; the bar reads `Updating CodeC's Linux tools — NN % — everything still works.` and **nothing is paused**: a working prefix locks nothing. The fresh-install half of this (roaming tabs while the first download runs) does not exist — the tabs are paused (E1), so run this row as an upgrade |
 | A3 | 44.1 | ALL | Pull down the status bar mid-download, then let it finish | `Downloading CodeC's Linux tools — NN %` with a progress bar; when setup settles the notification **goes away** (or becomes the plain terminal one while a shell lives) |
-| A4 ★ | 44.1 | D3 | Deny the notification permission when the system asks, mid-install | No crash. The in-app bar, the terminal's don't-close row and the chip all keep telling the truth; only the status-bar notification is missing |
-| A5 ★ | 44.1 | ALL | Mid-download: write a 5-line `hello.c`, tap RUN ▶; then in the terminal `cc hello.c -o hello && ./hello` | It compiles and runs at ANY percentage. C is never gated by setup — TCC lives in the APK |
-| A6 ★ | 44.1 | ALL | Mid-download: Packages tab → any card's INSTALL (and a Quick Action / custom `pkg` command) | Nothing is typed into a dead shell and nothing queues. One sentence — `CodeC is downloading its Linux tools (NN %). Don't close the app — this happens once.` — plus **VIEW SETUP**, which lands on the **Terminal** tab |
-| A7 | 44.1 | ALL | Mid-download: RUN a `.py` (or take the editor's "install language support" path) | The Output Panel prints the honest sentence, ending `C works offline right now.` — not a python: not found line and not a fake success |
+| A4 ★ | 44.1 | D3 | Deny the notification permission when the system asks, mid-install; or grant it, then turn CodeC's notifications OFF in the system app info and reopen mid-install | No crash. The in-app bar, the terminal's don't-close row and the chip all keep telling the truth; only the status-bar notification is missing |
+| A5 ★ | 44.1 | ALL | While that upgrade downloads, open a C file in the editor and tap RUN ▶; then in the terminal run `cc hello.c -o hello && ./hello` — and repeat the C half in B5's airplane-mode state, where there is no userland at all and the tabs are unlocked because the stage settled | It compiles and runs at ANY percentage and no refusal appears — C is never gated by setup, because TCC lives in the APK (`RUN_C` is Allowed in every stage). On a FRESH install there is no editor to reach at all: the C promise there is the starter file the welcome promised, which opens by itself the moment setup settles In the offline state the C file still compiles and runs with no userland whatsoever |
+| A6 ★ | 44.1 | ALL | In a state where the tools did NOT arrive — B5's airplane-mode failure, or a shell-only prefix with no `pkg` — open the Packages tab and tap any card's INSTALL; and where a shell exists (the shell-only prefix), try a custom `pkg install` line in the terminal's runner | Nothing is typed into a dead shell and nothing queues, and no command reaches a prefix that has no `pkg`. One sentence: `CodeC needs the network once to finish setting up its Linux tools. C works offline right now.` when the network was the problem, or `These CodeC tools have no package manager yet. Open the Terminal tab and tap ⬇ to install the full set.` for the shell-only prefix — plus **VIEW SETUP**, which lands on the **Terminal** tab. Mid-download on a fresh install the Packages tab cannot be reached at all: that tap is E1's row, not this one |
+| A7 | 44.1 | ALL | On a device where the tools did NOT arrive (B5's airplane-mode failure, or a settled `Setup didn't finish` state): open a Python file and tap RUN ▶ | The Output Panel prints the honest sentence, ending `C works offline right now.` — not a python: not found line and not a fake success. On a phone whose tools DO work but where Python is missing the answer is different and correct: the run offers **Install** instead (one download, one time) — that is D5's row. This is a SETTLED-state row: while a fresh download is in flight the editor is paused (E1), so RUN ▶ cannot be attempted at all on a first install |
 | A8 | 44.1 | ALL | Watch the terminal's status chip from the first second to READY | `downloading userland NN %` → `verifying download…` → `unpacking userland…` → `running`; above the chip, `Don't close CodeC — it is finishing a one-time setup (NN %)` and it disappears at READY |
 | A9 ★ | 44.1 | ALL | After the bar settles, tap the ✕; then start a repair with ⬇ | In flight there is **no** ✕ to tap (deliberate). Once settled the ✕ really puts the bar away, and it returns by itself when the state changes |
 | A10 | 44.1 | D1+D4 | On the small screen at the largest font, and on the tablet, read the bar | One line, an ellipsis if it must clip, and **VIEW SETUP** fully tappable — never a clipped button, never two lines pushing the tab bar off |
 | A11 ★ | 44.1 | ALL | Put the app in the background for 10 minutes mid-download (do not open it), then return | It finished, or it is honestly still running with a number. It never shows a settled `READY` over tools that do not work |
 | A12 | 44.1 | ALL | At the end: in the terminal type `pkg --version`, then `pkg install python` and `python3 -V` | A version prints, Python installs and runs, and the bar is gone |
+| A13 ★ | 44.1 | ALL | On an UPDATED install whose tools do not work — the pre-44 state: a marker on disk, no working pkg. Launch and read the bar before you touch anything | The app opens on **Terminal** and the bar says `Setup didn't finish — the Linux tools aren't working. Open the Terminal tab and tap ⬇ to install them again.` — this is the answer to the lying marker, and the bar's own percentage replaces the sentence the moment ⬇ starts |
+| A14 | 44.1 | ALL | Every route to the setup, from wherever you are: tap the bar itself, tap **VIEW SETUP**, tap VIEW SETUP on a refusal, then — from the editor — tap the **Terminal** tab in the bottom bar | All of them land on the **Terminal** tab and it **stays open** (device round 1's bug was the editor opening instead). The whole bar is the one tap, its `Open the Terminal tab` label is the same action, and no paused-tab tap is needed to get there |
 
 ### Round B — the setup that cannot half-finish (44.2)
 
@@ -101,7 +117,7 @@ the app's own number and its own variable part.
 |---|---|---|---|---|
 | B1 ★ | 44.2 | ALL | **Kill mid-DOWNLOAD**: at ~30–60 % force-stop (Settings → Apps → CodeC → **Force stop**, or swipe it away) → relaunch | The download resumes or restarts cleanly, the bar tells the truth again, setup finishes, and afterwards `pkg --version` works. No half-written prefix |
 | B2 ★ | 44.2 | ALL | Clear data, relaunch, and **kill mid-EXTRACT**: force-stop while the chip says `unpacking userland…`, then relaunch | The bar comes back, setup **completes on its own**, `pkg --version` works — no stuck spinner, no orphan pile |
-| B3 ★ | 44.2 | ALL | Hit the ~1 s swap window: with the tools already installed tap **⬇** in the terminal toolbar (a re-install) and force-stop as the chip flips to `running`. Repeat up to 5× | One-time notice row on the bar: `Setup was interrupted; CodeC restored your Linux tools.` — and `pkg --version` works on the next launch. The owner's original data-loss case, repaired at boot |
+| B3 ★ | 44.2 | ALL | Hit the ~1 s swap window: with the tools already installed tap **⬇** in the terminal toolbar (a re-install) and force-stop as the chip flips to `running`. Repeat up to 5× — use **Force stop**, not a swipe-away (a swipe lets the process shut down gracefully and lands after the window), and repeat up to five times | One-time notice row on the bar: `Setup was interrupted; CodeC restored your Linux tools.` — and `pkg --version` works on the next launch. The owner's original data-loss case, repaired at boot Judge it by behaviour, not by luck: no pkg: not found on the next launch, no bar claiming a finished setup over tools that do not work, and no pile of leftovers |
 | B4 | 44.2 | ALL | Repeat B3 three times in a row | Nothing accumulates and disk usage does not grow; `pkg` still works after the third |
 | B5 ★ | 44.2 | ALL | Airplane mode **on**, Clear data, launch, wait for the failure; then airplane off + **⬇** | Bar: `CodeC needs the network once to finish setting up its Linux tools. C works offline right now.` Chip: `setup incomplete — tap ⬇ to retry`. A `.c` file still compiles. With the network back, ⬇ completes the setup |
 | B6 | 44.2 | D4 | On hardware with no bootstrap for its ABI (an x86_64 emulator qualifies) | Bar: `C works offline · extra languages aren't available on this device`. The app opens in the **editor**, not the Terminal, and nothing retries or churns |
@@ -115,14 +131,14 @@ the app's own number and its own variable part.
 | C2 | 45.1 | ALL | Tap **GOT IT** four times, reading the titles | In order: `Your files live in the ☰ menu` → `RUN ▶ compiles and runs` → `One download, one time` → `A real terminal` → `Projects vs single files`, whose button reads **START CODING** and lands in the app |
 | C3 | 45.1 | ALL | Read slide 3 | `Python, Node and the Linux tools download once on first use. Keep CodeC open while it finishes.` — this is the slide that makes round A's bar make sense |
 | C4 ★ | 45.1 | ALL | Press the **back button** on slide 2, then relaunch | Back leaves the guide exactly like SKIP does (it never traps you), and the guide does not come back |
-| C5 | 45.1 | ALL | Re-open the guide from all three doors: Settings → About; the Projects hub ⋮; the editor ☰ drawer footer | Labels are `Help & guide` in Settings, `Guide` in the hub menu, `Guide` in the drawer footer. Each opens the same guide at slide 1, and re-opening never marks anything seen |
+| C5 | 45.1 | ALL | Re-open the guide from all three doors: Settings → About; the Projects hub ⋮; the editor ☰ drawer footer — once the setup has settled, because all three of those surfaces are paused while a first download runs (E1) | Labels are `Help & guide` in Settings, `Guide` in the hub menu, `Guide` in the drawer footer. Each opens the same guide at slide 1, and re-opening never marks anything seen |
 | C6 | 45.1 | D1+D4 | On a small screen at the largest font (and on the tablet), walk all five slides | The whole card is on screen, the button is reachable, and the copy column scrolls if it must |
 
 ### Round D — the eleven-beat tour (45.2)
 
 | # | Part | Run on | What to do | PASS looks like |
 |---|---|---|---|---|
-| D1 ★ | 45.2 | ALL | After the slides, arrive at the editor | `Tour · NN of 11`, a scrim, a hole exactly around **☰**, card titled `Your files`. The card has **no button at all** — no NEXT, no SKIP, no GOT IT |
+| D1 ★ | 45.2 | ALL | After the slides — and after the setup bar has settled, since a fresh install pauses every tab but Terminal (E1) — arrive at the editor | `Tour · NN of 11`, a scrim, a hole exactly around **☰**, card titled `Your files`. The card has **no button at all** — no NEXT, no SKIP, no GOT IT |
 | D2 ★ | 45.2 | ALL | Tap the highlighted ☰ **once** | The drawer opens **and** the box is already `2 of 11` on the project name, in the same gesture. Round 3 needed a second tap — that is the bug this row exists to remove |
 | D3 ★ | 45.2 | ALL | Continue with ONE tap per beat: the project name → `demo_flask` → `app.py` → RUN ▶ | `3 of 11` `Pick the demo` lands on the demo's own row; the switch happens **behind the open drawer** (the list stays dropped down); `4 of 11` `Open app.py` is on the file; the list drops, the tree refreshes, the file opens, RUN runs — and **nothing fires twice** (one run, one toast, no double-open) |
 | D4 | 45.2 | ALL | On `5 of 11` (RUN ▶), read the card, then tap it | `Runs the open file. If Python is missing, tap Install — one download, one time.` and it runs the OPEN file — no "Run main.c / Run utils.c" chooser dialog on this beat |
@@ -133,17 +149,25 @@ the app's own number and its own variable part.
 | D9 ★ | 45.2 | ALL | On any box: tap **outside** the hole; then press **back** | The outside tap does nothing at all — the box stays, the UI under the scrim is untouched. Back navigates away and **no box follows**; come back and the same beat, same number, is waiting. Back pauses a tour, it cannot cut one |
 | D10 | 45.2 | D1+D4 | With a box up, rotate the device (or enter split screen / drag the foldable's divider) | The hole follows its control or the box disappears — it never floats over the wrong control, and the card stays fully on screen |
 | D11 | 45.2 | ALL | Projects hub → ⋮ on `demo_flask` → Delete; return to the tab | It is back on the next list refresh. A demo you deleted is never left as a hole the tour points into |
+| D12 | 45.2 | ALL | On the finish card, tap **CLOSE**; then kill CodeC and relaunch | The card goes and **nothing returns** — no box on any tab, not after the relaunch either: the beats you watched stay spent, and the tour does not nag |
+| D13 | 45.2 | ALL | From the finish card tap **VIEW AGAIN**, walk one or two beats, then kill the app mid-tour and relaunch | **No finish card greets you** on the relaunch — the card is earned by watching a tour end, not stored as a preference — and the tour resumes at the beat you stopped on, `Tour · 2 of 11` where you left it |
+| D14 | 45.2 | ALL | While a box is pending, open an editor dialog: the ⋮ menu, Save to project, Go to line, or the Install? prompt | **No box is drawn under a dialog.** When the dialog closes the SAME beat is back — the counter did not move and nothing was consumed (the blind spot round 2 recorded, still the law) |
+| D15 | 45.2 | ALL | Settings → About → **Reset tips**, then kill and relaunch — run it with the tools already installed, because Settings is paused during a first download (E1) | The five slides return **and** the tour restarts at `Tour · 1 of 11`. Nothing else changed: no project, file, theme or other setting moved, and no install was re-triggered |
+| D16 | 45.2 | ALL | Optional, ~40 s: at beat 3 (the demo pick) choose a DIFFERENT project instead of demo_flask | The two demo beats cannot exist on another project's tree, so the tour **waits, passes them owed and not spent** (~20 s each), then teaches `5 of 11` on RUN ▶; both beats return on the next launch or after a Reset tips — a stall must never eat a lesson |
+| D17 | 45.2 | ALL | On `7 of 11` with the **whole tab bar** lit, tap a tab the tour does not use — Projects, Editor or Settings | That tab **opens** (the tap is left to it) **and** the tour still advances: one tap, both halves, no swallowed navigation (round 4's rule made the bar-wide hole literal — the tap resolves to the control under the finger) |
+| D18 ★ | 45.2 | D1+D4 | On `7 of 11` with the keyboard up, so only the thin reveal handle is lit: first TAP the handle, then, on another attempt, SWIPE it up | The tap reveals the bar and advances. The swipe does **nothing at all** — no beat spent, the box stays — and the card's copy tells you so: `Five tabs, one tap away. They hide while you type — tap this handle to bring them back.` While a box is up, a gesture is not a tap |
+| D19 | 45.2 | ALL | On the Packages beat, start a scroll INSIDE the hole and drag it out; then, on a phone where Python is already installed, tap that beat's card | No install starts, no drag is delivered and the box holds the same beat — **only a tap performs the card's button**. With Python already installed the card publishes no click, so that tap is an ordinary tap on the card and the tour moves on |
 
 ### Round E — the chrome lock while an install moves (44.1 §"the chrome lock")
 
 | # | Part | Run on | What to do | PASS looks like |
 |---|---|---|---|---|
-| E1 ★ | 44.1 | ALL | Clear data, launch, and in the **first second** — before any percentage, and again with the network off — tap Projects, Editor, Packages, Settings | All four are already dimmed with a small 🔒, and each answers `Hang tight — CodeC is getting ready to set up its Linux tools. Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step.` There is no window in which a tab can be switched |
+| E1 ★ | 44.1 | ALL | Clear data, launch, and in the **first second** — before any percentage arrives — tap Projects, Editor, Packages, Settings; then repeat with the network off | All four carry a small **lock icon** and are dimmed, and each answers `Hang tight — CodeC is getting ready to set up its Linux tools. Other options are paused for a moment so this one-time setup finishes cleanly. The Terminal tab shows every step.`; the same sentence also arrives on its own once, when the pause begins. A tap on a paused tab never navigates. **With the network off the pause releases by itself** — a settled stage (FAILED) pauses nothing, which is B5's state |
 | E2 ★ | 44.1 | ALL | During that pause, stay on Terminal | The **Terminal** tab is never locked (that is where the install is visible), the bar keeps its percentage, and no tour box is drawn while the lock is on |
 | E3 | 44.1 | ALL | Mid-download, read a locked tab's sentence as the number moves | The same sentence with the download's own version, including `(NN %)`, so the number appears twice in one screen |
-| E4 ★ | 44.1 | ALL | In the editor, RUN a `.py` → Install, and watch the other tabs | Projects / Packages / Settings / Terminal are paused with `Hang tight — CodeC is installing what you asked for. Other options are paused for a moment so this one install finishes cleanly. The Output panel shows every step.` while the **Editor** stays open. ☰ and RUN ▶ answer the same sentence instead of acting, and the drawer's edge swipe is dead |
+| E4 ★ | 44.1 | ALL | In the editor, RUN a `.py` → Install, and watch the other tabs | Projects / Packages / Settings / Terminal are paused with `Hang tight — CodeC is installing what you asked for. Other options are paused for a moment so this one install finishes cleanly. The Output panel shows every step.` while the **Editor** stays open. ☰ and RUN ▶ answer the same sentence instead of acting, and the drawer's edge swipe is dead; ☰ and RUN ▶ answer the same sentence instead of acting, the drawer's edge swipe is dead, and when the install finishes everything unlocks by itself and the run continues into the preview |
 | E5 | 44.1 | ALL | Run your own program (a C build, or a Flask server) and leave it running | **Nothing is paused.** A run or a server is not an install: tabs, ☰ and RUN ▶ all work while the Output Panel streams |
-| E6 ★ | 44.1 | ALL | Let a one-time setup finish **without killing the app** and watch the tabs; then re-run a finished setup with Terminal → ⬇ | The 🔒 and the dimming **release by themselves in the same session** — no restart, no refresh — and every tab navigates again. A setup that stopped (FAILED / offline) reopens the app too: it must never keep the app paused |
+| E6 ★ | 44.1 | ALL | Let a one-time setup finish **without killing the app** and watch the tabs; then re-run a finished setup with Terminal → ⬇ | The 🔒 and the dimming **release by themselves in the same session** — no restart, no refresh — and every tab navigates again. A setup that stopped (FAILED / offline) reopens the app too: it must never keep the app paused A slow network is the same release, only later; and when it lets go the app opens wherever the launch default says — the editor, if that is where you left off |
 | E7 | 44.1 | ALL | On a phone with the tools already installed: kill, relaunch, watch the first frame | **No pause flashes at launch.** A working prefix reads from disk before the first frame, so a usable phone never sees a lock |
 
 ### Round F — projects, not folders (46)
@@ -168,7 +192,7 @@ the app's own number and its own variable part.
 | G4 ★ | 47.1 | ALL | In that list, tap another project | The switch happens **with the list still dropped down** (a pick never closes the drawer — round-2 owner law), and the tree + git badges are the new project's |
 | G5 | 47.1 | ALL | Drawer → `＋ New project…` | You land on the **Projects tab with its `+` sheet open** — not on a stale restored tab (device round 1's bug) |
 | G6 | 47.1 | D4 | In single-file mode, open the drawer | Its whole surface is the PROJECTS list plus `Guide`: the hint reads `This file is open on its own — one tab, no project tree, no git. Use PROJECTS above to open a whole project, or Guide below for help.` |
-| G7 ★ | 47.2 | ALL | Fresh install (Clear data) → open a file and tap into it | The **system** keyboard appears with the extra-keys strip above it; ☰, RUN ▶ and the tabs are all reachable |
+| G7 ★ | 47.2 | ALL | On a phone with the tools already installed (or a fresh install AFTER the bar settled) → open a file and tap into it | The **system** keyboard appears with the extra-keys strip above it; ☰, RUN ▶ and the tabs are all reachable |
 | G8 | 47.2 | ALL | Settings → CodeC Keys: read the item, then flip the switch | The item is titled `Dedicated in-app code keyboard` and its subtitle begins `Off by default — CodeC uses your phone's keyboard.` Flipping the switch shows the code keyboard immediately, with ghost-accept, popups, haptics and the space-bar caret drag all working; off again returns the system keyboard with no restart |
 | G9 | 47.2 | ALL | Turn CodeC Keys **on**, then install the new build over it (no Clear data) | Still on. A stored choice always beats the new default — and an interactive run (scanf, a REPL) still gets the system keyboard for stdin |
 
@@ -199,7 +223,7 @@ the app's own number and its own variable part.
 | I7 | 49.1 | ALL | Web Preview, Logs, Feedback → back | Each returns to the previous screen |
 | I8 | 49.1 | ALL | A bottom sheet or a ⋮ dropdown open → back | It closes, exactly as before the router existed — the router returns `None` for surfaces it does not own |
 | I9 ★ | 49.2 | D1+D2 | At the **start** tab, nothing open → back | `Enjoying CodeC? 💚` with `You're closing the app. During testing, every word helps — tell us what you saw, or report a bug.`, the line `tap back again to exit`, and four buttons: `TELL US / REPORT A BUG` (or `SHARE EXPERIENCE` once you tap a star), `GIVE A REVIEW 💚`, `NOT NOW`, `EXIT` |
-| I10 ★ | 49.2 | D1+D2 | **NOT NOW**, then back again; separately: back twice quickly | `NOT NOW` stays in the app and outside taps do nothing; the second back exits. Identical on a **fresh install** (start = Projects) and an **upgrade** (start = the last editor file) — that pair was the whole 5.B bug |
+| I10 ★ | 49.2 | D1+D2 | **NOT NOW**, then back again; separately: back twice quickly | `NOT NOW` stays in the app and outside taps do nothing; the second back exits. Identical on a **fresh install** — which now opens on the **Terminal** tab, not the editor, because of 44.1's divert — and on a working phone that opens on the last editor file; that pair was the whole 5.B bug |
 | I11 ★ | 49.2 | D1+D2 | Tap Terminal (a non-start tab) → back → back | First back lands on the start tab; **second back shows the prompt**, on every device, 3-button *and* gesture |
 | I12 | 49.2 | ALL | Settings → Feedback & Support → turn the exit prompt **off** → back at the root | The app exits directly, no prompt, on every device |
 | I13 | 49.2 | ALL | In safe mode (crash-loop start) → back at the root | Exits directly, no prompt. Same when the prompt switch is on: safe mode outranks it |
@@ -242,9 +266,13 @@ For every device **after** the first, these 24 rows are what cross-device
 testing means; the rest of the matrix is the primary device's full pass.
 
 ```text
-A1 A5 A6 A9 A11 · B1 B5 · C1 C5 · D2 D3 D7 D9 · E1 E6 · F3 F4 · G1 G4 G7 ·
-H1 H2 H6 H9 · I1 I3 I9 I11 · J1
+A1 A9 A11 · B1 B5 · C1 C5 · D2 D3 D7 · E1 E2 · F3 F4 · G1 G4 G7 ·
+H1 H2 H9 · I1 I9 I11 · J1
 ```
+
+Deliberately not here: **A2, A5 and A6**, which need a phone whose tools already
+work (they are run as an UPGRADE) or a failed setup — worth once, on the primary
+device, not on every phone.
 
 ### The results, as they arrive (this table is the phase's deliverable)
 

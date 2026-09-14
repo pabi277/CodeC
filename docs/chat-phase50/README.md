@@ -54,9 +54,41 @@ That is Phase 44's device round 1 all over again — a round burned discovering 
 instructions instead of the app — so the fix is not only "correct the rows" but
 **"make it impossible to ship stale rows"**.
 
+**Round 2 — the owner's second finding: rows that are *true* but *unreachable*.**
+His report: *"i already updated the app like it will not open anything while
+download the userland so some steps like 'While it downloads, tap Projects,
+Editor, Packages, Settings' are not possible"*. He was right, and the pin could
+not see it: `DeviceMatrixTest` proves a quoted sentence **exists**, not that a
+step is **reachable**. The chrome lock (45.2 round 4, `SetupLockPolicy.option`,
+`SetupLockPolicy.reasonFor`) pauses `PROJECTS`, `EDITOR`, `PACKAGES` and
+`SETTINGS` from the **first frame** of a fresh install until the stage settles —
+only the watch surface stays open (`watchOption`: Terminal for the userland, the
+editor for a package install) — each paused tab carries a lock icon and answers
+the one "hang tight" sentence, the tour is suppressed for the same span, and
+three states pause nothing (`progress.settled`, `facts.usable`, `reducedStart`).
+Ten rows were rewritten: **A1** the real first-launch order (three starter tiles →
+five slides → the shell on Terminal); **A2** roaming the tabs is now checked as an
+**upgrade**, where nothing is locked and the bar carries
+`Updating CodeC's Linux tools — NN % — everything still works.`; **A5** the
+"C never waits" promise is checked during that upgrade (on a fresh install the C
+half is the starter file the welcome promised, which opens itself at settle);
+**A6**/**A7** the gate's refusal sentences belong to the settled states where the
+tab can actually be reached (B5's offline failure, or a shell-only prefix); **C5**,
+**D1**, **G7** named explicitly as after-settle rows; **E1** says *lock icon*, not
+the 🔒 emoji, and that a network-off install **releases** the pause once the
+failure settles; **I10** — a fresh install opens on **Terminal**, not Projects,
+because 44.1's divert moved it, so the 5.B pair to compare is Terminal-start vs
+last-editor-file-start. `§0` gained the rule that decides reachability, and
+`§3`'s 20-minute pass was recounted (the prose said 24 rows, the list held 29;
+A5/A6 are excluded as state-heavy).
+
+**The law this adds for the next runbook:** every row must be *reachable in the
+state it names* — read the gating policy, not just the strings — and a doc test
+that checks quotes is not a doc test that checks steps.
+
 ## What Phase 50 is
 
-1. **[DEVICE_MATRIX.md](DEVICE_MATRIX.md)** — 90 rows in ten rounds (A · 44.1,
+1. **[DEVICE_MATRIX.md](DEVICE_MATRIX.md)** — 100 rows in ten rounds (A · 44.1,
    B · 44.2, C · 45.1, D · 45.2, E · the chrome lock, F · 46, G · 47, H · 48,
    I · 49, J · the hostile environment), four device classes, a fixed per-device
    record format, a **20-minute pass** for every device after the first, and the
@@ -127,29 +159,44 @@ instructions instead of the app — so the fix is not only "correct the rows" bu
 4. Each of the eleven part files 44.1…49.2 carries a `## Test log` with its own
    rows filled in.  ✅ sections created, row-for-row pinned by DeviceMatrixTest
 5. `DeviceMatrixTest` green in CI — i.e. the runbook still matches the app the
-   tester installed (branch `main`, one build holding all of 44-49).
+   tester installed (branch `main`, one build holding all of 44-49).  ✅ GREEN
+   `34753000709` on tip `69a70ec` (the runbook's rows needed no change to get there)
 PASS = 1-5 with zero open failures that are not explicitly deferred. Until then
 Phase 50 is 🚧 IMPLEMENTED, never ✅ COMPLETE: this phase's deliverable is a
 filled matrix, not a promise.
 ```
 
-**CI, as it stands at the commit (`fe88de0`, 2026-09-13).** The push landed on
-`arena/01a099d8-codec`; the run id is **not** recorded here, because the sandbox's
-GitHub credential died (HTTP 401) immediately after the push and no run could be
-read. That matters more than usual for a docs phase: `Build APK` runs the app's
-unit tests, so **that run is also the first compile of `DeviceMatrixTest.kt`** —
-this file was written without a Gradle in reach, its rules mirrored in a throwaway
-parser over the same inputs (0 problems across all 90 rows). Exit 5 therefore stays
-open until either the run is read (reconnect GitHub, `gh run list --branch
-arena/01a099d8-codec`) or the owner runs
-`./gradlew :app:testDebugUnitTest --tests '*DeviceMatrixTest*'` and pastes the
-result. If it is red, `docs/TROUBLESHOOTING.md` §46 lists the four shapes a failure
-comes in and what each one means — and the fix is the document, not the pin.
+**CI — five rounds, and the phase's exit 5 is ✅ (`34753000709`, tip `69a70ec`).**
+Written in a sandbox with no Gradle, `DeviceMatrixTest.kt` had CI as its first
+compiler, and CI took four rounds to accept it. Every fault was in the **checker**,
+never in the runbook — not one row of `DEVICE_MATRIX.md` moved in the whole
+exchange, which is the review's worth of signal that the doc is true:
 
-**Row census** (measured from the file, and the floors `DeviceMatrixTest` enforces):
-90 rows / 10 rounds; per part 44.1 ×20, 44.2 ×8, 45.1 ×7, 45.2 ×12, 46.1 ×3,
-46.2 ×5, 47.1 ×6, 47.2 ×4, 48.1 ×9, 49.1 ×8, 49.2 ×8; 33 rows quote a
-corpus-verified sentence (floor 30); every device class is named by ≥ 3 rows.
+| Run | Tip | Result |
+|---|---|---|
+| `34749356274` | `fe88de0` | `startup_failure` after 2 m 2 s — the runner never came up. **No verdict on the code**, recorded so nobody reads it as a pass. |
+| `34751062038` | `f82d425` | 🔴 `compileDebugUnitTestKotlin` — `DeviceMatrixTest.kt:539:1 Syntax error: Unclosed comment`. The KDoc said `arena/*`, and **Kotlin block comments nest**: that `/*` opened a second comment inside the first, and its closer never came. Written `arena/…` in `5b2b4e1`. |
+| `34751405760` | `5b2b4e1` | 🔴 same task — `:227:37 Unresolved reference 's'`. In a **raw** string a backslash is literal but `$` is still a template, so `"""%\d+\$s"""` asked for a variable called `s`. `${'$'}` in `48115ae`. |
+| `34751860341` | `48115ae` | 🔴 **and the file compiled, and all 11 cases ran** — which is the thing this phase needed. Two failures, both in the test: `java.lang.StackOverflowError` (a `lazy [\s\S]*?` regex was scanning every production source, and the JVM engine recurses per quantified step) and `row A1 … NOT listed in its own Test log` (a `^`-anchored regex over a multi-line block needs `RegexOption.MULTILINE`). |
+| `34753000709` | `69a70ec` | ✅ **GREEN**, 8 m 38 s, 19 steps, zero error annotations. Artifacts: debug `25 726 164 B`, release `6 681 302 B` (4 B under PR #79's, with **no `app/src/main` file changed** — inside the noise floor `rule.md` §"APK size" records), mapping `56 755 579 B`. |
+
+The `MULTILINE` miss is the one worth keeping as a rule: the throwaway Python
+mirror that checked this doc used `re.M`, so it agreed with the document and
+disagreed with the JVM. A mirror catches what the *rules* get wrong; only the
+executor of record catches what the *language* gets wrong. `DEVICE_MATRIX.md` §4
+and `docs/TROUBLESHOOTING.md` §46 carry the shapes; the fix is always the doc or
+the test, never a pin lowered to pass.
+
+**Exits 1–4 stay open, and only a handset can close them** — see the results table
+in `DEVICE_MATRIX.md` §3.
+
+**Row census** (measured from the file by the mirror, and the floors `DeviceMatrixTest`
+enforces): **100 rows / 10 rounds** — A14 B7 C6 D19 E7 F7 G9 H9 I15 J7; per part
+44.1 ×22, 44.2 ×8, 45.1 ×7, 45.2 ×20, 46.1 ×3, 46.2 ×5, 47.1 ×6, 47.2 ×4, 48.1 ×9,
+49.1 ×8, 49.2 ×8; 41 rows quote a corpus-verified sentence (floor 30); every device
+class is named by ≥ 3 rows. The count moved 90 → 100 in rounds 2-3 *of the audit*
+(ten rows rewritten for reachability, ten added from 44's R-rows and 45's G-rows);
+the 20-minute pass stayed at 24 rows, because the new ten are primary-device rows.
 
 ## Sources
 

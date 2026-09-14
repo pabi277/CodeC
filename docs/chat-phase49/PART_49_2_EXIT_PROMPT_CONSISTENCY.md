@@ -101,7 +101,7 @@ plus the doc, not more code.
 ## Exit condition
 
 ```text
-1. Fresh install (start = Projects): back at the root → prompt. NOT NOW → stays.
+1. Fresh install (start = Projects): back at the root → prompt. NOT NOW → stays. (2026-09-13, Phase 50 round 3: **a fresh install does not start on Projects** — 44.1's `startOnTerminal` sends an unusable-prefix launch to the **Terminal** tab, so the pair this row compares is Terminal-start vs last-editor-file-start; the matrix's **I10** carries the corrected wording)**
 2. Upgrade (start = Editor, a file open): back at the root → prompt.
 3. Tap Terminal (non-start tab) → back → lands on the start tab; back again →
    prompt. Same on every device tested.

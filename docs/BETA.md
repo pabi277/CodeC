@@ -80,9 +80,13 @@ the same phone.
 3. The backup ZIP round-trip above on a spare folder
 4. Settings → About reads the version the release notes announce
 
-5. The one-time setup is visible and finishes — a bar that says
-   `Setting up CodeC's Linux tools — 42 % · C works right now` on **every** tab,
-   and at the end `pkg --version` works in the terminal (Phase 44)
+5. The one-time setup is visible and finishes — the bar says
+   `Setting up CodeC's Linux tools — 42 % · C works right now`, and it is on every
+   tab **because while the first download runs there is only one tab to reach**:
+   Projects, Editor, Packages and Settings are deliberately paused, each with a
+   lock icon and one "hang tight" sentence. That is the design (so a setup cannot
+   be half-finished by wandering off), not a bug. After it settles the tabs are
+   open again with no restart, and `pkg --version` works in the terminal (Phases 44-45)
 6. Back does the obvious thing: an open drawer closes, an open project tree
    closes, and the exit prompt appears on the **back** button (not on a home
    swipe — no app can) — Phase 49

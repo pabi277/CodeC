@@ -197,7 +197,7 @@ mode never shows it; the stars travel only inside a report the user sends.
 6. Web Preview / Logs / Feedback: back returns to the previous screen.
 49.2
 7. On a 3-button-nav phone: back at the start tab shows the prompt; back again
-   exits. Identical on a fresh install (start = Projects) and an upgrade
+   exits. Identical on a fresh install (start = Projects) and an upgrade (2026-09-13, Phase 50 round 3: **a fresh install does not start on Projects** — 44.1's `startOnTerminal` sends an unusable-prefix launch to the **Terminal** tab, so the pair this row compares is Terminal-start vs last-editor-file-start; the matrix's **I10** carries the corrected wording)**
    (start = last editor file).
 8. On a gesture-nav phone: the same, using the back swipe; the home swipe closes
    the app with no prompt (documented, not "fixed").

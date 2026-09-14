@@ -922,7 +922,7 @@ pass. Merge commanded via
 
 ## Test log (Phase 50 — the cross-device matrix)
 
-> The 12 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `45.2` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
+> The 20 rows of the cross-device matrix that this part owns ([`../chat-phase50/DEVICE_MATRIX.md`](../chat-phase50/DEVICE_MATRIX.md)). `⏳` = not run. Paste the tester's result into `Result` (✅, or ❌ + the text the screen really showed, verbatim) and the device identity line — the first line of Settings → Feedback & Support → COPY REPORT — into `Evidence`, one line per device class that ran it. `DeviceMatrixTest` pins this table both ways: every row here must exist in the matrix with `45.2` in its `Part` column, and every matrix row owned by this part must be listed here. That is Phase 50's exit 4, enforced by CI instead of by memory.
 
 | Row | Result | Evidence (device · OS · nav mode · what was seen) |
 |---|---|---|
@@ -937,6 +937,14 @@ pass. Merge commanded via
 | D9 | ⏳ | |
 | D10 | ⏳ | |
 | D11 | ⏳ | |
+| D12 | ⏳ | |
+| D13 | ⏳ | |
+| D14 | ⏳ | |
+| D15 | ⏳ | |
+| D16 | ⏳ | |
+| D17 | ⏳ | |
+| D18 | ⏳ | |
+| D19 | ⏳ | |
 | J5 | ⏳ | |
 
 **Already on record:** the tour's flow rows were walked by the owner across

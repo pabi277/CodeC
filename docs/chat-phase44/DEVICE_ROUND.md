@@ -173,3 +173,23 @@ Android version**, and — if you ran D10 — whether the restore notice appeare
 Paste screenshots for any row whose text differed. Until this round is
 reported, Phase 44 stays 🚧 IMPLEMENTED and is described as **device pass
 required** (`rule.md` §5).
+
+## Superseded in part by the chrome lock (2026-09-13, Phase 50 round 2)
+
+**D2, D5, D6 and D7 are not runnable as written.** They predate 45.2 round 4: while a
+**fresh** install has the userland in flight, `SetupLockPolicy` pauses Projects, Editor,
+Packages and Settings (only the watch surface stays open — Terminal for the userland, the
+editor for a package install), so "while it downloads, tap every tab" is a step the app
+deliberately refuses. The behaviours those rows guard did not go away; they moved:
+
+| Old row | Where it lives now |
+|---|---|
+| D2 (the same bar on every tab) | `DEVICE_MATRIX.md` **A2** — run as an **upgrade** of a working prefix, where nothing is locked; the fresh-install half is **E1** |
+| D5 (C compiles mid-download) | **A5** — the upgrade state, plus B5's offline state (a settled stage unlocks the app) |
+| D6 (Packages INSTALL refuses) | **A6** — the refusal is quoted from `SetupGatePolicy.refusal` in a state where the tab is reachable; the mid-download tap is **E1** |
+| D7 (RUN a `.py` mid-download) | **A7** — a settled-state row, with the working-prefix case (the Install prompt) living in **D5** |
+
+**R1-R8 are now covered by rows in this matrix** — R1/R2 by **A13**, R3/R5/R6 by **A14**,
+R4 by **A9**, R7 by **A8**/A12, R8 by **A12**; **D8-D12** map to **B1/B2/B3/B4/B5**. Nothing
+here deletes a row above: this round's text is the record of what was asked on 2026-09-12,
+and what a phone showed then is still evidence. Only the *next* pass uses the matrix.
