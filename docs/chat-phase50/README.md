@@ -166,7 +166,7 @@ Phase 50 is 🚧 IMPLEMENTED, never ✅ COMPLETE: this phase's deliverable is a
 filled matrix, not a promise.
 ```
 
-**CI — five rounds, and the phase's exit 5 is ✅ (`34753000709`, tip `69a70ec`).**
+**CI — six rounds: the phase's exit 5 is ✅ (`34753000709`, tip `69a70ec`) and it stayed ✅ across the round-2/3 audit (`34823159610`, tip `72d07a4`).**
 Written in a sandbox with no Gradle, `DeviceMatrixTest.kt` had CI as its first
 compiler, and CI took four rounds to accept it. Every fault was in the **checker**,
 never in the runbook — not one row of `DEVICE_MATRIX.md` moved in the whole
@@ -179,6 +179,7 @@ exchange, which is the review's worth of signal that the doc is true:
 | `34751405760` | `5b2b4e1` | 🔴 same task — `:227:37 Unresolved reference 's'`. In a **raw** string a backslash is literal but `$` is still a template, so `"""%\d+\$s"""` asked for a variable called `s`. `${'$'}` in `48115ae`. |
 | `34751860341` | `48115ae` | 🔴 **and the file compiled, and all 11 cases ran** — which is the thing this phase needed. Two failures, both in the test: `java.lang.StackOverflowError` (a `lazy [\s\S]*?` regex was scanning every production source, and the JVM engine recurses per quantified step) and `row A1 … NOT listed in its own Test log` (a `^`-anchored regex over a multi-line block needs `RegexOption.MULTILINE`). |
 | `34753000709` | `69a70ec` | ✅ **GREEN**, 8 m 38 s, 19 steps, zero error annotations. Artifacts: debug `25 726 164 B`, release `6 681 302 B` (4 B under PR #79's, with **no `app/src/main` file changed** — inside the noise floor `rule.md` §"APK size" records), mapping `56 755 579 B`. |
+| `34823159610` | `72d07a4` | ✅ **GREEN** on 2026-09-14 — job `build`, 25 steps, 10 m 16 s, zero failure annotations; release APK `6 681 298 B`, i.e. −4 B with no `app/src/main` change. The pin re-proved **after** rounds 2-3: 100 rows, 41 corpus-verified sentences, the eleven `## Test log` tables matching the matrix both ways. No floor moved, no row deleted to get there. |
 
 The `MULTILINE` miss is the one worth keeping as a rule: the throwaway Python
 mirror that checked this doc used `re.M`, so it agreed with the document and
