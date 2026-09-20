@@ -7,7 +7,7 @@ ships, CI as the executor of record, and 52.4's Roborazzi goldens in verify mode
 machine-pins the cancelled matrix from `docs/chat-phase50/…` — **delete or re-scope it** before that branch
 lands on `main`.
 
-**No PR until the owner commands it; next command: "Start Phase 50".**
+**MERGE COMMANDED (owner, 2026-09-14: *"Merge it"*) → [PR #80](https://github.com/pabi277/CodeC/pull/80)** — docs-only (28 files, +3587/−129), from `arena/01a09a40-codec` (tip `1b7774b`, CI ✅ `35491592459` on `e78d36b`). ⚠️ `arena/01a099d8-codec` (the matrix, unmerged) ships `DeviceMatrixTest.kt`, whose hard-coded `docs/chat-phase50/…` paths stop existing on `main` the moment PR #80 lands — **delete or re-scope it before that branch merges.** No other PR until the owner commands it; next command: "Start Phase 50".
 
 **Last updated:** 2026-09-13 · **Head: Phases 48 AND 49 + both device-round fixes ✅ ALL DEVICE-PASSED & MERGE COMMANDED via [PR #79](https://github.com/pabi277/CodeC/pull/79) (owner, verbatim: "All device passed. Now merge it." — the pass covers the 11-beat tour re-round, the CodeC Keys blink re-check, 48's eight checks and 49's ten + 49.2's eight; no per-row details supplied, none invented. Tip `3a88c44`; executor-of-record run ✅ GREEN `34742868395`, release APK 6,681,306 B).**
 
