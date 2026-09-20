@@ -55,7 +55,7 @@ class CodecTypeTest {
             scale.labelLarge to normal, scale.labelMedium to normal, scale.labelSmall to normal,
         )
         for ((style, multiple) in slots) {
-            val actual = style.lineHeight.value / style.fontSize.value
+            val actual = style.lineHeight.value.toDouble() / style.fontSize.value.toDouble()
             assertEquals(
                 "line height of ${style.fontSize} must be $multiple×",
                 multiple,

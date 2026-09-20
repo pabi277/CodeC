@@ -116,7 +116,7 @@ class BrandRampTest {
 
     @Test
     fun `secondary and tertiary are never the template constants`() {
-        val template = setOf(0xFFCCC2DC, 0xFFEFB8C8, 0xFF625B71, 0xFF7D5260)
+        val template = setOf(0xFFCCC2DC.toInt(), 0xFFEFB8C8.toInt(), 0xFF625B71.toInt(), 0xFF7D5260.toInt())
         for (choice in CodecPalette.ACCENT_CHOICES) {
             for ((dark, _) in themes) {
                 val roles = BrandRamp.rolesFor(choice.argb, dark)
