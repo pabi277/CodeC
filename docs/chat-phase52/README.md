@@ -1,162 +1,204 @@
-# CodeC Phase 52 — The feel: the screens you touch every day
+# CodeC Phase 52 — The return: it remembers you, and it never feels slow
 
 > **Status:** 📋 **PLANNED — no app code.** · **Cost:** `[client-only]` ·
-> **Effort:** L · **Owner row (verbatim):** *"it's not attractive to user to use
-> multiple time so i want to boost it's ui 100× time"* — the **surfaces** half of
-> that sentence (the return half is Phase 53).
-> Parent: [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md). Research dossier:
-> [`PHASE51_53_UX_RESEARCH.md`](../PHASE51_53_UX_RESEARCH.md).
-> **Depends on:** Phase 51 (tokens, brand, type, motion). Start 52 only after 51
-> is merged, or the six surfaces get converted twice.
+> **Effort:** L · **Owner row (verbatim):** *"not attractive to user to use
+> multiple time"* — the **return** half (the *look* half is 50, the *surfaces*
+> half is 51).
+> Parent: [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md). Research dossier:
+> [`PHASE50_52_UX_RESEARCH.md`](../PHASE50_52_UX_RESEARCH.md).
+> **Depends on:** 50 (design language) and 51 (surfaces).
 
 ```text
-  52.1  The first ten seconds: a splash that is CodeC, and a first screen with a face
-  52.2  The editor surface: RUN ▶ as the hero, chrome with rhythm, a real empty state
-  52.3  Hub, Packages, Terminal: cards with identity, skeletons, the install moment
-  52.4  Micro-feedback: press states, haptics on the eight moments, confirmations
+  52.1  Continuity: resume you can see, and decline
+  52.2  Perceived speed: first paint, jank budget, skeletons instead of blanks
+  52.3  Progress without nagging: the streak the app already counts, shown once
+  52.4  The proof: Roborazzi screenshot goldens + the look-and-feel device round
 ```
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [52.1](PART_52_1_FIRST_TEN_SECONDS.md) | Cold start and the first screen | M | 📋 PLANNED |
-| [52.2](PART_52_2_EDITOR_SURFACE.md) | The editor, with RUN ▶ as the hero | L | 📋 PLANNED |
-| [52.3](PART_52_3_HUB_PACKAGES_TERMINAL.md) | Hub / Packages / Terminal surfaces | M | 📋 PLANNED |
-| [52.4](PART_52_4_MICRO_FEEDBACK.md) | Haptics, press states, confirmations | S/M | 📋 PLANNED |
+| [52.1](PART_52_1_RESUME.md) | "Continue where you left off", visibly | M | 📋 PLANNED |
+| [52.2](PART_52_2_PERCEIVED_SPEED.md) | Jank budget + measured first paint | M | 📋 PLANNED |
+| [52.3](PART_52_3_PROGRESS_WITHOUT_NAGGING.md) | The streak in About, once per day | S | 📋 PLANNED |
+| [52.4](PART_52_4_PROOF.md) | Screenshot goldens + device round | M | 📋 PLANNED |
 
-Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (F1-F16, written, not run).
+Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (R1-R12, written, not run).
 
 ---
 
-## The evidence: what the first session looks like today
+## The evidence: the app already counts the habit and shows the user nothing
 
-Reads and greps on **`main` @ `62cfe7b`, 2026-09-13**.
+Reads on **`main` @ `62cfe7b`, 2026-09-13** — this is the most surprising
+finding of the whole research pass.
 
-| # | What the user meets | Evidence | Why it costs a return visit |
-|---|---|---|---|
-| 1 | A **black (or white) rectangle** for the first moment of every cold start | `app/src/main/res/values/themes.xml` is one line: `<style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />`; `grep -rn "SplashScreen\|windowSplashScreen\|postSplashScreen"` → **0** | the first thing a new user sees is not CodeC |
-| 2 | A first screen that is **functional and anonymous** | `WelcomeScreen.kt:52-100` — "CodeC" headline, one sentence, then three flat `Card`s (`RoundedCornerShape(16.dp)`, `defaultElevation = 0.dp`), no imagery, no colour beyond the accent | nothing to remember, nothing to feel |
-| 3 | **The one action that matters looks like every other button** | `EditorScreen.kt` — RUN ▶ is a text/icon button among the chrome; the editor is 2,423 lines of chrome + a code view | Google's eye-tracking: a bigger, better-contained primary action is found **up to 4× faster** (dossier §3.2) |
-| 4 | **Empty and loading states are one line of text** | `strings.xml:206-207, 331, 395, 442`; `FileManagerScreen.kt:1223` (`EmptyProjectsState`); the drawer's two empties (`EditorProjectDrawer.kt:255, 393`) | the moments a user is most unsure are the ones with the least design |
-| 5 | **Nothing acknowledges a tap** | haptics exist only in the CodeC keyboard (`CodecKeyboard.kt:255,267`), the terminal bell (`TerminalEmulatorView.kt:126-136`) and the `codec-vibrate` API | a user's finger is never answered by the app's own chrome |
-| 6 | Installs (the most anxious moment in the app) end with **terminal text** | Phase 44 owns the setup bar; Packages' rows are `ModulesScreen.kt` (783 lines) | the highest-emotion moment has the least reward |
+```text
+ui/stats/StatsManager.kt:17-31
+  val TOTAL_RUNS = intPreferencesKey("stats_total_runs")
+  val TOTAL_FILES_CREATED = intPreferencesKey("stats_total_files_created")
+  val LAST_RUN_DATE  = stringPreferencesKey("stats_last_run_date")
+  val CURRENT_STREAK = intPreferencesKey("stats_current_streak")
+  fun today(): String …   fun yesterday(): String …
 
-Why this ordering inside the phase: **52.1 owns the seconds before the first
-action, 52.2 owns the action itself, 52.3 makes the rest of the app feel like
-the same product, 52.4 answers the finger.** That is the order the user meets
-them.
+ui/stats/StatsManager.kt:39-52   incrementRuns(): a correct streak rule
+                                 (last == null → 1 · last == today → keep ·
+                                  last == yesterday → streak + 1 · else → 1)
+```
+
+**Six call sites increment these counters** (`MainActivity.kt:1383`,
+`EditorViewModel.kt:3149,3329`, `FileManagerViewModel.kt:276,347`) and
+**nothing reads them**:
+
+```text
+$ grep -rn "totalRunsFlow\|totalFilesCreatedFlow\|currentStreakFlow\|lastRunDateFlow" \
+        app/src/main/java --include=*.kt | grep -v "ui/stats/StatsManager.kt"
+  (no matches)
+```
+
+The second finding is the same shape:
+
+```text
+ui/projects/EditorLaunchState.kt:11-45   save(project, file) + load(context)
+                                         (validated against the disk; stale → null)
+MainActivity.kt:807                       start destination = EditorLaunchState.load(activity)
+```
+
+Resume **works** — and it is completely invisible. The user is dropped straight
+into a file with no breadcrumb, no "you were here", and no way to say *"not
+now, take me to my projects"*. A silent jump is the kindest reading; the
+unkind one is that it feels like the app opened somewhere random.
+
+So 53 is unusually cheap: **the data is already there, the policy is already
+there, and the only work is to show it — once, quietly, and never as a nag.**
+
+### Why this is the "100×" you can actually measure
+
+- Median retention: **D1 ≈ 25-27%, D7 ≈ 9-13%, D30 ≈ 4-6%**; users who complete
+  onboarding retain **2-3× higher**; a meaningful first action **within 3
+  minutes** materially lifts D7 (dossier §3.6).
+- The diagnostic shapes: a **D1 cliff** = first-session failure (→ 51.1, 52.1);
+  a **steep D1→D7 fall** = *"the second and third sessions were not compelling
+  enough to create return behaviour"* (→ 52.1, 52.2, 52.3).
+- And the measured instruments are **already in the repo**: the `bench` APK has
+  `FrameStats`/`FrameCapture`; Roborazzi 1.59.0 is declared, plugin-applied and
+  has **zero** tests.
 
 ---
 
 ## Design, in one page
 
-### 52.1 — The first ten seconds
+### 52.1 — Continuity you can see (and decline)
 
-- **A splash that is CodeC.** One new dependency:
-  `androidx.core:core-splashscreen` (Apache-2.0, the platform's own
-  backported splash API) — a themed window background using the **existing**
-  `ic_launcher_foreground` + the brand surface from 51.2, so the first frame is
-  the app's mark on the app's colour instead of the system's black. The splash
-  is dismissed by `SplashScreen.setKeepOnScreenCondition` keyed on a **pure**
-  `LaunchReadiness` policy (never a hard delay).
-- **A first screen with a face.** `WelcomeScreen` keeps its Phase 33.1
-  structure (three language tiles — that is Pydroid's pattern and it works) and
-  gains: the mark at a real size, the three tiles with **language identity**
-  (the existing `StarterIconView` colours: C orange / Python blue / web green)
-  on cards that use 51's radius/elevation, one line of "what happens next"
-  under each, and a visible "C works offline — no download" reassurance, which
-  is the single fact that stops a nervous first-run exit (Phase 44's whole
-  problem).
+A pure `ResumePolicy` decides, from facts the app already has, **what the first
+screen offers**:
 
-### 52.2 — The editor, with RUN ▶ as the hero
+```kotlin
+data class ResumeFacts(val lastProject: String?, val lastFile: String?,
+                       val stillExists: Boolean, val tabCount: Int,
+                       val minutesSinceLastOpen: Long?, val crashedLastTime: Boolean)
+enum class ResumeOffer { CONTINUE_IN_PLACE, OFFER_CARD, HUB }
+object ResumePolicy { fun offerFor(f: ResumeFacts): ResumeOffer }
+```
 
-- **RUN ▶ becomes the primary contained action** on the editor: larger, filled
-  with the brand container role, above the chrome's visual weight — the one
-  change with a measured 4× effect in Google's study.
-- **Chrome rhythm:** tab bar, find bar, suggestion strip, status bar and the RUN
-  row each get a declared slot in the column (51.1 tokens), so the code view's
-  height stops being an accident. **Nothing** in the sora host changes.
-- **A real empty state** for "no file open" (today: the tab bar collapses and
-  the user is looking at an empty frame): one sentence, one action, the mark.
-- **Save feedback** — Phase 46.2's single-file mode writes silently; give it a
-  one-word confirmation (52.4's mechanism).
+- **CONTINUE_IN_PLACE** (today's silent jump) only when the user left seconds
+  ago or the app was killed mid-session — the case where jumping back is
+  obviously right.
+- **OFFER_CARD** — the hub's top card: *"Pick up where you left off —
+  `demo_flask/app.py`"*, with **Continue** and **✕** (decline → hub; the ✕ is
+  remembered for that session only, never as a setting).
+- **HUB** when nothing is resumable or the project is gone (today's stale-entry
+  fallback already handles the disk half at `EditorLaunchState.kt:31-45`).
 
-### 52.3 — Hub, Packages, Terminal
+**Law:** the app never *silently* navigates somewhere the user did not ask for
+when they have been away longer than a short window; and a declined offer is
+never asked twice in the same session (the no-nag law).
 
-- **Project cards get identity** — the existing `ProjectIconView` (initial +
-  colour) plus the file-type icon set from Phase 34, arranged with the token
-  scale, so the hub reads as a shelf of *your* projects rather than a list.
-- **Loading states**: the hub's project load and the file tree get a skeleton
-  (`CodecMotion` shimmer), never a blank.
-- **The install moment**: a package row's RUNNING → INSTALLED transition gets a
-  visible, haptic-marked completion (not a terminal line); failure keeps Phase
-  44's one-sentence honesty.
+### 52.2 — Perceived speed
 
-### 52.4 — Micro-feedback
+- **First paint measured**, not guessed: the owner's stopwatch on a cold start
+  (row R4) plus the splash-leave timestamp 51.1 already produces. The number
+  goes in this part doc, with the device and OS.
+- **Jank budget** with the existing `bench` APK (`FrameStats`,
+  `FrameCapture`): scroll a 5,000-line file, type for 30 s, switch tabs —
+  record dropped frames **before** and **after**, and publish the table. If the
+  bench needs a new candidate file, that is code in `bench/`, which ships as a
+  **separate APK** and adds **zero** bytes to `:app`.
+- **Skeletons instead of blanks** everywhere a list takes more than one frame
+  (51.3 covers the hub; this part covers the file tree, the git screens and the
+  package list).
 
-Eight named moments get a haptic and a press state — and nothing else does,
-because haptics everywhere is noise:
+### 52.3 — Progress without nagging
 
-1. RUN ▶ started · 2. program finished (success) · 3. program failed ·
-4. file saved · 5. install finished · 6. tab closed · 7. project opened ·
-8. long-press / drag start.
+The streak already exists. Show it **once per day**, in a place the user goes
+to look, never as a dialog:
 
-All of it behind a **pure** `HapticPolicy.momentFor(action, settingsEnabled,
-deviceSupportsVibrator)`, and behind a Settings switch (haptics on/off) that
-defaults to **on** for these eight and never touches the CodeC keyboard's own
-setting (`KeysStayPolicy` stays untouched, Phase 47.2).
+- Settings → About gains one line: *"3 days in a row · 41 runs · 12 files"*
+  (all four numbers come from `StatsManager` — **no new DataStore key, no new
+  counter, no network**).
+- Optionally one quiet line on the hub when a streak *continues* (never when it
+  breaks — no guilt, no "you lost your streak"). Pure
+  `StreakLine.forToday(streak, runs, files, brokenYesterday): String?`.
+- **Never** a notification, never a badge, never a dialog. This part is written
+  specifically to be the *opposite* of a retention-nag feature.
+
+### 52.4 — The proof
+
+- **Roborazzi goldens** for the twelve states this series changed (welcome,
+  hub empty, hub list, editor chrome with RUN ▶, editor empty, output open,
+  packages row in all four states, terminal chrome, Settings appearance,
+  dark + light). Declared, plugin-applied, unused until now — **no new
+  dependency**. Verify mode must be wired in CI (Phase 53's README recorded
+  that CI today would *record* rather than *compare*).
+- **The device round** R1-R12, whose results are pasted into the owning part
+  docs, plus a **final walkthrough**: fresh install → first run → write → RUN →
+  close → reopen the next day — the whole journey the owner judges.
 
 ---
 
 ## What this phase must NOT do
 
-- **No new flow, no new screen, no changed navigation.** Phases 46/47/49 own
-  that; this phase repaints.
-- **No change to the sora editor host, the caret policy, the run pipeline, or
-  the chrome lock.** 52.2 is chrome-only, and the editor keeps every Phase
-  33/35/44/45/46/47/48 behaviour.
-- **No modal nag, ever** (Phases 41/42/45). Confirmations are snackbars and
-  states, never dialogs.
-- **No second splash delay, no artificial minimum display time** — the splash
-  leaves as soon as the app is ready (`LaunchReadiness`).
-- **No change to the guide/tour** (Phase 45) — its geometry is device-tested.
+- **No telemetry, no analytics, no network.** Everything here is on-device state
+  the app already stores (`rule.md`'s standing "no new dependency / DataStore
+  key / permission / telemetry").
+- **No notification, badge, or streak-loss message** (no-nag law, Phases
+  41/42/45).
+- **No change to what resume *does*** today — only that it becomes visible and
+  decline-able. Phase 49's back behaviour and the launch divert (Phase 44) stay.
+- **No change to the editor's text engine** for performance; 48.1's
+  `IncrementalEdit` is the current answer and is measured, not rewritten.
 
 ## Exit condition
 
-Cold start shows CodeC's own splash (not a black window); the welcome screen and
-the editor chrome use 51's tokens throughout; RUN ▶ is measurably the largest,
-most contained control on the editor (source pin + device row F6); every list
-has a designed empty **and** loading state; the eight moments give a haptic and
-the switch turns them off; the **one** new dependency is justified and recorded
-with its APK delta; and `DEVICE_ROUND.md` F1-F16 has been run by the owner.
+`ResumePolicy` is pinned case by case; the resume card renders and can be
+declined; first-paint and jank numbers are **recorded in this part doc** with
+the device that produced them; the About line shows the four existing counters;
+≥12 Roborazzi goldens run in **verify** mode on CI; and `DEVICE_ROUND.md` R1-R12
+has been run by the owner.
 
 ## Tests (plan)
 
 | File | Cases | Pins |
 |---|---|---|
-| `LaunchReadinessTest` | ~9 | splash leaves on readiness, never on a timer; safe mode / crash overlay still win |
-| `WelcomeLayoutTest` (source scan) | ~6 | tiles use tokens; each tile names its language; the offline-C line is present |
-| `EditorChromeLayoutTest` (source scan) | ~10 | RUN ▶ is the largest contained control; chrome slots exist; **no** change inside `SoraEditorHost` |
-| `EmptyStateTest` (source scan) | ~8 | every list surface has an empty + loading branch |
-| `HapticPolicyTest` | ~12 | exactly the eight moments; off switch wins; keyboard setting untouched |
-| `HapticWiringTest` (source scan) | ~8 | all haptic calls go through the policy; none in the sora host |
+| `ResumePolicyTest` | ~14 | in-place vs card vs hub; stale project; long absence; crash-last-time; declined twice |
+| `ResumeWiringTest` (source scan) | ~7 | the hub renders the card; decline is session-only; `EditorLaunchState` remains the single source |
+| `StreakLineTest` | ~10 | the four numbers format; a broken streak is never mentioned; null when there is nothing yet |
+| `AboutStatsTest` (source scan) | ~5 | the About row reads `StatsManager`; no new DataStore key is introduced |
+| Roborazzi `ChromeScreenshotTest` | 12 | one golden per state, dark + light where it matters |
 
-≈53 cases. The haptic *feel* is a device row, not a test; the policy is a test,
-not a feeling.
+≈48 cases + 12 goldens.
 
 ## Sources (record)
 
-Dossier §2.4 (splash evidence), §2.5, §3.2 (the 4× finding and the containment
-mechanism), §3.3 (users naming "little details and haptics"), §3.6 (D1 is
-decided in the first session; 3 minutes to first value), §4 (splashscreen
-library licence, Lottie rejected).
+Dossier §2.5 (the StatsManager and EditorLaunchState findings), §2.6 (bench +
+Roborazzi already exist), §3.6 (retention benchmarks and the diagnostic
+shapes), §4 (no new dependency), D3 (no telemetry).
 
 ## Deferred / rejected with reasons
 
-- **Lottie / animated empty-state illustrations** — bytes for decoration; the
-  research's win is containment + motion, which 51.4 and 52.2 already deliver.
-- **Reordering the bottom bar / a new home tab** — a navigation change; Phase 49
-  and 46 own navigation.
-- **Redesigning the terminal emulator's rendering** — Phase 36 tuned it for
-  speed; only its *chrome* is in scope.
-- **A "recent projects" carousel on the welcome screen** — that is 53.1's
-  continuity job, and putting it here would duplicate the resume decision.
+- **Notifications / re-engagement pushes** — forbidden by the repo's
+  no-telemetry and no-nag laws; explicitly rejected here.
+- **A "streak" gamification screen (badges, levels)** — a nag by another name,
+  and it invent incentives the owner has not asked for.
+- **Cloud backup of the session state** — a server, a permission and an account;
+  a different owner row entirely.
+- **Rewriting the editor for speed** — 48.1 already measured and fixed the
+  worst path; 52.2 measures before it tunes anything else.

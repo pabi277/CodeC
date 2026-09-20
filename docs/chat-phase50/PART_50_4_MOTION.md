@@ -1,9 +1,9 @@
-# CodeC Phase 51.4 — Motion, for the first time
+# CodeC Phase 50.4 — Motion, for the first time
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive"* / *"boost it's ui 100×"*.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -69,7 +69,7 @@ on the classpath, unused. **Zero new bytes of dependency.**
 | 2 | Output panel expand / collapse | `AnimatedVisibility` + `spatialSpring` on height | it is the "did my program work?" moment |
 | 3 | Find bar | give the **existing** `AnimatedVisibility` (`EditorScreen.kt:1627`) the shared spec | the one animation in the app should not use defaults nobody chose |
 | 4 | Open / close a file in the editor | cross-fade of the **chrome** (tab bar, status bar, path) only | the code view is sora's; swapping it is 48's territory |
-| 5 | RUN ▶ → output reveal | `AnimatedContent` on the run state chip + the panel | see 52.2: RUN is the hero |
+| 5 | RUN ▶ → output reveal | `AnimatedContent` on the run state chip + the panel | see 51.2: RUN is the hero |
 | 6 | Hub empty ↔ list | `AnimatedContent` cross-fade | the first-run → "I have projects" moment |
 
 ### The laws that keep Phases 44–49 intact
@@ -91,7 +91,7 @@ on the classpath, unused. **Zero new bytes of dependency.**
 
 The drawer, the bottom sheets and the ripple: material3 already animates those
 and replacing them is a rewrite with a regression surface. Ripples get their
-colour from 51.2's roles automatically.
+colour from 50.2's roles automatically.
 
 ## The Android edge
 
@@ -103,7 +103,7 @@ colour from 51.2's roles automatically.
 - Compose's `LocalAccessibilityManager` gives the reduce-motion hint on newer
   versions; on `minSdk 24` the platform setting above is the source of truth.
 - **Frame budget:** the six transitions are 150-300 ms on a small subtree. The
-  bench APK's `FrameStats`/`FrameCapture` (53.2) is the check, not a guess.
+  bench APK's `FrameStats`/`FrameCapture` (52.2) is the check, not a guess.
 
 ## Exit condition
 
@@ -131,7 +131,7 @@ device round's L11-L12 rows (tab switch, output panel) are run by the owner.
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §2.2 (the greps), §3.2 (46 studies / 18,000
+- `PHASE50_52_UX_RESEARCH.md` §2.2 (the greps), §3.2 (46 studies / 18,000
   participants, 4× faster, the age-gap finding, and the "context still matters"
   caveat), §3.3 (users naming fluidity), §4/D1 (why not the alpha library).
 - `developer.android.com/jetpack/androidx/releases/compose-material3`

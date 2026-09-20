@@ -1,9 +1,9 @@
-# CodeC Phase 52.3 — Hub, Packages and Terminal surfaces
+# CodeC Phase 51.3 — Hub, Packages and Terminal surfaces
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -26,7 +26,7 @@ user is most uncertain — and it is the moment with the least design.
 **Second:** the hub's project card (`ProjectHubCard`, 1,830-line file) shows the
 project's icon view (`ProjectIconView`) and its ⋮ menu, but the *shelf* itself
 has no rhythm: rows are built from the same 801 raw dp literals as the rest of
-the app (51.1's evidence).
+the app (50.1's evidence).
 
 The third finding is the one that costs return visits:
 
@@ -43,8 +43,8 @@ The third finding is the one that costs return visits:
 
 | Change | Detail |
 |---|---|
-| Card identity | `ProjectIconView`'s existing initial+colour tile gets the token radius and card elevation from 51.1, and the **file-type icon set** from Phase 34 on the card's secondary line (the project's dominant language) |
-| Row rhythm | one token gap between cards, one inside them; the ⋮ action keeps its 48 dp target (51.1) |
+| Card identity | `ProjectIconView`'s existing initial+colour tile gets the token radius and card elevation from 50.1, and the **file-type icon set** from Phase 34 on the card's secondary line (the project's dominant language) |
+| Row rhythm | one token gap between cards, one inside them; the ⋮ action keeps its 48 dp target (50.1) |
 | Empty state | `EmptyProjectsState` gains the mark, the two starter shortcuts it already offers (Phase 33.3) **as tiles**, not as text links, and one line that says what a project is |
 | Loading state | a skeleton card (`CodecMotion` shimmer) while the list is being read — **never** a blank frame |
 
@@ -73,7 +73,7 @@ object InstallMoment {
   that is the same discipline as Phase 44's `SetupLockPolicy`, which pauses
   nothing for a settled stage.
 - The celebration is: a `CodecMotion` state change on the row + the haptic and
-  one-line snackbar from 52.4. **No dialog, no confetti, no illustration.**
+  one-line snackbar from 51.4. **No dialog, no confetti, no illustration.**
 - Failure keeps Phase 44's law: one sentence saying what happened and where to
   look (the terminal), with a retry.
 
@@ -127,7 +127,7 @@ action changed meaning; and `DEVICE_ROUND.md` F10-F13 has been run by the owner.
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §2.3, §2.5, §3.3 (consistency across screens is
+- `PHASE50_52_UX_RESEARCH.md` §2.3, §2.5, §3.3 (consistency across screens is
   what users praise), §3.6.
 - `FileManagerScreen.kt:1223,1270,1351` and `strings.xml:206,207,331,442`
   greps (2026-09-13, `main` @ `62cfe7b`).

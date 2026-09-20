@@ -1,10 +1,10 @@
-# CodeC Phase 53.4 — The proof: screenshot goldens and the final walkthrough
+# CodeC Phase 52.4 — The proof: screenshot goldens and the final walkthrough
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"boost it's ui 100× time"* — and the only honest
 > answer to "did it work?" is evidence, not adjectives.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -19,19 +19,19 @@ $ grep -rln "roborazzi\|Roborazzi" app/src/test
   (no matches)
 ```
 
-Phase 50's README already recorded this and named the follow-up: *"Phase 50
+Phase 53's README already recorded this and named the follow-up: *"Phase 53
 should use it for the static parts of the new UI … instead of adding a rival
 library"*, and it also recorded the catch — **CI runs `testDebugUnitTest` with
 no `roborazzi.test.*` property, so a first screenshot test would *record*
-rather than *compare***. 53.4 closes both: it writes the goldens **and** wires
+rather than *compare***. 52.4 closes both: it writes the goldens **and** wires
 verify mode, so a future UI regression fails the build instead of silently
 re-recording a new picture.
 
-Two honest limits, stated up front (Phase 50's own words, still true):
+Two honest limits, stated up front (Phase 53's own words, still true):
 
 - **Goldens do not prove insets, IME behaviour or OEM quirks.** Roborazzi
   renders a fixed window. They prove **layout and colour**, which is exactly
-  what 51-53 changed.
+  what 50-52 changed.
 - **Goldens do not prove feel.** Motion, haptics and smoothness are the device
   round's job, and no screenshot can stand in for them.
 
@@ -51,7 +51,7 @@ Two honest limits, stated up front (Phase 50's own words, still true):
 | 8 | Terminal chrome — first run, tools not ready | dark |
 | 9 | Terminal chrome — ready | dark |
 | 10 | Settings → Appearance (brand / wallpaper / haptics rows) | dark + light |
-| 11 | About — with the streak line (53.3) | dark |
+| 11 | About — with the streak line (52.3) | dark |
 | 12 | The setup bar in each verdict state (Phase 44, re-pinned) | dark |
 
 They live in one test file (`ChromeScreenshotTest`, Robolectric + Roborazzi)
@@ -78,31 +78,39 @@ One scripted journey the owner runs end to end on a **fresh install**, because
 
 | Beat | What should happen | Whose work |
 |---|---|---|
-| 1 | Tap the icon → the mark on the brand colour, no black flash | 52.1 |
-| 2 | Three language tiles, each with its colour and one line of "what happens next" | 52.1 |
+| 1 | Tap the icon → the mark on the brand colour, no black flash | 51.1 |
+| 2 | Three language tiles, each with its colour and one line of "what happens next" | 51.1 |
 | 3 | Pick Python → a project opens, the tour walks first-to-last, one tap per beat | 45, 52 |
 | 4 | The setup bar says what is happening; the locked tabs say why | 44 |
-| 5 | RUN ▶ is the most obvious thing on the screen | 52.2 |
-| 6 | The program runs; the output panel animates; one haptic | 52.2, 52.4 |
-| 7 | Close the app; reopen the next day → the resume card, not a silent jump | 53.1 |
-| 8 | Settings → About → the streak line | 53.3 |
+| 5 | RUN ▶ is the most obvious thing on the screen | 51.2 |
+| 6 | The program runs; the output panel animates; one haptic | 51.2, 51.4 |
+| 7 | Close the app; reopen the next day → the resume card, not a silent jump | 52.1 |
+| 8 | Settings → About → the streak line | 52.3 |
 
 Every beat that fails becomes a row in the owning part doc's device-round
 section, with a test before the fix — the 44-49 discipline.
 
-### D — Where this leaves Phase 50
+### D — Where this leaves Phase 53 (⏸ deferred by the owner)
 
-Phase 50 (the cross-device matrix) is **🚧 IMPLEMENTED on `arena/01a099d8-codec`**
+Phase 53 (the cross-device matrix) is **🚧 IMPLEMENTED on `arena/01a099d8-codec`**
 (2026-09-13): `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` (627 lines)
 pins the ten rounds A-J for phases **44.1-49.2**, CI ✅ GREEN `34753000709` tip
-`69a70ec`. It is **not** replaced by this round — the two compose: the matrix
-proves 44-49 on every device class, this round proves 51-53 on the owner's
-phones. 53.4 therefore adopts its format verbatim — the `## Test log (Phase NN
+`69a70ec`. It is **not** replaced by this round — the two compose: when 53 reopens
+it proves **44-52** on every device class in one pass, and the rounds below
+prove 50-52 on the owner's phones as they ship. **53 is ⏸ DEFERRED**
+(owner, 2026-09-14: *"i want to work on other things before test in
+different devices"*): it was Phase 50, it moved to 53 so the numbers stay
+the execution order, and it reopens when 52 is merged and shipped. 52.4 therefore adopts its format verbatim — the `## Test log (Phase NN
 — …)` heading, the five-column table (`# | Part | Run on | What to do | PASS
 looks like`), one part doc per row — and the three `DEVICE_ROUND.md` files in
-this series already say so. Extending `DeviceMatrixTest` itself to cover 51-53
+this series already say so. Extending `DeviceMatrixTest` itself to cover 50-52
 is deliberately **not** in this phase: it carries a fixed `PART_FILES` map over
 44.1-49.2, and these rows do not exist until their phases are built.
+
+⚠️ **Merge-order note:** that test hard-codes `MATRIX_PATH =
+"docs/chat-phase50/DEVICE_MATRIX.md"`; this branch moved the matrix to
+`docs/chat-phase53/`. **Repoint the constant before both branches land on
+`main`**, or `Build APK` goes red on a doc rename.
 
 ## The Android edge
 
@@ -111,7 +119,7 @@ is deliberately **not** in this phase: it carries a fixed `PART_FILES` map over
   drives a real `NavHost` through `createComposeRule` — the precedent for
   rendering real screens).
 - Screenshots must be **deterministic**: fixed size, fixed density, fixed
-  theme, `System UI` off, and **no** animation left running (51.4's
+  theme, `System UI` off, and **no** animation left running (50.4's
   `MotionPolicy.INSTANT` path must be used in tests, or the goldens race).
 - The `bench` APK and `:app` stay separate; nothing here ships in the release
   APK (recorded as a 0-byte change, like every phase reports).
@@ -137,7 +145,7 @@ the results are pasted into the owning part docs.
 
 ## Sources (record)
 
-- `docs/chat-phase50/README.md` — Roborazzi declared/applied/unused, the
+- `docs/chat-phase53/README.md` — Roborazzi declared/applied/unused, the
   verify-mode gap, and the two honest limits (quoted above).
 - `gradle/libs.versions.toml`, `app/build.gradle.kts:8,272-274`,
   `grep -rln roborazzi app/src/test` (2026-09-13, `main` @ `62cfe7b`).
@@ -150,9 +158,9 @@ the results are pasted into the owning part docs.
 
 - **Screenshot tests for the editor's code area** — the sora view is an
   `AndroidView` with its own rendering; a golden of it would be a golden of
-  nothing. Chrome only (52.2's law again).
+  nothing. Chrome only (51.2's law again).
 - **A rival screenshot library (Paparazzi, Shot)** — the repo already declares
-  Roborazzi; adding a second is exactly what Phase 50 told us not to do.
+  Roborazzi; adding a second is exactly what Phase 53 told us not to do.
 - **Device-farm / Firebase Test Lab** — needs an account, a billing decision
   and network access the repo does not have; the owner's handsets are the
   device lab, as they have been for all 50 phases.

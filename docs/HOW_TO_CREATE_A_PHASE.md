@@ -39,7 +39,7 @@ turned into:
 
 Numbering law (owner 2026-09-12, `PHASE44_50_ROADMAP.md`): *"Number the phases
 like i go in a row."* New phases continue the sequence — **the next free number
-after the last planned one**. Part numbers are `<phase>.<n>` (51.1, 51.2, …).
+after the last planned one**. Part numbers are `<phase>.<n>` (50.1, 50.2, …).
 
 ---
 

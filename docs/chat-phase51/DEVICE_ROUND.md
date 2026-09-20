@@ -1,54 +1,58 @@
-# CodeC Phase 51 — device round (L1-L12)
+# CodeC Phase 51 — device round (F1-F16)
 
-> **Status:** 📋 WRITTEN, **NOT RUN.** Per `rule.md` §5: nothing here can be
-> verified in the agent sandbox (no device, no emulator, no IME). CI proves the
-> pure policies; **this round proves the look**. Paste each row's result back
-> into the owning part doc (`PART_51_x_*.md`) under a `## Test log (Phase 51 — the look)`
-> heading — the convention Phase 50 pinned with `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt`,
-> not into a scratchpad.
+> **Status:** 📋 WRITTEN, **NOT RUN.** Same law as every round:
+> `rule.md` §5 — the sandbox has no device, no emulator, no IME. CI proves the
+> policies; **you** prove the feel. Paste each row's result into the owning part
+> doc under a `## Test log (Phase 51 — the feel)` heading.
 >
-> **Concurrent work (2026-09-13):** Phase 50's cross-device matrix is 🚧
+> **Concurrent work (2026-09-13):** Phase 53's cross-device matrix is 🚧
 > IMPLEMENTED on `arena/01a099d8-codec` — `DeviceMatrixTest.kt` (627 lines)
 > pins ten rounds A-J for **44.1-49.2 only** (a fixed `PART_FILES` map), CI ✅
-> GREEN `34753000709` tip `69a70ec`. Nothing in 51-53 is scanned by it today;
+> GREEN `34753000709` tip `69a70ec` — and it is ⏸ **DEFERRED** by the owner
+> (2026-09-14) until after 52 ships, as one combined 44-52 pass. Nothing in
+> 50-52 is scanned by it today, and this round is not blocked by it;
 > if the owner ever wants these rows machine-pinned the same way, the map and
-> the `## Test log (Phase 51 — the look)` heading are already the right shape.
+> the `## Test log (Phase 51 — the feel)` heading are already the right shape.
 >
 > The log table is `# | Part | Run on | What to do | PASS looks like` — five columns,
 > one row per result, one part doc per row.
 >
-> **Build to test:** the CI `Build APK` artifact of the phase-51 branch
+> **Build:** the CI `Build APK` artifact of the phase-51 branch
 > (`CodeC-IDE-debug`, installed **over** the current install — no data wipe).
-> Record the run id and the version name (Settings → About) at the top of your
-> report; a row reported from the wrong build is not evidence.
+> Write the run id + version name (Settings → About) at the top of your report.
 
 
-**How to record:** (Phase 50's exact format, so the rounds stay machine-checkable:) `L<n> — device / OS / theme (dark|light) / result (PASS|FAIL) /
-one sentence of evidence (photo or the exact words on screen).`
+**Record format:** (Phase 53's exact format, so the rounds stay machine-checkable:) `F<n> — device / OS / theme / result (PASS|FAIL) / one
+sentence (or a photo).`
 
 | # | Row | Owning part | How to check |
 |---|---|---|---|
-| L1 | On a **small** phone (≤5.8"), the six core screens' gaps look even — no screen is visibly tighter than its neighbour | 51.1 | Hub → Editor → Packages → Terminal → Settings, one after another, and look only at the margins |
-| L2 | On a **large** phone (≥6.5") the same, and nothing looks stretched | 51.1 | same walk; the tile/card widths should not fill the screen edge-to-edge differently between screens |
-| L3 | Corners match: every card, chip and sheet on the hub and in Settings uses the same radius | 51.1 | Hub cards vs the `+` sheet vs Settings cards |
-| L4 | Every tap target feels the same size: tap near the **edge** of a toolbar icon, not its centre — the action still fires | 51.1 | Editor toolbar, hub card ⋮, Settings rows |
-| L5 | **Dark theme:** CodeC's own colour is visible — the app no longer looks like the wallpaper | 51.2 | Editor → RUN ▶, the tab bar, a Settings switch |
-| L6 | **Light theme:** same, and no text is washed out | 51.2 | Settings → Appearance → theme = Light; read every label |
-| L7 | **Android 12+ with "Match my wallpaper" OFF** (the default): brand colour, not wallpaper colour | 51.2 | Settings → Appearance |
-| L8 | **Android 12+ with "Match my wallpaper" ON**: the wallpaper palette is used, and nothing becomes unreadable | 51.2 | toggle it, then read the Settings body text and the RUN ▶ button |
-| L9 | The welcome screen's "CodeC" headline reads as a headline — clearly bigger and heavier than the line under it | 51.3 | first run, or Settings → About → Reset tips + clear data only if you accept a fresh install |
-| L10 | A code path (editor status bar, a diff, an output line) is in a **monospace** face and does not jump when it changes | 51.3 | open a file, look at `~proj/…`; run something, look at the output |
-| L11 | Switching bottom tabs **fades** instead of snapping, and is still fast enough to feel instant | 51.4 | tap Editor ↔ Terminal ↔ Hub ten times |
-| L12 | Expanding/collapsing the output panel animates, and the caret does **not** jump while the keyboard is open | 51.4 | type a line, open the panel, close it, type again (Phase 48's row, re-checked) |
+| F1 | **Cold start is CodeC, not black.** Force-stop the app, tap the icon: the first frame is the mark on the brand colour | 51.1 | Settings → Apps → CodeC → Force stop, then launch. Do it on a dark-mode phone *and* a light-mode one |
+| F2 | The splash goes away as soon as the app is ready — no waiting, no second of logo | 51.1 | launch five times; time it with your eye (52.2's R4 times it with a stopwatch) |
+| F3 | After a **crash** the crash report is not hidden behind the splash | 51.1 | (only if you can trigger one; otherwise mark N/A — do not fake it) |
+| F4 | The welcome screen: the three tiles are clearly tiles, each with its language colour, and each says what happens next | 51.1 | first run, or clear data if you accept a fresh install |
+| F5 | **RUN ▶ is the most obvious thing on the editor** — you find it without looking, with the keyboard up and down | 51.2 | open a file; hold the phone at arm's length; then do it with the keyboard open |
+| F6 | RUN ▶ still shows the lock sentence when an install is running, and never runs anyway | 51.2 | start a Python install, tap RUN ▶ (Phase 44's row, re-checked) |
+| F7 | With **no file open** the editor shows a designed empty state with one action, and that action opens something real | 51.2 | close every tab |
+| F8 | The chrome (tabs / find / status bar) has even gaps and does not move when the keyboard opens | 51.2 | type, search (find bar), close it, type again |
+| F9 | Saving gives one short confirmation and nothing else | 51.2 | edit + save, three times |
+| F10 | The hub's **empty** state is a designed screen, not a sentence | 51.3 | delete or move every project (or a fresh install) |
+| F11 | The hub's **loading** state is never a blank frame — you see the list's shape before the names arrive | 51.3 | cold open straight into the hub on a phone with many projects |
+| F12 | Installing a package **finishes** visibly (state change + one line), and does it exactly once | 51.3 | install a small package; watch the row; rotate the phone mid-install and confirm it does not celebrate twice |
+| F13 | The terminal's first frame says whether the tools are ready, and agrees with the setup bar | 51.3 | Terminal tab on a fresh install; compare with the bar's words |
+| F14 | **Haptics:** you feel one tick when a program finishes, a firm one when it fails, and one when a file saves — and nowhere else | 51.4 | run a hello world, then a program that errors, then save |
+| F15 | Settings → Appearance → **Haptics off** = total silence, except the CodeC keyboard's own setting | 51.4 | turn it off, repeat F14 |
+| F16 | The CodeC keyboard's haptics are unchanged by all of the above | 51.4 | Settings → Editor → CodeC Keys → haptics (Phase 47.2's row) |
 
-**Regression rows (from earlier phases — re-run because 51 touches their chrome):**
+**Regression rows** (52 repaints surfaces that earlier phases device-tested):
 
 | # | Row | Since |
 |---|---|---|
-| L13 | The last line of a long file stays above the keyboard (48) | 48.1 |
-| L14 | Back from the hub's open project tree closes the tree, not the app (49) | 49.1 |
-| L15 | RUN ▶ still runs the open file and the chrome lock still says why when it refuses (44/45) | 44.1 |
+| F17 | The last line of a long file stays above the keyboard; no blink while typing | 48 |
+| F18 | Back behaves: drawer closes, hub tree closes, exit prompt appears at the root | 49 |
+| F19 | The 11-beat tour still walks first-to-last with one tap per beat | 45 |
+| F20 | Two projects never share one editor tab | 46 |
 
-**If a row fails:** report the sentence you saw and the screen, not a
-conclusion. Phase 51's own history rule (from 44-49): the first fix is a test
-that fails without the fix, then the fix, then a re-round on a **new** build.
+**If a row fails:** report the sentence you saw and the screen — not a
+conclusion. Fix = a failing test first, then the change, then a re-round on a
+**new** build.

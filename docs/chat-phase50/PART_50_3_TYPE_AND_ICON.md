@@ -1,9 +1,9 @@
-# CodeC Phase 51.3 — A type scale and one icon set
+# CodeC Phase 50.3 — A type scale and one icon set
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"it's not attractive"* / *"boost it's ui 100×"*.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -90,7 +90,7 @@ CC0). So:
 
 - Every **action** icon keeps a `contentDescription` that describes the action
   ("Run this file"), never the glyph ("play arrow").
-- Sizes come from `CodecTokens.Icon`, so 51.1's source scan covers them.
+- Sizes come from `CodecTokens.Icon`, so 50.1's source scan covers them.
 - **No** `material-icons-extended`: it is already on the classpath for the core
   set only, and extending it is a well-known APK-size trap. The existing
   `SpckIcons` / `FileIcon` hand-drawn set stays for files and languages.
@@ -131,7 +131,7 @@ description (source scan of the six files); and the device round's L9-L10 rows
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §2.1 (Type.kt evidence), §3.2 (Google's own
+- `PHASE50_52_UX_RESEARCH.md` §2.1 (Type.kt evidence), §3.2 (Google's own
   finding that removing labels hurt usability), §4 (the OFL licence question).
 - `ui/theme/EditorThemes.kt:9-17` + `docs/JOURNEY.md` Phase 29.1 (the editor's
   typography is the owner's decision and is out of scope).

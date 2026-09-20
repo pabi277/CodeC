@@ -1,9 +1,9 @@
-# CodeC Phase 51.1 — One scale, not 801 numbers
+# CodeC Phase 50.1 — One scale, not 801 numbers
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive"* / *"boost it's ui 100×"*.
 > Parent: [`README.md`](README.md) (the evidence table) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -91,7 +91,7 @@ device-tested flow (44–49) is touched.
   host JVM for tests, exactly like `CodecPalette`.
 - `RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.L))` is the only
   shape constructor used in the six surfaces afterwards.
-- **Do not** animate a size or a padding in this part — that is 51.4's job, and
+- **Do not** animate a size or a padding in this part — that is 50.4's job, and
   an animated padding on the editor while the IME resizes would re-break
   Phase 48.
 

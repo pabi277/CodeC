@@ -1,204 +1,160 @@
-# CodeC Phase 53 — The return: it remembers you, and it never feels slow
+# CodeC Phase 53 — The cross-device round
 
-> **Status:** 📋 **PLANNED — no app code.** · **Cost:** `[client-only]` ·
-> **Effort:** L · **Owner row (verbatim):** *"not attractive to user to use
-> multiple time"* — the **return** half (the *look* half is 51, the *surfaces*
-> half is 52).
-> Parent: [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md). Research dossier:
-> [`PHASE51_53_UX_RESEARCH.md`](../PHASE51_53_UX_RESEARCH.md).
-> **Depends on:** 51 (design language) and 52 (surfaces).
+> **Status:** ⏸ **DEFERRED BY THE OWNER (2026-09-14)** — *"i want to work on
+> other things before test in different devices"*. It was **Phase 50**; it is
+> now **53** and it runs **last**, after the UI series (50 = the look, 51 = the
+> feel, 52 = the return), because the owner's numbering law makes the numbers
+> the execution order.
+>
+> **Reopen condition:** 52 is merged and shipped. When it reopens it is **one
+> combined matrix over 44-52** on a single build — the rounds below (A-F,
+> phases 44-49) plus new rounds for 50/51/52 — so the owner performs one full
+> pass instead of two. **Only this matrix is parked:** the still-owed device
+> rows of 44/45/46/47/48/49 stay owed exactly as they were.
+>
+> **Cost:** `[client-only]` · **Effort:** S (a day of testing) + M (the bugs it
+> finds) · **Owner rows it closes (verbatim):** *"A. If the code is very big
+> it's last line go under the keyboard…"*, *"B. My phone showing the option
+> when try to close… but in most phone no option"*, and the implicit *"it
+> works on mine"* behind all seven rows.
+>
+> ⚠️ **Two things to know before you touch this file.** (1) A **newer, longer
+> version of this matrix** (378 lines, ten rounds A-J, with `## Test log`
+> sections already written into the 44-49 part docs) exists on
+> `arena/01a099d8-codec` (tip `69a70ec`, CI ✅ GREEN `34753000709`), together
+> with `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` — a test that
+> *machine-pins* the matrix. This copy is the merged plan version. (2) That
+> test hard-codes `MATRIX_PATH = "docs/chat-phase50/DEVICE_MATRIX.md"` and a
+> `PART_FILES` map over 44.1-49.2 — **when these branches meet, point those
+> constants at the new locations before merging, or CI goes red.**
 
 ```text
-  53.1  Continuity: resume you can see, and decline
-  53.2  Perceived speed: first paint, jank budget, skeletons instead of blanks
-  53.3  Progress without nagging: the streak the app already counts, shown once
-  53.4  The proof: Roborazzi screenshot goldens + the look-and-feel device round
+  53.1  DEVICE_MATRIX.md — every fix from 44-49, checked on every device class
 ```
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [53.1](PART_53_1_RESUME.md) | "Continue where you left off", visibly | M | 📋 PLANNED |
-| [53.2](PART_53_2_PERCEIVED_SPEED.md) | Jank budget + measured first paint | M | 📋 PLANNED |
-| [53.3](PART_53_3_PROGRESS_WITHOUT_NAGGING.md) | The streak in About, once per day | S | 📋 PLANNED |
-| [53.4](PART_53_4_PROOF.md) | Screenshot goldens + device round | M | 📋 PLANNED |
-
-Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (R1-R12, written, not run).
+| [53.1](DEVICE_MATRIX.md) | The matrix + the record format | S + M | 📋 PLANNED |
 
 ---
 
-## The evidence: the app already counts the habit and shows the user nothing
+## Why this phase exists at all
 
-Reads on **`main` @ `62cfe7b`, 2026-09-13** — this is the most surprising
-finding of the whole research pass.
+The owner's report is a **single-device** report: *"My phone showing the option…
+but in most phone no option."* Four of the seven phases above ship a behaviour
+that is only meaningful on hardware — the caret above a keyboard (48), back
+behaviour (49), the setup bar under OEM battery management (44), coach-mark
+anchor geometry on a small screen (45). None of them can be proven by a JVM
+test, and the repository's law is that CI is the test executor of record
+(`rule.md` §3, §8). Phase 53 is the bridge: **a written procedure that turns
+handset testing into evidence the repo can keep.**
 
-```text
-ui/stats/StatsManager.kt:17-31
-  val TOTAL_RUNS = intPreferencesKey("stats_total_runs")
-  val TOTAL_FILES_CREATED = intPreferencesKey("stats_total_files_created")
-  val LAST_RUN_DATE  = stringPreferencesKey("stats_last_run_date")
-  val CURRENT_STREAK = intPreferencesKey("stats_current_streak")
-  fun today(): String …   fun yesterday(): String …
+`docs/PHONE_UX_ANALYSIS.md` §12 already states the same principle — *"I could
+not run the app: no device, no emulator, no Gradle cache"* — and lists the
+checks that remained pending. Phase 53 does them.
 
-ui/stats/StatsManager.kt:39-52   incrementRuns(): a correct streak rule
-                                 (last == null → 1 · last == today → keep ·
-                                  last == yesterday → streak + 1 · else → 1)
-```
+## What Phase 53 is
 
-**Six call sites increment these counters** (`MainActivity.kt:1383`,
-`EditorViewModel.kt:3149,3329`, `FileManagerViewModel.kt:276,347`) and
-**nothing reads them**:
+1. **[DEVICE_MATRIX.md](DEVICE_MATRIX.md)** — the device classes, the **49
+   checks** (A1-A8, B1-B7, C1-C6, D1-D8, E1-E8, F1-F12), and a fixed record
+   format (device, OS, nav mode, RAM, result, evidence).
+2. **The rule that makes it durable:** each row's result is pasted back into the
+   *owning* phase's part file (under a `## Test log` heading), not into a
+   scratchpad — so a fix and its proof live in the same file, the way every
+   merged phase does today.
+3. **A CI-side half that *can* run headless** — so the matrix is not pure
+   manual labour. **The toolchain is already in the repo; nothing new is
+   needed** (verified 2026-09-12):
+   - **The pure-policy tests that 44-49 each write** — they are *planned*, not
+     written yet (this is a docs-only plan), but every one of them is a plain
+     JVM test, and CI already runs `:app:testDebugUnitTest`
+     (`gradle-bootstrap/build.gradle.kts:15`), so they execute on every push the
+     moment their phase lands.
+   - **Screenshot tests — the stack is declared and applied but unused.**
+     Roborazzi **1.59.0** is in the version catalog
+     (`gradle/libs.versions.toml:30,75-77,121`), wired as `testImplementation`
+     (`app/build.gradle.kts:272-274`) and the Gradle plugin is **applied to
+     `:app`** (`app/build.gradle.kts:8`, declared at root
+     `build.gradle.kts:5` with `apply false`) — yet `grep -rln roborazzi
+     app/src/test` returns **nothing**. Phase 53 should use it for the *static*
+     parts of the new UI (the setup bar in each verdict state, the coach-mark
+     overlay geometry, the single-file status bar, the drawer's PROJECTS
+     section) instead of adding a rival library.
+   - **Robolectric 4.16.1 is already a test dependency**
+     (`gradle/libs.versions.toml:29`, `app/build.gradle.kts:271`) and **8 test
+     files already use `RobolectricTestRunner`** — including
+     `EditorLaunchMeasureReproTest`, which drives a real `NavHost` +
+     `rememberNavController` through `createComposeRule`. That is the precedent
+     for 49's back-stack test, so no harness question is open there.
 
-```text
-$ grep -rn "totalRunsFlow\|totalFilesCreatedFlow\|currentStreakFlow\|lastRunDateFlow" \
-        app/src/main/java --include=*.kt | grep -v "ui/stats/StatsManager.kt"
-  (no matches)
-```
+## The honest limits, stated up front
 
-The second finding is the same shape:
+- **No emulator in this environment.** Anything about IME insets, real keyboard
+  behaviour, OEM battery management or predictive-back gestures **cannot be
+  verified here** and must be run on the owner's handsets. The matrix exists so
+  that this is a scheduled task with a record, not a hope.
+- **Screenshot tests do not prove insets.** Roborazzi renders a fixed window;
+  the caret-above-keyboard fix (48) is precisely about a window that changes
+  size under a real IME. A screenshot can pin the *layout* of the new chrome,
+  and the matrix pins the *behaviour*.
+- **Roborazzi's verify mode is not yet wired.** CI runs `testDebugUnitTest`
+  with no `roborazzi.test.*` property, so a first screenshot test would
+  *record* rather than *compare* unless the phase that adds it also sets the
+  verify flag (or adds a `verifyRoborazziDebug` step). Recorded here so the
+  first author does not believe a green run means a golden was checked.
+- **One device class is not enough for cause C in 49.2** (gesture-nav home
+  swipe). The matrix requires at least one 3-button-nav device *and* one
+  gesture-nav device for the back rows.
 
-```text
-ui/projects/EditorLaunchState.kt:11-45   save(project, file) + load(context)
-                                         (validated against the disk; stale → null)
-MainActivity.kt:807                       start destination = EditorLaunchState.load(activity)
-```
+## Decision for the owner (asked, not assumed)
 
-Resume **works** — and it is completely invisible. The user is dropped straight
-into a file with no breadcrumb, no "you were here", and no way to say *"not
-now, take me to my projects"*. A silent jump is the kindest reading; the
-unkind one is that it feels like the app opened somewhere random.
+**There is nothing to decide about dependencies** — an earlier draft of this
+section asked whether to add Paparazzi and Robolectric. That question was
+wrong: both capabilities are already in the repo (Roborazzi 1.59.0 applied to
+`:app`, Robolectric 4.16.1 with 8 existing users). The only real choice left is
+*effort*, and it is the owner's:
 
-So 53 is unusually cheap: **the data is already there, the policy is already
-there, and the only work is to show it — once, quietly, and never as a nag.**
+| Option | Cost | Verdict |
+|---|---|---|
+| **Manual matrix only** | 0 | ✅ default — start here; every row is a human check |
+| **+ Roborazzi screenshots** for the static chrome (44.1's setup bar, 45.2's overlay, 46.2's status bar, 47.1's drawer) | one golden set per state; the verify-mode wiring noted above | recommended — it is the only automated check those four surfaces will ever get, and the dependency is already paid for |
+| **+ a Robolectric back-stack test** (49) | one test class | optional; 49.1's source-scan pin covers most of the risk, but `EditorLaunchMeasureReproTest` proves the harness can do it |
 
-### Why this is the "100×" you can actually measure
-
-- Median retention: **D1 ≈ 25-27%, D7 ≈ 9-13%, D30 ≈ 4-6%**; users who complete
-  onboarding retain **2-3× higher**; a meaningful first action **within 3
-  minutes** materially lifts D7 (dossier §3.6).
-- The diagnostic shapes: a **D1 cliff** = first-session failure (→ 52.1, 53.1);
-  a **steep D1→D7 fall** = *"the second and third sessions were not compelling
-  enough to create return behaviour"* (→ 53.1, 53.2, 53.3).
-- And the measured instruments are **already in the repo**: the `bench` APK has
-  `FrameStats`/`FrameCapture`; Roborazzi 1.59.0 is declared, plugin-applied and
-  has **zero** tests.
-
----
-
-## Design, in one page
-
-### 53.1 — Continuity you can see (and decline)
-
-A pure `ResumePolicy` decides, from facts the app already has, **what the first
-screen offers**:
-
-```kotlin
-data class ResumeFacts(val lastProject: String?, val lastFile: String?,
-                       val stillExists: Boolean, val tabCount: Int,
-                       val minutesSinceLastOpen: Long?, val crashedLastTime: Boolean)
-enum class ResumeOffer { CONTINUE_IN_PLACE, OFFER_CARD, HUB }
-object ResumePolicy { fun offerFor(f: ResumeFacts): ResumeOffer }
-```
-
-- **CONTINUE_IN_PLACE** (today's silent jump) only when the user left seconds
-  ago or the app was killed mid-session — the case where jumping back is
-  obviously right.
-- **OFFER_CARD** — the hub's top card: *"Pick up where you left off —
-  `demo_flask/app.py`"*, with **Continue** and **✕** (decline → hub; the ✕ is
-  remembered for that session only, never as a setting).
-- **HUB** when nothing is resumable or the project is gone (today's stale-entry
-  fallback already handles the disk half at `EditorLaunchState.kt:31-45`).
-
-**Law:** the app never *silently* navigates somewhere the user did not ask for
-when they have been away longer than a short window; and a declined offer is
-never asked twice in the same session (the no-nag law).
-
-### 53.2 — Perceived speed
-
-- **First paint measured**, not guessed: the owner's stopwatch on a cold start
-  (row R4) plus the splash-leave timestamp 52.1 already produces. The number
-  goes in this part doc, with the device and OS.
-- **Jank budget** with the existing `bench` APK (`FrameStats`,
-  `FrameCapture`): scroll a 5,000-line file, type for 30 s, switch tabs —
-  record dropped frames **before** and **after**, and publish the table. If the
-  bench needs a new candidate file, that is code in `bench/`, which ships as a
-  **separate APK** and adds **zero** bytes to `:app`.
-- **Skeletons instead of blanks** everywhere a list takes more than one frame
-  (52.3 covers the hub; this part covers the file tree, the git screens and the
-  package list).
-
-### 53.3 — Progress without nagging
-
-The streak already exists. Show it **once per day**, in a place the user goes
-to look, never as a dialog:
-
-- Settings → About gains one line: *"3 days in a row · 41 runs · 12 files"*
-  (all four numbers come from `StatsManager` — **no new DataStore key, no new
-  counter, no network**).
-- Optionally one quiet line on the hub when a streak *continues* (never when it
-  breaks — no guilt, no "you lost your streak"). Pure
-  `StreakLine.forToday(streak, runs, files, brokenYesterday): String?`.
-- **Never** a notification, never a badge, never a dialog. This part is written
-  specifically to be the *opposite* of a retention-nag feature.
-
-### 53.4 — The proof
-
-- **Roborazzi goldens** for the twelve states this series changed (welcome,
-  hub empty, hub list, editor chrome with RUN ▶, editor empty, output open,
-  packages row in all four states, terminal chrome, Settings appearance,
-  dark + light). Declared, plugin-applied, unused until now — **no new
-  dependency**. Verify mode must be wired in CI (Phase 50's README recorded
-  that CI today would *record* rather than *compare*).
-- **The device round** R1-R12, whose results are pasted into the owning part
-  docs, plus a **final walkthrough**: fresh install → first run → write → RUN →
-  close → reopen the next day — the whole journey the owner judges.
-
----
-
-## What this phase must NOT do
-
-- **No telemetry, no analytics, no network.** Everything here is on-device state
-  the app already stores (`rule.md`'s standing "no new dependency / DataStore
-  key / permission / telemetry").
-- **No notification, badge, or streak-loss message** (no-nag law, Phases
-  41/42/45).
-- **No change to what resume *does*** today — only that it becomes visible and
-  decline-able. Phase 49's back behaviour and the launch divert (Phase 44) stay.
-- **No change to the editor's text engine** for performance; 48.1's
-  `IncrementalEdit` is the current answer and is measured, not rewritten.
+Adding a *new* library would still need the owner's say-so (`rule.md` §6). Using
+the ones already declared does not.
 
 ## Exit condition
 
-`ResumePolicy` is pinned case by case; the resume card renders and can be
-declined; first-paint and jank numbers are **recorded in this part doc** with
-the device that produced them; the About line shows the four existing counters;
-≥12 Roborazzi goldens run in **verify** mode on CI; and `DEVICE_ROUND.md` R1-R12
-has been run by the owner.
+```text
+1. DEVICE_MATRIX.md filled in for at least: one small gesture-nav phone
+   (≤6.1", low RAM), one large 3-button-nav phone, one tablet/foldable if
+   available, and one Android 13+ device (so the FGS/notification behaviour in
+   44 is checked where the platform is strictest).
+2. Every row has a result and, for failures, an evidence note
+   (log line / screenshot name / device).
+3. Every failure has either a fix in the same phase's part file or a dated
+   deferral with a reason.
+4. Each part file from 44-49 carries a `## Test log` section with its own rows
+   pasted in.
+5. `docs/PHONE_UX_ANALYSIS.md`'s pending checks are marked done or superseded.
+PASS = 1-5 with zero open failures that are not explicitly deferred.
+```
 
-## Tests (plan)
+## Sources
 
-| File | Cases | Pins |
-|---|---|---|
-| `ResumePolicyTest` | ~14 | in-place vs card vs hub; stale project; long absence; crash-last-time; declined twice |
-| `ResumeWiringTest` (source scan) | ~7 | the hub renders the card; decline is session-only; `EditorLaunchState` remains the single source |
-| `StreakLineTest` | ~10 | the four numbers format; a broken streak is never mentioned; null when there is nothing yet |
-| `AboutStatsTest` (source scan) | ~5 | the About row reads `StatsManager`; no new DataStore key is introduced |
-| Roborazzi `ChromeScreenshotTest` | 12 | one golden per state, dark + light where it matters |
-
-≈48 cases + 12 goldens.
-
-## Sources (record)
-
-Dossier §2.5 (the StatsManager and EditorLaunchState findings), §2.6 (bench +
-Roborazzi already exist), §3.6 (retention benchmarks and the diagnostic
-shapes), §4 (no new dependency), D3 (no telemetry).
-
-## Deferred / rejected with reasons
-
-- **Notifications / re-engagement pushes** — forbidden by the repo's
-  no-telemetry and no-nag laws; explicitly rejected here.
-- **A "streak" gamification screen (badges, levels)** — a nag by another name,
-  and it invent incentives the owner has not asked for.
-- **Cloud backup of the session state** — a server, a permission and an account;
-  a different owner row entirely.
-- **Rewriting the editor for speed** — 48.1 already measured and fixed the
-  worst path; 53.2 measures before it tunes anything else.
+- `docs/PHONE_UX_ANALYSIS.md` §12 (the same limitation, stated earlier) and §8
+  (the five phone-specific risks this matrix is designed to catch).
+- `rule.md` §3 (CI is the test executor of record), §8 (verification law), §4.2
+  (evidence before change).
+- **Format precedent:** `docs/chat-phase40/DEVICE_TEST_PLAN.md` (204 lines, the
+  full runbook shape — branch, functional round, green CI run IDs, "PASS looks
+  like" rows with the exact on-screen text) and
+  `docs/chat-phase41/DEVICE_TEST_PLAN.md` (68 lines, the leaner round format).
+  `DEVICE_MATRIX.md` follows the same table columns so the three read as one
+  series.
+- `ui/utils/DeviceDiagnostics.kt:20-130` (`abiSummary`, `isArm64`,
+  `isLikelyEmulator`, `osSummary`, `summary(dataDir)`) — the device-info line
+  the matrix asks the tester to paste instead of guessing the model.
+- Android platform: FGS + `POST_NOTIFICATIONS` behaviour on 13+
+  (`MainActivity.kt:429-441`, `AndroidManifest.xml:16-17,113-118`) — the reason
+  an Android 13+ device is mandatory in the matrix even though `targetSdk = 28`.

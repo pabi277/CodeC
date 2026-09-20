@@ -1,4 +1,4 @@
-# CodeC Phase 51.2 — A brand you can see on Android 12+
+# CodeC Phase 50.2 — A brand you can see on Android 12+
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive"*; the older colour row
@@ -7,7 +7,7 @@
 > which Phase 40.5 answered for **contrast**. This part answers the half 40.5
 > could not: **identity**.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -156,7 +156,7 @@ Android 12+, and with the wallpaper switch on) are run by the owner.
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §2.1, §3.3, §3.5, §4, D1.
+- `PHASE50_52_UX_RESEARCH.md` §2.1, §3.3, §3.5, §4, D1.
 - Phase 40.5 colour law (`docs/JOURNEY.md`, `prompt.md`) — the standing rule
   this part extends rather than replaces.
 - WCAG 2.2 §1.4.3 (contrast minimum) as already applied by

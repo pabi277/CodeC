@@ -1,9 +1,9 @@
-# CodeC Phase 53.1 — "Continue where you left off", visibly
+# CodeC Phase 52.1 — "Continue where you left off", visibly
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -41,7 +41,7 @@ There is also a **conflict to respect, not to fix**:
 | First-run welcome (`WelcomeScreen`, Phase 33.1) | three tiles | ✅ wins over both |
 | Safe mode / crash overlay | safety | ✅ wins over everything |
 
-53.1 adds a **door**, not a new destination: the same resume, now announced and
+52.1 adds a **door**, not a new destination: the same resume, now announced and
 decline-able.
 
 ## Design
@@ -89,7 +89,7 @@ one session — the no-nag law (Phases 41/42/45).
 
 **Nothing about navigation changes:** no new route, no new screen, no change to
 back (Phase 49), no change to the launch divert (Phase 44). The card lives in
-`FileManagerScreen`, whose hub layout 52.3 is already converting to tokens.
+`FileManagerScreen`, whose hub layout 51.3 is already converting to tokens.
 
 ## The Android edge
 
@@ -103,7 +103,7 @@ back (Phase 49), no change to the launch divert (Phase 44). The card lives in
 - `crashedLastTime` comes from the existing `StartupLedger` /
   `CrashLog` (`ui/crash/`) — if neither reports a crash, it is false. No new
   crash plumbing.
-- The card uses 51's tokens and 51.4's motion for its appear/disappear.
+- The card uses 51's tokens and 50.4's motion for its appear/disappear.
 
 ## Exit condition
 
@@ -131,7 +131,7 @@ R1-R4 has been run by the owner.
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §2.5 (the finding), §3.6 (D7 and the "no habit"
+- `PHASE50_52_UX_RESEARCH.md` §2.5 (the finding), §3.6 (D7 and the "no habit"
   diagnostic shape).
 - `ui/projects/EditorLaunchState.kt`, `MainActivity.kt:807`,
   `ui/crash/StartupLedger.kt` reads (2026-09-13, `main` @ `62cfe7b`).
@@ -147,6 +147,6 @@ R1-R4 has been run by the owner.
   dependency-free, but it is a *launcher* surface this repo has never tested;
   keep it out of a phase whose exit condition is already device-heavy.
 - **Making the resume window a setting** — one more switch for something with a
-  correct default; rejected (the same reasoning as 52.4's single switch).
+  correct default; rejected (the same reasoning as 51.4's single switch).
 - **Restoring the caret position** — sora + `EditorViewModel` own that; today
   the file opens at the top and no owner row asks for more.

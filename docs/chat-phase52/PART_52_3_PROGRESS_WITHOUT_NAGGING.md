@@ -1,9 +1,9 @@
-# CodeC Phase 53.3 — The streak the app already counts, shown once
+# CodeC Phase 52.3 — The streak the app already counts, shown once
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S ·
 > **Owner row (verbatim):** *"not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 >
 > **This part is deliberately the smallest thing that could work.** It adds no
 > counter, no key, no network and no new screen. It takes numbers the app has
@@ -131,7 +131,7 @@ no dialog were added; and `DEVICE_ROUND.md` R9-R10 has been run by the owner.
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §2.5 (the finding), §3.6 (retention benchmarks
+- `PHASE50_52_UX_RESEARCH.md` §2.5 (the finding), §3.6 (retention benchmarks
   and the explicit warning against over-notifying), D3 (no telemetry).
 - `ui/stats/StatsManager.kt` and `ui/screens/SettingsScreen.kt:129-131` reads
   (2026-09-13, `main` @ `62cfe7b`).

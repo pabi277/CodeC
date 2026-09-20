@@ -278,15 +278,25 @@ the spec's `CloseCoachMark` row is NOT built — the 45.2 round-2 owner law
 prompt from state + the second door (Settings → Feedback & Support → "Tell
 us before you go", audit row 48 in the same commit).
 
-### Phase 50 — Cross-device test round
+### Phase 50 — Cross-device test round → **renumbered to 53 and ⏸ DEFERRED**
 
-No new features. One runbook (`chat-phase50/DEVICE_MATRIX.md`) that walks
+> **Owner decision (2026-09-14):** *"i want to work on other things before test
+> in different devices."* The owner's numbering law (*"number the phases like i
+> go in a row"*) makes the numbers the execution order, so this phase is no
+> longer 50: it is **53**, it runs **last** (after the UI series 50/51/52), and
+> when it reopens it is **one combined matrix over 44-52** on a single build.
+> **Only this phase is parked** — the device rows still owed for 44/45/46/47/48/49
+> stay owed. Full deferral record, reopen condition and the new rounds G/H/I:
+> [`docs/chat-phase53/`](chat-phase53/README.md) — the directory that now holds
+> this phase's `DEVICE_MATRIX.md`.
+
+No new features. One runbook (`chat-phase53/DEVICE_MATRIX.md`) that walks
 44–49's exit conditions on a matrix: a gesture-nav phone, a 3-button-nav phone,
 a small screen (≤ 5.5"), a tablet/foldable if available, Android 11 / 13 / 15 if
 available, plus the two destructive cases that matter (kill during install,
 revoke storage). The deliverable is a **filled matrix**, not a promise — the
 same standard `docs/BETA.md` and Phase 41's device rounds set.
-Specs: [`chat-phase50/`](chat-phase50/README.md).
+Specs: [`chat-phase53/`](chat-phase53/README.md) (moved from `chat-phase50/`).
 
 ---
 

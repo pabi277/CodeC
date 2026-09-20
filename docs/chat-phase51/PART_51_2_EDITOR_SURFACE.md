@@ -1,9 +1,9 @@
-# CodeC Phase 52.2 — The editor, with RUN ▶ as the hero
+# CodeC Phase 51.2 — The editor, with RUN ▶ as the hero
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** L ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 >
 > ⚠️ **This part is chrome-only.** `EditorScreen.kt` is 2,423 lines and carries
 > Phases 33, 35, 44, 45, 46, 47, 48 and 49. Nothing below may change the sora
@@ -51,8 +51,8 @@ the rest is implicit.
 ### A — RUN ▶ becomes the primary contained action
 
 - **Size and containment:** the largest control in the editor's chrome, filled
-  with the brand `primaryContainer`/`onPrimaryContainer` pair from 51.2 (never a
-  new literal), with the token radius from 51.1 — i.e. a *contained* button,
+  with the brand `primaryContainer`/`onPrimaryContainer` pair from 50.2 (never a
+  new literal), with the token radius from 50.1 — i.e. a *contained* button,
   not a text button among texts.
 - **Placement stays where it is** — moving it would break Phase 45's coach-mark
   anchors, Phase 44's chrome lock dimming and the owner's muscle memory. This is
@@ -61,7 +61,7 @@ the rest is implicit.
   text labels from email actions resulted in decreased usability."* RUN ▶ keeps
   its words.
 - **Its state is visible:** idle → running (a `CodecMotion` effect + the haptic
-  from 52.4) → done/failed. Phase 44's lock still governs *whether* it may run;
+  from 51.4) → done/failed. Phase 44's lock still governs *whether* it may run;
   this only governs how its state reads.
 
 A pure `RunButtonStyle` decides the role from state, so it is testable:
@@ -75,7 +75,7 @@ object RunButtonStyle { fun roleFor(s: RunButtonState): RunButtonRole }
 
 ### B — The chrome gets declared slots
 
-The editor column becomes five named slots with token gaps (51.1):
+The editor column becomes five named slots with token gaps (50.1):
 **tab bar → code view (sora, untouched) → find bar → suggestion strip → status
 bar**, with the RUN row in its own slot. Two benefits: the code view's height
 stops being an accident, and Phase 48's caret logic gets a stable layout to
@@ -86,7 +86,7 @@ still flows through the same policy, which is exactly why it is safe).
 
 "Nothing open" becomes a designed state: the mark, one sentence (*"No file
 open"*), and **one** action that opens the last file or the hub — reusing
-`EditorLaunchState.load` (Phase 53.1 owns its wording) so the two parts cannot
+`EditorLaunchState.load` (Phase 52.1 owns its wording) so the two parts cannot
 disagree.
 
 ### D — Save and state feedback
@@ -99,14 +99,14 @@ No nag, ever.
 
 - Everything above sits **above** `SoraEditorHost`; a source-scan test pins that
   the sora host file is unchanged by this part (compare against the merged
-  phase-51 sha).
+  phase-50 sha).
 - The chrome lock (Phase 44/45) dims controls it pauses — RUN ▶'s new
   contained style must respect the **same** dim/🔒 handling, and the
   `SetupLockPolicy` state, not the style, still decides enablement.
 - Keyboard-up vs keyboard-down: the chrome slots must not change the sora box's
   height behaviour that Phase 48 pinned (`CaretVisibilityPolicy` keys on height;
   a *stable* chrome is what keeps it quiet).
-- Motion: the RUN state change uses `CodecMotion.effectsSpring` (51.4) and no
+- Motion: the RUN state change uses `CodecMotion.effectsSpring` (50.4) and no
   layout animation.
 
 ## Exit condition
@@ -115,7 +115,7 @@ No nag, ever.
 control in the editor chrome (source pin: no other control in the file declares
 a larger height/width, and it uses the container role pair); the empty state
 renders with a sentence and one action; the sora host file is byte-identical to
-the merged phase-51 version (git diff pin in the report); Phase 44's lock
+the merged phase-50 version (git diff pin in the report); Phase 44's lock
 behaviour and Phase 48's caret behaviour are unchanged (device rows F12, F13);
 and `DEVICE_ROUND.md` F5-F9 has been run by the owner.
 
@@ -138,7 +138,7 @@ and `DEVICE_ROUND.md` F5-F9 has been run by the owner.
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §3.2 (the 4× finding, its mechanism, and the
+- `PHASE50_52_UX_RESEARCH.md` §3.2 (the 4× finding, its mechanism, and the
   "don't break paradigms / keep labels" guard-rail), §2.5, §3.3.
 - `EditorScreen.kt` / `EditorTabBar.kt:61` greps above (2026-09-13,
   `main` @ `62cfe7b`).
@@ -151,6 +151,6 @@ and `DEVICE_ROUND.md` F5-F9 has been run by the owner.
   keyboard/IME insets that Phase 48 just fixed; containment in the chrome is the
   same win without the risk. Revisit only with the owner's explicit ask.
 - **Moving RUN ▶ to the top bar** — breaks the tour, the lock and muscle memory.
-- **A run-output redesign** — Phase 19/36 own the output panel; 51.4 animates
+- **A run-output redesign** — Phase 19/36 own the output panel; 50.4 animates
   its reveal, nothing more.
 - **Editor themes, font size, key strip** — Phases 29/35/47 decisions.

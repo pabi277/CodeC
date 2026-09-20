@@ -1,12 +1,12 @@
-# CodeC Phase 52.1 — Cold start and the first screen
+# CodeC Phase 51.1 — Cold start and the first screen
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
 > **New dependency:** `androidx.core:core-splashscreen` (Apache-2.0) — the
-> **only** new dependency in the whole 51-53 series.
+> **only** new dependency in the whole 50-52 series.
 > **Owner row (verbatim):** *"not attractive … boost it's ui 100×"*, clarified
 > as *"the first 10 seconds — it must look gorgeous on open"*.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -60,8 +60,8 @@ says what happens after the tap.
 
 ```kotlin
 data class LaunchFacts(
-    val themeResolved: Boolean,     // 51.2 brand/dynamic decision made
-    val startRouteKnown: Boolean,   // welcome vs. resume (Phase 53's decision)
+    val themeResolved: Boolean,     // 50.2 brand/dynamic decision made
+    val startRouteKnown: Boolean,   // welcome vs. resume (Phase 52's decision)
     val crashOverlay: Boolean,      // ui/crash/CrashReportOverlay
     val safeMode: Boolean,          // ui/crash/SafeMode
 )
@@ -73,7 +73,7 @@ object LaunchReadiness {
 
 - **No minimum display time, ever.** A splash that waits to be admired is a
   splash that steals a second from every launch; that is the opposite of
-  perceived speed (53.2 owns the measurement).
+  perceived speed (52.2 owns the measurement).
 - **The crash overlay and safe mode always win** — a splash must never hide a
   crash report the owner is waiting for (`MainActivity.kt:338`).
 - Wiring: `installSplashScreen()` + `setKeepOnScreenCondition { … }` reading
@@ -83,7 +83,7 @@ object LaunchReadiness {
 
 A `Theme.Codec.Splash` style (`postSplashScreenTheme` → the existing
 `Theme.MyApplication`) with:
-- `windowSplashScreenBackground` = the **brand surface** from 51.2 (dark/light
+- `windowSplashScreenBackground` = the **brand surface** from 50.2 (dark/light
   variants, no new colour literals — `CodecPalette` / the ramp supply it);
 - `windowSplashScreenAnimatedIcon` = the existing
   `drawable/ic_launcher_foreground` (Phase 38's adaptive icon work — **no new
@@ -98,7 +98,7 @@ A `Theme.Codec.Splash` style (`postSplashScreenTheme` → the existing
 | Change | Reason |
 |---|---|
 | The mark (`drawable/app_mark.xml`, already in `res/`) at a real size above the wordmark | the app has a logo and never shows it |
-| Tiles on **elevated, token-shaped** cards (51.1) with the language's own colour carried by the existing `StarterIconView` | identity + hierarchy; today every tile is the same flat `surfaceVariant` |
+| Tiles on **elevated, token-shaped** cards (50.1) with the language's own colour carried by the existing `StarterIconView` | identity + hierarchy; today every tile is the same flat `surfaceVariant` |
 | One line of *"what happens next"* under each tile (e.g. *"creates a project and opens main.py"*) | uncertainty is the #1 first-run exit |
 | The offline-C line promoted to a visible reassurance badge | Phase 44's entire problem is a user who closes the app during a download; telling them C needs nothing prevents the panic |
 | Nothing else. No illustration, no carousel, no second button | the three tiles are the owner's Phase 33.1 decision and they work |
@@ -124,7 +124,7 @@ Copy changes go through `strings.xml` in the same commit so
 safe-mode wins); a cold start on a dark-mode phone shows **the CodeC mark on the
 brand colour** — verified by the owner on a device (row F1) — and the splash is
 gone as soon as the first route is composed (row F2: no perceptible wait, and
-the owner's own stopwatch in 53.2's R4 records the number).
+the owner's own stopwatch in 52.2's R4 records the number).
 
 ## Tests (plan)
 
@@ -142,7 +142,7 @@ the owner's own stopwatch in 53.2's R4 records the number).
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §2.4 (the evidence above), §3.1 (50 ms), §3.6
+- `PHASE50_52_UX_RESEARCH.md` §2.4 (the evidence above), §3.1 (50 ms), §3.6
   (first-session value), §4 (splashscreen licence).
 - `docs/JOURNEY.md` Phase 33.1 (the three-tile welcome is the owner's
   decision), Phase 38 (the adaptive icon), Phase 44 (why the offline-C line

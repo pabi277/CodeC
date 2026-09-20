@@ -1,9 +1,9 @@
-# CodeC Phase 52.4 — Haptics, press states, confirmations
+# CodeC Phase 51.4 — Haptics, press states, confirmations
 
 > **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
-> [`PHASE51_53_ROADMAP.md`](../PHASE51_53_ROADMAP.md).
+> [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
 
 ## First move: evidence, not code
 
@@ -69,14 +69,14 @@ Every tappable surface in the six core files gets a visible pressed state.
 Material3 gives a ripple for free; what is missing is **containment** — the
 surfaces that today are bare `Row`s with a `clickable` and no shape. The rule is
 one line: *a tappable thing has a shape and a background role.* token radius
-(51.1) + `surfaceContainerHigh`/`surfaceContainerHighest` roles (51.2).
+(50.1) + `surfaceContainerHigh`/`surfaceContainerHighest` roles (50.2).
 
 ### Confirmations, never dialogs
 
 | Moment | Confirmation |
 |---|---|
 | File saved | one word (`Saved`) as a snackbar; never a toast-callback, never a dialog |
-| Install finished | one line + the row's own state change (52.3) |
+| Install finished | one line + the row's own state change (51.3) |
 | Program finished / failed | the output panel's own state (Phase 19/36) + the haptic |
 | Copy / export / share | the platform's own affordance (already correct today) |
 
@@ -96,7 +96,7 @@ and the owner's own guide law ("no skip, no interruption") forbid it.
   the policy.
 - **Never** on a recomposition: haptics fire from event handlers (a click, a
   run-state transition), and the "celebrate only on a genuine transition" rule
-  from 52.3 is what keeps a re-render from buzzing twice.
+  from 51.3 is what keeps a re-render from buzzing twice.
 
 ## Exit condition
 
@@ -125,7 +125,7 @@ switch off = silence, keyboard haptics unchanged) has been run by the owner.
 
 ## Sources (record)
 
-- `PHASE51_53_UX_RESEARCH.md` §2.3 (the 28-hit breakdown), §3.3 (users naming
+- `PHASE50_52_UX_RESEARCH.md` §2.3 (the 28-hit breakdown), §3.3 (users naming
   haptics), §3.2.
 - `ui/keyboard/CodecKeyboard.kt`, `ui/components/TerminalEmulatorView.kt`,
   `ui/terminal/CodecApiBridge.kt` reads (2026-09-13, `main` @ `62cfe7b`).

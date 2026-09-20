@@ -1,4 +1,4 @@
-# CodeC — Phases 51–53 · "make it 100× more attractive" research dossier
+# CodeC — Phases 50–52 · "make it 100× more attractive" research dossier
 
 > **Owner (2026-09-13, verbatim):** *"research online, open source, real humans
 > thought on the topic of policed ui / No the main problem is it's not
@@ -110,7 +110,7 @@ it says what CodeC looks like.
   (`gradle/libs.versions.toml:30`), wired `testImplementation`
   (`app/build.gradle.kts:272-274`), plugin applied to `:app`
   (`app/build.gradle.kts:8`) — and `grep -rln roborazzi app/src/test` returns
-  **nothing** (verified 2026-09-13; Phase 50's README already recorded this).
+  **nothing** (verified 2026-09-13; Phase 53's README already recorded this).
   Screenshot goldens are available **without a new dependency**.
 - **The contrast gate** — `AppContrastTest` + `ChromeContrastTest` in
   `app/src/test` already measure ratios and read the alphas out of the UI
@@ -236,8 +236,8 @@ familiar patterns (tab bar stays a tab bar, list stays a list).
   first action **within 3 minutes** see materially higher D7
   ([digia.tech/post/mobile-app-onboarding-activation-retention](https://www.digia.tech/post/mobile-app-onboarding-activation-retention/)).
 - The diagnostic shapes matter: a **D1 cliff** = onboarding/first-impression
-  failure (→ Phase 52.1 + 53.1); a **steep D1→D7 fall** = the second and third
-  sessions gave no reason to return (→ Phase 53.2/53.3).
+  failure (→ Phase 51.1 + 52.1); a **steep D1→D7 fall** = the second and third
+  sessions gave no reason to return (→ Phase 52.2/52.3).
 
 **What that means for CodeC:** the "100×" that is measurable is
 **time-to-first-value** — first run to *"my code ran on my phone"* — and the
@@ -256,14 +256,14 @@ app whose behaviour we copy → only then custom Kotlin.**
 |---|---|---|---|
 | Expressive components (shape-morph buttons, `ButtonGroup`, `LoadingIndicator`, `MotionScheme`) | `androidx.compose.material3:material3:1.5.0-alphaNN` | Apache-2.0, **but alpha** | ❌ **not adopted** — see D1 |
 | Same, via Compose Multiplatform | `org.jetbrains.compose.material3:material3:1.9.0-alpha04` | Apache-2.0, alpha, and CMP is not in this build | ❌ not adopted |
-| Cold-start screen | `androidx.core:core-splashscreen` | Apache-2.0 | ✅ **adopt** in 52.1 (tiny, `minSdk`-safe, kills §2.4) — the only new dependency in the whole series |
+| Cold-start screen | `androidx.core:core-splashscreen` | Apache-2.0 | ✅ **adopt** in 51.1 (tiny, `minSdk`-safe, kills §2.4) — the only new dependency in the whole series |
 | Motion | `androidx.compose.animation` (`spring`/`tween`/`AnimatedContent`/`AnimatedVisibility`) | Apache-2.0, **already on the classpath and unused** | ✅ adopt — 0 bytes (§2.2) |
-| Screenshot goldens | **Roborazzi 1.59.0** | Apache-2.0, **already declared + plugin applied, zero tests** | ✅ adopt in 53.4 — 0 new bytes of dependency graph |
-| Frame timing | in-repo `bench/` (`FrameStats.kt`, `FrameCapture.kt`) | own code | ✅ adopt in 53.2 |
-| Haptics | `LocalHapticFeedback` (Compose) + `VibrationEffect` (platform) | platform | ✅ adopt in 52.4 |
+| Screenshot goldens | **Roborazzi 1.59.0** | Apache-2.0, **already declared + plugin applied, zero tests** | ✅ adopt in 52.4 — 0 new bytes of dependency graph |
+| Frame timing | in-repo `bench/` (`FrameStats.kt`, `FrameCapture.kt`) | own code | ✅ adopt in 52.2 |
+| Haptics | `LocalHapticFeedback` (Compose) + `VibrationEffect` (platform) | platform | ✅ adopt in 51.4 |
 | Animated illustrations (Lottie/Rive) | `com.airbnb.android:lottie-compose` | Apache-2.0 | ❌ **rejected** — adds a runtime dependency plus binary assets for decoration; the repo measures every KB, and M3's own research says the win comes from **containment + motion**, not illustrations |
 | A monospace font for code surfaces | **JetBrains Mono** | **SIL OFL-1.1** — not on `rule.md` §6's whitelist (MIT/Apache/BSD/CC0) | ⚠ **open question, escalated to the owner** — default ship = system `FontFamily.Monospace` (0 bytes); vendoring needs an explicit owner yes, recorded here and in the part doc |
-| Icons | `androidx.compose.material:material-icons-extended` | Apache-2.0 | ⚠ **already in the graph** but extended icons bloat the APK; 51.3 uses the **core** set + the existing `SpckIcons`/`FileIcon` work (Phase 34/38) |
+| Icons | `androidx.compose.material:material-icons-extended` | Apache-2.0 | ⚠ **already in the graph** but extended icons bloat the APK; 50.3 uses the **core** set + the existing `SpckIcons`/`FileIcon` work (Phase 34/38) |
 | Behaviour to copy (clean-room, visible behaviour only) | Acode (theme picker) · Pydroid (language-first first run) · Spck (preview) · GitHub Mobile (calm) · Niagara / Bundled Notes (fluidity) | — | ✅ **reference only** — no code, no assets, no trademarks |
 
 ---
@@ -287,14 +287,14 @@ expressive reaches stable.
 **D2 — Tokens before screens.**
 The evidence in §2.1 (801 dp literals, 10 radii, no type scale) means a
 screen-by-screen repaint would be repainting the same inconsistency three
-times. Phase 51 builds the scale and the motion vocabulary; Phase 52 spends it
-on the surfaces; Phase 53 spends it on the return. This is also the only order
+times. Phase 50 builds the scale and the motion vocabulary; Phase 51 spends it
+on the surfaces; Phase 52 spends it on the return. This is also the only order
 in which the **device round is meaningful** (the owner sees one change, not
 nine).
 
 **D3 — The "return" work uses what the app already counts. No telemetry, ever.**
 `StatsManager` already has a streak (§2.5) and `EditorLaunchState` already has
-resume. Phase 53 surfaces them. No analytics SDK, no network, no new DataStore
+resume. Phase 52 surfaces them. No analytics SDK, no network, no new DataStore
 keys beyond the ones that already exist (`rule.md`: *"No new dependency,
 DataStore key, Settings control, permission or telemetry"* unless a part doc
 justifies it).
@@ -334,14 +334,18 @@ justifies it).
 - **Vendoring a font (any licence not on `rule.md` §6's whitelist)** — §4;
   needs the owner's explicit yes.
 - **Notifications, streaks-by-nagging, re-engagement pushes** — forbidden by
-  the repo's no-telemetry/no-nag law; 53.3 is explicitly designed *against*
+  the repo's no-telemetry/no-nag law; 52.3 is explicitly designed *against*
   them.
 - **Anything that touches `targetSdk`, the bootstrap, or the userland.** Out of
   scope by invariant.
-- **Phase 50's cross-device matrix** stays its own phase; 53.4 **reuses** its
-  record format and does not replace it. (**Status corrected 2026-09-14:** while
-  this dossier was being written, Phase 50's matrix became 🚧 IMPLEMENTED on
+- **Phase 53's cross-device matrix** stays its own phase; 52.4 **reuses** its
+  record format and does not replace it. **(Owner decision, 2026-09-14: the
+  matrix is ⏸ DEFERRED.** It was Phase 50; because the owner's numbering law
+  makes the numbers the execution order and he wants to build before testing on
+  other handsets, it moved to **53** and runs last, as **one combined matrix
+  over 44-52**. Only the matrix is parked — the 44-49 device rows stay owed.) (**Status corrected 2026-09-14:** while
+  this dossier was being written, Phase 53's matrix became 🚧 IMPLEMENTED on
   `arena/01a099d8-codec` — `DeviceMatrixTest.kt` (627 lines), CI ✅ GREEN
-  `34753000709` tip `69a70ec` — pinning rounds A-J for **44.1-49.2**. The 51-53
+  `34753000709` tip `69a70ec` — pinning rounds A-J for **44.1-49.2**. The 50-52
   rounds adopt its `## Test log` convention; extending its fixed `PART_FILES`
-  map to 51-53 is out of scope here.)
+  map to 50-52 is out of scope here.)
