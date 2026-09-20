@@ -29,6 +29,8 @@ class SettingsManager(private val context: Context) {
         val TERMINAL_EXTRA_KEYS_MACROS = stringPreferencesKey("terminal_extra_keys_macros")
 
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
+        // Phase 50.2 — "Match my wallpaper" (dynamic colour opt-in).
+        val MATCH_WALLPAPER = booleanPreferencesKey("match_wallpaper")
 
         val DEV_MODE = booleanPreferencesKey("dev_mode")
         val SHOW_FILE_PATHS = booleanPreferencesKey("show_file_paths")
@@ -236,6 +238,14 @@ class SettingsManager(private val context: Context) {
     val accentColorFlow: Flow<String> = context.dataStore.data.map {
         AccentPalette.effectiveStoredAccent(it[ACCENT_COLOR])
     }
+
+    // Phase 50.2 — the RAW stored accent (null = never chose), for
+    // IdentityPolicy. accentColorFlow defaults, so it cannot say that.
+    val storedAccentFlow: Flow<String?> = context.dataStore.data.map { it[ACCENT_COLOR] }
+
+    val matchWallpaperFlow: Flow<Boolean> = context.dataStore.data.map { it[MATCH_WALLPAPER] ?: false }
+
+    suspend fun setMatchWallpaper(match: Boolean) { context.dataStore.edit { it[MATCH_WALLPAPER] = match } }
 
     val devModeUnlockedFlow: Flow<Boolean> = context.dataStore.data.map { it[DEV_MODE] ?: false }
     val showFilePathsFlow: Flow<Boolean> = context.dataStore.data.map { it[SHOW_FILE_PATHS] ?: false }

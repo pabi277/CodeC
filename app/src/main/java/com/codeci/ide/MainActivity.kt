@@ -64,6 +64,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -114,6 +116,10 @@ import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.MyApplicationTheme
 import com.codeci.ide.ui.theme.AccentPalette
 import com.codeci.ide.ui.theme.ThemeManager
+import com.codeci.ide.ui.theme.CodecMotion
+import com.codeci.ide.ui.theme.IdentityInput
+import com.codeci.ide.ui.theme.IdentityPolicy
+import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.FileNameUtils
 import androidx.activity.compose.LocalActivity
@@ -367,10 +373,30 @@ class MainActivity : ComponentActivity() {
                 if (safeModeActive) kotlinx.coroutines.flow.flowOf(AccentPalette.DEFAULT_STORAGE_HEX)
                 else settingsManager.accentColorFlow
                 ).collectAsState(initial = AccentPalette.DEFAULT_STORAGE_HEX)
+            // Phase 50.2 — the brand decision inputs: the raw stored accent
+            // (null-aware, so "never chose" is sayable) plus the wallpaper
+            // preference. Safe mode resolves both to their defaults, exactly
+            // like the accent above.
+            val storedAccent by (
+                if (safeModeActive) kotlinx.coroutines.flow.flowOf(null)
+                else settingsManager.storedAccentFlow
+                ).collectAsState(initial = null)
+            val matchWallpaper by (
+                if (safeModeActive) kotlinx.coroutines.flow.flowOf(false)
+                else settingsManager.matchWallpaperFlow
+                ).collectAsState(initial = false)
 
             val isDarkTheme = ThemeManager.effectiveDark(appTheme, isSystemInDarkTheme())
+            val brandMode = IdentityPolicy.decide(
+                IdentityInput(
+                    storedAccentHex = storedAccent,
+                    dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+                    darkTheme = isDarkTheme
+                ),
+                prefersWallpaper = matchWallpaper
+            )
 
-            MyApplicationTheme(darkTheme = isDarkTheme, accentHex = accentColor) {
+            MyApplicationTheme(darkTheme = isDarkTheme, accentHex = accentColor, brandMode = brandMode) {
                 MainApp(onStartupFinished = {
                     // Phase 42.3 — the main screen was drawn: this start
                     // succeeded, so the loop counter and the marker clear.
@@ -1163,10 +1189,19 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
                     onDismiss = if (setupBarDismissible) dismissSetupBar else null
                 )
             }
+            // Phase 50.4 — transition (1): every forward navigate shares
+            // the one 150 ms fade; pops are always instant, because Phase
+            // 49 decides back. The platform's remove-animations switch
+            // resolves both to nothing through the same gate.
+            val motion = rememberMotionSpecs()
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                enterTransition = { motion.orNone(CodecMotion.tabEnter) },
+                exitTransition = { motion.orNone(CodecMotion.tabExit) },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None }
             ) {
             composable(
                 route = Screen.Editor.route,

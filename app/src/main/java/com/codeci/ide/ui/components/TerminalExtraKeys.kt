@@ -17,10 +17,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.ui.theme.CodecType
 
 /**
  * Termux-style configurable 2-row extra key grid so a phone keyboard can still send
@@ -125,7 +125,7 @@ private fun ExtraKey(
         Text(
             text = label,
             color = if (latched) Color(0xFF80CBC4) else Color(0xFFE0E0E0),
-            fontFamily = FontFamily.Monospace,
+            fontFamily = CodecType.codeFamily,
             fontWeight = if (latched) FontWeight.Bold else FontWeight.Medium,
             fontSize = if (label.length > 3) 10.sp else 11.sp,
             maxLines = 1

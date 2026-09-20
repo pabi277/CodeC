@@ -1,6 +1,6 @@
 # CodeC Phase 50 — The look: one CodeC design language
 
-> **Status:** 📋 **PLANNED — no app code.** · **Cost:** `[client-only]` ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI pending — Build APK is executor of record) · **Cost:** `[client-only]` ·
 > **Effort:** L · **Owner row (verbatim):** *"it's not attractive"* /
 > *"i want to boost it's ui 100× time"*, clarified 2026-09-13 as **polished
 > UI**, goal = **both** *"the first 10 seconds — it must look gorgeous on
@@ -19,10 +19,10 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [50.1](PART_50_1_TOKENS.md) | One scale, not 801 numbers | M | 📋 PLANNED |
-| [50.2](PART_50_2_IDENTITY_COLOR.md) | A brand you can see on Android 12+ | M | 📋 PLANNED |
-| [50.3](PART_50_3_TYPE_AND_ICON.md) | A type scale and one icon set | S/M | 📋 PLANNED |
-| [50.4](PART_50_4_MOTION.md) | Motion, for the first time | M | 📋 PLANNED |
+| [50.1](PART_50_1_TOKENS.md) | One scale, not 801 numbers | M | 🚧 IMPLEMENTED |
+| [50.2](PART_50_2_IDENTITY_COLOR.md) | A brand you can see on Android 12+ | M | 🚧 IMPLEMENTED |
+| [50.3](PART_50_3_TYPE_AND_ICON.md) | A type scale and one icon set | S/M | 🚧 IMPLEMENTED |
+| [50.4](PART_50_4_MOTION.md) | Motion, for the first time | M | 🚧 IMPLEMENTED |
 
 Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (L1-L12, written, not run).
 

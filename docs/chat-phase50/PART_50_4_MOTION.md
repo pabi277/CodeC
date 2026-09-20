@@ -1,6 +1,6 @@
 # CodeC Phase 50.4 — Motion, for the first time
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI pending — Build APK is executor of record) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive"* / *"boost it's ui 100×"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -151,3 +151,36 @@ device round's L11-L12 rows (tab switch, output panel) are run by the owner.
   open-file navigation Phases 46/47 just fixed. A later row.
 - **Animating the terminal's text output** — Phase 36 tuned that path for speed;
   leave it.
+
+## Implementation (2026-09-20)
+
+**The vocabulary** (`ui/theme/CodecMotion.kt`, zero new dependencies):
+spatial + effects springs, the 150/300/500 ms ladder, the one emphasized
+easing — with `MotionPolicy` resolving Android's remove-animations switch
+(animator scale 0) or a reduce-motion signal to genuinely instant specs.
+`CodecMotionTest` + `MotionPolicyTest` pin the values and the gate;
+`MotionWiringTest` pins the call sites and the animation-free zones.
+
+**The six transitions, and only six** (every one gated on
+`rememberMotionSpecs()`, so motion-off is instant):
+
+1. Forward navigation fades (`MainActivity` NavHost, `tabEnter`/`tabExit`);
+   pops are pinned `None` — Phase 49 decides back, `BackRouter` holds zero
+   transition references.
+2. The output panel grows upward on the panel spec (`EditorScreen` host
+   wraps splitter + panel; the collapsed strip still swaps instantly).
+3. The find bar drops down on the shared spec instead of the defaults.
+4. The editor title chrome crossfades when the tab strip appears/disappears
+   (file open/close) — chrome only, never the code view.
+5. Each new run-state summary crossfades in (the RUN ▶ reveal).
+6. The hub's empty ↔ list crossfades (`ProjectsHubListContent` extraction —
+   creating or deleting the last project reads as one change).
+
+Laws kept: nothing inside `SoraEditorHost`, the terminal, IME-resized
+surfaces, or the coach marks (all pinned by scan); nothing delays back
+navigation; motion follows state, never gates an action. Two spec-draft
+audits did not survive contact with the tree and were corrected rather than
+implemented: back navigation is centralised (`onNavigateBack` → NavHost pops,
+already transition (1)'d) and the status bar holds no animation.
+
+Device rows: L11–L12 in `DEVICE_ROUND.md` (owner-run, pending).

@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.components
 
+import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.ui.theme.CodecPalette
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -41,7 +42,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -342,7 +342,7 @@ private fun QrCodeImage(text: String, size: Dp) {
 }
 
 private fun monoStyle(): TextStyle = TextStyle(
-    fontFamily = FontFamily.Monospace,
+    fontFamily = CodecType.codeFamily,
     fontSize = 12.sp
 )
 

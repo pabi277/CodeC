@@ -4,6 +4,7 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -110,8 +111,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.theme.CodecMotion
+import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.rememberMotionSpecs
+import com.codeci.ide.ui.theme.CodecTokens.Radius
+import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.EditorStatusBar
 import com.codeci.ide.ui.components.EditorTabBar
@@ -220,6 +225,9 @@ fun EditorScreen(
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    // Phase 50.4 — transition (3): the one motion hook; the find bar
+    // below resolves through it, instant when the platform says so.
+    val motion = rememberMotionSpecs()
     // Phase 25.2 — the edit core is sora-editor's CodeEditor, chosen by the
     // 25.1 device bench (keystroke p95 14.5 ms vs the old stack's 404 ms on a
     // 5 000-line file). Declared early: both the find-searcher effect below
@@ -840,7 +848,7 @@ fun EditorScreen(
                 Column {
                     Text(stringResource(R.string.install_prompt_body, prompt.packageName))
                     prompt.sizeHint?.let {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
                         Text(
                             text = stringResource(R.string.install_prompt_size, it),
                             style = MaterialTheme.typography.bodySmall
@@ -902,7 +910,7 @@ fun EditorScreen(
             onDismissRequest = { uiScope.launch { settingsManager.setImeGuideDismissed(true) } },
             title = { Text("Typing tips") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
                     Text("• Long-press a key for its popup ( ; → : , \" → ` , / → comment).", style = MaterialTheme.typography.bodySmall)
                     Text("• Swipe up/down on () {} [] <> to insert just the opener or closer.", style = MaterialTheme.typography.bodySmall)
                     Text("• Hold ← → to repeat quickly.", style = MaterialTheme.typography.bodySmall)
@@ -1013,7 +1021,7 @@ fun EditorScreen(
                 if (diagnostics.isEmpty()) {
                     Text(stringResource(R.string.no_diagnostics))
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.M))) {
                         diagnostics.forEach { diagnostic ->
                             val label = if (diagnostic.severity == DiagnosticSeverity.ERROR) {
                                 stringResource(R.string.diagnostic_error)
@@ -1027,7 +1035,7 @@ fun EditorScreen(
                                         viewModel.jumpToDiagnostic(diagnostic)
                                         showDiagnosticsDialog = false
                                     }
-                                    .padding(vertical = 2.dp)
+                                    .padding(vertical = CodecTokens.space(Space.XXS))
                             ) {
                                 Text(
                                     text = "$label · L${diagnostic.line}:${diagnostic.column}",
@@ -1048,8 +1056,8 @@ fun EditorScreen(
                                             viewModel.applyQuickFix(diagnostic)
                                         },
                                         contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                            horizontal = 0.dp,
-                                            vertical = 0.dp
+                                            horizontal = CodecTokens.space(Space.NONE),
+                                            vertical = CodecTokens.space(Space.NONE)
                                         )
                                     ) {
                                         Text(
@@ -1234,43 +1242,51 @@ fun EditorScreen(
         ) {
             TopAppBar(
                 title = {
-                    if (tabViews.isEmpty()) {
-                        Text(
-                            text = currentFileName.substringAfterLast('/') + if (isDirty) " *" else "",
-                            modifier = Modifier.clickable { showRenameDialog = true },
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    } else {
-                        EditorTabBar(
-                            tabs = tabViews,
-                            activePath = activeTabPath,
-                            onSelect = { path -> viewModel.selectTab(path) },
-                            onClose = { path ->
-                                // Phase 22.5 — the ACTIVE tab's dirtiness comes
-                                // from the VM flag (its stash is intentionally
-                                // not updated per keystroke); other tabs are
-                                // stashed at their boundaries, so their buffer
-                                // is current.
-                                val dirty = if (path == activeTabPath) {
-                                    isDirty
-                                } else {
-                                    openTabs.firstOrNull { it.relativePath == path }
-                                        ?.let { it.buffer.text != it.savedText } == true
-                                }
-                                if (dirty) {
-                                    pendingCloseTab = path
-                                } else {
-                                    viewModel.closeTab(context, path, saveFirst = false)
-                                }
-                            },
-                            onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
-                            onCloseAll = { viewModel.closeAllTabs(context) },
-                            onCopyPath = { path ->
-                                clipboard.setText(AnnotatedString(path))
-                                Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    // Phase 50.4 — transition (4): the title chrome crossfades
+                    // when the tab strip appears or disappears (file
+                    // open/close). Chrome only — the code view is untouched.
+                    Crossfade(
+                        targetState = tabViews.isEmpty(),
+                        animationSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec)
+                    ) { noTabs ->
+                        if (noTabs) {
+                            Text(
+                                text = currentFileName.substringAfterLast('/') + if (isDirty) " *" else "",
+                                modifier = Modifier.clickable { showRenameDialog = true },
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        } else {
+                            EditorTabBar(
+                                tabs = tabViews,
+                                activePath = activeTabPath,
+                                onSelect = { path -> viewModel.selectTab(path) },
+                                onClose = { path ->
+                                    // Phase 22.5 — the ACTIVE tab's dirtiness comes
+                                    // from the VM flag (its stash is intentionally
+                                    // not updated per keystroke); other tabs are
+                                    // stashed at their boundaries, so their buffer
+                                    // is current.
+                                    val dirty = if (path == activeTabPath) {
+                                        isDirty
+                                    } else {
+                                        openTabs.firstOrNull { it.relativePath == path }
+                                            ?.let { it.buffer.text != it.savedText } == true
+                                    }
+                                    if (dirty) {
+                                        pendingCloseTab = path
+                                    } else {
+                                        viewModel.closeTab(context, path, saveFirst = false)
+                                    }
+                                },
+                                onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
+                                onCloseAll = { viewModel.closeAllTabs(context) },
+                                onCopyPath = { path ->
+                                    clipboard.setText(AnnotatedString(path))
+                                    Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -1528,18 +1544,18 @@ fun EditorScreen(
                     if (LanguageRegistry.testProfileForFile(currentFileName) != null) {
                         Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
                                 .clickable { viewModel.runTests(context) }
-                                .padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                                .padding(start = CodecTokens.space(Space.XS), end = CodecTokens.space(Space.XS), top = CodecTokens.space(Space.S), bottom = CodecTokens.space(Space.S)),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 Icons.Default.CheckCircle,
                                 contentDescription = stringResource(R.string.run_tests),
                                 tint = RunGreen,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
                             )
-                            Spacer(Modifier.width(2.dp))
+                            Spacer(Modifier.width(CodecTokens.space(Space.XXS)))
                             Text(
                                 stringResource(R.string.run_tests),
                                 color = RunGreen,
@@ -1587,9 +1603,9 @@ fun EditorScreen(
                     }
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
                             .clickable(onClick = onRunTap)
-                            .padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
+                            .padding(start = CodecTokens.space(Space.XS), end = CodecTokens.space(Space.M), top = CodecTokens.space(Space.S), bottom = CodecTokens.space(Space.S))
                             // Phase 45.2 — RUN ▶ is the 30-second loop; the
                             // tour's fifth beat.
                             .then(
@@ -1604,9 +1620,9 @@ fun EditorScreen(
                             Icons.Default.PlayArrow,
                             contentDescription = stringResource(R.string.run),
                             tint = RunGreen,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
                         )
-                        Spacer(Modifier.width(2.dp))
+                        Spacer(Modifier.width(CodecTokens.space(Space.XXS)))
                         Text(
                             stringResource(R.string.run),
                             color = RunGreen,
@@ -1624,7 +1640,13 @@ fun EditorScreen(
             // exactly ☰ + tabs + 🔍 +  + ▶ RUN. Undo/Redo and the keys-row
             // toggle moved into the ⋮ overflow (below).
 
-            AnimatedVisibility(visible = findState.visible) {
+            // Phase 50.4 — transition (3): the find bar drops down on
+            // the shared spec instead of the defaults nobody chose.
+            AnimatedVisibility(
+                visible = findState.visible,
+                enter = motion.orNone(CodecMotion.findEnter),
+                exit = motion.orNone(CodecMotion.findExit)
+            ) {
                 FindReplaceBar(
                     state = findState,
                     onQueryChange = { viewModel.setFindQuery(it) },
@@ -1799,10 +1821,10 @@ fun EditorScreen(
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
-                                .offset { IntOffset(0, (pillY - with(density) { 6.dp.roundToPx() }).coerceAtLeast(0)) }
-                                .padding(end = 8.dp)
-                                .defaultMinSize(minHeight = 48.dp, minWidth = 48.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .offset { IntOffset(0, (pillY - with(density) { CodecTokens.space(Space.S).roundToPx() }).coerceAtLeast(0)) }
+                                .padding(end = CodecTokens.space(Space.S))
+                                .defaultMinSize(minHeight = CodecTokens.space(CodecTokens.MIN_TOUCH), minWidth = CodecTokens.space(CodecTokens.MIN_TOUCH))
+                                .clip(RoundedCornerShape(CodecTokens.radius(Radius.M)))
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.92f))
                                 .semantics { contentDescription = "Accept suggestion" }
                                 .pointerInput(completionModel.ghost) {
@@ -1829,7 +1851,7 @@ fun EditorScreen(
                                 text = "Tab ▸",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(horizontal = 10.dp)
+                                modifier = Modifier.padding(horizontal = CodecTokens.space(Space.M))
                             )
                         }
                     }
@@ -1915,34 +1937,44 @@ fun EditorScreen(
             // splitter + panel; collapsed = one-line strip (tap to expand).
             val maxPanelHeight = LocalConfiguration.current.screenHeightDp * 0.55f
             var outputPanelHeight by remember { mutableStateOf(220f) }
-            if (outputExpanded) {
-                OutputPanelSplitter(
-                    onDragDelta = { dragAmount ->
-                        outputPanelHeight = (outputPanelHeight - dragAmount)
-                            .coerceIn(120f, maxPanelHeight)
-                    }
-                )
-                OutputPanelView(
-                    state = outputState,
-                    isExpanded = true,
-                    onStop = { viewModel.stopRun() },
-                    onClear = { viewModel.clearOutput() },
-                    onToggleExpand = { viewModel.toggleOutput() },
-                    onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
-                    onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
-                    onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
-                    onInputChange = { viewModel.onInputChange(it) },
-                    onSubmitInput = { viewModel.submitInput() },
-                    // The Output Panel's "open URL" button carries the same
-                    // authoritative project as the RUN ▶ preview path.
-                    onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
-                    // Phase 37.1 — the LAN switch belongs to the whole session,
-                    // so it lives in the panel next to the URLs it changes.
-                    onToggleLanShare = { enabled -> viewModel.setLanShare(context, enabled) },
-                    onStopAllServers = { viewModel.stopAllServers(context) },
-                    modifier = Modifier.height(outputPanelHeight.dp)
-                )
-            } else if (outputState.hasContent() && !imeVisible && !codecKeysUp) {
+            // Phase 50.4 — transition (2): the expanded panel grows
+            // upward on the shared panel spec; the collapsed strip below
+            // still swaps instantly, exactly as before.
+            AnimatedVisibility(
+                visible = outputExpanded,
+                enter = motion.orNone(CodecMotion.panelEnter),
+                exit = motion.orNone(CodecMotion.panelExit)
+            ) {
+                Column {
+                    OutputPanelSplitter(
+                        onDragDelta = { dragAmount ->
+                            outputPanelHeight = (outputPanelHeight - dragAmount)
+                                .coerceIn(120f, maxPanelHeight)
+                        }
+                    )
+                    OutputPanelView(
+                        state = outputState,
+                        isExpanded = true,
+                        onStop = { viewModel.stopRun() },
+                        onClear = { viewModel.clearOutput() },
+                        onToggleExpand = { viewModel.toggleOutput() },
+                        onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
+                        onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
+                        onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
+                        onInputChange = { viewModel.onInputChange(it) },
+                        onSubmitInput = { viewModel.submitInput() },
+                        // The Output Panel's "open URL" button carries the same
+                        // authoritative project as the RUN ▶ preview path.
+                        onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
+                        // Phase 37.1 — the LAN switch belongs to the whole session,
+                        // so it lives in the panel next to the URLs it changes.
+                        onToggleLanShare = { enabled -> viewModel.setLanShare(context, enabled) },
+                        onStopAllServers = { viewModel.stopAllServers(context) },
+                        modifier = Modifier.height(outputPanelHeight.dp)
+                    )
+                }
+            }
+            if (!outputExpanded && outputState.hasContent() && !imeVisible && !codecKeysUp) {
                 // Phase 22.4 — the collapsed strip only exists once there IS
                 // output, and never while you are typing. Before the first
                 // RUN it was 64dp of permanently reserved height showing
@@ -2047,7 +2079,7 @@ fun EditorScreen(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(16.dp)
+                .padding(CodecTokens.space(Space.L))
         )
 
         // Phase 16 — the drawer replaced the files bottom-sheet; its dialogs
@@ -2065,7 +2097,7 @@ fun EditorScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(CodecTokens.space(Space.S)))
                         Text(
                             "Created in: " + (parent ?: (currentProject ?: stringResource(R.string.editor_scratch_mode))),
                             style = MaterialTheme.typography.bodySmall,
@@ -2149,7 +2181,7 @@ fun EditorScreen(
                             stringResource(R.string.go_to_line_prompt),
                             style = MaterialTheme.typography.bodySmall
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(CodecTokens.space(Space.S)))
                         OutlinedTextField(
                             value = goToLineText,
                             onValueChange = { raw -> goToLineText = raw.filter { it.isDigit() }.take(7) },
@@ -2228,7 +2260,7 @@ fun EditorScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(CodecTokens.space(Space.S)))
                         if (projectList.isEmpty()) {
                             Text(
                                 "No projects yet — create one in the Projects tab first.",
@@ -2273,7 +2305,7 @@ fun EditorScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(CodecTokens.space(Space.S)))
                         OutlinedTextField(
                             value = buildText,
                             onValueChange = { buildText = it },
@@ -2281,7 +2313,7 @@ fun EditorScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(CodecTokens.space(Space.S)))
                         OutlinedTextField(
                             value = runText,
                             onValueChange = { runText = it },
@@ -2400,7 +2432,7 @@ private fun OutputPanelSplitter(onDragDelta: (Float) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(10.dp)
+            .height(CodecTokens.space(Space.M))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .pointerInput(Unit) {
                 detectVerticalDragGestures { change, dragAmount ->
@@ -2412,11 +2444,11 @@ private fun OutputPanelSplitter(onDragDelta: (Float) -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .width(48.dp)
-                .height(3.dp)
+                .width(CodecTokens.space(Space.HUGE))
+                .height(CodecTokens.space(Space.XS))
                 .background(
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    RoundedCornerShape(2.dp)
+                    RoundedCornerShape(CodecTokens.radius(Radius.XS))
                 )
         )
     }

@@ -56,7 +56,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.components.FileIconView
@@ -282,7 +282,7 @@ fun GitControlSheet(
                                 Text(
                                     text = "  ${entry.status}  ${entry.path}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = FontFamily.Monospace,
+                                    fontFamily = CodecType.codeFamily,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                     modifier = Modifier.fillMaxWidth()
@@ -1030,7 +1030,7 @@ private fun GitChangeRow(
             color = accent,
             style = MaterialTheme.typography.labelLarge,
             fontSize = 16.sp,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = CodecType.codeFamily,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(end = 12.dp)
         )
@@ -1098,7 +1098,7 @@ private fun GitDiffDialog(
                         Text(
                             text = path,
                             style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = CodecType.codeFamily,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -1137,7 +1137,7 @@ private fun GitDiffDialog(
                             Text(
                                 text = "$marker${line.text}",
                                 color = color,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = CodecType.codeFamily,
                                 fontSize = 11.sp,
                                 lineHeight = 15.sp,
                                 modifier = Modifier.fillMaxWidth()

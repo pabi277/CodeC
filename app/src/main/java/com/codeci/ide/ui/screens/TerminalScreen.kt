@@ -60,8 +60,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecTokens.Radius
+import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.MainActivity
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.TerminalEmulatorView
@@ -331,16 +333,16 @@ fun TerminalScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF2E2A1E))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = CodecTokens.space(Space.M), vertical = CodecTokens.space(Space.S)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     Icons.Default.Warning,
                     contentDescription = null,
                     tint = Color(0xFFFFC107),
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                 Text(
                     text = warning,
                     color = Color(0xFFFFC107),
@@ -352,7 +354,7 @@ fun TerminalScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF292929))
-                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .padding(horizontal = CodecTokens.space(Space.M), vertical = CodecTokens.space(Space.XS))
                 // Phase 45.2 — the chip Phase 44.1 made stage-aware gets one
                 // mark: "starting / downloading / running" is the sentence that
                 // stops a user closing the app mid-download.
@@ -443,7 +445,7 @@ private fun SessionSwitcherMenu(
                 leadingIcon = {
                     Box(
                         modifier = Modifier
-                            .size(10.dp)
+                            .size(CodecTokens.space(Space.M))
                             .background(statusColor, CircleShape)
                     )
                 },
@@ -453,14 +455,14 @@ private fun SessionSwitcherMenu(
                             Icons.Default.Edit,
                             contentDescription = stringResource(R.string.session_rename),
                             modifier = Modifier
-                                .size(20.dp)
+                                .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
                                 .clickable { onRename(item) }
                         )
                         Icon(
                             Icons.Default.Close,
                             contentDescription = stringResource(R.string.session_close),
                             modifier = Modifier
-                                .size(20.dp)
+                                .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
                                 .clickable { onClose(item) }
                         )
                     }

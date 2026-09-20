@@ -65,6 +65,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.codeci.ide.ui.theme.CodecType
+import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecTokens.Radius
+import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.projects.GitErrors
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -158,6 +162,7 @@ fun SettingsScreen(
     val terminalFontFamily by settingsManager.terminalFontFamilyFlow.collectAsState(initial = "JetBrains Mono")
     val terminalExtraKeysMacros by settingsManager.terminalExtraKeysMacrosFlow.collectAsState(initial = "")
     val accentColor by settingsManager.accentColorFlow.collectAsState(initial = AccentPalette.DEFAULT_STORAGE_HEX)
+    val matchWallpaper by settingsManager.matchWallpaperFlow.collectAsState(initial = false)
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(com.codeci.ide.R.string.settings_title)) })
@@ -239,7 +244,7 @@ fun SettingsScreen(
                 )
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // CODEC KEYS — Phase 28.2, default flipped by Phase 47.2 (owner:
             // "System keyboard make default user can change to app keyboard
@@ -285,7 +290,7 @@ fun SettingsScreen(
                 Text(
                     text = "Preview (live — taps here type nowhere)",
                     style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                    modifier = Modifier.padding(start = CodecTokens.space(Space.L), top = CodecTokens.space(Space.XS), bottom = CodecTokens.space(Space.XS))
                 )
                 CodecKeyboard(
                     layout = KeyboardDefaults.codeQwerty().copy(heightScale = codecKeysHeight),
@@ -295,11 +300,11 @@ fun SettingsScreen(
                     textFieldValue = TextFieldValue(""),
                     onValueChange = {},
                     haptics = false,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    modifier = Modifier.padding(horizontal = CodecTokens.space(Space.S))
                 )
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // COMPILER — Phase 38.2 merged the three compiler sections
             // (Compiler Settings + Built-in Compiler + Termux Engine)
@@ -350,7 +355,7 @@ fun SettingsScreen(
                 subtitle = buildTccStatusText(tccState)
             )
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             SettingsSectionHeader(stringResource(com.codeci.ide.R.string.terminal_settings))
             SettingsSlider(
@@ -379,7 +384,7 @@ fun SettingsScreen(
                 }
             )
 
-            Box(modifier = Modifier.padding(16.dp)) {
+            Box(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
                 TerminalThemePreview(
                     terminalTheme = currentTerminalTheme,
                     fontFamily = terminalFontFamily,
@@ -400,13 +405,13 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(CodecTokens.radius(Radius.M))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
                     Text(
                         text = "Custom Extra-Key Shortcuts",
                         style = MaterialTheme.typography.titleMedium,
@@ -417,7 +422,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
                     OutlinedTextField(
                         value = editingMacros,
                         onValueChange = {
@@ -430,7 +435,7 @@ fun SettingsScreen(
                         singleLine = false,
                         maxLines = 3
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -455,7 +460,7 @@ fun SettingsScreen(
                 }
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // PACKAGE REPOSITORY & TRUST (Phase 4 Part 4.3)
             SettingsSectionHeader("Package Repository & Trust")
@@ -469,13 +474,13 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(CodecTokens.radius(Radius.M))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
@@ -484,9 +489,9 @@ fun SettingsScreen(
                             imageVector = if (trustInfo.keyringInstalled) Icons.Default.CheckCircle else Icons.Default.Warning,
                             contentDescription = "Trust Status",
                             tint = if (trustInfo.keyringInstalled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                         Text(
                             text = if (trustInfo.keyringInstalled) "CodeC Official Signed Channel" else "Keyring Missing",
                             style = MaterialTheme.typography.titleMedium,
@@ -495,7 +500,7 @@ fun SettingsScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
                     Text(
                         text = "• Channel: ${trustInfo.channelName}\n" +
                             "• Repository: ${trustInfo.repositoryUrl}\n" +
@@ -504,12 +509,12 @@ fun SettingsScreen(
                             "• Signing Subkey: ${trustInfo.signingFingerprint.take(8)}...${trustInfo.signingFingerprint.takeLast(8)}\n" +
                             "• Userland: ${if (trustInfo.userlandInstalled) "Phase 3 (Installed, ${trustInfo.arch ?: "unknown"})" else "Not installed"}",
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = CodecType.codeFamily,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     if (repoStatusMessage != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
                         Text(
                             text = repoStatusMessage!!,
                             style = MaterialTheme.typography.bodySmall,
@@ -518,7 +523,7 @@ fun SettingsScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         OutlinedButton(
                             onClick = {
@@ -543,7 +548,7 @@ fun SettingsScreen(
                 }
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // GITHUB ACCOUNT (Phase 13 — Git integration credentials)
             SettingsSectionHeader("GitHub Account")
@@ -569,13 +574,13 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(CodecTokens.radius(Radius.M))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
@@ -584,9 +589,9 @@ fun SettingsScreen(
                             imageVector = if (gitHubToken.isNotBlank()) Icons.Default.CheckCircle else Icons.Default.Info,
                             contentDescription = "GitHub Status",
                             tint = if (gitHubToken.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                         Text(
                             text = if (gitHubToken.isNotBlank()) {
                                 "Connected (${gitHubUser.ifBlank { "oauth2" }} · ••••${gitHubToken.takeLast(4)})"
@@ -599,7 +604,7 @@ fun SettingsScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
                     Text(
                         text = "A fine-grained Personal Access Token (repo contents read/write) enables push from the Source Control pane. The token stays in app-private storage — it is never written to repositories or logs.",
                         style = MaterialTheme.typography.bodySmall,
@@ -613,8 +618,8 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
-                            .padding(top = 4.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .padding(top = CodecTokens.space(Space.XS))
+                            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
                             .clickable {
                                 runCatching {
                                     context.startActivity(
@@ -623,10 +628,10 @@ fun SettingsScreen(
                                     )
                                 }
                             }
-                            .padding(vertical = 2.dp)
+                            .padding(vertical = CodecTokens.space(Space.XXS))
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
                     OutlinedTextField(
                         value = gitHubToken,
                         onValueChange = { gitHubToken = it },
@@ -640,7 +645,7 @@ fun SettingsScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
                     OutlinedTextField(
                         value = gitHubUser,
                         onValueChange = { gitHubUser = it },
@@ -648,8 +653,8 @@ fun SettingsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
                         OutlinedTextField(
                             value = gitAuthorName,
                             onValueChange = { gitAuthorName = it },
@@ -667,7 +672,7 @@ fun SettingsScreen(
                     }
 
                     if (gitSavedMessage != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
                         Text(
                             text = gitSavedMessage!!,
                             style = MaterialTheme.typography.bodySmall,
@@ -676,7 +681,7 @@ fun SettingsScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
@@ -696,7 +701,7 @@ fun SettingsScreen(
                             ) {
                                 Text("DISCONNECT")
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                         }
                         OutlinedButton(
                             onClick = {
@@ -708,15 +713,15 @@ fun SettingsScreen(
                             },
                             enabled = gitLoaded
                         ) {
-                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)))
+                            Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                             Text("SAVE")
                         }
                     }
                 }
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // APPEARANCE
             SettingsSectionHeader("Appearance")
@@ -724,7 +729,7 @@ fun SettingsScreen(
             Text(
                 text = "App Theme",
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S))
             )
             // Phase 24.8 — "Auto (follow system)" is the first, default option.
             val appThemeOptions = listOf(AppThemeMode.SYSTEM, AppThemeMode.LIGHT, AppThemeMode.DARK)
@@ -739,7 +744,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { scope.launch { themeManager.setAppTheme(themeMode) } }
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.XS))
                 ) {
                     RadioButton(
                         selected = currentAppTheme == themeMode,
@@ -747,12 +752,12 @@ fun SettingsScreen(
                     )
                     Text(
                         text = label,
-                        modifier = Modifier.padding(start = 8.dp)
+                        modifier = Modifier.padding(start = CodecTokens.space(Space.S))
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
             SettingsDropdown(
                 title = "Editor Theme",
                 // Phase 29.1 — display names ("VS Code Dark+") instead of the
@@ -787,11 +792,22 @@ fun SettingsScreen(
                 optionSwatchArgb = { label -> AccentPalette.argbForLabel(label) }
             )
 
-            Box(modifier = Modifier.padding(16.dp)) {
+            // Phase 50.2 — the wallpaper opt-in sits next to the accent it
+            // overrides: on Android 12+ the whole app follows the wallpaper
+            // palette while this is on (IdentityPolicy.decide).
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                SettingsSwitch(
+                    title = stringResource(com.codeci.ide.R.string.match_wallpaper),
+                    checked = matchWallpaper,
+                    onCheckedChange = { scope.launch { settingsManager.setMatchWallpaper(it) } }
+                )
+            }
+
+            Box(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
                 ThemePreview(editorTheme = currentEditorTheme, fontSize = fontSize)
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // STORAGE
             SettingsSectionHeader(stringResource(com.codeci.ide.R.string.storage))
@@ -823,7 +839,7 @@ fun SettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = CodecTokens.space(Space.L)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = {
@@ -922,7 +938,7 @@ fun SettingsScreen(
                 }
             )
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // ABOUT
             SettingsSectionHeader("About")
@@ -936,14 +952,14 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.M))
             ) {
                 Image(
                     painter = painterResource(com.codeci.ide.R.drawable.app_mark),
                     contentDescription = "CodeC",
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(CodecTokens.space(Space.HUGE))
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(CodecTokens.space(Space.M)))
                 Column {
                     Text(
                         text = "CodeC",
@@ -1194,7 +1210,7 @@ fun SettingsScreen(
             // here duplicated the "Open-source licenses" row above it and
             // controlled nothing; deleted.
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // FEEDBACK & SUPPORT (Phase 41) — right after About so "what
             // build is this" and "who do I tell" sit together. The follow-up
@@ -1243,7 +1259,7 @@ fun SettingsScreen(
             }
 
             if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
                 SettingsSectionHeader("Developer Options")
 
                 SettingsSwitch(
@@ -1319,7 +1335,7 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(CodecTokens.space(Space.HUGE)))
         }
     }
 }
@@ -1331,7 +1347,7 @@ fun SettingsSectionHeader(title: String) {
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+        modifier = Modifier.padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.L))
     )
 }
 
@@ -1341,7 +1357,7 @@ fun SettingsSwitch(title: String, checked: Boolean, onCheckedChange: (Boolean) -
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.M)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
@@ -1351,7 +1367,7 @@ fun SettingsSwitch(title: String, checked: Boolean, onCheckedChange: (Boolean) -
 
 @Composable
 fun SettingsSlider(title: String, value: Float, valueRange: ClosedFloatingPointRange<Float>, steps: Int, onValueChange: (Float) -> Unit, valueLabel: String) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(modifier = Modifier.padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S))) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(text = title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Text(text = valueLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
@@ -1382,7 +1398,7 @@ fun SettingsDropdown(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
@@ -1414,7 +1430,7 @@ fun SettingsDropdown(
                             } else {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     SwatchDot(swatch)
-                                    Spacer(Modifier.width(10.dp))
+                                    Spacer(Modifier.width(CodecTokens.space(Space.M)))
                                     Text(option)
                                 }
                             }
@@ -1435,7 +1451,7 @@ fun SettingsDropdown(
 private fun SwatchDot(argb: Int) {
     Box(
         modifier = Modifier
-            .size(18.dp)
+            .size(CodecTokens.space(Space.L))
             .clip(CircleShape)
             .background(Color(argb))
     )
@@ -1447,7 +1463,7 @@ fun SettingsItem(title: String, subtitle: String, onClick: (() -> Unit)? = null)
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.M))
     ) {
         Text(text = title, style = MaterialTheme.typography.bodyLarge)
         Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1459,7 +1475,7 @@ fun SettingsAction(title: String, actionText: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
@@ -1497,10 +1513,10 @@ fun ThemePreview(editorTheme: EditorThemeType, fontSize: Float) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
             .background(colors.background)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-            .padding(16.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(CodecTokens.radius(Radius.S)))
+            .padding(CodecTokens.space(Space.L))
     ) {
         val previewText = buildAnnotatedString {
             withStyle(SpanStyle(color = colors.keyword)) { append("int ") }
@@ -1526,7 +1542,7 @@ fun ThemePreview(editorTheme: EditorThemeType, fontSize: Float) {
         
         Text(
             text = previewText,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = CodecType.codeFamily,
             color = colors.text,
             fontSize = fontSize.sp
         )
@@ -1549,10 +1565,10 @@ fun TerminalThemePreview(terminalTheme: TerminalThemeType, fontFamily: String, f
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
             .background(colors.background)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-            .padding(16.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(CodecTokens.radius(Radius.S)))
+            .padding(CodecTokens.space(Space.L))
     ) {
         val previewText = buildAnnotatedString {
             withStyle(SpanStyle(color = Color(0xFF50FA7B))) { append("codec@user") }
