@@ -11,7 +11,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.cubicBezier
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -32,7 +31,7 @@ import androidx.compose.ui.unit.IntSize
  * with the stable APIs already on the classpath. Zero new dependencies.
  *
  * This file is the ONLY place in the app that may call `spring(`/`tween(`
- * /`snap(`/`cubicBezier(` (pinned by `MotionWiringTest`): call sites take
+ * /`snap(` (pinned by `MotionWiringTest`): call sites take
  * ready-made specs ([tabEnter], [panelEnter], [crossfadeSpec], …) and gate
  * them on [MotionSpecs.useSpring], so Android's own "remove animations"
  * switch makes the app genuinely instant.
@@ -77,7 +76,7 @@ object CodecMotion {
 
     /** The one easing curve. */
     object Easing {
-        val EMPHASIZED: CubicBezierEasing = cubicBezier(0.2f, 0f, 0f, 1f)
+        val EMPHASIZED: CubicBezierEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     }
 
     /** 150 ms emphasized fade — the workhorse alpha spec. */
