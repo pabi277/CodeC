@@ -278,17 +278,24 @@ the spec's `CloseCoachMark` row is NOT built — the 45.2 round-2 owner law
 prompt from state + the second door (Settings → Feedback & Support → "Tell
 us before you go", audit row 48 in the same commit).
 
-### Phase 50 — Cross-device test round → **renumbered to 53 and ⏸ DEFERRED**
+### Phase 50 — Cross-device test round → **renumbered to 53, then ❌ CANCELLED**
 
-> **Owner decision (2026-09-14):** *"i want to work on other things before test
-> in different devices."* The owner's numbering law (*"number the phases like i
-> go in a row"*) makes the numbers the execution order, so this phase is no
-> longer 50: it is **53**, it runs **last** (after the UI series 50/51/52), and
-> when it reopens it is **one combined matrix over 44-52** on a single build.
-> **Only this phase is parked** — the device rows still owed for 44/45/46/47/48/49
-> stay owed. Full deferral record, reopen condition and the new rounds G/H/I:
-> [`docs/chat-phase53/`](chat-phase53/README.md) — the directory that now holds
-> this phase's `DEVICE_MATRIX.md`.
+> **Owner decision (2026-09-14):** *"Remove the full device cross check phase."*
+> The owner's numbering law (*"number the phases like i go in a row"*) makes the
+> numbers the execution order, so this phase first moved from **50 to 53** — and
+> was then **cancelled outright**. It is not planned, not owed, not scheduled;
+> its files are history by the owner's choice
+> ([`docs/chat-phase53/`](chat-phase53/README.md), which now holds this phase's
+> `DEVICE_MATRIX.md`).
+>
+> **What replaced it:** one short per-phase handset round when each UI phase
+> ships (L1-L12 for 50, F1-F16 for 51, R1-R12 for 52), CI as the executor of
+> record, and the Roborazzi screenshot goldens in 52.4. The device rows still
+> owed for 44/45/46/47/48/49 belong to their own phases and are unaffected.
+>
+> ⚠️ `arena/01a099d8-codec` ships `DeviceMatrixTest.kt`, which machine-pins the
+> cancelled matrix from `docs/chat-phase50/…` — **delete or re-scope that test
+> before that branch lands on `main`.**
 
 No new features. One runbook (`chat-phase53/DEVICE_MATRIX.md`) that walks
 44–49's exit conditions on a matrix: a gesture-nav phone, a 3-button-nav phone,

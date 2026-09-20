@@ -1,11 +1,16 @@
-# CodeC Phase 53 — the cross-device matrix (⏸ DEFERRED)
+# CodeC Phase 53 — the cross-device matrix (❌ CANCELLED — history only)
 
-> **Deferred by the owner (2026-09-14)** until after the UI series ships:
-> 50 (the look) → 51 (the feel) → 52 (the return) → **53 (this matrix)**.
-> When it reopens it covers **44-52** in one pass: the rounds below (A-F,
-> phases 44-49, unchanged) plus **new rounds for 50, 51 and 52** — see the
-> last section of this file. Nothing here is deleted; only the *when*
-> changed. The still-owed rows of 44-49 are **not** parked by this deferral.
+> **Cancelled by the owner (2026-09-14): *"Remove the full device cross check
+> phase."*** This file is kept as **history, by the owner's choice** — it is not
+> a to-do, nothing here is owed, and no round in it is scheduled.
+>
+> **What proves things on a phone now:** the per-phase rounds (`L1-L12` in
+> `docs/chat-phase50/DEVICE_ROUND.md`, `F1-F16` in `chat-phase51/`, `R1-R12` in
+> `chat-phase52/`), run on the owner's own handsets when each phase ships, plus
+> CI (`Build APK`) and 52.4's Roborazzi goldens. The record format below —
+> `# | Part | Run on | What to do | PASS looks like`, pasted into the owning part
+> doc's `## Test log (Phase NN — …)` — is the part that survived cancellation and
+> is now used by those rounds.
 
 > **Branch:** `arena/01a094e5-codec` · **Functional round:** *TBD — filled in
 > when the phase's implementation commits exist* · **CI ✅ GREEN:** *TBD*
@@ -158,11 +163,12 @@ Phase 53.
 
 ---
 
-## Rounds G, H, I — the UI series (to be written when 50-52 ship)
+## Rounds G, H, I — the UI series (cancelled with the phase; kept for reference)
 
-This section is a **placeholder with a purpose**: it fixes, in advance, what the
-combined pass must contain, so that reopening 53 is writing rows rather than
-re-deciding scope.
+This section was a placeholder that fixed, in advance, what a combined 44-52
+pass would have contained. **It is cancelled with the phase** and is kept only
+because it is a compact statement of what each UI phase has to prove on a
+handset — which is exactly what the per-phase rounds (L/F/R) now cover.
 
 | Round | Phase | What it must prove on every device class |
 |---|---|---|
@@ -174,7 +180,6 @@ Per-device record format (unchanged, and the reason `DeviceMatrixTest` can read
 it): `# | Part | Run on | What to do | PASS looks like`, one row per result,
 pasted into a `## Test log (Phase NN — …)` section of the owning part doc.
 
-**Not parked by this deferral:** 44's R1-R8/D1-D12, 45's G1-G41, the 46/47
-re-rounds, 48's eight checks and 49's ten + eight. Those stay owed and should be
-run whenever the owner has a build in hand — they are simply no longer
-*blocking* new work.
+**Unaffected by this cancellation:** 44's R1-R8/D1-D12, 45's G1-G41, the 46/47
+re-rounds, 48's eight checks and 49's ten + eight. Those rows belong to their
+own phases and stay owed, to be run whenever the owner has a build in hand.

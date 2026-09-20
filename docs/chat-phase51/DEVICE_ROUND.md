@@ -8,11 +8,11 @@
 > **Concurrent work (2026-09-13):** Phase 53's cross-device matrix is 🚧
 > IMPLEMENTED on `arena/01a099d8-codec` — `DeviceMatrixTest.kt` (627 lines)
 > pins ten rounds A-J for **44.1-49.2 only** (a fixed `PART_FILES` map), CI ✅
-> GREEN `34753000709` tip `69a70ec` — and it is ⏸ **DEFERRED** by the owner
-> (2026-09-14) until after 52 ships, as one combined 44-52 pass. Nothing in
-> 50-52 is scanned by it today, and this round is not blocked by it;
-> if the owner ever wants these rows machine-pinned the same way, the map and
-> the `## Test log (Phase 51 — the feel)` heading are already the right shape.
+> `69a70ec` — and the owner then **cancelled it outright** (2026-09-14:
+> *"Remove the full device cross check phase"*). Nothing in 50-52 is scanned
+> by that test today, and this round is not blocked by it;
+> the format below is kept because it is a good record, not because anything
+> machine-reads it, and the `## Test log (Phase 51 — the feel)` heading are already the right shape.
 >
 > The log table is `# | Part | Run on | What to do | PASS looks like` — five columns,
 > one row per result, one part doc per row.

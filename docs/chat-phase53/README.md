@@ -1,16 +1,33 @@
 # CodeC Phase 53 — The cross-device round
 
-> **Status:** ⏸ **DEFERRED BY THE OWNER (2026-09-14)** — *"i want to work on
-> other things before test in different devices"*. It was **Phase 50**; it is
-> now **53** and it runs **last**, after the UI series (50 = the look, 51 = the
-> feel, 52 = the return), because the owner's numbering law makes the numbers
-> the execution order.
+> **Status:** ❌ **CANCELLED BY THE OWNER (2026-09-14)** — *"Remove the full
+> device cross check phase"*. It was **Phase 50**; it was renumbered to **53**
+> and deferred the same morning, and the owner then cancelled it outright. **It
+> is not planned, not owed and not scheduled** — nothing in this directory is a
+> to-do. The files are kept as history by the owner's choice.
 >
-> **Reopen condition:** 52 is merged and shipped. When it reopens it is **one
-> combined matrix over 44-52** on a single build — the rounds below (A-F,
-> phases 44-49) plus new rounds for 50/51/52 — so the owner performs one full
-> pass instead of two. **Only this matrix is parked:** the still-owed device
-> rows of 44/45/46/47/48/49 stay owed exactly as they were.
+> **What replaces it (this is the live answer to "how do we prove it works on a
+> phone?"):**
+>
+> 1. **Per-phase rounds on the owner's own phones** — L1-L12 (50, the look),
+>    F1-F16 (51, the feel), R1-R12 (52, the return), one short round when that
+>    phase ships, on the handsets he already owns. Same five-column record
+>    (`# | Part | Run on | What to do | PASS looks like`), same rule: results are
+>    pasted into the **owning part doc** (`## Test log (Phase NN — …)`), never a
+>    scratchpad.
+> 2. **CI as the executor of record** — `Build APK` = assemble + unit tests +
+>    lint (`rule.md` §5), plus the pure policies and wiring pins each phase
+>    leaves behind.
+> 3. **Roborazzi screenshot goldens in verify mode** (52.4) — the layout/colour
+>    regressions a multi-device matrix would have caught by eye.
+> 4. **The still-owed 44-49 rows stay owned by their own phases** (44 R1-R8 /
+>    D1-D12, 45 G1-G41, the 46/47 re-rounds, 48's eight, 49's ten + eight).
+>    They were never part of 53 and are unaffected by this cancellation.
+>
+> **What is deliberately not claimed:** no device class is proven by CI. IME
+> insets, real haptics, OEM battery management and perceived smoothness remain
+> handset-only, and the per-phase rounds above are now the only place they get
+> proven.
 >
 > **Cost:** `[client-only]` · **Effort:** S (a day of testing) + M (the bugs it
 > finds) · **Owner rows it closes (verbatim):** *"A. If the code is very big
@@ -18,15 +35,17 @@
 > when try to close… but in most phone no option"*, and the implicit *"it
 > works on mine"* behind all seven rows.
 >
-> ⚠️ **Two things to know before you touch this file.** (1) A **newer, longer
-> version of this matrix** (378 lines, ten rounds A-J, with `## Test log`
-> sections already written into the 44-49 part docs) exists on
-> `arena/01a099d8-codec` (tip `69a70ec`, CI ✅ GREEN `34753000709`), together
-> with `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` — a test that
-> *machine-pins* the matrix. This copy is the merged plan version. (2) That
-> test hard-codes `MATRIX_PATH = "docs/chat-phase50/DEVICE_MATRIX.md"` and a
-> `PART_FILES` map over 44.1-49.2 — **when these branches meet, point those
-> constants at the new locations before merging, or CI goes red.**
+> ⚠️ **Before anything merges: a live test depends on the old location of this
+> file.** `arena/01a099d8-codec` (tip `69a70ec`, CI ✅ GREEN `34753000709`)
+> ships `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` — 627 lines
+> that *machine-pin* a matrix, hard-coding `MATRIX_PATH =
+> "docs/chat-phase50/DEVICE_MATRIX.md"`, requiring `docs/chat-phase50/README.md`
+> to link it, and requiring a `## Test log (Phase 50 — the cross-device
+> matrix)` section in each of eleven part docs (44.1-49.2). **Since this phase
+> is cancelled, that test must be DELETED (or fully repointed and re-scoped)
+> before that branch lands on `main` — otherwise `Build APK` goes red on a doc
+> path that no longer exists.** (That branch also carries a newer, longer
+> version of this matrix: 378 lines, ten rounds A-J.)
 
 ```text
   53.1  DEVICE_MATRIX.md — every fix from 44-49, checked on every device class

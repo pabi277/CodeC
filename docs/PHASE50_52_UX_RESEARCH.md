@@ -338,12 +338,14 @@ justifies it).
   them.
 - **Anything that touches `targetSdk`, the bootstrap, or the userland.** Out of
   scope by invariant.
-- **Phase 53's cross-device matrix** stays its own phase; 52.4 **reuses** its
-  record format and does not replace it. **(Owner decision, 2026-09-14: the
-  matrix is ⏸ DEFERRED.** It was Phase 50; because the owner's numbering law
-  makes the numbers the execution order and he wants to build before testing on
-  other handsets, it moved to **53** and runs last, as **one combined matrix
-  over 44-52**. Only the matrix is parked — the 44-49 device rows stay owed.) (**Status corrected 2026-09-14:** while
+- **The cross-device matrix is ❌ CANCELLED (owner, 2026-09-14: *"Remove the full
+  device cross check phase"*).** It was Phase 50, was renumbered to **53**, and
+  was cancelled outright before it ever ran; its two files are kept as history by
+  the owner's choice. Only its **record format** survives — the five-column row
+  and the `## Test log (Phase NN — …)` heading — and 52.4 plus the per-phase
+  rounds use it. What replaces the matrix: per-phase handset rounds (L/F/R), CI
+  as the executor of record, and Roborazzi goldens. The 44-49 device rows were
+  never part of it and stay owed. (**Status corrected 2026-09-14:** while
   this dossier was being written, Phase 53's matrix became 🚧 IMPLEMENTED on
   `arena/01a099d8-codec` — `DeviceMatrixTest.kt` (627 lines), CI ✅ GREEN
   `34753000709` tip `69a70ec` — pinning rounds A-J for **44.1-49.2**. The 50-52

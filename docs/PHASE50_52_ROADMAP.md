@@ -19,15 +19,17 @@
 > **The phase recipe this series follows is now written down:**
 > [`docs/HOW_TO_CREATE_A_PHASE.md`](HOW_TO_CREATE_A_PHASE.md).
 >
-> **Renumbered + the matrix deferred (owner decision, 2026-09-14):** the
-> owner's law is *"number the phases like i go in a row"* — the numbers **are**
-> the execution order — and he wants to **build** before he tests on other
-> handsets. So the cross-device round moved from **50 to 53** and is marked
-> ⏸ **DEFERRED**; this series (the look / the feel / the return) took the free
-> numbers **50, 51, 52** and runs first. **Only the matrix is parked** — the
-> still-owed device rows of 44/45/46/47/48/49 stay owed exactly as they were.
-> When 53 reopens it is **one combined matrix over 44-52**, on a single build,
-> so the owner performs one full pass instead of two.
+> **Renumbered, and the cross-device matrix is ❌ CANCELLED (owner decision,
+> 2026-09-14):** the owner's law is *"number the phases like i go in a row"* —
+> the numbers **are** the execution order. The cross-device round therefore
+> moved from **50 to 53** … and the owner then cancelled it outright
+> (*"Remove the full device cross check phase"*). This series (the look / the
+> feel / the return) took the free numbers **50, 51, 52** and is the whole of
+> the plan now. **What proves things on a phone instead:** one short per-phase
+> round on the owner's own handsets (L1-L12, F1-F16, R1-R12), CI as the executor
+> of record, and 52.4's Roborazzi screenshot goldens. The still-owed device rows
+> of 44/45/46/47/48/49 are untouched — they belong to their own phases and were
+> never part of 53.
 
 ---
 
@@ -181,27 +183,29 @@ decides.
 
 ## Device rounds (the gate)
 
-Each phase ends with owner-run rows; the format is Phase 53's
-(`docs/chat-phase53/DEVICE_MATRIX.md`), and each row's result is pasted back
-into the **owning part doc**, not a scratchpad. **Phase 53 itself is ⏸
-DEFERRED** (owner, 2026-09-14) — it runs after 52, as one combined
-44-52 pass, and is the last row of the table below.
+Each phase ends with owner-run rows on the owner's own handsets, and each
+row's result is pasted back into the **owning part doc**, not a scratchpad.
+The record format (`# | Part | Run on | What to do | PASS looks like`,
+under a `## Test log (Phase NN — …)` heading) comes from the **cancelled**
+cross-device matrix — it survived the cancellation; the matrix did not.
 
 > **Concurrent work (recorded 2026-09-14):** while this plan was written,
-> Phase 53's cross-device matrix became 🚧 IMPLEMENTED on `arena/01a099d8-codec`
-> — `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` pins ten rounds A-J
-> for phases **44.1-49.2**, CI ✅ GREEN `34753000709` tip `69a70ec`. 50-52 are
-> unaffected (its `PART_FILES` map is fixed and covers 44.1-49.2 only), and the
-> three rounds below deliberately adopt its `## Test log (Phase NN — …)`
-> convention so the two systems compose instead of competing.
+> **⚠️ Merge-order note (live):** `arena/01a099d8-codec` — CI ✅ GREEN
+> `34753000709` tip `69a70ec` — ships `app/src/test/java/com/codeci/ide/
+> DeviceMatrixTest.kt`, a 627-line test that machine-pins a cross-device matrix
+> (hard-coded `MATRIX_PATH = "docs/chat-phase50/DEVICE_MATRIX.md"`, a required
+> link in `docs/chat-phase50/README.md`, and a `PART_FILES` map demanding a
+> `## Test log (Phase 50 — the cross-device matrix)` section in eleven part
+> docs). **Phase 53 is cancelled, so that test must be deleted or re-scoped
+> before that branch lands on `main`** — otherwise `Build APK` goes red on paths
+> this branch moved. Nothing in 50-52 depends on it.
 
 | Phase | Round | Rows |
 |---|---|---|
 | 50 | `docs/chat-phase50/DEVICE_ROUND.md` | L1-L12 — one screen per row, dark + light, small + large phone: spacing looks even, corners match, the accent is visible, nothing regressed in contrast |
 | 51 | `docs/chat-phase51/DEVICE_ROUND.md` | F1-F16 — cold start, first run, RUN ▶ visibility, keyboard up vs down, hub scroll, package install moment, haptics on/off |
 | 52 | `docs/chat-phase52/DEVICE_ROUND.md` | R1-R12 — resume card, decline, cold-open timing (stopwatch), jank on a big file, the streak row |
-| 53 | `docs/chat-phase53/DEVICE_MATRIX.md` | ⏸ **DEFERRED** (owner, 2026-09-14) — reopens after 52 ships as **one combined
-  matrix over 44-52** on a single build: rounds A-F (44-49, already written) plus new rounds for 50/51/52 |
+| ~~53~~ | `docs/chat-phase53/` | ❌ **CANCELLED** (owner, 2026-09-14: *"Remove the full device cross check phase"*) — kept as history only; nothing in it is owed |
 
 **Not verifiable in this sandbox and never claimed as verified:** IME insets,
 real haptics, perceived smoothness, OEM behaviour. CI proves the pure policies

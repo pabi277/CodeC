@@ -90,17 +90,18 @@ One scripted journey the owner runs end to end on a **fresh install**, because
 Every beat that fails becomes a row in the owning part doc's device-round
 section, with a test before the fix — the 44-49 discipline.
 
-### D — Where this leaves Phase 53 (⏸ deferred by the owner)
+### D — Where this leaves Phase 53 (❌ cancelled by the owner)
 
 Phase 53 (the cross-device matrix) is **🚧 IMPLEMENTED on `arena/01a099d8-codec`**
 (2026-09-13): `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` (627 lines)
 pins the ten rounds A-J for phases **44.1-49.2**, CI ✅ GREEN `34753000709` tip
-`69a70ec`. It is **not** replaced by this round — the two compose: when 53 reopens
-it proves **44-52** on every device class in one pass, and the rounds below
-prove 50-52 on the owner's phones as they ship. **53 is ⏸ DEFERRED**
-(owner, 2026-09-14: *"i want to work on other things before test in
-different devices"*): it was Phase 50, it moved to 53 so the numbers stay
-the execution order, and it reopens when 52 is merged and shipped. 52.4 therefore adopts its format verbatim — the `## Test log (Phase NN
+`69a70ec`. **It is now ❌ CANCELLED** (owner, 2026-09-14: *"Remove the full device
+cross check phase"*) — it was Phase 50, moved to 53 so the numbers stayed the
+execution order, and then removed from the plan entirely. Its files are history
+only. **So 52.4 is not "the CI half of the matrix" — it is the whole visual
+gate:** the twelve goldens in verify mode are what catches a layout or colour
+regression across the UI series, and the per-phase rounds (L/F/R) are the only
+handset evidence that is still planned. 52.4 therefore adopts its format verbatim — the `## Test log (Phase NN
 — …)` heading, the five-column table (`# | Part | Run on | What to do | PASS
 looks like`), one part doc per row — and the three `DEVICE_ROUND.md` files in
 this series already say so. Extending `DeviceMatrixTest` itself to cover 50-52
@@ -108,9 +109,11 @@ is deliberately **not** in this phase: it carries a fixed `PART_FILES` map over
 44.1-49.2, and these rows do not exist until their phases are built.
 
 ⚠️ **Merge-order note:** that test hard-codes `MATRIX_PATH =
-"docs/chat-phase50/DEVICE_MATRIX.md"`; this branch moved the matrix to
-`docs/chat-phase53/`. **Repoint the constant before both branches land on
-`main`**, or `Build APK` goes red on a doc rename.
+"docs/chat-phase50/DEVICE_MATRIX.md"` and demands a `## Test log (Phase 50 —
+the cross-device matrix)` section in eleven part docs; this branch moved the
+matrix to `docs/chat-phase53/` and the phase is cancelled. **The test must be
+DELETED (or fully re-scoped) before both branches land on `main`**, or `Build
+APK` goes red on a doc rename.
 
 ## The Android edge
 
