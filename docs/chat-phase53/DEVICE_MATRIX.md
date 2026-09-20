@@ -1,4 +1,16 @@
-# Phase 50 — cross-device matrix (owner runbook)
+# CodeC Phase 53 — the cross-device matrix (❌ CANCELLED — history only)
+
+> **Cancelled by the owner (2026-09-14): *"Remove the full device cross check
+> phase."*** This file is kept as **history, by the owner's choice** — it is not
+> a to-do, nothing here is owed, and no round in it is scheduled.
+>
+> **What proves things on a phone now:** the per-phase rounds (`L1-L12` in
+> `docs/chat-phase50/DEVICE_ROUND.md`, `F1-F16` in `chat-phase51/`, `R1-R12` in
+> `chat-phase52/`), run on the owner's own handsets when each phase ships, plus
+> CI (`Build APK`) and 52.4's Roborazzi goldens. The record format below —
+> `# | Part | Run on | What to do | PASS looks like`, pasted into the owning part
+> doc's `## Test log (Phase NN — …)` — is the part that survived cancellation and
+> is now used by those rounds.
 
 > **Branch:** `arena/01a094e5-codec` · **Functional round:** *TBD — filled in
 > when the phase's implementation commits exist* · **CI ✅ GREEN:** *TBD*
@@ -129,7 +141,7 @@ F1 ✅  F2 ❌ "the app closed"  …
 Then, for **every ❌**: which phase/part owns it (A→44, B→45, C→46, D→47,
 E→48, F→49), and either the fix's commit or a dated deferral with a reason. Each
 part file gets a `## Test log` section with its own rows — that is what closes
-Phase 50.
+Phase 53.
 
 ## What this matrix cannot prove
 
@@ -147,3 +159,27 @@ Phase 50.
 - **Battery-manager kills** (Xiaomi/Oppo/Vivo/Samsung) are not reproducible on
   demand. A8 is the closest proxy; a real answer needs a device with an
   aggressive OEM skin and 10 idle minutes.
+
+
+---
+
+## Rounds G, H, I — the UI series (cancelled with the phase; kept for reference)
+
+This section was a placeholder that fixed, in advance, what a combined 44-52
+pass would have contained. **It is cancelled with the phase** and is kept only
+because it is a compact statement of what each UI phase has to prove on a
+handset — which is exactly what the per-phase rounds (L/F/R) now cover.
+
+| Round | Phase | What it must prove on every device class |
+|---|---|---|
+| G | 50 — the look | spacing and corner rhythm look even on a small and a large phone; the brand colour is visible in dark **and** light; nothing that passed contrast before fails now (`AppContrastTest`/`ChromeContrastTest` are the CI half) |
+| H | 51 — the feel | cold start shows CodeC, not a black window; RUN ▶ is the first thing the eye finds with the keyboard up; the install finish is unmistakable and happens exactly once; haptics fire on the eight named moments and nowhere else |
+| I | 52 — the return | resume is offered, not silent, and can be declined; the About line shows the four counters; the 12 screenshot goldens match what the device actually renders |
+
+Per-device record format (unchanged, and the reason `DeviceMatrixTest` can read
+it): `# | Part | Run on | What to do | PASS looks like`, one row per result,
+pasted into a `## Test log (Phase NN — …)` section of the owning part doc.
+
+**Unaffected by this cancellation:** 44's R1-R8/D1-D12, 45's G1-G41, the 46/47
+re-rounds, 48's eight checks and 49's ten + eight. Those rows belong to their
+own phases and stay owed, to be run whenever the owner has a build in hand.
