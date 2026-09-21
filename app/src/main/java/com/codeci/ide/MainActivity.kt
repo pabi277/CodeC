@@ -15,6 +15,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
@@ -228,6 +229,29 @@ class MainActivity : ComponentActivity() {
     private var startupLedger: com.codeci.ide.ui.crash.StartupLedger? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Phase 51.1 — the cold start is CodeC, not black. Installed before
+        // anything else (the documented usage: before setContentView; the
+        // library immediately swaps the window to the style's
+        // `postSplashScreenTheme`, i.e. Theme.MyApplication), and dismissed by
+        // the PURE LaunchReadiness policy, never by a timer:
+        //   * `safeMode` and a crashed previous start release it at once — a
+        //     logo must never cover the crash door (MainActivity's overlay);
+        //   * otherwise it leaves as soon as the theme decision and the first
+        //     route are known, which is what keeps the one-frame
+        //     `return` branches below (welcome/guide flag still reading) from
+        //     flashing an empty UI.
+        // Nothing else in this method moves: the ordering below is Phase 44's
+        // (TerminalViewModel is built for the whole activity, the GC and the
+        // setup-recovery threads are fire-and-forget) and the splash covers
+        // the window, never the work.
+        val launchGate = com.codeci.ide.ui.crash.LaunchGate(
+            com.codeci.ide.ui.crash.LaunchFacts(
+                safeMode = com.codeci.ide.ui.crash.SafeMode.active,
+                // The crash fact needs the ledger, read a few lines below.
+                crashOverlay = false,
+            )
+        )
+        installSplashScreen().setKeepOnScreenCondition { launchGate.keepSplash() }
         super.onCreate(savedInstanceState)
         runCatching {
             val prefs = getSharedPreferences("codec-startup", MODE_PRIVATE)
@@ -244,6 +268,12 @@ class MainActivity : ComponentActivity() {
             val ledger = com.codeci.ide.ui.crash.StartupLedger(store)
             startupLedger = ledger
             startupPlan = ledger.noteLaunch()
+            // Phase 51.1 — a start that follows a crash may open the
+            // CrashReportOverlay (Phase 41.2); the splash releases the window
+            // at once so a logo can never sit on top of that door.
+            launchGate.overlayShown(
+                startupPlan != com.codeci.ide.ui.crash.StartupLedger.Plan.NORMAL
+            )
         }
         installCrashLog()
         enableEdgeToEdge()
@@ -397,7 +427,12 @@ class MainActivity : ComponentActivity() {
             )
 
             MyApplicationTheme(darkTheme = isDarkTheme, accentHex = accentColor, brandMode = brandMode) {
-                MainApp(onStartupFinished = {
+                // Phase 51.1 — the theme decision is made: this composition
+                // resolved it from the stored inputs (or their safe-mode
+                // defaults) and is about to draw. One of the two facts the
+                // splash waits for.
+                androidx.compose.runtime.SideEffect { launchGate.themeResolved() }
+                MainApp(launchGate = launchGate, onStartupFinished = {
                     // Phase 42.3 — the main screen was drawn: this start
                     // succeeded, so the loop counter and the marker clear.
                     startupLedger?.noteStartupFinished()
@@ -696,7 +731,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainApp(onStartupFinished: () -> Unit = {}) {
+fun MainApp(
+    onStartupFinished: () -> Unit = {},
+    /** Phase 51.1 — the splash gate, told when the first route is known. */
+    launchGate: com.codeci.ide.ui.crash.LaunchGate? = null,
+) {
     val navController = rememberNavController()
     val activity = requireNotNull(LocalActivity.current) as ComponentActivity
     val terminalViewModel: TerminalViewModel = viewModel(viewModelStoreOwner = activity)
@@ -751,6 +790,15 @@ fun MainApp(onStartupFinished: () -> Unit = {}) {
     // what the flag means. null = still reading; false = show the guide.
     var guideCompleted by remember { mutableStateOf<Boolean?>(null) }
     var guideRequested by remember { mutableStateOf(false) }
+    // Phase 51.1 — "is this start the welcome, the guide, or the shell?" takes
+    // BOTH flags below: the welcome's and the guide's are read by two
+    // `LaunchedEffect`s, and until each has landed the shell renders nothing
+    // (three one-frame `return`s). The splash waits for exactly this, so a
+    // returning user never sees those frames as a flash of empty UI.
+    val routeKnown = firstLaunchComplete != null && (guideCompleted != null || guideRequested)
+    androidx.compose.runtime.SideEffect {
+        if (routeKnown) launchGate?.startRouteKnown()
+    }
     // Phase 45.2 — the coach marks already seen (a CSV of step ids). The plan is
     // pure; this is only its persistence.
     var coachSeen by remember { mutableStateOf<Set<String>>(emptySet()) }

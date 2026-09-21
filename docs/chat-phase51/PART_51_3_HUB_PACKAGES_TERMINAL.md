@@ -1,6 +1,7 @@
 # CodeC Phase 51.3 — Hub, Packages and Terminal surfaces
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ DONE + DEVICE-PASSED (F10-F13 all PASS, owner report 2026-09-21,
+> [PR #82](https://github.com/pabi277/CodeC/pull/82)) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -145,3 +146,84 @@ action changed meaning; and `DEVICE_ROUND.md` F10-F13 has been run by the owner.
   owns progress; a second progress affordance competes.
 - **Terminal emulator restyle (font, colours beyond the 4 themes, padding)** —
   Phase 36's performance work; a later, measured row.
+
+## Implementation (2026-09-21)
+
+**The hub has three states, and the third one is the fix.** `HubListPolicy`
+(`ui/projects/HubListPolicy.kt`, new, pure): `LIST` when entries are in hand,
+`EMPTY` once a read has finished, `LOADING` otherwise; `rowCount` answers for the
+skeleton and for the list from the same function (floor `SKELETON_ROWS = 3`, and a
+previous count is honoured so the shape does not jump when the names arrive — the
+Phase 36 scroll-position bug class); `isPlaceholder` marks the branch that must
+not be interactive. `FileManagerViewModel` gained `hubListFacts` and
+`lastKnownHubRowCount()`, written by the existing `loadProjects`, and
+`FileManagerScreen` crossfades three branches: skeleton cards, the designed empty
+state, the list. `Skeleton.kt` (new) is `SkeletonBox` on `CodecMotion.shimmer` —
+the shared vocabulary's only infinite spec, so a device with animations off shows
+a static shape — plus `SkeletonHubCard`, which copies the real card's internal
+rhythm. The empty hub now carries the `app_mark` above its three starter tiles and
+the create door.
+
+**The install moment stops ending in another tab.** `InstallMoment`
+(`ui/modules/InstallMoment.kt`, new, pure) owns the words and the celebration;
+`ModulesScreen`'s row now holds observable state (`installedNow`,
+`installRequested`, `celebrated`) and re-reads the disk **only** while the user's
+own install is in flight (1.5 s, and never as a background poll for a screenful
+of rows). A genuine finish fires the `INSTALL_FINISHED` haptic (51.4) and the
+one-line toast, the badge crossfades on
+`motion.floatOrSnap(CodecMotion.crossfadeSpec)`, and the primary button wears the
+label and is disabled while in flight. The row still never guesses a failure —
+Phase 44's law stands: the terminal reports it, and `refuse()` already names the
+place to look.
+
+**The terminal's first frame quotes the shared truth.** `TerminalIntroPolicy`
+(`ui/terminal/TerminalIntro.kt`, new, pure) answers from `TerminalIntroFacts(setup
+= SetupFacts, hasOutput)`: output → `NONE` (silent — the shell speaks for
+itself), `InstallProgress.inFlight` → `INSTALLING`, `SetupFacts.usable` →
+`READY`, else `NEEDS_SETUP`. `TerminalScreen` renders it as one strip above the
+emulator, with the copy from `strings.xml`. `TerminalEmulatorView` is untouched.
+
+**Three corrections, all found by checking the plan against the code:**
+
+1. the planned `reading` flag was redundant — `(entryCount, loadedOnce)` already
+   answers the branch, and `isBusy` (the alternative) would have drawn skeletons
+   during clone/delete/export (the pin is `HubListPolicyTest`);
+2. `SetupGatePolicy.barVisible` is **not** "an install is running" — it is also
+   true for a *settled* bar (READY-without-pkg, FAILED, UNSUPPORTED), so quoting
+   it would have announced a failed setup as "installing"; the policy uses
+   `InstallProgress.inFlight`, the same predicate the bar refuses dismissal on;
+3. `celebrateOnFinish` v1 (`previous != INSTALLED && now == INSTALLED`) would
+   have celebrated **upgrading a package the user already had working**. The
+   predicate is now `now == INSTALLED && (previous == NOT_INSTALLED || previous ==
+   INSTALLING)` — "there was nothing, now there is something" — and a matrix test
+   counts exactly two true cells out of sixteen.
+
+**Tests:** `HubListPolicyTest` 9, `SkeletonStabilityTest` 4, `HubSurfaceTest` 9
+(the three branches render, the skeleton template, the empty state's design, and
+every `HubCardAction` the owner device-tested still exists), `InstallMomentTest`
+14 (the label matrix, the celebration matrix, clamped progress, the failure
+pointing at the terminal), `TerminalIntroTest` 9, `TerminalChromeTest` 7 (the
+shared facts, the copy, the tokens, and that the emulator view and the sora host
+gained none of this phase's vocabulary).
+
+**CI:** ✅ GREEN `35630471779` tip `32c7c70` (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`), after round 1's raw-apostrophe AAPT2 failure and round 2's missing `PaddingValues` import — both fixed for-cause and recorded in the README.
+
+**Not run:** device rows F9-F13 (the hub's loading frame, a real install's finish,
+the terminal's first frame in all three states, the package row's words).
+
+---
+
+## Test log (Phase 51 — the feel)
+
+**Owner report, 2026-09-21, verbatim: *"All pass record and merge"*** — every row
+below is **PASS** (device/OS/theme not named in the report). Build: the CI
+`Build APK` artifact of `arena/01a0c4cb-codec` (run `35630471779` tip `32c7c70`).
+
+| # | Part | Run on | What to do | PASS looks like |
+|---|---|---|---|---|
+| F10 | 51.3 | owner's handset (not specified) | empty the hub (or start fresh) | **PASS** — the empty hub is a designed screen (mark + starters + create door), not a sentence |
+| F11 | 51.3 | same | cold open straight into the hub with many projects | **PASS** — the list's own shape appears before the names; never a blank frame |
+| F12 | 51.3 | same | install a small package; rotate mid-install | **PASS** — the finish is visible (state change + one line) and happens exactly once |
+| F13 | 51.3 | same | Terminal tab on a fresh install, compare with the setup bar | **PASS** — the first frame says whether the tools are ready and agrees with the bar |
+
+**Result: 4/4 PASS, no re-round requested.**

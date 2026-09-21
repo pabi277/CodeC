@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Spacer
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
@@ -126,6 +128,15 @@ import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
 import com.codeci.ide.ui.guide.GuideAnchor
 import com.codeci.ide.ui.guide.GuideAnchors
+import com.codeci.ide.ui.components.HapticMoment
+import com.codeci.ide.ui.components.RunHapticRule
+import com.codeci.ide.ui.components.rememberCodecHaptics
+import com.codeci.ide.ui.editor.EditorEmptyAction
+import com.codeci.ide.ui.editor.EditorEmptyFacts
+import com.codeci.ide.ui.editor.EditorEmptyState
+import com.codeci.ide.ui.editor.RunButtonRole
+import com.codeci.ide.ui.editor.RunButtonState
+import com.codeci.ide.ui.editor.RunButtonStyle
 import com.codeci.ide.ui.components.OutputPanelView
 import com.codeci.ide.ui.components.RunKeysRow
 import com.codeci.ide.ui.components.SuggestionStrip
@@ -164,6 +175,7 @@ import com.codeci.ide.ui.navigation.BackRouter
 import com.codeci.ide.ui.navigation.BackState
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
+import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -228,6 +240,9 @@ fun EditorScreen(
     // Phase 50.4 — transition (3): the one motion hook; the find bar
     // below resolves through it, instant when the platform says so.
     val motion = rememberMotionSpecs()
+    // Phase 51.4 — the one haptics hook. Every moment this screen fires goes
+    // through it, and the Settings switch is read inside it (default on).
+    val haptics = rememberCodecHaptics()
     // Phase 25.2 — the edit core is sora-editor's CodeEditor, chosen by the
     // 25.1 device bench (keystroke p95 14.5 ms vs the old stack's 404 ms on a
     // 5 000-line file). Declared early: both the find-searcher effect below
@@ -274,6 +289,24 @@ fun EditorScreen(
     val codeText by viewModel.codeText.collectAsState()
     val currentFileName by viewModel.fileName.collectAsState()
     val outputState by viewModel.outputState.collectAsState()
+    // Phase 51.4 — the run's own moments, from the TRANSITION and never from a
+    // re-render: RUN_STARTED when a job begins, one of PROGRAM_FINISHED /
+    // PROGRAM_FAILED when it ends. `previousRunBusy` starts at the state the
+    // screen was born into, so opening onto an already-finished run is silent
+    // (the same discipline as Phase 48's CaretVisibilityPolicy) and a rotation
+    // cannot buzz twice. ONE watcher covers every way a run starts — the RUN
+    // button, the tour's tap on it, the F5 accelerator and the ⁝ menu — which
+    // is why the moments are not fired from the tap handlers.
+    var previousRunBusy by remember { mutableStateOf(outputState.busy) }
+    LaunchedEffect(outputState.busy, outputState.runExitCode) {
+        val moment = RunHapticRule.momentFor(
+            wasRunning = previousRunBusy,
+            running = outputState.busy,
+            exitCode = outputState.runExitCode,
+        )
+        previousRunBusy = outputState.busy
+        if (moment != null) haptics.perform(moment)
+    }
     val outputExpanded by viewModel.outputExpanded.collectAsState()
     val isDirty by viewModel.isDirty.collectAsState()
     val isRenaming by viewModel.isRenaming.collectAsState()
@@ -1242,6 +1275,7 @@ fun EditorScreen(
         ) {
             TopAppBar(
                 title = {
+                    // Phase 51.2 slot: tab_bar
                     // Phase 50.4 — transition (4): the title chrome crossfades
                     // when the tab strip appears or disappears (file
                     // open/close). Chrome only — the code view is untouched.
@@ -1276,6 +1310,11 @@ fun EditorScreen(
                                         pendingCloseTab = path
                                     } else {
                                         viewModel.closeTab(context, path, saveFirst = false)
+                                        // Phase 51.4 — TAB_CLOSED: a firm tick.
+                                        // Only a real close, never the dirty-tab
+                                        // dialog above (a dialog is a question,
+                                        // not an act).
+                                        haptics.perform(HapticMoment.TAB_CLOSED)
                                     }
                                 },
                                 onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
@@ -1360,10 +1399,27 @@ fun EditorScreen(
                                 text = { Text(stringResource(R.string.save)) },
                                 onClick = {
                                     showMoreMenu = false
+                                    // Phase 51.2/51.4 — the one-word
+                                    // confirmation, as the surface's own
+                                    // snackbar (never a dialog, and never a
+                                    // toast racing a snackbar elsewhere), plus
+                                    // the FILE_SAVED tick. Autosave stays
+                                    // silent on purpose: a save the user did
+                                    // not ask for does not deserve an
+                                    // interruption (the no-nag law, 41/42/45).
                                     if (viewModel.saveFile(context)) {
-                                        Toast.makeText(context, context.getString(R.string.file_saved), Toast.LENGTH_SHORT).show()
+                                        haptics.perform(HapticMoment.FILE_SAVED)
+                                        uiScope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.editor_saved)
+                                            )
+                                        }
                                     } else {
-                                        Toast.makeText(context, context.getString(R.string.file_save_failed), Toast.LENGTH_SHORT).show()
+                                        uiScope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.file_save_failed)
+                                            )
+                                        }
                                     }
                                 }
                             )
@@ -1516,8 +1572,12 @@ fun EditorScreen(
                                     val path = activeTabPath
                                     if (path != null) {
                                         val dirty = isDirty
-                                        if (dirty) pendingCloseTab = path
-                                        else viewModel.closeTab(context, path, saveFirst = false)
+                                        if (dirty) {
+                                            pendingCloseTab = path
+                                        } else {
+                                            viewModel.closeTab(context, path, saveFirst = false)
+                                            haptics.perform(HapticMoment.TAB_CLOSED)
+                                        }
                                     }
                                 }
                             )
@@ -1601,33 +1661,72 @@ fun EditorScreen(
                             runOpenFile()
                         }
                     }
-                    Row(
+                    // Phase 51.2 slot: run_action
+                    // Phase 51.2 — RUN ▶ is the hero: ONE contained action
+                    // among the chrome's glyph buttons. Google's eye-tracking
+                    // study (dossier §3.2) measured the mechanism — a bigger,
+                    // better-contained primary action is found up to 4× faster
+                    // — and its own counter-example keeps the label, so RUN
+                    // keeps its word. The role comes from the pure
+                    // RunButtonStyle (Phase 44's chrome lock wins over
+                    // everything, and it is what keeps the "says why" tap).
+                    val runButtonState = RunButtonState(
+                        running = outputState.busy,
+                        locked = editorChromeLocked,
+                        hasOpenFile = openTabs.isNotEmpty() || currentFileName.isNotEmpty(),
+                    )
+                    val runRole = RunButtonStyle.roleFor(runButtonState)
+                    val runContainer = if (runRole == RunButtonRole.CONTAINED) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    }
+                    val runContent = if (runRole == RunButtonRole.CONTAINED) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Button(
+                        onClick = onRunTap,
+                        // Phase 45.2 — RUN ▶ is the 30-second loop; the tour's
+                        // fifth beat, and the anchor publishes the tour's own
+                        // click beside its rect (round 4's single-click law).
                         modifier = Modifier
-                            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
-                            .clickable(onClick = onRunTap)
-                            .padding(start = CodecTokens.space(Space.XS), end = CodecTokens.space(Space.M), top = CodecTokens.space(Space.S), bottom = CodecTokens.space(Space.S))
-                            // Phase 45.2 — RUN ▶ is the 30-second loop; the
-                            // tour's fifth beat.
+                            .padding(end = CodecTokens.space(Space.S))
+                            .defaultMinSize(minHeight = CodecTokens.space(CodecTokens.MIN_TOUCH))
                             .then(
                                 GuideAnchor.modifier(
                                     GuideAnchors.EDITOR_RUN,
                                     onClick = onGuideRunTap
                                 )
                             ),
-                        verticalAlignment = Alignment.CenterVertically
+                        enabled = RunButtonStyle.isEnabled(runButtonState),
+                        shape = RoundedCornerShape(CodecTokens.radius(Radius.L)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = runContainer,
+                            contentColor = runContent,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                        contentPadding = PaddingValues(
+                            horizontal = CodecTokens.space(Space.L),
+                            vertical = CodecTokens.space(Space.S),
+                        ),
                     ) {
                         Icon(
                             Icons.Default.PlayArrow,
-                            contentDescription = stringResource(R.string.run),
-                            tint = RunGreen,
-                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                            contentDescription = null,
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
                         )
-                        Spacer(Modifier.width(CodecTokens.space(Space.XXS)))
+                        Spacer(Modifier.width(CodecTokens.space(Space.S)))
                         Text(
-                            stringResource(R.string.run),
-                            color = RunGreen,
+                            text = if (RunButtonStyle.showsRunning(runButtonState)) {
+                                stringResource(R.string.run_running)
+                            } else {
+                                stringResource(R.string.run)
+                            },
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 },
@@ -1640,6 +1739,74 @@ fun EditorScreen(
             // exactly ☰ + tabs + 🔍 +  + ▶ RUN. Undo/Redo and the keys-row
             // toggle moved into the ⋮ overflow (below).
 
+            // Phase 51.2 — the chrome never goes silent. With no tab open (and
+            // no project loaded) the tab bar collapses and the editor shows a
+            // scratch buffer: one sentence saying so, and ONE action back into
+            // a real file. The facts and the decision are the pure
+            // EditorEmptyState; the action reuses the ONE resume source
+            // (`EditorLaunchState`, the same object 52.1 will speak through),
+            // so there is no second place that decides what "last file" means.
+            val lastLaunch = remember(context) { EditorLaunchState.load(context) }
+            val emptyChrome = EditorEmptyState.chromeFor(
+                EditorEmptyFacts(
+                    openTabs = openTabs.size,
+                    projectOpen = currentProject != null,
+                    lastFileAvailable = lastLaunch != null,
+                )
+            )
+            if (emptyChrome != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = CodecTokens.space(Space.L),
+                            end = CodecTokens.space(Space.L),
+                            top = CodecTokens.space(Space.S),
+                        )
+                        .clip(RoundedCornerShape(CodecTokens.radius(Radius.M)))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(
+                            start = CodecTokens.space(Space.M),
+                            end = CodecTokens.space(Space.S),
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE)),
+                    )
+                    Spacer(Modifier.width(CodecTokens.space(Space.S)))
+                    Text(
+                        text = stringResource(R.string.editor_empty_scratch),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = {
+                            val target = lastLaunch
+                            if (target != null) {
+                                viewModel.openFile(context, target.projectName, target.fileName)
+                            } else {
+                                onOpenProjects()
+                            }
+                        }
+                    ) {
+                        Text(
+                            when (emptyChrome.action) {
+                                EditorEmptyAction.OPEN_LAST_FILE ->
+                                    stringResource(R.string.editor_empty_open_last)
+                                EditorEmptyAction.BROWSE_PROJECTS ->
+                                    stringResource(R.string.editor_empty_browse)
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+            }
+            // Phase 51.2 slot: find_bar
             // Phase 50.4 — transition (3): the find bar drops down on
             // the shared spec instead of the defaults nobody chose.
             AnimatedVisibility(
@@ -1757,6 +1924,7 @@ fun EditorScreen(
                         }
                     }
             ) {
+                // Phase 51.2 slot: code_view
                 // Phase 25.2 — the edit surface: sora-editor. Line numbers,
                 // word wrap, current-line highlight, bracket-pair drawing,
                 // pinch text-scale and the caret magnifier are sora-native;
@@ -1891,6 +2059,7 @@ fun EditorScreen(
             // returns the moment the keyboard closes. (Phase 28.2: CodeC Keys
             // yields the row the same way — it is the keyboard now.)
             if (caretPlaced && !imeVisible && !codecKeysUp) {
+                // Phase 51.2 slot: status_bar
                 EditorStatusBar(
                     line = cursorPos.line,
                     column = cursorPos.column,
@@ -1952,6 +2121,7 @@ fun EditorScreen(
                                 .coerceIn(120f, maxPanelHeight)
                         }
                     )
+                    // Phase 51.2 slot: output_panel
                     OutputPanelView(
                         state = outputState,
                         isExpanded = true,
@@ -2383,6 +2553,7 @@ private fun BottomStrip(
     when (context) {
         is StripContext.Hidden -> Unit
         is StripContext.Run -> RunKeysRow(onKeyAction = onRunKey, modifier = modifier)
+        // Phase 51.2 slot: suggestion_strip
         is StripContext.Suggestions -> SuggestionStrip(
             chips = context.chips,
             showMore = showMoreCap,
@@ -2399,6 +2570,7 @@ private fun BottomStrip(
                     context.surface
                 )
             }
+            // Phase 51.2 slot: keys_row
             EditorKeysRow(
                 keys = keys,
                 textFieldValue = textFieldValue,

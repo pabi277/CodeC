@@ -1,6 +1,14 @@
 # CodeC Phase 51 — device round (F1-F16)
 
-> **Status:** 📋 WRITTEN, **NOT RUN.** Same law as every round:
+> **Status:** ✅ RUN — **owner report 2026-09-21: ALL PASS** (F1-F16 + the four
+> regression rows F17-F20), on the CI artifact of run `35631916639`/`35630471779`
+> (tip `feebab5` / `32c7c70`); merge commanded by the owner in the same message
+> (*"All pass record and merge"*), [PR #82](https://github.com/pabi277/CodeC/pull/82).
+> The per-row record is in each owning part doc's `## Test log (Phase 51 — the
+> feel)` section, and the regression rows' record is in the phase
+> [`README.md`](README.md) §Test log.
+>
+> Same law as every round:
 > `rule.md` §5 — the sandbox has no device, no emulator, no IME. CI proves the
 > policies; **you** prove the feel. Paste each row's result into the owning part
 > doc under a `## Test log (Phase 51 — the feel)` heading.

@@ -1,6 +1,7 @@
 # CodeC Phase 51.1 — Cold start and the first screen
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ DONE + DEVICE-PASSED (F1-F4 all PASS, owner report 2026-09-21,
+> [PR #82](https://github.com/pabi277/CodeC/pull/82)) · **Cost:** `[client-only]` · **Effort:** M ·
 > **New dependency:** `androidx.core:core-splashscreen` (Apache-2.0) — the
 > **only** new dependency in the whole 50-52 series.
 > **Owner row (verbatim):** *"not attractive … boost it's ui 100×"*, clarified
@@ -159,3 +160,77 @@ the owner's own stopwatch in 52.2's R4 records the number).
   progress-telling, and two progress surfaces would compete.
 - **A minimum splash duration** — rejected on principle (see the design).
 - **Re-ordering or re-wording the three starters** — Phase 33.1's decision.
+
+## Implementation (2026-09-21)
+
+`themes.xml` is no longer one line. `Theme.Codec.Splash` parents the library's
+`Theme.SplashScreen`, paints the window with `@color/codec_splash_background`
+(`#FF101418` — the value the launcher art already carries), shows the **existing**
+`ic_launcher_foreground`, and hands over to `Theme.MyApplication`. The launcher
+activity wears it (`AndroidManifest.xml:71`); the `<application>` does not.
+
+The dismissal is code, not a timer. `ui/crash/LaunchReadiness.kt` (new, pure)
+holds `LaunchFacts(themeResolved, startRouteKnown, crashOverlay, safeMode)`,
+`LaunchReadiness.keepSplash` = `!(crashOverlay || safeMode) && !(themeResolved &&
+startRouteKnown)`, and `LaunchGate` — the one `@Volatile` cell the activity
+writes and `setKeepOnScreenCondition` polls. `MainActivity` installs the splash
+**before** `super.onCreate`, seeds the gate with `SafeMode.active`, marks
+`overlayShown(startupPlan != NORMAL)` once the startup ledger has spoken, marks
+`themeResolved()` from a `SideEffect` inside the themed composition, and
+`startRouteKnown()` the moment the route is real.
+
+**The one correction that mattered.** `routeKnown` could not be
+`firstLaunchComplete != null`: the welcome gate and the guide gate each `return`
+for a frame while their own flag is still being read, so a splash released on
+that fact alone hands the window to an empty composition. It now needs **both**
+families — `firstLaunchComplete != null && (guideCompleted != null ||
+guideRequested)` — which is why the fact is called `startRouteKnown`.
+
+The welcome screen keeps its Phase 33.1 structure and gains its face: the
+`app_mark` at 96 dp (display art — 50.1's own exception to the token ladder), the
+tagline, an `OfflineCBadge` on `secondaryContainer`/`onSecondaryContainer`
+("C works offline — nothing to download"), and tiles on `surfaceContainerHigh`
+with `Elevation.CARD`, the language's own colour from `StarterIconView`, and a
+trailing `ArrowForward`. Each `WelcomeStarter` gained `nextStep` — the line the
+research says a first-run screen owes before the tap, and it names the entry file
+it will open.
+
+**Tests:** `LaunchReadinessTest` 12 (the truth table, safe mode and the overlay
+winning, and that the gate is a function — an overlay that appears and is
+dismissed does not leave the splash "already released"), `SplashThemeTest` 8
+(style, parent, colour, icon, hand-over theme, the manifest, no hex typed into
+the theme, the one dependency, and the no-clock pin over the real
+`MainActivity`/policy source), `WelcomeLayoutTest` 8 (the mark above the touch
+floor, three tiles and one render loop, `nextStep` naming each entry file, the
+token roles, the badge, the strings).
+
+**Not run:** device rows F1-F4 (cold start, the guide's first frame, the welcome
+face, the second-launch speed) — no transcript exists, so this part claims no
+device acceptance.
+
+**The dependency's own cost, measured** (round 3, `35630471779`, against the
+merged Phase 50 build on the same `versionName`): the whole phase — this part's
+splash and welcome work included, but the library is the only new *artifact* —
+adds **+73,884 B / +0.29 %** to the debug APK (25,809,492 B) and **+27,066 B /
++0.40 %** to the release APK (6,714,740 B). Phase 42.2's noise floor is ~0.1 %, so
+this is a real, small cost and it is recorded rather than assumed.
+
+---
+
+## Test log (Phase 51 — the feel)
+
+**Owner report, 2026-09-21, verbatim: *"All pass record and merge"*** — every row
+below is **PASS**. The report named no device, OS version or theme, so this log
+keeps exactly what the owner stated and nothing invented. Round record format:
+`F<n> — device / OS / theme / result / one sentence`. Build: the CI `Build APK`
+artifact of `arena/01a0c4cb-codec` (run `35630471779` tip `32c7c70`; final docs
+tip `feebab5`), debug `CodeC-IDE-1.3.17-universal-debug.apk`.
+
+| # | Part | Run on | What to do | PASS looks like |
+|---|---|---|---|---|
+| F1 | 51.1 | owner's handset (not specified) | force-stop, then launch; dark **and** light phone | **PASS** — the first frame is CodeC's mark on the brand surface, not a black rectangle |
+| F2 | 51.1 | same | launch five times, watch the hand-off | **PASS** — no waiting, no second of logo: the splash leaves as soon as the app is ready |
+| F3 | 51.1 | same | after a crash, does the report show | **PASS** — the crash door is not covered by the splash |
+| F4 | 51.1 | same | first run (or after clearing data) | **PASS** — the three tiles read as tiles, each with its language colour, each saying what happens next |
+
+**Result: 4/4 PASS, no re-round requested.**

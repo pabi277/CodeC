@@ -10,8 +10,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.InfiniteRepeatableSpec
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -89,6 +92,19 @@ object CodecMotion {
 
     /** Genuinely instant — what every transition becomes with motion off. */
     val snapFloat: FiniteAnimationSpec<Float> = snap()
+
+    /**
+     * Phase 51.3 — the skeleton's breath: one slow alpha pass, reversed. A
+     * loading placeholder must look like *content is coming* (a shape, in the
+     * list's own rhythm), never like a spinner: a spinner says "wait", a
+     * skeleton says "here". The platform's remove-animations switch flattens it
+     * to a static shape, which is exactly what a placeholder should be then
+     * (see `SkeletonBox`, the only user).
+     */
+    val shimmer: InfiniteRepeatableSpec<Float> = infiniteRepeatable(
+        animation = tween(Duration.LONG, easing = Easing.EMPHASIZED),
+        repeatMode = RepeatMode.Reverse,
+    )
 
     /**
      * Crossfade spec for `Crossfade` call sites (editor chrome, run-state

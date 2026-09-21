@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Card
@@ -22,13 +23,18 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.codeci.ide.R
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecTokens.Radius
 import com.codeci.ide.ui.theme.CodecTokens.Space
@@ -57,30 +63,38 @@ fun WelcomeScreen(
             .padding(horizontal = CodecTokens.space(Space.XXL), vertical = CodecTokens.space(Space.XL)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(CodecTokens.space(Space.HUGE)))
+        Spacer(Modifier.height(CodecTokens.space(Space.XXL)))
 
+        // Phase 51.1 — the app has a logo and never showed it. `app_mark.xml`
+        // is Phase 38.1's in-app mark (the ">_" glyph on its own tile); at 96 dp
+        // it is display art, not chrome, so it stays a raw size by 50.1's rule.
+        Image(
+            painter = painterResource(R.drawable.app_mark),
+            contentDescription = null,
+            modifier = Modifier.size(96.dp),
+        )
+        Spacer(Modifier.height(CodecTokens.space(Space.L)))
         Text(
             text = "CodeC",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
         )
-        Spacer(Modifier.height(CodecTokens.space(Space.M)))
-        Text(
-            text = "Write and run C, Python, JavaScript, and HTML on your phone.",
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
-        )
         Spacer(Modifier.height(CodecTokens.space(Space.S)))
         Text(
-            text = "C works offline with no setup.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = stringResource(R.string.welcome_tagline),
+            style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(CodecTokens.space(Space.M)))
+        // Phase 51.1 — the one fact that stops a nervous first-run exit
+        // (Phase 44's whole problem was a user closing the app mid-download):
+        // C needs nothing, ever. A visible reassurance, not a grey line.
+        OfflineCBadge()
 
-        Spacer(Modifier.height(CodecTokens.space(Space.XXL)))
+        Spacer(Modifier.height(CodecTokens.space(Space.XL)))
         Text(
-            text = "Pick a language to get started",
+            text = stringResource(R.string.welcome_pick_language),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
@@ -112,11 +126,15 @@ fun StarterTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Phase 51.1 — identity and hierarchy on the first screen a user ever sees:
+    // a 50.1 token radius + the 50.1 CARD elevation (it was flat, zero-
+    // elevation surfaceVariant: three identical grey rows), the language's own
+    // colour carried by StarterIconView, and one line saying what the tap does.
     Card(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(CodecTokens.radius(Radius.L)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.FLAT)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        elevation = CardDefaults.cardElevation(defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.CARD)),
     ) {
         Row(
             modifier = Modifier
@@ -137,6 +155,13 @@ fun StarterTile(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // Phase 51.1 — "what happens next", the line the research says
+                // a first-run screen owes the user before they commit a tap.
+                Text(
+                    text = starter.nextStep,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -148,3 +173,38 @@ fun StarterTile(
     }
 }
 
+/**
+ * Phase 51.1 — "C works offline" as a badge, not a grey line.
+ *
+ * The owner's own Phase 33.1 tiles open with C because it needs nothing: the
+ * compiler is in the APK (`EmbeddedCompiler`), so a nervous first-run user can
+ * run something without waiting for a download. Phase 44's entire problem was a
+ * user who closed the app during the Python userland download — this badge is
+ * the sentence that prevents that decision before it is made.
+ */
+@Composable
+private fun OfflineCBadge() {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(CodecTokens.radius(Radius.XL)))
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(
+                horizontal = CodecTokens.space(Space.M),
+                vertical = CodecTokens.space(Space.S),
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE)),
+        )
+        Spacer(Modifier.width(CodecTokens.space(Space.S)))
+        Text(
+            text = stringResource(R.string.welcome_offline_c),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}

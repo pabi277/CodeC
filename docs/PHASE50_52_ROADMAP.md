@@ -10,7 +10,8 @@
 > **and** *"coming back — the daily-return habit"* · **three** phases, numbered
 > in a row after Phase 49.
 >
-> **Status: 📋 PLANNED — docs only, no app code.** Research dossier (every
+> **Status: 🚧 IN PROGRESS — 50 ✅ merged, 51 ✅ merged + device-passed,
+> 52 📋 planned (next).** Research dossier (every
 > external claim carries its source, every claim about this app carries a
 > `file:line` or a grep, read on `main` @ `62cfe7b`):
 > [`PHASE50_52_UX_RESEARCH.md`](PHASE50_52_UX_RESEARCH.md). Per-phase specs:
@@ -102,10 +103,20 @@ that a changed file uses the token, not that the whole app is converted.
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [51.1](chat-phase51/PART_51_1_FIRST_TEN_SECONDS.md) | Cold start and the first screen | M | 📋 PLANNED |
-| [51.2](chat-phase51/PART_51_2_EDITOR_SURFACE.md) | The editor, with RUN ▶ as the hero | L | 📋 PLANNED |
-| [51.3](chat-phase51/PART_51_3_HUB_PACKAGES_TERMINAL.md) | Hub / Packages / Terminal surfaces | M | 📋 PLANNED |
-| [51.4](chat-phase51/PART_51_4_MICRO_FEEDBACK.md) | Haptics, press states, confirmations | S/M | 📋 PLANNED |
+| [51.1](chat-phase51/PART_51_1_FIRST_TEN_SECONDS.md) | Cold start and the first screen | M | ✅ DONE |
+| [51.2](chat-phase51/PART_51_2_EDITOR_SURFACE.md) | The editor, with RUN ▶ as the hero | L | ✅ DONE |
+| [51.3](chat-phase51/PART_51_3_HUB_PACKAGES_TERMINAL.md) | Hub / Packages / Terminal surfaces | M | ✅ DONE |
+| [51.4](chat-phase51/PART_51_4_MICRO_FEEDBACK.md) | Haptics, press states, confirmations | S/M | ✅ DONE |
+
+> **Phase 51 status (2026-09-21):** ✅ **COMPLETE, DEVICE-PASSED & MERGED** — owner:
+> *"Start phase 51"*, then *"All pass record and merge"* on device rows F1-F16 +
+> F17-F20 (all PASS; the record is the owner's own report, kept verbatim).
+> [PR #82](https://github.com/pabi277/CodeC/pull/82); 132 new host cases; APK
+> delta +73,884 B / +0.29 % debug, +27,066 B / +0.40 % release. What actually
+> landed — with the three plan premises the code corrected — is recorded in
+> [`chat-phase51/README.md`](chat-phase51/README.md) §Implementation.
+> Phase 50 (the look) is ✅ **COMPLETE & MERGED** ([PR #81](https://github.com/pabi277/CodeC/pull/81),
+> `main` @ `0f1b650`).
 
 **Why these four.** D1 retention is decided in the first session
 (dossier §3.6: onboarding completers retain 2–3×; a meaningful first action

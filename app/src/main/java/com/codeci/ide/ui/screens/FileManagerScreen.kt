@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -100,6 +101,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -115,6 +117,13 @@ import com.codeci.ide.ui.theme.CodecMotion
 import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
+import com.codeci.ide.ui.components.HapticMoment
+import com.codeci.ide.ui.components.rememberCodecHaptics
+import com.codeci.ide.ui.components.PressableSurface
+import com.codeci.ide.ui.components.SkeletonHubCard
+import com.codeci.ide.ui.projects.HubListBranch
+import com.codeci.ide.ui.projects.HubListFacts
+import com.codeci.ide.ui.projects.HubListPolicy
 import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectHubEntry
@@ -171,6 +180,9 @@ fun FileManagerScreen(
     val context = LocalContext.current
     val projects by viewModel.projects.collectAsState()
     val hubEntries by viewModel.hubEntries.collectAsState()
+    // Phase 51.3 — the hub's third state (LOADING / EMPTY / LIST) and the
+    // count its skeleton honours. Pure decision: HubListPolicy.
+    val hubFacts by viewModel.hubListFacts.collectAsState()
     val activeProject by viewModel.activeProject.collectAsState()
     val tree by viewModel.tree.collectAsState()
     val isBusy by viewModel.isBusy.collectAsState()
@@ -179,6 +191,8 @@ fun FileManagerScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
+    // Phase 51.4 — the haptics hook (the switch is read inside it).
+    val haptics = rememberCodecHaptics()
 
     var showCreateProject by remember { mutableStateOf(false) }
     var showCreateItem by remember { mutableStateOf(false) }
@@ -530,13 +544,20 @@ fun FileManagerScreen(
             if (activeProject == null) {
                 ProjectsHubList(
                     entries = hubEntries,
+                    facts = hubFacts,
+                    skeletonRows = viewModel.lastKnownHubRowCount(),
                     filter = hubFilter,
                     searchQuery = searchQuery,
                     onFilterSelected = { hubFilter = it },
                     onCardAction = { entry, action ->
                         val project = projects.firstOrNull { it.name == entry.name } ?: return@ProjectsHubList
                         when (action) {
-                            HubCardAction.OPEN -> selectProject(project)
+                            // Phase 51.4 — PROJECT_OPENED: the hub answered
+                            // the tap with the thing the user asked for.
+                            HubCardAction.OPEN -> {
+                                haptics.perform(HapticMoment.PROJECT_OPENED)
+                                selectProject(project)
+                            }
                             HubCardAction.OPEN_IN_EDITOR -> {
                                 // Phase 46.2 — the explicit whole-project open:
                                 // launch default → newest source → first source
@@ -614,6 +635,7 @@ fun FileManagerScreen(
                     project = activeProject!!,
                     nodes = tree,
                     viewModel = viewModel,
+                    onLongPressHaptic = { haptics.perform(HapticMoment.DRAG_STARTED) },
                     onDirectoryClick = { viewModel.toggleDirectory(it) },
                     onFileClick = { path ->
                         // Phase 46.2 — one file is one file: the tap routes the
@@ -1218,6 +1240,15 @@ private enum class HubCardAction {
 @Composable
 private fun ProjectsHubList(
     entries: List<ProjectHubEntry>,
+    /**
+     * Phase 51.3 — the read's own facts (a read in flight / one has finished).
+     * The branch is decided by the pure HubListPolicy, not by `isBusy`, which
+     * is also true for clone/delete/export and would draw a skeleton over
+     * perfectly loaded projects.
+     */
+    facts: HubListFacts = HubListFacts(entryCount = entries.size, loadedOnce = true),
+    /** The last non-zero count the hub showed: skeleton stability. */
+    skeletonRows: Int = 0,
     filter: ProjectHubFilter,
     searchQuery: String,
     onFilterSelected: (ProjectHubFilter) -> Unit,
@@ -1227,16 +1258,29 @@ private fun ProjectsHubList(
     modifier: Modifier = Modifier
 ) {
     val motion = rememberMotionSpecs()
-    // Phase 50.4 — transition (6): empty ↔ list crossfades on the
-    // shared spec — creating or deleting the last project reads as one change.
+    // Phase 50.4 — transition (6): the hub's states crossfade on the shared
+    // spec — creating or deleting the last project reads as one change.
+    // Phase 51.3 — and "still reading" is now one of those states, so a cold
+    // open shows the list's own shape instead of the empty state (which was
+    // indistinguishable from "your projects are gone").
+    val branch = HubListPolicy.branchFor(facts)
     Crossfade(
-        targetState = entries.isEmpty(),
+        targetState = branch,
         animationSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec)
-    ) { empty ->
-        if (empty) {
-            EmptyProjectsState(onCreate, onStarter)
-        } else {
-            ProjectsHubListContent(entries, filter, searchQuery, onFilterSelected, onCardAction, modifier)
+    ) { state ->
+        when (state) {
+            HubListBranch.LOADING -> Column(modifier = modifier) {
+                repeat(HubListPolicy.rowCount(facts, skeletonRows)) {
+                    SkeletonHubCard(
+                        modifier = Modifier.padding(
+                            horizontal = CodecTokens.space(Space.L),
+                            vertical = CodecTokens.space(Space.XS),
+                        )
+                    )
+                }
+            }
+            HubListBranch.EMPTY -> EmptyProjectsState(onCreate, onStarter)
+            HubListBranch.LIST -> ProjectsHubListContent(entries, filter, searchQuery, onFilterSelected, onCardAction, modifier)
         }
     }
 }
@@ -1614,31 +1658,39 @@ private fun HubSheetRow(
     subtitle: String,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(CodecTokens.radius(Radius.L)))
-            .clickable(onClick = onClick)
-            .padding(vertical = CodecTokens.space(Space.M)),
-        verticalAlignment = Alignment.CenterVertically
+    // Phase 51.4 — the sheet's rows were the bare case: `clip` + `clickable`
+    // with no container and no press state of their own. Containment is the
+    // shared component now (token radius, the press state), and the container
+    // stays transparent so the row looks exactly as it did.
+    PressableSurface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.L)),
+        containerColor = Color.Transparent,
+        contentPadding = PaddingValues(vertical = CodecTokens.space(Space.M)),
     ) {
-        Box(
-            modifier = Modifier
-                .size(58.dp)
-                .clip(CircleShape)
-                .background(color),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(CodecTokens.space(Space.XXL)))
-        }
-        Spacer(Modifier.width(CodecTokens.space(Space.L)))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Box(
+                modifier = Modifier
+                    .size(58.dp)
+                    .clip(CircleShape)
+                    .background(color),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(CodecTokens.space(Space.XXL)))
+            }
+            Spacer(Modifier.width(CodecTokens.space(Space.L)))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -1651,6 +1703,8 @@ private fun ProjectTree(
     project: ProjectInfo,
     nodes: List<FileNode>,
     viewModel: FileManagerViewModel,
+    /** Phase 51.4 — the hub's DRAG_STARTED moment, hoisted from the screen. */
+    onLongPressHaptic: () -> Unit,
     onDirectoryClick: (String) -> Unit,
     onFileClick: (String) -> Unit,
     onCreateIn: (String, Boolean) -> Unit,
@@ -1696,6 +1750,7 @@ private fun ProjectTree(
             items(nodes, key = { it.relativePath }) { node ->
                 TreeRow(
                     node = node,
+                    onLongPressHaptic = onLongPressHaptic,
                     onClick = {
                         if (node is FileNode.DirectoryNode) onDirectoryClick(node.relativePath)
                         else onFileClick(node.relativePath)
@@ -1716,6 +1771,8 @@ private fun ProjectTree(
 @Composable
 private fun TreeRow(
     node: FileNode,
+    /** Phase 51.4 — fires on the long press (the hub's DRAG_STARTED moment). */
+    onLongPressHaptic: (() -> Unit)? = null,
     onClick: () -> Unit,
     onCreateIn: (String, Boolean) -> Unit,
     onRename: (FileNode) -> Unit,
@@ -1729,7 +1786,16 @@ private fun TreeRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = { menuOpen = true })
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    // Phase 51.4 — DRAG_STARTED: the long press that opens a
+                    // row's menu is the gesture this moment names, and it is
+                    // the one place the finger is told the hold "took".
+                    onLongPressHaptic?.invoke()
+                    menuOpen = true
+                }
+            )
             .padding(start = (Space.L + node.depth * Space.XL).dp, end = CodecTokens.space(Space.S), top = CodecTokens.space(Space.S), bottom = CodecTokens.space(Space.S)),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1824,7 +1890,16 @@ private fun EmptyProjectsState(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(CodecTokens.space(Space.XL)))
-        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.primary)
+        // Phase 51.3 — the empty hub is a designed state, not a sentence on a
+        // blank page: the app's own mark (Phase 38.1's `app_mark`, the same one
+        // the welcome and the splash show) above the line that says what a
+        // project is, then the three starters as the tiles they already were.
+        // Display art, so the raw size is the 50.1 rule's own exception.
+        Image(
+            painter = painterResource(R.drawable.app_mark),
+            contentDescription = null,
+            modifier = Modifier.size(96.dp),
+        )
         Spacer(Modifier.height(CodecTokens.space(Space.L)))
         Text(stringResource(R.string.no_projects), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(CodecTokens.space(Space.S)))

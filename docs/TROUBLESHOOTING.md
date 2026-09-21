@@ -1888,3 +1888,48 @@ build — the eleventh beat).
 rows, §44's blink re-check, Phase 48's eight checks and Phase 49's ten +
 49.2's eight. Merge commanded via
 [PR #79](https://github.com/pabi277/CodeC/pull/79).
+
+---
+
+## 46. "the app doesn't buzz any more" / "RUN ▶ turned purple" / "the hub shows grey cards first" (Phase 51, 2026-09-21)
+
+Three new behaviours people will notice, and where each is controlled:
+
+**1. The app now answers your finger (eight moments), and "Haptics" turns it
+off.** Settings → **Appearance → Haptics** (default **on**). The eight moments
+are: RUN ▶ started, a program finished, a program failed, a file was saved, an
+install finished, a tab was closed, a project was opened, and a long press on
+the file tree. Two strengths only — a light tick for "it happened", a firm one
+for the three moments that are an *end* (a failure, a close, a finished
+install) — because a taxonomy of eight buzzes is unlearnable. If the switch is
+on and nothing buzzes, check **Settings → System → Vibration & haptics** on the
+phone first: a device with no vibrator (or system haptics off) gets nothing, by
+design, and the app never logs or crashes about it. **The CodeC keyboard's own
+"haptic tick per key" is a separate switch** (Settings → **CodeC Keys**,
+`codec_keys_haptics`) — Phase 51 does not touch it.
+
+**2. RUN ▶ is now a filled brand button, and it says RUNNING.** Phase 51.2 made
+RUN ▶ the editor's primary action (a contained `primaryContainer` button, at
+least 48 dp tall, with its label kept). That is deliberate: a bigger,
+better-contained primary action is found far faster on a phone. **The green
+"RUN ▶" text style you may remember is gone.** Two things did **not** change:
+tapping RUN ▶ still opens the Phase 33 chooser when you have set a different
+default file, and while an install is streaming the same tap still explains
+itself instead of starting a second job (Phase 44/45's chrome lock — during the
+lock the button is quiet-toned, and it always says why when tapped).
+
+**3. The Projects tab shows grey placeholder cards for a moment before your
+projects appear.** That is the new loading state: before it, "still reading the
+disk" and "you have no projects" were the *same screen*, which is exactly the
+moment you would think your work was gone. The placeholders copy your list's own
+shape **and its row count**, so nothing jumps when the names arrive. If the
+placeholders never resolve, it is a storage-permission or disk problem — see
+§29 (projects location).
+
+**Where each piece lives:** `.dp`-free token scale — `ui/theme/CodecTokens.kt`;
+the splash — `res/values/themes.xml` + `ui/crash/LaunchReadiness.kt`; RUN ▶'s
+role — `ui/editor/RunButtonStyle.kt`; the hub's branch — `ui/projects/HubListPolicy.kt`;
+the install moment — `ui/modules/InstallMoment.kt`; the terminal's first frame —
+`ui/terminal/TerminalIntro.kt`; haptics — `ui/components/Haptics.kt` +
+`ui/components/CodecHaptics.kt`; the press state —
+`ui/components/PressableSurface.kt`.

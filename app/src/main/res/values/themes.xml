@@ -2,4 +2,33 @@
 <resources>
 
     <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
+
+    <!--
+      Phase 51.1 — the cold start is CodeC, not black.
+
+      Before this, the launcher activity used Theme.MyApplication directly and
+      the first frame a user met on every cold start was the system window
+      background (a black or white rectangle) while MainActivity.onCreate built
+      the world. This style paints that first frame with the app's own mark on
+      the app's own surface:
+
+        * windowSplashScreenBackground = @color/codec_splash_background
+          (#101418 — the same value the launcher art already uses, pinned by
+          SplashThemeTest);
+        * windowSplashScreenAnimatedIcon = the EXISTING launcher foreground
+          (Phase 38.1's ">_" glyph, no new asset). On Android 12+ the platform
+          animates it; on API 24-30 androidx.core:core-splashscreen backports
+          the same behaviour (the ONLY new dependency of the 50-52 series);
+        * postSplashScreenTheme = the app theme the activity has always used.
+
+      The splash is dismissed by code, never by a timer: MainActivity installs
+      it and keeps it until the pure LaunchReadiness policy says the theme and
+      the first route are known (and a crash overlay or safe-mode start always
+      win). See ui/crash/LaunchReadiness.kt.
+    -->
+    <style name="Theme.Codec.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/codec_splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
+    </style>
 </resources>
