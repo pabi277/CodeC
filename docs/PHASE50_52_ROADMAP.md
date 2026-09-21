@@ -111,7 +111,9 @@ that a changed file uses the token, not that the whole app is converted.
 > **Phase 51 status (2026-09-21):** ✅ **COMPLETE, DEVICE-PASSED & MERGED** — owner:
 > *"Start phase 51"*, then *"All pass record and merge"* on device rows F1-F16 +
 > F17-F20 (all PASS; the record is the owner's own report, kept verbatim).
-> [PR #82](https://github.com/pabi277/CodeC/pull/82); 132 new host cases; APK
+> [PR #82](https://github.com/pabi277/CodeC/pull/82) — merge commit
+> `defc7170e3038b54f3b58946239e8d8c6e7c3772`, post-merge CI on `main` ✅
+> `35646568754`; 132 new host cases; APK
 > delta +73,884 B / +0.29 % debug, +27,066 B / +0.40 % release. What actually
 > landed — with the three plan premises the code corrected — is recorded in
 > [`chat-phase51/README.md`](chat-phase51/README.md) §Implementation.

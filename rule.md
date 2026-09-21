@@ -1139,8 +1139,10 @@ Every update updates the docs **in the same commit**:
   record and merge"*)**, recorded per row in the owning part docs' `## Test log (Phase 51 — the
   feel)` and in [`chat-phase51/README.md`](docs/chat-phase51/README.md) §Test log — the report named
   no device/OS/theme, and the record keeps exactly that. **✅ MERGED to `main` on the owner's own
-  command via [PR #82](https://github.com/pabi277/CodeC/pull/82)** (merge commit recorded in
-  JOURNEY §75). Next: **`Start Phase 52`** — the return (visible, decline-able resume; measured
+  command via [PR #82](https://github.com/pabi277/CodeC/pull/82)** — merge commit
+  `defc7170e3038b54f3b58946239e8d8c6e7c3772`, PR check ✅ `35645228712` on the final tip `4c215a1`,
+  **post-merge CI on `main` ✅ `35646568754`**. `main` is now at Phase 51 (the feel); Phase 50 (the look)
+  is the commit before it. Next: **`Start Phase 52`** — the return (visible, decline-able resume; measured
   first paint + jank budget; the streak in About, read once; twelve Roborazzi goldens).
 
 ---
