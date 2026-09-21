@@ -1,8 +1,10 @@
 # CodeC Phase 51 — The feel: the screens you touch every day
 
 > **Status:** 🚧 **IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`, owner:
-> "Start phase 51") — all four parts landed in source, 132 new host cases green
-> locally, CI round 1 on the push below; device round F1-F16 NOT run; not merged.**
+> "Start phase 51"; CI ✅ GREEN `35630471779` tip `32c7c70` — rounds 1 and 2 red
+> for-cause, see §CI below) — all four parts landed in source, 132 new host cases
+> green locally and green in CI (assemble + `testDebugUnitTest` + lint);
+> device round F1-F16 NOT run; not merged.**
 > · **Cost:** `[client-only]` ·
 > **Effort:** L · **Owner row (verbatim):** *"it's not attractive to user to use
 > multiple time so i want to boost it's ui 100× time"* — the **surfaces** half of
@@ -340,6 +342,22 @@ its prose said "46 rows" while its own table held 64 — the test reads the
 
 ### CI
 
+**✅ Round 3 (`35630471779`, tip `32c7c70`) — GREEN.** Full `Build APK`: assemble
++ `:app:testDebugUnitTest` + `:app:lintDebug`. **APK delta** (the whole phase
+plus its one new dependency, against the merged Phase 50 build `0f1b650` on the
+same `versionName` 1.3.17):
+**debug 25,809,492 B vs 25,735,608 B = +73,884 B (+0.29 %)** ·
+**release (measure-only) 6,714,740 B vs 6,687,674 B = +27,066 B (+0.40 %)**.
+Both well above Phase 42.2's ~0.1 % noise floor, which is what a new dependency
+plus four parts of chrome should look like — and it is the number the roadmap
+asked this phase to record.
+
+**Round 2 (`35630097400`, tip `1abceca`) — red for-cause, fixed:**
+`:app:compileDebugKotlin` reported `EditorScreen.kt:1710:42 Unresolved reference
+'PaddingValues'` — the new contained RUN ▶ passes `contentPadding =
+PaddingValues(...)` and the editor had never imported the layout type (its old
+run row had no padding value of its own). One import; no behaviour change.
+
 **Round 1 (`35629624183`, tip `b42f106`) — red for-cause, fixed:**
 `:app:mergeDebugResources` rejected `strings.xml`'s `terminal_intro_installing`.
 AAPT2 refuses a **raw apostrophe** in a string value and reports it as
@@ -355,7 +373,8 @@ for it instead of re-reading AAPT2's message.
 - **The device round**: `DEVICE_ROUND.md` F1-F16 (plus regression F17-F20) is
   written and **not run** — no device transcript exists, so nothing here claims
   device acceptance.
-- **The APK delta** for the one new dependency is measured from the CI artifact
-  of this branch's green `Build APK` run (recorded with the run id); no local
-  build is possible in the sandbox (Maven/Gradle hosts are unreachable).
+- **The APK delta is now recorded** (round 3 above): +73,884 B / +0.29 % debug,
+  +27,066 B / +0.40 % release, for the whole phase including
+  `androidx.core:core-splashscreen` 1.0.1. No local build is possible in the
+  sandbox (Maven/Gradle hosts are unreachable), so CI is the only measurement.
 - **Nothing is merged.** The branch stops at the merge gate (`rule.md` §3).

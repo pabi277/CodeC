@@ -1128,7 +1128,13 @@ Every update updates the docs **in the same commit**:
   (`35629624183`, tip `b42f106`) red for-cause:** AAPT2 rejects a **raw apostrophe** in a
   `strings.xml` value and reports it as `Invalid unicode escape sequence in string` — the
   message names the wrong thing, so before pushing, scan the `<string …>` lines and confirm every
-  apostrophe is written `\'` (comments may carry a raw one; values may not). Device round
+  apostrophe is written `\'` (comments may carry a raw one; values may not). **Round 2 (`35630097400`, tip
+  `1abceca`) red for-cause:** `:app:compileDebugKotlin` — the new contained RUN ▶ passes
+  `contentPadding = PaddingValues(...)` and `EditorScreen.kt` had never imported the layout type;
+  one import, fixed. **Round 3 ✅ GREEN `35630471779` tip `32c7c70`** (assemble +
+  `:app:testDebugUnitTest` + `:app:lintDebug`), **APK delta for the whole phase incl. the one new
+  dependency: debug 25,809,492 B = +73,884 B / +0.29 % over the merged Phase 50 build `0f1b650`,
+  release 6,714,740 B = +27,066 B / +0.40 %** (same `versionName` 1.3.17). Device round
   **F1-F16 NOT run** ([`chat-phase51/DEVICE_ROUND.md`](docs/chat-phase51/DEVICE_ROUND.md)); nothing
   is merged, nothing is pushed to `main` — the branch stops at the gate for the owner's command.
 

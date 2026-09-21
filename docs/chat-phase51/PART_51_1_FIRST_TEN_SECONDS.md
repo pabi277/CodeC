@@ -206,5 +206,11 @@ token roles, the badge, the strings).
 
 **Not run:** device rows F1-F4 (cold start, the guide's first frame, the welcome
 face, the second-launch speed) — no transcript exists, so this part claims no
-device acceptance. The `core-splashscreen` APK delta is read from the green
-`Build APK` artifact of this branch.
+device acceptance.
+
+**The dependency's own cost, measured** (round 3, `35630471779`, against the
+merged Phase 50 build on the same `versionName`): the whole phase — this part's
+splash and welcome work included, but the library is the only new *artifact* —
+adds **+73,884 B / +0.29 %** to the debug APK (25,809,492 B) and **+27,066 B /
++0.40 %** to the release APK (6,714,740 B). Phase 42.2's noise floor is ~0.1 %, so
+this is a real, small cost and it is recorded rather than assumed.
