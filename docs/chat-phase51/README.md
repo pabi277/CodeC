@@ -2,7 +2,8 @@
 
 > **Status:** ✅ **COMPLETE, DEVICE-PASSED & MERGED (2026-09-21, `arena/01a0c4cb-codec` →
 > [PR #82](https://github.com/pabi277/CodeC/pull/82), owner: "All pass record and
-> merge") — all four parts landed, 132 new host cases green in CI, CI ✅ GREEN
+> merge"; merge commit `defc7170e3038b54f3b58946239e8d8c6e7c3772`, PR check ✅
+> `35645228712` on tip `4c215a1`, post-merge CI on `main` ✅ `35646568754`) — all four parts landed, 132 new host cases green in CI, CI ✅ GREEN
 > `35630471779` tip `32c7c70` (rounds 1-2 red for-cause, see §CI), device round
 > **F1-F16 + F17-F20 ALL PASS by owner report** (see §Test log), APK delta
 > +73,884 B / +0.29 % debug and +27,066 B / +0.40 % release.**
@@ -401,4 +402,7 @@ per-row logs live in the owning part docs (`F1-F4` → 51.1, `F5-F9` → 51.2,
   sandbox (Maven/Gradle hosts are unreachable), so CI is the only measurement.
 - **Merged on the owner's command**, `arena/01a0c4cb-codec` → `main` via
   [PR #82](https://github.com/pabi277/CodeC/pull/82) (*"All pass record and
-  merge"*, 2026-09-21).
+  merge"*, 2026-09-21) — merge commit
+  `defc7170e3038b54f3b58946239e8d8c6e7c3772`; PR check ✅ `35645228712` on the final
+  tip `4c215a1` and post-merge CI on `main` ✅ `35646568754` (assemble +
+  `:app:testDebugUnitTest` + `:app:lintDebug`).
