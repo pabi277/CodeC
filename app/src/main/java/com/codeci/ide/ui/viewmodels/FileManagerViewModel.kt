@@ -53,8 +53,13 @@ class FileManagerViewModel : ViewModel() {
 
     private val _tree = MutableStateFlow<List<FileNode>>(emptyList())
     val tree: StateFlow<List<FileNode>> = _tree.asStateFlow()
+    // Phase 52.2 — the file tree has a real loading state, separate from the
+    // valid empty-project state.
+    private val _treeLoading = MutableStateFlow(false)
+    val treeLoading: StateFlow<Boolean> = _treeLoading.asStateFlow()
 
     private val expandedDirectories = mutableSetOf<String>()
+    private var treeGeneration = 0
 
     private val _isBusy = MutableStateFlow(false)
     val isBusy: StateFlow<Boolean> = _isBusy.asStateFlow()
@@ -261,7 +266,9 @@ class FileManagerViewModel : ViewModel() {
 
     fun closeProject() {
         _activeProject.value = null
+        treeGeneration++
         _tree.value = emptyList()
+        _treeLoading.value = false
         expandedDirectories.clear()
     }
 
@@ -856,10 +863,24 @@ class FileManagerViewModel : ViewModel() {
     private fun refreshTree() {
         val project = _activeProject.value ?: run {
             _tree.value = emptyList()
+            _treeLoading.value = false
             return
         }
-        val root = FileTreeRepository.buildTree(project.root, expandedDirectories)
-        _tree.value = FileTreeRepository.flattenVisible(root)
+        val expanded = expandedDirectories.toSet()
+        val generation = ++treeGeneration
+        _treeLoading.value = true
+        viewModelScope.launch {
+            val visible = withContext(Dispatchers.IO) {
+                val root = FileTreeRepository.buildTree(project.root, expanded)
+                FileTreeRepository.flattenVisible(root)
+            }
+            // A refresh can finish after the user closed or switched projects;
+            // never paint an old tree into the new project.
+            if (generation == treeGeneration && _activeProject.value?.name == project.name) {
+                _tree.value = visible
+                _treeLoading.value = false
+            }
+        }
     }
 
     private suspend fun finishImport(

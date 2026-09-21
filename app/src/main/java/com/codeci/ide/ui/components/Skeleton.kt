@@ -94,3 +94,79 @@ fun SkeletonHubCard(modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** Phase 52.2 — file-tree placeholder with the same row rhythm as TreeRow. */
+@Composable
+fun SkeletonFileTreeRow(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = CodecTokens.space(Space.L),
+                vertical = CodecTokens.space(Space.S),
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SkeletonBox(modifier = Modifier.size(CodecTokens.space(Space.XXL)))
+        Spacer(Modifier.size(CodecTokens.space(Space.M)))
+        Column(Modifier.weight(1f)) {
+            SkeletonBox(
+                modifier = Modifier
+                    .fillMaxWidth(0.58f)
+                    .height(CodecTokens.space(Space.M)),
+            )
+            Spacer(Modifier.height(CodecTokens.space(Space.XS)))
+            SkeletonBox(
+                modifier = Modifier
+                    .fillMaxWidth(0.28f)
+                    .height(CodecTokens.space(Space.XS)),
+            )
+        }
+    }
+}
+
+/** Phase 52.2 — package-row placeholder; row count stays fixed while loading. */
+@Composable
+fun SkeletonPackageRow(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = CodecTokens.space(Space.S)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SkeletonBox(modifier = Modifier.size(CodecTokens.space(Space.XXL)))
+        Spacer(Modifier.size(CodecTokens.space(Space.M)))
+        Column(Modifier.weight(1f)) {
+            SkeletonBox(
+                modifier = Modifier
+                    .fillMaxWidth(0.62f)
+                    .height(CodecTokens.space(Space.M)),
+            )
+            Spacer(Modifier.height(CodecTokens.space(Space.XS)))
+            SkeletonBox(
+                modifier = Modifier
+                    .fillMaxWidth(0.82f)
+                    .height(CodecTokens.space(Space.S)),
+            )
+        }
+    }
+}
+
+/** Phase 52.2 — source-control placeholder for its initial git read. */
+@Composable
+fun SkeletonGitRow(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = CodecTokens.space(Space.S)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SkeletonBox(modifier = Modifier.size(CodecTokens.space(Space.XL)))
+        Spacer(Modifier.size(CodecTokens.space(Space.M)))
+        SkeletonBox(
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .height(CodecTokens.space(Space.M)),
+        )
+    }
+}

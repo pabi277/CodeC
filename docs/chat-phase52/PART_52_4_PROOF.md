@@ -1,6 +1,6 @@
 # CodeC Phase 52.4 — The proof: screenshot goldens and the final walkthrough
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 CI wiring started; goldens and handset walkthrough pending · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"boost it's ui 100× time"* — and the only honest
 > answer to "did it work?" is evidence, not adjectives.
 > Parent: [`README.md`](README.md) ·
@@ -134,6 +134,16 @@ deliberately breaking one layout in a scratch commit and watching the run go
 red — the evidence goes in this part doc, then the scratch commit is dropped);
 the final walkthrough's eight beats are run by the owner on a fresh install; and
 the results are pasted into the owning part docs.
+
+## Implementation record (Phase 52 start)
+
+- The CI workflow now runs `:app:testDebugUnitTest`; the Gradle test task sets
+  `roborazzi.test.verify=true` only under CI, so it cannot silently re-record
+  images there.
+- Screenshot goldens and the eight-beat fresh-install walkthrough are **not
+  claimed complete**: image generation needs the CI/owner environment and the
+  walkthrough needs a handset. The first green CI run will supply the golden
+  inventory evidence before this part is marked done.
 
 ## Tests (plan)
 

@@ -67,6 +67,7 @@ import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.components.FileIconView
+import com.codeci.ide.ui.components.SkeletonGitRow
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.DiffOp
 import com.codeci.ide.ui.projects.GitBlocker
@@ -178,11 +179,11 @@ fun GitControlSheet(
 
             when {
                 state.loading || state.busy -> {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                    // Phase 52.2 — the source-control sheet has a stable shape
+                    // while git reads; a spinner-only blank made a slow status
+                    // call look like a broken sheet.
+                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                        repeat(4) { SkeletonGitRow() }
                     }
                 }
                 !state.gitInstalled -> {

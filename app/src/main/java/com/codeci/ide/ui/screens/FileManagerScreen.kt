@@ -121,6 +121,7 @@ import com.codeci.ide.ui.components.HapticMoment
 import com.codeci.ide.ui.components.rememberCodecHaptics
 import com.codeci.ide.ui.components.PressableSurface
 import com.codeci.ide.ui.components.SkeletonHubCard
+import com.codeci.ide.ui.components.SkeletonFileTreeRow
 import com.codeci.ide.ui.projects.HubListBranch
 import com.codeci.ide.ui.projects.HubListFacts
 import com.codeci.ide.ui.projects.HubListPolicy
@@ -175,7 +176,12 @@ fun FileManagerScreen(
     onPreviewFile: (String) -> Unit = {},
     onProjectPreviewFile: (projectName: String, relativePath: String) -> Unit = { _, path -> onPreviewFile(path) },
     onRunProjectFile: (projectName: String, relativePath: String) -> Unit = { _, _ -> },
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    /** Phase 52.1 — the visible return door, supplied by the activity session. */
+    resumeFacts: com.codeci.ide.ui.projects.ResumeFacts? = null,
+    showResumeOffer: Boolean = false,
+    onResumeContinue: () -> Unit = {},
+    onResumeDecline: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val projects by viewModel.projects.collectAsState()
@@ -185,6 +191,7 @@ fun FileManagerScreen(
     val hubFacts by viewModel.hubListFacts.collectAsState()
     val activeProject by viewModel.activeProject.collectAsState()
     val tree by viewModel.tree.collectAsState()
+    val treeLoading by viewModel.treeLoading.collectAsState()
     val isBusy by viewModel.isBusy.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
     val cloneError by viewModel.cloneError.collectAsState()
@@ -542,14 +549,26 @@ fun FileManagerScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (activeProject == null) {
-                ProjectsHubList(
-                    entries = hubEntries,
-                    facts = hubFacts,
-                    skeletonRows = viewModel.lastKnownHubRowCount(),
-                    filter = hubFilter,
-                    searchQuery = searchQuery,
-                    onFilterSelected = { hubFilter = it },
-                    onCardAction = { entry, action ->
+                Column(Modifier.fillMaxSize()) {
+                    if (showResumeOffer && resumeFacts != null) {
+                        ResumeOfferCard(
+                            facts = resumeFacts,
+                            onContinue = onResumeContinue,
+                            onDecline = onResumeDecline,
+                            modifier = Modifier.padding(
+                                horizontal = CodecTokens.space(Space.L),
+                                vertical = CodecTokens.space(Space.S),
+                            ),
+                        )
+                    }
+                    ProjectsHubList(
+                        entries = hubEntries,
+                        facts = hubFacts,
+                        skeletonRows = viewModel.lastKnownHubRowCount(),
+                        filter = hubFilter,
+                        searchQuery = searchQuery,
+                        onFilterSelected = { hubFilter = it },
+                        onCardAction = { entry, action ->
                         val project = projects.firstOrNull { it.name == entry.name } ?: return@ProjectsHubList
                         when (action) {
                             // Phase 51.4 — PROJECT_OPENED: the hub answered
@@ -628,8 +647,23 @@ fun FileManagerScreen(
                     },
                     onCreate = { showHubSheet = true },
                     onStarter = { startFromStarter(it) },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
                 )
+                }
+            } else if (treeLoading && tree.isEmpty()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = CodecTokens.space(Space.S)),
+                ) {
+                    item {
+                        SkeletonFileTreeRow(
+                            modifier = Modifier.padding(horizontal = CodecTokens.space(Space.L))
+                        )
+                    }
+                    items(7) { SkeletonFileTreeRow() }
+                }
             } else {
                 ProjectTree(
                     project = activeProject!!,
@@ -1224,6 +1258,63 @@ fun FileManagerScreen(
                 TextButton(onClick = { renameProjectTarget = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
+    }
+}
+
+/** Phase 52.1 — the hub's explicit return door. It is not a new route: the
+ * activity keeps the offer session-only and the two actions hand back to the
+ * existing editor or hub navigation. */
+@Composable
+private fun ResumeOfferCard(
+    facts: com.codeci.ide.ui.projects.ResumeFacts,
+    onContinue: () -> Unit,
+    onDecline: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val path = com.codeci.ide.ui.projects.ResumePolicy.displayPath(
+        facts.lastProject,
+        facts.lastFile,
+    ) ?: return
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.L)),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ),
+    ) {
+        Column(Modifier.padding(CodecTokens.space(Space.L))) {
+            Text(
+                text = stringResource(R.string.resume_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(CodecTokens.space(Space.XS)))
+            Text(
+                text = path,
+                style = MaterialTheme.typography.bodyLarge,
+                fontFamily = com.codeci.ide.ui.theme.CodecType.codeFamily,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(R.string.resume_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onDecline) {
+                    Text(stringResource(R.string.resume_decline))
+                }
+                Button(onClick = onContinue) {
+                    Text(stringResource(R.string.resume_continue))
+                }
+            }
+        }
     }
 }
 

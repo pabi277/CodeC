@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -227,6 +228,8 @@ class MainActivity : ComponentActivity() {
     private var startupPlan: com.codeci.ide.ui.crash.StartupLedger.Plan =
         com.codeci.ide.ui.crash.StartupLedger.Plan.NORMAL
     private var startupLedger: com.codeci.ide.ui.crash.StartupLedger? = null
+    /** Monotonic process/activity start used only for the first-paint log. */
+    private val launchStartedAtMs = SystemClock.elapsedRealtime()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Phase 51.1 — the cold start is CodeC, not black. Installed before
@@ -432,11 +435,23 @@ class MainActivity : ComponentActivity() {
                 // defaults) and is about to draw. One of the two facts the
                 // splash waits for.
                 androidx.compose.runtime.SideEffect { launchGate.themeResolved() }
-                MainApp(launchGate = launchGate, onStartupFinished = {
-                    // Phase 42.3 — the main screen was drawn: this start
-                    // succeeded, so the loop counter and the marker clear.
-                    startupLedger?.noteStartupFinished()
-                })
+                MainApp(
+                    launchGate = launchGate,
+                    onStartupFinished = {
+                        // Phase 42.3 — the main screen was drawn: this start
+                        // succeeded, so the loop counter and the marker clear.
+                        startupLedger?.noteStartupFinished()
+                    },
+                    onFirstFrame = { route ->
+                        // Phase 52.2 — one honest device-readable first-paint
+                        // sample. Continuous frame instrumentation belongs in
+                        // :bench, not in the shipping APK.
+                        AppLogger.i(
+                            "Launch",
+                            "firstFrameMs=${(SystemClock.elapsedRealtime() - launchStartedAtMs).coerceAtLeast(0L)} route=$route"
+                        )
+                    }
+                )
                 // Phase 25.2 device-round instrumentation: if the previous
                 // run crashed, surface the report in-app (no root / file
                 // manager needed) before anything else.
@@ -735,6 +750,8 @@ fun MainApp(
     onStartupFinished: () -> Unit = {},
     /** Phase 51.1 — the splash gate, told when the first route is known. */
     launchGate: com.codeci.ide.ui.crash.LaunchGate? = null,
+    /** Phase 52.2 — one first-paint sample, kept out of the shipping UI state. */
+    onFirstFrame: (route: String) -> Unit = {},
 ) {
     val navController = rememberNavController()
     val activity = requireNotNull(LocalActivity.current) as ComponentActivity
@@ -871,35 +888,15 @@ fun MainApp(
         // welcome above — a returning user never flashes the guide.
         return
     }
-    // "Open where I left off": the last project file wins as the start
-    // destination; a fresh install with no last file lands on the hub.
-    // Phase 42.3 — safe mode NEVER reopens the saved session: a
-    // half-written project file is exactly the kind of startup culprit the
-    // guard exists for, so the reduced start lands on the hub with the
-    // last file untouched on disk.
+    // "Open where I left off": the saved file remains the source of truth for
+    // what is resumable. Phase 52 adds a visible door around that decision — it
+    // does not invent a second file picker or a second launch state.
     val launchState = remember {
         if (com.codeci.ide.ui.crash.SafeMode.active) null else EditorLaunchState.load(activity)
     }
-    // Phase 44.1 — the setup truth, read ONCE for the start destination and
-    // then observed by the setup bar below. A fresh install (welcome just
-    // handed over, no usable Linux tools yet, and this device does have a
-    // bootstrap) starts on the Terminal tab so the download is visible while
-    // it runs; every other launch keeps the pre-44 behaviour. Computed once on
-    // purpose: a startDestination that changed later would rebuild the nav
-    // graph and throw away the user's navigation state.
-    val setupProgress by terminalViewModel.setupProgress.collectAsState()
-    val setupFacts by terminalViewModel.setupFacts.collectAsState()
-    val startDestination = remember(launchState) {
-        launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
-            ?: Screen.FileManager.route
-    }
-    // Phase 44.1 (device round 1) — "it opens the terminal 1st", decided from
-    // the DISK, not from the ViewModel's first (possibly stale) facts, and done
-    // with the SAME navigate() the bottom tab bar uses. Two reasons for the
-    // shape: a `startDestination` that has to resolve a route carrying
-    // arguments is graph-construction risk we do not need to take, and the
-    // owner's report was about an UPDATED install (no first-run welcome), where
-    // a rule keyed on "is this the welcome hand-over" could not fire at all.
+    // Phase 44.1 — setup wins before resume. This is deliberately the same
+    // disk-backed gate as the existing Terminal divert, so a visible resume
+    // card can never hide an install the user needs to watch.
     val setupLaunchDivert = remember {
         val prefix = ShellEnvironment.prefixDir(activity.filesDir)
         val phase = runCatching {
@@ -909,6 +906,47 @@ fun MainApp(
             usable = com.codeci.ide.ui.terminal.SetupGatePolicy.userlandUsable(prefix, phase),
             abiSupported = com.codeci.ide.ui.terminal.UserlandManifest.archName() != null
         )
+    }
+    val setupProgress by terminalViewModel.setupProgress.collectAsState()
+    val setupFacts by terminalViewModel.setupFacts.collectAsState()
+    val resumeFacts = remember(launchState, setupLaunchDivert) {
+        com.codeci.ide.ui.projects.ResumeFacts(
+            lastProject = launchState?.projectName,
+            lastFile = launchState?.fileName,
+            stillExists = launchState != null,
+            minutesSinceLastOpen = EditorLaunchState.minutesSinceLastOpen(activity),
+            welcomePending = firstLaunchComplete == false,
+            // Only inspect file metadata here; the overlay reads the report
+            // body on its existing IO coroutine after the first frame.
+            crashedLastTime = com.codeci.ide.ui.crash.CrashLog
+                .hasRecord(activity.filesDir),
+            setupNeedsWatching = setupLaunchDivert,
+            safeMode = com.codeci.ide.ui.crash.SafeMode.active,
+        )
+    }
+    val resumeOffer = remember(resumeFacts) {
+        com.codeci.ide.ui.projects.ResumePolicy.offerFor(resumeFacts)
+    }
+    val startDestination = remember(launchState, resumeOffer) {
+        when (resumeOffer) {
+            com.codeci.ide.ui.projects.ResumeOffer.CONTINUE_IN_PLACE ->
+                launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
+                    ?: Screen.FileManager.route
+            else -> Screen.FileManager.route
+        }
+    }
+    // The offer is activity-session state, not a preference. Both Continue and
+    // decline consume it, so navigating away and back never turns continuity
+    // into a nag.
+    var resumeHandled by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(false)
+    }
+    var firstFrameReported by remember { mutableStateOf(false) }
+    androidx.compose.runtime.SideEffect {
+        if (!firstFrameReported && routeKnown) {
+            firstFrameReported = true
+            onFirstFrame(startDestination)
+        }
     }
     LaunchedEffect(setupLaunchDivert) {
         if (!setupLaunchDivert) return@LaunchedEffect
@@ -1426,7 +1464,23 @@ fun MainApp(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    // Phase 52.1 — a long-absence return is a card in the hub,
+                    // not a second launch destination. Both actions consume the
+                    // activity-session offer; no preference is written.
+                    resumeFacts = resumeFacts,
+                    showResumeOffer = resumeOffer == com.codeci.ide.ui.projects.ResumeOffer.OFFER_CARD &&
+                        !resumeHandled,
+                    onResumeContinue = {
+                        resumeHandled = true
+                        launchState?.let { state ->
+                            navController.navigate(Screen.Editor.createRoute(state.fileName, state.projectName)) {
+                                launchSingleTop = true
+                                restoreState = false
+                            }
+                        }
+                    },
+                    onResumeDecline = { resumeHandled = true }
                 )
             }
             composable(
