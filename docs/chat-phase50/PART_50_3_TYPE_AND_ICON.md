@@ -1,6 +1,6 @@
 # CodeC Phase 50.3 — A type scale and one icon set
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI pending — Build APK is executor of record) · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** ✅ IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI ✅ GREEN `35495174151` — rounds 1–3 red for-cause (cubicBezier() not on this Compose; two test-compile type errors; audit row 64 owed by the new switch); device round L1–L12 pending at merge, owner command) · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"it's not attractive"* / *"boost it's ui 100×"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).

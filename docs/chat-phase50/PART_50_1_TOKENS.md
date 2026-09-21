@@ -1,6 +1,6 @@
 # CodeC Phase 50.1 — One scale, not 801 numbers
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI pending — Build APK is executor of record) · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI ✅ GREEN `35495174151` — rounds 1–3 red for-cause (cubicBezier() not on this Compose; two test-compile type errors; audit row 64 owed by the new switch); device round L1–L12 pending at merge, owner command) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive"* / *"boost it's ui 100×"*.
 > Parent: [`README.md`](README.md) (the evidence table) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -145,7 +145,7 @@ the four `space`/`radius`/`elevation`/`icon` helpers. Pinned by
 `CodecTokensTest` (ladders, monotonicity, 4-based rule, round-trips).
 
 **The six surfaces**, converted by the one-shot `scripts/phase50_tokens.py`
-(kept until CI is green, then deleted; it asserts rather than re-convert):
+(deleted after CI went green; it asserted rather than re-convert):
 
 | File | radius | elevation | icon sizes | spacing | protected as raw |
 |---|---|---|---|---|---|

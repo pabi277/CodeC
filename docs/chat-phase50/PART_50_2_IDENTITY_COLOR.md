@@ -1,6 +1,6 @@
 # CodeC Phase 50.2 — A brand you can see on Android 12+
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI pending — Build APK is executor of record) · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI ✅ GREEN `35495174151` — rounds 1–3 red for-cause (cubicBezier() not on this Compose; two test-compile type errors; audit row 64 owed by the new switch); device round L1–L12 pending at merge, owner command) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive"*; the older colour row
 > (2026-09-05) was *"research throughly on the color of the app's inside texts …
 > Now it is violet 💜 but not very good to read … Make the green as default"* —
