@@ -1,7 +1,7 @@
 # CodeC Phase 51.1 — Cold start and the first screen
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`) — device round
-> F1-F4 NOT run · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ DONE + DEVICE-PASSED (F1-F4 all PASS, owner report 2026-09-21,
+> [PR #82](https://github.com/pabi277/CodeC/pull/82)) · **Cost:** `[client-only]` · **Effort:** M ·
 > **New dependency:** `androidx.core:core-splashscreen` (Apache-2.0) — the
 > **only** new dependency in the whole 50-52 series.
 > **Owner row (verbatim):** *"not attractive … boost it's ui 100×"*, clarified
@@ -214,3 +214,23 @@ splash and welcome work included, but the library is the only new *artifact* —
 adds **+73,884 B / +0.29 %** to the debug APK (25,809,492 B) and **+27,066 B /
 +0.40 %** to the release APK (6,714,740 B). Phase 42.2's noise floor is ~0.1 %, so
 this is a real, small cost and it is recorded rather than assumed.
+
+---
+
+## Test log (Phase 51 — the feel)
+
+**Owner report, 2026-09-21, verbatim: *"All pass record and merge"*** — every row
+below is **PASS**. The report named no device, OS version or theme, so this log
+keeps exactly what the owner stated and nothing invented. Round record format:
+`F<n> — device / OS / theme / result / one sentence`. Build: the CI `Build APK`
+artifact of `arena/01a0c4cb-codec` (run `35630471779` tip `32c7c70`; final docs
+tip `feebab5`), debug `CodeC-IDE-1.3.17-universal-debug.apk`.
+
+| # | Part | Run on | What to do | PASS looks like |
+|---|---|---|---|---|
+| F1 | 51.1 | owner's handset (not specified) | force-stop, then launch; dark **and** light phone | **PASS** — the first frame is CodeC's mark on the brand surface, not a black rectangle |
+| F2 | 51.1 | same | launch five times, watch the hand-off | **PASS** — no waiting, no second of logo: the splash leaves as soon as the app is ready |
+| F3 | 51.1 | same | after a crash, does the report show | **PASS** — the crash door is not covered by the splash |
+| F4 | 51.1 | same | first run (or after clearing data) | **PASS** — the three tiles read as tiles, each with its language colour, each saying what happens next |
+
+**Result: 4/4 PASS, no re-round requested.**

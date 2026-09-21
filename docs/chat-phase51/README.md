@@ -1,10 +1,11 @@
 # CodeC Phase 51 — The feel: the screens you touch every day
 
-> **Status:** 🚧 **IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`, owner:
-> "Start phase 51"; CI ✅ GREEN `35630471779` tip `32c7c70` — rounds 1 and 2 red
-> for-cause, see §CI below) — all four parts landed in source, 132 new host cases
-> green locally and green in CI (assemble + `testDebugUnitTest` + lint);
-> device round F1-F16 NOT run; not merged.**
+> **Status:** ✅ **COMPLETE, DEVICE-PASSED & MERGED (2026-09-21, `arena/01a0c4cb-codec` →
+> [PR #82](https://github.com/pabi277/CodeC/pull/82), owner: "All pass record and
+> merge") — all four parts landed, 132 new host cases green in CI, CI ✅ GREEN
+> `35630471779` tip `32c7c70` (rounds 1-2 red for-cause, see §CI), device round
+> **F1-F16 + F17-F20 ALL PASS by owner report** (see §Test log), APK delta
+> +73,884 B / +0.29 % debug and +27,066 B / +0.40 % release.**
 > · **Cost:** `[client-only]` ·
 > **Effort:** L · **Owner row (verbatim):** *"it's not attractive to user to use
 > multiple time so i want to boost it's ui 100× time"* — the **surfaces** half of
@@ -23,10 +24,10 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [51.1](PART_51_1_FIRST_TEN_SECONDS.md) | Cold start and the first screen | M | 🚧 IMPLEMENTED |
-| [51.2](PART_51_2_EDITOR_SURFACE.md) | The editor, with RUN ▶ as the hero | L | 🚧 IMPLEMENTED |
-| [51.3](PART_51_3_HUB_PACKAGES_TERMINAL.md) | Hub / Packages / Terminal surfaces | M | 🚧 IMPLEMENTED |
-| [51.4](PART_51_4_MICRO_FEEDBACK.md) | Haptics, press states, confirmations | S/M | 🚧 IMPLEMENTED |
+| [51.1](PART_51_1_FIRST_TEN_SECONDS.md) | Cold start and the first screen | M | ✅ DONE |
+| [51.2](PART_51_2_EDITOR_SURFACE.md) | The editor, with RUN ▶ as the hero | L | ✅ DONE |
+| [51.3](PART_51_3_HUB_PACKAGES_TERMINAL.md) | Hub / Packages / Terminal surfaces | M | ✅ DONE |
+| [51.4](PART_51_4_MICRO_FEEDBACK.md) | Haptics, press states, confirmations | S/M | ✅ DONE |
 
 Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (F1-F16, written, not run).
 
@@ -352,6 +353,10 @@ Both well above Phase 42.2's ~0.1 % noise floor, which is what a new dependency
 plus four parts of chrome should look like — and it is the number the roadmap
 asked this phase to record.
 
+**Round 4 (`35631916639`, tip `feebab5`) — GREEN:** the two docs commits re-ran
+the full pipeline (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`) and
+passed, which is this repo's rule that even a docs-only push is proven by CI.
+
 **Round 2 (`35630097400`, tip `1abceca`) — red for-cause, fixed:**
 `:app:compileDebugKotlin` reported `EditorScreen.kt:1710:42 Unresolved reference
 'PaddingValues'` — the new contained RUN ▶ passes `contentPadding =
@@ -368,13 +373,32 @@ the only raw one), and the whole file was re-scanned for raw apostrophes before
 the next push. Recorded in `rule.md` §9's lesson list so the next session greps
 for it instead of re-reading AAPT2's message.
 
+### Test log (Phase 51 — the feel)
+
+**Owner report, 2026-09-21, verbatim: *"All pass record and merge"*** — every row
+of [`DEVICE_ROUND.md`](DEVICE_ROUND.md) is **PASS**. The report named no device,
+OS version or theme, so the record keeps exactly what the owner stated. The
+per-row logs live in the owning part docs (`F1-F4` → 51.1, `F5-F9` → 51.2,
+`F10-F13` → 51.3, `F14-F16` → 51.4); the four **regression** rows are here:
+
+| # | Part | Run on | What to do | PASS looks like |
+|---|---|---|---|---|
+| F17 | 48 (regression) | owner's handset (not specified) | open a long file, put the caret on the last line, raise the keyboard | **PASS** — the line stays above the keyboard; no blink while typing |
+| F18 | 49 (regression) | same | back from the drawer, from an open project tree, at the root | **PASS** — drawer closes, tree closes, the exit prompt appears at the root |
+| F19 | 45 (regression) | same | run the 11-beat tour | **PASS** — first to last, one tap per beat |
+| F20 | 46 (regression) | same | open two different projects | **PASS** — they never share one editor tab |
+
+**Result: 16/16 new rows + 4/4 regressions PASS, no re-round requested.**
+
 ### What is NOT done
 
-- **The device round**: `DEVICE_ROUND.md` F1-F16 (plus regression F17-F20) is
-  written and **not run** — no device transcript exists, so nothing here claims
-  device acceptance.
+- **Nothing outstanding on the device side**: the round was run and reported
+  ALL PASS (see §Test log) — the record is the owner's message itself, which is
+  the transcript this repo's law requires.
 - **The APK delta is now recorded** (round 3 above): +73,884 B / +0.29 % debug,
   +27,066 B / +0.40 % release, for the whole phase including
   `androidx.core:core-splashscreen` 1.0.1. No local build is possible in the
   sandbox (Maven/Gradle hosts are unreachable), so CI is the only measurement.
-- **Nothing is merged.** The branch stops at the merge gate (`rule.md` §3).
+- **Merged on the owner's command**, `arena/01a0c4cb-codec` → `main` via
+  [PR #82](https://github.com/pabi277/CodeC/pull/82) (*"All pass record and
+  merge"*, 2026-09-21).

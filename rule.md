@@ -1134,9 +1134,14 @@ Every update updates the docs **in the same commit**:
   one import, fixed. **Round 3 ✅ GREEN `35630471779` tip `32c7c70`** (assemble +
   `:app:testDebugUnitTest` + `:app:lintDebug`), **APK delta for the whole phase incl. the one new
   dependency: debug 25,809,492 B = +73,884 B / +0.29 % over the merged Phase 50 build `0f1b650`,
-  release 6,714,740 B = +27,066 B / +0.40 %** (same `versionName` 1.3.17). Device round
-  **F1-F16 NOT run** ([`chat-phase51/DEVICE_ROUND.md`](docs/chat-phase51/DEVICE_ROUND.md)); nothing
-  is merged, nothing is pushed to `main` — the branch stops at the gate for the owner's command.
+  release 6,714,740 B = +27,066 B / +0.40 %** (same `versionName` 1.3.17). **Device round F1-F16 +
+  the four regression rows F17-F20: ALL PASS by the owner's report (2026-09-21, verbatim: *"All pass
+  record and merge"*)**, recorded per row in the owning part docs' `## Test log (Phase 51 — the
+  feel)` and in [`chat-phase51/README.md`](docs/chat-phase51/README.md) §Test log — the report named
+  no device/OS/theme, and the record keeps exactly that. **✅ MERGED to `main` on the owner's own
+  command via [PR #82](https://github.com/pabi277/CodeC/pull/82)** (merge commit recorded in
+  JOURNEY §75). Next: **`Start Phase 52`** — the return (visible, decline-able resume; measured
+  first paint + jank budget; the streak in About, read once; twelve Roborazzi goldens).
 
 ---
 

@@ -1,7 +1,7 @@
 # CodeC Phase 51.3 — Hub, Packages and Terminal surfaces
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`) — device round
-> F9-F13 NOT run · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ DONE + DEVICE-PASSED (F10-F13 all PASS, owner report 2026-09-21,
+> [PR #82](https://github.com/pabi277/CodeC/pull/82)) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -210,3 +210,20 @@ gained none of this phase's vocabulary).
 
 **Not run:** device rows F9-F13 (the hub's loading frame, a real install's finish,
 the terminal's first frame in all three states, the package row's words).
+
+---
+
+## Test log (Phase 51 — the feel)
+
+**Owner report, 2026-09-21, verbatim: *"All pass record and merge"*** — every row
+below is **PASS** (device/OS/theme not named in the report). Build: the CI
+`Build APK` artifact of `arena/01a0c4cb-codec` (run `35630471779` tip `32c7c70`).
+
+| # | Part | Run on | What to do | PASS looks like |
+|---|---|---|---|---|
+| F10 | 51.3 | owner's handset (not specified) | empty the hub (or start fresh) | **PASS** — the empty hub is a designed screen (mark + starters + create door), not a sentence |
+| F11 | 51.3 | same | cold open straight into the hub with many projects | **PASS** — the list's own shape appears before the names; never a blank frame |
+| F12 | 51.3 | same | install a small package; rotate mid-install | **PASS** — the finish is visible (state change + one line) and happens exactly once |
+| F13 | 51.3 | same | Terminal tab on a fresh install, compare with the setup bar | **PASS** — the first frame says whether the tools are ready and agrees with the bar |
+
+**Result: 4/4 PASS, no re-round requested.**

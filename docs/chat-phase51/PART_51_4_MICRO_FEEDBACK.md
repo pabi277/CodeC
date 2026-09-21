@@ -1,7 +1,7 @@
 # CodeC Phase 51.4 — Haptics, press states, confirmations
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`) — device round
-> F14-F16 NOT run · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** ✅ DONE + DEVICE-PASSED (F14-F16 all PASS, owner report 2026-09-21,
+> [PR #82](https://github.com/pabi277/CodeC/pull/82)) · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -204,3 +204,20 @@ policy file imports no Android/Compose; the press component's call sites).
 **Not run:** device rows F14-F16 (the eight moments felt, the switch off, a
 press state seen). A haptic's *feel* is a handset judgement — the policy is a
 test, the feel is the owner's.
+
+---
+
+## Test log (Phase 51 — the feel)
+
+**Owner report, 2026-09-21, verbatim: *"All pass record and merge"*** — every row
+below is **PASS** (device/OS/theme not named in the report). Build: the CI
+`Build APK` artifact of `arena/01a0c4cb-codec` (run `35630471779` tip `32c7c70`).
+
+| # | Part | Run on | What to do | PASS looks like |
+|---|---|---|---|---|
+| F14 | 51.4 | owner's handset (not specified) | run a hello world, then a program that errors, then save | **PASS** — one tick on finish, a firm one on failure, one on save — and nowhere else |
+| F15 | 51.4 | same | Settings → Appearance → Haptics **off**, repeat F14 | **PASS** — total silence from the app's eight moments |
+| F16 | 51.4 | same | Settings → Editor → CodeC Keys → haptics | **PASS** — the CodeC keyboard's own haptics are unchanged by all of the above |
+
+**Result: 3/3 PASS, no re-round requested.** (The *feel* was judged on the
+handset, as planned; the policy stays a host test.)

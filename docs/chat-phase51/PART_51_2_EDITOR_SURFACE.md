@@ -1,7 +1,7 @@
 # CodeC Phase 51.2 — The editor, with RUN ▶ as the hero
 
-> **Status:** 🚧 IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`) — device round
-> F5-F8 NOT run · **Cost:** `[client-only]` · **Effort:** L ·
+> **Status:** ✅ DONE + DEVICE-PASSED (F5-F9 all PASS, owner report 2026-09-21,
+> [PR #82](https://github.com/pabi277/CodeC/pull/82)) · **Cost:** `[client-only]` · **Effort:** L ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -215,3 +215,22 @@ button, the touch floor, every minimum height from the scale),
 
 **Not run:** device rows F5-F8 (RUN ▶ visible at arm's length, the chord/keys row
 still reachable, the chip in both scratch states, save confirmation).
+
+---
+
+## Test log (Phase 51 — the feel)
+
+**Owner report, 2026-09-21, verbatim: *"All pass record and merge"*** — every row
+below is **PASS** (device/OS/theme not named in the report; nothing added here
+that the owner did not state). Build: the CI `Build APK` artifact of
+`arena/01a0c4cb-codec` (run `35630471779` tip `32c7c70`).
+
+| # | Part | Run on | What to do | PASS looks like |
+|---|---|---|---|---|
+| F5 | 51.2 | owner's handset (not specified) | open a file, hold the phone at arm's length, then repeat with the keyboard up | **PASS** — RUN ▶ is the most obvious control on the editor, keyboard up or down |
+| F6 | 51.2 | same | start a Python install, tap RUN ▶ | **PASS** — the lock sentence appears and nothing runs anyway (Phase 44's law intact) |
+| F7 | 51.2 | same | close every tab | **PASS** — scratch mode shows one sentence and one action, and the action opens something real |
+| F8 | 51.2 | same | type, open find, close it, type again | **PASS** — the chrome's gaps are even and nothing moves when the keyboard opens |
+| F9 | 51.2 | same | edit + save, three times | **PASS** — one short confirmation and nothing else |
+
+**Result: 5/5 PASS, no re-round requested.**
