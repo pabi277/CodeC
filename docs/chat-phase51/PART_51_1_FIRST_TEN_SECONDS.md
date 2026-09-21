@@ -1,6 +1,7 @@
 # CodeC Phase 51.1 — Cold start and the first screen
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`) — device round
+> F1-F4 NOT run · **Cost:** `[client-only]` · **Effort:** M ·
 > **New dependency:** `androidx.core:core-splashscreen` (Apache-2.0) — the
 > **only** new dependency in the whole 50-52 series.
 > **Owner row (verbatim):** *"not attractive … boost it's ui 100×"*, clarified
@@ -159,3 +160,51 @@ the owner's own stopwatch in 52.2's R4 records the number).
   progress-telling, and two progress surfaces would compete.
 - **A minimum splash duration** — rejected on principle (see the design).
 - **Re-ordering or re-wording the three starters** — Phase 33.1's decision.
+
+## Implementation (2026-09-21)
+
+`themes.xml` is no longer one line. `Theme.Codec.Splash` parents the library's
+`Theme.SplashScreen`, paints the window with `@color/codec_splash_background`
+(`#FF101418` — the value the launcher art already carries), shows the **existing**
+`ic_launcher_foreground`, and hands over to `Theme.MyApplication`. The launcher
+activity wears it (`AndroidManifest.xml:71`); the `<application>` does not.
+
+The dismissal is code, not a timer. `ui/crash/LaunchReadiness.kt` (new, pure)
+holds `LaunchFacts(themeResolved, startRouteKnown, crashOverlay, safeMode)`,
+`LaunchReadiness.keepSplash` = `!(crashOverlay || safeMode) && !(themeResolved &&
+startRouteKnown)`, and `LaunchGate` — the one `@Volatile` cell the activity
+writes and `setKeepOnScreenCondition` polls. `MainActivity` installs the splash
+**before** `super.onCreate`, seeds the gate with `SafeMode.active`, marks
+`overlayShown(startupPlan != NORMAL)` once the startup ledger has spoken, marks
+`themeResolved()` from a `SideEffect` inside the themed composition, and
+`startRouteKnown()` the moment the route is real.
+
+**The one correction that mattered.** `routeKnown` could not be
+`firstLaunchComplete != null`: the welcome gate and the guide gate each `return`
+for a frame while their own flag is still being read, so a splash released on
+that fact alone hands the window to an empty composition. It now needs **both**
+families — `firstLaunchComplete != null && (guideCompleted != null ||
+guideRequested)` — which is why the fact is called `startRouteKnown`.
+
+The welcome screen keeps its Phase 33.1 structure and gains its face: the
+`app_mark` at 96 dp (display art — 50.1's own exception to the token ladder), the
+tagline, an `OfflineCBadge` on `secondaryContainer`/`onSecondaryContainer`
+("C works offline — nothing to download"), and tiles on `surfaceContainerHigh`
+with `Elevation.CARD`, the language's own colour from `StarterIconView`, and a
+trailing `ArrowForward`. Each `WelcomeStarter` gained `nextStep` — the line the
+research says a first-run screen owes before the tap, and it names the entry file
+it will open.
+
+**Tests:** `LaunchReadinessTest` 12 (the truth table, safe mode and the overlay
+winning, and that the gate is a function — an overlay that appears and is
+dismissed does not leave the splash "already released"), `SplashThemeTest` 8
+(style, parent, colour, icon, hand-over theme, the manifest, no hex typed into
+the theme, the one dependency, and the no-clock pin over the real
+`MainActivity`/policy source), `WelcomeLayoutTest` 8 (the mark above the touch
+floor, three tiles and one render loop, `nextStep` naming each entry file, the
+token roles, the badge, the strings).
+
+**Not run:** device rows F1-F4 (cold start, the guide's first frame, the welcome
+face, the second-launch speed) — no transcript exists, so this part claims no
+device acceptance. The `core-splashscreen` APK delta is read from the green
+`Build APK` artifact of this branch.

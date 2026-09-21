@@ -32,6 +32,18 @@ class SettingsManager(private val context: Context) {
         // Phase 50.2 — "Match my wallpaper" (dynamic colour opt-in).
         val MATCH_WALLPAPER = booleanPreferencesKey("match_wallpaper")
 
+        // Phase 51.4 — the app's own haptics (the eight moments: run started,
+        // program finished/failed, file saved, install finished, tab closed,
+        // project opened, drag/long-press start). Default ON: they are quiet by
+        // nature and the research's finding is that these small answers are
+        // what people name when they describe an interface they like. It is a
+        // SEPARATE key from `codec_keys_haptics` (Phase 28.2/47.2, the code
+        // keyboard's own per-key tick) — turning this off must never silence
+        // the keyboard, and turning the keyboard's off must never silence the
+        // app chrome. Justified in PART_51_4's Deferred section: one key, one
+        // switch, no telemetry.
+        val HAPTICS = booleanPreferencesKey("haptics")
+
         val DEV_MODE = booleanPreferencesKey("dev_mode")
         val SHOW_FILE_PATHS = booleanPreferencesKey("show_file_paths")
         val EDITOR_CUSTOM_SNIPPETS = stringPreferencesKey("editor_custom_snippets")
@@ -157,6 +169,12 @@ class SettingsManager(private val context: Context) {
     suspend fun setCodecKeysEnabled(v: Boolean) { context.dataStore.edit { it[CODEC_KEYS_ENABLED] = v } }
     suspend fun setEditorKeepKeysOpen(v: Boolean) { context.dataStore.edit { it[EDITOR_KEEP_KEYS_OPEN] = v } }
     suspend fun setCodecKeysHaptics(v: Boolean) { context.dataStore.edit { it[CODEC_KEYS_HAPTICS] = v } }
+
+    // Phase 51.4 — the app chrome's haptics (the eight moments). Read by
+    // `rememberCodecHaptics()` (ui/components/CodecHaptics.kt) — one reader,
+    // so the switch cannot be half-wired.
+    val hapticsFlow: Flow<Boolean> = context.dataStore.data.map { it[HAPTICS] ?: true }
+    suspend fun setHaptics(v: Boolean) { context.dataStore.edit { it[HAPTICS] = v } }
     suspend fun setCodecKeysHeight(v: Float) { context.dataStore.edit { it[CODEC_KEYS_HEIGHT] = v.coerceIn(0.7f, 1.3f) } }
     suspend fun setCodecKeysLayoutJson(v: String) { context.dataStore.edit { it[CODEC_KEYS_LAYOUT_JSON] = v } }
 

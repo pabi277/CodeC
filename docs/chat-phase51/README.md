@@ -1,6 +1,9 @@
 # CodeC Phase 51 — The feel: the screens you touch every day
 
-> **Status:** 📋 **PLANNED — no app code.** · **Cost:** `[client-only]` ·
+> **Status:** 🚧 **IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`, owner:
+> "Start phase 51") — all four parts landed in source, 132 new host cases green
+> locally, CI round 1 on the push below; device round F1-F16 NOT run; not merged.**
+> · **Cost:** `[client-only]` ·
 > **Effort:** L · **Owner row (verbatim):** *"it's not attractive to user to use
 > multiple time so i want to boost it's ui 100× time"* — the **surfaces** half of
 > that sentence (the return half is Phase 52).
@@ -18,10 +21,10 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [51.1](PART_51_1_FIRST_TEN_SECONDS.md) | Cold start and the first screen | M | 📋 PLANNED |
-| [51.2](PART_51_2_EDITOR_SURFACE.md) | The editor, with RUN ▶ as the hero | L | 📋 PLANNED |
-| [51.3](PART_51_3_HUB_PACKAGES_TERMINAL.md) | Hub / Packages / Terminal surfaces | M | 📋 PLANNED |
-| [51.4](PART_51_4_MICRO_FEEDBACK.md) | Haptics, press states, confirmations | S/M | 📋 PLANNED |
+| [51.1](PART_51_1_FIRST_TEN_SECONDS.md) | Cold start and the first screen | M | 🚧 IMPLEMENTED |
+| [51.2](PART_51_2_EDITOR_SURFACE.md) | The editor, with RUN ▶ as the hero | L | 🚧 IMPLEMENTED |
+| [51.3](PART_51_3_HUB_PACKAGES_TERMINAL.md) | Hub / Packages / Terminal surfaces | M | 🚧 IMPLEMENTED |
+| [51.4](PART_51_4_MICRO_FEEDBACK.md) | Haptics, press states, confirmations | S/M | 🚧 IMPLEMENTED |
 
 Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (F1-F16, written, not run).
 
@@ -140,8 +143,9 @@ with its APK delta; and `DEVICE_ROUND.md` F1-F16 has been run by the owner.
 | `HapticPolicyTest` | ~12 | exactly the eight moments; off switch wins; keyboard setting untouched |
 | `HapticWiringTest` (source scan) | ~8 | all haptic calls go through the policy; none in the sora host |
 
-≈53 cases. The haptic *feel* is a device row, not a test; the policy is a test,
-not a feeling.
+≈53 cases (the plan's file names were split where the decision turned out to have
+three owners — see the implementation section below; **132 landed**). The haptic
+*feel* is a device row, not a test; the policy is a test, not a feeling.
 
 ## Sources (record)
 
@@ -160,3 +164,186 @@ library licence, Lottie rejected).
   speed; only its *chrome* is in scope.
 - **A "recent projects" carousel on the welcome screen** — that is 52.1's
   continuity job, and putting it here would duplicate the resume decision.
+
+---
+
+## Implementation (2026-09-21)
+
+**What actually landed**, part by part, with the corrections the code forced.
+
+### 51.1 — the cold start and the first screen
+
+| Piece | Where | Note |
+|---|---|---|
+| `Theme.Codec.Splash` (parent `Theme.SplashScreen`) | `res/values/themes.xml` | `windowSplashScreenBackground` = `@color/codec_splash_background` (`#FF101418`, the launcher art's own value), `windowSplashScreenAnimatedIcon` = the **existing** `ic_launcher_foreground`, `postSplashScreenTheme` = `Theme.MyApplication` |
+| the launcher activity wears it | `AndroidManifest.xml:71` | the `<application>` keeps `Theme.MyApplication` (only the launcher activity splashes) |
+| the one new dependency | `gradle/libs.versions.toml` `coreSplashscreen = "1.0.1"` + `app/build.gradle.kts:219` | Apache-2.0, no new licence file (AndroidX is covered by the existing notices) |
+| `LaunchFacts` / `LaunchReadiness` / `LaunchGate` | `ui/crash/LaunchReadiness.kt` (new, pure) | `keepSplash` = `!(crashOverlay \|\| safeMode) && !(themeResolved && startRouteKnown)` — the answer is derived from facts, so a slow device keeps its already-drawn splash instead of flashing half-built UI |
+| the activity wiring | `MainActivity.kt:247-254, 434, 800` | `installSplashScreen().setKeepOnScreenCondition { launchGate.keepSplash() }` **before** `super.onCreate`; `SafeMode.active` seeds the gate; `overlayShown(startupPlan != NORMAL)` after the ledger; `themeResolved()` from a `SideEffect` in the themed composition; `startRouteKnown()` the moment `routeKnown` is true |
+| the welcome repaint | `ui/screens/WelcomeScreen.kt` | the 96 dp `app_mark` (display art, 50.1's own exception), the tagline, a `secondaryContainer` **offline-C badge**, and the tiles on `surfaceContainerHigh` + `Elevation.CARD` with the arrow |
+| `nextStep` on each starter | `ui/projects/WelcomeStarters.kt` | one line naming what the tap does **and the entry file it opens** |
+
+**Correction found while wiring (recorded because it would have shipped a bug):**
+`routeKnown = firstLaunchComplete != null` alone is **not** enough. The welcome
+gate and the guide gate both `return` for a frame while their flags are still
+reading, so a splash released on the launch flag alone hands the window to an
+empty composition. It now requires **both** families —
+`firstLaunchComplete != null && (guideCompleted != null || guideRequested)` —
+which is exactly why the fact is named `startRouteKnown` and not
+`firstLaunchRead`.
+
+### 51.2 — the editor (chrome only)
+
+- **`RunButtonStyle`** (`ui/editor/RunButtonStyle.kt`, new, pure): `roleFor` is
+  lock-first (Phase 44's chrome lock wins over a running job, over a missing
+  file, over everything), `showsRunning` is `running && !locked`,
+  `isEnabled = locked || hasOpenFile` (a locked tap still runs
+  `showChromeLock`, so it is *enabled*), `toneFor` = `PRIMARY_CONTAINER` vs
+  `SURFACE_VARIANT`, and `visualFor` is the one call the screen makes.
+- **RUN ▶** (`EditorScreen.kt`, the `run_action` slot) is now a contained
+  `Button` on `primaryContainer` / `onPrimaryContainer`, `MIN_TOUCH` tall, with
+  the `NAV` glyph and its label kept — `RUN`, or `RUNNING` while the job it
+  started runs (new string `run_running`). The tour's anchor and its one-tap
+  `onGuideRunTap` are untouched; `onRunTap`'s Phase 33 chooser logic is
+  untouched; the old bare `.clip(...).clickable(onClick = onRunTap)` row is gone.
+- **`EditorChrome`** (`ui/editor/EditorChrome.kt`, new, pure): eight declared
+  slots in the screen's own order, `markerFor` → `// Phase 51.2 slot: <name>`,
+  and `gapFor` as `CodecTokens.Space` steps. It is a **declaration, not a
+  re-flow**: no chrome height changes and nothing moves, because Phase 48's
+  caret work was device-proven on the current height. What it buys is that a
+  later edit which moves a chrome piece fails `EditorChromeSlotTest` instead of
+  quietly changing the code view's height.
+- **`EditorEmptyState`** (`ui/editor/EditorEmptyState.kt`, new, pure) + the chip
+  in the editor column: with no tab and no project open, one sentence
+  (*"Nothing open — this is a scratch file."*) and **exactly one** action —
+  *Open my last file* (through the one resume source, `EditorLaunchState`, so
+  52.1 keeps owning resume) or *Browse projects*. It renders as chrome, never a
+  dialog.
+
+**Correction:** the plan's premise (*"with no file open … the user is looking at
+an empty frame"*) is **half right**. `EditorTabBar` really does return early
+(`EditorTabBar.kt:61`) and the top bar falls back to a bare file name — but the
+code view is never blank: `EditorViewModel.INITIAL_CODE` is a Hello-World
+`main.c` and `closeTab` deliberately keeps one buffer alive
+(`tabs.size <= 1`). "No tabs" therefore means **scratch mode**, and the honest
+deliverable is the thing that was genuinely missing — the chrome never *said* so
+and offered no way back into a real file.
+
+### 51.3 — hub, packages, terminal
+
+- **`HubListPolicy`** (`ui/projects/HubListPolicy.kt`, new, pure): three
+  branches — `LIST` when there are entries, `EMPTY` once a read has finished,
+  `LOADING` otherwise; `rowCount` answers for the skeleton and the list from one
+  function (floor `SKELETON_ROWS = 3`, and the last known count is honoured so
+  the transition cannot move the scroll position — the Phase 36 bug class);
+  `isPlaceholder` marks the non-interactive branch.
+- **`FileManagerViewModel`**: `hubListFacts` (`HubListFacts`) + a
+  `lastKnownHubRowCount()`, written by the existing `loadProjects`. **Not
+  `isBusy`** — that is also true for clone/delete/export and would draw a
+  skeleton over perfectly loaded projects.
+- **`Skeleton.kt`** (`SkeletonBox` on `CodecMotion.shimmer`, `SkeletonHubCard`)
+  + the hub's three-branch `Crossfade` (`FileManagerScreen` :1257 branch,
+  :1273 skeleton rows) + the designed empty state (the `app_mark`, the three
+  starter tiles, the create door).
+- **`InstallMoment`** (`ui/modules/InstallMoment.kt`, new, pure):
+  `labelFor` (RETRY beats everything except a working install → OPEN;
+  INSTALLING on state *or* a running command; else UPDATE / INSTALL),
+  `percentOrNull` coerced to 0-100, `failureKind` → `RETRY_IN_TERMINAL`, and
+  **`celebrateOnFinish` = only `NOT_INSTALLED`/`INSTALLING` → `INSTALLED`**.
+- **`ModulesScreen`**: the row's state is observable now (`installedNow` /
+  `installRequested` / `celebrated`) with a 1.5 s poll that runs **only while the
+  user's own install is in flight** and never as a background poll for a
+  screenful of rows; a genuine finish fires the `INSTALL_FINISHED` haptic and
+  the one-line toast; the badge crossfades on
+  `motion.floatOrSnap(CodecMotion.crossfadeSpec)`; the primary button wears
+  `installLabelText` and is disabled while in flight. The row still never
+  guesses a failure — Phase 44's law stands, the terminal reports.
+- **`TerminalIntroPolicy`** (`ui/terminal/TerminalIntro.kt`, new, pure) + the
+  strip above the emulator in `TerminalScreen`: `hasOutput` → silent;
+  `InstallProgress.inFlight` → INSTALLING; `SetupFacts.usable` → READY; else
+  NEEDS_SETUP. The emulator view itself is untouched.
+
+**Corrections:** (1) the planned `reading` flag was redundant — `loadedOnce`
+alone answers the branch, and the pair (`entryCount`, `loadedOnce`) is what the
+tests pin; (2) `SetupGatePolicy.barVisible` is **not** "an install is running"
+(it is also true for a *settled* READY-without-pkg / FAILED / UNSUPPORTED bar),
+so the terminal quotes `InstallProgress.inFlight`, the same predicate the setup
+bar refuses dismissal on — otherwise a failed setup would be announced as
+"installing"; (3) v1 of `celebrateOnFinish` (`previous != INSTALLED`) would have
+celebrated an **upgrade** of a package the user already had working; the
+predicate is now the genuine nothing→something transition, and a matrix test
+counts exactly two true cells out of sixteen.
+
+### 51.4 — micro-feedback
+
+- **`Haptics.kt`** (`ui/components/Haptics.kt`, new, **pure Kotlin** — no
+  Compose, no Android, so it runs on the host JVM): `HapticMoment` (the eight),
+  `HapticStrength` (two), `HapticInput`, `HapticPolicy.performFor` with three
+  guards checked *before* the mapping (no moment / switch off / no vibrator),
+  `FIRM = PROGRAM_FAILED, INSTALL_FINISHED, TAB_CLOSED`, and `RunHapticRule` (a
+  run's haptic fires on the transition the user caused; the first observation
+  owes nothing).
+- **`CodecHaptics.kt`** (new) is the **only** adapter: `LIGHT` →
+  `TextHandleMove`, `FIRM` → `LongPress`, wrapped in `runCatching`;
+  `rememberCodecHaptics()` reads the DataStore switch itself (`initial = true`)
+  and `HapticsSupport.hasVibrator` (API-31 `VibratorManager`, API-24
+  `Vibrator.hasVibrator()`; no `VibrationEffect` is built anywhere in the app).
+- **The switch**: DataStore key `haptics` (default **on**) with
+  `hapticsFlow`/`setHaptics`, rendered in Settings → Appearance above the theme
+  preview, and audit row 65 in the same commit. The keyboard's own
+  `codec_keys_haptics` is untouched — `HapticWiringTest` pins both keys.
+- **All eight moments wired**: `RUN_STARTED` / `PROGRAM_FINISHED` /
+  `PROGRAM_FAILED` (one `LaunchedEffect(busy, exitCode)` + `RunHapticRule`),
+  `FILE_SAVED`, `TAB_CLOSED` (both close paths), `INSTALL_FINISHED`,
+  `PROJECT_OPENED`, `DRAG_STARTED` (the tree's long press).
+- **`PressableSurface`** (new): token radius + container role + the `MIN_TOUCH`
+  floor + a 0.98 press scale on `CodecMotion.effectsSpring` (`indication = null`
+  — the scale *is* the feedback). Call sites: the Packages section header
+  (where the containment flag keeps a plain label plain) and the hub's
+  New-Project sheet rows.
+- **Snackbars, never dialogs**: the save path's one-word `Saved`, the install
+  finish's one line. No new dialog exists in this phase.
+
+**Correction:** the plan's `HapticPolicy.performFor` returned the *platform*
+`HapticFeedbackType`, which would have dragged Android into the policy and cost
+the host test. The split is now policy (pure → `HapticStrength`) / adapter
+(`CodecHaptics`) — and that split is what `HapticWiringTest` pins, including
+that nothing in `app/src/main/java` performs haptic feedback outside
+`CodecHaptics.kt` and the pre-existing keyboard.
+
+### The tests that landed (132 cases, 14 classes)
+
+| File | Cases | Pins |
+|---|---|---|
+| `LaunchReadinessTest` | 12 | splash leaves on readiness, never on a timer; safe mode / crash overlay win; the gate is a function, not a latch |
+| `SplashThemeTest` | 8 | the theme, the manifest, the colour, the icon, `postSplashScreenTheme`, the one dependency, and the no-clock pin |
+| `WelcomeLayoutTest` | 8 | the mark at display size, the three tiles, `nextStep` naming the entry file, the elevated card roles, the offline-C badge |
+| `RunButtonStyleTest` | 9 | the lock wins; a run owns the word; nothing-open is quiet, never hidden; the visual is total |
+| `EditorChromeSlotTest` | 9 | eight slots, their order **read from the real file**, the marker per slot, off-scale gaps impossible, RUN contained |
+| `EditorEmptyStateTest` | 8 | exactly one action, and it reuses `EditorLaunchState`; the chip is chrome, never a dialog |
+| `HubListPolicyTest` | 9 | loading ≠ empty; the branch matrix; the placeholder is not interactive |
+| `SkeletonStabilityTest` | 4 | the skeleton and the list answer their count from one function |
+| `HubSurfaceTest` | 9 | the three branches render; the skeleton template; the empty state's design; every hub card action still exists |
+| `InstallMomentTest` | 14 | the label per state; exactly two celebrating transitions; clamped progress; the failure points at the terminal |
+| `TerminalIntroTest` | 9 | the four states from the shared facts; output always wins |
+| `TerminalChromeTest` | 7 | the shared facts, the copy, the tokens, and the two do-not-touch files |
+| `HapticPolicyTest` | 14 | the eight (by name), the two strengths, three guards, the run rule |
+| `HapticWiringTest` | 12 | one platform call site, the adapter's shape, both Settings keys, all eight wired, the animation-free zones stay free |
+
+Plus the Phase 50 pins re-run green against the new tree: `TokenAdoptionTest`,
+`TouchTargetTest` (still exactly 16 `IconButton`s — RUN is a `Button` and the
+chip a `TextButton`), `MotionWiringTest` (spec constructors live only in
+`CodecMotion.kt` — the Crossfade spec is now passed in, not constructed),
+`SettingsAuditTest` (the audit table's row count, corrected in the same commit:
+its prose said "46 rows" while its own table held 64 — the test reads the
+**table**, so the prose had drifted; it now says 65 with row 65 added).
+
+### What is NOT done
+
+- **The device round**: `DEVICE_ROUND.md` F1-F16 (plus regression F17-F20) is
+  written and **not run** — no device transcript exists, so nothing here claims
+  device acceptance.
+- **The APK delta** for the one new dependency is measured from the CI artifact
+  of this branch's green `Build APK` run (recorded with the run id); no local
+  build is possible in the sandbox (Maven/Gradle hosts are unreachable).
+- **Nothing is merged.** The branch stops at the merge gate (`rule.md` §3).

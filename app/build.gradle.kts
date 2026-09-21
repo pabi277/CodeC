@@ -209,6 +209,14 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
+  // Phase 51.1 — the splash screen API (Apache-2.0, JetBrains/Google-authored
+  // `androidx.core`, the same licence family as every other androidx line
+  // here). `installSplashScreen()` + the `Theme.SplashScreen` compat theme
+  // paint the first frame with the app's own mark instead of the system's
+  // black window, on API 24+ (the library backports the Android 12 platform
+  // behaviour; targetSdk 28 and minSdk 24 are untouched). This is the ONLY
+  // new dependency of the 50-52 series (PHASE50_52_ROADMAP cost table).
+  implementation(libs.androidx.core.splashscreen)
   implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -57,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -70,7 +72,11 @@ import com.codeci.ide.ui.components.TerminalEmulatorView
 import com.codeci.ide.ui.components.TerminalExtraKeys
 import com.codeci.ide.ui.components.openTerminalUrl
 import com.codeci.ide.ui.components.parseExtraKeysMacros
+import com.codeci.ide.ui.terminal.SetupFacts
 import com.codeci.ide.ui.terminal.SetupGatePolicy
+import com.codeci.ide.ui.terminal.TerminalIntro
+import com.codeci.ide.ui.terminal.TerminalIntroFacts
+import com.codeci.ide.ui.terminal.TerminalIntroPolicy
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalLifecycle
 import com.codeci.ide.ui.terminal.TerminalSessionItem
@@ -103,6 +109,9 @@ fun TerminalScreen(
     // userland 62 %" instead of the fixed "starting shell…" that hid a 200 MB
     // one-time download behind a lie by omission.
     val setupProgress by viewModel.setupProgress.collectAsState()
+    // Phase 51.3 — the SAME facts the setup bar and Packages render, so the
+    // terminal's first frame cannot disagree with them about "is it ready?".
+    val setupFacts by viewModel.setupFacts.collectAsState()
     val fontSize by viewModel.fontSizeSp.collectAsState()
     val fontFamily by viewModel.fontFamily.collectAsState()
     val terminalThemeType by viewModel.terminalTheme.collectAsState()
@@ -365,6 +374,47 @@ fun TerminalScreen(
                 color = statusColor,
                 style = MaterialTheme.typography.labelMedium
             )
+        }
+        // Phase 51.3 — the terminal's first frame. One line, from the pure
+        // policy: INSTALLING while the setup bar is showing an install, READY
+        // when the tools are usable, NEEDS_SETUP when they are neither (and the
+        // C-is-offline sentence still holds). Nothing at all once the shell has
+        // spoken — the terminal is the shell's, and this is only its introduction.
+        val intro = TerminalIntroPolicy.introFor(
+            TerminalIntroFacts(
+                setup = setupFacts,
+                // "the shell has produced a line": any non-blank cell row.
+                hasOutput = snapshot.lines.any { it.readableText().isNotBlank() },
+            )
+        )
+        if (!TerminalIntroPolicy.isSilent(intro)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S))
+                    .clip(RoundedCornerShape(CodecTokens.radius(Radius.M)))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(horizontal = CodecTokens.space(Space.M), vertical = CodecTokens.space(Space.S)),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.GetApp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
+                )
+                Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
+                Text(
+                    text = when (intro) {
+                        TerminalIntro.INSTALLING -> stringResource(R.string.terminal_intro_installing)
+                        TerminalIntro.READY -> stringResource(R.string.terminal_intro_ready)
+                        TerminalIntro.NEEDS_SETUP -> stringResource(R.string.terminal_intro_needs_setup)
+                        TerminalIntro.NONE -> ""
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         TerminalEmulatorView(
             snapshot = snapshot,

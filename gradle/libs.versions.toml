@@ -1,6 +1,9 @@
 [versions]
 agp = "9.1.1"
 coreKtx = "1.18.0"
+# Phase 51.1 — the platform splash API backported to API 24 (Apache-2.0);
+# the ONLY new dependency of the 50-52 series (roadmap cost table).
+coreSplashscreen = "1.0.1"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
@@ -36,8 +39,10 @@ soraEditor = "0.24.6"
 zxingCore = "3.5.4"
 
 
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

@@ -1087,6 +1087,47 @@ Every update updates the docs **in the same commit**:
   the changed main sources for them before pushing — TROUBLESHOOTING §34 has the
   replacement table and the one-line check.
 
+- **Phases 50 ✅ MERGED and 51 🚧 IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`, owner: "Start phase 51").**
+  **Phase 50 (the look) is ✅ COMPLETE & MERGED via [PR #81](https://github.com/pabi277/CodeC/pull/81)** —
+  `main` @ `0f1b650`, CI ✅ `35495174151` on the branch tip: `CodecTokens`
+  (space/radius/elevation/icon + the 48 dp `MIN_TOUCH` floor), `IdentityPolicy` + the brand ramp
+  (dynamic colour by default, D1), `CodecType`'s scale, `CodecMotion`'s specs and `MotionPolicy`
+  (`MotionSpecs`, the one `useSpring` gate), with `TokenAdoptionTest` / `MotionWiringTest` /
+  `ChromeContrast` pins. **Phase 51 (the feel) is the phase this branch implements**: 51.1 the cold
+  start is CodeC's own (`Theme.Codec.Splash` from `androidx.core:core-splashscreen` 1.0.1 — the one new
+  dependency of the 50-52 series — released ONLY by the pure `LaunchReadiness`/`LaunchGate` facts,
+  never a timer, and a `routeKnown` that needs BOTH launch-flag families or the splash flashes the
+  welcome gate's one-frame `return`; plus `WelcomeScreen`'s mark/tagline/offline-C badge and
+  `WelcomeStarter.nextStep`); 51.2 `RunButtonStyle` (lock-first) puts RUN ▶ in a contained
+  `primaryContainer` Button with `RUNNING` as its state word, `EditorChrome`'s 8 declared slots +
+  `markerFor` markers pin the chrome order from the real source (a declaration, NOT a re-flow: Phase
+  48's caret geometry is device-proven), and `EditorEmptyState` adds the scratch-file chip with
+  exactly one action reusing `EditorLaunchState`; 51.3 `HubListPolicy` (LOADING/EMPTY/LIST from
+  `loadedOnce`, `SKELETON_ROWS`) + `Skeleton.kt` (`CodecMotion.shimmer`) so the hub never shows
+  "no projects" while the disk is still being read, `InstallMoment` (celebrate ONLY on a genuine
+  transition into INSTALLED) with ModulesScreen polling `checkIsInstalled` every 1.5 s only while the
+  user's own install is in flight, and `TerminalIntroPolicy` (shared `SetupFacts`;
+  `InstallProgress.inFlight`; silent the moment the shell speaks); 51.4 `Haptics.kt` — the eight
+  moments, two strengths, three guards, Compose-free — plus `CodecHaptics.kt` (the only adapter,
+  `LIGHT` → `TextHandleMove`, `FIRM` → `LongPress`), the Settings switch `haptics` default ON
+  (audit row 65; the keyboard's `codec_keys_haptics` untouched), and `PressableSurface`'s containment
+  rule on the two bare-clickable surfaces. **132 host cases in 14 new/updated test classes**
+  (LaunchReadiness 12 · RunButtonStyle 9 · EditorChromeSlot 9 · EditorEmptyState 8 · HubListPolicy 9 ·
+  InstallMoment 14 · TerminalIntro 9 · SkeletonStability 4 · HapticPolicy 14 · HapticWiring 12 ·
+  HubSurface 9 · TerminalChrome 7 · SplashTheme 8 · WelcomeLayout 8), all green locally through the
+  §9 harness; the Phase 50 pins (TokenAdoption/TouchTarget/SettingsAudit/MotionWiring) re-run green
+  against the new tree. **Three plan premises were corrected by reading the code, and each is a
+  lesson:** (1) the editor is never an empty frame — the VM keeps one scratch buffer alive
+  (`INITIAL_CODE` + `closeTab` returning at `tabs.size <= 1`), so 51.2's deliverable is a sentence
+  plus one resume action, not a full-screen state; (2) the hub needs `loadedOnce` (has a read ever
+  finished?), not the planned `reading` flag or `isBusy` — `isBusy` is also true for clone/delete and
+  would draw skeletons over loaded projects, and `reading` alone could not tell "no read yet" from
+  "read finished, zero projects"; (3) `SetupGatePolicy.barVisible` is NOT "an install is running"
+  (it is also true for a settled READY-without-pkg / FAILED bar), so the terminal's first frame uses
+  `InstallProgress.inFlight`, the same predicate the bar refuses dismissal on. Device round
+  **F1-F16 NOT run** ([`chat-phase51/DEVICE_ROUND.md`](docs/chat-phase51/DEVICE_ROUND.md)); nothing
+  is merged, nothing is pushed to `main` — the branch stops at the gate for the owner's command.
+
 ---
 
 ## 10. GitHub without a terminal (cheat sheet)

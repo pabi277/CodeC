@@ -59,6 +59,21 @@ class FileManagerViewModel : ViewModel() {
     private val _isBusy = MutableStateFlow(false)
     val isBusy: StateFlow<Boolean> = _isBusy.asStateFlow()
 
+    // Phase 51.3 — the hub's LOADING state. `isBusy` cannot serve it: it is
+    // true for clone/delete/export too, and a skeleton during a delete would be
+    // a lie. This says exactly one thing — "has a read ever finished?" — and the
+    // pure HubListPolicy turns it (plus the entry count) into the branch the
+    // list renders (LOADING / EMPTY / LIST). `lastKnownHubCount` is the count
+    // the skeleton honours so the list's shape does not jump when the names
+    // arrive (SkeletonStabilityTest).
+    private val _hubListFacts = MutableStateFlow(com.codeci.ide.ui.projects.HubListFacts())
+    val hubListFacts: StateFlow<com.codeci.ide.ui.projects.HubListFacts> =
+        _hubListFacts.asStateFlow()
+
+    /** The last non-zero entry count the hub showed (skeleton stability). */
+    private var lastKnownHubCount: Int = 0
+    fun lastKnownHubRowCount(): Int = lastKnownHubCount
+
     private val _userMessage = MutableStateFlow<String?>(null)
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
 
@@ -86,10 +101,19 @@ class FileManagerViewModel : ViewModel() {
 
     fun loadProjects(context: Context) {
         viewModelScope.launch {
+            // Phase 51.3 — the read is announced before it starts and cleared
+            // after it lands, so the hub can show its own shape instead of the
+            // empty state while the disk is being read.
             val manager = ProjectManager(context)
             val loaded = withContext(Dispatchers.IO) { manager.listProjects() }
             _projects.value = loaded
             _hubEntries.value = buildHubEntries(context, loaded)
+            val entries = _hubEntries.value.size
+            if (entries > 0) lastKnownHubCount = entries
+            _hubListFacts.value = com.codeci.ide.ui.projects.HubListFacts(
+                entryCount = entries,
+                loadedOnce = true,
+            )
             val current = _activeProject.value
             if (current != null) {
                 _activeProject.value = loaded.firstOrNull { it.name == current.name }

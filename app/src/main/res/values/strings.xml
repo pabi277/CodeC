@@ -127,6 +127,9 @@
     <string name="share_logs">Share Logs</string>
     <string name="back">Back</string>
     <string name="run">RUN</string>
+    <!-- Phase 51.2 — the hero's own state: the button stays contained and its
+         word becomes what is happening (Google's study: keep the label). -->
+    <string name="run_running">RUNNING</string>
     <string name="save">Save</string>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
@@ -340,6 +343,37 @@
     <string name="hub_filter_web">Web</string>
     <string name="hub_no_match">No projects match this filter</string>
     <string name="hub_create_first">Create your first project</string>
+
+    <!-- Phase 51.1 — the first screen (welcome): the tagline, the section
+         label and the offline-C reassurance badge. The three tiles' own copy
+         (title/subtitle/nextStep) lives in WelcomeStarters, where Phase 33.1
+         put it, and WelcomeScreenTest pins all of it. -->
+    <string name="welcome_tagline">Write and run code on your phone.</string>
+    <string name="welcome_pick_language">Pick a language to get started</string>
+    <string name="welcome_offline_c">C works offline — nothing to download</string>
+
+    <!-- Phase 51.2 — the editor's empty (scratch) chip: one sentence, one
+         action. Shown only with no tab and no project open. -->
+    <string name="editor_empty_scratch">Nothing open — this is a scratch file.</string>
+    <string name="editor_empty_open_last">Open my last file</string>
+    <string name="editor_empty_browse">Browse projects</string>
+    <string name="editor_saved">Saved</string>
+
+    <!-- Phase 51.3 — the terminal's first frame and the install moment. -->
+    <string name="terminal_intro_ready">Linux tools are ready — type a command, or run a file with RUN.</string>
+    <string name="terminal_intro_installing">Setting up CodeC's Linux tools — one time only, nothing to do.</string>
+    <string name="terminal_intro_needs_setup">Linux tools are not installed yet. C still works offline with the built-in compiler.</string>
+    <string name="install_label_install">INSTALL</string>
+    <string name="install_label_installing">INSTALLING</string>
+    <string name="install_label_open">OPEN</string>
+    <string name="install_label_update">UPDATE</string>
+    <string name="install_label_retry">RETRY</string>
+    <string name="install_progress">%1$s %2$d%%</string>
+    <string name="install_finished">%1$s installed — ready to run.</string>
+    <string name="install_failed">%1$s did not install. The terminal shows why — tap the row to retry.</string>
+
+    <!-- Phase 51.4 — the one haptics switch (the app's eight moments). -->
+    <string name="haptics_title">Haptics</string>
     <string name="hub_sheet_title">New Project</string>
     <string name="hub_sheet_new">New Project</string>
     <string name="hub_sheet_new_subtitle">Start from a template</string>

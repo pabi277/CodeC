@@ -1,6 +1,7 @@
 # CodeC Phase 51.4 — Haptics, press states, confirmations
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`) — device round
+> F14-F16 NOT run · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -142,3 +143,62 @@ switch off = silence, keyboard haptics unchanged) has been run by the owner.
   second source would double-buzz.
 - **Sound effects** — no audio assets; out of scope by repo convention.
 - **A per-moment user setting** — one switch, not eight.
+
+## Implementation (2026-09-21)
+
+**The policy stayed pure and the platform stayed in one file.** The spec's
+`performFor` returned a platform `HapticFeedbackType`, which would have pulled
+Android into the decision and cost the host test; the landed split is
+`HapticPolicy.performFor(HapticInput): HapticStrength?` in
+`ui/components/Haptics.kt` (new — **pure Kotlin**, no Compose, no Android) and
+`CodecHaptics` in `ui/components/CodecHaptics.kt` (new), the single adapter that
+turns `LIGHT` → `HapticFeedbackType.TextHandleMove` and `FIRM` →
+`HapticFeedbackType.LongPress` inside `runCatching`. Three guards are checked
+*before* the mapping (no moment / switch off / no vibrator), so "off means off"
+cannot be bypassed by a moment that happens to be firm. `rememberCodecHaptics()`
+reads the DataStore switch itself (one reader, one behaviour, and the switch
+cannot be half-wired) and `HapticsSupport.hasVibrator` guards the API split
+(`VibratorManager` on API 31+, `Vibrator.hasVibrator()` below — no
+`VibrationEffect`, which is API 26+, is built anywhere).
+
+**The eight moments are wired, each at the place the user's own act happens:**
+`RUN_STARTED` / `PROGRAM_FINISHED` / `PROGRAM_FAILED` from ONE
+`LaunchedEffect(busy, exitCode)` through the pure `RunHapticRule` (a screen that
+opens onto an already-finished run stays quiet — the first observation owes
+nothing, Phase 48's discipline); `FILE_SAVED` on the write; `TAB_CLOSED` on both
+close paths (never from the dirty-tab dialog — a dialog is a question, not an
+act); `INSTALL_FINISHED` on the genuine install transition (51.3's policy);
+`PROJECT_OPENED` on the hub's OPEN; `DRAG_STARTED` on the file tree's long press.
+
+**One switch, default on, and the keyboard's own setting is untouched.** DataStore
+key `haptics` (`booleanPreferencesKey("haptics")`, read as `it[HAPTICS] ?: true`)
+with `hapticsFlow`/`setHaptics`, rendered in Settings → Appearance above the theme
+preview, with `SETTINGS_AUDIT.md` row 65 in the same commit. `codec_keys_haptics`
+(Phase 28.2/47.2) stays the keyboard's own — `HapticWiringTest` pins that both
+keys still exist and that each is read by its own surface.
+
+**A tappable thing has an edge.** `PressableSurface` (new) is the containment
+rule: token radius, a container role, the `MIN_TOUCH` floor, and the press state
+itself — 0.98 on `CodecMotion.effectsSpring`, `indication = null`, because the
+scale *is* the feedback and the size never changes, so nothing re-measures under
+a typing finger. It renders its content verbatim (no new widget), and the
+`contained` flag keeps a plain label plain: the two call sites are the Packages
+section header (`ModulesScreen`, a bare `Row` with a `clickable`) and the hub's
+New-Project sheet rows (`FileManagerScreen`, `clip` + `clickable` with no
+container). Cards keep Material's own ripple — they already have containment.
+
+**Confirmations are still snackbars and states.** The save path's one-word
+`Saved`, the install finish's one line, and the output panel's own state for a
+finished run. This phase adds **no dialog**.
+
+**Tests:** `HapticPolicyTest` 14 (the eight by name, exactly three firm, every
+guard, the run rule's transitions and its silences), `HapticWiringTest` 12 (the
+platform call exists in exactly two files and one of them is new; `LocalHapticFeedback`
+is borrowed by the adapter and the keyboard only; the adapter asks the policy and
+never invents a moment; both DataStore keys; all eight moments wired; the sora
+host, the emulator view and the whole `ui/guide` package stay haptic-free; the
+policy file imports no Android/Compose; the press component's call sites).
+
+**Not run:** device rows F14-F16 (the eight moments felt, the switch off, a
+press state seen). A haptic's *feel* is a handset judgement — the policy is a
+test, the feel is the owner's.

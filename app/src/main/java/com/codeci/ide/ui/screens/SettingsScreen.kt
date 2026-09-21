@@ -163,6 +163,8 @@ fun SettingsScreen(
     val terminalExtraKeysMacros by settingsManager.terminalExtraKeysMacrosFlow.collectAsState(initial = "")
     val accentColor by settingsManager.accentColorFlow.collectAsState(initial = AccentPalette.DEFAULT_STORAGE_HEX)
     val matchWallpaper by settingsManager.matchWallpaperFlow.collectAsState(initial = false)
+    // Phase 51.4 — the app chrome's haptics (the eight moments), default on.
+    val haptics by settingsManager.hapticsFlow.collectAsState(initial = true)
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(com.codeci.ide.R.string.settings_title)) })
@@ -802,6 +804,18 @@ fun SettingsScreen(
                     onCheckedChange = { scope.launch { settingsManager.setMatchWallpaper(it) } }
                 )
             }
+
+            // Phase 51.4 — the app's own haptics, next to the look-and-feel
+            // rows it belongs to. One switch, one key (`haptics`, default on),
+            // one reader (`rememberCodecHaptics()` in ui/components/
+            // CodecHaptics.kt), eight moments — and it is NOT the CodeC
+            // keyboard's own row (`codec_keys_haptics`, CodeC Keys section,
+            // Phase 47.2), which keeps working exactly as it did.
+            SettingsSwitch(
+                title = stringResource(com.codeci.ide.R.string.haptics_title),
+                checked = haptics,
+                onCheckedChange = { scope.launch { settingsManager.setHaptics(it) } }
+            )
 
             Box(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
                 ThemePreview(editorTheme = currentEditorTheme, fontSize = fontSize)

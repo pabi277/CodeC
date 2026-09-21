@@ -1,6 +1,7 @@
 # CodeC Phase 51.2 — The editor, with RUN ▶ as the hero
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** L ·
+> **Status:** 🚧 IMPLEMENTED (2026-09-21, `arena/01a0c4cb-codec`) — device round
+> F5-F8 NOT run · **Cost:** `[client-only]` · **Effort:** L ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -154,3 +155,61 @@ and `DEVICE_ROUND.md` F5-F9 has been run by the owner.
 - **A run-output redesign** — Phase 19/36 own the output panel; 50.4 animates
   its reveal, nothing more.
 - **Editor themes, font size, key strip** — Phases 29/35/47 decisions.
+
+## Implementation (2026-09-21)
+
+**RUN ▶ is the hero, and the decision is a pure function.** `RunButtonStyle`
+(`ui/editor/RunButtonStyle.kt`, new) takes `RunButtonState(running, locked,
+hasOpenFile)` and returns the role, the tone, the label state and the primary
+flag. The lock is the **first** branch, so Phase 44's chrome lock beats a running
+job, a missing file and a perfectly runnable buffer — and a locked tap stays
+*enabled*, because it still runs `showChromeLock` and says why. The screen's
+`run_action` slot is now a real `Button`: `primaryContainer` /
+`onPrimaryContainer` (a role, never a hex), `MIN_TOUCH` tall, the `NAV` glyph,
+and the label kept — `RUN`, or `RUNNING` while the job it started is producing
+output. The tour's `GuideAnchor` and its one-tap `onGuideRunTap` are untouched;
+`onRunTap` and its Phase 33 chooser logic are untouched; the old bare
+`.clip(...).clickable(onClick = onRunTap)` row is gone.
+
+**The chrome is declared.** `EditorChrome` (`ui/editor/EditorChrome.kt`, new)
+lists the eight slots in the order the screen declares them (`TAB_BAR`,
+`RUN_ACTION`, `FIND_BAR`, `CODE_VIEW`, `STATUS_BAR`, `OUTPUT_PANEL`,
+`SUGGESTION_STRIP`, `KEYS_ROW`), gives each a marker comment
+(`// Phase 51.2 slot: <name>`) that is now in the file at its real site, and gives
+each a gap as a `CodecTokens.Space` step. It is **a declaration, not a re-flow**:
+this part adds no chrome height and moves no composable, because every
+hand-picked number in that column is a change to the code view's height — the
+one measurement Phase 48's caret work was device-proven against. What it buys is
+that a later edit which moves a chrome piece fails `EditorChromeSlotTest`
+instead of silently changing that height.
+
+**The empty state is a sentence and one action, not a screen.**
+`EditorEmptyState` (new, pure) answers from `EditorEmptyFacts(openTabs,
+projectOpen, lastFileAvailable)`: with a tab open it says nothing (the surface
+speaks for itself), inside a project it says nothing (the drawer already lists
+the files), and in scratch mode it shows one sentence — *"Nothing open — this is
+a scratch file."* — with **exactly one** action: *Open my last file* when
+`EditorLaunchState.load(...)` still resolves (the one resume source 52.1 owns), or
+*Browse projects* through `onOpenProjects` when it does not. It renders as chrome
+above the code view; it opens no dialog.
+
+**The correction, recorded honestly.** The plan's premise — *"with no file open
+the tab bar collapses and the user is looking at an empty frame"* — is **half
+right**, and the wrong half matters. `EditorTabBar` really does return early
+(`EditorTabBar.kt:61`) and the top bar falls back to a bare file name; but the
+code view is never blank: `EditorViewModel.INITIAL_CODE` is a Hello-World `main.c`
+and `closeTab` deliberately keeps one buffer alive (`tabs.size <= 1`). "No tabs"
+therefore means **scratch mode**, and covering a buffer the user can already run
+with a full-screen empty state would have been a lie. The missing thing was the
+sentence plus the way back — which is what landed.
+
+**Tests:** `RunButtonStyleTest` 9 (lock wins in all four combinations, the run
+rule, the enabled rule, the total role mapping, `visualFor` coupling),
+`EditorChromeSlotTest` 9 (eight slots, the markers present **and in order** read
+from the real file, per-slot gaps on the token ladder, the RUN slot holding the
+button, the touch floor, every minimum height from the scale),
+`EditorEmptyStateTest` 8 (one action per state, the reuse of
+`EditorLaunchState`/`openFile`, chrome-not-dialog, the strings).
+
+**Not run:** device rows F5-F8 (RUN ▶ visible at arm's length, the chord/keys row
+still reachable, the chip in both scratch states, save confirmation).

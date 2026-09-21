@@ -7,4 +7,13 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Phase 51.1 — the splash screen's one colour: the brand surface the
+         launcher art already uses (#101418, `drawable/ic_launcher_background.xml`
+         and the mark's own tile in `drawable/app_mark.xml`). One value for both
+         themes — the mark is a dark tile on every Android skin, and the splash
+         must be recognisable in a dark room and in daylight alike. No second
+         literal: `SplashThemeTest` reads this value and the launcher drawable
+         and requires them to agree. -->
+    <color name="codec_splash_background">#FF101418</color>
 </resources>

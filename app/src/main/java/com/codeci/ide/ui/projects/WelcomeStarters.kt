@@ -17,6 +17,13 @@ data class WelcomeStarter(
     val id: String,
     val title: String,
     val subtitle: String,
+    /**
+     * Phase 51.1 — what the tap actually does, in the user's words. The
+     * first-run exit the research names is *uncertainty*, not boredom: the
+     * tiles promised a language and never said that picking one creates a
+     * project and opens its entry file. One line, no new flow.
+     */
+    val nextStep: String,
     val projectType: String,
     val projectName: String,
     val entryFile: String,
@@ -29,6 +36,7 @@ object WelcomeStarters {
             id = "c",
             title = "C",
             subtitle = "Works offline — built-in TCC compiler, no setup",
+            nextStep = "Creates C Starter and opens main.c — ready to run straight away",
             projectType = "c",
             projectName = "C Starter",
             entryFile = "main.c",
@@ -37,6 +45,7 @@ object WelcomeStarters {
             id = "python",
             title = "Python",
             subtitle = "Run scripts with python3 — installs once on first run",
+            nextStep = "Creates Python Starter and opens main.py",
             projectType = "python",
             projectName = "Python Starter",
             entryFile = "main.py",
@@ -45,6 +54,7 @@ object WelcomeStarters {
             id = "web",
             title = "HTML",
             subtitle = "A web page you edit and preview live",
+            nextStep = "Creates Web Starter and opens index.html",
             projectType = "web",
             projectName = "Web Starter",
             entryFile = "index.html",

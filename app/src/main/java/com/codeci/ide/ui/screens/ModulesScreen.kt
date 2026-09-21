@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -50,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,19 +67,29 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.codeci.ide.ui.components.HapticMoment
+import com.codeci.ide.ui.components.PressableSurface
+import com.codeci.ide.ui.components.rememberCodecHaptics
 import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecMotion
 import com.codeci.ide.ui.theme.CodecTokens.Radius
 import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.theme.CodecType
+import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.R
 import com.codeci.ide.ui.guide.GuideAnchor
 import com.codeci.ide.ui.guide.GuideAnchors
+import com.codeci.ide.ui.modules.InstallFacts
+import com.codeci.ide.ui.modules.InstallLabel
+import com.codeci.ide.ui.modules.InstallMoment
 import com.codeci.ide.ui.modules.PackageCatalog
 import com.codeci.ide.ui.modules.PackageItem
 import com.codeci.ide.ui.modules.PackageSection
+import com.codeci.ide.ui.modules.PkgState
 import com.codeci.ide.ui.modules.QuickAction
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.terminal.SetupAction
+import kotlinx.coroutines.delay
 import com.codeci.ide.ui.terminal.SetupGatePolicy
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -357,7 +370,40 @@ private fun PackageCardRow(
     /** Phase 45.2 — non-null on the one card a coach mark may spotlight. */
     guideAnchorId: String? = null,
 ) {
-    val isInstalled = remember(item.id) { checkIsInstalled(context, item) }
+    val haptics = rememberCodecHaptics()
+    val motion = rememberMotionSpecs()
+    // Phase 51.3 — the row's own state, now observable. Before this it was a
+    // one-shot `remember(item.id) { checkIsInstalled(...) }`: a finished install
+    // could never be seen by the row that started it, which is why the install
+    // "ended in the terminal". `installedNow` re-reads the disk only while the
+    // user's own install is in flight (never as a background poll for a
+    // screenful of rows), and the pure InstallMoment policy decides when that
+    // read is the genuine transition worth marking — once, never on a
+    // re-render, never for a package that was already installed.
+    val firstCheck = remember(item.id) { checkIsInstalled(context, item) }
+    var installedNow by remember(item.id) { mutableStateOf(firstCheck) }
+    var installRequested by remember(item.id) { mutableStateOf(false) }
+    var celebrated by remember(item.id) { mutableStateOf(false) }
+    LaunchedEffect(item.id, installRequested, installedNow) {
+        if (!installRequested || installedNow) return@LaunchedEffect
+        var observed = PkgState.NOT_INSTALLED
+        while (!installedNow) {
+            delay(1_500)
+            val now = if (checkIsInstalled(context, item)) PkgState.INSTALLED else PkgState.NOT_INSTALLED
+            if (InstallMoment.celebrateOnFinish(observed, now) && !celebrated) {
+                celebrated = true
+                haptics.perform(HapticMoment.INSTALL_FINISHED)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.install_finished, item.name),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+            observed = now
+            installedNow = now == PkgState.INSTALLED
+        }
+    }
+    val isInstalled = installedNow
     // Phase 44.1 — a built-in package (the APK's own TCC `cc`) needs no
     // userland at all, so the setup gate never applies to it: C is never gated.
     val gated = setupRefusal != null && !item.isBuiltIn
@@ -366,6 +412,29 @@ private fun PackageCardRow(
     // is ALREADY in the prefix runs fine — so RUN stays live for an installed
     // package even while the setup gate is up.
     val runBlocked = gated && !isInstalled
+    // Phase 51.3 — one policy decides what the row's primary action says at each
+    // transition (INSTALL / INSTALLING / OPEN / UPDATE / RETRY); the copy itself
+    // stays in strings.xml.
+    val installFacts = InstallFacts(
+        state = when {
+            isInstalled -> PkgState.INSTALLED
+            installRequested -> PkgState.INSTALLING
+            else -> PkgState.NOT_INSTALLED
+        },
+        running = installRequested,
+        progress = null,
+        // Failure is the terminal's to report (Phase 44's law): the row never
+        // guesses. `refuse()` below already names the place to look.
+        failed = false,
+    )
+    val installLabel = InstallMoment.labelFor(installFacts)
+    val installLabelText = when (installLabel) {
+        InstallLabel.INSTALL -> stringResource(R.string.install_label_install)
+        InstallLabel.INSTALLING -> stringResource(R.string.install_label_installing)
+        InstallLabel.OPEN -> stringResource(R.string.install_label_open)
+        InstallLabel.UPDATE -> stringResource(R.string.install_label_update)
+        InstallLabel.RETRY -> stringResource(R.string.install_label_retry)
+    }
     val refuse: () -> Unit = {
         Toast.makeText(context, setupRefusal ?: NOT_READY, Toast.LENGTH_LONG).show()
         onNavigateToTerminal()
@@ -374,6 +443,9 @@ private fun PackageCardRow(
         item = item,
         guideAnchorId = guideAnchorId,
         isInstalled = isInstalled,
+        installLabelText = installLabelText,
+        installInFlight = installLabel == InstallLabel.INSTALLING,
+        crossfadeSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec),
         setupRefusal = setupRefusal?.takeIf { gated && !isInstalled },
         packageActionsBlocked = gated,
         onViewSetup = onNavigateToTerminal,
@@ -381,6 +453,10 @@ private fun PackageCardRow(
             if (gated) {
                 refuse()
             } else {
+                // The moment the user's own install starts — the only state in
+                // which the row polls the disk for the finish below.
+                installRequested = true
+                celebrated = false
                 Toast.makeText(context, "Installing ${item.name}…", Toast.LENGTH_SHORT).show()
                 terminalViewModel.sendCommand(item.installCommand)
                 onNavigateToTerminal()
@@ -466,26 +542,36 @@ private fun PackageSectionHeader(
     collapsible: Boolean,
     onToggle: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (collapsible) Modifier.clickable(onClick = onToggle) else Modifier)
-            .padding(vertical = CodecTokens.space(Space.S)),
-        verticalAlignment = Alignment.CenterVertically
+    // Phase 51.4 — a press needs an edge to happen inside. A collapsible
+    // header is a real surface, so it gets the phase's one containment rule
+    // (radius + press state + the touch floor); a plain label keeps none of it
+    // (`contained = collapsible`) and stays the flat line it was.
+    PressableSurface(
+        onClick = onToggle,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.S)),
+        containerColor = Color.Transparent,
+        contentPadding = PaddingValues(vertical = CodecTokens.space(Space.S)),
+        contained = collapsible,
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f)
-        )
-        if (collapsible) {
-            Icon(
-                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (expanded) "Collapse $title" else "Expand $title",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f)
             )
+            if (collapsible) {
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -539,6 +625,12 @@ private fun PackageItemCard(
     /** Phase 45.2 — the coach-mark anchor id, or null for an ordinary card. */
     guideAnchorId: String? = null,
     isInstalled: Boolean,
+    /** Phase 51.3 — the word the primary action wears (InstallMoment). */
+    installLabelText: String,
+    /** Phase 51.3 — true while the user's own install is in flight. */
+    installInFlight: Boolean = false,
+    /** Phase 51.3 — the shared spec for the badge's state change (50.4). */
+    crossfadeSpec: androidx.compose.animation.core.FiniteAnimationSpec<Float>,
     onInstall: () -> Unit,
     onRun: () -> Unit,
     onUninstall: () -> Unit,
@@ -603,43 +695,52 @@ private fun PackageItemCard(
                     )
                 }
 
-                // STATUS BADGE
-                if (isInstalled) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                            .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XS))
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = "Installed",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
-                            )
-                            Spacer(modifier = Modifier.width(CodecTokens.space(Space.XS)))
+                // STATUS BADGE — Phase 51.3: the INSTALLED badge does not
+                // appear, it arrives, on the shared crossfade spec (and snaps
+                // when the platform's animations are off). A state change the
+                // user waited minutes for deserves to be seen.
+                Crossfade(
+                    targetState = isInstalled,
+                    animationSpec = crossfadeSpec,
+                    label = "installBadge",
+                ) { installed ->
+                    if (installed) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XS))
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = "Installed",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
+                                )
+                                Spacer(modifier = Modifier.width(CodecTokens.space(Space.XS)))
+                                Text(
+                                    text = if (item.isBuiltIn) "BUILT-IN" else "INSTALLED",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XS))
+                        ) {
                             Text(
-                                text = if (item.isBuiltIn) "BUILT-IN" else "INSTALLED",
+                                text = "AVAILABLE",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XS))
-                    ) {
-                        Text(
-                            text = "AVAILABLE",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             }
@@ -737,14 +838,14 @@ private fun PackageItemCard(
                         Text("VIEW SETUP")
                     }
                 } else {
-                    Button(onClick = onInstall) {
+                    Button(onClick = onInstall, enabled = !installInFlight) {
                         Icon(
                             Icons.Default.Download,
                             contentDescription = null,
                             modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
                         )
                         Spacer(modifier = Modifier.width(CodecTokens.space(Space.XS)))
-                        Text("INSTALL")
+                        Text(installLabelText)
                     }
                 }
             }
