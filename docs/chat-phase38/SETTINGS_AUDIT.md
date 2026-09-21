@@ -78,6 +78,7 @@ change nothing and say so).
 | 26 | Terminal | Terminal | item | — (info) | — | keep |
 | 27 | Appearance | Editor Theme | dropdown | `editor_theme` (ThemeManager) | `editorThemeFlow` → editor colours | keep |
 | 28 | Appearance | Accent Color | dropdown | `accent_color` | `accentColorFlow` → app accent | keep |
+| 64 | Appearance | Match my wallpaper | switch | `match_wallpaper` | `matchWallpaperFlow` → IdentityPolicy DYNAMIC branch on API 31+ (Phase 50.2; a stored accent wins over the switch) | keep |
 | 29 | Storage | Terminal Storage Access (~/storage) | item + button | storage permission + `~/storage` setup | `ShellEnvironment.hasStoragePermission` / setup | keep |
 | 30 | Storage | Projects Location | item | — (info; displays `getExternalFilesDir`) | — | keep |
 | 31 | Storage | Temporary files | item | — (info; `TempGc.measure` of `CodeC/temp/runs`) | size shown; Phase 39.1 | keep |

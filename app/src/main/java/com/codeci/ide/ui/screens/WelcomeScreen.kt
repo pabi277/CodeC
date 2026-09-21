@@ -29,7 +29,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecTokens.Radius
+import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.components.StarterIconView
 import com.codeci.ide.ui.projects.WelcomeStarter
@@ -52,23 +54,23 @@ fun WelcomeScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp, vertical = 24.dp),
+            .padding(horizontal = CodecTokens.space(Space.XXL), vertical = CodecTokens.space(Space.XL)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.HUGE)))
 
         Text(
             text = "CodeC",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.M)))
         Text(
             text = "Write and run C, Python, JavaScript, and HTML on your phone.",
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.S)))
         Text(
             text = "C works offline with no setup.",
             style = MaterialTheme.typography.bodyMedium,
@@ -76,14 +78,14 @@ fun WelcomeScreen(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(Modifier.height(36.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.XXL)))
         Text(
             text = "Pick a language to get started",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.M)))
 
         WelcomeStarters.starters.forEach { starter ->
             StarterTile(
@@ -91,10 +93,10 @@ fun WelcomeScreen(
                 onClick = { onStarterChosen(starter) },
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(CodecTokens.space(Space.M)))
         }
 
-        Spacer(Modifier.height(36.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.XXL)))
     }
 }
 
@@ -112,18 +114,18 @@ fun StarterTile(
 ) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.L)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.FLAT)),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.L)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             StarterIconView(starter)
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(CodecTokens.space(Space.L)))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = starter.title,
@@ -140,7 +142,7 @@ fun StarterTile(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)),
             )
         }
     }

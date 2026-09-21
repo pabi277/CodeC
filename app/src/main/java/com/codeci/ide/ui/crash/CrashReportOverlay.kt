@@ -22,12 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.codeci.ide.ui.theme.CodecType
 
 /**
  * Phase 25.2 device-round instrumentation. The owner's device is not rooted
@@ -114,7 +114,7 @@ fun CrashReportOverlay(
                     Text(
                         text,
                         fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = CodecType.codeFamily,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 320.dp)

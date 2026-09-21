@@ -21,9 +21,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.R
 import com.codeci.ide.ui.utils.AppLogger
 
@@ -50,7 +50,7 @@ fun LogsScreen(onNavigateBack: () -> Unit) {
             items(logs.reversed()) { log ->
                 Text(
                     text = log,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = CodecType.codeFamily,
                     fontSize = 12.sp,
                     color = when {
                         log.contains("ERROR") -> MaterialTheme.colorScheme.error

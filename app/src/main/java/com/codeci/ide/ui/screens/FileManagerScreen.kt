@@ -7,6 +7,7 @@ import androidx.core.content.FileProvider
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -107,6 +108,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecTokens.Radius
+import com.codeci.ide.ui.theme.CodecTokens.Space
+import com.codeci.ide.ui.theme.CodecMotion
+import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.projects.FileNode
@@ -514,7 +520,7 @@ fun FileManagerScreen(
                         Icons.Default.Add,
                         contentDescription = stringResource(R.string.new_project),
                         tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(CodecTokens.space(Space.XXL))
                     )
                 }
             }
@@ -652,20 +658,20 @@ fun FileManagerScreen(
                         label = { Text(stringResource(R.string.project_name)) },
                         singleLine = true
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(CodecTokens.space(Space.M)))
                     Text(
                         text = stringResource(R.string.project_type),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(CodecTokens.space(Space.XS)))
                     ProjectTypes.options.forEach { option ->
                         val selected = option.id == selectedType
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { selectedType = option.id }
-                                .padding(vertical = 7.dp, horizontal = 4.dp),
+                                .padding(vertical = CodecTokens.space(Space.S), horizontal = CodecTokens.space(Space.XS)),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -675,7 +681,7 @@ fun FileManagerScreen(
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 },
-                                modifier = Modifier.padding(end = 8.dp)
+                                modifier = Modifier.padding(end = CodecTokens.space(Space.S))
                             )
                             Column(Modifier.weight(1f)) {
                                 Text(
@@ -725,7 +731,7 @@ fun FileManagerScreen(
                             text = "In ${newItemParent}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
                         )
                     }
                     OutlinedTextField(
@@ -920,14 +926,14 @@ fun FileManagerScreen(
                             text = stringResource(R.string.clone_failed, error),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
                         )
                     }
                     Text(
                         stringResource(R.string.clone_url_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 6.dp)
+                        modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
                     )
                     OutlinedTextField(
                         value = cloneUrl,
@@ -940,17 +946,17 @@ fun FileManagerScreen(
                             Icon(
                                 SpckIcons.QrScan,
                                 contentDescription = stringResource(R.string.clone_qr),
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
                             )
                         },
                         singleLine = true
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
                     Text(
                         stringResource(R.string.clone_name_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 6.dp)
+                        modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
                     )
                     OutlinedTextField(
                         value = cloneName,
@@ -960,21 +966,21 @@ fun FileManagerScreen(
                         },
                         singleLine = true
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(CodecTokens.space(Space.XS)))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { cloneAdvancedOpen = !cloneAdvancedOpen }
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = CodecTokens.space(Space.S)),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = if (cloneAdvancedOpen) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(CodecTokens.space(Space.S)))
                         Text(
                             stringResource(R.string.clone_advanced),
                             color = MaterialTheme.colorScheme.primary,
@@ -986,7 +992,7 @@ fun FileManagerScreen(
                             stringResource(R.string.clone_branch_label),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 6.dp)
+                            modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
                         )
                         Box {
                             OutlinedTextField(
@@ -998,7 +1004,7 @@ fun FileManagerScreen(
                                         Icons.Default.ExpandMore,
                                         contentDescription = stringResource(R.string.clone_branch_label),
                                         modifier = Modifier
-                                            .padding(end = 4.dp)
+                                            .padding(end = CodecTokens.space(Space.XS))
                                             .clickable {
                                                 val url = cloneUrl.trim()
                                                 if (!GitManager.isCloneableUrl(url)) {
@@ -1023,13 +1029,13 @@ fun FileManagerScreen(
                                     fetchingBranches -> {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                            modifier = Modifier.padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.M))
                                         ) {
                                             CircularProgressIndicator(
-                                                modifier = Modifier.size(16.dp),
+                                                modifier = Modifier.size(CodecTokens.space(Space.L)),
                                                 strokeWidth = 2.dp
                                             )
-                                            Spacer(Modifier.width(10.dp))
+                                            Spacer(Modifier.width(CodecTokens.space(Space.M)))
                                             Text(stringResource(R.string.clone_fetching_branches))
                                         }
                                     }
@@ -1038,7 +1044,7 @@ fun FileManagerScreen(
                                             stringResource(R.string.clone_no_branches_found),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                            modifier = Modifier.padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.M))
                                         )
                                     }
                                     else -> {
@@ -1060,15 +1066,15 @@ fun FileManagerScreen(
                                 note,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(top = 4.dp)
+                                modifier = Modifier.padding(top = CodecTokens.space(Space.XS))
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { cloneShallow = !cloneShallow }
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = CodecTokens.space(Space.XS)),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
@@ -1079,17 +1085,17 @@ fun FileManagerScreen(
                             }
                             Switch(checked = cloneShallow, onCheckedChange = { cloneShallow = it })
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
                     }
-                    HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                    HorizontalDivider(Modifier.padding(vertical = CodecTokens.space(Space.M)))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.Info,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)),
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(CodecTokens.space(Space.S)))
                         Text(
                             stringResource(R.string.clone_token_hint),
                             style = MaterialTheme.typography.bodySmall,
@@ -1220,18 +1226,38 @@ private fun ProjectsHubList(
     onStarter: (WelcomeStarter) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (entries.isEmpty()) {
-        EmptyProjectsState(onCreate, onStarter)
-        return
+    val motion = rememberMotionSpecs()
+    // Phase 50.4 — transition (6): empty ↔ list crossfades on the
+    // shared spec — creating or deleting the last project reads as one change.
+    Crossfade(
+        targetState = entries.isEmpty(),
+        animationSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec)
+    ) { empty ->
+        if (empty) {
+            EmptyProjectsState(onCreate, onStarter)
+        } else {
+            ProjectsHubListContent(entries, filter, searchQuery, onFilterSelected, onCardAction, modifier)
+        }
     }
+}
+
+@Composable
+private fun ProjectsHubListContent(
+    entries: List<ProjectHubEntry>,
+    filter: ProjectHubFilter,
+    searchQuery: String,
+    onFilterSelected: (ProjectHubFilter) -> Unit,
+    onCardAction: (ProjectHubEntry, HubCardAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val visible = ProjectsHub.filterEntries(entries, filter, searchQuery)
     Column(modifier = modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
+            horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
         ) {
             HubFilterChip(ProjectHubFilter.ALL, filter, stringResource(R.string.hub_filter_all), null, onFilterSelected)
             HubFilterChip(ProjectHubFilter.GIT, filter, stringResource(R.string.hub_filter_git), SpckIcons.GitBranch, onFilterSelected)
@@ -1241,18 +1267,18 @@ private fun ProjectsHubList(
         }
         if (visible.isEmpty()) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp, horizontal = 32.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = CodecTokens.space(Space.HUGE), horizontal = CodecTokens.space(Space.XXL)),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
                     Icons.Default.Search,
                     contentDescription = null,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(CodecTokens.space(Space.HUGE)),
                     // Phase 40.5 — an accent at 60% measured 2.45:1 (needs 3:1
                     // for a graphic); the opaque accent is 4.47:1.
                     tint = MaterialTheme.colorScheme.primary
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(CodecTokens.space(Space.M)))
                 Text(
                     stringResource(R.string.hub_no_match),
                     style = MaterialTheme.typography.titleMedium,
@@ -1263,8 +1289,8 @@ private fun ProjectsHubList(
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(start = CodecTokens.space(Space.L), end = CodecTokens.space(Space.L), top = CodecTokens.space(Space.XS), bottom = CodecTokens.space(Space.HUGE) * 2f),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
         ) {
             items(visible, key = { it.name }) { entry ->
                 ProjectHubCard(entry = entry, onAction = onCardAction)
@@ -1312,21 +1338,21 @@ private fun HubFilterChip(
                 }
             )
             .clickable { onSelect(value) }
-            .padding(horizontal = 16.dp, vertical = 9.dp),
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         icon?.let {
             Icon(
                 it,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE)),
                 tint = if (isSelected) {
                     MaterialTheme.colorScheme.onPrimary
                 } else {
                     MaterialTheme.colorScheme.onSurface
                 }
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(CodecTokens.space(Space.S)))
         }
         Text(
             text = label,
@@ -1355,16 +1381,16 @@ private fun ProjectHubCard(
     var menuOpen by remember(entry.name) { mutableStateOf(false) }
     Card(
         onClick = { onAction(entry, HubCardAction.OPEN) },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.L)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.FLAT))
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.M)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             ProjectIconView(entry)
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(CodecTokens.space(Space.L)))
             Column(Modifier.weight(1f)) {
                 Text(
                     entry.name,
@@ -1378,10 +1404,10 @@ private fun ProjectHubCard(
                         Icon(
                             SpckIcons.GitBranch,
                             contentDescription = null,
-                            modifier = Modifier.size(13.dp),
+                            modifier = Modifier.size(CodecTokens.space(Space.M)),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.width(5.dp))
+                        Spacer(Modifier.width(CodecTokens.space(Space.XS)))
                     }
                     Text(
                         // Mockup-exact separator: single " · " between segments.
@@ -1397,10 +1423,10 @@ private fun ProjectHubCard(
                 // Mockup-exact `M` pill: small yellow-outlined square before ⋮.
                 Box(
                     modifier = Modifier
-                        .padding(end = 10.dp)
-                        .clip(RoundedCornerShape(5.dp))
-                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(5.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(end = CodecTokens.space(Space.M))
+                        .clip(RoundedCornerShape(CodecTokens.radius(Radius.XS)))
+                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(CodecTokens.radius(Radius.XS)))
+                        .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XXS))
                 ) {
                     Text(
                         "M",
@@ -1415,10 +1441,10 @@ private fun ProjectHubCard(
                 // must never look like an uploaded project.
                 Box(
                     modifier = Modifier
-                        .padding(end = 8.dp)
-                        .clip(RoundedCornerShape(5.dp))
-                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(5.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(end = CodecTokens.space(Space.S))
+                        .clip(RoundedCornerShape(CodecTokens.radius(Radius.XS)))
+                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(CodecTokens.radius(Radius.XS)))
+                        .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XXS))
                 ) {
                     Text(
                         "↑${entry.unpushed}",
@@ -1433,10 +1459,10 @@ private fun ProjectHubCard(
                 // so a local-only branch is never mistaken for an uploaded one.
                 Box(
                     modifier = Modifier
-                        .padding(end = 8.dp)
-                        .clip(RoundedCornerShape(5.dp))
-                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(5.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(end = CodecTokens.space(Space.S))
+                        .clip(RoundedCornerShape(CodecTokens.radius(Radius.XS)))
+                        .border(width = 1.2.dp, color = HubBadgeYellow, shape = RoundedCornerShape(CodecTokens.radius(Radius.XS)))
+                        .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XXS))
                 ) {
                     Text(
                         "↑",
@@ -1541,13 +1567,13 @@ private fun ProjectsHubAddSheet(
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, bottom = 32.dp, top = 4.dp)
+                .padding(start = CodecTokens.space(Space.XL), end = CodecTokens.space(Space.XL), bottom = CodecTokens.space(Space.XXL), top = CodecTokens.space(Space.XS))
         ) {
             Text(
                 stringResource(R.string.hub_sheet_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 14.dp)
+                modifier = Modifier.padding(bottom = CodecTokens.space(Space.L))
             )
             HubSheetRow(
                 color = Color(CodecPalette.HUB_ROW_VIOLET),
@@ -1591,9 +1617,9 @@ private fun HubSheetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(CodecTokens.radius(Radius.L)))
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(vertical = CodecTokens.space(Space.M)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -1603,9 +1629,9 @@ private fun HubSheetRow(
                 .background(color),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(30.dp))
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(CodecTokens.space(Space.XXL)))
         }
-        Spacer(Modifier.width(18.dp))
+        Spacer(Modifier.width(CodecTokens.space(Space.L)))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -1637,11 +1663,11 @@ private fun ProjectTree(
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(1.dp)
+        contentPadding = PaddingValues(vertical = CodecTokens.space(Space.S)),
+        verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.XXS))
     ) {
         item {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S))) {
                 Text(
                     text = listOf(project.name, "").joinToString("  >  "),
                     style = MaterialTheme.typography.labelLarge,
@@ -1657,12 +1683,12 @@ private fun ProjectTree(
         }
         if (nodes.isEmpty()) {
             item {
-                Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.fillMaxWidth().padding(CodecTokens.space(Space.XXL)), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(CodecTokens.space(Space.S)))
                     Text(stringResource(R.string.empty_project), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.empty_project_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(CodecTokens.space(Space.L)))
                     Button(onClick = { onCreateIn("", false) }) { Text(stringResource(R.string.new_file)) }
                 }
             }
@@ -1704,16 +1730,16 @@ private fun TreeRow(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = { menuOpen = true })
-            .padding(start = (16 + node.depth * 24).dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            .padding(start = (Space.L + node.depth * Space.XL).dp, end = CodecTokens.space(Space.S), top = CodecTokens.space(Space.S), bottom = CodecTokens.space(Space.S)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         FileIconView(
             name = node.file.name,
             isDirectory = isDirectory,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(CodecTokens.space(Space.XXL)),
             tint = if (isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(CodecTokens.space(Space.M)))
         Column(Modifier.weight(1f)) {
             Text(node.file.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (!isDirectory) {
@@ -1794,14 +1820,14 @@ private fun EmptyProjectsState(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = CodecTokens.space(Space.XL), vertical = CodecTokens.space(Space.XXL)),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.XL)))
         Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.L)))
         Text(stringResource(R.string.no_projects), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.S)))
         // Phase 33.3 — the empty hub points at the three starters (33.1), not
         // a blank list.
         Text(
@@ -1810,16 +1836,16 @@ private fun EmptyProjectsState(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.XL)))
         WelcomeStarters.starters.forEach { starter ->
             StarterTile(
                 starter = starter,
                 onClick = { onStarter(starter) },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(CodecTokens.space(Space.M)))
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(CodecTokens.space(Space.M)))
         // The full create / clone / import sheet is still one tap away.
         TextButton(onClick = onCreate) { Text(stringResource(R.string.hub_create_first)) }
     }

@@ -1,6 +1,6 @@
 # CodeC Phase 50.3 — A type scale and one icon set
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S/M ·
+> **Status:** ✅ IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI ✅ GREEN `35495174151` — rounds 1–3 red for-cause (cubicBezier() not on this Compose; two test-compile type errors; audit row 64 owed by the new switch); device round L1–L12 pending at merge, owner command) · **Cost:** `[client-only]` · **Effort:** S/M ·
 > **Owner row (verbatim):** *"it's not attractive"* / *"boost it's ui 100×"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -80,6 +80,12 @@ CC0). So:
 > adds ~200-400 KB to the APK and a licence line to `docs/`; the part doc
 > records the answer before a byte is added.
 
+> ✅ **Decided 2026-09-20 (chat: vendor it):** JetBrains Mono Medium + Bold
+> is the one code face (`CodecType.codeFamily`). Zero new bytes — both
+> `.ttf` files already shipped since Phase 19.2 for the terminal, and the
+> OFL-1.1 licence was already in `assets/licenses/JETBRAINS_MONO_OFL.txt`;
+> this part only builds the Compose face for them.
+
 ### Iconography: one size per role
 
 | Role | Size | Where |
@@ -139,9 +145,35 @@ description (source scan of the six files); and the device round's L9-L10 rows
 
 ## Deferred / rejected with reasons
 
-- **Vendoring a font** — owner decision, see above.
+- **Vendoring a font** — decided yes (see above); shipped as `CodecType.codeFamily`.
 - **Variable fonts / dynamic type scaling from the system font-size setting** —
   `sp` already respects the system scale; a custom scale factor is a later,
   accessibility-specific row.
 - **Restyling the editor's code font** — sora + the four themes own it.
 - **A full icon audit of all 61k lines** — six surfaces now, rest on touch.
+
+## Implementation (2026-09-20)
+
+**The scale** (`ui/theme/CodecType.kt`): six anchors (display 34, headline 26,
+title 20, body 15, label 13, caption 11), line heights as multiples (tight
+1.20 / normal 1.40 / relaxed 1.55), all fifteen M3 slots filled, wired once as
+`typography = CodecType.scale()` in `MyApplicationTheme`. `CodecTypeTest`
+proves the anchors ordered, the multiples exact, the weights hierarchical,
+and no slot left at the Material default. Zero `fontSize = N.sp` literals
+survive in the six files (the editor/terminal sizes are user-driven
+variables, untouched); the Packages subtitle moved 10sp → `labelSmall`, and
+the install command reads `labelMedium` in the code face.
+
+**One code face**: every hardcoded `FontFamily.Monospace` display surface —
+output lines, diff, logs, stdin, crash report, server share, extra keys,
+template preview, web address/console, status-bar path, trust block, theme
+preview — now reads `CodecType.codeFamily`. `FontFamily.Monospace` survives
+only in the two font-setting maps (Editor, Settings), where "Monospace" is
+the user's explicit named choice. The theme-switcher audit found no duplicate
+marking to fix (selection is RadioButton + regular text, single signal).
+
+**Icons**: `INLINE/ACTION/NAV` (16/20/24) through `CodecTokens.icon()` in the
+six files; `IconRoleTest` pins token sizes, non-null descriptions on
+icon-only actions, and the three known decorative nulls.
+
+Device rows: L9–L10 in `DEVICE_ROUND.md` (owner-run, pending).

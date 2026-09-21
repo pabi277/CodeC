@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.ui.theme.Contrast
 
 private val ErrorRed = Color(0xFFFF5555)
@@ -86,6 +87,8 @@ fun EditorStatusBar(
             Text(
                 text = pathLabel,
                 style = MaterialTheme.typography.labelSmall,
+                // Phase 50.3 — the path reads as code, so it wears the code face.
+                fontFamily = CodecType.codeFamily,
                 color = onStrip(muted),
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,

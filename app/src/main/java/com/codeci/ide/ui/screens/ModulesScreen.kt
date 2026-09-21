@@ -61,11 +61,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecTokens.Radius
+import com.codeci.ide.ui.theme.CodecTokens.Space
+import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.R
 import com.codeci.ide.ui.guide.GuideAnchor
 import com.codeci.ide.ui.guide.GuideAnchors
@@ -149,8 +151,8 @@ fun ModulesScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = CodecTokens.space(Space.L)),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.L))
         ) {
             // Phase 44.1 — the setup notice, once, at the top: what is
             // happening, and the tap that gets the user to where it happens.
@@ -180,7 +182,7 @@ fun ModulesScreen(
                         }
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(CodecTokens.radius(Radius.M))
                 )
             }
 
@@ -193,7 +195,7 @@ fun ModulesScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = CodecTokens.space(Space.XXL)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -260,12 +262,12 @@ fun ModulesScreen(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
                 ) {
                     PackageCatalog.QUICK_ACTIONS.forEach { action ->
                         QuickActionChip(
@@ -285,24 +287,24 @@ fun ModulesScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(CodecTokens.radius(Radius.M))
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.Terminal,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                             Text(
                                 text = "Run Custom Command",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -313,9 +315,9 @@ fun ModulesScreen(
                                 modifier = Modifier.weight(1f),
                                 placeholder = { Text("e.g. pkg install -y git, cc main.c") },
                                 singleLine = true,
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(CodecTokens.radius(Radius.S))
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                             Button(
                                 onClick = {
                                     if (customCommand.isNotBlank()) {
@@ -324,9 +326,9 @@ fun ModulesScreen(
                                     }
                                 },
                                 enabled = customCommand.isNotBlank(),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(CodecTokens.radius(Radius.S))
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = "Run", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Send, contentDescription = "Run", modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE)))
                             }
                         }
                     }
@@ -334,7 +336,7 @@ fun ModulesScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(CodecTokens.space(Space.XXL)))
             }
         }
     }
@@ -422,7 +424,7 @@ private fun SetupGateCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.M)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
@@ -430,16 +432,16 @@ private fun SetupGateCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
+                .padding(start = CodecTokens.space(Space.L), end = CodecTokens.space(Space.S), top = CodecTokens.space(Space.M), bottom = CodecTokens.space(Space.M)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.Download,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
             )
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(CodecTokens.space(Space.M)))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
@@ -468,7 +470,7 @@ private fun PackageSectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (collapsible) Modifier.clickable(onClick = onToggle) else Modifier)
-            .padding(vertical = 6.dp),
+            .padding(vertical = CodecTokens.space(Space.S)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -496,22 +498,22 @@ private fun QuickActionChip(
     Card(
         modifier = Modifier
             .clickable { onClick() }
-            .clip(RoundedCornerShape(8.dp)),
+            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S))),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
         )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = CodecTokens.space(Space.M), vertical = CodecTokens.space(Space.S)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Terminal,
                 contentDescription = action.title,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
             Column {
                 Text(
                     text = action.title,
@@ -521,8 +523,9 @@ private fun QuickActionChip(
                 )
                 Text(
                     text = action.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 10.sp,
+                    // Phase 50.3 — the caption role (11sp) instead of a 10sp
+                    // literal: one step up, same place in the hierarchy.
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                 )
             }
@@ -572,13 +575,13 @@ private fun PackageItemCard(
     }
     Card(
         modifier = cardModifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.M)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.RAISED))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
             // HEADER
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -604,18 +607,18 @@ private fun PackageItemCard(
                 if (isInstalled) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
                             .background(MaterialTheme.colorScheme.primaryContainer)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XS))
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.CheckCircle,
                                 contentDescription = "Installed",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(CodecTokens.space(Space.XS)))
                             Text(
                                 text = if (item.isBuiltIn) "BUILT-IN" else "INSTALLED",
                                 style = MaterialTheme.typography.labelSmall,
@@ -627,9 +630,9 @@ private fun PackageItemCard(
                 } else {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.XS))
                     ) {
                         Text(
                             text = "AVAILABLE",
@@ -641,7 +644,7 @@ private fun PackageItemCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
 
             // DESCRIPTION
             Text(
@@ -650,16 +653,16 @@ private fun PackageItemCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
 
             // COMMAND SNIPPET BOX
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(CodecTokens.radius(Radius.S)))
+                    .padding(horizontal = CodecTokens.space(Space.M), vertical = CodecTokens.space(Space.S))
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -668,9 +671,8 @@ private fun PackageItemCard(
                 ) {
                     Text(
                         text = "$ ${item.installCommand}",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontFamily = CodecType.codeFamily,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -678,19 +680,19 @@ private fun PackageItemCard(
                     )
                     IconButton(
                         onClick = { onCopyCommand(item.installCommand) },
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(CodecTokens.space(CodecTokens.MIN_TOUCH))
                     ) {
                         Icon(
                             Icons.Default.ContentCopy,
                             contentDescription = "Copy Command",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
 
             // ACTIONS
             Row(
@@ -707,19 +709,19 @@ private fun PackageItemCard(
                         TextButton(onClick = onUninstall) {
                             Text("UNINSTALL", color = MaterialTheme.colorScheme.error)
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                         OutlinedButton(onClick = onInstall) {
                             Text("REINSTALL")
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
                     }
                     Button(onClick = onRun) {
                         Icon(
                             Icons.Default.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(CodecTokens.space(Space.XS)))
                         Text(if (item.isBuiltIn) "RUN CC" else "RUN")
                     }
                 } else if (setupRefusal != null) {
@@ -729,9 +731,9 @@ private fun PackageItemCard(
                         Icon(
                             Icons.Default.Download,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(CodecTokens.space(Space.XS)))
                         Text("VIEW SETUP")
                     }
                 } else {
@@ -739,9 +741,9 @@ private fun PackageItemCard(
                         Icon(
                             Icons.Default.Download,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE))
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(CodecTokens.space(Space.XS)))
                         Text("INSTALL")
                     }
                 }

@@ -1,6 +1,6 @@
 # CodeC Phase 50.2 — A brand you can see on Android 12+
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI ✅ GREEN `35495174151` — rounds 1–3 red for-cause (cubicBezier() not on this Compose; two test-compile type errors; audit row 64 owed by the new switch); device round L1–L12 pending at merge, owner command) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive"*; the older colour row
 > (2026-09-05) was *"research throughly on the color of the app's inside texts …
 > Now it is violet 💜 but not very good to read … Make the green as default"* —
@@ -171,3 +171,38 @@ Android 12+, and with the wallpaper switch on) are run by the owner.
 - **Taking `MaterialTheme` out of the equation with a fully custom theme** —
   the app is 61k lines of material3 components; a custom theme would be a
   rewrite, not a polish.
+
+## Implementation (2026-09-20)
+
+**The decision** (`ui/theme/IdentityPolicy.kt`, host-tested by
+`IdentityPolicyTest` over all 16 input combinations): a stored accent always
+wins; Android 7–11 is always brand; on 12+ the wallpaper wins only when the
+user turns on Settings → Appearance → **"Match my wallpaper"** (off by
+default, switch visible on API 31+ only). `MainActivity` resolves
+`storedAccentFlow` + `matchWallpaperFlow` into a `BrandMode` and passes it to
+`MyApplicationTheme(brandMode = …)`; the theme re-checks the SDK so DYNAMIC
+can never reach the dynamic scheme on 7–11 even if a caller mis-decides.
+
+**Why a new DataStore key** (the spec asked for the reason before a key is
+added): the existing `accent_color` key holds a colour hex or null, and
+"match wallpaper" is orthogonal to it — a user can hold a stored accent
+*with* the switch on (stored wins), or hold nothing with the switch on *or*
+off (two different modes from the same null). A hex cannot encode that, so
+`match_wallpaper` (boolean, default false) is its own key, with
+`matchWallpaperFlow` / `setMatchWallpaper` and a reader in both `MainActivity`
+and `SettingsScreen` (`SettingsKeysHaveReadersTest` stays green).
+
+**The ramp** (`ui/theme/BrandRamp.kt`): the eight brand roles plus the surface
+tint from the one seed, fronting Phase 40.5's twelve-role engine — never
+beside it. `BrandRampTest` proves all seven text pairs clear 4.5:1 for all six
+picker choices in both themes, and pins the facade equal to the engine on
+every shared role.
+
+**The template is gone**: `Color.kt` (six violet constants) and `Type.kt`
+deleted; the theme builds its base from plain `darkColorScheme()` /
+`lightColorScheme()`; `surfaceTint` is the brand primary (the violet wash on
+every card and sheet is fixed). `TemplatePaletteRemovedTest` pins all of it.
+`dynamicColor` is gone from the theme signature — its one call site passes
+`brandMode` instead.
+
+Device rows: L5–L8 in `DEVICE_ROUND.md` (owner-run, pending).

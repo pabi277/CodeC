@@ -69,10 +69,10 @@ One command per phase, in a row: **"Start Phase 50"** → 51 → 52. The numbers
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [50.1](chat-phase50/PART_50_1_TOKENS.md) | One scale, not 801 numbers | M | 📋 PLANNED |
-| [50.2](chat-phase50/PART_50_2_IDENTITY_COLOR.md) | A brand you can see on Android 12+ | M | 📋 PLANNED |
-| [50.3](chat-phase50/PART_50_3_TYPE_AND_ICON.md) | A type scale and one icon set | S/M | 📋 PLANNED |
-| [50.4](chat-phase50/PART_50_4_MOTION.md) | Motion, for the first time | M | 📋 PLANNED |
+| [50.1](chat-phase50/PART_50_1_TOKENS.md) | One scale, not 801 numbers | M | ✅ DONE |
+| [50.2](chat-phase50/PART_50_2_IDENTITY_COLOR.md) | A brand you can see on Android 12+ | M | ✅ DONE |
+| [50.3](chat-phase50/PART_50_3_TYPE_AND_ICON.md) | A type scale and one icon set | S/M | ✅ DONE |
+| [50.4](chat-phase50/PART_50_4_MOTION.md) | Motion, for the first time | M | ✅ DONE |
 
 **Why these four.** They are the four things every "polished" app review in the
 dossier names, and CodeC is missing all four: no spacing scale, no type scale,
@@ -175,8 +175,8 @@ decides.
 |---|---|
 | New runtime dependency | **one** — `androidx.core:core-splashscreen` (Apache-2.0), 51.1 |
 | New test-only dependency | **none** — Roborazzi is already declared and applied |
-| New permission / DataStore key / Settings control / telemetry | **none** (a Settings row is only added if the owner asks for the font question in 50.3) |
-| Fonts | 0 bytes by default (system `FontFamily.Monospace`); JetBrains Mono is OFL-1.1 and needs an explicit owner decision |
+| New permission / DataStore key / Settings control / telemetry | one DataStore key (`match_wallpaper`, boolean, default false) + one Settings → Appearance switch (API 31+ only) — 50.2, reason recorded in the part doc; no permission, no telemetry |
+| Fonts | 0 new bytes — JetBrains Mono Medium + Bold became the one code face (50.3) but both `.ttf` files already shipped since 19.2; OFL-1.1 licence already in `assets/licenses/`, owner decision 2026-09-20 |
 | APK budget | the repo measures every round (release APK is 6,681,306 B today, v1.3.17). Every part doc records its own delta the way 44–49 did. |
 
 ---

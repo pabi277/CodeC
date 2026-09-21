@@ -66,6 +66,7 @@
     <string name="app_theme">App Theme</string>
     <string name="editor_theme">Editor Theme</string>
     <string name="accent_color">Accent Color</string>
+    <string name="match_wallpaper">Match my wallpaper</string>
     <string name="storage">Storage</string>
     <string name="terminal_storage_title">Terminal Storage Access (~/storage)</string>
     <string name="terminal_storage_subtitle">Expose shared directories (Downloads, Documents, DCIM, Pictures, Music, Movies) to the terminal via ~/storage symlinks.</string>

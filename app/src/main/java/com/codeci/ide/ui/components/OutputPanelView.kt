@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,13 +50,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.ui.theme.CodecMotion
+import com.codeci.ide.ui.theme.rememberMotionSpecs
+import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.R
 import com.codeci.ide.ui.editor.CompilerDiagnostics
 import com.codeci.ide.ui.theme.CodecPalette
@@ -116,6 +119,9 @@ fun OutputPanelView(
 ) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    // Phase 50.4 — transition (5): the one motion hook; the run-state
+    // summary below resolves through it, instant when the platform says so.
+    val motion = rememberMotionSpecs()
 
     // Phase 23.1 — auto-scroll to the newest content. While a program is
     // waiting for input the last item IS the inline input row (index
@@ -156,14 +162,21 @@ fun OutputPanelView(
                 style = MaterialTheme.typography.labelLarge
             )
             Spacer(modifier = Modifier.width(10.dp))
+            // Phase 50.4 — transition (5): the RUN ▶ reveal — each new
+            // run-state summary crossfades in on the shared spec.
             state.summary?.let { summary ->
-                Text(
-                    text = summary,
-                    color = if (state.busy) Color(0xFF66B2FF) else Color(CodecPalette.MUTED_TEXT),
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Crossfade(
+                    targetState = summary,
+                    animationSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec)
+                ) { current ->
+                    Text(
+                        text = current,
+                        color = if (state.busy) Color(0xFF66B2FF) else Color(CodecPalette.MUTED_TEXT),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
             // Phase 37.1 — a live server announces itself in the header, so the
             // collapsed strip still tells you the phone is serving something.
@@ -321,7 +334,7 @@ fun OutputPanelView(
                     text = "Run ▶ to compile and execute here",
                     color = Color(CodecPalette.MUTED_TEXT),
                     fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = CodecType.codeFamily,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                 )
             }
@@ -340,7 +353,7 @@ private fun OutputLineItem(
     val diagnostic = remember(line) { OutputLineParser.parseLine(line.text) }
     val baseColor = OUTPUT_COLORS[line.kind] ?: Color(0xFFFFFFFF)
     val style = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = CodecType.codeFamily,
         fontSize = MaterialTheme.typography.bodySmall.fontSize,
         color = baseColor
     )
@@ -421,7 +434,7 @@ private fun InlineInputRow(
             singleLine = true,
             textStyle = TextStyle(
                 color = Color.White,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = CodecType.codeFamily,
                 fontSize = 13.sp
             ),
             cursorBrush = SolidColor(Color.White),
@@ -431,7 +444,7 @@ private fun InlineInputRow(
                         text = "Type here — Enter sends",
                         color = Color(CodecPalette.MUTED_TEXT),
                         fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = CodecType.codeFamily
                     )
                 }
                 innerTextField()

@@ -1,6 +1,6 @@
 # CodeC Phase 50.1 — One scale, not 801 numbers
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** ✅ IMPLEMENTED (2026-09-20, `arena/01a0bd6d-codec`, owner: "Start phase 50"; CI ✅ GREEN `35495174151` — rounds 1–3 red for-cause (cubicBezier() not on this Compose; two test-compile type errors; audit row 64 owed by the new switch); device round L1–L12 pending at merge, owner command) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive"* / *"boost it's ui 100×"*.
 > Parent: [`README.md`](README.md) (the evidence table) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -134,3 +134,35 @@ device round reports a moved element, the conversion is wrong.
 - **A `CodecTheme` wrapper object**: tempting, but three of the six surfaces are
   mid-refactor in Phases 46/47; adding a wrapper now would conflict. Plain
   `CodecTokens` first, wrapper later if it earns itself.
+
+## Implementation (2026-09-20)
+
+**The scale** (`ui/theme/CodecTokens.kt`, host-tested, zero Android imports
+beyond `Dp`): Space NONE/XXS/XS/S/M/L/XL/XXL/HUGE (0/2/4/8/12/16/24/32/48),
+Radius XS/S/M/L/XL (4/8/12/16/28), Elevation FLAT/RAISED/CARD/SHEET
+(0/1/3/6), Icon INLINE/ACTION/NAV (16/20/24), the `MIN_TOUCH` 48 floor, and
+the four `space`/`radius`/`elevation`/`icon` helpers. Pinned by
+`CodecTokensTest` (ladders, monotonicity, 4-based rule, round-trips).
+
+**The six surfaces**, converted by the one-shot `scripts/phase50_tokens.py`
+(deleted after CI went green; it asserted rather than re-convert):
+
+| File | radius | elevation | icon sizes | spacing | protected as raw |
+|---|---|---|---|---|---|
+| WelcomeScreen | 1 | 1 | 1 | 12 | — |
+| EditorScreen | 4 | 0 | 2 | 29 | `MIN_TOUCH` floor on the copy button |
+| FileManagerScreen | 8 | 1 | 13 | 82 | tree indent formula, `HUGE × 2` sheet inset, percent pill, hairlines |
+| ModulesScreen | 11 | 1 | 9 | 35 | `MIN_TOUCH` copy button, hairline |
+| TerminalScreen | 0 | 0 | 4 | 5 | — |
+| SettingsScreen | 8 | 0 | 4 | 69 | hairlines, computed insets |
+
+Kept raw on purpose, exactly as the spec's blast-radius rules say: 1.dp
+hairlines (thickness, not spacing), hero/display sizes above the scale, the
+hub tree's computed indent (`Space.L + depth × Space.XL`), and the percent
+`RoundedCornerShape(50)` pill (a shape choice, not a dp value —
+`TokenAdoptionTest` exempts it explicitly). `TouchTargetTest` pins every
+`IconButton` in the six files at ≥ 48 dp; the Packages copy button that was
+24 dp now reads `MIN_TOUCH`. `WelcomeScreen` and `TerminalScreen` hold zero
+`.dp` literals and dropped the import.
+
+Device rows: L1–L4 in `DEVICE_ROUND.md` (owner-run, pending).

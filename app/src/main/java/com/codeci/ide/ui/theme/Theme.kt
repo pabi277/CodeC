@@ -12,12 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme =
-  darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
-
-private val LightColorScheme =
-  lightColorScheme(primary = Purple40, secondary = PurpleGrey40, tertiary = Pink40)
-
 fun parseAccentColor(hex: String): Color? =
   AccentPalette.parseHex(hex)?.let { Color(it) }
 
@@ -38,18 +32,31 @@ fun parseAccentColor(hex: String): Color? =
  * The default accent is CodeC's own green (`CodecPalette.DEFAULT_ACCENT`); a
  * stored accent always wins, and an unparseable/missing value falls back to the
  * default rather than to the template violet.
+ *
+ * Phase 50.2 — the template is gone. `Color.kt` (the six template colour
+ * constants) is deleted, the base is the plain M3 scheme, and the colour
+ * source is the explicit [BrandMode] from [IdentityPolicy] (brand green by
+ * default, the wallpaper only when the user asks on API 31+). Two fixes ride
+ * with the deletion: `surfaceTint` is the brand's primary — the old base was
+ * built from the template violet and `copy()` kept its tint on every card and
+ * sheet — and the type scale is [CodecType.scale()] (50.3), not the
+ * template's one-line `Typography`.
  */
 @Composable
 fun MyApplicationTheme(
   darkTheme: Boolean = isSystemInDarkTheme(),
   accentHex: String? = null,
-  dynamicColor: Boolean = true,
+  brandMode: BrandMode = BrandMode.BRAND,
   content: @Composable () -> Unit,
 ) {
   val requested = accentHex?.let { AccentPalette.parseHex(it) }
-  val useDynamic = dynamicColor && requested == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+  // The policy already gates on availability; the theme re-checks the SDK
+  // because it owns the `Build` import, so DYNAMIC can never reach the
+  // dynamic scheme on Android 7–11 even if a caller mis-decides.
+  val useDynamic = brandMode == BrandMode.DYNAMIC &&
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
   // Phase 40.5 — a missing/corrupt value means the app's own default (green),
-  // never the template violet that used to sit behind `DarkColorScheme`.
+  // never the template violet that used to sit behind the base scheme.
   val accentArgb = when {
     useDynamic -> null
     requested != null -> requested
@@ -61,8 +68,8 @@ fun MyApplicationTheme(
         val context = LocalContext.current
         if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
       }
-      darkTheme -> DarkColorScheme
-      else -> LightColorScheme
+      darkTheme -> darkColorScheme()
+      else -> lightColorScheme()
     }
   val colorScheme = if (accentArgb != null) {
     val roles = AccentPalette.rolesFor(
@@ -85,11 +92,15 @@ fun MyApplicationTheme(
       tertiary = Color(roles.tertiary),
       onTertiary = Color(roles.onTertiary),
       tertiaryContainer = Color(roles.tertiaryContainer),
-      onTertiaryContainer = Color(roles.onTertiaryContainer)
+      onTertiaryContainer = Color(roles.onTertiaryContainer),
+      // Phase 50.2 — the tint cards and sheets are washed with is the
+      // brand's primary. The old base carried the template's violet here
+      // even with a green accent, because `copy()` kept what it built.
+      surfaceTint = Color(roles.primary)
     )
   } else {
     base
   }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  MaterialTheme(colorScheme = colorScheme, typography = CodecType.scale(), content = content)
 }

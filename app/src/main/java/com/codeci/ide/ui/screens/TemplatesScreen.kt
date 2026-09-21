@@ -48,9 +48,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.ui.models.Template
 import com.codeci.ide.ui.models.TemplateProvider
 import com.codeci.ide.ui.theme.EditorThemeType
@@ -285,7 +285,7 @@ fun TemplateDetailView(
         ) {
             Text(
                 text = highlightedCode,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = CodecType.codeFamily,
                 style = MaterialTheme.typography.bodySmall
             )
         }
