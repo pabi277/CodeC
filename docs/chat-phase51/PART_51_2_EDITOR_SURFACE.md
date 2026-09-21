@@ -211,5 +211,7 @@ button, the touch floor, every minimum height from the scale),
 `EditorEmptyStateTest` 8 (one action per state, the reuse of
 `EditorLaunchState`/`openFile`, chrome-not-dialog, the strings).
 
+**CI:** ✅ GREEN `35630471779` tip `32c7c70` (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`), after round 1's raw-apostrophe AAPT2 failure and round 2's missing `PaddingValues` import — both fixed for-cause and recorded in the README.
+
 **Not run:** device rows F5-F8 (RUN ▶ visible at arm's length, the chord/keys row
 still reachable, the chip in both scratch states, save confirmation).

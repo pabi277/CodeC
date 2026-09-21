@@ -199,6 +199,8 @@ never invents a moment; both DataStore keys; all eight moments wired; the sora
 host, the emulator view and the whole `ui/guide` package stay haptic-free; the
 policy file imports no Android/Compose; the press component's call sites).
 
+**CI:** ✅ GREEN `35630471779` tip `32c7c70` (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`), after round 1's raw-apostrophe AAPT2 failure and round 2's missing `PaddingValues` import — both fixed for-cause and recorded in the README.
+
 **Not run:** device rows F14-F16 (the eight moments felt, the switch off, a
 press state seen). A haptic's *feel* is a handset judgement — the policy is a
 test, the feel is the owner's.

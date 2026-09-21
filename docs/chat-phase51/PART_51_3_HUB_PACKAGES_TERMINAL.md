@@ -206,5 +206,7 @@ pointing at the terminal), `TerminalIntroTest` 9, `TerminalChromeTest` 7 (the
 shared facts, the copy, the tokens, and that the emulator view and the sora host
 gained none of this phase's vocabulary).
 
+**CI:** ✅ GREEN `35630471779` tip `32c7c70` (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`), after round 1's raw-apostrophe AAPT2 failure and round 2's missing `PaddingValues` import — both fixed for-cause and recorded in the README.
+
 **Not run:** device rows F9-F13 (the hub's loading frame, a real install's finish,
 the terminal's first frame in all three states, the package row's words).
