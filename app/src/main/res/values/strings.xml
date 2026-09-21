@@ -361,7 +361,9 @@
 
     <!-- Phase 51.3 — the terminal's first frame and the install moment. -->
     <string name="terminal_intro_ready">Linux tools are ready — type a command, or run a file with RUN.</string>
-    <string name="terminal_intro_installing">Setting up CodeC's Linux tools — one time only, nothing to do.</string>
+    <!-- The apostrophe is escaped: AAPT2 refuses a raw one and reports it as
+         "Invalid unicode escape sequence in string" (CI round 1, 2026-09-21). -->
+    <string name="terminal_intro_installing">Setting up CodeC\'s Linux tools — one time only, nothing to do.</string>
     <string name="terminal_intro_needs_setup">Linux tools are not installed yet. C still works offline with the built-in compiler.</string>
     <string name="install_label_install">INSTALL</string>
     <string name="install_label_installing">INSTALLING</string>

@@ -338,6 +338,18 @@ chip a `TextButton`), `MotionWiringTest` (spec constructors live only in
 its prose said "46 rows" while its own table held 64 — the test reads the
 **table**, so the prose had drifted; it now says 65 with row 65 added).
 
+### CI
+
+**Round 1 (`35629624183`, tip `b42f106`) — red for-cause, fixed:**
+`:app:mergeDebugResources` rejected `strings.xml`'s `terminal_intro_installing`.
+AAPT2 refuses a **raw apostrophe** in a string value and reports it as
+`Invalid unicode escape sequence in string` — a message that names the wrong
+thing entirely. The string now escapes it (`CodeC\'s`), the way every other
+apostrophe in this file already does (14 strings were silently fine; this was
+the only raw one), and the whole file was re-scanned for raw apostrophes before
+the next push. Recorded in `rule.md` §9's lesson list so the next session greps
+for it instead of re-reading AAPT2's message.
+
 ### What is NOT done
 
 - **The device round**: `DEVICE_ROUND.md` F1-F16 (plus regression F17-F20) is

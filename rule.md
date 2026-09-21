@@ -1124,7 +1124,11 @@ Every update updates the docs **in the same commit**:
   would draw skeletons over loaded projects, and `reading` alone could not tell "no read yet" from
   "read finished, zero projects"; (3) `SetupGatePolicy.barVisible` is NOT "an install is running"
   (it is also true for a settled READY-without-pkg / FAILED bar), so the terminal's first frame uses
-  `InstallProgress.inFlight`, the same predicate the bar refuses dismissal on. Device round
+  `InstallProgress.inFlight`, the same predicate the bar refuses dismissal on. **CI round 1
+  (`35629624183`, tip `b42f106`) red for-cause:** AAPT2 rejects a **raw apostrophe** in a
+  `strings.xml` value and reports it as `Invalid unicode escape sequence in string` — the
+  message names the wrong thing, so before pushing, scan the `<string …>` lines and confirm every
+  apostrophe is written `\'` (comments may carry a raw one; values may not). Device round
   **F1-F16 NOT run** ([`chat-phase51/DEVICE_ROUND.md`](docs/chat-phase51/DEVICE_ROUND.md)); nothing
   is merged, nothing is pushed to `main` — the branch stops at the gate for the owner's command.
 
