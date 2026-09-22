@@ -53,7 +53,14 @@ quietly dropped.
 | `ProjectMarkTest` (10) + `ProjectsHubTest` (20, four new cases and one re-cut) + `ProjectMarkWiringTest` (7 pins) | **37 passed / 0 failed** |
 | the broad pure-source regression set (every Android-free main source and host test this checkout can compile, including the core-file pins — `TouchTargetTest`, `IconRoleTest`, `TokenAdoptionTest`, `TypeAdoptionTest`, `SettingsAuditTest`) | **970 passed / 0 failed** |
 
-**CI:** pending on this phase's commit.
+| CI round 1 | **RED, for cause** — `FileManagerScreen.kt`: the new action chip was inserted directly above `private fun HubFilterChip(`, so that function's own `@Composable` ended up on the new one (*“This annotation is not repeatable”*, and the filter chip left without an annotation) |
+| CI round 2 | **RED, for cause** — one more stray `@Composable`, appended above `ProjectHubCard` by the same move |
+| CI round 3 | ✅ **GREEN** — run `35741546107` on `55d32f3`, the whole `build` job with zero failed steps |
+
+**Both red rounds were one class, and the sandbox cannot see it** (no Compose on the host JVM), so the
+phase added the pin that makes it impossible: `ComposableAnnotationTest` walks every main source and
+fails if any `@Composable` reaches no declaration or two end up stacked on one — the rule the
+compiler enforces, checked where the edits happen. See PART_59_2 §3.
 
 **Next:** 60 — tabs and the coding row (close-unmodified, hide-tabs, the three sorts), then 61, 63 —
 and the merge gate stands: no PR, no merge, no `main` push without the owner's command.

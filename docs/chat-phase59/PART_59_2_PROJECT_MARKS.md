@@ -62,6 +62,14 @@ Two more local lessons worth keeping:
   `SN` (one word keeps two characters), `initials("日本")` is `日本`, and the seat of `snake` is
   BLUE. They were corrected to the implementation's documented rule, with the real values then
   pinned; the rule was not bent to the guesses.
+* **CI caught the same annotation mistake twice, and now a pin catches it first.** Inserting the
+  action chip immediately before `HubFilterChip` left that function's own `@Composable` attached to
+  the new one (round 1: *“This annotation is not repeatable”*, plus `HubFilterChip` unannotated);
+  moving the block left a second stray above `ProjectHubCard` (round 2). Both are invisible to a
+  host JVM — the sandbox cannot compile Compose at all — so the phase ships
+  `ComposableAnnotationTest`: every `@Composable` in `app/src/main/java` must reach a declaration,
+  with a floor of 100 annotations so the scan cannot silently visit nothing. A repo-wide run of the
+  same rule reports **0** problems today.
 * **The sandbox harness can now compile `ProjectsHubTest`.** It never could before, because
   `ProjectsHub.kt` reaches `AutoRunPlan` → `ProjectRunTarget` → `LanguageRegistry`/`WebFileSupport`
   → `LanguageType`, and `LanguageType` is declared inside the sora-coupled

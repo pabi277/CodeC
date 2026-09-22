@@ -75,7 +75,10 @@ Only the *new* rows are numbered; already-built behaviour is verified, not rebui
 - **Exit, checked:** a name filter and a recent filter both narrow the list ✅; three same-kind
   projects carry three marks ✅; nothing else that worked is gone — the kind the mark used to show
   moved to the subtitle ✅. Local: **37 passed / 0 failed** for the phase, **970 passed / 0 failed**
-  across the broad pure-source set (which includes the core-file pins). CI: pending.
+  across the broad pure-source set (which includes the core-file pins). **CI: green on the third
+  round** — `35741546107` on `55d32f3`; rounds 1 and 2 were red for one class (a stray `@Composable`
+  left by the edit, invisible to the sandbox's non-Compose host JVM), which is now pinned by
+  `ComposableAnnotationTest`.
 
 ### 60 — Tabs and the coding row  *(spec §2)*
 - **Add:** to the tab menu that already exists — *Close unmodified*, *Hide tabs*
