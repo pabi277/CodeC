@@ -68,7 +68,7 @@ These are not the project bar, and they stay:
 - the touch-key row, docked even when the keyboard is closed
 - Android’s own gesture or button bar (the system’s, not ours)
 
-These leave with the project bar:
+These were going to leave with the whole bar. They do not. Only the Projects tab leaves:
 
 - the five tabs
 - the **Show tabs** handle that only exists to bring the five tabs back
