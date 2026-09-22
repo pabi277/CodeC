@@ -1449,46 +1449,6 @@ private fun ProjectsHubListContent(
  * carries the branch glyph.
  */
 @Composable
-/**
- * Phase 59.1 — the row's action chip (*Create*): the same shell as [HubFilterChip], because it
- * shares their shape, their spacing and their tap area — but it is never “selected”, because it is
- * not a state the list can be in. It opens the same sheet the hub's ＋ opens, so there is one
- * add-project path in the app and not two.
- */
-@Composable
-private fun HubActionChip(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector?,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(50)
-    Row(
-        modifier = Modifier
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(
-                width = 1.dp,
-                // Phase 40.5 — the same boundary role the unselected filter chips use.
-                color = MaterialTheme.colorScheme.outline,
-                shape = shape
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        icon?.let {
-            Icon(
-                it,
-                contentDescription = null,
-                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE)),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(CodecTokens.space(Space.XS)))
-        }
-        Text(label, style = MaterialTheme.typography.labelLarge)
-    }
-}
-
 private fun HubFilterChip(
     value: ProjectHubFilter,
     selected: ProjectHubFilter,
@@ -1550,6 +1510,47 @@ private fun HubFilterChip(
         )
     }
 }
+
+/**
+ * Phase 59.1 — the row's action chip (*Create*): the same shell as [HubFilterChip], because it
+ * shares their shape, their spacing and their tap area — but it is never “selected”, because it is
+ * not a state the list can be in. It opens the same sheet the hub's ＋ opens, so there is one
+ * add-project path in the app and not two.
+ */
+@Composable
+private fun HubActionChip(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(50)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(
+                width = 1.dp,
+                // Phase 40.5 — the same boundary role the unselected filter chips use.
+                color = MaterialTheme.colorScheme.outline,
+                shape = shape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        icon?.let {
+            Icon(
+                it,
+                contentDescription = null,
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE)),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(CodecTokens.space(Space.XS)))
+        }
+        Text(label, style = MaterialTheme.typography.labelLarge)
+    }
+}
+@Composable
 
 /**
  * Phase 15 — Spck-style project card: colored leading type square, name,
