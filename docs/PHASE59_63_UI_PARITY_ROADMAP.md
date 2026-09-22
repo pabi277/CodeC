@@ -111,7 +111,12 @@ Only the *new* rows are numbered; already-built behaviour is verified, not rebui
   audit still matches the screen ✅ (`SettingsAuditTest` untouched). Local: **25 passed / 0
   failed** for the phase, **881 passed / 0 failed** across the broad pure-source set, with the
   phase's one census re-cut (the `IconButton` census 17 → 18, reason recorded in
-  `TouchTargetTest`).
+  `TouchTargetTest`). **CI round 1 was red for cause and round 2 went green:** the section wrappers
+  cut two declarations from their readers (CI's compile), a third boundary bug was one no compiler
+  could see (the `BuildConfig.DEBUG` guard ended up outside the Developer Options fold), and the
+  phase now ships two structural pins that catch all three — *every section slice is a balanced
+  block*, *no local declaration is split from its uses* (both validated against the pre-62 screen).
+  CI ✅ **GREEN** `35724187664` on `aa1fcba`.
 
 ### 63 — Git pane: verify and fill  *(spec §5)*
 - **Verify:** the pane, the staging toggle, diff, commit(+push), pull, conflicts — all exist.
