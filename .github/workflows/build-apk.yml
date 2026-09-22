@@ -107,7 +107,16 @@ jobs:
       # committed goldens can fail this job rather than being silently
       # rewritten.
       - name: Run host unit and screenshot tests (Phase 52)
-        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace 2>&1 | tee phase52-host-tests.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # Keep the actionable Gradle/test lines in check-run annotations too;
+            # the raw Actions blob is not always available to the owner.
+            python3 scripts/surface_gradle_errors.py phase52-host-tests.log
+            exit "$status"
+          fi
 
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
