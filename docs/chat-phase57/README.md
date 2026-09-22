@@ -1,6 +1,6 @@
 # CodeC Phase 57 — Editor chrome
 
-> **Status:** 🚧 **IMPLEMENTED on `arena/01a0c83e-codec`** (57.3 not started) · **Cost:** `[client-only]` · **Effort:** M (57.1) + L (57.2) + S (57.3)
+> **Status:** 🚧 **IMPLEMENTED on `arena/01a0c83e-codec`** (57.1-57.3; device round not run) · **Cost:** `[client-only]` · **Effort:** M (57.1) + L (57.2) + S (57.3)
 >
 > Parent: [`PHASE54_58_PHONE_UI_ROADMAP.md`](../PHASE54_58_PHONE_UI_ROADMAP.md).
 > Reference of record: `docs/spck-ui/Screenshot_20260922_122157_Spck Editor.jpg`
@@ -10,16 +10,22 @@
 ```text
   57.1  Top row and tab row, as the shots          🚧 IMPLEMENTED
   57.2  Status line, touch row, predictive row     🚧 IMPLEMENTED
-  57.3  Pills, not dialogs                         📋 NOT STARTED
+  57.3  Pills, not dialogs                         🚧 IMPLEMENTED
 ```
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
 | [57.1](PART_57_1_TOP_ROW.md) | Filename, tab, green triangle | M | 🚧 IMPLEMENTED |
 | [57.2](PART_57_2_ROWS_AND_CARET.md) | The two rows above the system keyboard | L | 🚧 IMPLEMENTED |
-| 57.3 | One pill | S | 📋 NOT STARTED |
+| [57.3](PART_57_3_PILL.md) | One pill | S | 🚧 IMPLEMENTED |
 
-Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (R1-R9, written, **not run**).
+Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (R1-R11, written, **not run**).
+
+**CI round 1 was red for cause** (run `35709258747`): two pins that the 57.1 layout had invalidated —
+`EditorChromeSlotTest`'s tab-row region ended on a comment this checkout no longer carries, and
+`TouchTargetTest`'s exact icon census counted 16 where the six files now hold 17 (the ⋮ `IconButton`
+left the bar, the bare green ▶ `IconButton` arrived, the tab row's trailing cell added one). Both were
+fixed in the 57.3 commit, and both files now carry the reason in the code that must be edited next time.
 
 ## What the shots actually show (re-read 2026-09-22, before any code)
 
@@ -51,7 +57,7 @@ Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (R1-R9, written, **not run**)
 | “The touch row from the shot, docked even when the keyboard is closed.” | Already true; **pinned**. |
 | “The predictive row only while the IME is up.” | Done — `StripContext` now takes `typingSurfaceUp`; the chips dock only with a keyboard. |
 | “For the blue drop … If sora already draws a handle, style that.” | **sora 0.24.6 does draw one.** Verified in the library source: `EditorRenderer` calls `getHandleStyle().draw(…, HANDLE_TYPE_INSERT, …)`, and `CodeEditor`'s default is `HandleStyleSideDrop`. So 57.2 **styles sora's own handle** (`HandleStyleDrop`) and sets its colour role; no second caret, no overlay. |
-| “A pill for ‘Error opening file.’ and ‘Refreshed Files’” | 📋 57.3, not started. |
+| “A pill for ‘Error opening file.’ and ‘Refreshed Files’” | Done — one pill (57.3), above the snackbar's slot, dismissed by its own timer or a tap. It also closed a real hole: **eight** silent `?: return`s on the open paths made a tap on an unreadable file do nothing at all; each now reports. Details: [PART_57_3](PART_57_3_PILL.md). |
 | “A glyph may be drawn to match the shot only if tapping it does not perform a guessed action.” | One new glyph (`SpckIcons.EditorMenu`) is drawn; the cell it sits in opens the **existing** list. `>>`, the `⧉` cap and `⌘` are untouched. |
 
 ## One honest reversal, recorded

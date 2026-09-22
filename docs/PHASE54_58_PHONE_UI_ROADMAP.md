@@ -12,9 +12,15 @@
 > - The HTML page view’s upper links are not phone-friendly; they want a hamburger-style treatment.
 > - *“if need say me”* — if a screen is not in the shots, ask. Do not invent it.
 
-> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED, 56 IMPLEMENTED, 57.1 + 57.2 IMPLEMENTED, 57.3 NOT STARTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel ([`chat-phase55/`](chat-phase55/README.md)). 56 took the Projects option off the bar and left the other four, the handle and hide-while-typing exactly as they were ([`chat-phase56/`](chat-phase56/README.md)). 57.1 and 57.2 shipped ([`chat-phase57/`](chat-phase57/README.md)); 57.3 and 58 are still 📋 PLANNED — the owner says **“Start Phase N”**, and only then does that phase’s research pass begin.
+> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED, 56 IMPLEMENTED, 57.1-57.3 IMPLEMENTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel ([`chat-phase55/`](chat-phase55/README.md)). 56 took the Projects option off the bar and left the other four, the handle and hide-while-typing exactly as they were ([`chat-phase56/`](chat-phase56/README.md)). 57.1, 57.2 and 57.3 shipped ([`chat-phase57/`](chat-phase57/README.md)); 58 is still 📋 PLANNED — the owner says **“Start Phase N”**, and only then does that phase’s research pass begin.
 >
-> **One red CI round so far (for cause, fixed):** run `35707359816` failed on Phase 55 with two real compile errors — a wrong package in an import (`CoachMarkPlan` lives in `ui.guide`, not `ui.editor`) and `CodecTokens.Icon.HUGE`, which does not exist. Both fixed in the Phase 56 commit.
+> **Two red CI rounds so far (both for cause, both fixed):** run `35707359816` failed on Phase 55 with two real
+> compile errors — a wrong package in an import (`CoachMarkPlan` lives in `ui.guide`, not `ui.editor`) and
+> `CodecTokens.Icon.HUGE`, which does not exist. Both fixed in the Phase 56 commit. Run `35709258747` failed
+> on Phase 57.1 with two **pins** the new layout had legitimately invalidated: `EditorChromeSlotTest`'s tab-row
+> helper ended its region on a comment no longer on this checkout, and `TouchTargetTest`'s deliberately-exact
+> icon census (16 → 17 — see the next part doc). Both fixed and re-run green in the 57.3 commit; the census
+> comment and the helper now carry the reason, so the next phase that moves them is forced to say why.
 >
 > **Owner decisions that shaped 55 (2026-09-22, verbatim):** the full bottom bar stays (*“only removing the project option is ok”*); the fifth rail slot is *“Reseserve[d] … i have plan for ai”*; the card's bottom row is **Terminal · Packages · Guide**; the unseen glyphs: *“Do whatever is good”* (read as omit-and-ask, with a real CodeC action where one existed).
 >
@@ -217,7 +223,7 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 |---|---|---|---|
 | 57.1 | Filename, tab, green triangle | M | 🚧 IMPLEMENTED — [PART_57_1](chat-phase57/PART_57_1_TOP_ROW.md) |
 | 57.2 | The two rows above the system keyboard | L | 🚧 IMPLEMENTED — [PART_57_2](chat-phase57/PART_57_2_ROWS_AND_CARET.md) |
-| 57.3 | One pill | S | 📋 NOT STARTED |
+| 57.3 | One pill | S | 🚧 IMPLEMENTED — [PART_57_3](chat-phase57/PART_57_3_PILL.md) |
 
 > **Owner answers taken before this phase's code (2026-09-22, verbatim):** where the retired
 > ⋮'s list should live → **“Tab row's trailing cell (the shot's glyph)”**; what to do about

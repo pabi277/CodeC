@@ -360,6 +360,11 @@
     <string name="editor_empty_browse">Browse projects</string>
     <string name="editor_saved">Saved</string>
 
+    <!-- Phase 57.3 — the two short messages the shots show as a floating pill:
+         a refresh the user asked for, and a tap on a file that cannot open. -->
+    <string name="notice_files_refreshed">Refreshed Files</string>
+    <string name="notice_file_open_failed">Error opening file.</string>
+
     <!-- Phase 51.3 — the terminal's first frame and the install moment. -->
     <string name="terminal_intro_ready">Linux tools are ready — type a command, or run a file with RUN.</string>
     <!-- The apostrophe is escaped: AAPT2 refuses a raw one and reports it as

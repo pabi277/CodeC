@@ -149,11 +149,13 @@ import com.codeci.ide.ui.editor.RunButtonRole
 import com.codeci.ide.ui.editor.RunButtonState
 import com.codeci.ide.ui.editor.RunButtonStyle
 import com.codeci.ide.ui.components.OutputPanelView
+import com.codeci.ide.ui.components.PillNotice
 import com.codeci.ide.ui.components.RunKeysRow
 import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.components.SuggestionStrip
 import com.codeci.ide.ui.editor.AcceptGranularity
 import com.codeci.ide.ui.editor.CompletionPolicy
+import com.codeci.ide.ui.editor.NoticePolicy
 import com.codeci.ide.ui.editor.CompletionSettings
 import com.codeci.ide.ui.editor.CompletionItem
 import com.codeci.ide.ui.editor.CompletionSurface
@@ -604,6 +606,17 @@ fun EditorScreen(
     // drawer slides shut its rows are still laid out, and `currentValue` only
     // flips at the END of the animation, so without it a box could be cut on a
     // control the panel is still covering for ~200ms.
+    // Phase 57.3 — the pill: the VM owns WHICH message is owed, the screen owns
+    // how long it stays. The timer is re-keyed by the message, so two pills in a
+    // row each get their full window (a second refresh must not inherit the
+    // first one's remainder).
+    val notice by viewModel.notice.collectAsState()
+    LaunchedEffect(notice) {
+        if (notice != null) {
+            kotlinx.coroutines.delay(NoticePolicy.AUTO_DISMISS_MS)
+            viewModel.clearNotice()
+        }
+    }
     val editorDrawerOpen = drawerState.currentValue == DrawerValue.Open ||
         drawerState.isAnimationRunning
     LaunchedEffect(editorDrawerOpen) { EditorChromeState.setDrawerOpen(editorDrawerOpen) }
@@ -1381,10 +1394,9 @@ fun EditorScreen(
                         entryName = ""
                         pendingCreate = parent to true
                     },
-                    onRefresh = {
-                        viewModel.refreshFileEntries(context)
-                        viewModel.refreshGitMeta(context)
-                    },
+                    // Phase 57.3 — the tree's OWN Refresh: the one re-read the
+                    // user asked for, and the only one that confirms itself.
+                    onRefresh = { viewModel.refreshFilesFromUser(context) },
                     onToggleCollapseAll = {
                         if (allCollapsed) viewModel.expandAllDirectories() else viewModel.collapseAllDirectories()
                     },
@@ -2437,6 +2449,26 @@ fun EditorScreen(
 
         if (isRenaming) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        }
+        // Phase 57.3 — one pill, above the snackbar's own slot so the two can
+        // never sit on top of each other: the pill confirms what the user just
+        // did (the shot's “Refreshed Files”), or names a dead tap
+        // (“Error opening file.”) that used to be silent.
+        val pill = notice
+        AnimatedVisibility(
+            visible = pill != null,
+            enter = CodecMotion.tabEnter,
+            exit = CodecMotion.tabExit,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(
+                    bottom = CodecTokens.space(Space.HUGE) +
+                        CodecTokens.space(Space.XXL)
+                )
+        ) {
+            if (pill != null) {
+                PillNotice(kind = pill, onDismiss = { viewModel.clearNotice() })
+            }
         }
         SnackbarHost(
             hostState = snackbarHostState,

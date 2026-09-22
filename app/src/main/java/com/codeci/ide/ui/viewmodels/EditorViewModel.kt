@@ -30,6 +30,8 @@ import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorLineOps
 import com.codeci.ide.ui.editor.EditorOpenMode
+import com.codeci.ide.ui.editor.NoticeKind
+import com.codeci.ide.ui.editor.NoticePolicy
 import com.codeci.ide.ui.editor.EditorOpenModePolicy
 import com.codeci.ide.ui.editor.EditorTab
 import com.codeci.ide.ui.editor.EditorUndoManager
@@ -315,6 +317,40 @@ class EditorViewModel : ViewModel() {
 
     private val _isDirty = MutableStateFlow(false)
     val isDirty: StateFlow<Boolean> = _isDirty.asStateFlow()
+
+    // Phase 57.3 — the one short-lived message surface (the shots' pill). It is
+    // deliberately NOT a dialog and NOT a toast: a pill is dismissed by its own
+    // timer, it cannot race the editor's snackbar, and which message is owed is
+    // the pure `NoticePolicy`'s call, not a chain of ifs at a call site.
+    private val _notice = MutableStateFlow<NoticeKind?>(null)
+    val notice: StateFlow<NoticeKind?> = _notice.asStateFlow()
+
+    /** The screen's timer, its tap, or the next notice: one way out. */
+    fun clearNotice() {
+        _notice.value = null
+    }
+
+    private fun noticeFor(kind: NoticeKind?) {
+        if (kind != null) _notice.value = kind
+    }
+
+    /**
+     * Phase 57.3 — a file that cannot be opened is never a dead tap. Every
+     * silent `?: return` on the open paths comes through here instead.
+     */
+    private fun failOpen(name: String?) {
+        noticeFor(NoticePolicy.openFailureNotice(name))
+    }
+
+    /**
+     * Phase 57.3 — the tree toolbar's OWN Refresh. It confirms itself with a
+     * pill; every automatic re-read stays silent (the no-nag law).
+     */
+    fun refreshFilesFromUser(context: Context) {
+        refreshFileEntries(context)
+        refreshGitMeta(context)
+        noticeFor(NoticePolicy.refreshNotice(userAsked = true))
+    }
 
     private val _isRenaming = MutableStateFlow(false)
     val isRenaming: StateFlow<Boolean> = _isRenaming.asStateFlow()
@@ -1285,8 +1321,8 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun openProjectFile(context: Context, projectName: String, relativePath: String) {
-        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return
-        val info = ProjectManager(context).project(projectName) ?: return
+        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return failOpen(relativePath)
+        val info = ProjectManager(context).project(projectName) ?: return failOpen(relativePath)
         // Phase 46.2 — arriving here from another mode is a mode flip; the
         // PROJECT side of it is decided before any early return.
         _openMode.value = EditorOpenMode.PROJECT
@@ -1325,9 +1361,9 @@ class EditorViewModel : ViewModel() {
             activateTab(existing)
             return
         }
-        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return
-        if (!file.isFile || !file.canRead()) return
-        val content = runCatching { file.readText() }.getOrNull() ?: return
+        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return failOpen(safe)
+        if (!file.isFile || !file.canRead()) return failOpen(safe)
+        val content = runCatching { file.readText() }.getOrNull() ?: return failOpen(safe)
         // Phase 16: the buffer always lives in LF; the file's native ending is
         // remembered on the tab and re-expanded on save (Spck-style, no reflow).
         val ending = LineEndings.detect(content)
@@ -1360,10 +1396,10 @@ class EditorViewModel : ViewModel() {
      */
     fun openSingleProjectFile(context: Context, projectName: String, relativePath: String) {
         captureContext(context)
-        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return
-        val info = ProjectManager(context).project(projectName) ?: return
-        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return
-        if (!file.isFile || !file.canRead()) return
+        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return failOpen(relativePath)
+        val info = ProjectManager(context).project(projectName) ?: return failOpen(relativePath)
+        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return failOpen(safe)
+        if (!file.isFile || !file.canRead()) return failOpen(safe)
         val alreadyThisSingleFile = _openMode.value == EditorOpenMode.SINGLE_FILE &&
             _projectName.value == info.name && _activeTabPath.value == safe
         if (alreadyThisSingleFile) {
@@ -1376,7 +1412,7 @@ class EditorViewModel : ViewModel() {
         // autosave so un-typed keystrokes land on disk, then read the file's
         // truth from disk (PART_46_2 exit 6; the money test).
         flushAutoSave()
-        val content = runCatching { file.readText() }.getOrNull() ?: return
+        val content = runCatching { file.readText() }.getOrNull() ?: return failOpen(safe)
         val ending = LineEndings.detect(content)
         val normalized = LineEndings.normalizeToLf(content)
         resetCaretForOpen()
@@ -1406,14 +1442,14 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun openScratchFile(context: Context, name: String) {
-        val safe = FileNameUtils.sanitizeFileName(name) ?: return
+        val safe = FileNameUtils.sanitizeFileName(name) ?: return failOpen(name)
         _openMode.value = EditorOpenMode.SCRATCH
         if (_activeTabPath.value == null && _fileName.value == safe && _projectName.value == null) {
             resetCaretForOpen()
             return
         }
         val fm = FileManager(context)
-        val content = fm.loadFile(safe) ?: return
+        val content = fm.loadFile(safe) ?: return failOpen(safe)
         stashActiveTabBuffer(_codeText.value)
         resetCaretForOpen()
         _projectName.value = null

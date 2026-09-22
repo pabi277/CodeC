@@ -75,8 +75,13 @@ class TouchTargetTest {
     @Test
     fun `the scan really visits buttons`() {
         // A pin that never matches is a pin that never fails: the six files
-        // hold sixteen IconButtons today (3 editor + 5 hub + 2 packages +
-        // 6 terminal; welcome and settings hold none).
+        // hold seventeen IconButtons today (4 editor + 5 hub + 2 packages +
+        // 6 terminal; welcome and settings hold none). The editor's count went
+        // 3 → 4 in Phase 57.1, and this comment is the record the pin demands:
+        // the top row's ⋮ `IconButton` left the bar, the RUN action became the
+        // shots' bare green ▶ `IconButton`, and the tab row's trailing cell
+        // added the editor-menu `IconButton` (+1 net). A phase that changes this
+        // number again must say why here, not just edit the digit.
         var total = 0
         for (name in sixFiles) {
             val code = RepoFiles.codeOnly(
@@ -87,8 +92,8 @@ class TouchTargetTest {
             total += Regex("""\bIconButton\s*\(""").findAll(code).count()
         }
         assertTrue(
-            "expected 16 IconButtons across the six files, found $total",
-            total == 16,
+            "expected 17 IconButtons across the six files, found $total",
+            total == 17,
         )
     }
 }

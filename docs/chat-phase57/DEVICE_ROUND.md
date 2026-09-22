@@ -18,10 +18,12 @@ Phone: the owner's own device, one hand, `docs/spck-ui/Screenshot_20260922_12215
 | R7 | Does the drop survive a theme switch? | Settings → switch the editor theme, tap back into the code. | The drop is still the reference's blue. | the theme effect |
 | R8 | The rows, keyboard down then up (the exit criterion) | Keyboard down: status line, then the touch row, then the bottom bar. Keyboard up: **no** status line, the chip row, the touch row, then the system keyboard. | As written, in that order, in both states. | `EditorScreen.kt:2229/2254/2371` |
 | R9 | The chips only with a keyboard | With the keyboard down, type nothing and look at the row; then focus a file with many completions. | Down: key caps, **no** chips. Up (or CodeC Keys): chips dock as usual. | `StripContext.typingSurfaceUp` |
+| R10 | The pill, on a refresh the user asked for | Open the side panel's Files tab, tap the tree toolbar's **Refresh**. Then tap somewhere else immediately, and refresh twice in a row. | One pill appears above the status line / touch row: dark, rounded, blue glyph, bold **Refreshed Files**. It leaves after ~2.4 s or on a tap (a tap does nothing else). Two refreshes in a row each get their own window. **No** pill appears when the tree is re-read by opening the drawer, saving, renaming or deleting. | `PillNotice.kt` · `NoticePolicy.AUTO_DISMISS_MS` · `EditorViewModel.refreshFilesFromUser` |
+| R11 | The pill, on a file that cannot open | With a project open, delete a file from the terminal (`rm`) and then tap its row in the tree; also try tapping a row whose file is chmod'd unreadable. | **“Error opening file.”** appears in the pill — red glyph, same place, same lifetime. The tap is never silent again. Nothing else changes: the other tabs, the tree, and the buffer in front stay exactly as they were. | `EditorViewModel.failOpen` · `PillNotice.kt` |
 
 ## What this round cannot answer
 
-* 57.3 (the pill) is not built, so nothing here tests it.
+* R10/R11 were written with the pill, after R1-R9; they have never been run either.
 * The tour's beats 2-4 still run inside the drawer; R1-R3 change the panel's *outside*, not
   the tour. A tour replay is still worth doing after this round (`docs/chat-phase55` P-round
   covers it).

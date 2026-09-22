@@ -47,7 +47,12 @@ class EditorChromeSlotTest {
     /** The tab row's own block, below the app bar. */
     private fun tabRow(): String {
         val start = editor.indexOf("            // Phase 57.1 — the shots' second row")
-        val end = editor.indexOf("            // Phase 16 mockup-exact", start)
+        // The row's own block runs to the next declared slot. The first cut of
+        // this helper anchored on a `// Phase 16 mockup-exact` comment that no
+        // longer exists on this checkout — CI round 1 caught it ("the tab row's
+        // block moved"), so the end anchor is now a marker the phase system
+        // keeps alive rather than a comment someone can tidy away.
+        val end = editor.indexOf("            // Phase 51.2 slot: find_bar", start)
         assertTrue("the tab row's block moved", start > 0 && end > start)
         return editor.substring(start, end)
     }
