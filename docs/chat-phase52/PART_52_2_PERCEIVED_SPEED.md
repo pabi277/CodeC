@@ -1,6 +1,6 @@
 # CodeC Phase 52.2 — Jank budget and measured first paint
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` (the bench APK is separate
+> **Status:** 🚧 IMPLEMENTED (instrumented; device measurements pending) · **Cost:** `[client-only]` (the bench APK is separate
 > and ships nothing into `:app`) · **Effort:** M ·
 > **Owner row (verbatim):** *"it's not attractive to user to use multiple
 > time"* — because an app that stutters is an app that feels cheap, whatever it
@@ -116,6 +116,18 @@ build id; `FrameBudget` and `SpeedVerdict` are pinned by tests; the three
 remaining loading surfaces have a skeleton branch (source pins); and
 `DEVICE_ROUND.md` R4-R8 has been run by the owner (including the stopwatch
 cross-check of M1).
+
+## Implementation record (Phase 52 start)
+
+- `FrameBudget` and `SpeedVerdict` are pure policies with pinned thresholds;
+  the existing bench remains the collector and no continuous frame monitor was
+  added to `:app`.
+- `MainActivity` emits one `Launch` line with `firstFrameMs` and the resolved
+  route after the first route-known composition.
+- The file tree, package list and source-control loading branches now use the
+  shared skeleton vocabulary rather than a blank/spinner-only first paint.
+- M1-M6 are **not measured in this sandbox**. The before/after table must be
+  filled from the owner's handset and bench APK; no numbers are invented here.
 
 ## Tests (plan)
 

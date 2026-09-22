@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.components.HapticMoment
 import com.codeci.ide.ui.components.PressableSurface
+import com.codeci.ide.ui.components.SkeletonPackageRow
 import com.codeci.ide.ui.components.rememberCodecHaptics
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecMotion
@@ -105,6 +106,13 @@ fun ModulesScreen(
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var customCommand by remember { mutableStateOf("") }
+    // Phase 52.2 — even the static catalog gets one honest first-paint branch;
+    // its six rows match the loaded card rhythm instead of flashing a blank.
+    var packageListReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.yield()
+        packageListReady = true
+    }
     // Phase 44.1 — the Packages tab stops lying. Every row here fires
     // `pkg …` into the terminal shell; while the one-time userland setup has
     // not produced a working `bin/pkg`, that produced a bare
@@ -203,7 +211,14 @@ fun ModulesScreen(
             // and "Unix tools" is collapsed by default (tap the header to
             // expand). A typed search flattens both sections so a name is
             // found regardless of which section it lives in.
-            if (filteredPackages.isEmpty()) {
+            if (!packageListReady) {
+                items(
+                    count = PackageCatalog.ALL_PACKAGES.size,
+                    key = { "package_skeleton_$it" },
+                ) {
+                    SkeletonPackageRow()
+                }
+            } else if (filteredPackages.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier

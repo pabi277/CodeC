@@ -102,6 +102,31 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Phase 52.4 — host policy and screenshot tests are the CI executor of
+      # record. The Gradle build sets roborazzi.test.verify=true under CI, so
+      # committed goldens can fail this job rather than being silently
+      # rewritten.
+      - name: Run host unit and screenshot tests (Phase 52)
+        run: |
+          set -o pipefail
+          set +e
+          ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace 2>&1 | tee phase52-host-tests.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            # Keep the actionable Gradle/test lines in check-run annotations too;
+            # the raw Actions blob is not always available to the owner.
+            echo "::notice::Phase 52 host log bytes=$(wc -c < phase52-host-tests.log 2>/dev/null || echo 0)"
+            # GitHub keeps only a small annotation window per step. Select the
+            # first actionable Gradle lines rather than flooding it with the
+            # end of a Java stack trace.
+            grep -iE 'FAILURE:|What went wrong|Execution failed|There were failing tests|e: file:|error:|Could not |Caused by:|FAILED' \
+              phase52-host-tests.log | head -9 | while IFS= read -r line; do
+              [ -n "$line" ] && echo "::error::${line:0:1800}"
+            done
+            exit "$status"
+          fi
+
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 

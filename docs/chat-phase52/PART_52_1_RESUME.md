@@ -1,6 +1,6 @@
 # CodeC Phase 52.1 — "Continue where you left off", visibly
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M ·
+> **Status:** 🚧 IMPLEMENTED (host-verified; handset round pending) · **Cost:** `[client-only]` · **Effort:** M ·
 > **Owner row (verbatim):** *"not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -112,6 +112,18 @@ cases and the missing-timestamp default); the card renders on the hub with the
 real path and two actions; **✕** is session-only and not asked again; the
 first-run welcome and Phase 44's setup divert still win; and `DEVICE_ROUND.md`
 R1-R4 has been run by the owner.
+
+## Implementation record (Phase 52 start)
+
+- `ResumePolicy` is a pure host-testable policy with all four offers, the
+  missing-timestamp default and the five-minute boundary.
+- `EditorLaunchState` stores `last_opened_at` beside the existing project/file
+  pair; older installs deliberately receive the visible card rather than a
+  silent jump.
+- `MainActivity` keeps setup/welcome/safe mode precedence, and the hub card is
+  session-only: Continue and ✕ both consume it without writing a preference.
+- The owner handset rows R1-R4 are **not run in this sandbox**; they require the
+  phase APK and the owner's device.
 
 ## Tests (plan)
 
