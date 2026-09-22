@@ -1,6 +1,8 @@
 # Phone UI spec images
 
-Drawings of the accepted phone chrome. Not photos, and not Play Store art.
+The seven `Screenshot_20260922_*.jpg` files are the real phone. They win over the drawings below.
+
+Drawings of the accepted phone chrome. Not photos, and not Play Store art. The drawings got the shell right and the navigation grid wrong: the real grid is 3 columns by 2 rows, inside one card.
 
 The project bar does not get a strip at the bottom. Rooms live in the side panel. The bottom is the status line and the touch row, then the system keyboard when it is open.
 

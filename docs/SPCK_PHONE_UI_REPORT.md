@@ -5,11 +5,37 @@
 **What this accepts:** the seven phone screenshots of SPCK Editor, not Play Store art, and not a new layout.  
 **Your point, checked:** after this UI, the project bar does not need its own space at the bottom. That is right.
 
-The screens to check are in [docs/spck-ui](spck-ui/README.md). They are drawings of this spec, not photos.
+The real shots are in [docs/spck-ui](spck-ui/README.md), commit `Real ss`. They win over the drawings. The drawings got the shell right and the grid wrong. See the check below.
 
-![Overview](spck-ui/00-overview.png)
+## 0. Checked against the seven real shots
 
-![Today the project bar keeps a strip. After, that strip is gone.](spck-ui/08-bottom-comparison.png)
+Commit `dd81a6d` (`Real ss`) is the phone. Every shot confirms there is no project bar.
+
+What the shots confirm:
+
+- Top of the editor is ☰, the HTML5 shield, `index.html`, search, a green triangle. No word RUN. No ⋮.
+- The tab row sits under that. The active tab has an orange top edge. A right-hand icon (lines and a down arrow) is still unnamed.
+- Keyboard down: status line `Ln 81, Col 28` on the left, `Sp: 4  HTML  LF  UTF-8` on the right, then the touch row. A pill, “Refreshed Files”, floats above that line. The caret on line 81 is a thin bar. No blue drop in that shot.
+- Keyboard up: the status line hides. A predictive row appears (`<tag>` `div` `class` `=` `""`, plus a small icon on the right). The same touch row stays. Gboard stays, including its own emoji/clipboard row and the number row. The blue drop is large, under the caret on `</html>`.
+- The side panel leaves a strip of the editor, including the green play. `>>` from the touch row peeks at the bottom of that strip.
+- Rail, selected icon underlined: outline triangle, folder, search-with-`<>`, branch, person.
+- Files: the project name is the tree root. `index.html` has a green triangle and a full-width selected row. Errors are a pill with the app mark: “Error opening file.”
+- Search is empty. Toggles are icons (regex, Aa, whole word, filter, replace), not text chips.
+- Repository, empty: one left-aligned sentence, then a centered blue Initialize Repository button.
+- Account is a shop. Do not copy it.
+
+What the drawings got wrong, and the shots correct:
+
+- The grid is **3 columns by 2 rows, inside one card**, not 2 columns. Real cells: Projects, Editor (selected, center of the top row), Settings, then Discover, My Labs, Change Log. Editor is not the top-right of a 2-column grid.
+- Recent is a long stacked list. Every row in this shot has an External badge. Not one row.
+- The first rail icon is an outline triangle, not a filled play. The green play is only the run button.
+- The touch row is icons, not the word Tab: `→|`, up, down, left, right, a quote bubble, a braces mark, `>>`.
+- The HTML file icon is the HTML5 shield. Text files are a TXT page.
+- The real tree is longer than the drawing: app-resources, Chemistry, css, English, js, Math, Physics, Practice_question, pyq-assets, then `4.html`, `index.html`, `last_english.html`, `prompt.txt`, `structure.txt`.
+- The Navigation title has a `...` on the right. The drawing omitted it.
+- The repository sentence is left-aligned, not centered.
+
+The 2-column CodeC room map in section 4 was a proposal. It is not what the phone shows. The phone’s shape is the 3×2 card. Discover, My Labs, Change Log, Upgrade, and the AI credits stay out. Where Terminal, Packages, and Guide sit in that 3×2 card is still an open choice.
 
 ---
 
@@ -124,14 +150,14 @@ This is the current app, read from the code, not from memory of an old mockup.
 
 ## 4. Where each CodeC room goes
 
-The Navigation grid is 2×3. SPCK fills it with Discover, My Labs, and Change Log. Those are their product. CodeC’s six real rooms fit the same grid, and that is the whole map:
+The real grid is 3×2, one card. Copy that shape. Do not copy Discover, My Labs, or Change Log. A CodeC filling of the same card, still a proposal:
 
 | | | |
 |---|---|---|
-| Projects | Editor | Terminal |
-| Packages | Settings | Guide |
+| Projects | Editor | Settings |
+| Terminal | Packages | Guide |
 
-Editor is the home cell, the way it is selected in your shot. Recent projects sit under the grid, same list shape: name, relative time. No External badge unless the project really came from outside the app.
+Editor stays the selected center cell, as in the shot. Recent stays a stacked list under the card: name, relative time, and External only when the project came from outside the app.
 
 The fifth rail icon stays, so the panel still matches the shots, but it does not open a shop. It opens a quiet About: version, licenses, feedback. Settings stays in the grid. If you would rather the fifth icon open Settings, say so. That is the only choice in this map that is not already a CodeC room.
 
