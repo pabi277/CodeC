@@ -48,6 +48,22 @@ object EditorChromeState {
         _drawerOpen.value = open
     }
 
+    private val _guideBeat = MutableStateFlow<String?>(null)
+
+    /**
+     * Phase 55 — the id of the coach-mark beat that is due right now (null when
+     * the tour is over, paused, or has never started). The editor needs it
+     * because the panel it now owns is also the drawer the tour's first four
+     * beats live in: “is the next beat an in-drawer one?” is a pure question
+     * ([CoachMarkPlan.step] + [CoachStep.inDrawer]), and this is the fact that
+     * lets the editor ask it. Published by the guide host, never guessed.
+     */
+    val guideBeat: StateFlow<String?> = _guideBeat.asStateFlow()
+
+    fun setGuideBeat(id: String?) {
+        _guideBeat.value = id
+    }
+
     private val _installRunning = MutableStateFlow(false)
 
     /**

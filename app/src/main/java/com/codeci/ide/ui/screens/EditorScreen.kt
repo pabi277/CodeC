@@ -126,6 +126,17 @@ import com.codeci.ide.ui.components.EditorTabUi
 import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
+import com.codeci.ide.ui.components.EditorSidePanel
+import com.codeci.ide.ui.components.RepositoryPanelState
+import com.codeci.ide.ui.components.SearchPanelState
+import com.codeci.ide.ui.editor.CoachMarkPlan
+import com.codeci.ide.ui.editor.NavCell
+import com.codeci.ide.ui.editor.ProjectSearch
+import com.codeci.ide.ui.editor.RailPanel
+import com.codeci.ide.ui.editor.RecentProjects
+import com.codeci.ide.ui.editor.SidePanelPlan
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.codeci.ide.ui.guide.GuideAnchor
 import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.components.HapticMoment
@@ -234,6 +245,15 @@ fun EditorScreen(
      * drawer never creates projects (one truth about how projects begin).
      */
     onOpenProjects: () -> Unit = {},
+    /**
+     * Phase 55 — the side panel's **Projects** cell: the Projects screen
+     * itself, with no sheet up. [onOpenProjects] above stays what it always
+     * was (the drawer's `+ New project…` row, which opens the hub's `+` sheet):
+     * two doors, two meanings, one route.
+     */
+    onOpenProjectsHub: () -> Unit = {},
+    /** Phase 55 — the side panel's **Packages** cell: the Packages tab. */
+    onOpenPackages: () -> Unit = {},
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -460,6 +480,14 @@ fun EditorScreen(
     // Phase 17 — Switch Branch, opened from the drawer footer.
     var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
     var keysRowVisible by remember { mutableStateOf(true) }
+    // ---- Phase 55 — the side panel's own state --------------------------
+    // Which rail slot the panel shows. Navigation is the shot's default;
+    // the guide's in-drawer beats switch it to Files (below), and the user's
+    // own tap always wins afterwards.
+    var sidePanel by remember { mutableStateOf(SidePanelPlan.DEFAULT_PANEL) }
+    var searchQuery by remember { mutableStateOf("") }
+    var searchOptions by remember { mutableStateOf(ProjectSearch.Options()) }
+    var searchHits by remember { mutableStateOf<List<ProjectSearch.Hit>>(emptyList()) }
     // The screen remains the focused editor session while the output panel or
     // a transient IME state changes. Only the explicit toolbar collapse and
     // interactive stdin are allowed to remove the keyboard.
@@ -1120,6 +1148,76 @@ fun EditorScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
+        // Phase 55 — the guide's own pure flag decides the slot while the tour
+        // runs: its first four beats live INSIDE the drawer (☰ → project →
+        // app.py), and that tree is the panel's Files slot now. Without this a
+        // beat would wait on an anchor that belongs to a slot nobody opened.
+        val guideBeat by EditorChromeState.guideBeat.collectAsState()
+        LaunchedEffect(guideBeat) {
+            if (CoachMarkPlan.step(guideBeat)?.inDrawer == true) sidePanel = RailPanel.FILES
+        }
+
+        // The Recent list under the card: the projects on this device, newest
+        // first, with the age and the (real) External badge. Read only while
+        // the Navigation slot is the one on screen.
+        val panelOpen = drawerState.currentValue == DrawerValue.Open ||
+            drawerState.isAnimationRunning
+        val recentRows = remember(sidePanel, panelOpen, currentProject) {
+            if (sidePanel != RailPanel.NAVIGATION || !panelOpen) {
+                emptyList()
+            } else {
+                runCatching {
+                    val manager = ProjectManager(context)
+                    val entries = manager.listProjects().map { info ->
+                        RecentProjects.Entry(
+                            id = info.name,
+                            name = info.name,
+                            lastOpenedMillis = info.root.lastModified(),
+                            rootPath = info.root.absolutePath
+                        )
+                    }
+                    RecentProjects.build(
+                        entries = entries,
+                        nowMillis = System.currentTimeMillis(),
+                        privateRoot = manager.projectsRoot().absolutePath,
+                        externalRoot = context.getExternalFilesDir(null)
+                            ?.let { File(it, "CodeC/projects").absolutePath }
+                    )
+                }.getOrDefault(emptyList())
+            }
+        }
+
+        // One action, two doors: the drawer footer's Source Control row and the
+        // panel's Repository slot open the same sheet, from the same root.
+        val openSourceControl: () -> Unit = {
+            val root = currentProject?.let {
+                runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+            }
+            if (root != null) {
+                gitSheetRoot = root
+            } else {
+                Toast.makeText(context, context.getString(R.string.editor_scratch_mode), Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // The panel's Search slot: one query, the five glyphs' options, and the
+        // same capped, in-project walk the pure engine pins on the host.
+        LaunchedEffect(searchQuery, searchOptions, currentProject) {
+            val query = searchQuery
+            if (query.isBlank()) {
+                searchHits = emptyList()
+                return@LaunchedEffect
+            }
+            val root = currentProject?.let {
+                runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+            }
+            searchHits = if (root == null) {
+                emptyList()
+            } else {
+                withContext(Dispatchers.IO) { ProjectSearch.search(root, query, searchOptions) }
+            }
+        }
+
         ModalNavigationDrawer(
             drawerState = drawerState,
             // Phase 25.2 device-round 3 (owner report): the edge-swipe zone
@@ -1131,7 +1229,88 @@ fun EditorScreen(
             // chrome lock closes it too (a lock you can swipe around is not one).
             gesturesEnabled = activeTabPath == null && currentFileName.isEmpty() &&
                 !editorChromeLocked,
+            // Phase 55 — the ☰ opens the SIDE PANEL (the shots' shape): a rail
+            // of five slots, the 3 × 2 Navigation card, Recent, Files, Search and
+            // Repository. The project tree itself is unchanged and rides in the
+            // Files slot; the bottom bar is untouched (the owner kept it).
             drawerContent = {
+                EditorSidePanel(
+                    panel = sidePanel,
+                    onSelectPanel = { slot -> sidePanel = slot },
+                    selectedCell = SidePanelPlan.SELECTED_CELL,
+                    onNavCell = { cell ->
+                        when (cell) {
+                            // The Projects screen — the door Phase 56 leaves the
+                            // bar's tab for. A tab-style close: the panel goes,
+                            // the screen stays.
+                            NavCell.PROJECTS -> {
+                                uiScope.launch { drawerState.close() }
+                                onOpenProjectsHub()
+                            }
+                            // Editor IS this screen: the cell just puts the
+                            // panel away again.
+                            NavCell.EDITOR -> closeDrawer(DrawerCloseReason.CLOSE_BUTTON)
+                            NavCell.SETTINGS -> {
+                                uiScope.launch { drawerState.close() }
+                                onOpenSettings()
+                            }
+                            NavCell.TERMINAL -> {
+                                uiScope.launch { drawerState.close() }
+                                onOpenInTerminal(null)
+                            }
+                            NavCell.PACKAGES -> {
+                                uiScope.launch { drawerState.close() }
+                                onOpenPackages()
+                            }
+                            NavCell.GUIDE -> {
+                                uiScope.launch { drawerState.close() }
+                                onOpenGuide()
+                            }
+                        }
+                    },
+                    recent = recentRows,
+                    onRecentRow = { row ->
+                        // A recent row is "take me there": the same context
+                        // switch the drawer's PROJECTS list runs, then the panel
+                        // gets out of the way.
+                        uiScope.launch { drawerState.close() }
+                        viewModel.switchContext(context, row.id)
+                        runCatching { ProjectManager(context).project(row.id) }
+                            .getOrNull()
+                            ?.let(onProjectSelected)
+                    },
+                    search = SearchPanelState(
+                        query = searchQuery,
+                        options = searchOptions,
+                        hits = searchHits
+                    ),
+                    onSearchQuery = { text -> searchQuery = text },
+                    onSearchOptions = { options -> searchOptions = options },
+                    onSearchHit = { hit ->
+                        viewModel.openFile(context, currentProject, hit.relativePath)
+                        viewModel.jumpToLine(hit.line)
+                        closeDrawer(DrawerCloseReason.FILE_OPENED)
+                    },
+                    onClearSearch = {
+                        searchQuery = ""
+                        searchHits = emptyList()
+                    },
+                    repository = RepositoryPanelState(
+                        hasRepository = gitBranch != null,
+                        branch = gitBranch,
+                        changeCount = gitChangeCount
+                    ),
+                    onInitializeRepository = {
+                        // The shot's one button, wired to CodeC's real git: the
+                        // repository is created by the same `git init` the
+                        // app's own readiness sentence points at, run in the
+                        // Terminal where the engine lives. No invented screen
+                        // (the shots do not show one).
+                        uiScope.launch { drawerState.close() }
+                        onOpenInTerminal("git init")
+                    },
+                    onOpenSourceControl = openSourceControl,
+                    files = {
                 EditorProjectDrawer(
                     onOpenGuide = onOpenGuide,
                     projectName = currentProject,
@@ -1178,16 +1357,7 @@ fun EditorScreen(
                         uiScope.launch { drawerState.close() }
                         onOpenProjects()
                     },
-                    onSourceControl = {
-                        val root = currentProject?.let {
-                            runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
-                        }
-                        if (root != null) gitSheetRoot = root else Toast.makeText(
-                            context,
-                            context.getString(R.string.editor_scratch_mode),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    },
+                    onSourceControl = openSourceControl,
                     onSwitchBranch = {
                         val root = currentProject?.let {
                             runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
@@ -1256,6 +1426,8 @@ fun EditorScreen(
                         }.getOrDefault(entry.relativePath)
                         clipboard.setText(AnnotatedString(path))
                         Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
+                    }
+                        )
                     }
                 )
             }

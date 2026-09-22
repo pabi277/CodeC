@@ -301,7 +301,13 @@ object CoachMarkPlan {
 
     private val byId: Map<String, CoachStep> = steps.associateBy { it.id }
 
-    fun step(id: String): CoachStep? = byId[id]
+    /**
+     * The step with [id], or null. `id` is nullable since Phase 55: the editor
+     * asks this about the beat the guide host just published, and “no beat is
+     * due right now” is a null — one lookup, no second null check at every
+     * caller.
+     */
+    fun step(id: String?): CoachStep? = id?.let { byId[it] }
 
     /**
      * The step to show, or null: in tour order, the FIRST beat that is neither

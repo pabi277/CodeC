@@ -484,5 +484,21 @@
     <string name="branch_switch_fetching">Fetching branch from GitHub…</string>
     <string name="branch_switch_empty">This repository has no branches yet.</string>
     <string name="close_action">Close</string>
+
+    <!-- Phase 55: the side panel (docs/chat-phase55/PART_55_1_PANEL.md).
+         The section titles and the card's cell names come from
+         SidePanelPlan (pinned by SidePanelPlanTest); these are the sentences. -->
+    <string name="panel_reserved">Reserved for a future AI feature</string>
+    <string name="panel_recent">Recent</string>
+    <string name="panel_recent_empty">No recent projects yet.</string>
+    <string name="panel_recent_external">External</string>
+    <string name="panel_search_placeholder">Find Text</string>
+    <string name="panel_search_results">Results</string>
+    <string name="panel_search_no_matches">No matches</string>
+    <string name="panel_repository_empty">No Git Repository initialized. Initialize one to version your work.</string>
+    <string name="panel_repository_init">Initialize Repository</string>
+    <string name="panel_repository_no_branch">No branch yet</string>
+    <string name="panel_repository_changes">Changes: %1$d</string>
+    <string name="panel_repository_open">Source Control</string>
 </resources>
 

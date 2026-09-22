@@ -1379,6 +1379,25 @@ fun MainApp(
                     // drawer, so the editor reopens it after a pick. A pure
                     // question asked of the plan, and false whenever the tour is
                     // not mid-flight: no tour, no change for anybody.
+
+                    // Phase 55 — the side panel's Navigation card. Projects and
+                    // Packages are the two cells that leave the editor; both go
+                    // the way a bottom-bar TAP goes (save state, single top),
+                    // because a cell is a room, not an instruction with a sheet.
+                    onOpenProjectsHub = {
+                        navController.navigate(Screen.FileManager.createRoute()) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onOpenPackages = {
+                        navController.navigate(Screen.Modules.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
             composable(

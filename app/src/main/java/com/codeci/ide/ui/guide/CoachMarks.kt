@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import com.codeci.ide.ui.editor.EditorChromeState
 
 /**
  * Phase 45.2 — the tour's Android edge: where a control is, and what a box looks
@@ -301,6 +302,12 @@ fun GuideCoachMarks(
     LaunchedEffect(finished) { if (!finished) ranThisSession = true }
 
     val step = CoachMarkPlan.nextStep(seen, chrome, stalled)
+    // Phase 55 — publish the beat that is due (null when none is): the editor's
+    // side panel owns the drawer beats 2-4 live in, and it reads this instead of
+    // inferring "the tour is running" from a preference. Cleared on dispose, so
+    // a stale beat cannot outlive the host.
+    LaunchedEffect(step?.id) { EditorChromeState.setGuideBeat(step?.id) }
+    DisposableEffect(Unit) { onDispose { EditorChromeState.setGuideBeat(null) } }
     if (step == null) {
         if (finished && ranThisSession && !finishClosed && !blockedByForeground) {
             TourFinishedCard(
