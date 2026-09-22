@@ -188,9 +188,15 @@ fun SettingsScreen(
     // Phase 51.4 — the app chrome's haptics (the eight moments), default on.
     val haptics by settingsManager.hapticsFlow.collectAsState(initial = true)
 
+    // Phase 62 — two reads moved up from the About section: Developer Options reads them too, and
+    // a folded section must never carry off a declaration its neighbour uses. Nothing else changed
+    // — both were already evaluated on every recomposition.
+    val devModeUnlocked by settingsManager.devModeUnlockedFlow.collectAsState(initial = false)
+    val showFilePaths by settingsManager.showFilePathsFlow.collectAsState(initial = false)
+
     // Phase 62 — Settings, findable. The query and the folded sections are view state, not
-    // preferences: `rememberSaveable` keeps them across a rotation and the screen forgets them
-    // on the way out, which is what a search box should do.
+    // preferences: `rememberSaveable` keeps them across a rotation, and the screen forgets them on
+    // the way out, which is what a search box should do.
     var settingsQuery by rememberSaveable { mutableStateOf("") }
     var foldedSectionsCsv by rememberSaveable { mutableStateOf("") }
     val foldedSections = remember(foldedSectionsCsv) { SettingsDisclosure.parse(foldedSectionsCsv) }
@@ -448,11 +454,11 @@ fun SettingsScreen(
                 subtitle = "In-app VT/ANSI terminal with a real PTY, built-in TCC compiler (cc), and signed CodeC package manager (pkg)."
             )
 
+            }
+            SettingsSection("Terminal Extra-Keys & Shortcuts") {
             var editingMacros by remember(terminalExtraKeysMacros) { mutableStateOf(terminalExtraKeysMacros) }
             var macrosSaved by remember { mutableStateOf(false) }
 
-            }
-            SettingsSection("Terminal Extra-Keys & Shortcuts") {
             SettingsSectionHeader("Terminal Extra-Keys & Shortcuts")
 
             Card(
@@ -1087,8 +1093,6 @@ fun SettingsScreen(
             )
 
             var versionTaps by remember { mutableStateOf(0) }
-            val devModeUnlocked by settingsManager.devModeUnlockedFlow.collectAsState(initial = false)
-            val showFilePaths by settingsManager.showFilePathsFlow.collectAsState(initial = false)
 
             StreakLine.forAbout(
                 StreakFacts(
@@ -1354,9 +1358,9 @@ fun SettingsScreen(
                 )
             }
 
-            if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
             }
-                SettingsSection("Developer Options") {
+            SettingsSection("Developer Options") {
+            if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
                 Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
                 SettingsSectionHeader("Developer Options")
 
@@ -1432,11 +1436,11 @@ fun SettingsScreen(
                     }
                 )
             }
+            }
 
             // Phase 62 — nothing matched: say so, rather than leaving bare separators.
             if (SettingsSearch.isEmptyResult(settingsQuery)) {
                 SettingsNoMatch(settingsQuery)
-                }
             }
 
             Spacer(modifier = Modifier.height(CodecTokens.space(Space.HUGE)))

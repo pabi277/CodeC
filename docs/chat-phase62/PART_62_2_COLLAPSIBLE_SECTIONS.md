@@ -84,7 +84,51 @@ A row the catalog has **not** met fails open: it renders (rather than disappeari
 it is still nobody's search result. The audit's own 66-row pin is what keeps that branch
 unreachable in practice.
 
-## 5. The one census this phase re-cut
+## 5. What CI caught first, and the two pins that now catch it
+
+**CI round 1 was RED, and the product was wrong — not a pin.** The compile step failed inside the
+phase's own file with eight errors, all of one kind:
+
+```
+SettingsScreen.kt:498:29 Unresolved reference 'editingMacros'
+SettingsScreen.kt:487:35 @Composable invocations can only happen from the context of a @Composable function
+```
+
+The Terminal Extra-Keys section's two `remember`s are declared *just above its header*, so the
+wrapper boundary — computed as “the divider before the header, else the header” — had put them
+inside the **Terminal** section and their readers inside the extra-keys section.
+
+Fixing that surfaced two more instances of the same class, and one the compiler cannot see:
+
+| # | What | Why it happened | Fix |
+|---|---|---|---|
+| 1 | `editingMacros`, `macrosSaved` cut from their readers | the declarations precede the header | the boundary now swallows the contiguous declarations that belong to the section |
+| 2 | `devModeUnlocked` and `showFilePaths` declared in **About**, read in **Developer Options** | this screen declares state where it is first used, and two reads are used by two sections | both are **hoisted** beside the other `collectAsState` reads (they were already evaluated on every recomposition — nothing else changes) |
+| 3 | the `if (BuildConfig.DEBUG && devModeUnlocked) {` guard was left **outside** the Developer wrapper, and the Feedback wrapper's closing brace landed *inside* that `if` | the boundary rule stopped at the divider instead of the `if` line | the Developer section's wrapper now opens **before the `if`** and closes after its `}` — so the DEBUG guard is inside the fold, where it was |
+
+**#3 is the one CI could not have caught:** the braces still balanced, the file still compiled, and
+the DEBUG guard silently guarded an empty block — Developer Options would have shipped into release
+builds. It was found by re-reading the inserted region, and it is the reason the phase now ships two
+structural pins that would have failed:
+
+* *every section slice is a balanced block* — each wrapper's brace pair is matched and its inner
+  brace count must be zero, so a brace on the wrong line cannot pass;
+* *no local declaration is split from its uses by a section wrapper* — the screen's own body is
+  brace-matched, lambda parameters and doubly-declared names are skipped, and every remaining
+  local's readers must lie inside the block the declaration lives in (i.e. exactly what the Kotlin
+  compiler enforces).
+
+Both pins were validated against the **pre-62 screen** as well: they report zero problems there,
+so their silence on the new file means something.
+
+**What was re-derived, not guessed.** The full list of cross-section declarations was computed by
+scanning every local declaration in the screen's body against its readers: four names looked like
+crossers, and only two really were (`theme` and `intent` were named-argument and shadowing noise —
+`theme` was matched inside `com.codeci.ide.ui.theme` imports, `intent` by a *second* `intent`
+declared in the developer flow). The scope checker that says so is a small brace-matching
+simulation, and it reports **0 violations** on both the original file and the rebuilt one.
+
+## 6. The one census this phase re-cut
 
 `TouchTargetTest` pins an **exact count of `IconButton`s in the five core files**, with a comment
 demanding that a phase which changes the number says why: *“A phase that changes this number again
@@ -99,7 +143,7 @@ rows), `TokenAdoptionTest` (the new chrome uses `CodecTokens.space`/`radius`, no
 `IconRoleTest` (no sized icon, every action icon names itself), `TypeAdoptionTest`,
 `HapticWiringTest`, `KeyboardDefaultTest`, `PreviewChromeWiringTest`.
 
-## 6. Tests
+## 7. Tests
 
 | Case | What it pins |
 |---|---|
@@ -110,4 +154,4 @@ rows), `TokenAdoptionTest` (the new chrome uses `CodecTokens.space`/`radius`, no
 | *a header folds its section, counts it, and only when there is something to fold* | the wiring: `isControlSection`, the conditional `clickable`, both chevrons, the count, the two strings |
 | *every header sits inside its own section wrapper* | twelve wrappers, in order, one header per slice |
 
-**25 passed / 0 failed** with PART_62_1's cases; the broad set **881 passed / 0 failed**.
+**27 passed / 0 failed** with PART_62_1's cases (8 pins here); the broad set **883 passed / 0 failed**.

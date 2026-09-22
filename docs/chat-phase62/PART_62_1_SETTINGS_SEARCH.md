@@ -58,7 +58,7 @@ result the search just found, and the fold comes back when the box is cleared.
 | `ui/screens/SettingsScreen.kt` | `SettingsSearchField` (an `OutlinedTextField` with a leading lens and a ✕ that appears only when there is something to clear — the app's own search idiom), `SettingsNoMatch` (the hub's centred lens-and-line empty state), the screen's query + fold state, and the one `CompositionLocalProvider` that hands both to the rows |
 | `res/values/strings.xml` | `settings_search_hint`, `settings_search_clear`, `settings_no_match` (with the query read back), `settings_section_expand`, `settings_section_collapse` |
 | `SettingsSearchPolicyTest` **(new, 19 cases)** | the laws above, plus the catalog's honesty against the screen and the audit doc |
-| `SettingsSearchWiringTest` **(new, 6 pins)** | the box, the state, the guard, the wrappers, the empty state |
+| `SettingsSearchWiringTest` **(new, 8 pins)** | the box, the state, the guard, the wrappers, the empty state, and (after CI round 1) the two structural pins: every section slice is a balanced block, and no declaration is cut from its own readers |
 
 **Why the search does not re-implement the screen.** The rows stay exactly where they were: no
 section was re-ordered, no row was moved into a results list, and the audit's 12-section/66-row
@@ -109,6 +109,8 @@ SettingsScreen
 │       └── if (SettingsSearch.isEmptyResult(settingsQuery)) SettingsNoMatch(settingsQuery)
 ```
 
+The section wrapper, its boundary rules and the hoisted reads are PART_62_2 §1-§5.
+
 `LocalSettingsView` is the **first `CompositionLocal` in this codebase**, and it is deliberately
 the only one: one screen, no other reader, and the alternative was a view-state parameter on
 twelve headers and sixty-six rows. Its default (“no query, nothing folded, folding does nothing”)
@@ -116,10 +118,12 @@ is only ever seen by a preview, and the wiring test pins that the screen provide
 
 ## 7. Tests
 
-**25 passed / 0 failed** locally (`/tmp/p62`): 19 policy cases + 6 wiring pins. The broad
+**27 passed / 0 failed** locally (`/tmp/p62`): 19 policy cases + 8 wiring pins. The broad
 pure-source regression set (the pins that read `SettingsScreen.kt`, `strings.xml` and every pure
-policy this checkout can compile on a host JVM) ran **881 passed / 0 failed** after the phase's one
-census re-cut (PART_62_2 §5).
+policy this checkout can compile on a host JVM) ran **883 passed / 0 failed** after the phase's one
+census re-cut (PART_62_2 §6). CI round 1 was **red for a real reason** — the section wrappers cut
+two declarations from their readers; the fix, the third boundary bug CI could not see, and the two
+pins that now catch all three are PART_62_2 §5.
 
 Compile-time note for the next agent: the host harness cannot compile Compose, so the screen's own
 code is proven by CI's `assembleDebug`/unit-test step, not by the sandbox. Everything pure

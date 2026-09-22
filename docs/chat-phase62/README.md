@@ -56,8 +56,9 @@ specified** — the shots stay the reference for everything they do show.
 
 | Run | Result |
 |---|---|
-| `SettingsSearchPolicyTest` (19 cases) + `SettingsSearchWiringTest` (6 pins) | **25 passed / 0 failed** |
-| the broad pure-source regression set (the pins that read `SettingsScreen.kt`, `strings.xml` and every pure policy this checkout can compile on a host JVM) | **881 passed / 0 failed** |
+| `SettingsSearchPolicyTest` (19 cases) + `SettingsSearchWiringTest` (8 pins) | **27 passed / 0 failed** |
+| the broad pure-source regression set (the pins that read `SettingsScreen.kt`, `strings.xml` and every pure policy this checkout can compile on a host JVM) | **883 passed / 0 failed** |
+| CI round 1 | **RED, for cause** — the wrapper boundaries cut two declarations from their readers (`PART_62_2 §5`); fixed, plus a third boundary bug CI could not see (the DEBUG guard around Developer Options was left outside its fold), plus two new structural pins that catch all three |
 
 **Next:** the owner's device rounds (this phase has none of its own beyond S1-S6 + 57's P/Q/R, none
 run yet), then 59 → 60 → 61 → 63 in the owner's order — and the merge gate stands: no PR, no merge,

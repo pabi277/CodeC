@@ -2,6 +2,7 @@ package com.codeci.ide
 
 import com.codeci.ide.ui.settings.SettingsCatalog
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -137,6 +138,90 @@ class SettingsSearchWiringTest {
         assertTrue(
             "the wrapper is the policy's own question",
             code.contains("if (!SettingsSearch.sectionVisible(LocalSettingsView.current.query, title)) return")
+        )
+    }
+
+    /**
+     * Matched brace pairs over the code-only text, as (open line, close line).
+     *
+     * Phase 62 learned this the hard way: the section wrappers are inserted into a 1,600-line
+     * composable, and a brace put on the wrong line compiles perfectly while silently emptying an
+     * `if` — which is how the DEBUG guard around Developer Options briefly stopped guarding.
+     */
+    private fun bracePairs(code: String): List<Pair<Int, Int>> {
+        val stack = ArrayDeque<Int>()
+        val pairs = mutableListOf<Pair<Int, Int>>()
+        code.split("\n").forEachIndexed { line, text ->
+            for (c in text) {
+                when (c) {
+                    '{' -> stack.addLast(line)
+                    '}' -> if (stack.isNotEmpty()) pairs += stack.removeLast() to line
+                }
+            }
+        }
+        return pairs
+    }
+
+    /** The line a pattern first matches on. */
+    private fun lineOf(regex: Regex, inText: String): Int =
+        inText.substring(0, regex.find(inText)!!.range.first).count { it == '\n' }
+
+    @Test
+    fun `every section slice is a balanced block`() {
+        val lines = code.split("\n")
+        val pairs = bracePairs(code)
+        val opens = Regex("""SettingsSection\("([^"]+)"\) \{""").findAll(raw)
+            .map { it.groupValues[1] to lineOf(Regex(Regex.escape(it.value)), raw) }.toList()
+        assertEquals("twelve sections", 12, opens.size)
+        opens.forEach { (title, line) ->
+            val close = pairs.firstOrNull { it.first == line }?.second
+            assertNotNull("section '$title' has no matching brace", close)
+            val net = lines.subList(line, close!! + 1)
+                .sumOf { l -> l.count { it == '{' } - l.count { it == '}' } }
+            assertEquals(
+                "section '$title' must be a self-contained block (a brace on the wrong line " +
+                    "compiles fine and empties whatever it lands in)",
+                0, net
+            )
+        }
+    }
+
+    @Test
+    fun `no local declaration is split from its uses by a section wrapper`() {
+        val lines = code.split("\n")
+        val pairs = bracePairs(code)
+        val funLine = lines.indexOfFirst { it.contains("fun SettingsScreen(") }
+        val body = pairs.filter { it.first in funLine..(funLine + 60) }.maxByOrNull { it.second }
+        assertNotNull("the screen's own body must be found", body)
+        val (bodyOpen, bodyClose) = body!!
+        val slice = lines.subList(bodyOpen, bodyClose + 1)
+        // Rebased to slice-relative lines, so they can be compared with the indices below.
+        val inBody = pairs.filter { it.first >= bodyOpen && it.second <= bodyClose }
+            .map { (it.first - bodyOpen) to (it.second - bodyOpen) }
+        val lambdaParams = Regex("""([A-Za-z_]\w*)\s*->""")
+            .findAll(slice.joinToString("\n")).map { it.groupValues[1] }.toSet()
+        val declaration = Regex("""^\s*(?:var|val)\s+(\w+)\b""")
+        val decls = slice.mapIndexedNotNull { i, l ->
+            declaration.find(l)?.let { it.groupValues[1] to i }
+        }
+        val counts = decls.groupingBy { it.first }.eachCount()
+        val violations = mutableListOf<String>()
+        decls.forEach { (name, i) ->
+            // A name declared twice (or bound by a lambda) cannot be told apart by a source scan.
+            if (counts[name] != 1 || name in lambdaParams) return@forEach
+            val block = inBody.filter { it.first < i && i < it.second }.maxByOrNull { it.first }
+            slice.forEachIndexed { j, l ->
+                if (j > i && Regex("\\b$name\\b").containsMatchIn(l)) {
+                    if (block == null || j < block.first || j > block.second) {
+                        violations += "$name@${i + bodyOpen + 1} used@${j + bodyOpen + 1}"
+                    }
+                }
+            }
+        }
+        assertEquals(
+            "a declaration read outside the block it lives in does not compile - the section " +
+                "wrappers must not cut a section's state away from its readers",
+            emptyList<String>(), violations
         )
     }
 
