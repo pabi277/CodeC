@@ -927,7 +927,9 @@ fun MainApp(
     val resumeOffer = remember(resumeFacts) {
         com.codeci.ide.ui.projects.ResumePolicy.offerFor(resumeFacts)
     }
-    val startDestination = remember(launchState, resumeOffer) {
+    // Keep the start route decided once, as Phase 44's setup wiring requires;
+    // the resume offer is derived from the same one-shot launch facts.
+    val startDestination = remember(launchState) {
         when (resumeOffer) {
             com.codeci.ide.ui.projects.ResumeOffer.CONTINUE_IN_PLACE ->
                 launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
