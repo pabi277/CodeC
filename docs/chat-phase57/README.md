@@ -1,6 +1,6 @@
 # CodeC Phase 57 — Editor chrome
 
-> **Status:** 🚧 **IMPLEMENTED on `arena/01a0c83e-codec`** (57.1-57.3; device round not run) · **Cost:** `[client-only]` · **Effort:** M (57.1) + L (57.2) + S (57.3)
+> **Status:** 🚧 **IMPLEMENTED on `arena/01a0c83e-codec`, CI ✅ GREEN** (57.1-57.3, run `35710338114` on tip `7c9619b`; device round not run) · **Cost:** `[client-only]` · **Effort:** M (57.1) + L (57.2) + S (57.3)
 >
 > Parent: [`PHASE54_58_PHONE_UI_ROADMAP.md`](../PHASE54_58_PHONE_UI_ROADMAP.md).
 > Reference of record: `docs/spck-ui/Screenshot_20260922_122157_Spck Editor.jpg`

@@ -54,6 +54,18 @@ S4-S6 the hamburger), on top of the editor-chrome rows in
 [`../chat-phase57/DEVICE_ROUND.md`](../chat-phase57/DEVICE_ROUND.md) (P1-P10 / Q1-Q6 / R1-R11).
 Neither round has been run.
 
+## CI
+
+| Commit | Round | Verdict |
+|---|---|---|
+| `22b9c2e` (58.1 + 58.2) | `35712790369` | ✅ **green first try** — host unit + screenshot tests, debug + both release APKs built and uploaded |
+| `ebc1296` (58.3) | `35713903141` | ✅ **green first try** — same jobs |
+
+No pin failures in either round, which is the point of the local host runs: the two censuses
+this phase invalidated (the terminal-navigation count and the `before()` anchor inside
+`decide()`) were caught and re-cut **before** the push, with their reasons written into the
+tests.
+
 ## Records
 
 * Research and the `file:line` inventory for the series: [`../PHASE54_58_PHONE_UI_ROADMAP.md`](../PHASE54_58_PHONE_UI_ROADMAP.md)
