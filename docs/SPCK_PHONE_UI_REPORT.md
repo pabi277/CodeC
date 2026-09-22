@@ -3,7 +3,7 @@
 **Date:** 2026-09-22  
 **Status:** review only. No app code was changed.  
 **What this accepts:** the seven phone screenshots of SPCK Editor, not Play Store art, and not a new layout.  
-**Your point, checked:** after this UI, the project bar does not need its own space at the bottom. That is right.
+**Reviewed again (2026-09-22):** *“I don't think removing the full down ber is a good choice i think only removing the project option is ok.”* The earlier reading — delete the whole bottom bar — is withdrawn. The bar stays. Only the Projects tab leaves it, and only after Projects can be opened from the side panel. Editor, Terminal, Packages, and Settings stay on the bar. The shots have no bottom bar; that part of the shots is not copied. The plan is [`PHASE54_58_PHONE_UI_ROADMAP.md`](PHASE54_58_PHONE_UI_ROADMAP.md).
 
 **Plan:** [`PHASE54_58_PHONE_UI_ROADMAP.md`](PHASE54_58_PHONE_UI_ROADMAP.md). No app code until you say **Start Phase 54**.
 
@@ -51,7 +51,7 @@ When that bar hides, a second strip appears in its place: **Show tabs**. Both ex
 
 SPCK does not do that. On your phone the editor goes to the bottom of the app. Rooms live in the side panel, behind ☰, on the first icon (Navigation). The project name is the root of the file tree (`1st semester` in your Files shot), not a tab.
 
-So the project bar can go. Nothing has to replace it at the bottom.
+**Withdrawn.** The shots have no bottom bar. The owner rejected copying that. The bar stays. Only the Projects tab leaves it. See the review line at the top.
 
 What the bottom is allowed to be, from your shots, and nothing else:
 
