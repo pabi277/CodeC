@@ -776,17 +776,29 @@ fun MainApp(
             }
         }
     }
-    // 2026-08-31 bar: five tabs with Terminal dead-center —
-    // Projects · Editor · Terminal · Packages · Settings. The Home dashboard
-    // is gone; the app opens straight into the editor where the user left
-    // off (or the Projects hub on first launch).
+    // Phase 56 (owner, 2026-09-22: *“I don't think removing the full down ber is
+    // a good choice i think only removing the project option is ok.”*) — the bar
+    // keeps four options: Editor · Terminal · Packages · Settings. **Projects
+    // left the bar**, not the app: its screen, its route and its hub are
+    // untouched, and the side panel's Navigation card opens it (Phase 55).
+    // No filler tab replaces it, and Terminal no longer sits dead-center — that
+    // is arithmetic, not a redesign. The Home dashboard is long gone; the app
+    // opens straight into the editor where the user left off.
     val screens = listOf(
-        Screen.FileManager,
         Screen.Editor,
         Screen.Terminal,
         Screen.Modules,
         Screen.Settings
     )
+    /**
+     * Phase 56 — the routes the BACK ROUTER treats as rooms. Until this phase
+     * the bar and the router read the same list; they answer two different
+     * questions, and Projects is the proof: it is no longer a tab, but it is
+     * still a ROOM — a phone that starts there (a deep link, or the first-launch
+     * hub before Phase 58) must get the exit prompt, not a silent exit, exactly
+     * like the other four.
+     */
+    val rootRoutes = screens.map { it.route } + Screen.FileManager.route
     // Phase 33.1 — first-run welcome (three starter tiles). The flag is read
     // ONCE at startup into local state, so a Settings reset ("show welcome
     // again") only affects the NEXT launch instead of yanking the user out of
@@ -1125,7 +1137,7 @@ fun MainApp(
             canPopRoute = navController.previousBackStackEntry != null,
             atRootDestination = BackRouter.isRoot(
                 currentDestination?.route,
-                screens.map { it.route }
+                rootRoutes
             ),
             exitPromptEnabled = exitPromptEnabled,
             exitPromptVisible = exitPromptVisible,
@@ -1163,7 +1175,8 @@ fun MainApp(
         bottomBar = {
             when {
                 // Phase 32.1 — the bar is visible (or was revealed by the
-                // handle) exactly as before: five flat tabs.
+                // handle) exactly as before: flat tabs (four since Phase 56 —
+                // the owner kept the bar and removed only the Projects option).
                 !hideNav -> FlatBottomBar(
                     screens = screens,
                     currentDestination = currentDestination,
@@ -1688,9 +1701,14 @@ fun MainApp(
 }
 
 /**
- * 2026-08-31 bottom bar: five flat tabs (Projects · Editor · Terminal ·
- * Packages · Settings — Terminal dead-center) with icon-over-label, the
- * active tab in primary color, muted grey otherwise — no M3 selection pill.
+ * 2026-08-31 bottom bar: flat tabs with icon-over-label, the active tab in
+ * primary color, muted grey otherwise — no M3 selection pill.
+ *
+ * Phase 56 left FOUR of them (Editor · Terminal · Packages · Settings): the
+ * owner's own row was *“only removing the project option is ok”*, so the bar
+ * stays and only Projects left it — the side panel's Navigation card opens that
+ * screen now. Nothing else in this composable changed: the same one-lambda tab
+ * tap, the same install lock, the same tour anchors.
  */
 @Composable
 private fun FlatBottomBar(

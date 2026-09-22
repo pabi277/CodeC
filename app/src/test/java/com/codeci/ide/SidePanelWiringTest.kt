@@ -1,5 +1,6 @@
 package com.codeci.ide
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -81,22 +82,45 @@ class SidePanelWiringTest {
         assertTrue("the walk must not run on the UI thread", editor.contains("Dispatchers.IO"))
     }
 
+    /** The `val screens = listOf(...)` block, whatever its indentation. */
+    private fun tabListBlock(): String {
+        val start = main.indexOf("val screens = listOf(")
+        assertTrue("the bar's tab list must exist", start >= 0)
+        val end = main.indexOf(")", start)
+        assertTrue("the tab list must close", end > start)
+        return main.substring(start, end)
+    }
+
     @Test
-    fun `the bottom bar survives Phase 55 - five tabs, the handle, hide-while-typing`() {
-        // The owner, 2026-09-22: “only removing the project option is ok”. Phase
-        // 55 adds a panel; it removes nothing from the bar.
+    fun `the bottom bar survives - the handle, hide-while-typing, and four tabs`() {
+        // Owner, 2026-09-22: “I don't think removing the full down ber is a good
+        // choice i think only removing the project option is ok.” The BAR stays;
+        // exactly one option left it (Phase 56).
         assertTrue("FlatBottomBar must still exist", main.contains("private fun FlatBottomBar("))
         assertTrue("and must still be composed", main.contains("FlatBottomBar("))
         assertTrue("the reveal handle stays", main.contains("EditorNavRevealHandle("))
         assertTrue("hide-while-typing stays", main.contains("NavBarPolicy.hideNavBar("))
-        // The tab list itself: Phase 55 changes it NOT AT ALL (five options).
+        val tabs = tabListBlock()
+        listOf("Screen.Editor", "Screen.Terminal", "Screen.Modules", "Screen.Settings").forEach { tab ->
+            assertTrue("$tab must still be a bottom tab", tabs.contains(tab))
+        }
+        assertFalse("Projects is the ONE option that left", tabs.contains("Screen.FileManager"))
+        // Four, not five: no filler tab was invented to keep the row full.
+        assertEquals(4, Regex("Screen\\.\\w+").findAll(tabs).count())
+    }
+
+    @Test
+    fun `the Projects screen is still a room for the back router`() {
+        // The bar and the router stopped sharing a list in Phase 56: a phone that
+        // STARTS on Projects (deep link) must get the exit prompt, not a silent
+        // exit — the same behaviour the other four rooms have.
         assertTrue(
-            "the editor tab must not be the first bar option yet — that is Phase 56",
-            main.contains("val screens = listOf(")
+            "the router's own list must keep the Projects route",
+            main.contains("val rootRoutes = screens.map { it.route } + Screen.FileManager.route")
         )
-        assertFalse(
-            "Phase 56 has not happened yet: Projects must still be a bottom tab",
-            main.contains("val screens = listOf(\n        Screen.Editor,")
+        assertTrue(
+            "and the router must read it",
+            main.contains("atRootDestination = BackRouter.isRoot(") && main.contains("rootRoutes")
         )
     }
 

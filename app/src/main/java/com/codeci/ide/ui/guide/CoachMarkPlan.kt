@@ -265,7 +265,10 @@ object CoachMarkPlan {
             // up the overlay owns the gesture (it performs the control's click
             // itself) and a swipe that leaves the hole is not a tap. The swipe
             // still works the moment the tour is over (NavBarPolicy).
-            body = "Five tabs, one tap away. They hide while you type \u2014 tap this handle to bring them back.",
+            // Phase 56 — the bar has FOUR options since the Projects option left
+            // it (the side panel opens Projects). The lesson is the same; the
+            // count is not allowed to lie.
+            body = "Four tabs, one tap away. They hide while you type \u2014 tap this handle to bring them back.",
         ),
         // 7-8 — "then a small tour of package".
         CoachStep(

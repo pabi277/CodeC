@@ -851,7 +851,7 @@ object SetupLockPolicy {
 
     /**
      * Route → chrome option, so the bar asks the policy instead of keeping its
-     * own list. `null` for a route that is not one of the five tabs (preview,
+     * own list. `null` for a route that is not one of the tab rooms (preview,
      * feedback, templates, logs): those are reached from inside a screen, and
      * the lock answers taps on chrome, never programmatic navigation.
      */

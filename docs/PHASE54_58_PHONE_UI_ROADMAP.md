@@ -12,7 +12,9 @@
 > - The HTML page view’s upper links are not phone-friendly; they want a hamburger-style treatment.
 > - *“if need say me”* — if a screen is not in the shots, ask. Do not invent it.
 
-> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel; its part docs, host tests and device round are in [`chat-phase55/`](chat-phase55/README.md). **56-58 are still 📋 PLANNED** — the owner says **“Start Phase N”**, and only then does that phase’s research pass begin.
+> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED, 56 IMPLEMENTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel ([`chat-phase55/`](chat-phase55/README.md)). 56 took the Projects option off the bar and left the other four, the handle and hide-while-typing exactly as they were ([`chat-phase56/`](chat-phase56/README.md)). **57-58 are still 📋 PLANNED** — the owner says **“Start Phase N”**, and only then does that phase’s research pass begin.
+>
+> **One red CI round so far (for cause, fixed):** run `35707359816` failed on Phase 55 with two real compile errors — a wrong package in an import (`CoachMarkPlan` lives in `ui.guide`, not `ui.editor`) and `CodecTokens.Icon.HUGE`, which does not exist. Both fixed in the Phase 56 commit.
 >
 > **Owner decisions that shaped 55 (2026-09-22, verbatim):** the full bottom bar stays (*“only removing the project option is ok”*); the fifth rail slot is *“Reseserve[d] … i have plan for ai”*; the card's bottom row is **Terminal · Packages · Guide**; the unseen glyphs: *“Do whatever is good”* (read as omit-and-ask, with a real CodeC action where one existed).
 >
@@ -186,8 +188,8 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| 56.1 | Projects leaves the bar | S | 📋 PLANNED |
-| 56.2 | The tour still teaches where projects are | S | 📋 PLANNED |
+| 56.1 | Projects leaves the bar | S | 🚧 IMPLEMENTED — [PART_56_1](chat-phase56/PART_56_1_PROJECTS_LEAVES.md) |
+| 56.2 | The tour still teaches where projects are | S | 🚧 IMPLEMENTED (premise corrected) — [PART_56_2](chat-phase56/PART_56_2_TOUR.md) |
 
 **Research before code.** Re-read the tab list in `MainActivity.kt` and `NavBarPolicy.kt`. Re-read the Phase 45 coach-mark plan and name the beat that spotlights Projects. ⚠️ **Phase 54 found there is no such beat** ([PART_54_2 §5](chat-phase54/PART_54_2_TODAY.md)): the eleven beats are `editor_drawer`, `drawer_project`, `drawer_demo_pick`, `drawer_file`, `editor_run`, `preview_close`, `nav_handle`, `nav_tab_packages`, `packages_card`, `nav_tab_terminal`, `terminal_chip`, and `tabAnchorFor` maps only Packages and Terminal. **56.2 is therefore a verification part** — re-run the tour after 56.1 and confirm every beat finds its anchor, and that no anchor names the Projects tab. Re-open the Navigation shot and confirm Projects is a cell in the card. Do not re-open the shots in order to delete the bar. The owner already decided that.
 
@@ -197,7 +199,9 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 **Exit.** The bottom bar reads Editor · Terminal · Packages · Settings. It still hides while typing, and “Show tabs” still brings it back. Projects is not on it. Projects opens from the side panel. A source-scan test fails if `Screen.FileManager` is in the bottom-tab list, and fails if `FlatBottomBar` is deleted. The guide still runs from first beat to last.
 
-**Device pass required.** Yes. Confirm the four remaining tabs, and confirm Projects is only in the panel.
+**Device pass required.** Yes. Confirm the four remaining tabs, and confirm Projects is only in the panel — [chat-phase56/DEVICE_ROUND.md](chat-phase56/DEVICE_ROUND.md) (Q1-Q6, written but **not run**).
+
+**What the code did beyond the plan (recorded):** the bar and the back router read the **same** list until this phase (`screens.map { it.route }` fed `BackRouter.isRoot`). Removing the tab would have made a phone that *starts* on the Projects screen exit silently instead of asking the exit question, so the router now reads its own `rootRoutes` (the four tabs + the Projects route) and `BackRouterRootTest` pins that Projects is still a room. Also corrected in the same commit: beat 7's copy counted tabs (*“Five tabs, one tap away”* → **four**), and three comments that claimed five.
 
 ---
 

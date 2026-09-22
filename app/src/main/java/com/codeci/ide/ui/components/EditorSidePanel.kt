@@ -208,7 +208,7 @@ private fun Rail(panel: RailPanel, onSelect: (RailPanel) -> Unit) {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = CodecTokens.icon(CodecTokens.Icon.HUGE))
+                    .heightIn(min = CodecTokens.icon(CodecTokens.MIN_TOUCH))
                     .clickable(enabled = wired) { onSelect(slot) }
                     .padding(top = CodecTokens.space(Space.S)),
                 horizontalAlignment = Alignment.CenterHorizontally

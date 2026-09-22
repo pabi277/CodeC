@@ -129,7 +129,6 @@ import com.codeci.ide.ui.components.EditorProjectDrawer
 import com.codeci.ide.ui.components.EditorSidePanel
 import com.codeci.ide.ui.components.RepositoryPanelState
 import com.codeci.ide.ui.components.SearchPanelState
-import com.codeci.ide.ui.editor.CoachMarkPlan
 import com.codeci.ide.ui.editor.NavCell
 import com.codeci.ide.ui.editor.ProjectSearch
 import com.codeci.ide.ui.editor.RailPanel
@@ -137,6 +136,7 @@ import com.codeci.ide.ui.editor.RecentProjects
 import com.codeci.ide.ui.editor.SidePanelPlan
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.codeci.ide.ui.guide.CoachMarkPlan
 import com.codeci.ide.ui.guide.GuideAnchor
 import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.components.HapticMoment
