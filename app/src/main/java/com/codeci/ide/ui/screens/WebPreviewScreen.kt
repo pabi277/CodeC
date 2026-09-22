@@ -1,6 +1,8 @@
 package com.codeci.ide.ui.screens
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -20,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,10 +52,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.ServerSharePanel
+import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.guide.GuideAnchor
 import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.services.LanAddressProvider
 import com.codeci.ide.ui.services.LanSharePolicy
+import com.codeci.ide.ui.services.PreviewChromeFacts
+import com.codeci.ide.ui.services.PreviewChromePolicy
+import com.codeci.ide.ui.services.PreviewLink
+import com.codeci.ide.ui.services.OpenInBrowser
+import com.codeci.ide.ui.services.ShareActions
+import com.codeci.ide.ui.services.ShareRow
 import com.codeci.ide.ui.services.ServerHost
 import com.codeci.ide.ui.services.ServerHosts
 import com.codeci.ide.ui.services.WebPreviewServer
@@ -166,6 +177,41 @@ fun WebPreviewScreen(
         }
     }
 
+    // Phase 58.3 — the upper links move behind one hamburger (the owner's own
+    // answer to the roadmap's two candidates: CodeC's preview chrome, not the
+    // page inside it). The panel that used to sit above every preview is now
+    // the detail behind the ☰, so the page gets that height back and the
+    // address row stays as the readout — a browser that hid its address would
+    // be worse than the bar this replaces. WHAT the menu offers is the pure
+    // `PreviewChromePolicy`'s call, not a chain of ifs here.
+    var showServerPanel by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    val servers = host.registry.snapshot()
+    val previewChrome = PreviewChromeFacts(
+        hasAddress = currentUrl != null,
+        addressIsHttp = ShareActions.isHttpUrl(currentUrl),
+        hasPeerUrl = shareEndpoints?.lanUrl != null,
+        // The LAN switch only ever moves a server this screen owns (37.1).
+        ownsStaticServer = !isLive,
+        serverCount = servers.size,
+    )
+    val previewLinks = PreviewChromePolicy.links(previewChrome)
+    val copyAddress: (String) -> Unit = { url ->
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("CodeC URL", url))
+    }
+    // The same open-or-copy policy the panel's rows use (Phase 41): a URL the
+    // device cannot hand to a browser is copied instead of lost.
+    val openAddress: (String) -> Unit = { url ->
+        OpenInBrowser.openOrCopy(
+            context = context,
+            url = url,
+            clipboardLabel = "CodeC URL",
+            copyInstead = url,
+            failureMessage = ShareActions.fallbackMessage(url)
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
@@ -187,6 +233,86 @@ fun WebPreviewScreen(
                 }
             },
             actions = {
+                // Phase 58.3 — the ☰, and only when the policy says it has
+                // something to offer (a dead control is not drawn). The editor
+                // already uses this glyph for its own overflow ("the shot's
+                // glyph"), so the two screens agree on what a menu looks like.
+                if (PreviewChromePolicy.hasMenu(previewChrome)) {
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(
+                                SpckIcons.EditorMenu,
+                                contentDescription = stringResource(R.string.preview_menu)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false }
+                        ) {
+                            for (link in previewLinks) {
+                                when (link) {
+                                    PreviewLink.COPY_PAGE_ADDRESS -> DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.preview_menu_copy_address)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            currentUrl?.let(copyAddress)
+                                        }
+                                    )
+                                    PreviewLink.OPEN_PHONE_BROWSER -> DropdownMenuItem(
+                                        text = { Text(ShareActions.label(ShareRow.ON_PHONE)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            currentUrl?.let(openAddress)
+                                        }
+                                    )
+                                    PreviewLink.OPEN_PEER_LINK -> DropdownMenuItem(
+                                        text = { Text(ShareActions.label(ShareRow.OTHER_DEVICES)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            val url = shareEndpoints?.let {
+                                                ShareActions.browserUrl(it, ShareRow.OTHER_DEVICES)
+                                            }
+                                            url?.let(openAddress)
+                                        }
+                                    )
+                                    PreviewLink.LAN_SHARING -> DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    if (lanShared) R.string.preview_menu_lan_off
+                                                    else R.string.preview_menu_lan_on
+                                                )
+                                            )
+                                        },
+                                        onClick = {
+                                            menuOpen = false
+                                            LanSharePolicy.shared.set(!lanShared)
+                                        }
+                                    )
+                                    PreviewLink.SERVER_OPTIONS -> DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.preview_menu_server_options)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            // The detail the menu promised: the
+                                            // panel itself, unchanged (QR, every
+                                            // server, the notices), just no
+                                            // longer spending the page's height
+                                            // by default.
+                                            showServerPanel = true
+                                        }
+                                    )
+                                    PreviewLink.STOP_SERVERS -> DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.preview_menu_stop_servers)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            host.stopAll()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
                 IconButton(
                     onClick = { viewModel.requestReload() },
                     enabled = error == null
@@ -230,15 +356,26 @@ fun WebPreviewScreen(
             // Phase 37.1 — the peer-facing address + QR, right under the bar
             // that shows the local one. The LAN switch only appears for the
             // static preview, because that is the server this screen owns.
-            if (shareEndpoints != null) {
+            //
+            // Phase 58.3 — this panel is no longer the default: it spends a
+            // hundred-odd dp above the page for information a user needs
+            // occasionally, so it now opens from the ☰ (its own "Server
+            // options…" item) and closes from its own header. Nothing it
+            // carried was removed, and the ☰ stays visible while it is open —
+            // the way back cannot be hidden by the thing it opened.
+            if (shareEndpoints != null && PreviewChromePolicy.panelVisible(showServerPanel)) {
                 ServerSharePanel(
                     endpoints = shareEndpoints,
                     lanShared = lanShared,
                     onToggleLan = { enabled -> LanSharePolicy.shared.set(enabled) },
                     onOpenUrl = { url -> webView?.loadUrl(url) },
-                    servers = host.registry.snapshot(),
+                    servers = servers,
                     onStopAll = { host.stopAll() },
-                    showSwitch = !isLive
+                    showSwitch = !isLive,
+                    // No `dense`: the panel itself is unchanged, so every
+                    // affordance it had (both copy buttons, the QR, STOP ALL)
+                    // is still there. Only its default visibility moved.
+                    onClose = { showServerPanel = false }
                 )
             }
             staticError?.let { message ->

@@ -10,7 +10,7 @@ reference seriously”*.
 |---|---|---|
 | 58.1 | Open on snake | 🚧 IMPLEMENTED — [PART_58_1](PART_58_1_SNAKE_FIRST_OPEN.md) |
 | 58.2 | Silent userland, one warning | 🚧 IMPLEMENTED — [PART_58_2](PART_58_2_SILENT_USERLAND.md) |
-| 58.3 | Upper links | 📋 PLANNED — research first, then ask if no Play shot has arrived |
+| 58.3 | Upper links | 🚧 IMPLEMENTED — [PART_58_3](PART_58_3_PREVIEW_HAMBURGER.md) — the owner chose **CodeC's preview chrome** when the research pass found no Play shot and asked |
 
 ## What §58 asked for, and where it stands
 
@@ -24,11 +24,15 @@ reference seriously”*.
 * **Add** one warning pill in the standing case → **done** (58.2:
   `NoticePolicy.userlandWarning` → `NoticeKind.USERLAND_NOT_READY` →
   *“Finish installing the Linux tools first — open Terminal.”*).
-* **The hamburger** → 58.3, not started. The shots show Content / Home / More as buttons
-  **inside `index.html`**, and they do **not** show CodeC's preview screen; the roadmap names
-  two possible fixes (that page's nav, or the preview chrome in `WebPreviewScreen.kt`) and
-  says: research both, use a Play shot if one has arrived, otherwise **ask**. Nothing is to be
-  invented from the store Snake image.
+* **The hamburger** → **done** (58.3), and *asked* rather than invented. The research pass
+  re-read all seven shots: Content / Home / More are buttons **inside the page's own
+  `index.html`** (`124105` shows their markup, `<span>More</span>`), so they are a user's file,
+  not CodeC chrome; and no shot shows CodeC's preview screen (`124052`, long suspected of being
+  a Play shot, is the editor's code area again — see PART_58_3 §1.1). The roadmap says ask, so
+  the two candidates were put to the owner with the evidence, and he chose **CodeC's preview
+  chrome**: the preview's address row + peer/LAN panel are now one ☰ menu (address row stays as
+  the readout), with the panel itself reachable as its own item. Nothing was removed and nothing
+  was re-implemented — the menu calls the same actions the panel did.
 
 ## Exit criteria, checked against this checkout
 
@@ -39,14 +43,14 @@ reference seriously”*.
 | userland can be downloading with **no setup strip** on the editor | the strip is deleted, not hidden (58.2) |
 | running that HTML previews it | `SnakeSample.ENTRY_FILE` is a `.html`; `RunDecision.WebPreview` is decided before any tool probe (pinned in 58.2) |
 | running a language that needs a download, before userland is ready, says to finish the userland install first | `EditorViewModel.promptInstall` → `NoticePolicy.userlandWarning` → the pill |
-| the hamburger change matches whichever of the two the research pass proved, and says which | **owed — 58.3** |
+| the hamburger change matches whichever of the two the research pass proved, and says which | **done** — 58.3: **CodeC's preview chrome** (the owner's own answer, after the pass proved the shots' Content/Home/More live inside the *page*, and that no Play shot exists). PART_58_3 §1 records the evidence and §1.1 records the near-miss shot |
 | **device pass** | owed (see below) |
 
 ## Device round owed
 
 The phase exit still says *“Device pass required: Yes.”* The rows are in
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (S1 fresh install, S2 the one warning, S3 the preview,
-S4 the hamburger once 58.3 decides what it is), on top of the editor-chrome rows in
+S4-S6 the hamburger), on top of the editor-chrome rows in
 [`../chat-phase57/DEVICE_ROUND.md`](../chat-phase57/DEVICE_ROUND.md) (P1-P10 / Q1-Q6 / R1-R11).
 Neither round has been run.
 

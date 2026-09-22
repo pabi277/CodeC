@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.QrCode2
@@ -41,11 +42,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.R
 import com.codeci.ide.ui.services.OpenInBrowser
 import com.codeci.ide.ui.services.QrModules
 import com.codeci.ide.ui.services.ShareActions
@@ -70,6 +73,12 @@ private const val QR_LIGHT = 0xFFFFFFFF.toInt()
  * The panel is stateless about the server: it renders a [ServerEndpoints] value
  * and reports taps, so the Output Panel and the Web Preview can both show it
  * from the same source (the [com.codeci.ide.ui.services.ServerHost] registry).
+ *
+ * Phase 58.3 — the Web Preview no longer shows this by default: it opens from
+ * that screen's ☰ ("Server options…"), because a hundred-odd dp of addresses
+ * above every page is not what a phone wants. Nothing was removed for it: the
+ * one new parameter is [onClose], and only the surface that opens the panel
+ * from a menu passes it, so the Output Panel renders exactly what it always did.
  */
 @Composable
 fun ServerSharePanel(
@@ -86,7 +95,14 @@ fun ServerSharePanel(
      * server must not pretend its switch can rebind it (the Web Preview shows
      * the switch for its own static server only).
      */
-    showSwitch: Boolean = true
+    showSwitch: Boolean = true,
+    /**
+     * Phase 58.3 — non-null only where the panel can be put away: the Web
+     * Preview opens it from its own ☰, so it must carry the way back. The
+     * Output Panel passes nothing (it is the panel of that surface), which is
+     * exactly why the header row appears only when this is set.
+     */
+    onClose: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showQr by remember(endpoints?.port, endpoints?.lanShared) { mutableStateOf(false) }
@@ -121,6 +137,27 @@ fun ServerSharePanel(
             .padding(horizontal = 12.dp, vertical = if (dense) 4.dp else 8.dp),
         verticalArrangement = Arrangement.spacedBy(if (dense) 1.dp else 4.dp)
     ) {
+        // Phase 58.3 — the way back, for the surfaces that open this panel from
+        // a menu. The menu itself stays visible underneath, so this is not the
+        // only exit; it is the one that does not make the user hunt for it.
+        if (onClose != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.preview_panel_title),
+                    color = Color(0xFFD0D0D0),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.preview_menu),
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
         AddressRow(
             label = "On this phone",
             url = urls.loopbackUrl,

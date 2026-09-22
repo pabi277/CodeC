@@ -370,6 +370,19 @@
          close", nothing to sit and watch (the strip that said those is gone). -->
     <string name="notice_userland_not_ready">Finish installing the Linux tools first — open Terminal.</string>
 
+    <!-- Phase 58.3 — the preview screen's upper links, behind one hamburger
+         (the owner's own answer when the roadmap's two candidates were put to
+         him: CodeC's preview chrome, not the page inside it). The menu reuses
+         the app's existing wording for the two browser actions
+         (ShareActions.label), so only these four strings are new. -->
+    <string name="preview_menu">Preview menu</string>
+    <string name="preview_panel_title">Server options</string>
+    <string name="preview_menu_copy_address">Copy page address</string>
+    <string name="preview_menu_server_options">Server options…</string>
+    <string name="preview_menu_stop_servers">Stop servers</string>
+    <string name="preview_menu_lan_on">Share on LAN</string>
+    <string name="preview_menu_lan_off">Stop sharing on LAN</string>
+
     <!-- Phase 51.3 — the terminal's first frame and the install moment. -->
     <string name="terminal_intro_ready">Linux tools are ready — type a command, or run a file with RUN.</string>
     <!-- The apostrophe is escaped: AAPT2 refuses a raw one and reports it as
