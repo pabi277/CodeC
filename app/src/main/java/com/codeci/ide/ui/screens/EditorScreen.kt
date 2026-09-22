@@ -2454,6 +2454,9 @@ fun EditorScreen(
         // never sit on top of each other: the pill confirms what the user just
         // did (the shot's “Refreshed Files”), or names a dead tap
         // (“Error opening file.”) that used to be silent.
+        // Phase 58.2 — the same pill is the whole of what the userland setup
+        // still says in the editor (the permanent strip is gone): ONE line when
+        // a RUN ▶ needs a download the setup cannot install yet.
         val pill = notice
         AnimatedVisibility(
             visible = pill != null,

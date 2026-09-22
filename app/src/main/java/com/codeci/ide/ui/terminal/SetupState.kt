@@ -378,52 +378,33 @@ object SetupGatePolicy {
     }
 
     // ---- the surfaces (same vocabulary everywhere) --------------------------
-
-    /**
-     * The slim bar under the safe-mode banner, visible from EVERY tab.
-     * `null` when there is nothing to say (READY and usable).
-     */
-    fun barText(progress: InstallProgress, facts: SetupFacts): String? = when {
-        progress.stage == SetupStage.READY && facts.usable -> null
-        progress.stage == SetupStage.READY ->
-            "C works right now · the Linux tools still need one install — open Terminal and tap ⬇"
-        progress.stage == SetupStage.UNSUPPORTED ->
-            "C works offline · extra languages aren't available on this device"
-        progress.stage == SetupStage.FAILED -> refusal(SetupAction.INSTALL_PACKAGE, progress, facts)
-        progress.stage == SetupStage.DOWNLOADING ->
-            if (progress.percent != null) {
-                "Setting up CodeC's Linux tools — ${progress.percent} % · C works right now"
-            } else {
-                "Setting up CodeC's Linux tools · C works right now"
-            }
-        progress.stage == SetupStage.VERIFYING ->
-            "Checking the downloaded Linux tools · C works right now"
-        progress.stage == SetupStage.EXTRACTING ->
-            "Unpacking CodeC's Linux tools · C works right now"
-        else -> "Setting up CodeC · C works right now"
-    }
-
-    /** True while the bar should be on screen (the caller may add a dismiss ✕). */
-    fun barVisible(progress: InstallProgress, facts: SetupFacts): Boolean =
-        barText(progress, facts) != null
-
-    /**
-     * May the user put the bar away? (device round 1, 2026-09-12)
-     *
-     * The owner's report: *"The top a massage 'C works right now…' But it's not
-     * closing or opening terminal."* The bar was showing a **settled** state
-     * (READY with a prefix the facts did not call usable) in which the old rule
-     * — dismissible only when settled *and* usable — left no ✕ that did anything
-     * and no action button at all: a wall with a sentence on it.
-     *
-     * The law now: **in flight means not dismissible** (hiding a running
-     * download is the exact bug this phase exists to remove), and **settled
-     * means dismissible whatever the verdict** — READY, FAILED, UNSUPPORTED and
-     * READY-but-unusable alike. Nothing is lost by dismissing a settled bar: the
-     * gate still refuses at the point of use with the same sentence, and the
-     * bar comes back as soon as the text changes (a new install, a repair).
-     */
-    fun barDismissAllowed(progress: InstallProgress): Boolean = progress.settled
+    //
+    // Phase 58.2 — the setup BAR is gone, and its vocabulary with it.
+    //
+    // `barText` / `barVisible` / `barDismissAllowed` and the composable that
+    // rendered them (`ui/components/SetupBar.kt`) described exactly one thing:
+    // a permanent strip under the safe-mode banner, on every tab, from first
+    // launch until the Linux tools were ready. The owner's row retires it —
+    // *"Userland installs silently; one warning when a run needs a download
+    // before userland is ready."* — and the roadmap's Remove list names it in
+    // so many words ("the setup bar as a permanent strip"). What used to sit on
+    // the strip now lives where the fact is actually needed:
+    //
+    //  - a RUN ▶ that needs a package the setup cannot install yet says ONE
+    //    sentence, once, in the editor's pill
+    //    (`NoticePolicy.userlandWarning` → `NoticeKind.USERLAND_NOT_READY`);
+    //  - every transaction gate still refuses at the point of use with the same
+    //    sentence (`can(...)` / `refusal(...)` below, and `SetupLockPolicy`);
+    //  - the Terminal, the one place the download is visible, still says what
+    //    the install is doing and why it should not be closed
+    //    (`dontCloseText`, [TerminalIntro]).
+    //
+    // **Do not re-add the strip.** A later phase may want a different way to
+    // surface the setup, but a bar over every tab was rejected by the owner on
+    // 2026-09-22, and a future agent who rebuilds this is undoing an owner row,
+    // not fixing an oversight. The device round 1 reports that shaped the strip
+    // (2026-09-12: "It's not closing or opening terminal") are answered by the
+    // point-of-use gates above; they are not a reason to bring the bar back.
 
     /**
      * Which tab a cold start lands on (device round 1, 2026-09-12).

@@ -117,6 +117,7 @@ import com.codeci.ide.ui.theme.CodecMotion
 import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
+import com.codeci.ide.ui.components.StarterTile
 import com.codeci.ide.ui.components.HapticMoment
 import com.codeci.ide.ui.components.rememberCodecHaptics
 import com.codeci.ide.ui.components.PressableSurface

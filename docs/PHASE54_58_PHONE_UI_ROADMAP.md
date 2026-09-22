@@ -12,9 +12,9 @@
 > - The HTML page view’s upper links are not phone-friendly; they want a hamburger-style treatment.
 > - *“if need say me”* — if a screen is not in the shots, ask. Do not invent it.
 
-> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED, 56 IMPLEMENTED, 57.1-57.3 IMPLEMENTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel ([`chat-phase55/`](chat-phase55/README.md)). 56 took the Projects option off the bar and left the other four, the handle and hide-while-typing exactly as they were ([`chat-phase56/`](chat-phase56/README.md)). 57.1, 57.2 and 57.3 shipped ([`chat-phase57/`](chat-phase57/README.md)); 58 is still 📋 PLANNED — the owner says **“Start Phase N”**, and only then does that phase’s research pass begin.
+> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED, 56 IMPLEMENTED, 57.1-57.3 IMPLEMENTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel ([`chat-phase55/`](chat-phase55/README.md)). 56 took the Projects option off the bar and left the other four, the handle and hide-while-typing exactly as they were ([`chat-phase56/`](chat-phase56/README.md)). 57.1, 57.2 and 57.3 shipped and are **CI-green** (`35710338114` on tip `7c9619b`; [`chat-phase57/`](chat-phase57/README.md)). **58.1 and 58.2 are implemented** ([`chat-phase58/`](chat-phase58/README.md)): the first open is the editor on the snake sample this app writes, the setup strip is deleted (not hidden) with its policy vocabulary, the first-run divert to the Terminal is retired, and the one sentence a run owes when its download cannot be installed yet is the editor's pill. **58.3 (the hamburger) is not started**: the shots show the page's own Content/Home/More buttons and no preview screen, so its research pass comes first and, failing a Play shot, the owner is asked rather than an invented chrome shipped.
 >
-> **Two red CI rounds so far (both for cause, both fixed):** run `35707359816` failed on Phase 55 with two real
+> **Three red CI rounds so far (all for cause, all fixed; the phase-57 tip `7c9619b` is green):** run `35707359816` failed on Phase 55 with two real
 > compile errors — a wrong package in an import (`CoachMarkPlan` lives in `ui.guide`, not `ui.editor`) and
 > `CodecTokens.Icon.HUGE`, which does not exist. Both fixed in the Phase 56 commit. Run `35709258747` failed
 > on Phase 57.1 with two **pins** the new layout had legitimately invalidated: `EditorChromeSlotTest`'s tab-row
@@ -275,9 +275,9 @@ The shots have no bottom bar under the touch row. CodeC will still have one, by 
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| 58.1 | Open on snake | M | 📋 PLANNED |
-| 58.2 | Silent userland, one warning | M | 📋 PLANNED |
-| 58.3 | Upper links | S/M | 📋 PLANNED |
+| 58.1 | Open on snake | M | 🚧 IMPLEMENTED — [PART_58_1](chat-phase58/PART_58_1_SNAKE_FIRST_OPEN.md) |
+| 58.2 | Silent userland, one warning | M | 🚧 IMPLEMENTED — [PART_58_2](chat-phase58/PART_58_2_SILENT_USERLAND.md) |
+| 58.3 | Upper links | S/M | 📋 PLANNED — research both candidates, then ask if no Play shot has arrived |
 
 **Research before code.**
 

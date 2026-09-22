@@ -790,14 +790,21 @@ class GuideWiringTest {
 
     @Test
     fun `phase 44's setup surfaces are untouched by the guide`() {
-        // The gate the guide must not weaken: the setup bar is still rendered
-        // from the pure policy, and the terminal-first divert still reads the
-        // disk. (SetupGateWiringTest pins the detail; this is the "the guide did
-        // not move it" check.)
+        // The gate the guide must not weaken: the setup truth is still read from
+        // the disk and handed to the resume policy. (SetupGateWiringTest pins the
+        // detail; this is the "the guide did not move it" check.)
+        //
+        // Phase 58.2 retired the strip this pin used to order against
+        // `GuideScreen(` — the bar left the shell with the owner's row, not with
+        // this test — so the ordering half of the pin is now the mount half: no
+        // setup surface sits in the guide's shell at all.
         val src = source(main)
-        assertTrue(src.contains("com.codeci.ide.ui.components.SetupBar("))
         assertTrue(src.contains("SetupGatePolicy.startOnTerminal("))
-        assertTrue(src.contains("SetupGatePolicy.barDismissAllowed(setupProgress)"))
-        before(src, "GuideScreen(", "com.codeci.ide.ui.components.SetupBar(")
+        assertTrue(src.contains("setupNeedsWatching = setupLaunchDivert"))
+        assertTrue(src.contains("GuideScreen("))
+        assertFalse(
+            "the strip is retired: the shell mounts no setup bar",
+            RepoFiles.codeOnly(src).contains("SetupBar")
+        )
     }
 }

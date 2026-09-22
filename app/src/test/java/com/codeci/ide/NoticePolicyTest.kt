@@ -47,6 +47,22 @@ class NoticePolicyTest {
     }
 
     @Test
+    fun `a run that needs a download says so only when the tools cannot take it`() {
+        // Phase 58.2 — the owner's row: *"Userland installs silently; one
+        // warning when a run needs a download before userland is ready."* The
+        // verdict is `SetupGatePolicy.can(INSTALL_PACKAGE, …)`'s, so the warning
+        // and the refusal it stands in for cannot drift apart.
+        assertEquals(
+            NoticeKind.USERLAND_NOT_READY,
+            NoticePolicy.userlandWarning(packageInstallAllowed = false),
+        )
+        assertNull(
+            "a ready setup gets the normal install sheet, not a warning",
+            NoticePolicy.userlandWarning(packageInstallAllowed = true),
+        )
+    }
+
+    @Test
     fun `the pill takes itself away, and not immediately`() {
         assertTrue(
             "a pill that leaves instantly is a pill nobody reads",

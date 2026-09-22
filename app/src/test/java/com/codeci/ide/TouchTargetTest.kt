@@ -4,12 +4,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 50.1 — every icon button in the six core surfaces keeps a ≥ 48 dp
+ * Phase 50.1 — every icon button in the core surfaces keeps a ≥ 48 dp
  * touch target (source scan).
  *
  * M3's `IconButton` reserves the 48 dp minimum by itself
  * (`minimumInteractiveComponentSize`); what this pins is that no call site
- * in the six files shrinks it back with an explicit small `size(` /
+ * in the core files shrinks it back with an explicit small `size(` /
  * `requiredSize(` / `defaultMinSize(` in the button's own header. (The one
  * that did — the Packages command-snippet copy button at 24 dp — now reads
  * `CodecTokens.MIN_TOUCH`; `TokenAdoptionTest` pins the token.)
@@ -22,8 +22,7 @@ import org.junit.Test
  */
 class TouchTargetTest {
 
-    private val sixFiles = listOf(
-        "WelcomeScreen.kt",
+    private val coreFiles = listOf(
         "EditorScreen.kt",
         "FileManagerScreen.kt",
         "ModulesScreen.kt",
@@ -47,10 +46,10 @@ class TouchTargetTest {
     }
 
     @Test
-    fun `no IconButton in the six files shrinks below 48dp`() {
+    fun `no IconButton in the core files shrinks below 48dp`() {
         val smallBox = Regex("""\.(size|requiredSize|defaultMinSize)\(\s*(\d+)""")
         val failures = mutableListOf<String>()
-        for (name in sixFiles) {
+        for (name in coreFiles) {
             val code = RepoFiles.codeOnly(
                 RepoFiles.mainSource(
                     "app/src/main/java/com/codeci/ide/ui/screens/$name",
@@ -74,16 +73,17 @@ class TouchTargetTest {
 
     @Test
     fun `the scan really visits buttons`() {
-        // A pin that never matches is a pin that never fails: the six files
+        // A pin that never matches is a pin that never fails: the core files
         // hold seventeen IconButtons today (4 editor + 5 hub + 2 packages +
-        // 6 terminal; welcome and settings hold none). The editor's count went
+        // 6 terminal; settings holds none — the first-run welcome held none
+        // either, and Phase 58.1 retired that screen). The editor's count went
         // 3 → 4 in Phase 57.1, and this comment is the record the pin demands:
         // the top row's ⋮ `IconButton` left the bar, the RUN action became the
         // shots' bare green ▶ `IconButton`, and the tab row's trailing cell
         // added the editor-menu `IconButton` (+1 net). A phase that changes this
         // number again must say why here, not just edit the digit.
         var total = 0
-        for (name in sixFiles) {
+        for (name in coreFiles) {
             val code = RepoFiles.codeOnly(
                 RepoFiles.mainSource(
                     "app/src/main/java/com/codeci/ide/ui/screens/$name",
@@ -92,7 +92,7 @@ class TouchTargetTest {
             total += Regex("""\bIconButton\s*\(""").findAll(code).count()
         }
         assertTrue(
-            "expected 17 IconButtons across the six files, found $total",
+            "expected 17 IconButtons across the core files, found $total",
             total == 17,
         )
     }

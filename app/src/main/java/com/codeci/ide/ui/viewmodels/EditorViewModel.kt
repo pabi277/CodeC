@@ -851,7 +851,39 @@ class EditorViewModel : ViewModel() {
         return LanguageToolProbe.isInstalled(ShellEnvironment.prefixDir(ctx.filesDir), binary)
     }
 
+    /**
+     * Phase 21.2 — the RUN ▶ gate for a language whose toolchain package is
+     * missing.
+     *
+     * Phase 58.2 — the download is only *offered* when the one-time userland
+     * setup can carry it. While that is still settling (or failed, or the
+     * device is unsupported) the run says ONE sentence instead, from the pill —
+     * the owner's row: *“Userland installs silently; one warning when a run
+     * needs a download before userland is ready.”* The permanent strip and the
+     * first-run divert to a locked Terminal are retired with this part, so this
+     * is the only moment the app speaks about the setup while the user works:
+     * at the point of use, once, with nothing to watch afterwards.
+     *
+     * The verdict is the same `SetupGatePolicy.can(INSTALL_PACKAGE, …)` call
+     * [confirmInstall] already obeys, so the pill and the refusal it stands in
+     * for can never disagree.
+     */
     private fun promptInstall(decision: RunDecision.NeedsInstall) {
+        val ctx = appContext
+        if (ctx != null) {
+            val allowed = SetupGatePolicy.can(
+                SetupAction.INSTALL_PACKAGE,
+                SetupStateBridge.factsOrDisk(
+                    ShellEnvironment.prefixDir(ctx.filesDir),
+                    SetupLedgerPrefs.ledger(ctx).read().phase
+                )
+            ).allowed
+            val warning = NoticePolicy.userlandWarning(allowed)
+            if (warning != null) {
+                noticeFor(warning)
+                return
+            }
+        }
         _installPrompt.value = InstallPromptState(
             packageName = decision.packageName,
             displayName = decision.profile.displayName,

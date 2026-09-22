@@ -94,9 +94,19 @@ class PillNoticeWiringTest {
     }
 
     @Test
-    fun `both messages exist, worded as the phase wrote them`() {
+    fun `every message exists, worded as the phases wrote them`() {
         assertTrue(strings.contains("<string name=\"notice_files_refreshed\">Refreshed Files</string>"))
         assertTrue(strings.contains("<string name=\"notice_file_open_failed\">Error opening file.</string>"))
+        // Phase 58.2 — the third and last message: the ONE sentence the userland
+        // setup says in the editor, once, at the point of use (the strip that
+        // used to say it over every tab is retired).
+        assertTrue(
+            strings.contains("<string name=\"notice_userland_not_ready\">"),
+        )
+        assertTrue(
+            "the pill renders the third kind, and never a bare fallback",
+            pill.contains("NoticeKind.USERLAND_NOT_READY"),
+        )
         assertEquals(
             "the wording lives in the resource file, never inline in a composable",
             0,

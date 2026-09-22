@@ -12,12 +12,12 @@ package com.codeci.ide.ui.terminal
  *
  * [TerminalIntroPolicy] answers that from **the same object Phase 44 already
  * computes** ([SetupFacts], produced by [SetupGatePolicy.factsFor] and shared
- * with the setup bar and Packages through the ViewModel): whether an install is
- * on screen is the stage's own [InstallProgress.inFlight] — the same predicate
- * the setup bar refuses dismissal on — and usability is [SetupFacts.usable], so
- * the terminal, the setup bar and Packages cannot drift apart — the plan's exit
- * condition for this part. (Deliberately not `barVisible`, which is also true
- * for a *settled* bar: the terminal must not call a failed setup "installing".)
+ * with Packages through the ViewModel): whether an install is on screen is the
+ * stage's own [InstallProgress.inFlight], and usability is [SetupFacts.usable],
+ * so the terminal and the gates that refuse a transaction cannot drift apart —
+ * the plan's exit condition for this part. It is deliberately NOT the stage
+ * alone: `SetupStage.READY` with a prefix the disk does not confirm is a failed
+ * setup, and the terminal must not call that "installing".
  *
  * It is a *first frame*, never a permanent fixture: as soon as the shell has
  * produced a line ([TerminalIntroFacts.hasOutput]) the screen shows the shell

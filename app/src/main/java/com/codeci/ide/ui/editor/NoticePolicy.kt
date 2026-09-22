@@ -33,6 +33,12 @@ enum class NoticeKind {
 
     /** A file the user tapped could not be opened. */
     FILE_OPEN_FAILED,
+
+    /**
+     * Phase 58.2 — a RUN ▶ needed a download and the one-time Linux setup is
+     * not in a state where that download can be trusted yet.
+     */
+    USERLAND_NOT_READY,
 }
 
 object NoticePolicy {
@@ -58,4 +64,22 @@ object NoticePolicy {
      */
     fun openFailureNotice(fileName: String?): NoticeKind? =
         if (fileName.isNullOrBlank()) null else NoticeKind.FILE_OPEN_FAILED
+
+    /**
+     * Phase 58.2 — the one warning of the whole userland story.
+     *
+     * The owner's row: *“Userland installs silently; one warning when a run
+     * needs a download before userland is ready.”* The permanent strip is
+     * retired (58.2 removed it, and with it the first-run divert to a locked
+     * Terminal), so this is the ONLY place the app speaks about the setup while
+     * the user is working: the moment a RUN ▶ asks for a package it cannot
+     * install yet. One sentence, at the point of use, then the user is on their
+     * own again — not “hang tight”, not “don't close”, nothing to watch.
+     *
+     * @param packageInstallAllowed `SetupGatePolicy.can(INSTALL_PACKAGE,
+     *   facts)` — the same verdict `confirmInstall` has always obeyed, so the
+     *   warning and the refusal can never disagree.
+     */
+    fun userlandWarning(packageInstallAllowed: Boolean): NoticeKind? =
+        if (packageInstallAllowed) null else NoticeKind.USERLAND_NOT_READY
 }

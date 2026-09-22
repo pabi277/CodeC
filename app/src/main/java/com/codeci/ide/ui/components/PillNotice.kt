@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +43,14 @@ import com.codeci.ide.ui.theme.CodecTokens.Space
  * glyph for the same idea (the refresh arrow), tinted the reference's blue.
  * An unopenable file keeps the app's established danger red, so the two pills
  * are never mistaken for one another at a glance.
+ *
+ * Phase 58.2 adds the third and last one, from the owner's own row (*“one
+ * warning when a run needs a download before userland is ready”*): a RUN ▶ that
+ * wants a package the setup cannot install yet. Amber with the warning
+ * triangle — the file is fine, the tool simply is not here yet — and it is the
+ * whole of what the userland setup ever says in the editor now that 58.2
+ * retired the permanent strip. One line, at the point of use, and nothing that
+ * asks the user to sit and watch a download.
  */
 @Composable
 fun PillNotice(
@@ -52,14 +61,17 @@ fun PillNotice(
     val label = when (kind) {
         NoticeKind.FILES_REFRESHED -> R.string.notice_files_refreshed
         NoticeKind.FILE_OPEN_FAILED -> R.string.notice_file_open_failed
+        NoticeKind.USERLAND_NOT_READY -> R.string.notice_userland_not_ready
     }
     val glyph = when (kind) {
         NoticeKind.FILES_REFRESHED -> Icons.Default.Refresh
         NoticeKind.FILE_OPEN_FAILED -> Icons.Default.Info
+        NoticeKind.USERLAND_NOT_READY -> Icons.Default.Warning
     }
     val tint = when (kind) {
         NoticeKind.FILES_REFRESHED -> CodecPalette.INFO
         NoticeKind.FILE_OPEN_FAILED -> CodecPalette.DANGER
+        NoticeKind.USERLAND_NOT_READY -> CodecPalette.WARNING
     }
     PressableSurface(
         onClick = onDismiss,
