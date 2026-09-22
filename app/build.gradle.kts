@@ -294,4 +294,10 @@ dependencies {
 // test task instead — the suite is normally well under this.
 tasks.withType<Test>().configureEach {
   timeout.set(Duration.ofMinutes(5))
+  // Phase 52.4 — CI compares committed Roborazzi images instead of silently
+  // recording a new image. Developers can explicitly request record mode
+  // with -Droborazzi.test.record=true; CI never does so.
+  if (System.getenv("CI").equals("true", ignoreCase = true)) {
+    systemProperty("roborazzi.test.verify", "true")
+  }
 }

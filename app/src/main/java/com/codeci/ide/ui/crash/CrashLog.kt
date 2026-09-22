@@ -23,6 +23,11 @@ object CrashLog {
 
     const val FILE_NAME = "crash-log.txt"
 
+    /** Cheap startup fact: avoid reading the whole report before first paint. */
+    fun hasRecord(filesDir: File): Boolean = runCatching {
+        File(filesDir, FILE_NAME).isFile && File(filesDir, FILE_NAME).length() > 0L
+    }.getOrDefault(false)
+
     /** The newest crash record, or null when there is nothing to show. */
     fun newestRecord(filesDir: File): String? = runCatching {
         val file = File(filesDir, FILE_NAME)

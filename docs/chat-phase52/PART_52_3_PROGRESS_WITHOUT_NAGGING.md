@@ -1,6 +1,6 @@
 # CodeC Phase 52.3 — The streak the app already counts, shown once
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S ·
+> **Status:** 🚧 IMPLEMENTED (host-verified; handset round pending) · **Cost:** `[client-only]` · **Effort:** S ·
 > **Owner row (verbatim):** *"not attractive to user to use multiple time"*.
 > Parent: [`README.md`](README.md) ·
 > [`PHASE50_52_ROADMAP.md`](../PHASE50_52_ROADMAP.md).
@@ -113,6 +113,15 @@ About row renders the four existing numbers and is **absent** when they are all
 zero; the hub line appears only on a continuing day ≥2 and never mentions a
 break; a source scan proves no new DataStore key, no write, no notification and
 no dialog were added; and `DEVICE_ROUND.md` R9-R10 has been run by the owner.
+
+## Implementation record (Phase 52 start)
+
+- `StreakLine` formats the existing StatsManager counters and returns null for
+  an all-zero account. Settings → About is the single display location.
+- The line is read-only: there is no new key, counter, write, notification,
+  dialog or snackbar in this feature.
+- R9-R10 are **not run in this sandbox**; the owner must verify the two-day
+  display and the no-nag behaviour on a phase APK.
 
 ## Tests (plan)
 

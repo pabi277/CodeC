@@ -1,6 +1,6 @@
 # CodeC Phase 52 — The return: it remembers you, and it never feels slow
 
-> **Status:** 📋 **PLANNED — no app code.** · **Cost:** `[client-only]` ·
+> **Status:** 🚧 **IMPLEMENTED IN PART — host policies and app wiring are in this branch; device measurements and screenshot goldens remain.** · **Cost:** `[client-only]` ·
 > **Effort:** L · **Owner row (verbatim):** *"not attractive to user to use
 > multiple time"* — the **return** half (the *look* half is 50, the *surfaces*
 > half is 51).
@@ -17,12 +17,23 @@
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [52.1](PART_52_1_RESUME.md) | "Continue where you left off", visibly | M | 📋 PLANNED |
-| [52.2](PART_52_2_PERCEIVED_SPEED.md) | Jank budget + measured first paint | M | 📋 PLANNED |
-| [52.3](PART_52_3_PROGRESS_WITHOUT_NAGGING.md) | The streak in About, once per day | S | 📋 PLANNED |
-| [52.4](PART_52_4_PROOF.md) | Screenshot goldens + device round | M | 📋 PLANNED |
+| [52.1](PART_52_1_RESUME.md) | "Continue where you left off", visibly | M | 🚧 HOST IMPLEMENTED |
+| [52.2](PART_52_2_PERCEIVED_SPEED.md) | Jank budget + measured first paint | M | 🚧 INSTRUMENTED |
+| [52.3](PART_52_3_PROGRESS_WITHOUT_NAGGING.md) | The streak in About, once per day | S | 🚧 HOST IMPLEMENTED |
+| [52.4](PART_52_4_PROOF.md) | Screenshot goldens + device round | M | 🚧 CI WIRING |
 
 Device round: [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (R1-R12, written, not run).
+
+## Phase 52 start record
+
+The branch now contains the pure `ResumePolicy`, `FrameBudget`/`SpeedVerdict`
+and `StreakLine` policies plus their host tests; a visible, session-only resume
+card; the About progress line; the first-paint `Launch` log; and skeleton
+branches for the file tree, package list and Source Control read. CI is wired to
+execute the host suite and verify (never record) Roborazzi tests. The sandbox has
+no Java/device access, so R1-R12, M1-M6 and committed screenshot goldens are
+explicitly still pending rather than fabricated. The CI verify-mode wiring is
+ready for the golden test inventory to land.
 
 ---
 

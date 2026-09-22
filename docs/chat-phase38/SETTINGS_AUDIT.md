@@ -9,10 +9,12 @@
 > every DataStore key in the three stores, so the NEXT dead row fails
 > the build instead of rotting back.
 
-Audit date: 2026-09-10, against `SettingsScreen.kt` as edited by Phase
-38.2 (11 sections, 45 `Settings*` control rows). Phase 41 added a 12th
+Audit date: 2026-09-22, against `SettingsScreen.kt` as edited by Phase
+52.3 (12 sections, 66 `Settings*` control rows). Phase 41 added a 12th
 section — **Feedback & Support** (one OPEN row since the follow-up round;
-the content lives on `FeedbackScreen`, see "Other surfaces").
+the content lives on `FeedbackScreen`, see "Other surfaces"). Phase 52.3
+adds one read-only About progress line backed by the existing StatsManager
+counters.
 
 ## Deleted by this audit (with evidence)
 
@@ -41,7 +43,7 @@ the content lives on `FeedbackScreen`, see "Other surfaces").
 
 Screen order (machine-checked): Editor Settings | CodeC Keys | Compiler | Terminal | Terminal Extra-Keys & Shortcuts | Package Repository & Trust | GitHub Account | Appearance | Storage | About | Feedback & Support | Developer Options
 
-This table is what `SettingsAuditTest` counts: 12 sections, 65 rows
+This table is what `SettingsAuditTest` counts: 12 sections, 66 rows
 (three of the sections — Terminal Extra-Keys & Shortcuts, Package
 Repository & Trust, GitHub Account — are custom cards with no
 `Settings*` rows; they are covered under "Other surfaces" below and in
@@ -86,6 +88,7 @@ change nothing and say so).
 | 32 | Storage | Clear temporary files | action | `TempGc.clearIdle` (idle run dirs only) | space freed; live stamps kept; Phase 39.1 | keep |
 | 33 | Storage | Clear Cache | action | deletes `cacheDir` | space freed; toast confirms | keep |
 | 34 | About | Show the welcome screen again | action | `first_launch_complete=false` | `firstLaunchCompleteFlow` → MainActivity welcome | keep |
+| 66 | About | Your CodeC progress | item | — (info; read-only current streak, runs and files) | `StatsManager` flows → `StreakLine` (52.3) | keep |
 | 53 | About | Help & guide | item | nothing stored — opens the Phase 45.1 five-slide guide on the spot | `GuideScreen` through MainActivity's `guideRequested` (the flag is written only by SKIP / START CODING) | keep |
 | 54 | About | Reset tips | action | `guide_completed=false` + `coach_marks_seen_csv=""` and nothing else (no project, file or other preference) | `guideCompletedFlow` → the guide gate on next launch; `coachMarksSeenCsvFlow` → `GuideCoachMarks` (45.2) | keep |
 | 35 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |

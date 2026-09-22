@@ -11,7 +11,7 @@
 > in a row after Phase 49.
 >
 > **Status: 🚧 IN PROGRESS — 50 ✅ merged, 51 ✅ merged + device-passed,
-> 52 📋 planned (next).** Research dossier (every
+> 52 🚧 in progress (host implementation started; device/proof pending).** Research dossier (every
 > external claim carries its source, every claim about this app carries a
 > `file:line` or a grep, read on `main` @ `62cfe7b`):
 > [`PHASE50_52_UX_RESEARCH.md`](PHASE50_52_UX_RESEARCH.md). Per-phase specs:
@@ -151,10 +151,10 @@ policy, the run pipeline or the chrome lock.
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| [52.1](chat-phase52/PART_52_1_RESUME.md) | "Continue where you left off", visibly | M | 📋 PLANNED |
-| [52.2](chat-phase52/PART_52_2_PERCEIVED_SPEED.md) | Jank budget + measured first paint | M | 📋 PLANNED |
-| [52.3](chat-phase52/PART_52_3_PROGRESS_WITHOUT_NAGGING.md) | The streak in About, once | S | 📋 PLANNED |
-| [52.4](chat-phase52/PART_52_4_PROOF.md) | Screenshot goldens + device round | M | 📋 PLANNED |
+| [52.1](chat-phase52/PART_52_1_RESUME.md) | "Continue where you left off", visibly | M | 🚧 HOST IMPLEMENTED |
+| [52.2](chat-phase52/PART_52_2_PERCEIVED_SPEED.md) | Jank budget + measured first paint | M | 🚧 INSTRUMENTED |
+| [52.3](chat-phase52/PART_52_3_PROGRESS_WITHOUT_NAGGING.md) | The streak in About, once | S | 🚧 HOST IMPLEMENTED |
+| [52.4](chat-phase52/PART_52_4_PROOF.md) | Screenshot goldens + device round | M | 🚧 CI WIRING |
 
 **Why these four.** The owner's *"to use multiple time"* is D7, and the
 diagnostic for a D1→D7 collapse (dossier §3.6) is *"the second and third

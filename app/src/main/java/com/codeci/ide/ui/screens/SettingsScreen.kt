@@ -88,6 +88,9 @@ import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.services.LiveRunStamps
 import com.codeci.ide.ui.services.TempGc
 import com.codeci.ide.ui.services.TempMeasure
+import com.codeci.ide.ui.stats.StatsManager
+import com.codeci.ide.ui.stats.StreakFacts
+import com.codeci.ide.ui.stats.StreakLine
 import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.terminal.ShellEnvironment
@@ -128,6 +131,13 @@ fun SettingsScreen(
     val context = LocalContext.current
     val themeManager = remember { ThemeManager(context) }
     val settingsManager = remember { SettingsManager(context) }
+    // Phase 52.3 — read the counters that already exist; this screen never
+    // writes them and introduces no DataStore key.
+    val statsManager = remember { StatsManager(context) }
+    val totalRuns by statsManager.totalRunsFlow.collectAsState(initial = 0)
+    val totalFilesCreated by statsManager.totalFilesCreatedFlow.collectAsState(initial = 0)
+    val currentStreak by statsManager.currentStreakFlow.collectAsState(initial = 0)
+    val lastRunDate by statsManager.lastRunDateFlow.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
     
     val currentAppTheme by themeManager.appThemeFlow.collectAsState(initial = AppThemeMode.SYSTEM)
@@ -1028,6 +1038,25 @@ fun SettingsScreen(
             var versionTaps by remember { mutableStateOf(0) }
             val devModeUnlocked by settingsManager.devModeUnlockedFlow.collectAsState(initial = false)
             val showFilePaths by settingsManager.showFilePathsFlow.collectAsState(initial = false)
+
+            StreakLine.forAbout(
+                StreakFacts(
+                    streak = currentStreak,
+                    runs = totalRuns,
+                    files = totalFilesCreated,
+                    // A missed day is not shown as a failure; it only keeps the
+                    // optional hub sentence quiet.
+                    streakBroken = lastRunDate != null && lastRunDate != StatsManager.today(),
+                )
+            )?.let { progressLine ->
+                // Phase 52.3 — one quiet, non-modal place for progress. The
+                // line disappears before the first run rather than displaying a
+                // guilt-inducing zero.
+                SettingsItem(
+                    title = stringResource(com.codeci.ide.R.string.about_progress),
+                    subtitle = progressLine,
+                )
+            }
 
             SettingsItem(
                 title = "App Version",
