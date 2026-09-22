@@ -46,6 +46,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Switch
@@ -93,6 +101,10 @@ import com.codeci.ide.ui.stats.StreakFacts
 import com.codeci.ide.ui.stats.StreakLine
 import com.codeci.ide.ui.projects.GitCredentialsStore
 import com.codeci.ide.ui.settings.SettingsManager
+import com.codeci.ide.ui.settings.SettingsCatalog
+import com.codeci.ide.ui.settings.SettingsDisclosure
+import com.codeci.ide.ui.settings.SettingsSearch
+import com.codeci.ide.ui.settings.SettingsViewState
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.DeviceDiagnostics
 import com.codeci.ide.ui.theme.AccentPalette
@@ -176,8 +188,28 @@ fun SettingsScreen(
     // Phase 51.4 — the app chrome's haptics (the eight moments), default on.
     val haptics by settingsManager.hapticsFlow.collectAsState(initial = true)
 
+    // Phase 62 — Settings, findable. The query and the folded sections are view state, not
+    // preferences: `rememberSaveable` keeps them across a rotation and the screen forgets them
+    // on the way out, which is what a search box should do.
+    var settingsQuery by rememberSaveable { mutableStateOf("") }
+    var foldedSectionsCsv by rememberSaveable { mutableStateOf("") }
+    val foldedSections = remember(foldedSectionsCsv) { SettingsDisclosure.parse(foldedSectionsCsv) }
+    val settingsView = remember(settingsQuery, foldedSections) {
+        SettingsViewState(
+            query = settingsQuery,
+            folded = foldedSections,
+            onToggleSection = { section ->
+                foldedSectionsCsv = SettingsDisclosure.serialize(
+                    SettingsDisclosure.toggle(foldedSections, section)
+                )
+            }
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(com.codeci.ide.R.string.settings_title)) })
+        SettingsSearchField(query = settingsQuery, onQueryChange = { settingsQuery = it })
+        CompositionLocalProvider(LocalSettingsView provides settingsView) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -185,6 +217,7 @@ fun SettingsScreen(
         ) {
             
             // EDITOR SETTINGS
+            SettingsSection("Editor Settings") {
             SettingsSectionHeader("Editor Settings")
             
             SettingsSlider(
@@ -256,6 +289,8 @@ fun SettingsScreen(
                 )
             }
 
+            }
+            SettingsSection("CodeC Keys") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // CODEC KEYS — Phase 28.2, default flipped by Phase 47.2 (owner:
@@ -316,6 +351,8 @@ fun SettingsScreen(
                 )
             }
 
+            }
+            SettingsSection("Compiler") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // COMPILER — Phase 38.2 merged the three compiler sections
@@ -367,6 +404,8 @@ fun SettingsScreen(
                 subtitle = buildTccStatusText(tccState)
             )
 
+            }
+            SettingsSection("Terminal") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             SettingsSectionHeader(stringResource(com.codeci.ide.R.string.terminal_settings))
@@ -412,6 +451,8 @@ fun SettingsScreen(
             var editingMacros by remember(terminalExtraKeysMacros) { mutableStateOf(terminalExtraKeysMacros) }
             var macrosSaved by remember { mutableStateOf(false) }
 
+            }
+            SettingsSection("Terminal Extra-Keys & Shortcuts") {
             SettingsSectionHeader("Terminal Extra-Keys & Shortcuts")
 
             Card(
@@ -472,6 +513,8 @@ fun SettingsScreen(
                 }
             }
 
+            }
+            SettingsSection("Package Repository & Trust") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // PACKAGE REPOSITORY & TRUST (Phase 4 Part 4.3)
@@ -560,6 +603,8 @@ fun SettingsScreen(
                 }
             }
 
+            }
+            SettingsSection("GitHub Account") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // GITHUB ACCOUNT (Phase 13 — Git integration credentials)
@@ -733,6 +778,8 @@ fun SettingsScreen(
                 }
             }
 
+            }
+            SettingsSection("Appearance") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // APPEARANCE
@@ -831,6 +878,8 @@ fun SettingsScreen(
                 ThemePreview(editorTheme = currentEditorTheme, fontSize = fontSize)
             }
 
+            }
+            SettingsSection("Storage") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // STORAGE
@@ -962,6 +1011,8 @@ fun SettingsScreen(
                 }
             )
 
+            }
+            SettingsSection("About") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // ABOUT
@@ -1253,6 +1304,8 @@ fun SettingsScreen(
             // here duplicated the "Open-source licenses" row above it and
             // controlled nothing; deleted.
 
+            }
+            SettingsSection("Feedback & Support") {
             Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
 
             // FEEDBACK & SUPPORT (Phase 41) — right after About so "what
@@ -1302,6 +1355,8 @@ fun SettingsScreen(
             }
 
             if (com.codeci.ide.BuildConfig.DEBUG && devModeUnlocked) {
+            }
+                SettingsSection("Developer Options") {
                 Divider(modifier = Modifier.padding(vertical = CodecTokens.space(Space.S)))
                 SettingsSectionHeader("Developer Options")
 
@@ -1378,24 +1433,159 @@ fun SettingsScreen(
                 )
             }
 
+            // Phase 62 — nothing matched: say so, rather than leaving bare separators.
+            if (SettingsSearch.isEmptyResult(settingsQuery)) {
+                SettingsNoMatch(settingsQuery)
+                }
+            }
+
             Spacer(modifier = Modifier.height(CodecTokens.space(Space.HUGE)))
+        }
+        }
+    }
+}
+
+/**
+ * Phase 62 — one screen's view state, handed down instead of threaded through seventy-eight
+ * call sites.
+ *
+ * This is the first CompositionLocal in the codebase, and deliberately the only one: one screen,
+ * no other reader, and the alternative was a view-state parameter on twelve headers and
+ * sixty-six control rows. `SettingsSearchWiringTest` pins the wiring end to end, and the default
+ * below ("no query, nothing folded, folding does nothing") is only ever seen by a preview.
+ */
+private val LocalSettingsView = compositionLocalOf { SettingsViewState() }
+
+/**
+ * Phase 62 — one section, filtered or folded as a unit: its header, its rows, and whatever
+ * bespoke block it owns (the theme previews, the terminal preview, the GitHub card). A query the
+ * section does not answer hides all of it, so a filtered screen never leaves a preview floating
+ * with no header above it.
+ */
+@Composable
+fun SettingsSection(title: String, content: @Composable () -> Unit) {
+    if (!SettingsSearch.sectionVisible(LocalSettingsView.current.query, title)) return
+    content()
+}
+
+/**
+ * Phase 62 — the screen's search bar (the owner's spec: a Settings search that finds a specific
+ * configuration without scrolling 1,600 lines). The same shape as the app's other search bars: a
+ * leading lens, and a cross that appears only once there is something to clear.
+ */
+@Composable
+fun SettingsSearchField(query: String, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
+        placeholder = { Text(stringResource(com.codeci.ide.R.string.settings_search_hint)) },
+        leadingIcon = {
+            Icon(Icons.Default.Search, contentDescription = stringResource(com.codeci.ide.R.string.search))
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(com.codeci.ide.R.string.settings_search_clear)
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.M))
+    )
+}
+
+/**
+ * Phase 62 — the honest empty state. The one thing a search must never do is show nothing and
+ * say nothing.
+ */
+@Composable
+private fun SettingsNoMatch(query: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = CodecTokens.space(Space.XXL), vertical = CodecTokens.space(Space.HUGE)),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            Icons.Default.Search,
+            contentDescription = null,
+            modifier = Modifier.size(CodecTokens.space(Space.HUGE)),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(CodecTokens.space(Space.M)))
+        Text(
+            text = stringResource(com.codeci.ide.R.string.settings_no_match, query),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+/** Phase 62 — one row's two questions, answered from the catalog and never from the call site. */
+@Composable
+private fun settingsRowVisible(title: String): Boolean {
+    val view = LocalSettingsView.current
+    return SettingsSearch.rowVisible(view.query, title, view.folded)
+}
+
+/**
+ * Phase 62.2 — a section header that folds its section, says how much it is holding, and answers
+ * to the search. A section the catalog has no rows for (GitHub Account, Package Repository &
+ * Trust, Terminal Extra-Keys & Shortcuts) is not tappable: folding it would hide nothing, and a
+ * control that does nothing is the one thing this app does not draw.
+ */
+@Composable
+fun SettingsSectionHeader(title: String) {
+    val view = LocalSettingsView.current
+    val foldable = SettingsCatalog.isControlSection(title)
+    val folded = foldable && !SettingsDisclosure.expanded(title, view.folded)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (foldable) Modifier.clickable { view.onToggleSection(title) } else Modifier)
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.L)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+        )
+        // The count is what a folded header must not keep to itself; while the user is filtering
+        // it says how many rows answered — the same number the policy counted.
+        if (folded || SettingsSearch.isActive(view.query)) {
+            Text(
+                text = SettingsSearch.sectionMatchCount(view.query, title).toString(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
+        }
+        if (foldable) {
+            Icon(
+                imageVector = if (folded) Icons.Default.KeyboardArrowRight else Icons.Default.ExpandMore,
+                contentDescription = stringResource(
+                    if (folded) com.codeci.ide.R.string.settings_section_expand
+                    else com.codeci.ide.R.string.settings_section_collapse
+                ),
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
 
 @Composable
-fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.L))
-    )
-}
-
-@Composable
 fun SettingsSwitch(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    if (!settingsRowVisible(title)) return
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1410,6 +1600,7 @@ fun SettingsSwitch(title: String, checked: Boolean, onCheckedChange: (Boolean) -
 
 @Composable
 fun SettingsSlider(title: String, value: Float, valueRange: ClosedFloatingPointRange<Float>, steps: Int, onValueChange: (Float) -> Unit, valueLabel: String) {
+    if (!settingsRowVisible(title)) return
     Column(modifier = Modifier.padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S))) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(text = title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
@@ -1436,6 +1627,7 @@ fun SettingsDropdown(
     /** Phase 40.5 — optional per-option colour swatch, keyed by option label. */
     optionSwatchArgb: ((String) -> Int?)? = null,
 ) {
+    if (!settingsRowVisible(title)) return
     var expanded by remember { mutableStateOf(false) }
 
     Row(
@@ -1502,6 +1694,7 @@ private fun SwatchDot(argb: Int) {
 
 @Composable
 fun SettingsItem(title: String, subtitle: String, onClick: (() -> Unit)? = null) {
+    if (!settingsRowVisible(title)) return
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1515,6 +1708,7 @@ fun SettingsItem(title: String, subtitle: String, onClick: (() -> Unit)? = null)
 
 @Composable
 fun SettingsAction(title: String, actionText: String, onClick: () -> Unit) {
+    if (!settingsRowVisible(title)) return
     Row(
         modifier = Modifier
             .fillMaxWidth()

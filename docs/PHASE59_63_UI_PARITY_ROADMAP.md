@@ -91,17 +91,27 @@ Only the *new* rows are numbered; already-built behaviour is verified, not rebui
 - **Exit:** the console opens, filters, and resizes; zoom and resolution work; Refresh and
   Open-in-browser still behave as 58.3 left them.
 
-### 62 — Settings: find and group  *(spec §4)*
-- **Add:** a search field at the top that filters rows by their own labels (pure matcher over
-  the audit's 65 rows, `docs/chat-phase38/SETTINGS_AUDIT.md`), and collapsible sections over
-  the twelve headers that already exist.
-- **Add only where a real behaviour exists:** tablet mode (wider rail / larger touch floor),
-  touch action bar (a toggle for the row 57.2 docked). Each new switch must gate something
-  real or it is not drawn — this app does not ship dead controls.
+### 62 — Settings: find and group  *(spec §4)* — ✅ **BUILT (2026-09-22), the owner's chosen start**
+- **Built:** a search field at the top that filters rows by their own labels — a pure matcher over
+  the audit's **66** rows (the doc's own count; this line said 65 and the table held 66 — see
+  `docs/chat-phase38/SETTINGS_AUDIT.md`) — and collapsible sections over the twelve headers that
+  already exist. Records: [`chat-phase62/`](chat-phase62/README.md) + `PART_62_1` + `PART_62_2`.
+- **Built, in the sections' own terms:** the sidebar-free `SettingsCatalog` (generated from the
+  screen's own `title = …` arguments, pinned back against the screen *and* the audit table),
+  `SettingsSearch`'s three laws, and `SettingsSection` wrappers so a folded or filtered section
+  takes its bespoke preview blocks (and its leading divider) with it.
+- **Add only where a real behaviour exists:** *Haptic* and *touch action bar* are already built
+  (51.4/28.2, the 57.2 row); **tablet mode is refused in writing** until the owner names what it
+  should change — nothing in this checkout behaves differently when it flips, and this app does
+  not ship dead controls.
 - **Refuse, in writing:** an AI-assistant toggle (the fifth slot is reserved for the owner's
   own plan) and a predictive-keyboard switch that would silently reverse 57.2.
-- **Exit:** typing “haptic” finds the haptics row; every section collapses; the audit still
-  matches the screen.
+- **Exit, checked:** typing “haptic” finds the haptics row ✅; the nine row-bearing sections fold
+  (the three form-only ones are not tappable, because folding them would hide nothing) ✅; the
+  audit still matches the screen ✅ (`SettingsAuditTest` untouched). Local: **25 passed / 0
+  failed** for the phase, **881 passed / 0 failed** across the broad pure-source set, with the
+  phase's one census re-cut (the `IconButton` census 17 → 18, reason recorded in
+  `TouchTargetTest`).
 
 ### 63 — Git pane: verify and fill  *(spec §5)*
 - **Verify:** the pane, the staging toggle, diff, commit(+push), pull, conflicts — all exist.
@@ -127,16 +137,24 @@ Only the *new* rows are numbered; already-built behaviour is verified, not rebui
 
 ---
 
-## 3. Decisions needed before any code
+## 3. Decisions — ANSWERED by the owner (2026-09-22)
 
 Written here so the answers are on the record; asked in chat in the same breath.
 
-1. **Where to start** — 59 (§1, the spec's High Priority), 62 (the quickest visible win),
-   or the whole 59-63 run without check-ins.
-2. **Shots vs spec.** Items no shot shows (name-derived project marks, hub *Recent* filter,
-   preview zoom/resolution, console resizing): build them as specified, or ask per item as we
-   reach it (the *“if need say me”* law)?
-3. **Console depth** — level-filtered console only, or also the *Network* and *Elements* tabs
-   (real new instrumentation, no shot to check them against)?
-4. **Git (§5)** — verify and fill gaps only, leave it untouched, or rebuild to the spec's
-   literal wording?
+1. **Start at 62** — Settings search + collapsible groups (spec §4). *Every other phase keeps
+   its place; 59, 60, 61 and 63 follow.*
+2. **Build the not-in-shots items as specified** — name-derived project marks, the hub *Recent*
+   filter, preview zoom + resolution tools, and console resizing are all **approved**. The
+   shots stay the reference for everything they *do* show; this answer covers the four items
+   named in the question.
+3. **Console + Network** — level filters, resize, **and** a Network tab fed by
+   `WebViewClient.shouldInterceptRequest`. *Elements* (JS injection) was **not** chosen.
+4. **Git: verify + per-file Discard** — the existing pane (stage/unstage, diff, commit+push,
+   pull, conflicts, publish) is verified, not rebuilt; the one gap to close is a per-file
+   discard/revert action.
+
+**Still open — do not build:** an AI-assistant toggle (the fifth rail slot is reserved for the
+owner's own plan) and a predictive-keyboard switch that would change 57.2's typing-surface
+gate. A *Tablet Mode* switch is unproven too: nothing in the code today changes when it flips,
+and this app does not draw dead controls — it needs a behaviour the owner names, or a refusal
+in writing.

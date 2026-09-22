@@ -52,6 +52,11 @@
     <string name="uninstall">Uninstall</string>
     <string name="size_unknown">Unknown size</string>
     <string name="settings_title">Settings</string>
+    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_clear">Clear search</string>
+    <string name="settings_no_match">No settings match “%1$s”</string>
+    <string name="settings_section_expand">Expand section</string>
+    <string name="settings_section_collapse">Collapse section</string>
     <string name="editor_settings">Editor Settings</string>
     <string name="font_size">Font Size</string>
     <string name="font_family">Font Family</string>
