@@ -55,17 +55,27 @@ organise*, plus two genuinely new instruments (name-derived project marks; previ
 Five phases, in the spec's own priority order, each small enough to ship with its own pins.
 Only the *new* rows are numbered; already-built behaviour is verified, not rebuilt.
 
-### 59 — Projects hub: find, filter, identify  *(spec §1, its own High Priority)*
-- **Add:** a *Recent* filter beside the existing chips, fed by `RecentProjects` (the same rows
-  the side panel's card uses, so the two cannot disagree); a **name-derived project mark**
-  (pure policy: initials + one of the app's palette seats chosen from the name hash) replacing
-  the kind-only glyph in `ProjectIconView`.
-- **Keep, verified not rebuilt:** the top search field, the tree, the hub→tree path.
-- **Ask, don't guess:** whether the chip row becomes `All · Recent · C · Python · Web · Git`
-  (six, scrollable) or the spec's literal `All · Recent · Create` (which would *remove* the
-  language filters and turn a filter into a button).
-- **Exit:** a name filter and a recent filter both narrow the list; two projects of the same
-  kind carry visibly different marks; nothing that worked before the phase is gone.
+### 59 — Projects hub: find, filter, identify  *(spec §1, its own High Priority)* — ✅ **BUILT (2026-09-22)**
+- **Built:** the row is the spec's own **`All · Recent · Create`** (the owner's answer to the §3
+  question below), where *Create* is an action chip opening the same add sheet the hub's ＋ opens;
+  and the card's leading square is the project's **own name-derived mark** (initials + one of the
+  five `CodecPalette.TILE_*` seats, hashed from the name by FNV-1a), replacing the kind-only glyph.
+  Records: [`chat-phase59/`](chat-phase59/README.md) + `PART_59_1` + `PART_59_2`.
+- **One recency rule:** *Recent* is `ProjectHubFilter.RECENT`, a **ranking** (not a flag on the
+  entry), fed by the side panel's own `RecentProjects.build` with the panel's cap — and the clock
+  it ranks by is now read off disk once (`ScanResult.folderModified` →
+  `ProjectHubEntry.folderModified`/`recency`, passed by `FileManagerViewModel`), so the hub's chip
+  and the panel's RECENT card cannot disagree.
+- **Kept, verified not rebuilt:** the top search field (still combines with *Recent*), the tree, the
+  hub→tree path.
+- **The owner's answer moved the language chips out of the row** (his chosen option said so): the
+  policy is untouched (`ProjectHubFilter.GIT/C/PYTHON/WEB`, `filters`, `filterEntries` and their
+  cases), the kind is now on every card's subtitle (`kindLabel`), and a future home for those chips
+  is one chip, not new machinery.
+- **Exit, checked:** a name filter and a recent filter both narrow the list ✅; three same-kind
+  projects carry three marks ✅; nothing else that worked is gone — the kind the mark used to show
+  moved to the subtitle ✅. Local: **37 passed / 0 failed** for the phase, **970 passed / 0 failed**
+  across the broad pure-source set (which includes the core-file pins). CI: pending.
 
 ### 60 — Tabs and the coding row  *(spec §2)*
 - **Add:** to the tab menu that already exists — *Close unmodified*, *Hide tabs*
@@ -145,6 +155,11 @@ Only the *new* rows are numbered; already-built behaviour is verified, not rebui
 ## 3. Decisions — ANSWERED by the owner (2026-09-22)
 
 Written here so the answers are on the record; asked in chat in the same breath.
+
+0. **The hub's chip row** (asked when 59 started, 2026-09-22): the spec's **literal**
+   `All · Recent · Create` — not the six-chip variant that kept the language filters beside
+   *Recent*. The language chips therefore leave the visible row; the filter policy stays, and the
+   kind each card belongs to moved into the card's subtitle so it is still readable.
 
 1. **Start at 62** — Settings search + collapsible groups (spec §4). *Every other phase keeps
    its place; 59, 60, 61 and 63 follow.*

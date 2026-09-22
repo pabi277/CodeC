@@ -343,6 +343,8 @@
     <!-- Phase 15: Projects Hub & Unified Import (Spck-style) -->
     <string name="hub_search_hint">Search projects</string>
     <string name="hub_filter_all">All</string>
+    <string name="hub_filter_recent">Recent</string>
+    <string name="hub_filter_create">Create</string>
     <string name="hub_filter_git">Git</string>
     <string name="hub_filter_c">C</string>
     <string name="hub_filter_python">Python</string>

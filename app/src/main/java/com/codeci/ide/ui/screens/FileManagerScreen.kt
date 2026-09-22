@@ -130,7 +130,6 @@ import com.codeci.ide.ui.projects.FileNode
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubFilter
-import com.codeci.ide.ui.projects.HubIconToken
 import com.codeci.ide.ui.components.FileIconView
 import com.codeci.ide.ui.components.ProjectIconView
 import com.codeci.ide.ui.theme.CodecPalette
@@ -1372,7 +1371,10 @@ private fun ProjectsHubList(
                 }
             }
             HubListBranch.EMPTY -> EmptyProjectsState(onCreate, onStarter)
-            HubListBranch.LIST -> ProjectsHubListContent(entries, filter, searchQuery, onFilterSelected, onCardAction, modifier)
+            HubListBranch.LIST -> ProjectsHubListContent(
+                entries, filter, searchQuery, onFilterSelected, onCardAction,
+                onCreate = onCreate, modifier = modifier
+            )
         }
     }
 }
@@ -1384,6 +1386,8 @@ private fun ProjectsHubListContent(
     searchQuery: String,
     onFilterSelected: (ProjectHubFilter) -> Unit,
     onCardAction: (ProjectHubEntry, HubCardAction) -> Unit,
+    /** Phase 59.1 — the row's *Create* chip opens the hub's own add sheet. */
+    onCreate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val visible = ProjectsHub.filterEntries(entries, filter, searchQuery)
@@ -1395,11 +1399,15 @@ private fun ProjectsHubListContent(
                 .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
             horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
         ) {
+            // Phase 59.1 — the row is the spec's own (`All · Recent · Create`), by the owner's
+            // answer of 2026-09-22. *Create* is an action, not a filter: it opens the sheet the
+            // hub's ＋ already opens. The language chips left the row in the same answer — the
+            // policy still filters by them (`ProjectHubFilter.GIT/C/PYTHON/WEB` and their
+            // `filterEntries` tests are untouched), and the card's subtitle still names each
+            // project's kind (`ProjectsHub.kindLabel`).
             HubFilterChip(ProjectHubFilter.ALL, filter, stringResource(R.string.hub_filter_all), null, onFilterSelected)
-            HubFilterChip(ProjectHubFilter.GIT, filter, stringResource(R.string.hub_filter_git), SpckIcons.GitBranch, onFilterSelected)
-            HubFilterChip(ProjectHubFilter.C, filter, stringResource(R.string.hub_filter_c), null, onFilterSelected)
-            HubFilterChip(ProjectHubFilter.PYTHON, filter, stringResource(R.string.hub_filter_python), null, onFilterSelected)
-            HubFilterChip(ProjectHubFilter.WEB, filter, stringResource(R.string.hub_filter_web), null, onFilterSelected)
+            HubFilterChip(ProjectHubFilter.RECENT, filter, stringResource(R.string.hub_filter_recent), null, onFilterSelected)
+            HubActionChip(stringResource(R.string.hub_filter_create), Icons.Default.Add, onCreate)
         }
         if (visible.isEmpty()) {
             Column(
@@ -1441,6 +1449,46 @@ private fun ProjectsHubListContent(
  * carries the branch glyph.
  */
 @Composable
+/**
+ * Phase 59.1 — the row's action chip (*Create*): the same shell as [HubFilterChip], because it
+ * shares their shape, their spacing and their tap area — but it is never “selected”, because it is
+ * not a state the list can be in. It opens the same sheet the hub's ＋ opens, so there is one
+ * add-project path in the app and not two.
+ */
+@Composable
+private fun HubActionChip(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(50)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(
+                width = 1.dp,
+                // Phase 40.5 — the same boundary role the unselected filter chips use.
+                color = MaterialTheme.colorScheme.outline,
+                shape = shape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        icon?.let {
+            Icon(
+                it,
+                contentDescription = null,
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.INLINE)),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(CodecTokens.space(Space.XS)))
+        }
+        Text(label, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
 private fun HubFilterChip(
     value: ProjectHubFilter,
     selected: ProjectHubFilter,

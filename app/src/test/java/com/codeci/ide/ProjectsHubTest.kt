@@ -10,6 +10,7 @@ import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.ProjectsHub
 import java.io.File
 import org.junit.Assert.assertEquals
+import com.codeci.ide.ui.editor.RecentProjects
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -36,8 +37,13 @@ class ProjectsHubTest {
         branch: String? = null,
         fileCount: Int = 3,
         lastModified: Long = 0L,
-        hasChanges: Boolean? = null
-    ) = ProjectHubEntry(name, kind, isGit, branch, fileCount, lastModified, hasChanges)
+        hasChanges: Boolean? = null,
+        /** Phase 59.1 — the folder's own clock, when the case cares about it. */
+        folderModified: Long = 0L
+    ) = ProjectHubEntry(
+        name, kind, isGit, branch, fileCount, lastModified, hasChanges,
+        folderModified = folderModified
+    )
 
     // ---- kind mapping ----
 
@@ -175,20 +181,88 @@ class ProjectsHubTest {
     // ---- subtitle & relative age ----
 
     @Test
-    fun `subtitle shows branch only for git projects and counts files singular`() {
+    fun `subtitle names the kind, then branch only for git projects, and counts files singular`() {
+        // Phase 59.2 re-cut this case, and the reason is the phase's design: the card's leading
+        // square is now the project's own name-derived mark, so the KIND it used to draw lives
+        // here instead — the information moved one line down rather than disappearing.
         val now = 1_700_000_000_000L
         val git = entry("p", ProjectHubKind.C, isGit = true, branch = "main", fileCount = 1, lastModified = now - 2 * day)
-        assertEquals(listOf("main", "1 file", "2 days ago"), ProjectsHub.subtitleSegments(git, now))
+        assertEquals(listOf("C", "main", "1 file", "2 days ago"), ProjectsHub.subtitleSegments(git, now))
 
         val plain = entry("p", ProjectHubKind.C, isGit = false, fileCount = 8, lastModified = now - hour)
-        assertEquals(listOf("8 files", "1 hour ago"), ProjectsHub.subtitleSegments(plain, now))
+        assertEquals(listOf("C", "8 files", "1 hour ago"), ProjectsHub.subtitleSegments(plain, now))
 
         val detached = entry("p", ProjectHubKind.C, isGit = true, branch = "HEAD", fileCount = 0, lastModified = now - minute)
-        assertEquals(listOf("HEAD", "0 files", "1 min ago"), ProjectsHub.subtitleSegments(detached, now))
+        assertEquals(listOf("C", "HEAD", "0 files", "1 min ago"), ProjectsHub.subtitleSegments(detached, now))
 
         // Zero timestamp (brand-new/undetermined) drops the age segment entirely.
         val fresh = entry("p", ProjectHubKind.GENERIC, fileCount = 0, lastModified = 0L)
-        assertEquals(listOf("0 files"), ProjectsHub.subtitleSegments(fresh, now))
+        assertEquals(listOf("Project", "0 files"), ProjectsHub.subtitleSegments(fresh, now))
+    }
+
+    @Test
+    fun `every kind has its own word in the subtitle`() {
+        val labels = ProjectHubKind.values().map { ProjectsHub.kindLabel(it) }
+        assertEquals(
+            "kind labels must be distinct, or the card says the same thing twice",
+            labels.size, labels.distinct().size
+        )
+        assertEquals(
+            listOf("C", "C server", "Python", "Python server", "Web", "Project"), labels
+        )
+    }
+
+    @Test
+    fun `Recent filters to the ranking, not to a flag on the entry`() {
+        val now = 1_700_000_000_000L
+        fun at(name: String, days: Long) = entry(name, ProjectHubKind.PY, lastModified = now - days * day)
+        val entries = listOf(at("old", 30), at("fresh", 1), at("middle", 7))
+
+        assertEquals(
+            "newest folder first",
+            listOf("fresh", "middle", "old"),
+            ProjectsHub.filterEntries(entries, ProjectHubFilter.RECENT, null).map { it.name }
+        )
+        assertFalse(
+            "RECENT is a ranking, so it is not one of the chips an entry claims",
+            entries.first().filters.contains(ProjectHubFilter.RECENT)
+        )
+        assertTrue(
+            "and it still combines with the name search",
+            ProjectsHub.filterEntries(entries, ProjectHubFilter.RECENT, "MID").map { it.name } ==
+                listOf("middle")
+        )
+    }
+
+    @Test
+    fun `the hub's Recent list is the panel's own ranking, cap and all`() {
+        val now = 1_700_000_000_000L
+        // Twelve projects, newest folder time first; the panel's card caps at
+        // RecentProjects.MAX_ROWS and the hub's filter must show the same rows.
+        val entries = (1..12).map { i ->
+            entry("p$i", ProjectHubKind.C, lastModified = now - i * day, folderModified = now - i * day)
+        }
+        val expected = (1..RecentProjects.MAX_ROWS).map { "p$it" }
+        assertEquals(expected, ProjectsHub.recentEntries(entries).map { it.name })
+        assertEquals(
+            "the chip and the function are the same list",
+            expected,
+            ProjectsHub.filterEntries(entries, ProjectHubFilter.RECENT, null).map { it.name }
+        )
+    }
+
+    @Test
+    fun `a project's recency is the folder clock when it is known`() {
+        val now = 1_700_000_000_000L
+        val known = entry("a", ProjectHubKind.C, lastModified = now, folderModified = now - 5 * day)
+        val unknown = entry("b", ProjectHubKind.C, lastModified = now)
+        assertEquals(now - 5 * day, known.recency)
+        assertEquals("with no folder time, the newest-thing time stands in", now, unknown.recency)
+        assertEquals(
+            "so a folder touched yesterday outranks one whose files are merely newer",
+            listOf("a", "b"),
+            ProjectsHub.filterEntries(listOf(unknown, known), ProjectHubFilter.RECENT, null).map { it.name }
+        )
     }
 
     @Test
@@ -344,6 +418,31 @@ class ProjectsHubTest {
     }
 
     // ---- Phase 16: editor drawer tree letters ----
+
+    @Test
+    fun `the scan reports the folder's own clock apart from its newest file`() {
+        // Phase 59.1 — the Recent rankings read the FOLDER's time (the same reading the side
+        // panel's card takes), while the card's age line keeps reading the newest thing inside.
+        val root = File.createTempFile("hub-folder-clock", "").apply { delete(); mkdirs() }
+        try {
+            File(root, "main.c").writeText("int main(){}")
+            val folderTime = System.currentTimeMillis() - 10 * day
+            root.setLastModified(folderTime)
+            val newerFile = folderTime + 5 * day
+            File(root, "main.c").setLastModified(newerFile)
+
+            val scan = ProjectHubStats.scan(root)
+            assertEquals("the folder's own time is reported as itself", folderTime, scan.folderModified)
+            assertEquals("and the newest file still wins the age line", newerFile, scan.lastModified)
+            assertTrue(
+                "so an entry built from it ranks by the folder, not by the file",
+                ProjectHubEntry("p", ProjectHubKind.C, false, null, 1, newerFile, null, folderModified = folderTime)
+                    .recency == folderTime
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
 
     @Test
     fun `fileBadges maps paths to porcelain letters with first change winning`() {
