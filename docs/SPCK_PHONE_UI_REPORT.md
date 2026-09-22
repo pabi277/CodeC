@@ -5,6 +5,8 @@
 **What this accepts:** the seven phone screenshots of SPCK Editor, not Play Store art, and not a new layout.  
 **Your point, checked:** after this UI, the project bar does not need its own space at the bottom. That is right.
 
+**Plan:** [`PHASE54_58_PHONE_UI_ROADMAP.md`](PHASE54_58_PHONE_UI_ROADMAP.md). No app code until you say **Start Phase 54**.
+
 The real shots are in [docs/spck-ui](spck-ui/README.md), commit `Real ss`. They win over the drawings. The drawings got the shell right and the grid wrong. See the check below.
 
 ## 0. Checked against the seven real shots
