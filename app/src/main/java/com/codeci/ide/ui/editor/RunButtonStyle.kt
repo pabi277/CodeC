@@ -8,18 +8,28 @@ package com.codeci.ide.ui.editor
  * + label (`EditorScreen.kt:1563-1631`), one control among ☰, 🔍, ⋮ and Test ▷.
  * Google's Material eye-tracking study (dossier §3.2) measured the mechanism
  * that fixes exactly this: a bigger, better-contained primary action is found
- * **up to 4× faster** — and its own counter-example says the *label* must stay
- * ("removing text labels … resulted in decreased usability"), which is why RUN
- * keeps its word.
+ * **up to 4× faster** — and its own counter-example said the *label* must stay
+ * ("removing text labels … resulted in decreased usability").
  *
- * The policy is pure: a state in, a role + a visual out. The Android half is
- * two branches in `EditorScreen.kt`, so the decision is provable without a
- * device and the device only has to prove the *look* (row F5).
+ * **Phase 57.1 re-scopes the look, and the reference wins.** The owner's seven
+ * phone shots (`docs/spck-ui` 122157 / 124105) are the accepted UI, and their
+ * top row carries a bare green ▶: no container, no word. So the container pair
+ * and its tone enum are gone from this file — a policy that describes a
+ * control the app no longer draws is worse than no policy. What survives is
+ * everything the eye-tracking study could not decide and the device must
+ * still honour:
  *
- * **Phase 44's law is preserved by the first branch**: when the chrome lock is
- * up, the lock wins over everything else — a running job, a missing file, even
- * a perfectly runnable buffer. The lock's own sentence stays the snackbar's job
- * (`SetupLockPolicy.message`), never this file's.
+ *  - **Phase 44's lock wins over every other fact.** A locked tap stays
+ *    meaningful (it says why, `SetupLockPolicy`); nothing open stays inert.
+ *  - **The state has an owner.** While a job this control started is running,
+ *    the glyph itself answers "did my tap work?" — the one state change the
+ *    shots cannot show, because nothing was running in them.
+ *  - **The word is not lost, it moves.** `contentDescription` keeps "Run" /
+ *    "Running" for TalkBack; the pixels drop it because the reference does.
+ *
+ * The policy is pure: a state in, a role + a tone out. The Android half is the
+ * one `IconButton` in `EditorScreen.kt`, so the decision is provable without a
+ * device and the device only has to prove the *look* (PART_57_1 row F5).
  */
 data class RunButtonState(
     val running: Boolean = false,
@@ -30,45 +40,30 @@ data class RunButtonState(
 /**
  * Which visual role the RUN control wears.
  *
- * - [CONTAINED] — fillable, the hero: idle and runnable.
- * - [TONAL_LOCKED] — the Phase 44/45 chrome lock is up: still visible (it says
- *   why when tapped), never the primary weight.
- * - [TONAL_DISABLED] — nothing to run: tonally quiet, not hidden.
+ * - [HERO] — idle and runnable: the reference's bare green ▶, the surface's
+ *   primary action.
+ * - [LOCKED] — the Phase 44/45 chrome lock is up: still visible, still
+ *   tappable (it says why), never the green weight.
+ * - [QUIET] — nothing to run: on-surface, inert, not hidden.
  */
-enum class RunButtonRole { CONTAINED, TONAL_LOCKED, TONAL_DISABLED }
-
-/** The colour pair the control paints with — brand roles, never a hex. */
-enum class RunButtonTone { PRIMARY_CONTAINER, SURFACE_VARIANT }
-
-/** The whole visual decision, in one value the screen can paint directly. */
-data class RunButtonVisual(
-    val role: RunButtonRole,
-    val tone: RunButtonTone,
-    /** The label's state: RUN → RUNNING while a job this button started runs. */
-    val showsRunning: Boolean,
-    /** True when the control is the surface's primary action. */
-    val primary: Boolean,
-)
+enum class RunButtonRole { HERO, LOCKED, QUIET }
 
 object RunButtonStyle {
 
     /** The role, with the lock winning over every other fact. */
     fun roleFor(s: RunButtonState): RunButtonRole = when {
-        s.locked -> RunButtonRole.TONAL_LOCKED
-        !s.hasOpenFile -> RunButtonRole.TONAL_DISABLED
-        else -> RunButtonRole.CONTAINED
+        s.locked -> RunButtonRole.LOCKED
+        !s.hasOpenFile -> RunButtonRole.QUIET
+        else -> RunButtonRole.HERO
     }
 
     /**
-     * True while a job the button started is still producing output. The button
-     * stays contained (it is still the thing that owns the run) but its label
-     * becomes the state — "RUN" → "RUNNING" — so the surface answers "did my tap
-     * work?" without the user watching the panel.
+     * True while a job the control started is still producing output. The
+     * screen paints the state where the word used to be (a small progress
+     * glyph in the same green) so the surface answers "did my tap work?"
+     * without the user watching the panel.
      */
     fun showsRunning(s: RunButtonState): Boolean = s.running && !s.locked
-
-    /** True when the control is the surface's primary action. */
-    fun isPrimary(s: RunButtonState): Boolean = roleFor(s) == RunButtonRole.CONTAINED
 
     /**
      * True when a tap does something (or says why it cannot): the lock's own
@@ -78,26 +73,11 @@ object RunButtonStyle {
     fun isEnabled(s: RunButtonState): Boolean = s.locked || s.hasOpenFile
 
     /**
-     * The tone: the brand's container pair while the control is the hero, the
-     * quiet surface variant otherwise. Phase 40.5's law — the accent is a role
-     * (`primaryContainer` / `onPrimaryContainer`), so the RUN affordance keeps
-     * its identity without a single new colour literal.
+     * True when the glyph is the surface's hero — the one case that paints the
+     * reference's run green. Phase 40.5's law survives in spirit (the accent is
+     * a *role*: `RunGreen` is the app's established run colour, not a literal
+     * typed at a call site), and a locked or nothing-to-run control falls back
+     * to the theme's `onSurfaceVariant`.
      */
-    fun toneFor(s: RunButtonState): RunButtonTone =
-        if (roleFor(s) == RunButtonRole.CONTAINED) {
-            RunButtonTone.PRIMARY_CONTAINER
-        } else {
-            RunButtonTone.SURFACE_VARIANT
-        }
-
-    /** The one call the screen makes. */
-    fun visualFor(s: RunButtonState): RunButtonVisual {
-        val role = roleFor(s)
-        return RunButtonVisual(
-            role = role,
-            tone = toneFor(s),
-            showsRunning = showsRunning(s),
-            primary = role == RunButtonRole.CONTAINED,
-        )
-    }
+    fun isPrimary(s: RunButtonState): Boolean = roleFor(s) == RunButtonRole.HERO
 }

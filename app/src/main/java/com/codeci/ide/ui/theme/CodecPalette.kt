@@ -98,6 +98,17 @@ object CodecPalette {
     /** Blue row fill; `#3B82F6` under white measured 3.68:1 — this one is 5.17:1. */
     const val HUB_ROW_BLUE = 0xFF2563EB.toInt()
 
+    // ---- the editor's caret handle (a shape, never text) -------------------
+
+    /**
+     * Phase 57.2 — the drop under the caret, as the reference has it
+     * (`docs/spck-ui` 124105). It is a filled shape that sora paints itself
+     * (`HandleStyleDrop`), so it carries NO AA row in the table above: nothing
+     * is ever written on it. The value is the reference's own blue, kept here
+     * because the palette is the one place a hex is allowed to be written.
+     */
+    const val CARET_HANDLE = 0xFF3B82F6.toInt()
+
     // ---- the identity colour (docs/icon/codec-mark.svg) --------------------
 
     /** CodeC's own green — the launcher mark. **The app's default accent.** */

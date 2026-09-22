@@ -40,7 +40,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
@@ -123,6 +122,7 @@ import com.codeci.ide.R
 import com.codeci.ide.ui.components.EditorStatusBar
 import com.codeci.ide.ui.components.EditorTabBar
 import com.codeci.ide.ui.components.EditorTabUi
+import com.codeci.ide.ui.components.FileIconView
 import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
@@ -150,6 +150,7 @@ import com.codeci.ide.ui.editor.RunButtonState
 import com.codeci.ide.ui.editor.RunButtonStyle
 import com.codeci.ide.ui.components.OutputPanelView
 import com.codeci.ide.ui.components.RunKeysRow
+import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.components.SuggestionStrip
 import com.codeci.ide.ui.editor.AcceptGranularity
 import com.codeci.ide.ui.editor.CompletionPolicy
@@ -652,7 +653,11 @@ fun EditorScreen(
             hasSelection = codeText.selection.length != 0,
             textLength = codeText.text.length,
             language = language,
-            acceptCounts = completionModel.acceptCounts
+            acceptCounts = completionModel.acceptCounts,
+            // Phase 57.2 — the chips are typing chrome: they dock with a
+            // keyboard (the IME or CodeC Keys) and never without one. The key
+            // caps stay either way (122157 has the touch row alone).
+            typingSurfaceUp = imeVisible || codecKeysUp
         )
     }
     // Phase 23.2 — the run keys are VM actions, not editor buffer edits.
@@ -1447,57 +1452,20 @@ fun EditorScreen(
         ) {
             TopAppBar(
                 title = {
-                    // Phase 51.2 slot: tab_bar
-                    // Phase 50.4 — transition (4): the title chrome crossfades
-                    // when the tab strip appears or disappears (file
-                    // open/close). Chrome only — the code view is untouched.
-                    Crossfade(
-                        targetState = tabViews.isEmpty(),
-                        animationSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec)
-                    ) { noTabs ->
-                        if (noTabs) {
-                            Text(
-                                text = currentFileName.substringAfterLast('/') + if (isDirty) " *" else "",
-                                modifier = Modifier.clickable { showRenameDialog = true },
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        } else {
-                            EditorTabBar(
-                                tabs = tabViews,
-                                activePath = activeTabPath,
-                                onSelect = { path -> viewModel.selectTab(path) },
-                                onClose = { path ->
-                                    // Phase 22.5 — the ACTIVE tab's dirtiness comes
-                                    // from the VM flag (its stash is intentionally
-                                    // not updated per keystroke); other tabs are
-                                    // stashed at their boundaries, so their buffer
-                                    // is current.
-                                    val dirty = if (path == activeTabPath) {
-                                        isDirty
-                                    } else {
-                                        openTabs.firstOrNull { it.relativePath == path }
-                                            ?.let { it.buffer.text != it.savedText } == true
-                                    }
-                                    if (dirty) {
-                                        pendingCloseTab = path
-                                    } else {
-                                        viewModel.closeTab(context, path, saveFirst = false)
-                                        // Phase 51.4 — TAB_CLOSED: a firm tick.
-                                        // Only a real close, never the dirty-tab
-                                        // dialog above (a dialog is a question,
-                                        // not an act).
-                                        haptics.perform(HapticMoment.TAB_CLOSED)
-                                    }
-                                },
-                                onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
-                                onCloseAll = { viewModel.closeAllTabs(context) },
-                                onCopyPath = { path ->
-                                    clipboard.setText(AnnotatedString(path))
-                                    Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                    // Phase 57.1 — the top row of the shots (122157/124105):
+                    // the open file's OWN mark, then its name. No overflow, and
+                    // no word on RUN (the actions block below).
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FileIconView(
+                            name = currentFileName,
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
+                        )
+                        Spacer(Modifier.width(CodecTokens.space(Space.S)))
+                        Text(
+                            text = currentFileName.substringAfterLast('/') + if (isDirty) " *" else "",
+                            modifier = Modifier.clickable { showRenameDialog = true },
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
                 },
                 navigationIcon = {
@@ -1522,256 +1490,7 @@ fun EditorScreen(
                     }) {
                         Icon(Icons.Default.Search, contentDescription = stringResource(R.string.find))
                     }
-                    Box {
-                        IconButton(onClick = { showMoreMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
-                        }
-                        DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
-                            // Phase 16 mockup-exact: the former second toolbar
-                            // row (undo/redo/save/format + keys toggle) now
-                            // lives here; the top bar stays ☰ tabs 🔍  RUN.
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.undo)) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null) },
-                                enabled = canUndo,
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.undo()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.redo)) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null) },
-                                enabled = canRedo,
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.redo()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(
-                                            if (keysRowVisible) R.string.editor_hide_keys_row else R.string.editor_show_keys_row
-                                        )
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        if (keysRowVisible) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = {
-                                    showMoreMenu = false
-                                    keysRowVisible = !keysRowVisible
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.save)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    // Phase 51.2/51.4 — the one-word
-                                    // confirmation, as the surface's own
-                                    // snackbar (never a dialog, and never a
-                                    // toast racing a snackbar elsewhere), plus
-                                    // the FILE_SAVED tick. Autosave stays
-                                    // silent on purpose: a save the user did
-                                    // not ask for does not deserve an
-                                    // interruption (the no-nag law, 41/42/45).
-                                    if (viewModel.saveFile(context)) {
-                                        haptics.perform(HapticMoment.FILE_SAVED)
-                                        uiScope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                context.getString(R.string.editor_saved)
-                                            )
-                                        }
-                                    } else {
-                                        uiScope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                context.getString(R.string.file_save_failed)
-                                            )
-                                        }
-                                    }
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.save_all)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.saveAllTabs(context)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.rename_file)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    showRenameDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.reload_from_disk)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.reloadActiveTab(context)
-                                }
-                            )
-                            if (LanguageRegistry.forFile(currentFileName)?.formatterTemplate != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.format)) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        viewModel.formatActiveFile(context, tabSize)
-                                    }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.jump_to_line)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    goToLineText = cursorPos.line.toString()
-                                    showGoToLineDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.find)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    if (findState.visible) viewModel.hideFind() else viewModel.showFind()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.diagnostics)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    showDiagnosticsDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.line_endings, activeLineEnding)) },
-                                enabled = activeTabPath != null,
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.toggleLineEnding(context)
-                                }
-                            )
-                            // Phase 46.2 — set/clear launch default and the
-                            // per-project run-config editor are PROJECT chrome:
-                            // a single-file peek never mutates project config.
-                            if (projectChrome) {
-                                // Phase 33 — any run target (C, Python, HTML,
-                                // JS, shell, …) can be the project's default
-                                // run file, so RUN can offer "default vs open".
-                                if (ProjectRunTarget.isRunTarget(currentFileName) && launchDefault != currentFileName) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.editor_drawer_set_default)) },
-                                        onClick = {
-                                            showMoreMenu = false
-                                            viewModel.setLaunchDefault(context, viewModel.fileName.value)
-                                        }
-                                    )
-                                }
-                                if (launchDefault != null) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.editor_drawer_clear_default)) },
-                                        onClick = {
-                                            showMoreMenu = false
-                                            viewModel.setLaunchDefault(context, null)
-                                        }
-                                    )
-                                }
-                                // Phase 24.9 — per-project `.codec.json` override.
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.edit_run_config)) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        showCodecConfig = true
-                                    }
-                                )
-                            }
-                            if (!isWebProject) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.run_in_terminal)) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        val command = projectRunCommandOrNull()
-                                            ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
-                                        if (command != null) {
-                                            onOpenInTerminal(command)
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.file_save_failed),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                )
-                            }
-                            // 46.2 device round — "Save to project" is the
-                            // scratch/PROJECT session's move-into-a-project
-                            // action; a SINGLE_FILE peek already saves into
-                            // its own project, so the row hides there.
-                            if (currentProject == null || projectChrome) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.save_to_project)) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        showSaveToProject = true
-                                    }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.share_file)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    val send = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, currentFileName.substringAfterLast('/'))
-                                        putExtra(Intent.EXTRA_TEXT, codeText.text)
-                                    }
-                                    runCatching {
-                                        context.startActivity(
-                                            Intent.createChooser(send, context.getString(R.string.share_file))
-                                        )
-                                    }
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.close_file)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    val path = activeTabPath
-                                    if (path != null) {
-                                        val dirty = isDirty
-                                        if (dirty) {
-                                            pendingCloseTab = path
-                                        } else {
-                                            viewModel.closeTab(context, path, saveFirst = false)
-                                            haptics.perform(HapticMoment.TAB_CLOSED)
-                                        }
-                                    }
-                                }
-                            )
-                            DropdownMenuItem(
-                                enabled = diagnostics.isNotEmpty(),
-                                text = {
-                                    Text(
-                                        stringResource(R.string.clear_diagnostics),
-                                        color = if (diagnostics.isEmpty()) {
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                },
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.clearDiagnostics()
-                                }
-                            )
-                        }
-                    }
+
                     // Phase 24.6 — Test ▷ for pytest/go test files, alongside RUN.
                     if (LanguageRegistry.testProfileForFile(currentFileName) != null) {
                         Row(
@@ -1796,8 +1515,9 @@ fun EditorScreen(
                             )
                         }
                     }
-                    // Mockup-exact RUN: green ▶ + green "RUN" text, no filled
-                    // button chrome (Spck's run affordance).
+                    // Mockup-exact RUN: the reference's bare green ▶ and no
+                    // word on it (Phase 57.1; the container + label 51.2 gave
+                    // it are retired by the shots in docs/spck-ui).
                     // Phase 45 round 4 — RUN ▶'s own click in ONE place: the
                     // button uses it and the guided tour performs it, so beat 4
                     // costs one tap instead of two. While an install streams into
@@ -1834,31 +1554,20 @@ fun EditorScreen(
                         }
                     }
                     // Phase 51.2 slot: run_action
-                    // Phase 51.2 — RUN ▶ is the hero: ONE contained action
-                    // among the chrome's glyph buttons. Google's eye-tracking
-                    // study (dossier §3.2) measured the mechanism — a bigger,
-                    // better-contained primary action is found up to 4× faster
-                    // — and its own counter-example keeps the label, so RUN
-                    // keeps its word. The role comes from the pure
-                    // RunButtonStyle (Phase 44's chrome lock wins over
-                    // everything, and it is what keeps the "says why" tap).
+                    // Phase 57.1 — RUN is the shots' bare green ▶: no
+                    // container, no word (122157/124105). The pure role still
+                    // decides the tone — HERO paints the reference's green, a
+                    // locked or nothing-to-run control stays on-surface — and
+                    // the tap's rules are untouched (Phase 44's lock still
+                    // says why). The word survives as the contentDescription,
+                    // so TalkBack keeps what the pixels drop.
                     val runButtonState = RunButtonState(
                         running = outputState.busy,
                         locked = editorChromeLocked,
                         hasOpenFile = openTabs.isNotEmpty() || currentFileName.isNotEmpty(),
                     )
                     val runRole = RunButtonStyle.roleFor(runButtonState)
-                    val runContainer = if (runRole == RunButtonRole.CONTAINED) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
-                    val runContent = if (runRole == RunButtonRole.CONTAINED) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                    Button(
+                    IconButton(
                         onClick = onRunTap,
                         // Phase 45.2 — RUN ▶ is the 30-second loop; the tour's
                         // fifth beat, and the anchor publishes the tour's own
@@ -1872,34 +1581,29 @@ fun EditorScreen(
                                     onClick = onGuideRunTap
                                 )
                             ),
-                        enabled = RunButtonStyle.isEnabled(runButtonState),
-                        shape = RoundedCornerShape(CodecTokens.radius(Radius.L)),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = runContainer,
-                            contentColor = runContent,
-                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                        contentPadding = PaddingValues(
-                            horizontal = CodecTokens.space(Space.L),
-                            vertical = CodecTokens.space(Space.S),
-                        ),
+                        enabled = RunButtonStyle.isEnabled(runButtonState)
                     ) {
-                        Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
-                        )
-                        Spacer(Modifier.width(CodecTokens.space(Space.S)))
-                        Text(
-                            text = if (RunButtonStyle.showsRunning(runButtonState)) {
-                                stringResource(R.string.run_running)
-                            } else {
-                                stringResource(R.string.run)
-                            },
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (RunButtonStyle.showsRunning(runButtonState)) {
+                            // A job this control owns: the glyph itself answers
+                            // "did my tap work?" — the one state change the
+                            // shots cannot show because nothing was running.
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)),
+                                strokeWidth = CodecTokens.space(CodecTokens.Space.XXS),
+                                color = RunGreen
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = stringResource(R.string.run),
+                                tint = if (runRole == RunButtonRole.HERO) {
+                                    RunGreen
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -1907,9 +1611,326 @@ fun EditorScreen(
                 )
             )
 
-            // Phase 16 mockup-exact: no second toolbar row — the top bar is
-            // exactly ☰ + tabs + 🔍 +  + ▶ RUN. Undo/Redo and the keys-row
-            // toggle moved into the ⋮ overflow (below).
+            // Phase 57.1 — the shots' second row: the open tabs under the
+            // file's name, with the editor-menu cell at their right edge. The
+            // Phase 50.4 crossfade keeps its job (the row arrives and leaves
+            // with the tab set); only its home moved out of the app bar — the
+            // shots lay the tabs out as a row of their own, and a tab must
+            // never take the file's NAME away from the top row.
+            Crossfade(
+                targetState = tabViews.isEmpty(),
+                animationSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec)
+            ) { noTabs ->
+                if (!noTabs) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Phase 51.2 slot: tab_bar
+                        EditorTabBar(
+                            tabs = tabViews,
+                            activePath = activeTabPath,
+                            onSelect = { path -> viewModel.selectTab(path) },
+                            onClose = { path ->
+                                // Phase 22.5 — the ACTIVE tab's dirtiness comes
+                                // from the VM flag (its stash is intentionally
+                                // not updated per keystroke); other tabs are
+                                // stashed at their boundaries, so their buffer
+                                // is current.
+                                val dirty = if (path == activeTabPath) {
+                                    isDirty
+                                } else {
+                                    openTabs.firstOrNull { it.relativePath == path }
+                                        ?.let { it.buffer.text != it.savedText } == true
+                                }
+                                if (dirty) {
+                                    pendingCloseTab = path
+                                } else {
+                                    viewModel.closeTab(context, path, saveFirst = false)
+                                    // Phase 51.4 — TAB_CLOSED: a firm tick.
+                                    // Only a real close, never the dirty-tab
+                                    // dialog above (a dialog is a question,
+                                    // not an act).
+                                    haptics.perform(HapticMoment.TAB_CLOSED)
+                                }
+                            },
+                            onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
+                            onCloseAll = { viewModel.closeAllTabs(context) },
+                            onCopyPath = { path ->
+                                clipboard.setText(AnnotatedString(path))
+                                Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Phase 57.1 — the shots' trailing cell: the editor's
+                        // action list (undo, save, format, rename, the launch
+                        // default, line endings…). It is the SAME `showMoreMenu`
+                        // list the top row used to own, so the row loses an icon
+                        // and the app loses nothing (owner's answer, 2026-09-22).
+                        Box {
+                            IconButton(onClick = { showMoreMenu = true }) {
+                                Icon(
+                                    SpckIcons.EditorMenu,
+                                    contentDescription = stringResource(R.string.more)
+                                )
+                            }
+                            DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                                // Phase 16/57.1 — the former second toolbar row
+                                // (undo/redo/save/format + keys toggle) lives here,
+                                // in the tab row's trailing cell: the top row keeps
+                                // only ☰ + the file's mark and name + 🔍 + ▶ RUN.
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.undo)) },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null) },
+                                    enabled = canUndo,
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.undo()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.redo)) },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null) },
+                                    enabled = canRedo,
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.redo()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (keysRowVisible) R.string.editor_hide_keys_row else R.string.editor_show_keys_row
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (keysRowVisible) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        keysRowVisible = !keysRowVisible
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.save)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        // Phase 51.2/51.4 — the one-word
+                                        // confirmation, as the surface's own
+                                        // snackbar (never a dialog, and never a
+                                        // toast racing a snackbar elsewhere), plus
+                                        // the FILE_SAVED tick. Autosave stays
+                                        // silent on purpose: a save the user did
+                                        // not ask for does not deserve an
+                                        // interruption (the no-nag law, 41/42/45).
+                                        if (viewModel.saveFile(context)) {
+                                            haptics.perform(HapticMoment.FILE_SAVED)
+                                            uiScope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    context.getString(R.string.editor_saved)
+                                                )
+                                            }
+                                        } else {
+                                            uiScope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    context.getString(R.string.file_save_failed)
+                                                )
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.save_all)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.saveAllTabs(context)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.rename_file)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        showRenameDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.reload_from_disk)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.reloadActiveTab(context)
+                                    }
+                                )
+                                if (LanguageRegistry.forFile(currentFileName)?.formatterTemplate != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.format)) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            viewModel.formatActiveFile(context, tabSize)
+                                        }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.jump_to_line)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        goToLineText = cursorPos.line.toString()
+                                        showGoToLineDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.find)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        if (findState.visible) viewModel.hideFind() else viewModel.showFind()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.diagnostics)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        showDiagnosticsDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.line_endings, activeLineEnding)) },
+                                    enabled = activeTabPath != null,
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.toggleLineEnding(context)
+                                    }
+                                )
+                                // Phase 46.2 — set/clear launch default and the
+                                // per-project run-config editor are PROJECT chrome:
+                                // a single-file peek never mutates project config.
+                                if (projectChrome) {
+                                    // Phase 33 — any run target (C, Python, HTML,
+                                    // JS, shell, …) can be the project's default
+                                    // run file, so RUN can offer "default vs open".
+                                    if (ProjectRunTarget.isRunTarget(currentFileName) && launchDefault != currentFileName) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.editor_drawer_set_default)) },
+                                            onClick = {
+                                                showMoreMenu = false
+                                                viewModel.setLaunchDefault(context, viewModel.fileName.value)
+                                            }
+                                        )
+                                    }
+                                    if (launchDefault != null) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.editor_drawer_clear_default)) },
+                                            onClick = {
+                                                showMoreMenu = false
+                                                viewModel.setLaunchDefault(context, null)
+                                            }
+                                        )
+                                    }
+                                    // Phase 24.9 — per-project `.codec.json` override.
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.edit_run_config)) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            showCodecConfig = true
+                                        }
+                                    )
+                                }
+                                if (!isWebProject) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.run_in_terminal)) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            val command = projectRunCommandOrNull()
+                                                ?: viewModel.saveAndAbsolutePath(context)?.let(TerminalHandoff::compileAndRunCommand)
+                                            if (command != null) {
+                                                onOpenInTerminal(command)
+                                            } else {
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.file_save_failed),
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
+                                    )
+                                }
+                                // 46.2 device round — "Save to project" is the
+                                // scratch/PROJECT session's move-into-a-project
+                                // action; a SINGLE_FILE peek already saves into
+                                // its own project, so the row hides there.
+                                if (currentProject == null || projectChrome) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.save_to_project)) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            showSaveToProject = true
+                                        }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.share_file)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, currentFileName.substringAfterLast('/'))
+                                            putExtra(Intent.EXTRA_TEXT, codeText.text)
+                                        }
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent.createChooser(send, context.getString(R.string.share_file))
+                                            )
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.close_file)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        val path = activeTabPath
+                                        if (path != null) {
+                                            val dirty = isDirty
+                                            if (dirty) {
+                                                pendingCloseTab = path
+                                            } else {
+                                                viewModel.closeTab(context, path, saveFirst = false)
+                                                haptics.perform(HapticMoment.TAB_CLOSED)
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    enabled = diagnostics.isNotEmpty(),
+                                    text = {
+                                        Text(
+                                            stringResource(R.string.clear_diagnostics),
+                                            color = if (diagnostics.isEmpty()) {
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                        )
+                                    },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.clearDiagnostics()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Phase 16, re-cut by 57.1: the chrome's top is TWO rows now, as
+            // the shots have it — the bar (☰ + the file's mark and name + 🔍 +
+            // ▶) and, under it, the tab row with the editor-menu cell at its
+            // right edge. Undo/Redo and the keys-row toggle live in that cell's
+            // list, never on the bar itself.
 
             // Phase 51.2 — the chrome never goes silent. With no tab open (and
             // no project loaded) the tab bar collapses and the editor shows a

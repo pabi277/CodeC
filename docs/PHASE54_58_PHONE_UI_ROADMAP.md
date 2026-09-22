@@ -12,7 +12,7 @@
 > - The HTML page view’s upper links are not phone-friendly; they want a hamburger-style treatment.
 > - *“if need say me”* — if a screen is not in the shots, ask. Do not invent it.
 
-> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED, 56 IMPLEMENTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel ([`chat-phase55/`](chat-phase55/README.md)). 56 took the Projects option off the bar and left the other four, the handle and hide-while-typing exactly as they were ([`chat-phase56/`](chat-phase56/README.md)). **57-58 are still 📋 PLANNED** — the owner says **“Start Phase N”**, and only then does that phase’s research pass begin.
+> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED, 56 IMPLEMENTED, 57.1 + 57.2 IMPLEMENTED, 57.3 NOT STARTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel ([`chat-phase55/`](chat-phase55/README.md)). 56 took the Projects option off the bar and left the other four, the handle and hide-while-typing exactly as they were ([`chat-phase56/`](chat-phase56/README.md)). 57.1 and 57.2 shipped ([`chat-phase57/`](chat-phase57/README.md)); 57.3 and 58 are still 📋 PLANNED — the owner says **“Start Phase N”**, and only then does that phase’s research pass begin.
 >
 > **One red CI round so far (for cause, fixed):** run `35707359816` failed on Phase 55 with two real compile errors — a wrong package in an import (`CoachMarkPlan` lives in `ui.guide`, not `ui.editor`) and `CodecTokens.Icon.HUGE`, which does not exist. Both fixed in the Phase 56 commit.
 >
@@ -215,9 +215,30 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| 57.1 | Filename, tab, green triangle | M | 📋 PLANNED |
-| 57.2 | The two rows above the system keyboard | L | 📋 PLANNED |
-| 57.3 | One pill | S | 📋 PLANNED |
+| 57.1 | Filename, tab, green triangle | M | 🚧 IMPLEMENTED — [PART_57_1](chat-phase57/PART_57_1_TOP_ROW.md) |
+| 57.2 | The two rows above the system keyboard | L | 🚧 IMPLEMENTED — [PART_57_2](chat-phase57/PART_57_2_ROWS_AND_CARET.md) |
+| 57.3 | One pill | S | 📋 NOT STARTED |
+
+> **Owner answers taken before this phase's code (2026-09-22, verbatim):** where the retired
+> ⋮'s list should live → **“Tab row's trailing cell (the shot's glyph)”**; what to do about
+> the blue caret drop → **“Do what will be best”**.
+>
+> **Code did more than the plan, on purpose (recorded, not hidden):**
+> - **The tab row became a row of its own** under the bar (`EditorScreen.kt:1614`). The shots
+>   show the file's name **and** the tab row at once; the old chrome crossfaded one into the
+>   other. Cost: the code view is one row shorter while tabs are open — the measurement
+>   Phase 48's caret policy keys on, and it reads the *measured* box.
+> - **`EditorChrome` re-ordered its declaration** (run action before tab row) with the reason
+>   written in the file; `EditorChromeSlotTest` caught the move exactly as designed.
+> - **The caret's drop is sora's own handle, styled** — the library *does* draw one in
+>   0.24.6 (`EditorRenderer` → `HANDLE_TYPE_INSERT`, default `HandleStyleSideDrop`), so the
+>   plan's “if sora already draws a handle, style that” applied and no overlay was built.
+> - **The chip row is gated on a typing surface** (`StripContext.typingSurfaceUp`) so 124105's
+>   predictive row appears with a keyboard and not without one.
+>
+> **The one reversal:** Phase 51.2's contained, labelled RUN is retired by the reference's
+> bare green ▶ (the study's “keep the label” counter-example is overruled by *“They accept
+> only this UI”*). The word survives as the TalkBack label; the lock still says why.
 
 **Research before code.** Re-open `122157` (keyboard down) and `124105` (keyboard up). Re-read `EditorScreen.kt` top bar, `EditorStatusBar.kt`, and the keys row. For the blue drop, read the sora caret path before adding a view. If sora already draws a handle, style that. Do not stack a second caret on it.
 

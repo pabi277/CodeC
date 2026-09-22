@@ -17,6 +17,11 @@ import com.codeci.ide.ui.utils.LanguageType
  *  - No suggestions while a text selection is active, while the file is past
  *    the soft size cap, or when the Settings master/strip switch is off.
  *  - The row HEIGHT never changes between contexts (no IME flicker).
+ *  - Phase 57.2: the CHIP row belongs to a typing surface. With no keyboard
+ *    up the row is the touch row (`Keys`), never candidates — the reference
+ *    (`docs/spck-ui` 122157 keyboard-down vs 124105 keyboard-up) docks the
+ *    predictions only while the IME is on screen. The keys themselves are
+ *    always there; the chips are the part that waits.
  */
 sealed class StripContext {
     /** The strip is not shown at all (visibility toggle off). */
@@ -99,6 +104,10 @@ object SuggestionStripModel {
      * @param prefixAnchor offset where the current identifier starts.
      * @param hasSelection true while text is selected (G7/S-matrix row).
      * @param textLength for the G7 soft file cap.
+     * @param typingSurfaceUp true while a typing surface is up (the system IME
+     *        or CodeC Keys). The reference docks the chip row only then; with
+     *        no keyboard the row is the key caps (57.2). The default keeps the
+     *        S-matrix's own case — every S test is a typing test.
      */
     fun stripContextFor(
         stripVisible: Boolean,
@@ -111,7 +120,8 @@ object SuggestionStripModel {
         hasSelection: Boolean,
         textLength: Int,
         language: LanguageType?,
-        acceptCounts: Map<String, Int> = emptyMap()
+        acceptCounts: Map<String, Int> = emptyMap(),
+        typingSurfaceUp: Boolean = true
     ): StripContext {
         if (!stripVisible) return StripContext.Hidden
         if (runWaiting) return StripContext.Run
@@ -129,7 +139,7 @@ object SuggestionStripModel {
         val emmetOnly = items.size == 1 &&
             items[0].detail == Emmet.DETAIL &&
             ghost !is GhostState.Visible
-        if (items.size >= 2 || emmetOnly) {
+        if (typingSurfaceUp && (items.size >= 2 || emmetOnly)) {
             val chips = buildStripModel(items, ghost, acceptCounts)
             if (chips.size >= 2 || (emmetOnly && chips.size == 1)) {
                 return StripContext.Suggestions(chips)

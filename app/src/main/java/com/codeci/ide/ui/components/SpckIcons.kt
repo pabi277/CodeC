@@ -394,6 +394,45 @@ object SpckIcons {
         )
     }.build()
 
+    /**
+     * Phase 57.1 — the tab row's trailing cell: the editor's action list.
+     *
+     * The reference (`docs/spck-ui` 122157 / 124105) puts a mark at the right
+     * edge of the tab row: a stack of lines shrinking toward a downward
+     * chevron. That mark's own meaning in the source app is not documented in
+     * the shots, so this is a clean-room drawing of the SHAPE, and the cell it
+     * sits in opens CodeC's existing editor menu — the same list the top row's
+     * ⋮ used to own. No action is guessed from the glyph: the phone's own
+     * affordance list is what appears.
+     */
+    val EditorMenu: ImageVector = builder("spck.editorMenu").apply {
+        strokePath(
+            nodes = listOf(PathNode.MoveTo(4f, 6.5f), PathNode.HorizontalTo(20f)),
+            width = 1.8f,
+            cap = StrokeCap.Round
+        )
+        strokePath(
+            nodes = listOf(PathNode.MoveTo(4f, 11f), PathNode.HorizontalTo(15.5f)),
+            width = 1.8f,
+            cap = StrokeCap.Round
+        )
+        strokePath(
+            nodes = listOf(PathNode.MoveTo(4f, 15.5f), PathNode.HorizontalTo(11f)),
+            width = 1.8f,
+            cap = StrokeCap.Round
+        )
+        strokePath(
+            nodes = listOf(
+                PathNode.MoveTo(15f, 13.5f),
+                PathNode.LineTo(18f, 16.5f),
+                PathNode.LineTo(21f, 13.5f)
+            ),
+            width = 1.8f,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round
+        )
+    }.build()
+
     /** Stage/unstage toggle glyph: the mockup's horizontal "+−" (plus, minus). */
     val PlusMinus: ImageVector = builder("spck.plusMinus").apply {
         // plus (left)
