@@ -20,7 +20,10 @@
 > on Phase 57.1 with two **pins** the new layout had legitimately invalidated: `EditorChromeSlotTest`'s tab-row
 > helper ended its region on a comment no longer on this checkout, and `TouchTargetTest`'s deliberately-exact
 > icon census (16 → 17 — see the next part doc). Both fixed and re-run green in the 57.3 commit; the census
-> comment and the helper now carry the reason, so the next phase that moves them is forced to say why.
+> comment and the helper now carry the reason, so the next phase that moves them is forced to say why. Run
+> `35709878911` (57.3's own commit) then failed on **one more exact-census pin** — `HapticWiringTest`'s
+> `PressableSurface` call-site list, where the pill is the fourth call site, added with its reason; the
+> two 57.1 pins were green in that run (2,126 tests, 1 failed).
 >
 > **Owner decisions that shaped 55 (2026-09-22, verbatim):** the full bottom bar stays (*“only removing the project option is ok”*); the fifth rail slot is *“Reseserve[d] … i have plan for ai”*; the card's bottom row is **Terminal · Packages · Guide**; the unseen glyphs: *“Do whatever is good”* (read as omit-and-ask, with a real CodeC action where one existed).
 >

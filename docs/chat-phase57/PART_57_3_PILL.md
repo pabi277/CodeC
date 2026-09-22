@@ -116,6 +116,13 @@ RunnerKt com.codeci.ide.NoticePolicyTest com.codeci.ide.PillNoticeWiringTest
 RESULT: 10 passed, 0 failed
 ```
 
+**CI round 2 (`35709878911`, this commit's parent) was red on one more exact-census pin** —
+`HapticWiringTest`'s *“the press state is a shared component, not a per-screen one-off”* lists the
+`PressableSurface` call sites exactly (hub sheet, Packages header, the component itself). The pill
+is the fourth — added with its reason, because the whole point of rendering through 51.4's component
+is that the pill must **not** grow its own press state. Both 57.1 pins from round 1 came back green
+in that same run (2,126 tests, 1 failed).
+
 Compiled to `/tmp/p573/out` from `app/`. `PillNotice.kt` itself is Compose and cannot compile
 outside the Android toolchain, so the pill's own *rendering* is proven by CI (`Run host unit and
 screenshot tests`) and its *existence and wiring* by the scan pins above. The look is a device
