@@ -109,8 +109,10 @@ jobs:
       - name: Run host unit and screenshot tests (Phase 52)
         run: |
           set -o pipefail
+          set +e
           ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace 2>&1 | tee phase52-host-tests.log
           status=${PIPESTATUS[0]}
+          set -e
           if [ "$status" -ne 0 ]; then
             # Keep the actionable Gradle/test lines in check-run annotations too;
             # the raw Actions blob is not always available to the owner.
