@@ -1550,7 +1550,6 @@ private fun HubActionChip(
         Text(label, style = MaterialTheme.typography.labelLarge)
     }
 }
-@Composable
 
 /**
  * Phase 15 — Spck-style project card: colored leading type square, name,
