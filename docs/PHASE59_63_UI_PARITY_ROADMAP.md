@@ -97,6 +97,7 @@ Only the *new* rows are numbered; already-built behaviour is verified, not rebui
   sorting is a pure function with host tests ✅ (11 `TabSortPolicyTest` cases); the top row is
   unchanged from 57.1 ✅ (`EditorChromeSlotTest`'s top-row pins pass untouched). Local: **35 passed
   / 0 failed** for the phase, **534 passed / 0 failed** for the phase + broad regression set.
+  **CI ✅ GREEN on the first round** — `36220293009` on `017dd2c` (zero failed steps).
 - **Deliberately absent, recorded:** no "back to open order" row (the spec names three sorts and no
   neutral one; reconstructing the open order would need a second field on `EditorTab`), and no tick
   on the sort rows (a one-shot re-order is not a mode — an indicator would lie the moment a file

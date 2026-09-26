@@ -56,5 +56,9 @@ sessions), on this checkout:
   `ComposableAnnotationTest` (1).
 * **534 passed / 0 failed** — the regression set: the broad pure-source sweep (197 files after
   pruning) plus the phase's own files, compiled together.
+* **CI ✅ GREEN on the first round** — `36220293009` on `017dd2c` (build + `:app:testDebugUnitTest` +
+  `:app:lintDebug`, zero failed steps). The phase that follows two rounds of stray-`@Composable`
+  reds opened with a clean run: `ComposableAnnotationTest` is in the local set and passed before
+  the push.
 * **Not runnable here, by construction:** anything that needs Compose or the Android SDK — the
   screens, the tab bar, `MainActivity`. CI is their gate.
