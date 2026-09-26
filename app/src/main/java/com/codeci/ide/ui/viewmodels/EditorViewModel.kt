@@ -40,6 +40,9 @@ import com.codeci.ide.ui.editor.FindOptions
 import com.codeci.ide.ui.editor.FindOutcome
 import com.codeci.ide.ui.editor.FindReplaceEngine
 import com.codeci.ide.ui.editor.LineEndings
+import com.codeci.ide.ui.editor.TabClosePolicy
+import com.codeci.ide.ui.editor.TabSort
+import com.codeci.ide.ui.editor.TabSortPolicy
 import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputDiagnosticTarget
 import com.codeci.ide.ui.editor.OutputLineParser
@@ -1656,6 +1659,43 @@ class EditorViewModel : ViewModel() {
             closeTab(appContext, it, saveFirst = true)
         }
         selectTab(keepPath)
+    }
+
+    /**
+     * Phase 60 — the tab menu's "Close unmodified" (spec §2): every tab with
+     * nothing unsaved goes, the active tab never does (the editor keeps a
+     * buffer alive, so with the whole strip clean exactly the active one
+     * stays). Which tabs those are is [TabClosePolicy]'s pure decision; this
+     * function only answers the one fact the policy cannot — cleanness — and
+     * then reuses the regular `closeTab`, so closing a tab here is the same
+     * operation as closing it by hand, minus the save (nothing to save).
+     */
+    fun closeUnmodifiedTabs(context: Context) {
+        val appContext = context.applicationContext
+        val active = _activeTabPath.value
+        val clean = _openTabs.value.filter { tab ->
+            // Phase 22.5 — the ACTIVE tab's stash is deliberately stale between
+            // boundaries, so its dirtiness is the live flag; every other tab is
+            // stashed at its boundaries and its buffer is the truth.
+            if (tab.relativePath == active) !_isDirty.value else tab.buffer.text == tab.savedText
+        }.map { it.relativePath }
+        TabClosePolicy.unmodifiedTargets(clean, active).forEach { path ->
+            closeTab(appContext, path, saveFirst = false)
+        }
+    }
+
+    /**
+     * Phase 60 — the tab menu's three sorts (spec §2). Applied to the open
+     * tabs themselves rather than to the strip's rendering, so the visible
+     * order is the only order: Ctrl+Tab, the tab a close falls back to and
+     * `trimTabs`'s eviction pick all read this same list. The ACTIVE tab stays
+     * active — it only moves. The ordering itself is [TabSortPolicy], pure and
+     * pinned.
+     */
+    fun sortTabs(sort: TabSort) {
+        val reordered = TabSortPolicy.sort(_openTabs.value, sort)
+        if (reordered.map { it.relativePath } == _openTabs.value.map { it.relativePath }) return
+        _openTabs.value = reordered
     }
 
     /**

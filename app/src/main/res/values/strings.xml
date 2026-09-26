@@ -453,6 +453,17 @@
     <string name="tab_close_others">Close others</string>
     <string name="tab_close_all">Close all</string>
     <string name="tab_copy_path">Copy path</string>
+    <!-- Phase 60 — the tab menu's §2 rows: the close family's newest member,
+         the door to the row's own hiding, and the three sorts. The sorts are
+         one-shot re-orders (no tick in the menu: after the tap the order IS the
+         choice), and `tab_show` is shared with the bottom bar's reveal handle so
+         the two reveal affordances say the same word. -->
+    <string name="tab_close_unmodified">Close unmodified</string>
+    <string name="tab_hide">Hide tabs</string>
+    <string name="tab_show">Show tabs</string>
+    <string name="tab_sort_name">Sort by name</string>
+    <string name="tab_sort_extension">Sort by extension</string>
+    <string name="tab_sort_path">Sort by path</string>
     <string name="editor_scratch_mode">Single files</string>
     <string name="editor_drawer_switch_hint">Tap to switch folder</string>
     <string name="editor_drawer_source_control">Source Control</string>

@@ -122,6 +122,7 @@ import com.codeci.ide.R
 import com.codeci.ide.ui.components.EditorStatusBar
 import com.codeci.ide.ui.components.EditorTabBar
 import com.codeci.ide.ui.components.EditorTabUi
+import com.codeci.ide.ui.components.TabRowRevealStrip
 import com.codeci.ide.ui.components.FileIconView
 import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.EditorKeysRow
@@ -483,6 +484,12 @@ fun EditorScreen(
     // Phase 17 — Switch Branch, opened from the drawer footer.
     var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
     var keysRowVisible by remember { mutableStateOf(true) }
+    // Phase 60 — the tab menu's *Hide tabs*: one flag that parks BOTH the
+    // tab row (it becomes its reveal strip, below) and the app's bottom bar
+    // (published to `EditorChromeState`, where MainActivity's NavBarPolicy
+    // reads it). Session-scoped like `keysRowVisible`: a view choice, not a
+    // setting, so it never survives into a fresh launch as a missing row.
+    var tabsHidden by remember { mutableStateOf(false) }
     // ---- Phase 55 — the side panel's own state --------------------------
     // Which rail slot the panel shows. Navigation is the shot's default;
     // the guide's in-drawer beats switch it to Files (below), and the user's
@@ -620,6 +627,10 @@ fun EditorScreen(
     val editorDrawerOpen = drawerState.currentValue == DrawerValue.Open ||
         drawerState.isAnimationRunning
     LaunchedEffect(editorDrawerOpen) { EditorChromeState.setDrawerOpen(editorDrawerOpen) }
+    // Phase 60 — the editor owns the tab-row flag but the bar it also parks
+    // lives in the app scaffold, so the fact is published exactly like the
+    // keyboard's (and cleared on dispose for the same reason).
+    LaunchedEffect(tabsHidden) { EditorChromeState.setTabsHidden(tabsHidden) }
     // Phase 45 round 4 — the scaffold locks the OTHER TABS while this install
     // runs, and the editor is the only surface that knows it is running.
     LaunchedEffect(packageInstallRunning) {
@@ -633,6 +644,8 @@ fun EditorScreen(
             // A stale "installing" would leave the whole app paused behind an
             // install that finished with the screen.
             EditorChromeState.setInstallRunning(false)
+            // A stale "hidden" would greet the next visit with a parked bar.
+            EditorChromeState.setTabsHidden(false)
         }
     }
     var codecKeysLayer by remember { mutableStateOf(KeyboardLayers.LETTERS) }
@@ -1639,41 +1652,62 @@ fun EditorScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Phase 51.2 slot: tab_bar
-                        EditorTabBar(
-                            tabs = tabViews,
-                            activePath = activeTabPath,
-                            onSelect = { path -> viewModel.selectTab(path) },
-                            onClose = { path ->
-                                // Phase 22.5 — the ACTIVE tab's dirtiness comes
-                                // from the VM flag (its stash is intentionally
-                                // not updated per keystroke); other tabs are
-                                // stashed at their boundaries, so their buffer
-                                // is current.
-                                val dirty = if (path == activeTabPath) {
-                                    isDirty
-                                } else {
-                                    openTabs.firstOrNull { it.relativePath == path }
-                                        ?.let { it.buffer.text != it.savedText } == true
-                                }
-                                if (dirty) {
-                                    pendingCloseTab = path
-                                } else {
-                                    viewModel.closeTab(context, path, saveFirst = false)
-                                    // Phase 51.4 — TAB_CLOSED: a firm tick.
-                                    // Only a real close, never the dirty-tab
-                                    // dialog above (a dialog is a question,
-                                    // not an act).
-                                    haptics.perform(HapticMoment.TAB_CLOSED)
-                                }
-                            },
-                            onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
-                            onCloseAll = { viewModel.closeAllTabs(context) },
-                            onCopyPath = { path ->
-                                clipboard.setText(AnnotatedString(path))
-                                Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
+                        // Phase 60 — "Hide tabs" folds the strip into its reveal
+                        // bar. The cell beside it is deliberately outside this
+                        // choice: the editor's own action list (undo, save,
+                        // format, rename, line endings…) lives there, and hiding
+                        // the tabs must never hide the editor's actions with
+                        // them.
+                        if (tabsHidden) {
+                            TabRowRevealStrip(
+                                onReveal = { tabsHidden = false },
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
+                            EditorTabBar(
+                                tabs = tabViews,
+                                activePath = activeTabPath,
+                                onSelect = { path -> viewModel.selectTab(path) },
+                                onClose = { path ->
+                                    // Phase 22.5 — the ACTIVE tab's dirtiness comes
+                                    // from the VM flag (its stash is intentionally
+                                    // not updated per keystroke); other tabs are
+                                    // stashed at their boundaries, so their buffer
+                                    // is current.
+                                    val dirty = if (path == activeTabPath) {
+                                        isDirty
+                                    } else {
+                                        openTabs.firstOrNull { it.relativePath == path }
+                                            ?.let { it.buffer.text != it.savedText } == true
+                                    }
+                                    if (dirty) {
+                                        pendingCloseTab = path
+                                    } else {
+                                        viewModel.closeTab(context, path, saveFirst = false)
+                                        // Phase 51.4 — TAB_CLOSED: a firm tick.
+                                        // Only a real close, never the dirty-tab
+                                        // dialog above (a dialog is a question,
+                                        // not an act).
+                                        haptics.perform(HapticMoment.TAB_CLOSED)
+                                    }
+                                },
+                                onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
+                                onCloseAll = { viewModel.closeAllTabs(context) },
+                                // Phase 60 — Close unmodified reads the tabs' own
+                                // dirtiness in the VM (the active tab's buffer stash
+                                // is stale by design, so a screen-side rule would be
+                                // a second, wrong answer), and the sorts re-order
+                                // the open tabs themselves, not just what is drawn.
+                                onCloseUnmodified = { viewModel.closeUnmodifiedTabs(context) },
+                                onHideTabs = { tabsHidden = true },
+                                onSort = { sort -> viewModel.sortTabs(sort) },
+                                onCopyPath = { path ->
+                                    clipboard.setText(AnnotatedString(path))
+                                    Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
 
                         // Phase 57.1 — the shots' trailing cell: the editor's
                         // action list (undo, save, format, rename, the launch

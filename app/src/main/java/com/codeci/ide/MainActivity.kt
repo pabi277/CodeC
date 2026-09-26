@@ -63,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -1012,6 +1013,11 @@ fun MainApp(
     val inEditor = currentDestination?.route
         ?.startsWith(Screen.Editor.route.substringBefore("?")) == true
     val editorKeysVisible by EditorChromeState.keysVisible.collectAsState()
+    // Phase 60 — the tab menu's *Hide tabs* parks the bar too (the owner's
+    // answer, 2026-09-26: one menu row, both strips), and the editor owns that
+    // flag. The reveal handle below clears it, so the bar's own idiom — tap to
+    // bring it back — also brings the tab row back: one flag, one toggle.
+    val editorTabsHidden by EditorChromeState.tabsHidden.collectAsState()
     // Phase 45.2 (device round) — the two facts the tour cannot observe from
     // anchors: is a dialog open (a box would be cut underneath it), and is the
     // drawer open (only its own two beats may show then).
@@ -1061,6 +1067,8 @@ fun MainApp(
         imeVisible = isImeVisible,
         keysVisible = editorKeysVisible,
         revealed = navRevealed,
+        // Phase 60 — the tab menu's manual door to the same hiding.
+        hiddenByUser = editorTabsHidden,
     )
 
     DisposableEffect(navController) {
@@ -1213,8 +1221,14 @@ fun MainApp(
                 )
                 // Phase 32.1 — hidden because CodeC Keys is up (no IME in the
                 // way): show the thin reveal handle instead of the bar.
+                // Phase 60 — the same handle also answers the tab menu's *Hide
+                // tabs*: revealing writes the editor's flag back, so the row it
+                // folded away returns with the bar.
                 inEditor && !isImeVisible -> EditorNavRevealHandle(
-                    onReveal = { navRevealed = true }
+                    onReveal = {
+                        navRevealed = true
+                        EditorChromeState.setTabsHidden(false)
+                    }
                 )
                 // Hidden because the soft keyboard is up (any tab): nothing,
                 // the pre-32 behaviour.
@@ -1844,7 +1858,9 @@ private fun EditorNavRevealHandle(onReveal: () -> Unit) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Show tabs",
+                // Phase 60 — one word, one resource: the tab row's own reveal
+                // strip says the same thing, and the two must never drift.
+                text = stringResource(R.string.tab_show),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

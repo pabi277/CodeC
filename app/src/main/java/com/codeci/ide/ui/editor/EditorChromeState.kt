@@ -82,4 +82,20 @@ object EditorChromeState {
     fun setInstallRunning(running: Boolean) {
         _installRunning.value = running
     }
+
+    private val _tabsHidden = MutableStateFlow(false)
+
+    /**
+     * Phase 60 — the tab menu's *Hide tabs*, published for the same reason the
+     * keyboard is: the row it folds away lives in the editor, but the bottom
+     * bar it also parks lives in the app scaffold. One owner (the editor's own
+     * state), one reader (MainActivity's `NavBarPolicy` call), and the reveal
+     * handle clears it by writing here — there is no second flag that could
+     * disagree about whether the bar is parked.
+     */
+    val tabsHidden: StateFlow<Boolean> = _tabsHidden.asStateFlow()
+
+    fun setTabsHidden(hidden: Boolean) {
+        _tabsHidden.value = hidden
+    }
 }

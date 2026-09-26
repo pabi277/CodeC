@@ -59,6 +59,52 @@ class NavBarPolicyTest {
     }
 
     @Test
+    fun `hide tabs parks the bar, and only inside the editor`() {
+        // Phase 60 — the tab menu's manual door: same hiding, same scope. Off
+        // the editor the bar comes back, because the reveal handle that
+        // un-hides it only exists there.
+        assertTrue(
+            NavBarPolicy.hideNavBar(
+                inEditor = true, imeVisible = false, keysVisible = false, hiddenByUser = true
+            )
+        )
+        assertFalse(
+            NavBarPolicy.hideNavBar(
+                inEditor = false, imeVisible = false, keysVisible = false, hiddenByUser = true
+            )
+        )
+    }
+
+    @Test
+    fun `hide tabs parks the bar even while the keyboard is down`() {
+        // The one state the auto rules would otherwise keep the bar in.
+        assertTrue(
+            NavBarPolicy.hideNavBar(
+                inEditor = true, imeVisible = false, keysVisible = false, hiddenByUser = true
+            )
+        )
+        assertFalse(
+            "without the flag nothing changed",
+            NavBarPolicy.hideNavBar(inEditor = true, imeVisible = false, keysVisible = false)
+        )
+    }
+
+    @Test
+    fun `a reveal wins over the manual hide too`() {
+        // The reveal handle taps write BOTH facts in the app; the policy still
+        // has to prefer the reveal, so the order cannot depend on that.
+        assertFalse(
+            NavBarPolicy.hideNavBar(
+                inEditor = true,
+                imeVisible = true,
+                keysVisible = true,
+                revealed = true,
+                hiddenByUser = true,
+            )
+        )
+    }
+
+    @Test
     fun `swipe up past the threshold reveals, anything less does not`() {
         assertTrue(NavBarPolicy.revealOnSwipe(-40f))
         assertTrue(NavBarPolicy.revealOnSwipe(-NavBarPolicy.REVEAL_SWIPE_DP))

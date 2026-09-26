@@ -80,7 +80,29 @@ Only the *new* rows are numbered; already-built behaviour is verified, not rebui
   left by the edit, invisible to the sandbox's non-Compose host JVM), which is now pinned by
   `ComposableAnnotationTest`.
 
-### 60 — Tabs and the coding row  *(spec §2)*
+### 60 — Tabs and the coding row  *(spec §2)* — ✅ **BUILT (2026-09-26)**
+- **Built:** *Close unmodified* (a new pure `TabClosePolicy` + `EditorViewModel.closeUnmodifiedTabs`,
+  reusing the ordinary `closeTab`), *Hide tabs* (the tab row folds into a reveal strip, and the
+  bottom bar is parked through the existing `NavBarPolicy`/reveal-handle idiom), and the three
+  sorts (`TabSortPolicy`: name / extension / path, applied to the **open tabs** so the strip,
+  Ctrl+Tab, the close fallback and the eviction pick read one order). Records:
+  [`chat-phase60/`](chat-phase60/README.md) + `PART_60_1` + `PART_60_2`.
+- **The owner's answer (2026-09-26) — *Hide tabs* = both readings in one row:** the editor's
+  file-tab row (the spec's own meaning) **and** the bottom bar's manual door, with the editor's ⋮
+  cell deliberately left outside the fold so undo/save/format stay reachable. The bar's half stays
+  editor-scoped, because the reveal handle that un-hides it only exists in the editor.
+- **Verify, not rebuild (done):** the symbol strip is `EditorKeysRow`, untouched; the shots show one
+  row, so the second, symbol-specific toolbar is still unbuilt and still needs the owner's word.
+- **Exit, checked:** the menu lists close/others/all/unmodified, hide-tabs and three sorts ✅;
+  sorting is a pure function with host tests ✅ (11 `TabSortPolicyTest` cases); the top row is
+  unchanged from 57.1 ✅ (`EditorChromeSlotTest`'s top-row pins pass untouched). Local: **35 passed
+  / 0 failed** for the phase, **534 passed / 0 failed** for the phase + broad regression set.
+- **Deliberately absent, recorded:** no "back to open order" row (the spec names three sorts and no
+  neutral one; reconstructing the open order would need a second field on `EditorTab`), and no tick
+  on the sort rows (a one-shot re-order is not a mode — an indicator would lie the moment a file
+  opens).
+
+### 60 — (the plan, as it stood before the build)
 - **Add:** to the tab menu that already exists — *Close unmodified*, *Hide tabs*
   (the existing hide bar is `NavBarPolicy.hideNavBar` + the reveal handle; this is the menu's
   door to it), and the three sorts (alphabetical / by extension / by path) as **pure ordering
