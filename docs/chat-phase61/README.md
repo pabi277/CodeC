@@ -1,6 +1,6 @@
 # Phase 61 — Preview tools
 
-Status: research complete; implementation in progress. No PR/merge authorised.
+Status: **BUILT, CI GREEN** on the session branch; device round pending. No PR/merge authorised.
 
 ## Reference lock and inventory (2026-09-27, before edits)
 
@@ -50,8 +50,32 @@ JUnit assertion shim (not an Android build): policy 10, wiring 4, existing
 menu policy 8, existing menu wiring 4, composable annotation scan 1. Strings XML
 parses and `git diff --check` passes. CI-only cases: diagnostics lifecycle and
 worker capture (2), real panel measurement/accessibility action (1), native
-WebView callback/settings/disposal (1). Full Android compilation still pending.
+WebView callback/settings/disposal (1). Full Android compilation subsequently passed in CI (verdict below).
 
 Capture is in-memory for the current native WebView session (a recreated view
 starts fresh, including after rotation). Reload retains entries; filters don't
 delete them. No traffic is persisted or sent to telemetry.
+
+## CI verdict — 2026-09-27
+
+**5707e38**, first round **36300428167**, ✅ passed host unit/screenshot tests,
+debug APK, release APK and release-artifact checks (no failed steps).
+[Build + APK artifacts](https://github.com/pabi277/CodeC/actions/runs/36300428167).
+No new dependency. Debug 26,013,768 bytes; release 6,780,344 bytes.
+
+Live anchors (under `app/src/main/java/com/codeci/ide/ui/`):
+- `screens/WebPreviewScreen.kt:317-329`: the three new menu handlers;
+  `:419-469`: bounded page/panel + measured/fitted viewport; `:438-441` native
+  disposal; `:471-477` dialogs; `:532-534` unchanged reload signal.
+- `components/PreviewToolsPanel.kt:31-122`: bounded lazy panel; `:65` accessible
+  progress action, `:67` drag, `:126` Zoom, `:143` resolution chooser.
+- `components/PreviewWebView.kt:28-33`: zoom settings and initial scale;
+  `:35-37`: request observation returning null; `:61-69`: zoom without reload;
+  `:72-79`: capture session ended before native disposal.
+- `viewmodels/WebPreviewViewModel.kt:45-77`: synchronised sessions/append/clear;
+  `:97-113`: one cancellable watcher.
+- `services/PreviewToolsPolicy.kt:25-60`: tested data and geometry rules.
+
+[Device round P1–P14](DEVICE_ROUND.md) **not run**, with our own minimal HTML
+fixture. Stop at the gate: no PR/merge/main push. Next planned phase **63**
+(verify existing git pane + per-file Discard), not implemented in this phase.

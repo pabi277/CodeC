@@ -115,7 +115,18 @@ Only the *new* rows are numbered; already-built behaviour is verified, not rebui
 - **Exit:** the tab menu lists close/others/all/unmodified, hide-tabs and three sorts; sorting
   is a pure function with host tests; the top row is unchanged from 57.1.
 
-### 61 — Preview: console and controls  *(spec §3)*
+### 61 — Preview: console and controls  *(spec §3)* — ✅ **BUILT (2026-09-27)**
+
+Code `5707e38`, CI ✅ `36300428167` (first round, host tests + debug/release
+APKs). Console opens even empty; typed level filters, bounded resize and Network
+request observations; native zoom and fitted logical viewport presets. Network
+is observation-only, no fabricated status/timings; resolution is not device
+emulation. [Research, implementation, tests](chat-phase61/README.md) +
+[device round P1–P14](chat-phase61/DEVICE_ROUND.md), **not run**. No merge.
+Next: **63** (verify git + per-file Discard).
+
+*(The plan below is retained as it stood before implementation; the owner's
+Console + Network answer in §3 resolved its ask.)*
 - **Add:** the console strip becomes a real surface — level filters (log/info/warn/error) over
   the lines already captured, a drag handle for its height, and it no longer hides itself when
   empty (a console that appears only when it has content is a console you cannot open).

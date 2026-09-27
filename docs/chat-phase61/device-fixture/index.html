@@ -1,0 +1,37 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeC preview check</title>
+<style>
+  body { font: 16px system-ui; margin: 20px; background: #f0faf3; color: #152b20; }
+  button, input { padding: 12px; margin: 6px 0; max-width: 100%; }
+  @media (min-width: 700px) { body { background: #e8efff; } }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+<h1>CodeC preview check</h1>
+<p>Green below 700 CSS px; blue at 700 or wider.</p>
+<pre id="dimensions"></pre>
+<label>Zoom must keep this input: <input placeholder="Type something"></label><br>
+<button id="logs">Emit all console levels</button>
+<button id="request">Fetch JSON once</button>
+<pre id="result">No fetch yet.</pre>
+<script>
+  const loads = Number(sessionStorage.getItem('loads') || 0) + 1;
+  sessionStorage.setItem('loads', String(loads));
+  function dimensions() {
+    document.getElementById('dimensions').textContent =
+      `Viewport: ${innerWidth} × ${innerHeight} CSS px\nPage loads: ${loads}`;
+  }
+  addEventListener('resize', dimensions);
+  dimensions();
+  document.getElementById('logs').onclick = () => {
+    console.log('LOG sample'); console.debug('DEBUG sample (Log filter)');
+    console.info('INFO sample'); console.warn('WARN sample'); console.error('ERROR sample');
+  };
+  let requests = 0;
+  document.getElementById('request').onclick = async () => {
+    try {
+      const response = await fetch(`data.json?probe=not-shown-in-network&n=${++requests}`, {cache:'no-store'});
+      document.getElementById('result').textContent = `Fetch ${requests}: ${await response.text()}`;
+    } catch (error) { document.getElementById('result').textContent = String(error); }
+  };
+</script>

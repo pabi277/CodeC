@@ -20,3 +20,13 @@ Device checks: responsive page with viewport meta; verify each size against
 window.innerWidth/innerHeight at 100%; zoom in/out/reset without reload; change
 resolution while panel open, rotate, touch links and form fields in fitted
 viewport; Refresh, live reload and Open in browser still work.
+
+
+## Implementation / test verdict
+
+Built in `5707e38`, CI ✅ `36300428167`. `PreviewWebView.applyZoom` applies
+initial scale for later loads and zoomBy for the current page. The screen uses
+requiredSize for native viewport measurement, graphicsLayer for visual fitting,
+and clips the page to its remaining area. No injected script or duplicate
+WebView. Geometry policy, native settings/callback and wiring tests are green;
+on-device rendering/touch/zoom behaviour is still pending (P8–P11).

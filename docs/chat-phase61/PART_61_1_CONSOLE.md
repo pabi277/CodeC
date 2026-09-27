@@ -28,3 +28,13 @@ Device checks: open empty panel; log each level; toggle each/all off/on; drag
 both limits, rotate/raise keyboard; Console/Network independently clear; navigate
 and refresh CSS/JS/fetch page; ensure requests still load once; reopen another
 project and confirm old callbacks cannot populate the new session.
+
+
+## Implementation / test verdict
+
+Built in `5707e38`, CI ✅ `36300428167`. `PreviewToolsPanel` is one bounded
+LazyColumn, so headers remain scroll-reachable and off-screen logs aren't all
+composed. Session guards reject stale callbacks; filters do not delete data.
+Pure tests + worker/session tests + real WebView callback test + Compose
+measurement/accessibility test passed in the full CI host test task.
+Device P1–P7, P11–P14 pending; see [DEVICE_ROUND](DEVICE_ROUND.md).
