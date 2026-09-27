@@ -27,6 +27,22 @@ Rules:
 | G3 | **Accept** = (a) TAB cap in strip, (b) a small "Tab ▸" pill floating at line-end (48 dp, visible while ghost shows), (c) hardware Tab on HW keyboards, (d) → (right-arrow cap) accepts **the next WORD only** (partial accept; hold to keep going). | VS Code partial-accept word (`Ctrl+→`) norm, thumb port |
 | G4 | **Reject** = keep typing anything that doesn't match, swipe-down on the pill, or ESC cap; auto-clears on caret move/scroll. | react-ghost-text reject path; AI-UX "suppress while navigating" |
 | G5 | Contrast law: ghost at exactly 38 % alpha of comment color — readable but unmistakably not real text; dark/light themes audited. | AI-UX anti-pattern: ghost contrast unreadable/ungnorable |
+
+> **Amended by Phase 69.2 (2026-09-28)** — the owner's own report
+> (*"Sometimes the ghost suggestions text are way too real i think as i wrote the
+> wrong word then about a second it vanished"*) retired two of this part's bets.
+> This document is kept as the 27.1 record; the live behaviour is 69.2's:
+> **G4** now hides the ghost only on the USER's own scrolls (`CAUSE_USER_DRAG` /
+> `CAUSE_USER_FLING` from sora 0.24.6's `ScrollEvent`) — the editor's own
+> caret-follow scroll no longer counts — and a refresh that stops proposing the
+> painted item no longer clears a ghost that is still correct
+> (`GhostCompletion.heldWhenStillValid`). **G5** keeps the 38 % text colour but no
+> longer leans on "plain text reads as not real": the hint is drawn inside a
+> suggestion box (comment colour at 18 % over the editor background — the look
+> sora's own inlay hints use), because the measured 1.8–2.0:1 ghost was already
+> faint and what was missing was a container. Both alphas are pinned for the four
+> shipped themes by `GhostContrastTest`. See
+> [`PHASE_69_2_LANGUAGE_KEYS_AND_GHOST.md`](../ui-polish-chats/PHASE_69_2_LANGUAGE_KEYS_AND_GHOST.md).
 | G6 | Multi-line suggestions degrade gracefully: ghost shows the FIRST line only; the rest rides the 27.3 "⌄ more" panel. | Phone viewport discipline |
 | G7 | No ghost while: text is selected, IME composing, find dialog open, interactive run holds the strip (RunKeySet context wins), file > soft size cap (keep completion snappy — the cap equals Phase 22.1's current windowing guard). | conflict law §27.3 |
 

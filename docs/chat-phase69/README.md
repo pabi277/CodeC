@@ -6,6 +6,15 @@
 ([run 36350567066](https://github.com/pabi277/CodeC/actions/runs/36350567066))**.
 **No PR opened, nothing merged** — the owner's instruction is required for that.
 
+**Phase 69.2** (2026-09-28) arrived in the same chat, right after this delivery:
+the owner reported two problems — *"What language i am using don't matter it
+always give me same fixed quick keys"* and *"Sometimes the ghost suggestions
+text are way too real i think as i wrote the wrong word then about a second it
+vanished the ghost suggestions fix it"*. Both were investigated on this checkout,
+answered before any code, and implemented as one part. **The full section is at
+the bottom of this file**; the brief is
+[`PHASE_69_2_LANGUAGE_KEYS_AND_GHOST.md`](../ui-polish-chats/PHASE_69_2_LANGUAGE_KEYS_AND_GHOST.md).
+
 Reviewed first, then asked, then coded: the current implementation and the real
 reference shots were re-read before a single question was put, and the owner's
 five answers were taken **before** any code was written (`ask_user`, 2026-09-27).
@@ -228,3 +237,135 @@ above rather than re-implemented.
 
 **Stop point:** this part only. No PR, no merge, no `main` push without the
 owner's explicit instruction; the next chat starts from the next brief.
+
+---
+
+# Phase 69.2 — the quick-key row's language, and the ghost's suggestion look
+
+**Date:** 2026-09-28. **Status:** implemented on `arena/01a0e49f-codec`.
+**No PR, nothing merged.** Owner reports, verbatim: *"What language i am using
+don't matter it always give me same fixed quick keys"* and *"Sometimes the ghost
+suggestions text are way too real i think as i wrote the wrong word then about a
+second it vanished the ghost suggestions fix it"*.
+
+## Owner answers (verbatim, taken before any code)
+
+| # | Question | Answer |
+|---|---|---|
+| Q1 | Where should the language's caps sit? | *"Can it be auto detection my file extension and set the the quick keys order as per requirement and if it is not a standard file than a default quick key option"* |
+| Q2 | Keep today's caps or Spck-like real caps? | **B — Give each language a few real caps (recommended, Spck parity)** |
+| Q3 | What should change about the ghost? | **A — Both: unmistakable look + stop it vanishing (recommended)** |
+
+## What was found (read on this checkout, not from memory)
+
+- The quick-key row was `GENERAL` — 14 caps (`TAB () {} [] <> "" '' ; / = ← → ↑ ↓`)
+  — with the file language's caps **appended after them**, in slots 15+. About
+  six or seven caps fit a phone width and the row opens at offset 0, so the
+  language caps were **off-screen in every language**: the report was right.
+  Old tails: C `->`; C++ `->` `::`; Python `:` `_(self)`; HTML `</>`; CSS `:` `;`;
+  JS/TS `` `` `` `=>`; shell `$`; JSON `:` `,` `null`; **no caps at all for Go,
+  Rust, PHP, Ruby, Lua, XML, YAML, Markdown, Text**.
+- The language is the file's **extension** only (`LanguageType.fromFileName`);
+  there is no picker. `EditorKeySet.languageMacroRow` existed but was never
+  called (28.2 round 3 made CodeC Keys language-independent by decision).
+- The ghost was **plain code text**, full size, no box, theme comment colour at
+  38 % alpha: measured 1.82–1.98:1 against the editor background on the four
+  shipped themes, where real code text is 11.25–13.94:1. So "too real" was a
+  missing **container**, never brightness.
+- Two code paths could take the ghost away: **any** `ScrollEvent` (G4) — and the
+  editor scrolls itself to follow the caret, including the 48/69 air rule's
+  rescroll when the keyboard settles — and **any** recompute, because the
+  debounced engine pass (~120 ms–1 s after the keystroke) landing without the
+  aligned item dropped a still-correct ghost with nothing the user had done.
+  Phase 69.1 had touched neither the look nor the rules.
+
+## What changed
+
+1. **The quick keys answer to the file** (`9c7a74d`). New pure
+   `ui/editor/LanguageQuickKeys.kt` (the file language's caps, Spck-parity
+   content: C `#include` `printf` `int` `->` · Python `def` `print` `:` `_(self)` ·
+   HTML `<tag>` `div` `class` `</>` · JS/TS `log` `=>` `` `` `` `function` ·
+   CSS `color:` `px` `:` `;` · JSON `:` `,` `null` · Shell `echo` `|` `#!` `$` ·
+   Go/Rust/PHP/Ruby/Lua/XML/YAML/Markdown each with their own three to five).
+   `keysFor` order is now language caps → the user's custom snippets → the
+   general set; `languageTail` deleted; `languageMacroRow` shares the table; a
+   non-standard file keeps the default row (TEXT / unknown extension); a language
+   change returns the row to its head (within one file the 69.1 remembered
+   position stands). **Nothing that shipped before was removed** — every old cap
+   is in the new lists, JSON's `: ` popup and the true/false flicks
+   regression-pinned.
+2. **The ghost reads as a suggestion and stops vanishing** (`d5420f0`). The hint
+   is drawn inside a suggestion box (sora's own inlay-hint rounded-background
+   family) filled with the comment colour at **18 %**, text unchanged at **38 %**
+   (G5); the box starts at the caret and the measured width covers it. A
+   still-correct ghost is held across a background refresh
+   (`GhostCompletion.heldWhenStillValid` = the painted item re-aligned by the
+   same rule `compute` uses, i.e. exactly what `accept` would still accept), and
+   G4's clear-on-scroll is narrowed to the **user's own** scrolls
+   (`CAUSE_USER_DRAG` / `CAUSE_USER_FLING`; causes verified against sora 0.24.6
+   `event/ScrollEvent.java`) so the editor's own caret-follow scroll can no
+   longer delete the suggestion.
+
+## Tests
+
+`LanguageQuickKeysTest` (new, 7) · `EditorKeySetTest` (two old "tail, last" pins
+rewritten with their reason into four order/fallback/ownership cases) ·
+`RunKeySetTest` (one stale 22.x pin moved — found by CI round 1) ·
+`EditorRowsWiringTest` +1 (the head-of-row reset) · `GhostCompletionTest` +4 (the
+hold) · `GhostWiringTest` (new, 4: the box, the themed colours, the one guarded
+hide-on-scroll call site, the one hold call site) · `GhostContrastTest` (new, 3:
+both alphas re-derived from `EditorThemes.kt`, the ghost ≤ 2.6:1 and < 30 % of
+real text contrast on all four themes, the box visible but never a filled
+component, and the ghost legible inside its box).
+
+## Validation
+
+| What | Where | Result |
+|---|---|---|
+| Source tests (host JVM) | CI `:app:testDebugUnitTest` | ✅ runs below |
+| Android tests (instrumented) | — | none for this part; nothing claimed |
+| Device evidence | — | **not claimed** — no round run, none asked for |
+
+What only a handset can confirm (recorded, not requested): that the language
+caps are the ones a thumb wants in a real file, and that the box reads as a
+suggestion on the owner's screen.
+
+### CI
+
+- **Round 1 — red for cause**, run
+  [36353374750](https://github.com/pabi277/CodeC/actions/runs/36353374750) on
+  `9c7a74d`: *"2270 tests completed, 1 failed"* — `RunKeySetTest > keysForContext
+  keeps the per-language tail for C` still asserted the row's language cap was
+  the **last** entry, which is exactly what this part changes. The fix
+  (`f29fcfd`) moved only that pin: no production code changed.
+- **Round 2** (`f29fcfd`) — green, run
+  [36353691179](https://github.com/pabi277/CodeC/actions/runs/36353691179), 11m51s.
+- **Round 3 — red for cause**, run
+  [36353710831](https://github.com/pabi277/CodeC/actions/runs/36353710831) on
+  the tip `d5420f0`: the only failure was `:app:compileDebugUnitTestKotlin` —
+  two `Unresolved reference 'Visible'` in this part's own new test cases
+  (`GhostCompletion.Visible` should have been `GhostState.Visible`). Main code
+  compiled in the same run, so the production change was never in question; the
+  fix is the two test lines only (`b43432d`).
+- **Round 4 — tip green**, run
+  [36354523369](https://github.com/pabi277/CodeC/actions/runs/36354523369) on
+  `b43432d`, 11m26s: the full suite plus this part's 11 new cases, both APKs
+  built (debug 26,024,564 B / release 6,796,488 B).
+
+Both reds were found by CI, not by a compiler here: this sandbox has no JDK
+(`which java javac kotlinc` → empty, `JAVA_HOME` unset, no `/usr/lib/jvm`), so
+CI is the executor of record, as it was for 68.1 and 69.1. Every literal of the
+new pins was re-read against the live sources before each push; the contrast
+law's four themes and the 15 wiring literals were additionally reproduced by
+hand, which is how round 3's test-only typo was isolated to the test source.
+
+## Boundaries
+
+No new dependency, permission, persistent preference, telemetry, screen, engine,
+row, button or setting. The one coding row stays one row (68.1); nothing was
+removed from it; CodeC Keys stays language-independent by its own 28.2 decision;
+`keyStripJson` still controls only the general base; the system keyboard stays
+the default and CodeC Keys stays opt-in.
+
+**Stop point:** this part only. No PR, no merge, no `main` push without the
+owner's explicit instruction.

@@ -1,3 +1,51 @@
+**2026-09-28 — Phase 69.2 (the quick-key row's language + the ghost's suggestion
+look): implemented on `arena/01a0e49f-codec`, owner answers taken BEFORE any
+code.** The owner reported two problems right after the 69.1 delivery, verbatim:
+*"What language i am using don't matter it always give me same fixed quick
+keys"* and *"Sometimes the ghost suggestions text are way too real i think as i
+wrote the wrong word then about a second it vanished the ghost suggestions fix
+it"*. Investigation on this checkout (not from memory) found both were real and
+why: the language caps were the row's **last** entries — slots 15+ of a row that
+shows ~7 caps and opens at the left, so every language looked identical (and Go,
+Rust, PHP, Ruby, Lua, XML, YAML, Markdown had no caps at all); the ghost was
+**plain code text with no box** at 38 % of the comment colour — measured
+1.82–1.98:1 against the editor background where real code is 11.25–13.94:1, so
+the missing cue was a container, not brightness — and two code paths could
+delete it: **any** scroll (the editor's own caret-follow scroll included) and any
+recompute whose fresh engine answer no longer carried the aligned item (~1 s
+after the keystroke). Owner answers: **auto-detect by file extension, the
+language's own caps lead the row, the default row for a non-standard file**
+(*"Can it be auto detection my file extension and set the the quick keys order as
+per requirement and if it is not a standard file than a default quick key
+option"*), **B — Give each language a few real caps (Spck parity)**, and **A —
+Both: unmistakable look + stop it vanishing**. So the part is exactly two
+changes: **(1)** new pure `LanguageQuickKeys` (real caps per language, one table
+shared with `languageMacroRow`), `keysFor` order = language caps → the owner's
+custom snippets → the general set, non-standard files keep the default row,
+nothing that shipped before was removed, and a language change returns the row
+to its head (`LaunchedEffect(language) { keysRowScroll.scrollTo(0) }`) while the
+69.1 remembered position still stands within one file; **(2)** the ghost is drawn
+inside a suggestion box (comment colour at 18 %, text unchanged at 38 % — both
+pinned by a new contrast law) and a still-correct ghost is held across background
+refreshes (`GhostCompletion.heldWhenStillValid`) while G4's clear-on-scroll is
+narrowed to the user's own drag/fling (causes verified against sora 0.24.6's
+`ScrollEvent`). Tests: `LanguageQuickKeysTest` (new, 7), `GhostWiringTest` (new,
+4), `GhostContrastTest` (new, 3), `GhostCompletionTest` +4, `EditorKeySetTest`
+(two "tail, last" pins rewritten with their reason), `EditorRowsWiringTest` +1,
+and one stale 22.x pin in `RunKeySetTest` found by CI round 1 (red for cause,
+run 36353374750 on `9c7a74d`; fixed in `f29fcfd` with no production change; the
+same run's test-only receiver typo at the tip — `GhostCompletion.Visible` for
+`GhostState.Visible` — was round 3's red, run 36353710831 on `d5420f0`, fixed in
+`b43432d`). **Android CI is green on the tip `b43432d`**: run 36354523369,
+11m26s, the full suite plus this part's 11 new cases and both APKs (debug
+26,024,564 B / release 6,796,488 B). **No device evidence claimed** and no round
+asked for. No new dependency, permission, preference, telemetry, screen, engine,
+row, button or setting. **No PR and nothing merged.** Brief with the verbatim
+answers:
+[PHASE_69_2_LANGUAGE_KEYS_AND_GHOST.md](ui-polish-chats/PHASE_69_2_LANGUAGE_KEYS_AND_GHOST.md).
+
+---
+
 **2026-09-27 — Phase 69.1 (typing, keyboard and selection): reviewed, asked,
 implemented on `arena/01a0e49f-codec` — owner answers taken BEFORE any code,
 all five = option A.** The owner chose **keep the system IME default and the one
