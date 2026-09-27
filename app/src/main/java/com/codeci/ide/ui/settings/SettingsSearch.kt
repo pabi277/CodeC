@@ -72,8 +72,6 @@ object SettingsCatalog {
         SettingsEntry(section = "Storage", label = "Clear temporary files"),
         SettingsEntry(section = "Storage", label = "Clear Cache"),
         SettingsEntry(section = "About", label = "Show the welcome screen again"),
-        SettingsEntry(section = "About", label = "Help & guide"),
-        SettingsEntry(section = "About", label = "Reset tips"),
         SettingsEntry(section = "About", label = "Your CodeC progress"),
         SettingsEntry(section = "About", label = "App Version"),
         SettingsEntry(section = "About", label = "GitHub"),

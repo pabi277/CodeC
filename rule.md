@@ -1,3 +1,20 @@
+> **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
+> next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
+> progress stays in Terminal/Output, no new app-wide indicator. These select
+> discussion priorities, not permission to auto-implement the next phase.
+
+> **Latest owner instruction — 2026-09-27 (Phase 64):** remove BOTH installation
+> UI locks and the guide system. This supersedes earlier mandatory-tour,
+> no-skip and chrome-lock instructions below. Keep internal package/install
+> safety, progress/retry and runner guards. Source implementation and local
+> 177/0 prevalidation recorded in `docs/chat-phase64/README.md`; Android CI
+> **green on `4de912a`, run 36305311370** (unit/screenshot tests, debug/release APKs). Full UI review and one-part-per-chat proposals:
+> `docs/UI_POLISH_REVIEW_20260927.md`. Ask the owner’s thoughts before broader
+> UI changes. The owner now authorised **“Complete docs and merge”** for this
+> delivery via [PR #87](https://github.com/pabi277/CodeC/pull/87), after final-head checks pass.
+> The PR records the actual merge state/commit. No device acceptance invented;
+> future phases still require their own agreed scope and merge authority.
+
 # CodeC — Future-Update Rules (owner direction 2026-09-01)
 
 > **Owner's direction:** *"Update all md files … make a rule.md for future

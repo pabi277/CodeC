@@ -30,6 +30,8 @@ import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorLineOps
 import com.codeci.ide.ui.editor.EditorOpenMode
+import com.codeci.ide.ui.editor.InstallResumePolicy
+import com.codeci.ide.ui.editor.InstallRunContext
 import com.codeci.ide.ui.editor.NoticeKind
 import com.codeci.ide.ui.editor.NoticePolicy
 import com.codeci.ide.ui.editor.EditorOpenModePolicy
@@ -165,15 +167,7 @@ data class OutputRunState(
     val lastTerminalCommand: String? = null,
     /** Phase 24.6 — true when the current output belongs to a Test ▷ run. */
     val testRun: Boolean = false,
-    /**
-     * Phase 45 round 4 — true while the panel is streaming an INSTALL the user
-     * asked for (RUN ▶ → Install, i.e. `pkg install -y <pkg>`), as opposed to a
-     * compile, a run or a long-lived server. It is the only signal that says
-     * "one job is being installed right now", which is what the chrome lock
-     * pauses the other options for ([com.codeci.ide.ui.terminal.SetupLockPolicy]).
-     * A plain run never sets it: locking the app while the user's own program —
-     * or a Flask server — is running would be a prison, not a courtesy.
-     */
+    /** True while output belongs to a package install, never a navigation lock. */
     val installing: Boolean = false,
     /** Phase 14 — the live loopback URL of a running server project (Open Preview). */
     val serverUrl: String? = null,
@@ -932,6 +926,11 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             return
         }
         val command = LanguageRunPlanner.installCommand(prompt.packageName)
+        // Navigation now remains available during installs. Capture the intent
+        // before the coroutine; completion must not run a newly selected file.
+        val installContext = InstallRunContext(_projectName.value, _fileName.value)
+        val resumeTarget = pendingRunTarget
+        val resumeServerProject = pendingServerProject
         _outputExpanded.value = true
         _outputState.value = OutputRunState(
             phase = OutputPhase.BUILDING,
@@ -939,8 +938,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             lines = listOf(OutputLine("$ $command", OutputLineKind.COMMAND)),
             summary = ctx.getString(R.string.output_installing, prompt.displayName),
             lastTerminalCommand = command,
-            // Phase 45 round 4 — the chrome lock's input: while this install
-            // streams, the other options are paused and say why.
+            // Progress metadata only; unrelated controls remain available.
             installing = true
         )
         runJob = viewModelScope.launch {
@@ -970,22 +968,27 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
                 return@launch
             }
             if (installExit == 0) {
+                val resume = InstallResumePolicy.shouldResume(
+                    installContext, InstallRunContext(_projectName.value, _fileName.value)
+                )
+                val message = ctx.getString(
+                    if (resume) R.string.output_install_ok else R.string.output_install_ready,
+                    prompt.displayName
+                )
                 _outputState.value = _outputState.value.copy(
+                    phase = OutputPhase.DONE,
                     busy = false,
                     installing = false,
-                    lines = _outputState.value.lines + OutputLine(
-                        ctx.getString(R.string.output_install_ok, prompt.displayName),
-                        OutputLineKind.STATS
-                    )
+                    summary = message,
+                    lines = _outputState.value.lines + OutputLine(message, OutputLineKind.STATS)
                 )
-                val serverProject = pendingServerProject
                 pendingServerProject = null
-                if (serverProject != null) {
-                    ProjectManager(ctx).project(serverProject)?.let { startServerRun(ctx, it) }
+                pendingRunTarget = null
+                if (!resume) return@launch
+                if (resumeServerProject != null) {
+                    ProjectManager(ctx).project(resumeServerProject)?.let { startServerRun(ctx, it) }
                 } else {
-                    // Phase 33 — resume the file RUN ▶ was asked to run (the
-                    // main/index entry, or the open file), not just the open file.
-                    runFile(ctx, pendingRunTarget)
+                    runFile(ctx, resumeTarget)
                 }
             } else {
                 _outputState.value = _outputState.value.copy(

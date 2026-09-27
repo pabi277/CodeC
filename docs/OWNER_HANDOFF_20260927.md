@@ -1,3 +1,9 @@
+> **Later handoff on 2026-09-27:** the owner subsequently requested Phase 64
+> (remove both installation UI locks and the guide), chose Projects/files for
+> the next polish discussion, and instructed “Complete docs and merge”.
+> [Phase 64 delivery and next-chat handoff](chat-phase64/HANDOFF.md) is the current
+> entry point. The Phase 63 feedback and evidence below remain history.
+
 # Owner feedback, testing decision and polishing handoff — 2026-09-27
 
 ## Owner's thoughts (verbatim)

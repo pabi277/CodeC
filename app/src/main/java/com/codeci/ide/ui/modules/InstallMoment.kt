@@ -13,7 +13,7 @@ package com.codeci.ide.ui.modules
  *
  * [InstallMoment] is the pure half of the fix: it says what the row *means* at
  * each transition, and — the part that matters — **when a finish is worth
- * marking**. It is deliberately as strict as Phase 44's `SetupLockPolicy`:
+ * marking**. Only observed operation state counts:
  *
  * - a celebration happens only on a real transition **into** `INSTALLED`
  *   ([celebrateOnFinish]): a re-render of an already-installed row is not news,

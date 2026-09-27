@@ -1,3 +1,8 @@
+> **2026-09-27 amendment:** Phase 64 removes the guide and installation UI
+> locks. The older no-skip/single-click-tour rules and SetupLockPolicy example
+> below are historical, not requirements for new work. Follow the dated owner
+> decision in `UI_POLISH_REVIEW_20260927.md`; ask before broader polishing.
+
 # How to create a new phase in CodeC
 
 > **What this file is.** The phase ceremony, extracted from the repo itself

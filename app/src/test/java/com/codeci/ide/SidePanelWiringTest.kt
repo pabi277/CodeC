@@ -10,7 +10,7 @@ import org.junit.Test
  *
  * The pure spec is [com.codeci.ide.SidePanelPlanTest]'s job. This file asks the
  * *source* the questions a phone would ask, in the house style of
- * `DrawerWiringTest`/`GuideWiringTest`/`TokenAdoptionTest`: the panel is really
+ * `DrawerWiringTest`/`TokenAdoptionTest`: the panel is really
  * composed by the editor's ☰, the tree really rides in it, the Projects cell
  * really exists (Phase 56's precondition), and — the owner's own row — the
  * bottom bar is still there, five tabs and all.
@@ -63,18 +63,6 @@ class SidePanelWiringTest {
         assertTrue("the Packages cell must have a door too", main.contains("onOpenPackages = {"))
     }
 
-    @Test
-    fun `the guide's in-drawer beats switch the panel to Files`() {
-        assertTrue(
-            "the editor must ask the pure plan which beat is due",
-            editor.contains("CoachMarkPlan.step(guideBeat)?.inDrawer == true")
-        )
-        assertTrue(
-            "the beat must be published by the guide host",
-            RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/guide/CoachMarks.kt")
-                .readText().contains("EditorChromeState.setGuideBeat(")
-        )
-    }
 
     @Test
     fun `the search slot runs the pure engine, off the main thread`() {

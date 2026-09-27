@@ -22,6 +22,13 @@ rows this document numbers: `ui/settings/SettingsSearch.kt`'s catalog is generat
 this table per section against it — so *one row, one effect* and *one row, one search result* are
 the same promise. Nothing in the numbered rows below changed for it.
 
+## 2026-09-27 update — guide removal
+
+The owner removed the guide system. The live inventory is now **64 controls**:
+Help & guide and Reset tips are removed from the screen and search catalog.
+The guide/coach-mark/typing-tip preference readers are removed; legacy stored
+values are harmless and ignored. Earlier dated census counts above are history.
+
 ## Deleted by this audit (with evidence)
 
 | Was | Kind | Evidence it was dead | Disposition |
@@ -49,7 +56,7 @@ the same promise. Nothing in the numbered rows below changed for it.
 
 Screen order (machine-checked): Editor Settings | CodeC Keys | Compiler | Terminal | Terminal Extra-Keys & Shortcuts | Package Repository & Trust | GitHub Account | Appearance | Storage | About | Feedback & Support | Developer Options
 
-This table is what `SettingsAuditTest` counts: 12 sections, 66 rows
+This table is what `SettingsAuditTest` counts: 12 sections, 64 rows
 (three of the sections — Terminal Extra-Keys & Shortcuts, Package
 Repository & Trust, GitHub Account — are custom cards with no
 `Settings*` rows; they are covered under "Other surfaces" below and in
@@ -95,8 +102,6 @@ change nothing and say so).
 | 33 | Storage | Clear Cache | action | deletes `cacheDir` | space freed; toast confirms | keep |
 | 34 | About | Show the welcome screen again | action | `first_launch_complete=false` | `firstLaunchCompleteFlow` → MainActivity welcome | keep |
 | 66 | About | Your CodeC progress | item | — (info; read-only current streak, runs and files) | `StatsManager` flows → `StreakLine` (52.3) | keep |
-| 53 | About | Help & guide | item | nothing stored — opens the Phase 45.1 five-slide guide on the spot | `GuideScreen` through MainActivity's `guideRequested` (the flag is written only by SKIP / START CODING) | keep |
-| 54 | About | Reset tips | action | `guide_completed=false` + `coach_marks_seen_csv=""` and nothing else (no project, file or other preference) | `guideCompletedFlow` → the guide gate on next launch; `coachMarksSeenCsvFlow` → `GuideCoachMarks` (45.2) | keep |
 | 35 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |
 | 36 | About | GitHub | item | — (info) | — | keep |
 | 48 | About | Build date | item | — (info; `BuildConfig.BUILD_DATE` UTC — 42.3: "which build is this?" from inside the app) | — | keep |
@@ -151,6 +156,5 @@ audit sees them deliberately:
 | `editor_key_strip_json` | `editorKeyStripJsonFlow` → editor key strip layout |
 | `codec_keys_layout_json` | `codecKeysLayoutJsonFlow` → Keys layout override (dev builds) |
 | `smart_typing_type_over` / `wrap_selection` / `empty_pair` / `auto_indent` / `string_aware` | the five `smartTyping*Flow`s → EditorScreen `SmartTyping.Config` |
-| `ime_guide_dismissed` | `imeGuideDismissedFlow` / `setImeGuideDismissed` → IME guide one-time banner |
 | `dev_mode` | `devModeUnlockedFlow` → Developer Options + About 7-tap |
 | `git_token` / `git_username` / `git_author_name` / `git_author_email` | `GitCredentialsStore.stored()` → `GitManager`, commit identity |

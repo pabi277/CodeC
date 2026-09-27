@@ -69,7 +69,7 @@ import com.codeci.ide.ui.theme.CodecTokens.Space
  *   │ ┌────────┬────────┬────────┐             ││      │  requirement: play
  *   │ │Projects│ Editor │Settings│  ← 3 × 2    ││      │  keeps working)
  *   │ ├────────┼────────┼────────┤             ││      │
- *   │ │Terminal│Packages│ Guide  │             ││      │
+ *   │ │Terminal│Packages│        │             ││      │
  *   │ └────────┴────────┴────────┘             ││      │
  *   │ RECENT                                   ││      │
  *   │ 1st semester      18 minutes ago         ││      │
@@ -329,6 +329,9 @@ private fun NavCardGrid(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                repeat((SidePanelPlan.CARD_COLUMNS - row.size).coerceAtLeast(0)) {
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
     }
@@ -390,7 +393,6 @@ private fun cellIcon(cell: NavCell): ImageVector = when (cell) {
     NavCell.SETTINGS -> Icons.Filled.Settings
     NavCell.TERMINAL -> Icons.Filled.Terminal
     NavCell.PACKAGES -> Icons.Filled.Download
-    NavCell.GUIDE -> SpckIcons.BookLine
 }
 
 @Composable

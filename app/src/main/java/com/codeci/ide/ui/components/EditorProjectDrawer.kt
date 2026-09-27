@@ -53,10 +53,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
 import com.codeci.ide.ui.editor.DrawerProjectList
-import com.codeci.ide.ui.guide.CoachMarkPlan
-import com.codeci.ide.ui.guide.GuideAnchor
-import com.codeci.ide.ui.guide.GuideAnchors
-import com.codeci.ide.ui.projects.DemoProjects
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import com.codeci.ide.ui.components.FileIconView
@@ -86,7 +82,7 @@ fun EditorProjectDrawer(
     /**
      * Phase 46.2 — false in the editor's SINGLE_FILE mode: a peek carries no
      * project tree, no git rows and no create/rename toolbar. What remains is
-     * the header, the PROJECTS list (47.1) and the Guide footer.
+     * the header, the PROJECTS list (47.1) only.
      */
     showProjectTree: Boolean = true,
     onSourceControl: () -> Unit,
@@ -120,12 +116,6 @@ fun EditorProjectDrawer(
     onSetLaunchDefault: (EditorFileEntry) -> Unit,
     onClearLaunchDefault: () -> Unit,
     onCopyPath: (EditorFileEntry) -> Unit,
-    /**
-     * Phase 45.1 — the footer's Guide row: the third of the three doors back to
-     * the first-run guide, and the one a user who is lost IN THE EDITOR finds
-     * (they are already looking at this drawer).
-     */
-    onOpenGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -135,37 +125,11 @@ fun EditorProjectDrawer(
             .padding(top = 24.dp)
     ) {
         // ---- header: project name + source-control glyph ------------------
-        // Phase 45.2, round 3 — beat 2 of the guided tour ("change the project
-        // folder to demo_flask"), published in EVERY state of this header:
-        // another project, the demo already open, scratch mode. The header
-        // always toggles the in-drawer PROJECTS list, so the beat is always
-        // reachable — and a tour the owner wants "1st to last without skip
-        // anything" must not depend on which project happens to be open
-        // (round 2 published it only where a switch would teach something,
-        // which parked the beat forever on a phone already in demo_flask).
-        // Round 4 publishes the header's OWN click beside its rect: the tour's
-        // second beat is one tap that both drops the list down and moves the
-        // tour on, instead of a tap that only dismisses the box.
-        // Phase 47.1 — the tap now EXPANDS the in-drawer PROJECTS list (the
-        // Open-folder-titled dialog is retired); the ✕ at the row's end is
-        // the close affordance the drawer never had.
-        // 2026-09-13 round (single-click law) — the TOUR's tap is
-        // goal-directed: it only ever DROPS the list down, never collapses
-        // one that is already down. (The header's own tap, one line up,
-        // stays a toggle.) Without this guard, a phone that already had the
-        // list open would make the guided tap fold it away — the tour would
-        // teach the opposite of its box and strand beat 3 behind a second
-        // tap, the exact two-click feel the owner reported.
+        // The project header toggles the in-drawer project list.
         val anchoredHeader: Modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onSwitchProject)
             .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
-            .then(
-                GuideAnchor.modifier(
-                    GuideAnchors.DRAWER_PROJECT,
-                    onClick = { if (!projectsExpanded) onSwitchProject() }
-                )
-            )
         Row(
             modifier = anchoredHeader,
             verticalAlignment = Alignment.CenterVertically
@@ -259,33 +223,10 @@ fun EditorProjectDrawer(
                     )
                 }
                 projects.forEach { row ->
-                    // 2026-09-13 round — beat 3 of the tour (DEMO_PICK), the
-                    // owner's row: "give the demo_flask also a guide box after
-                    // opening projects". The demo's own row publishes its tap
-                    // beside its rect, so the box's dismissal IS the switch —
-                    // one click end to end. Every other row stays anchorless
-                    // (a box would teach the wrong tap; CoachMarkPlan
-                    // .drawerDemoPickAnchor names the demo and only the demo).
-                    // The row exists only while the list is down, which is
-                    // exactly when beat 3 can be taught — no extra gate.
-                    val pickAnchorId = CoachMarkPlan.drawerDemoPickAnchor(
-                        row.contextName,
-                        DemoProjects.NAME
-                    )
                     TextButton(
                         onClick = { onSelectProject(row.contextName) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .then(
-                                if (pickAnchorId != null) {
-                                    GuideAnchor.modifier(
-                                        pickAnchorId,
-                                        onClick = { onSelectProject(row.contextName) }
-                                    )
-                                } else {
-                                    Modifier
-                                }
-                            )
                     ) {
                         Text(
                             text = if (row.isCurrent) "\u25CF  ${row.label}" else row.label,
@@ -406,16 +347,6 @@ fun EditorProjectDrawer(
                     items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
                         DrawerRow(
                             entry = entry,
-                            // Phase 45.2 — step 3 of the tour: the demo's own entry
-                            // file, and only it (a box on some other row would teach
-                            // the wrong tap).
-                            guideAnchorId = CoachMarkPlan.drawerFileAnchor(
-                                projectName = entry.projectName,
-                                relativePath = entry.relativePath,
-                                isDirectory = entry.isDirectory,
-                                demoProjectName = DemoProjects.NAME,
-                                demoEntryFile = DemoProjects.ENTRY_FILE
-                            ),
                             expanded = !collapsedDirs.contains(entry.relativePath),
                             selected = entry.relativePath == selectedPath,
                             isLaunchDefault = entry.relativePath == launchDefault,
@@ -457,8 +388,8 @@ fun EditorProjectDrawer(
             )
         } else {
             // Phase 46.2 — SINGLE_FILE: the peek's drawer. No create/rename
-            // toolbar, no tree, no git rows — the PROJECTS list above and the
-            // Guide footer below are the whole surface.
+            // toolbar, no tree, no git rows — the PROJECTS list above is the
+            // whole surface.
             Text(
                 text = stringResource(R.string.editor_single_file_drawer_hint),
                 style = MaterialTheme.typography.bodySmall,
@@ -466,14 +397,6 @@ fun EditorProjectDrawer(
                 modifier = Modifier.padding(16.dp)
             )
         }
-        // Phase 45.1 — "open view again[ing]" (the owner's words): the guide is
-        // one tap from the drawer the guide's own slide 1 is about.
-        DrawerFooterRow(
-            icon = SpckIcons.BookLine,
-            label = "Guide",
-            badge = 0,
-            onClick = onOpenGuide
-        )
         Spacer(Modifier.height(10.dp))
     }
 }
@@ -487,8 +410,6 @@ private enum class RowAction {
 @Composable
 private fun DrawerRow(
     entry: EditorFileEntry,
-    /** Phase 45.2 — non-null on the one row the guided tour spotlights. */
-    guideAnchorId: String? = null,
     expanded: Boolean,
     selected: Boolean,
     isLaunchDefault: Boolean,
@@ -499,23 +420,10 @@ private fun DrawerRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    // Phase 45.2 — the anchored row publishes its rect while it is laid out and
-    // withdraws it when the drawer closes, so the tour can never point at a row
-    // that is not on screen.
-    // Round 4: the anchored row publishes the click it already has, so the
-    // tour's third beat ("Open app.py") opens the file with the same tap that
-    // dismisses the box. Long-press stays the row's own (the overlay only ever
-    // performs a tap).
-    val rowAnchor: Modifier = if (guideAnchorId != null) {
-        GuideAnchor.modifier(guideAnchorId, onClick = onOpenOrToggle)
-    } else {
-        Modifier
-    }
     Box {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(rowAnchor)
                 .padding(horizontal = 6.dp, vertical = 1.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(

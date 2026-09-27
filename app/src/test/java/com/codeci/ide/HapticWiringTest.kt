@@ -119,16 +119,7 @@ class HapticWiringTest {
                 source(path).contains("HapticMoment") || source(path).contains("performHapticFeedback"),
             )
         }
-        val guide = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/guide")
-            .walkTopDown()
-            .filter { it.extension == "kt" }
-            .toList()
-        for (file in guide) {
-            assertFalse(
-                "${file.name} must stay haptic-free (Phase 45's geometry is device-tested)",
-                file.readText().contains("HapticMoment"),
-            )
-        }
+
     }
 
     @Test

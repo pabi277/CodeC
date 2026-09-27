@@ -1,3 +1,8 @@
+> **Retired by owner request, 2026-09-27:** Phase 64 removes the guide,
+> coach marks and both installation UI locks. The original design and device
+> rounds below remain history, not current requirements.
+> [Removal record](../chat-phase64/README.md).
+
 # CodeC Phase 45 — The guide (slides on first run + coach marks on first arrival)
 
 > **Status:** 🚧 **IMPLEMENTED THROUGH ROUND 6** (2026-09-13, `arena/01a0955a-codec`;

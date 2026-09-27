@@ -14,7 +14,7 @@ import org.junit.Test
 /**
  * Phase 51.3 — the install moment: what a package row says at each transition,
  * and when a finish is worth marking. The celebration is deliberately as strict
- * as Phase 44's `SetupLockPolicy`: a re-render is not news and an upgrade of a
+ * about observed operation state: a re-render is not news and an upgrade of a
  * working tool is not news.
  */
 class InstallMomentTest {

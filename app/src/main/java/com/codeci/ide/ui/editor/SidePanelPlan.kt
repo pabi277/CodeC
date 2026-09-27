@@ -60,25 +60,16 @@ object SidePanelPlan {
 
     val DEFAULT_PANEL: RailPanel = RailPanel.NAVIGATION
 
-    /**
-     * The Navigation card: **one card, 3 columns × 2 rows** — the shape the
-     * phone shows, and the drawing got wrong.
-     *
-     * Top row is the shot's own (`Projects · Editor · Settings`). Bottom row is
-     * the owner's answer of 2026-09-22 (option *“Terminal · Packages · Guide”*),
-     * replacing the shot's `Discover · My Labs · Change Log`, which CodeC must
-     * not copy. [Selecting][SELECTED_CELL] is the editor, exactly as the shot
-     * shows a raised, highlit **Editor** cell.
-     */
+    /** Five destinations in three columns. The retired Guide cell has no replacement. */
     val CARD: List<List<NavCell>> = listOf(
         listOf(NavCell.PROJECTS, NavCell.EDITOR, NavCell.SETTINGS),
-        listOf(NavCell.TERMINAL, NavCell.PACKAGES, NavCell.GUIDE)
+        listOf(NavCell.TERMINAL, NavCell.PACKAGES)
     )
 
     /** The shot's selected cell (raised tile, white label). */
     val SELECTED_CELL: NavCell = NavCell.EDITOR
 
-    /** The grid's column count — `CARD` must stay rectangular (tested). */
+    /** The grid's column count — short rows leave non-interactive space (tested). */
     const val CARD_COLUMNS = 3
 
     /**
@@ -133,8 +124,7 @@ enum class NavCell(val id: String, val label: String) {
     EDITOR("editor", "Editor"),
     SETTINGS("settings", "Settings"),
     TERMINAL("terminal", "Terminal"),
-    PACKAGES("packages", "Packages"),
-    GUIDE("guide", "Guide")
+    PACKAGES("packages", "Packages")
 }
 
 /**

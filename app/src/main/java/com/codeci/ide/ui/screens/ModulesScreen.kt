@@ -78,8 +78,6 @@ import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.R
-import com.codeci.ide.ui.guide.GuideAnchor
-import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.modules.InstallFacts
 import com.codeci.ide.ui.modules.InstallLabel
 import com.codeci.ide.ui.modules.InstallMoment
@@ -257,25 +255,13 @@ fun ModulesScreen(
                         )
                     }
                     if (expanded) {
-                        // Phase 45.2 — the Packages surface gets ONE coach mark,
-                        // on the first card of the first section: "adding a
-                        // language downloads once" is Phase 44's teaching moment
-                        // at the point of action. Only a card that is really laid
-                        // out publishes an anchor, so a collapsed or empty
-                        // section produces no mark (and marks nothing seen).
-                        val isFirstSection = section == PackageSection.ordered.first()
-                        itemsIndexed(sectionItems, key = { _, item -> item.id }) { index, item ->
+                        itemsIndexed(sectionItems, key = { _, item -> item.id }) { _, item ->
                             PackageCardRow(
                                 item = item,
                                 context = context,
                                 terminalViewModel = terminalViewModel,
                                 onNavigateToTerminal = onNavigateToTerminal,
                                 setupRefusal = setupRefusal,
-                                guideAnchorId = if (isFirstSection && index == 0) {
-                                    GuideAnchors.PACKAGES_CARD
-                                } else {
-                                    null
-                                },
                             )
                         }
                     }
@@ -382,8 +368,6 @@ private fun PackageCardRow(
     terminalViewModel: TerminalViewModel,
     onNavigateToTerminal: () -> Unit,
     setupRefusal: String? = null,
-    /** Phase 45.2 — non-null on the one card a coach mark may spotlight. */
-    guideAnchorId: String? = null,
 ) {
     val haptics = rememberCodecHaptics()
     val motion = rememberMotionSpecs()
@@ -456,7 +440,6 @@ private fun PackageCardRow(
     }
     PackageItemCard(
         item = item,
-        guideAnchorId = guideAnchorId,
         isInstalled = isInstalled,
         installLabelText = installLabelText,
         installInFlight = installLabel == InstallLabel.INSTALLING,
@@ -637,8 +620,6 @@ private fun QuickActionChip(
 @Composable
 private fun PackageItemCard(
     item: PackageItem,
-    /** Phase 45.2 — the coach-mark anchor id, or null for an ordinary card. */
-    guideAnchorId: String? = null,
     isInstalled: Boolean,
     /** Phase 51.3 — the word the primary action wears (InstallMoment). */
     installLabelText: String,
@@ -654,34 +635,8 @@ private fun PackageItemCard(
     packageActionsBlocked: Boolean = false,
     onViewSetup: () -> Unit = {}
 ) {
-    // Phase 45.2 — the anchored card publishes its window rect while it is laid
-    // out; the pure CoachMarkPlan decides whether a mark may use it.
-    // Phase 45 round 4 — and it publishes the click of the button the card is
-    // REALLY showing, so the tour's eighth beat is one tap that starts the
-    // one-time download instead of a tap that only dismisses the box:
-    //  - not installed → INSTALL (`onInstall`, which already carries the
-    //    Phase 44.1 setup gate, so performing it from the overlay cannot
-    //    bypass that);
-    //  - not installed and the userland is not usable → the card shows VIEW
-    //    SETUP, so that is the click published;
-    //  - already installed → the card's buttons are RUN / UNINSTALL / REINSTALL
-    //    and none of them is what the box is teaching, so NO click is published:
-    //    the tap is left to the card (and still advances the tour). Publishing
-    //    `onInstall` here would turn a tap on a highlighted card into a
-    //    REINSTALL the user never asked for.
-    val cardClick: (() -> Unit)? = when {
-        isInstalled -> null
-        setupRefusal != null -> onViewSetup
-        else -> onInstall
-    }
-    val cardModifier = if (guideAnchorId != null) {
-        Modifier.fillMaxWidth()
-            .then(GuideAnchor.modifier(guideAnchorId, onClick = cardClick))
-    } else {
-        Modifier.fillMaxWidth()
-    }
     Card(
-        modifier = cardModifier,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CodecTokens.radius(Radius.M)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

@@ -28,10 +28,10 @@ class BackHandlerWiringTest {
             "ad-hoc back handlers outside the router: ${offenders.map { it.name }}",
             offenders.isEmpty()
         )
-        // The full list is exactly the four surfaces 49 wired.
+        // The full list is the three remaining surfaces.
         assertEquals(
             listOf(
-                "FileManagerScreen.kt", "GuideScreen.kt",
+                "FileManagerScreen.kt",
                 "MainActivity.kt", "EditorScreen.kt"
             ).sorted(),
             handlers.map { it.name }.sorted()
@@ -92,22 +92,7 @@ class BackHandlerWiringTest {
         assertTrue(hub.contains("viewModel.closeProject()"))
     }
 
-    @Test
-    fun `GuideScreen leaves one level through the router`() {
-        val guide = source("app/src/main/java/com/codeci/ide/ui/guide/GuideScreen.kt")
-        assertTrue(guide.contains("BackRouter.decide(BackState(canPopRoute = true))"))
-        assertTrue(guide.contains("BackAction.PopRoute -> onFinished()"))
-    }
 
-    @Test
-    fun `the tour overlay still has no back handler of its own`() {
-        // The 45.2 round-2 law (owner: back must not end the tour) — the
-        // coach-mark row the 49 spec sketched was deliberately not built
-        // (see PART_49_1's implementation record); GuideWiringTest pins the
-        // overlay side, this pins that no close-the-mark row came back.
-        val overlay = source("app/src/main/java/com/codeci/ide/ui/guide/CoachMarks.kt")
-        assertFalse(overlay.contains("BackHandler("))
-    }
 
     @Test
     fun `the exit prompt has a second door in Settings`() {
