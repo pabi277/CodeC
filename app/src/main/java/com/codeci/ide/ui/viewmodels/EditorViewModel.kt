@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.viewmodels
 
+import com.codeci.ide.ui.editor.ProjectFilesPolicy
 import android.content.Context
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -1864,7 +1865,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             if (root == null) {
                 emptyList()
             } else {
-                runCatching { drawerEntries(FileTreeRepository.buildTree(root).children) }
+                runCatching { drawerEntries(FileTreeRepository.buildTree(root, include = { ProjectFilesPolicy.visible(it.name, it.isDirectory) }).children) }
                     .getOrDefault(emptyList())
                     .map { it.copy(projectName = project) }
             }
@@ -1886,9 +1887,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         val out = ArrayList<EditorFileEntry>()
         fun walk(list: List<FileNode>) {
             for (node in list) {
-                if (node.file.name.startsWith(".") ||
-                    node.relativePath == "bin" || node.relativePath.startsWith("bin/")
-                ) continue
+                if (!ProjectFilesPolicy.visible(node.file.name, node.file.isDirectory)) continue
                 when (node) {
                     is FileNode.DirectoryNode -> {
                         out += EditorFileEntry(null, node.relativePath, node.file.name, node.depth, true)
@@ -1935,7 +1934,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             }
             _projectName.value = info.name
             val entry = runCatching {
-                drawerEntries(FileTreeRepository.buildTree(info.root).children)
+                drawerEntries(FileTreeRepository.buildTree(info.root, include = { ProjectFilesPolicy.visible(it.name, it.isDirectory) }).children)
                     .firstOrNull { !it.isDirectory && isTextLikeFile(it.name) }
             }.getOrNull()
             if (entry != null) {
@@ -1976,53 +1975,82 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
      * single-files folder when no project is open — and open it as a tab.
      * This is the single-file path: a file, no project required.
      */
-    fun createAndOpenFile(context: Context, rawName: String, parent: String? = null) {
+    fun createAndOpenFile(context: Context, rawName: String, parent: String? = null): Boolean {
         val appContext = context.applicationContext
-        val base = FileNameUtils.sanitizeFileName(rawName.trim())
-        if (base == null) {
-            _userMessage.value = "Invalid file name"
-            return
-        }
         val project = _projectName.value
-        if (project != null) {
-            val info = ProjectManager(appContext).project(project)
-            if (info == null) {
-                _userMessage.value = "Project '$project' is gone"
-                return
-            }
-            // Phase 16 — "New file here" from a tree row creates inside that
-            // folder; the toolbar keeps the root behaviour (parent == null).
-            val target = if (parent.isNullOrBlank()) base else
-                ProjectPathUtils.sanitizeRelativePath("$parent/$base")
-            if (target == null) {
-                _userMessage.value = "Invalid folder path"
-                return
-            }
-            val exists = runCatching {
-                ProjectPathUtils.resolveInside(info.root, target)?.isFile == true
-            }.getOrDefault(false)
-            if (!exists && !writeProjectFile(appContext, project, target, "")) {
-                _userMessage.value = "Could not create $base"
-                return
-            }
-            if (!parent.isNullOrBlank()) expandAncestors(parent)
-            openFile(appContext, project, target)
-        } else {
-            val fm = FileManager(appContext)
-            val exists = fm.loadFile(base) != null
-            if (!exists && !fm.saveFile(base, "")) {
-                _userMessage.value = "Could not create $base"
-                return
-            }
-            openFile(appContext, null, base)
+        val root = if (project != null) ProjectManager(appContext).project(project)?.root
+            else FileManager(appContext).getProjectDir()
+        if (root == null) { _userMessage.value = "Project is no longer available"; return false }
+        val path = com.codeci.ide.ui.editor.NewFilePath.resolve(parent, rawName)
+        if (path == null) {
+            _userMessage.value = "Enter a relative file path, for example css/subjects.css"
+            return false
         }
+        // Scratch files still live directly in the single-files directory. Never flatten a path.
+        if (project == null && path.contains('/')) {
+            _userMessage.value = "Choose a project to create folders and nested files"
+            return false
+        }
+        if (project != null && com.codeci.ide.ui.projects.GitDiscardEditors.blocks(root, path)) {
+            _userMessage.value = "This file is being restored. Try creating it again when that finishes."
+            return false
+        }
+        val result = com.codeci.ide.ui.editor.NewFilePath.create(root, parent, rawName)
+        if (result.isFailure) {
+            _userMessage.value = result.exceptionOrNull()?.message ?: "Could not create file"
+            return false
+        }
+        expandAncestors(path.substringBeforeLast('/', ""))
+        openFile(appContext, project, path)
         refreshFileEntries(appContext)
-        _userMessage.value = "Opened $base"
+        _userMessage.value = "Opened $path"
+        return true
+    }
+
+    /** Save only the selected file's edits before exporting it; never substitute the active tab. */
+    fun fileForExport(context: Context, entry: EditorFileEntry): File? {
+        if (entry.isDirectory || entry.projectName != _projectName.value) {
+            _userMessage.value = "Select a file in the current project"
+            return null
+        }
+        val root = if (entry.projectName != null) ProjectManager(context).project(entry.projectName)?.root
+            else FileManager(context).getProjectDir()
+        val file = root?.let { ProjectPathUtils.resolveInside(it, entry.relativePath) }
+        if (file == null || !file.isFile || !file.canRead()) {
+            _userMessage.value = "The file is no longer available"
+            return null
+        }
+        val activePath = _activeTabPath.value ?: _fileName.value
+        if (entry.relativePath == activePath) {
+            // The active tab's cached buffer is intentionally stale between boundaries.
+            // Never export/re-save that cache after autosave has saved the live editor text.
+            if (_isDirty.value && !saveFile(context)) {
+                _userMessage.value = "Could not save file before export"
+                return null
+            }
+        } else {
+            val tab = _openTabs.value.firstOrNull { it.relativePath == entry.relativePath }
+            if (tab != null && tab.buffer.text != tab.savedText) {
+                val project = entry.projectName ?: return null
+                if (!writeProjectFile(context, project, tab.relativePath, tab.buffer.text, tab.lineEnding)) {
+                    _userMessage.value = "Could not save file before export"
+                    return null
+                }
+                updateTab(tab.relativePath) { it.copy(savedText = tab.buffer.text) }
+            }
+        }
+        return file
     }
 
     /** Delete a drawer entry from disk and drop its tab if it was open. */
-    fun deleteFileEntry(context: Context, entry: EditorFileEntry) {
+    fun deleteFileEntry(context: Context, entry: EditorFileEntry): Boolean {
         val appContext = context.applicationContext
+        if (entry.projectName != _projectName.value) {
+            _userMessage.value = "Project changed; reopen the file action"
+            return false
+        }
+        val root = entry.projectName?.let { ProjectManager(appContext).project(it)?.root }
+            ?: FileManager(appContext).getProjectDir()
         val ok = if (entry.projectName != null) {
             runCatching {
                 val info = ProjectManager(appContext).project(entry.projectName)
@@ -2031,16 +2059,38 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         } else {
             runCatching { FileManager(appContext).deleteFile(entry.relativePath) }.getOrDefault(false)
         }
-        if (!ok) {
-            _userMessage.value = "Could not delete ${entry.name}"
-            return
+        autoSaveJob?.cancel()
+        autoSaveJob = null
+        stashActiveTabBuffer(_codeText.value)
+        val affects: (String) -> Boolean = {
+            ProjectFilesPolicy.affects(entry.relativePath, it) &&
+                ProjectPathUtils.resolveInside(root, it)?.exists() == false
         }
-        val tab = _openTabs.value.firstOrNull { it.relativePath == entry.relativePath }
-        if (tab != null && _openTabs.value.size > 1) {
-            closeTab(appContext, tab.relativePath, saveFirst = false)
+        val activeDeleted = affects(_activeTabPath.value ?: _fileName.value)
+        _openTabs.value = _openTabs.value.filterNot { affects(it.relativePath) }
+        undoManagers.keys.removeAll { affects(it) }
+        _collapsedDirs.value = _collapsedDirs.value.filterNot(affects).toSet()
+        if (_launchDefault.value?.let(affects) == true) setLaunchDefault(appContext, null)
+        if (activeDeleted) {
+            val next = _openTabs.value.firstOrNull()
+            _activeTabPath.value = null
+            if (next != null) activateTab(next)
+            else {
+                // A deleted last file must not remain a writable buffer at its old path.
+                _fileName.value = ""
+                _codeText.value = TextFieldValue("")
+                scratchSavedText = ""
+                _isDirty.value = false
+                undoManagers.clear()
+                resetDecorationsForNewBuffer()
+                syncUndoFlags(undoManager())
+            }
         }
         refreshFileEntries(appContext)
-        _userMessage.value = "Deleted ${entry.name}"
+        if (_isDirty.value) scheduleAutoSave()
+        _userMessage.value = if (ok) "Deleted ${entry.name}"
+            else "Could not delete all of ${entry.name}. Remaining files were kept."
+        return ok
     }
 
     // ---- Phase 16: drawer collapse + row actions -------------------------
@@ -2072,30 +2122,60 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         _collapsedDirs.value = set
     }
 
+    fun revealActiveFile() {
+        val path = _activeTabPath.value ?: _fileName.value
+        expandAncestors(path.substringBeforeLast('/', ""))
+    }
+
+    fun openSearchHit(context: Context, project: String, hit: com.codeci.ide.ui.editor.ProjectSearch.Hit): Boolean {
+        if (_projectName.value != project) return false
+        val root = ProjectManager(context).project(project)?.root ?: return false
+        val file = ProjectPathUtils.resolveInside(root, hit.relativePath) ?: return false
+        if (!file.isFile || !file.canRead()) {
+            _userMessage.value = "Search result is no longer available"
+            return false
+        }
+        openFile(context, project, hit.relativePath)
+        if (_activeTabPath.value != hit.relativePath || _projectName.value != project) return false
+        val text = _codeText.value.text
+        val line = hit.line.coerceIn(1, text.count { it == '\n' } + 1)
+        val start = CodeFormatter.lineStartOffset(text, line)
+        val end = text.indexOf('\n', start).let { if (it < 0) text.length else it }
+        val offset = (start + hit.column - 1).coerceIn(start, end)
+        selectRegion(offset, offset)
+        return true
+    }
+
     /** Toolbar / "New folder here" row action. */
-    fun createFolderEntry(context: Context, rawName: String, parent: String? = null) {
+    fun createFolderEntry(context: Context, rawName: String, parent: String? = null): Boolean {
         val appContext = context.applicationContext
         val base = ProjectPathUtils.sanitizeSegment(rawName.trim())
         if (base == null) {
             _userMessage.value = "Invalid folder name"
-            return
+            return false
         }
         val project = _projectName.value
         if (project != null) {
-            val info = ProjectManager(appContext).project(project) ?: return
+            val info = ProjectManager(appContext).project(project) ?: run {
+                _userMessage.value = "Project is no longer available"
+                return false
+            }
             val result = FileTreeRepository.createDirectory(info.root, parent.orEmpty(), base)
             if (result.isSuccess) {
                 if (!parent.isNullOrBlank()) expandAncestors(parent)
                 _userMessage.value = "Created folder $base"
             } else {
-                _userMessage.value = "Could not create folder"
+                _userMessage.value = result.exceptionOrNull()?.message ?: "Could not create folder"
+                return false
             }
         } else {
-            val root = runCatching { FileManager(appContext).getProjectDir() }.getOrNull() ?: return
+            val root = runCatching { FileManager(appContext).getProjectDir() }.getOrNull() ?: return false
             val ok = runCatching { File(root, base).mkdirs() }.getOrDefault(false)
             _userMessage.value = if (ok) "Created folder $base" else "Could not create folder"
+            if (!ok) return false
         }
         refreshFileEntries(appContext)
+        return true
     }
 
     /**
@@ -2103,38 +2183,41 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
      * file — a folder rename re-prefixes every tab underneath it, undo
      * history included — so the buffer never points at a dead path.
      */
-    fun renameFileEntry(context: Context, entry: EditorFileEntry, rawNewName: String) {
+    fun renameFileEntry(context: Context, entry: EditorFileEntry, rawNewName: String): Boolean {
         val appContext = context.applicationContext
         val newName = ProjectPathUtils.sanitizeSegment(rawNewName.trim())
         if (newName == null) {
             _userMessage.value = appContext.getString(R.string.invalid_file_name)
-            return
+            return false
         }
-        if (newName == entry.name) return
+        if (newName == entry.name) return true
         val oldPath = entry.relativePath
         val project = entry.projectName
         if (project == null) {
             if (entry.isDirectory) {
                 _userMessage.value = "Folders live inside projects"
-                return
+                return false
             }
             val ok = runCatching {
                 FileManager(appContext).renameFile(oldPath, newName)
             }.getOrDefault(false)
             if (!ok) {
                 _userMessage.value = appContext.getString(R.string.rename_failed)
-                return
+                return false
             }
             if (_activeTabPath.value == null && _fileName.value == oldPath) _fileName.value = newName
             refreshFileEntries(appContext)
             _userMessage.value = appContext.getString(R.string.rename_success)
-            return
+            return true
         }
-        val info = ProjectManager(appContext).project(project) ?: return
+        val info = ProjectManager(appContext).project(project) ?: run {
+                _userMessage.value = "Project is no longer available"
+                return false
+            }
         val newPath = FileTreeRepository.rename(info.root, oldPath, newName).getOrNull()
         if (newPath == null) {
             _userMessage.value = appContext.getString(R.string.rename_failed)
-            return
+            return false
         }
         fun remap(path: String): String? = when {
             path == oldPath -> newPath
@@ -2151,9 +2234,11 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         }
         _activeTabPath.value?.let { _activeTabPath.value = remap(it) ?: it }
         _fileName.value = remap(_fileName.value) ?: _fileName.value
-        _launchDefault.value?.let { _launchDefault.value = remap(it) ?: it }
+        _collapsedDirs.value = _collapsedDirs.value.map { remap(it) ?: it }.toSet()
+        _launchDefault.value?.let { old -> remap(old)?.let { setLaunchDefault(appContext, it) } }
         refreshFileEntries(appContext)
         _userMessage.value = appContext.getString(R.string.rename_success)
+        return true
     }
 
     // ---- Phase 16: line endings + launch default --------------------------
@@ -2298,6 +2383,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
 
     fun saveFile(context: Context): Boolean {
         captureContext(context)
+        if (_fileName.value.isBlank()) return false
         val text = _codeText.value.text
         val project = _projectName.value
         if (project != null) {

@@ -1,5 +1,12 @@
 package com.codeci.ide.ui.screens
 
+import android.content.ClipData
+import android.webkit.MimeTypeMap
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.codeci.ide.ui.editor.SingleFileTransfer
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -435,12 +442,19 @@ fun EditorScreen(
     val uiScope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
 
-    val visibleEntries = remember(fileEntries, collapsedDirs) {
-        FileTreeCollapse.visible(fileEntries, collapsedDirs)
+    var fileSearchOpen by remember(currentProject) { mutableStateOf(false) }
+    var fileSearchQuery by remember(currentProject) { mutableStateOf("") }
+    var searchCollapsed by remember(currentProject, fileSearchQuery) { mutableStateOf(emptySet<String>()) }
+    val filteredEntries = remember(fileEntries, fileSearchQuery) {
+        FileTreeCollapse.search(fileEntries, fileSearchQuery)
     }
-    val allCollapsed = remember(fileEntries, collapsedDirs) {
-        val dirs = FileTreeCollapse.allDirs(fileEntries)
-        dirs.isNotEmpty() && collapsedDirs.containsAll(dirs)
+    val displayedCollapsed = if (fileSearchQuery.isBlank()) collapsedDirs else searchCollapsed
+    val visibleEntries = remember(filteredEntries, displayedCollapsed) {
+        FileTreeCollapse.visible(filteredEntries, displayedCollapsed)
+    }
+    val allCollapsed = remember(filteredEntries, displayedCollapsed) {
+        val dirs = FileTreeCollapse.allDirs(filteredEntries)
+        dirs.isNotEmpty() && displayedCollapsed.containsAll(dirs)
     }
 
     var showUnsavedDialog by remember { mutableStateOf(false) }
@@ -485,13 +499,18 @@ fun EditorScreen(
     // setting, so it never survives into a fresh launch as a missing row.
     var tabsHidden by remember { mutableStateOf(false) }
     // ---- Phase 55 — the side panel's own state --------------------------
-    // Which rail slot the panel shows. Navigation is the shot's default;
+    // Owner follow-up: Files is the editor menu's default;
     // the user's
     // own tap always wins afterwards.
     var sidePanel by remember { mutableStateOf(SidePanelPlan.DEFAULT_PANEL) }
     var searchQuery by remember { mutableStateOf("") }
     var searchOptions by remember { mutableStateOf(ProjectSearch.Options()) }
     var searchHits by remember { mutableStateOf<List<ProjectSearch.Hit>>(emptyList()) }
+    var searchResultKey by remember { mutableStateOf<Triple<String, ProjectSearch.Options, String?>?>(null) }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    var searchCapped by remember { mutableStateOf(false) }
+    val searchKey = Triple(searchQuery, searchOptions, currentProject)
+
     // The screen remains the focused editor session while the output panel or
     // a transient IME state changes. Only the explicit toolbar collapse and
     // interactive stdin are allowed to remove the keyboard.
@@ -507,9 +526,94 @@ fun EditorScreen(
     var runChooserDefault by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Keep an immutable selected-file snapshot while the Android destination picker is open.
+    var pendingDownloadPath by rememberSaveable { mutableStateOf<String?>(null) }
+    var fileTransferBusy by remember { mutableStateOf(false) }
+    val downloadLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        val path = pendingDownloadPath
+        pendingDownloadPath = null
+        uiScope.launch {
+            val snapshot = withContext(Dispatchers.IO) { runCatching { SingleFileTransfer.pending(context.cacheDir, path) }.getOrNull() }
+            if (snapshot == null) {
+                if (uri != null) snackbarHostState.showSnackbar("The prepared file is no longer available. Download it again.")
+                return@launch
+            }
+            try {
+                if (uri != null) {
+                    withContext(Dispatchers.IO) {
+                        val output = context.contentResolver.openOutputStream(uri, "wt")
+                            ?: error("Could not open the selected destination")
+                        output.use { SingleFileTransfer.copy(snapshot, it) }
+                    }
+                    snackbarHostState.showSnackbar("File saved to the selected location")
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                snackbarHostState.showSnackbar("Could not save the file. The destination may contain an incomplete copy; please retry.")
+            } finally {
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
+                    SingleFileTransfer.discard(context.cacheDir, snapshot)
+                }
+            }
+        }
+    }
+    val exportFile: (EditorFileEntry, Boolean) -> Unit = { entry, share ->
+        if (fileTransferBusy || pendingDownloadPath != null) {
+            uiScope.launch { snackbarHostState.showSnackbar("Finish the current file export first") }
+        } else {
+            val source = viewModel.fileForExport(context, entry)
+            if (source != null) {
+                fileTransferBusy = true
+                uiScope.launch {
+                    var snapshot: File? = null
+                    var handedOff = false
+                    try {
+                        val prepared = withContext(Dispatchers.IO) {
+                            SingleFileTransfer.snapshot(source, context.cacheDir).also { snapshot = it }
+                        }
+                        if (share) {
+                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", prepared)
+                            val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(prepared.extension.lowercase())
+                                ?: "application/octet-stream"
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = mime
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                clipData = ClipData.newRawUri(prepared.name, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(send, "Share as file")
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+                        } else {
+                            pendingDownloadPath = prepared.path
+                            downloadLauncher.launch(prepared.name)
+                        }
+                        handedOff = true
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        pendingDownloadPath = null
+                        snackbarHostState.showSnackbar(if (share) "Could not share this file" else "Could not prepare this download")
+                    } finally {
+                        fileTransferBusy = false
+                        if (!handedOff) withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
+                            snapshot?.let { SingleFileTransfer.discard(context.cacheDir, it) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val toggleDrawer: () -> Unit = {
         uiScope.launch {
-            if (drawerState.currentValue == DrawerValue.Open) drawerState.close() else drawerState.open()
+            if (drawerState.targetValue == DrawerValue.Open) drawerState.close() else {
+                sidePanel = RailPanel.FILES
+                drawerProjectsExpanded = false
+                drawerState.open()
+            }
         }
     }
     // Phase 47.1 — every close the app controls routes through ONE callback
@@ -1150,20 +1254,45 @@ fun EditorScreen(
 
         // The panel's Search slot: one query, the five glyphs' options, and the
         // same capped, in-project walk the pure engine pins on the host.
-        LaunchedEffect(searchQuery, searchOptions, currentProject) {
-            val query = searchQuery
-            if (query.isBlank()) {
-                searchHits = emptyList()
+        LaunchedEffect(searchQuery, searchOptions, currentProject, sidePanel) {
+            val key = searchKey
+            searchHits = emptyList()
+            searchResultKey = null
+            searchMessage = null
+            searchCapped = false
+            val query = key.first
+            val project = key.third
+            if (query.isBlank()) { searchResultKey = key; return@LaunchedEffect }
+            if (project == null) {
+                searchMessage = "Choose a project to search saved files"
+                searchResultKey = key
                 return@LaunchedEffect
             }
-            val root = currentProject?.let {
-                runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+            if (ProjectSearch.patternFor(query, key.second) == null) {
+                searchMessage = "Invalid regular expression"
+                searchResultKey = key
+                return@LaunchedEffect
             }
-            searchHits = if (root == null) {
-                emptyList()
-            } else {
-                withContext(Dispatchers.IO) { ProjectSearch.search(root, query, searchOptions) }
+            kotlinx.coroutines.delay(200)
+            try {
+                val root = ProjectManager(context).project(project)?.root
+                if (root == null || !root.isDirectory) error("Project is no longer available")
+                var unreadable = false
+                val hits = withContext(Dispatchers.IO) {
+                    val job = coroutineContext[kotlinx.coroutines.Job]
+                    ProjectSearch.search(root, query, key.second, ProjectSearch.MAX_HITS + 1,
+                        checkActive = { if (job?.isActive == false) throw kotlinx.coroutines.CancellationException() },
+                        onUnreadable = { unreadable = true })
+                }
+                searchHits = hits.take(ProjectSearch.MAX_HITS)
+                searchCapped = hits.size > ProjectSearch.MAX_HITS
+                if (unreadable) searchMessage = "Some files could not be read; results may be incomplete"
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                searchMessage = "Could not search this project. Edit the query or reopen Search to retry."
             }
+            searchResultKey = key
         }
 
         ModalNavigationDrawer(
@@ -1223,14 +1352,20 @@ fun EditorScreen(
                     search = SearchPanelState(
                         query = searchQuery,
                         options = searchOptions,
-                        hits = searchHits
+                        hits = if (searchResultKey == searchKey) searchHits else emptyList(),
+                        projectName = currentProject,
+                        searching = searchQuery.isNotBlank() && searchResultKey != searchKey,
+                        message = if (searchResultKey == searchKey) searchMessage else null,
+                        capped = searchResultKey == searchKey && searchCapped
                     ),
                     onSearchQuery = { text -> searchQuery = text },
                     onSearchOptions = { options -> searchOptions = options },
                     onSearchHit = { hit ->
-                        viewModel.openFile(context, currentProject, hit.relativePath)
-                        viewModel.jumpToLine(hit.line)
-                        closeDrawer(DrawerCloseReason.FILE_OPENED)
+                        val project = searchResultKey?.third
+                        if (searchResultKey == searchKey && project != null &&
+                            viewModel.openSearchHit(context, project, hit)) {
+                            closeDrawer(DrawerCloseReason.FILE_OPENED)
+                        }
                     },
                     onClearSearch = {
                         searchQuery = ""
@@ -1257,7 +1392,7 @@ fun EditorScreen(
                     branch = gitBranch,
                     changeCount = gitChangeCount,
                     entries = visibleEntries,
-                    collapsedDirs = collapsedDirs,
+                    collapsedDirs = displayedCollapsed,
                     selectedPath = activeTabPath ?: currentFileName,
                     launchDefault = launchDefault,
                     gitBadges = gitBadges,
@@ -1309,7 +1444,7 @@ fun EditorScreen(
                         ).show()
                     },
                     onNewFile = { parent ->
-                        entryName = "main.c"
+                        entryName = ""
                         pendingCreate = parent to false
                     },
                     onNewFolder = { parent ->
@@ -1318,13 +1453,27 @@ fun EditorScreen(
                     },
                     // Phase 57.3 — the tree's OWN Refresh: the one re-read the
                     // user asked for, and the only one that confirms itself.
+                    fileSearchOpen = fileSearchOpen,
+                    fileSearchQuery = fileSearchQuery,
+                    onFileSearchQuery = { fileSearchQuery = it },
+                    onCloseFileSearch = { fileSearchOpen = false; fileSearchQuery = "" },
+                    onSearch = { fileSearchOpen = !fileSearchOpen; if (!fileSearchOpen) fileSearchQuery = "" },
+                    onLocate = { fileSearchQuery = ""; viewModel.revealActiveFile() },
+                    onShareFile = { exportFile(it, true) },
+                    onDownloadFile = { exportFile(it, false) },
                     onRefresh = { viewModel.refreshFilesFromUser(context) },
                     onToggleCollapseAll = {
-                        if (allCollapsed) viewModel.expandAllDirectories() else viewModel.collapseAllDirectories()
+                        if (fileSearchQuery.isNotBlank()) {
+                            searchCollapsed = if (allCollapsed) emptySet() else FileTreeCollapse.allDirs(filteredEntries)
+                        } else if (allCollapsed) viewModel.expandAllDirectories() else viewModel.collapseAllDirectories()
                     },
                     onOpenEntry = { entry ->
                         if (entry.isDirectory) {
-                            viewModel.toggleDirectory(entry.relativePath)
+                            if (fileSearchQuery.isNotBlank()) {
+                                searchCollapsed = searchCollapsed.toMutableSet().apply {
+                                    if (!add(entry.relativePath)) remove(entry.relativePath)
+                                }
+                            } else viewModel.toggleDirectory(entry.relativePath)
                         } else {
                             viewModel.openFile(context, entry.projectName, entry.relativePath)
                             closeDrawer(DrawerCloseReason.FILE_OPENED)
@@ -1777,19 +1926,19 @@ fun EditorScreen(
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.share_file)) },
+                                    text = { Text("Share as file") },
                                     onClick = {
                                         showMoreMenu = false
-                                        val send = Intent(Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(Intent.EXTRA_SUBJECT, currentFileName.substringAfterLast('/'))
-                                            putExtra(Intent.EXTRA_TEXT, codeText.text)
-                                        }
-                                        runCatching {
-                                            context.startActivity(
-                                                Intent.createChooser(send, context.getString(R.string.share_file))
-                                            )
-                                        }
+                                        exportFile(EditorFileEntry(currentProject, currentFileName,
+                                            currentFileName.substringAfterLast('/'), 0, false), true)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Download file") },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        exportFile(EditorFileEntry(currentProject, currentFileName,
+                                            currentFileName.substringAfterLast('/'), 0, false), false)
                                     }
                                 )
                                 DropdownMenuItem(
@@ -2376,6 +2525,7 @@ fun EditorScreen(
         // Phase 16 — the drawer replaced the files bottom-sheet; its dialogs
         // (create entry, per-row rename, delete confirm) live here now.
         pendingCreate?.let { (parent, isFolder) ->
+            var operationError by remember(pendingCreate) { mutableStateOf<String?>(null) }
             AlertDialog(
                 onDismissRequest = { pendingCreate = null },
                 title = { Text(stringResource(if (isFolder) R.string.new_folder else R.string.new_file)) },
@@ -2383,8 +2533,11 @@ fun EditorScreen(
                     Column {
                         OutlinedTextField(
                             value = entryName,
-                            onValueChange = { entryName = it },
-                            label = { Text(stringResource(if (isFolder) R.string.new_folder else R.string.file_name)) },
+                            isError = operationError != null,
+                            supportingText = { operationError?.let { Text(it) } },
+                            onValueChange = { entryName = it; operationError = null },
+                            label = { Text(if (isFolder) stringResource(R.string.new_folder) else "File name or relative path") },
+                            placeholder = { if (!isFolder) Text("css/subjects.css") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -2398,11 +2551,10 @@ fun EditorScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        pendingCreate = null
-                        val name = entryName
-                        entryName = ""
-                        if (isFolder) viewModel.createFolderEntry(context, name, parent)
-                        else viewModel.createAndOpenFile(context, name, parent)
+                        val ok = if (isFolder) viewModel.createFolderEntry(context, entryName, parent)
+                        else viewModel.createAndOpenFile(context, entryName, parent)
+                        if (ok) { pendingCreate = null; entryName = ""; fileSearchQuery = "" }
+                        else operationError = viewModel.userMessage.value ?: "Could not create entry"
                     }) { Text(stringResource(R.string.create)) }
                 },
                 dismissButton = {
@@ -2415,13 +2567,16 @@ fun EditorScreen(
 
         pendingRenameEntry?.let { target ->
             var renameValue by remember(target) { mutableStateOf(target.name) }
+            var operationError by remember(target) { mutableStateOf<String?>(null) }
             AlertDialog(
                 onDismissRequest = { pendingRenameEntry = null },
-                title = { Text(stringResource(R.string.rename_file)) },
+                title = { Text(if (target.isDirectory) "Rename folder" else stringResource(R.string.rename_file)) },
                 text = {
                     OutlinedTextField(
                         value = renameValue,
-                        onValueChange = { renameValue = it },
+                        isError = operationError != null,
+                        supportingText = { operationError?.let { Text(it) } },
+                        onValueChange = { renameValue = it; operationError = null },
                         label = { Text(stringResource(R.string.file_name)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -2429,10 +2584,8 @@ fun EditorScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        if (renameValue.isNotBlank()) {
-                            viewModel.renameFileEntry(context, target, renameValue)
-                        }
-                        pendingRenameEntry = null
+                        if (viewModel.renameFileEntry(context, target, renameValue)) pendingRenameEntry = null
+                        else operationError = viewModel.userMessage.value ?: "Could not rename entry"
                     }) { Text(stringResource(R.string.rename)) }
                 },
                 dismissButton = {
@@ -2444,15 +2597,23 @@ fun EditorScreen(
         }
 
         if (pendingDelete != null) {
+            var operationError by remember(pendingDelete) { mutableStateOf<String?>(null) }
             AlertDialog(
                 onDismissRequest = { pendingDelete = null },
                 title = { Text("Delete ${pendingDelete?.name ?: ""}?") },
-                text = { Text("The entry is removed from disk. This cannot be undone.") },
+                text = { Column {
+                    Text(pendingDelete!!.relativePath)
+                    Text(if (pendingDelete!!.isDirectory)
+                        "This folder and all its contents, including unsaved edits in open files, will be deleted. This cannot be undone."
+                        else "This file and its unsaved edits will be deleted. This cannot be undone.")
+                    operationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                } },
                 confirmButton = {
                     TextButton(onClick = {
-                        pendingDelete?.let { viewModel.deleteFileEntry(context, it) }
-                        pendingDelete = null
-                    }) { Text(stringResource(R.string.delete)) }
+                        val target = pendingDelete ?: return@TextButton
+                        if (viewModel.deleteFileEntry(context, target)) pendingDelete = null
+                        else operationError = viewModel.userMessage.value ?: "Could not delete entry"
+                    }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = {
                     TextButton(onClick = { pendingDelete = null }) {

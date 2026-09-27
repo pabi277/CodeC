@@ -1,7 +1,8 @@
-# Proposed Phase 67.1 — Files, drawer and project search
+# Phase 67.1 — Files, drawer and project search
 
-**Status: discussion draft, not approved for implementation.** One part = one
-future chat. No deadline, dependency, new control or replacement engine promised.
+**Status: implemented and merged to `main`; Android CI green for code `3dd599e`.**
+See [Phase 67.1 record](../chat-phase67/README.md) for exact choices and checks.
+Delivered to `main` on owner instruction.
 
 ## Copy into a new chat
 
@@ -32,8 +33,11 @@ Expand/collapse; project switch; scratch and single-file mode; rename/delete con
 
 Suggested starting point, not your decision: Use compact visuals with generous non-overlapping touch targets, rather than shrinking all controls.
 
-**Owner answer:** pending. Record it verbatim here when given; do not present the
-recommendation as approval.
+**Owner answer:** “Compact, with safe tap targets”. The owner additionally chose
+“Match the Files appearance closely” using three new real reference shots,
+“Move switching to a menu”, “Include useful config files”, “File safety + search
+clarity”, “Existing actions, screenshot styling” and “Screenshot layout, bounded
+actions”. See the implementation record for the complete discussion and limits.
 
 ## Implementation and exit, after agreement
 
@@ -47,3 +51,7 @@ device evidence establish. Do not make the owner run declined device rounds.
 
 No new dependencies, permissions, persistent preferences or telemetry by default.
 Stop after this agreed part and update its record; do not roll into the next chat.
+
+Owner follow-up: hamburger opens Files; Files magnifier finds filenames/paths;
+blank New file field accepts nested project paths; single-file Download and Share
+as file added. See the [follow-up record](../chat-phase67/README.md#owner-follow-up--files-first-file-finding-paths-and-file-attachments).

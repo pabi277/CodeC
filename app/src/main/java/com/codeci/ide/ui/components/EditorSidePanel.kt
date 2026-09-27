@@ -1,5 +1,12 @@
 package com.codeci.ide.ui.components
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -97,7 +104,11 @@ object Placement {
 data class SearchPanelState(
     val query: String = "",
     val options: ProjectSearch.Options = ProjectSearch.Options(),
-    val hits: List<ProjectSearch.Hit> = emptyList()
+    val hits: List<ProjectSearch.Hit> = emptyList(),
+    val projectName: String? = null,
+    val searching: Boolean = false,
+    val message: String? = null,
+    val capped: Boolean = false
 )
 
 /** The Repository slot's live state. The empty state is the shot's. */
@@ -438,7 +449,6 @@ private fun RecentRow(row: RecentProjects.Row, onClick: () -> Unit) {
 @Composable
 private fun FilesSlot(files: @Composable () -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
-        SlotLabel(text = RailPanel.FILES.label)
         // The tree itself: the screen passes the existing project tree in.
         Box(
             modifier = Modifier
@@ -470,17 +480,20 @@ private fun SearchSlot(
             SlotLabel(text = RailPanel.SEARCH.label, modifier = Modifier.weight(1f))
             // The shot's five glyphs, as real options: regex, Aa, whole word,
             // and a clear. A glyph whose meaning is unknown is not drawn.
-            OptionGlyph(label = ".*", selected = state.options.regex) {
+            OptionGlyph(label = ".*", description = "Regular expression", selected = state.options.regex) {
                 onOptions(state.options.copy(regex = !state.options.regex))
             }
-            OptionGlyph(label = "Aa", selected = state.options.caseSensitive) {
+            OptionGlyph(label = "Aa", description = "Match case", selected = state.options.caseSensitive) {
                 onOptions(state.options.copy(caseSensitive = !state.options.caseSensitive))
             }
-            OptionGlyph(label = "Ab|", selected = state.options.wholeWord) {
+            OptionGlyph(label = "Ab|", description = "Whole word", selected = state.options.wholeWord) {
                 onOptions(state.options.copy(wholeWord = !state.options.wholeWord))
             }
-            OptionGlyph(label = "⌫", selected = false) { onClear() }
+            OptionGlyph(label = "⌫", description = "Clear search", selected = false) { onClear() }
         }
+        Text(state.projectName?.let { "$it · saved files" } ?: "No project selected",
+            style = MaterialTheme.typography.labelSmall, maxLines = 2,
+            overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value = state.query,
             onValueChange = onQuery,
@@ -502,7 +515,7 @@ private fun SearchSlot(
             )
             if (state.hits.isNotEmpty()) {
                 Text(
-                    text = state.hits.size.toString(),
+                    text = if (state.capped) "First ${state.hits.size}" else state.hits.size.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -511,6 +524,9 @@ private fun SearchSlot(
         when {
             // Nothing typed: nothing at all. The shot's empty RESULTS.
             state.query.isBlank() -> Unit
+            state.searching -> Text("Searching…", style = MaterialTheme.typography.bodyMedium)
+            state.message != null && state.hits.isEmpty() -> Text(state.message,
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             state.hits.isEmpty() -> Text(
                 text = stringResource(R.string.panel_search_no_matches),
                 style = MaterialTheme.typography.bodyMedium,
@@ -523,6 +539,8 @@ private fun SearchSlot(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
+                if (state.message != null) Text(state.message, style = MaterialTheme.typography.bodySmall)
+                if (state.capped) Text("More matches exist. Refine your search.", style = MaterialTheme.typography.bodySmall)
                 state.hits.forEach { hit ->
                     SearchHitRow(hit = hit, onClick = { onHit(hit) })
                 }
@@ -532,7 +550,7 @@ private fun SearchSlot(
 }
 
 @Composable
-private fun OptionGlyph(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun OptionGlyph(label: String, description: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         text = label,
         style = MaterialTheme.typography.labelLarge,
@@ -543,7 +561,10 @@ private fun OptionGlyph(label: String, selected: Boolean, onClick: () -> Unit) {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
         modifier = Modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .semantics { contentDescription = description; this.selected = selected; role = Role.Button }
             .clickable(onClick = onClick)
+            .wrapContentSize(Alignment.Center)
             .padding(horizontal = CodecTokens.space(Space.S), vertical = CodecTokens.space(Space.S))
     )
 }
@@ -557,7 +578,7 @@ private fun SearchHitRow(hit: ProjectSearch.Hit, onClick: () -> Unit) {
             .padding(vertical = CodecTokens.space(Space.S))
     ) {
         Text(
-            text = "${hit.relativePath}:${hit.line}",
+            text = "${hit.relativePath}:${hit.line}:${hit.column}",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
             maxLines = 1,

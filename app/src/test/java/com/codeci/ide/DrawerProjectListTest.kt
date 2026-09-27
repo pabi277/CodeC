@@ -54,7 +54,7 @@ class DrawerProjectListTest {
         assertEquals(listOf("Single files"), rows.map { it.label })
         assertTrue(rows.first().isCurrent)
         assertEquals(
-            "No projects yet — create one in the Projects tab, or keep working with single files here.",
+            "No projects yet — create one in the Projects screen, or keep working with single files here.",
             DrawerProjectList.EMPTY_PROJECTS_COPY
         )
     }

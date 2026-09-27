@@ -26,14 +26,16 @@ sealed class FileNode {
 
 /** Pure filesystem operations used by the project tree and host tests. */
 object FileTreeRepository {
-    fun buildTree(root: File, expandedDirectories: Set<String> = emptySet()): FileNode.DirectoryNode {
+    fun buildTree(root: File, expandedDirectories: Set<String> = emptySet(),
+        include: (File) -> Boolean = { true }): FileNode.DirectoryNode {
         val canonicalRoot = root.canonicalFile
         return buildDirectory(
             root = canonicalRoot,
             directory = canonicalRoot,
             relativePath = "",
             depth = -1,
-            expandedDirectories = expandedDirectories
+            expandedDirectories = expandedDirectories,
+            include = include
         )
     }
 
@@ -109,11 +111,12 @@ object FileTreeRepository {
         directory: File,
         relativePath: String,
         depth: Int,
-        expandedDirectories: Set<String>
+        expandedDirectories: Set<String>,
+        include: (File) -> Boolean
     ): FileNode.DirectoryNode {
         val children = directory.listFiles()
             ?.asSequence()
-            ?.filter { child -> isSafeChild(root, child) }
+            ?.filter { child -> isSafeChild(root, child) && include(child) }
             ?.sortedWith(compareBy<File> { !it.isDirectory }.thenBy { it.name.lowercase() })
             ?.map { child ->
                 val childPath = ProjectPathUtils.relativePath(root, child) ?: return@map null
@@ -128,7 +131,8 @@ object FileTreeRepository {
                             child,
                             childPath,
                             depth + 1,
-                            expandedDirectories
+                            expandedDirectories,
+                            include
                         ).children
                     )
                 } else {

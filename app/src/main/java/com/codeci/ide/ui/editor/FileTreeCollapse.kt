@@ -18,6 +18,21 @@ object FileTreeCollapse {
             }
         }
 
+    /** Filename/path filtering keeps matching rows and their ancestors, even below collapsed folders. */
+    fun search(entries: List<EditorFileEntry>, query: String): List<EditorFileEntry> {
+        val needle = query.trim()
+        if (needle.isEmpty()) return entries
+        val paths = mutableSetOf<String>()
+        entries.filter { it.relativePath.contains(needle, ignoreCase = true) }.forEach { entry ->
+            var path = entry.relativePath
+            while (path.isNotEmpty()) {
+                paths += path
+                path = path.substringBeforeLast('/', "")
+            }
+        }
+        return entries.filter { it.relativePath in paths }
+    }
+
     /** Every directory path in [entries] — what "Collapse all" stores. */
     fun allDirs(entries: List<EditorFileEntry>): Set<String> =
         entries.filter { it.isDirectory }.map { it.relativePath }.toSet()

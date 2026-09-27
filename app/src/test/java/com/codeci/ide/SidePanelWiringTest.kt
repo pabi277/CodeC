@@ -66,7 +66,7 @@ class SidePanelWiringTest {
 
     @Test
     fun `the search slot runs the pure engine, off the main thread`() {
-        assertTrue(editor.contains("ProjectSearch.search(root, query, searchOptions)"))
+        assertTrue(editor.contains("ProjectSearch.search(root, query, key.second, ProjectSearch.MAX_HITS + 1,"))
         assertTrue("the walk must not run on the UI thread", editor.contains("Dispatchers.IO"))
     }
 
