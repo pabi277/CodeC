@@ -12,9 +12,10 @@ tree header names the kind, the breadcrumb no longer dangles, card age uses the
 side panel's words, hub sentences are resources, delete confirms wear the error
 role, the badge reads `CodecPalette.WARNING`. Look unchanged. Local JVM
 prevalidation 192/0 focused + 202/0 source-scan (temporary JUnit shim, not
-Android); Compose files reviewed by hand, CI is their compile evidence. **CI
-verdict for the pushed head is recorded in
-[chat-phase66/PART_66_1 § CI](chat-phase66/PART_66_1_PROJECTS_HUB.md#ci).**
+Android); Compose files reviewed by hand. **Full Android CI GREEN, first
+round, on code `a96fb25`:
+[run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346)**
+— host unit/screenshot tests, debug APK 25,965,508 B, release APK 6,777,708 B.
 Not merged; no PR; no device round asked. Deferred, not decided: clone QR
 glyph, chip touch height, `Auto` default, real last-opened history. **Next
 discussion in the owner's order: 67.1 (files, drawer, project search) — ask

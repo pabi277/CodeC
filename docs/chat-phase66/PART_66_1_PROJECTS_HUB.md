@@ -134,9 +134,7 @@ Android or Gradle run; Compose sources cannot be compiled in the sandbox):**
 
 **CI**
 
-- Recorded after the push in the *CI* section below (this file is updated
-  with the run id and verdict; if it is missing, the run had not finished when
-  the session ended).
+- Green on the first round for `a96fb25` — see [CI](#ci) below.
 
 **Not verified (device):** the keyboard actually appearing when 🔍 / a dialog
 opens on a handset; TalkBack reading the type rows as radio buttons; the
@@ -147,5 +145,14 @@ mistakes CI green for a device pass.
 
 ## CI
 
-_Pending at the time of writing; see the final entry in `docs/NEXT_STEPS.md`
-for the recorded run._
+**GREEN, first round** — code `a96fb25`,
+[run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346)
+(*Build APK*): icon and release-notes checks, **host unit and screenshot
+tests**, debug APK, release APK (measure-only and signed), release APK-set
+check and artifact uploads all passed; zero failed steps. This is the compile
+and test evidence for `FileManagerScreen.kt` and `FileManagerViewModel.kt`,
+which the sandbox cannot build.
+
+APK sizes on the same `versionName` 1.3.17 (against the Phase 64 build
+`4de912a`): debug **25,965,508 B** (+27,096 B), release **6,777,708 B**
+(+14,972 B). No new dependency.

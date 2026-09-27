@@ -7,11 +7,11 @@
 > improvements, and ask my thoughts before implementing. Do not start other
 > phases or merge anything automatically.
 
-**Status:** Part 66.1 implemented on `arena/01a0e220-codec`; not merged, no PR
-opened (owner: *"Do not start other phases or merge anything automatically"*).
-Verification state is recorded honestly in [Validation](#validation) below —
-local JVM prevalidation is done; the Android CI verdict for the pushed head is
-recorded in the part document's *CI* section.
+**Status:** Part 66.1 implemented on `arena/01a0e220-codec`, code `a96fb25`,
+**Android CI green on the first round**
+([run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346));
+not merged, no PR opened (owner: *"Do not start other phases or merge anything
+automatically"*). Device behaviour not verified — see [Validation](#validation).
 
 | Part | Scope | Status |
 |---|---|---|
@@ -100,7 +100,11 @@ middle-ellipsis for long names. They remain open for a later chat.
   against the Compose 1.7 / Material 3 APIs used (`selectable`,
   `selectableGroup`, `FocusRequester`, `KeyboardActions`, `supportingText`,
   `ButtonDefaults.textButtonColors`); their compilation is CI evidence only.
-- Android CI on the pushed head: see [PART_66_1 § CI](PART_66_1_PROJECTS_HUB.md#ci).
+- **Full Android CI GREEN, first round:** code `a96fb25`,
+  [run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346)
+  — host unit/screenshot tests, debug and release APKs, APK-set checks all
+  passed. Debug APK 25,965,508 B; release APK 6,777,708 B
+  (details in [PART_66_1 § CI](PART_66_1_PROJECTS_HUB.md#ci)).
 - Device behaviour is **not** verified in this session (the owner declined a
   handset round for this delivery track; none is invented). What a device
   would still have to confirm is listed in the part document's *Not verified*.
