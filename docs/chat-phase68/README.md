@@ -3,8 +3,10 @@
 **Date:** 2026-09-27. **Branch:** started on `arena/01a0e36f-codec`; finished and
 CI-green on `arena/01a0e444-codec` (full tree mirrored byte-for-byte, see
 Follow-up verification).
-**Status:** implemented, Android CI ✅ GREEN. No PR opened per owner instruction.
-Handset verification recommended.
+**Status:** implemented, Android CI ✅ GREEN, owner handset round done —
+**merge authorised** (owner, verbatim: *"Everything looks good merge it"*).
+Delivery: PR from `arena/01a0e444-codec` to `main`; the PR timeline is the
+final-check/merge-commit record.
 
 ## Owner decisions (option labels verbatim)
 
@@ -147,7 +149,18 @@ debug APK 26,021,016 B (+8,012 B), release APK 6,798,016 B (+3,752 B).
 
 No new dependency, permission, persistent preference or telemetry. The
 standing boundaries (no PR/merge without owner instruction; handset round
-recommended) are unchanged.
+recommended) are unchanged — until the owner's delivery authorisation below.
+
+### Phase 68.1 delivery authorised — 2026-09-27
+
+Owner (verbatim): **“Everything looks good merge it”** — after the handset
+round on the completed part. Delivery is the PR from `arena/01a0e444-codec`
+to `main`, after final-head checks pass. This supersedes this phase's earlier
+“no PR/merge authority” entries without rewriting their history. The PR
+timeline is the final-check/merge-commit record. Source code `324579c` is the
+tested head (CI `36346718603` green); the documentation finalisation does not
+change tested code. The owner's handset verdict covers the completed part as
+shipped; no broader device-test pass is claimed.
 
 ## Boundaries
 

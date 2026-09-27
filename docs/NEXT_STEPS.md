@@ -9,9 +9,13 @@ that contradicted Q4=C; **(2)** the JSON Keys row from Spck shot 204937 —
 editor re-entry (`lastTabSort` now lives in the view model). **GREEN, first
 round: [run 36346189970](https://github.com/pabi277/CodeC/actions/runs/36346189970)**
 on code `8c862c5` — host unit/screenshot tests, debug APK 26,021,016 B,
-release APK 6,798,016 B. Still no PR/merge without owner instruction.
-**Next: owner handset round (compact parity + Run ▶ on a README.md + a JSON
-file's Keys row), then merge decision.** [Record](chat-phase68/README.md).
+release APK 6,798,016 B. Still no PR/merge without owner instruction —
+**until the owner's handset round came back: “Everything looks good merge
+it” (2026-09-27). Delivery authorised: PR from `arena/01a0e444-codec` to
+`main`; the PR timeline is the final-check/merge-commit record.**
+**Next after merge: the 69.1 discussion (typing, keyboard and selection) in a
+new chat — review and questions first, no code before the owner answers.**
+[Record](chat-phase68/README.md).
 
 ---
 
