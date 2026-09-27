@@ -26,12 +26,12 @@ class TabSortPolicyTest {
     )
 
     @Test
-    fun `the menu asks for exactly the three sorts the spec names`() {
+    fun `the menu asks for exactly the four sorts the spec names`() {
         assertEquals(
-            listOf(TabSort.NAME, TabSort.EXTENSION, TabSort.PATH),
+            listOf(TabSort.QUEUE, TabSort.NAME, TabSort.PATH, TabSort.EXTENSION),
             TabSortPolicy.MENU_ORDER,
         )
-        assertEquals(3, TabSort.entries.size)
+        assertEquals(4, TabSort.entries.size)
     }
 
     @Test
@@ -121,12 +121,26 @@ class TabSortPolicyTest {
     @Test
     fun `every sort is total - the same set always lands in the same order`() {
         val tabs = listOf(tab("b/x.kt"), tab("B/x.KT"), tab("a/y"), tab("a/Y.kt"), tab("same.kt"))
-        for (sort in TabSortPolicy.MENU_ORDER) {
+        // QUEUE is intentionally input-order preserving (unsorted), so it is not total by design
+        for (sort in TabSortPolicy.MENU_ORDER.filterNot { it == TabSort.QUEUE }) {
             val once = TabSortPolicy.sort(tabs, sort).map { it.relativePath }
             val shuffled = TabSortPolicy.sort(tabs.reversed(), sort).map { it.relativePath }
             assertEquals("$sort is not deterministic", once, shuffled)
             assertEquals("$sort lost or duplicated a tab", tabs.size, once.size)
             assertTrue("$sort left the active set empty", once.isNotEmpty())
         }
+    }
+
+    @Test
+    fun `queue preserves input order`() {
+        val tabs = listOf(tab("b/x.kt"), tab("a/y"), tab("same.kt"))
+        assertEquals(
+            tabs.map { it.relativePath },
+            TabSortPolicy.sort(tabs, TabSort.QUEUE).map { it.relativePath }
+        )
+        assertEquals(
+            tabs.reversed().map { it.relativePath },
+            TabSortPolicy.sort(tabs.reversed(), TabSort.QUEUE).map { it.relativePath }
+        )
     }
 }

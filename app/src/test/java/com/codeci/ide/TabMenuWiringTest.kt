@@ -77,33 +77,41 @@ class TabMenuWiringTest {
 
     @Test
     fun `the tab menu offers the spec's new rows`() {
-        val menu = bodyOf(bar, "EditorTabBar(")
-        assertTrue("Close unmodified is missing", menu.contains("R.string.tab_close_unmodified"))
-        assertTrue("Hide tabs is missing", menu.contains("R.string.tab_hide"))
-        assertTrue(
-            "the sorts must come from the policy's own order, not a hand-typed list",
-            menu.contains("TabSortPolicy.MENU_ORDER.forEach"),
-        )
-        assertTrue("the menu's sort rows are unwired", menu.contains("onSort(sort)"))
-        assertTrue("Close unmodified is unwired", menu.contains("onCloseUnmodified()"))
-        assertTrue("Hide tabs is unwired", menu.contains("onHideTabs()"))
+        val closeMenu = bodyOf(bar, "EditorTabBar(")
+        assertTrue("Quick Close is missing", closeMenu.contains("R.string.tab_quick_close"))
+        assertTrue("Close unmodified is missing", closeMenu.contains("R.string.tab_close_unmodified"))
+        assertTrue("Hide tabs is missing", closeMenu.contains("R.string.tab_hide"))
+        assertTrue("Close others is missing", closeMenu.contains("R.string.tab_close_others"))
+        assertTrue("Close all is missing", closeMenu.contains("R.string.tab_close_all"))
+        // Sort now lives in its own door (sort icon) in EditorScreen, not in close menu
+        assertTrue("Sort must NOT be in close menu (split doors)", !closeMenu.contains("TabSortPolicy.MENU_ORDER.forEach"))
+        assertTrue("Close menu must not have sort rows", !closeMenu.contains("tab_sort_queue"))
+        assertTrue("Close unmodified is unwired", closeMenu.contains("onCloseUnmodified()"))
+        assertTrue("Hide tabs is unwired", closeMenu.contains("onHideTabs()"))
+        // Sort door in editor
+        assertTrue("Sort door is missing from editor", editor.contains("TabSortPolicy.MENU_ORDER.forEach"))
+        assertTrue("Sort icon is missing", editor.contains("Icons.AutoMirrored.Filled.Sort"))
+        assertTrue("Queue is missing from MENU_ORDER", editor.contains("TabSort.QUEUE") || bar.contains("TabSort.QUEUE"))
+        assertTrue("Queue label is missing", bar.contains("tab_sort_queue") || editor.contains("tab_sort_queue"))
+        assertTrue("Sort rows are unwired", editor.contains("viewModel.sortTabs(sort)"))
     }
 
     @Test
     fun `every sort has its own label`() {
         val labels = bodyOf(bar, "of(sort:")
+        val labelsBlock = bar.substring(bar.indexOf("internal object TabSortLabels"))
         val missing = Regex("""TabSort\.([A-Z_]+)""")
-            .findAll(bar.substring(bar.indexOf("internal object TabSortLabels")))
+            .findAll(labelsBlock)
             .map { it.groupValues[1] }
             .toSet()
-        for (entry in listOf("NAME", "EXTENSION", "PATH")) {
+        for (entry in listOf("QUEUE", "NAME", "EXTENSION", "PATH")) {
             assertTrue("TabSort.$entry has no label", entry in missing)
             assertTrue("TabSort.$entry is not labelled in the menu", labels.contains("TabSort.$entry ->"))
         }
         assertEquals(
-            "the label map must have exactly the three sorts",
-            3,
-            Regex("""TabSort\.[A-Z_]+ ->""").findAll(bar).count(),
+            "the label map must have exactly the four sorts",
+            4,
+            Regex("""TabSort\.[A-Z_]+ ->""").findAll(labelsBlock).count(),
         )
     }
 
@@ -179,7 +187,7 @@ class TabMenuWiringTest {
         )
         assertTrue(
             "the strip's tap brings the row back",
-            editor.contains("TabRowRevealStrip(\n                                onReveal = { tabsHidden = false }"),
+            editor.contains("TabRowRevealStrip(\n                                onReveal = { tabsHidden = false })"),
         )
     }
 
@@ -208,6 +216,10 @@ class TabMenuWiringTest {
         assertTrue(
             editor.contains("onCloseUnmodified = { viewModel.closeUnmodifiedTabs(context) }")
         )
-        assertTrue(editor.contains("onSort = { sort -> viewModel.sortTabs(sort) }"))
+        // Sort now in its own door, not via EditorTabBar's onSort param
+        assertTrue(
+            "Sort door must wire to viewModel.sortTabs",
+            editor.contains("viewModel.sortTabs(sort)") && editor.contains("showSortMenu")
+        )
     }
 }

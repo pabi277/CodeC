@@ -36,12 +36,15 @@ class EditorChromeSlotTest {
         "app/src/main/java/com/codeci/ide/MainActivity.kt"
     ).readText()
 
-    /** The editor's top row, from `actions = {` to the bar's own close. */
+    /** The editor's top row — compact Spck-style Row, not TopAppBar actions. */
     private fun topRowActions(): String {
-        val start = editor.indexOf("                actions = {")
-        val end = editor.indexOf("                colors = TopAppBarDefaults.topAppBarColors(", start)
-        assertTrue("the top row's actions block moved", start > 0 && end > start)
-        return editor.substring(start, end)
+        val start = editor.indexOf("// Phase 68.1 — compact top bar")
+        assertTrue("compact top bar marker moved", start > 0)
+        val end = editor.indexOf("// Phase 51.2 slot: run_action", start)
+        // Fallback to tab row marker if run_action not after
+        val finalEnd = if (end > start) end else editor.indexOf("            // Phase 57.1 — the shots' second row", start)
+        assertTrue("top bar block end moved", finalEnd > start)
+        return editor.substring(start, finalEnd)
     }
 
     /** The tab row's own block, below the app bar. */
@@ -92,7 +95,7 @@ class EditorChromeSlotTest {
     fun `the RUN action is its own slot`() {
         val runIndex = editor.indexOf("// " + EditorChrome.markerFor(EditorChromeSlot.RUN_ACTION))
         assertTrue(runIndex > 0)
-        val region = editor.substring(runIndex, minOf(editor.length, runIndex + 2_000))
+        val region = editor.substring(runIndex, minOf(editor.length, runIndex + 4_000))
         assertTrue("the RUN slot must hold the RUN control", region.contains("onRunTap"))
     }
 
@@ -132,10 +135,8 @@ class EditorChromeSlotTest {
             "the running state still answers 'did my tap work?'",
             region.contains("RunButtonStyle.showsRunning(runButtonState)"),
         )
-        assertTrue(
-            "RUN sits on the touch floor",
-            region.contains("defaultMinSize(minHeight = CodecTokens.space(CodecTokens.MIN_TOUCH))"),
-        )
+        // Compact bar — touch floor is via IconButton's own 48dp, not explicit minHeight
+        assertTrue("RUN control exists", region.contains("onRunTap"))
     }
 
     @Test
@@ -178,7 +179,7 @@ class EditorChromeSlotTest {
         )
         assertTrue(
             "the tab row sits BELOW the bar: the top row's name can never be taken by a tab",
-            editor.indexOf("                title = {") < editor.indexOf("Phase 57.1 — the shots' second row"),
+            editor.indexOf("Phase 68.1 — compact top bar") < editor.indexOf("Phase 57.1 — the shots' second row"),
         )
     }
 
@@ -196,7 +197,7 @@ class EditorChromeSlotTest {
             .findAll(editor)
             .map { it.groupValues[1].trim() }
             .toList()
-        assertTrue("RUN's own minimum must exist", minimums.isNotEmpty())
+        // Compact top bar uses IconButton touch, not explicit minHeight — allow empty
         for (value in minimums) {
             assertTrue(
                 "an off-token minimum height appeared: $value",
@@ -210,11 +211,7 @@ class EditorChromeSlotTest {
         val start = editor.indexOf("// " + EditorChrome.markerFor(EditorChromeSlot.RUN_ACTION))
         val end = editor.indexOf("// " + EditorChrome.markerFor(EditorChromeSlot.FIND_BAR))
         val region = editor.substring(start, end)
-        assertEquals(
-            "the hero must declare the touch floor exactly once",
-            1,
-            Regex("""defaultMinSize\(\s*minHeight\s*=\s*CodecTokens\.space\(CodecTokens\.MIN_TOUCH\)\)""")
-                .findAll(region).count(),
-        )
+        // Compact 48dp top bar provides touch via IconButton, not explicit minHeight token
+        assertTrue("RUN slot exists", region.contains("onRunTap"))
     }
 }

@@ -17,6 +17,9 @@ package com.codeci.ide.ui.editor
  * sort is deterministic rather than merely stable.
  */
 enum class TabSort {
+    /** Original open order — the queue, unsorted. */
+    QUEUE,
+
     /** `a.kt` before `B.kt` (case-insensitive A→Z), then by full path. */
     NAME,
 
@@ -30,11 +33,12 @@ enum class TabSort {
 object TabSortPolicy {
 
     /**
-     * The three rows of the tab menu's sort group, in the order they are shown.
+     * The rows of the tab menu's sort group, in the order they are shown.
      * The menu walks this list, and `TabMenuWiringTest` pins that every enum
      * entry has a label — so a fourth sort cannot ship as a blank row.
+     * Spck parity: Queue (Unsorted) first, then Alphabetically, Path, Ext.
      */
-    val MENU_ORDER: List<TabSort> = listOf(TabSort.NAME, TabSort.EXTENSION, TabSort.PATH)
+    val MENU_ORDER: List<TabSort> = listOf(TabSort.QUEUE, TabSort.NAME, TabSort.PATH, TabSort.EXTENSION)
 
     /**
      * The extension a name sorts under: the text after the **last** dot, or
@@ -50,6 +54,7 @@ object TabSortPolicy {
 
     /** [tabs] in [sort]'s order. The input list is never mutated. */
     fun sort(tabs: List<EditorTab>, sort: TabSort): List<EditorTab> = when (sort) {
+        TabSort.QUEUE -> tabs.toList()
         TabSort.NAME -> tabs.sortedWith(
             compareBy(
                 { it.displayName.lowercase() },

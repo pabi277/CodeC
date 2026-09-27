@@ -481,8 +481,8 @@ fun WebPreviewScreen(
         when {
             file == null -> viewModel.reportError("Cannot resolve file: ${fileName ?: ""}")
             !file.exists() || !file.isFile -> viewModel.reportError("File not found: ${file.name}")
-            !WebFileSupport.isHtml(file.name) ->
-                viewModel.reportError("Preview supports HTML files (.html / .htm)")
+            !WebFileSupport.isPreviewable(file.name) ->
+                viewModel.reportError("Preview supports HTML and Markdown files")
             else -> {
                 viewModel.clearError()
                 val port = serverPort
