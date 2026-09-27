@@ -5,8 +5,8 @@ import org.junit.Test
 
 /** Source checks supplement (not replace) Android rendering and buffer tests. */
 class FilesPolishWiringTest {
-    private fun source(path: String) = RepoFiles.codeOnly(RepoFiles.mainSource(
-        "app/src/main/java/com/codeci/ide/ui/$path").readText())
+    private fun source(path: String) = RepoFiles.mainSource(
+        "app/src/main/java/com/codeci/ide/ui/$path").readText()
     private val drawer = source("components/EditorProjectDrawer.kt")
     private val screen = source("screens/EditorScreen.kt")
     private val panel = source("components/EditorSidePanel.kt")

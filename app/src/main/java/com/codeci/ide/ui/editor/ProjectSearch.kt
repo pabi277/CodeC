@@ -54,9 +54,8 @@ object ProjectSearch {
 
     /**
      * Search [relativePath]'s file under [root]. Returns an empty list when the
-     * file is missing, too large, binary, or holds no match — the panel shows
-     * the same empty `RESULTS` for all four, because “nothing found” is the
-     * truth in every one of them.
+     * file is missing, too large, binary, or holds no match. Read failures call
+     * [onUnreadable], allowing the panel to report incomplete results.
      */
     fun searchFile(root: File, relativePath: String, query: String, options: Options = Options(),
         onUnreadable: () -> Unit = {}, limit: Int = MAX_HITS): List<Hit> {
@@ -146,8 +145,8 @@ object ProjectSearch {
 
     /**
      * The query as a [Regex], or null when a regex option is on and the user is
-     * still typing an invalid one (the panel then shows nothing rather than a
-     * crash or a red wall — a half-typed pattern is not an error message).
+     * still typing an invalid one. The panel distinguishes this from no matches
+     * with a quiet inline message; the engine never crashes for invalid syntax.
      */
     fun patternFor(query: String, options: Options): Regex? {
         val literal = if (options.regex) query else Regex.escape(query)

@@ -88,7 +88,7 @@ fun EditorProjectDrawer(
     onSwitchBranch: () -> Unit,
     /** The Files overflow opens the in-panel project switcher. */
     onSwitchProject: () -> Unit,
-    /** Phase 47.1 — the ✕: closes the drawer and does NOTHING else. */
+    /** Explicit Close files panel action: no save or navigation side effects. */
     onClose: () -> Unit = {},
     /** Phase 47.1 — the in-drawer project list (built by [DrawerProjectList]). */
     projects: List<DrawerProjectList.Row> = emptyList(),
@@ -127,126 +127,126 @@ fun EditorProjectDrawer(
         }
     }
     BoxWithConstraints(modifier.fillMaxWidth().fillMaxHeight()) {
-    val compactToolbar = maxWidth < 300.dp
-    Column(Modifier.fillMaxWidth().fillMaxHeight().background(MaterialTheme.colorScheme.surface)) {
-        // Reference-style toolbar; every glyph has a real, named action.
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("FILES", style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.weight(1f).padding(start = 12.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (showProjectTree) {
-                DrawerIcon(Icons.Default.Search, "Search project", onSearch)
-                if (!compactToolbar) DrawerIcon(Icons.Default.MyLocation, "Locate active file") {
-                    rootExpanded = true
-                    onLocate()
-                    locateRequest = true
-                }
-                DrawerIcon(Icons.Default.NoteAdd, "New file") { onNewFile(null) }
-                DrawerIcon(Icons.Default.CreateNewFolder, "New folder") { onNewFolder(null) }
-            }
-            Box {
-                DrawerIcon(Icons.Default.MoreHoriz, "Files actions") { overflow = true }
-                DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
-                    DropdownMenuItem(text = { Text("Switch project") }, onClick = {
-                        overflow = false; onSwitchProject()
-                    })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.editor_drawer_new_project)) },
-                        onClick = { overflow = false; onNewProject() })
-                    if (showProjectTree) {
-                        if (compactToolbar) DropdownMenuItem(text = { Text("Locate active file") },
-                            leadingIcon = { Icon(Icons.Default.MyLocation, null) },
-                            onClick = { overflow = false; rootExpanded = true; onLocate(); locateRequest = true })
-                        HorizontalDivider()
-                        DropdownMenuItem(text = { Text("Refresh files") },
-                            leadingIcon = { Icon(Icons.Default.Refresh, null) },
-                            onClick = { overflow = false; onRefresh() })
-                        DropdownMenuItem(text = { Text(if (allCollapsed) "Expand all" else "Collapse all") },
-                            onClick = { overflow = false; rootExpanded = true; onToggleCollapseAll() })
-                        HorizontalDivider()
-                        DropdownMenuItem(text = { Text("Source control" + if (changeCount > 0) " ($changeCount)" else "") },
-                            onClick = { overflow = false; onSourceControl() })
-                        DropdownMenuItem(text = { Text("Switch branch" + (branch?.let { " · $it" } ?: "")) },
-                            onClick = { overflow = false; onSwitchBranch() })
-                    }
-                    HorizontalDivider()
-                    DropdownMenuItem(text = { Text("Close files panel") },
-                        leadingIcon = { Icon(Icons.Default.Close, null) },
-                        onClick = { overflow = false; onClose() })
-                }
-            }
-        }
-        if (projectsExpanded) {
+        val compactToolbar = maxWidth < 300.dp
+        Column(Modifier.fillMaxWidth().fillMaxHeight().background(MaterialTheme.colorScheme.surface)) {
+            // Reference-style toolbar; every glyph has a real, named action.
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Projects", Modifier.weight(1f).padding(start = 12.dp))
-                DrawerIcon(Icons.Default.Close, "Close project list", onToggleProjects)
-            }
-            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 192.dp)) {
-                if (projects.none { it.contextName != null }) item {
-                    Text(DrawerProjectList.EMPTY_PROJECTS_COPY, Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodySmall)
-                }
-                items(projects, key = { it.contextName ?: "__single_files__" }) { row ->
-                    TextButton(onClick = { onSelectProject(row.contextName) }, modifier = Modifier
-                        .fillMaxWidth().semantics { selected = row.isCurrent }) {
-                        Text(if (row.isCurrent) "●  ${row.label}" else row.label,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("FILES", style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.weight(1f).padding(start = 12.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (showProjectTree) {
+                    DrawerIcon(Icons.Default.Search, "Search project", onSearch)
+                    if (!compactToolbar) DrawerIcon(Icons.Default.MyLocation, "Locate active file") {
+                        rootExpanded = true
+                        onLocate()
+                        locateRequest = true
                     }
+                    DrawerIcon(Icons.Default.NoteAdd, "New file") { onNewFile(null) }
+                    DrawerIcon(Icons.Default.CreateNewFolder, "New folder") { onNewFolder(null) }
                 }
-            }
-            HorizontalDivider()
-        }
-        if (showProjectTree) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                .semantics { stateDescription = if (rootExpanded) "Expanded" else "Collapsed" }
-                .clickable { rootExpanded = !rootExpanded }.padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Icon(if (rootExpanded) Icons.Default.ExpandMore else Icons.Default.KeyboardArrowRight, null)
-                Text(projectName ?: stringResource(R.string.editor_scratch_mode),
-                    modifier = Modifier.weight(1f).padding(start = 8.dp),
-                    style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Box {
-                    DrawerIcon(Icons.Default.MoreHoriz, "Project folder actions") { rootMenu = true }
-                    DropdownMenu(expanded = rootMenu, onDismissRequest = { rootMenu = false }) {
-                        DropdownMenuItem(text = { Text(projectName ?: "Single files", maxLines = 3) },
-                            enabled = false, onClick = {})
-                        DropdownMenuItem(text = { Text("New file") },
-                            leadingIcon = { Icon(Icons.Default.NoteAdd, null) },
-                            onClick = { rootMenu = false; onNewFile(null) })
-                        DropdownMenuItem(text = { Text("New folder") },
-                            leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) },
-                            onClick = { rootMenu = false; onNewFolder(null) })
+                    DrawerIcon(Icons.Default.MoreHoriz, "Files actions") { overflow = true }
+                    DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
+                        DropdownMenuItem(text = { Text("Switch project") }, onClick = {
+                            overflow = false; onSwitchProject()
+                        })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.editor_drawer_new_project)) },
+                            onClick = { overflow = false; onNewProject() })
+                        if (showProjectTree) {
+                            if (compactToolbar) DropdownMenuItem(text = { Text("Locate active file") },
+                                leadingIcon = { Icon(Icons.Default.MyLocation, null) },
+                                onClick = { overflow = false; rootExpanded = true; onLocate(); locateRequest = true })
+                            HorizontalDivider()
+                            DropdownMenuItem(text = { Text("Refresh files") },
+                                leadingIcon = { Icon(Icons.Default.Refresh, null) },
+                                onClick = { overflow = false; onRefresh() })
+                            DropdownMenuItem(text = { Text(if (allCollapsed) "Expand all" else "Collapse all") },
+                                onClick = { overflow = false; rootExpanded = true; onToggleCollapseAll() })
+                            HorizontalDivider()
+                            DropdownMenuItem(text = { Text("Source control" + if (changeCount > 0) " ($changeCount)" else "") },
+                                onClick = { overflow = false; onSourceControl() })
+                            DropdownMenuItem(text = { Text("Switch branch" + (branch?.let { " · $it" } ?: "")) },
+                                onClick = { overflow = false; onSwitchBranch() })
+                        }
                         HorizontalDivider()
-                        DropdownMenuItem(text = { Text("Switch project") },
-                            onClick = { rootMenu = false; onSwitchProject() })
+                        DropdownMenuItem(text = { Text("Close files panel") },
+                            leadingIcon = { Icon(Icons.Default.Close, null) },
+                            onClick = { overflow = false; onClose() })
                     }
                 }
             }
-            if (rootExpanded) {
-                if (entries.isEmpty()) Text(stringResource(R.string.editor_drawer_empty), Modifier.padding(16.dp))
-                else LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
-                        DrawerRow(entry, !collapsedDirs.contains(entry.relativePath),
-                            entry.relativePath == selectedPath, entry.relativePath == launchDefault,
-                            launchDefault != null, gitBadges[entry.relativePath],
-                            onOpenOrToggle = { onOpenEntry(entry) }, onAction = { action ->
-                                when (action) {
-                                    RowAction.Open -> onOpenEntry(entry)
-                                    RowAction.Rename -> onRenameEntry(entry)
-                                    RowAction.Delete -> onDeleteEntry(entry)
-                                    RowAction.Run -> onRunInTerminal(entry)
-                                    RowAction.Launch -> onLaunchEntry(entry)
-                                    RowAction.SetDefault -> onSetLaunchDefault(entry)
-                                    RowAction.ClearDefault -> onClearLaunchDefault()
-                                    RowAction.CopyPath -> onCopyPath(entry)
-                                    RowAction.NewFileHere -> onNewFile(entry.relativePath)
-                                    RowAction.NewFolderHere -> onNewFolder(entry.relativePath)
-                                }
-                            })
+            if (projectsExpanded) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Projects", Modifier.weight(1f).padding(start = 12.dp))
+                    DrawerIcon(Icons.Default.Close, "Close project list", onToggleProjects)
+                }
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 192.dp)) {
+                    if (projects.none { it.contextName != null }) item {
+                        Text(DrawerProjectList.EMPTY_PROJECTS_COPY, Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    items(projects, key = { it.contextName ?: "__single_files__" }) { row ->
+                        TextButton(onClick = { onSelectProject(row.contextName) }, modifier = Modifier
+                            .fillMaxWidth().semantics { selected = row.isCurrent }) {
+                            Text(if (row.isCurrent) "●  ${row.label}" else row.label,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
+                HorizontalDivider()
             }
-        } else Text(stringResource(R.string.editor_single_file_drawer_hint), Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodySmall)
-    }
+            if (showProjectTree) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .semantics { stateDescription = if (rootExpanded) "Expanded" else "Collapsed" }
+                    .clickable { rootExpanded = !rootExpanded }.padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(if (rootExpanded) Icons.Default.ExpandMore else Icons.Default.KeyboardArrowRight, null)
+                    Text(projectName ?: stringResource(R.string.editor_scratch_mode),
+                        modifier = Modifier.weight(1f).padding(start = 8.dp),
+                        style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Box {
+                        DrawerIcon(Icons.Default.MoreHoriz, "Project folder actions") { rootMenu = true }
+                        DropdownMenu(expanded = rootMenu, onDismissRequest = { rootMenu = false }) {
+                            DropdownMenuItem(text = { Text(projectName ?: "Single files", maxLines = 3) },
+                                enabled = false, onClick = {})
+                            DropdownMenuItem(text = { Text("New file") },
+                                leadingIcon = { Icon(Icons.Default.NoteAdd, null) },
+                                onClick = { rootMenu = false; onNewFile(null) })
+                            DropdownMenuItem(text = { Text("New folder") },
+                                leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) },
+                                onClick = { rootMenu = false; onNewFolder(null) })
+                            HorizontalDivider()
+                            DropdownMenuItem(text = { Text("Switch project") },
+                                onClick = { rootMenu = false; onSwitchProject() })
+                        }
+                    }
+                }
+                if (rootExpanded) {
+                    if (entries.isEmpty()) Text(stringResource(R.string.editor_drawer_empty), Modifier.padding(16.dp))
+                    else LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
+                            DrawerRow(entry, !collapsedDirs.contains(entry.relativePath),
+                                entry.relativePath == selectedPath, entry.relativePath == launchDefault,
+                                launchDefault != null, gitBadges[entry.relativePath],
+                                onOpenOrToggle = { onOpenEntry(entry) }, onAction = { action ->
+                                    when (action) {
+                                        RowAction.Open -> onOpenEntry(entry)
+                                        RowAction.Rename -> onRenameEntry(entry)
+                                        RowAction.Delete -> onDeleteEntry(entry)
+                                        RowAction.Run -> onRunInTerminal(entry)
+                                        RowAction.Launch -> onLaunchEntry(entry)
+                                        RowAction.SetDefault -> onSetLaunchDefault(entry)
+                                        RowAction.ClearDefault -> onClearLaunchDefault()
+                                        RowAction.CopyPath -> onCopyPath(entry)
+                                        RowAction.NewFileHere -> onNewFile(entry.relativePath)
+                                        RowAction.NewFolderHere -> onNewFolder(entry.relativePath)
+                                    }
+                                })
+                        }
+                    }
+                }
+            } else Text(stringResource(R.string.editor_single_file_drawer_hint), Modifier.padding(16.dp),
+                style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 
