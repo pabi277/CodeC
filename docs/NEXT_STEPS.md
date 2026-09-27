@@ -21,8 +21,9 @@ Not merged; no PR; no device round asked. **Follow-up from the owner's phone
 close the app but i want previous editor page"* — the two editor→Projects doors
 popped the editor tab-style; they now push the hub over it like the Settings
 door, so Back returns to the editor and the exit prompt is the next Back
-(router unchanged; `BackHandlerWiringTest` pin; local 53/0 + 197/0). CI for
-the follow-up head: see the line below this entry. Deferred, not decided: clone
+(router unchanged; `BackHandlerWiringTest` pin; local 53/0 + 197/0). **CI
+green, first round, code `3762b7b`:
+[run 36317041278](https://github.com/pabi277/CodeC/actions/runs/36317041278).** Deferred, not decided: clone
 QR glyph, chip touch height, `Auto` default, real last-opened history. **Next
 discussion in the owner's order: 67.1 (files, drawer, project search) — ask
 first.** [Record](chat-phase66/README.md).

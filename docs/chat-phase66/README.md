@@ -115,7 +115,8 @@ path; a later shell pass (65.1) can revisit if it ever shows up on a device.
 `BackRouterTest`, `BackRouterRootTest`, `ExitPromptPolicyTest`,
 `DrawerWiringTest`, `SidePanelWiringTest`, `ResumeWiringTest` — **53 / 0**
 locally (prevalidation shim), plus the 39 pure source-scan classes 197 / 0.
-CI for the follow-up head is recorded in [PART_66_1 § CI](PART_66_1_PROJECTS_HUB.md#ci).
+**CI green on the first round for the follow-up head `3762b7b`:
+[run 36317041278](https://github.com/pabi277/CodeC/actions/runs/36317041278).**
 Device: the owner's report is the only device observation; the fix is not
 device-verified in this session.
 

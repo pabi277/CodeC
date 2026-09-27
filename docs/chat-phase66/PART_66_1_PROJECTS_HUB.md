@@ -146,8 +146,9 @@ mistakes CI green for a device pass.
 
 ## CI
 
-**Follow-up head (Back from Projects):** recorded in `docs/NEXT_STEPS.md`'s
-Phase 66.1 entry once the run finishes.
+**Follow-up head (Back from Projects) — GREEN, first round** — code
+`3762b7b`, [run 36317041278](https://github.com/pabi277/CodeC/actions/runs/36317041278):
+host unit/screenshot tests, debug and release APKs, APK-set checks passed.
 
 **66.1 head — GREEN, first round** — code `a96fb25`,
 [run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346)
