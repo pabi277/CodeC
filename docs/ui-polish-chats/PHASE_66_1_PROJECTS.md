@@ -1,9 +1,12 @@
 # Proposed Phase 66.1 — Projects hub and creation
 
-**Status: discussed and agreed on 2026-09-27; implemented on the session branch
-`arena/01a0e220-codec` (code `a96fb25`, Android CI green, run
-[36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346)) —
-see [`docs/chat-phase66/`](../chat-phase66/README.md).**
+**Status: discussed and agreed on 2026-09-27; implemented on
+`arena/01a0e220-codec` (Android CI green: `a96fb25`
+[36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346),
+`3762b7b` [36317041278](https://github.com/pabi277/CodeC/actions/runs/36317041278));
+owner device-verified and merge-authorised (*"Device verified merge it to the
+main"*) via [PR #88](https://github.com/pabi277/CodeC/pull/88) — see
+[`docs/chat-phase66/`](../chat-phase66/README.md).**
 The owner's answers are recorded verbatim in *Your thoughts* below. Not merged;
 no PR opened (owner instruction: *"Do not start other phases or merge anything
 automatically"*). One part = one chat. No deadline, dependency, new control or

@@ -1,3 +1,10 @@
+**2026-09-27 — Phase 66.1 delivered: owner device-verified and merge-authorised
+(verbatim: "Device verified merge it to the main") via
+[PR #88](https://github.com/pabi277/CodeC/pull/88).** The PR records the
+final-head checks and the merge state. **Next: the 67.1 discussion (files,
+drawer, project search) in a new chat — review and questions first, no code
+before the owner answers.**
+
 **2026-09-27 — Phase 66.1: Projects hub — demo seeded once, truthful dialogs,
 one vocabulary.** Discussed first (review + four option questions); owner
 answers verbatim: **"Keep the current cards"**, **"Yes — stay deleted"**,

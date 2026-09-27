@@ -137,12 +137,13 @@ Android or Gradle run; Compose sources cannot be compiled in the sandbox):**
 
 - Green on the first round for `a96fb25` — see [CI](#ci) below.
 
-**Not verified (device):** the keyboard actually appearing when 🔍 / a dialog
-opens on a handset; TalkBack reading the type rows as radio buttons; the
-supporting text's layout in the dialog on a narrow phone; a real ZIP import
-landing on the promised `_2` name. No handset round is asked of the owner
-(the owner declined device rounds for this track); these are listed so nobody
-mistakes CI green for a device pass.
+**Device.** The owner verified the delivered build and authorised the merge
+(2026-09-27, verbatim: *"Device verified merge it to the main"*). That message
+is the device evidence; it was not an itemised round, so the following are
+**not individually confirmed**: TalkBack reading the type rows as radio
+buttons; the supporting text's layout on a narrow phone; a real ZIP import
+landing on the promised `_2` name. Listed so nobody mistakes the merge for a
+row-by-row device pass.
 
 ## CI
 

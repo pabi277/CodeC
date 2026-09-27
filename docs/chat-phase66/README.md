@@ -7,11 +7,17 @@
 > improvements, and ask my thoughts before implementing. Do not start other
 > phases or merge anything automatically.
 
-**Status:** Part 66.1 implemented on `arena/01a0e220-codec`, code `a96fb25`,
-**Android CI green on the first round**
-([run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346));
-not merged, no PR opened (owner: *"Do not start other phases or merge anything
-automatically"*). Device behaviour not verified — see [Validation](#validation).
+**Status:** Part 66.1 and its Back follow-up implemented on
+`arena/01a0e220-codec`; Android CI green on the first round for both code heads
+(`a96fb25` — [run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346);
+`3762b7b` — [run 36317041278](https://github.com/pabi277/CodeC/actions/runs/36317041278)).
+**Owner device verification and merge authority (2026-09-27, verbatim):
+"Device verified merge it to the main".** Delivery:
+[PR #88](https://github.com/pabi277/CodeC/pull/88), `arena/01a0e220-codec` → `main`;
+the PR is the authoritative record of final-head checks and merge state. The
+owner's message is the device evidence for this phase — no separate checklist
+was run or asked; what it does not cover is listed in
+[PART_66_1 § Not verified](PART_66_1_PROJECTS_HUB.md#validation).
 
 | Part | Scope | Status |
 |---|---|---|
@@ -145,12 +151,15 @@ device-verified in this session.
   — host unit/screenshot tests, debug and release APKs, APK-set checks all
   passed. Debug APK 25,965,508 B; release APK 6,777,708 B
   (details in [PART_66_1 § CI](PART_66_1_PROJECTS_HUB.md#ci)).
-- Device behaviour is **not** verified in this session (the owner declined a
-  handset round for this delivery track; none is invented). What a device
-  would still have to confirm is listed in the part document's *Not verified*.
+- Device: the owner verified the delivered build on a handset and authorised
+  the merge (*"Device verified merge it to the main"*). No itemised checklist
+  was run; the part document's *Not verified* list names what that one message
+  does not individually confirm.
 
 ## Gate
 
-No PR, no merge, no `main` push, no Phase 67.1 without the owner's
-instruction. The next discussion in the owner's order is
-[67.1 — files, drawer and project search](../ui-polish-chats/PHASE_67_1_FILES_SEARCH.md).
+Merge authorised by the owner for this phase only ([PR #88](https://github.com/pabi277/CodeC/pull/88)).
+No Phase 67.1 work without the owner's instruction; the next discussion in
+the owner's order is
+[67.1 — files, drawer and project search](../ui-polish-chats/PHASE_67_1_FILES_SEARCH.md),
+and it starts with a review and questions, not code.
