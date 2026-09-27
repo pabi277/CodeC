@@ -1,5 +1,11 @@
 # Phase 58 — first open, silent install, hamburger
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](../OWNER_HANDOFF_20260927.md).
+
 **Owner row of record:** *“First open = editor on sample snake code we write (not a picker
 landing on a locked terminal). Userland installs silently; one warning when a run needs a
 download before userland is ready. The HTML page view's upper links want a hamburger

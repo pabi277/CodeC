@@ -1,5 +1,11 @@
 # CodeC Phase 55 — Add the side panel
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](../OWNER_HANDOFF_20260927.md).
+
 > **Status:** 🚧 **IMPLEMENTED on `arena/01a0c83e-codec`** (host policies + app wiring; **device pass required**). · **Cost:** `[client-only]` · **Effort:** L ·
 > **Owner row (verbatim):** *“create phase wise plan remove add what needed always say to research and take the reference seriously.”*
 > **Owner decisions of 2026-09-22 that shape this phase (verbatim):**

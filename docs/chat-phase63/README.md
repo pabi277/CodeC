@@ -1,6 +1,12 @@
 # Phase 63 — verify Git, add safe per-file Discard
 
-Research/owner decision: 2026-09-27. **BUILT, CI GREEN** on the session branch. Device round pending; no merge authorised.
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](../OWNER_HANDOFF_20260927.md).
+
+Research/owner decision: 2026-09-27. **BUILT, CI GREEN**. Remaining device round declined by the owner (not run); merge authorised via PR #86, subject to final CI.
 
 ## Reference and scope
 Re-read all seven real phone shots (contact sheet); 124055 is the Repository

@@ -1,5 +1,11 @@
 # CodeC Phase 56 — Remove only the Projects option
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](../OWNER_HANDOFF_20260927.md).
+
 > **Status:** 🚧 **IMPLEMENTED on `arena/01a0c83e-codec`** · **Cost:** `[client-only]` · **Effort:** S ·
 > **Owner row (verbatim):** *“I don't think removing the full down ber is a good choice i think only removing the project option is ok.”*
 >

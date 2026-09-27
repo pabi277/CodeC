@@ -1,5 +1,13 @@
 # Phase 63 — phone checks (NOT RUN)
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](../OWNER_HANDOFF_20260927.md).
+
+**Checklist retained for reference only; the owner is not being asked to run it for this merge.**
+
 Build **bd55e70**, CI **36301860116**:
 https://github.com/pabi277/CodeC/actions/runs/36301860116
 

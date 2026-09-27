@@ -1,5 +1,11 @@
 # CodeC Phase 57 — Editor chrome
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](../OWNER_HANDOFF_20260927.md).
+
 > **Status:** 🚧 **IMPLEMENTED on `arena/01a0c83e-codec`, CI ✅ GREEN** (57.1-57.3, run `35710338114` on tip `7c9619b`; device round not run) · **Cost:** `[client-only]` · **Effort:** M (57.1) + L (57.2) + S (57.3)
 >
 > Parent: [`PHASE54_58_PHONE_UI_ROADMAP.md`](../PHASE54_58_PHONE_UI_ROADMAP.md).

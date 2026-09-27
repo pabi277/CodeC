@@ -1,5 +1,11 @@
 # CodeC — the full journey
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](OWNER_HANDOFF_20260927.md).
+
 **2026-09-09 — Phase 35 editor typing feel is ✅ DEVICE-PASSED (owner report:
 "Device test pass").** The implementation is on `arena/01a086a0-codec` at
 `317b89a`; the follow-up record is `88839cd`, and CI runs `34367008019` and
@@ -1125,3 +1131,6 @@ recipe (steps 1–8).**
 
 
 89. **Phase 63 — Git verify + per-file Discard BUILT, CI-green (2026-09-27).** Owner said “Continue” after 61. Research re-read the seven real shots (Repository 124055 shows an empty-state, not discard semantics); the owner chose **Discard unstaged changes only**, keeping staged changes. Existing pane, diff, staging, commit+push, pull, conflicts and both entry points are retained. The new confirmation names the path; the engine validates the exact literal path, regular stage-0 index entry, current staged/unstaged state and actual worktree root before `checkout-index --force`. No HEAD reset, clean, directory deletion or new-file deletion. Weakly registered editor VMs cover the editor and Projects entry points: unsaved selected buffers are refused, that file's writes are blocked during the operation, and only its buffer/undo state is reconciled in finally. Verification found/fixed `??` being treated as staged and path parsing that stripped leading spaces/misread arrows/failed UTF-8 octal decoding. **Local 134/0**, including nine isolated real-Git cases; CI adds two real EditorViewModel buffer tests. Initial code **`c43ede6` ✅ `36301773302`**; explicit external-worktree guard **`bd55e70` ✅ `36301860116`** — full host unit/screenshot tests and debug/release APK builds, no red rounds. [Records](chat-phase63/README.md) and [device checks G1–G13](chat-phase63/DEVICE_ROUND.md), **not run**; host tests do not assert live GitHub auth or handset UI. 59–63 are now built on the branch, with no new dependency or engine replacement. Next is device acceptance/review, including 61 still pending. No PR, merge or main push; owner gate stands.
+
+
+90. **Owner feedback and merge authorisation (2026-09-27).** Owner: “Ok listen i am not going to run any device test but top view looking all good but i need a polished version so i will create new phase in next chats for every detail fixed”. Then: “Update the docs and my thoughts and merged with main”. Record precisely: top-level appearance looks good; remaining handset rounds are declined/unrun, NOT passed; the earlier blank-editor fix alone retains its explicit “Yes working now” confirmation. The owner wants future chat-defined, detail-by-detail polishing phases, not a claim that the current build is fully polished. Merge is now expressly authorised for [PR #86](https://github.com/pabi277/CodeC/pull/86) after final CI. The PR records the actual merge state/commit. No new phase is invented. [Full thoughts and next-chat handoff](OWNER_HANDOFF_20260927.md); old pending-test/no-authorisation entries remain historical, superseded for this delivery.

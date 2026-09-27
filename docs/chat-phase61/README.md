@@ -1,6 +1,12 @@
 # Phase 61 — Preview tools
 
-Status: **BUILT, CI GREEN** on the session branch; device round pending. No PR/merge authorised.
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](../OWNER_HANDOFF_20260927.md).
+
+Status: **BUILT, CI GREEN**; remaining device round declined by the owner (not run). Merge authorised via PR #86, subject to final CI.
 
 ## Reference lock and inventory (2026-09-27, before edits)
 

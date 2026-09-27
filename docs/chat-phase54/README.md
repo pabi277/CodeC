@@ -1,5 +1,11 @@
 # CodeC Phase 54 — Reference lock (the phone shots, before any chrome)
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](../OWNER_HANDOFF_20260927.md).
+
 > **Status:** 📋 **PLANNED → this doc set is the phase.** Phase 54 changes **no app
 > file**; it is the phase that makes 55–58 citable. · **Cost:** `[docs-only]` ·
 > **Effort:** S (3 parts, all research) ·

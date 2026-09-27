@@ -1,5 +1,11 @@
 # CodeC — Phases 54–58 · the phone UI, reviewed
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](OWNER_HANDOFF_20260927.md).
+
 > **Owner (2026-09-22, this review, verbatim):** *“I don't think removing the full down ber is a good choice i think only removing the project option is ok.”*
 >
 > That row **reverses** the earlier reading of *“after that the project bar no need a separate space at the bottom.”* The earlier sentence was taken to mean delete the whole bottom bar. The owner has now said that is not the choice. **Only the Projects option leaves the bottom bar.** Editor, Terminal, Packages, and Settings stay there.
