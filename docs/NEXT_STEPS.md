@@ -1,3 +1,27 @@
+**2026-09-27 — Phase 66.1: Projects hub — demo seeded once, truthful dialogs,
+one vocabulary.** Discussed first (review + four option questions); owner
+answers verbatim: **"Keep the current cards"**, **"Yes — stay deleted"**,
+**"(a) demo + (b) dialogs + (c) wording — all in one part"**, **"Keep today:
+hub file tree"**. Implemented on `arena/01a0e220-codec`: `demo_flask` is seeded
+once per install (marker `.demo-flask-seeded-v1`; deleted stays deleted); New
+Project / Rename / Import ZIP say *taken* / *invalid* in the field before the
+tap and print a failure inside the open dialog (new pure `ProjectNameCheck`,
+`onFailed` on the three ViewModel operations); search and name fields take
+focus with the right IME action; type rows are radio buttons to TalkBack; the
+tree header names the kind, the breadcrumb no longer dangles, card age uses the
+side panel's words, hub sentences are resources, delete confirms wear the error
+role, the badge reads `CodecPalette.WARNING`. Look unchanged. Local JVM
+prevalidation 192/0 focused + 202/0 source-scan (temporary JUnit shim, not
+Android); Compose files reviewed by hand, CI is their compile evidence. **CI
+verdict for the pushed head is recorded in
+[chat-phase66/PART_66_1 § CI](chat-phase66/PART_66_1_PROJECTS_HUB.md#ci).**
+Not merged; no PR; no device round asked. Deferred, not decided: clone QR
+glyph, chip touch height, `Auto` default, real last-opened history. **Next
+discussion in the owner's order: 67.1 (files, drawer, project search) — ask
+first.** [Record](chat-phase66/README.md).
+
+---
+
 **Owner choices recorded — 2026-09-27:** keep the current look; prioritise
 **Projects and files** for the next discussion (start with proposed 66.1, then
 67.1 if agreed); keep installation progress in Terminal/Output, with **no new

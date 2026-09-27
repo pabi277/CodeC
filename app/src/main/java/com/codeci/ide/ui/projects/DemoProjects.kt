@@ -11,16 +11,22 @@ import java.io.File
  * wizard would (`ProjectConfig.defaultFor` + `ProjectScaffold.writeFiles`),
  * plus a short README.
  *
- * **Change of law (2026-09-12, owner, Phase 45 device round): the demo is
- * ALWAYS present.** It used to be seeded once per install — a marker file in the
- * projects root meant deleting `demo_flask` never brought it back. The Phase 45
- * guided tour walks the user through this project by name (*"change the project
- * folder to demo_flask → select app.py → run"*), so a missing demo would make
- * the tour teach a tap that leads nowhere. [ensure] therefore re-seeds whenever
- * the directory is gone. What it still never does: overwrite or touch an
- * existing `demo_flask` (the user's edits are theirs), or replace a plain FILE
- * of the same name. The marker survives as a *record* of the first seed, not as
- * a gate.
+ * **Law (Phase 66.1, owner 2026-09-27: *"Yes — stay deleted"*): the demo is
+ * seeded at most once per install.** Between 2026-09-12 and Phase 64 it was
+ * re-seeded whenever the directory was missing, because the Phase 45 guided
+ * tour taught the project by name; Phase 64 removed that tour, and with it the
+ * only reason a deleted demo had to come back. Re-seeding made *Delete* on the
+ * hub card look broken (the card never left the list — `deleteProject` reloads
+ * the list, and the reload re-seeded it) and made the hub's designed empty
+ * state unreachable on a real device. The marker file in the projects root is
+ * therefore the gate again, exactly as [SnakeSample] is seeded once on the
+ * first launch: a `demo_flask` the user deleted stays deleted. A user who wants
+ * it back creates a *Flask Web Server* project from the `+` sheet — the same
+ * scaffold, one tap.
+ *
+ * What never changed: an existing `demo_flask` is never overwritten or touched
+ * (the user's edits are theirs), and a plain FILE of the same name blocks the
+ * seed and is left alone.
  */
 object DemoProjects {
 
@@ -28,13 +34,16 @@ object DemoProjects {
     const val TYPE = "python-flask"
 
     /**
-     * The demo's entry file — the one the guided tour tells the user to open and
-     * RUN ▶, and the one `ProjectScaffold` writes for [TYPE]. Named here so the
-     * tour's copy, the drawer's coach-mark anchor and the scaffold cannot drift
-     * apart (`DemoProjectSeedTest` pins it against `ProjectScaffold.filesFor`).
+     * The demo's entry file — the one `ProjectScaffold` writes first for [TYPE]
+     * (`DemoProjectSeedTest` pins it against `ProjectScaffold.filesFor`).
      */
     const val ENTRY_FILE = "app.py"
 
+    /**
+     * Written beside the projects (not inside the demo) when the demo has been
+     * seeded — or found — once. Hidden (leading dot), so `listProjects()` never
+     * lists it as a project. Its presence means "never seed again".
+     */
     private const val MARKER = ".demo-flask-seeded-v1"
 
     private val README = """
@@ -55,29 +64,40 @@ object DemoProjects {
     """.trimIndent() + "\n"
 
     /**
-     * Makes sure the demo project exists, and returns the directory when THIS
-     * call created it (null when it was already there, or the filesystem
-     * refused). Idempotent and safe to call from every list refresh:
-     *  - an existing `demo_flask` directory is never read, rewritten or touched;
-     *  - a missing one is seeded again (the "always present" law above);
+     * Seeds the demo project on the first call of an install, and returns the
+     * directory when THIS call created it (null in every other case). Idempotent
+     * and safe to call from every list refresh:
+     *  - an existing `demo_flask` directory is never read, rewritten or touched
+     *    (and, if the marker is somehow missing beside it, the marker is written
+     *    so the once-per-install rule still holds after the user deletes it);
      *  - a plain file named `demo_flask` blocks the seed and is left alone;
+     *  - a marker without a directory means the user deleted the demo: it stays
+     *    deleted;
      *  - a seed that throws is rolled back, so a half-written demo can never be
-     *    mistaken for a real project (and the next list retries).
+     *    mistaken for a real project (and the next list retries, because the
+     *    marker is written only after a complete seed).
      */
     fun ensure(projectsRoot: File): File? {
         val project = File(projectsRoot, NAME)
-        if (project.isDirectory) return null
+        val marker = File(projectsRoot, MARKER)
+        if (project.isDirectory) {
+            if (!marker.exists()) runCatching { marker.writeText(MARKER_TEXT) }
+            return null
+        }
         if (project.exists()) return null
+        if (marker.exists()) return null
         if (!project.mkdirs()) return null
         return try {
             writeProject(project)
-            File(projectsRoot, MARKER).writeText("seeded 2026-08-31")
+            marker.writeText(MARKER_TEXT)
             project
         } catch (e: Exception) {
             project.deleteRecursively()
             null
         }
     }
+
+    private const val MARKER_TEXT = "seeded once; a deleted demo_flask stays deleted (Phase 66.1)"
 
     private fun writeProject(project: File) {
         val config = ProjectConfig.defaultFor(NAME, TYPE)

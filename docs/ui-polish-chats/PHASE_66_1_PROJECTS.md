@@ -1,7 +1,11 @@
 # Proposed Phase 66.1 — Projects hub and creation
 
-**Status: discussion draft, not approved for implementation.** One part = one
-future chat. No deadline, dependency, new control or replacement engine promised.
+**Status: discussed and agreed on 2026-09-27; implemented on the session branch
+`arena/01a0e220-codec` — see [`docs/chat-phase66/`](../chat-phase66/README.md).**
+The owner's answers are recorded verbatim in *Your thoughts* below. Not merged;
+no PR opened (owner instruction: *"Do not start other phases or merge anything
+automatically"*). One part = one chat. No deadline, dependency, new control or
+replacement engine promised.
 
 ## Owner priority — 2026-09-27
 
@@ -39,8 +43,22 @@ Search/filter combinations; long and duplicate-looking names; recent ordering; c
 
 Suggested starting point, not your decision: Keep cards for now; discuss persistent demo re-seeding before changing it.
 
-**Owner answer:** pending. Record it verbatim here when given; do not present the
-recommendation as approval.
+**Owner answers — 2026-09-27 (chosen from the options offered in chat, recorded
+verbatim as the option labels the owner selected):**
+
+1. *Projects list: keep the current cards, or move to a denser list?* —
+   **"Keep the current cards"**.
+2. *Should a deleted demo_flask stay deleted (like snake already does)?* —
+   **"Yes — stay deleted"** (not the "stay deleted, but restorable" option).
+3. *Which bundle should Part 66.1 implement first?* —
+   **"(a) demo + (b) dialogs + (c) wording — all in one part"**.
+4. *After 'Create' with a typed template (e.g., C Program), where should the
+   user land?* — **"Keep today: hub file tree"**.
+
+Not asked as options, therefore **not decided and not implemented** here: the
+clone dialog's non-functional QR glyph, the filter chips' ≈36 dp touch height,
+the `Auto (detect)` default that scaffolds an empty project, and a real
+"last opened" history for *Recent*. They stay open for a later chat.
 
 ## Implementation and exit, after agreement
 

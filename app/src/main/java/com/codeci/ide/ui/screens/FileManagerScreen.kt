@@ -16,6 +16,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -34,6 +36,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
@@ -65,6 +69,7 @@ import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -98,13 +103,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -135,6 +145,9 @@ import com.codeci.ide.ui.components.ProjectIconView
 import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.ProjectNameCheck
+import com.codeci.ide.ui.projects.ProjectNameProblem
+import com.codeci.ide.ui.projects.ProjectNameVerdict
 import com.codeci.ide.ui.projects.ProjectTransfer
 import com.codeci.ide.ui.projects.ProjectTypes
 import com.codeci.ide.ui.projects.ProjectsHub
@@ -221,6 +234,12 @@ fun FileManagerScreen(
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showHubSheet by remember { mutableStateOf(false) }
+    // Phase 66.1 — the search field takes focus when the 🔍 opens it: the tap
+    // used to show a field and no keyboard, so every search cost a second tap.
+    // (The request is made beside the field, once the field is in the tree —
+    // a FocusRequester with no node attached throws.)
+    val searchFocus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
 
     // Phase 47.1 — the editor drawer's `+ New project…` hand-off (openSheet=1):
     // the sheet opens once on arrival. Route args survive state restore, so
@@ -359,12 +378,19 @@ fun FileManagerScreen(
                                 onValueChange = { searchQuery = it },
                                 placeholder = { Text(stringResource(R.string.hub_search_hint)) },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
+                                // Phase 66.1 — the keyboard's action key is Search and
+                                // it dismisses the keyboard; the list filters as you type.
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(searchFocus),
                                 colors = androidx.compose.material3.TextFieldDefaults.colors(
                                     focusedContainerColor = Color.Transparent,
                                     unfocusedContainerColor = Color.Transparent
                                 )
                             )
+                            LaunchedEffect(Unit) { searchFocus.requestFocus() }
                         } else {
                             // Mockup-exact: a large bold screen title, not a
                             // small app-bar caption.
@@ -378,7 +404,10 @@ fun FileManagerScreen(
                         Column {
                             Text(activeProject!!.name, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                activeProject!!.config.type,
+                                // Phase 66.1 — the same word the card's subtitle uses
+                                // ("Python server"), not the raw config id ("python-flask",
+                                // "auto"): one project, one name for its kind.
+                                hubKindLabel(activeProject!!, hubEntries),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -688,17 +717,58 @@ fun FileManagerScreen(
         // opens the live Web Preview). Default is "auto": no type choice —
         // RUN ▶ detects the type from the project's files.
         var selectedType by remember { mutableStateOf("auto") }
+        // Phase 66.1 — the field says "taken" / "invalid" before the tap
+        // (ProjectNameCheck: the same rules ProjectManager enforces), Create
+        // is enabled only for a name that can be created, and a failure that
+        // still happens (filesystem) is shown INSIDE this dialog — the snackbar
+        // behind an open dialog was the owner's 40.1 clone bug, repeated here.
+        val existingNames = remember(projects) { projects.map { it.name } }
+        val verdict = remember(name, existingNames) { ProjectNameCheck.check(name, existingNames) }
+        var createError by remember { mutableStateOf<String?>(null) }
+        val nameFocus = remember { FocusRequester() }
+        fun submitCreate() {
+            if (!verdict.ok || isBusy) return
+            createError = null
+            viewModel.createProject(
+                context, name, selectedType,
+                onCreated = { project ->
+                    showCreateProject = false
+                    onProjectSelected(project)
+                },
+                onFailed = { createError = it }
+            )
+        }
         AlertDialog(
             onDismissRequest = { showCreateProject = false },
             title = { Text(stringResource(R.string.new_project)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
+                    createError?.let { error ->
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
+                        )
+                    }
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = {
+                            name = it
+                            createError = null
+                        },
                         label = { Text(stringResource(R.string.project_name)) },
-                        singleLine = true
+                        singleLine = true,
+                        isError = verdict.showsError,
+                        supportingText = projectNameSupportingText(verdict),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { submitCreate() }),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(nameFocus)
                     )
+                    // Inside the dialog's own composition: the field exists here.
+                    LaunchedEffect(Unit) { nameFocus.requestFocus() }
                     Spacer(Modifier.height(CodecTokens.space(Space.M)))
                     Text(
                         text = stringResource(R.string.project_type),
@@ -706,53 +776,58 @@ fun FileManagerScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.height(CodecTokens.space(Space.XS)))
-                    ProjectTypes.options.forEach { option ->
-                        val selected = option.id == selectedType
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedType = option.id }
-                                .padding(vertical = CodecTokens.space(Space.S), horizontal = CodecTokens.space(Space.XS)),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (selected) "●" else "○",
-                                color = if (selected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier.padding(end = CodecTokens.space(Space.S))
-                            )
-                            Column(Modifier.weight(1f)) {
+                    // Phase 66.1 — the rows are real radio buttons to TalkBack
+                    // (selectable + Role.RadioButton in one group); the ●/○
+                    // glyphs are unchanged, so the dialog looks as it did.
+                    Column(Modifier.selectableGroup()) {
+                        ProjectTypes.options.forEach { option ->
+                            val selected = option.id == selectedType
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected = selected,
+                                        role = Role.RadioButton,
+                                        onClick = { selectedType = option.id }
+                                    )
+                                    .padding(vertical = CodecTokens.space(Space.S), horizontal = CodecTokens.space(Space.XS)),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = option.label,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = if (selected) "●" else "○",
                                     color = if (selected) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    }
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.padding(end = CodecTokens.space(Space.S))
                                 )
-                                Text(
-                                    text = option.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        text = option.label,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (selected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                    Text(
+                                        text = option.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    if (name.isNotBlank()) {
-                        viewModel.createProject(context, name, selectedType) { project ->
-                            showCreateProject = false
-                            onProjectSelected(project)
-                        }
-                    }
-                }) { Text(stringResource(R.string.create)) }
+                TextButton(
+                    onClick = { submitCreate() },
+                    enabled = verdict.ok && !isBusy
+                ) { Text(stringResource(R.string.create)) }
             },
             dismissButton = {
                 TextButton(onClick = { showCreateProject = false }) { Text(stringResource(R.string.cancel)) }
@@ -769,7 +844,7 @@ fun FileManagerScreen(
                 Column {
                     if (newItemParent.isNotEmpty()) {
                         Text(
-                            text = "In ${newItemParent}",
+                            text = stringResource(R.string.new_item_in, newItemParent),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
@@ -835,12 +910,15 @@ fun FileManagerScreen(
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text(stringResource(R.string.delete)) },
-            text = { Text("Delete ${node.relativePath}? This cannot be undone.") },
+            text = { Text(stringResource(R.string.delete_item_confirm, node.relativePath)) },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteNode(context, node.relativePath)
-                    deleteTarget = null
-                }) { Text(stringResource(R.string.delete)) }
+                TextButton(
+                    onClick = {
+                        viewModel.deleteNode(context, node.relativePath)
+                        deleteTarget = null
+                    },
+                    colors = destructiveTextButtonColors()
+                ) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
                 TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.cancel)) }
@@ -852,12 +930,18 @@ fun FileManagerScreen(
         AlertDialog(
             onDismissRequest = { deleteProjectTarget = null },
             title = { Text(stringResource(R.string.delete_project)) },
-            text = { Text("Delete project ${project.name} and all its files?") },
+            // Phase 66.1 — the sentence says what the file dialog already said:
+            // it cannot be undone (and, since 66.1, a deleted demo_flask really
+            // stays deleted — DemoProjects no longer re-seeds it).
+            text = { Text(stringResource(R.string.delete_project_confirm, project.name)) },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteProject(context, project.name)
-                    deleteProjectTarget = null
-                }) { Text(stringResource(R.string.delete)) }
+                TextButton(
+                    onClick = {
+                        viewModel.deleteProject(context, project.name)
+                        deleteProjectTarget = null
+                    },
+                    colors = destructiveTextButtonColors()
+                ) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
                 TextButton(onClick = { deleteProjectTarget = null }) { Text(stringResource(R.string.cancel)) }
@@ -866,37 +950,82 @@ fun FileManagerScreen(
     }
 
     if (showZipNameDialog) {
+        // Phase 66.1 — same truthfulness as New Project: an unusable name is
+        // said in the field; a taken name is not an error here (the import
+        // appends _2, _3 — ProjectNameCheck.importedNameFor says which), and an
+        // import failure is shown in this dialog, not behind it.
+        val existingNames = remember(projects) { projects.map { it.name } }
+        val verdict = remember(zipProjectName, existingNames) {
+            ProjectNameCheck.check(zipProjectName, existingNames, allowTaken = true)
+        }
+        val importedAs = remember(zipProjectName, existingNames) {
+            ProjectNameCheck.importedNameFor(zipProjectName, existingNames)
+        }
+        var importError by remember { mutableStateOf<String?>(null) }
+        val nameFocus = remember { FocusRequester() }
+        fun dismissZip() {
+            showZipNameDialog = false
+            zipImportUri = null
+        }
+        fun submitZip() {
+            val uri = zipImportUri
+            if (uri == null || !verdict.ok || isBusy) return
+            importError = null
+            viewModel.importZip(
+                context, uri, zipProjectName,
+                onImported = { imported ->
+                    dismissZip()
+                    onProjectSelected(imported)
+                },
+                onFailed = { importError = it }
+            )
+        }
         AlertDialog(
-            onDismissRequest = {
-                showZipNameDialog = false
-                zipImportUri = null
-            },
+            onDismissRequest = { if (!isBusy) dismissZip() },
             title = { Text(stringResource(R.string.import_zip)) },
             text = {
-                OutlinedTextField(
-                    value = zipProjectName,
-                    onValueChange = { zipProjectName = it },
-                    label = { Text(stringResource(R.string.project_name)) },
-                    singleLine = true
-                )
+                Column {
+                    importError?.let { error ->
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
+                        )
+                    }
+                    OutlinedTextField(
+                        value = zipProjectName,
+                        onValueChange = {
+                            zipProjectName = it
+                            importError = null
+                        },
+                        label = { Text(stringResource(R.string.project_name)) },
+                        singleLine = true,
+                        isError = verdict.showsError,
+                        supportingText = when {
+                            verdict.showsError -> projectNameSupportingText(verdict)
+                            importedAs != null && importedAs != verdict.safeName -> {
+                                { Text(stringResource(R.string.project_name_will_import_as, importedAs)) }
+                            }
+                            else -> null
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { submitZip() }),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(nameFocus)
+                    )
+                    LaunchedEffect(Unit) { nameFocus.requestFocus() }
+                }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val uri = zipImportUri
-                    if (uri != null && zipProjectName.isNotBlank()) {
-                        viewModel.importZip(context, uri, zipProjectName) { imported ->
-                            showZipNameDialog = false
-                            zipImportUri = null
-                            onProjectSelected(imported)
-                        }
-                    }
-                }) { Text(stringResource(R.string.import_action)) }
+                TextButton(
+                    onClick = { submitZip() },
+                    enabled = verdict.ok && zipImportUri != null && !isBusy
+                ) { Text(stringResource(R.string.import_action)) }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showZipNameDialog = false
-                    zipImportUri = null
-                }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = { dismissZip() }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -1219,25 +1348,71 @@ fun FileManagerScreen(
 
     renameProjectTarget?.let { project ->
         var newName by remember(project.name) { mutableStateOf(project.name) }
+        // Phase 66.1 — "taken" / "invalid" in the field before the tap, the
+        // project's own name is not a collision, and a rename that still fails
+        // is shown in this dialog rather than in a snackbar behind it.
+        val existingNames = remember(projects) { projects.map { it.name } }
+        val verdict = remember(newName, existingNames, project.name) {
+            ProjectNameCheck.check(newName, existingNames, current = project.name)
+        }
+        var renameError by remember(project.name) { mutableStateOf<String?>(null) }
+        val nameFocus = remember { FocusRequester() }
+        fun submitRename() {
+            if (!verdict.ok || isBusy) return
+            if (verdict.safeName == project.name) {
+                renameProjectTarget = null
+                return
+            }
+            renameError = null
+            viewModel.renameProject(
+                context, project.name, newName.trim(),
+                onRenamed = { renameProjectTarget = null },
+                onFailed = { renameError = it }
+            )
+        }
         AlertDialog(
             onDismissRequest = { renameProjectTarget = null },
             title = { Text(stringResource(R.string.rename_project)) },
             text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text(stringResource(R.string.project_name)) },
-                    singleLine = true
-                )
+                Column {
+                    renameError?.let { error ->
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(bottom = CodecTokens.space(Space.S))
+                        )
+                    }
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = {
+                            newName = it
+                            renameError = null
+                        },
+                        label = { Text(stringResource(R.string.project_name)) },
+                        singleLine = true,
+                        isError = verdict.showsError,
+                        supportingText = when {
+                            verdict.showsError -> projectNameSupportingText(verdict)
+                            verdict.ok && verdict.safeName == project.name -> {
+                                { Text(stringResource(R.string.project_name_unchanged)) }
+                            }
+                            else -> null
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { submitRename() }),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(nameFocus)
+                    )
+                    LaunchedEffect(project.name) { nameFocus.requestFocus() }
+                }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    if (newName.isNotBlank()) {
-                        viewModel.renameProject(context, project.name, newName.trim()) {
-                            renameProjectTarget = null
-                        }
-                    }
-                }) { Text(stringResource(R.string.rename)) }
+                TextButton(
+                    onClick = { submitRename() },
+                    enabled = verdict.ok && !isBusy
+                ) { Text(stringResource(R.string.rename)) }
             },
             dismissButton = {
                 TextButton(onClick = { renameProjectTarget = null }) { Text(stringResource(R.string.cancel)) }
@@ -1245,6 +1420,44 @@ fun FileManagerScreen(
         )
     }
 }
+
+/**
+ * Phase 66.1 — the line under a project-name field, from the pure verdict:
+ * *invalid* and *taken* are said in the field, in the field's own error colour
+ * (M3 `supportingText` + `isError`); an empty or usable name shows nothing, so
+ * the dialog's shape does not change while the user types a good name.
+ */
+private fun projectNameSupportingText(verdict: ProjectNameVerdict): (@Composable () -> Unit)? =
+    when (verdict.problem) {
+        ProjectNameProblem.INVALID -> {
+            { Text(stringResource(R.string.project_name_invalid_hint)) }
+        }
+        ProjectNameProblem.TAKEN -> {
+            { Text(stringResource(R.string.project_name_taken)) }
+        }
+        ProjectNameProblem.EMPTY, null -> null
+    }
+
+/**
+ * Phase 66.1 — the word for a project's kind in the tree header: the hub
+ * entry's kind (what the card's subtitle already says, detector included for
+ * `auto` projects), falling back to the wizard's label for the declared type
+ * before the entries have loaded, and to the generic kind word ("Project")
+ * for anything else. Never the raw config id.
+ */
+private fun hubKindLabel(project: ProjectInfo, entries: List<ProjectHubEntry>): String =
+    entries.firstOrNull { it.name == project.name }?.let { ProjectsHub.kindLabel(it.kind) }
+        ?: ProjectTypes.optionFor(project.config.type)?.label
+        ?: ProjectsHub.kindLabel(ProjectsHub.kindOfConfigType(project.config.type))
+
+/**
+ * Phase 66.1 — a destructive confirm reads as one: the text button's content
+ * in the theme's error role (the Packages screen's UNINSTALL already does
+ * this). Same button, same place, one colour.
+ */
+@Composable
+private fun destructiveTextButtonColors() =
+    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
 
 /** Phase 52.1 — the hub's explicit return door. It is not a new route: the
  * activity keeps the offer session-only and the two actions hand back to the
@@ -1409,7 +1622,11 @@ private fun ProjectsHubListContent(
                 )
                 Spacer(Modifier.height(CodecTokens.space(Space.M)))
                 Text(
-                    stringResource(R.string.hub_no_match),
+                    // Phase 66.1 — a search miss is named as one; "this filter"
+                    // is kept for a chip that really matched nothing.
+                    stringResource(
+                        if (searchQuery.isNotBlank()) R.string.hub_no_search_match else R.string.hub_no_match
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1820,7 +2037,9 @@ private fun HubSheetRow(
     }
 }
 
-private val HubBadgeYellow = Color(0xFFE6B33C)
+// Phase 66.1 — the palette's own amber (`CodecPalette.WARNING`, the same
+// `#E6B33C` the constant used to spell out), so the badge cannot drift from it.
+private val HubBadgeYellow = Color(CodecPalette.WARNING)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1848,12 +2067,15 @@ private fun ProjectTree(
         item {
             Column(Modifier.fillMaxWidth().padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S))) {
                 Text(
-                    text = listOf(project.name, "").joinToString("  >  "),
+                    // Phase 66.1 — the root line is the project's name; the old
+                    // `name  >  ` printed a separator with nothing after it.
+                    text = project.name,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = project.config.entry.takeIf { it.isNotBlank() } ?: "No entry configured",
+                    text = project.config.entry.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.project_entry_none),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -2031,7 +2253,7 @@ private fun EmptyProjectsState(
         // Phase 33.3 — the empty hub points at the three starters (33.1), not
         // a blank list.
         Text(
-            text = "Start with C, Python, or a web page — or import an existing codebase.",
+            text = stringResource(R.string.no_projects_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

@@ -213,7 +213,7 @@
     <string name="server_preview_live">live</string>
     <string name="delete_project">Delete Project</string>
     <string name="no_projects">No projects yet</string>
-    <string name="no_projects_hint">Create a project or import a codebase to get started.</string>
+    <string name="no_projects_hint">Start with C, Python, or a web page — or import an existing codebase.</string>
     <string name="empty_project">This project is empty</string>
     <string name="empty_project_hint">Add a file or folder, or import files from storage.</string>
     <string name="search">Search</string>
@@ -317,7 +317,6 @@
     <string name="replace_all_done">Replaced %1$d occurrence(s)</string>
 
     <!-- Phase 13: GitHub & Git source control -->
-    <string name="clone_from_github">Clone from GitHub</string>
     <string name="clone_url_label">Repository URL</string>
     <string name="clone_name_label">Project name</string>
     <string name="clone_action">Clone</string>
@@ -418,7 +417,6 @@
     <string name="clone_advanced">Advanced</string>
     <string name="clone_branch_label">Branch</string>
     <string name="clone_shallow">Shallow clone (latest commit only)</string>
-    <string name="clone_fetch_branches">Fetch branches</string>
     <string name="clone_no_branches_found">No branches listed — type a name instead</string>
     <string name="clone_invalid_branch">Invalid branch name</string>
     <string name="clone_token_hint">Private repos need a token — add it in</string>
@@ -431,7 +429,6 @@
     <string name="resume_continue">Continue</string>
     <string name="hub_open_action">Open</string>
     <string name="hub_open_in_editor">Open in editor</string>
-    <string name="hub_rename_project">Rename Project</string>
     <string name="hub_copy_remote_url">Copy remote URL</string>
     <string name="hub_remote_url_copied">Remote URL copied</string>
     <string name="hub_no_remote_url">No remote URL configured</string>
@@ -446,6 +443,26 @@
     <string name="invalid_project_name">Invalid project name</string>
     <string name="project_name_taken">A project with that name already exists</string>
     <string name="rename_project">Rename Project</string>
+    <!-- Phase 66.1 — hub dialogs say it in their own window (no snackbar behind
+         a dialog), and the hub's remaining hardcoded sentences become resources. -->
+    <string name="project_name_invalid_hint">Names cannot contain / or \\ and cannot be . or ..</string>
+    <string name="project_name_will_import_as">A project with that name exists — it will be imported as %1$s</string>
+    <string name="project_name_unchanged">Same name as before</string>
+    <string name="project_entry_none">No entry file configured</string>
+    <string name="new_item_in">In %1$s</string>
+    <string name="delete_item_confirm">Delete %1$s? This cannot be undone.</string>
+    <string name="delete_project_confirm">Delete project %1$s and all its files? This cannot be undone.</string>
+    <string name="delete_project_failed">Could not delete project</string>
+    <string name="hub_no_search_match">No projects match your search</string>
+    <string name="import_file_needs_project">Open a project before importing a file</string>
+    <string name="import_failed">Import failed: %1$s</string>
+    <string name="zip_import_failed">ZIP import failed: %1$s</string>
+    <string name="export_done">Exported %1$s</string>
+    <string name="export_failed">Export failed: %1$s</string>
+    <string name="backup_failed">Backup failed: %1$s</string>
+    <string name="backup_imported">Imported backup (%1$d entries)</string>
+    <string name="backup_import_failed">Backup import failed: %1$s</string>
+    <string name="unknown_error">unknown error</string>
     <!-- Phase 16: Spck-style editor shell -->
     <string name="open">Open</string>
     <string name="refresh">Refresh</string>
