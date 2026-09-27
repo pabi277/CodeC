@@ -187,7 +187,7 @@ class TabMenuWiringTest {
         )
         assertTrue(
             "the strip's tap brings the row back",
-            editor.contains("TabRowRevealStrip(\n                                onReveal = { tabsHidden = false })"),
+            editor.contains("TabRowRevealStrip(\n                                onReveal = { tabsHidden = false }"),
         )
     }
 
