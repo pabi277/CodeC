@@ -24,8 +24,15 @@ pin moved with its reason + a new "ask through the pure policy, never move the
 caret" pin), `EditorRowsWiringTest` +1. **No device evidence claimed** — the two
 behaviours are only provable on a handset, and no round was asked. No new
 dependency, permission, preference, telemetry, engine or screen. **No PR and
-nothing merged.** CI run recorded in [the record](chat-phase69/README.md);
-brief with the verbatim answers: [PHASE_69_1_TYPING.md](ui-polish-chats/PHASE_69_1_TYPING.md).
+nothing merged.** **CI: round 1 red for-cause on two self-inflicted pins (a KDoc
+carrying the literal `ensurePositionVisible(`, and one wrong expectation); fixed
+in `f98ae5c` (comment + test only) and round 2 ✅ GREEN —
+[run 36350567066](https://github.com/pabi277/CodeC/actions/runs/36350567066) on
+`f98ae5c`: host unit/screenshot tests (Phase 52), debug APK 26,021,972 B, release
+APK 6,797,484 B, manifest validation, artifacts uploaded.** Brief with the
+verbatim answers:
+[PHASE_69_1_TYPING.md](ui-polish-chats/PHASE_69_1_TYPING.md); full record:
+[chat-phase69/README.md](chat-phase69/README.md).
 
 ---
 

@@ -1,11 +1,14 @@
 # Phase 69.1 — Typing, keyboard and selection
 
-**Status: implemented on `arena/01a0e49f-codec` (owner answers taken before any
-code; see the answer block below).** Re-reviewed on that branch, based on
+**Status: implemented and Android CI ✅ GREEN on `arena/01a0e49f-codec`
+([run 36350567066](https://github.com/pabi277/CodeC/actions/runs/36350567066),
+tested code `f98ae5c`)** — owner answers taken before any code; see the answer
+block below. Round 1 was red for-cause on two self-inflicted pins, fixed in
+`f98ae5c` (a comment and one test expectation, no production behaviour). Based on
 `main` @ `b297765` (the merge of Phase 68.1 / PR #90). One part = one chat. No
-deadline, dependency, new control or replacement engine promised, and no PR/merge
-without the owner's instruction. Implementation record:
-[`chat-phase69/README.md`](../chat-phase69/README.md).
+deadline, dependency, new control or replacement engine promised; no device-round
+evidence claimed, and no PR/merge without the owner's instruction.
+Implementation record: [`chat-phase69/README.md`](../chat-phase69/README.md).
 
 ## Copy into a new chat
 

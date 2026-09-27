@@ -2,7 +2,8 @@
 
 **Date:** 2026-09-27. **Branch:** `arena/01a0e49f-codec`, based on `main` @
 `b297765` (the merge of Phase 68.1 / PR #90).
-**Status:** implemented; Android CI run recorded in §Validation below.
+**Status:** implemented; **Android CI ✅ GREEN on `f98ae5c`
+([run 36350567066](https://github.com/pabi277/CodeC/actions/runs/36350567066))**.
 **No PR opened, nothing merged** — the owner's instruction is required for that.
 
 Reviewed first, then asked, then coded: the current implementation and the real
@@ -154,10 +155,10 @@ and every literal was re-read against the real source before pushing.
 Recorded precisely, in the phase system's three separate columns:
 
 - **Source tests (host/CI):** the three files above; the rest of the suite is
-  unchanged by design. CI is the executor of record (see the run below).
+  unchanged by design.
 - **Android/Compose compile + host test task:** `:app:testDebugUnitTest` on CI,
-  plus `assembleDebug` and the measure-only release build — all recorded in the
-  run below. Nothing here claims a device pass.
+  plus `assembleDebug` and the measure-only release build — all recorded below.
+  Nothing here claims a device pass.
 - **Real device evidence:** **none in this chat.** The air rule and the row's
   memory are visible behaviours a still image cannot prove; the owner's handset
   round is the only honest evidence, and it has not been run (the owner declined
@@ -167,6 +168,52 @@ Recorded precisely, in the phase system's three separate columns:
   then the touch row, and 124105 (keyboard up) shows the chip row + touch row
   above the system keyboard with the caret's blue drop hanging under the caret —
   none of which this part moves.
+
+### CI
+
+Two rounds, and the first one earned its keep:
+
+**Round 1 🔴 for-cause — [run 36350232681](https://github.com/pabi277/CodeC/actions/runs/36350232681), code
+`e7a11d9`.** The Phase 52 host step reported **2260 tests completed, 2 failed** —
+both failures were self-inflicted and both were mine, not the platform's:
+
+1. `CaretCallSiteTest > exactly one ensurePositionVisible call site exists in the
+   app` — that test pins the *raw text* of `app/src/main` and found TWO files
+   with the literal. The second hit was this phase's own policy KDoc, which
+   spelled the call with its parentheses while documenting why a margin argument
+   does not exist. The doc now names the call and its `(line, column)` pair
+   without the literal; the *meaning* is unchanged and the pin still enforces
+   one owner.
+2. `CaretVisibilityPolicyTest > the reveal target is total …` — my new
+   expectation said a caret past the end of a *shorter* buffer reveals line 0;
+   the policy (correctly) clamps to the **last** line. Test expectation
+   corrected, with the intent written next to it.
+
+Fix commit `f98ae5c` changed **no production behaviour**: one comment and one
+test expectation.
+
+**Round 2 ✅ GREEN — [run 36350567066](https://github.com/pabi277/CodeC/actions/runs/36350567066), code `f98ae5c`** (the
+tested head; this documentation finalisation does not change tested code).
+Every step passed: icon assets, release-notes template, signing resolution, the
+**host unit and screenshot step (Phase 52)**, `assembleDebug`, the measure-only
+release build, the release APK set check and the artifact uploads. Reported APK
+facts: **debug `CodeC-IDE-1.3.17-universal-debug.apk` = 26 021 972 B**, **release
+`CodeC-IDE-1.3.17-universal.apk` = 6 797 484 B** (release manifest: no
+`android:debuggable` flag). Release-publish steps stay skipped by design on a
+branch push (publishing is `app-v*`-tag-only).
+
+What the green run does **not** establish: any handset behaviour. The host suite
+proves the pure policy's arithmetic, the pin set and that the Compose half
+compiles and the screens still measure; it cannot prove that the row stays where
+you scrolled it or that the caret gains air above a real keyboard.
+
+### Local prevalidation
+
+None possible: no JDK/`kotlinc` in the sandbox (`which java javac kotlinc` →
+empty, `JAVA_HOME` unset, no `/usr/lib/jvm`) and no network for a toolchain, so
+CI is the executor of record — the same position Phase 68.1 was in. Every pinned
+literal was re-read against the real source before the push, which is exactly how
+round 1's two reds were found by CI rather than by the compiler here.
 
 ## Boundaries
 
