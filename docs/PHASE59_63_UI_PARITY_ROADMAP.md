@@ -165,7 +165,19 @@ Console + Network answer in §3 resolved its ask.)*
   block*, *no local declaration is split from its uses* (both validated against the pre-62 screen).
   CI ✅ **GREEN** `35724187664` on `aa1fcba`.
 
-### 63 — Git pane: verify and fill  *(spec §5)*
+### 63 — Git pane: verify and fill  *(spec §5)* — ✅ **BUILT (2026-09-27)**
+
+Owner chose **Discard unstaged changes only**, preserving staged changes.
+Existing pane/diff/stage/commit+push/pull/conflict machinery verified, not
+rebuilt. New per-file action confirms path, restores only from index, refuses
+unsafe/new/renamed/conflicted paths, and coordinates every open editor so
+stale buffers cannot autosave over restored content. Also fixed the verified
+untracked-stage classification and exact-filename porcelain parsing defects.
+Code `c43ede6` + boundary guard `bd55e70`; CI ✅ `36301773302` / `36301860116`.
+[Records](chat-phase63/README.md), [device checks G1–G13](chat-phase63/DEVICE_ROUND.md)
+**pending**. No new rail shortcut, no Git engine transplant, no merge.
+
+*(The original plan follows; the owner's answer above resolved the discard ask.)*
 - **Verify:** the pane, the staging toggle, diff, commit(+push), pull, conflicts — all exist.
 - **Fill (only after the ask):** a per-file **Discard** (the `Revert` of the spec's wording)
   and, if wanted, a first-class *Source control* entry point in the editor's rail (it is

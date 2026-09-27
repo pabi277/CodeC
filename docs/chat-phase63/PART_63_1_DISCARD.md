@@ -56,6 +56,15 @@ repositories, cover index preservation, deletion restore, exact unusual names,
 new/renamed/staged-only refusals, path boundaries, merge stages/gitlinks and
 an unborn repository. Local Unicode filesystem tests require C.UTF-8 (the
 sandbox starts without a UTF-8 locale). Two actual EditorViewModel buffer tests
-are written for Robolectric and await CI; no local Android build was claimed.
+are written for Robolectric and passed in CI; no local Android build was claimed.
 
 Additional boundary check: the engine verifies `git rev-parse --show-toplevel` matches the selected project. A repo with `core.worktree` pointing elsewhere is refused; a real-Git test asserts the external file remains untouched.
+
+
+## CI verdict
+
+`c43ede6` ✅ `36301773302`; boundary guard `bd55e70` ✅ `36301860116`.
+Full host unit/screenshot task, Android compilation, debug/release builds and
+artifact checks green. [Device checks](DEVICE_ROUND.md) pending; no PR/merge.
+The previously approved meaning is preserved: restore FROM INDEX, never HEAD;
+no new-file deletion and no staged changes removed.
