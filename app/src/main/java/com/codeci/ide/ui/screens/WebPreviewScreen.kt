@@ -1,30 +1,34 @@
 package com.codeci.ide.ui.screens
 
-import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.webkit.ConsoleMessage
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import com.codeci.ide.ui.components.PreviewToolsPanel
+import com.codeci.ide.ui.components.PreviewZoomDialog
+import com.codeci.ide.ui.components.PreviewResolutionDialog
+import com.codeci.ide.ui.components.PreviewWebView
+import com.codeci.ide.ui.services.PreviewToolsPolicy
+import com.codeci.ide.ui.services.PreviewToolTab
+import com.codeci.ide.ui.services.PreviewLevel
+import com.codeci.ide.ui.services.PreviewResolution
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -79,8 +83,9 @@ import java.io.File
 /**
  * Phase 5.2: preview an HTML file (and its sibling CSS/JS/images) in an
  * in-app WebView. The page is loaded from the app-private project directory
- * via `file://` so relative references resolve; JS console output is shown in
- * a bottom strip, and the page auto-reloads when the file changes on disk.
+ * via the existing static HTTP server (file:// fallback) or a live server URL.
+ * The optional console/Network panel and viewport controls are screen-local;
+ * the page still auto-reloads when its watched file changes on disk.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,7 +105,15 @@ fun WebPreviewScreen(
     val reloadTick by viewModel.reloadTick.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    var webView by remember { mutableStateOf<WebView?>(null) }
+    var webView by remember { mutableStateOf<PreviewWebView?>(null) }
+    val network by viewModel.network.collectAsState()
+    var toolsVisible by remember { mutableStateOf(false) }
+    var toolTab by remember { mutableStateOf(PreviewToolTab.CONSOLE) }
+    var levels by remember { mutableStateOf(PreviewLevel.entries.toSet()) }
+    var requestedHeight by remember { mutableStateOf(240f) }
+    var zoomDialog by remember { mutableStateOf(false) }
+    var resolutionDialog by remember { mutableStateOf(false) }
+    var resolution by remember { mutableStateOf(PreviewResolution.DEVICE) }
     var currentUrl by remember { mutableStateOf<String?>(liveUrl) }
 
     // Phase 9.1: serve the whole folder over a loopback HTTP server so
@@ -212,7 +225,7 @@ fun WebPreviewScreen(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().imePadding()) {
         TopAppBar(
             title = {
                 Text(htmlFile?.name ?: (fileName ?: if (isLive) "Live server" else "Preview"))
@@ -301,6 +314,19 @@ fun WebPreviewScreen(
                                             showServerPanel = true
                                         }
                                     )
+                                    PreviewLink.CONSOLE -> DropdownMenuItem(
+                                        text = { Text(stringResource(if (toolsVisible)
+                                            R.string.preview_hide_console else R.string.preview_show_console)) },
+                                        onClick = { menuOpen = false; toolsVisible = !toolsVisible }
+                                    )
+                                    PreviewLink.ZOOM -> DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.preview_zoom)) },
+                                        onClick = { menuOpen = false; zoomDialog = true }
+                                    )
+                                    PreviewLink.RESOLUTION -> DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.preview_resolution)) },
+                                        onClick = { menuOpen = false; resolutionDialog = true }
+                                    )
                                     PreviewLink.STOP_SERVERS -> DropdownMenuItem(
                                         text = { Text(stringResource(R.string.preview_menu_stop_servers)) },
                                         onClick = {
@@ -388,44 +414,67 @@ fun WebPreviewScreen(
             }
         }
 
-        if (error != null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = error.orEmpty(),
-                    modifier = Modifier.padding(24.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                factory = { ctx -> createWebView(ctx, viewModel) { webView = it } }
-            )
-
-            if (console.isNotEmpty()) {
-                HorizontalDivider()
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .background(Color(0xFF111318))
-                        .verticalScroll(rememberScrollState())
-                        .padding(8.dp)
+        // Height comes from remaining content constraints, not screen metrics.
+        // Diagnostics are unweighted but bounded; the page owns the remainder.
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+            val available = maxHeight.value
+            val panelHeight = PreviewToolsPolicy.panelHeight(requestedHeight, available)
+            Column(Modifier.fillMaxSize()) {
+                BoxWithConstraints(
+                    Modifier.fillMaxWidth().weight(1f).clipToBounds(),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    console.takeLast(60).forEach { line ->
-                        Text(
-                            text = line,
-                            color = Color(0xFFA6E22E),
-                            fontFamily = CodecType.codeFamily,
-                            fontSize = 11.sp
-                        )
+                    val simulated = resolution != PreviewResolution.DEVICE
+                    val width = if (simulated) resolution.widthDp.dp else maxWidth
+                    val height = if (simulated) resolution.heightDp.dp else maxHeight
+                    val fit = PreviewToolsPolicy.fitScale(maxWidth.value, maxHeight.value,
+                        width.value, height.value)
+                    // requiredSize controls native measurement; layer scaling fits
+                    // the page visually without lying to responsive CSS about size.
+                    AndroidView(
+                        modifier = Modifier.requiredSize(width, height)
+                            .graphicsLayer { scaleX = fit; scaleY = fit },
+                        factory = { ctx -> PreviewWebView(ctx, viewModel).also { webView = it } },
+                        onRelease = { released ->
+                            released.disposePreview()
+                            if (webView === released) webView = null
+                        },
+                    )
+                    // Keep the native view alive under an error, so fixing the
+                    // target can load it again instead of waiting for a missing view.
+                    if (error != null) {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+                            contentAlignment = Alignment.Center) {
+                            Text(error.orEmpty(), modifier = Modifier.padding(24.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
+                }
+                if (toolsVisible) {
+                    PreviewToolsPanel(
+                        console = console, network = network, tab = toolTab, levels = levels,
+                        height = panelHeight, availableHeight = available,
+                        onTab = { toolTab = it },
+                        onLevel = { level -> levels = if (level in levels) levels - level else levels + level },
+                        onResize = { delta -> requestedHeight = PreviewToolsPolicy.panelHeight(
+                            PreviewToolsPolicy.panelHeight(requestedHeight, available) + delta, available) },
+                        onHeight = { requestedHeight = PreviewToolsPolicy.panelHeight(it, available) },
+                        onClear = { if (toolTab == PreviewToolTab.CONSOLE)
+                            viewModel.clearConsole() else viewModel.clearNetwork() },
+                        onClose = { toolsVisible = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
     }
+    if (zoomDialog) PreviewZoomDialog(
+        onDismiss = { zoomDialog = false }, onZoom = { webView?.applyZoom(it) }
+    )
+    if (resolutionDialog) PreviewResolutionDialog(
+        selected = resolution, onDismiss = { resolutionDialog = false },
+        onResolution = { resolution = it }
+    )
 
     // Initial load once the WebView instance and the target URL are known.
     LaunchedEffect(webView, htmlFile, liveUrl, serverPort) {
@@ -459,11 +508,6 @@ fun WebPreviewScreen(
         }
     }
 
-    // Start live-reload watching for the resolved file (static mode only).
-    LaunchedEffect(htmlFile, liveUrl) {
-        if (liveUrl == null) htmlFile?.let { viewModel.watch(it) }
-    }
-
     // Phase 14 — live server mode: server templates read index.html per
     // request, so watching the project's index.html makes Save → auto-reload
     // work exactly like the static preview (Reload always works too).
@@ -477,50 +521,17 @@ fun WebPreviewScreen(
             null
         }
     }
-    LaunchedEffect(liveWatchFile, liveUrl) {
-        if (liveWatchFile != null) viewModel.watch(liveWatchFile)
+    LaunchedEffect(htmlFile, liveWatchFile, liveUrl) {
+        viewModel.watch(if (liveUrl == null) htmlFile else liveWatchFile)
+    }
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.watch(null) }
     }
 
     // Reload the WebView whenever the file changed on disk or Refresh was tapped.
     LaunchedEffect(reloadTick) {
         if (reloadTick > 0) webView?.reload()
     }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
-private fun createWebView(
-    context: Context,
-    viewModel: WebPreviewViewModel,
-    onCreated: (WebView) -> Unit
-): WebView =
-    WebView(context).apply {
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        // Loading the user's own project files from file:// requires sibling
-        // file access; universal (cross-origin) file access stays off.
-        settings.allowFileAccess = true
-        settings.allowFileAccessFromFileURLs = true
-        settings.allowUniversalAccessFromFileURLs = false
-        webViewClient = WebViewClient()
-        webChromeClient = object : WebChromeClient() {
-            override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-                viewModel.addConsole(
-                    levelLabel(consoleMessage.messageLevel()),
-                    consoleMessage.message(),
-                    consoleMessage.lineNumber()
-                )
-                return true
-            }
-        }
-        onCreated(this)
-    }
-
-private fun levelLabel(level: ConsoleMessage.MessageLevel): String = when (level) {
-    ConsoleMessage.MessageLevel.ERROR -> "error"
-    ConsoleMessage.MessageLevel.WARNING -> "warn"
-    ConsoleMessage.MessageLevel.TIP -> "info"
-    ConsoleMessage.MessageLevel.DEBUG -> "debug"
-    ConsoleMessage.MessageLevel.LOG -> "log"
 }
 
 private fun resolveServedRoot(context: Context, projectName: String?, htmlFile: File?): File? {

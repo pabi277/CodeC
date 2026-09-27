@@ -33,16 +33,16 @@ class PreviewChromePolicyTest {
     ) = PreviewChromeFacts(hasAddress, addressIsHttp, hasPeerUrl, ownsStaticServer, serverCount)
 
     @Test
-    fun `a preview with nothing to offer draws no hamburger`() {
+    fun `preview tools are available even before the address resolves`() {
         val nothing = plain(
             hasAddress = false,
             addressIsHttp = false,
             ownsStaticServer = false,
             serverCount = 0,
         )
-        assertEquals(emptyList<PreviewLink>(), PreviewChromePolicy.links(nothing))
-        assertFalse(
-            "an icon whose menu is empty is a dead control",
+        assertEquals(listOf(PreviewLink.CONSOLE, PreviewLink.ZOOM, PreviewLink.RESOLUTION), PreviewChromePolicy.links(nothing))
+        assertTrue(
+            "Phase 61 tools remain usable with empty diagnostics and no server",
             PreviewChromePolicy.hasMenu(nothing),
         )
     }
@@ -53,7 +53,7 @@ class PreviewChromePolicyTest {
         // is real before the page loads — and the panel has always shown it that
         // way (it renders from the endpoints, not from the page).
         val starting = plain(hasAddress = false, addressIsHttp = false, serverCount = 0)
-        assertEquals(listOf(PreviewLink.LAN_SHARING), PreviewChromePolicy.links(starting))
+        assertEquals(listOf(PreviewLink.LAN_SHARING, PreviewLink.CONSOLE, PreviewLink.ZOOM, PreviewLink.RESOLUTION), PreviewChromePolicy.links(starting))
     }
 
     @Test
@@ -64,6 +64,9 @@ class PreviewChromePolicyTest {
                 PreviewLink.OPEN_PHONE_BROWSER,
                 PreviewLink.LAN_SHARING,
                 PreviewLink.SERVER_OPTIONS,
+                PreviewLink.CONSOLE,
+                PreviewLink.ZOOM,
+                PreviewLink.RESOLUTION,
             ),
             PreviewChromePolicy.links(plain()),
         )

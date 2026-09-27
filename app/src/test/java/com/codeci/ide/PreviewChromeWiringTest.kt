@@ -53,6 +53,9 @@ class PreviewChromeWiringTest {
             "LAN_SHARING",
             "SERVER_OPTIONS",
             "STOP_SERVERS",
+            "CONSOLE",
+            "ZOOM",
+            "RESOLUTION",
         )) {
             assertTrue("PreviewLink.$link is offered but never handled", code.contains("PreviewLink.$link ->"))
         }

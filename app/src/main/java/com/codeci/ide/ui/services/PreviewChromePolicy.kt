@@ -25,9 +25,8 @@ package com.codeci.ide.ui.services
  * screen: a browser that hid the address would be the one thing worse than the
  * bar it replaced.
  *
- * Deliberately a `List` (order is the menu's order) and deliberately empty when
- * there is nothing to offer: an icon whose menu is empty is a dead control, and
- * this app does not draw those.
+ * Deliberately a `List` (order is the menu's order). Phase 61 appends tools
+ * that work even without an address; an empty console must remain openable.
  */
 enum class PreviewLink {
     /** The page's own address onto the clipboard (always available once loaded). */
@@ -47,6 +46,10 @@ enum class PreviewLink {
 
     /** Stop the servers the registry knows about (more than one, as ever). */
     STOP_SERVERS,
+
+    CONSOLE,
+    ZOOM,
+    RESOLUTION,
 }
 
 /**
@@ -84,6 +87,10 @@ object PreviewChromePolicy {
         // this very page is not an action the old chrome ever offered, and a
         // menu must not grow a way to break the screen it belongs to.
         if (facts.serverCount > 1) add(PreviewLink.STOP_SERVERS)
+        // Diagnostics and view controls work even before any address resolves.
+        add(PreviewLink.CONSOLE)
+        add(PreviewLink.ZOOM)
+        add(PreviewLink.RESOLUTION)
     }
 
     /** The ☰ is drawn only when it has something behind it. */

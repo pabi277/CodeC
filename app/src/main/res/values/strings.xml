@@ -541,5 +541,21 @@
     <string name="panel_repository_no_branch">No branch yet</string>
     <string name="panel_repository_changes">Changes: %1$d</string>
     <string name="panel_repository_open">Source Control</string>
+    <!-- Phase 61: preview diagnostics and viewport controls -->
+    <string name="preview_console">Console</string>
+    <string name="preview_network">Network</string>
+    <string name="preview_show_console">Show console / Network</string>
+    <string name="preview_hide_console">Hide console / Network</string>
+    <string name="preview_resize">Resize preview console</string>
+    <string name="preview_clear">Clear</string>
+    <string name="preview_close">Close</string>
+    <string name="preview_console_empty">No messages match the selected levels.</string>
+    <string name="preview_network_empty">No HTTP(S) requests observed. Refresh the page to capture requests.</string>
+    <string name="preview_network_limits">Observed requests only — not responses or timings. Some traffic and redirects are not reported by WebView. Credentials, query and fragment omitted. Latest 200 retained.</string>
+    <string name="preview_zoom">Zoom</string>
+    <string name="preview_zoom_note">Apply a zoom preset without reloading. Pinch zoom is also available; page and WebView zoom limits still apply.</string>
+    <string name="preview_resolution">Screen resolution</string>
+    <string name="preview_device">Device — available space</string>
+    <string name="preview_resolution_note">Simulated viewport in logical dp, fitted to the available space. Not device or pixel-density emulation. Page viewport settings and zoom still apply.</string>
 </resources>
 
