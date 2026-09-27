@@ -8,6 +8,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -78,13 +79,14 @@ fun EditorTabBar(
     if (tabs.isEmpty()) return
     var menuPath by remember { mutableStateOf<String?>(null) }
     val underlineColor = MaterialTheme.colorScheme.primary
-    // fillMaxHeight stretches the strip to the app-bar's full height so the
-    // 3dp underline lands on the bar's bottom edge (mockup-exact), while the
-    // tab labels stay vertically centered.
+    // This strip now lives in a Column, not the bounded app-bar title slot.
+    // Filling the incoming height consumes the editor viewport and centres
+    // the tabs in an otherwise blank screen. Bound the strip itself; only
+    // its inner tab boxes may fill that height (device report 2026-09-27).
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .fillMaxHeight()
+            .height(48.dp)
             .background(MaterialTheme.colorScheme.surface)
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 4.dp),
