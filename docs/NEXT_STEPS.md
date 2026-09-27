@@ -1,3 +1,48 @@
+**2026-09-27 — Phase 68.1 completed part: the three owner-approved additions
+are built and CI GREEN.** After the close-out below, the owner asked what the
+phase still needed and approved all three findings: **(1)** the Markdown
+preview now really renders Markdown — pure host-tested `MarkdownPreview`
+(subset → HTML, escaped input, sanitised URLs, no-JS themed shell) wired into
+`WebPreviewScreen` via `loadDataWithBaseURL`, fixing the raw-source preview
+that contradicted Q4=C; **(2)** the JSON Keys row from Spck shot 204937 —
+`:` + `,` + one null/true/false cap; **(3)** the sort door's ✓ survives
+editor re-entry (`lastTabSort` now lives in the view model). **GREEN, first
+round: [run 36346189970](https://github.com/pabi277/CodeC/actions/runs/36346189970)**
+on code `8c862c5` — host unit/screenshot tests, debug APK 26,021,016 B,
+release APK 6,798,016 B. Still no PR/merge without owner instruction —
+**until the owner's handset round came back: “Everything looks good merge
+it” (2026-09-27). Delivery authorised: PR from `arena/01a0e444-codec` to
+`main`; the PR timeline is the final-check/merge-commit record.**
+**Next after merge: the 69.1 discussion (typing, keyboard and selection) in a
+new chat — review and questions first, no code before the owner answers.**
+[Record](chat-phase68/README.md).
+
+---
+
+**2026-09-27 — Phase 68.1 closed out: full Android CI ✅ GREEN on
+`arena/01a0e444-codec`, no return to the earlier chat needed.** The whole tree
+of `arena/01a0e36f-codec` at `472579d` (Phase 68.1 compact Spck parity:
+48dp breadcrumb top bar, 40dp tab bar with italic active + fixed dirty dot,
+split tab-menu doors — close-only ⋮ menu + ≡↓ sort door with Queue and
+checkmark, compact status bar, MD preview via Run) was mirrored byte-for-byte
+onto `arena/01a0e444-codec` (`9e7280b`) and repaired: that branch's CI had
+been red on a compile error (missing `clickable` import, fixed there by
+`472579d`) and on one self-contradictory test — `TabMenuWiringTest > the flag
+is published once and cleared on the way out`, whose exact-match literal had
+been given a trailing `)` that cannot coexist with the
+`modifier = Modifier.weight(1f)` argument the sibling test requires; the
+literal reverted to the `)`-free form `main` uses (`7ca3880`). **GREEN, first
+round on the repaired code: [run
+36343503123](https://github.com/pabi277/CodeC/actions/runs/36343503123)** —
+host unit/screenshot tests, debug APK 26,013,004 B, release APK 6,794,264 B,
+manifest validation, artifacts uploaded. No PR opened and nothing merged —
+owner instruction still required. **Next: owner handset round (compact Spck
+parity: top-bar breadcrumb, 40dp tabs, the two menu doors, status bar, Run ▶
+opening MD preview), then merge decision.**
+[Record](chat-phase68/README.md).
+
+---
+
 **2026-09-27 — Phase 66.1 delivered: owner device-verified and merge-authorised
 (verbatim: "Device verified merge it to the main") via
 [PR #88](https://github.com/pabi277/CodeC/pull/88).** The PR records the

@@ -14,6 +14,15 @@ object WebFileSupport {
         return lower.endsWith(".html") || lower.endsWith(".htm")
     }
 
+    fun isMarkdown(name: String): Boolean {
+        val lower = name.lowercase()
+        return lower.endsWith(".md") || lower.endsWith(".markdown")
+    }
+
+    fun isPreviewable(name: String): Boolean {
+        return isHtml(name) || isMarkdown(name)
+    }
+
     fun isWeb(name: String): Boolean {
         val lower = name.lowercase()
         return WEB_EXTENSIONS.any { lower.endsWith(".$it") }

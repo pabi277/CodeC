@@ -36,7 +36,11 @@ class PreviewToolsWiringTest {
         assertTrue(screen.contains("Modifier.requiredSize(width, height)"))
         assertTrue(screen.contains(".graphicsLayer { scaleX = fit; scaleY = fit }"))
         assertTrue(screen.contains(".weight(1f).clipToBounds()"))
-        assertTrue(screen.contains("if (reloadTick > 0) webView?.reload()"))
+        assertTrue(screen.contains("if (reloadTick > 0) {"))
+        // Phase 68.1 (completed part) — HTML still reloads in place; Markdown
+        // must RE-RENDER, or a raw reload would show the source again.
+        assertTrue(screen.contains("wv.reload()"))
+        assertTrue(screen.contains("loadMarkdownInto(wv, file, previewDark)"))
         assertTrue(screen.contains("OpenInBrowser.openOrCopy("))
     }
 }

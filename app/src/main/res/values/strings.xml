@@ -477,11 +477,13 @@
          choice), and `tab_show` is shared with the bottom bar's reveal handle so
          the two reveal affordances say the same word. -->
     <string name="tab_close_unmodified">Close unmodified</string>
+    <string name="tab_quick_close">Quick Close</string>
     <string name="tab_hide">Hide tabs</string>
     <string name="tab_show">Show tabs</string>
-    <string name="tab_sort_name">Sort by name</string>
-    <string name="tab_sort_extension">Sort by extension</string>
-    <string name="tab_sort_path">Sort by path</string>
+    <string name="tab_sort_name">Sort Alphabetically</string>
+    <string name="tab_sort_extension">Sort by Ext.</string>
+    <string name="tab_sort_path">Sort by Path</string>
+    <string name="tab_sort_queue">Queue (Unsorted)</string>
     <string name="editor_scratch_mode">Single files</string>
     <string name="editor_drawer_switch_hint">Tap to switch folder</string>
     <string name="editor_drawer_source_control">Source Control</string>

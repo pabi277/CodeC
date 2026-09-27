@@ -8,16 +8,22 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,13 +38,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
-import com.codeci.ide.ui.components.FileIconView
-import com.codeci.ide.ui.editor.TabSort
-import com.codeci.ide.ui.editor.TabSortPolicy
+import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecTokens.Space
+import com.codeci.ide.ui.theme.CodecTokens.Radius
 
 /** View model of one editor tab for the tab strip. */
 data class EditorTabUi(
@@ -48,18 +53,9 @@ data class EditorTabUi(
 )
 
 /**
- * Phase 16 (mockup-exact) tab strip: horizontally scrollable file tabs in the
- * top bar title slot — plain bold/regular labels, the active one with a 3dp
- * accent underline on the bar's bottom edge and a ● dirty dot. No per-tab ✕
- * (the mockups show none): long-press offers the tab menu, and the top-bar
- * overflow keeps "Close file".
- *
- * Phase 60 grew that menu to the spec's §2 list: the close family gains
- * *Close unmodified*, *Hide tabs* folds the row into [TabRowRevealStrip], and
- * the three sorts ([TabSort]) close the list behind their own divider. The
- * sorts are one-shot re-orders — the menu marks no choice, because after the
- * tap the order *is* the choice, and a tick would claim a mode that no longer
- * exists the moment a new file opens.
+ * Phase 68.1 — compact Spck-style tab strip: 40dp high, 8dp inner padding,
+ * italic active, subtle underline, fixed dirty dot. Close menu only (6 rows);
+ * sort lives in its own door (sort icon) for Spck parity, shortest.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -73,29 +69,23 @@ fun EditorTabBar(
     onCopyPath: (String) -> Unit = {},
     onCloseUnmodified: () -> Unit = {},
     onHideTabs: () -> Unit = {},
-    onSort: (TabSort) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (tabs.isEmpty()) return
     var menuPath by remember { mutableStateOf<String?>(null) }
-    val underlineColor = MaterialTheme.colorScheme.primary
-    // This strip now lives in a Column, not the bounded app-bar title slot.
-    // Filling the incoming height consumes the editor viewport and centres
-    // the tabs in an otherwise blank screen. Bound the strip itself; only
-    // its inner tab boxes may fill that height (device report 2026-09-27).
+    val underlineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+    val dirtyColor = MaterialTheme.colorScheme.primary
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(CodecTokens.space(Space.XXL + Space.S))
             .background(MaterialTheme.colorScheme.surface)
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 4.dp),
+            .padding(horizontal = CodecTokens.space(Space.XXS)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         tabs.forEach { tab ->
             val active = tab.path == activePath
-            // Full-height tab box: the label stays centered while the 3dp
-            // accent underline is anchored to the app bar's bottom edge.
             Box(
                 modifier = Modifier.fillMaxHeight(),
                 contentAlignment = Alignment.Center
@@ -106,8 +96,8 @@ fun EditorTabBar(
                             if (active) {
                                 drawRect(
                                     color = underlineColor,
-                                    topLeft = Offset(0f, size.height - 3.dp.toPx()),
-                                    size = Size(size.width, 3.dp.toPx())
+                                    topLeft = Offset(0f, size.height - CodecTokens.space(Space.XXS).toPx()),
+                                    size = Size(size.width, CodecTokens.space(Space.XXS).toPx())
                                 )
                             }
                         }
@@ -115,34 +105,39 @@ fun EditorTabBar(
                             onClick = { onSelect(tab.path) },
                             onLongClick = { menuPath = tab.path }
                         )
-                        .padding(horizontal = 12.dp),
+                        .padding(horizontal = CodecTokens.space(Space.S)),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     FileIconView(
                         name = tab.name,
                         isDirectory = false,
-                        modifier = Modifier.padding(end = 6.dp).size(16.dp),
+                        modifier = Modifier.padding(end = CodecTokens.space(Space.XS)).size(CodecTokens.space(Space.M)),
                         tint = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = tab.name + if (tab.isDirty) " ●" else "",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-                        color = if (active) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        text = tab.name,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontStyle = if (active) FontStyle.Italic else FontStyle.Normal,
+                        color = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (tab.isDirty) {
+                        Spacer(Modifier.width(CodecTokens.space(Space.XS)))
+                        Box(
+                            modifier = Modifier
+                                .size(CodecTokens.space(Space.XS + Space.XXS))
+                                .background(dirtyColor, CircleShape)
+                        )
+                    }
                 }
                 DropdownMenu(
                     expanded = menuPath == tab.path,
                     onDismissRequest = { menuPath = null }
                 ) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.close_tab)) },
+                        text = { Text(stringResource(R.string.tab_quick_close)) },
+                        leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
                         onClick = {
                             menuPath = null
                             onClose(tab.path)
@@ -150,71 +145,61 @@ fun EditorTabBar(
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.tab_close_others)) },
+                        leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
                         onClick = {
                             menuPath = null
                             onCloseOthers(tab.path)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.tab_close_all)) },
-                        onClick = {
-                            menuPath = null
-                            onCloseAll()
-                        }
-                    )
-                    // Phase 60 — the spec's own row: close every tab that has
-                    // nothing unsaved. The law lives in `TabClosePolicy`; this
-                    // row is only its door.
-                    DropdownMenuItem(
                         text = { Text(stringResource(R.string.tab_close_unmodified)) },
+                        leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
                         onClick = {
                             menuPath = null
                             onCloseUnmodified()
                         }
                     )
                     DropdownMenuItem(
+                        text = { Text(stringResource(R.string.tab_close_all)) },
+                        leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
+                        onClick = {
+                            menuPath = null
+                            onCloseAll()
+                        }
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
                         text = { Text(stringResource(R.string.tab_copy_path)) },
+                        leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
                         onClick = {
                             menuPath = null
                             onCopyPath(tab.path)
                         }
                     )
-                    // Phase 60 — the view rows are a group of their own: what
-                    // the row looks like, then how it is ordered.
                     HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.tab_hide)) },
+                        leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
                         onClick = {
                             menuPath = null
                             onHideTabs()
                         }
                     )
-                    HorizontalDivider()
-                    TabSortPolicy.MENU_ORDER.forEach { sort ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(TabSortLabels.of(sort))) },
-                            onClick = {
-                                menuPath = null
-                                onSort(sort)
-                            }
-                        )
-                    }
                 }
             }
         }
     }
 }
 
-/**
- * Phase 60 — the tab row, folded away: the same reveal idiom Phase 32.1 gave
- * the bottom bar (a thin pill and one word), for the same reason. The row is
- * not gone, it is parked; a tap anywhere on this strip brings it back, and
- * bringing it back also un-parks the bottom bar, because both are one flag.
- *
- * The editor-menu cell at the row's right edge is deliberately NOT part of the
- * fold: undo, save, format and the rest live in that cell's list, and hiding
- * the tabs must never take the editor's actions with it.
- */
+internal object TabSortLabels {
+    fun of(sort: com.codeci.ide.ui.editor.TabSort): Int = when (sort) {
+        com.codeci.ide.ui.editor.TabSort.QUEUE -> com.codeci.ide.R.string.tab_sort_queue
+        com.codeci.ide.ui.editor.TabSort.NAME -> com.codeci.ide.R.string.tab_sort_name
+        com.codeci.ide.ui.editor.TabSort.EXTENSION -> com.codeci.ide.R.string.tab_sort_extension
+        com.codeci.ide.ui.editor.TabSort.PATH -> com.codeci.ide.R.string.tab_sort_path
+    }
+}
+
 @Composable
 fun TabRowRevealStrip(
     onReveal: () -> Unit,
@@ -223,39 +208,25 @@ fun TabRowRevealStrip(
     Box(
         modifier = modifier
             .clickable(onClick = onReveal)
-            .padding(vertical = 6.dp),
+            .height(CodecTokens.space(Space.XXL + Space.S))
+            .padding(horizontal = CodecTokens.space(Space.S)),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(width = 44.dp, height = 4.dp)
+                    .size(width = CodecTokens.space(Space.XL + Space.XS), height = CodecTokens.space(Space.XXS))
                     .background(
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
-                        RoundedCornerShape(2.dp)
+                        RoundedCornerShape(CodecTokens.radius(Radius.XS))
                     )
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(CodecTokens.space(Space.XS + Space.XXS)))
             Text(
                 text = stringResource(R.string.tab_show),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-/**
- * Phase 60 — [TabSort]'s label, in the menu's own terms. A `when` over every
- * entry rather than a lookup table, so adding a sort without a label is a
- * compile error here instead of a blank row on a device (`TabMenuWiringTest`
- * holds the other half: the menu walks [TabSortPolicy.MENU_ORDER]).
- */
-internal object TabSortLabels {
-
-    fun of(sort: TabSort): Int = when (sort) {
-        TabSort.NAME -> R.string.tab_sort_name
-        TabSort.EXTENSION -> R.string.tab_sort_extension
-        TabSort.PATH -> R.string.tab_sort_path
     }
 }

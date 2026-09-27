@@ -38,6 +38,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
@@ -498,6 +504,11 @@ fun EditorScreen(
     // reads it). Session-scoped like `keysRowVisible`: a view choice, not a
     // setting, so it never survives into a fresh launch as a missing row.
     var tabsHidden by remember { mutableStateOf(false) }
+    // Phase 68.1 (completed part) — the sort door's ✓ now reads the view
+    // model's own last sort: leaving and re-entering the editor keeps both
+    // the sorted order AND the checkmark, so the ✓ never lies about the row.
+    val lastTabSort by viewModel.lastTabSort.collectAsState()
+    var showSortMenu by remember { mutableStateOf(false) }
     // ---- Phase 55 — the side panel's own state --------------------------
     // Owner follow-up: Files is the editor menu's default;
     // the user's
@@ -795,10 +806,10 @@ fun EditorScreen(
         return entry.takeIf { target.isFile && WebFileSupport.isHtml(target.name) }
     }
 
-    /** The file the 👁 button previews: the active HTML file, else the project default. */
+    /** The file the 👁 button previews: the active HTML/MD file, else the project default. */
     fun previewEntryOrNull(): String? {
         val name = viewModel.fileName.value
-        return if (WebFileSupport.isHtml(name)) {
+        return if (WebFileSupport.isPreviewable(name)) {
             if (viewModel.saveFile(context)) name else null
         } else {
             webDefaultEntryOrNull()
@@ -819,13 +830,14 @@ fun EditorScreen(
     }
 
     /**
-     * RUN the file that is open, by ITS OWN type: HTML previews; a runnable
+     * RUN the file that is open, by ITS OWN type: HTML/MD previews; a runnable
      * source (C/Python/…) runs in the panel even inside a `web` project
      * (Phase 33: "html project with c files"); otherwise a web project
      * previews its entry and anything else reports "no run profile".
+     * Phase 68.1: MD preview via Run, no extra button (owner Q4=C).
      */
     fun runOpenFile() {
-        if (WebFileSupport.isHtml(currentFileName)) {
+        if (WebFileSupport.isPreviewable(currentFileName)) {
             val entry = previewEntryOrNull()
             if (entry != null) {
                 onOpenPreview(currentProject, entry)
@@ -854,9 +866,9 @@ fun EditorScreen(
         }
     }
 
-    /** RUN the project's default file (HTML → preview, else compile/run). */
+    /** RUN the project's default file (HTML/MD → preview, else compile/run). */
     fun runDefaultFile(entryRel: String) {
-        if (WebFileSupport.isHtml(entryRel)) {
+        if (WebFileSupport.isPreviewable(entryRel)) {
             onOpenPreview(currentProject, entryRel)
         } else {
             viewModel.runFile(context, entryRel)
@@ -1533,116 +1545,89 @@ fun EditorScreen(
                 .fillMaxSize()
                 .imePadding()
         ) {
-            TopAppBar(
-                title = {
-                    // Phase 57.1 — the top row of the shots (122157/124105):
-                    // the open file's OWN mark, then its name. No overflow, and
-                    // no word on RUN (the actions block below).
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        FileIconView(
-                            name = currentFileName,
+            // Phase 51.2 slot: run_action
+            // Phase 68.1 — compact top bar like Spck: 48dp, breadcrumb for nested files,
+            // no extra spaces. The file's mark + breadcrumb + dirty, then search + run.
+            val breadcrumbText = remember(currentFileName, isDirty) {
+                val dirtySuffix = if (isDirty) " *" else ""
+                if (currentFileName.contains("/")) {
+                    currentFileName.replace("/", " > ") + dirtySuffix
+                } else {
+                    currentFileName + dirtySuffix
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CodecTokens.space(Space.HUGE))
+                    .background(MaterialTheme.colorScheme.surface),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onDrawerTap) {
+                    Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.project_files))
+                }
+                FileIconView(
+                    name = currentFileName,
+                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
+                )
+                Spacer(Modifier.width(CodecTokens.space(Space.XS)))
+                Text(
+                    text = breadcrumbText,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { showRenameDialog = true },
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                IconButton(onClick = {
+                    if (findState.visible) viewModel.hideFind() else viewModel.showFind()
+                }) {
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.find), modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)))
+                }
+                if (LanguageRegistry.testProfileForFile(currentFileName) != null) {
+                    IconButton(onClick = { viewModel.runTests(context) }) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = stringResource(R.string.run_tests),
+                            tint = RunGreen,
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                        )
+                    }
+                }
+                val onRunTap: () -> Unit = {
+                    val defaultEntry = runChooserEntryOrNull()
+                    if (defaultEntry != null) {
+                        runChooserDefault = defaultEntry
+                    } else {
+                        runOpenFile()
+                    }
+                }
+                val runButtonState = RunButtonState(
+                    running = outputState.busy,
+                    hasOpenFile = openTabs.isNotEmpty() || currentFileName.isNotEmpty(),
+                )
+                val runRole = RunButtonStyle.roleFor(runButtonState)
+                IconButton(
+                    onClick = onRunTap,
+                    enabled = RunButtonStyle.isEnabled(runButtonState)
+                ) {
+                    if (RunButtonStyle.showsRunning(runButtonState)) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)),
+                            strokeWidth = 2.dp,
+                            color = RunGreen
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = stringResource(R.string.run),
+                            tint = if (runRole == RunButtonRole.HERO) RunGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
                         )
-                        Spacer(Modifier.width(CodecTokens.space(Space.S)))
-                        Text(
-                            text = currentFileName.substringAfterLast('/') + if (isDirty) " *" else "",
-                            modifier = Modifier.clickable { showRenameDialog = true },
-                            style = MaterialTheme.typography.titleMedium
-                        )
                     }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onDrawerTap
-                    ) {
-                        Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.project_files))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        if (findState.visible) viewModel.hideFind() else viewModel.showFind()
-                    }) {
-                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.find))
-                    }
-
-                    // Phase 24.6 — Test ▷ for pytest/go test files, alongside RUN.
-                    if (LanguageRegistry.testProfileForFile(currentFileName) != null) {
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
-                                .clickable { viewModel.runTests(context) }
-                                .padding(start = CodecTokens.space(Space.XS), end = CodecTokens.space(Space.XS), top = CodecTokens.space(Space.S), bottom = CodecTokens.space(Space.S)),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = stringResource(R.string.run_tests),
-                                tint = RunGreen,
-                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
-                            )
-                            Spacer(Modifier.width(CodecTokens.space(Space.XXS)))
-                            Text(
-                                stringResource(R.string.run_tests),
-                                color = RunGreen,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                    // Mockup-exact RUN: the reference's bare green ▶ and no
-                    // word on it (Phase 57.1; the container + label 51.2 gave
-                    // it are retired by the shots in docs/spck-ui).
-                    // RUN retains the default/open-file chooser. The runner's
-                    // own busy guard prevents a second job, not navigation.
-                    val onRunTap: () -> Unit = {
-                        val defaultEntry = runChooserEntryOrNull()
-                        if (defaultEntry != null) {
-                            runChooserDefault = defaultEntry
-                        } else {
-                            runOpenFile()
-                        }
-                    }
-                    // Phase 51.2 slot: run_action
-                    // Bare Run glyph with accessible label and real job progress.
-                    val runButtonState = RunButtonState(
-                        running = outputState.busy,
-                        hasOpenFile = openTabs.isNotEmpty() || currentFileName.isNotEmpty(),
-                    )
-                    val runRole = RunButtonStyle.roleFor(runButtonState)
-                    IconButton(
-                        onClick = onRunTap,
-                        modifier = Modifier
-                            .padding(end = CodecTokens.space(Space.S))
-                            .defaultMinSize(minHeight = CodecTokens.space(CodecTokens.MIN_TOUCH)),
-                        enabled = RunButtonStyle.isEnabled(runButtonState)
-                    ) {
-                        if (RunButtonStyle.showsRunning(runButtonState)) {
-                            // A job this control owns: the glyph itself answers
-                            // "did my tap work?" — the one state change the
-                            // shots cannot show because nothing was running.
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)),
-                                strokeWidth = CodecTokens.space(CodecTokens.Space.XXS),
-                                color = RunGreen
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = stringResource(R.string.run),
-                                tint = if (runRole == RunButtonRole.HERO) {
-                                    RunGreen
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
+                }
+            }
 
             // Phase 57.1 — the shots' second row: the open tabs under the
             // file's name, with the editor-menu cell at their right edge. The
@@ -1677,11 +1662,6 @@ fun EditorScreen(
                                 activePath = activeTabPath,
                                 onSelect = { path -> viewModel.selectTab(path) },
                                 onClose = { path ->
-                                    // Phase 22.5 — the ACTIVE tab's dirtiness comes
-                                    // from the VM flag (its stash is intentionally
-                                    // not updated per keystroke); other tabs are
-                                    // stashed at their boundaries, so their buffer
-                                    // is current.
                                     val dirty = if (path == activeTabPath) {
                                         isDirty
                                     } else {
@@ -1692,29 +1672,56 @@ fun EditorScreen(
                                         pendingCloseTab = path
                                     } else {
                                         viewModel.closeTab(context, path, saveFirst = false)
-                                        // Phase 51.4 — TAB_CLOSED: a firm tick.
-                                        // Only a real close, never the dirty-tab
-                                        // dialog above (a dialog is a question,
-                                        // not an act).
                                         haptics.perform(HapticMoment.TAB_CLOSED)
                                     }
                                 },
                                 onCloseOthers = { path -> viewModel.closeOtherTabs(context, path) },
                                 onCloseAll = { viewModel.closeAllTabs(context) },
-                                // Phase 60 — Close unmodified reads the tabs' own
-                                // dirtiness in the VM (the active tab's buffer stash
-                                // is stale by design, so a screen-side rule would be
-                                // a second, wrong answer), and the sorts re-order
-                                // the open tabs themselves, not just what is drawn.
                                 onCloseUnmodified = { viewModel.closeUnmodifiedTabs(context) },
                                 onHideTabs = { tabsHidden = true },
-                                onSort = { sort -> viewModel.sortTabs(sort) },
                                 onCopyPath = { path ->
                                     clipboard.setText(AnnotatedString(path))
                                     Toast.makeText(context, R.string.path_copied, Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.weight(1f)
                             )
+                            // Phase 68.1 — sort door: Spck's ≡↓ icon at tab bar right edge,
+                            // left of the editor menu. Short menu (4 rows) with checkmark.
+                            Box {
+                                IconButton(onClick = { showSortMenu = true }) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Sort,
+                                        contentDescription = stringResource(R.string.tab_sort_name),
+                                        modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                                    )
+                                }
+                                DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                    com.codeci.ide.ui.editor.TabSortPolicy.MENU_ORDER.forEach { sort ->
+                                        val isCurrent = lastTabSort == sort
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(com.codeci.ide.ui.components.TabSortLabels.of(sort))) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = when (sort) {
+                                                        com.codeci.ide.ui.editor.TabSort.QUEUE -> Icons.Default.List
+                                                        com.codeci.ide.ui.editor.TabSort.NAME -> Icons.AutoMirrored.Filled.Sort
+                                                        com.codeci.ide.ui.editor.TabSort.PATH -> Icons.Default.Folder
+                                                        com.codeci.ide.ui.editor.TabSort.EXTENSION -> Icons.Default.Extension
+                                                    },
+                                                    contentDescription = null
+                                                )
+                                            },
+                                            trailingIcon = if (isCurrent) {
+                                                { Icon(Icons.Default.Check, contentDescription = null) }
+                                            } else null,
+                                            onClick = {
+                                                showSortMenu = false
+                                                viewModel.sortTabs(sort)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Phase 57.1 — the shots' trailing cell: the editor's

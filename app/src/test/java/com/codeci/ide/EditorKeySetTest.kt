@@ -179,6 +179,19 @@ class EditorKeySetTest {
     }
 
     @Test
+    fun `the JSON tail offers colon comma and the three literals`() {
+        val base = EditorKeySet.keysFor(null).size
+        val json = EditorKeySet.keysFor(LanguageType.JSON)
+        assertEquals(base + 3, json.size)
+        assertEquals(EditorKey.Insert(":"), json.first { it.label == ":" }.key)
+        assertEquals(EditorKey.Insert(","), json.first { it.label == "," }.key)
+        val literals = json.first { it.label == "null" }
+        assertEquals(EditorKey.Insert("null"), literals.key)
+        assertEquals(EditorKey.Insert("true"), literals.swipeUp)
+        assertEquals(EditorKey.Insert("false"), literals.swipeDown)
+    }
+
+    @Test
     fun `custom snippets parse label equals text lines`() {
         val keys = EditorKeySet.parseCustomSnippets("# a comment\nhi=hello world\nnoequals line\n\nlog=x\n")
         assertEquals(2, keys.size)

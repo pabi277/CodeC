@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.imePadding
@@ -53,7 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.theme.AppThemeMode
 import com.codeci.ide.ui.theme.CodecType
+import com.codeci.ide.ui.theme.ThemeManager
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.ServerSharePanel
 import com.codeci.ide.ui.components.SpckIcons
@@ -74,6 +77,7 @@ import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.utils.FileManager
 import com.codeci.ide.ui.utils.FileNameUtils
+import com.codeci.ide.ui.utils.MarkdownPreview
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.WebPreviewViewModel
 import java.io.File
@@ -113,6 +117,12 @@ fun WebPreviewScreen(
     var resolutionDialog by remember { mutableStateOf(false) }
     var resolution by remember { mutableStateOf(PreviewResolution.DEVICE) }
     var currentUrl by remember { mutableStateOf<String?>(liveUrl) }
+
+    // Phase 68.1 (completed part) — the rendered Markdown page must match the
+    // app's theme, so resolve dark exactly the way MainActivity does.
+    val themeManager = remember { ThemeManager(context) }
+    val appThemeMode by themeManager.appThemeFlow.collectAsState(initial = AppThemeMode.SYSTEM)
+    val previewDark = ThemeManager.effectiveDark(appThemeMode, isSystemInDarkTheme())
 
     // Phase 9.1: serve the whole folder over a loopback HTTP server so
     // relative CSS/JS, fetch("data.json") and ES modules work like under a
@@ -481,19 +491,28 @@ fun WebPreviewScreen(
         when {
             file == null -> viewModel.reportError("Cannot resolve file: ${fileName ?: ""}")
             !file.exists() || !file.isFile -> viewModel.reportError("File not found: ${file.name}")
-            !WebFileSupport.isHtml(file.name) ->
-                viewModel.reportError("Preview supports HTML files (.html / .htm)")
+            !WebFileSupport.isPreviewable(file.name) ->
+                viewModel.reportError("Preview supports HTML and Markdown files")
             else -> {
                 viewModel.clearError()
-                val port = serverPort
-                // The host owns the socket now, so the port can arrive one
-                // frame after the file does. Wait for it (a `file://` load
-                // first would flash, then reload, and lose the fetch/module
-                // behaviour the server exists to provide).
-                if (servedRoot != null && port == null && staticError == null) return@LaunchedEffect
-                val viaServer = if (port != null) "http://127.0.0.1:$port$pagePath" else null
-                currentUrl = viaServer ?: ("file://" + file.absolutePath)
-                wv.loadUrl(currentUrl.orEmpty())
+                if (WebFileSupport.isMarkdown(file.name)) {
+                    // Phase 68.1 (completed part) — Run ▶ on Markdown renders
+                    // Markdown; the raw file is the source, not the preview.
+                    // Base URL stays the file's folder so relative images
+                    // resolve. No static-server wait: the page is self-owned.
+                    currentUrl = "file://" + file.absolutePath
+                    loadMarkdownInto(wv, file, previewDark)
+                } else {
+                    val port = serverPort
+                    // The host owns the socket now, so the port can arrive one
+                    // frame after the file does. Wait for it (a `file://` load
+                    // first would flash, then reload, and lose the fetch/module
+                    // behaviour the server exists to provide).
+                    if (servedRoot != null && port == null && staticError == null) return@LaunchedEffect
+                    val viaServer = if (port != null) "http://127.0.0.1:$port$pagePath" else null
+                    currentUrl = viaServer ?: ("file://" + file.absolutePath)
+                    wv.loadUrl(currentUrl.orEmpty())
+                }
             }
         }
     }
@@ -520,8 +539,35 @@ fun WebPreviewScreen(
 
     // Reload the WebView whenever the file changed on disk or Refresh was tapped.
     LaunchedEffect(reloadTick) {
-        if (reloadTick > 0) webView?.reload()
+        if (reloadTick > 0) {
+            val wv = webView ?: return@LaunchedEffect
+            val file = htmlFile
+            if (file != null && file.isFile && WebFileSupport.isMarkdown(file.name)) {
+                // Phase 68.1 (completed part) — a raw reload would show the
+                // Markdown source again; re-render the page instead.
+                loadMarkdownInto(wv, file, previewDark)
+            } else {
+                wv.reload()
+            }
+        }
     }
+}
+
+/**
+ * Phase 68.1 (completed part) — load a RENDERED Markdown page into the
+ * WebView: pure [MarkdownPreview] converts the file, [MarkdownPreview.page]
+ * wraps it in the themed shell, and the base URL is the file's folder so
+ * relative image paths resolve. No JavaScript in the page, ever.
+ */
+private fun loadMarkdownInto(wv: PreviewWebView, file: File, dark: Boolean) {
+    val body = runCatching { file.readText() }.getOrDefault("")
+    wv.loadDataWithBaseURL(
+        "file://" + (file.parentFile?.absolutePath ?: "") + "/",
+        MarkdownPreview.page(MarkdownPreview.toHtml(body), dark, file.name),
+        "text/html",
+        "UTF-8",
+        null
+    )
 }
 
 private fun resolveServedRoot(context: Context, projectName: String?, htmlFile: File?): File? {

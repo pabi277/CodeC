@@ -74,17 +74,17 @@ class TouchTargetTest {
     @Test
     fun `the scan really visits buttons`() {
         // A pin that never matches is a pin that never fails: the core files
-        // hold eighteen IconButtons today (4 editor + 5 hub + 2 packages +
+        // hold twenty IconButtons today (6 editor + 5 hub + 2 packages +
         // 6 terminal + 1 settings — the first-run welcome held none, and Phase
         // 58.1 retired that screen). Settings' first one is Phase 62's ✕: the
         // search field offers it only when there is something to clear, and it
         // is an IconButton like every other one here, so the 48 dp rule holds.
         // The editor's count went
-        // 3 → 4 in Phase 57.1, and this comment is the record the pin demands:
-        // the top row's ⋮ `IconButton` left the bar, the RUN action became the
-        // shots' bare green ▶ `IconButton`, and the tab row's trailing cell
-        // added the editor-menu `IconButton` (+1 net). A phase that changes this
-        // number again must say why here, not just edit the digit.
+        // 3 → 4 in Phase 57.1, and 4 → 5 in Phase 68.1 and 5 → 6 with sort door for compact Spck parity:
+        // the Test ▷ Row became an IconButton to save horizontal space, the top
+        // bar became a 48dp Row (hamburger + search + run + optional test), and
+        // the tab row's trailing cell kept the editor-menu IconButton. A phase
+        // that changes this number again must say why here, not just edit the digit.
         var total = 0
         for (name in coreFiles) {
             val code = RepoFiles.codeOnly(
@@ -95,8 +95,8 @@ class TouchTargetTest {
             total += Regex("""\bIconButton\s*\(""").findAll(code).count()
         }
         assertTrue(
-            "expected 18 IconButtons across the core files, found $total",
-            total == 18,
+            "expected 20 IconButtons across the core files, found $total",
+            total == 20,
         )
     }
 }

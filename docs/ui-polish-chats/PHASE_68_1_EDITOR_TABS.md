@@ -1,7 +1,22 @@
-# Proposed Phase 68.1 — Editor chrome, tabs and file actions
+# Phase 68.1 — Editor chrome, tabs and file actions
 
-**Status: discussion draft, not approved for implementation.** One part = one
-future chat. No deadline, dependency, new control or replacement engine promised.
+**Status: implemented and CI ✅ GREEN on `arena/01a0e444-codec`
+([run 36343503123](https://github.com/pabi277/CodeC/actions/runs/36343503123),
+final code `7ca3880`).** The tree of `arena/01a0e36f-codec` was mirrored
+byte-for-byte and finished there so the owner does not need to return to the
+earlier chat. One test repair was needed: the `TabRowRevealStrip(` exact-match
+literal had been given a trailing `)` that could never coexist with the
+`modifier = Modifier.weight(1f)` argument the sibling test requires — reverted
+to the `)`-free form `main` uses. Tab menu shape is the split doors (close-only
+bar menu + sort door in the editor), pinned by the tests. Completed part
+(same branch, code `8c862c5`, CI
+[36346189970](https://github.com/pabi277/CodeC/actions/runs/36346189970)
+green): the Markdown preview now renders Markdown (pure host-tested
+`MarkdownPreview`, no-JS themed shell), the Keys strip gains the JSON tail
+from shot 204937, and the sort door's ✓ survives editor re-entry. One part =
+one future chat. No deadline, dependency, new control or replacement engine
+promised. Owner verified compact Spck parity via new shots
+`Screenshot_20260927_2049xx`. No PR opened; handset verification recommended.
 
 ## Copy into a new chat
 
@@ -13,10 +28,10 @@ future chat. No deadline, dependency, new control or replacement engine promised
 
 ## First move: current evidence
 
-Main entry: [`ui/screens/EditorScreen.kt:217`](../../app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt#L217), reviewed on 2026-09-27.
+Main entry: [`ui/screens/EditorScreen.kt:217`](../../app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt#L217), reviewed on 2026-09-27 and 2026-09-27 with new shots.
 Recheck line numbers against the future checkout; these are this review’s anchors.
 
-**Reference boundary:** 122157 and 124105 show the actual top/tab rows. Do not use the earlier drawn mockups as higher authority.
+**Reference boundary:** 122157 and 124105 show the actual top/tab rows, plus new 204955/204945/204937 (README.md, index.json menu, JSON symbols) for compactness and the `<>` button. Do not use the earlier drawn mockups as higher authority.
 
 ## My recommendation
 
@@ -32,18 +47,33 @@ No file; one/many tabs; dirty marker; sorting/close-unmodified; hide and reveal;
 
 Suggested starting point, not your decision: Keep Search and Run on top; avoid adding a second permanent toolbar until you choose priority actions.
 
-**Owner answer:** pending. Record it verbatim here when given; do not present the
-recommendation as approval.
+**Owner answers — 2026-09-27 (verbatim option labels + free text):**
+
+From new Spck shots analysis:
+
+1. Top bar breadcrumb? — **B** — Show breadcrumb `folder > file` when nested (like `data > index.json`)
+2. Tab bar compactness? — **B** — Reduce to 40-42dp / 8dp padding — matches Spck, +8dp code height
+3. Tab menu polish? — **B** — Add icons + groups + ✓ for active sort + Queue (Unsorted) (Spck parity)
+4. Button beside Run `<>` for MD/JSON? — **C** — Reuse Run to open MD preview (like HTML), no extra button
+5. Active/dirty look? — **C** — Italic active + subtle underline + fixed dot — closer to Spck
+6. Status bar density? — **B** — Make more compact 2-3dp vertical, like Spck `Ln 1104, Col 20   Sp:2`
+
+Free text: **"I don't want to use any extra spaces just make it like spck"**
+
+Interpretation: compact Spck parity, no extra spaces, no extra `<>` button, MD preview via Run.
 
 ## Implementation and exit, after agreement
 
-EditorShellUi, TabClosePolicy, TabSortPolicy, TabLayoutPolicy and EditorChrome; protect the owner-confirmed 48dp tab-height fix.
+EditorShellUi, TabClosePolicy, TabSortPolicy, EditorChrome, EditorTabBar, EditorStatusBar, WebFileSupport, EditorScreen; protect compactness, no extra spaces.
 
-Use existing platform/components and pure policies first. Add focused regression
-coverage for the agreed behaviour, check loading/empty/failure states, long text,
-Back, touch targets, light/dark, narrow layouts and keyboard overlap. Run CI on
-the session branch. Report separately what source tests, Android tests and real
-device evidence establish. Do not make the owner run declined device rounds.
+- Tab bar 40dp (was 48dp), inner padding 8dp (was 12dp), icon 14dp, italic active, subtle underline (onSurface 0.35 alpha, 2dp), fixed 6dp dirty dot (no layout shift)
+- Top bar 48dp custom Row (was 64dp TopAppBar), breadcrumb `a/b/c` → `a > b > c`, titleSmall, ellipsis, 20dp icons, no extra spaces
+- Tab menu: Quick Close, Close Others, Close Unmodified, Close All, Copy path, sorts (Queue, Alphabetically, Path, Ext.) with icons + checkmark for currentSort, Hide Tabs — Spck parity from shot 204945
+- TabSort: added QUEUE, MENU_ORDER = QUEUE, NAME, PATH, EXTENSION
+- Status bar: vertical padding 2dp (was 5dp), horizontal 8dp (was 12/10)
+- MD preview: WebFileSupport.isMarkdown + isPreviewable, previewEntryOrNull/runOpenFile/runDefaultFile use isPreviewable, WebPreviewScreen allows HTML+MD
+- No new dependency, permission, preference, telemetry. Phase 64 (no guide/install locks) and Phase 66-67 (Files-first drawer, filename search, nested create, download/share) intact.
 
-No new dependencies, permissions, persistent preferences or telemetry by default.
-Stop after this agreed part and update its record; do not roll into the next chat.
+Use existing platform/components and pure policies first. Add focused regression coverage for the agreed behaviour, check loading/empty/failure states, long text, Back, touch targets, light/dark, narrow layouts and keyboard overlap. Run CI on the session branch. Report separately what source tests, Android tests and real device evidence establish. Do not make the owner run declined device rounds.
+
+No new dependencies, permissions, persistent preferences or telemetry by default. Stop after this agreed part and update its record; do not roll into the next chat.

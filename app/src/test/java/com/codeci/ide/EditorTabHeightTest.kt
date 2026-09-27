@@ -53,7 +53,7 @@ class EditorTabHeightTest {
                 }
             }
         }
-        compose.onNodeWithTag("tabs").assertHeightIsEqualTo(48.dp)
+        compose.onNodeWithTag("tabs").assertHeightIsEqualTo(40.dp)
         compose.onNodeWithTag("code").assertHeightIsEqualTo(288.dp)
     }
 }
