@@ -8,8 +8,13 @@ earlier chat. One test repair was needed: the `TabRowRevealStrip(` exact-match
 literal had been given a trailing `)` that could never coexist with the
 `modifier = Modifier.weight(1f)` argument the sibling test requires — reverted
 to the `)`-free form `main` uses. Tab menu shape is the split doors (close-only
-bar menu + sort door in the editor), pinned by the tests. One part = one
-future chat. No deadline, dependency, new control or replacement engine
+bar menu + sort door in the editor), pinned by the tests. Completed part
+(same branch, code `8c862c5`, CI
+[36346189970](https://github.com/pabi277/CodeC/actions/runs/36346189970)
+green): the Markdown preview now renders Markdown (pure host-tested
+`MarkdownPreview`, no-JS themed shell), the Keys strip gains the JSON tail
+from shot 204937, and the sort door's ✓ survives editor re-entry. One part =
+one future chat. No deadline, dependency, new control or replacement engine
 promised. Owner verified compact Spck parity via new shots
 `Screenshot_20260927_2049xx`. No PR opened; handset verification recommended.
 

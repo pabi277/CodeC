@@ -1,3 +1,20 @@
+**2026-09-27 — Phase 68.1 completed part: the three owner-approved additions
+are built and CI GREEN.** After the close-out below, the owner asked what the
+phase still needed and approved all three findings: **(1)** the Markdown
+preview now really renders Markdown — pure host-tested `MarkdownPreview`
+(subset → HTML, escaped input, sanitised URLs, no-JS themed shell) wired into
+`WebPreviewScreen` via `loadDataWithBaseURL`, fixing the raw-source preview
+that contradicted Q4=C; **(2)** the JSON Keys row from Spck shot 204937 —
+`:` + `,` + one null/true/false cap; **(3)** the sort door's ✓ survives
+editor re-entry (`lastTabSort` now lives in the view model). **GREEN, first
+round: [run 36346189970](https://github.com/pabi277/CodeC/actions/runs/36346189970)**
+on code `8c862c5` — host unit/screenshot tests, debug APK 26,021,016 B,
+release APK 6,798,016 B. Still no PR/merge without owner instruction.
+**Next: owner handset round (compact parity + Run ▶ on a README.md + a JSON
+file's Keys row), then merge decision.** [Record](chat-phase68/README.md).
+
+---
+
 **2026-09-27 — Phase 68.1 closed out: full Android CI ✅ GREEN on
 `arena/01a0e444-codec`, no return to the earlier chat needed.** The whole tree
 of `arena/01a0e36f-codec` at `472579d` (Phase 68.1 compact Spck parity:

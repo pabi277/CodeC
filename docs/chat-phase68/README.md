@@ -116,6 +116,39 @@ tests pin the split shape (`Sort must NOT be in close menu`), and the green
 run confirms it. No handset verification claimed; do not treat this record as
 device proof.
 
+### Completed part — owner-approved additions (2026-09-27)
+
+The owner asked what the phase still needed ("must have or would be great")
+and approved **all three** findings. Implemented on `arena/01a0e444-codec`,
+commit `8c862c5`, **CI GREEN first round:
+[run 36346189970](https://github.com/pabi277/CodeC/actions/runs/36346189970)** —
+debug APK 26,021,016 B (+8,012 B), release APK 6,798,016 B (+3,752 B).
+
+1. **Markdown preview now RENDERS Markdown (the must-have).** 68.1 had only
+   opened the Run ▶ door for `.md`; the WebView then loaded the raw file,
+   contradicting Q4=C. New pure `MarkdownPreview` (`ui/utils/`,
+   host-testable, no dependency, no WebView/Android import): subset → HTML
+   covering headings, emphasis, code spans/fences, links, images, nested
+   lists, quotes, rules, tables, GFM hard breaks; input escaped first,
+   `javascript:`-family URLs sanitised, page shell carries NO JavaScript and
+   follows the app's light/dark theme (`ThemeManager.effectiveDark`, the
+   MainActivity path). `WebPreviewScreen` renders via `loadDataWithBaseURL`
+   with the file's folder as base URL (relative images resolve), and
+   Reload/Save re-renders instead of reloading raw source. Pinned by
+   `MarkdownPreviewTest` (21 cases incl. escape/URL-safety); the
+   `PreviewToolsWiringTest` reload pin updated for the evolved shape.
+2. **JSON Keys row (Spck shot 204937 parity).** The Keys strip gains a JSON
+   tail: `:` (popup `: `), `,`, and one `null` cap with flick-up `true` /
+   flick-down `false`; the `{}` `[]` `""` pairs already live in the GENERAL
+   set. Pinned in `EditorKeySetTest`.
+3. **The sort door's ✓ tells the truth across re-entry.** `lastTabSort`
+   moved from screen `remember` to `EditorViewModel`, so leaving and
+   re-entering the editor keeps the sorted order AND the checkmark together.
+
+No new dependency, permission, persistent preference or telemetry. The
+standing boundaries (no PR/merge without owner instruction; handset round
+recommended) are unchanged.
+
 ## Boundaries
 
 Phase 64 (no guide/install locks, no app-wide indicator) and Phase 66-67 (Files-first drawer, filename search, nested `css/a.css` creation, download/share as file) intact. No changes to drawer/search logic, no new top-level navigation, no new engine. Stop after this part; no PR/merge without owner instruction.
