@@ -137,11 +137,11 @@ the record states what proves them.
 ## Implementation and exit, after agreement
 
 SoraEditorHost, EditorKeysRow, CaretVisibilityPolicy and the editor's keyboard
-layout; protect undo, selection and composition correctness. **Two files of
-production code in the agreed part** — the air rule (policy + the one owner) and
-the row's remembered position (one hoisted `ScrollState`) — with the pins that
-make them stick; see the record for the exact pins, the moved one and its
-reason.
+layout; protect undo, selection and composition correctness. **The agreed part is
+two changes across four production files** — the air rule (pure policy + the one
+Phase-48 owner) and the row's remembered position (one hoisted `ScrollState`
+threaded to the row) — with the pins that make them stick; see the record for the
+exact pins, the one that moved, and its reason.
 
 Use existing platform/components and pure policies first. Add focused regression
 coverage for the agreed behaviour, check loading/empty/failure states, long text,
