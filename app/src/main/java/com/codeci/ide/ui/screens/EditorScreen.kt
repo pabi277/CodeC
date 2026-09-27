@@ -504,7 +504,10 @@ fun EditorScreen(
     // reads it). Session-scoped like `keysRowVisible`: a view choice, not a
     // setting, so it never survives into a fresh launch as a missing row.
     var tabsHidden by remember { mutableStateOf(false) }
-    var lastTabSort by remember { mutableStateOf<com.codeci.ide.ui.editor.TabSort?>(null) }
+    // Phase 68.1 (completed part) — the sort door's ✓ now reads the view
+    // model's own last sort: leaving and re-entering the editor keeps both
+    // the sorted order AND the checkmark, so the ✓ never lies about the row.
+    val lastTabSort by viewModel.lastTabSort.collectAsState()
     var showSortMenu by remember { mutableStateOf(false) }
     // ---- Phase 55 — the side panel's own state --------------------------
     // Owner follow-up: Files is the editor menu's default;
@@ -1713,7 +1716,6 @@ fun EditorScreen(
                                             } else null,
                                             onClick = {
                                                 showSortMenu = false
-                                                lastTabSort = sort
                                                 viewModel.sortTabs(sort)
                                             }
                                         )

@@ -170,6 +170,19 @@ object EditorKeySet {
         LanguageType.SHELL -> listOf(
             EditorKeyDef("$", EditorKey.Insert("$"))
         )
+        // Phase 68.1 (completed part) — Spck's JSON symbol row (shot 204937:
+        // `{} prop: = null , ""`). The pairs `{} [] ""` already live in the
+        // GENERAL set; the tail adds what JSON keeps reaching for: the colon
+        // after a key, the comma between members, and the three literals —
+        // one cap, flick for true/false.
+        LanguageType.JSON -> listOf(
+            EditorKeyDef(":", EditorKey.Insert(":"), popup = EditorKey.Insert(": ")),
+            EditorKeyDef(",", EditorKey.Insert(",")),
+            EditorKeyDef(
+                "null", EditorKey.Insert("null"),
+                swipeUp = EditorKey.Insert("true"), swipeDown = EditorKey.Insert("false")
+            )
+        )
         else -> emptyList()
     }
 

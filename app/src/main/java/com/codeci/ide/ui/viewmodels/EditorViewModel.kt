@@ -396,6 +396,14 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
     private val _openTabs = MutableStateFlow<List<EditorTab>>(emptyList())
     val openTabs: StateFlow<List<EditorTab>> = _openTabs.asStateFlow()
 
+    /**
+     * Phase 68.1 (completed part) — the last sort applied. Lives on the view
+     * model, not the screen, so the sort door's ✓ survives leaving and
+     * re-entering the editor while the tabs keep their sorted order.
+     */
+    private val _lastTabSort = MutableStateFlow<TabSort?>(null)
+    val lastTabSort: StateFlow<TabSort?> = _lastTabSort.asStateFlow()
+
     private val _activeTabPath = MutableStateFlow<String?>(null)
     val activeTabPath: StateFlow<String?> = _activeTabPath.asStateFlow()
 
@@ -1699,6 +1707,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
      * pinned.
      */
     fun sortTabs(sort: TabSort) {
+        _lastTabSort.value = sort
         val reordered = TabSortPolicy.sort(_openTabs.value, sort)
         if (reordered.map { it.relativePath } == _openTabs.value.map { it.relativePath }) return
         _openTabs.value = reordered
