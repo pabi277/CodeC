@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.components
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -53,6 +54,16 @@ import kotlin.math.abs
  * machine (host-testable via KeyGestureDetector), hold-repeat for arrows.
  * FIX 2026-09-05: horizontal drag to scroll the strip no longer inserts a key
  * (touchSlop vs swipe), long-press tolerates tiny jitter, swipe consumes.
+ *
+ * Phase 69.1 — where the row is scrolled to is the OWNER's business, not this
+ * composable's: the caps a phone thumb reaches for most (`;`, `/`, `=`, then
+ * the arrows) live in the row's right half, so the row gets scrolled — and a
+ * `rememberScrollState()` in here lives exactly as long as the row does. The
+ * row is composed at TWO call sites (keyboard down / keyboard up) and in three
+ * branches of the one strip (Keys | Suggestions | Run), so every keyboard
+ * toggle and every chip appearance handed back a fresh state and snapped the
+ * row back to its left edge. [scrollState] is passed in and owned above, one
+ * state for the Keys variant.
  */
 @Composable
 fun EditorKeysRow(
@@ -61,6 +72,8 @@ fun EditorKeysRow(
     onValueChange: (TextFieldValue) -> Unit,
     tabSize: Int = 4,
     onCommentToggle: (() -> Unit)? = null,
+    /** Phase 69.1 — the row's horizontal position, owned by the caller. */
+    scrollState: ScrollState = rememberScrollState(),
     modifier: Modifier = Modifier,
     /**
      * Phase 27.1 — first refusal on a resolved key (the dual-mood ghost caps).
@@ -71,7 +84,7 @@ fun EditorKeysRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
+            .horizontalScroll(scrollState)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically

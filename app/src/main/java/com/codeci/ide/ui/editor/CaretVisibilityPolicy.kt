@@ -51,14 +51,44 @@ object CaretVisibilityPolicy {
 
     /**
      * One-line-of-air rule: the caret must not sit on the last visible row.
-     * Sora's `ensurePositionVisible` (line, column) guarantees visibility
-     * without a margin argument; this constant records the intent and the
-     * honest debt (if sora ever grows a margin parameter, this is its value).
+     *
+     * Phase 48 wrote this as an honest debt — sora's
+     * `ensurePositionVisible(line, column)` takes no margin argument, so the
+     * guarantee was only "the caret's row is visible".
+     *
+     * Phase 69.1 paid it WITH that same call, by reading sora 0.24.6's own
+     * implementation instead of guessing (`CodeEditor.ensurePositionVisible`,
+     * read 2026-09-27):
+     *
+     * ```java
+     * float yOffset = layoutOffset[0];                 // bottom of the row
+     * if (yOffset > getHeight() + currFinalY) {        // row below the fold
+     *     targetY = yOffset - getHeight() + getRowHeight() * 1f;   // one row of air
+     * }
+     * ...
+     * if (withinDelta(targetX, getOffsetX(), 1f) && withinDelta(targetY, getOffsetY(), 1f)) {
+     *     invalidate(); return;                        // ALREADY VISIBLE: nothing happens
+     * }
+     * ```
+     *
+     * So sora already leaves a row of slack when it has to REVEAL a row, but
+     * when the caret's row is still on screen it returns early — including the
+     * worst case, the caret's row being the LAST visible one, where the caret
+     * sits flush on the keyboard's edge and its drop handle (sora draws it
+     * BELOW the row) is clipped away.
+     *
+     * [revealLine] is the fix, and it needs no margin parameter: when a
+     * re-scroll is already owed, ask sora for the position one line BELOW the
+     * caret. The neighbour is off screen, so the branch above runs and the
+     * caret gains air; at the last line of the buffer [revealLine] clamps to
+     * the caret's own line, which is exactly today's behaviour (no new scroll
+     * at EOF).
+     *
      * The very-short-viewport case — editor + IME + CodeC Keys + expanded
-     * output on a 5" screen — degrades the right way for free: if the
-     * viewport cannot show the caret plus one line, the caret alone wins,
-     * because visibility is what sora's call guarantees (PART_50's device
-     * matrix measures it; nothing is guessed here).
+     * output on a 5" screen — degrades the right way for free: if the viewport
+     * cannot show the caret plus one line, the caret alone wins, because
+     * visibility is what sora's call guarantees (PART_50's device matrix
+     * measures it; nothing is guessed here).
      */
     const val KEEP_LINES_BELOW = 1
 
@@ -107,4 +137,33 @@ object CaretVisibilityPolicy {
     fun debounceMs(previous: EditorViewport?, current: EditorViewport): Long =
         if (previous != null && current.heightPx < previous.heightPx) 0L
         else RESCROLL_DEBOUNCE_MS
+
+    /**
+     * Phase 69.1 — the LINE the one re-scroll owner should reveal for a caret
+     * on [caretLine]: the caret's own line plus [KEEP_LINES_BELOW] rows of air,
+     * clamped into a buffer of [lineCount] lines.
+     *
+     * Total by construction, because it runs inside a layout callback where the
+     * buffer can be shorter than the position it was read from (a tab switch
+     * landing between the schedule and the task): a negative/zero [lineCount]
+     * yields 0, a caret past the end yields the last line, and the last line
+     * clamps to itself — which is what makes EOF need no special case in the
+     * edge (sora then behaves exactly as it did before this part).
+     */
+    fun revealLine(caretLine: Int, lineCount: Int): Int {
+        val last = (lineCount - 1).coerceAtLeast(0)
+        return (caretLine + KEEP_LINES_BELOW).coerceIn(0, last)
+    }
+
+    /**
+     * Phase 69.1 — the COLUMN to reveal with [revealLine]. The caret's own
+     * column is kept: sora's x branch is the same for the caret's row and for
+     * its neighbour, so passing the caret's column is what keeps a horizontally
+     * scrolled long line exactly where the user left it. Clamped against the
+     * target line's length — the neighbour can be shorter than the caret's line
+     * (the column of a reveal position must be a real position; a wrapped or
+     * long line is not a reason to throw inside a layout callback).
+     */
+    fun revealColumn(caretColumn: Int, targetLineColumnCount: Int): Int =
+        caretColumn.coerceIn(0, targetLineColumnCount.coerceAtLeast(0))
 }

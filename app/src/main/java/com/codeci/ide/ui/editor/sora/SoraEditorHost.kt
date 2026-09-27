@@ -425,13 +425,30 @@ fun SoraEditorHost(
     // crash-proof (runCatching — the editor can be mid-release() when a
     // late size change lands; a cosmetic call must never kill the app, the
     // Phase 44 law applied to a layout callback).
+    //
+    // Phase 69.1 — WHAT it asks for is the caret one line lower
+    // (`CaretVisibilityPolicy.revealLine`): sora's own reveal only runs when
+    // the row is below the fold, so a caret flush on the last visible row kept
+    // its row and lost its drop handle (drawn below the row). The target is
+    // clamped against the live buffer here, because the buffer can be shorter
+    // than the position the schedule was made from; at EOF the clamp returns
+    // the caret's own line, i.e. the pre-69.1 call, and the caret is never
+    // MOVED — only the viewport is (no selection, no buffer write: the air
+    // comes from scrolling, never from editing).
     val lastViewport = remember(editor) { arrayOf<EditorViewport?>(null) }
     val pendingRescroll = remember(editor) { arrayOf<Runnable?>(null) }
     fun scheduleCaretRescroll(line: Int, column: Int, delayMs: Long) {
         pendingRescroll[0]?.let { editor.removeCallbacks(it) }
         val task = Runnable {
             pendingRescroll[0] = null
-            runCatching { editor.ensurePositionVisible(line, column, true) }
+            runCatching {
+                val targetLine = CaretVisibilityPolicy.revealLine(line, editor.text.lineCount)
+                val targetColumn = CaretVisibilityPolicy.revealColumn(
+                    column,
+                    editor.text.getColumnCount(targetLine)
+                )
+                editor.ensurePositionVisible(targetLine, targetColumn, true)
+            }
         }
         pendingRescroll[0] = task
         editor.postDelayed(task, if (delayMs < 0L) 0L else delayMs)

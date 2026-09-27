@@ -14,6 +14,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -498,6 +499,16 @@ fun EditorScreen(
     // Phase 17 — Switch Branch, opened from the drawer footer.
     var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
     var keysRowVisible by remember { mutableStateOf(true) }
+    // Phase 69.1 — the coding row's horizontal position is owned HERE, not
+    // inside the row. The caps a phone thumb reaches for most (`;`, `/`, `=`,
+    // then the arrows) sit in the row's right half, so the row gets scrolled
+    // — and the row is composed at two call sites (keyboard down / keyboard
+    // up) plus three branches of the one strip (Keys | Suggestions | Run),
+    // each of which used to hand back a fresh `rememberScrollState()` and snap
+    // the row to its left edge. One state, one owner: the position now
+    // survives the keyboard, the chips and the run keys. The row's caps,
+    // order and height are unchanged (owner answer Q3 = A).
+    val keysRowScroll = rememberScrollState()
     // Phase 60 — the tab menu's *Hide tabs*: one flag that parks BOTH the
     // tab row (it becomes its reveal strip, below) and the app's bottom bar
     // (published to `EditorChromeState`, where MainActivity's NavBarPolicy
@@ -2296,6 +2307,8 @@ fun EditorScreen(
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
+                    // Phase 69.1 — one row position across both call sites.
+                    keysRowScroll = keysRowScroll,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) },
                     showMoreCap = completionSettings.panel,
@@ -2438,6 +2451,8 @@ fun EditorScreen(
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
+                    // Phase 69.1 — one row position across both call sites.
+                    keysRowScroll = keysRowScroll,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) },
                     showMoreCap = completionSettings.panel,
@@ -2830,6 +2845,8 @@ private fun BottomStrip(
     textFieldValue: TextFieldValue,
     onEditorValueChange: (TextFieldValue) -> Unit,
     tabSize: Int,
+    /** Phase 69.1 — the keys row's horizontal position, owned by the screen. */
+    keysRowScroll: ScrollState,
     onRunKey: (RunKey) -> Unit,
     onCommentToggle: (() -> Unit)? = null,
     showMoreCap: Boolean = true,
@@ -2866,6 +2883,9 @@ private fun BottomStrip(
                 onValueChange = onEditorValueChange,
                 tabSize = tabSize,
                 onCommentToggle = onCommentToggle,
+                // Phase 69.1 — the screen's one state: the same row, in the
+                // same place, when the keyboard or the strip's context changes.
+                scrollState = keysRowScroll,
                 onInterceptKey = { key ->
                     when (key) {
                         EditorKey.GhostAccept -> {

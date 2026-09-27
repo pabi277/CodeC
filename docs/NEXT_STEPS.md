@@ -1,3 +1,34 @@
+**2026-09-27 — Phase 69.1 (typing, keyboard and selection): reviewed, asked,
+implemented on `arena/01a0e49f-codec` — owner answers taken BEFORE any code,
+all five = option A.** The owner chose **keep the system IME default and the one
+coding row exactly as it is** (no second toolbar, no forced CodeC Keys), **add
+the one-line-of-air rule**, **remember the coding row's horizontal position (and
+nothing else)**, **keep sora's own blue drop exactly as it is**, and **keep the
+keyboard-time behaviour of the bottom tabs (no bar, no handle while typing)**.
+So the bounded part is exactly two changes, both in the Phase-48 caret owner's
+world: **(1)** the air rule — reading sora **0.24.6's own**
+`CodeEditor.ensurePositionVisible` (fetched and quoted, not guessed) showed sora
+leaves a row of slack only when the caret's row is OFF screen and otherwise
+returns early, so a caret on the last visible row sits flush and its drop handle
+(below the row) is clipped; the pure `CaretVisibilityPolicy.revealLine` /
+`revealColumn` now ask the same single, posted, coalesced, `runCatching`d call
+for the position **one line below** the caret (clamped into the live buffer, so
+EOF = today's behaviour, and the air is a viewport effect — no `setSelection`, no
+buffer write); **(2)** the coding row's position — `rememberScrollState()` lived
+inside `EditorKeysRow`, which is composed at **two** strip call sites and in
+three strip branches, so every keyboard toggle and chip appearance snapped the
+caps row back to its left edge; one `ScrollState` is now owned by `EditorScreen`
+and threaded through both call sites. Caps, order, height and the bottom cluster
+are unchanged. Tests: `CaretVisibilityPolicyTest` +5, `CaretCallSiteTest` (one
+pin moved with its reason + a new "ask through the pure policy, never move the
+caret" pin), `EditorRowsWiringTest` +1. **No device evidence claimed** — the two
+behaviours are only provable on a handset, and no round was asked. No new
+dependency, permission, preference, telemetry, engine or screen. **No PR and
+nothing merged.** CI run recorded in [the record](chat-phase69/README.md);
+brief with the verbatim answers: [PHASE_69_1_TYPING.md](ui-polish-chats/PHASE_69_1_TYPING.md).
+
+---
+
 **2026-09-27 — Phase 68.1 completed part: the three owner-approved additions
 are built and CI GREEN.** After the close-out below, the owner asked what the
 phase still needed and approved all three findings: **(1)** the Markdown

@@ -1,6 +1,7 @@
 package com.codeci.ide
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -41,11 +42,47 @@ class CaretCallSiteTest {
         )
         assertTrue(
             "the rescroll must be crash-proof (runCatching)",
-            body.contains("runCatching { editor.ensurePositionVisible(line, column, true) }")
+            body.contains("runCatching {")
+        )
+        // Phase 69.1 — the pin MOVED with its reason: the single call now
+        // passes the reveal target the pure policy computed (the caret's line
+        // plus the air), not the raw caret pair. Still one call, still
+        // unanimated (`true`).
+        assertTrue(
+            "the rescroll must stay unanimated (noAnimation = true)",
+            body.contains("editor.ensurePositionVisible(targetLine, targetColumn, true)")
         )
         assertTrue(
             "the rescroll must coalesce (cancel-and-replace the pending task)",
             body.contains("editor.removeCallbacks(it)")
+        )
+    }
+
+    @Test
+    fun `the owner asks through the pure policy for one line of air`() {
+        // Phase 69.1 — the intent (KEEP_LINES_BELOW) was declared in 48 and is
+        // paid here: the target is decided by the pure policy and clamped
+        // against the LIVE buffer, because the posted task can outlive the
+        // buffer it was scheduled from.
+        val host = sources().first { it.name == "SoraEditorHost.kt" }.readText()
+        val body = host.substringAfter("fun scheduleCaretRescroll").substringBefore("AndroidView(")
+        assertTrue(
+            "the reveal line must come from the policy (the air rule)",
+            body.contains("CaretVisibilityPolicy.revealLine(line, editor.text.lineCount)")
+        )
+        assertTrue(
+            "the reveal column must come from the policy (clamped to the target line)",
+            body.contains("CaretVisibilityPolicy.revealColumn(") &&
+                body.contains("editor.text.getColumnCount(targetLine)")
+        )
+        // The air comes from the VIEWPORT, never from the caret or the buffer.
+        assertFalse(
+            "the rescroll must never move the caret",
+            body.contains("setSelection(") || body.contains("setSelectionRegion(")
+        )
+        assertFalse(
+            "the rescroll must never write the buffer",
+            body.contains("text.replace(") || body.contains(".setText(")
         )
     }
 
