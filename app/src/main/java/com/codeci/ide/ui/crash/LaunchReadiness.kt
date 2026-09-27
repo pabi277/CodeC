@@ -28,7 +28,7 @@ package com.codeci.ide.ui.crash
 data class LaunchFacts(
     /** The 50.2 brand/dynamic-colour decision has been made for this start. */
     val themeResolved: Boolean = false,
-    /** The first route is known (welcome / guide / resume / hub). */
+    /** The first route is known (sample / resume / hub). */
     val startRouteKnown: Boolean = false,
     /** The crash-report overlay is on screen and must not be covered. */
     val crashOverlay: Boolean = false,

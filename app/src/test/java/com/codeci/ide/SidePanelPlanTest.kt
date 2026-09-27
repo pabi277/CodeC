@@ -52,11 +52,12 @@ class SidePanelPlanTest {
     // ---- the navigation card ----------------------------------------------
 
     @Test
-    fun `the navigation card is one card of three columns by two rows`() {
+    fun `the navigation card keeps three columns without a fake replacement for Guide`() {
         assertEquals(2, SidePanelPlan.CARD.size)
         assertEquals(SidePanelPlan.CARD_COLUMNS, SidePanelPlan.CARD[0].size)
-        assertEquals(SidePanelPlan.CARD_COLUMNS, SidePanelPlan.CARD[1].size)
-        assertEquals(6, SidePanelPlan.CARD.flatten().size)
+        assertEquals(2, SidePanelPlan.CARD[1].size)
+        assertEquals(5, SidePanelPlan.CARD.flatten().size)
+        assertNull(SidePanelPlan.cellFor("guide"))
     }
 
     @Test
@@ -65,10 +66,10 @@ class SidePanelPlanTest {
             listOf(NavCell.PROJECTS, NavCell.EDITOR, NavCell.SETTINGS),
             SidePanelPlan.CARD[0]
         )
-        // Owner picked “Terminal · Packages · Guide” for the bottom row; the
+        // The owner removed Guide on 2026-09-27; the
         // shot's Discover / My Labs / Change Log are refused outright.
         assertEquals(
-            listOf(NavCell.TERMINAL, NavCell.PACKAGES, NavCell.GUIDE),
+            listOf(NavCell.TERMINAL, NavCell.PACKAGES),
             SidePanelPlan.CARD[1]
         )
     }

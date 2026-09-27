@@ -1134,3 +1134,15 @@ recipe (steps 1–8).**
 
 
 90. **Owner feedback and merge authorisation (2026-09-27).** Owner: “Ok listen i am not going to run any device test but top view looking all good but i need a polished version so i will create new phase in next chats for every detail fixed”. Then: “Update the docs and my thoughts and merged with main”. Record precisely: top-level appearance looks good; remaining handset rounds are declined/unrun, NOT passed; the earlier blank-editor fix alone retains its explicit “Yes working now” confirmation. The owner wants future chat-defined, detail-by-detail polishing phases, not a claim that the current build is fully polished. Merge is now expressly authorised for [PR #86](https://github.com/pabi277/CodeC/pull/86) after final CI. The PR records the actual merge state/commit. No new phase is invented. [Full thoughts and next-chat handoff](OWNER_HANDOFF_20260927.md); old pending-test/no-authorisation entries remain historical, superseded for this delivery.
+
+
+## 2026-09-27 — Phase 64, simplify before polishing
+
+The owner requested full UI research, a part-per-chat plan with both agent and
+owner thoughts, and first removing both installation UI locks and the guide.
+Removed those user-facing restrictions and the slides/tour/typing-tip system,
+including stale Settings/search/navigation doors. Kept internal transaction
+safety, readiness checks, progress and retry. Local prevalidation: 171/0; Android
+CI pending, no device pass claimed. [Record](chat-phase64/README.md).
+The [UI review](UI_POLISH_REVIEW_20260927.md) proposes 65–74 as separate discussion
+chats, not approved implementations. No PR or merge authority was given.

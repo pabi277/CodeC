@@ -62,8 +62,6 @@ class SettingsManager(private val context: Context) {
         val SMART_TYPING_AUTO_INDENT = booleanPreferencesKey("smart_typing_auto_indent")
         val SMART_TYPING_STRING_AWARE = booleanPreferencesKey("smart_typing_string_aware")
 
-        // Phase 26.3 — IME guide dismissed flag (optional).
-        val IME_GUIDE_DISMISSED = booleanPreferencesKey("ime_guide_dismissed")
 
         // Phase 28.2 — CodeC Keys (the dedicated code keyboard). Master is
         // ON by default (owner device round 2: "make the keyboard default,
@@ -91,21 +89,6 @@ class SettingsManager(private val context: Context) {
         // true when the user picks a starter, and Settings can clear it again
         // ("show welcome again") so testers re-trigger the first-run flow.
         val FIRST_LAUNCH_COMPLETE = booleanPreferencesKey("first_launch_complete")
-
-        // Phase 45.1 — the first-run guide (five slides). false = never
-        // finished/skipped, so the guide is the second first-launch gate after
-        // Phase 33.1's welcome tiles. Written ONLY by an explicit user action
-        // (SKIP or START CODING) — never on a timer, never implicitly — and a
-        // returning user who upgrades sees it exactly once (the no-nag law:
-        // one-time, skippable in one tap, re-openable from three places).
-        val GUIDE_COMPLETED = booleanPreferencesKey("guide_completed")
-
-        // Phase 45.2 — the coach marks already seen, as a CSV of step ids (the
-        // same list-ish shape the codebase uses elsewhere, e.g. the extra-keys
-        // macros). Ids come from CoachMarkPlan; unknown tokens are dropped by
-        // CoachMarkPlan.parseSeen, so an id deleted in a later build cannot
-        // suppress a real mark. Empty = every mark still to come.
-        val COACH_MARKS_SEEN_CSV = stringPreferencesKey("coach_marks_seen_csv")
 
         // Phase 41 follow-up (round 1) — the exit survey prompt
         // (owner-requested for the testing phase; see ui/support/ExitSurvey).
@@ -147,8 +130,7 @@ class SettingsManager(private val context: Context) {
     suspend fun setSmartTypingStringAware(v: Boolean) { context.dataStore.edit { it[SMART_TYPING_STRING_AWARE] = v } }
 
     // Phase 26.3
-    val imeGuideDismissedFlow: Flow<Boolean> = context.dataStore.data.map { it[IME_GUIDE_DISMISSED] ?: false }
-    suspend fun setImeGuideDismissed(v: Boolean) { context.dataStore.edit { it[IME_GUIDE_DISMISSED] = v } }
+
 
     // Phase 28.2 — CodeC Keys. Phase 47.2 (owner instruction: "System
     // keyboard make default user can change to app keyboard if they want")
@@ -194,30 +176,6 @@ class SettingsManager(private val context: Context) {
     // Phase 33.1 — first-run welcome flag (default false = welcome not yet seen).
     val firstLaunchCompleteFlow: Flow<Boolean> = context.dataStore.data.map { it[FIRST_LAUNCH_COMPLETE] ?: false }
     suspend fun setFirstLaunchComplete(v: Boolean) { context.dataStore.edit { it[FIRST_LAUNCH_COMPLETE] = v } }
-
-    // Phase 45.1 — the first-run guide flag (default false = show it once).
-    val guideCompletedFlow: Flow<Boolean> = context.dataStore.data.map { it[GUIDE_COMPLETED] ?: false }
-    suspend fun setGuideCompleted(v: Boolean) { context.dataStore.edit { it[GUIDE_COMPLETED] = v } }
-
-    // Phase 45.2 — the coach marks the user has already seen (default empty =
-    // show each one once, on first arrival at its surface).
-    val coachMarksSeenCsvFlow: Flow<String> =
-        context.dataStore.data.map { it[COACH_MARKS_SEEN_CSV] ?: "" }
-    suspend fun setCoachMarksSeenCsv(csv: String) {
-        context.dataStore.edit { it[COACH_MARKS_SEEN_CSV] = csv }
-    }
-
-    /**
-     * Phase 45 — Settings → About → "Reset tips": the guide and every coach
-     * mark come back, and NOTHING else is touched (no project, no file, no
-     * other preference). Two keys, one edit, so the reset is atomic.
-     */
-    suspend fun resetGuideTips() {
-        context.dataStore.edit {
-            it[GUIDE_COMPLETED] = false
-            it[COACH_MARKS_SEEN_CSV] = ""
-        }
-    }
 
     // Phase 41 follow-up — the exit survey prompt (testing-phase default ON).
     val feedbackExitPromptEnabledFlow: Flow<Boolean> =

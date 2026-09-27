@@ -1,3 +1,14 @@
+**2026-09-27 — Phase 64: remove both installation UI locks and the guide.**
+Implemented on `arena/01a0e1d9-codec`; local JVM prevalidation 171/0 (temporary
+JUnit shim, not Android). Full CI pending. Navigation no longer locks during
+userland/package installation; slides, coach marks, typing tips and guide entry
+points/preferences API removed. Internal install safety and progress remain.
+[Implementation](chat-phase64/README.md) · [Full UI review and ten proposed
+one-part-per-chat briefs](UI_POLISH_REVIEW_20260927.md). Later phases are discussion
+drafts: ask for the owner's thoughts before implementation. No PR/merge requested.
+
+---
+
 **2026-09-27 — Owner-approved merge and future polishing handoff.** The owner says the top-level appearance looks good, declines further device testing for this delivery, and wants to define focused phases in future chats to polish every detail. This is **not a full device-test pass or final-polish claim**. The owner explicitly authorised merging the current branch via [PR #86](https://github.com/pabi277/CodeC/pull/86), after final CI. **Next: the owner defines the first detail-focused polishing phase in a new chat.** No further feature phase is invented; existing unrun checklists are reference-only, not an outstanding owner task. [Verbatim feedback, evidence and handoff](OWNER_HANDOFF_20260927.md).
 
 ---

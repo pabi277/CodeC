@@ -1,3 +1,10 @@
+> **2026-09-27 update — Phase 64:** installation no longer locks tabs or the
+> editor drawer, and the guide/tour/typing tips are removed. “Help & guide” and
+> “Reset tips” no longer exist. To inspect/retry userland setup, use Terminal’s
+> progress and download action. A missing tool or busy runner may still refuse
+> its own operation; that is not a navigation lock. Older guide/lock recipes
+> below are historical. [Details](chat-phase64/README.md).
+
 # CodeC — "Compiler blocked / Permission denied" & the Termux way
 
 > **Bug-report mode (2026-09-01):** all phases are complete. Report a bug with

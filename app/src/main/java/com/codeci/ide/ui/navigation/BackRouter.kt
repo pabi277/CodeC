@@ -20,16 +20,6 @@ package com.codeci.ide.ui.navigation
  *
  * `None` means "let the library own it" (a Material3 sheet or a dropdown
  * keeps its own back handling) — never "do nothing".
- *
- * Deliberate deviation from the written spec (PART_49_1's table row 2): the
- * spec's `coachMarkVisible -> CloseCoachMark` row is NOT built, and the
- * `BackState`/`BackAction` members for it do not exist. The guided tour was
- * rebuilt under the owner's own instruction in Phase 45 rounds 2-3 as ONE
- * unbreakable flow (*"I want a full process 1st to last without skip
- * anything in this"*), where Back navigates normally and the tour resumes at
- * the same beat, unspent — pinned by `GuideWiringTest` ("Back must not end
- * the tour"). A close-the-mark row would contradict that later, owner-given
- * law; the audit row is corrected in PART_49_1's implementation record.
  */
 data class BackState(
     /** The active buffer has unsaved edits (the editor's dirty flag). */

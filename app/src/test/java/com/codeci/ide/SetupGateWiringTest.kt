@@ -288,13 +288,10 @@ class SetupGateWiringTest {
         val navHost = src.indexOf("NavHost(")
         assertTrue(banner >= 0 && navHost >= 0)
         assertTrue("the safe-mode banner is still the shell's one announcement", banner < navHost)
-        // The progress and the facts still come from the terminal's own state…
-        assertTrue(src.contains("terminalViewModel.setupProgress.collectAsState()"))
-        assertTrue(src.contains("terminalViewModel.setupFacts.collectAsState()"))
+        // Setup state remains on the operation-owning screens, not the shell.
+        assertTrue(source(terminalScreen).contains("viewModel.setupProgress.collectAsState()"))
+        assertTrue(source(modules).contains("terminalViewModel.setupFacts.collectAsState()"))
         assertTrue(src.contains("SetupNoticeBridge.post(report.message)"))
-        // …and still reach the screens that gate on them…
-        assertTrue(src.contains("progress = setupProgress,"))
-        assertTrue(src.contains("facts = setupFacts,"))
         // …but nothing between the banner and the NavHost is a setup surface.
         assertFalse(
             "the strip is gone from the shell",
@@ -456,82 +453,6 @@ class SetupGateWiringTest {
         assertTrue(body.contains("failRun(ctx, setupVerdict.message"))
     }
 
-    // ---- Phase 45 round 4: the chrome lock --------------------------------
-    // Owner, after running the tour: *"When the userland is installing and
-    // unpacking the user can not access any other option and it will show a
-    // sweet massage of why can't access any other option."*
-
-    // ---- Phase 45 round 5: the lock is on from the FIRST FRAME --------------
-    // Owner, after running round 4: *"The lock option is good but still it late
-    // user can switch before the start of userland download because is takes a
-    // little time to connect and user can switch task between them / Make it
-    // instantly after 1st open and others are ok."*
-
-    @Test
-    fun `the lock is decided by the prefix, not by the stage, and safe mode is exempt`() {
-        val policy = source(setupState)
-        // The userland branch no longer waits for DOWNLOADING, and ROUND 6 moved
-        // the boundary from a hand-listed pair of stages to the settled flag:
-        // nothing IN FLIGHT with no usable prefix answers NONE. If CHECKING ever
-        // comes back into the "no lock" list, the window the owner reported in
-        // round 5 is open again; if the settled guard goes, the lock outlives the
-        // unpack again (*"even after unpacking the userland it still stay lock"*).
-        assertTrue(
-            "the settled stage must be the boundary",
-            policy.contains("if (progress.settled) return ChromeLockReason.NONE")
-        )
-        assertFalse(
-            "round 5's hand-listed pair is gone",
-            policy.contains("SetupStage.FAILED, SetupStage.UNSUPPORTED -> ChromeLockReason.NONE")
-        )
-        assertFalse(
-            "round 5's READY pause is gone",
-            policy.contains("SetupStage.READY -> ChromeLockReason.USERLAND_STARTING")
-        )
-        assertTrue(policy.contains("else -> ChromeLockReason.USERLAND_STARTING"))
-        assertFalse(
-            "CHECKING must not be exempted any more",
-            policy.contains("SetupStage.CHECKING -> ChromeLockReason.NONE")
-        )
-        // A usable prefix short-circuits BEFORE the stage table, which is what
-        // keeps a launch on an installed phone from flashing a pause — and before
-        // the settled guard, so the two cannot disagree about the order.
-        before(policy, "if (facts.usable) return ChromeLockReason.NONE", "return when (progress.stage)")
-        before(
-            policy,
-            "if (facts.usable) return ChromeLockReason.NONE",
-            "if (progress.settled) return ChromeLockReason.NONE"
-        )
-        // The first-frame reason has its own sentence, and it points at the watch
-        // surface like every other one.
-        assertTrue(policy.contains("ChromeLockReason.USERLAND_STARTING ->"))
-        val starting = policy.substring(
-            policy.indexOf("ChromeLockReason.USERLAND_STARTING ->"),
-            policy.indexOf("ChromeLockReason.USERLAND_DOWNLOAD ->")
-        )
-        assertTrue(starting.contains("Hang tight"))
-        assertTrue(starting.contains("Terminal tab"))
-
-        // The Android edge: the lock is computed in the shell's composition from
-        // the flows the ViewModel fills SYNCHRONOUSLY from the disk, so frame one
-        // already knows — and safe mode is passed in, because a crash-loop phone
-        // must still be able to reach Settings (export, report).
-        val mainSrc = source(main)
-        assertTrue(mainSrc.contains("reducedStart = com.codeci.ide.ui.crash.SafeMode.active"))
-        before(mainSrc, "val chromeLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock(", "SnackbarHostState()")
-        val vm = source(terminalVm)
-        assertTrue(
-            "the facts must be read from the disk at construction, not later",
-            vm.contains("MutableStateFlow(computeSetupFacts(setupTracker.state))")
-        )
-        assertTrue(vm.contains("SetupGatePolicy.factsFor(prefixDir, phase, progress)"))
-    }
-
-    // ---- Phase 45 round 6: the lock must die with the setup -----------------
-    // Owner, after running round 5: *"One problem even after unpacking the
-    // userland it still stay lock if i refresh it it's the open the editor check
-    // the problem."*
-
     @Test
     fun `a shell that is alive re-reads the disk facts`() {
         // Round 6's second half: the facts are re-read a FOURTH time when a
@@ -549,94 +470,5 @@ class SetupGateWiringTest {
         // Off the main thread: three filesystem stats, but the collector is Main.
         assertTrue(region.take(500), region.contains("Dispatchers.IO"))
         assertTrue(region.take(500), region.contains("round 6"))
-    }
-
-    @Test
-    fun `an install pauses the other tabs, and a paused tab says why`() {
-        val src = source(main)
-        // The bar ASKS the pure policy which tabs an install has paused; it does
-        // not keep its own list of stages, and it does not guess a sentence.
-        assertTrue(src.contains("val chromeLock = com.codeci.ide.ui.terminal.SetupLockPolicy.lock("))
-        assertTrue(src.contains("progress = setupProgress,"))
-        assertTrue(src.contains("facts = setupFacts,"))
-        assertTrue(src.contains("packageInstallRunning = editorInstallRunning"))
-        assertTrue(src.contains(".optionForRoute(screen.route)"))
-        assertTrue(src.contains("SetupLockPolicy.option(option, chromeLock)"))
-        // A paused tab does not navigate: the tap shows the sentence instead.
-        val barStart = src.indexOf("private fun FlatBottomBar(")
-        val barEnd = src.indexOf("private fun EditorNavRevealHandle(")
-        assertTrue("the bottom bar is gone", barStart >= 0 && barEnd > barStart)
-        val bar = src.substring(barStart, barEnd)
-        assertTrue(bar.contains("val locked = !verdict.allowed"))
-        assertTrue(bar.contains("if (locked) {"))
-        assertTrue(bar.contains("verdict.message?.let(onLockMessage)"))
-        assertTrue(bar.contains("onNavigate(screen)"))
-        // ONE lambda for the tab and for the guided tour, which performs the click
-        // of the control it spotlights (round 4): beats 7 and 9 are these tabs.
-        assertTrue(bar.contains("val onTabTap: () -> Unit = {"))
-        assertTrue(bar.contains("GuideAnchor.modifier(tabAnchorId, onClick = onTabTap)"))
-        // A paused tab also LOOKS paused, before it is tapped.
-        assertTrue(bar.contains("Icons.Default.Lock"))
-        assertTrue(bar.contains("idleColor.copy(alpha = 0.45f)"))
-        // The sentence has somewhere to appear: the scaffold grew a snackbar host
-        // — a line of text, not a wall, and it blocks nothing.
-        assertTrue(src.contains("snackbarHost = { SnackbarHost(snackbarHostState) }"))
-        assertTrue(src.contains("scope.launch { snackbarHostState.showSnackbar(message) }"))
-        // The sentence arrives once when the pause BEGINS, not only after a
-        // refused tap — and once per episode, so the three stages of one download
-        // do not stack three snackbars.
-        assertTrue(src.contains("LaunchedEffect(chromeLock.locked) {"))
-        assertTrue(src.contains("if (chromeLock.locked) chromeLock.message?.let(showLockMessage)"))
-        // The law that keeps a pause from being a prison: the surface that SHOWS
-        // the install is never paused, and the POLICY says which one that is.
-        val policy = source("app/src/main/java/com/codeci/ide/ui/terminal/SetupState.kt")
-        assertTrue(policy.contains("fun watchOption(reason: ChromeLockReason): ChromeOption"))
-        assertTrue(policy.contains("if (reason == ChromeLockReason.PACKAGE_INSTALL) ChromeOption.EDITOR else ChromeOption.TERMINAL"))
-        assertTrue(policy.contains("option == watchOption(lock.reason) -> SetupVerdict.Allowed"))
-    }
-
-    @Test
-    fun `the editor reports the install only it can see, and clears it on the way out`() {
-        val editor = source("app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt")
-        // The Output Panel's install flag is the only signal that says "one job is
-        // being installed right now". `busy` alone is not enough: a run — or a
-        // Flask server the tour itself starts — keeps it true for minutes, and
-        // pausing the app for the user's own program would be a prison.
-        assertTrue(editor.contains("val packageInstallRunning = outputState.busy && outputState.installing"))
-        assertTrue(editor.contains("EditorChromeState.setInstallRunning(packageInstallRunning)"))
-        // Cleared on dispose: a stale "installing" would leave the whole app
-        // paused behind an install that finished with the screen.
-        assertTrue(editor.contains("EditorChromeState.setInstallRunning(false)"))
-        // The bridge, and why it exists: the tabs live in MainActivity, the
-        // install lives in the editor, and no parameter reaches between them.
-        val bridge = source("app/src/main/java/com/codeci/ide/ui/editor/EditorChromeState.kt")
-        assertTrue(bridge.contains("val installRunning: StateFlow<Boolean>"))
-        assertTrue(bridge.contains("fun setInstallRunning(running: Boolean)"))
-        assertTrue(source(main).contains("val editorInstallRunning by EditorChromeState.installRunning.collectAsState()"))
-        // The flag itself: default false, set true on the ONE install path, and
-        // cleared by both of its exits.
-        val vm = source("app/src/main/java/com/codeci/ide/ui/viewmodels/EditorViewModel.kt")
-        assertTrue(vm.contains("val installing: Boolean = false"))
-        assertEquals("only confirmInstall may set installing = true", 1, vm.split("installing = true").size - 1)
-        assertEquals("both exits of an install clear the flag", 2, vm.split("installing = false,").size - 1)
-    }
-
-    @Test
-    fun `the editor's own chrome pauses for a package install and never for the userland`() {
-        val editor = source("app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt")
-        // ☰ and RUN ▶ answer the lock with the SAME sentence the tabs use, from
-        // the SAME pure policy — one install, one explanation.
-        assertTrue(editor.contains("com.codeci.ide.ui.terminal.SetupLockPolicy.editorChromeLocked(editorLock)"))
-        assertTrue(editor.contains("if (editorChromeLocked) showChromeLock() else toggleDrawer()"))
-        assertTrue(editor.contains("val onRunTap: () -> Unit = {"))
-        assertTrue(editor.contains("snackbarHostState.showSnackbar(message)"))
-        // The edge swipe is the same option as ☰: a lock you can swipe around is
-        // not a lock.
-        assertTrue(editor.contains("!editorChromeLocked,"))
-        // And the reason the editor is reached at all is a PACKAGE install, never
-        // the userland's own: typing and `cc` do not wait for a download
-        // (Phase 44.1's law, pinned by SetupGatePolicyTest).
-        val policy = source("app/src/main/java/com/codeci/ide/ui/terminal/SetupState.kt")
-        assertTrue(policy.contains("lock.reason == ChromeLockReason.PACKAGE_INSTALL"))
     }
 }

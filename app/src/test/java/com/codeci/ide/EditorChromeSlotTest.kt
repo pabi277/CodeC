@@ -125,7 +125,7 @@ class EditorChromeSlotTest {
         assertTrue("the glyph is the triangle the shots draw", region.contains("Icons.Default.PlayArrow"))
         assertTrue("the colour decision comes from RunButtonStyle", region.contains("RunButtonStyle.roleFor(runButtonState)"))
         assertTrue(
-            "the green belongs to the hero role alone (a locked or quiet control falls back)",
+            "the green belongs to the hero role alone (a quiet control falls back)",
             region.contains("runRole == RunButtonRole.HERO") && region.contains("RunGreen"),
         )
         assertTrue(
@@ -150,10 +150,7 @@ class EditorChromeSlotTest {
             "the word survives for TalkBack (the pixels drop it, the accessibility tree keeps it)",
             actions.contains("stringResource(R.string.run)"),
         )
-        assertTrue(
-            "the tour's anchor and its one-tap click must survive the restyle",
-            actions.contains("GuideAnchors.EDITOR_RUN") && actions.contains("onClick = onGuideRunTap"),
-        )
+        assertTrue("Run uses the normal chooser path", actions.contains("onClick = onRunTap"))
     }
 
     @Test

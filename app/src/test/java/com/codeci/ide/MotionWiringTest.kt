@@ -103,19 +103,6 @@ class MotionWiringTest {
         }
     }
 
-    @Test
-    fun `the coach marks contain no animation call`() {
-        val guideDir = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/guide")
-        val hits = guideDir.walkTopDown()
-            .filter { it.isFile && it.extension == "kt" }
-            .filter { file ->
-                val code = RepoFiles.codeOnly(file.readText())
-                animationNeedles().any { it.containsMatchIn(code) }
-            }
-            .map { it.name }
-            .toList()
-        assertTrue("animated guide files: $hits", hits.isEmpty())
-    }
 
     private fun animationNeedles(): List<Regex> = listOf(
         Regex("""\bAnimatedVisibility\s*\("""),

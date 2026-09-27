@@ -170,7 +170,7 @@ data class OutputRunState(
      * asked for (RUN ▶ → Install, i.e. `pkg install -y <pkg>`), as opposed to a
      * compile, a run or a long-lived server. It is the only signal that says
      * "one job is being installed right now", which is what the chrome lock
-     * pauses the other options for ([com.codeci.ide.ui.terminal.SetupLockPolicy]).
+     * reports as installation progress (without blocking navigation).
      * A plain run never sets it: locking the app while the user's own program —
      * or a Flask server — is running would be a prison, not a courtesy.
      */

@@ -1,3 +1,12 @@
+> **Latest owner instruction — 2026-09-27 (Phase 64):** remove BOTH installation
+> UI locks and the guide system. This supersedes earlier mandatory-tour,
+> no-skip and chrome-lock instructions below. Keep internal package/install
+> safety, progress/retry and runner guards. Source implementation and local
+> 171/0 prevalidation recorded in `docs/chat-phase64/README.md`; Android CI
+> pending. Full UI review and one-part-per-chat proposals:
+> `docs/UI_POLISH_REVIEW_20260927.md`. Ask the owner’s thoughts before broader
+> UI changes. No PR/merge requested; no device acceptance invented.
+
 # CodeC — Future-Update Rules (owner direction 2026-09-01)
 
 > **Owner's direction:** *"Update all md files … make a rule.md for future
