@@ -52,8 +52,8 @@ object CaretVisibilityPolicy {
     /**
      * One-line-of-air rule: the caret must not sit on the last visible row.
      *
-     * Phase 48 wrote this as an honest debt — sora's
-     * `ensurePositionVisible(line, column)` takes no margin argument, so the
+     * Phase 48 wrote this as an honest debt — sora's reveal call takes no
+     * margin argument (its `(line, column)` pair, nothing else), so the
      * guarantee was only "the caret's row is visible".
      *
      * Phase 69.1 paid it WITH that same call, by reading sora 0.24.6's own

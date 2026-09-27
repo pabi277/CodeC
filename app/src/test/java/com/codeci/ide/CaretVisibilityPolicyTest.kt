@@ -199,8 +199,10 @@ class CaretVisibilityPolicyTest {
         // can land before it runs, so `lineCount` may be smaller than the line
         // it was scheduled from. Total by construction — never an index error
         // inside runCatching's cosmetic call.
+        // An empty buffer has exactly one (empty) line: line 0, never a negative.
         assertEquals(0, CaretVisibilityPolicy.revealLine(caretLine = 5, lineCount = 0))
-        assertEquals(0, CaretVisibilityPolicy.revealLine(caretLine = 5, lineCount = 3))
+        // A caret past the end of a shorter buffer reveals the LAST line, not 0.
+        assertEquals(2, CaretVisibilityPolicy.revealLine(caretLine = 5, lineCount = 3))
         assertEquals(2, CaretVisibilityPolicy.revealLine(caretLine = 9, lineCount = 3))
         assertEquals(0, CaretVisibilityPolicy.revealLine(caretLine = -2, lineCount = 0))
     }
