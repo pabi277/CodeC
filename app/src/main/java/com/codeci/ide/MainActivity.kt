@@ -37,8 +37,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -118,7 +116,6 @@ import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.ui.utils.AppLogger
 import com.codeci.ide.ui.utils.FileNameUtils
 import androidx.activity.compose.LocalActivity
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.ui.viewmodels.TerminalViewModel

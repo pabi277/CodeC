@@ -62,6 +62,10 @@ protection, source files/samples, resume, safe mode and normal Back handling.
 An installation must not take away navigation, but an unavailable tool still
 cannot honestly run and two transactions must not corrupt the same prefix.
 
+After an editor-driven install, automatic Run resumes only if the originally
+selected project/file is still selected; otherwise successful installation asks
+the user to tap Run when ready. Switching files must never run the wrong file.
+
 No replacement onboarding or new help screen. Existing stored guide flags are
 ignored without resetting user data. The navigation card now has five real
 choices, not a dead sixth tile. Settings/search inventory is now 64 controls.

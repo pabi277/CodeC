@@ -36,9 +36,21 @@ installs and invalid commands; they must not prevent navigating or editing.
 - Old guide preference values can remain on upgraded devices; nothing reads or
   writes them. No destructive DataStore migration or project reset.
 
+## Follow-up: install completion must not run a newly selected file
+
+Reviewing the newly unlocked path exposed a real dependency on the old lock:
+`confirmInstall` resumed `runFile(ctx, pendingRunTarget)` using the *current*
+project/file after an asynchronous install. A user can now change that context.
+The ViewModel captures the original context and target before launching the
+installer and uses pure `InstallResumePolicy` at completion. If the selected
+project/file changed, installation ends successfully with “installed — tap Run
+when ready”, not an unexpected run of another file. Same-context file and server
+requests retain their existing automatic continuation. Six regression cases
+cover identity and both continuation call sites. No navigation restriction added.
+
 ## Validation
 
-- Local JVM prevalidation: **171 passed, 0 failed** (16 actual test classes,
+- Local JVM prevalidation: **177 passed, 0 failed** (17 actual test classes,
   temporary JUnit assertion/rule shim; not an Android or Gradle test run).
 - Six new `UnrestrictedUiWiringTest` cases pin removed APIs and preserved safety.
   Updated Run policy, navigation grid, Settings census, Back and setup pins.

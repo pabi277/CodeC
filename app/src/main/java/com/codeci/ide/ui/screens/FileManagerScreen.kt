@@ -503,7 +503,6 @@ fun FileManagerScreen(
                                 }
                             )
                         }
-                        HorizontalDivider()
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

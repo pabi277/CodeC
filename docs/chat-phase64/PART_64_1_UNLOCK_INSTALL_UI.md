@@ -45,3 +45,14 @@ https://developer.android.com/develop/ui/compose/components/progress
 
 Reject deleting internal mutexes/transaction locks. Reject replacing the lock
 with another modal. No arbitrary parallel-install feature in a UI-removal task.
+
+## Implementation follow-up — 2026-09-27
+
+Unlocking file/project changes also requires safe continuation after install.
+`InstallResumePolicy` compares the captured project/file with the current one;
+`EditorViewModel.confirmInstall` captures the target/server intent before async
+work and guards BOTH continuation paths. A changed context gets successful
+completion with an explicit “tap Run when ready” message, not an automatic run
+of a different file. `InstallResumePolicyTest`: five policy cases + one wiring
+case; included in the 177/0 local result. This is an operation-identity guard,
+not a new navigation lock.

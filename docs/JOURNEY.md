@@ -1142,7 +1142,7 @@ The owner requested full UI research, a part-per-chat plan with both agent and
 owner thoughts, and first removing both installation UI locks and the guide.
 Removed those user-facing restrictions and the slides/tour/typing-tip system,
 including stale Settings/search/navigation doors. Kept internal transaction
-safety, readiness checks, progress and retry. Local prevalidation: 171/0; Android
+safety, readiness checks, progress and retry. Local prevalidation: 177/0; Android
 CI pending, no device pass claimed. [Record](chat-phase64/README.md).
 The [UI review](UI_POLISH_REVIEW_20260927.md) proposes 65–74 as separate discussion
 chats, not approved implementations. No PR or merge authority was given.

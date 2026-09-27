@@ -1,5 +1,5 @@
 **2026-09-27 — Phase 64: remove both installation UI locks and the guide.**
-Implemented on `arena/01a0e1d9-codec`; local JVM prevalidation 171/0 (temporary
+Implemented on `arena/01a0e1d9-codec`; local JVM prevalidation 177/0 (temporary
 JUnit shim, not Android). Full CI pending. Navigation no longer locks during
 userland/package installation; slides, coach marks, typing tips and guide entry
 points/preferences API removed. Internal install safety and progress remain.
