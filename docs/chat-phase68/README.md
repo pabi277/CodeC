@@ -1,7 +1,9 @@
 # Phase 68.1 — Editor chrome, tabs and file actions — compact Spck parity
 
-**Date:** 2026-09-27. **Branch:** `arena/01a0e36f-codec`.
-**Status:** implemented, pending Android CI. No PR opened per owner instruction.
+**Date:** 2026-09-27. **Branch:** started on `arena/01a0e36f-codec`; finished and
+CI-green on `arena/01a0e444-codec` (full tree mirrored byte-for-byte, see
+Follow-up verification).
+**Status:** implemented, Android CI ✅ GREEN. No PR opened per owner instruction.
 Handset verification recommended.
 
 ## Owner decisions (option labels verbatim)
@@ -69,7 +71,50 @@ Local JDK not available in this sandbox (JAVA_HOME unset, no `java` binary), so 
 - Tab bar height 40dp, top bar 48dp, status padding 2dp verified via source search
 - No new dependency, permission, preference, telemetry
 
-Android CI must be run on `arena/01a0e36f-codec` to confirm green: host unit/screenshot, debug/release APK. No handset verification claimed. Do not treat this record as device proof.
+Android CI must be run to confirm green: host unit/screenshot, debug/release APK.
+**Done — see Follow-up verification below.** No handset verification claimed.
+Do not treat this record as device proof.
+
+### Follow-up verification — completed on `arena/01a0e444-codec`
+
+The original branch never reached a green run. Its last two failures, in
+order, were:
+
+1. **Compile error** at `EditorTabBar.kt:209` — `Unresolved reference
+   'clickable'` after the Phase 68.1 split-doors rewrite (fixed there by
+   `472579d`, which added the missing `androidx.compose.foundation.clickable`
+   import).
+2. **One unit test:** `TabMenuWiringTest > the flag is published once and
+   cleared on the way out`. Root cause: commit `918f4d4` had appended `)` to
+   the exact-match literal for the `TabRowRevealStrip(` call, but the real
+   call carries a second argument — `modifier = Modifier.weight(1f)` — which
+   the sibling test `hide tabs folds the row into its strip` *requires*, so
+   the source text is `onReveal = { tabsHidden = false },` and the
+   `)`-suffixed literal could never match. The two assertions contradicted
+   each other; no source could satisfy both.
+
+To finish the phase without returning to the earlier chat, the whole tree of
+`arena/01a0e36f-codec` at `472579d` was mirrored byte-for-byte onto
+`arena/01a0e444-codec` (commit `9e7280b`, diff against the source branch
+empty), and the test was repaired by reverting the literal to the
+`)`-free form `main` already uses (commit `7ca3880`). Both assertions are now
+satisfiable by the same source.
+
+**✅ GREEN:** [CI 36343503123](https://github.com/pabi277/CodeC/actions/runs/36343503123)
+on final code `7ca3880` completed successfully: the full host unit and
+screenshot test task (Phase 52), debug APK assembly (26,013,004 B), release
+APK assembly (universal 6,794,264 B), release manifest validation and
+artifact packaging all passed. Release-publish steps stay skipped by design
+on a branch push (publishing is `app-v*`-tag-only).
+
+One recorded deviation from this README's original *Tab menu* section: the
+menu is **split into two doors** (commit `918f4d4`) — the tab bar's ⋮ menu is
+close-only (Quick Close / Close Others / Close Unmodified / Close All / Copy
+path / Hide Tabs) and sorting lives in its own ≡↓ door in `EditorScreen`
+(`Icons.AutoMirrored.Filled.Sort`, `MENU_ORDER` rows with checkmark). The
+tests pin the split shape (`Sort must NOT be in close menu`), and the green
+run confirms it. No handset verification claimed; do not treat this record as
+device proof.
 
 ## Boundaries
 

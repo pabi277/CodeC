@@ -1,3 +1,27 @@
+**2026-09-27 — Phase 68.1 closed out: full Android CI ✅ GREEN on
+`arena/01a0e444-codec`, no return to the earlier chat needed.** The whole tree
+of `arena/01a0e36f-codec` at `472579d` (Phase 68.1 compact Spck parity:
+48dp breadcrumb top bar, 40dp tab bar with italic active + fixed dirty dot,
+split tab-menu doors — close-only ⋮ menu + ≡↓ sort door with Queue and
+checkmark, compact status bar, MD preview via Run) was mirrored byte-for-byte
+onto `arena/01a0e444-codec` (`9e7280b`) and repaired: that branch's CI had
+been red on a compile error (missing `clickable` import, fixed there by
+`472579d`) and on one self-contradictory test — `TabMenuWiringTest > the flag
+is published once and cleared on the way out`, whose exact-match literal had
+been given a trailing `)` that cannot coexist with the
+`modifier = Modifier.weight(1f)` argument the sibling test requires; the
+literal reverted to the `)`-free form `main` uses (`7ca3880`). **GREEN, first
+round on the repaired code: [run
+36343503123](https://github.com/pabi277/CodeC/actions/runs/36343503123)** —
+host unit/screenshot tests, debug APK 26,013,004 B, release APK 6,794,264 B,
+manifest validation, artifacts uploaded. No PR opened and nothing merged —
+owner instruction still required. **Next: owner handset round (compact Spck
+parity: top-bar breadcrumb, 40dp tabs, the two menu doors, status bar, Run ▶
+opening MD preview), then merge decision.**
+[Record](chat-phase68/README.md).
+
+---
+
 **2026-09-27 — Phase 66.1 delivered: owner device-verified and merge-authorised
 (verbatim: "Device verified merge it to the main") via
 [PR #88](https://github.com/pabi277/CodeC/pull/88).** The PR records the
