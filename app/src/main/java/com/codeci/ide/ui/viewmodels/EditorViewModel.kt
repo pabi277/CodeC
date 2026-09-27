@@ -1991,6 +1991,10 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             _userMessage.value = "Choose a project to create folders and nested files"
             return false
         }
+        if (project != null && com.codeci.ide.ui.projects.GitDiscardEditors.blocks(root, path)) {
+            _userMessage.value = "This file is being restored. Try creating it again when that finishes."
+            return false
+        }
         val result = com.codeci.ide.ui.editor.NewFilePath.create(root, parent, rawName)
         if (result.isFailure) {
             _userMessage.value = result.exceptionOrNull()?.message ?: "Could not create file"

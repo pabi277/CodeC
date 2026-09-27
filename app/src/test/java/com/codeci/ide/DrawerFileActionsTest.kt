@@ -122,4 +122,18 @@ class DrawerFileActionsTest {
             assertNull(vm.fileForExport(context, chosen.copy(isDirectory = true)))
         } finally { GitDiscardEditors.unregister(vm) }
     }
+
+    @Test fun `nested creation preserves the existing discard write guard`() {
+        val project = ProjectManager(context).createProject("create_guard", includeStarter = false).getOrThrow()
+        File(project.root, "start.txt").writeText("start")
+        val vm = EditorViewModel()
+        try {
+            vm.openFile(context, project.name, "start.txt")
+            val ticket = GitDiscardEditors.begin(project.root, "css/new.css")
+            try {
+                assertFalse(vm.createAndOpenFile(context, "css/new.css"))
+                assertFalse(File(project.root, "css/new.css").exists())
+            } finally { GitDiscardEditors.finish(ticket) }
+        } finally { GitDiscardEditors.unregister(vm) }
+    }
 }
