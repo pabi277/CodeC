@@ -16,8 +16,14 @@ Android); Compose files reviewed by hand. **Full Android CI GREEN, first
 round, on code `a96fb25`:
 [run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346)**
 — host unit/screenshot tests, debug APK 25,965,508 B, release APK 6,777,708 B.
-Not merged; no PR; no device round asked. Deferred, not decided: clone QR
-glyph, chip touch height, `Auto` default, real last-opened history. **Next
+Not merged; no PR; no device round asked. **Follow-up from the owner's phone
+(same day):** *"when i go to projects and press back it's showing options of
+close the app but i want previous editor page"* — the two editor→Projects doors
+popped the editor tab-style; they now push the hub over it like the Settings
+door, so Back returns to the editor and the exit prompt is the next Back
+(router unchanged; `BackHandlerWiringTest` pin; local 53/0 + 197/0). CI for
+the follow-up head: see the line below this entry. Deferred, not decided: clone
+QR glyph, chip touch height, `Auto` default, real last-opened history. **Next
 discussion in the owner's order: 67.1 (files, drawer, project search) — ask
 first.** [Record](chat-phase66/README.md).
 

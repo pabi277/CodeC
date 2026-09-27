@@ -28,6 +28,7 @@ shape. Everything below is behaviour and words.
 | 10 | Search miss and filter miss shared "No projects match this filter". | A search miss says *"No projects match your search"*. |
 | 11 | Hardcoded sentences in the hub and its ViewModel ("Delete project X and all its files?", "In X", the empty-state sentence, "Import failed: …", "unknown error", …). | String resources (`delete_project_confirm`, `new_item_in`, `no_projects_hint`, `import_failed`, `unknown_error`, …); three strings with zero readers removed (`clone_from_github`, `clone_fetch_branches`, `hub_rename_project`). |
 | 12 | Delete confirms' action button in the default text-button colour; the amber badge a private literal `0xFFE6B33C`. | `destructiveTextButtonColors()` (theme error role); `HubBadgeYellow = Color(CodecPalette.WARNING)`. |
+| 13 | **Owner device report after 66.1:** Back on Projects showed the exit prompt instead of returning to the editor (`MainActivity.kt` `onOpenProjectsHub` / `onOpenProjects` popped the editor tab-style; `popUpTo(start)`). | Both doors push the hub over the editor like the Settings door; Back returns to the editor, the prompt is the next Back. Router unchanged. See [README § Follow-up](README.md#follow-up--back-from-projects-returns-to-the-editor-owner-device-report). |
 
 ## Files
 
@@ -145,7 +146,10 @@ mistakes CI green for a device pass.
 
 ## CI
 
-**GREEN, first round** — code `a96fb25`,
+**Follow-up head (Back from Projects):** recorded in `docs/NEXT_STEPS.md`'s
+Phase 66.1 entry once the run finishes.
+
+**66.1 head — GREEN, first round** — code `a96fb25`,
 [run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346)
 (*Build APK*): icon and release-notes checks, **host unit and screenshot
 tests**, debug APK, release APK (measure-only and signed), release APK-set

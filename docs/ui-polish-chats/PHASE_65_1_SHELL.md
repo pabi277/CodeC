@@ -47,3 +47,11 @@ device evidence establish. Do not make the owner run declined device rounds.
 
 No new dependencies, permissions, persistent preferences or telemetry by default.
 Stop after this agreed part and update its record; do not roll into the next chat.
+
+## Already done outside this part
+
+2026-09-27, owner device report during 66.1: Back on the Projects hub returns
+to the editor the user came from instead of showing the exit prompt — the two
+editor→Projects doors no longer pop the editor (`MainActivity.kt`; pinned by
+`BackHandlerWiringTest`). Record:
+[`docs/chat-phase66/README.md` § Follow-up](../chat-phase66/README.md).

@@ -1223,11 +1223,22 @@ fun MainApp(
                         }
                     },
                     // Phase 47.1 — the drawer's `+ New project…`: the Projects
-                    // tab with the hub's `+` sheet open (tab-style navigation,
-                    // so the editor's back stack is not stacked under it).
+                    // screen with the hub's `+` sheet open.
+                    //
+                    // Phase 66.1 follow-up (owner, 2026-09-27: *"when i go to
+                    // projects and press back it's showing options of close the
+                    // app but i want previous editor page"*): Projects is a PAGE
+                    // over the editor, not a tab — it left the bar in Phase 56.
+                    // Until now both Projects doors popped the editor
+                    // (`popUpTo(start) { saveState }`), so on a launch that
+                    // started on the hub (the resume card, any absence over
+                    // five minutes) the hub had nothing under it and Back met
+                    // the exit prompt. Pushing it like the Settings door below
+                    // keeps the editor underneath: the router's row 8 pops back
+                    // to it, and the exit prompt is one more Back away, exactly
+                    // as the owner asked.
                     onOpenProjects = {
                         navController.navigate(Screen.FileManager.createRoute(openAddSheet = true)) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             // 47.1 device round (owner: the ✕ row "just close
                             // and open editor"). This row is an INSTRUCTION —
@@ -1248,13 +1259,15 @@ fun MainApp(
                     // question asked of the plan, and false whenever the tour is
                     // not mid-flight: no tour, no change for anybody.
 
-                    // Phase 55 — the side panel's Navigation card. Projects and
-                    // Packages are the two cells that leave the editor; both go
-                    // the way a bottom-bar TAP goes (save state, single top),
-                    // because a cell is a room, not an instruction with a sheet.
+                    // Phase 55 — the side panel's Navigation card. Packages is
+                    // still a bottom-bar tab and goes the way a TAP goes (save
+                    // state, single top). Projects is not (Phase 56): since the
+                    // 66.1 follow-up above it is a page pushed over the editor,
+                    // like the card's Settings cell — Back returns to the editor
+                    // the user left. `restoreState` still brings back a hub the
+                    // user had parked (filter, search) when one was saved.
                     onOpenProjectsHub = {
                         navController.navigate(Screen.FileManager.createRoute()) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }

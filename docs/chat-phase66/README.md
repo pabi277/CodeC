@@ -80,6 +80,45 @@ middle-ellipsis for long names. They remain open for a later chat.
   the amber badge reads `CodecPalette.WARNING`; destructive confirms use the
   theme's error role through `ButtonDefaults.textButtonColors`.
 
+## Follow-up — Back from Projects returns to the editor (owner device report)
+
+**Owner (2026-09-27, verbatim):**
+> One small issue when i go to projects and press back it's showing options of
+> close the app but i want preview editor page than if i press back it will be back
+
+**Cause, read from `MainActivity.kt`.** Projects left the bottom bar in
+Phase 56, but its two doors from the editor — the side panel's *Projects* cell
+(`onOpenProjectsHub`) and the drawer's *＋ New project…* (`onOpenProjects`) —
+still navigated tab-style: `popUpTo(start) { saveState = true }`. Whenever the
+app had started on the hub (the resume card — every launch after more than five
+minutes away — or no file to resume), that `popUpTo` **popped the editor**, so
+the hub had nothing under it and the back router's row 9 showed the exit
+prompt. When the app had started in the editor the same press already went
+back to it, which is why the defect looked intermittent.
+
+**Fix.** The two doors now push the hub over the editor exactly like the side
+panel's *Settings* cell does (`launchSingleTop`, no `popUpTo`; the ＋ door keeps
+`restoreState = false`, the *Projects* door keeps `restoreState = true`). The
+router did not change: with the editor underneath, row 8
+(`canPopRoute → PopRoute`) returns to the editor the user left, and the exit
+prompt is the next Back — *"than if i press back it will be back"*. *Packages*
+is still a tab and keeps the tab idiom. Pinned by
+`BackHandlerWiringTest.Projects opened from the editor is a page over it`.
+
+**Accepted trade-off.** A user who hops editor → Projects → file → Projects …
+through the side panel builds a stack that retraces every hop (the same
+property the Settings door has had since Phase 16). Bounding it would need
+inclusive pops that break "Back goes back", so it is left as the user's own
+path; a later shell pass (65.1) can revisit if it ever shows up on a device.
+
+**Verification.** Source-scan and router tests: `BackHandlerWiringTest`,
+`BackRouterTest`, `BackRouterRootTest`, `ExitPromptPolicyTest`,
+`DrawerWiringTest`, `SidePanelWiringTest`, `ResumeWiringTest` — **53 / 0**
+locally (prevalidation shim), plus the 39 pure source-scan classes 197 / 0.
+CI for the follow-up head is recorded in [PART_66_1 § CI](PART_66_1_PROJECTS_HUB.md#ci).
+Device: the owner's report is the only device observation; the fix is not
+device-verified in this session.
+
 ## Validation
 
 - Local JVM prevalidation with a temporary JUnit shim (kotlinc 2.2.10, Temurin
