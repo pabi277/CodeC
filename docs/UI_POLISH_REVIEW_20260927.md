@@ -70,6 +70,17 @@ No replacement onboarding or new help screen. Existing stored guide flags are
 ignored without resetting user data. The navigation card now has five real
 choices, not a dead sixth tile. Settings/search inventory is now 64 controls.
 
+### Phase 64 verification
+
+Code `4de912a`: [Android CI green — run 36305311370](https://github.com/pabi277/CodeC/actions/runs/36305311370); host
+unit/screenshot task and debug/release APK builds passed. Local prevalidation:
+177 passed / 0 failed with a temporary JUnit shim. No handset verification
+claimed. The owner subsequently instructed **“Complete docs and merge”**.
+Delivery: [PR #87](https://github.com/pabi277/CodeC/pull/87); its checks and timeline record the
+final-head validation and actual merge state/commit. Plan choices recorded
+below are documentation updates after the tested code revision, not additional
+app changes. The merge instruction does not approve implementing later phases.
+
 ## 3. My assessment of the full UI
 
 The foundation is feature-rich enough. The next gain is **consistency, clarity
@@ -153,10 +164,11 @@ and record your answer before implementing the part.
 | [72.1](ui-polish-chats/PHASE_72_1_PREVIEW.md) | Web preview, console and viewport tools | Polish existing tools. |
 | [73.1](ui-polish-chats/PHASE_73_1_GIT.md) | Source control and GitHub | Simplify hierarchy; keep discard safeguards. |
 | [74.1](ui-polish-chats/PHASE_74_1_SETTINGS_SUPPORT.md) | Settings, support and final consistency | Truthful controls and cross-screen consistency. |
-**Suggested order:** shell → projects/files → editor/typing → run/install →
-preview/Git → settings and final consistency. If your main frustration is in
-the editor, move those chats first. I recommend polishing one area fully enough
-to review, not opening ten parallel redesigns.
+**Owner-selected starting area (2026-09-27): Projects and files.** Start the
+next discussion with 66.1 (hub/creation), then 67.1 (files/search), unless the
+owner names a particular file detail first. The part numbers are stable IDs,
+not a requirement to execute 65 first. My original suggestion was editor/typing;
+the owner's priority overrides that. Polish one agreed part per chat.
 
 ## 6. Gate for every chat
 
@@ -183,4 +195,13 @@ to review, not opening ten parallel redesigns.
   Terminal/Output, or also have a small non-blocking indicator elsewhere?
   **My vote: retain existing progress locations until you want more visibility.**
 
-Answers: **pending**. Only the removal in Phase 64 was implemented here.
+### Your answers — recorded 2026-09-27
+
+- Visual direction: **Keep the current look** — polish, not a redesign.
+- First future chat: **Projects and files** — hub, creation, file drawer and search.
+- Installation progress: **Keep existing progress locations** — Terminal and
+  Output only; **no new app-wide status indicator**.
+
+These choices prioritise the plan; they do not authorise automatic implementation
+of a future part. Detailed card-density/demo-deletion preferences remain open.
+Only Phase 64 was implemented here.

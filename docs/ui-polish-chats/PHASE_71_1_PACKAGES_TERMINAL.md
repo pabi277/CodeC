@@ -26,14 +26,15 @@ The lock removal is done in Phase 64. Next polish status visibility, the Package
 
 Available/installing/installed/update/failure; unavailable userland; verification errors; retry; command handoff; session switch; selection/copy/paste; extra keys; restart; screen-off foreground notification.
 
-## Your thoughts — ask before code
+## Your thoughts — recorded decision
 
-**While installing, do you want a small status indicator visible elsewhere, or progress only in Terminal/Output?**
+Asked: while installing, should a small status indicator appear elsewhere or
+should progress stay in Terminal/Output?
 
-Suggested starting point, not your decision: Keep progress at the operation’s existing surface unless you want a compact, non-blocking indicator. Never bring back navigation locks.
-
-**Owner answer:** pending. Record it verbatim here when given; do not present the
-recommendation as approval.
+**Owner answer (2026-09-27): Keep existing progress locations.** Terminal and
+Output show progress; no new app-wide indicator. Respect that decision rather
+than asking it again. In the future chat, ask which specific package/terminal
+detail the owner wants polished. Do not reintroduce navigation locks.
 
 ## Implementation and exit, after agreement
 

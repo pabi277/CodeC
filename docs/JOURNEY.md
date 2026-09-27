@@ -1142,7 +1142,30 @@ The owner requested full UI research, a part-per-chat plan with both agent and
 owner thoughts, and first removing both installation UI locks and the guide.
 Removed those user-facing restrictions and the slides/tour/typing-tip system,
 including stale Settings/search/navigation doors. Kept internal transaction
-safety, readiness checks, progress and retry. Local prevalidation: 177/0; Android
-CI pending, no device pass claimed. [Record](chat-phase64/README.md).
+safety, readiness checks, progress and retry. Local prevalidation: 177/0; final Android
+CI 36305311370 green on `4de912a` (unit/screenshot tests and debug/release APKs),
+no device pass claimed. [Record](chat-phase64/README.md).
 The [UI review](UI_POLISH_REVIEW_20260927.md) proposes 65–74 as separate discussion
 chats, not approved implementations. No PR or merge authority was given.
+
+The owner answered the plan questions: preserve the current look; prioritise
+Projects and files; keep installation progress in Terminal/Output only. The
+next chat starts with the 66.1/67.1 briefs, not the agent's preferred editor-first
+order. No broader implementation was started from those answers.
+
+
+### Phase 64 delivery authorised — 2026-09-27
+
+Owner (verbatim): **“Complete docs and merge”**. Delivery is
+[PR #87](https://github.com/pabi277/CodeC/pull/87), from
+`arena/01a0e1d9-codec` to `main`, after final-head checks pass. This supersedes
+this phase's earlier “no PR/merge authority” entries without rewriting their
+history. The PR timeline is the final-check/merge-commit record. Source code
+`4de912a` is unchanged by the documentation finalisation and already passed
+Android CI `36305311370`. Local prevalidation was 177/0, not a device test.
+
+Completed records: Phase 64 README/parts and HANDOFF; full UI research and ten
+chat briefs; owner choices; active NEXT_STEPS and prompt/rules; README discovery
+link and a pointer from the older Phase 63 owner handoff. Next is discussion of
+Projects/files, not automatic implementation of 65–74. This instruction creates
+no release tag and authorises no unrelated PR or future phase merge.

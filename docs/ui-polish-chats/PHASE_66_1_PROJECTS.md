@@ -3,6 +3,13 @@
 **Status: discussion draft, not approved for implementation.** One part = one
 future chat. No deadline, dependency, new control or replacement engine promised.
 
+## Owner priority — 2026-09-27
+
+The owner chose **Projects and files** as the first future polish chat, keeping
+the current visual direction. This makes this brief the suggested starting
+point; it does not approve a cards-to-list redesign or change demo deletion.
+The detailed question below still needs the owner's answer.
+
 ## Copy into a new chat
 
 > Review `docs/UI_POLISH_REVIEW_20260927.md` and this brief. Re-read the current

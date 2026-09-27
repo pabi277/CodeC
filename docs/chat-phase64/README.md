@@ -3,8 +3,12 @@
 **Owner instruction (2026-09-27, verbatim):**
 > And 1st remove the both locker system when installing something and the guide system
 
-**Status:** implemented on `arena/01a0e1d9-codec`; validation below. No PR or
-merge authorised. This is the first concrete phase after the Phase 63 delivery.
+**Status:** implementation complete; Android CI green on `4de912a`.
+**Delivery:** [PR #87](https://github.com/pabi277/CodeC/pull/87), `arena/01a0e1d9-codec` → `main`.
+The owner explicitly authorised delivery: **“Complete docs and merge”**
+(2026-09-27). The PR is the authoritative record of final-head checks, actual
+merge state and merge commit. Do not infer handset acceptance from this approval.
+This is the first concrete phase after the Phase 63 delivery.
 
 | Part | Scope | Status |
 |---|---|---|
@@ -57,10 +61,26 @@ cover identity and both continuation call sites. No navigation restriction added
 - Retired tests for the deleted guide and chrome-lock policies are removed;
   existing readiness, setup-state, ledger, recovery and single-runner protections
   are retained. No installer implementation was changed.
-- Full Android tests/build: pending session-branch CI. Local Gradle cannot
-  download its distribution (TLS handshake failure); no local APK claimed.
+- **Full Android CI GREEN:** code `4de912a`, [run 36305311370](https://github.com/pabi277/CodeC/actions/runs/36305311370).
+  Real host unit/screenshot task, debug build, release builds and APK-set checks
+  passed. Debug APK: 25,938,412 bytes; release APK: 6,762,736 bytes.
+  Initial removal code `28b47c0` also passed CI run 36304965446; the final code run
+  includes the install-continuation guard and is the verdict used here.
+- Local Gradle could not download its distribution (TLS handshake failure).
+  The local 177 checks are prevalidation only; Android compilation is CI evidence.
 - Device behaviour not verified in this session. The owner's earlier decision
   to decline device rounds is respected; no new compulsory handset checklist.
+
+## Owner plan answers — 2026-09-27
+
+Keep the current look; next discussion is Projects/files (proposed 66.1 then
+67.1); keep progress in Terminal/Output, with no new global indicator. These
+are planning priorities, not approval to implement a further phase now.
+
+## Delivery and next-chat handoff
+
+[Completed handoff](HANDOFF.md) records the owner's decisions, evidence limits,
+merge authority and the exact starting brief for the next chat.
 
 ## Next
 

@@ -23,6 +23,15 @@ files and tap **RUN**.
 > own. The owner merges to `main`. Operating manual: [`rule.md`](rule.md) —
 > start there.
 
+## Current UI work and next-chat plan
+
+[Phase 64 delivery](docs/chat-phase64/HANDOFF.md) removes the installation UI
+locks and guide while keeping installation safety, progress and retry. The
+[full UI review and ten chat briefs](docs/UI_POLISH_REVIEW_20260927.md) record the
+owner's direction: keep the current look, discuss Projects/files next, and keep
+progress in Terminal/Output. Later polish parts require an agreed scope before
+implementation; they are not a batch of automatically approved changes.
+
 ## Install the APK from GitHub
 
 **The release channel (Phase 42.1)** — for anyone who just wants the app:
