@@ -265,7 +265,10 @@ object CoachMarkPlan {
             // up the overlay owns the gesture (it performs the control's click
             // itself) and a swipe that leaves the hole is not a tap. The swipe
             // still works the moment the tour is over (NavBarPolicy).
-            body = "Five tabs, one tap away. They hide while you type \u2014 tap this handle to bring them back.",
+            // Phase 56 — the bar has FOUR options since the Projects option left
+            // it (the side panel opens Projects). The lesson is the same; the
+            // count is not allowed to lie.
+            body = "Four tabs, one tap away. They hide while you type \u2014 tap this handle to bring them back.",
         ),
         // 7-8 — "then a small tour of package".
         CoachStep(
@@ -301,7 +304,13 @@ object CoachMarkPlan {
 
     private val byId: Map<String, CoachStep> = steps.associateBy { it.id }
 
-    fun step(id: String): CoachStep? = byId[id]
+    /**
+     * The step with [id], or null. `id` is nullable since Phase 55: the editor
+     * asks this about the beat the guide host just published, and “no beat is
+     * due right now” is a null — one lookup, no second null check at every
+     * caller.
+     */
+    fun step(id: String?): CoachStep? = id?.let { byId[it] }
 
     /**
      * The step to show, or null: in tour order, the FIRST beat that is neither

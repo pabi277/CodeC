@@ -1,5 +1,6 @@
 package com.codeci.ide.ui.projects
 
+import com.codeci.ide.ui.editor.RecentProjects
 import java.io.File
 
 /**
@@ -17,8 +18,17 @@ import java.io.File
  * CodeC's own engines (Phases 8/13/14).
  */
 
-/** One selected filter chip in the Projects Hub. */
-enum class ProjectHubFilter { ALL, GIT, C, PYTHON, WEB }
+/**
+ * One selected filter chip in the Projects Hub.
+ *
+ * Phase 59.1 added [RECENT] (the owner's answer, 2026-09-22: the row is the spec's
+ * `All · Recent · Create`). [RECENT] is deliberately **not** a property of an entry — “recent” is
+ * the project's position in a ranking, not a fact about it — so it is not in
+ * [ProjectHubEntry.filters] and [ProjectsHub.filterEntries] answers it from
+ * [ProjectsHub.recentEntries]. The language filters remain part of this policy (they are simply
+ * no longer drawn in the row): `filters`, `filterEntries` and their host tests are untouched.
+ */
+enum class ProjectHubFilter { ALL, RECENT, GIT, C, PYTHON, WEB }
 
 /**
  * The language/family a project belongs to — derived from the declared
@@ -34,8 +44,10 @@ enum class ProjectHubKind {
     GENERIC       // unknown / mixed / empty
 }
 
-/** Icon content for a card's leading square; the UI maps these to colors. */
-enum class HubIconToken { C_ORANGE, PY_BLUE, WEB_GREEN, SERVER_PURPLE, GENERIC_GRAY }
+// Phase 59.2 removed `HubIconToken`, `ProjectHubEntry.icon` and `iconLabel`: the card's leading
+// square is the project's own name-derived mark (`ProjectMark`), so a kind→glyph table with no
+// reader would have been dead code. The kind itself moved into the card's subtitle line
+// (`kindLabel`, below), because the mark no longer carries it.
 
 /**
  * One row of the hub: everything the card needs, precomputed off the main
@@ -64,29 +76,24 @@ data class ProjectHubEntry(
      * compare against), so this flag carries the "not on GitHub yet" state
      * the `↑N` badge cannot express; the card shows a bare amber `↑`.
      */
-    val unpublished: Boolean = false
+    val unpublished: Boolean = false,
+    /**
+     * Phase 59.1 — the project **folder's** own last-modified time, as
+     * `ProjectManager.listProjects()` sees it. The side panel's Recent card ranks by exactly this
+     * clock (`EditorScreen` passes `info.root.lastModified()`), so the hub's *Recent* filter needs
+     * the same reading to be able to agree with it. `0` means unknown, and [recency] falls back to
+     * [lastModified].
+     */
+    val folderModified: Long = 0L
 ) {
-    /** Icon token for the card's leading square. */
-    val icon: HubIconToken
-        get() = when (kind) {
-            ProjectHubKind.C -> HubIconToken.C_ORANGE
-            ProjectHubKind.C_SERVER -> HubIconToken.C_ORANGE
-            ProjectHubKind.PY -> HubIconToken.PY_BLUE
-            ProjectHubKind.PY_SERVER -> HubIconToken.SERVER_PURPLE
-            ProjectHubKind.WEB_STATIC -> HubIconToken.WEB_GREEN
-            ProjectHubKind.GENERIC -> HubIconToken.GENERIC_GRAY
-        }
+    /**
+     * Phase 59.1 — the clock the *Recent* ranking uses: the folder's own time when it is known,
+     * otherwise the newest-thing-in-the-project time. One definition, read by both surfaces, so
+     * “recent” cannot mean two things.
+     */
+    val recency: Long get() = if (folderModified > 0L) folderModified else lastModified
 
-    /** Label drawn inside the leading square (the green web chip uses an icon instead). */
-    val iconLabel: String
-        get() = when (icon) {
-            HubIconToken.C_ORANGE -> "C"
-            HubIconToken.PY_BLUE -> "Py"
-            HubIconToken.SERVER_PURPLE -> "Web"
-            else -> ""
-        }
-
-    /** Which filter chips this project matches. */
+    /** Which filter chips this project matches ([ProjectHubFilter.RECENT] is not per-entry). */
     val filters: Set<ProjectHubFilter>
         get() = buildSet {
             add(ProjectHubFilter.ALL)
@@ -172,7 +179,12 @@ object ProjectsHub {
         query: String?
     ): List<ProjectHubEntry> {
         var result = entries
-        if (filter != ProjectHubFilter.ALL) {
+        if (filter == ProjectHubFilter.RECENT) {
+            // “Recent” is a ranking, not a flag on the entry: ask the one recent-list
+            // implementation (`recentEntries`) which names are in it.
+            val recent = recentEntries(entries).map { it.name }.toSet()
+            result = result.filter { it.name in recent }
+        } else if (filter != ProjectHubFilter.ALL) {
             result = result.filter { it.filters.contains(filter) }
         }
         val needle = query?.trim()?.lowercase()
@@ -189,18 +201,68 @@ object ProjectsHub {
     }
 
     /**
-     * Subtitle segments in card order: `[branch] · N file(s) · <age>`.
+     * Phase 59.2 — the kind as a word, for the card's subtitle.
+     *
+     * The kind used to live in the card's leading square. That square is now the project's own
+     * name-derived mark ([ProjectMark]), which is what the spec asks for — so the kind moved one
+     * line down rather than disappearing: the subtitle is the card's information line, and the
+     * information is still true.
+     */
+    fun kindLabel(kind: ProjectHubKind): String = when (kind) {
+        ProjectHubKind.C -> "C"
+        ProjectHubKind.C_SERVER -> "C server"
+        ProjectHubKind.PY -> "Python"
+        ProjectHubKind.PY_SERVER -> "Python server"
+        ProjectHubKind.WEB_STATIC -> "Web"
+        ProjectHubKind.GENERIC -> "Project"
+    }
+
+    /**
+     * Subtitle segments in card order: `[kind] · [branch] · N file(s) · <age>`.
      * The branch segment is present only for git projects with a known
      * branch; a detached repo shows the "HEAD" label the parser supplies.
      */
     fun subtitleSegments(entry: ProjectHubEntry, nowMillis: Long): List<String> =
         buildList {
+            add(kindLabel(entry.kind))
             if (entry.isGit) entry.branch?.takeIf { it.isNotBlank() }?.let { add(it) }
             add(
                 if (entry.fileCount == 1) "1 file" else "${entry.fileCount} files"
             )
             if (entry.lastModified > 0L) add(relativeAge(entry.lastModified, nowMillis))
         }
+
+    /**
+     * Phase 59.1 — the hub's *Recent* list.
+     *
+     * It is **the same rule the side panel's card uses**, not a second one that resembles it:
+     * [RecentProjects.build] does the ranking, with each project's [ProjectHubEntry.recency] as
+     * the clock and the panel's own [RecentProjects.MAX_ROWS] cap, so the hub's *Recent* filter
+     * and the panel's RECENT card cannot disagree about which projects are recent or about their
+     * order. Ages are not shown here, so `nowMillis` is the ranking's unused input.
+     */
+    fun recentEntries(
+        entries: List<ProjectHubEntry>,
+        limit: Int = RecentProjects.MAX_ROWS
+    ): List<ProjectHubEntry> {
+        if (entries.isEmpty()) return emptyList()
+        val ranked = RecentProjects.build(
+            entries = entries.map { entry ->
+                RecentProjects.Entry(
+                    id = entry.name,
+                    name = entry.name,
+                    lastOpenedMillis = entry.recency,
+                    rootPath = null
+                )
+            },
+            nowMillis = 0L,
+            privateRoot = null,
+            externalRoot = null,
+            limit = limit
+        ).map { it.name }
+        val position = ranked.withIndex().associate { (index, name) -> name to index }
+        return entries.filter { it.name in position }.sortedBy { position.getValue(it.name) }
+    }
 
     /** "3 files" / "1 file". */
     fun formatFileCount(count: Int): String =
@@ -373,12 +435,21 @@ object ProjectHubStats {
     private const val MAX_DEPTH = 6
     private const val MAX_FILES = 10_000
 
-    data class ScanResult(val fileCount: Int, val lastModified: Long)
+    /**
+     * [lastModified] is the newest thing *in* the project; [folderModified] is the project
+     * folder's own time, which is the clock the Recent rankings use (Phase 59.1).
+     */
+    data class ScanResult(
+        val fileCount: Int,
+        val lastModified: Long,
+        val folderModified: Long = lastModified
+    )
 
     fun scan(root: File): ScanResult {
-        if (!root.isDirectory) return ScanResult(0, 0L)
+        if (!root.isDirectory) return ScanResult(0, 0L, 0L)
+        val folderModified = root.lastModified()
         var count = 0
-        var newest = root.lastModified()
+        var newest = folderModified
         fun walk(dir: File, depth: Int) {
             val children = dir.listFiles() ?: return
             for (child in children) {
@@ -395,7 +466,7 @@ object ProjectHubStats {
             }
         }
         walk(root, 0)
-        return ScanResult(count, newest)
+        return ScanResult(count, newest, folderModified)
     }
 
     private val SKIP_DIRS = setOf(".git", ".codec")

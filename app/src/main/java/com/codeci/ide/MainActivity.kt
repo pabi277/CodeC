@@ -63,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -81,8 +82,8 @@ import com.codeci.ide.ui.navigation.Screen
 import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.IncomingImportBridge
 import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.SnakeSample
 import com.codeci.ide.ui.projects.ProjectPathUtils
-import com.codeci.ide.ui.projects.WelcomeStarters
 import com.codeci.ide.ui.screens.EditorScreen
 import com.codeci.ide.ui.screens.FeedbackScreen
 import com.codeci.ide.ui.screens.FileManagerScreen
@@ -97,7 +98,6 @@ import com.codeci.ide.ui.guide.GuideAnchor
 import com.codeci.ide.ui.guide.GuideAnchors
 import com.codeci.ide.ui.guide.GuideCoachMarks
 import com.codeci.ide.ui.guide.GuideScreen
-import com.codeci.ide.ui.screens.WelcomeScreen
 import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.NavBarPolicy
 import com.codeci.ide.ui.editor.lsp.LspManager
@@ -776,17 +776,29 @@ fun MainApp(
             }
         }
     }
-    // 2026-08-31 bar: five tabs with Terminal dead-center —
-    // Projects · Editor · Terminal · Packages · Settings. The Home dashboard
-    // is gone; the app opens straight into the editor where the user left
-    // off (or the Projects hub on first launch).
+    // Phase 56 (owner, 2026-09-22: *“I don't think removing the full down ber is
+    // a good choice i think only removing the project option is ok.”*) — the bar
+    // keeps four options: Editor · Terminal · Packages · Settings. **Projects
+    // left the bar**, not the app: its screen, its route and its hub are
+    // untouched, and the side panel's Navigation card opens it (Phase 55).
+    // No filler tab replaces it, and Terminal no longer sits dead-center — that
+    // is arithmetic, not a redesign. The Home dashboard is long gone; the app
+    // opens straight into the editor where the user left off.
     val screens = listOf(
-        Screen.FileManager,
         Screen.Editor,
         Screen.Terminal,
         Screen.Modules,
         Screen.Settings
     )
+    /**
+     * Phase 56 — the routes the BACK ROUTER treats as rooms. Until this phase
+     * the bar and the router read the same list; they answer two different
+     * questions, and Projects is the proof: it is no longer a tab, but it is
+     * still a ROOM — a phone that starts there (a deep link, or the first-launch
+     * hub before Phase 58) must get the exit prompt, not a silent exit, exactly
+     * like the other four.
+     */
+    val rootRoutes = screens.map { it.route } + Screen.FileManager.route
     // Phase 33.1 — first-run welcome (three starter tiles). The flag is read
     // ONCE at startup into local state, so a Settings reset ("show welcome
     // again") only affects the NEXT launch instead of yanking the user out of
@@ -823,35 +835,38 @@ fun MainApp(
         guideCompleted = settingsManager.guideCompletedFlow.first()
         coachSeen = CoachMarkPlan.parseSeen(settingsManager.coachMarksSeenCsvFlow.first())
     }
-    // Phase 44.1 — set once, when the first-run welcome hands over: this is
-    // the launch where the one-time userland download should be ON SCREEN
-    // while it happens (the owner's own solution to the invisible install).
-    var setupDiverted by remember { mutableStateOf(false) }
-
-    if (firstLaunchComplete == false) {
-        WelcomeScreen(
-            onStarterChosen = { starter ->
-                scope.launch {
-                    val project = withContext(Dispatchers.IO) {
-                        WelcomeStarters.ensureProject(ProjectManager(activity), starter)
-                    }
-                    if (project != null) {
-                        // Save the launch state BEFORE flipping the flag so the
-                        // shell that replaces the welcome opens the starter file
-                        // (and the next launch opens it too — 33.1 exit 2).
-                        EditorLaunchState.save(activity, project.name, starter.entryFile)
-                        // Persist for the NEXT launch, then flip the local state
-                        // so the normal shell replaces the welcome right away.
-                        settingsManager.setFirstLaunchComplete(true)
-                        // Set BEFORE the flag that swaps the welcome for the
-                        // shell: the shell's first composition decides the
-                        // start destination from it.
-                        setupDiverted = true
-                        firstLaunchComplete = true
-                    }
-                }
+    // Phase 58.1 — the welcome tiles are retired. The first open is the editor,
+    // on the snake sample this app writes (SnakeSample): one project, one page,
+    // nothing to download. What the welcome's tile tap used to do — seed,
+    // remember, hand over — is now one seed on the first launch only.
+    //
+    // The ordering law is 33.1's exit 2, kept: the launch state is saved BEFORE
+    // the flag flips, so the shell that replaces this frame opens the sample and
+    // the next launch resumes it. The flag ALSO flips when the seed fails: a
+    // filesystem that refuses must not leave the user on a blank first frame —
+    // the shell then opens the way it always did (the hub), which is the honest
+    // fallback, not a trap.
+    var firstOpenSample by remember { mutableStateOf(false) }
+    LaunchedEffect(firstLaunchComplete) {
+        if (firstLaunchComplete != false) return@LaunchedEffect
+        val project = if (com.codeci.ide.ui.crash.SafeMode.active) {
+            // Safe mode does LESS at startup on purpose (Phase 42.3): no seed.
+            null
+        } else {
+            withContext(Dispatchers.IO) {
+                SnakeSample.ensure(ProjectManager(activity).projectsRoot())
             }
-        )
+        }
+        if (project != null) {
+            EditorLaunchState.save(activity, SnakeSample.NAME, SnakeSample.ENTRY_FILE)
+            firstOpenSample = true
+        }
+        settingsManager.setFirstLaunchComplete(true)
+        firstLaunchComplete = true
+    }
+    if (firstLaunchComplete == false) {
+        // The seed is running. One frame of nothing, exactly like the flag read
+        // below: a new user never flashes the hub first.
         return
     }
     if (firstLaunchComplete == null) {
@@ -897,12 +912,17 @@ fun MainApp(
     // Phase 44.1 — setup wins before resume. This is deliberately the same
     // disk-backed gate as the existing Terminal divert, so a visible resume
     // card can never hide an install the user needs to watch.
+    // Phase 58.2 — this fact no longer DIVERTS (nothing navigates on it). It
+    // survives because it still means something to the resume decision: run one
+    // of a phone whose userland has never been installed owes no resume card
+    // (`ResumePolicy.setupNeedsWatching` → NONE). The disk read that backs it is
+    // Phase 44.1's, unchanged.
     val setupLaunchDivert = remember {
         val prefix = ShellEnvironment.prefixDir(activity.filesDir)
         val phase = runCatching {
             com.codeci.ide.ui.terminal.SetupLedgerPrefs.ledger(activity).read().phase
         }.getOrDefault(com.codeci.ide.ui.terminal.SetupPhase.IDLE)
-        setupDiverted || com.codeci.ide.ui.terminal.SetupGatePolicy.startOnTerminal(
+        com.codeci.ide.ui.terminal.SetupGatePolicy.startOnTerminal(
             usable = com.codeci.ide.ui.terminal.SetupGatePolicy.userlandUsable(prefix, phase),
             abiSupported = com.codeci.ide.ui.terminal.UserlandManifest.archName() != null
         )
@@ -929,9 +949,15 @@ fun MainApp(
     }
     // Keep the start route decided once, as Phase 44's setup wiring requires;
     // the resume offer is derived from the same one-shot launch facts.
-    val startDestination = remember(launchState) {
-        when (resumeOffer) {
-            com.codeci.ide.ui.projects.ResumeOffer.CONTINUE_IN_PLACE ->
+    val startDestination = remember(launchState, firstOpenSample) {
+        when {
+            // Phase 58.1 — a first open is the editor, on the sample, and never
+            // the Projects hub: this branch is above the resume offer so a
+            // first-run state (a crash log, a missing file list, whatever the
+            // offer would have said) cannot outrank it.
+            firstOpenSample ->
+                Screen.Editor.createRoute(SnakeSample.ENTRY_FILE, SnakeSample.NAME)
+            resumeOffer == com.codeci.ide.ui.projects.ResumeOffer.CONTINUE_IN_PLACE ->
                 launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
                     ?: Screen.FileManager.route
             else -> Screen.FileManager.route
@@ -950,43 +976,17 @@ fun MainApp(
             onFirstFrame(startDestination)
         }
     }
-    LaunchedEffect(setupLaunchDivert) {
-        if (!setupLaunchDivert) return@LaunchedEffect
-        if (navController.currentDestination?.route.orEmpty().startsWith("terminal")) {
-            return@LaunchedEffect
-        }
-        navController.navigate(Screen.Terminal.createRoute(null)) {
-            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-            launchSingleTop = true
-            restoreState = false
-        }
-    }
-    // The welcome promised a starter file. Once the setup settles, open it — but
-    // only while the user is still on the tab we diverted them to (nothing is
-    // yanked out from under a tap), and never while the setup is settled-but-
-    // unusable: in that state the terminal is the only way out, so sending the
-    // user to the editor is how the bar becomes a wall (device round 1).
-    // C works offline either way (TCC is in the APK), which is why a FAILED or
-    // UNSUPPORTED setup still releases the user into the editor.
-    LaunchedEffect(setupDiverted, setupProgress.stage, setupFacts.usable) {
-        if (!setupDiverted) return@LaunchedEffect
-        val target = launchState
-        if (target == null) {
-            setupDiverted = false
-            return@LaunchedEffect
-        }
-        if (!setupProgress.settled) return@LaunchedEffect
-        val stuck = !setupFacts.usable &&
-            setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.FAILED &&
-            setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.UNSUPPORTED
-        if (stuck) return@LaunchedEffect
-        val current = navController.currentDestination?.route.orEmpty()
-        if (!current.startsWith("terminal")) return@LaunchedEffect
-        setupDiverted = false
-        navController.navigate(Screen.Editor.createRoute(target.fileName, target.projectName)) {
-            launchSingleTop = true
-        }
-    }
+    // Phase 58.2 — the first-run DIVERT to the Terminal is retired with the
+    // strip, and for the same owner row: a fresh install opens the editor (58.1
+    // puts it on the snake sample) and the setup is not something the user is
+    // marched to watch. The 58 exit says it in one line — *"not a locked
+    // terminal"*. Nothing else moved: the Terminal tab is where it always was,
+    // its intro card still names the missing userland and starts the install, and
+    // the session (and the download) keep running when the user walks away.
+    //
+    // The welcome's old hand-over effect — *"open the starter once the setup
+    // settles"* — is gone with the welcome itself (58.1 seeds and opens the
+    // sample before the shell exists, so there is nothing left to hand over).
 
     // Phase 24.7 — an "Open with CodeC" file/ZIP arrives outside navigation
     // (onNewIntent); the bridge carries it in and the editor opens the import.
@@ -1013,6 +1013,11 @@ fun MainApp(
     val inEditor = currentDestination?.route
         ?.startsWith(Screen.Editor.route.substringBefore("?")) == true
     val editorKeysVisible by EditorChromeState.keysVisible.collectAsState()
+    // Phase 60 — the tab menu's *Hide tabs* parks the bar too (the owner's
+    // answer, 2026-09-26: one menu row, both strips), and the editor owns that
+    // flag. The reveal handle below clears it, so the bar's own idiom — tap to
+    // bring it back — also brings the tab row back: one flag, one toggle.
+    val editorTabsHidden by EditorChromeState.tabsHidden.collectAsState()
     // Phase 45.2 (device round) — the two facts the tour cannot observe from
     // anchors: is a dialog open (a box would be cut underneath it), and is the
     // drawer open (only its own two beats may show then).
@@ -1062,6 +1067,8 @@ fun MainApp(
         imeVisible = isImeVisible,
         keysVisible = editorKeysVisible,
         revealed = navRevealed,
+        // Phase 60 — the tab menu's manual door to the same hiding.
+        hiddenByUser = editorTabsHidden,
     )
 
     DisposableEffect(navController) {
@@ -1125,7 +1132,7 @@ fun MainApp(
             canPopRoute = navController.previousBackStackEntry != null,
             atRootDestination = BackRouter.isRoot(
                 currentDestination?.route,
-                screens.map { it.route }
+                rootRoutes
             ),
             exitPromptEnabled = exitPromptEnabled,
             exitPromptVisible = exitPromptVisible,
@@ -1163,7 +1170,8 @@ fun MainApp(
         bottomBar = {
             when {
                 // Phase 32.1 — the bar is visible (or was revealed by the
-                // handle) exactly as before: five flat tabs.
+                // handle) exactly as before: flat tabs (four since Phase 56 —
+                // the owner kept the bar and removed only the Projects option).
                 !hideNav -> FlatBottomBar(
                     screens = screens,
                     currentDestination = currentDestination,
@@ -1213,8 +1221,14 @@ fun MainApp(
                 )
                 // Phase 32.1 — hidden because CodeC Keys is up (no IME in the
                 // way): show the thin reveal handle instead of the bar.
+                // Phase 60 — the same handle also answers the tab menu's *Hide
+                // tabs*: revealing writes the editor's flag back, so the row it
+                // folded away returns with the bar.
                 inEditor && !isImeVisible -> EditorNavRevealHandle(
-                    onReveal = { navRevealed = true }
+                    onReveal = {
+                        navRevealed = true
+                        EditorChromeState.setTabsHidden(false)
+                    }
                 )
                 // Hidden because the soft keyboard is up (any tab): nothing,
                 // the pre-32 behaviour.
@@ -1234,49 +1248,26 @@ fun MainApp(
                     onDismiss = { safeModeBannerVisible = false }
                 )
             }
-            // Phase 44.1 — the setup bar: one slim non-modal line, visible
-            // from EVERY tab, with the moving percentage and a VIEW action to
-            // the terminal. Not dismissible while the setup is in flight
-            // (dismissing it would recreate the invisible-download bug); the ✕
-            // appears once it has settled, and always for the boot repair's
-            // one-time note.
-            val setupNote by com.codeci.ide.ui.terminal.SetupNoticeBridge.message.collectAsState()
-            // Device round 1: the bar was a wall in the settled-but-unusable
-            // state — no action button, and a ✕ that cleared a note which was
-            // not there. Now: one tap anywhere goes to the setup, and the ✕
-            // (only while settled, per SetupGatePolicy.barDismissAllowed) really
-            // removes the bar until its TEXT changes, so a new install or a
-            // repair brings it back.
-            val setupBarText = setupNote
-                ?: com.codeci.ide.ui.terminal.SetupGatePolicy.barText(setupProgress, setupFacts)
-            var dismissedSetupBar by remember { mutableStateOf<String?>(null) }
-            val goToSetup: () -> Unit = {
-                navController.navigate(Screen.Terminal.createRoute(null)) {
-                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                    launchSingleTop = true
-                    // No restoreState: "VIEW SETUP" means the terminal, not
-                    // whatever happened to be above it last time (device round 1).
-                    restoreState = false
-                }
-            }
-            val dismissSetupBar: () -> Unit = {
-                if (setupNote != null) {
-                    com.codeci.ide.ui.terminal.SetupNoticeBridge.clear()
-                } else {
-                    dismissedSetupBar = setupBarText
-                }
-            }
-            val setupBarDismissible = setupNote != null ||
-                com.codeci.ide.ui.terminal.SetupGatePolicy.barDismissAllowed(setupProgress)
-            if (setupBarText != null && setupBarText != dismissedSetupBar) {
-                com.codeci.ide.ui.components.SetupBar(
-                    progress = setupProgress,
-                    facts = setupFacts,
-                    note = setupNote,
-                    onViewSetup = goToSetup,
-                    onDismiss = if (setupBarDismissible) dismissSetupBar else null
-                )
-            }
+            // Phase 58.2 — **the setup strip is retired** (owner: *"Userland
+            // installs silently; one warning when a run needs a download before
+            // userland is ready"*). This is a reversal of Phase 44.1's visible
+            // setup, recorded rather than quietly dropped: 44 made the download
+            // visible because a user could not tell it was happening, and 54-58's
+            // owner row now says the app should look like the reference instead —
+            // no strip over the editor, no percentage, nothing to dismiss.
+            //
+            // What replaces it, in this phase: the install still runs (the
+            // Terminal's own intro starts it and keeps it running in the
+            // background while the user edits), and the ONE sentence a run owes a
+            // user whose userland is not ready yet is the editor's own pill —
+            // *"Finish installing the Linux tools first — open Terminal."* —
+            // raised only when the file they asked to run actually needs that
+            // download (`NoticePolicy.userlandWarning`, `EditorViewModel`'s run
+            // gate, shown by the editor's one pill).
+            //
+            // `SetupNoticeBridge` and the progress/facts collectors stay: they are
+            // the terminal's own truth (its intro card quotes them), and the
+            // installer still posts its boot-repair note there.
             // Phase 50.4 — transition (1): every forward navigate shares
             // the one 150 ms fade; pops are always instant, because Phase
             // 49 decides back. The platform's remove-animations switch
@@ -1379,6 +1370,25 @@ fun MainApp(
                     // drawer, so the editor reopens it after a pick. A pure
                     // question asked of the plan, and false whenever the tour is
                     // not mid-flight: no tour, no change for anybody.
+
+                    // Phase 55 — the side panel's Navigation card. Projects and
+                    // Packages are the two cells that leave the editor; both go
+                    // the way a bottom-bar TAP goes (save state, single top),
+                    // because a cell is a room, not an instruction with a sheet.
+                    onOpenProjectsHub = {
+                        navController.navigate(Screen.FileManager.createRoute()) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onOpenPackages = {
+                        navController.navigate(Screen.Modules.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
             composable(
@@ -1669,9 +1679,14 @@ fun MainApp(
 }
 
 /**
- * 2026-08-31 bottom bar: five flat tabs (Projects · Editor · Terminal ·
- * Packages · Settings — Terminal dead-center) with icon-over-label, the
- * active tab in primary color, muted grey otherwise — no M3 selection pill.
+ * 2026-08-31 bottom bar: flat tabs with icon-over-label, the active tab in
+ * primary color, muted grey otherwise — no M3 selection pill.
+ *
+ * Phase 56 left FOUR of them (Editor · Terminal · Packages · Settings): the
+ * owner's own row was *“only removing the project option is ok”*, so the bar
+ * stays and only Projects left it — the side panel's Navigation card opens that
+ * screen now. Nothing else in this composable changed: the same one-lambda tab
+ * tap, the same install lock, the same tour anchors.
  */
 @Composable
 private fun FlatBottomBar(
@@ -1843,7 +1858,9 @@ private fun EditorNavRevealHandle(onReveal: () -> Unit) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Show tabs",
+                // Phase 60 — one word, one resource: the tab row's own reveal
+                // strip says the same thing, and the two must never drift.
+                text = stringResource(R.string.tab_show),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

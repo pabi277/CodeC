@@ -5,7 +5,7 @@ import org.junit.Test
 
 /**
  * Phase 50.3 — one icon size per role, and every action names itself
- * (source scan over the six core files).
+ * (source scan over the core files).
  *
  * - An `Icon(` sized with a raw `N.dp` fails at or under 48 (display heroes
  *   above the scale stay raw, like every other display size — see
@@ -14,13 +14,12 @@ import org.junit.Test
  *   `contentDescription` (text-only buttons, like the terminal's session
  *   number, have no icon and are skipped);
  * - decorative icons keep declaring `contentDescription = null` explicitly
- *   (the welcome tile's arrow, the hub's git glyph, the terminal's warning
+ *   (the hub's git glyph, the terminal's warning
  *   triangle all duplicate adjacent text — null is correct there).
  */
 class IconRoleTest {
 
-    private val sixFiles = listOf(
-        "WelcomeScreen.kt",
+    private val coreFiles = listOf(
         "EditorScreen.kt",
         "FileManagerScreen.kt",
         "ModulesScreen.kt",
@@ -68,9 +67,9 @@ class IconRoleTest {
     }
 
     @Test
-    fun `icon sizes in the six files are tokens`() {
+    fun `icon sizes in the core files are tokens`() {
         val failures = mutableListOf<String>()
-        for (name in sixFiles) {
+        for (name in coreFiles) {
             val code = codeOf(name)
             for (m in Regex("""\bIcon\s*\(""").findAll(code)) {
                 val slice = parenSlice(code, m.range.first)
@@ -91,7 +90,7 @@ class IconRoleTest {
     @Test
     fun `icon-only actions name themselves`() {
         val failures = mutableListOf<String>()
-        for (name in sixFiles) {
+        for (name in coreFiles) {
             val code = codeOf(name)
             for (m in Regex("""\bIconButton\s*\(""").findAll(code)) {
                 val header = parenSlice(code, m.range.first)
@@ -114,7 +113,9 @@ class IconRoleTest {
     fun `decorative icons declare null explicitly`() {
         // The three known decorative glyphs beside text: if one gains a
         // description it is a copy change to record, not a drive-by.
-        for (name in listOf("WelcomeScreen.kt", "FileManagerScreen.kt", "TerminalScreen.kt")) {
+        // The welcome's tile arrow left with the screen (58.1); the two that
+        // remain still duplicate adjacent text and must say so explicitly.
+        for (name in listOf("FileManagerScreen.kt", "TerminalScreen.kt")) {
             assertTrue(
                 "$name lost its decorative contentDescription = null",
                 codeOf(name).contains("contentDescription = null"),

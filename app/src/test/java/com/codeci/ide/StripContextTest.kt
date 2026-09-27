@@ -40,10 +40,13 @@ class StripContextTest {
         hasSelection: Boolean = false,
         textLength: Int = 100,
         language: LanguageType? = LanguageType.C,
-        acceptCounts: Map<String, Int> = emptyMap()
+        acceptCounts: Map<String, Int> = emptyMap(),
+        /** Phase 57.2 — a keyboard is up (the system IME or CodeC Keys). */
+        typingSurfaceUp: Boolean = true
     ) = SuggestionStripModel.stripContextFor(
         stripVisible, runWaiting, settings, items, ghost,
-        dismissedAnchor, prefixAnchor, hasSelection, textLength, language, acceptCounts
+        dismissedAnchor, prefixAnchor, hasSelection, textLength, language, acceptCounts,
+        typingSurfaceUp
     )
 
     // ---- buildStripModel ---------------------------------------------------
@@ -94,6 +97,28 @@ class StripContextTest {
     fun `S6 - interactive run ALWAYS wins the strip (23 point 2 preserved)`() {
         val chips = listOf(item("a"), item("b"))
         assertTrue(stripOf(chips, runWaiting = true) is StripContext.Run)
+    }
+
+    @Test
+    fun `57 point 2 - the chip row belongs to a typing surface`() {
+        val chips = listOf(item("alpha"), item("alpine"))
+        assertTrue(
+            "with a keyboard up the candidates dock as chips",
+            stripOf(chips, typingSurfaceUp = true) is StripContext.Suggestions
+        )
+        assertTrue(
+            "with no keyboard the same state is the touch row, never chips",
+            stripOf(chips, typingSurfaceUp = false) is StripContext.Keys
+        )
+        assertTrue(
+            "the run keys are not typing chrome: an interactive run still wins",
+            stripOf(chips, runWaiting = true, typingSurfaceUp = false) is StripContext.Run
+        )
+        assertEquals(
+            "the chevron still hides the whole row",
+            StripContext.Hidden,
+            stripOf(chips, stripVisible = false, typingSurfaceUp = false)
+        )
     }
 
     @Test

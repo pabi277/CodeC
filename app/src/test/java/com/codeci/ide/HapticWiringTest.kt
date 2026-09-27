@@ -150,12 +150,19 @@ class HapticWiringTest {
         // The component exists to hold the rule for more than one surface: the
         // Packages section header and the hub's New-Project sheet rows are the
         // call sites, so a press there has an edge to happen inside.
+        //
+        // Phase 57.3 added the fourth: the editor's pill is a tappable surface,
+        // and it renders through this component precisely so it does NOT become
+        // the per-screen one-off this test exists to prevent. The list stays
+        // exact on purpose — a new call site is a conscious edit, and this
+        // comment is where the reason goes (nothing else here may be relaxed
+        // into a `contains` check).
         val callSites = RepoFiles.mainKotlinSources()
             .filter { RepoFiles.codeOnly(it.readText()).contains("PressableSurface(") }
             .map { it.name }
             .sorted()
         assertEquals(
-            listOf("FileManagerScreen.kt", "ModulesScreen.kt", "PressableSurface.kt"),
+            listOf("FileManagerScreen.kt", "ModulesScreen.kt", "PillNotice.kt", "PressableSurface.kt"),
             callSites,
         )
     }

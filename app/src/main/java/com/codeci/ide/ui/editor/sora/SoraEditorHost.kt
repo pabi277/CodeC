@@ -22,6 +22,7 @@ import com.codeci.ide.ui.editor.EditorViewport
 import com.codeci.ide.ui.editor.GhostState
 import com.codeci.ide.ui.editor.IncrementalEdit
 import com.codeci.ide.ui.viewmodels.CompletionModel
+import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.viewmodels.EditorViewModel
 import io.github.rosemoe.sora.event.EventReceiver
 import io.github.rosemoe.sora.event.InlayHintClickEvent
@@ -31,6 +32,8 @@ import io.github.rosemoe.sora.lang.styling.inlayHint.InlayHintsContainer
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.ContentListener
 import io.github.rosemoe.sora.widget.CodeEditor
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
+import io.github.rosemoe.sora.widget.style.builtin.HandleStyleDrop
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -104,8 +107,18 @@ fun SoraEditorHost(
     // Everything keyed (language/scheme/size/font/tab/wrap/line numbers) is
     // applied by exactly ONE LaunchedEffect — setting them twice makes sora
     // destroy + rebuild the analyzer/scheme at startup for nothing.
+    // Phase 57.2 — the caret's drop handle. sora already draws an INSERT handle
+    // (`EditorRenderer`: `getInsertHandleDescriptor()` → `handleStyle.draw`), so
+    // this is NOT a second caret stacked on the editor — it is the style that
+    // drawing uses. sora ships `HandleStyleSideDrop` as the default and
+    // `HandleStyleDrop` as the reference's tear-drop; the colour comes from the
+    // scheme's `SELECTION_HANDLE` (set with the theme, below). The glyph is
+    // draggable through sora's own touch path (`holdInsertHandle`), which is why
+    // no overlay is needed here.
+    val hostContext = androidx.compose.ui.platform.LocalContext.current
     val completionBits = remember(editor) {
         editor.apply {
+            setSelectionHandleStyle(HandleStyleDrop(hostContext))
             setUndoEnabled(false) // VM EditorUndoManager is canonical
             // Phase 35.3 — disable sora's animated cursor travel. The blink
             // period is switched to solid only during active typing below.
@@ -259,6 +272,9 @@ fun SoraEditorHost(
             TextMateSupport.ensureInitialized(appContext)
         }
         editor.setColorScheme(TextMateThemes.applyTheme(theme))
+        // A fresh scheme resets every custom colour, so the caret handle's one
+        // colour is re-applied with it (57.2).
+        editor.colorScheme.setColor(EditorColorScheme.SELECTION_HANDLE, CodecPalette.CARET_HANDLE)
     }
     LaunchedEffect(fontSizeSp) { editor.setTextSize(fontSizeSp) }
     LaunchedEffect(fontFamily) {

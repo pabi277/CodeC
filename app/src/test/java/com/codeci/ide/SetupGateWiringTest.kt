@@ -34,6 +34,9 @@ class SetupGateWiringTest {
     private val fgs = "app/src/main/java/com/codeci/ide/ui/services/TerminalForegroundService.kt"
     private val setupBar = "app/src/main/java/com/codeci/ide/ui/components/SetupBar.kt"
     private val setupState = "app/src/main/java/com/codeci/ide/ui/terminal/SetupState.kt"
+    private val editorVm = "app/src/main/java/com/codeci/ide/ui/viewmodels/EditorViewModel.kt"
+    private val noticePolicy = "app/src/main/java/com/codeci/ide/ui/editor/NoticePolicy.kt"
+    private val pill = "app/src/main/java/com/codeci/ide/ui/components/PillNotice.kt"
 
     private fun before(src: String, first: String, then: String) {
         val a = src.indexOf(first)
@@ -48,32 +51,34 @@ class SetupGateWiringTest {
     // ---- device round 1 (owner report, 2026-09-12) -------------------------
 
     @Test
-    fun `the setup bar is always actionable and its close button really closes it`() {
-        val bar = source(setupBar)
-        // "it's not closing or opening terminal": the VIEW button used to be
-        // rendered only `if (inFlight || stage == FAILED)`, so the
-        // settled-but-unusable state had a sentence and no way to act on it.
-        assertTrue("the bar must offer the setup action", bar.contains("TextButton(onClick = onViewSetup)"))
-        val before = bar.substring(0, bar.indexOf("TextButton(onClick = onViewSetup)"))
-        val tail = before.substring(maxOf(0, before.length - 400))
+    fun `the setup strip is retired and its vocabulary with it`() {
+        // Phase 58.2 (owner, 2026-09-22) — *"Userland installs silently; one
+        // warning when a run needs a download before userland is ready."* The
+        // permanent strip is a Remove row in the roadmap, so this pin now holds
+        // the REMOVAL: the composable is deleted, the three policy functions
+        // that existed only to describe it are deleted, and no shell mounts a
+        // bar. A later agent who rebuilds it is undoing an owner row.
         assertFalse(
-            "the VIEW action must not be conditional on the stage (context: …${tail.takeLast(80)})",
-            tail.contains("if (inFlight")
+            "the strip's composable must stay deleted",
+            RepoFiles.mainSource(setupBar).isFile
         )
-        // The whole bar is one tap, not just a small button.
-        assertTrue(bar.contains(".clickable(onClickLabel = \"Open the Terminal tab\") { onViewSetup() }"))
-        // The ✕ is driven by a dismiss the CALLER owns (note cleared, or the
-        // bar's text remembered as dismissed) — never by a no-op note clear.
-        assertTrue(bar.contains("onDismiss: (() -> Unit)? = null"))
-        assertTrue(bar.contains("if (onDismiss != null)"))
-        assertFalse("the dead note-only dismiss is gone", bar.contains("onDismissNote"))
-
-        val main = source(this.main)
-        assertTrue(main.contains("SetupGatePolicy.barDismissAllowed(setupProgress)"))
-        assertTrue(main.contains("var dismissedSetupBar by remember { mutableStateOf<String?>(null) }"))
-        assertTrue(main.contains("dismissedSetupBar = setupBarText"))
-        assertTrue(main.contains("setupBarText != dismissedSetupBar"))
-        assertTrue(main.contains("onDismiss = if (setupBarDismissible) dismissSetupBar else null"))
+        val state = source(setupState)
+        assertFalse("barText described only the strip", state.contains("fun barText("))
+        assertFalse(state.contains("fun barVisible("))
+        assertFalse(state.contains("fun barDismissAllowed("))
+        assertTrue(
+            "and the file says why, so nobody re-adds it by accident",
+            state.contains("Do not re-add the strip")
+        )
+        val mainCode = RepoFiles.codeOnly(source(this.main))
+        assertFalse(mainCode.contains("SetupBar"))
+        assertFalse(mainCode.contains("setupBarText"))
+        assertFalse(mainCode.contains("dismissedSetupBar"))
+        assertFalse(mainCode.contains("setupBarDismissible"))
+        // The ONE sentence that replaced it is the editor's pill.
+        val notice = source(noticePolicy)
+        assertTrue(notice.contains("fun userlandWarning("))
+        assertTrue(notice.contains("NoticeKind.USERLAND_NOT_READY"))
     }
 
     @Test
@@ -95,13 +100,18 @@ class SetupGateWiringTest {
             )
             index = main.indexOf(needle, index + 1)
         }
-        assertTrue("expected at least four terminal navigations, found $count", count >= 4)
+        // Phase 58.2 — this census was four: the first-run DIVERT to the
+        // Terminal was one of them, and it is retired with the strip (see the
+        // reversal pin below). The three that remain are the three ways a user
+        // still asks for the terminal themselves: the bottom bar, a project's
+        // "open in terminal" hand-off, and the Packages tab's door.
+        assertTrue("expected at least three terminal navigations, found $count", count >= 3)
         // The bottom tab bar itself: the Terminal tab never restores.
         assertTrue(main.contains("restoreState = screen !is Screen.Terminal"))
     }
 
     @Test
-    fun `a cold start is diverted to the terminal from the disk, not from a flag`() {
+    fun `a cold start reads the tools from the disk, and no longer diverts`() {
         val main = source(this.main)
         assertTrue(main.contains("SetupGatePolicy.startOnTerminal("))
         assertTrue(main.contains("SetupGatePolicy.userlandUsable(prefix, phase)"))
@@ -110,15 +120,16 @@ class SetupGateWiringTest {
         // The start destination itself stays the pre-44 one: a route with
         // arguments as `startDestination` is graph-construction risk, and a
         // navigate() after the first composition is the proven path.
-        assertTrue(main.contains("val startDestination = remember(launchState) {"))
+        assertTrue(main.contains("val startDestination = remember(launchState, firstOpenSample) {"))
         assertTrue(main.contains("?: Screen.FileManager.route"))
         assertFalse(
             "a route with arguments must not become the graph's start destination",
             main.contains("setupFirstRun -> Screen.Terminal.createRoute(null)")
         )
-        // The welcome's starter file is still opened — but never out of the
-        // settled-but-unusable state, where the terminal is the only way out.
-        assertTrue(main.contains("if (stuck) return@LaunchedEffect"))
+        // 58.2 — and the start route no longer decides anything about the
+        // setup: the read below only feeds `ResumePolicy` (no divert, no
+        // "wait until settled", see the reversal pin).
+        assertTrue(main.contains("setupNeedsWatching = setupLaunchDivert"))
     }
 
     @Test
@@ -271,31 +282,97 @@ class SetupGateWiringTest {
     }
 
     @Test
-    fun `the setup bar is mounted above the NavHost, in every tab's shell`() {
+    fun `the shell keeps the setup truth and mounts no strip`() {
         val src = source(main)
         val banner = src.indexOf("SafeModeBanner(")
-        val bar = src.indexOf("com.codeci.ide.ui.components.SetupBar(")
         val navHost = src.indexOf("NavHost(")
-        assertTrue(banner >= 0 && bar >= 0 && navHost >= 0)
-        assertTrue("the bar rides in the same column as the safe-mode banner", banner < bar)
-        assertTrue("the bar is above the NavHost, never inside one tab", bar < navHost)
+        assertTrue(banner >= 0 && navHost >= 0)
+        assertTrue("the safe-mode banner is still the shell's one announcement", banner < navHost)
+        // The progress and the facts still come from the terminal's own state…
         assertTrue(src.contains("terminalViewModel.setupProgress.collectAsState()"))
         assertTrue(src.contains("terminalViewModel.setupFacts.collectAsState()"))
-        assertTrue(src.contains("SetupNoticeBridge.message.collectAsState()"))
-        assertTrue(src.contains("SetupNoticeBridge.clear()"))
+        assertTrue(src.contains("SetupNoticeBridge.post(report.message)"))
+        // …and still reach the screens that gate on them…
+        assertTrue(src.contains("progress = setupProgress,"))
+        assertTrue(src.contains("facts = setupFacts,"))
+        // …but nothing between the banner and the NavHost is a setup surface.
+        assertFalse(
+            "the strip is gone from the shell",
+            RepoFiles.codeOnly(src.substring(banner, navHost)).contains("SetupBar")
+        )
     }
 
     @Test
-    fun `a fresh install opens the terminal first and releases the user when setup settles`() {
+    fun `a fresh install opens the editor on the sample, never a locked terminal`() {
         val src = source(main)
-        assertTrue(src.contains("setupDiverted = true"))
-        assertTrue(src.contains("Screen.Terminal.createRoute(null)"))
-        assertTrue(src.contains("setupProgress.stage != com.codeci.ide.ui.terminal.SetupStage.UNSUPPORTED"))
-        assertTrue(src.contains("if (!setupProgress.settled) return@LaunchedEffect"))
-        assertTrue(src.contains("current.startsWith(\"terminal\")"))
+        val code = RepoFiles.codeOnly(src)
+        // Phase 58.2 — the reversal §58's exit calls "not a locked terminal":
+        // the first-run DIVERT is gone (a comment sits where it was), so nothing
+        // navigates to the Terminal behind the user's back and no run is parked
+        // behind the download.
+        assertFalse("the divert flag is gone", code.contains("setupDiverted"))
+        assertFalse(
+            "no effect waits for the setup to settle before letting the user in",
+            code.contains("if (!setupProgress.settled) return@LaunchedEffect")
+        )
+        // The disk read the divert used to own stays: ResumePolicy's
+        // setupNeedsWatching still means "an uninstalled phone owes no card".
+        assertTrue(src.contains("val setupLaunchDivert = remember {"))
+        assertTrue(src.contains("setupNeedsWatching = setupLaunchDivert"))
+        assertTrue(src.contains("SetupGatePolicy.startOnTerminal("))
+        // And the first open is the editor, on the sample the app writes.
+        assertTrue(src.contains("firstOpenSample ->"))
+        assertTrue(
+            src.contains("Screen.Editor.createRoute(SnakeSample.ENTRY_FILE, SnakeSample.NAME)")
+        )
     }
 
-    // ---- the installer's swap window ---------------------------------------
+    @Test
+    fun `the one warning a run owes is the editor's pill, and it obeys the install verdict`() {
+        // Phase 58.2 — the owner's row in one pin: the download is offered only
+        // when the setup can carry it, and when it cannot the run says ONE
+        // sentence instead. The verdict is `confirmInstall`'s own, so the pill
+        // and the refusal it stands in for can never disagree.
+        val vm = source(editorVm)
+        val prompt = vm.indexOf("private fun promptInstall(")
+        assertTrue("the gate lives in promptInstall", prompt >= 0)
+        val body = vm.substring(prompt, minOf(vm.length, prompt + 1_800))
+        assertTrue(body.contains("SetupGatePolicy.can("))
+        assertTrue(body.contains("SetupAction.INSTALL_PACKAGE"))
+        assertTrue(body.contains("SetupStateBridge.factsOrDisk("))
+        assertTrue("the pill is posted, not queued as a dialog", body.contains("noticeFor(warning)"))
+        before(body, "NoticePolicy.userlandWarning(", "_installPrompt.value = InstallPromptState(")
+        // The pill renders it, and says it in one line of the app's own words.
+        assertTrue(source(pill).contains("NoticeKind.USERLAND_NOT_READY"))
+        val strings = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
+        assertTrue(strings.contains("name=\"notice_userland_not_ready\""))
+        // The retired vocabulary must not come back as copy (comments stripped:
+        // the file's own comment quotes the two sentences this forbids).
+        val copy = strings.replace(Regex("(?s)<!--.*?-->"), "")
+        assertFalse("no 'hang tight' came back", copy.contains("hang tight"))
+        assertFalse("no \"don't close\" came back", copy.contains("close the app"))
+        // …and the two things the roadmap's 58 exit says never wait on it: the
+        // preview is decided before any tool is probed at all, and C's TCC ships
+        // in the APK (`requiredPackage = null`), so a `.c` file cannot be gated.
+        val planner = RepoFiles.codeOnly(
+            RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/services/LanguageRunPlanner.kt").readText()
+        )
+        val decide = planner.indexOf("fun decide(")
+        assertTrue("the run planner's decide() must still be there", decide >= 0)
+        val decideBody = planner.substring(decide, minOf(planner.length, decide + 1_200))
+        before(decideBody, "RunDecision.WebPreview(profile)", "NeedsInstall(profile, pkg)")
+        // the registry is read raw on purpose: the C profile's mark is the string
+        // literal `"c"`, which `codeOnly` blanks out.
+        val registry = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/services/LanguageRegistry.kt"
+        ).readText()
+        val cProfile = registry.indexOf("extensions = listOf(\"c\")")
+        assertTrue("the C profile must still be declared", cProfile >= 0)
+        assertTrue(
+            "C must never be gated behind a download",
+            registry.substring(cProfile, cProfile + 600).contains("requiredPackage = null")
+        )
+    }
 
     @Test
     fun `the swap window is recorded before the first rename and closed after the second`() {

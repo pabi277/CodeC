@@ -16,6 +16,12 @@ the content lives on `FeedbackScreen`, see "Other surfaces"). Phase 52.3
 adds one read-only About progress line backed by the existing StatsManager
 counters.
 
+**Phase 62 reads this table too.** The search added in Phase 62 is built over the *same* 66
+rows this document numbers: `ui/settings/SettingsSearch.kt`'s catalog is generated from each
+`Settings*` call's own `title = …` argument in screen order, and `SettingsSearchPolicyTest` re-counts
+this table per section against it — so *one row, one effect* and *one row, one search result* are
+the same promise. Nothing in the numbered rows below changed for it.
+
 ## Deleted by this audit (with evidence)
 
 | Was | Kind | Evidence it was dead | Disposition |

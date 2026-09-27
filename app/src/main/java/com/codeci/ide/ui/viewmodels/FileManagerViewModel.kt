@@ -177,6 +177,10 @@ class FileManagerViewModel : ViewModel() {
                 branch = branch,
                 fileCount = scan.fileCount,
                 lastModified = scan.lastModified,
+                // Phase 59.1 — the folder's own time, the clock the Recent rankings use (the
+                // side panel's card reads the same value for the same projects, so the hub's
+                // Recent filter and that card agree by construction).
+                folderModified = scan.folderModified,
                 hasChanges = hasChanges,
                 // Phase 17 device fix: commits that never reached the remote.
                 unpushed = status?.ahead ?: 0,

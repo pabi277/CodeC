@@ -48,6 +48,22 @@ object EditorChromeState {
         _drawerOpen.value = open
     }
 
+    private val _guideBeat = MutableStateFlow<String?>(null)
+
+    /**
+     * Phase 55 — the id of the coach-mark beat that is due right now (null when
+     * the tour is over, paused, or has never started). The editor needs it
+     * because the panel it now owns is also the drawer the tour's first four
+     * beats live in: “is the next beat an in-drawer one?” is a pure question
+     * ([CoachMarkPlan.step] + [CoachStep.inDrawer]), and this is the fact that
+     * lets the editor ask it. Published by the guide host, never guessed.
+     */
+    val guideBeat: StateFlow<String?> = _guideBeat.asStateFlow()
+
+    fun setGuideBeat(id: String?) {
+        _guideBeat.value = id
+    }
+
     private val _installRunning = MutableStateFlow(false)
 
     /**
@@ -65,5 +81,21 @@ object EditorChromeState {
 
     fun setInstallRunning(running: Boolean) {
         _installRunning.value = running
+    }
+
+    private val _tabsHidden = MutableStateFlow(false)
+
+    /**
+     * Phase 60 — the tab menu's *Hide tabs*, published for the same reason the
+     * keyboard is: the row it folds away lives in the editor, but the bottom
+     * bar it also parks lives in the app scaffold. One owner (the editor's own
+     * state), one reader (MainActivity's `NavBarPolicy` call), and the reveal
+     * handle clears it by writing here — there is no second flag that could
+     * disagree about whether the bar is parked.
+     */
+    val tabsHidden: StateFlow<Boolean> = _tabsHidden.asStateFlow()
+
+    fun setTabsHidden(hidden: Boolean) {
+        _tabsHidden.value = hidden
     }
 }

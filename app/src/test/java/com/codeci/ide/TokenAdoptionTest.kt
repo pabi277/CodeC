@@ -4,11 +4,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 50.1 — the six core surfaces adopted the scale (source scan).
+ * Phase 50.1 — the core surfaces adopted the scale (source scan).
+ *
+ * "Six" until Phase 58.1 retired the first-run welcome (owner: *"first open is
+ * the editor, on a snake sample"*); the five that remain are the ones a user
+ * actually lives in, and they are the ones this scan holds to the ladder.
  *
  * The rules, exactly as implemented:
- * - every one of the six files imports [com.codeci.ide.ui.theme.CodecTokens];
- * - no raw `RoundedCornerShape(N.dp)` anywhere in the six (every radius is a
+ * - every one of the five files imports [com.codeci.ide.ui.theme.CodecTokens];
+ * - no raw `RoundedCornerShape(N.dp)` anywhere in the five (every radius is a
  *   token — the plan's "corners match" row);
  * - no raw `N.dp` at or under 48 in a padding/gap/size call (padding,
  *   PaddingValues, spacedBy, defaultMinSize, size, width, height,
@@ -20,8 +24,7 @@ import org.junit.Test
  */
 class TokenAdoptionTest {
 
-    private val sixFiles = listOf(
-        "app/src/main/java/com/codeci/ide/ui/screens/WelcomeScreen.kt",
+    private val coreFiles = listOf(
         "app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt",
         "app/src/main/java/com/codeci/ide/ui/screens/FileManagerScreen.kt",
         "app/src/main/java/com/codeci/ide/ui/screens/ModulesScreen.kt",
@@ -33,8 +36,8 @@ class TokenAdoptionTest {
         RepoFiles.codeOnly(RepoFiles.mainSource(path).readText())
 
     @Test
-    fun `all six core files import CodecTokens`() {
-        for (path in sixFiles) {
+    fun `every core file imports CodecTokens`() {
+        for (path in coreFiles) {
             val raw = RepoFiles.mainSource(path).readText()
             assertTrue(
                 "$path must import CodecTokens",
@@ -44,8 +47,8 @@ class TokenAdoptionTest {
     }
 
     @Test
-    fun `all six core files reach for the tokens`() {
-        for (path in sixFiles) {
+    fun `every core file reaches for the tokens`() {
+        for (path in coreFiles) {
             val code = codeOf(path)
             val uses = Regex("""CodecTokens\.""").findAll(code).count()
             assertTrue(
@@ -56,11 +59,11 @@ class TokenAdoptionTest {
     }
 
     @Test
-    fun `no raw corner radius in the six files`() {
+    fun `no raw corner radius in the core files`() {
         // The percent/pill overload (`RoundedCornerShape(50)`) is a shape
         // choice, not a dp value: only the `.dp` form is raw radius.
         val rawRadius = Regex("""RoundedCornerShape\(\s*\d+\s*\.dp""")
-        for (path in sixFiles) {
+        for (path in coreFiles) {
             val code = codeOf(path)
             assertTrue(
                 "$path still shapes a corner with a raw N.dp: " +
@@ -71,7 +74,7 @@ class TokenAdoptionTest {
     }
 
     @Test
-    fun `no raw chrome literal at or under 48dp in the six files`() {
+    fun `no raw chrome literal at or under 48dp in the core files`() {
         val literal = Regex("""(\d+(?:\.\d+)?)\.dp\b""")
         val spacingCalls = listOf(
             "padding", "PaddingValues", "spacedBy", "defaultMinSize",
@@ -79,7 +82,7 @@ class TokenAdoptionTest {
         )
         val thicknessCalls = listOf("border", "BorderStroke", "strokeWidth")
         val failures = mutableListOf<String>()
-        for (path in sixFiles) {
+        for (path in coreFiles) {
             val code = codeOf(path)
             for (m in literal.findAll(code)) {
                 val value = m.groupValues[1].toFloat()

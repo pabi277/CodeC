@@ -30,6 +30,8 @@ import com.codeci.ide.ui.editor.DiagnosticSeverity
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorLineOps
 import com.codeci.ide.ui.editor.EditorOpenMode
+import com.codeci.ide.ui.editor.NoticeKind
+import com.codeci.ide.ui.editor.NoticePolicy
 import com.codeci.ide.ui.editor.EditorOpenModePolicy
 import com.codeci.ide.ui.editor.EditorTab
 import com.codeci.ide.ui.editor.EditorUndoManager
@@ -38,6 +40,9 @@ import com.codeci.ide.ui.editor.FindOptions
 import com.codeci.ide.ui.editor.FindOutcome
 import com.codeci.ide.ui.editor.FindReplaceEngine
 import com.codeci.ide.ui.editor.LineEndings
+import com.codeci.ide.ui.editor.TabClosePolicy
+import com.codeci.ide.ui.editor.TabSort
+import com.codeci.ide.ui.editor.TabSortPolicy
 import com.codeci.ide.ui.editor.OutputDiagnostic
 import com.codeci.ide.ui.editor.OutputDiagnosticTarget
 import com.codeci.ide.ui.editor.OutputLineParser
@@ -253,7 +258,7 @@ data class FindUiState(
     val error: String? = null
 )
 
-class EditorViewModel : ViewModel() {
+class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor {
 
     companion object {
         const val MAX_OPEN_TABS = 12
@@ -316,6 +321,40 @@ class EditorViewModel : ViewModel() {
     private val _isDirty = MutableStateFlow(false)
     val isDirty: StateFlow<Boolean> = _isDirty.asStateFlow()
 
+    // Phase 57.3 — the one short-lived message surface (the shots' pill). It is
+    // deliberately NOT a dialog and NOT a toast: a pill is dismissed by its own
+    // timer, it cannot race the editor's snackbar, and which message is owed is
+    // the pure `NoticePolicy`'s call, not a chain of ifs at a call site.
+    private val _notice = MutableStateFlow<NoticeKind?>(null)
+    val notice: StateFlow<NoticeKind?> = _notice.asStateFlow()
+
+    /** The screen's timer, its tap, or the next notice: one way out. */
+    fun clearNotice() {
+        _notice.value = null
+    }
+
+    private fun noticeFor(kind: NoticeKind?) {
+        if (kind != null) _notice.value = kind
+    }
+
+    /**
+     * Phase 57.3 — a file that cannot be opened is never a dead tap. Every
+     * silent `?: return` on the open paths comes through here instead.
+     */
+    private fun failOpen(name: String?) {
+        noticeFor(NoticePolicy.openFailureNotice(name))
+    }
+
+    /**
+     * Phase 57.3 — the tree toolbar's OWN Refresh. It confirms itself with a
+     * pill; every automatic re-read stays silent (the no-nag law).
+     */
+    fun refreshFilesFromUser(context: Context) {
+        refreshFileEntries(context)
+        refreshGitMeta(context)
+        noticeFor(NoticePolicy.refreshNotice(userAsked = true))
+    }
+
     private val _isRenaming = MutableStateFlow(false)
     val isRenaming: StateFlow<Boolean> = _isRenaming.asStateFlow()
 
@@ -330,6 +369,7 @@ class EditorViewModel : ViewModel() {
 
     private fun captureContext(context: Context) {
         if (appContext == null) appContext = context.applicationContext
+        com.codeci.ide.ui.projects.GitDiscardEditors.register(this)
     }
 
     /** Debounced auto-save: called after every buffer mutation. */
@@ -815,7 +855,39 @@ class EditorViewModel : ViewModel() {
         return LanguageToolProbe.isInstalled(ShellEnvironment.prefixDir(ctx.filesDir), binary)
     }
 
+    /**
+     * Phase 21.2 — the RUN ▶ gate for a language whose toolchain package is
+     * missing.
+     *
+     * Phase 58.2 — the download is only *offered* when the one-time userland
+     * setup can carry it. While that is still settling (or failed, or the
+     * device is unsupported) the run says ONE sentence instead, from the pill —
+     * the owner's row: *“Userland installs silently; one warning when a run
+     * needs a download before userland is ready.”* The permanent strip and the
+     * first-run divert to a locked Terminal are retired with this part, so this
+     * is the only moment the app speaks about the setup while the user works:
+     * at the point of use, once, with nothing to watch afterwards.
+     *
+     * The verdict is the same `SetupGatePolicy.can(INSTALL_PACKAGE, …)` call
+     * [confirmInstall] already obeys, so the pill and the refusal it stands in
+     * for can never disagree.
+     */
     private fun promptInstall(decision: RunDecision.NeedsInstall) {
+        val ctx = appContext
+        if (ctx != null) {
+            val allowed = SetupGatePolicy.can(
+                SetupAction.INSTALL_PACKAGE,
+                SetupStateBridge.factsOrDisk(
+                    ShellEnvironment.prefixDir(ctx.filesDir),
+                    SetupLedgerPrefs.ledger(ctx).read().phase
+                )
+            ).allowed
+            val warning = NoticePolicy.userlandWarning(allowed)
+            if (warning != null) {
+                noticeFor(warning)
+                return
+            }
+        }
         _installPrompt.value = InstallPromptState(
             packageName = decision.packageName,
             displayName = decision.profile.displayName,
@@ -931,6 +1003,7 @@ class EditorViewModel : ViewModel() {
     }
 
     override fun onCleared() {
+        com.codeci.ide.ui.projects.GitDiscardEditors.unregister(this)
         // Phase 37.2 — a LAN server survives the editor. The process belongs to
         // the shared ServerHost, not to this scope, so the only thing this
         // ViewModel may do on its death is stop observing. Loopback-only
@@ -1285,8 +1358,8 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun openProjectFile(context: Context, projectName: String, relativePath: String) {
-        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return
-        val info = ProjectManager(context).project(projectName) ?: return
+        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return failOpen(relativePath)
+        val info = ProjectManager(context).project(projectName) ?: return failOpen(relativePath)
         // Phase 46.2 — arriving here from another mode is a mode flip; the
         // PROJECT side of it is decided before any early return.
         _openMode.value = EditorOpenMode.PROJECT
@@ -1325,9 +1398,9 @@ class EditorViewModel : ViewModel() {
             activateTab(existing)
             return
         }
-        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return
-        if (!file.isFile || !file.canRead()) return
-        val content = runCatching { file.readText() }.getOrNull() ?: return
+        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return failOpen(safe)
+        if (!file.isFile || !file.canRead()) return failOpen(safe)
+        val content = runCatching { file.readText() }.getOrNull() ?: return failOpen(safe)
         // Phase 16: the buffer always lives in LF; the file's native ending is
         // remembered on the tab and re-expanded on save (Spck-style, no reflow).
         val ending = LineEndings.detect(content)
@@ -1360,10 +1433,10 @@ class EditorViewModel : ViewModel() {
      */
     fun openSingleProjectFile(context: Context, projectName: String, relativePath: String) {
         captureContext(context)
-        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return
-        val info = ProjectManager(context).project(projectName) ?: return
-        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return
-        if (!file.isFile || !file.canRead()) return
+        val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return failOpen(relativePath)
+        val info = ProjectManager(context).project(projectName) ?: return failOpen(relativePath)
+        val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return failOpen(safe)
+        if (!file.isFile || !file.canRead()) return failOpen(safe)
         val alreadyThisSingleFile = _openMode.value == EditorOpenMode.SINGLE_FILE &&
             _projectName.value == info.name && _activeTabPath.value == safe
         if (alreadyThisSingleFile) {
@@ -1376,7 +1449,7 @@ class EditorViewModel : ViewModel() {
         // autosave so un-typed keystrokes land on disk, then read the file's
         // truth from disk (PART_46_2 exit 6; the money test).
         flushAutoSave()
-        val content = runCatching { file.readText() }.getOrNull() ?: return
+        val content = runCatching { file.readText() }.getOrNull() ?: return failOpen(safe)
         val ending = LineEndings.detect(content)
         val normalized = LineEndings.normalizeToLf(content)
         resetCaretForOpen()
@@ -1406,14 +1479,14 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun openScratchFile(context: Context, name: String) {
-        val safe = FileNameUtils.sanitizeFileName(name) ?: return
+        val safe = FileNameUtils.sanitizeFileName(name) ?: return failOpen(name)
         _openMode.value = EditorOpenMode.SCRATCH
         if (_activeTabPath.value == null && _fileName.value == safe && _projectName.value == null) {
             resetCaretForOpen()
             return
         }
         val fm = FileManager(context)
-        val content = fm.loadFile(safe) ?: return
+        val content = fm.loadFile(safe) ?: return failOpen(safe)
         stashActiveTabBuffer(_codeText.value)
         resetCaretForOpen()
         _projectName.value = null
@@ -1588,6 +1661,43 @@ class EditorViewModel : ViewModel() {
             closeTab(appContext, it, saveFirst = true)
         }
         selectTab(keepPath)
+    }
+
+    /**
+     * Phase 60 — the tab menu's "Close unmodified" (spec §2): every tab with
+     * nothing unsaved goes, the active tab never does (the editor keeps a
+     * buffer alive, so with the whole strip clean exactly the active one
+     * stays). Which tabs those are is [TabClosePolicy]'s pure decision; this
+     * function only answers the one fact the policy cannot — cleanness — and
+     * then reuses the regular `closeTab`, so closing a tab here is the same
+     * operation as closing it by hand, minus the save (nothing to save).
+     */
+    fun closeUnmodifiedTabs(context: Context) {
+        val appContext = context.applicationContext
+        val active = _activeTabPath.value
+        val clean = _openTabs.value.filter { tab ->
+            // Phase 22.5 — the ACTIVE tab's stash is deliberately stale between
+            // boundaries, so its dirtiness is the live flag; every other tab is
+            // stashed at its boundaries and its buffer is the truth.
+            if (tab.relativePath == active) !_isDirty.value else tab.buffer.text == tab.savedText
+        }.map { it.relativePath }
+        TabClosePolicy.unmodifiedTargets(clean, active).forEach { path ->
+            closeTab(appContext, path, saveFirst = false)
+        }
+    }
+
+    /**
+     * Phase 60 — the tab menu's three sorts (spec §2). Applied to the open
+     * tabs themselves rather than to the strip's rendering, so the visible
+     * order is the only order: Ctrl+Tab, the tab a close falls back to and
+     * `trimTabs`'s eviction pick all read this same list. The ACTIVE tab stays
+     * active — it only moves. The ordering itself is [TabSortPolicy], pure and
+     * pinned.
+     */
+    fun sortTabs(sort: TabSort) {
+        val reordered = TabSortPolicy.sort(_openTabs.value, sort)
+        if (reordered.map { it.relativePath } == _openTabs.value.map { it.relativePath }) return
+        _openTabs.value = reordered
     }
 
     /**
@@ -2175,6 +2285,7 @@ class EditorViewModel : ViewModel() {
     ): Boolean {
         val info = ProjectManager(context).project(project) ?: return false
         val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return false
+        if (com.codeci.ide.ui.projects.GitDiscardEditors.blocks(info.root, safe)) return false
         val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return false
         return runCatching {
             file.parentFile?.mkdirs()
@@ -2245,6 +2356,49 @@ class EditorViewModel : ViewModel() {
         _userMessage.value = context.getString(
             if (failures == 0) R.string.file_saved else R.string.file_save_failed
         )
+    }
+
+    // Phase 63: both Source Control entry points coordinate with every live
+    // editor, including one parked behind Projects on the navigation stack.
+    private fun ownsDiscardRoot(root: File): Boolean {
+        val context = appContext ?: return false
+        val project = _projectName.value ?: return false
+        return ProjectManager(context).project(project)?.root?.canonicalFile == root.canonicalFile
+    }
+
+    override fun canDiscardFile(root: File, path: String): Boolean {
+        if (!ownsDiscardRoot(root)) return true
+        val tab = _openTabs.value.firstOrNull { it.relativePath == path } ?: return true
+        return if (_activeTabPath.value == path) !_isDirty.value
+            else tab.buffer.text == tab.savedText
+    }
+
+    override fun reloadDiscardedFile(root: File, path: String) {
+        if (!ownsDiscardRoot(root)) return
+        val context = appContext ?: return
+        val tab = _openTabs.value.firstOrNull { it.relativePath == path }
+        if (tab != null) {
+            check(canDiscardFile(root, path)) { "New editor edits were kept. Reload the file manually after saving them elsewhere." }
+            val file = ProjectPathUtils.resolveInside(root, path)
+            check(file?.isFile == true) { "Could not reload the restored file. Reopen it before editing." }
+            val content = file!!.readText()
+            val ending = LineEndings.detect(content)
+            val normalized = LineEndings.normalizeToLf(content)
+            val restored = EditorTab(path, TextFieldValue(normalized), normalized, ending)
+            updateTab(path) { restored }
+            undoManagers.remove(path) // Never clear another tab's history.
+            if (_activeTabPath.value == path) {
+                resetCaretForOpen()
+                _codeText.value = restored.buffer
+                _activeLineEnding.value = ending
+                _isDirty.value = false
+                syncUndoFlags(undoManager())
+                _diagnostics.value = emptyList()
+                resetDecorationsForNewBuffer()
+            }
+        }
+        refreshFileEntries(context)
+        refreshGitMeta(context)
     }
 
     fun reloadActiveTab(context: Context) {

@@ -1,5 +1,11 @@
 # CodeC — Phases 54–58 · the phone UI, reviewed
 
+> **Owner update — 2026-09-27:** Top-level appearance looks good; further device
+> testing for this delivery is declined, **not passed**. The owner explicitly
+> authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
+> subject to final CI. Future detail-by-detail polishing phases will be defined
+> in new chats. [Full owner feedback and handoff](OWNER_HANDOFF_20260927.md).
+
 > **Owner (2026-09-22, this review, verbatim):** *“I don't think removing the full down ber is a good choice i think only removing the project option is ok.”*
 >
 > That row **reverses** the earlier reading of *“after that the project bar no need a separate space at the bottom.”* The earlier sentence was taken to mean delete the whole bottom bar. The owner has now said that is not the choice. **Only the Projects option leaves the bottom bar.** Editor, Terminal, Packages, and Settings stay there.
@@ -12,7 +18,20 @@
 > - The HTML page view’s upper links are not phone-friendly; they want a hamburger-style treatment.
 > - *“if need say me”* — if a screen is not in the shots, ask. Do not invent it.
 
-> **Status:** 📋 **PLANNED. No app code.** Reviewed 2026-09-22 after the owner rejected deleting the full bottom bar. Part docs are written when the owner says **“Start Phase N”**, and only after that phase’s research pass.
+> **Status:** 🚧 **54 DONE, 55 IMPLEMENTED, 56 IMPLEMENTED, 57.1-57.3 IMPLEMENTED** (2026-09-22, `arena/01a0c83e-codec`). 54 wrote the reference card (zero app files). 55 built the side panel ([`chat-phase55/`](chat-phase55/README.md)). 56 took the Projects option off the bar and left the other four, the handle and hide-while-typing exactly as they were ([`chat-phase56/`](chat-phase56/README.md)). 57.1, 57.2 and 57.3 shipped and are **CI-green** (`35710338114` on tip `7c9619b`; [`chat-phase57/`](chat-phase57/README.md)). **58.1 and 58.2 are implemented** ([`chat-phase58/`](chat-phase58/README.md)): the first open is the editor on the snake sample this app writes, the setup strip is deleted (not hidden) with its policy vocabulary, the first-run divert to the Terminal is retired, and the one sentence a run owes when its download cannot be installed yet is the editor's pill. **58.3 (the hamburger) is implemented** too, as the owner chose it: the research pass re-read all seven shots, proved Content/Home/More live in the *page's* markup (`124105`), found no Play/preview screenshot (the file long suspected of being one, `124052`, is the editor's code area again — recorded so nobody re-opens it hoping), and asked. His answer — CodeC's preview chrome — is what shipped: one ☰ in the preview's app bar holds the upper links, the panel is its own item, the address row stays as the readout, and every action is the one that was already there.
+>
+> **Three red CI rounds so far (all for cause, all fixed) — and every phase tip since is green:** run `35710338114` closed Phase 57 on tip `7c9619b`; run `35712790369` took **58.1 + 58.2** (tip `22b9c2e`) green **first try**; run `35713903141` took **58.3** (tip `ebc1296`) green **first try**, both with `Run host unit and screenshot tests (Phase 52): success`, both APK jobs built and uploaded. The three red rounds, for the record: run `35707359816` failed on Phase 55 with two real
+> compile errors — a wrong package in an import (`CoachMarkPlan` lives in `ui.guide`, not `ui.editor`) and
+> `CodecTokens.Icon.HUGE`, which does not exist. Both fixed in the Phase 56 commit. Run `35709258747` failed
+> on Phase 57.1 with two **pins** the new layout had legitimately invalidated: `EditorChromeSlotTest`'s tab-row
+> helper ended its region on a comment no longer on this checkout, and `TouchTargetTest`'s deliberately-exact
+> icon census (16 → 17 — see the next part doc). Both fixed and re-run green in the 57.3 commit; the census
+> comment and the helper now carry the reason, so the next phase that moves them is forced to say why. Run
+> `35709878911` (57.3's own commit) then failed on **one more exact-census pin** — `HapticWiringTest`'s
+> `PressableSurface` call-site list, where the pill is the fourth call site, added with its reason; the
+> two 57.1 pins were green in that run (2,126 tests, 1 failed).
+>
+> **Owner decisions that shaped 55 (2026-09-22, verbatim):** the full bottom bar stays (*“only removing the project option is ok”*); the fifth rail slot is *“Reseserve[d] … i have plan for ai”*; the card's bottom row is **Terminal · Packages · Guide**; the unseen glyphs: *“Do whatever is good”* (read as omit-and-ask, with a real CodeC action where one existed).
 >
 > **Numbering:** the last used number is 53 (❌ cancelled). 52 is a different series and is not cancelled by this plan. These phases are **54, 55, 56, 57, 58**, in that order.
 >
@@ -128,13 +147,13 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| 54.1 | The shots, not the drawings | S | 📋 PLANNED |
-| 54.2 | What CodeC has today | S | 📋 PLANNED |
-| 54.3 | What is not in the shots, and what the owner already decided | S | 📋 PLANNED |
+| 54.1 | The shots, not the drawings | S | ✅ DONE — [PART_54_1](chat-phase54/PART_54_1_SHOTS.md) |
+| 54.2 | What CodeC has today | S | ✅ DONE — [PART_54_2](chat-phase54/PART_54_2_TODAY.md) |
+| 54.3 | What is not in the shots, and what the owner already decided | S | ✅ DONE — [PART_54_3](chat-phase54/PART_54_3_OPEN.md) |
 
 **Research this phase must do.** Open each jpg. Note the rail, the grid shape, the touch-row glyphs, the pill, the status line, and the editor strip. Also note, in the same card, that the shots have no bottom bar and that the owner rejected copying that absence. Re-fetch the two SPCK doc pages if a sentence here is about to be treated as a fact that is not in a shot. Record what was rejected: store art, the 2-column drawing, the Account shop, and “delete the whole bottom bar.”
 
-**Exit.** A reference card in `docs/chat-phase54/`. Zero app files changed. The card states, in one place:
+**Exit.** ✅ **MET (2026-09-22).** The card is in [`chat-phase54/`](chat-phase54/README.md), and the commit that landed it touched **no** file under `app/src` (`git diff --stat` = empty). The owner then answered items 2, 3 and 4 in chat: bottom row **Terminal · Packages · Guide**; fifth icon **reserved for AI**; the unseen glyphs **“Do whatever is good”** (read as omit-and-ask). The card states, in one place:
 
 1. Bottom bar stays. Only the Projects option is removed, and only in 56, after Projects has a home in the side panel.
 2. Bottom row of the 3×2 card. The shot’s cells are Discover, My Labs, Change Log. Those stay out. A proposal, not a decision: Terminal, Packages, Guide. Say if that is wrong. Projects, Editor, and Settings are already in the shot’s top row. Projects must be one of the cells, because that is its new door.
@@ -155,9 +174,9 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| 55.1 | The panel and the rail | M | 📋 PLANNED |
-| 55.2 | Navigation and Recent | M | 📋 PLANNED |
-| 55.3 | Files, Search, Repository | M | 📋 PLANNED |
+| 55.1 | The panel and the rail | M | 🚧 IMPLEMENTED — [PART_55_1](chat-phase55/PART_55_1_PANEL.md) |
+| 55.2 | Navigation and Recent | M | 🚧 IMPLEMENTED — [PART_55_2](chat-phase55/PART_55_2_NAVIGATION.md) |
+| 55.3 | Files, Search, Repository | M | 🚧 IMPLEMENTED — [PART_55_3](chat-phase55/PART_55_3_FILES_SEARCH_REPO.md) |
 
 **Research before code.** Re-open `Screenshot_20260922_124049` (Navigation), `122203` (Files), `124052` (Search), `124055` (Repository). Measure the strip: the green play, the tab-row icon, and `>>` must remain tappable. Do not start from `03-navigation.png`. Do not treat the absence of a bottom bar in those shots as an instruction to hide CodeC’s bar in this phase.
 
@@ -169,7 +188,9 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 **Exit.** On a phone, ☰ opens a panel that matches the shots’ shell. Play works with the panel open. A tap on Projects in the card opens the Projects screen. Files shows the open project’s name as the root and a green triangle on the launch-default HTML file. Search empty is empty. Repository empty is one sentence and one button. The bottom bar still has five tabs. A host test pins the rail order and that Projects is in the card.
 
-**Device pass required.** Yes.
+**Device pass required.** Yes — [chat-phase55/DEVICE_ROUND.md](chat-phase55/DEVICE_ROUND.md) (P1-P10, written but **not run**).
+
+**⚠️ One recorded deviation (asked, not taken):** Material3's modal scrim owns the tap on the strip, so a Run while the panel is open costs one tap on the strip first (play stays one tap away). The shots show a live strip; making it truly interactive means hand-rolling the drawer's state machine (back precedence, the chrome lock, the tour's `drawerOpen` fact, the edge swipe) — a **one-line change** if the owner wants it, so it was put to him instead.
 
 ---
 
@@ -182,10 +203,10 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| 56.1 | Projects leaves the bar | S | 📋 PLANNED |
-| 56.2 | The tour still teaches where projects are | S | 📋 PLANNED |
+| 56.1 | Projects leaves the bar | S | 🚧 IMPLEMENTED — [PART_56_1](chat-phase56/PART_56_1_PROJECTS_LEAVES.md) |
+| 56.2 | The tour still teaches where projects are | S | 🚧 IMPLEMENTED (premise corrected) — [PART_56_2](chat-phase56/PART_56_2_TOUR.md) |
 
-**Research before code.** Re-read the tab list in `MainActivity.kt` and `NavBarPolicy.kt`. Re-read the Phase 45 coach-mark plan and name the beat that spotlights Projects. Re-open the Navigation shot and confirm Projects is a cell in the card. Do not re-open the shots in order to delete the bar. The owner already decided that.
+**Research before code.** Re-read the tab list in `MainActivity.kt` and `NavBarPolicy.kt`. Re-read the Phase 45 coach-mark plan and name the beat that spotlights Projects. ⚠️ **Phase 54 found there is no such beat** ([PART_54_2 §5](chat-phase54/PART_54_2_TODAY.md)): the eleven beats are `editor_drawer`, `drawer_project`, `drawer_demo_pick`, `drawer_file`, `editor_run`, `preview_close`, `nav_handle`, `nav_tab_packages`, `packages_card`, `nav_tab_terminal`, `terminal_chip`, and `tabAnchorFor` maps only Packages and Terminal. **56.2 is therefore a verification part** — re-run the tour after 56.1 and confirm every beat finds its anchor, and that no anchor names the Projects tab. Re-open the Navigation shot and confirm Projects is a cell in the card. Do not re-open the shots in order to delete the bar. The owner already decided that.
 
 **Remove.** `Screen.FileManager` from the bottom-tab list only. The Projects screen, its route, and the hub stay. The tour beat that pointed at the Projects tab moves to the Navigation card’s Projects cell.
 
@@ -193,7 +214,9 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 **Exit.** The bottom bar reads Editor · Terminal · Packages · Settings. It still hides while typing, and “Show tabs” still brings it back. Projects is not on it. Projects opens from the side panel. A source-scan test fails if `Screen.FileManager` is in the bottom-tab list, and fails if `FlatBottomBar` is deleted. The guide still runs from first beat to last.
 
-**Device pass required.** Yes. Confirm the four remaining tabs, and confirm Projects is only in the panel.
+**Device pass required.** Yes. Confirm the four remaining tabs, and confirm Projects is only in the panel — [chat-phase56/DEVICE_ROUND.md](chat-phase56/DEVICE_ROUND.md) (Q1-Q6, written but **not run**).
+
+**What the code did beyond the plan (recorded):** the bar and the back router read the **same** list until this phase (`screens.map { it.route }` fed `BackRouter.isRoot`). Removing the tab would have made a phone that *starts* on the Projects screen exit silently instead of asking the exit question, so the router now reads its own `rootRoutes` (the four tabs + the Projects route) and `BackRouterRootTest` pins that Projects is still a room. Also corrected in the same commit: beat 7's copy counted tabs (*“Five tabs, one tap away”* → **four**), and three comments that claimed five.
 
 ---
 
@@ -207,9 +230,30 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| 57.1 | Filename, tab, green triangle | M | 📋 PLANNED |
-| 57.2 | The two rows above the system keyboard | L | 📋 PLANNED |
-| 57.3 | One pill | S | 📋 PLANNED |
+| 57.1 | Filename, tab, green triangle | M | 🚧 IMPLEMENTED — [PART_57_1](chat-phase57/PART_57_1_TOP_ROW.md) |
+| 57.2 | The two rows above the system keyboard | L | 🚧 IMPLEMENTED — [PART_57_2](chat-phase57/PART_57_2_ROWS_AND_CARET.md) |
+| 57.3 | One pill | S | 🚧 IMPLEMENTED — [PART_57_3](chat-phase57/PART_57_3_PILL.md) |
+
+> **Owner answers taken before this phase's code (2026-09-22, verbatim):** where the retired
+> ⋮'s list should live → **“Tab row's trailing cell (the shot's glyph)”**; what to do about
+> the blue caret drop → **“Do what will be best”**.
+>
+> **Code did more than the plan, on purpose (recorded, not hidden):**
+> - **The tab row became a row of its own** under the bar (`EditorScreen.kt:1614`). The shots
+>   show the file's name **and** the tab row at once; the old chrome crossfaded one into the
+>   other. Cost: the code view is one row shorter while tabs are open — the measurement
+>   Phase 48's caret policy keys on, and it reads the *measured* box.
+> - **`EditorChrome` re-ordered its declaration** (run action before tab row) with the reason
+>   written in the file; `EditorChromeSlotTest` caught the move exactly as designed.
+> - **The caret's drop is sora's own handle, styled** — the library *does* draw one in
+>   0.24.6 (`EditorRenderer` → `HANDLE_TYPE_INSERT`, default `HandleStyleSideDrop`), so the
+>   plan's “if sora already draws a handle, style that” applied and no overlay was built.
+> - **The chip row is gated on a typing surface** (`StripContext.typingSurfaceUp`) so 124105's
+>   predictive row appears with a keyboard and not without one.
+>
+> **The one reversal:** Phase 51.2's contained, labelled RUN is retired by the reference's
+> bare green ▶ (the study's “keep the label” counter-example is overruled by *“They accept
+> only this UI”*). The word survives as the TalkBack label; the lock still says why.
 
 **Research before code.** Re-open `122157` (keyboard down) and `124105` (keyboard up). Re-read `EditorScreen.kt` top bar, `EditorStatusBar.kt`, and the keys row. For the blue drop, read the sora caret path before adding a view. If sora already draws a handle, style that. Do not stack a second caret on it.
 
@@ -237,9 +281,9 @@ The shots have no bottom bar under the touch row. CodeC will still have one, by 
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
-| 58.1 | Open on snake | M | 📋 PLANNED |
-| 58.2 | Silent userland, one warning | M | 📋 PLANNED |
-| 58.3 | Upper links | S/M | 📋 PLANNED |
+| 58.1 | Open on snake | M | 🚧 IMPLEMENTED — [PART_58_1](chat-phase58/PART_58_1_SNAKE_FIRST_OPEN.md) |
+| 58.2 | Silent userland, one warning | M | 🚧 IMPLEMENTED — [PART_58_2](chat-phase58/PART_58_2_SILENT_USERLAND.md) |
+| 58.3 | Upper links | S/M | 🚧 IMPLEMENTED — [PART_58_3](chat-phase58/PART_58_3_PREVIEW_HAMBURGER.md) — the research pass proved the shots’ Content/Home/More live inside the *page*, found no Play shot, asked the owner, and built his answer: **CodeC’s preview chrome** behind one ☰ |
 
 **Research before code.**
 

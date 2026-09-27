@@ -9,7 +9,7 @@ import org.junit.Test
  * Phase 50.3 — the scale is wired and the code face is one (source scan).
  *
  * - `MyApplicationTheme` passes `CodecType.scale()`;
- * - no `fontSize = N.sp` literal survives in the six core files (sizes come
+ * - no `fontSize = N.sp` literal survives in the core files (sizes come
  *   from the scale — variables like the user's editor size are untouched);
  * - the named code surfaces (status-bar path, diff, output) read
  *   `CodecType.codeFamily`;
@@ -19,8 +19,7 @@ import org.junit.Test
  */
 class TypeAdoptionTest {
 
-    private val sixFiles = listOf(
-        "WelcomeScreen.kt",
+    private val coreFiles = listOf(
         "EditorScreen.kt",
         "FileManagerScreen.kt",
         "ModulesScreen.kt",
@@ -40,9 +39,9 @@ class TypeAdoptionTest {
     }
 
     @Test
-    fun `no fontSize literal in the six files`() {
+    fun `no fontSize literal in the core files`() {
         val literal = Regex("""fontSize\s*=\s*\d""")
-        for (name in sixFiles) {
+        for (name in coreFiles) {
             val code = RepoFiles.codeOnly(
                 RepoFiles.mainSource(
                     "app/src/main/java/com/codeci/ide/ui/screens/$name",

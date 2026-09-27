@@ -205,6 +205,47 @@ class GitManager(
         exec(root, listOf("reset", "--", path), localTimeoutSeconds, "git reset failed")
     }
 
+    /** Restore ONE regular tracked file from the index; staged bytes never change. */
+    fun discardUnstaged(root: File, path: String) {
+        val safe = GitDiscardPolicy.safePath(path)
+            ?: throw IllegalArgumentException("Unsafe discard path.")
+        require(isRepository(root)) { "Not a project Git repository." }
+        val base = root.canonicalFile
+        var file = base
+        for (part in safe.split('/')) {
+            file = File(file, part)
+            require(file.canonicalFile == file.absoluteFile) { "Discard does not follow symlinks." }
+        }
+        require(!file.exists() || file.isFile) { "Discard only supports a single regular file." }
+        fun read(args: List<String>): List<String> {
+            val result = runGit(base, listOf("--literal-pathspecs") + args, localTimeoutSeconds)
+            if (result.exitCode != 0) throw GitCommandException(
+                redactOrFallback(result, "Could not validate file for discard"),
+                result.exitCode, redactor.redactAll(result.stdout + result.stderr)
+            )
+            return result.stdout
+        }
+        val workTree = read(listOf("rev-parse", "--show-toplevel")).singleOrNull()
+        require(workTree != null && File(workTree).canonicalFile == base) {
+            "Git worktree does not match this project. Discard refused."
+        }
+        // Parse only the ASCII index metadata, not quoted filenames. Literal
+        // pathspec + one stage-0 entry rules out directories and merge stages.
+        val index = read(listOf("ls-files", "--stage", "--error-unmatch", "--", safe))
+        val fields = index.singleOrNull()?.substringBefore('\t')?.split(' ')
+        require(fields?.size == 3 && fields[0] in listOf("100644", "100755") && fields[2] == "0") {
+            "Discard is unavailable for new, conflicted, symlink or submodule paths."
+        }
+        val staged = read(listOf("diff", "--cached", "--name-status", "--no-renames", "--", safe))
+        val unstaged = read(listOf("diff", "--name-status", "--no-renames", "--", safe))
+        require((staged.isEmpty() || (staged.size == 1 && staged[0].startsWith("M\t"))) &&
+            unstaged.size == 1 && (unstaged[0].startsWith("M\t") || unstaged[0].startsWith("D\t"))) {
+            "File status changed or discard is unavailable. Refresh and review the diff."
+        }
+        exec(base, listOf("--literal-pathspecs", "checkout-index", "--force", "--", safe),
+            localTimeoutSeconds, "Could not discard unstaged changes")
+    }
+
     /**
      * `git ls-files` — every tracked path (one per line), or null when the
      * command fails. Used by [BuildArtifactIgnore] to find build outputs an
@@ -1197,9 +1238,9 @@ object GitStatusParser {
                 line.length >= 4 && line[2] == ' ' && (line[0] != ' ' || line[1] != ' ') -> {
                     val x = line[0]
                     val y = line[1]
-                    var rest = line.substring(3).trimStart()
+                    var rest = line.substring(3) // Leading spaces can belong to the filename.
                     var oldPath: String? = null
-                    val renameSplit = splitRename(rest)
+                    val renameSplit = if (x in "RC" || y in "RC") splitRename(rest) else null
                     if (renameSplit != null) {
                         oldPath = unquote(renameSplit.first)
                         rest = unquote(renameSplit.second)
@@ -1238,28 +1279,33 @@ object GitStatusParser {
     fun unquote(path: String): String {
         if (path.length < 2 || !path.startsWith("\"") || !path.endsWith("\"")) return path
         val body = path.substring(1, path.length - 1)
-        return buildString(body.length) {
-            var i = 0
-            while (i < body.length) {
-                val ch = body[i]
-                if (ch == '\\' && i + 1 < body.length) {
-                    when (val next = body[i + 1]) {
-                        'n' -> append('\n')
-                        't' -> append('\t')
-                        '\\' -> append('\\')
-                        '"' -> append('"')
-                        else -> {
-                            append('\\')
-                            append(next)
-                        }
-                    }
-                    i += 2
-                } else {
-                    append(ch)
-                    i++
+        val bytes = java.io.ByteArrayOutputStream()
+        var i = 0
+        while (i < body.length) {
+            if (body[i] == '\\' && i + 1 < body.length) {
+                val next = body[i + 1]
+                if (next in '0'..'7') {
+                    var end = i + 1
+                    while (end < body.length && end < i + 4 && body[end] in '0'..'7') end++
+                    bytes.write(body.substring(i + 1, end).toInt(8))
+                    i = end
+                    continue
                 }
+                val decoded = when (next) {
+                    'a' -> "\u0007"; 'b' -> "\b"; 't' -> "\t"; 'n' -> "\n"
+                    'v' -> "\u000b"; 'f' -> "\u000c"; 'r' -> "\r"
+                    '\\' -> "\\"; '"' -> "\""
+                    else -> "\\$next"
+                }
+                bytes.write(decoded.toByteArray(Charsets.UTF_8))
+                i += 2
+            } else {
+                val end = i + Character.charCount(body.codePointAt(i))
+                bytes.write(body.substring(i, end).toByteArray(Charsets.UTF_8))
+                i = end
             }
         }
+        return bytes.toByteArray().toString(Charsets.UTF_8)
     }
 }
 
@@ -1278,6 +1324,8 @@ data class GitFileChange(
      * conflict, so the pair set is tested exactly rather than by column.
      */
     val isConflict: Boolean = GitBranchOps.isConflict(x, y)
+    /** '?' means untracked, NOT staged. Used by both the row and its action. */
+    val isStaged: Boolean get() = x != ' ' && x != '?' && x != '!'
 
     val state: GitFileState = when {
         isConflict -> GitFileState.UNMERGED

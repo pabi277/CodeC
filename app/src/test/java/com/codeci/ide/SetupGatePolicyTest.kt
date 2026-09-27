@@ -309,27 +309,38 @@ class SetupGatePolicyTest {
     // ---- the surfaces -------------------------------------------------------
 
     @Test
-    fun `the bar is silent only when the setup is ready and usable`() {
-        assertNull(
-            SetupGatePolicy.barText(
-                InstallProgress(SetupStage.READY),
+    fun `a package transaction is allowed only when the setup is ready and usable`() {
+        // Phase 58.2 — the strip that used to quote these sentences is retired,
+        // so the pin follows the fact to where it is actually used: the verdict
+        // the editor's RUN ▶, the Packages tab and `confirmInstall` obey.
+        assertTrue(
+            SetupGatePolicy.can(
+                SetupAction.INSTALL_PACKAGE,
                 facts(SetupStage.READY, runnable = true, pkg = true)
-            )
+            ).allowed
         )
         for (stage in stages) {
-            val f = facts(stage, percent = if (stage == SetupStage.DOWNLOADING) 62 else null)
-            val text = SetupGatePolicy.barText(f.progress, f)
             if (stage == SetupStage.READY) continue
-            assertNotNull("$stage must show something", text)
-            assertTrue(SetupGatePolicy.barVisible(f.progress, f))
+            val f = facts(stage, percent = if (stage == SetupStage.DOWNLOADING) 62 else null)
+            val verdict = SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, f)
+            assertFalse("$stage must refuse the download", verdict.allowed)
+            assertNotNull("$stage must say why, not just say no", verdict.message)
+            assertTrue(verdict.message!!.isNotBlank())
         }
-        val inFlight = facts(SetupStage.DOWNLOADING, percent = 62)
-        assertTrue(SetupGatePolicy.barText(inFlight.progress, inFlight)!!.contains("62 %"))
-        assertTrue(SetupGatePolicy.barText(inFlight.progress, inFlight)!!.contains("C works right now"))
+        // …and C never waits on any of it (the roadmap's 58 exit).
+        assertTrue(
+            SetupGatePolicy.can(
+                SetupAction.RUN_C,
+                facts(SetupStage.DOWNLOADING, percent = 62)
+            ).allowed
+        )
     }
 
     @Test
-    fun `the do-not-close bar covers every stage except ready`() {
+    fun `the terminal's do-not-close line covers every stage except ready`() {
+        // Phase 58.2 — this sentence is no longer the strip's: it is the
+        // Terminal's own chip while an install it can see is in flight
+        // (`TerminalScreen.kt` quotes it), which is why it outlived the bar.
         for (stage in stages) {
             val text = SetupGatePolicy.dontCloseText(InstallProgress(stage, percent = 7))
             if (stage == SetupStage.READY) {
@@ -421,57 +432,35 @@ class SetupGatePolicyTest {
         assertFalse(SetupGatePolicy.startOnTerminal(usable = true, abiSupported = false))
     }
 
-    @Test
-    fun `the bar is dismissible exactly when the setup has settled`() {
-        // "it's not closing": in the settled-but-unusable state the old rule
-        // (dismissible only when settled AND usable) left a ✕ that cleared a
-        // note which was not there — a wall with a sentence on it.
-        val inFlight = listOf(
-            SetupStage.CHECKING,
-            SetupStage.DOWNLOADING,
-            SetupStage.VERIFYING,
-            SetupStage.EXTRACTING
-        )
-        for (stage in inFlight) {
-            assertFalse(
-                "$stage is in flight: hiding it is the bug this phase removes",
-                SetupGatePolicy.barDismissAllowed(InstallProgress(stage))
-            )
-        }
-        for (stage in listOf(SetupStage.READY, SetupStage.FAILED, SetupStage.UNSUPPORTED)) {
-            assertTrue(
-                "$stage is settled and must be dismissible whatever the verdict",
-                SetupGatePolicy.barDismissAllowed(InstallProgress(stage))
-            )
-        }
-        // The trap state itself: READY with a prefix the disk does not confirm.
-        assertTrue(SetupGatePolicy.barDismissAllowed(InstallProgress(SetupStage.READY)))
-    }
+    // Phase 58.2 — the bar's own dismissal rule (`barDismissAllowed`) and the
+    // test that pinned it are gone with the bar: there is no strip to put away
+    // any more, so there is no ✕ to reason about. The in-flight/settled line
+    // itself survives where it is still used — `InstallProgress.settled` keeps
+    // the Terminal chip honest and the gates above keep refusing — and the
+    // device-round-1 report that shaped the ✕ ("it's not closing or opening
+    // terminal") is answered by those point-of-use gates today.
 
     @Test
-    fun `the settled-but-unusable bar text is the one the owner quoted and it names the terminal`() {
+    fun `a ready marker the disk does not confirm still refuses, and names the terminal`() {
         val markerOnly = facts(SetupStage.READY, runnable = true, pkg = false)
         assertFalse("no bin/pkg means not usable, whatever the marker says", markerOnly.usable)
-        val text = SetupGatePolicy.barText(InstallProgress(SetupStage.READY), markerOnly)
-        assertNotNull(text)
-        assertTrue(text?.contains("C works right now") == true)
-        assertTrue(text?.contains("open Terminal") == true)
-        assertTrue(text?.contains("⬇") == true)
-        // …and the gate refuses a package transaction with the same honesty.
+        // The sentence the owner once read on the strip is still produced for
+        // the user who asks for something that needs the tools — at the point of
+        // use, not on a bar.
         val verdict = SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, markerOnly)
         assertFalse(verdict.allowed)
         assertNotNull(verdict.message)
+        assertTrue(verdict.message!!.contains("Terminal"))
+        assertTrue(verdict.message!!.contains("Tap") || verdict.message!!.contains("tap"))
     }
 
     @Test
-    fun `a working prefix with a stale swapping ledger is unusable but the bar still leads out`() {
+    fun `a working prefix with a stale swapping ledger is unusable and the gate leads out`() {
         // The other shape of the same trap: the ledger says a swap was in
-        // flight, the tree is fine. Not usable (a swap must win), and the bar
-        // must say what to do rather than only what is wrong.
+        // flight, the tree is fine. Not usable (a swap must win), and the
+        // refusal must say what to do rather than only what is wrong.
         val stale = facts(SetupStage.READY, runnable = true, pkg = true, swapping = true)
         assertFalse(stale.usable)
-        val text = SetupGatePolicy.barText(InstallProgress(SetupStage.READY), stale)
-        assertNotNull(text)
         val verdict = SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, stale)
         assertFalse(verdict.allowed)
         assertTrue(verdict.message!!.contains("Terminal"))

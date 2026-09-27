@@ -4,36 +4,42 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.codeci.ide.ui.projects.HubIconToken
-import com.codeci.ide.ui.theme.CodecPalette
+import com.codeci.ide.ui.projects.MarkSeat
 import com.codeci.ide.ui.projects.ProjectHubEntry
+import com.codeci.ide.ui.projects.ProjectMarks
+import com.codeci.ide.ui.theme.CodecPalette
 
+/**
+ * Phase 59.2 — the project's leading square is now the project's **own mark**: the name's initials
+ * on one of the app's five project-tile colours, chosen from a hash of the name.
+ *
+ * It used to be a **kind** glyph (every C project the same orange `C`). The spec's §1 asks for an
+ * auto-generated, distinct logo per project, so this view no longer draws a kind at all: the
+ * decision is `ProjectMark`'s (pure, host-tested), this composable only paints it — and the kind
+ * stayed on the card, one line down in the subtitle (`ProjectsHub.kindLabel`).
+ *
+ * The five colours are `CodecPalette.TILE_*`, whose white-on-tile contrast Phase 50.1 measured and
+ * corrected (all ≥ 4.83:1), so a mark never introduces an unreadable pairing.
+ */
 @Composable
 fun ProjectIconView(entry: ProjectHubEntry, modifier: Modifier = Modifier) {
-    val background = when (entry.icon) {
-        HubIconToken.C_ORANGE -> Color(CodecPalette.TILE_ORANGE)
-        HubIconToken.PY_BLUE -> Color(CodecPalette.TILE_BLUE)
-        HubIconToken.SERVER_PURPLE -> Color(CodecPalette.TILE_VIOLET)
-        HubIconToken.WEB_GREEN -> Color(CodecPalette.TILE_GREEN)
-        HubIconToken.GENERIC_GRAY -> Color(CodecPalette.TILE_GRAY)
-    }
-    
-    val icon = when (entry.icon) {
-        HubIconToken.C_ORANGE -> FileIcon.C
-        HubIconToken.PY_BLUE -> FileIcon.Python
-        HubIconToken.WEB_GREEN -> FileIcon.Html
-        HubIconToken.SERVER_PURPLE -> FileIcon.Default // Can be a server icon or default
-        else -> null
+    val mark = remember(entry.name) { ProjectMarks.mark(entry.name) }
+    val background = when (mark.seat) {
+        MarkSeat.ORANGE -> Color(CodecPalette.TILE_ORANGE)
+        MarkSeat.BLUE -> Color(CodecPalette.TILE_BLUE)
+        MarkSeat.VIOLET -> Color(CodecPalette.TILE_VIOLET)
+        MarkSeat.GREEN -> Color(CodecPalette.TILE_GREEN)
+        MarkSeat.GRAY -> Color(CodecPalette.TILE_GRAY)
     }
 
     Box(
@@ -43,20 +49,11 @@ fun ProjectIconView(entry: ProjectHubEntry, modifier: Modifier = Modifier) {
             .background(background),
         contentAlignment = Alignment.Center
     ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon.vector,
-                contentDescription = null,
-                tint = if (icon.tintable) Color.White else Color.Unspecified,
-                modifier = Modifier.size(if (icon.tintable) 30.dp else 34.dp) // Python/HTML might need 34dp to fit nicely as they have extra margins inside their original vector or we match the previous sizing
-            )
-        } else {
-            Text(
-                entry.iconLabel.ifEmpty { entry.name.take(1).uppercase() },
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        Text(
+            text = mark.initials,
+            color = Color.White,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

@@ -26,6 +26,9 @@ import com.codeci.ide.ui.projects.SwitchBranchResult
 import com.codeci.ide.ui.projects.BranchTarget
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import java.io.File
+import kotlinx.coroutines.NonCancellable
+import com.codeci.ide.ui.projects.GitDiscardPolicy
+import com.codeci.ide.ui.projects.GitDiscardEditors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +51,7 @@ class GitControlViewModel : ViewModel() {
     data class UiState(
         val loading: Boolean = false,
         val busy: Boolean = false,
+        val discardBusy: Boolean = false,
         val gitInstalled: Boolean = true,
         val isRepo: Boolean = false,
         val status: GitStatus? = null,
@@ -756,7 +760,7 @@ class GitControlViewModel : ViewModel() {
      * file is currently on.
      */
     fun toggleStage(context: Context, projectRoot: File, change: GitFileChange) {
-        val staged = change.x != ' '
+        val staged = change.isStaged
         val name = change.path.substringAfterLast('/')
         runGitOperation(
             context,
@@ -770,6 +774,38 @@ class GitControlViewModel : ViewModel() {
                 git.stageFile(projectRoot, change.path)
                 "Staged $name"
             }
+        }
+    }
+
+    /** Called only after a named-file confirmation; no optimistic row removal. */
+    fun discardUnstaged(context: Context, projectRoot: File, change: GitFileChange) {
+        val current = _state.value
+        if (current.busy || current.loading || current.branchBusy || current.publishBusy ||
+            current.branchesLoading || current.discardBusy || !GitDiscardPolicy.canDiscard(change)) return
+        _state.value = current.copy(busy = true, discardBusy = true)
+        viewModelScope.launch {
+            var message: String
+            try {
+                val git = gitContext(context).manager()
+                    ?: error(GitErrors.notInstalled().message)
+                val ticket = GitDiscardEditors.begin(projectRoot, change.path)
+                // A navigation/disposal cancellation cannot leave a restored
+                // file paired with a stale open buffer or a permanently held lock.
+                withContext(NonCancellable) {
+                    try {
+                        withContext(Dispatchers.IO) { git.discardUnstaged(projectRoot, change.path) }
+                    } finally {
+                        GitDiscardEditors.finish(ticket)
+                    }
+                }
+                closeDiff()
+                message = "Discarded unstaged changes: ${change.path}. Staged changes kept."
+            } catch (e: Exception) {
+                message = friendly(e, false).display()
+            } finally {
+                _state.value = _state.value.copy(busy = false, discardBusy = false)
+            }
+            refresh(context, projectRoot, finalMessage = message)
         }
     }
 

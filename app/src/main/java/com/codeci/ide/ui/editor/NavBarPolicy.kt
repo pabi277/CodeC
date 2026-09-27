@@ -20,14 +20,22 @@ object NavBarPolicy {
      * Whether the 5-tab bar must hide. [revealed] (the sticky un-hide) always
      * wins; otherwise the bar hides while the system IME is up (any tab) or,
      * in the editor only, while CodeC Keys is up.
+     *
+     * Phase 60 added the owner's *Hide tabs*: [hiddenByUser] is the tab menu's
+     * manual door to this same hiding, so it too is **the editor's rule** —
+     * off the editor the bar comes straight back. That is deliberate: the
+     * reveal handle that un-hides it only exists in the editor, and hiding the
+     * only navigation the other three tabs have would strand the user there.
      */
     fun hideNavBar(
         inEditor: Boolean,
         imeVisible: Boolean,
         keysVisible: Boolean,
         revealed: Boolean = false,
+        hiddenByUser: Boolean = false,
     ): Boolean {
         if (revealed) return false
+        if (hiddenByUser && inEditor) return true
         return imeVisible || (inEditor && keysVisible)
     }
 
