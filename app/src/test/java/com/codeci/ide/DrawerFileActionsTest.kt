@@ -136,4 +136,20 @@ class DrawerFileActionsTest {
             } finally { GitDiscardEditors.finish(ticket) }
         } finally { GitDiscardEditors.unregister(vm) }
     }
+
+    @Test fun `export after autosave never rewrites a stale active-tab buffer`() {
+        val project = ProjectManager(context).createProject("export_autosaved", includeStarter = false).getOrThrow()
+        val file = File(project.root, "a.txt").apply { writeText("original") }
+        val vm = EditorViewModel()
+        try {
+            vm.openFile(context, project.name, "a.txt")
+            vm.updateCode(TextFieldValue("latest live editor text"))
+            vm.flushAutoSave()
+            assertFalse(vm.isDirty.value)
+            val entry = EditorFileEntry(project.name, "a.txt", "a.txt", 0, false)
+            assertEquals("latest live editor text", vm.fileForExport(context, entry)?.readText())
+            assertEquals("latest live editor text", file.readText())
+            assertEquals("latest live editor text", vm.codeText.value.text)
+        } finally { GitDiscardEditors.unregister(vm) }
+    }
 }

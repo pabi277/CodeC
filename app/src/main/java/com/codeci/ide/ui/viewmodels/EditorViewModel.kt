@@ -2021,8 +2021,13 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             return null
         }
         val activePath = _activeTabPath.value ?: _fileName.value
-        if (entry.relativePath == activePath && _isDirty.value) {
-            if (!saveFile(context)) { _userMessage.value = "Could not save file before export"; return null }
+        if (entry.relativePath == activePath) {
+            // The active tab's cached buffer is intentionally stale between boundaries.
+            // Never export/re-save that cache after autosave has saved the live editor text.
+            if (_isDirty.value && !saveFile(context)) {
+                _userMessage.value = "Could not save file before export"
+                return null
+            }
         } else {
             val tab = _openTabs.value.firstOrNull { it.relativePath == entry.relativePath }
             if (tab != null && tab.buffer.text != tab.savedText) {
