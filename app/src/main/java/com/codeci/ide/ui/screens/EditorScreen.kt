@@ -2231,6 +2231,12 @@ fun EditorScreen(
                     ghostPanelEnabled = completionSettings.panel,
                     // G5 contrast law: comment color at exactly 38 % alpha.
                     ghostColorArgb = editorColors.comment.copy(alpha = 0.38f).toArgb(),
+                    // Phase 69.2 — the suggestion box: the same comment colour
+                    // at 18 % so the ghost reads as a suggestion at a glance
+                    // (owner: "the ghost suggestions text are way too real i
+                    // think as i wrote the wrong word"). Both alphas are pinned
+                    // by GhostContrastTest for all four editor themes.
+                    ghostChipArgb = editorColors.comment.copy(alpha = 0.18f).toArgb(),
                     onBrowseVisibilityChanged = { completionPanelBrowsing = it }
                 )
 

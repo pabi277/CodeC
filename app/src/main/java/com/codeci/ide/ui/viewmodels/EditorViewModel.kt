@@ -539,7 +539,20 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             else -> GhostCompletion.filterForPrefix(completionItemsBase, prefix)
         }
         val ghost = if (!hasSelection && dismissed == null && !scrollSuppressed && cfg.ghost) {
-            GhostCompletion.compute(text, caret, items)
+            val fresh = GhostCompletion.compute(text, caret, items)
+            // Phase 69.2 — the owner's "about a second it vanished": the
+            // debounced engine pass can land with an item set that no longer
+            // proposes what the instant leg painted, and the visible ghost was
+            // dropped although nothing about what the user typed had changed.
+            // A ghost that is still correct now survives the refresh (the hold
+            // is the accept rule itself — see heldWhenStillValid). Every
+            // user-caused clear (selection, dismissal, a real scroll, the
+            // master switch) is checked above and never reaches the hold.
+            if (fresh is GhostState.Hidden) {
+                GhostCompletion.heldWhenStillValid(prev.ghost, text, caret)
+            } else {
+                fresh
+            }
         } else {
             GhostState.Hidden
         }

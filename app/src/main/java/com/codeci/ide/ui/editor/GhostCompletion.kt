@@ -93,6 +93,40 @@ object GhostCompletion {
     }
 
     /**
+     * Phase 69.2 — a ghost that is still CORRECT is not thrown away by a
+     * background refresh that no longer proposes it.
+     *
+     * The owner's report (2026-09-28, verbatim): *"Sometimes the ghost
+     * suggestions text are way too real i think as i wrote the wrong word then
+     * about a second it vanished the ghost suggestions fix it"*. The vanish is
+     * real in the code: the ghost is recomputed from scratch on every event,
+     * and the debounced engine pass lands about a second after the keystroke;
+     * if that fresh answer no longer carries the aligned item, [compute]
+     * returns [GhostState.Hidden] and a visible, still-correct hint blinks out
+     * with nothing the user did to cause it.
+     *
+     * The hold is the painted item, re-aligned against the live text by the
+     * very same rule [compute] uses for the whole list: the item is still a
+     * suggestion exactly as long as the text before the caret literally
+     * continues it. So it survives while the user keeps typing matching
+     * characters (re-measured and shrunk on every pass, G1), it keeps its
+     * first-line-only shape (G6), and it dies the moment the text before the
+     * caret stops matching — or the remainder is empty. Nothing is kept that
+     * [accept] could not accept, because [accept] re-checks the same relation
+     * against the live buffer before it writes anything.
+     *
+     * The user's own actions never reach here: a selection, a per-identifier
+     * dismissal, a real (thumb) scroll and the master switch are all checked by
+     * the caller ([EditorViewModel.refreshCompletionModelNow]) before this is
+     * consulted, so ESC, the pill's swipe-down and any deliberate clear still
+     * behave exactly as Phase 27.1 pinned them.
+     */
+    fun heldWhenStillValid(previous: GhostState, text: String, caret: Int): GhostState {
+        val state = previous as? GhostState.Visible ?: return GhostState.Hidden
+        return compute(text, caret, listOf(state.item))
+    }
+
+    /**
      * The next word-piece of [rest] (VS Code Ctrl+→ semantics): an identifier
      * run, a symbol run, or a whitespace run — never spanning a newline; a
      * leading newline is its own single-character piece.
