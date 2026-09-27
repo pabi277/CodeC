@@ -72,6 +72,7 @@ import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.DiffOp
 import com.codeci.ide.ui.projects.GitBlocker
 import com.codeci.ide.ui.projects.GitErrors
+import com.codeci.ide.ui.projects.GitDiscardPolicy
 import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.GitFileState
 import com.codeci.ide.ui.projects.GitOp
@@ -103,6 +104,7 @@ fun GitControlSheet(
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
+    var pendingDiscard by remember(projectRoot) { mutableStateOf<GitFileChange?>(null) }
     var commitMessage by remember { mutableStateOf("") }
     // Phase 17 — the branch chip opens the Switch Branch dialog.
     var showBranchSheet by remember { mutableStateOf(false) }
@@ -459,7 +461,10 @@ fun GitControlSheet(
                                     },
                                     onToggleStage = {
                                         viewModel.toggleStage(context, projectRoot, change)
-                                    }
+                                    },
+                                    onDiscard = if (GitDiscardPolicy.canDiscard(change)) {
+                                        { pendingDiscard = change }
+                                    } else null
                                 )
                                 // Mockup: a hairline between every change row.
                                 if (index < others.lastIndex) {
@@ -667,6 +672,35 @@ fun GitControlSheet(
             onAttach = { url -> viewModel.attachRemoteToGitHub(context, projectRoot, url) }
         )
     }
+    pendingDiscard?.let { change ->
+        AlertDialog(
+            onDismissRequest = { pendingDiscard = null },
+            title = { Text(stringResource(R.string.git_discard_title)) },
+            text = { Text(stringResource(R.string.git_discard_confirm, change.path)) },
+            confirmButton = {
+                TextButton(
+                    enabled = !state.busy && !state.loading && !state.branchBusy && !state.publishBusy,
+                    onClick = {
+                        pendingDiscard = null
+                        viewModel.discardUnstaged(context, projectRoot, change)
+                    }
+                ) { Text(stringResource(R.string.discard)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDiscard = null }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+    if (state.discardBusy) {
+        AlertDialog(
+            onDismissRequest = {},
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            title = { Text(stringResource(R.string.git_discard_progress)) },
+            text = { CircularProgressIndicator() },
+            confirmButton = {},
+        )
+    }
+
 }
 
 /**
@@ -980,10 +1014,11 @@ private fun GitChangeRow(
     projectFolderName: String,
     onOpenDiff: () -> Unit,
     onToggleStage: () -> Unit,
-    markResolvedMode: Boolean = false
+    markResolvedMode: Boolean = false,
+    onDiscard: (() -> Unit)? = null,
 ) {
     val accent = badgeColor(change.state)
-    val staged = change.x != ' '
+    val staged = change.isStaged
     val fileName = change.path.substringAfterLast('/')
     val parent = change.path.substringBeforeLast('/', "")
     val folderPath = if (parent.isEmpty()) "/$projectFolderName" else "/$projectFolderName/$parent"
@@ -1035,6 +1070,9 @@ private fun GitChangeRow(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(end = 12.dp)
         )
+        if (onDiscard != null) {
+            TextButton(onClick = onDiscard) { Text(stringResource(R.string.discard)) }
+        }
         // Per-file stage/unstage toggle (+/−), mockup-exact outlined square —
         // or the Phase 17 ✓ "Mark Resolved" for a conflicted path.
         Box(

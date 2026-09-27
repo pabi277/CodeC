@@ -557,5 +557,8 @@
     <string name="preview_resolution">Screen resolution</string>
     <string name="preview_device">Device — available space</string>
     <string name="preview_resolution_note">Simulated viewport in logical dp, fitted to the available space. Not device or pixel-density emulation. Page viewport settings and zoom still apply.</string>
+    <string name="git_discard_title">Discard unstaged changes?</string>
+    <string name="git_discard_confirm">Restore %1$s from the staged version? Unstaged changes to this file will be lost. Staged changes and other files stay unchanged. This cannot be undone here. If the file has unsaved editor changes, save and review its diff first.</string>
+    <string name="git_discard_progress">Discarding unstaged changes…</string>
 </resources>
 

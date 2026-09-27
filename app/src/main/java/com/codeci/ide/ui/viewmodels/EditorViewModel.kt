@@ -258,7 +258,7 @@ data class FindUiState(
     val error: String? = null
 )
 
-class EditorViewModel : ViewModel() {
+class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor {
 
     companion object {
         const val MAX_OPEN_TABS = 12
@@ -369,6 +369,7 @@ class EditorViewModel : ViewModel() {
 
     private fun captureContext(context: Context) {
         if (appContext == null) appContext = context.applicationContext
+        com.codeci.ide.ui.projects.GitDiscardEditors.register(this)
     }
 
     /** Debounced auto-save: called after every buffer mutation. */
@@ -1002,6 +1003,7 @@ class EditorViewModel : ViewModel() {
     }
 
     override fun onCleared() {
+        com.codeci.ide.ui.projects.GitDiscardEditors.unregister(this)
         // Phase 37.2 — a LAN server survives the editor. The process belongs to
         // the shared ServerHost, not to this scope, so the only thing this
         // ViewModel may do on its death is stop observing. Loopback-only
@@ -2283,6 +2285,7 @@ class EditorViewModel : ViewModel() {
     ): Boolean {
         val info = ProjectManager(context).project(project) ?: return false
         val safe = ProjectPathUtils.sanitizeRelativePath(relativePath) ?: return false
+        if (com.codeci.ide.ui.projects.GitDiscardEditors.blocks(info.root, safe)) return false
         val file = ProjectPathUtils.resolveInside(info.root, safe) ?: return false
         return runCatching {
             file.parentFile?.mkdirs()
@@ -2353,6 +2356,49 @@ class EditorViewModel : ViewModel() {
         _userMessage.value = context.getString(
             if (failures == 0) R.string.file_saved else R.string.file_save_failed
         )
+    }
+
+    // Phase 63: both Source Control entry points coordinate with every live
+    // editor, including one parked behind Projects on the navigation stack.
+    private fun ownsDiscardRoot(root: File): Boolean {
+        val context = appContext ?: return false
+        val project = _projectName.value ?: return false
+        return ProjectManager(context).project(project)?.root?.canonicalFile == root.canonicalFile
+    }
+
+    override fun canDiscardFile(root: File, path: String): Boolean {
+        if (!ownsDiscardRoot(root)) return true
+        val tab = _openTabs.value.firstOrNull { it.relativePath == path } ?: return true
+        return if (_activeTabPath.value == path) !_isDirty.value
+            else tab.buffer.text == tab.savedText
+    }
+
+    override fun reloadDiscardedFile(root: File, path: String) {
+        if (!ownsDiscardRoot(root)) return
+        val context = appContext ?: return
+        val tab = _openTabs.value.firstOrNull { it.relativePath == path }
+        if (tab != null) {
+            check(canDiscardFile(root, path)) { "New editor edits were kept. Reload the file manually after saving them elsewhere." }
+            val file = ProjectPathUtils.resolveInside(root, path)
+            check(file?.isFile == true) { "Could not reload the restored file. Reopen it before editing." }
+            val content = file!!.readText()
+            val ending = LineEndings.detect(content)
+            val normalized = LineEndings.normalizeToLf(content)
+            val restored = EditorTab(path, TextFieldValue(normalized), normalized, ending)
+            updateTab(path) { restored }
+            undoManagers.remove(path) // Never clear another tab's history.
+            if (_activeTabPath.value == path) {
+                resetCaretForOpen()
+                _codeText.value = restored.buffer
+                _activeLineEnding.value = ending
+                _isDirty.value = false
+                syncUndoFlags(undoManager())
+                _diagnostics.value = emptyList()
+                resetDecorationsForNewBuffer()
+            }
+        }
+        refreshFileEntries(context)
+        refreshGitMeta(context)
     }
 
     fun reloadActiveTab(context: Context) {
