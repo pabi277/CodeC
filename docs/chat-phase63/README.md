@@ -39,7 +39,9 @@ per-root/path write guard + targeted buffer/undo reconciliation. Both existing
 entry points use the same coordinator; no screen-local callback that would miss
 an editor behind the Projects screen. No second Git engine or new dependency.
 
-Local: **133 passed / 0 failed**, existing engine/branch/status/error tests plus
-18 new host cases and annotation pin; strings XML parses; diff whitespace check
+Local: **134 passed / 0 failed**, existing engine/branch/status/error tests plus
+19 new host cases and annotation pin; strings XML parses; diff whitespace check
 passes. CI still required for Android compilation, full tests and the two
 new real EditorViewModel buffer tests. Device verification not run.
+
+Additional boundary check: the engine verifies `git rev-parse --show-toplevel` matches the selected project. A repo with `core.worktree` pointing elsewhere is refused; a real-Git test asserts the external file remains untouched.

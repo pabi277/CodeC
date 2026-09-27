@@ -225,6 +225,10 @@ class GitManager(
             )
             return result.stdout
         }
+        val workTree = read(listOf("rev-parse", "--show-toplevel")).singleOrNull()
+        require(workTree != null && File(workTree).canonicalFile == base) {
+            "Git worktree does not match this project. Discard refused."
+        }
         // Parse only the ASCII index metadata, not quoted filenames. Literal
         // pathspec + one stage-0 entry rules out directories and merge stages.
         val index = read(listOf("ls-files", "--stage", "--error-unmatch", "--", safe))

@@ -49,11 +49,13 @@ Unsaved buffers are refused rather than silently flushed or discarded.
 
 ## Local tests
 
-133 passed / 0 failed (temporary Kotlin/JVM assertion harness): 18 new host
+134 passed / 0 failed (temporary Kotlin/JVM assertion harness): 19 new host
 checks plus existing GitManager, branch manager/policy, status parser, errors
-and annotation tests. The eight new real-Git cases use only isolated temporary
+and annotation tests. The nine new real-Git cases use only isolated temporary
 repositories, cover index preservation, deletion restore, exact unusual names,
 new/renamed/staged-only refusals, path boundaries, merge stages/gitlinks and
 an unborn repository. Local Unicode filesystem tests require C.UTF-8 (the
 sandbox starts without a UTF-8 locale). Two actual EditorViewModel buffer tests
 are written for Robolectric and await CI; no local Android build was claimed.
+
+Additional boundary check: the engine verifies `git rev-parse --show-toplevel` matches the selected project. A repo with `core.worktree` pointing elsewhere is refused; a real-Git test asserts the external file remains untouched.

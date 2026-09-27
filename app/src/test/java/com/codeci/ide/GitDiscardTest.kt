@@ -110,6 +110,15 @@ class GitDiscardTest {
         git(root, "update-index", "--add", "--cacheinfo", "160000,$commit,module")
         refused { manager.discardUnstaged(root, "module") }
     }
+    @Test fun `configured external worktree cannot redirect the destructive write`() = repo { root, manager ->
+        val outside = Files.createTempDirectory("codec-discard-outside-").toFile()
+        try {
+            val target = File(outside, "main.txt").apply { writeText("outside stays unchanged\n") }
+            git(root, "config", "core.worktree", outside.absolutePath)
+            refused { manager.discardUnstaged(root, "main.txt") }
+            assertEquals("outside stays unchanged\n", target.readText())
+        } finally { outside.deleteRecursively() }
+    }
     @Test fun `unborn staged addition stays untouched`() {
         val root = Files.createTempDirectory("codec-unborn-").toFile()
         try {
