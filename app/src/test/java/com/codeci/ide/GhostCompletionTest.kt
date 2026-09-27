@@ -314,14 +314,14 @@ class GhostCompletionTest {
     fun `the held ghost re-measures its suffix against the live text`() {
         // The user keeps typing characters that still match: the held ghost
         // must shrink, never paint a suffix that includes what they typed.
-        val painted = GhostCompletion.Visible("f(\"\\n\");", printf, 5)
+        val painted = GhostState.Visible("f(\"\\n\");", printf, 5)
         val held = GhostCompletion.heldWhenStillValid(painted, "printf", 6)
         assertEquals(GhostState.Visible("(\"\\n\");", printf, 6), held)
     }
 
     @Test
     fun `a mismatch or an empty remainder still clears the ghost`() {
-        val painted = GhostCompletion.Visible("f(\"\\n\");", printf, 5)
+        val painted = GhostState.Visible("f(\"\\n\");", printf, 5)
         // Typed a character the insert does not continue.
         assertEquals(GhostState.Hidden, GhostCompletion.heldWhenStillValid(painted, "printx", 6))
         // The whole insert is typed: no suffix left to paint (G1).
