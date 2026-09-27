@@ -35,7 +35,7 @@ object ProjectSearch {
     const val MAX_HITS: Int = 200
 
     /** Directories that are never searched. */
-    val SKIPPED_DIRS: Set<String> = setOf(".git", "node_modules", "build", ".gradle", "bin", "dist")
+    val SKIPPED_DIRS: Set<String> = ProjectFilesPolicy.excludedDirectories
 
     /** A hit is one line of one file. [column] is 1-based, like the status bar. */
     data class Hit(
@@ -58,13 +58,14 @@ object ProjectSearch {
      * the same empty `RESULTS` for all four, because “nothing found” is the
      * truth in every one of them.
      */
-    fun searchFile(root: File, relativePath: String, query: String, options: Options = Options()): List<Hit> {
+    fun searchFile(root: File, relativePath: String, query: String, options: Options = Options(),
+        onUnreadable: () -> Unit = {}, limit: Int = MAX_HITS): List<Hit> {
         if (query.isBlank()) return emptyList()
         val safe = ProjectPathGuard.childOf(root, relativePath) ?: return emptyList()
         if (!safe.isFile || safe.length() > MAX_FILE_BYTES) return emptyList()
-        val text = runCatching { safe.readText() }.getOrNull() ?: return emptyList()
+        val text = runCatching { safe.readText() }.getOrElse { onUnreadable(); return emptyList() }
         if (looksBinary(text)) return emptyList()
-        return matchesIn(text, query, options, relativePath)
+        return matchesIn(text, query, options, relativePath, limit)
     }
 
     /**
@@ -72,10 +73,11 @@ object ProjectSearch {
      * folders sorted by name, case-insensitively) so results do not jump
      * between runs. Stops the moment [MAX_HITS] is reached.
      */
-    fun search(root: File, query: String, options: Options = Options(), limit: Int = MAX_HITS): List<Hit> {
+    fun search(root: File, query: String, options: Options = Options(), limit: Int = MAX_HITS,
+        checkActive: () -> Unit = {}, onUnreadable: () -> Unit = {}): List<Hit> {
         if (query.isBlank() || !root.isDirectory) return emptyList()
         val hits = mutableListOf<Hit>()
-        walk(root, root, query, options, limit, hits)
+        walk(root, root, query, options, limit, hits, checkActive, onUnreadable)
         return hits
     }
 
@@ -85,21 +87,26 @@ object ProjectSearch {
         query: String,
         options: Options,
         limit: Int,
-        into: MutableList<Hit>
+        into: MutableList<Hit>,
+        checkActive: () -> Unit,
+        onUnreadable: () -> Unit
     ) {
         if (into.size >= limit) return
-        val children = dir.listFiles()?.sortedBy { it.name.lowercase() } ?: return
+        checkActive()
+        val children = dir.listFiles()?.sortedBy { it.name.lowercase() }
+        if (children == null) { onUnreadable(); return }
         for (child in children) {
+            checkActive()
             if (into.size >= limit) return
             if (child.isDirectory) {
-                if (child.name in SKIPPED_DIRS || child.name.startsWith(".")) continue
+                if (!ProjectFilesPolicy.visible(child.name, true)) continue
                 if (isSymlink(child)) continue
-                walk(root, child, query, options, limit, into)
+                walk(root, child, query, options, limit, into, checkActive, onUnreadable)
             } else {
                 if (!isSearchable(child.name)) continue
                 val relative = child.relativeTo(root).path.replace(File.separatorChar, '/')
                 val remaining = limit - into.size
-                into += searchFile(root, relative, query, options).take(remaining)
+                into += searchFile(root, relative, query, options, onUnreadable, remaining).take(remaining)
             }
         }
     }
@@ -151,6 +158,8 @@ object ProjectSearch {
 
     /** Text files only, by extension; the panel is a code search, not a disk scan. */
     fun isSearchable(name: String): Boolean {
+        if (!ProjectFilesPolicy.visible(name, false)) return false
+        if (ProjectFilesPolicy.usefulConfig(name)) return true
         val dot = name.lastIndexOf('.')
         if (dot <= 0 || dot == name.length - 1) return false
         return name.substring(dot + 1).lowercase() in TEXT_EXTENSIONS

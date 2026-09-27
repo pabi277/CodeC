@@ -492,6 +492,11 @@ fun EditorScreen(
     var searchQuery by remember { mutableStateOf("") }
     var searchOptions by remember { mutableStateOf(ProjectSearch.Options()) }
     var searchHits by remember { mutableStateOf<List<ProjectSearch.Hit>>(emptyList()) }
+    var searchResultKey by remember { mutableStateOf<Triple<String, ProjectSearch.Options, String?>?>(null) }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    var searchCapped by remember { mutableStateOf(false) }
+    val searchKey = Triple(searchQuery, searchOptions, currentProject)
+
     // The screen remains the focused editor session while the output panel or
     // a transient IME state changes. Only the explicit toolbar collapse and
     // interactive stdin are allowed to remove the keyboard.
@@ -1150,20 +1155,45 @@ fun EditorScreen(
 
         // The panel's Search slot: one query, the five glyphs' options, and the
         // same capped, in-project walk the pure engine pins on the host.
-        LaunchedEffect(searchQuery, searchOptions, currentProject) {
-            val query = searchQuery
-            if (query.isBlank()) {
-                searchHits = emptyList()
+        LaunchedEffect(searchQuery, searchOptions, currentProject, sidePanel) {
+            val key = searchKey
+            searchHits = emptyList()
+            searchResultKey = null
+            searchMessage = null
+            searchCapped = false
+            val query = key.first
+            val project = key.third
+            if (query.isBlank()) { searchResultKey = key; return@LaunchedEffect }
+            if (project == null) {
+                searchMessage = "Choose a project to search saved files"
+                searchResultKey = key
                 return@LaunchedEffect
             }
-            val root = currentProject?.let {
-                runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+            if (ProjectSearch.patternFor(query, key.second) == null) {
+                searchMessage = "Invalid regular expression"
+                searchResultKey = key
+                return@LaunchedEffect
             }
-            searchHits = if (root == null) {
-                emptyList()
-            } else {
-                withContext(Dispatchers.IO) { ProjectSearch.search(root, query, searchOptions) }
+            kotlinx.coroutines.delay(200)
+            try {
+                val root = ProjectManager(context).project(project)?.root
+                if (root == null || !root.isDirectory) error("Project is no longer available")
+                var unreadable = false
+                val hits = withContext(Dispatchers.IO) {
+                    val job = coroutineContext[kotlinx.coroutines.Job]
+                    ProjectSearch.search(root, query, key.second, ProjectSearch.MAX_HITS + 1,
+                        checkActive = { if (job?.isActive == false) throw kotlinx.coroutines.CancellationException() },
+                        onUnreadable = { unreadable = true })
+                }
+                searchHits = hits.take(ProjectSearch.MAX_HITS)
+                searchCapped = hits.size > ProjectSearch.MAX_HITS
+                if (unreadable) searchMessage = "Some files could not be read; results may be incomplete"
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                searchMessage = "Could not search this project. Edit the query or reopen Search to retry."
             }
+            searchResultKey = key
         }
 
         ModalNavigationDrawer(
@@ -1223,14 +1253,20 @@ fun EditorScreen(
                     search = SearchPanelState(
                         query = searchQuery,
                         options = searchOptions,
-                        hits = searchHits
+                        hits = if (searchResultKey == searchKey) searchHits else emptyList(),
+                        projectName = currentProject,
+                        searching = searchQuery.isNotBlank() && searchResultKey != searchKey,
+                        message = if (searchResultKey == searchKey) searchMessage else null,
+                        capped = searchResultKey == searchKey && searchCapped
                     ),
                     onSearchQuery = { text -> searchQuery = text },
                     onSearchOptions = { options -> searchOptions = options },
                     onSearchHit = { hit ->
-                        viewModel.openFile(context, currentProject, hit.relativePath)
-                        viewModel.jumpToLine(hit.line)
-                        closeDrawer(DrawerCloseReason.FILE_OPENED)
+                        val project = searchResultKey?.third
+                        if (searchResultKey == searchKey && project != null &&
+                            viewModel.openSearchHit(context, project, hit)) {
+                            closeDrawer(DrawerCloseReason.FILE_OPENED)
+                        }
                     },
                     onClearSearch = {
                         searchQuery = ""
@@ -1318,6 +1354,8 @@ fun EditorScreen(
                     },
                     // Phase 57.3 — the tree's OWN Refresh: the one re-read the
                     // user asked for, and the only one that confirms itself.
+                    onSearch = { sidePanel = RailPanel.SEARCH },
+                    onLocate = { viewModel.revealActiveFile() },
                     onRefresh = { viewModel.refreshFilesFromUser(context) },
                     onToggleCollapseAll = {
                         if (allCollapsed) viewModel.expandAllDirectories() else viewModel.collapseAllDirectories()
@@ -2376,6 +2414,7 @@ fun EditorScreen(
         // Phase 16 — the drawer replaced the files bottom-sheet; its dialogs
         // (create entry, per-row rename, delete confirm) live here now.
         pendingCreate?.let { (parent, isFolder) ->
+            var operationError by remember(pendingCreate) { mutableStateOf<String?>(null) }
             AlertDialog(
                 onDismissRequest = { pendingCreate = null },
                 title = { Text(stringResource(if (isFolder) R.string.new_folder else R.string.new_file)) },
@@ -2383,7 +2422,9 @@ fun EditorScreen(
                     Column {
                         OutlinedTextField(
                             value = entryName,
-                            onValueChange = { entryName = it },
+                            isError = operationError != null,
+                            supportingText = { operationError?.let { Text(it) } },
+                            onValueChange = { entryName = it; operationError = null },
                             label = { Text(stringResource(if (isFolder) R.string.new_folder else R.string.file_name)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -2398,11 +2439,10 @@ fun EditorScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        pendingCreate = null
-                        val name = entryName
-                        entryName = ""
-                        if (isFolder) viewModel.createFolderEntry(context, name, parent)
-                        else viewModel.createAndOpenFile(context, name, parent)
+                        val ok = if (isFolder) viewModel.createFolderEntry(context, entryName, parent)
+                        else viewModel.createAndOpenFile(context, entryName, parent)
+                        if (ok) { pendingCreate = null; entryName = "" }
+                        else operationError = viewModel.userMessage.value ?: "Could not create entry"
                     }) { Text(stringResource(R.string.create)) }
                 },
                 dismissButton = {
@@ -2415,13 +2455,16 @@ fun EditorScreen(
 
         pendingRenameEntry?.let { target ->
             var renameValue by remember(target) { mutableStateOf(target.name) }
+            var operationError by remember(target) { mutableStateOf<String?>(null) }
             AlertDialog(
                 onDismissRequest = { pendingRenameEntry = null },
-                title = { Text(stringResource(R.string.rename_file)) },
+                title = { Text(if (target.isDirectory) "Rename folder" else stringResource(R.string.rename_file)) },
                 text = {
                     OutlinedTextField(
                         value = renameValue,
-                        onValueChange = { renameValue = it },
+                        isError = operationError != null,
+                        supportingText = { operationError?.let { Text(it) } },
+                        onValueChange = { renameValue = it; operationError = null },
                         label = { Text(stringResource(R.string.file_name)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -2429,10 +2472,8 @@ fun EditorScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        if (renameValue.isNotBlank()) {
-                            viewModel.renameFileEntry(context, target, renameValue)
-                        }
-                        pendingRenameEntry = null
+                        if (viewModel.renameFileEntry(context, target, renameValue)) pendingRenameEntry = null
+                        else operationError = viewModel.userMessage.value ?: "Could not rename entry"
                     }) { Text(stringResource(R.string.rename)) }
                 },
                 dismissButton = {
@@ -2444,15 +2485,23 @@ fun EditorScreen(
         }
 
         if (pendingDelete != null) {
+            var operationError by remember(pendingDelete) { mutableStateOf<String?>(null) }
             AlertDialog(
                 onDismissRequest = { pendingDelete = null },
                 title = { Text("Delete ${pendingDelete?.name ?: ""}?") },
-                text = { Text("The entry is removed from disk. This cannot be undone.") },
+                text = { Column {
+                    Text(pendingDelete!!.relativePath)
+                    Text(if (pendingDelete!!.isDirectory)
+                        "This folder and all its contents, including unsaved edits in open files, will be deleted. This cannot be undone."
+                        else "This file and its unsaved edits will be deleted. This cannot be undone.")
+                    operationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                } },
                 confirmButton = {
                     TextButton(onClick = {
-                        pendingDelete?.let { viewModel.deleteFileEntry(context, it) }
-                        pendingDelete = null
-                    }) { Text(stringResource(R.string.delete)) }
+                        val target = pendingDelete ?: return@TextButton
+                        if (viewModel.deleteFileEntry(context, target)) pendingDelete = null
+                        else operationError = viewModel.userMessage.value ?: "Could not delete entry"
+                    }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = {
                     TextButton(onClick = { pendingDelete = null }) {

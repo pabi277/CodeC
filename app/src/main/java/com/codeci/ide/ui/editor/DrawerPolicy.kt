@@ -65,7 +65,7 @@ object DrawerProjectList {
 
     /** The dialog's empty-projects copy, verbatim — it is already written. */
     const val EMPTY_PROJECTS_COPY =
-        "No projects yet — create one in the Projects tab, or keep working with single files here."
+        "No projects yet — create one in the Projects screen, or keep working with single files here."
 
     data class Row(
         /** null = the Single files (scratch) context. */

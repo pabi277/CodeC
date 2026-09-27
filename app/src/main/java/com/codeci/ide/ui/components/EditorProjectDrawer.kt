@@ -1,11 +1,29 @@
 package com.codeci.ide.ui.components
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,18 +35,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.automirrored.filled.CallMerge
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,31 +56,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
 import com.codeci.ide.ui.editor.DrawerProjectList
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
-import com.codeci.ide.ui.components.FileIconView
 
-/**
- * Phase 16 (mockup-exact) — the Spck-style navigation drawer: project name
- * with a purple source-control glyph, an outlined `⌥ branch ▾` chip, the
- * four-column tree toolbar (New File / New Folder / Refresh / Collapse All),
- * the Phase 8 `FileTreeRepository` entries with typed file icons, git
- * M/A/D/? letters and the purple selected-row highlight, and the two footer
- * rows (Source Control with change badge, Switch Branch).
- *
- * Pure presentation over [EditorFileEntry] + the state its screen feeds in;
- * all actions and IO live in the screen / ViewModel.
- */
+/** Phase 67.1: reference-style hierarchy and menus over the existing file engine. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EditorProjectDrawer(
@@ -87,11 +86,7 @@ fun EditorProjectDrawer(
     showProjectTree: Boolean = true,
     onSourceControl: () -> Unit,
     onSwitchBranch: () -> Unit,
-    /**
-     * Phase 47.1 — the header's tap now EXPANDS the in-drawer PROJECTS list
-     * instead of opening the retired Open-folder dialog: one behaviour,
-     * two entry points (header tap and the section row itself).
-     */
+    /** The Files overflow opens the in-panel project switcher. */
     onSwitchProject: () -> Unit,
     /** Phase 47.1 — the ✕: closes the drawer and does NOTHING else. */
     onClose: () -> Unit = {},
@@ -101,7 +96,7 @@ fun EditorProjectDrawer(
     onToggleProjects: () -> Unit = {},
     /** null picks the Single files context — the old dialog's exact behaviour. */
     onSelectProject: (String?) -> Unit = {},
-    /** Phase 47.1 — jumps to the Projects tab with the `+` sheet open. */
+    /** Phase 47.1 — jumps to the Projects screen with the `+` sheet open. */
     onNewProject: () -> Unit = {},
     onNewFile: (String?) -> Unit,
     onNewFolder: (String?) -> Unit,
@@ -116,244 +111,123 @@ fun EditorProjectDrawer(
     onSetLaunchDefault: (EditorFileEntry) -> Unit,
     onClearLaunchDefault: () -> Unit,
     onCopyPath: (EditorFileEntry) -> Unit,
+    onSearch: () -> Unit = {},
+    onLocate: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(top = 24.dp)
-    ) {
-        // ---- header: project name + source-control glyph ------------------
-        // The project header toggles the in-drawer project list.
-        val anchoredHeader: Modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSwitchProject)
-            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
-        Row(
-            modifier = anchoredHeader,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = projectName ?: stringResource(R.string.editor_scratch_mode),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+    var overflow by remember { mutableStateOf(false) }
+    var rootMenu by remember { mutableStateOf(false) }
+    var rootExpanded by remember(projectName) { mutableStateOf(true) }
+    var locateRequest by remember(projectName) { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    LaunchedEffect(locateRequest, entries, selectedPath) {
+        if (locateRequest) {
+            val index = entries.indexOfFirst { it.relativePath == selectedPath }
+            if (index >= 0) { listState.animateScrollToItem(index); locateRequest = false }
+        }
+    }
+    BoxWithConstraints(modifier.fillMaxWidth().fillMaxHeight()) {
+    val compactToolbar = maxWidth < 300.dp
+    Column(Modifier.fillMaxWidth().fillMaxHeight().background(MaterialTheme.colorScheme.surface)) {
+        // Reference-style toolbar; every glyph has a real, named action.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("FILES", style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f).padding(start = 12.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (showProjectTree) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onSourceControl),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.material3.BadgedBox(
-                        badge = { if (changeCount > 0) Badge { Text(changeCount.toString()) } }
-                    ) {
-                        // Mockup-exact: the same purple branch glyph as the chip.
-                        Icon(
-                            SpckIcons.GitBranch,
-                            contentDescription = stringResource(R.string.editor_drawer_source_control),
-                            modifier = Modifier.size(22.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                DrawerIcon(Icons.Default.Search, "Search project", onSearch)
+                if (!compactToolbar) DrawerIcon(Icons.Default.MyLocation, "Locate active file") {
+                    rootExpanded = true
+                    onLocate()
+                    locateRequest = true
+                }
+                DrawerIcon(Icons.Default.NoteAdd, "New file") { onNewFile(null) }
+                DrawerIcon(Icons.Default.CreateNewFolder, "New folder") { onNewFolder(null) }
+            }
+            Box {
+                DrawerIcon(Icons.Default.MoreHoriz, "Files actions") { overflow = true }
+                DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
+                    DropdownMenuItem(text = { Text("Switch project") }, onClick = {
+                        overflow = false; onSwitchProject()
+                    })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.editor_drawer_new_project)) },
+                        onClick = { overflow = false; onNewProject() })
+                    if (showProjectTree) {
+                        if (compactToolbar) DropdownMenuItem(text = { Text("Locate active file") },
+                            leadingIcon = { Icon(Icons.Default.MyLocation, null) },
+                            onClick = { overflow = false; rootExpanded = true; onLocate(); locateRequest = true })
+                        HorizontalDivider()
+                        DropdownMenuItem(text = { Text("Refresh files") },
+                            leadingIcon = { Icon(Icons.Default.Refresh, null) },
+                            onClick = { overflow = false; onRefresh() })
+                        DropdownMenuItem(text = { Text(if (allCollapsed) "Expand all" else "Collapse all") },
+                            onClick = { overflow = false; rootExpanded = true; onToggleCollapseAll() })
+                        HorizontalDivider()
+                        DropdownMenuItem(text = { Text("Source control" + if (changeCount > 0) " ($changeCount)" else "") },
+                            onClick = { overflow = false; onSourceControl() })
+                        DropdownMenuItem(text = { Text("Switch branch" + (branch?.let { " · $it" } ?: "")) },
+                            onClick = { overflow = false; onSwitchBranch() })
                     }
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text("Close files panel") },
+                        leadingIcon = { Icon(Icons.Default.Close, null) },
+                        onClick = { overflow = false; onClose() })
                 }
             }
-            // Phase 47.1 — the explicit close. Mirrors the source-control
-            // glyph's 38 dp hit target so the header stays balanced. Closing
-            // and NOTHING else: no dialog, no navigation, no autosave flush
-            // (the screen's DisposableEffect owns leaving).
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onClose),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = stringResource(R.string.editor_drawer_close),
-                    modifier = Modifier.size(22.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // ---- Phase 47.1: the PROJECTS section (the in-drawer switcher) -----
-        // The retired dialog's list, living where the owner chose: expand,
-        // see "Single files" + every project with the current one marked, tap
-        // to switch. Read once per expansion by the screen (this composable
-        // never touches disk).
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggleProjects)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.ExpandMore,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(18.dp)
-                    .rotate(if (projectsExpanded) 0f else -90f),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.editor_drawer_projects),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
         if (projectsExpanded) {
-            Column(Modifier.padding(bottom = 6.dp)) {
-                if (projects.none { it.contextName != null }) {
-                    Text(
-                        text = DrawerProjectList.EMPTY_PROJECTS_COPY,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Projects", Modifier.weight(1f).padding(start = 12.dp))
+                DrawerIcon(Icons.Default.Close, "Close project list", onToggleProjects)
+            }
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 192.dp)) {
+                if (projects.none { it.contextName != null }) item {
+                    Text(DrawerProjectList.EMPTY_PROJECTS_COPY, Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall)
                 }
-                projects.forEach { row ->
-                    TextButton(
-                        onClick = { onSelectProject(row.contextName) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    ) {
-                        Text(
-                            text = if (row.isCurrent) "\u25CF  ${row.label}" else row.label,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                items(projects, key = { it.contextName ?: "__single_files__" }) { row ->
+                    TextButton(onClick = { onSelectProject(row.contextName) }, modifier = Modifier
+                        .fillMaxWidth().semantics { selected = row.isCurrent }) {
+                        Text(if (row.isCurrent) "●  ${row.label}" else row.label,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                }
-                TextButton(
-                    onClick = onNewProject,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.editor_drawer_new_project))
                 }
             }
             HorizontalDivider()
         }
-
-        // ---- branch chip ----------------------------------------------------
-        // Phase 46.2 — gated on showProjectTree: a peek shows no git.
-        if (showProjectTree && branch != null) {
-            Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp)) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .border(
-                            width = 1.dp,
-                            // Phase 40.5 — 0.55 alpha measured 2.25:1 against the
-                            // surface; the opaque accent clears 3:1.
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(50)
-                        )
-                        .clickable(onClick = onSwitchBranch)
-                        .padding(horizontal = 12.dp, vertical = 5.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            SpckIcons.GitBranch,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = branch,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Icon(
-                            Icons.Default.ExpandMore,
-                            contentDescription = stringResource(R.string.editor_drawer_switch_branch),
-                            modifier = Modifier.size(15.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-        }
-        HorizontalDivider()
-
-        // ---- tree toolbar (four equal columns) ------------------------------
-        // Phase 46.2 — toolbar + tree + the two git footer rows exist only in
-        // PROJECT mode; a SINGLE_FILE peek gets a one-line hint instead.
         if (showProjectTree) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DrawerToolAction(
-                    icon = Icons.Default.NoteAdd,
-                    label = stringResource(R.string.new_file),
-                    onClick = { onNewFile(null) },
-                    modifier = Modifier.weight(1f)
-                )
-                DrawerToolAction(
-                    icon = Icons.Default.CreateNewFolder,
-                    label = stringResource(R.string.new_folder),
-                    onClick = { onNewFolder(null) },
-                    modifier = Modifier.weight(1f)
-                )
-                DrawerToolAction(
-                    icon = Icons.Default.Refresh,
-                    label = stringResource(R.string.refresh),
-                    onClick = onRefresh,
-                    modifier = Modifier.weight(1f)
-                )
-                DrawerToolAction(
-                    icon = SpckIcons.CollapseAll,
-                    label = stringResource(
-                        if (allCollapsed) R.string.editor_drawer_expand_all else R.string.editor_drawer_collapse_all
-                    ),
-                    onClick = onToggleCollapseAll,
-                    modifier = Modifier.weight(1f)
-                )
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .semantics { stateDescription = if (rootExpanded) "Expanded" else "Collapsed" }
+                .clickable { rootExpanded = !rootExpanded }.padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Icon(if (rootExpanded) Icons.Default.ExpandMore else Icons.Default.KeyboardArrowRight, null)
+                Text(projectName ?: stringResource(R.string.editor_scratch_mode),
+                    modifier = Modifier.weight(1f).padding(start = 8.dp),
+                    style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Box {
+                    DrawerIcon(Icons.Default.MoreHoriz, "Project folder actions") { rootMenu = true }
+                    DropdownMenu(expanded = rootMenu, onDismissRequest = { rootMenu = false }) {
+                        DropdownMenuItem(text = { Text(projectName ?: "Single files", maxLines = 3) },
+                            enabled = false, onClick = {})
+                        DropdownMenuItem(text = { Text("New file") },
+                            leadingIcon = { Icon(Icons.Default.NoteAdd, null) },
+                            onClick = { rootMenu = false; onNewFile(null) })
+                        DropdownMenuItem(text = { Text("New folder") },
+                            leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) },
+                            onClick = { rootMenu = false; onNewFolder(null) })
+                        HorizontalDivider()
+                        DropdownMenuItem(text = { Text("Switch project") },
+                            onClick = { rootMenu = false; onSwitchProject() })
+                    }
+                }
             }
-            HorizontalDivider()
-
-            // ---- the tree ---------------------------------------------------------
-            if (entries.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.editor_drawer_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 6.dp,
-                        vertical = 4.dp
-                    )
-                ) {
+            if (rootExpanded) {
+                if (entries.isEmpty()) Text(stringResource(R.string.editor_drawer_empty), Modifier.padding(16.dp))
+                else LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
                     items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
-                        DrawerRow(
-                            entry = entry,
-                            expanded = !collapsedDirs.contains(entry.relativePath),
-                            selected = entry.relativePath == selectedPath,
-                            isLaunchDefault = entry.relativePath == launchDefault,
-                            hasLaunchDefault = launchDefault != null,
-                            badge = gitBadges[entry.relativePath],
-                            onOpenOrToggle = { onOpenEntry(entry) },
-                            onAction = { action ->
+                        DrawerRow(entry, !collapsedDirs.contains(entry.relativePath),
+                            entry.relativePath == selectedPath, entry.relativePath == launchDefault,
+                            launchDefault != null, gitBadges[entry.relativePath],
+                            onOpenOrToggle = { onOpenEntry(entry) }, onAction = { action ->
                                 when (action) {
                                     RowAction.Open -> onOpenEntry(entry)
                                     RowAction.Rename -> onRenameEntry(entry)
@@ -366,38 +240,20 @@ fun EditorProjectDrawer(
                                     RowAction.NewFileHere -> onNewFile(entry.relativePath)
                                     RowAction.NewFolderHere -> onNewFolder(entry.relativePath)
                                 }
-                            }
-                        )
+                            })
                     }
                 }
             }
-            HorizontalDivider()
+        } else Text(stringResource(R.string.editor_single_file_drawer_hint), Modifier.padding(16.dp),
+            style = MaterialTheme.typography.bodySmall)
+    }
+    }
+}
 
-            // ---- footer -----------------------------------------------------------
-            DrawerFooterRow(
-                icon = SpckIcons.GitBranch,
-                label = stringResource(R.string.editor_drawer_source_control),
-                badge = changeCount,
-                onClick = onSourceControl
-            )
-            DrawerFooterRow(
-                icon = SpckIcons.GitBranch,
-                label = stringResource(R.string.editor_drawer_switch_branch),
-                badge = 0,
-                onClick = onSwitchBranch
-            )
-        } else {
-            // Phase 46.2 — SINGLE_FILE: the peek's drawer. No create/rename
-            // toolbar, no tree, no git rows — the PROJECTS list above is the
-            // whole surface.
-            Text(
-                text = stringResource(R.string.editor_single_file_drawer_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-        Spacer(Modifier.height(10.dp))
+@Composable
+private fun DrawerIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        Icon(icon, contentDescription = label, modifier = Modifier.size(22.dp))
     }
 }
 
@@ -420,102 +276,45 @@ private fun DrawerRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val guide = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+    val depth = entry.depth.coerceIn(0, 6)
     Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 1.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(
-                    if (selected) {
-                        // Mockup: a clearly visible mid-purple row highlight.
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
-                    } else {
-                        Color.Transparent
-                    }
-                )
-                .combinedClickable(
-                    onClick = onOpenOrToggle,
-                    onLongClick = { menuOpen = true }
-                )
-                .padding(start = 10.dp, end = 10.dp, top = 7.dp, bottom = 7.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (entry.isDirectory) {
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = muted
-                )
-                Spacer(Modifier.width(4.dp))
-                FileIconView(
-                    name = entry.name,
-                    isDirectory = true,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            } else {
-                Spacer(Modifier.width(22.dp))
-                FileIconView(
-                    name = entry.name,
-                    isDirectory = false,
-                    modifier = Modifier.size(18.dp),
-                    tint = muted
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = entry.name,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            if (isLaunchDefault) {
-                // Spck marks the launch-default file with a blue mark.
-                Box(
-                    modifier = Modifier
-                        .padding(end = 8.dp)
-                        .size(8.dp)
-                        .background(LaunchDefaultBlue, CircleShape)
-                )
-            }
-            if (badge != null) {
-                Text(
-                    text = badge,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = when (badge) {
-                        "M" -> Color(0xFFE6B33C)
-                        "A" -> Color(0xFF66BB6A)
-                        "D" -> Color(0xFFFF5555)
-                        // Phase 17 — Spck marks merge conflicts purple.
-                        "U" -> Color(0xFFBA68C8)
-                        else -> muted.copy(alpha = 0.8f)
-                    },
-                    modifier = Modifier.padding(end = 4.dp)
-                )
-            }
-        }
-        DropdownMenu(
-            expanded = menuOpen,
-            onDismissRequest = { menuOpen = false }
-        ) {
-            DrawerEntryMenu(
-                entry = entry,
-                hasLaunchDefault = hasLaunchDefault,
-                onAction = { action ->
-                    menuOpen = false
-                    onAction(action)
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .then(if (selected) Modifier.border(1.dp, MaterialTheme.colorScheme.primary) else Modifier)
+            .drawBehind {
+                for (level in 0..depth) {
+                    val x = (16 + level * 16).dp.toPx()
+                    drawLine(guide, Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
                 }
-            )
+            }
+            .semantics {
+                this.selected = selected
+                if (entry.isDirectory) stateDescription = if (expanded) "Expanded" else "Collapsed"
+            }, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f).heightIn(min = 48.dp)
+                .combinedClickable(onClick = onOpenOrToggle, onLongClick = { menuOpen = true })
+                .padding(start = (20 + depth * 16).dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                if (entry.isDirectory) Icon(
+                    if (expanded) Icons.Default.ExpandMore else Icons.Default.KeyboardArrowRight,
+                    null, Modifier.size(20.dp), tint = muted)
+                else if (isLaunchDefault) Icon(Icons.Default.PlayArrow, "Launch default",
+                    Modifier.size(20.dp), tint = Color(0xFF27AE80))
+                else Spacer(Modifier.width(20.dp))
+                if (!entry.isDirectory) FileIconView(entry.name, false, Modifier.size(18.dp), tint = muted)
+                Text(entry.name, modifier = Modifier.weight(1f).padding(start = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (badge != null) Text(badge, color = muted, style = MaterialTheme.typography.labelMedium)
+            }
+            Box {
+                DrawerIcon(Icons.Default.MoreHoriz, "Actions for ${entry.name}") { menuOpen = true }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DrawerEntryMenu(entry, hasLaunchDefault) { action -> menuOpen = false; onAction(action) }
+                }
+            }
         }
     }
 }
-
-private val LaunchDefaultBlue = Color(0xFF42A5F5)
 
 @Composable
 private fun DrawerEntryMenu(
@@ -523,118 +322,73 @@ private fun DrawerEntryMenu(
     hasLaunchDefault: Boolean,
     onAction: (RowAction) -> Unit
 ) {
+    Text(entry.relativePath, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.labelSmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
+    HorizontalDivider()
     if (!entry.isDirectory) {
         DropdownMenuItem(
             text = { Text(stringResource(R.string.open)) },
+            leadingIcon = { Icon(Icons.Default.OpenInNew, null) },
             onClick = { onAction(RowAction.Open) }
         )
     }
     if (entry.isDirectory) {
         DropdownMenuItem(
             text = { Text(stringResource(R.string.new_file)) },
+            leadingIcon = { Icon(Icons.Default.NoteAdd, null) },
             onClick = { onAction(RowAction.NewFileHere) }
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.new_folder)) },
+            leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) },
             onClick = { onAction(RowAction.NewFolderHere) }
         )
     } else {
         if (entry.name.endsWith(".c", ignoreCase = true)) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.run_in_terminal)) },
+            leadingIcon = { Icon(Icons.Default.PlayArrow, null) },
                 onClick = { onAction(RowAction.Run) }
             )
         }
         if (WebFileSupport.isHtml(entry.name)) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.editor_drawer_launch)) },
+            leadingIcon = { Icon(Icons.Default.PlayArrow, null) },
                 onClick = { onAction(RowAction.Launch) }
             )
         }
         if (entry.projectName != null) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.editor_drawer_set_default)) },
+            leadingIcon = { Icon(Icons.Default.PlayArrow, null) },
                 onClick = { onAction(RowAction.SetDefault) }
             )
             if (hasLaunchDefault) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.editor_drawer_clear_default)) },
+            leadingIcon = { Icon(Icons.Default.Close, null) },
                     onClick = { onAction(RowAction.ClearDefault) }
                 )
             }
         }
     }
+    HorizontalDivider()
     DropdownMenuItem(
         text = { Text(stringResource(R.string.rename)) },
+            leadingIcon = { Icon(Icons.Default.Edit, null) },
         onClick = { onAction(RowAction.Rename) }
     )
-    DropdownMenuItem(
-        text = { Text(stringResource(R.string.delete)) },
-        onClick = { onAction(RowAction.Delete) }
-    )
+
     DropdownMenuItem(
         text = { Text(stringResource(R.string.editor_drawer_copy_path)) },
+            leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
         onClick = { onAction(RowAction.CopyPath) }
     )
-}
-
-@Composable
-private fun DrawerToolAction(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 8.dp)
-    ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp))
-        Spacer(Modifier.height(3.dp))
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun DrawerFooterRow(
-    icon: ImageVector,
-    label: String,
-    badge: Int,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.width(12.dp))
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        if (badge > 0) {
-            Badge { Text(badge.toString()) }
-            Spacer(Modifier.width(8.dp))
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.ArrowForwardIos,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    HorizontalDivider()
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+        leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+        onClick = { onAction(RowAction.Delete) }
+    )
 }
