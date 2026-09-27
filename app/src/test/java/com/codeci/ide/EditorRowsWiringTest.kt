@@ -20,6 +20,10 @@ import org.junit.Test
  * Phase 69.1 added the row's REACH: the caps row's horizontal position is owned
  * by the screen, so it survives the keyboard and the strip's context swaps
  * (owner Q3 = A: remember the position, change nothing about the caps).
+ *
+ * Phase 69.2 added the row's LANGUAGE: the file's own quick keys lead it and a
+ * language change returns it to its head (owner: *"What language i am using
+ * don't matter it always give me same fixed quick keys"*).
  */
 class EditorRowsWiringTest {
 
@@ -114,6 +118,24 @@ class EditorRowsWiringTest {
         assertTrue(
             "the run keys keep their own row position",
             runRowBody.contains("horizontalScroll(rememberScrollState())"),
+        )
+    }
+
+    @Test
+    fun `the row starts at its head when the file language changes`() {
+        // Phase 69.2 — the row LEADS with the file language's caps now (owner:
+        // "What language i am using don't matter it always give me same fixed
+        // quick keys"), so a language change returns the row to offset 0: the
+        // remembered 69.1 offset belonged to the previous file's caps. Within
+        // one file the owner's Q3 = A ("remember the row's horizontal
+        // position") still stands.
+        assertTrue(
+            "the row must open at its head for a new language",
+            editor.contains("LaunchedEffect(language) { keysRowScroll.scrollTo(0) }"),
+        )
+        assertTrue(
+            "the row's language is the file's own extension, detected in one place",
+            editor.contains("LanguageType.fromFileName(activeTabPath ?: currentFileName)"),
         )
     }
 

@@ -144,52 +144,22 @@ object EditorKeySet {
         )
     )
 
-    /** Small per-language tails (data-driven, per spec; one good general set first). */
-    private fun languageTail(language: LanguageType?): List<EditorKeyDef> = when (language) {
-        LanguageType.C -> listOf(EditorKeyDef("->", EditorKey.Insert("->")))
-        LanguageType.CPP -> listOf(
-            EditorKeyDef("->", EditorKey.Insert("->")),
-            EditorKeyDef("::", EditorKey.Insert("::"))
-        )
-        LanguageType.PYTHON -> listOf(
-            EditorKeyDef(":", EditorKey.Insert(":")),
-            EditorKeyDef("_(self)", EditorKey.Insert("self "))
-        )
-        LanguageType.HTML -> listOf(
-            EditorKeyDef("</>", EditorKey.Insert("</>"))
-        )
-        LanguageType.CSS -> listOf(
-            EditorKeyDef(":", EditorKey.Insert(":")),
-            EditorKeyDef(";", EditorKey.Insert(";"))
-        )
-        LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT -> listOf(
-            // Backticks are a pair too — template literals.
-            EditorKeyDef("``", EditorKey.Pair("`", "`")),
-            EditorKeyDef("=>", EditorKey.Insert("=>"))
-        )
-        LanguageType.SHELL -> listOf(
-            EditorKeyDef("$", EditorKey.Insert("$"))
-        )
-        // Phase 68.1 (completed part) — Spck's JSON symbol row (shot 204937:
-        // `{} prop: = null , ""`). The pairs `{} [] ""` already live in the
-        // GENERAL set; the tail adds what JSON keeps reaching for: the colon
-        // after a key, the comma between members, and the three literals —
-        // one cap, flick for true/false.
-        LanguageType.JSON -> listOf(
-            EditorKeyDef(":", EditorKey.Insert(":"), popup = EditorKey.Insert(": ")),
-            EditorKeyDef(",", EditorKey.Insert(",")),
-            EditorKeyDef(
-                "null", EditorKey.Insert("null"),
-                swipeUp = EditorKey.Insert("true"), swipeDown = EditorKey.Insert("false")
-            )
-        )
-        else -> emptyList()
-    }
-
     /**
-     * Keys for [language]: the general set, the language tail, then any
-     * [customSnippets] (name ⇒ body) parsed from the Settings string. The
-     * row is horizontally scrollable so growth is safe.
+     * Keys for [language] — Phase 69.2 order, and the order IS the fix the
+     * owner asked for (2026-09-28, verbatim: *"What language i am using don't
+     * matter it always give me same fixed quick keys"* → *"Can it be auto
+     * detection my file extension and set the the quick keys order as per
+     * requirement and if it is not a standard file than a default quick key
+     * option"*):
+     *
+     *  1. [LanguageQuickKeys.forLanguage] — the file language's own caps;
+     *  2. the user's own [customSnippets] (name ⇒ body) from Settings;
+     *  3. the general set ([GENERAL], or the stored JSON when it is valid).
+     *
+     * Before 69.2 the language caps came LAST: in slots 15-17 of a row that
+     * shows ~7 caps and opens at the left, so every language looked identical.
+     * A non-standard file has no language caps and keeps the default row, and
+     * the row stays horizontally scrollable so growth is safe.
      *
      * Phase 26.1: when [storedJson] (from DataStore) is valid, it replaces
      * GENERAL as the base — user-editable ordering. Invalid JSON falls back
@@ -205,7 +175,9 @@ object EditorKeySet {
         } else {
             GENERAL
         }
-        return base + languageTail(language) + parseCustomSnippets(customSnippets)
+        return LanguageQuickKeys.forLanguage(language) +
+            parseCustomSnippets(customSnippets) +
+            base
     }
 
     /** Access to the default general set for Settings reset + tests. */
@@ -322,12 +294,13 @@ object EditorKeySet {
     }
 
     /**
-     * Phase 28.2 — the per-language macro ROW of the full keyboard reuses the
-     * Phase 16 language hook (spec §1.1: "per-language macro rows reusing the
-     * Phase 16/22 language hook"). C ships `->`, Python `:` + `self`, and so
-     * on — one accessor, so the tail and the keyboard row never diverge.
+     * Phase 28.2 — the per-language macro ROW accessor, kept so the row and
+     * the (unused-by-decision, 28.2 round 3) CodeC Keys macro hook can never
+     * disagree. Since Phase 69.2 it is the SAME table the strip leads with —
+     * [LanguageQuickKeys] — one source, no second list to drift.
      */
-    fun languageMacroRow(language: LanguageType?): List<EditorKeyDef> = languageTail(language)
+    fun languageMacroRow(language: LanguageType?): List<EditorKeyDef> =
+        LanguageQuickKeys.forLanguage(language)
 
     private fun replaced(text: String, start: Int, end: Int, insert: String, caretShift: Int): TextFieldValue {
         val next = text.substring(0, start) + insert + text.substring(end)

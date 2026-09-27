@@ -665,6 +665,11 @@ fun EditorScreen(
     val language = remember(activeTabPath, currentFileName) {
         LanguageType.fromFileName(activeTabPath ?: currentFileName)
     }
+    // Phase 69.2 — the row now LEADS with the language's own caps, so a
+    // language change (a different file) starts the row back at its head:
+    // the 69.1 remembered offset belonged to the previous file's caps. Within
+    // one file the position is still remembered exactly as the owner asked.
+    LaunchedEffect(language) { keysRowScroll.scrollTo(0) }
     // Phase 27.2 — ONE strip context: Keys | Suggestions | Run (| Hidden).
     // An interactive run waiting for stdin ALWAYS wins (S6 / 23.2 law);
     // multi-candidate completions become chips (S1); otherwise the editor's
