@@ -40,7 +40,8 @@ class SidePanelPlanTest {
         // “Reseserve it i have plan for ai i can use that” (owner, 2026-09-22) —
         // a reserved slot that opened a shop or a fake account would be a lie.
         assertTrue(SidePanelPlan.WIRED.all { it != RailPanel.RESERVED })
-        assertEquals(RailPanel.NAVIGATION, SidePanelPlan.DEFAULT_PANEL)
+        // Owner follow-up: the editor hamburger opens Files, not Navigation.
+        assertEquals(RailPanel.FILES, SidePanelPlan.DEFAULT_PANEL)
     }
 
     @Test

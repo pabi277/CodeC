@@ -2,6 +2,9 @@ package com.codeci.ide.ui.components
 
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.drawBehind
@@ -54,6 +57,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -111,6 +116,12 @@ fun EditorProjectDrawer(
     onSetLaunchDefault: (EditorFileEntry) -> Unit,
     onClearLaunchDefault: () -> Unit,
     onCopyPath: (EditorFileEntry) -> Unit,
+    onShareFile: (EditorFileEntry) -> Unit = {},
+    onDownloadFile: (EditorFileEntry) -> Unit = {},
+    fileSearchOpen: Boolean = false,
+    fileSearchQuery: String = "",
+    onFileSearchQuery: (String) -> Unit = {},
+    onCloseFileSearch: () -> Unit = {},
     onSearch: () -> Unit = {},
     onLocate: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -120,6 +131,13 @@ fun EditorProjectDrawer(
     var rootExpanded by remember(projectName) { mutableStateOf(true) }
     var locateRequest by remember(projectName) { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val fileSearchFocus = remember { FocusRequester() }
+    LaunchedEffect(fileSearchOpen) {
+        if (fileSearchOpen && showProjectTree) {
+            rootExpanded = true
+            fileSearchFocus.requestFocus()
+        }
+    }
     LaunchedEffect(locateRequest, entries, selectedPath) {
         if (locateRequest) {
             val index = entries.indexOfFirst { it.relativePath == selectedPath }
@@ -134,7 +152,7 @@ fun EditorProjectDrawer(
                 Text("FILES", style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.weight(1f).padding(start = 12.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (showProjectTree) {
-                    DrawerIcon(Icons.Default.Search, "Search project", onSearch)
+                    DrawerIcon(Icons.Default.Search, "Find file", onSearch)
                     if (!compactToolbar) DrawerIcon(Icons.Default.MyLocation, "Locate active file") {
                         rootExpanded = true
                         onLocate()
@@ -173,6 +191,12 @@ fun EditorProjectDrawer(
                             onClick = { overflow = false; onClose() })
                     }
                 }
+            }
+            if (fileSearchOpen && showProjectTree) {
+                OutlinedTextField(value = fileSearchQuery, onValueChange = onFileSearchQuery,
+                    label = { Text("Find file by name or path") }, singleLine = true,
+                    trailingIcon = { DrawerIcon(Icons.Default.Close, "Close file search", onCloseFileSearch) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).focusRequester(fileSearchFocus))
             }
             if (projectsExpanded) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -221,7 +245,8 @@ fun EditorProjectDrawer(
                     }
                 }
                 if (rootExpanded) {
-                    if (entries.isEmpty()) Text(stringResource(R.string.editor_drawer_empty), Modifier.padding(16.dp))
+                    if (entries.isEmpty()) Text(if (fileSearchQuery.isNotBlank()) "No matching files or folders"
+                        else stringResource(R.string.editor_drawer_empty), Modifier.padding(16.dp))
                     else LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
                         items(entries, key = { "${if (it.isDirectory) "d" else "f"}:${it.relativePath}" }) { entry ->
                             DrawerRow(entry, !collapsedDirs.contains(entry.relativePath),
@@ -237,6 +262,8 @@ fun EditorProjectDrawer(
                                         RowAction.SetDefault -> onSetLaunchDefault(entry)
                                         RowAction.ClearDefault -> onClearLaunchDefault()
                                         RowAction.CopyPath -> onCopyPath(entry)
+                                        RowAction.Share -> onShareFile(entry)
+                                        RowAction.Download -> onDownloadFile(entry)
                                         RowAction.NewFileHere -> onNewFile(entry.relativePath)
                                         RowAction.NewFolderHere -> onNewFolder(entry.relativePath)
                                     }
@@ -258,7 +285,7 @@ private fun DrawerIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
 }
 
 private enum class RowAction {
-    Open, Rename, Delete, Run, Launch, SetDefault, ClearDefault, CopyPath, NewFileHere, NewFolderHere
+    Open, Rename, Delete, Run, Launch, SetDefault, ClearDefault, CopyPath, NewFileHere, NewFolderHere, Share, Download
 }
 
 
@@ -385,6 +412,15 @@ private fun DrawerEntryMenu(
             leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
         onClick = { onAction(RowAction.CopyPath) }
     )
+    if (!entry.isDirectory) {
+        HorizontalDivider()
+        DropdownMenuItem(text = { Text("Share as file") },
+            leadingIcon = { Icon(Icons.Default.Share, null) },
+            onClick = { onAction(RowAction.Share) })
+        DropdownMenuItem(text = { Text("Download") },
+            leadingIcon = { Icon(Icons.Default.Download, null) },
+            onClick = { onAction(RowAction.Download) })
+    }
     HorizontalDivider()
     DropdownMenuItem(
         text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },

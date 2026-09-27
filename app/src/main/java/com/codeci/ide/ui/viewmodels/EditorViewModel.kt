@@ -1977,49 +1977,60 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
      */
     fun createAndOpenFile(context: Context, rawName: String, parent: String? = null): Boolean {
         val appContext = context.applicationContext
-        val base = ProjectPathUtils.sanitizeSegment(rawName.trim())
-        if (base == null) {
-            _userMessage.value = "Invalid file name"
+        val project = _projectName.value
+        val root = if (project != null) ProjectManager(appContext).project(project)?.root
+            else FileManager(appContext).getProjectDir()
+        if (root == null) { _userMessage.value = "Project is no longer available"; return false }
+        val path = com.codeci.ide.ui.editor.NewFilePath.resolve(parent, rawName)
+        if (path == null) {
+            _userMessage.value = "Enter a relative file path, for example css/subjects.css"
             return false
         }
-        val project = _projectName.value
-        if (project != null) {
-            val info = ProjectManager(appContext).project(project)
-            if (info == null) {
-                _userMessage.value = "Project '$project' is gone"
-                return false
-            }
-            // Phase 16 — "New file here" from a tree row creates inside that
-            // folder; the toolbar keeps the root behaviour (parent == null).
-            val target = if (parent.isNullOrBlank()) base else
-                ProjectPathUtils.sanitizeRelativePath("$parent/$base")
-            if (target == null) {
-                _userMessage.value = "Invalid folder path"
-                return false
-            }
-            val exists = runCatching {
-                ProjectPathUtils.resolveInside(info.root, target)?.exists() == true
-            }.getOrDefault(false)
-            if (exists) { _userMessage.value = "A file or folder with that name already exists"; return false }
-            if (!writeProjectFile(appContext, project, target, "")) {
-                _userMessage.value = "Could not create $base"
-                return false
-            }
-            if (!parent.isNullOrBlank()) expandAncestors(parent)
-            openFile(appContext, project, target)
-        } else {
-            val fm = FileManager(appContext)
-            val exists = fm.loadFile(base) != null
-            if (exists) { _userMessage.value = "A file or folder with that name already exists"; return false }
-            if (!fm.saveFile(base, "")) {
-                _userMessage.value = "Could not create $base"
-                return false
-            }
-            openFile(appContext, null, base)
+        // Scratch files still live directly in the single-files directory. Never flatten a path.
+        if (project == null && path.contains('/')) {
+            _userMessage.value = "Choose a project to create folders and nested files"
+            return false
         }
+        val result = com.codeci.ide.ui.editor.NewFilePath.create(root, parent, rawName)
+        if (result.isFailure) {
+            _userMessage.value = result.exceptionOrNull()?.message ?: "Could not create file"
+            return false
+        }
+        expandAncestors(path.substringBeforeLast('/', ""))
+        openFile(appContext, project, path)
         refreshFileEntries(appContext)
-        _userMessage.value = "Opened $base"
+        _userMessage.value = "Opened $path"
         return true
+    }
+
+    /** Save only the selected file's edits before exporting it; never substitute the active tab. */
+    fun fileForExport(context: Context, entry: EditorFileEntry): File? {
+        if (entry.isDirectory || entry.projectName != _projectName.value) {
+            _userMessage.value = "Select a file in the current project"
+            return null
+        }
+        val root = if (entry.projectName != null) ProjectManager(context).project(entry.projectName)?.root
+            else FileManager(context).getProjectDir()
+        val file = root?.let { ProjectPathUtils.resolveInside(it, entry.relativePath) }
+        if (file == null || !file.isFile || !file.canRead()) {
+            _userMessage.value = "The file is no longer available"
+            return null
+        }
+        val activePath = _activeTabPath.value ?: _fileName.value
+        if (entry.relativePath == activePath && _isDirty.value) {
+            if (!saveFile(context)) { _userMessage.value = "Could not save file before export"; return null }
+        } else {
+            val tab = _openTabs.value.firstOrNull { it.relativePath == entry.relativePath }
+            if (tab != null && tab.buffer.text != tab.savedText) {
+                val project = entry.projectName ?: return null
+                if (!writeProjectFile(context, project, tab.relativePath, tab.buffer.text, tab.lineEnding)) {
+                    _userMessage.value = "Could not save file before export"
+                    return null
+                }
+                updateTab(tab.relativePath) { it.copy(savedText = tab.buffer.text) }
+            }
+        }
+        return file
     }
 
     /** Delete a drawer entry from disk and drop its tab if it was open. */

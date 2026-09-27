@@ -58,7 +58,7 @@ object SidePanelPlan {
     /** The slots that open a panel today. [RailPanel.RESERVED] is not one. */
     val WIRED: List<RailPanel> = RAIL.filter { it != RailPanel.RESERVED }
 
-    val DEFAULT_PANEL: RailPanel = RailPanel.NAVIGATION
+    val DEFAULT_PANEL: RailPanel = RailPanel.FILES
 
     /** Five destinations in three columns. The retired Guide cell has no replacement. */
     val CARD: List<List<NavCell>> = listOf(

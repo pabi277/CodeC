@@ -87,4 +87,39 @@ class DrawerFileActionsTest {
             assertFalse(vm.openSearchHit(context, project.name, hit))
         } finally { GitDiscardEditors.unregister(vm) }
     }
+
+    @Test fun `nested create opens exact path and expands its ancestors`() {
+        val project = ProjectManager(context).createProject("nested_create", includeStarter = false).getOrThrow()
+        File(project.root, "start.txt").writeText("start")
+        val vm = EditorViewModel()
+        try {
+            vm.openFile(context, project.name, "start.txt")
+            assertTrue(vm.createAndOpenFile(context, "css/subjects.css"))
+            assertTrue(File(project.root, "css/subjects.css").isFile)
+            assertEquals("css/subjects.css", vm.activeTabPath.value)
+            assertFalse(vm.collapsedDirs.value.contains("css"))
+            assertTrue(vm.createAndOpenFile(context, "more/a.css", "css"))
+            assertEquals("css/more/a.css", vm.activeTabPath.value)
+        } finally { GitDiscardEditors.unregister(vm) }
+    }
+
+    @Test fun `export saves the selected dirty tab and never substitutes the active file`() {
+        val project = ProjectManager(context).createProject("export_selected", includeStarter = false).getOrThrow()
+        File(project.root, "a.txt").writeText("a")
+        File(project.root, "b.txt").writeText("b")
+        val vm = EditorViewModel()
+        try {
+            vm.openFile(context, project.name, "a.txt")
+            vm.updateCode(TextFieldValue("selected edits"))
+            vm.openFile(context, project.name, "b.txt")
+            vm.updateCode(TextFieldValue("active edits"))
+            val chosen = EditorFileEntry(project.name, "a.txt", "a.txt", 0, false)
+            assertEquals("selected edits", vm.fileForExport(context, chosen)?.readText())
+            assertEquals("active edits", vm.codeText.value.text)
+            assertEquals("b.txt", vm.activeTabPath.value)
+            assertNull(vm.fileForExport(context, chosen.copy(relativePath = "../outside.txt")))
+            assertNull(vm.fileForExport(context, chosen.copy(projectName = "another")))
+            assertNull(vm.fileForExport(context, chosen.copy(isDirectory = true)))
+        } finally { GitDiscardEditors.unregister(vm) }
+    }
 }

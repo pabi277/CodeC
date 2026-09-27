@@ -56,4 +56,12 @@ class FileTreeCollapseTest {
         assertEquals(setOf("src", "src/img"), FileTreeCollapse.allDirs(tree))
         assertTrue(FileTreeCollapse.allDirs(emptyList()).isEmpty())
     }
+    @Test fun `file name search includes ancestors and does not read contents`() {
+        val found = FileTreeCollapse.search(tree, "A.PNG")
+        assertEquals(listOf("src", "src/img", "src/img/a.png"), found.map { it.relativePath })
+        assertEquals(tree, FileTreeCollapse.search(tree, "  "))
+        assertTrue(FileTreeCollapse.search(tree, "not-found").isEmpty())
+        assertEquals(listOf("src", "src/img", "src/img/a.png"),
+            FileTreeCollapse.search(tree, "img/a").map { it.relativePath })
+    }
 }
