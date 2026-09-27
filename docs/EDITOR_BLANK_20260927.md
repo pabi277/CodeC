@@ -29,3 +29,11 @@ Validation: diff whitespace check passed. Android/Compose test execution and
 APK build require CI (no local Android toolchain). Device confirmation still
 required: open file, switch projects repeatedly, change theme, type, and toggle
 Hide tabs / Show tabs. A passing build is not proof of device rendering.
+
+## CI verdict
+
+Code commit `5464981`: CI run `36295679258` passed, including host unit /
+screenshot tests (the new measurement regression) and debug/release APK builds.
+Run: https://github.com/pabi277/CodeC/actions/runs/36295679258
+
+Device verification remains pending. No PR opened and no merge performed.
