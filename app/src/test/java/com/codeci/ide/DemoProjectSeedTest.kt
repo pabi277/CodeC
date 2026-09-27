@@ -5,6 +5,7 @@ import com.codeci.ide.ui.projects.ProjectConfig
 import com.codeci.ide.ui.projects.ProjectScaffold
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -17,15 +18,14 @@ import org.junit.rules.TemporaryFolder
  * with just RUN ▶ (stdlib fallback, so no extra install is required on the
  * acceptance path beyond Phase-12 python).
  *
- * **Phase 45 device round (2026-09-12) changed one law here.** The owner: *"make
- * it like demo_flask is always present so whatever user chose to start guide the
- * user to start the demo project from the editor only"*. The guided tour teaches
- * this project BY NAME (beat 3 "Pick the demo", beat 4 "Open app.py"), so a
- * demo the user once deleted would make the tour point at a row that does not
- * exist. The seed is therefore no longer once-per-install: a missing
- * `demo_flask` is seeded again, the marker file survives only as a record of the
- * first seed, and what never changed is that an existing project — the user's
- * edits — is not touched.
+ * **Phase 66.1 (owner, 2026-09-27: *"Yes — stay deleted"*) restored the
+ * once-per-install law.** The Phase 45 device round had made the demo "always
+ * present" because the guided tour taught it by name; Phase 64 removed that
+ * tour, and re-seeding then only made *Delete* on the hub card look broken (the
+ * list reload re-seeded the project before the card could leave) and kept the
+ * hub's empty state unreachable on a device. The marker file is the gate again:
+ * a `demo_flask` the user deleted stays deleted, exactly like `snake`. What
+ * never changed: an existing project — the user's edits — is not touched.
  */
 class DemoProjectSeedTest {
 
@@ -86,47 +86,68 @@ class DemoProjectSeedTest {
     }
 
     @Test
-    fun `a deleted demo_flask comes back, because the tour teaches it by name`() {
+    fun `a deleted demo_flask stays deleted - the owner's 66_1 answer`() {
         val root = projectRoot()
         assertTrue(DemoProjects.ensure(root) != null)
-        val app = File(root, "demo_flask/app.py")
-        app.writeText("# my own flask app")
-        File(root, "demo_flask").deleteRecursively()
+        File(root, "demo_flask/app.py").writeText("# my own flask app")
+        assertTrue(File(root, "demo_flask").deleteRecursively())
 
-        val again = DemoProjects.ensure(root)
-        assertTrue("the demo is ALWAYS present (owner, Phase 45)", again != null)
-        assertEquals("demo_flask", again?.name)
-        assertTrue(File(root, "demo_flask/app.py").isFile)
-        assertTrue(File(root, "demo_flask/index.html").isFile)
-        // …and it is the shipped demo again, not the deleted one.
-        assertTrue(!File(root, "demo_flask/app.py").readText().contains("# my own flask app"))
-    }
-
-    @Test
-    fun `the marker is a record of the first seed, not a gate`() {
-        val root = projectRoot()
-        // What the old build wrote to mean "never seed again".
-        File(root, ".demo-flask-seeded-v1").writeText("seeded 2026-08-31")
-        val created = DemoProjects.ensure(root)
-        assertTrue("a stale marker must not hide the demo", created != null)
-        assertTrue(File(root, "demo_flask/app.py").isFile)
-        // A successful seed leaves the record behind.
+        // Every list refresh calls ensure(); none of them may bring it back.
+        repeat(3) {
+            assertNull("a deleted demo must not be re-seeded (owner, 2026-09-27)", DemoProjects.ensure(root))
+            assertFalse(File(root, "demo_flask").exists())
+        }
+        // The record of the first seed is what keeps it away.
         assertTrue(File(root, ".demo-flask-seeded-v1").isFile)
     }
 
     @Test
-    fun `a plain file named demo_flask blocks the seed and is left alone`() {
+    fun `the marker is the gate - an install that seeded once never seeds again`() {
+        val root = projectRoot()
+        // What a previous build wrote after its first (or any later) seed.
+        File(root, ".demo-flask-seeded-v1").writeText("seeded 2026-08-31")
+        assertNull("the marker alone means the demo was here once and is gone by choice", DemoProjects.ensure(root))
+        assertFalse(File(root, "demo_flask").exists())
+    }
+
+    @Test
+    fun `an existing demo without a marker gets the marker, not a rewrite`() {
+        // A demo_flask that exists while the record is missing (the record was
+        // deleted, or the folder was made by hand): the folder is left alone and
+        // the record is written beside it — so that deleting the folder later
+        // is still final. Nothing appears inside the project.
+        val root = projectRoot()
+        val project = File(root, "demo_flask")
+        assertTrue(project.mkdirs())
+        File(project, "app.py").writeText("# my own app")
+        assertNull(DemoProjects.ensure(root))
+        assertEquals("# my own app", File(project, "app.py").readText())
+        assertEquals(listOf("app.py"), project.list()?.sorted())
+        assertTrue(File(root, ".demo-flask-seeded-v1").isFile)
+        assertTrue(project.deleteRecursively())
+        assertNull("…and it stays deleted", DemoProjects.ensure(root))
+        assertFalse(project.exists())
+    }
+
+    @Test
+    fun `a plain file named demo_flask blocks the seed, is left alone, and writes no marker`() {
         val root = projectRoot()
         File(root, "demo_flask").writeText("not a project")
         assertNull(DemoProjects.ensure(root))
         assertEquals("not a project", File(root, "demo_flask").readText())
+        // Nothing was seeded, so nothing is recorded: the marker means "seeded
+        // once", never "tried once".
+        assertFalse(File(root, ".demo-flask-seeded-v1").exists())
+        // Once the file is out of the way the first real seed happens.
+        assertTrue(File(root, "demo_flask").delete())
+        assertTrue(DemoProjects.ensure(root) != null)
+        assertTrue(File(root, ".demo-flask-seeded-v1").isFile)
     }
 
     @Test
-    fun `the entry file the tour names is the one the scaffold really writes`() {
-        // Beat 3 of the tour says "Open app.py" and its anchor is published only
-        // for DemoProjects.ENTRY_FILE — so the constant, the scaffold and the
-        // bytes on disk must agree, or the box teaches a tap that does nothing.
+    fun `the entry file the demo names is the one the scaffold really writes`() {
+        // DemoProjects.ENTRY_FILE, the scaffold and the bytes on disk must
+        // agree, or RUN ▶ on the demo runs a file that is not there.
         assertEquals("app.py", DemoProjects.ENTRY_FILE)
         assertEquals(
             DemoProjects.ENTRY_FILE,
@@ -139,6 +160,6 @@ class DemoProjectSeedTest {
             File(root, "demo_flask/.codec/project.json").readText(),
             DemoProjects.NAME
         )
-        assertEquals("RUN ▶ runs the file the tour told the user to open", DemoProjects.ENTRY_FILE, config.entry)
+        assertEquals("RUN ▶ runs the demo's own entry file", DemoProjects.ENTRY_FILE, config.entry)
     }
 }

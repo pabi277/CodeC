@@ -1,3 +1,42 @@
+**2026-09-27 — Phase 66.1 delivered: owner device-verified and merge-authorised
+(verbatim: "Device verified merge it to the main") via
+[PR #88](https://github.com/pabi277/CodeC/pull/88).** The PR records the
+final-head checks and the merge state. **Next: the 67.1 discussion (files,
+drawer, project search) in a new chat — review and questions first, no code
+before the owner answers.**
+
+**2026-09-27 — Phase 66.1: Projects hub — demo seeded once, truthful dialogs,
+one vocabulary.** Discussed first (review + four option questions); owner
+answers verbatim: **"Keep the current cards"**, **"Yes — stay deleted"**,
+**"(a) demo + (b) dialogs + (c) wording — all in one part"**, **"Keep today:
+hub file tree"**. Implemented on `arena/01a0e220-codec`: `demo_flask` is seeded
+once per install (marker `.demo-flask-seeded-v1`; deleted stays deleted); New
+Project / Rename / Import ZIP say *taken* / *invalid* in the field before the
+tap and print a failure inside the open dialog (new pure `ProjectNameCheck`,
+`onFailed` on the three ViewModel operations); search and name fields take
+focus with the right IME action; type rows are radio buttons to TalkBack; the
+tree header names the kind, the breadcrumb no longer dangles, card age uses the
+side panel's words, hub sentences are resources, delete confirms wear the error
+role, the badge reads `CodecPalette.WARNING`. Look unchanged. Local JVM
+prevalidation 192/0 focused + 202/0 source-scan (temporary JUnit shim, not
+Android); Compose files reviewed by hand. **Full Android CI GREEN, first
+round, on code `a96fb25`:
+[run 36311728346](https://github.com/pabi277/CodeC/actions/runs/36311728346)**
+— host unit/screenshot tests, debug APK 25,965,508 B, release APK 6,777,708 B.
+Not merged; no PR; no device round asked. **Follow-up from the owner's phone
+(same day):** *"when i go to projects and press back it's showing options of
+close the app but i want previous editor page"* — the two editor→Projects doors
+popped the editor tab-style; they now push the hub over it like the Settings
+door, so Back returns to the editor and the exit prompt is the next Back
+(router unchanged; `BackHandlerWiringTest` pin; local 53/0 + 197/0). **CI
+green, first round, code `3762b7b`:
+[run 36317041278](https://github.com/pabi277/CodeC/actions/runs/36317041278).** Deferred, not decided: clone
+QR glyph, chip touch height, `Auto` default, real last-opened history. **Next
+discussion in the owner's order: 67.1 (files, drawer, project search) — ask
+first.** [Record](chat-phase66/README.md).
+
+---
+
 **Owner choices recorded — 2026-09-27:** keep the current look; prioritise
 **Projects and files** for the next discussion (start with proposed 66.1, then
 67.1 if agreed); keep installation progress in Terminal/Output, with **no new

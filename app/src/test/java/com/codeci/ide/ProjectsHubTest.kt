@@ -193,7 +193,7 @@ class ProjectsHubTest {
         assertEquals(listOf("C", "8 files", "1 hour ago"), ProjectsHub.subtitleSegments(plain, now))
 
         val detached = entry("p", ProjectHubKind.C, isGit = true, branch = "HEAD", fileCount = 0, lastModified = now - minute)
-        assertEquals(listOf("C", "HEAD", "0 files", "1 min ago"), ProjectsHub.subtitleSegments(detached, now))
+        assertEquals(listOf("C", "HEAD", "0 files", "1 minute ago"), ProjectsHub.subtitleSegments(detached, now))
 
         // Zero timestamp (brand-new/undetermined) drops the age segment entirely.
         val fresh = entry("p", ProjectHubKind.GENERIC, fileCount = 0, lastModified = 0L)
@@ -270,7 +270,9 @@ class ProjectsHubTest {
         val now = 1_700_000_000_000L
         assertEquals("just now", ProjectsHub.relativeAge(now - 30_000L, now))
         assertEquals("just now", ProjectsHub.relativeAge(now + 5 * day, now)) // clock skew clamps
-        assertEquals("59 min ago", ProjectsHub.relativeAge(now - 59 * minute, now))
+        // Phase 66.1 — the panel's words ("minutes", not "min").
+        assertEquals("1 minute ago", ProjectsHub.relativeAge(now - 61_000L, now))
+        assertEquals("59 minutes ago", ProjectsHub.relativeAge(now - 59 * minute, now))
         assertEquals("1 hour ago", ProjectsHub.relativeAge(now - 61 * minute, now))
         assertEquals("3 hours ago", ProjectsHub.relativeAge(now - 3 * hour, now))
         assertEquals("yesterday", ProjectsHub.relativeAge(now - 25 * hour, now))
@@ -281,6 +283,22 @@ class ProjectsHubTest {
         assertEquals("1 year ago", ProjectsHub.relativeAge(now - 400 * day, now))
         assertEquals("2 years ago", ProjectsHub.relativeAge(now - 800 * day, now))
         assertEquals("", ProjectsHub.relativeAge(0L, now))
+    }
+
+    @Test
+    fun `the card's age and the side panel's age are one vocabulary`() {
+        // Phase 66.1 — the same project must not read "18 min ago" on the hub
+        // card and "18 minutes ago" in the panel's Recent row. Sample the whole
+        // range, minute by minute up to a day and day by day up to two years.
+        val now = 1_700_000_000_000L
+        val ages = (1L..(24 * 60)).map { it * minute } + (1L..730).map { it * day }
+        for (age in ages) {
+            assertEquals(
+                "age $age ms",
+                com.codeci.ide.ui.editor.RecentProjects.ageLabel(age),
+                ProjectsHub.relativeAge(now - age, now)
+            )
+        }
     }
 
     // ---- cheap git metadata readers ----

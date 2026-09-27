@@ -269,28 +269,19 @@ object ProjectsHub {
         if (count == 1) "1 file" else "$count files"
 
     /**
-     * Human relative age, clock injected for testability. Buckets:
-     * just now · N min ago · N hours ago · yesterday · N days ago · N weeks
-     * ago · N months ago (30-day months) · N years ago (365-day years).
-     * A future timestamp (clock skew) clamps to "just now".
+     * Human relative age, clock injected for testability.
+     *
+     * Phase 66.1 — **one vocabulary for both surfaces.** The card said
+     * `18 min ago` while the side panel's Recent row said `18 minutes ago` for
+     * the same project; the panel's wording is the reference's own
+     * (`Screenshot_20260922_124049`), so the hub now reads through the panel's
+     * [RecentProjects.ageLabel] instead of keeping a second bucket table. A
+     * zero/unknown timestamp still yields `""` (the segment is simply omitted),
+     * and a future timestamp (clock skew) still clamps to "just now".
      */
     fun relativeAge(timestampMillis: Long, nowMillis: Long): String {
         if (timestampMillis <= 0L) return ""
-        val delta = nowMillis - timestampMillis
-        if (delta < MINUTE_MILLIS) return "just now"
-        val minutes = delta / MINUTE_MILLIS
-        if (minutes < 60L) return "$minutes min ago"
-        val hours = minutes / 60L
-        if (hours < 24L) return if (hours == 1L) "1 hour ago" else "$hours hours ago"
-        val days = hours / 24L
-        if (days == 1L) return "yesterday"
-        if (days < 7L) return "$days days ago"
-        val weeks = days / 7L
-        if (weeks < 5L) return if (weeks == 1L) "1 week ago" else "$weeks weeks ago"
-        val months = days / 30L
-        if (months < 12L) return if (months == 1L) "1 month ago" else "$months months ago"
-        val years = days / 365L
-        return if (years <= 1L) "1 year ago" else "$years years ago"
+        return RecentProjects.ageLabel(nowMillis - timestampMillis)
     }
 
     // ---- cheap git metadata readers (pure parsers; IO lives in the ViewModel) ----
@@ -422,7 +413,6 @@ object ProjectsHub {
     fun hasChangesFromPorcelain(lines: List<String>): Boolean =
         GitStatusParser.parse(lines).files.isNotEmpty()
 
-    private const val MINUTE_MILLIS = 60_000L
 }
 
 /**

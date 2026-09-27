@@ -16,6 +16,7 @@ import com.codeci.ide.ui.projects.ProjectHubEntry
 import com.codeci.ide.ui.projects.ProjectHubStats
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.ProjectNameCheck
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.ProjectEntryFile
 import com.codeci.ide.ui.projects.RepoHygiene
@@ -220,7 +221,7 @@ class FileManagerViewModel : ViewModel() {
         viewModelScope.launch {
             val project = withContext(Dispatchers.IO) { ProjectManager(context).project(name) }
             if (project == null) {
-                _userMessage.value = "Project is no longer available"
+                _userMessage.value = context.getString(R.string.project_missing)
                 return@launch
             }
             expandedDirectories.clear()
@@ -297,7 +298,13 @@ class FileManagerViewModel : ViewModel() {
         context: Context,
         name: String,
         type: String = "c",
-        onCreated: (ProjectInfo) -> Unit = {}
+        onCreated: (ProjectInfo) -> Unit = {},
+        /**
+         * Phase 66.1 — the failure, for the dialog's own text column. The
+         * snackbar still gets it (for after the dialog closes); this is the
+         * copy the user can actually see while the New Project dialog is open.
+         */
+        onFailed: (String) -> Unit = {}
     ) {
         runOperation(
             context = context,
@@ -310,7 +317,8 @@ class FileManagerViewModel : ViewModel() {
                 refreshTree()
                 StatsManager(context).incrementFilesCreated()
                 onCreated(project)
-            }
+            },
+            onFailure = onFailed
         )
     }
 
@@ -320,7 +328,14 @@ class FileManagerViewModel : ViewModel() {
      * target must stay a direct child of the projects root. The config's
      * display name is rewritten after the move so metadata stays truthful.
      */
-    fun renameProject(context: Context, oldName: String, newName: String, onRenamed: (String) -> Unit = {}) {
+    fun renameProject(
+        context: Context,
+        oldName: String,
+        newName: String,
+        onRenamed: (String) -> Unit = {},
+        /** Phase 66.1 — the failure, inline in the Rename dialog (see [createProject]). */
+        onFailed: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
             _isBusy.value = true
             try {
@@ -345,7 +360,9 @@ class FileManagerViewModel : ViewModel() {
                 loadProjects(context)
                 onRenamed(result)
             } catch (e: Exception) {
-                _userMessage.value = e.message ?: context.getString(R.string.rename_failed)
+                val message = e.message ?: context.getString(R.string.rename_failed)
+                _userMessage.value = message
+                onFailed(message)
             } finally {
                 _isBusy.value = false
             }
@@ -417,7 +434,7 @@ class FileManagerViewModel : ViewModel() {
             _isBusy.value = true
             try {
                 if (!withContext(Dispatchers.IO) { ProjectManager(context).deleteProject(name) }) {
-                    error("Could not delete project")
+                    error(context.getString(R.string.delete_project_failed))
                 }
                 if (_activeProject.value?.name == name) closeProject()
                 loadProjects(context)
@@ -437,7 +454,7 @@ class FileManagerViewModel : ViewModel() {
     fun importFile(context: Context, uri: Uri, onImported: (ProjectInfo) -> Unit = {}) {
         val active = _activeProject.value
         if (active == null) {
-            _userMessage.value = "Open a project before importing a file"
+            _userMessage.value = context.getString(R.string.import_file_needs_project)
             return
         }
         viewModelScope.launch {
@@ -452,7 +469,9 @@ class FileManagerViewModel : ViewModel() {
                 }
                 finishImport(context, ProjectManager(context), active, onImported)
             } catch (e: Exception) {
-                _userMessage.value = "Import failed: ${e.message ?: "unknown error"}"
+                _userMessage.value = context.getString(
+                    R.string.import_failed, e.message ?: context.getString(R.string.unknown_error)
+                )
             } finally {
                 _isBusy.value = false
             }
@@ -474,12 +493,24 @@ class FileManagerViewModel : ViewModel() {
         }
     }
 
-    fun importZip(context: Context, uri: Uri, requestedName: String, onImported: (ProjectInfo) -> Unit = {}) {
+    fun importZip(
+        context: Context,
+        uri: Uri,
+        requestedName: String,
+        onImported: (ProjectInfo) -> Unit = {},
+        /** Phase 66.1 — the failure, inline in the Import ZIP dialog (see [createProject]). */
+        onFailed: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
             _isBusy.value = true
             try {
                 val manager = ProjectManager(context)
-                val name = uniqueProjectName(manager, requestedName)
+                // Phase 66.1 — the name the dialog promised (`ProjectNameCheck.importedNameFor`
+                // over the same directory names), so "will be imported as X_2" is true.
+                val name = withContext(Dispatchers.IO) {
+                    ProjectNameCheck.importedNameFor(requestedName, projectDirectoryNames(manager))
+                        ?: ProjectsHub.uniqueProjectName("imported_project", projectDirectoryNames(manager))
+                }
                 val project = withContext(Dispatchers.IO) {
                     manager.createProject(name, includeStarter = false).getOrThrow().also {
                         File(it.root, ".codec/project.json").delete()
@@ -498,7 +529,11 @@ class FileManagerViewModel : ViewModel() {
                 }
                 finishImport(context, manager, project, onImported)
             } catch (e: Exception) {
-                _userMessage.value = "ZIP import failed: ${e.message ?: "unknown error"}"
+                val message = context.getString(
+                    R.string.zip_import_failed, e.message ?: context.getString(R.string.unknown_error)
+                )
+                _userMessage.value = message
+                onFailed(message)
             } finally {
                 _isBusy.value = false
             }
@@ -542,12 +577,7 @@ class FileManagerViewModel : ViewModel() {
                     GitManager.repoNameFromUrl(url.trim()) ?: "cloned_repo"
                 }
                 val name = withContext(Dispatchers.IO) {
-                    val existing = manager.projectsRoot().listFiles()
-                        ?.filter { it.isDirectory }
-                        ?.map { it.name }
-                        ?.toSet()
-                        .orEmpty()
-                    ProjectsHub.uniqueProjectName(baseName, existing)
+                    ProjectsHub.uniqueProjectName(baseName, projectDirectoryNames(manager))
                 }
                 val dest = File(manager.projectsRoot(), name)
                 try {
@@ -746,7 +776,7 @@ class FileManagerViewModel : ViewModel() {
             } catch (e: Exception) {
                 _userMessage.value = context.getString(
                     R.string.default_run_page_failed,
-                    e.message ?: "unknown error"
+                    e.message ?: context.getString(R.string.unknown_error)
                 )
             } finally {
                 _isBusy.value = false
@@ -759,15 +789,17 @@ class FileManagerViewModel : ViewModel() {
             _isBusy.value = true
             try {
                 val project = withContext(Dispatchers.IO) { ProjectManager(context).project(projectName) }
-                    ?: error("Project is no longer available")
+                    ?: error(context.getString(R.string.project_missing))
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri)?.use { output ->
                         ProjectTransfer.exportZip(project.root, output)
                     } ?: error("Could not open the export destination")
                 }
-                _userMessage.value = "Exported ${project.name}.zip"
+                _userMessage.value = context.getString(R.string.export_done, "${project.name}.zip")
             } catch (e: Exception) {
-                _userMessage.value = "Export failed: ${e.message ?: "unknown error"}"
+                _userMessage.value = context.getString(
+                    R.string.export_failed, e.message ?: context.getString(R.string.unknown_error)
+                )
             } finally {
                 _isBusy.value = false
             }
@@ -798,7 +830,9 @@ class FileManagerViewModel : ViewModel() {
                     "Exported ${result.projects} projects (${formatSize(result.bytesWritten)})$renames$skipped"
             } catch (e: Exception) {
                 runCatching { context.contentResolver.delete(uri, null, null) }
-                _userMessage.value = "Backup failed: ${e.message ?: "unknown error"}"
+                _userMessage.value = context.getString(
+                    R.string.backup_failed, e.message ?: context.getString(R.string.unknown_error)
+                )
             } finally {
                 _isBusy.value = false
             }
@@ -820,10 +854,12 @@ class FileManagerViewModel : ViewModel() {
                         ProjectTransfer.importAllZip(input, ProjectManager(context).projectsRoot())
                     } ?: error("Could not read the backup")
                 }
-                _userMessage.value = "Imported backup ($count entries)"
+                _userMessage.value = context.getString(R.string.backup_imported, count)
                 loadProjects(context)
             } catch (e: Exception) {
-                _userMessage.value = "Backup import failed: ${e.message ?: "unknown error"}"
+                _userMessage.value = context.getString(
+                    R.string.backup_import_failed, e.message ?: context.getString(R.string.unknown_error)
+                )
             } finally {
                 _isBusy.value = false
             }
@@ -924,17 +960,17 @@ class FileManagerViewModel : ViewModel() {
         }
     }
 
-    private fun uniqueProjectName(manager: ProjectManager, rawName: String): String {
-        val base = ProjectPathUtils.sanitizeProjectName(rawName.substringBeforeLast('.'))
-            ?: "imported_project"
-        var candidate = base
-        var suffix = 2
-        while (manager.project(candidate) != null) {
-            candidate = "${base}_$suffix"
-            suffix++
-        }
-        return candidate
-    }
+    /**
+     * Every directory name in the projects root — the set a new name must not
+     * collide with (`createProject` refuses any existing path, valid project or
+     * not). Shared by clone and ZIP import so both de-duplicate the same way.
+     */
+    private fun projectDirectoryNames(manager: ProjectManager): Set<String> =
+        manager.projectsRoot().listFiles()
+            ?.filter { it.isDirectory }
+            ?.map { it.name }
+            ?.toSet()
+            .orEmpty()
 
     /**
      * Friendly git failure text for hub operations: real git process failures
@@ -964,7 +1000,9 @@ class FileManagerViewModel : ViewModel() {
     private fun <T> runOperation(
         context: Context,
         operation: suspend () -> T,
-        onSuccess: suspend (T) -> Unit
+        onSuccess: suspend (T) -> Unit,
+        /** Phase 66.1 — the same message, handed to the caller's own surface. */
+        onFailure: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
             _isBusy.value = true
@@ -972,7 +1010,9 @@ class FileManagerViewModel : ViewModel() {
                 val result = withContext(Dispatchers.IO) { operation() }
                 onSuccess(result)
             } catch (e: Exception) {
-                _userMessage.value = e.message ?: context.getString(R.string.create_failed)
+                val message = e.message ?: context.getString(R.string.create_failed)
+                _userMessage.value = message
+                onFailure(message)
             } finally {
                 _isBusy.value = false
             }

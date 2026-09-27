@@ -1,5 +1,8 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.navigation.BackAction
+import com.codeci.ide.ui.navigation.BackRouter
+import com.codeci.ide.ui.navigation.BackState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -104,5 +107,52 @@ class BackHandlerWiringTest {
         assertTrue(settings.contains("onClick = { onShowExitPrompt() }"))
         val main = source("app/src/main/java/com/codeci/ide/MainActivity.kt")
         assertTrue(main.contains("onShowExitPrompt = { exitPromptVisible = true }"))
+    }
+
+    /**
+     * Phase 66.1 follow-up — owner, 2026-09-27: *"when i go to projects and
+     * press back it's showing options of close the app but i want previous
+     * editor page than if i press back it will be back"*.
+     *
+     * Projects left the bottom bar in Phase 56, but its two doors from the
+     * editor still navigated tab-style (`popUpTo(start) { saveState }`), which
+     * POPS the editor whenever the hub is the start destination (the resume
+     * card: any launch after more than five minutes away). With nothing under
+     * the hub, Back reached row 9 — the exit prompt. The doors now push the
+     * hub over the editor like the side panel's Settings cell, so row 8
+     * (`canPopRoute -> PopRoute`) returns to the editor and the prompt is the
+     * NEXT Back. The router itself did not change.
+     */
+    @Test
+    fun `Projects opened from the editor is a page over it - Back returns to the editor`() {
+        val main = RepoFiles.codeOnly(source("app/src/main/java/com/codeci/ide/MainActivity.kt"))
+        for (door in listOf("onOpenProjectsHub = {", "onOpenProjects = {")) {
+            val at = main.indexOf(door)
+            assertTrue("the $door door is gone", at >= 0)
+            val window = main.substring(at, main.indexOf("},", at) + 2)
+            assertTrue("$door must navigate to the hub", window.contains("Screen.FileManager.createRoute("))
+            assertFalse(
+                "$door must not pop the editor from under the hub (tab-style popUpTo)",
+                window.contains("popUpTo(")
+            )
+            assertTrue("$door stays single-top", window.contains("launchSingleTop = true"))
+        }
+        // The precedent it now matches: the Settings door pushes without popUpTo.
+        val settingsDoor = main.substring(main.indexOf("onOpenSettings = {"))
+            .substringBefore("},")
+        assertFalse(settingsDoor.contains("popUpTo("))
+        // Packages IS still a tab and keeps the tab idiom — the change is Projects only.
+        val packagesDoor = main.substring(main.indexOf("onOpenPackages = {")).substringBefore("},")
+        assertTrue(packagesDoor.contains("popUpTo(navController.graph.findStartDestination().id) { saveState = true }"))
+        // And the row that now answers: something below the hub pops to it,
+        // before the root row can prompt.
+        assertEquals(
+            BackAction.PopRoute,
+            BackRouter.decide(BackState(canPopRoute = true, atRootDestination = true))
+        )
+        assertEquals(
+            BackAction.ShowExitPrompt,
+            BackRouter.decide(BackState(canPopRoute = false, atRootDestination = true))
+        )
     }
 }

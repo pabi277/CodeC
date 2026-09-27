@@ -155,7 +155,7 @@ and record your answer before implementing the part.
 | Proposed phase / chat | Area | My starting recommendation |
 |---|---|---|
 | [65.1](ui-polish-chats/PHASE_65_1_SHELL.md) | Shell and navigation | Keep navigation; refine behaviour. |
-| [66.1](ui-polish-chats/PHASE_66_1_PROJECTS.md) | Projects hub and creation | Keep hub; improve clarity. |
+| [66.1](ui-polish-chats/PHASE_66_1_PROJECTS.md) | Projects hub and creation | Keep hub; improve clarity. **Discussed and implemented 2026-09-27** on `arena/01a0e220-codec` (owner: keep cards; deleted demo stays deleted; (a)+(b)+(c) in one part; after Create keep the hub tree) — [record](chat-phase66/README.md). Owner device-verified; delivered via [PR #88](https://github.com/pabi277/CodeC/pull/88). |
 | [67.1](ui-polish-chats/PHASE_67_1_FILES_SEARCH.md) | Files, drawer and project search | Clear selection and safe actions. |
 | [68.1](ui-polish-chats/PHASE_68_1_EDITOR_TABS.md) | Editor chrome, tabs and file actions | Protect code space and tab geometry. |
 | [69.1](ui-polish-chats/PHASE_69_1_TYPING.md) | Typing, keyboard and selection | Caret and input correctness first. |
