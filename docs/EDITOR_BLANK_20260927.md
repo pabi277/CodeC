@@ -36,4 +36,11 @@ Code commit `5464981`: CI run `36295679258` passed, including host unit /
 screenshot tests (the new measurement regression) and debug/release APK builds.
 Run: https://github.com/pabi277/CodeC/actions/runs/36295679258
 
-Device verification remains pending. No PR opened and no merge performed.
+## Device verdict — resolved
+
+2026-09-27: owner reports **“Yes working now”** after the fixed build was
+provided. The blank-editor blocker is resolved on the owner's phone. This is
+confirmation of the reported fix, not a claim that every suggested regression
+check or the wider phase device rounds were individually run.
+
+No PR opened and no merge performed.
