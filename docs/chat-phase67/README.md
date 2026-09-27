@@ -1,7 +1,7 @@
 # Phase 67.1 — Files, drawer and project search
 
 **Date:** 2026-09-27. **Branch:** `arena/01a0e2fc-codec`.
-**Status:** implemented; Android CI green for code `bd71cef`. No handset verification claimed.
+**Status:** implemented; Android CI green for final code `3dd599e`. No handset verification claimed.
 No PR opened; no merge authorised.
 
 ## Owner decisions (option labels verbatim)
@@ -133,3 +133,76 @@ no-installation-UI-lock and no-new-app-wide-indicator decisions remain intact.
 No new app dependency, permission, preference or telemetry. SidePanelPlan rail,
 reserved slot and bottom navigation remain unchanged. Stop after this part;
 no other phase, PR or merge without the owner's instruction.
+
+## Owner follow-up — Files-first, file finding, paths and file attachments
+
+**Owner instruction (verbatim):**
+> You did really great but some addition when i click 3 ber from editor it will open the file section not the project section, the search icon in the file section is for the file search, the new file create have a default file name remove it and new file also will have a feature like if someone try they can add location with file example css/subjects.css it will create a folder and the file will be inside the folder, single file download and share as file option add
+
+This explicitly extends the agreed part; it does not authorise a different
+phase, PR or merge. It supersedes the initial toolbar-search interpretation.
+
+### Changes
+
+- Opening the editor's hamburger selects **Files**, with the project switcher
+  collapsed. The rail's default is now Files; rail order, navigation destinations
+  and the close/Back law remain unchanged.
+- Files' magnifier opens **Find file by name or path**, not content search.
+  Filtering is case-insensitive, retains matching rows' ancestor folders, and
+  searches below normally collapsed folders. Search-only expansion state does
+  not overwrite the normal tree's expansion. Clear/close restores the full tree;
+  switching project resets the filter. The separate Search rail still searches
+  saved file contents with its existing options.
+- New file starts blank; `css/subjects.css` is a placeholder, not a default
+  value. `NewFilePath` creates missing parents then exclusively creates the
+  file, with no overwrite/truncation. Toolbar paths are project-root-relative;
+  “New file here” paths are relative to the selected folder. Absolute paths,
+  traversal, empty segments, trailing separators, backslashes, escaping symlinks,
+  occupied targets and blocking parent files are rejected with dialog feedback.
+  The existing per-file Git restore write guard is preserved.
+  Existing single-files/scratch mode remains flat: nested creation requires a
+  project rather than silently flattening the typed path.
+- File-row menus gain **Share as file** and **Download** (not folder transfer).
+  The editor overflow has the same operations, including in single-file mode;
+  its former text-only share is replaced by an actual attachment.
+- The selected file's dirty buffer is saved before preparing an export, without
+  switching tabs or substituting the active file. An unreadable/missing source,
+  stale project, directory selection or save failure refuses the operation.
+- Exports use unique cache snapshots with the original basename and exact bytes.
+  Download uses Android's CreateDocument save picker: the user chooses Downloads
+  or another document-provider destination. Pending snapshot identity survives
+  activity recreation through saved instance state, not a new preference; a
+  later project/tab change cannot retarget it. Cancellation removes the snapshot
+  silently; provider failure reports a possible incomplete destination copy.
+- Sharing uses the existing FileProvider with EXTRA_STREAM, MIME type and a
+  temporary **read-only** URI grant/ClipData. It shares a cache copy rather than
+  exposing a writable source file. Failed handoffs clean up; successful share
+  snapshots remain readable and are eligible for cleanup on a later export
+  after 24 hours. Missing pending cache snapshots request a retry.
+- No dependency, manifest permission, persistent preference or global indicator
+  added. Installation and Phase 66 navigation decisions remain untouched.
+
+### Follow-up verification
+
+Code `5fbf1c3`: [CI 36325808709](https://github.com/pabi277/CodeC/actions/runs/36325808709)
+passed the full host unit/screenshot test task on its first run; APK assembly
+was still running when this record was updated. A review follow-up preserves
+`GitDiscardEditors.blocks` before exclusive nested creation, with a dedicated
+buffer regression test. Intermediate code `1fa530d` passed the host test task in
+[CI 36326072901](https://github.com/pabi277/CodeC/actions/runs/36326072901).
+Review then caught an active-tab export edge case: the active tab's cached
+buffer can lag live editor text after autosave. Code `3dd599e` prevents that
+cache from being written back and adds a real-buffer regression test. **GREEN:** [CI 36326855236](https://github.com/pabi277/CodeC/actions/runs/36326855236)
+for final code `3dd599e` completed successfully. The host unit and screenshot test
+task, debug APK assembly (26,010,088 B), release APK assembly (6,790,476 B), release
+manifest validation and artifact packaging all passed without errors. Subsequent
+documentation-only commits do not change the tested code.
+Do not treat the earlier `bd71cef` green run as evidence for these additions.
+
+Added/extended tests cover exclusive nested creation, invalid paths and symlink
+escape, binary-preserving snapshots and independent same-name exports,
+filename/path matches with ancestors, real ViewModel nested creation and
+selected-dirty-tab export and active export after autosave, Files-first/empty-name/attachment wiring, and Compose
+file-filter plus Share/Download menu callbacks. External save-provider and
+receiving-app behaviour, rotation while the picker is open, and handset IME
+interaction still need real Android evidence; no such verification is claimed.

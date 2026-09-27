@@ -1,6 +1,6 @@
 # Phase 67.1 — Files, drawer and project search
 
-**Status: implemented; Android CI green for code `bd71cef`.**
+**Status: implemented; Android CI green for code `3dd599e`.**
 See [Phase 67.1 record](../chat-phase67/README.md) for exact choices and checks.
 No PR/merge authorised.
 
@@ -51,3 +51,7 @@ device evidence establish. Do not make the owner run declined device rounds.
 
 No new dependencies, permissions, persistent preferences or telemetry by default.
 Stop after this agreed part and update its record; do not roll into the next chat.
+
+Owner follow-up: hamburger opens Files; Files magnifier finds filenames/paths;
+blank New file field accepts nested project paths; single-file Download and Share
+as file added. See the [follow-up record](../chat-phase67/README.md#owner-follow-up--files-first-file-finding-paths-and-file-attachments).
