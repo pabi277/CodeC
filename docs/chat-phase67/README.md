@@ -1,8 +1,8 @@
 # Phase 67.1 — Files, drawer and project search
 
 **Date:** 2026-09-27. **Branch:** `arena/01a0e2fc-codec`.
-**Status:** implemented; Android CI green for final code `3dd599e`. No handset verification claimed.
-No PR opened; no merge authorised.
+**Status:** merged to `main` via PR; Android CI green for code `3dd599e`. Handset verification recommended.
+Delivered to `main` via PR on owner instruction.
 
 ## Owner decisions (option labels verbatim)
 

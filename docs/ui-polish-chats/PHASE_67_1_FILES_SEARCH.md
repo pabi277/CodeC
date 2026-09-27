@@ -1,8 +1,8 @@
 # Phase 67.1 — Files, drawer and project search
 
-**Status: implemented; Android CI green for code `3dd599e`.**
+**Status: implemented and merged to `main`; Android CI green for code `3dd599e`.**
 See [Phase 67.1 record](../chat-phase67/README.md) for exact choices and checks.
-No PR/merge authorised.
+Delivered to `main` on owner instruction.
 
 ## Copy into a new chat
 
