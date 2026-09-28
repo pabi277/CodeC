@@ -1,3 +1,219 @@
+**2026-09-29 — HEAD: the 70.1 + 72.1 branch is ✅ OWNER-TESTED and MERGED to `main` on the
+owner's command → [PR #93](https://github.com/pabi277/CodeC/pull/93).** Owner, verbatim: *"Yes all
+test passed complete docs and merge to main"* — covering round 5's four rows (the Projects card
+tap, the preview console with the keyboard up, Network on a real page, RUN ▶ output height) and the
+editor row (`p`, tap `print(`, `r` → `print(r`); no device, OS or theme named, and the records say
+exactly that. What went to `main` in that one PR (29 commits, 49 files): Phase 72.1 (the five-tab
+preview console), Phase 70.1 (the run Output Panel), preview render rounds 1–4 (the `WRAP_CONTENT`
+→ zero-layout-height cause; the page-box instrument line stays), round 5 (the phone pass; the
+project card and Create open the editor, ⋮ → Browse files is the tree), and the composing-replay
+fix in `SoraEditorHost` (TROUBLESHOOTING §47). Last code commit `308441e`, CI ✅ `36467347590`;
+docs stamps `1b68266` (CI ✅ `36468730204`) and this completion commit (its run is recorded in the
+PR). The PR records the merge commit. **Next chat:** `prompt.md` carries the handoff — the polish
+series' remaining discussion drafts are **65.1 shell/navigation, 68.1 editor chrome/tabs, 71.1
+packages/terminal, 73.1 git, 74.1 settings/support**; the owner names the next one (or reports a
+bug); nothing is started on the agent's own. Two older PRs from other sessions were open at merge
+time (#83 `arena/01a0c4cb-codec`, #42 `arena/01a062f7-codec`) and were left alone — the owner's call.
+
+**2026-09-29 — the accepted suggestion that the next letter undid (outside the 70/72 phase;
+the owner spotted it after accepting round 5).** Owner: *"in a python code I write p, it shows
+print(, I click it and it is on the screen — then I write the next letter and print( is gone,
+only p and the letters I typed"*. Cause, read in sora 0.24.6 and reproduced against its real
+classes: the system keyboard was composing the word `p`; the accept's replay (`Content.replace`,
+the §44 delta path) inserted `rint(` at the end of sora's composing range, `shiftOnInsert` grew
+the range over it, and the IME's next `setComposingText("pr")` replaced the whole range. Fix in
+`SoraEditorHost`: sora's own bracket for an edit while composing — `restartInput()` before the
+delta and after the selection, gated on `hasComposingText()` so CodeC Keys / hardware typing pay
+nothing. Tests: `ComposingReplayTest` ×4 (Robolectric, real sora), `ReplayPathWiringTest` +1.
+Records: `TROUBLESHOOTING.md` §47, `chat-phase48/PART_48_1` follow-up. **CI: ✅ GREEN — `Build APK`
+`36467347590` on `308441e` (host suite incl. the four `ComposingReplayTest` cases, 10 m 52 s;
+debug APK 26 171 304 B). No device pass** at the time — the owner types `p`, taps `print(`, types
+`r` on the system keyboard: the line must read `print(r`; then the same with the ghost, and a
+keys-row `(` after a word. *→ ✅ passed, 2026-09-29 (*"Yes all test passed"*); merged via PR #93 — see the head entry.*
+
+**2026-09-28 (round 5) — the phone pass for 70.1 + 72.1, and the project card that opens
+the editor.** Owner: *"when I click on a project it should open the editor by default and not
+the file structure"*; *"make everything from this and only this phase … phone friendly … the
+console input etc. is not looking good on phone"*. Measured on his 411 × 656 dp page area: the
+tools panel's Console tab spent **209 dp of its 240 dp default on its own rows** (one line of
+output; none with the keyboard up), the Network table gave Name ≈ 107 dp under a ≈ 90 dp note,
+Elements lost the tree after one tap, the run-output panel's 220 dp left 2–4 lines. Asked first
+(four questions): card tap → editor **and Create too** (supersedes 66.1's "Keep today: hub file
+tree"); **two-line rows**; the two height rules left to this chat (*"I don't know"*, *"Your
+choice"*). Shipped: `openInEditor` in the hub (tap = `OPEN_IN_EDITOR` + haptic, ⋮ → **Browse
+files** = the tree, `hub_open_in_editor` gone); the tools panel re-fitted (strip = drag handle,
+labelMedium tabs + 48 dp ×, one-row `›` command line with Cancel · Execute inside, level-coloured
+auto-following console lines, two-line Network/Resources rows via pure `nameLabel` /
+`requestSummary` / `resourceSummary`, collapsing notes, an Elements details header that splits the
+tab, no six-column header); heights: tools panel default **½ the page area** and, while typing,
+the keyboard slides *under* a panel and page that keep their size (`imeDp` added back,
+`pageReserve`, panel drawn over the page); run output opens at **40 % of the screen**
+(`OutputPanelHeight.defaultFor`). Tests: `PreviewToolsLayoutTest` +2, `PreviewToolsPolicyTest` +1,
+`PreviewToolsWiringTest` +1, `OutputPanelStatusTest`/`OutputPanelWiringTest`/`HubDialogWiringTest`
+amended. Record: `docs/chat-phase70/README.md` §Round 5. **CI: first run red on one Robolectric
+case (the 320 × 470 dp default display, fixed with `w411dp-h820dp`), second killed by a corrupt NDK
+download on the runner; third run `36453466081` on `0535c0f` ✅ GREEN. No device pass** at the time — the owner installs the debug APK of that run and looks at: the Projects card tap, the
+preview console with the keyboard up, Network with a real page, RUN ▶ output height. *→ ✅ passed, 2026-09-29 (*"Yes all test passed"*); merged via PR #93 — see the head entry.*
+
+**2026-09-28 (round 4) — the modal that collapsed: the cause was ours, and it had been
+there since Phase 61.** The owner's Code-with-C page with a card open: a full card in
+Samsung Browser, a **42 px strip** in CodeC (the pill and the ×, nothing below) under a
+page-box line that read healthy. The card is `max-height: 88vh` in border-box sizing with
+20 px vertical padding — `88vh → 0` is exactly padding + border = 42 px. `vh` was 0 because
+**Chromium's WebView forces a zero layout height whenever its layout params say
+wrap-content** (`AwLayoutSizer.updateLayoutSettings()` →
+`setForceZeroLayoutHeight(isLayoutParamsHeightWrapContent())`, read from source this round),
+and **Compose's `AndroidView` stamps `WRAP_CONTENT` on a bare view** (`AndroidViewHolder`
+→ `addView(view)`) while still measuring it `EXACTLY` — so the view was truly 411×656 dp,
+`innerHeight` (the *visual* viewport) said 655, and every `vh`/`height:100%` (the *layout*
+viewport) resolved to 0. Fixed: `PreviewWebView` sets `MATCH_PARENT × MATCH_PARENT` in its
+constructor. Instrument: the per-load line now also prints what the page's CSS gets for
+`100vh` (`· 100vh 655 px ·`), and `PreviewToolsPolicy.layoutHeightCollapsed` (pure: `100vh`
+shorter than half the page's own `innerHeight`) turns a collapsed answer into a console
+**warning**. Rounds 1 and 2 are re-read honestly in the chat README: `html{height:100%}` → 0
+and `calc(100vh − 320px)` → floor are this same quirk; the page-side changes stay, the
+headless-Chrome reproductions explained the shape, not the device's cause. Tests:
+`PreviewWebViewTest` +1 (Robolectric), `PreviewToolsWiringTest` +1, `PreviewToolsPolicyTest`
++1 and the page-box cases on the four-field wire format. **CI ✅ `36436647849` on `146986b`.
+No device pass; no render this round (no Chromium in the sandbox, and desktop Chrome cannot enter the WebView's wrap-content
+mode).** The owner re-installs: the line should read `100vh 655 px`, the card should open whole.
+
+**2026-09-28 (round 3b) — the owner's console lines came back and settled it.**
+Four loads of his page in a 411×656 dp box: **three laid out 411 CSS px at scale =
+dpr (the browser's own 1:1) and one laid out 457** — 1.112× the view, drawn at 0.9×
+(10 % small). That single bad load is a page laid out for a box it does not have,
+because Chromium decides the page's scale before the page's `viewport` meta is in
+effect. Fixed in `c954599` (**CI ✅ `36421203364`**): `PreviewToolsPolicy.boxMismatch`
+(pure — device-width pages only, zoom-aware, 4 dp tolerance, never for a page that
+declares its own width) and `PreviewWebView` loads the page **once more** when it
+fires, with the box and the meta both known, logging the reason to the console. The
+app's own loads re-arm the check; the correction never re-arms itself, so it cannot
+loop. **A Phase 61 pin was reversed with its reason in the test** — `PreviewToolsWiringTest`
+previously pinned `assertFalse(native.contains("reload()"))`; the red round `36420734801`
+is that pin working. Tests: `PreviewToolsPolicyTest` 19→21, the amended
+`PreviewToolsWiringTest`. **No device pass**; the owner re-installs to confirm.
+
+**2026-09-28 (round 3) — the snake problem is confirmed gone; a third-party page
+is next, and it is being measured before anything changes.** The owner cloned
+[`priyajitpaul4-cmyk/Code-with-C`](https://github.com/priyajitpaul4-cmyk/Code-with-C)
+into CodeC and sent Samsung Browser vs CodeC again: *"Snake problem is gone but
+still it have problem like the screenshot see in browser it opens a wide window
+but in CodeC it's very small."* Two shapes produce that and need opposite fixes —
+a layout **wider than the phone** (wide-viewport fallback, squeezed) versus a
+**smaller scale** (right layout, drawn below density) — and both pages involved
+declare a valid viewport, so (`e436473`, **CI ✅ `36417473156`**) the per-load console
+line now carries every number that separates them:
+`page box 360×619 CSS px · meta width=device-width, initial-scale=1.0 · view
+360×430 dp · scale 3 · dpr 3` — the page's own box, its own `viewport`
+declaration, the view's box, and the scale read back from the WebView's
+`getScale()` (which should equal `dpr`). Reading it: `page box` ≈ the view's dp and
+`scale` ≈ `dpr` ⇒ the preview is 1:1 like the browser and only this app's chrome
+remains; `scale` ≈ 1 against `dpr` ≈ 3 ⇒ the initial-scale recipe; `page box` ≈ 980
+in a 360 dp box ⇒ the wide-viewport path. Exhibit (a simulation, not a phone
+measurement): [`chat-phase70/render-fix/third-party/`](chat-phase70/render-fix/third-party/).
+**Nothing was changed on a hunch** — the owner's next console paste picks the fix.
+
+**2026-09-28 (round 2) — "better than before but still i don't think it's good
+enough. Because browser have a good view and code is very smaller view."** The
+owner's second screenshot showed the same snake page, un-clipped but **small**: my
+round-1 page capped the board by the reported viewport height
+(`calc(100vh - 320px)`), and CodeC's preview box is shorter than a browser window
+once the app bar, the address row, the keys row and the nav bar have taken their
+height — so the board fell to **200 px** where the browser shows **380 px**.
+Reversed in `0ca08dc` (**CI ✅ green `36409241166`**): the board is width-driven again
+(`min(100%, 420px)`) and a short box scrolls like a browser (measured in headless
+Chrome: 360×520 → 328 px board; 412×915 → 380 px, nothing to scroll); the screen
+stops reserving the keyboard's inset unless the tools panel — the only text field
+on it — is open (the band under the page), and the two taps that take that field
+away (Close, a tab switch) release focus so the keyboard leaves with it
+(`1906b08`, **CI ✅ green `36411874083`**); and every load now logs the page's own
+box to the console (`page box W×H CSS px · view W×H dp · dpr N`,
+`PreviewToolsPolicy.pageBoxScript`/`parsePageBox`/`pageBoxLabel`), so this
+ambiguity is measurable next time. Renders:
+[`chat-phase70/render-fix/side-by-side-round2.png`](chat-phase70/render-fix/side-by-side-round2.png).
+Tests: `PreviewToolsPolicyTest` 17→19, `PreviewToolsWiringTest` 8→10,
+`FirstOpenSampleTest`'s viewport case rewritten (it now forbids `100vh`/`100dvh`
+in the page). **Headless Chrome evidence only — no device pass**; N1 still open.
+
+**2026-09-28 (later) — the snake sample came back clipped inside the preview, and
+is fixed (`ced2821`, **CI ✅ green `36404697868`**, and `36404764414` on the record commit).** After the report above, the owner sent
+two screenshots of the *same* page — Samsung Browser showed it whole, CodeC's Web
+Preview showed the arrow pad near the top, the hint under it and a long empty
+band, with the header, the score and *Tap to start / START* off-screen — and
+said: *"the better one is in browser and other is from code c preview correct it
+CodeC preview sucs"*. **Reproduced in headless Chrome from the seed page itself**
+(360×520 CSS px — the preview box minus CodeC's bar and keys row): the legacy page
+put the header at **−53 px** and the board top at **−18 px**, with `scrollHeight`
+562 over an `innerHeight` of 520 — the overflow sits *above* the box, so no scroll
+can reach it. Cause: `height:100%` + `justify-content:center` on the body — a page
+that fixes its own height cannot survive a box shorter than its column. Fix: the
+page grows (`html{height:100%}` + `body{min-height:100%}`), its square board is
+capped by `width:min(100%, 420px, calc(100vh - 320px))` with a 120 px floor, the
+browser-default paragraph margins are gone and `touch-action:none` moved from the
+body to the board (so a too-short page can still scroll); and `WebPreviewScreen`
+now waits — **bounded at 1 s** — for a measured page box before its first load, so
+no page takes its first layout against 0×0. Renders:
+[`chat-phase70/render-fix/`](chat-phase70/render-fix/). Pins: `FirstOpenSampleTest`
++1 case, `PreviewToolsWiringTest` +1 case. **Evidence is headless Chrome on this
+machine — not a phone**; a page a user writes that fixes its own height will still
+clip in a box shorter than it needs, exactly as in a short browser window. N1 stays
+open, and nothing here is a device pass.
+
+**2026-09-28 — Phase 70.1 + 72.1 (one chat, preview first): the Web Preview's
+five-tab console and the run Output Panel's state word, Stop, error cards and
+console line — implemented on `arena/01a0e704-codec` (tip `d86b4a3`), owner
+answers taken BEFORE any code.** The two sentences from the owner, verbatim:
+*"Try to make output exactly same for web view"* and *"And terminal output is
+good enough but is hard to understand the error line from terminal"*, with six
+shots of SPCK's Web Preview in `uploads/` — a **preview** reference, not an
+editor-panel one. Six questions were put before anything was written; all six
+answers are recorded verbatim in
+[`PHASE_72_1_PREVIEW.md`](ui-polish-chats/PHASE_72_1_PREVIEW.md): surface =
+**"Both, one after the other"**, console = **"The whole strip, Elements
+included"**, viewport = **"Yes — fix the tiny rendering in the same part"**,
+error line = **"The run output panel's"**, order = **"Both in this chat, preview
+first"**. **72.1 (commits `090596e`, `2a707be`):** the strip is now the five tabs
+the shots show, the console takes commands (`PreviewConsolePolicy`: echo → one
+policy-built `eval` line → LOG/ERROR result, 4096 cap, Cancel · Execute, IME
+Send), the Network table's Method/Name come from `shouldInterceptRequest` and its
+Type/Size/Time from the page's own Resource Timing entries joined by redacted
+address (`PreviewToolsPolicy.merge`) while **Status stays "—"** because WebView
+cannot see a response, Elements is a read-only DOM walk into `window.__codecDom`
+(caps 300 nodes/12 depth/80 text/40 attrs/4000 HTML, highlight + copy), Resources
+and Settings (zoom, resolution, fit, viewport outcome, clear cache) are real
+tabs, the bar carries **"Preview · N % Zoom"** and the console toggle, and a page
+with **no** viewport meta gets a phone-sized default appended — a page that
+declared one is left byte-for-byte as authored. Phase 61's "native never
+evaluates" pin was reversed **with its reason in the test**: scripts are still
+only the policies', `shouldInterceptRequest` still fetches nothing, and the view
+still has no `openConnection` and no `reload()`. **70.1 (commits `11345c0`,
+`2590429`, `3ad83c7`, `d86b4a3`):** all six review findings closed — the header
+is now `OutputPanelStatus.head()` (waiting > busy/installing > serving > FAILED →
+Failed(run) > CANCELLED → Stopped > DONE, where `finishFailedBuild`'s stored DONE
+with a non-zero `buildExitCode` reads **Failed**), an empty expanded panel says
+so, the 36 dp actions became a 48 dp status row and a 48 dp action row led by the
+**labelled Stop**, the terminal palette is pinned by `OutputPanelContrastTest`
+(all ten line colours and seven header tints ≥ WCAG AA), the run keys survive the
+stdin yield via `KeysStayPolicy.isRunStripVisible` + `stripVisible`, and the
+height law is `OutputPanelHeight.resolve` (**55 % / 38 % with the IME, floor 160,
+default 220**). The error line the owner could not read is now two rows —
+location + severity, then the message, with the existing *Add missing ;* fix —
+under a `3 errors · 1 warning` banner from `OutputPanelStatus.counts`. **N2 is
+delivered too:** the panel's one line (`submitInput(context)`) is a waiting
+program's stdin, otherwise a console command run in the app's real shell
+(`ShellBootstrap.prepare` + PTY-first `InteractiveRunSession.start`), workdir =
+active project root else the single-file folder, 4096-char bound, and **no second
+job on an occupied runner** — a line typed while busy is refused, never queued.
+**CI ✅ GREEN — `Build APK` run `36399610563` on `d86b4a3`, 2347 tests, 0 failed,
+debug + release APKs built**; every red round in between was fixed for cause
+(`is OutputHead.Done` in four `when`s, the `motion` hook in scope, `counts()`
+taking `List<String>`, a policy test comparing merged rows with unmerged ones,
+and a cap assertion pressing the 55 % cap from *below* it). **Open:** **N1 — the
+"above ber" is still unanswered** (no shot identifies it, nothing designed);
+Elements stays read-only; Network's Status stays "—". **No device evidence** —
+nothing here has been on a handset, and the five owed 69.1–69.4 rows stay owed.
+No PR, no merge, no `main` push without the owner's explicit instruction.
+
 **2026-09-28 — Phase 69.4 (the Files tree remembers its shape; the route's file
 opens once per editor session): implemented on `arena/01a0e49f-codec` (tip
 `e7e420e`), owner answers taken BEFORE any code.** Two owner reports, verbatim:

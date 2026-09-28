@@ -184,6 +184,7 @@ import com.codeci.ide.ui.editor.EditorOpenMode
 import com.codeci.ide.ui.editor.EditorOpenModePolicy
 import com.codeci.ide.ui.editor.EditorRouteOpen
 import com.codeci.ide.ui.editor.KeysStayPolicy
+import com.codeci.ide.ui.editor.OutputPanelHeight
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
 import com.codeci.ide.ui.keyboard.CodecKeyboard
@@ -560,6 +561,14 @@ fun EditorScreen(
         waitingForInput = outputState.waitingForInput,
         explicitlyCollapsed = !keysRowVisible
     )
+    // Phase 70.1 — Q3: the run-keys row survives the stdin yield above, so the
+    // touch path back to a waiting program (↵ submit, Ctrl+C, Tab) exists.
+    val runStripVisible = KeysStayPolicy.isRunStripVisible(
+        keepOpen = keepKeysOpen,
+        waitingForInput = outputState.waitingForInput,
+        explicitlyCollapsed = !keysRowVisible
+    )
+    val stripVisible = keysVisible || runStripVisible
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var pendingCloseTab by remember { mutableStateOf<String?>(null) }
     // Phase 33 — non-null while the RUN ▶ chooser is up (the user's default file).
@@ -761,11 +770,11 @@ fun EditorScreen(
     }
 
     val stripContext = remember(
-        keysVisible, outputState.waitingForInput, completionSettings,
+        stripVisible, outputState.waitingForInput, completionSettings,
         completionModel, language, codeText.selection, codeText.text.length
     ) {
         SuggestionStripModel.stripContextFor(
-            stripVisible = keysVisible,
+            stripVisible = stripVisible,
             runWaiting = outputState.waitingForInput,
             settings = completionSettings,
             items = completionModel.items,
@@ -785,7 +794,15 @@ fun EditorScreen(
     // Phase 23.2 — the run keys are VM actions, not editor buffer edits.
     val handleRunKey: (RunKey) -> Unit = { action ->
         when (action) {
-            RunKey.SUBMIT -> viewModel.submitInput()
+            // Phase 70.1 — Q3: with the panel collapsed, ↵ opens the field
+            // first (the strip's “tap to answer”); once it is there, ↵ submits.
+            RunKey.SUBMIT -> {
+                if (outputState.waitingForInput && !outputExpanded) {
+                    viewModel.toggleOutput()
+                } else {
+                    viewModel.submitInput(context)
+                }
+            }
             RunKey.INTERRUPT -> viewModel.interruptRun()
             RunKey.TAB -> viewModel.appendInput("\t")
             RunKey.HISTORY_UP, RunKey.HISTORY_DOWN -> Unit
@@ -2327,7 +2344,7 @@ fun EditorScreen(
             // very bottom of the column instead, so with `imePadding()` above
             // it lands DIRECTLY on top of the keyboard (Termux's extra-keys
             // behavior) rather than being stranded mid-screen.
-            if (keysVisible && !imeVisible) {
+            if (stripVisible && !imeVisible) {
                 BottomStrip(
                     suppressKeysVariant = codecKeysUp,
                     context = stripContext,
@@ -2400,8 +2417,12 @@ fun EditorScreen(
 
             // Phase 11: split-screen Output Panel. Expanded = draggable
             // splitter + panel; collapsed = one-line strip (tap to expand).
-            val maxPanelHeight = LocalConfiguration.current.screenHeightDp * 0.55f
-            var outputPanelHeight by remember { mutableStateOf(220f) }
+            // Phase 70.1 — Q5: the same request, clamped by the shared law,
+            // which caps the panel lower while the keyboard is up.
+            val panelScreen = LocalConfiguration.current.screenHeightDp.toFloat()
+            // 2026-09-28 phone pass: the panel opens at OutputPanelHeight.DEFAULT_FRACTION
+            // of the screen (defaultFor), no longer at a fixed 220 dp.
+            var outputPanelHeight by remember { mutableStateOf(OutputPanelHeight.defaultFor(panelScreen)) }
             // Phase 50.4 — transition (2): the expanded panel grows
             // upward on the shared panel spec; the collapsed strip below
             // still swaps instantly, exactly as before.
@@ -2413,8 +2434,11 @@ fun EditorScreen(
                 Column {
                     OutputPanelSplitter(
                         onDragDelta = { dragAmount ->
-                            outputPanelHeight = (outputPanelHeight - dragAmount)
-                                .coerceIn(120f, maxPanelHeight)
+                            outputPanelHeight = OutputPanelHeight.resolve(
+                                requested = outputPanelHeight - dragAmount,
+                                available = panelScreen,
+                                imeVisible = imeVisible
+                            )
                         }
                     )
                     // Phase 51.2 slot: output_panel
@@ -2425,10 +2449,16 @@ fun EditorScreen(
                         onClear = { viewModel.clearOutput() },
                         onToggleExpand = { viewModel.toggleOutput() },
                         onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
-                        onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
+                        // Phase 70.1 — Q6: tapping an error line takes you to
+                        // its line and puts the panel away, so the code the
+                        // error is about gets the screen back.
+                        onDiagnosticTap = {
+                            viewModel.jumpToOutputDiagnostic(context, it)
+                            if (outputExpanded) viewModel.toggleOutput()
+                        },
                         onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
                         onInputChange = { viewModel.onInputChange(it) },
-                        onSubmitInput = { viewModel.submitInput() },
+                        onSubmitInput = { viewModel.submitInput(context) },
                         // The Output Panel's "open URL" button carries the same
                         // authoritative project as the RUN ▶ preview path.
                         onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
@@ -2436,7 +2466,9 @@ fun EditorScreen(
                         // so it lives in the panel next to the URLs it changes.
                         onToggleLanShare = { enabled -> viewModel.setLanShare(context, enabled) },
                         onStopAllServers = { viewModel.stopAllServers(context) },
-                        modifier = Modifier.height(outputPanelHeight.dp)
+                        modifier = Modifier.height(
+                            OutputPanelHeight.resolve(outputPanelHeight, panelScreen, imeVisible).dp
+                        )
                     )
                 }
             }
@@ -2455,10 +2487,13 @@ fun EditorScreen(
                     onClear = { viewModel.clearOutput() },
                     onToggleExpand = { viewModel.toggleOutput() },
                     onOpenInTerminal = { outputState.lastTerminalCommand?.let(onOpenInTerminal) },
-                    onDiagnosticTap = { viewModel.jumpToOutputDiagnostic(context, it) },
+                    onDiagnosticTap = {
+                        viewModel.jumpToOutputDiagnostic(context, it)
+                        if (outputExpanded) viewModel.toggleOutput()
+                    },
                     onApplyFix = { viewModel.applyFixForOutputDiagnostic(context, it) },
                     onInputChange = { viewModel.onInputChange(it) },
-                    onSubmitInput = { viewModel.submitInput() },
+                    onSubmitInput = { viewModel.submitInput(context) },
                     onOpenPreviewUrl = { url -> onOpenPreviewUrl(currentProject, url) },
                     onToggleLanShare = { enabled -> viewModel.setLanShare(context, enabled) },
                     onStopAllServers = { viewModel.stopAllServers(context) },
@@ -2471,7 +2506,7 @@ fun EditorScreen(
             // soft keyboard. Same composable, same key set, same actions as
             // the docked row above — only the position changes, so nothing
             // about find/replace, autocomplete or the status bar is affected.
-            if (keysVisible && imeVisible) {
+            if (stripVisible && imeVisible) {
                 BottomStrip(
                     suppressKeysVariant = codecKeysUp,
                     context = stripContext,

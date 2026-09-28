@@ -120,8 +120,11 @@ jobs:
             # GitHub keeps only a small annotation window per step. Select the
             # first actionable Gradle lines rather than flooding it with the
             # end of a Java stack trace.
-            grep -iE 'FAILURE:|What went wrong|Execution failed|There were failing tests|e: file:|error:|Could not |Caused by:|FAILED' \
-              phase52-host-tests.log | head -9 | while IFS= read -r line; do
+            # A failing host test prints its assertion site on the next line
+            # (`java.lang.AssertionError at FooTest.kt:97`) — surface that too,
+            # so a red round can be read from the annotations alone.
+            grep -iE 'FAILURE:|What went wrong|Execution failed|There were failing tests|e: file:|error:|Could not |Caused by:|FAILED|Error at [A-Za-z0-9_]+\.kt:[0-9]+|Failure at [A-Za-z0-9_]+\.kt:[0-9]+|Exception at [A-Za-z0-9_]+\.kt:[0-9]+' \
+              phase52-host-tests.log | head -12 | while IFS= read -r line; do
               [ -n "$line" ] && echo "::error::${line:0:1800}"
             done
             exit "$status"

@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CallSplit
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
@@ -350,6 +349,23 @@ fun FileManagerScreen(
         onProjectSelected(project)
     }
 
+    // 2026-09-28, owner: *"when I click on a project it should open the editor
+    // by default and not the file structure"*, and the same for the wizard's
+    // Create. Phase 46.2's rule decides which file: launch default → newest
+    // source → first source (ProjectEntryFile). A project with nothing to open
+    // falls back to the hub's own tree, which is also still one ⋮ → Browse
+    // files away, and one ☰ away inside the editor (the drawer's Files slot).
+    fun openInEditor(project: ProjectInfo) {
+        viewModel.entryFileForEditor(context, project.name) { entry ->
+            if (entry != null) {
+                onProjectSelected(project)
+                onProjectFileSelected(project.name, entry)
+            } else {
+                selectProject(project)
+            }
+        }
+    }
+
     // Phase 33.3 — the Projects empty state points at the three 33.1 starter
     // tiles: tapping one create-or-opens the starter project and opens its
     // entry file in the editor (idempotent — a second tap reuses it).
@@ -585,25 +601,16 @@ fun FileManagerScreen(
                         onCardAction = { entry, action ->
                         val project = projects.firstOrNull { it.name == entry.name } ?: return@ProjectsHubList
                         when (action) {
+                            // ⋮ → Browse files: the hub's own tree, no longer
+                            // the card's primary tap (2026-09-28).
+                            HubCardAction.OPEN -> selectProject(project)
                             // Phase 51.4 — PROJECT_OPENED: the hub answered
-                            // the tap with the thing the user asked for.
-                            HubCardAction.OPEN -> {
-                                haptics.perform(HapticMoment.PROJECT_OPENED)
-                                selectProject(project)
-                            }
+                            // the tap with the thing the user asked for — since
+                            // 2026-09-28 that is the editor on the project's
+                            // entry file (Phase 46.2's rule, see openInEditor).
                             HubCardAction.OPEN_IN_EDITOR -> {
-                                // Phase 46.2 — the explicit whole-project open:
-                                // launch default → newest source → first source
-                                // (ProjectEntryFile); an empty project falls
-                                // back to the hub's own tree view.
-                                viewModel.entryFileForEditor(context, project.name) { entry ->
-                                    if (entry != null) {
-                                        onProjectSelected(project)
-                                        onProjectFileSelected(project.name, entry)
-                                    } else {
-                                        selectProject(project)
-                                    }
-                                }
+                                haptics.perform(HapticMoment.PROJECT_OPENED)
+                                openInEditor(project)
                             }
                             HubCardAction.RENAME -> renameProjectTarget = project
                             HubCardAction.EXPORT -> {
@@ -733,7 +740,9 @@ fun FileManagerScreen(
                 context, name, selectedType,
                 onCreated = { project ->
                     showCreateProject = false
-                    onProjectSelected(project)
+                    // 2026-09-28, owner: Create lands in the editor too (it
+                    // superseded Phase 66.1's "Keep today: hub file tree").
+                    openInEditor(project)
                 },
                 onFailed = { createError = it }
             )
@@ -1766,7 +1775,9 @@ private fun ProjectHubCard(
 ) {
     var menuOpen by remember(entry.name) { mutableStateOf(false) }
     Card(
-        onClick = { onAction(entry, HubCardAction.OPEN) },
+        // The card's tap opens the project in the editor (2026-09-28); the
+        // tree is the ⋮ menu's Browse files.
+        onClick = { onAction(entry, HubCardAction.OPEN_IN_EDITOR) },
         shape = RoundedCornerShape(CodecTokens.radius(Radius.L)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.FLAT))
@@ -1863,18 +1874,13 @@ private fun ProjectHubCard(
                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    // At the top, above SOURCE CONTROL: the hub's own tree.
+                    // The card's tap is the editor now (2026-09-28), so the
+                    // menu's first item is the other thing a project opens as.
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.hub_open_action)) },
+                        text = { Text(stringResource(R.string.hub_browse_files)) },
                         leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
                         onClick = { menuOpen = false; onAction(entry, HubCardAction.OPEN) }
-                    )
-                    // Phase 46.2 — at the top, above SOURCE CONTROL: the
-                    // explicit "open the project" action sits next to the
-                    // card's primary tap.
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.hub_open_in_editor)) },
-                        leadingIcon = { Icon(Icons.Default.Code, contentDescription = null) },
-                        onClick = { menuOpen = false; onAction(entry, HubCardAction.OPEN_IN_EDITOR) }
                     )
                     if (entry.isGit) {
                         DropdownMenuItem(

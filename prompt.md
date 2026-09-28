@@ -1,3 +1,14 @@
+> **Latest owner instruction — 2026-09-29 (after Phases 70.1 + 72.1):** *"Yes all test
+> passed complete docs and merge to main"* → the 70.1 + 72.1 branch (`arena/01a0e84c-codec`:
+> the five-tab preview console, the run Output Panel, preview render rounds 1–4, the phone
+> pass, the project card that opens the editor, and the `SoraEditorHost` composing-replay
+> fix — TROUBLESHOOTING §47) is **owner-tested and merged via
+> [PR #93](https://github.com/pabi277/CodeC/pull/93)**; last code commit `308441e`, CI ✅
+> `36467347590`. The PR records the merge commit. The polish series' remaining discussion
+> drafts are **65.1, 68.1, 71.1, 73.1, 74.1** — the owner names the next one; nothing starts
+> on the agent's own. The operative handoff is the **CURRENT HANDOFF — 2026-09-29** block
+> below; every block after it is history.
+
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
 > progress stays in Terminal/Output, no new app-wide indicator. These select
@@ -31,7 +42,51 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-27, Phase 64.** Read
+**CURRENT HANDOFF — 2026-09-29, after PR #93 (Phases 70.1 + 72.1, owner-tested and
+merged).** Read `rule.md`, `docs/NEXT_STEPS.md` (head entry), `docs/chat-phase70/README.md`
+and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the historical entries below.
+
+*State to verify first, never assume:* `main` should be at the merge commit of
+[PR #93](https://github.com/pabi277/CodeC/pull/93) (`gh pr view 93 --json mergeCommit,state`);
+your session is a fresh `arena/*` branch off that `main` — confirm with `git status`,
+`git log -1`, `git ls-remote origin main`, `gh pr list`, `gh run list --limit 3`. The Arena
+sandbox can silently reset local HEAD to the base commit between turns while the files stay
+newer (rule.md §2.4): before every commit run `git fetch origin <session-branch> && git
+reset --mixed FETCH_HEAD` and check `git status --short` shows only your own edits. Never
+`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were open when
+#93 merged (#83, #42) — leave them to the owner.
+
+*What is done and must not be redone:* the UI polish series (`docs/UI_POLISH_REVIEW_20260927.md`
+§5) has 64, 66.1, 67.1, 69.1–69.4, 70.1 and 72.1 delivered, owner-tested and merged. The
+editor's replay path (`SoraEditorHost`: one `Content.replace` delta, `restartInput()` before and
+after it only while `hasComposingText()`), the preview WebView's `MATCH_PARENT` birth and its
+page-box instrument line, the tools panel's phone geometry (half the page area; the keyboard
+slides under a panel and page that keep their size), the run panel's 40 % default, and the hub's
+tap-opens-editor / ⋮ → Browse files are all device-passed — do not re-debug them without a new
+symptom (rule.md §6, last bullet).
+
+*What is next — the owner decides, you ask:* the remaining discussion drafts are **65.1 Shell and
+navigation**, **68.1 Editor chrome, tabs and file actions**, **71.1 Packages, installation and
+Terminal**, **73.1 Source control and GitHub**, **74.1 Settings, support and final consistency**
+(briefs in `docs/ui-polish-chats/`). Your first message reports the verified state, then asks the
+owner which part (or which bug) comes next — offer the five, with one line each on what the brief
+proposes; do not recommend a redesign (owner, 2026-09-27: keep the current look). If the owner
+reports a bug instead, run the rule.md §4 lifecycle: evidence first (his words, screenshots,
+console lines), measure in the checkout, ask when a decision is his, fix host-testably with pins,
+CI, docs in the same commit, report — and stop at the merge gate (§3) unless he commands the merge
+in the same chat. Record his answers verbatim; never claim device evidence he did not give;
+when he delegates a choice ("your choice"), say in the record that the choice was the chat's.
+
+*Working habits this series proved:* read sora/Compose/Chromium sources before touching their
+behaviour (the tag is sora 0.24.6; `git clone --depth 1 --branch 0.24.6 --sparse` works in the
+sandbox, raw.githubusercontent does not); Robolectric's default display is 320 × 470 dp — declare
+`@Config(qualifiers = "w411dp-h820dp")` for phone-sized layout cases; `RepoFiles.codeOnly` blanks
+comments AND string literals, so wiring pins must not quote string contents; the CI annotation
+grep surfaces `AssertionError at FooTest.kt:NN`, so read a red run's annotations before guessing;
+the M3 BOM is 2024.12.01 (no `TextOverflow.MiddleEllipsis`); `apt`, Chromium and raw-GitHub
+fetches are unavailable in the sandbox — CI is the only executor of record.
+
+*Previous handoff (2026-09-27, Phase 64), kept for history:* read
 `docs/chat-phase64/HANDOFF.md` and `docs/UI_POLISH_REVIEW_20260927.md` before the
 historical status entries below. Phase 64 removes the guide and both installation
 UI locks; preserve internal installation safety and the install-resume context

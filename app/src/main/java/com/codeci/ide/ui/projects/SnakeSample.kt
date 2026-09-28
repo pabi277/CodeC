@@ -111,15 +111,27 @@ object SnakeSample {
 <style>
   :root { color-scheme: dark; --bg:#0f1115; --grid:#161a20; --snake:#6ee08a; --head:#d9f7c9; --food:#ffb86b; --ink:#e6edf3; --dim:#8b949e; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+  /* Swipes are the game's controls, so the board refuses to scroll the page;
+     everywhere else the page may still scroll when the viewport is too short. */
+  html { height:100%; }
+  html, body { margin:0; background:var(--bg); color:var(--ink);
                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  body { display:flex; flex-direction:column; align-items:center; justify-content:center;
-         gap:14px; padding:16px; touch-action:none; }
+  /* min-height, never height: a viewport with less room than the page needs
+     (the editor's own preview, carrying its bar and its keys row) must make the
+     page scroll, never clip the top of it. */
+  body { min-height:100%; display:flex; flex-direction:column; align-items:center;
+         justify-content:center; gap:14px; padding:16px; }
+  p { margin:0; }
   header { width:100%; max-width:420px; display:flex; align-items:baseline; justify-content:space-between; }
   h1 { font-size:18px; margin:0; letter-spacing:.08em; text-transform:uppercase; }
   .score { font-size:14px; color:var(--dim); }
   .score b { color:var(--head); font-size:16px; }
-  .wrap { position:relative; width:100%; max-width:420px; }
+  /* The board is as wide as the space allows — the same square a browser gives
+     it at the same width. A preview box shorter than the page then scrolls,
+     exactly like a browser window that is too short; sizing the board from the
+     viewport height instead (2026-09-28) made it tiny in the editor's own
+     preview, where the box is shorter than a phone window. */
+  .wrap { position:relative; width:min(100%, 420px); touch-action:none; }
   canvas { width:100%; height:auto; display:block; background:var(--grid); border-radius:12px; }
   .over { position:absolute; inset:0; display:none; flex-direction:column; gap:10px;
           align-items:center; justify-content:center; background:rgba(15,17,21,.86); border-radius:12px; text-align:center; }

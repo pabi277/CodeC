@@ -7,6 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
@@ -43,13 +47,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.codeci.ide.ui.services.PreviewConsolePolicy
+import com.codeci.ide.ui.services.PreviewDomNode
+import com.codeci.ide.ui.services.PreviewInspectorPolicy
+import com.codeci.ide.ui.services.PreviewNodeDetails
+import com.codeci.ide.ui.services.PreviewViewport
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -72,6 +86,8 @@ import com.codeci.ide.ui.services.ServerHost
 import com.codeci.ide.ui.services.ServerHosts
 import com.codeci.ide.ui.services.WebPreviewServer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -112,11 +128,37 @@ fun WebPreviewScreen(
     var toolsVisible by remember { mutableStateOf(false) }
     var toolTab by remember { mutableStateOf(PreviewToolTab.CONSOLE) }
     var levels by remember { mutableStateOf(PreviewLevel.entries.toSet()) }
-    var requestedHeight by remember { mutableStateOf(240f) }
+    // Nothing dragged yet: the policy's default share of the page area
+    // (PreviewToolsPolicy.DEFAULT_FRACTION), not a fixed dp that fit no phone.
+    var requestedHeight by remember { mutableStateOf(Float.NaN) }
+    // The keyboard's height in dp, read here — above the imePadding()'d column,
+    // which consumes the inset for everything under it. The tools panel is
+    // sized against the page area *without* the keyboard, so typing a console
+    // command neither shrinks the panel to the 65 % of what is left nor lays
+    // the page out again: the keyboard slides under the panel instead.
+    val imeDp = WindowInsets.ime.getBottom(LocalDensity.current) / LocalDensity.current.density
     var zoomDialog by remember { mutableStateOf(false) }
     var resolutionDialog by remember { mutableStateOf(false) }
     var resolution by remember { mutableStateOf(PreviewResolution.DEVICE) }
     var currentUrl by remember { mutableStateOf<String?>(liveUrl) }
+    /**
+     * The measured size of the page box. Reported so the first load can wait
+     * for a real box: a page's own first layout must not be taken against 0×0
+     * (the snake sample sizes its board from `100vh`).
+     */
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+
+    // Phase 72.1 — the shots' “Preview · 100 % Zoom” subtitle needs the number
+    // the WebView is actually at, so the screen owns it and hands it down.
+    // Readouts are screen state, not preferences: nothing here is persisted.
+    var zoomPercent by rememberSaveable { mutableStateOf(100) }
+    var fitToPhone by rememberSaveable { mutableStateOf(true) }
+    val resources by viewModel.resources.collectAsState()
+    val viewport by viewModel.viewport.collectAsState()
+    var domTree by remember { mutableStateOf(emptyList<PreviewDomNode>()) }
+    var domDetails by remember { mutableStateOf<PreviewNodeDetails?>(null) }
+    var selectedNode by remember { mutableStateOf(-1) }
+    var highlighted by remember { mutableStateOf(-1) }
 
     // Phase 68.1 (completed part) — the rendered Markdown page must match the
     // app's theme, so resolve dark exactly the way MainActivity does.
@@ -233,10 +275,75 @@ fun WebPreviewScreen(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize().imePadding()) {
+    // Phase 72.1 — everything the five tabs ask for, in one place. The panel
+    // stays presentation-only: these lambdas own the WebView calls and the
+    // clipboard, and every script comes from a pure policy.
+    val copyText: (String) -> Unit = { text ->
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("CodeC", text))
+    }
+    val refreshElements: () -> Unit = {
+        webView?.evaluate(PreviewInspectorPolicy.treeScript()) { raw ->
+            domTree = PreviewInspectorPolicy.parseTree(raw)
+            domDetails = null
+            selectedNode = -1
+            highlighted = -1
+        }
+    }
+    val selectNode: (Int) -> Unit = { index ->
+        selectedNode = index
+        webView?.evaluate(PreviewInspectorPolicy.detailScript(index)) { raw ->
+            domDetails = PreviewInspectorPolicy.parseDetails(raw)
+        }
+    }
+    val toggleHighlight: (Int) -> Unit = { index ->
+        val next = if (highlighted == index) -1 else index
+        highlighted = next
+        webView?.evaluate(PreviewInspectorPolicy.highlightScript(next)) { }
+    }
+    val copyHtml: (Int) -> Unit = { index ->
+        webView?.evaluate(PreviewInspectorPolicy.htmlScript(index)) { raw ->
+            val html = PreviewConsolePolicy.unquote(raw)
+            if (html.isNotBlank()) copyText(html)
+        }
+    }
+    val runCommand: (String) -> Unit = { text ->
+        val script = PreviewConsolePolicy.command(text)
+        if (script != null) {
+            viewModel.appendConsole(PreviewConsolePolicy.echo(text))
+            webView?.evaluate(script) { raw ->
+                viewModel.appendConsole(PreviewConsolePolicy.result(raw))
+            }
+        }
+    }
+    val clearCache: () -> Unit = {
+        webView?.clearCache()
+        viewModel.clearConsole()
+        viewModel.clearNetwork()
+        viewModel.requestReload()
+    }
+
+    // The console's command line is the only text field on this screen and it
+    // lives inside the tools panel, so the keyboard's inset is reserved only
+    // while that panel is open: a keyboard that is not there must never shorten
+    // the page (the owner's unaccounted band under it, 2026-09-28).
+    Column(
+        modifier = Modifier.fillMaxSize().then(
+            if (toolsVisible) Modifier.imePadding() else Modifier
+        )
+    ) {
         TopAppBar(
             title = {
-                Text(htmlFile?.name ?: (fileName ?: if (isLive) "Live server" else "Preview"))
+                // Phase 72.1 — the shots' two-line bar: the page, then what the
+                // preview is doing with it (Preview · N % Zoom).
+                Column {
+                    Text(htmlFile?.name ?: (fileName ?: if (isLive) "Live server" else "Preview"))
+                    Text(
+                        text = stringResource(R.string.preview_bar_subtitle, zoomPercent),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             },
             navigationIcon = {
                 IconButton(
@@ -339,6 +446,18 @@ fun WebPreviewScreen(
                         }
                     }
                 }
+                // Phase 72.1 — the shots' own console button: one tap, and its
+                // glyph swaps to ⊘ while the panel is open, exactly as the
+                // shots swap theirs.
+                IconButton(onClick = { toolsVisible = !toolsVisible }) {
+                    Icon(
+                        if (toolsVisible) SpckIcons.ClearCircle else SpckIcons.Console,
+                        contentDescription = stringResource(
+                            if (toolsVisible) R.string.preview_console_hide
+                            else R.string.preview_console_show
+                        ),
+                    )
+                }
                 IconButton(
                     onClick = { viewModel.requestReload() },
                     enabled = error == null
@@ -417,8 +536,15 @@ fun WebPreviewScreen(
         // Height comes from remaining content constraints, not screen metrics.
         // Diagnostics are unweighted but bounded; the page owns the remainder.
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-            val available = maxHeight.value
+            // 2026-09-28 phone pass: the keyboard is added back, so the panel
+            // keeps the height it had before the keyboard came. The page keeps
+            // its height too — it reserves (panel − keyboard) under itself and
+            // the panel is drawn over it, bottom-aligned above the keyboard —
+            // so a command being typed never relays the page out.
+            val available = maxHeight.value + imeDp
             val panelHeight = PreviewToolsPolicy.panelHeight(requestedHeight, available)
+            val panelShown = minOf(panelHeight, maxHeight.value)
+            val pageReserve = (panelHeight - imeDp).coerceIn(0f, maxHeight.value)
             Column(Modifier.fillMaxSize()) {
                 BoxWithConstraints(
                     Modifier.fillMaxWidth().weight(1f).clipToBounds(),
@@ -433,6 +559,7 @@ fun WebPreviewScreen(
                     // the page visually without lying to responsive CSS about size.
                     AndroidView(
                         modifier = Modifier.requiredSize(width, height)
+                            .onSizeChanged { viewportSize = it }
                             .graphicsLayer { scaleX = fit; scaleY = fit },
                         factory = { ctx -> PreviewWebView(ctx, viewModel).also { webView = it } },
                         onRelease = { released ->
@@ -450,26 +577,59 @@ fun WebPreviewScreen(
                         }
                     }
                 }
-                if (toolsVisible) {
-                    PreviewToolsPanel(
-                        console = console, network = network, tab = toolTab, levels = levels,
-                        height = panelHeight, availableHeight = available,
-                        onTab = { toolTab = it },
-                        onLevel = { level -> levels = if (level in levels) levels - level else levels + level },
-                        onResize = { delta -> requestedHeight = PreviewToolsPolicy.panelHeight(
-                            PreviewToolsPolicy.panelHeight(requestedHeight, available) + delta, available) },
-                        onHeight = { requestedHeight = PreviewToolsPolicy.panelHeight(it, available) },
-                        onClear = { if (toolTab == PreviewToolTab.CONSOLE)
-                            viewModel.clearConsole() else viewModel.clearNetwork() },
-                        onClose = { toolsVisible = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                if (toolsVisible) Spacer(Modifier.height(pageReserve.dp))
+            }
+            if (toolsVisible) {
+                PreviewToolsPanel(
+                    console = console,
+                    // The table the shots show: the WebView's own observed
+                    // requests joined, by address, with the page's timings.
+                    network = PreviewToolsPolicy.merge(network, resources),
+                    resources = resources,
+                    domTree = domTree,
+                    details = domDetails,
+                    selectedNode = selectedNode,
+                    highlighted = highlighted,
+                    viewport = viewport,
+                    fitToPhone = fitToPhone,
+                    zoomPercent = zoomPercent,
+                    resolution = resolution,
+                    tab = toolTab,
+                    levels = levels,
+                    height = panelShown,
+                    availableHeight = available,
+                    onTab = { toolTab = it },
+                    onLevels = { levels = it },
+                    onResize = { delta -> requestedHeight = PreviewToolsPolicy.panelHeight(
+                        PreviewToolsPolicy.panelHeight(requestedHeight, available) + delta, available) },
+                    onHeight = { requestedHeight = PreviewToolsPolicy.panelHeight(it, available) },
+                    onClear = {
+                        if (toolTab == PreviewToolTab.CONSOLE) viewModel.clearConsole()
+                        else viewModel.clearNetwork()
+                    },
+                    onClose = { toolsVisible = false },
+                    onCommand = runCommand,
+                    onCopyText = copyText,
+                    onSelectNode = selectNode,
+                    onToggleHighlight = toggleHighlight,
+                    onCopyHtml = copyHtml,
+                    onRefreshElements = refreshElements,
+                    onRefreshResources = { webView?.captureResources() },
+                    onZoom = { zoomDialog = true },
+                    onResolution = { resolutionDialog = true },
+                    onFitToPhone = { fitToPhone = it },
+                    onClearCache = clearCache,
+                    modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+                )
             }
         }
     }
     if (zoomDialog) PreviewZoomDialog(
-        onDismiss = { zoomDialog = false }, onZoom = { webView?.applyZoom(it) }
+        onDismiss = { zoomDialog = false },
+        onZoom = {
+            webView?.applyZoom(it)
+            zoomPercent = it
+        }
     )
     if (resolutionDialog) PreviewResolutionDialog(
         selected = resolution, onDismiss = { resolutionDialog = false },
@@ -479,6 +639,14 @@ fun WebPreviewScreen(
     // Initial load once the WebView instance and the target URL are known.
     LaunchedEffect(webView, htmlFile, liveUrl, serverPort) {
         val wv = webView ?: return@LaunchedEffect
+        // A page that sizes itself from the viewport (the snake sample caps its
+        // board by `100vh`) must not be loaded into a box that has no size yet:
+        // the tools panel can hold every pixel of the preview area, and a page
+        // loaded at 0×0 lays itself out against a viewport that does not exist.
+        // Bounded, so a preview that is never measured still loads.
+        withTimeoutOrNull(1_000) {
+            snapshotFlow { viewportSize }.first { it.width > 0 && it.height > 0 }
+        }
         if (liveUrl != null) {
             // Phase 14: live server mode — the URL comes from the runner's
             // detected bind line; load it directly, no static server needed.
@@ -536,6 +704,19 @@ fun WebPreviewScreen(
     DisposableEffect(viewModel) {
         onDispose { viewModel.watch(null) }
     }
+
+    // Phase 72.1 — opening the panel asks the page what it is made of: the
+    // Resource Timing entries behind Network's Type/Size/Time and the
+    // Resources tab, and the DOM tree when Elements is the tab on screen.
+    LaunchedEffect(toolsVisible, toolTab, reloadTick, webView) {
+        if (!toolsVisible) return@LaunchedEffect
+        webView?.captureResources()
+        if (toolTab == PreviewToolTab.ELEMENTS) refreshElements()
+    }
+
+    // Phase 72.1 — the Settings switch reaches the next load, never the current
+    // one: a page that already rendered must not be re-laid out under the user.
+    LaunchedEffect(webView, fitToPhone) { webView?.fitToPhone = fitToPhone }
 
     // Reload the WebView whenever the file changed on disk or Refresh was tapped.
     LaunchedEffect(reloadTick) {

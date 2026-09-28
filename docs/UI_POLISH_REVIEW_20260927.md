@@ -158,15 +158,17 @@ and record your answer before implementing the part.
 | [66.1](ui-polish-chats/PHASE_66_1_PROJECTS.md) | Projects hub and creation | Keep hub; improve clarity. **Discussed and implemented 2026-09-27** on `arena/01a0e220-codec` (owner: keep cards; deleted demo stays deleted; (a)+(b)+(c) in one part; after Create keep the hub tree) — [record](chat-phase66/README.md). Owner device-verified; delivered via [PR #88](https://github.com/pabi277/CodeC/pull/88). |
 | [67.1](ui-polish-chats/PHASE_67_1_FILES_SEARCH.md) | Files, drawer and project search | Screenshot-style tree, safe file actions, file finding and single-file download/share merged to `main`; [record and CI](chat-phase67/README.md). |
 | [68.1](ui-polish-chats/PHASE_68_1_EDITOR_TABS.md) | Editor chrome, tabs and file actions | Protect code space and tab geometry. |
-| [69.1](ui-polish-chats/PHASE_69_1_TYPING.md) | Typing, keyboard and selection | Caret and input correctness first. |
-| [70.1](ui-polish-chats/PHASE_70_1_RUN_OUTPUT.md) | Run, output and error recovery | Clear run states; no navigation lock. |
+| [69.1](ui-polish-chats/PHASE_69_1_TYPING.md) | Typing, keyboard and selection | Caret and input correctness first. **Delivered 2026-09-28** as 69.1–69.4 (typing; language keys + ghost; strip + key drag; tree + route) via [PR #91](https://github.com/pabi277/CodeC/pull/91) — [record](chat-phase69/README.md). Then, 2026-09-29, the accepted suggestion the next letter undid: [TROUBLESHOOTING §47](TROUBLESHOOTING.md), owner-tested, [PR #93](https://github.com/pabi277/CodeC/pull/93). |
+| [70.1](ui-polish-chats/PHASE_70_1_RUN_OUTPUT.md) | Run, output and error recovery | Clear run states; no navigation lock. **Delivered 2026-09-28** (state row, labelled Stop, error rows + fix, waiting strip, the panel's console; phone pass 2026-09-28) — owner-tested 2026-09-29, [PR #93](https://github.com/pabi277/CodeC/pull/93); [record](chat-phase70/README.md). |
 | [71.1](ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md) | Packages, installation and Terminal | Visible progress, safe transactions. |
-| [72.1](ui-polish-chats/PHASE_72_1_PREVIEW.md) | Web preview, console and viewport tools | Polish existing tools. |
+| [72.1](ui-polish-chats/PHASE_72_1_PREVIEW.md) | Web preview, console and viewport tools | Polish existing tools. **Delivered 2026-09-28** (five-tab console, four render rounds incl. the `WRAP_CONTENT` → zero-layout-height cause, the phone pass; the project card opens the editor) — owner-tested 2026-09-29, [PR #93](https://github.com/pabi277/CodeC/pull/93); [record](chat-phase70/README.md). |
 | [73.1](ui-polish-chats/PHASE_73_1_GIT.md) | Source control and GitHub | Simplify hierarchy; keep discard safeguards. |
 | [74.1](ui-polish-chats/PHASE_74_1_SETTINGS_SUPPORT.md) | Settings, support and final consistency | Truthful controls and cross-screen consistency. |
 **Owner-selected starting area (2026-09-27): Projects and files.** Start the
 next discussion with 66.1 (hub/creation), then 67.1 (files/search), unless the
-owner names a particular file detail first. The part numbers are stable IDs,
+owner names a particular file detail first. *State on 2026-09-29:* 64, 66.1,
+67.1, 69.1–69.4, 70.1 and 72.1 are delivered and merged; **65.1, 68.1, 71.1,
+73.1 and 74.1 remain discussion drafts** — the owner picks the next one. The part numbers are stable IDs,
 not a requirement to execute 65 first. My original suggestion was editor/typing;
 the owner's priority overrides that. Polish one agreed part per chat.
 

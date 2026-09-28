@@ -512,6 +512,40 @@ fun SoraEditorHost(
                     // source of truth, so a wholesale setText is always a
                     // safe recovery).
                     val plan = if (known != null) IncrementalEdit.between(known, target.text) else null
+                    // Device round 2026-09-29 (owner: *"I write p, it shows
+                    // print(, I click it and it is on the screen — then I
+                    // write the next letter and print( is gone, only p and
+                    // the letters I typed"*): the soft keyboard was COMPOSING
+                    // the word `p` when the accept landed. sora tracks that
+                    // word as a range and grows it over any insert that
+                    // touches its end (ComposingText.shiftOnInsert:
+                    // `startIndex <= insertStart && endIndex >= insertStart`),
+                    // so the replayed delta `rint(` was absorbed into the IME's
+                    // own word, and Gboard's next update —
+                    // setComposingText("pr") — replaced the WHOLE range
+                    // (EditorInputConnection.setComposingText →
+                    // setComposingTextCompat: `print(` starts with `pr`, so it
+                    // deleted the tail). Nothing in our VM ever held `pr`: the
+                    // keystroke arrived through the IME as a replacement of
+                    // the range sora believed was still being composed. The
+                    // wholesale setText never met this because it restarts the
+                    // input method; the incremental path (2026-09-13) must do
+                    // the same, exactly the way sora's own
+                    // EditorAutoCompletion.select() brackets performCompletion:
+                    // restartInput() BEFORE the edit (sora's range and the
+                    // IME's word are both dropped, so the delta lands outside
+                    // any composing text) and AFTER it (the restarted IME
+                    // reads the post-edit text and selection). Gated on a live
+                    // composing text: CodeC Keys and hardware keyboards never
+                    // compose, so their one-replay-per-keystroke path keeps its
+                    // zero per-keystroke cost (restartInput is an IPC to the
+                    // input method manager — TerminalKeyView's Phase 19.2
+                    // lesson). Every VM-driven replay was exposed, not only the
+                    // chips and the ghost: a keys-row `(` after `foo`, a
+                    // snippet, an Emmet expansion, strip undo/redo, a quick fix.
+                    val composing = plan != null &&
+                        runCatching { ed.hasComposingText() }.getOrDefault(false)
+                    if (composing) runCatching { ed.restartInput() }
                     val appliedIncrementally = plan != null && runCatching {
                         ed.text.replace(plan.start, plan.end, plan.replacement)
                         true
@@ -568,6 +602,12 @@ fun SoraEditorHost(
                     } else if (!caretPlaced) {
                         ed.clearFocus()
                     }
+                    // The second half of sora's own bracket (see `composing`
+                    // above): the input method restarts on the text and
+                    // selection as they are NOW, so its next composing update
+                    // begins a fresh word after the accepted text instead of
+                    // continuing the one it was typing before the replay.
+                    if (composing) runCatching { ed.restartInput() }
                     syncedText = target.text
                     soraHasText = target.text
                     syncedSelection = target.selection

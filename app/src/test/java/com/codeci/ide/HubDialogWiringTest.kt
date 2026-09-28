@@ -209,14 +209,26 @@ class HubDialogWiringTest {
     }
 
     @Test
-    fun `the after-Create landing is unchanged - the hub's own tree`() {
-        // Owner: "Keep today: hub file tree". The wizard's success path still
-        // hands the project to onProjectSelected and nothing else (no
-        // onProjectFileSelected — that would open the editor).
+    fun `the after-Create landing is the editor, like a card tap`() {
+        // Phase 66.1's owner answer was "Keep today: hub file tree". On
+        // 2026-09-28 the owner superseded it: a project card's tap opens the
+        // editor by default "and not the file structure", and Create lands the
+        // same way. Both go through the hub's one openInEditor (Phase 46.2's
+        // entry-file rule; an empty project still falls back to the tree).
         val success = createDialog.substringAfter("onCreated = { project ->").substringBefore("}")
-        assertTrue(success.contains("onProjectSelected(project)"))
-        assertFalse(success.contains("onProjectFileSelected("))
+        assertTrue(success.contains("openInEditor(project)"))
+        assertFalse(success.contains("onProjectSelected(project)"))
+        val open = screenCode.substringAfter("fun openInEditor(project: ProjectInfo) {").substringBefore("HubCardAction")
+        assertTrue(open.contains("viewModel.entryFileForEditor(context, project.name)"))
+        assertTrue(open.contains("onProjectFileSelected(project.name, entry)"))
+        assertTrue(open.contains("selectProject(project)"))
+        // The card's tap is the editor; the tree is the menu's Browse files.
+        assertTrue(screenCode.contains("onClick = { onAction(entry, HubCardAction.OPEN_IN_EDITOR) },"))
+        assertTrue(screenCode.contains("R.string.hub_browse_files"))
+        assertFalse(screenCode.contains("R.string.hub_open_in_editor"))
+        assertTrue(screenCode.contains("HubCardAction.OPEN -> selectProject(project)"))
+        assertTrue(screenCode.contains("HubCardAction.OPEN_IN_EDITOR -> {"))
         val vm = viewModelCode.substringAfter("fun createProject(").substringBefore("fun renameProject(")
-        assertTrue("the ViewModel still opens the created project's tree", vm.contains("_activeProject.value = project"))
+        assertTrue("the ViewModel still records the created project as active", vm.contains("_activeProject.value = project"))
     }
 }

@@ -1940,3 +1940,66 @@ the install moment — `ui/modules/InstallMoment.kt`; the terminal's first frame
 `ui/terminal/TerminalIntro.kt`; haptics — `ui/components/Haptics.kt` +
 `ui/components/CodecHaptics.kt`; the press state —
 `ui/components/PressableSurface.kt`.
+
+## 47. "I write p, it shows print(, I click it and it is on the screen — then I write the next letter and print( is gone, only p and the letters I typed" (owner device report, 2026-09-29)
+
+**Symptom.** Python file, system keyboard (Gboard-class, suggestions on).
+Type `p` → the strip/ghost offers `print(` → tap it → `print(` appears →
+type the next letter → `print(` vanishes and the line reads `p` + the letters
+typed since (`pr`, `pri`, …). The ghost accept (tap the dim text, TAB ▸) and
+the chip tap both do it. Not on CodeC Keys, not on a hardware keyboard.
+
+**Root cause (read against the pinned sora 0.24.6 tag, then reproduced in
+`ComposingReplayTest` with the real `CodeEditor` and its own
+`EditorInputConnection`).** A soft keyboard types a word as *composing* text
+(`setComposingText("p")`), and sora keeps that word as a range
+(`text/ComposingText.java`, 0..1). The accept runs through the VM →
+`SoraEditorHost` replay, which since §44 applies the change as **one
+`Content.replace` behind the input method's back** — here the delta `rint(`
+inserted at index 1. sora's range grows over any insert that touches its end
+(`ComposingText.shiftOnInsert`: `startIndex <= insertStart && endIndex >=
+insertStart` → `endIndex += length`), so sora now believed the IME's word was
+`print(` (0..6). The IME's own word was still `p`; its next letter arrived as
+`setComposingText("pr")`, and sora replaced the *whole* range with it
+(`EditorInputConnection.setComposingText` → `setComposingTextCompat`:
+`print(` starts with `pr`, so it deleted the tail). The VM never held `pr` —
+sora did, and the content listener pushed it up as the new truth. The old
+wholesale `setText` never met this because it restarts the input method
+(`CodeEditor.java:4020`), which drops both sora's range and the IME's word.
+§44's incremental path did not — a regression of §44, invisible in its own
+device round because CodeC Keys never compose.
+
+**Fix.** sora's own discipline for a programmatic edit while composing —
+`EditorAutoCompletion.select()` brackets `performCompletion` with
+`restartInput()` before and after — applied to the host's incremental
+replay: `restartInput()` **before** the delta (sora's range and the IME's
+word are dropped, so the delta lands outside any composing text) and
+**after** the selection replay (the restarted IME reads the post-edit text
+and caret, so its next composing update starts a fresh word after `print(`).
+Gated on `hasComposingText()`: CodeC Keys and hardware keyboards never
+compose, so their one-replay-per-keystroke path pays nothing (`restartInput`
+is an IPC to the input method manager — the TerminalKeyView Phase 19.2
+lesson). The gate covers every VM-driven replay, not only completions: a
+keys-row `(` after `foo`, a snippet or Emmet expansion, strip undo/redo, a
+quick fix — all were exposed the same way while the IME was composing.
+
+**Pins.** `ComposingReplayTest` ×4 (Robolectric, real sora: the mechanism —
+`p` → replace → `setComposingText("pr")` → `pr`; the bracket keeps `print(`
+and the next letter follows it; a stale `pr` after the restart yields
+`print(pr`, never a lost completion; a committed — non-composing — edit needs
+no restart), `ReplayPathWiringTest` +1 (gate read first, restart before the
+delta, restart after the selection and before the synced snapshot, exactly
+two gated `ed.restartInput()` sites). **CI:** `Build APK` `36467347590` on
+`308441e` ✅ — the mechanism case reproduces the owner's `pr` under Robolectric
+against the real sora classes, and the bracket cases pass beside it. **Device
+pass ✅ — owner, 2026-09-29: *"Yes all test passed"*** (the row was: system keyboard,
+`p`, tap `print(`, type `r` → `print(r`; the same via the ghost; a keys-row `(`
+after a word — no device, OS or keyboard app named). Merged to `main` via
+[PR #93](https://github.com/pabi277/CodeC/pull/93).
+
+**If it ever comes back:** `grep -n "hasComposingText\|restartInput" app/src/main/java/com/codeci/ide/ui/editor/sora/SoraEditorHost.kt`
+must show the gate and two restarts around `ed.text.replace(plan.start, …)`
+(ReplayPathWiringTest fails first); if it holds and the symptom is still
+there, check whether a new path edits `editor.text` directly without going
+through the host's replay — every programmatic edit while the IME composes
+needs the same bracket.

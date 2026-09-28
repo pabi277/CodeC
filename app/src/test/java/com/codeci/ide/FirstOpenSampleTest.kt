@@ -80,6 +80,32 @@ class FirstOpenSampleTest {
     }
 
     @Test
+    fun `the page survives the preview's shorter viewport`() {
+        // 2026-09-28, owner, two rounds: the same page filled a browser window and
+        // came back clipped (round one), then small (round two) inside CodeC's
+        // preview, which carries an app bar, an address row and the keys row. The
+        // page must therefore neither fix its own height (a short box clips the
+        // top of a centred, fixed-height page) nor size its board from the
+        // viewport height (a short box then shrinks the board instead of letting
+        // the page scroll — which is what a browser does).
+        val page = page
+        assertTrue("the body must not fix its height", page.contains("body { min-height:100%"))
+        assertTrue("the html element still owns the viewport height",
+            page.contains("html { height:100%; }"))
+        assertFalse("the board must not be sized from the reported viewport height",
+            page.contains("100vh") || page.contains("100dvh"))
+        assertTrue("the board is as wide as the space allows, like a browser",
+            page.contains(".wrap { position:relative; width:min(100%, 420px);"))
+        assertTrue("no browser-default paragraph margins may pad the column",
+            page.contains("p { margin:0; }"))
+        val body = page.substringAfter("body { min-height:100%").substringBefore("}")
+        assertFalse("a page taller than the viewport must still be scrollable",
+            body.contains("touch-action:none"))
+        val wrap = page.substringAfter(".wrap {").substringBefore("}")
+        assertTrue("the board itself keeps the swipe gesture", wrap.contains("touch-action:none"))
+    }
+
+    @Test
     fun `the first open lands in the editor on the sample, never on the hub`() {
         assertTrue(
             "the first launch must seed the sample",

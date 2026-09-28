@@ -1169,3 +1169,145 @@ chat briefs; owner choices; active NEXT_STEPS and prompt/rules; README discovery
 link and a pointer from the older Phase 63 owner handoff. Next is discussion of
 Projects/files, not automatic implementation of 65–74. This instruction creates
 no release tag and authorises no unrelated PR or future phase merge.
+
+
+## 2026-09-28 — Phase 70.1 + 72.1, one chat, preview first
+
+The owner sent six shots of SPCK's **Web Preview** with two sentences — *“Try to
+make output exactly same for web view”* and *“And terminal output is good enough
+but is hard to understand the error line from terminal”* — and, asked before any
+code was written, chose **both surfaces, one after the other, preview first**, the
+**whole five-tab console (Elements included)**, and the rendering fix in the same
+part. Delivered on `arena/01a0e704-codec`: the preview's console now takes
+commands (`PreviewConsolePolicy` builds the one-line `eval`; the answer becomes a
+LOG or ERROR line), the Network table joins the WebView's observed requests with
+the page's own Resource Timing entries by redacted address and says “—” where
+neither reported a value, Elements is a read-only DOM walk with a details view,
+highlight and copy, Resources and Settings are real tabs, the bar carries
+“Preview · N % Zoom” and the console toggle, and a page with no viewport meta gets
+a phone-sized default added (a page that declared one is untouched). The run
+Output Panel closed all six review findings — a state word derived from facts
+(including a failed build stored as DONE), a 48 dp action row led by a labelled
+Stop, an error/warning banner with compiler errors rendered as two rows and their
+*Add missing ;* fix, a waiting strip and restored run keys, and a 55 %/38 %
+height law — and, on the owner's answer, the panel's own line runs commands in
+the app's real shell while refusing to queue behind a busy run. **CI ✅ GREEN —
+`Build APK` `36399610563` on `d86b4a3`, 2347 tests, 0 failed**, with every red
+round fixed for cause. Records: [chat-phase70](chat-phase70/README.md) plus the
+two briefs in [ui-polish-chats](ui-polish-chats/). **No device pass was run and
+none is claimed**; N1 (the unnamed “above ber”) is still unanswered, and no PR,
+merge or `main` push was made.
+
+## 2026-09-28 (later) — the preview render fix, from the owner's own screenshot
+
+The owner put a browser render and a CodeC render of the same snake page side by side
+(*"the better one is in browser and other is from code c preview correct it CodeC preview
+sucs"*). The clip was real and in the seed page: `height:100%` plus a centred flex column
+puts the overflow above y=0, where no scroll can reach it — measured at −53 px for the
+header and −18 px for the board at 360×520 CSS px in headless Chrome. The page now grows
+(`min-height`), its board is capped by `calc(100vh - 320px)` with a floor, its stray
+paragraph margins are gone and the swipe gesture belongs to the board alone, so a
+too-short viewport scrolls instead of clipping; the preview also waits, bounded at one
+second, for a measured page box before its first load. Two new source pins and before/after
+renders in `docs/chat-phase70/render-fix/`. **No device pass — headless Chrome only.**
+
+## 2026-09-28 (later still) — round 2: “better than before but … very smaller view”
+
+The owner's second install was no longer clipped — it was *small*. My round-1 fix had capped
+the sample's board by the reported viewport height (`calc(100vh - 320px)`), which is what a
+browser window wants and what CodeC's preview box punishes: that box is shorter than a phone
+window once the app bar, the address row, the keys row and the nav bar have taken their
+height, so the board collapsed to 200 px where the browser showed 380. Reversed: the board is
+width-driven again (`min(100%, 420px)`) and a short box scrolls, exactly as a browser does;
+the screen stops reserving the keyboard's inset unless the tools panel — the only text field
+on it — is open, which removes the band of dead space under the page; and the WebView now logs
+the page's own box (`page box 360×430 CSS px · view 360×430 dp · dpr 1.75`) to the console
+after every load, so the next report is measurable instead of ambiguous. Renders in
+`docs/chat-phase70/render-fix/` (`side-by-side-round2.png`), CI ✅ green, **still no device
+pass**.
+
+## 2026-09-28 (round 3) — a third-party page, measured before it was touched
+
+The owner's confirmation arrived with the next report: *"Snake problem is gone"* — and his
+cloned Code-with-C site looked *"very small"* next to Samsung Browser. Since a layout wider
+than the phone and a scale below density look identical in a screenshot and need opposite
+fixes, the preview's per-load console line was widened to print every number that separates
+them: the page's own box, its own `viewport` meta, the view's box, and the scale read back
+from `getScale()`. His four lines then settled it: **three loads were 1:1 correct** (411 CSS
+px in a 411 dp box, scale = dpr) and one laid out 457 in a 411 — drawn at 0.9×, 10 % small,
+the shape of a page laid out for a box it does not have, because Chromium decides the scale
+before the page's viewport meta exists. `PreviewToolsPolicy.boxMismatch` now detects exactly
+that (device-width pages, zoom-aware, 4 dp tolerance) and the view reloads the page **once**
+to lay it out for the box it has; the Phase 61 “never reloads” pin was reversed with its
+reason in the test. CI ✅ green, **no device pass**.
+
+
+## 2026-09-28 (round 4) — the strip that was a card, and the number the console could not see
+
+The owner's next screenshots showed the same page's detail card whole in Samsung Browser and as
+a 42 px strip in CodeC — under a console line that looked perfectly healthy. Reading the page's
+source instead of the picture: the card is `max-height: 88vh` in border-box sizing with 20 px
+vertical padding, and 88vh collapsing to 0 gives exactly 42 px, the pill visible inside the
+padding, everything else clipped. Reading Chromium and Compose instead of remembering them:
+Compose's `AndroidView` stamps `WRAP_CONTENT` on a bare view while still measuring it exactly,
+and Chromium's WebView reads *those params*, not the measure spec, to force a zero layout
+height — so the visual viewport (`innerHeight`, what the line printed) was 655 and the layout
+viewport (what `vh` and `height:100%` use) was 0. One property in `PreviewWebView`'s
+constructor, `MATCH_PARENT × MATCH_PARENT`, turns it off. The uncomfortable part, written down:
+rounds 1 and 2 had been treating symptoms of this same quirk — a clipped header from
+`height:100%` and a small board from `calc(100vh − …)` — and the headless-Chrome renders that
+"reproduced" them had reproduced the shape, not the cause. The console line now prints what the
+page's CSS actually gets for `100vh`, and warns when it is not the page's own height, so the
+next fault of this class is a sentence, not a screenshot. CI ✅ green (`36436647849` on
+`146986b`), **no device pass**.
+
+## 2026-09-28, round 5 — the phone the panel was never measured on
+
+The owner's two sentences were about the same thing seen from two sides: a project card that
+opened a file tree when he wanted the editor, and a preview console that *"is not looking good on
+phone"*. The second one was measured before it was believed: on the 411 × 656 dp page area his own
+console line had reported, the panel's default height was 240 dp and 209 dp of that was the panel
+talking about itself — a drag handle, a strip, a filter row, an outlined text field — leaving one
+line for the page to talk. With the keyboard up the arithmetic went negative. The Network table had
+been designed to look like the SPCK shot and could not survive a phone's width: six columns, 288 dp
+fixed, and a Name column that read `http://127.0.…` on every row. Four questions went to the owner
+first; two came back answered and two came back *"your choice"*, which is a decision too and is
+recorded as this chat's. What shipped is not a new panel — it is the same five tabs the shots asked
+for, with every row made to earn its height: the strip is the handle, the command line is one row
+with Cancel · Execute inside it, rows are two lines that name the file, notes collapse once there is
+something to read under them, and the panel opens at half the page instead of at a number that fit
+nowhere. The keyboard, the thing that had made the arithmetic negative, now slides *under* a panel
+and a page that keep their size — chosen over "fill the screen while typing" because Round 4 had
+just taught what a WebView does when it is laid out at a height it did not expect. The card tap and
+Create both land in the editor now; the tree moved one tap into the ⋮ and stayed in the drawer. CI
+green is recorded in the chat README; a device pass is still the owner's to run.
+
+## 2026-09-29 — the letter that undid the suggestion
+
+Round 5 was accepted (*"Everything good"*) and the owner spotted something outside the phase: on a
+Python file he typed `p`, the strip offered `print(`, he tapped it, it appeared — and the next
+letter he typed took it away, leaving `p` plus the letters. The ghost did it too. Nothing in the
+completion code was wrong; the VM had `print(` and handed it to sora correctly. The failure was
+between sora and the system keyboard. A soft keyboard types a word as *composing* text and sora
+keeps that word as a range; the accept's replay — the one-`Content.replace` delta that had cured
+the CodeC Keys blink on 2026-09-13 — inserted `rint(` exactly at the end of that range, sora's
+`shiftOnInsert` stretched the range over it, and when Gboard sent its next composing update for
+the word it still thought it was typing (`pr`), sora replaced the whole stretched range with it.
+The old wholesale `setText` had been hiding this all along by restarting the input method; the
+delta path skipped that, and the keyboard it was built for never composes. The fix is sora's own
+recipe for editing while composing — `restartInput()` before and after, which its completion panel
+has always done — applied to the host's replay, only while a composing word exists, so the
+dedicated keyboard keeps its zero per-keystroke cost. The mechanism and the fix are both pinned
+against the real sora classes in Robolectric; the device pass is the owner's, one word long:
+`p`, tap, `r`, read `print(r`.
+
+## 2026-09-29 — closed on his word
+
+*"Yes all test passed complete docs and merge to main."* The four rows of the phone pass and the
+one-word editor check came back green from his hands — no device or OS named, and the records keep
+exactly that. The docs were completed in one commit (every "no device pass" now says when it became
+one; the review table shows 69.1, 70.1 and 72.1 as delivered; `prompt.md` hands the next chat its
+state), and the branch went to `main` through PR #93 — twenty-nine commits, from the first five-tab
+console to the `restartInput()` bracket, all of them answers to things he saw on his phone. Of the
+polish series, five drafts remain (shell, editor chrome, packages, git, settings). Which one comes
+next is his to say; the next chat's first job is to read, verify, and ask.
