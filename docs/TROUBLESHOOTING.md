@@ -1989,7 +1989,11 @@ and the next letter follows it; a stale `pr` after the restart yields
 `print(pr`, never a lost completion; a committed — non-composing — edit needs
 no restart), `ReplayPathWiringTest` +1 (gate read first, restart before the
 delta, restart after the selection and before the synced snapshot, exactly
-two gated `ed.restartInput()` sites).
+two gated `ed.restartInput()` sites). **CI:** `Build APK` `36467347590` on
+`308441e` ✅ — the mechanism case reproduces the owner's `pr` under Robolectric
+against the real sora classes, and the bracket cases pass beside it. **Device
+pass still owed** (system keyboard: `p`, tap `print(`, type `r` → `print(r`;
+the same via the ghost; a keys-row `(` after a word).
 
 **If it ever comes back:** `grep -n "hasComposingText\|restartInput" app/src/main/java/com/codeci/ide/ui/editor/sora/SoraEditorHost.kt`
 must show the gate and two restarts around `ed.text.replace(plan.start, …)`

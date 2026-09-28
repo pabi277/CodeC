@@ -258,5 +258,6 @@ composes. The host now brackets the delta with sora's own recipe
 after the selection, only while `hasComposingText()` — CodeC Keys and
 hardware keyboards still pay nothing per keystroke. Mechanism and fix
 reproduced against the real sora classes in `ComposingReplayTest` ×4;
-`ReplayPathWiringTest` +1 pins the bracket. Owner-facing record:
-[`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §47.
+`ReplayPathWiringTest` +1 pins the bracket; CI `36467347590` on `308441e`
+green. Owner-facing record: [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §47.
+No device pass yet — the owner's one-word check is `p`, tap, `r` → `print(r`.

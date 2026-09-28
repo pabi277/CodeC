@@ -8,8 +8,9 @@ the range over it, and the IME's next `setComposingText("pr")` replaced the whol
 `SoraEditorHost`: sora's own bracket for an edit while composing — `restartInput()` before the
 delta and after the selection, gated on `hasComposingText()` so CodeC Keys / hardware typing pay
 nothing. Tests: `ComposingReplayTest` ×4 (Robolectric, real sora), `ReplayPathWiringTest` +1.
-Records: `TROUBLESHOOTING.md` §47, `chat-phase48/PART_48_1` follow-up. **CI: pending when this
-entry was written — the stamp follows here. No device pass** — the owner types `p`, taps `print(`, types `r` on the
+Records: `TROUBLESHOOTING.md` §47, `chat-phase48/PART_48_1` follow-up. **CI: ✅ GREEN — `Build APK`
+`36467347590` on `308441e` (host suite incl. the four `ComposingReplayTest` cases, 10 m 52 s;
+debug APK 26 171 304 B). No device pass** — the owner types `p`, taps `print(`, types `r` on the
 system keyboard: the line must read `print(r`; then the same with the ghost, and a keys-row `(`
 after a word.
 
