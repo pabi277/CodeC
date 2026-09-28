@@ -164,8 +164,9 @@ private fun SuggestionChipCap(
     val scope = rememberCoroutineScope()
     var tooltip by remember { mutableStateOf(false) }
     val density = LocalDensity.current
-    // Phase 69.3 — the row's own scroll slop (see KeyGestureDetector.isScrollDx).
-    val scrollSlopPx = with(density) { LocalViewConfiguration.current.touchSlop.toPx() }
+    // Phase 69.3 — the row's own scroll slop, in pixels (see
+    // KeyGestureDetector.isScrollDx).
+    val scrollSlopPx = LocalViewConfiguration.current.touchSlop
     Box(
         modifier = Modifier
             .defaultMinSize(minWidth = 44.dp, minHeight = 40.dp)

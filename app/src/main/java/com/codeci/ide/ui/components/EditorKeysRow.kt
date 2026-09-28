@@ -149,9 +149,11 @@ object KeyGestureDetector {
      *
      * The owner (2026-09-28, verbatim): *"The quick keys are sensitive even i
      * want to drag for other keys it's types which ever i am scrolling"*. The
-     * row scrolls from the platform's own touch slop (~8 dp); until 69.3 the
-     * cap only gave up the tap past **20 dp**, so every drag between the two —
-     * the short flick a thumb actually uses to reach the caps on the right —
+     * row starts scrolling at the platform's own touch slop
+     * ([androidx.compose.ui.platform.ViewConfiguration.touchSlop], in pixels —
+     * Android's `scaledTouchSlop`, 8 dp on a stock phone); until 69.3 the cap
+     * only gave up the tap past **20 dp**, so every drag between the two — the
+     * short flick a thumb actually uses to reach the caps on the right —
      * scrolled the row *and* typed the cap the finger started on.
      *
      * The rule is one number and one owner: past the slop, with the horizontal
@@ -218,11 +220,13 @@ private fun EditorKeyCap(
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 28.dp.toPx() }
     // Phase 69.3 — the distance the row itself starts scrolling at, not a
-    // number invented here: `LocalViewConfiguration.current.touchSlop` is the
-    // same slop `horizontalScroll` uses to claim the drag, so the cap gives up
-    // the tap at exactly the moment the row takes the scroll (owner: *"even i
-    // want to drag for other keys it's types which ever i am scrolling"*).
-    val scrollSlopPx = with(density) { LocalViewConfiguration.current.touchSlop.toPx() }
+    // number invented here: `ViewConfiguration.touchSlop` is the platform's
+    // own slop (Android's `scaledTouchSlop`, 8 dp on a stock device, already
+    // in PIXELS) and it is the same value `horizontalScroll` uses to claim a
+    // drag — so the cap gives up the tap at exactly the moment the row takes
+    // the scroll (owner: *"even i want to drag for other keys it's types which
+    // ever i am scrolling"*).
+    val scrollSlopPx = LocalViewConfiguration.current.touchSlop
 
     Box(
         modifier = Modifier
@@ -407,11 +411,13 @@ private fun RunKeyCap(
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 28.dp.toPx() }
     // Phase 69.3 — the distance the row itself starts scrolling at, not a
-    // number invented here: `LocalViewConfiguration.current.touchSlop` is the
-    // same slop `horizontalScroll` uses to claim the drag, so the cap gives up
-    // the tap at exactly the moment the row takes the scroll (owner: *"even i
-    // want to drag for other keys it's types which ever i am scrolling"*).
-    val scrollSlopPx = with(density) { LocalViewConfiguration.current.touchSlop.toPx() }
+    // number invented here: `ViewConfiguration.touchSlop` is the platform's
+    // own slop (Android's `scaledTouchSlop`, 8 dp on a stock device, already
+    // in PIXELS) and it is the same value `horizontalScroll` uses to claim a
+    // drag — so the cap gives up the tap at exactly the moment the row takes
+    // the scroll (owner: *"even i want to drag for other keys it's types which
+    // ever i am scrolling"*).
+    val scrollSlopPx = LocalViewConfiguration.current.touchSlop
 
     Box(
         modifier = Modifier

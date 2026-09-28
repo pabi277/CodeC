@@ -34,7 +34,10 @@ class KeysScrollCancelWiringTest {
 
     @Test
     fun `the row's own touch slop decides, never a number of our own`() {
-        val slop = "with(density) { LocalViewConfiguration.current.touchSlop.toPx() }"
+        // `ViewConfiguration.touchSlop` is ALREADY pixels: the row's scroller
+        // compares raw offsets against it, so the cap must too (no dp, no
+        // conversion of our own — one number, one unit).
+        val slop = "val scrollSlopPx = LocalViewConfiguration.current.touchSlop"
         assertTrue(
             "the keys row must read the slop the row scrolls with",
             code(keysRow).contains(slop)
