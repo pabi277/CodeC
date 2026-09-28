@@ -104,6 +104,11 @@ class PreviewToolsLayoutTest {
         compose.runOnIdle { assertTrue(closed) }
     }
 
+    // Robolectric's default display is 320 × 470 dp, smaller than the phone
+    // this case lays out — `Modifier.size` yields to that, and the first CI
+    // round (36452192492) failed on exactly that clamp. A phone-sized display
+    // for this case only.
+    @Config(sdk = [34], qualifiers = "w411dp-h820dp")
     @Test fun `on a phone the default console shows lines, not just its own rows`() {
         // 411 × 656 dp is the page area the owner's phone reported (Round 4's
         // instrument line). At the old 240 dp default the Console tab kept
@@ -130,6 +135,7 @@ class PreviewToolsLayoutTest {
         compose.onNodeWithText("line 40").assertIsDisplayed()
     }
 
+    @Config(sdk = [34], qualifiers = "w411dp-h820dp")
     @Test fun `network and resources are two-line rows that name the file`() {
         val request = PreviewRequest("GET", "http://127.0.0.1:41897/js/app.js", false, type = "script", size = 12_595L, time = 45L)
         val resource = PreviewResource("http://127.0.0.1:41897/css/style.css", "link", 2_048L, 12L)
