@@ -212,3 +212,14 @@ round ships measurement instead of a hunch. The per-load console line became:
 `getScale()`, pinned in `PreviewToolsWiringTest`). Both candidate fixes are one line of change
 once the line says which one it is. **CI ✅ `36417473156` on `e436473`; no device pass.**
 
+### Round 3b (2026-09-28) — the console answered, and the answer was acted on
+
+The owner's four lines: three loads laid the page out **411 CSS px in a 411 dp box at scale = dpr**
+(the browser's own 1:1), one laid it out **457 in a 411** — drawn at 0.9×, 10 % small. That is a
+page laid out for a box it does not have (Chromium fixes the scale before the page's `viewport`
+meta is in effect). `PreviewToolsPolicy.boxMismatch` is now the pure rule that detects it —
+device-width pages only, zoom-aware, 4 dp tolerance, never for a page that declares its own width —
+and `PreviewWebView` loads the page once more when it fires, logging the reason to the console.
+The Phase 61 “the native view never reloads” pin was amended **with its reason** (red round
+`36420734801`, green `36421203364` on `c954599`). **No device pass.**
+

@@ -216,8 +216,38 @@ renders the owner's page twice on this machine: at phone width (left) and laid o
 then squeezed to phone width (right). It is **a simulation of shape 1, not a measurement of his
 phone** — a visual reference for comparing against his own screenshot.
 
-**Nothing was changed on a hunch this round.** No viewport setting, no scale, no chrome: the
-next install's console line decides which shape it is, and the fix follows from it.
+**The owner sent four console lines (2026-09-28, later). Decoded:**
+
+| # | page box | view | page/view | verdict |
+| --- | --- | --- | --- | --- |
+| 1 | 411×655 CSS px (meta without `viewport-fit`) | 411×656 dp | 1.000 | **1:1 correct** |
+| 2 | 411×655 CSS px | 411×656 dp | 1.000 | **1:1 correct** |
+| 3 | **457×728 CSS px** | 411×656 dp | **1.112** | drawn **0.9× — 10 % small** |
+| 4 | 411×655 CSS px | 411×656 dp | 1.000 | **1:1 correct** |
+
+Three of four loads were already pixel-exact — one CSS pixel per dp, which is the browser's own
+`initial-scale=1`. One load was not: the page laid itself out **457 CSS px wide in a 411 dp box**,
+i.e. the page was laid out for a box it does not have, because Chromium decides a page's scale
+*before* the page's `viewport` meta is in effect and never revisits that decision. (Line 1's meta
+has no `viewport-fit=cover` — that load had no page meta when the report ran, so `fitToPhone`
+added ours; the other three carry `viewport-fit=cover`, which is **Chromium's own rewrite for an
+edge-to-edge WebView**, not something in the owner's file. Verified against his repository:
+`index.html` declares `width=device-width, initial-scale=1.0` and nothing else.)
+
+**The fix (`c954599`, CI ✅ `36421203364`).** `PreviewWebView` now asks a pure rule —
+`PreviewToolsPolicy.boxMismatch` — whether the page's own box disagrees with the view's, and if it
+does, logs one sentence to the console and **loads the page once more**, with the box and the meta
+both known. The rule is deliberately narrow: it only judges pages that declare `width=device-width`
+(or declared nothing — the case `fitToPhone` answers), it accounts for the user's zoom (at 150 % a
+page *should* lay out at two-thirds width), it ignores a 4 dp rounding tolerance, and it never
+touches a page that declares its own width (`width=1024`). One correction per load the app asked
+for — the app's own loads re-arm the check, the correction never re-arms itself, so it cannot loop.
+
+**A Phase 61 pin was reversed, with its reason in the test.** `PreviewToolsWiringTest` pinned
+`assertFalse(native.contains("reload()"))` — the native view observed, it never drove the page.
+It now asserts the **two and only two** reload paths (the app's own request passing through, and
+the policy-gated correction) and names the owner's 457-in-a-411 load as the reason. The red round
+`36420734801` is that pin doing its job.
 
 ## Stop point
 

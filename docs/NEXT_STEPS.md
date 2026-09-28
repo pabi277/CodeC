@@ -1,3 +1,18 @@
+**2026-09-28 (round 3b) — the owner's console lines came back and settled it.**
+Four loads of his page in a 411×656 dp box: **three laid out 411 CSS px at scale =
+dpr (the browser's own 1:1) and one laid out 457** — 1.112× the view, drawn at 0.9×
+(10 % small). That single bad load is a page laid out for a box it does not have,
+because Chromium decides the page's scale before the page's `viewport` meta is in
+effect. Fixed in `c954599` (**CI ✅ `36421203364`**): `PreviewToolsPolicy.boxMismatch`
+(pure — device-width pages only, zoom-aware, 4 dp tolerance, never for a page that
+declares its own width) and `PreviewWebView` loads the page **once more** when it
+fires, with the box and the meta both known, logging the reason to the console. The
+app's own loads re-arm the check; the correction never re-arms itself, so it cannot
+loop. **A Phase 61 pin was reversed with its reason in the test** — `PreviewToolsWiringTest`
+previously pinned `assertFalse(native.contains("reload()"))`; the red round `36420734801`
+is that pin working. Tests: `PreviewToolsPolicyTest` 19→21, the amended
+`PreviewToolsWiringTest`. **No device pass**; the owner re-installs to confirm.
+
 **2026-09-28 (round 3) — the snake problem is confirmed gone; a third-party page
 is next, and it is being measured before anything changes.** The owner cloned
 [`priyajitpaul4-cmyk/Code-with-C`](https://github.com/priyajitpaul4-cmyk/Code-with-C)

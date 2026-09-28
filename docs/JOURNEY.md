@@ -1226,3 +1226,18 @@ after every load, so the next report is measurable instead of ambiguous. Renders
 `docs/chat-phase70/render-fix/` (`side-by-side-round2.png`), CI ✅ green, **still no device
 pass**.
 
+## 2026-09-28 (round 3) — a third-party page, measured before it was touched
+
+The owner's confirmation arrived with the next report: *"Snake problem is gone"* — and his
+cloned Code-with-C site looked *"very small"* next to Samsung Browser. Since a layout wider
+than the phone and a scale below density look identical in a screenshot and need opposite
+fixes, the preview's per-load console line was widened to print every number that separates
+them: the page's own box, its own `viewport` meta, the view's box, and the scale read back
+from `getScale()`. His four lines then settled it: **three loads were 1:1 correct** (411 CSS
+px in a 411 dp box, scale = dpr) and one laid out 457 in a 411 — drawn at 0.9×, 10 % small,
+the shape of a page laid out for a box it does not have, because Chromium decides the scale
+before the page's viewport meta exists. `PreviewToolsPolicy.boxMismatch` now detects exactly
+that (device-width pages, zoom-aware, 4 dp tolerance) and the view reloads the page **once**
+to lay it out for the box it has; the Phase 61 “never reloads” pin was reversed with its
+reason in the test. CI ✅ green, **no device pass**.
+
