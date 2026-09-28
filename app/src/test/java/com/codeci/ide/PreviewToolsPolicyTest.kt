@@ -164,28 +164,52 @@ class PreviewToolsPolicyTest {
         assertEquals(.1f, PreviewToolsPolicy.fitScale(500f, 64f, 360f, 640f), .001f)
         assertEquals(1f, PreviewToolsPolicy.fitScale(2000f, 2000f, 360f, 640f), .001f)
     }
-    @Test fun `the page box line names the page's box and the view's`() {
+    @Test fun `the page box line names the page's box, its meta, the view and the scale`() {
         // 2026-09-28, owner: *"browser have a good view and code is very smaller
-        // view"*. The console says which box the page was laid out in and which
-        // box the view was given, so the two can be told apart from one shot.
-        assertEquals(PreviewPageBox(360, 430, 1.75), PreviewToolsPolicy.parsePageBox("\"360 430 1.75\""))
+        // view"*. Two reports in a row could not be told apart from a screenshot,
+        // so the console now prints every number that separates them: the page's
+        // own box, the viewport it declared, the view's box and the scale the
+        // WebView actually applied (which should equal dpr — one CSS pixel per dp).
+        val box = PreviewToolsPolicy.parsePageBox("\"360|619|3|width=device-width, initial-scale=1.0\"")
+        assertEquals(PreviewPageBox(360, 619, 3.0, "width=device-width, initial-scale=1.0"), box)
         assertEquals(
-            "page box 360\u00d7430 CSS px \u00b7 view 360\u00d7430 dp \u00b7 dpr 1.75",
-            PreviewToolsPolicy.pageBoxLabel(PreviewPageBox(360, 430, 1.75), 360, 430),
+            "page box 360\u00d7619 CSS px \u00b7 meta width=device-width, initial-scale=1.0 \u00b7 " +
+                "view 360\u00d7430 dp \u00b7 scale 3 \u00b7 dpr 3",
+            PreviewToolsPolicy.pageBoxLabel(box, 360, 430, 3.0),
         )
+        // A page that declares no viewport is the case `fitToPhone` answers.
+        val bare = PreviewToolsPolicy.parsePageBox("\"980|1200|2|\"")
+        assertEquals(PreviewPageBox(980, 1200, 2.0, null), bare)
         assertEquals(
-            "page box 412\u00d7915 CSS px \u00b7 view 360\u00d7800 dp \u00b7 dpr 2",
-            PreviewToolsPolicy.pageBoxLabel(PreviewPageBox(412, 915, 2.0), 360, 800),
+            "page box 980\u00d71200 CSS px \u00b7 meta none \u00b7 view 360\u00d7800 dp \u00b7 " +
+                "scale 2 \u00b7 dpr 2",
+            PreviewToolsPolicy.pageBoxLabel(bare, 360, 800, 2.0),
         )
+        // 514 CSS px shown in a 360 dp box at scale 1: the "very smaller view" shape.
+        assertEquals(
+            "page box 514\u00d7500 CSS px \u00b7 meta none \u00b7 view 360\u00d7430 dp \u00b7 " +
+                "scale 1 \u00b7 dpr 3",
+            PreviewToolsPolicy.pageBoxLabel(PreviewPageBox(514, 500, 3.0), 360, 430, 1.0),
+        )
+        // A meta is capped, and a separator smuggled into it is neutralised: the
+        // declaration is prose, so everything after the third field is kept.
+        val long = PreviewToolsPolicy.parsePageBox("\"360|600|1|width=device-width,| user-scalable=no\"")
+        assertEquals("width=device-width, user-scalable=no", long?.meta)
+        val capped = PreviewToolsPolicy.parsePageBox("\"360|600|1|" + "x".repeat(200) + "\"")
+        assertEquals(PreviewToolsPolicy.META_LIMIT, capped?.meta?.length)
     }
     @Test fun `a page that never answered still reports the view it was given`() {
         assertNull(PreviewToolsPolicy.parsePageBox(null))
         assertNull(PreviewToolsPolicy.parsePageBox("\"null\""))
         assertNull(PreviewToolsPolicy.parsePageBox("\"\""))
-        assertNull(PreviewToolsPolicy.parsePageBox("\"0 0 1\""))
+        assertNull(PreviewToolsPolicy.parsePageBox("\"0|0|1\""))
         assertEquals(
             "page box unanswered \u00b7 view 360\u00d7600 dp",
             PreviewToolsPolicy.pageBoxLabel(null, 360, 600),
+        )
+        assertEquals(
+            "page box unanswered \u00b7 view 360\u00d7600 dp \u00b7 scale 1.5",
+            PreviewToolsPolicy.pageBoxLabel(null, 360, 600, 1.5),
         )
     }
     @Test fun `zoom presets have a reset and viewport choices retain device mode`() {

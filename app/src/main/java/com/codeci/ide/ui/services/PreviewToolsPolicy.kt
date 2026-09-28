@@ -60,8 +60,16 @@ data class PreviewResource(
  *
  * @param dpr the page's own `devicePixelRatio`, which is the density its CSS
  *   pixels are drawn at.
+ * @param meta the page's own `viewport` meta content, capped at [META_LIMIT]
+ *   characters; null when the page declares none (a page with none is the one
+ *   `fitToPhone` gives a phone-sized default).
  */
-data class PreviewPageBox(val cssWidth: Int, val cssHeight: Int, val dpr: Double)
+data class PreviewPageBox(
+    val cssWidth: Int,
+    val cssHeight: Int,
+    val dpr: Double,
+    val meta: String? = null,
+)
 
 /**
  * Phase 72.1 — the five tabs of the strip the shots show, in their order.
@@ -94,6 +102,12 @@ object PreviewToolsPolicy {
     val zoomPresets = listOf(50, 75, 100, 125, 150, 200)
 
     /** The console's own separator: unit is inside a row, record between rows. */
+    /** The page-box report's field separator: the meta content itself has spaces. */
+    private const val FIELD = '|'
+
+    /** A meta is a declaration, not a document: this is plenty of it. */
+    const val META_LIMIT = 80
+
     private const val UNIT = '\u0001'
 
     fun <T> append(entries: List<T>, entry: T): List<T> =
@@ -218,35 +232,59 @@ object PreviewToolsPolicy {
      * preview box is short" — and the owner's two reports looked identical.
      */
     fun pageBoxScript(): String = script(
-        "(function(){try{return [Math.round(window.innerWidth),",
-        "Math.round(window.innerHeight),",
-        "(window.devicePixelRatio||1)].join(' ');}catch(e){return '';}})()",
+        "(function(){try{var m=document.querySelector('meta[name=viewport]');",
+        "return [Math.round(window.innerWidth),Math.round(window.innerHeight),",
+        "(window.devicePixelRatio||1),",
+        "(m?(m.getAttribute('content')||''):'')].join('|');}catch(e){return '';}})()",
     )
 
     /** Parse [pageBoxScript]'s answer. Never throws; null when the page stayed silent. */
     fun parsePageBox(raw: String?): PreviewPageBox? {
-        val parts = PreviewConsolePolicy.unquote(raw).trim().split(' ')
+        val parts = PreviewConsolePolicy.unquote(raw).trim().split(FIELD)
         if (parts.size < 3) return null
-        val width = parts[0].toIntOrNull() ?: return null
-        val height = parts[1].toIntOrNull() ?: return null
-        val dpr = parts[2].toDoubleOrNull() ?: return null
+        val width = parts[0].trim().toIntOrNull() ?: return null
+        val height = parts[1].trim().toIntOrNull() ?: return null
+        val dpr = parts[2].trim().toDoubleOrNull() ?: return null
         if (width <= 0 || height <= 0 || dpr <= 0.0) return null
-        return PreviewPageBox(width, height, dpr)
+        // Everything after the third field is the meta, even if the declaration
+        // itself contained the separator: a meta is prose, not a wire format.
+        val meta = if (parts.size > 3) {
+            parts.drop(3)
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .joinToString(" ")
+                .take(META_LIMIT)
+                .takeIf { it.isNotEmpty() }
+        } else null
+        return PreviewPageBox(width, height, dpr, meta)
     }
 
     /**
-     * The console line: the page's own box next to the box the view was given.
-     * Equal on a healthy preview; when they differ, this line says which side is
-     * wrong without a second screenshot.
+     * The console line: what the page was laid out as, what it declared, the box
+     * the view was given and the scale actually applied between the two.
+     *
+     * It exists because two reports in a row could not be told apart from a
+     * screenshot alone (*"code is very smaller view"*, 2026-09-28). Reading it:
+     * `scale` should equal `dpr` (one CSS pixel = one dp, the browser's
+     * `initial-scale=1`); `CSS px` should equal the view's `dp`; and `meta none`
+     * on a page that hard-codes a width explains a layout wider than the phone.
      */
-    fun pageBoxLabel(box: PreviewPageBox?, viewWidthDp: Int, viewHeightDp: Int): String {
+    fun pageBoxLabel(
+        box: PreviewPageBox?,
+        viewWidthDp: Int,
+        viewHeightDp: Int,
+        scale: Double? = null,
+    ): String {
         val view = "view $viewWidthDp\u00d7$viewHeightDp dp"
-        if (box == null) return "page box unanswered \u00b7 $view"
-        return "page box ${box.cssWidth}\u00d7${box.cssHeight} CSS px \u00b7 $view \u00b7 dpr ${dprLabel(box.dpr)}"
+        val zoom = if (scale != null && scale > 0.0) " \u00b7 scale ${number(scale)}" else ""
+        if (box == null) return "page box unanswered \u00b7 $view$zoom"
+        val meta = box.meta ?: "none"
+        return "page box ${box.cssWidth}\u00d7${box.cssHeight} CSS px \u00b7 meta $meta \u00b7 " +
+            "$view$zoom \u00b7 dpr ${number(box.dpr)}"
     }
 
-    private fun dprLabel(dpr: Double): String {
-        val rounded = Math.round(dpr * 100.0) / 100.0
+    private fun number(value: Double): String {
+        val rounded = Math.round(value * 100.0) / 100.0
         return if (rounded == Math.floor(rounded)) rounded.toLong().toString()
         else rounded.toString()
     }

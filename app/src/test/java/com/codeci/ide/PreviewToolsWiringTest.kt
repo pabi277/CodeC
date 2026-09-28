@@ -96,6 +96,11 @@ class PreviewToolsWiringTest {
         assertTrue(view.contains("reportPageBox()"))
         assertTrue(view.contains("PreviewToolsPolicy.pageBoxScript()"))
         assertTrue(view.contains("PreviewToolsPolicy.pageBoxLabel("))
+        // 2026-09-28, the third-party page report: the line also carries the page's
+        // own `viewport` declaration and the scale the WebView actually applied —
+        // the numbers that separate "laid out wider than the phone" from "drawn
+        // smaller than the phone", which two screenshots could not tell apart.
+        assertTrue(view.contains("private fun appliedScale(): Double = getScale().toDouble()"))
     }
 
     @Test fun `the first load waits for a measured page box`() {

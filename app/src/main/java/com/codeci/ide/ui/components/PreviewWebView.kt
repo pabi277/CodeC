@@ -138,16 +138,21 @@ class PreviewWebView(context: Context, private val model: WebPreviewViewModel) :
         val density = resources.displayMetrics.density
         val viewWidthDp = if (density > 0f) (width / density).roundToInt() else 0
         val viewHeightDp = if (density > 0f) (height / density).roundToInt() else 0
+        val applied = appliedScale()
         evaluate(PreviewToolsPolicy.pageBoxScript()) { raw ->
             model.addConsole(
                 token, "log",
                 PreviewToolsPolicy.pageBoxLabel(
-                    PreviewToolsPolicy.parsePageBox(raw), viewWidthDp, viewHeightDp
+                    PreviewToolsPolicy.parsePageBox(raw), viewWidthDp, viewHeightDp, applied
                 ),
                 0,
             )
         }
     }
+
+    /** `getScale()` is deprecated, and still the only way to read the applied scale back. */
+    @Suppress("DEPRECATION")
+    private fun appliedScale(): Double = getScale().toDouble()
 
     /** Changes the current page without reloading; initial scale covers later navigations. */
     @Suppress("DEPRECATION")
