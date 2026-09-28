@@ -1,3 +1,23 @@
+**2026-09-28 (round 3) — the snake problem is confirmed gone; a third-party page
+is next, and it is being measured before anything changes.** The owner cloned
+[`priyajitpaul4-cmyk/Code-with-C`](https://github.com/priyajitpaul4-cmyk/Code-with-C)
+into CodeC and sent Samsung Browser vs CodeC again: *"Snake problem is gone but
+still it have problem like the screenshot see in browser it opens a wide window
+but in CodeC it's very small."* Two shapes produce that and need opposite fixes —
+a layout **wider than the phone** (wide-viewport fallback, squeezed) versus a
+**smaller scale** (right layout, drawn below density) — and both pages involved
+declare a valid viewport, so (`e436473`, **CI ✅ `36417473156`**) the per-load console
+line now carries every number that separates them:
+`page box 360×619 CSS px · meta width=device-width, initial-scale=1.0 · view
+360×430 dp · scale 3 · dpr 3` — the page's own box, its own `viewport`
+declaration, the view's box, and the scale read back from the WebView's
+`getScale()` (which should equal `dpr`). Reading it: `page box` ≈ the view's dp and
+`scale` ≈ `dpr` ⇒ the preview is 1:1 like the browser and only this app's chrome
+remains; `scale` ≈ 1 against `dpr` ≈ 3 ⇒ the initial-scale recipe; `page box` ≈ 980
+in a 360 dp box ⇒ the wide-viewport path. Exhibit (a simulation, not a phone
+measurement): [`chat-phase70/render-fix/third-party/`](chat-phase70/render-fix/third-party/).
+**Nothing was changed on a hunch** — the owner's next console paste picks the fix.
+
 **2026-09-28 (round 2) — "better than before but still i don't think it's good
 enough. Because browser have a good view and code is very smaller view."** The
 owner's second screenshot showed the same snake page, un-clipped but **small**: my

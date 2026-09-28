@@ -198,3 +198,17 @@ preview box is short” can never be confused again. Renders and numbers:
 [`../chat-phase70/README.md`](../chat-phase70/README.md). **CI ✅ green `36409241166` on `0ca08dc`;
 no device pass.**
 
+### Round 3 (2026-09-28, a third-party page) — the measurement line
+
+The owner's snake problem is fixed (his confirmation); the next report is his cloned
+Code-with-C site being *"very small"* next to Samsung Browser. Two shapes look identical in a
+screenshot — a layout **wider than the phone** (wide-viewport fallback, squeezed) and a
+**smaller scale** (right layout, drawn below density) — and they need opposite fixes, so this
+round ships measurement instead of a hunch. The per-load console line became:
+
+`page box 360×619 CSS px · meta width=device-width, initial-scale=1.0 · view 360×430 dp · scale 3 · dpr 3`
+
+(`PreviewToolsPolicy.parsePageBox`/`pageBoxLabel`; the scale comes back from the WebView's own
+`getScale()`, pinned in `PreviewToolsWiringTest`). Both candidate fixes are one line of change
+once the line says which one it is. **CI ✅ `36417473156` on `e436473`; no device pass.**
+

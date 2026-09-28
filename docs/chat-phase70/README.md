@@ -166,6 +166,59 @@ with numbers. If the page still reads small against Samsung Browser at the same 
 remaining difference is the chrome, and the options are the panel/rows — a decision for the
 owner, not a silent change.
 
+## Round 3 (2026-09-28, a third-party page) — measured, not guessed
+
+The owner installed round 2: **the snake problem is gone** (his own confirmation), and the
+next report is about a page he cloned into CodeC —
+[`priyajitpaul4-cmyk/Code-with-C`](https://github.com/priyajitpaul4-cmyk/Code-with-C) — with
+Samsung Browser and CodeC side by side again:
+
+> *"Snake problem is gone but still it have problem like the screenshot see in browser it
+> opens a wide window but in CodeC it's very small"*
+
+**What is known and what is not.** The two screenshots are not on this machine (the uploads
+directory is not mounted here — the same limitation as every earlier round), so the page's
+numbers had to come from somewhere better than my reading of a picture. Two candidate shapes
+produce a page that “looks small”, and they need opposite fixes:
+
+1. **Laid out wider than the phone** — the WebView falls back to a wide viewport (Chromium's
+   classic 980 px) and squeezes it into the box. The page's own media queries then run at
+   ~1000 px, so its text is *relatively* tiny while the page still fills the width.
+2. **Drawn at a smaller scale** — the layout is right (phone width) but the WebView applied a
+   scale below the screen density, so every CSS pixel is drawn smaller than one dp.
+
+Both pages involved declare a valid viewport (`width=device-width, initial-scale=1`), which is
+why this needed measuring rather than guessing — the round-1 lesson, learned the expensive way.
+
+**The instrument (this round's change, `e436473`, CI ✅ `36417473156`).** Every load already logged a
+page-box line; it now prints every number that separates the two shapes, from the page itself
+and from the view:
+
+```
+page box 360×619 CSS px · meta width=device-width, initial-scale=1.0 · view 360×430 dp · scale 3 · dpr 3
+```
+
+- `page box` = the page's own `window.innerWidth × innerHeight` (the layout it got).
+- `meta` = the page's own `viewport` declaration, or `none` (the pages `fitToPhone` answers).
+- `view` = the box the WebView was given, in dp.
+- `scale` = device pixels per CSS pixel, read back from the WebView's own `getScale()`;
+  **`scale` should equal `dpr`** (one CSS pixel per dp — the browser's `initial-scale=1`).
+- `dpr` = the page's `devicePixelRatio`.
+
+Reading it: if `page box` ≈ the view's `dp` and `scale` ≈ `dpr`, the preview is rendering 1:1
+like the browser and the only difference left is the box's height (this app's chrome). If
+`scale` is ~1 against a `dpr` of ~3, the page is drawn ~3× smaller → the initial-scale recipe
+in `PreviewWebView` is the fix. If `page box` is ~980 while the box is 360 dp wide, the wide
+viewport fallback is in play → the viewport-meta path is the fix.
+
+**The exhibit** — [`render-fix/third-party/what-wider-than-the-phone-looks-like.png`](render-fix/third-party/what-wider-than-the-phone-looks-like.png)
+renders the owner's page twice on this machine: at phone width (left) and laid out 980 px wide
+then squeezed to phone width (right). It is **a simulation of shape 1, not a measurement of his
+phone** — a visual reference for comparing against his own screenshot.
+
+**Nothing was changed on a hunch this round.** No viewport setting, no scale, no chrome: the
+next install's console line decides which shape it is, and the fix follows from it.
+
 ## Stop point
 
 This part only. No PR, no merge, no `main` push without the owner's explicit
