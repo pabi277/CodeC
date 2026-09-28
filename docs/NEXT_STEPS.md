@@ -1,3 +1,26 @@
+**2026-09-28 (round 4) — the modal that collapsed: the cause was ours, and it had been
+there since Phase 61.** The owner's Code-with-C page with a card open: a full card in
+Samsung Browser, a **42 px strip** in CodeC (the pill and the ×, nothing below) under a
+page-box line that read healthy. The card is `max-height: 88vh` in border-box sizing with
+20 px vertical padding — `88vh → 0` is exactly padding + border = 42 px. `vh` was 0 because
+**Chromium's WebView forces a zero layout height whenever its layout params say
+wrap-content** (`AwLayoutSizer.updateLayoutSettings()` →
+`setForceZeroLayoutHeight(isLayoutParamsHeightWrapContent())`, read from source this round),
+and **Compose's `AndroidView` stamps `WRAP_CONTENT` on a bare view** (`AndroidViewHolder`
+→ `addView(view)`) while still measuring it `EXACTLY` — so the view was truly 411×656 dp,
+`innerHeight` (the *visual* viewport) said 655, and every `vh`/`height:100%` (the *layout*
+viewport) resolved to 0. Fixed: `PreviewWebView` sets `MATCH_PARENT × MATCH_PARENT` in its
+constructor. Instrument: the per-load line now also prints what the page's CSS gets for
+`100vh` (`· 100vh 655 px ·`), and `PreviewToolsPolicy.layoutHeightCollapsed` (pure: `100vh`
+shorter than half the page's own `innerHeight`) turns a collapsed answer into a console
+**warning**. Rounds 1 and 2 are re-read honestly in the chat README: `html{height:100%}` → 0
+and `calc(100vh − 320px)` → floor are this same quirk; the page-side changes stay, the
+headless-Chrome reproductions explained the shape, not the device's cause. Tests:
+`PreviewWebViewTest` +1 (Robolectric), `PreviewToolsWiringTest` +1, `PreviewToolsPolicyTest`
++1 and the page-box cases on the four-field wire format. **No device pass; no render this
+round (no Chromium in the sandbox, and desktop Chrome cannot enter the WebView's wrap-content
+mode).** The owner re-installs: the line should read `100vh 655 px`, the card should open whole.
+
 **2026-09-28 (round 3b) — the owner's console lines came back and settled it.**
 Four loads of his page in a 411×656 dp box: **three laid out 411 CSS px at scale =
 dpr (the browser's own 1:1) and one laid out 457** — 1.112× the view, drawn at 0.9×

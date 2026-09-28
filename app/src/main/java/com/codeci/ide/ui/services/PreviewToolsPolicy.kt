@@ -63,12 +63,20 @@ data class PreviewResource(
  * @param meta the page's own `viewport` meta content, capped at [META_LIMIT]
  *   characters; null when the page declares none (a page with none is the one
  *   `fitToPhone` gives a phone-sized default).
+ * @param vhHeight what the page's CSS gets for `100vh`, in CSS px — the
+ *   *layout* viewport's height, which is not the same number as [cssHeight]
+ *   (`window.innerHeight`, the *visual* viewport). Round 4, 2026-09-28: a
+ *   WebView whose layout params say wrap-content lays every page out in a
+ *   0 px tall layout viewport, so `vh` and `height: 100%` resolve to 0 while
+ *   `innerHeight` still reports the real box. Null when it could not be
+ *   measured.
  */
 data class PreviewPageBox(
     val cssWidth: Int,
     val cssHeight: Int,
     val dpr: Double,
     val meta: String? = null,
+    val vhHeight: Int? = null,
 )
 
 /**
@@ -233,30 +241,42 @@ object PreviewToolsPolicy {
      */
     fun pageBoxScript(): String = script(
         "(function(){try{var m=document.querySelector('meta[name=viewport]');",
+        // Round 4 — what `100vh` really resolves to, measured, not inferred:
+        // `innerHeight` is the visual viewport and stays truthful even when the
+        // layout viewport has collapsed to 0 (the wrap-content WebView quirk).
+        // A hidden probe sized `100vh` is the page's own CSS answering; it is
+        // added and removed inside one script, so the page never sees it.
+        "var v=-1;try{var r=document.documentElement;if(r){var p=document.createElement('div');",
+        "p.setAttribute('style','position:absolute;top:0;left:0;width:0;height:100vh;",
+        "margin:0;padding:0;border:0;visibility:hidden;pointer-events:none');",
+        "r.appendChild(p);v=Math.round(p.getBoundingClientRect().height);r.removeChild(p);}}catch(y){}",
         "return [Math.round(window.innerWidth),Math.round(window.innerHeight),",
-        "(window.devicePixelRatio||1),",
+        "(window.devicePixelRatio||1),v,",
         "(m?(m.getAttribute('content')||''):'')].join('|');}catch(e){return '';}})()",
     )
 
     /** Parse [pageBoxScript]'s answer. Never throws; null when the page stayed silent. */
     fun parsePageBox(raw: String?): PreviewPageBox? {
         val parts = PreviewConsolePolicy.unquote(raw).trim().split(FIELD)
-        if (parts.size < 3) return null
+        if (parts.size < 4) return null
         val width = parts[0].trim().toIntOrNull() ?: return null
         val height = parts[1].trim().toIntOrNull() ?: return null
         val dpr = parts[2].trim().toDoubleOrNull() ?: return null
         if (width <= 0 || height <= 0 || dpr <= 0.0) return null
-        // Everything after the third field is the meta, even if the declaration
+        // The probe answers -1 when it could not be placed; 0 is a real answer
+        // (it is the collapsed layout viewport itself), so it must survive.
+        val vh = parts[3].trim().toIntOrNull()?.takeIf { it >= 0 }
+        // Everything after the fourth field is the meta, even if the declaration
         // itself contained the separator: a meta is prose, not a wire format.
-        val meta = if (parts.size > 3) {
-            parts.drop(3)
+        val meta = if (parts.size > 4) {
+            parts.drop(4)
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
                 .joinToString(" ")
                 .take(META_LIMIT)
                 .takeIf { it.isNotEmpty() }
         } else null
-        return PreviewPageBox(width, height, dpr, meta)
+        return PreviewPageBox(width, height, dpr, meta, vh)
     }
 
     /**
@@ -279,9 +299,39 @@ object PreviewToolsPolicy {
         val zoom = if (scale != null && scale > 0.0) " \u00b7 scale ${number(scale)}" else ""
         if (box == null) return "page box unanswered \u00b7 $view$zoom"
         val meta = box.meta ?: "none"
-        return "page box ${box.cssWidth}\u00d7${box.cssHeight} CSS px \u00b7 meta $meta \u00b7 " +
+        val vh = box.vhHeight?.let { "$it px" } ?: "unmeasured"
+        return "page box ${box.cssWidth}\u00d7${box.cssHeight} CSS px \u00b7 100vh $vh \u00b7 meta $meta \u00b7 " +
             "$view$zoom \u00b7 dpr ${number(box.dpr)}"
     }
+
+    /**
+     * Round 4 (owner, 2026-09-28): a page's modal drawn as a 42 px strip in
+     * CodeC and as a full card in Samsung Browser, with a page-box line that
+     * looked healthy — `411×655 CSS px` in a `411×656 dp` view, scale = dpr.
+     * The strip was the modal's `max-height: 88vh` box collapsed to padding +
+     * border: `vh` had resolved to 0 because the WebView's *layout* viewport
+     * was 0 px tall (a WebView whose layout params say wrap-content lays
+     * every page out that way — `AwLayoutSizer.updateLayoutSettings`), while
+     * `innerHeight`, the *visual* viewport, still said 655.
+     *
+     * No browser ever gives a page a `100vh` shorter than half its own
+     * `innerHeight` — browser controls only ever make `vh` the *larger* of the
+     * two, and a pinch-zoom shrinks `innerHeight`, never `vh`. So a probe that
+     * measures less than that is the collapsed layout viewport, and nothing
+     * else. Returns true when the console should say so.
+     */
+    fun layoutHeightCollapsed(box: PreviewPageBox?): Boolean {
+        val page = box ?: return false
+        val vh = page.vhHeight ?: return false
+        if (page.cssHeight <= 0) return false
+        return vh * 2 < page.cssHeight
+    }
+
+    /** The console's own sentence for [layoutHeightCollapsed] — a warning, not a log line. */
+    fun collapsedLabel(box: PreviewPageBox): String =
+        "100vh is ${box.vhHeight ?: 0} px in a ${box.cssHeight} px tall page: the layout viewport " +
+            "has collapsed, so vh units and height:100% resolve to 0 — the view's height must " +
+            "not be wrap-content"
 
     /**
      * The page's own box against the view's, for the pages that must match it.

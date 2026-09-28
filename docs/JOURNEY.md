@@ -1241,3 +1241,22 @@ that (device-width pages, zoom-aware, 4 dp tolerance) and the view reloads the p
 to lay it out for the box it has; the Phase 61 “never reloads” pin was reversed with its
 reason in the test. CI ✅ green, **no device pass**.
 
+
+## 2026-09-28 (round 4) — the strip that was a card, and the number the console could not see
+
+The owner's next screenshots showed the same page's detail card whole in Samsung Browser and as
+a 42 px strip in CodeC — under a console line that looked perfectly healthy. Reading the page's
+source instead of the picture: the card is `max-height: 88vh` in border-box sizing with 20 px
+vertical padding, and 88vh collapsing to 0 gives exactly 42 px, the pill visible inside the
+padding, everything else clipped. Reading Chromium and Compose instead of remembering them:
+Compose's `AndroidView` stamps `WRAP_CONTENT` on a bare view while still measuring it exactly,
+and Chromium's WebView reads *those params*, not the measure spec, to force a zero layout
+height — so the visual viewport (`innerHeight`, what the line printed) was 655 and the layout
+viewport (what `vh` and `height:100%` use) was 0. One property in `PreviewWebView`'s
+constructor, `MATCH_PARENT × MATCH_PARENT`, turns it off. The uncomfortable part, written down:
+rounds 1 and 2 had been treating symptoms of this same quirk — a clipped header from
+`height:100%` and a small board from `calc(100vh − …)` — and the headless-Chrome renders that
+"reproduced" them had reproduced the shape, not the cause. The console line now prints what the
+page's CSS actually gets for `100vh`, and warns when it is not the page's own height, so the
+next fault of this class is a sentence, not a screenshot. CI pending at the time of writing,
+**no device pass**.

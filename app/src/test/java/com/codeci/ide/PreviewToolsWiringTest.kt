@@ -154,6 +154,31 @@ class PreviewToolsWiringTest {
         assertTrue(screen.contains("loadMarkdownInto(wv, file, previewDark)"))
         assertTrue(screen.contains("OpenInBrowser.openOrCopy("))
     }
+    @Test fun `the page is laid out in a real layout viewport, and the console can tell`() {
+        // Round 4 (owner, 2026-09-28): a third-party page's modal was a 42 px
+        // strip in CodeC and a full card in Samsung Browser — `max-height: 88vh`
+        // collapsed to padding + border because the WebView's layout viewport
+        // was 0 px tall. Compose's AndroidView stamps WRAP_CONTENT on a bare
+        // view, and Chromium reads exactly that to force a zero layout height
+        // (`AwLayoutSizer`: setForceZeroLayoutHeight(isLayoutParamsHeightWrapContent())).
+        // The view is always given an exact box (`requiredSize` above), so its
+        // params must say MATCH_PARENT — from the constructor, before any host
+        // can add it. The Robolectric half of this pin is PreviewWebViewTest.
+        assertTrue(native.contains("ViewGroup.LayoutParams.MATCH_PARENT"))
+        assertTrue(native.contains("layoutParams = ViewGroup.LayoutParams("))
+        assertFalse(native.contains("WRAP_CONTENT"))
+        // The instrument: `innerHeight` is the visual viewport and stayed
+        // truthful throughout, so the page-box line now also reports what the
+        // page's own CSS gets for `100vh`, and a collapsed answer becomes a
+        // warning in the console instead of a screenshot.
+        val policy = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/services/PreviewToolsPolicy.kt"
+        ).readText()
+        assertTrue(policy.contains("height:100vh;"))
+        assertTrue(policy.contains("fun layoutHeightCollapsed(box: PreviewPageBox?): Boolean"))
+        assertTrue(native.contains("PreviewToolsPolicy.layoutHeightCollapsed(known)"))
+        assertTrue(native.contains("PreviewToolsPolicy.collapsedLabel(known)"))
+    }
     @Test fun `the bar carries the shots' console toggle and zoom readout`() {
         assertTrue(screen.contains("SpckIcons.Console"))
         assertTrue(screen.contains("SpckIcons.ClearCircle"))

@@ -249,6 +249,103 @@ It now asserts the **two and only two** reload paths (the app's own request pass
 the policy-gated correction) and names the owner's 457-in-a-411 load as the reason. The red round
 `36420734801` is that pin doing its job.
 
+## Round 4 (2026-09-28, the modal that collapsed) — the cause was ours, and it was there all along
+
+The owner's next pair of screenshots, same page ([Code-with-C](https://github.com/priyajitpaul4-cmyk/Code-with-C)),
+same phone, a program card tapped open. **Samsung Browser:** the detail card fills the
+screen — pill *Program 01 · Basic Programs*, ×, the heading, the description, the C CODE block,
+*Sample Output*, scrolling inside. **CodeC:** the page behind is correctly blurred, and the card
+is a **thin strip, vertically centred** — the pill and the × survive, the heading, the text and
+the code are gone. His console lines for the same loads read as *healthy*:
+
+```
+page box 411×655 CSS px · meta width=device-width, initial-scale=1.0 · view 411×656 dp · scale 2.63 · dpr 2.63
+```
+
+> *"I have problems with some screen … also other code but same problem"*
+
+**What the page does (read from its source, not guessed).** `showDetail()` builds the whole
+card in one `innerHTML`, so every element was in the DOM in CodeC too. The card's rule is
+`.detail-box { max-height: 88vh; overflow: auto; padding: 25px }` — at phone width
+`padding: 20px 15px` — under a global `* { box-sizing: border-box }`, and `88vh` is the **only**
+`vh` in the entire stylesheet. If `88vh` resolves to ~0, a border-box `max-height` clamps the
+content box to 0 and the card becomes exactly **padding + border = 20 + 20 + 2 = 42 px**, the
+22 px pill (starting 20 px down) stays visible inside the padding box with ~2 px clipped off its
+bottom, and `overflow: auto` hides everything below. That is the strip in the screenshot, to the
+pixel. So the question became: *why is `vh` zero in a view whose `innerHeight` is 655?*
+
+**Why `vh` was 0 — two sources, read this round, not remembered.**
+
+1. **Compose.** `AndroidViewHolder` (`compose/ui/ui/…/viewinterop/AndroidViewHolder.android.kt`)
+   adds the factory's view with a plain `addView(view)`, which stamps
+   `WRAP_CONTENT × WRAP_CONTENT` on any view that arrives without layout params — and
+   `PreviewWebView` arrived bare. The holder's own `getLayoutParams()` *returns the child's*,
+   and its `onMeasure` forwards the exact spec straight to the child, so with
+   `Modifier.requiredSize` the WebView was measured **`EXACTLY` 411×656 dp** all along. The
+   console line never lied.
+2. **Chromium.** `android_webview/…/AwLayoutSizer.java`, verbatim:
+   ```java
+   private void updateLayoutSettings() {
+       mDelegate.setForceZeroLayoutHeight(mDelegate.isLayoutParamsHeightWrapContent());
+   }
+   ```
+   The WebView decides its **layout** height from the *layout params*, not from the measure
+   spec. With that flag on, Blink's layout viewport (the initial containing block) is **0 px
+   tall**: every `vh` unit and every `height: 100%` chain from `<html>` resolves to 0, while
+   `window.innerHeight` — the **visual** viewport — still reports the true 655. That is
+   precisely the split the console line could not see: it measured the visual viewport.
+
+**Re-reading rounds 1 and 2 with this in hand.** Round 1's clip (`html, body { height: 100% }`
+with a centred flex column → the header at −53 px, unreachable) and round 2's small board
+(`calc(100vh − 320px)` → its 120 px floor) are both what a 0 px layout viewport does to those
+rules. The page-side changes in those rounds were sound as pages and stay; but the headless-Chrome
+reproductions explained the *shape* of the symptoms, not the device's cause, and this record
+should say so. The cause was in `WebPreviewScreen`/`PreviewWebView`, not in any page.
+
+**The fix (`PreviewWebView`).** One property, set in the constructor so it exists before any
+host can add the view:
+
+```kotlin
+layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+```
+
+`MATCH_PARENT` is the truth about this view — it is always given an exact box by
+`requiredSize` — and it is what turns `isLayoutParamsHeightWrapContent()` off. The Compose
+measure path is unchanged (`obtainMeasureSpec` gives `EXACTLY` for fixed constraints either
+way); only Chromium's reading of the params changes. This is the same reason Accompanist's
+`WebView` composable sets `MATCH_PARENT` params from its constraints (*"WebView changes its layout
+strategy based on its layoutParams"*).
+
+**The instrument (`PreviewToolsPolicy`).** The per-load line now also reports what the page's
+own CSS gets for `100vh` — a hidden probe sized `100vh`, added and removed inside one script —
+because `innerHeight` cannot see this class of fault:
+
+```
+page box 411×655 CSS px · 100vh 655 px · meta width=device-width, initial-scale=1.0 · view 411×656 dp · scale 2.63 · dpr 2.63
+```
+
+and a pure rule, `layoutHeightCollapsed` (`100vh` shorter than **half** the page's own
+`innerHeight` — no browser ever does that: browser controls only make `vh` the *larger* of the
+two, and a pinch-zoom shrinks `innerHeight`, never `vh`), turns a collapsed answer into a console
+**warning** in one sentence. Had it existed this morning, the owner's line would have read
+`100vh 0 px` with the warning under it, and no screenshot would have been needed.
+
+**Coverage.** `PreviewWebViewTest` +1 (Robolectric: the params are `MATCH_PARENT` at
+construction and survive a host's `addView`), `PreviewToolsWiringTest` +1 (the source pins:
+`MATCH_PARENT` present, `WRAP_CONTENT` absent from the code, the `100vh` probe, the rule and
+the warning wired), `PreviewToolsPolicyTest` +1 (the owner's collapsed line → `0` kept as a
+number, the rule's edge at half, the healthy line, a pinch-zoom shape) and the page-box cases
+moved to the four-field wire format.
+
+**What this does not establish.** No device pass — nothing here has been installed on a
+handset; the owner's own screenshots are the only device evidence. No rendered exhibit this
+round: the sandbox had no Chromium and no package access, and a desktop Chrome cannot enter
+the WebView's wrap-content mode anyway — the proof here is the two sources above and the 42 px
+arithmetic against his screenshot. The second project's console lines he pasted are the same
+four as round 3b (three 1:1, one 457-in-a-411 that the one bounded reload already handles);
+they carry nothing new, which is itself the finding — a page-box line could not show this
+fault, and now it can.
+
 ## Stop point
 
 This part only. No PR, no merge, no `main` push without the owner's explicit

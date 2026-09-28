@@ -223,3 +223,22 @@ and `PreviewWebView` loads the page once more when it fires, logging the reason 
 The Phase 61 “the native view never reloads” pin was amended **with its reason** (red round
 `36420734801`, green `36421203364` on `c954599`). **No device pass.**
 
+### Round 4 (2026-09-28) — the modal strip: a 0 px layout viewport, and it was ours
+
+The owner's next pair: the same Code-with-C page with a program card open — a full card in
+Samsung Browser, a **42 px strip** (the pill and the ×, nothing below) in CodeC, under a page-box
+line that read healthy (`411×655 CSS px · view 411×656 dp · scale = dpr`). The card is
+`max-height: 88vh` in border-box sizing with `20px` vertical padding: `88vh → 0` gives exactly
+padding + border = 42 px, the pill visible inside the padding, everything else clipped. `vh` was 0
+because Chromium's WebView forces a zero **layout** height whenever its layout params say
+wrap-content (`AwLayoutSizer.updateLayoutSettings()` →
+`setForceZeroLayoutHeight(isLayoutParamsHeightWrapContent())`), and Compose's `AndroidView` stamps
+`WRAP_CONTENT` on a bare view via `addView` — while still measuring it `EXACTLY`, which is why
+`innerHeight` (the visual viewport) kept telling the truth. Fix: `PreviewWebView` is born with
+`MATCH_PARENT × MATCH_PARENT` params. Instrument: the per-load line now prints what the page's CSS
+gets for `100vh` (`· 100vh 655 px ·`), and `PreviewToolsPolicy.layoutHeightCollapsed` raises a
+console **warning** when it is shorter than half the page's own `innerHeight`. Rounds 1 and 2 are
+re-read in the chat README: their symptoms were this same quirk acting on `height:100%` and
+`calc(100vh − …)`. Full account: [`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 4.
+**No device pass; the owner re-installs to confirm — the line should read `100vh 655 px` and the
+card should open whole.**

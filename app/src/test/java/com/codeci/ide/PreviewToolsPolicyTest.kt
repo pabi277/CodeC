@@ -170,33 +170,70 @@ class PreviewToolsPolicyTest {
         // so the console now prints every number that separates them: the page's
         // own box, the viewport it declared, the view's box and the scale the
         // WebView actually applied (which should equal dpr — one CSS pixel per dp).
-        val box = PreviewToolsPolicy.parsePageBox("\"360|619|3|width=device-width, initial-scale=1.0\"")
-        assertEquals(PreviewPageBox(360, 619, 3.0, "width=device-width, initial-scale=1.0"), box)
+        // Round 4 added a fourth field before the meta: what `100vh` measured.
+        val box = PreviewToolsPolicy.parsePageBox("\"360|619|3|619|width=device-width, initial-scale=1.0\"")
+        assertEquals(PreviewPageBox(360, 619, 3.0, "width=device-width, initial-scale=1.0", 619), box)
         assertEquals(
-            "page box 360\u00d7619 CSS px \u00b7 meta width=device-width, initial-scale=1.0 \u00b7 " +
+            "page box 360\u00d7619 CSS px \u00b7 100vh 619 px \u00b7 meta width=device-width, initial-scale=1.0 \u00b7 " +
                 "view 360\u00d7430 dp \u00b7 scale 3 \u00b7 dpr 3",
             PreviewToolsPolicy.pageBoxLabel(box, 360, 430, 3.0),
         )
         // A page that declares no viewport is the case `fitToPhone` answers.
-        val bare = PreviewToolsPolicy.parsePageBox("\"980|1200|2|\"")
-        assertEquals(PreviewPageBox(980, 1200, 2.0, null), bare)
+        val bare = PreviewToolsPolicy.parsePageBox("\"980|1200|2|1200|\"")
+        assertEquals(PreviewPageBox(980, 1200, 2.0, null, 1200), bare)
         assertEquals(
-            "page box 980\u00d71200 CSS px \u00b7 meta none \u00b7 view 360\u00d7800 dp \u00b7 " +
+            "page box 980\u00d71200 CSS px \u00b7 100vh 1200 px \u00b7 meta none \u00b7 view 360\u00d7800 dp \u00b7 " +
                 "scale 2 \u00b7 dpr 2",
             PreviewToolsPolicy.pageBoxLabel(bare, 360, 800, 2.0),
         )
         // 514 CSS px shown in a 360 dp box at scale 1: the "very smaller view" shape.
+        // A box built without the probe's answer says so rather than inventing one.
         assertEquals(
-            "page box 514\u00d7500 CSS px \u00b7 meta none \u00b7 view 360\u00d7430 dp \u00b7 " +
+            "page box 514\u00d7500 CSS px \u00b7 100vh unmeasured \u00b7 meta none \u00b7 view 360\u00d7430 dp \u00b7 " +
                 "scale 1 \u00b7 dpr 3",
             PreviewToolsPolicy.pageBoxLabel(PreviewPageBox(514, 500, 3.0), 360, 430, 1.0),
         )
         // A meta is capped, and a separator smuggled into it is neutralised: the
-        // declaration is prose, so everything after the third field is kept.
-        val long = PreviewToolsPolicy.parsePageBox("\"360|600|1|width=device-width,| user-scalable=no\"")
+        // declaration is prose, so everything after the fourth field is kept.
+        val long = PreviewToolsPolicy.parsePageBox("\"360|600|1|600|width=device-width,| user-scalable=no\"")
         assertEquals("width=device-width, user-scalable=no", long?.meta)
-        val capped = PreviewToolsPolicy.parsePageBox("\"360|600|1|" + "x".repeat(200) + "\"")
+        val capped = PreviewToolsPolicy.parsePageBox("\"360|600|1|600|" + "x".repeat(200) + "\"")
         assertEquals(PreviewToolsPolicy.META_LIMIT, capped?.meta?.length)
+        // The probe's own failure answer is -1 and parses to "unmeasured"; a
+        // three-field answer is the old wire format and no longer parses.
+        assertNull(PreviewToolsPolicy.parsePageBox("\"360|600|1|-1|\"")?.vhHeight)
+        assertNull(PreviewToolsPolicy.parsePageBox("\"360|600|1\""))
+    }
+    @Test fun `a 100vh shorter than half the page is the collapsed layout viewport`() {
+        // Round 4, 2026-09-28: the owner's modal rendered as a 42 px strip — its
+        // `max-height: 88vh` box collapsed to padding + border — under a page-box
+        // line that read `411×655 CSS px · view 411×656 dp · scale 2.63 · dpr 2.63`.
+        // `innerHeight` is the visual viewport and cannot see this; only the
+        // page's own `100vh` can. 0 is the quirk's exact signature and must be
+        // kept as a number, never dropped as "unanswered".
+        val collapsed = PreviewToolsPolicy.parsePageBox("\"411|655|2.63|0|width=device-width, initial-scale=1.0\"")
+        assertEquals(0, collapsed?.vhHeight)
+        assertTrue(PreviewToolsPolicy.layoutHeightCollapsed(collapsed))
+        assertEquals(
+            "page box 411\u00d7655 CSS px \u00b7 100vh 0 px \u00b7 meta width=device-width, initial-scale=1.0 \u00b7 " +
+                "view 411\u00d7656 dp \u00b7 scale 2.63 \u00b7 dpr 2.63",
+            PreviewToolsPolicy.pageBoxLabel(collapsed, 411, 656, 2.63),
+        )
+        assertEquals(
+            "100vh is 0 px in a 655 px tall page: the layout viewport has collapsed, so vh units " +
+                "and height:100% resolve to 0 — the view's height must not be wrap-content",
+            PreviewToolsPolicy.collapsedLabel(collapsed!!),
+        )
+        // The healthy line — the one the fix should produce on the same phone.
+        assertFalse(PreviewToolsPolicy.layoutHeightCollapsed(PreviewPageBox(411, 655, 2.63, null, 655)))
+        // A pinch-zoom shrinks innerHeight, never vh: taller is never collapsed.
+        assertFalse(PreviewToolsPolicy.layoutHeightCollapsed(PreviewPageBox(200, 320, 2.63, null, 655)))
+        // Half is the line: 327 of 655 is collapsed, 328 is not.
+        assertTrue(PreviewToolsPolicy.layoutHeightCollapsed(PreviewPageBox(411, 655, 2.63, null, 327)))
+        assertFalse(PreviewToolsPolicy.layoutHeightCollapsed(PreviewPageBox(411, 655, 2.63, null, 328)))
+        // Nothing to judge with: no probe answer, no page.
+        assertFalse(PreviewToolsPolicy.layoutHeightCollapsed(PreviewPageBox(411, 655, 2.63, null, null)))
+        assertFalse(PreviewToolsPolicy.layoutHeightCollapsed(null))
     }
     @Test fun `the mismatch rule fires on the owner's one bad load and nothing else`() {
         // 2026-09-28: the owner's console, four loads of the same page in a

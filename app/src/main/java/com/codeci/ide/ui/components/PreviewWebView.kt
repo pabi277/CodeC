@@ -2,6 +2,7 @@ package com.codeci.ide.ui.components
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -48,6 +49,25 @@ class PreviewWebView(context: Context, private val model: WebPreviewViewModel) :
     private var boxCorrectionDone = false
 
     init {
+        // Round 4 (owner, 2026-09-28: a third-party page's modal rendered as a
+        // 42 px strip — its `max-height: 88vh` box collapsed to padding + border
+        // — while Samsung Browser showed the whole card). The cause is on this
+        // side, not the page's. Compose's `AndroidView` adds a bare view with
+        // `ViewGroup.addView`, which stamps WRAP_CONTENT × WRAP_CONTENT on it,
+        // and Chromium's WebView decides its *layout* height from those params,
+        // not from the exact measure spec it is given:
+        //     AwLayoutSizer.updateLayoutSettings():
+        //         setForceZeroLayoutHeight(isLayoutParamsHeightWrapContent())
+        // With that flag the layout viewport is 0 px tall, so every `vh` unit
+        // and every `height: 100%` chain from `<html>` resolves to 0 — while
+        // `window.innerHeight` (the visual viewport) still reports the true box,
+        // which is why the page-box console line looked healthy. The view is
+        // always given an exact box by `Modifier.requiredSize`, so MATCH_PARENT
+        // is the truth about it, and it is what turns the quirk off.
+        layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+        )
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.allowFileAccess = true
@@ -156,6 +176,13 @@ class PreviewWebView(context: Context, private val model: WebPreviewViewModel) :
                 0,
             )
             val known = box ?: return@evaluate
+            // Round 4 — the tripwire for the quirk the layout params above turn
+            // off: if a page ever gets a `100vh` shorter than half its own box
+            // again, the console says so in one sentence instead of a screenshot
+            // having to.
+            if (PreviewToolsPolicy.layoutHeightCollapsed(known)) {
+                model.addConsole(token, "warn", PreviewToolsPolicy.collapsedLabel(known), 0)
+            }
             if (disposed || boxCorrectionDone) return@evaluate
             if (!PreviewToolsPolicy.boxMismatch(known, viewWidthDp, zoomPercent)) return@evaluate
             boxCorrectionDone = true
