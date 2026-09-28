@@ -67,6 +67,26 @@ class PreviewToolsWiringTest {
         assertTrue(native.contains("zoomBy("))
         assertFalse(native.contains("reload()"))
     }
+    @Test fun `the keyboard is only reserved while the tools panel is open`() {
+        // 2026-09-28, owner: *"browser have a good view and code is very smaller
+        // view"*, with an unaccounted band under the page. The console line is
+        // the only text field on this screen and it lives in the tools panel, so
+        // the IME inset is reserved only while that panel is open — a keyboard
+        // that is not there must never shorten the page.
+        assertTrue(screen.contains("if (toolsVisible) Modifier.imePadding() else Modifier"))
+    }
+
+    @Test fun `every load reports the page box into the console`() {
+        // The line that tells "the page renders small" apart from "the preview
+        // box is short" — the page's own answer, from the view that loaded it.
+        val view = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/components/PreviewWebView.kt"
+        ).readText()
+        assertTrue(view.contains("reportPageBox()"))
+        assertTrue(view.contains("PreviewToolsPolicy.pageBoxScript()"))
+        assertTrue(view.contains("PreviewToolsPolicy.pageBoxLabel("))
+    }
+
     @Test fun `the first load waits for a measured page box`() {
         // 2026-09-28, owner report: the snake sample rendered clipped and
         // squashed inside the preview while the same page was fine in a

@@ -118,8 +118,7 @@ object SnakeSample {
                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   /* min-height, never height: a viewport with less room than the page needs
      (the editor's own preview, carrying its bar and its keys row) must make the
-     page scroll, never clip the top of it — and the flex column must not squash
-     the board to nothing to fit. */
+     page scroll, never clip the top of it. */
   body { min-height:100%; display:flex; flex-direction:column; align-items:center;
          justify-content:center; gap:14px; padding:16px; }
   p { margin:0; }
@@ -127,11 +126,12 @@ object SnakeSample {
   h1 { font-size:18px; margin:0; letter-spacing:.08em; text-transform:uppercase; }
   .score { font-size:14px; color:var(--dim); }
   .score b { color:var(--head); font-size:16px; }
-  /* The board is square, so its size is the smaller of the column width and
-     what the viewport height leaves: header + pad + hint are ~320px of the
-     column, and everything above that would otherwise squeeze the canvas. */
-  .wrap { position:relative; width:min(100%, 420px, calc(100vh - 320px)); min-width:120px;
-          touch-action:none; }
+  /* The board is as wide as the space allows — the same square a browser gives
+     it at the same width. A preview box shorter than the page then scrolls,
+     exactly like a browser window that is too short; sizing the board from the
+     viewport height instead (2026-09-28) made it tiny in the editor's own
+     preview, where the box is shorter than a phone window. */
+  .wrap { position:relative; width:min(100%, 420px); touch-action:none; }
   canvas { width:100%; height:auto; display:block; background:var(--grid); border-radius:12px; }
   .over { position:absolute; inset:0; display:none; flex-direction:column; gap:10px;
           align-items:center; justify-content:center; background:rgba(15,17,21,.86); border-radius:12px; text-align:center; }

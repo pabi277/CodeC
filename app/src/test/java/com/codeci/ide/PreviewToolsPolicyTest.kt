@@ -164,6 +164,30 @@ class PreviewToolsPolicyTest {
         assertEquals(.1f, PreviewToolsPolicy.fitScale(500f, 64f, 360f, 640f), .001f)
         assertEquals(1f, PreviewToolsPolicy.fitScale(2000f, 2000f, 360f, 640f), .001f)
     }
+    @Test fun `the page box line names the page's box and the view's`() {
+        // 2026-09-28, owner: *"browser have a good view and code is very smaller
+        // view"*. The console says which box the page was laid out in and which
+        // box the view was given, so the two can be told apart from one shot.
+        assertEquals(PreviewPageBox(360, 430, 1.75), PreviewToolsPolicy.parsePageBox("\"360 430 1.75\""))
+        assertEquals(
+            "page box 360\u00d7430 CSS px \u00b7 view 360\u00d7430 dp \u00b7 dpr 1.75",
+            PreviewToolsPolicy.pageBoxLabel(PreviewPageBox(360, 430, 1.75), 360, 430),
+        )
+        assertEquals(
+            "page box 412\u00d7915 CSS px \u00b7 view 360\u00d7800 dp \u00b7 dpr 2",
+            PreviewToolsPolicy.pageBoxLabel(PreviewPageBox(412, 915, 2.0), 360, 800),
+        )
+    }
+    @Test fun `a page that never answered still reports the view it was given`() {
+        assertNull(PreviewToolsPolicy.parsePageBox(null))
+        assertNull(PreviewToolsPolicy.parsePageBox("\"null\""))
+        assertNull(PreviewToolsPolicy.parsePageBox("\"\""))
+        assertNull(PreviewToolsPolicy.parsePageBox("\"0 0 1\""))
+        assertEquals(
+            "page box unanswered \u00b7 view 360\u00d7600 dp",
+            PreviewToolsPolicy.pageBoxLabel(null, 360, 600),
+        )
+    }
     @Test fun `zoom presets have a reset and viewport choices retain device mode`() {
         assertEquals(listOf(50, 75, 100, 125, 150, 200), PreviewToolsPolicy.zoomPresets)
         assertEquals(0, PreviewResolution.DEVICE.widthDp)

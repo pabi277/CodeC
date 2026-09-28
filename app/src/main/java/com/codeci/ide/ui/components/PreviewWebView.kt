@@ -70,6 +70,7 @@ class PreviewWebView(context: Context, private val model: WebPreviewViewModel) :
                     model.reportViewport(token, PreviewViewport.DISABLED)
                 }
                 captureResources()
+                reportPageBox()
             }
         }
         webChromeClient = object : WebChromeClient() {
@@ -123,6 +124,28 @@ class PreviewWebView(context: Context, private val model: WebPreviewViewModel) :
     fun captureResources() {
         evaluate(PreviewToolsPolicy.resourcesScript()) { raw ->
             model.addResources(token, PreviewToolsPolicy.parseResources(raw))
+        }
+    }
+
+    /**
+     * Phase 72.1 follow-up (owner, 2026-09-28: *"browser have a good view and
+     * code is very smaller view"*). One console line per load with the box the
+     * page was laid out in, next to the box this view was given. A screenshot
+     * cannot tell "the page renders small" from "the preview box is short" —
+     * this line can, and it is the page's own answer, not a guess.
+     */
+    private fun reportPageBox() {
+        val density = resources.displayMetrics.density
+        val viewWidthDp = if (density > 0f) (width / density).roundToInt() else 0
+        val viewHeightDp = if (density > 0f) (height / density).roundToInt() else 0
+        evaluate(PreviewToolsPolicy.pageBoxScript()) { raw ->
+            model.addConsole(
+                token, "log",
+                PreviewToolsPolicy.pageBoxLabel(
+                    PreviewToolsPolicy.parsePageBox(raw), viewWidthDp, viewHeightDp
+                ),
+                0,
+            )
         }
     }
 

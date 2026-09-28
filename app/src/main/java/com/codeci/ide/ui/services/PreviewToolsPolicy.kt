@@ -55,6 +55,15 @@ data class PreviewResource(
 )
 
 /**
+ * Phase 72.1 follow-up (owner, 2026-09-28: *"browser have a good view and code is
+ * very smaller view"*). What the page believes its viewport is.
+ *
+ * @param dpr the page's own `devicePixelRatio`, which is the density its CSS
+ *   pixels are drawn at.
+ */
+data class PreviewPageBox(val cssWidth: Int, val cssHeight: Int, val dpr: Double)
+
+/**
  * Phase 72.1 — the five tabs of the strip the shots show, in their order.
  * Elements/Resources/Settings are new; Console and Network already existed.
  */
@@ -201,6 +210,46 @@ object PreviewToolsPolicy {
             "authored" -> PreviewViewport.AUTHORED
             else -> PreviewViewport.UNKNOWN
         }
+
+    /**
+     * The box a page was laid out in, read from the page itself. One line, no
+     * state: the console shows it after every load, next to the view's own size,
+     * because a screenshot cannot tell "the page renders small" from "the
+     * preview box is short" — and the owner's two reports looked identical.
+     */
+    fun pageBoxScript(): String = script(
+        "(function(){try{return [Math.round(window.innerWidth),",
+        "Math.round(window.innerHeight),",
+        "(window.devicePixelRatio||1)].join(' ');}catch(e){return '';}})()",
+    )
+
+    /** Parse [pageBoxScript]'s answer. Never throws; null when the page stayed silent. */
+    fun parsePageBox(raw: String?): PreviewPageBox? {
+        val parts = PreviewConsolePolicy.unquote(raw).trim().split(' ')
+        if (parts.size < 3) return null
+        val width = parts[0].toIntOrNull() ?: return null
+        val height = parts[1].toIntOrNull() ?: return null
+        val dpr = parts[2].toDoubleOrNull() ?: return null
+        if (width <= 0 || height <= 0 || dpr <= 0.0) return null
+        return PreviewPageBox(width, height, dpr)
+    }
+
+    /**
+     * The console line: the page's own box next to the box the view was given.
+     * Equal on a healthy preview; when they differ, this line says which side is
+     * wrong without a second screenshot.
+     */
+    fun pageBoxLabel(box: PreviewPageBox?, viewWidthDp: Int, viewHeightDp: Int): String {
+        val view = "view $viewWidthDp\u00d7$viewHeightDp dp"
+        if (box == null) return "page box unanswered \u00b7 $view"
+        return "page box ${box.cssWidth}\u00d7${box.cssHeight} CSS px \u00b7 $view \u00b7 dpr ${dprLabel(box.dpr)}"
+    }
+
+    private fun dprLabel(dpr: Double): String {
+        val rounded = Math.round(dpr * 100.0) / 100.0
+        return if (rounded == Math.floor(rounded)) rounded.toLong().toString()
+        else rounded.toString()
+    }
 
     /** “—” is the honest answer for a cell WebView or the page never reported. */
     fun statusLabel(status: Int?): String = status?.toString() ?: "—"

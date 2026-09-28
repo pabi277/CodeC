@@ -81,20 +81,21 @@ class FirstOpenSampleTest {
 
     @Test
     fun `the page survives the preview's shorter viewport`() {
-        // 2026-09-28, owner: the same page filled a browser window and came back
-        // clipped and squashed inside CodeC's preview, which carries an app bar,
-        // an address row and the keys row. A page that fixes its own height and
-        // centres its content cannot survive that; this one must be allowed to
-        // grow (`min-height`) and the square board must be capped by the height
-        // the viewport actually leaves.
+        // 2026-09-28, owner, two rounds: the same page filled a browser window and
+        // came back clipped (round one), then small (round two) inside CodeC's
+        // preview, which carries an app bar, an address row and the keys row. The
+        // page must therefore neither fix its own height (a short box clips the
+        // top of a centred, fixed-height page) nor size its board from the
+        // viewport height (a short box then shrinks the board instead of letting
+        // the page scroll — which is what a browser does).
         val page = page
         assertTrue("the body must not fix its height", page.contains("body { min-height:100%"))
         assertTrue("the html element still owns the viewport height",
             page.contains("html { height:100%; }"))
-        assertTrue("the board is capped by the viewport height",
-            page.contains("calc(100vh - 320px)"))
-        assertTrue("and it keeps a floor so it never disappears",
-            page.contains("min-width:120px"))
+        assertFalse("the board must not be sized from the reported viewport height",
+            page.contains("100vh") || page.contains("100dvh"))
+        assertTrue("the board is as wide as the space allows, like a browser",
+            page.contains(".wrap { position:relative; width:min(100%, 420px);"))
         assertTrue("no browser-default paragraph margins may pad the column",
             page.contains("p { margin:0; }"))
         val body = page.substringAfter("body { min-height:100%").substringBefore("}")

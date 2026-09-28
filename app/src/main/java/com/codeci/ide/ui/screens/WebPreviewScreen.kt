@@ -310,7 +310,15 @@ fun WebPreviewScreen(
         viewModel.requestReload()
     }
 
-    Column(modifier = Modifier.fillMaxSize().imePadding()) {
+    // The console's command line is the only text field on this screen and it
+    // lives inside the tools panel, so the keyboard's inset is reserved only
+    // while that panel is open: a keyboard that is not there must never shorten
+    // the page (the owner's unaccounted band under it, 2026-09-28).
+    Column(
+        modifier = Modifier.fillMaxSize().then(
+            if (toolsVisible) Modifier.imePadding() else Modifier
+        )
+    ) {
         TopAppBar(
             title = {
                 // Phase 72.1 — the shots' two-line bar: the page, then what the
