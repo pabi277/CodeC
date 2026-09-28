@@ -337,6 +337,10 @@ the warning wired), `PreviewToolsPolicyTest` +1 (the owner's collapsed line → 
 number, the rule's edge at half, the healthy line, a pinch-zoom shape) and the page-box cases
 moved to the four-field wire format.
 
+**CI ✅ green** — `Build APK` [`36436647849`](https://github.com/pabi277/CodeC/actions/runs/36436647849)
+on `146986b` (the host unit and screenshot test step, the debug and release assembles, release
+manifest without `android:debuggable`). The debug APK on that run is the one to install.
+
 **What this does not establish.** No device pass — nothing here has been installed on a
 handset; the owner's own screenshots are the only device evidence. No rendered exhibit this
 round: the sandbox had no Chromium and no package access, and a desktop Chrome cannot enter

@@ -1258,5 +1258,5 @@ rounds 1 and 2 had been treating symptoms of this same quirk — a clipped heade
 `height:100%` and a small board from `calc(100vh − …)` — and the headless-Chrome renders that
 "reproduced" them had reproduced the shape, not the cause. The console line now prints what the
 page's CSS actually gets for `100vh`, and warns when it is not the page's own height, so the
-next fault of this class is a sentence, not a screenshot. CI pending at the time of writing,
-**no device pass**.
+next fault of this class is a sentence, not a screenshot. CI ✅ green (`36436647849` on
+`146986b`), **no device pass**.

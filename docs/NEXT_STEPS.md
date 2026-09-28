@@ -17,8 +17,8 @@ shorter than half the page's own `innerHeight`) turns a collapsed answer into a 
 and `calc(100vh − 320px)` → floor are this same quirk; the page-side changes stay, the
 headless-Chrome reproductions explained the shape, not the device's cause. Tests:
 `PreviewWebViewTest` +1 (Robolectric), `PreviewToolsWiringTest` +1, `PreviewToolsPolicyTest`
-+1 and the page-box cases on the four-field wire format. **No device pass; no render this
-round (no Chromium in the sandbox, and desktop Chrome cannot enter the WebView's wrap-content
++1 and the page-box cases on the four-field wire format. **CI ✅ `36436647849` on `146986b`.
+No device pass; no render this round (no Chromium in the sandbox, and desktop Chrome cannot enter the WebView's wrap-content
 mode).** The owner re-installs: the line should read `100vh 655 px`, the card should open whole.
 
 **2026-09-28 (round 3b) — the owner's console lines came back and settled it.**

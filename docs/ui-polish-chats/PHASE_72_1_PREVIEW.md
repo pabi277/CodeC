@@ -240,5 +240,5 @@ gets for `100vh` (`· 100vh 655 px ·`), and `PreviewToolsPolicy.layoutHeightCol
 console **warning** when it is shorter than half the page's own `innerHeight`. Rounds 1 and 2 are
 re-read in the chat README: their symptoms were this same quirk acting on `height:100%` and
 `calc(100vh − …)`. Full account: [`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 4.
-**No device pass; the owner re-installs to confirm — the line should read `100vh 655 px` and the
-card should open whole.**
+**CI ✅ `36436647849` on `146986b`; no device pass — the owner re-installs to confirm: the line
+should read `100vh 655 px` and the card should open whole.**
