@@ -9,7 +9,9 @@ Reversed in `0ca08dc` (**CI ✅ green `36409241166`**): the board is width-drive
 (`min(100%, 420px)`) and a short box scrolls like a browser (measured in headless
 Chrome: 360×520 → 328 px board; 412×915 → 380 px, nothing to scroll); the screen
 stops reserving the keyboard's inset unless the tools panel — the only text field
-on it — is open (the band under the page); and every load now logs the page's own
+on it — is open (the band under the page), and the two taps that take that field
+away (Close, a tab switch) release focus so the keyboard leaves with it
+(`1906b08`, **CI ✅ green `36411874083`**); and every load now logs the page's own
 box to the console (`page box W×H CSS px · view W×H dp · dpr N`,
 `PreviewToolsPolicy.pageBoxScript`/`parsePageBox`/`pageBoxLabel`), so this
 ambiguity is measurable next time. Renders:

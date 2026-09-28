@@ -130,7 +130,12 @@ the keys row and the nav bar all take height), so the board collapsed from the b
    shows 380 only because its window is taller), **412×915 → 380 px with nothing to scroll**.
 2. **The phantom band under the page is gone.** `WebPreviewScreen` reserved the keyboard's
    inset on this screen unconditionally, but the console's command line is the only text
-   field here: the inset is now reserved **only while the tools panel is open**.
+   field here: the inset is now reserved **only while the tools panel is open** — and, since
+   an inset can no longer be reserved for a keyboard nobody can see, the two taps that take
+   that field away (Close, and a tab switch away from the console) now release focus in the
+   same tap, so the keyboard goes down with it (`PreviewToolsPanel`). Pinned by
+   `PreviewToolsWiringTest` — *"closing the panel or leaving the console takes the keyboard
+   with it"*.
 3. **The console now measures the page.** After every load the WebView logs one line —
    `page box 360×430 CSS px · view 360×430 dp · dpr 1.75` — the page's own `window.innerWidth`
    × `innerHeight` and `devicePixelRatio` next to the box the view was given
