@@ -120,7 +120,9 @@ class OutputPanelStatusTest {
 
     @Test
     fun `a clean run has nothing to announce`() {
-        val counts = OutputPanelStatus.counts(lines("Build OK (220ms)", "Process finished with exit code 0 (12ms)"))
+        val counts = OutputPanelStatus.counts(
+            listOf("Build OK (220ms)", "Process finished with exit code 0 (12ms)")
+        )
         assertEquals(0, counts.errors)
         assertEquals(0, counts.warnings)
         assertFalse(counts.hasErrors)
