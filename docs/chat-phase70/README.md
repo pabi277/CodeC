@@ -458,8 +458,10 @@ diagnosed by reasoning because the raw log is unreadable from here and the annot
 the test's name. Run `36453064452` on `26cb316` died in **1 m 27 s** before any test:
 `Install NDK (Side by side) 27.2.12479018 … ZipException: Archive is not a ZIP archive` — a
 corrupt download on the runner, nothing in the tree; the session's token cannot re-run a job
-(`rerun-failed-jobs` → 403), so this record's own push is the re-run. **Green stamp: see the end of
-this section.**
+(`rerun-failed-jobs` → 403), so this record's own push is the re-run. **Run `36453466081` on
+`0535c0f` (this section's records commit; the same tree as `26cb316` plus prose): ✅ GREEN — the host
+suite including the two phone cases, 11 m 55 s, `CodeC-IDE-1.3.17-universal-debug.apk` 26 171 024 B.**
+That debug APK is the one to install for the device pass listed below.
 
 **What this does not establish.** No device pass — nothing here was installed on a handset; the
 heights are arithmetic against his reported page area and the Robolectric layout. Whether 13 sp
