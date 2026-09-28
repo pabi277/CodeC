@@ -130,9 +130,11 @@ class OutputPanelStatusTest {
 
     @Test
     fun `the panel is capped lower while the keyboard is up`() {
-        // 800 dp screen: 440 normally, 304 with the keyboard.
-        assertEquals(440f, OutputPanelHeight.resolve(400f, 800f, imeVisible = false), .01f)
-        assertEquals(304f, OutputPanelHeight.resolve(400f, 800f, imeVisible = true), .01f)
+        // 800 dp screen: 55 % is 440, with the keyboard 38 % is 304.
+        assertEquals(440f, OutputPanelHeight.resolve(900f, 800f, imeVisible = false), .01f)
+        assertEquals(304f, OutputPanelHeight.resolve(900f, 800f, imeVisible = true), .01f)
+        // A request under the cap is honoured as-is (the drag owns the rest).
+        assertEquals(400f, OutputPanelHeight.resolve(400f, 800f, imeVisible = false), .01f)
         // A request below the floor comes back at the floor, not at zero.
         assertEquals(OutputPanelHeight.MIN, OutputPanelHeight.resolve(1f, 800f, imeVisible = false), .01f)
         // A tiny screen keeps its own maximum (the IME cap can be the smaller one).
