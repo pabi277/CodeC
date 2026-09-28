@@ -1,3 +1,58 @@
+**2026-09-28 — Phase 70.1 + 72.1 (one chat, preview first): the Web Preview's
+five-tab console and the run Output Panel's state word, Stop, error cards and
+console line — implemented on `arena/01a0e704-codec` (tip `d86b4a3`), owner
+answers taken BEFORE any code.** The two sentences from the owner, verbatim:
+*"Try to make output exactly same for web view"* and *"And terminal output is
+good enough but is hard to understand the error line from terminal"*, with six
+shots of SPCK's Web Preview in `uploads/` — a **preview** reference, not an
+editor-panel one. Six questions were put before anything was written; all six
+answers are recorded verbatim in
+[`PHASE_72_1_PREVIEW.md`](ui-polish-chats/PHASE_72_1_PREVIEW.md): surface =
+**"Both, one after the other"**, console = **"The whole strip, Elements
+included"**, viewport = **"Yes — fix the tiny rendering in the same part"**,
+error line = **"The run output panel's"**, order = **"Both in this chat, preview
+first"**. **72.1 (commits `090596e`, `2a707be`):** the strip is now the five tabs
+the shots show, the console takes commands (`PreviewConsolePolicy`: echo → one
+policy-built `eval` line → LOG/ERROR result, 4096 cap, Cancel · Execute, IME
+Send), the Network table's Method/Name come from `shouldInterceptRequest` and its
+Type/Size/Time from the page's own Resource Timing entries joined by redacted
+address (`PreviewToolsPolicy.merge`) while **Status stays "—"** because WebView
+cannot see a response, Elements is a read-only DOM walk into `window.__codecDom`
+(caps 300 nodes/12 depth/80 text/40 attrs/4000 HTML, highlight + copy), Resources
+and Settings (zoom, resolution, fit, viewport outcome, clear cache) are real
+tabs, the bar carries **"Preview · N % Zoom"** and the console toggle, and a page
+with **no** viewport meta gets a phone-sized default appended — a page that
+declared one is left byte-for-byte as authored. Phase 61's "native never
+evaluates" pin was reversed **with its reason in the test**: scripts are still
+only the policies', `shouldInterceptRequest` still fetches nothing, and the view
+still has no `openConnection` and no `reload()`. **70.1 (commits `11345c0`,
+`2590429`, `3ad83c7`, `d86b4a3`):** all six review findings closed — the header
+is now `OutputPanelStatus.head()` (waiting > busy/installing > serving > FAILED →
+Failed(run) > CANCELLED → Stopped > DONE, where `finishFailedBuild`'s stored DONE
+with a non-zero `buildExitCode` reads **Failed**), an empty expanded panel says
+so, the 36 dp actions became a 48 dp status row and a 48 dp action row led by the
+**labelled Stop**, the terminal palette is pinned by `OutputPanelContrastTest`
+(all ten line colours and seven header tints ≥ WCAG AA), the run keys survive the
+stdin yield via `KeysStayPolicy.isRunStripVisible` + `stripVisible`, and the
+height law is `OutputPanelHeight.resolve` (**55 % / 38 % with the IME, floor 160,
+default 220**). The error line the owner could not read is now two rows —
+location + severity, then the message, with the existing *Add missing ;* fix —
+under a `3 errors · 1 warning` banner from `OutputPanelStatus.counts`. **N2 is
+delivered too:** the panel's one line (`submitInput(context)`) is a waiting
+program's stdin, otherwise a console command run in the app's real shell
+(`ShellBootstrap.prepare` + PTY-first `InteractiveRunSession.start`), workdir =
+active project root else the single-file folder, 4096-char bound, and **no second
+job on an occupied runner** — a line typed while busy is refused, never queued.
+**CI ✅ GREEN — `Build APK` run `36399610563` on `d86b4a3`, 2347 tests, 0 failed,
+debug + release APKs built**; every red round in between was fixed for cause
+(`is OutputHead.Done` in four `when`s, the `motion` hook in scope, `counts()`
+taking `List<String>`, a policy test comparing merged rows with unmerged ones,
+and a cap assertion pressing the 55 % cap from *below* it). **Open:** **N1 — the
+"above ber" is still unanswered** (no shot identifies it, nothing designed);
+Elements stays read-only; Network's Status stays "—". **No device evidence** —
+nothing here has been on a handset, and the five owed 69.1–69.4 rows stay owed.
+No PR, no merge, no `main` push without the owner's explicit instruction.
+
 **2026-09-28 — Phase 69.4 (the Files tree remembers its shape; the route's file
 opens once per editor session): implemented on `arena/01a0e49f-codec` (tip
 `e7e420e`), owner answers taken BEFORE any code.** Two owner reports, verbatim:

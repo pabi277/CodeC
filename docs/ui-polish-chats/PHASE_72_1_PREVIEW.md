@@ -114,3 +114,60 @@ device evidence establish. Do not make the owner run declined device rounds.
 
 No new dependencies, permissions, persistent preferences or telemetry by default.
 Stop after this agreed part and update its record; do not roll into the next chat.
+
+
+## Implementation (2026-09-28) — the preview, delivered first
+
+**The owner's round-3 answers, taken before any code, verbatim:** the surface is
+**“Both, one after the other”**; the console takes **“The whole strip, Elements
+included”**; **“Yes — fix the tiny rendering in the same part”**; the line that
+is hard to understand is **“The run output panel's”**; the order is **“Both in
+this chat, preview first”**.
+
+**Branch** `arena/01a0e704-codec` (base `main` @ `fbb3056`), commits `090596e`
+(this part) and `2a707be` (the icon import the first push was missing).
+**CI: `Build APK` run [36399610563](https://github.com/pabi277/CodeC/actions/runs/36399610563)
+GREEN on tip `d86b4a3`** (12 m 2 s): `:app:testDebugUnitTest` **2347 tests, 0
+failed**; debug and release APKs assembled (6,852,680 / 26,146,308 bytes); the
+release manifest carries no `android:debuggable` flag. Every red round was fixed
+for cause: `36397545127` — `Unresolved reference 'Refresh'` in
+`PreviewToolsPanel.kt` (a missing import, not a test); `36397873242` — one
+policy test compared the merged rows with the unmerged ones (the law is: nothing
+to join, rows untouched); `36398106111` and later rounds — `OutputPanelView.kt`'s
+`is OutputHead.Done` branches and the `motion` hook (see the 70.1 brief).
+
+### What the shots asked for, and what is there now
+
+| Shot | Delivered |
+|---|---|
+| Bar: title, **Preview · N % Zoom**, console toggle, refresh, ⋮ | `WebPreviewScreen`'s bar: `preview_bar_subtitle`, the `SpckIcons.Console` toggle (`preview_console_show/hide`), Refresh, ⋮; zoom and fit are `rememberSaveable` |
+| Five tabs **Console · Elements · Network · Resources · Settings** | `PreviewToolTab` + `PreviewToolsPanel`'s strip; the empty console is still openable (the Phase 61 reversal of the old “no console when empty” gate) |
+| Filter row **All · Info · Warning · Error**, copy | level chips; filtering never destroys entries — it hides them |
+| Console with **Cancel · Execute** and a command line | `PreviewConsolePolicy`: the line is echoed as an INFO `› …`, run through `command()` (one line, `eval(<quoted>)`, a 4096 cap), and the WebView's answer becomes a LOG or ERROR line (`ok\u0001…`/`err\u0001…`) |
+| Network table **Name · Method · Status · Type · Size · Time** | Name/Method from `shouldInterceptRequest` (redacted: no credentials, query or fragment); Type/Size/Time joined from the page's own Resource Timing entries by `PreviewToolsPolicy.merge`, keyed on the redacted address; **Status stays “—”**, and the panel still says why |
+| Resources | the page-reported list, redacted the same way, with refresh and copy |
+| Settings | zoom presets, screen resolution, **Fit page to phone**, the viewport outcome in words (authored / added / not reported / off), **Clear cache** |
+| Other pages render phone-sized | `PreviewToolsPolicy.viewportScript()` asks once per load: a page **without** a viewport meta gets `width=device-width, initial-scale=1` appended; a page that declared one is left byte-for-byte as authored. The outcome is recorded (`PreviewViewport.AUTHORED/ADDED/UNKNOWN/DISABLED`) |
+| Elements | `PreviewInspectorPolicy`: a DOM walk into `window.__codecDom` (caps 300 nodes / depth 12 / 80 text chars / 40 attributes / 4000 HTML chars), a tree, a details view, “Highlight on page” (`2px solid #4FC3F7` + `scrollIntoView`) and Copy selector / Copy HTML |
+
+**One Phase 61 pin was deliberately reversed, with the reason recorded in the
+test:** `PreviewToolsWiringTest` used to assert the native view contained **no**
+`evaluateJavascript` — the Network tab observed and injected nothing. The
+owner's shots (*Execute*) and his report (*“i can't run any console command”*)
+asked for the opposite, so `PreviewWebView` now exposes `evaluate(script,
+onResult)` → `evaluateJavascript(script)` on the view's own thread. The scripts
+are still only the pure policies' (never a page's payload), `shouldInterceptRequest`
+still returns null, still fetches and replaces nothing, and the view still has no
+`openConnection` and no `reload()`.
+
+**Tests added or rewritten:** `PreviewToolsPolicyTest` 17 cases (five tabs in
+order, redaction, the merge and its identity case, resource parsing, viewport
+outcomes, the honest cell labels, `panelHeight` 220 floor / 65 % cap),
+`PreviewConsolePolicyTest` 7, `PreviewInspectorPolicyTest` 5,
+`PreviewToolsWiringTest` 7 pins, `PreviewToolsLayoutTest` 3 Robolectric cases
+(resizing never consumes the page, the five tabs, the Settings readouts).
+
+**Honest limits, unchanged by this part:** Elements is **read-only** — a DOM
+walk, not SPCK's DevTools protocol; there is no element editing, no computed
+styles panel and no network-status capture; Network's Status column stays “—”;
+and **nothing here has been on a handset** — source tests and CI only.

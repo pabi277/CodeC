@@ -1169,3 +1169,31 @@ chat briefs; owner choices; active NEXT_STEPS and prompt/rules; README discovery
 link and a pointer from the older Phase 63 owner handoff. Next is discussion of
 Projects/files, not automatic implementation of 65–74. This instruction creates
 no release tag and authorises no unrelated PR or future phase merge.
+
+
+## 2026-09-28 — Phase 70.1 + 72.1, one chat, preview first
+
+The owner sent six shots of SPCK's **Web Preview** with two sentences — *“Try to
+make output exactly same for web view”* and *“And terminal output is good enough
+but is hard to understand the error line from terminal”* — and, asked before any
+code was written, chose **both surfaces, one after the other, preview first**, the
+**whole five-tab console (Elements included)**, and the rendering fix in the same
+part. Delivered on `arena/01a0e704-codec`: the preview's console now takes
+commands (`PreviewConsolePolicy` builds the one-line `eval`; the answer becomes a
+LOG or ERROR line), the Network table joins the WebView's observed requests with
+the page's own Resource Timing entries by redacted address and says “—” where
+neither reported a value, Elements is a read-only DOM walk with a details view,
+highlight and copy, Resources and Settings are real tabs, the bar carries
+“Preview · N % Zoom” and the console toggle, and a page with no viewport meta gets
+a phone-sized default added (a page that declared one is untouched). The run
+Output Panel closed all six review findings — a state word derived from facts
+(including a failed build stored as DONE), a 48 dp action row led by a labelled
+Stop, an error/warning banner with compiler errors rendered as two rows and their
+*Add missing ;* fix, a waiting strip and restored run keys, and a 55 %/38 %
+height law — and, on the owner's answer, the panel's own line runs commands in
+the app's real shell while refusing to queue behind a busy run. **CI ✅ GREEN —
+`Build APK` `36399610563` on `d86b4a3`, 2347 tests, 0 failed**, with every red
+round fixed for cause. Records: [chat-phase70](chat-phase70/README.md) plus the
+two briefs in [ui-polish-chats](ui-polish-chats/). **No device pass was run and
+none is claimed**; N1 (the unnamed “above ber”) is still unanswered, and no PR,
+merge or `main` push was made.

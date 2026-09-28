@@ -236,3 +236,92 @@ recorded. This part (70.1) keeps its own five settled answers (Q1–Q6 = A) and 
 six findings, still **not implemented**: the owner's scope decision was “wait for
 my screenshots before any code”, and the screenshots turned out to describe the
 preview. The owner is asked which comes first.
+
+
+## Implementation (2026-09-28) — the panel part, after the preview
+
+Q1–Q6 are all **A** (the table at the top of this file), and the panel they
+describe is now built. Branch `arena/01a0e704-codec` (base `main` @ `fbb3056`),
+commits `11345c0`, `2590429`, `3ad83c7`, `d86b4a3`; **CI: `Build APK` run
+[36399610563](https://github.com/pabi277/CodeC/actions/runs/36399610563) GREEN on
+tip `d86b4a3`** (2347 tests, 0 failed).
+
+### The six findings, and what each became
+
+1. **The header said “Output” for every state** → `OutputPanelStatus.head()` is
+   the one state projection, in a fixed order: waiting for input wins, then busy
+   (with *Installing* as its own word), then a live server (*Serving*), then the
+   terminal phases — where **a build that failed reads as Failed** even though
+   `finishFailedBuild` stores `DONE` (`buildExitCode != 0`), a non-zero run exit
+   is Failed, and a zero one is Done with its exit code. The row shows icon +
+   state word + `exit N` (Q2) on a 48 dp bar.
+2. **Clear left an expanded empty panel** → the empty state now says
+   `output_empty_hint`, and the collapsed strip says `output_strip_hint` until
+   something runs.
+3. **36 dp header actions** → a 48 dp status row and a 48 dp action row — the
+   labelled **Stop** leads it (Q4), the rest scroll horizontally so nothing
+   squeezes on a narrow phone. `TouchTargetTest`'s note that deferred the panel's
+   under-size buttons to “51.2's editor-surface pass” is discharged for the
+   panel.
+4. **The palette no one audited** → `OUTPUT_COLORS`, `PANEL_BACKGROUND` and
+   `PANEL_HEADER_BACKGROUND` are named and pinned by `OutputPanelContrastTest`:
+   all ten line colours clear WCAG AA on `#121212`, and the seven state/header
+   tints clear AA on `#252526`. The terminal colours themselves are unchanged.
+5. **The run keys were unreachable while a program waited** → `KeysStayPolicy.isRunStripVisible(keepOpen, waitingForInput, explicitlyCollapsed)`
+   keeps ↵ / Ctrl+C / Tab alive for exactly the stdin case `isVisible` yields to,
+   and the screen gates both strip positions on
+   `stripVisible = keysVisible || runStripVisible`. The collapsed strip says
+   *“Waiting for input — tap to answer”* (Q3), and ↵ with the panel collapsed
+   opens the field first.
+6. **The panel ignored the keyboard** → `OutputPanelHeight.resolve(requested,
+   available, imeVisible)`: 55 % of the screen normally, **38 % with the IME up**,
+   floor 160 (room for the status row, the actions and the line), default 220;
+   the splitter drag and the panel height both go through it (Q5).
+
+**The error line — his own words, *“hard to understand the error line from
+terminal”*** — is now two rows: the location and severity (`main.c:12:5 - error`)
+and then the message, with the existing *Add missing ;* fix beside it when
+`CompilerDiagnostics` can offer one; and a banner above the list counts the
+parseable diagnostics (`3 errors · 1 warning`) so the user does not have to
+count red lines. `OutputPanelStatus.counts` counts only parseable diagnostics —
+a location-less line is not an error, exactly as `OutputLineParserTest` pins.
+
+**N2, answered in the same chat, is delivered as well.** The owner's words:
+*“I type ls, python main.py or pkg install … into the output area at any time and
+it runs there, like a terminal.”* The panel's one line now has two meanings
+(`submitInput(context)`): while a program waits it is that program's stdin,
+otherwise it is a console command. Before code, the four questions this file
+listed were settled as: **the owner is the panel's own runner** (the panel is the
+output surface, not a second terminal); **no second job on an occupied runner** —
+a line typed while something is busy is refused with a line saying so, never
+queued or interleaved; **the shell is the app's real environment**
+(`ShellBootstrap.prepare` + the PTY-first `InteractiveRunSession.start`, the same
+pair RUN ▶ uses, so `ls`, `python main.py` and `pkg install` behave); and **the
+place is the active project's root**, else the folder the editor keeps single
+files in. The line is bounded at 4096 characters, and an exit finishes the panel
+with the command's own words (`output_console_exit`) and DONE/FAILED.
+
+### Tests
+
+`OutputPanelStatusTest` 9 cases (state precedence, the failed-build case, the
+counts, the height law), `OutputPanelWiringTest` 5 pins, `OutputPanelContrastTest`
+3 cases, and `EditorRowsWiringTest` updated to the new strip gate. Together with
+the preview's tests the branch's CI run executed **2347 tests, 0 failed**.
+
+### Red rounds, for the record
+
+Each was fixed for cause, none papered over: `11345c0` failed to compile
+(`OutputHead.Done` is a data class — `is` in four `when`s — and the Crossfade
+needed the `motion` hook in scope); `36398809324` failed the test compile
+(`OutputPanelStatus.counts` takes `List<String>`); `36399166831` failed one test
+(a policy test compared the merged rows with the unmerged ones); the last red
+round was the height test asserting the 55 % cap with a request *below* it.
+
+### Still open
+
+**N1 — the “above ber” — is still unanswered**, and nothing was designed for it:
+none of the six shots identifies that bar, so the shape has not been agreed.
+Q1's behaviour (the panel opens on every run) is unchanged and already true. And
+**this is not device evidence**: nothing in 70.1 or 72.1 has been on a handset,
+and the five owed handset rows for 69.1–69.4 stay owed. No PR, no merge, no
+`main` push without the owner's explicit instruction.
