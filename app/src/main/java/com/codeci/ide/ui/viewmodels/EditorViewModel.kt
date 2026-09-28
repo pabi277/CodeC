@@ -415,6 +415,28 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
     private val _collapsedDirs = MutableStateFlow<Set<String>>(emptySet())
     val collapsedDirs: StateFlow<Set<String>> = _collapsedDirs.asStateFlow()
 
+    /**
+     * Phase 69.4 — which project the [_collapsedDirs] above belong to. The set
+     * is remembered per project, so it is loaded once per project session and
+     * never carried into another project's tree (the old code reset it to
+     * "everything expanded" on every switch).
+     */
+    private var treeStateProject: String? = null
+
+    /**
+     * Phase 69.4 — the editor route this session has already opened, or null.
+     * One VM life: it dies exactly when the session that must re-open dies.
+     */
+    private var openedRouteKey: String? = null
+
+    /** Phase 69.4 — the route [EditorScreen] has already handed to this session. */
+    fun openedRoute(): String? = openedRouteKey
+
+    /** Phase 69.4 — remember that [routeKey] has been opened (see [EditorRouteOpen]). */
+    fun markRouteOpened(routeKey: String) {
+        openedRouteKey = routeKey
+    }
+
     private val _gitBranch = MutableStateFlow<String?>(null)
     val gitBranch: StateFlow<String?> = _gitBranch.asStateFlow()
 
@@ -1903,6 +1925,55 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             }.getOrDefault(emptyList())
         }
         _fileEntries.value = entries
+        // Phase 69.4 — the tree's shape belongs to the project, not to the
+        // session: load it here (the one place that knows both the project and
+        // its directories), so leaving the editor, switching projects or
+        // closing the app all come back to the same open folders.
+        applyTreeStateFor(project, entries, context.applicationContext)
+    }
+
+    /**
+     * Phase 69.4 — put the drawer tree into this project's remembered shape.
+     *
+     * Owner (2026-09-28): *"...remember what open by the use when leaving and
+     * again open the editor and the project in the same position no all expend
+     * or collapse"*. A project listed for the first time starts with EVERY
+     * folder closed (his other half: *"import a zip or repository and open in
+     * editor it will in collapse state"*), and that first shape is remembered
+     * too, so the next open restores it rather than re-initialising.
+     */
+    private fun applyTreeStateFor(project: String?, entries: List<EditorFileEntry>, context: Context) {
+        if (project == null) {
+            treeStateProject = null
+            _collapsedDirs.value = emptySet()
+            return
+        }
+        // Nothing to remember against an unreadable/empty project: wait for a
+        // listing that actually has directories, or the first open would be
+        // recorded as "the user opened everything".
+        if (entries.isEmpty()) return
+        val dirs = FileTreeCollapse.allDirs(entries)
+        if (treeStateProject == project) {
+            val pruned = FileTreeCollapse.prune(_collapsedDirs.value, dirs)
+            if (pruned != _collapsedDirs.value) {
+                _collapsedDirs.value = pruned
+                FileTreeMemory.save(context, project, pruned)
+            }
+            return
+        }
+        treeStateProject = project
+        val remembered = FileTreeMemory.load(context, project)
+        val initial = FileTreeCollapse.initialTree(dirs, remembered)
+        val shape = if (remembered == null) initial else FileTreeCollapse.prune(initial, dirs)
+        _collapsedDirs.value = shape
+        if (remembered == null || shape != remembered) FileTreeMemory.save(context, project, shape)
+    }
+
+    /** Phase 69.4 — the user's own shape change is what gets remembered. */
+    private fun rememberTreeState() {
+        val project = treeStateProject ?: return
+        val context = appContext ?: return
+        FileTreeMemory.save(context, project, _collapsedDirs.value)
     }
 
     private fun drawerEntries(nodes: List<FileNode>): List<EditorFileEntry> {
@@ -2122,15 +2193,18 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         _collapsedDirs.value = _collapsedDirs.value.toMutableSet().apply {
             if (!add(path)) remove(path)
         }
+        rememberTreeState()
     }
 
     /** Drawer toolbar "Collapse All": hides everything below the top level. */
     fun collapseAllDirectories() {
         _collapsedDirs.value = FileTreeCollapse.allDirs(_fileEntries.value)
+        rememberTreeState()
     }
 
     fun expandAllDirectories() {
         _collapsedDirs.value = emptySet()
+        rememberTreeState()
     }
 
     private fun expandAncestors(parentRelative: String) {
@@ -2142,6 +2216,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             current = current.substringBeforeLast('/', "")
         }
         _collapsedDirs.value = set
+        rememberTreeState()
     }
 
     fun revealActiveFile() {
@@ -2257,6 +2332,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         _activeTabPath.value?.let { _activeTabPath.value = remap(it) ?: it }
         _fileName.value = remap(_fileName.value) ?: _fileName.value
         _collapsedDirs.value = _collapsedDirs.value.map { remap(it) ?: it }.toSet()
+        rememberTreeState()
         _launchDefault.value?.let { old -> remap(old)?.let { setLaunchDefault(appContext, it) } }
         refreshFileEntries(appContext)
         _userMessage.value = appContext.getString(R.string.rename_success)

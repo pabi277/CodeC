@@ -182,6 +182,7 @@ import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorOpenMode
 import com.codeci.ide.ui.editor.EditorOpenModePolicy
+import com.codeci.ide.ui.editor.EditorRouteOpen
 import com.codeci.ide.ui.editor.KeysStayPolicy
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
@@ -305,7 +306,22 @@ fun EditorScreen(
         else -> FontFamily.Monospace
     }
 
-    LaunchedEffect(projectName, fileName, singleFile) {
+    // Phase 69.4 — the route's file is opened ONCE per editor session, not on
+    // every re-entry. Owner: *"If i run a file but it is not in 1st of the
+    // editor and back from preview it again opens the 1st file on the editor
+    // not the file i opened"*. Opening a file from the drawer does not
+    // navigate, so the route still names the file the editor was ENTERED with;
+    // returning from the Web Preview re-composes this screen and that effect
+    // used to re-activate the route's tab over the one the user was on (and
+    // reset the caret, and re-point "open where I left off" at it). The
+    // decision is pure (EditorRouteOpen) and the session marker lives in the
+    // ViewModel, so it survives a rotation and dies with the tabs.
+    val editorRouteKey = EditorRouteOpen.key(projectName, fileName, singleFile)
+    LaunchedEffect(editorRouteKey) {
+        if (!EditorRouteOpen.shouldOpen(editorRouteKey, viewModel.openedRoute())) {
+            return@LaunchedEffect
+        }
+        viewModel.markRouteOpened(editorRouteKey)
         if (projectName != null && fileName != null) {
             if (singleFile) {
                 // Phase 46.2 — the peek: no onProjectSelected (the hub tap
