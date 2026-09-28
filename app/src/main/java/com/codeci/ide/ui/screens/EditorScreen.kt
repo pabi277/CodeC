@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -2520,6 +2521,39 @@ fun EditorScreen(
                 )
             }
         }
+        }
+
+        // Phase 69.3 — the strip beside the panel closes it. Owner (2026-09-28,
+        // verbatim): *"it have a gap side of that make it if user clicks the
+        // empty space it will close the 3 ber"*.
+        //
+        // The strip keeps the Phase 55 look — undimmed, the editor still
+        // visible through it — and only the TAP is ours. It is composed AFTER
+        // the drawer in this wrapper Box, so it sits above the drawer and
+        // above Material3's scrim: the tap cannot be spent on the editor (or
+        // on a second close) before it closes the panel, which is the one
+        // thing the scrim was trusted with and did not deliver on the phone.
+        // Closing still goes through the one law — DrawerPolicy, reason SCRIM —
+        // so ✕ / back / strip / a file row cannot drift. It exists only while
+        // the panel is OPEN or OPENING (targetValue, the 49.1 rule): a closing
+        // panel must not leave a dead strip behind.
+        if (drawerState.targetValue == DrawerValue.Open) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(SidePanelPlan.STRIP_WIDTH_FRACTION)
+                    .align(Alignment.CenterEnd)
+                    // `clickable`, not a raw `pointerInput`: it CONSUMES the
+                    // tap, so nothing below this box (the editor, and
+                    // Material3's own scrim whose tap never reached this
+                    // strip on the phone) can spend it first — and with
+                    // `indication = null` it draws nothing at all, which is
+                    // what "undimmed strip" means.
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { closeDrawer(DrawerCloseReason.SCRIM) }
+            )
         }
 
         if (isRenaming) {

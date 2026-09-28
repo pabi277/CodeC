@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -143,6 +144,26 @@ object KeyGestureDetector {
     enum class Result { TAP, POPUP, SWIPE_UP, SWIPE_DOWN, HOLD_REPEAT, NONE }
 
     /**
+     * Phase 69.3 — is this displacement the row SCROLLING (and therefore never
+     * a key)?
+     *
+     * The owner (2026-09-28, verbatim): *"The quick keys are sensitive even i
+     * want to drag for other keys it's types which ever i am scrolling"*. The
+     * row scrolls from the platform's own touch slop (~8 dp); until 69.3 the
+     * cap only gave up the tap past **20 dp**, so every drag between the two —
+     * the short flick a thumb actually uses to reach the caps on the right —
+     * scrolled the row *and* typed the cap the finger started on.
+     *
+     * The rule is one number and one owner: past the slop, with the horizontal
+     * travel at least the vertical, the gesture belongs to the row. The caller
+     * must not consume the change, so `horizontalScroll` still gets it.
+     */
+    fun isScrollDx(dxPx: Float, dyPx: Float, slopPx: Float): Boolean {
+        val absDx = abs(dxPx)
+        return absDx > slopPx && absDx >= abs(dyPx)
+    }
+
+    /**
      * Classifies gesture from duration and displacement.
      * [durationMs] time finger was down, [dyPx] vertical displacement (negative = up),
      * [dxPx] horizontal, [hasPopup]/[hasSwipe] whether cap carries those.
@@ -196,7 +217,12 @@ private fun EditorKeyCap(
     var holdJob by remember { mutableStateOf<Job?>(null) }
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 28.dp.toPx() }
-    val scrollThresholdPx = with(density) { 20.dp.toPx() }
+    // Phase 69.3 — the distance the row itself starts scrolling at, not a
+    // number invented here: `LocalViewConfiguration.current.touchSlop` is the
+    // same slop `horizontalScroll` uses to claim the drag, so the cap gives up
+    // the tap at exactly the moment the row takes the scroll (owner: *"even i
+    // want to drag for other keys it's types which ever i am scrolling"*).
+    val scrollSlopPx = with(density) { LocalViewConfiguration.current.touchSlop.toPx() }
 
     Box(
         modifier = Modifier
@@ -222,7 +248,10 @@ private fun EditorKeyCap(
                         delay(EditorKeySet.HOLD_INITIAL_DELAY_MS)
                         held = true
                         while (true) {
-                            onKey(def.key)
+                            // Phase 69.3 — a hold that turned into a scroll
+                            // never repeats, not even the first step: the
+                            // arrows are the caps a thumb drags from.
+                            if (!isScroll) onKey(def.key)
                             delay(EditorKeySet.HOLD_REPEAT_INTERVAL_MS)
                         }
                     } else null
@@ -237,14 +266,15 @@ private fun EditorKeyCap(
                             finished = true
                             break
                         }
-                        if (!change.pressed) {
-                            finished = true
-                            break
-                        }
+                        // Phase 69.3 — the LAST change counts too. A flick can
+                        // lift the finger where no move event was ever
+                        // delivered, and that up is where the gesture really
+                        // ended: measure it before calling the touch finished.
                         val dy = change.position.y - startY
                         val dx = change.position.x - startX
+                        if (!change.pressed) finished = true
                         // Horizontal scroll dominates -> suppress tap, let Row scroll
-                        if (!isScroll && abs(dx) > scrollThresholdPx && abs(dx) > abs(dy)) {
+                        if (!isScroll && KeyGestureDetector.isScrollDx(dx, dy, scrollSlopPx)) {
                             isScroll = true
                             longPressJob.cancel()
                             hrJob?.cancel()
@@ -376,7 +406,12 @@ private fun RunKeyCap(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 28.dp.toPx() }
-    val scrollThresholdPx = with(density) { 20.dp.toPx() }
+    // Phase 69.3 — the distance the row itself starts scrolling at, not a
+    // number invented here: `LocalViewConfiguration.current.touchSlop` is the
+    // same slop `horizontalScroll` uses to claim the drag, so the cap gives up
+    // the tap at exactly the moment the row takes the scroll (owner: *"even i
+    // want to drag for other keys it's types which ever i am scrolling"*).
+    val scrollSlopPx = with(density) { LocalViewConfiguration.current.touchSlop.toPx() }
 
     Box(
         modifier = Modifier
@@ -405,13 +440,14 @@ private fun RunKeyCap(
                             finished = true
                             break
                         }
-                        if (!change.pressed) {
-                            finished = true
-                            break
-                        }
+                        // Phase 69.3 — the LAST change counts too. A flick can
+                        // lift the finger where no move event was ever
+                        // delivered, and that up is where the gesture really
+                        // ended: measure it before calling the touch finished.
                         val dy = change.position.y - startY
                         val dx = change.position.x - startX
-                        if (!isScroll && abs(dx) > scrollThresholdPx && abs(dx) > abs(dy)) {
+                        if (!change.pressed) finished = true
+                        if (!isScroll && KeyGestureDetector.isScrollDx(dx, dy, scrollSlopPx)) {
                             isScroll = true
                             job.cancel()
                             showPopup = false
