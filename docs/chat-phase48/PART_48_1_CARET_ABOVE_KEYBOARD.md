@@ -260,4 +260,5 @@ hardware keyboards still pay nothing per keystroke. Mechanism and fix
 reproduced against the real sora classes in `ComposingReplayTest` ×4;
 `ReplayPathWiringTest` +1 pins the bracket; CI `36467347590` on `308441e`
 green. Owner-facing record: [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §47.
-No device pass yet — the owner's one-word check is `p`, tap, `r` → `print(r`.
+Device pass ✅ — the owner's one-word check (`p`, tap, `r` → `print(r`) passed
+on 2026-09-29 (*"Yes all test passed"*); merged via [PR #93](https://github.com/pabi277/CodeC/pull/93).

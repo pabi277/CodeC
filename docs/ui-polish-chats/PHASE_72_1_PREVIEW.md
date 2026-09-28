@@ -265,5 +265,7 @@ size — the keyboard's height is added back into what the panel is sized agains
 `panel − keyboard`, the panel is drawn over the page above the keyboard (no 0 dp relayout of the
 WebView; Round 4's lesson). Tests: `PreviewToolsLayoutTest` +2, `PreviewToolsPolicyTest` +1 and the
 default cases, `PreviewToolsWiringTest` +1. Full account and the CI stamp:
-[`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5. **No device pass.**
+[`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5. **Device pass ✅ — owner, 2026-09-29: *"Yes all test passed"*** (no device, OS or theme named).
+**Merged to `main` on the owner's command via [PR #93](https://github.com/pabi277/CodeC/pull/93)**;
+the whole phase (70.1 + 72.1, the render rounds, round 5) went in that one PR.
 

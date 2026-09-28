@@ -1300,3 +1300,14 @@ has always done — applied to the host's replay, only while a composing word ex
 dedicated keyboard keeps its zero per-keystroke cost. The mechanism and the fix are both pinned
 against the real sora classes in Robolectric; the device pass is the owner's, one word long:
 `p`, tap, `r`, read `print(r`.
+
+## 2026-09-29 — closed on his word
+
+*"Yes all test passed complete docs and merge to main."* The four rows of the phone pass and the
+one-word editor check came back green from his hands — no device or OS named, and the records keep
+exactly that. The docs were completed in one commit (every "no device pass" now says when it became
+one; the review table shows 69.1, 70.1 and 72.1 as delivered; `prompt.md` hands the next chat its
+state), and the branch went to `main` through PR #93 — twenty-nine commits, from the first five-tab
+console to the `restartInput()` bracket, all of them answers to things he saw on his phone. Of the
+polish series, five drafts remain (shell, editor chrome, packages, git, settings). Which one comes
+next is his to say; the next chat's first job is to read, verify, and ask.

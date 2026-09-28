@@ -1,13 +1,16 @@
 # Phase 70.1 + 72.1 — one chat, preview first
 
-**Date:** 2026-09-28. **Branch:** `arena/01a0e704-codec`, based on `main` @
-`fbb3056` (the merge of Phase 69.4 / PR #91). **Tip:** `d86b4a3`.
-**Status:** 🚧 IMPLEMENTED, **CI ✅ GREEN — `Build APK`
+**Date:** 2026-09-28 → 2026-09-29. **Branch:** `arena/01a0e704-codec` (rounds 1–4),
+continued verbatim on `arena/01a0e84c-codec` (the owner's *"copy the whole branch"*;
+round 5 and the editor fix), based on `main` @ `fbb3056` (the merge of Phase 69.4 /
+PR #91). **Status: ✅ OWNER-TESTED AND MERGE COMMANDED (2026-09-29, verbatim:
+*"Yes all test passed complete docs and merge to main"*) → [PR #93](https://github.com/pabi277/CodeC/pull/93).**
+The last code commit is `308441e` (CI ✅ `36467347590`); the docs stamps that
+follow it are CI ✅ too (`36468730204` on `1b68266`). The first delivery's own
+numbers — **CI ✅ `Build APK`
 [36399610563](https://github.com/pabi277/CodeC/actions/runs/36399610563) on
-`d86b4a3`** (12 m 2 s: `:app:testDebugUnitTest` **2347 tests, 0 failed**, debug
-and release APKs assembled, release manifest with no `android:debuggable` flag).
-**No PR opened, nothing merged, nothing pushed to `main`.** No device evidence
-was produced, and none is implied.
+`d86b4a3`** (12 m 2 s: `:app:testDebugUnitTest` **2347 tests, 0 failed**) — stand
+as the record of that round; every later round has its own stamp below.
 
 This chat began as **Phase 70.1 — Run, output and error recovery** and ended up
 delivering **both** the Web Preview console (Phase 72.1) and the run Output
@@ -45,8 +48,11 @@ Briefs (the owner's questions and answers are recorded verbatim inside them):
   `PreviewToolsLayoutTest` (3 — resizing never consumes the page, the five tabs,
   the Settings readouts) and `PreviewWebViewTest` (the view's zoom, file-access
   pins, console mapping and dispose path). These are **not** a device pass.
-- **Real device:** **none.** Nothing in this chat has been installed or driven on
-  a handset; the five owed handset rows for 69.1–69.4 remain owed.
+- **Real device:** at the time of this section, **none**. On 2026-09-29 the owner
+  ran the rows listed at the end of §Round 5 and the editor row of the
+  composing-replay fix (TROUBLESHOOTING §47) and reported *"Yes all test passed"* — no device,
+  OS or theme named; the record keeps exactly that. The five owed handset rows for
+  69.1–69.4 are not part of that report and remain as recorded in their own docs.
 
 ## Open, and not delivered
 
@@ -463,11 +469,26 @@ corrupt download on the runner, nothing in the tree; the session's token cannot 
 suite including the two phone cases, 11 m 55 s, `CodeC-IDE-1.3.17-universal-debug.apk` 26 171 024 B.**
 That debug APK is the one to install for the device pass listed below.
 
-**What this does not establish.** No device pass — nothing here was installed on a handset; the
-heights are arithmetic against his reported page area and the Robolectric layout. Whether 13 sp
-lines and `labelMedium` chips read well *to him* is a device question.
+**What this did not establish, and then did.** At the time of writing, no device pass — the
+heights were arithmetic against his reported page area and the Robolectric layout, and whether
+13 sp lines and `labelMedium` chips read well *to him* was a device question. **Device pass ✅ —
+owner, 2026-09-29: *"Yes all test passed"*** (the four rows named above: the Projects card tap, the
+preview console with the keyboard up, Network on a real page, RUN ▶ output height — plus the
+editor row of the fix below). No device, OS or theme was named.
 
-## Stop point
+## After round 5 — the suggestion the next letter undid (2026-09-29)
 
-This part only. No PR, no merge, no `main` push without the owner's explicit
-instruction, and no claim of device acceptance.
+Outside this phase, spotted by the owner right after accepting round 5: on a Python file, `p` →
+tap `print(` → the next letter took it away. The cause was the editor host's incremental replay
+meeting the system keyboard's *composing* word; the fix is sora's own `restartInput()` bracket,
+gated on `hasComposingText()`. Full record: [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §47 and
+[`chat-phase48/PART_48_1`](../chat-phase48/PART_48_1_CARET_ABOVE_KEYBOARD.md) (follow-up);
+`ComposingReplayTest` ×4 reproduces the mechanism against the real sora classes. CI ✅
+`36467347590` on `308441e`. **Device pass ✅ — the same report** (`p`, tap, `r` → `print(r`).
+
+## Closed
+
+The owner's command on 2026-09-29 — *"Yes all test passed complete docs and merge to main"* —
+closed the gate: the docs were completed in this commit and the branch went to `main` through
+[PR #93](https://github.com/pabi277/CodeC/pull/93) (the PR records the merge state and commit).
+`prompt.md` carries the next chat's handoff. Nothing else was started.

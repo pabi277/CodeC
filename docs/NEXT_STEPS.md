@@ -1,3 +1,20 @@
+**2026-09-29 — HEAD: the 70.1 + 72.1 branch is ✅ OWNER-TESTED and MERGED to `main` on the
+owner's command → [PR #93](https://github.com/pabi277/CodeC/pull/93).** Owner, verbatim: *"Yes all
+test passed complete docs and merge to main"* — covering round 5's four rows (the Projects card
+tap, the preview console with the keyboard up, Network on a real page, RUN ▶ output height) and the
+editor row (`p`, tap `print(`, `r` → `print(r`); no device, OS or theme named, and the records say
+exactly that. What went to `main` in that one PR (29 commits, 49 files): Phase 72.1 (the five-tab
+preview console), Phase 70.1 (the run Output Panel), preview render rounds 1–4 (the `WRAP_CONTENT`
+→ zero-layout-height cause; the page-box instrument line stays), round 5 (the phone pass; the
+project card and Create open the editor, ⋮ → Browse files is the tree), and the composing-replay
+fix in `SoraEditorHost` (TROUBLESHOOTING §47). Last code commit `308441e`, CI ✅ `36467347590`;
+docs stamps `1b68266` (CI ✅ `36468730204`) and this completion commit (its run is recorded in the
+PR). The PR records the merge commit. **Next chat:** `prompt.md` carries the handoff — the polish
+series' remaining discussion drafts are **65.1 shell/navigation, 68.1 editor chrome/tabs, 71.1
+packages/terminal, 73.1 git, 74.1 settings/support**; the owner names the next one (or reports a
+bug); nothing is started on the agent's own. Two older PRs from other sessions were open at merge
+time (#83 `arena/01a0c4cb-codec`, #42 `arena/01a062f7-codec`) and were left alone — the owner's call.
+
 **2026-09-29 — the accepted suggestion that the next letter undid (outside the 70/72 phase;
 the owner spotted it after accepting round 5).** Owner: *"in a python code I write p, it shows
 print(, I click it and it is on the screen — then I write the next letter and print( is gone,
@@ -10,9 +27,9 @@ delta and after the selection, gated on `hasComposingText()` so CodeC Keys / har
 nothing. Tests: `ComposingReplayTest` ×4 (Robolectric, real sora), `ReplayPathWiringTest` +1.
 Records: `TROUBLESHOOTING.md` §47, `chat-phase48/PART_48_1` follow-up. **CI: ✅ GREEN — `Build APK`
 `36467347590` on `308441e` (host suite incl. the four `ComposingReplayTest` cases, 10 m 52 s;
-debug APK 26 171 304 B). No device pass** — the owner types `p`, taps `print(`, types `r` on the
-system keyboard: the line must read `print(r`; then the same with the ghost, and a keys-row `(`
-after a word.
+debug APK 26 171 304 B). No device pass** at the time — the owner types `p`, taps `print(`, types
+`r` on the system keyboard: the line must read `print(r`; then the same with the ghost, and a
+keys-row `(` after a word. *→ ✅ passed, 2026-09-29 (*"Yes all test passed"*); merged via PR #93 — see the head entry.*
 
 **2026-09-28 (round 5) — the phone pass for 70.1 + 72.1, and the project card that opens
 the editor.** Owner: *"when I click on a project it should open the editor by default and not
@@ -35,8 +52,8 @@ the keyboard slides *under* a panel and page that keep their size (`imeDp` added
 `PreviewToolsWiringTest` +1, `OutputPanelStatusTest`/`OutputPanelWiringTest`/`HubDialogWiringTest`
 amended. Record: `docs/chat-phase70/README.md` §Round 5. **CI: first run red on one Robolectric
 case (the 320 × 470 dp default display, fixed with `w411dp-h820dp`), second killed by a corrupt NDK
-download on the runner; third run `36453466081` on `0535c0f` ✅ GREEN. No device pass** — the owner installs the debug APK of that run and looks at: the Projects card tap, the
-preview console with the keyboard up, Network with a real page, RUN ▶ output height.
+download on the runner; third run `36453466081` on `0535c0f` ✅ GREEN. No device pass** at the time — the owner installs the debug APK of that run and looks at: the Projects card tap, the
+preview console with the keyboard up, Network with a real page, RUN ▶ output height. *→ ✅ passed, 2026-09-29 (*"Yes all test passed"*); merged via PR #93 — see the head entry.*
 
 **2026-09-28 (round 4) — the modal that collapsed: the cause was ours, and it had been
 there since Phase 61.** The owner's Code-with-C page with a card open: a full card in

@@ -335,5 +335,7 @@ lines — or ~44 dp, two lines, once the error-count banner was there. Asked (ke
 (`OutputPanelHeight.DEFAULT_FRACTION`, `defaultFor(screen)`; about 320 dp, nine lines). Q2–Q6's
 rows and the 55 % / 38 % caps and the 160 floor the owner chose are untouched; only what the panel
 opens at changed. `OutputPanelStatusTest` and `OutputPanelWiringTest` pin it. Record:
-[`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5. **No device pass.**
+[`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5. **Device pass ✅ — owner, 2026-09-29: *"Yes all test passed"*** (no device, OS or theme named).
+**Merged to `main` on the owner's command via [PR #93](https://github.com/pabi277/CodeC/pull/93)**;
+the whole phase (70.1 + 72.1, the render rounds, round 5) went in that one PR.
 

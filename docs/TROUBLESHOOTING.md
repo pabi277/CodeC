@@ -1992,8 +1992,10 @@ delta, restart after the selection and before the synced snapshot, exactly
 two gated `ed.restartInput()` sites). **CI:** `Build APK` `36467347590` on
 `308441e` ✅ — the mechanism case reproduces the owner's `pr` under Robolectric
 against the real sora classes, and the bracket cases pass beside it. **Device
-pass still owed** (system keyboard: `p`, tap `print(`, type `r` → `print(r`;
-the same via the ghost; a keys-row `(` after a word).
+pass ✅ — owner, 2026-09-29: *"Yes all test passed"*** (the row was: system keyboard,
+`p`, tap `print(`, type `r` → `print(r`; the same via the ghost; a keys-row `(`
+after a word — no device, OS or keyboard app named). Merged to `main` via
+[PR #93](https://github.com/pabi277/CodeC/pull/93).
 
 **If it ever comes back:** `grep -n "hasComposingText\|restartInput" app/src/main/java/com/codeci/ide/ui/editor/sora/SoraEditorHost.kt`
 must show the gate and two restarts around `ed.text.replace(plan.start, …)`

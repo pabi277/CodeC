@@ -61,7 +61,8 @@ verbatim as the option labels the owner selected):**
    user land?* — **"Keep today: hub file tree"**. *Superseded 2026-09-28:* the
    owner chose **"Same, and 'Create project' also lands in the editor"** when a
    card's tap became the editor by default — see
-   [`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5.
+   [`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5; owner-tested
+   2026-09-29 and merged via [PR #93](https://github.com/pabi277/CodeC/pull/93).
 
 Not asked as options, therefore **not decided and not implemented** here: the
 clone dialog's non-functional QR glyph, the filter chips' ≈36 dp touch height,
