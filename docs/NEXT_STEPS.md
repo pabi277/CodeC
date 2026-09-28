@@ -1,3 +1,27 @@
+**2026-09-28 (later) — the snake sample came back clipped inside the preview, and
+is fixed (`ced2821`, CI `36404697868`).** After the report above, the owner sent
+two screenshots of the *same* page — Samsung Browser showed it whole, CodeC's Web
+Preview showed the arrow pad near the top, the hint under it and a long empty
+band, with the header, the score and *Tap to start / START* off-screen — and
+said: *"the better one is in browser and other is from code c preview correct it
+CodeC preview sucs"*. **Reproduced in headless Chrome from the seed page itself**
+(360×520 CSS px — the preview box minus CodeC's bar and keys row): the legacy page
+put the header at **−53 px** and the board top at **−18 px**, with `scrollHeight`
+562 over an `innerHeight` of 520 — the overflow sits *above* the box, so no scroll
+can reach it. Cause: `height:100%` + `justify-content:center` on the body — a page
+that fixes its own height cannot survive a box shorter than its column. Fix: the
+page grows (`html{height:100%}` + `body{min-height:100%}`), its square board is
+capped by `width:min(100%, 420px, calc(100vh - 320px))` with a 120 px floor, the
+browser-default paragraph margins are gone and `touch-action:none` moved from the
+body to the board (so a too-short page can still scroll); and `WebPreviewScreen`
+now waits — **bounded at 1 s** — for a measured page box before its first load, so
+no page takes its first layout against 0×0. Renders:
+[`chat-phase70/render-fix/`](chat-phase70/render-fix/). Pins: `FirstOpenSampleTest`
++1 case, `PreviewToolsWiringTest` +1 case. **Evidence is headless Chrome on this
+machine — not a phone**; a page a user writes that fixes its own height will still
+clip in a box shorter than it needs, exactly as in a short browser window. N1 stays
+open, and nothing here is a device pass.
+
 **2026-09-28 — Phase 70.1 + 72.1 (one chat, preview first): the Web Preview's
 five-tab console and the run Output Panel's state word, Stop, error cards and
 console line — implemented on `arena/01a0e704-codec` (tip `d86b4a3`), owner

@@ -171,3 +171,15 @@ outcomes, the honest cell labels, `panelHeight` 220 floor / 65 % cap),
 walk, not SPCK's DevTools protocol; there is no element editing, no computed
 styles panel and no network-status capture; Network's Status column stays “—”;
 and **nothing here has been on a handset** — source tests and CI only.
+
+### Render fix (2026-09-28, the owner's screenshot)
+
+The owner's two screenshots of the same snake page — whole in Samsung Browser, clipped in
+CodeC's Web Preview (pad near the top, hint under it, a long empty band, header/score/START
+off-screen) with *"correct it CodeC preview sucs"* — reproduced in headless Chrome: the seed
+page fixed its own height, so a box shorter than its column clips the top of the content
+irrecoverably (header at −53 px at 360×520 CSS px). Fixed in the page (`min-height`, a board
+capped by the viewport, no stray paragraph margins, the gesture only on the board) and in this
+screen (the first load waits, bounded at 1 s, for a measured page box). Renders and numbers:
+[`../chat-phase70/README.md`](../chat-phase70/README.md); pins in `FirstOpenSampleTest` and
+`PreviewToolsWiringTest`. **Headless Chrome evidence only — no device pass.**

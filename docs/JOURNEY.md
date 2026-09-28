@@ -1197,3 +1197,16 @@ round fixed for cause. Records: [chat-phase70](chat-phase70/README.md) plus the
 two briefs in [ui-polish-chats](ui-polish-chats/). **No device pass was run and
 none is claimed**; N1 (the unnamed “above ber”) is still unanswered, and no PR,
 merge or `main` push was made.
+
+## 2026-09-28 (later) — the preview render fix, from the owner's own screenshot
+
+The owner put a browser render and a CodeC render of the same snake page side by side
+(*"the better one is in browser and other is from code c preview correct it CodeC preview
+sucs"*). The clip was real and in the seed page: `height:100%` plus a centred flex column
+puts the overflow above y=0, where no scroll can reach it — measured at −53 px for the
+header and −18 px for the board at 360×520 CSS px in headless Chrome. The page now grows
+(`min-height`), its board is capped by `calc(100vh - 320px)` with a floor, its stray
+paragraph margins are gone and the swipe gesture belongs to the board alone, so a
+too-short viewport scrolls instead of clipping; the preview also waits, bounded at one
+second, for a measured page box before its first load. Two new source pins and before/after
+renders in `docs/chat-phase70/render-fix/`. **No device pass — headless Chrome only.**

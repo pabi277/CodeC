@@ -58,6 +58,57 @@ Briefs (the owner's questions and answers are recorded verbatim inside them):
 - The panel's console refuses a command while a run is busy (by design); it does
   not queue, and it never becomes a second Terminal.
 
+## Render fix (2026-09-28, after the report)
+
+The owner sent two screenshots of the *same* snake page — Samsung Browser showed it whole
+(SNAKE, `score 0 · best 0`, *Tap to start* and START, the pad, the hint); CodeC's Web
+Preview showed the arrow pad near the top, the hint under it and a long empty band, with
+the header, the score and *Tap to start / START* off-screen — and said:
+
+> *"the better one is in browser and other is from code c preview correct it CodeC preview
+> sucs"*
+
+**Reproduced, not guessed.** The seed page fixed its own height (`body { height:100% }`)
+and centred its flex column, so in a box shorter than the column the content is centred
+*around* the box: the overflow sits above y=0 and can never be scrolled to. Rendered from
+the page source in headless Chrome at **360×520 CSS px** (the preview box minus CodeC's bar
+and keys row):
+
+| 360×520 CSS px | legacy | fixed |
+| --- | --- | --- |
+| header top | **−53 px** (off-screen) | 23 px |
+| board top | **−18 px** (clipped) | 58 px (200 px square) |
+| pad top | 324 px | 272 px |
+| hint | 534 px (below the fold) | 470 px, inside |
+| page height | 562 px over a 520 px box | 520 px, fits |
+
+At 360×600 and 412×660 the legacy page still clipped the header by 13 px and 2 px. The
+fixed page renders whole at all three sizes. Evidence renders:
+[`render-fix/before-preview-height-360x520.png`](render-fix/before-preview-height-360x520.png)
+and [`render-fix/after-preview-height-360x520.png`](render-fix/after-preview-height-360x520.png).
+
+**What changed**
+
+1. The seed page (`SnakeSample`): `html { height:100%; }` + `body { min-height:100%; }` so
+   the page grows and a short box scrolls instead of clipping; the square board is capped by
+   `width:min(100%, 420px, calc(100vh - 320px))` with a 120 px floor; the browser-default
+   paragraph margins are gone (they added 24 px to the column); and `touch-action:none` moved
+   from the body to the board, so the board still owns the swipe while a too-short page can
+   still be scrolled.
+2. `WebPreviewScreen`: the first load waits — **bounded at 1 s** — for the page box to be
+   measured, so no page takes its first layout against a 0×0 view (the tools panel can hold
+   every pixel of the preview area). Reloads stay immediate.
+
+**Coverage.** `FirstOpenSampleTest` +1 — *"the page survives the preview's shorter viewport"*
+— pins every rule above, including that the body no longer carries `touch-action:none`.
+`PreviewToolsWiringTest` +1 — *"the first load waits for a measured page box"* — pins the
+state, the `onSizeChanged` report and the 1 s bound. Both are source-level pins.
+
+**What this does not establish.** The renders are headless Chrome on the machine that wrote
+the fix, **not** a phone and not the app; no device pass is claimed. A page a user writes that
+fixes its own height will still clip in a box shorter than it needs — exactly as it would in a
+short browser window. CI run `36404697868` on `ced2821`.
+
 ## Stop point
 
 This part only. No PR, no merge, no `main` push without the owner's explicit
