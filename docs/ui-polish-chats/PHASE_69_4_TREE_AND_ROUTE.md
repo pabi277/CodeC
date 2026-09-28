@@ -1,7 +1,8 @@
 # Phase 69.4 — the Files tree remembers its shape, and the route opens once
 
-**Date:** 2026-09-28. **Branch:** `arena/01a0e49f-codec` (tip `dbbe884`).
-**Status:** implemented; Android CI result at the bottom of this file.
+**Date:** 2026-09-28. **Branch:** `arena/01a0e49f-codec` (tip `e7e420e`).
+**Status:** implemented; **Android CI ✅ GREEN** (run 36386089320, 10m12s, both
+APKs: debug 26,027,944 B / release 6,798,904 B).
 **No PR opened, nothing merged** — that needs the owner's explicit word.
 
 Read first, asked second, coded third. Both reports arrived in one message after
@@ -136,7 +137,7 @@ writer). **Sixteen new host cases.**
 
 | What | Where | Result |
 |---|---|---|
-| Source tests (host JVM) | CI `:app:testDebugUnitTest` on `dbbe884` | see the CI section below |
+| Source tests (host JVM) | CI `:app:testDebugUnitTest` on `e7e420e` | ✅ run 36386089320 — 2306 tests, 0 failed |
 | Android tests (instrumented) | — | none for this part; nothing claimed |
 | Device evidence | — | **not claimed** — no round run, none asked for |
 
@@ -163,9 +164,17 @@ device to make.
   of what is remembered` — **my expectation was wrong**, not the code: `prune`
   keeps the folders that still exist, so the answer is `{src, src/img}`. Fixed
   in `dbbe884` (the `treeStateTouched` rule + the corrected expectation).
-- **Round 3** — run
+- **Round 3 — red, one stale pin**, run
   [36385643910](https://github.com/pabi277/CodeC/actions/runs/36385643910) on
-  `dbbe884`. *(Result recorded here when the run ends.)*
+  `dbbe884`: 2306 tests, 1 failed — `FileTreeStateWiringTest > a project listed
+  for the first time starts with every folder closed` still looked for
+  `initialTree(dirs, remembered)` after round 2 had moved the call to
+  `initialTree(dirs, null)`. **The Robolectric case round 2 was about passed**,
+  so the behaviour fix stood; only the pin moved (`e7e420e`).
+- **Round 4 — tip green**, run
+  [36386089320](https://github.com/pabi277/CodeC/actions/runs/36386089320) on
+  `e7e420e`, 10m12s: the full suite plus this part's 16 new cases, both APKs
+  built (debug 26,027,944 B / release 6,798,904 B).
 
 This sandbox has no JDK (`which java javac kotlinc` → empty, `JAVA_HOME` unset),
 so **CI is the executor of record**, as it was for 68.1, 69.1, 69.2 and 69.3.
@@ -173,7 +182,9 @@ Every literal the new wiring pins assert was re-read against the live sources an
 reproduced by hand before the push (that simulation is how the one wrong
 assertion was caught: `rememberTreeState()` counted 6 because the plain substring
 also matched the declaration). That is a pin check, not a compile — the compile
-is CI's.
+is CI's. Round 2 is what a hand simulation cannot see: `DrawerFileActionsTest`
+(a Robolectric test that predates this part) caught a real conflict between the
+first-open default and a reveal that lands before the drawer's first listing.
 
 ## Boundaries
 

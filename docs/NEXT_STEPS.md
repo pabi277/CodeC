@@ -1,3 +1,50 @@
+**2026-09-28 — Phase 69.4 (the Files tree remembers its shape; the route's file
+opens once per editor session): implemented on `arena/01a0e49f-codec` (tip
+`e7e420e`), owner answers taken BEFORE any code.** Two owner reports, verbatim:
+*"When i import a zip or repository and open in editor it will in collapse state
+and remember what open by the use when leaving and again open the editor and the
+project in the same position no all expend or collapse"* and *"If i run a file
+but it is not in 1st of the editor and back from preview it again opens the 1st
+file on the editor not the file i opened"*. What the reading found: (1)
+`EditorViewModel._collapsedDirs` is session-only — no storage anywhere — and
+three places reset it to `emptySet()` on leaving a project, which in this code
+means "expand everything", so a fresh import opened as a wall of folders and no
+shape survived leaving the editor; (2) `EditorScreen`'s open effect keyed on the
+route's three arguments and so re-ran on every re-composition, and the route
+names the file the editor was **entered** with (opening a file from the drawer
+does not navigate), so every return from the Web Preview re-activated that first
+tab — and reset its caret, and re-pointed "open where I left off" at it. Owner
+answers: **A — a project opened for the first time starts with every folder
+closed, only the top level listed** and **A — remembered per project, and it
+survives closing the app**. So: a new `FileTreeMemory` (one `SharedPreferences`
+file `codec_file_tree`, one key per project, deliberately mirroring the existing
+`EditorLaunchState` store) plus the pure half in `FileTreeCollapse`
+(`encode`/`decode`, `initialTree` = remembered-or-everything-closed, `prune`);
+`refreshFileEntries` applies it and the five user-driven mutators (chevron,
+Collapse all, Expand all, the reveal, a rename's remap) are the only writers —
+the project-switch resets are left alone, and deleting a project from the hub
+forgets its entry. One rule CI round 2 added for cause: a shape the user already
+chose (a nested file's reveal, which lands before the drawer's first listing)
+outranks the first-open default — `treeStateTouched`, cleared by
+`resetTreeShapeForNewContext` at the three switches. And the route: a new pure
+`EditorRouteOpen` — *a route is opened once per editor session* — with the
+marker in the ViewModel, so it survives a rotation and dies with the tabs.
+Sixteen new host cases (`FileTreeCollapseTest` +4, `EditorRouteOpenTest` new 4,
+`FileTreeStateWiringTest` new 5, `EditorRouteWiringTest` new 3). **Android CI
+green on the tip — run 36386089320, 10m12s, 2306 tests, both APKs (debug
+26,027,944 B / release 6,798,904 B)**; round 1 (36383822168) was a missing
+import, round 2 (36384352636) was the reveal/default conflict above plus one
+wrong expectation of mine, round 3 (36385643910) was one stale pin. **No device
+evidence claimed** and no round asked for; the two things only his phone can
+confirm are that the tree comes back in the same position after leaving the
+editor and after closing the app, and that returning from the Preview keeps the
+file he opened. No new dependency, permission, screen, row, button or setting —
+one small `SharedPreferences` file and no telemetry. **No PR and nothing
+merged.** Brief with the verbatim answers:
+[PHASE_69_4_TREE_AND_ROUTE.md](ui-polish-chats/PHASE_69_4_TREE_AND_ROUTE.md)
+
+---
+
 **2026-09-28 — Phase 69.3 (the strip beside the ☰ panel closes it; a drag never
 types a key): implemented on `arena/01a0e49f-codec` (tip `df6c654`), owner
 answers taken BEFORE any code.** Two owner reports, verbatim: *"The 3 ber open

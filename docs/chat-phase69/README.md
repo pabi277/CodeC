@@ -472,7 +472,8 @@ owner's explicit instruction.
 # Phase 69.4 — the Files tree remembers its shape, and the route opens once
 
 **Date:** 2026-09-28. **Status:** implemented on `arena/01a0e49f-codec`
-(tip `1c61f42`), CI result in the brief. **No PR, nothing merged.**
+(tip `e7e420e`), **CI ✅ GREEN** (run 36386089320, 10m12s, both APKs).
+**No PR, nothing merged.**
 Owner reports, verbatim: *"When i import a zip or repository and open in editor
 it will in collapse state and remember what open by the use when leaving and
 again open the editor and the project in the same position no all expend or
@@ -522,13 +523,18 @@ from preview it again opens the 1st file on the editor not the file i opened"*.
 
 | What | Where | Result |
 |---|---|---|
-| Source tests (host JVM) | CI `:app:testDebugUnitTest` on `1c61f42` | in the brief |
+| Source tests (host JVM) | CI `:app:testDebugUnitTest` on `e7e420e` | ✅ run 36386089320 — 2306 tests, 0 failed |
 | Android tests (instrumented) | — | none for this part; nothing claimed |
 | Device evidence | — | **not claimed** — no round run, none asked for |
 
 CI round 1 (36383822168) was red with four `Unresolved reference
 'FileTreeMemory'` in `EditorViewModel` — this part's own omission, one import
-line, fixed in `1c61f42` with no behaviour change.
+line. Round 2 (36384352636) was red for cause: the first-open default was
+closing the folder a file had just been created in (a reveal lands before the
+drawer's first listing), fixed with the `treeStateTouched` rule, plus one wrong
+expectation of mine in `FileTreeCollapseTest` (`prune` keeps the folders that
+still exist). Round 3 (36385643910) was one stale pin; round 4 is green
+(36386089320).
 
 ## Boundaries
 
