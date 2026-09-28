@@ -57,6 +57,11 @@ Briefs (the owner's questions and answers are recorded verbatim inside them):
 - **Network's Status column stays “—”**, with the panel saying why.
 - The panel's console refuses a command while a run is busy (by design); it does
   not queue, and it never becomes a second Terminal.
+- **The preview's own chrome height** — the bar, the address row and the bottom
+  navigation — is the remaining difference from a browser window at the same
+  width (browser chrome is thinner, so its page box is taller). The console's
+  page-box line now measures it; folding the address row into the bar is a
+  layout decision for the owner and was deliberately not taken.
 
 ## Render fix (2026-09-28, after the report)
 
