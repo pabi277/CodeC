@@ -6,6 +6,15 @@
 ([run 36350567066](https://github.com/pabi277/CodeC/actions/runs/36350567066))**.
 **No PR opened, nothing merged** — the owner's instruction is required for that.
 
+**Phase 69.4** (2026-09-28) followed in the chat after that — two more owner
+reports, verbatim: *"When i import a zip or repository and open in editor it will
+in collapse state and remember what open by the use when leaving and again open
+the editor and the project in the same position no all expend or collapse"* and
+*"If i run a file but it is not in 1st of the editor and back from preview it
+again opens the 1st file on the editor not the file i opened"*. Full section at
+the bottom of this file; the brief is
+[`PHASE_69_4_TREE_AND_ROUTE.md`](../ui-polish-chats/PHASE_69_4_TREE_AND_ROUTE.md).
+
 **Phase 69.3** (2026-09-28) followed in the next chat — two more owner reports:
 *"The 3 ber open the editor but it have a gap side of that make it if user clicks
 the empty space it will close the 3 ber"* and *"The quick keys are sensitive even
@@ -454,6 +463,80 @@ setting; the panel's look, rail, slots and tree, the bottom bar, the drawer
 close law (47.1), back precedence (49.1) and the tour's `drawerOpen` fact are
 untouched; vertical swipe layers, popups, flicks and hold-repeat timings are
 unchanged.
+
+**Stop point:** this part only. No PR, no merge, no `main` push without the
+owner's explicit instruction.
+
+---
+
+# Phase 69.4 — the Files tree remembers its shape, and the route opens once
+
+**Date:** 2026-09-28. **Status:** implemented on `arena/01a0e49f-codec`
+(tip `1c61f42`), CI result in the brief. **No PR, nothing merged.**
+Owner reports, verbatim: *"When i import a zip or repository and open in editor
+it will in collapse state and remember what open by the use when leaving and
+again open the editor and the project in the same position no all expend or
+collapse"* and *"If i run a file but it is not in 1st of the editor and back
+from preview it again opens the 1st file on the editor not the file i opened"*.
+
+## Owner answers (verbatim)
+
+| # | Question | Answer |
+|---|---|---|
+| Q1 | A project opened for the first time — what should the tree look like? | **A — Every folder closed, only the top level listed** |
+| Q2 | How long is the shape remembered? | **A — Remembered per project, and it survives closing the app (recommended)** |
+
+## What was found (read on this checkout)
+
+- `EditorViewModel._collapsedDirs` is session-only: no storage anywhere, and
+  three places reset it to `emptySet()` on leaving a project — which in this
+  code means "expand everything". So a fresh import is a wall of folders and no
+  shape survives leaving the editor.
+- `EditorScreen`'s open effect keyed on the route's three arguments, so it
+  re-ran on every re-composition — and the route names the file the editor was
+  **entered** with, because opening a file from the drawer does not navigate.
+  Every return from the Web Preview re-activated that first tab (and reset its
+  caret, and re-pointed `EditorLaunchState` at it).
+
+## What changed
+
+1. **The tree's shape belongs to the project.** New `FileTreeMemory`
+   (one `SharedPreferences` file `codec_file_tree`, one key per project) plus
+   the pure half in `FileTreeCollapse` (`encode`/`decode`, `initialTree` =
+   remembered-or-everything-closed, `prune`). `refreshFileEntries` applies it;
+   the five user-driven mutators (chevron, Collapse all, Expand all, the
+   reveal, a rename's remap) are the only writers; the project-switch resets
+   are deliberately left alone; deleting a project from the hub forgets it.
+2. **A route is opened once per editor session.** New pure `EditorRouteOpen`
+   (`key`, `shouldOpen`); the effect keys on that one key and asks it before it
+   opens anything; the marker lives in the ViewModel, so it survives a rotation
+   and dies with the tabs.
+
+## Tests
+
+`FileTreeCollapseTest` +4 · `EditorRouteOpenTest` (new, 4) ·
+`FileTreeStateWiringTest` (new, 4) · `EditorRouteWiringTest` (new, 3) —
+**fifteen new host cases**.
+
+## Validation
+
+| What | Where | Result |
+|---|---|---|
+| Source tests (host JVM) | CI `:app:testDebugUnitTest` on `1c61f42` | in the brief |
+| Android tests (instrumented) | — | none for this part; nothing claimed |
+| Device evidence | — | **not claimed** — no round run, none asked for |
+
+CI round 1 (36383822168) was red with four `Unresolved reference
+'FileTreeMemory'` in `EditorViewModel` — this part's own omission, one import
+line, fixed in `1c61f42` with no behaviour change.
+
+## Boundaries
+
+No new dependency, permission, screen, row, button or setting; one small
+`SharedPreferences` file mirroring the existing `EditorLaunchState` store; no
+telemetry. The drawer's look, rows, toolbar and search, the collapse filter
+itself, the launch default, the drawer-close law and back precedence are
+untouched.
 
 **Stop point:** this part only. No PR, no merge, no `main` push without the
 owner's explicit instruction.

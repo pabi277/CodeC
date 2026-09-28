@@ -425,6 +425,15 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
     private var treeStateProject: String? = null
 
     /**
+     * Phase 69.4 — whether the user has changed the tree since this VM was
+     * created. A change made BEFORE the project's first listing (a new nested
+     * file reveals its parents the moment it is created, and the drawer may
+     * not have listed anything yet) is still the user's own, and must not be
+     * overwritten by the first-open default below.
+     */
+    private var treeStateTouched = false
+
+    /**
      * Phase 69.4 — the editor route this session has already opened, or null.
      * One VM life: it dies exactly when the session that must re-open dies.
      */
@@ -1426,7 +1435,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             _openTabs.value = emptyList()
             undoManagers.clear()
             _activeTabPath.value = null
-            _collapsedDirs.value = emptySet()
+            resetTreeShapeForNewContext()
             _gitBranch.value = null
             _gitBadges.value = emptyMap()
             _gitChangeCount.value = 0
@@ -1520,7 +1529,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         _gitBadges.value = emptyMap()
         _gitChangeCount.value = 0
         _launchDefault.value = null
-        _collapsedDirs.value = emptySet()
+        resetTreeShapeForNewContext()
         resetDecorationsForNewBuffer()
         syncUndoFlags(undoManager())
         _openMode.value = EditorOpenMode.SINGLE_FILE
@@ -1964,14 +1973,35 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         }
         treeStateProject = project
         val remembered = FileTreeMemory.load(context, project)
-        val initial = FileTreeCollapse.initialTree(dirs, remembered)
-        val shape = if (remembered == null) initial else FileTreeCollapse.prune(initial, dirs)
+        val shape = when {
+            // The first open of this project's tree: every folder closed.
+            remembered == null && !treeStateTouched -> FileTreeCollapse.initialTree(dirs, null)
+            // …unless the user has already shaped it (a reveal that landed
+            // before the tree was ever listed) — that is theirs, and it wins.
+            remembered == null -> FileTreeCollapse.prune(_collapsedDirs.value, dirs)
+            else -> FileTreeCollapse.prune(remembered, dirs)
+        }
         _collapsedDirs.value = shape
-        if (remembered == null || shape != remembered) FileTreeMemory.save(context, project, shape)
+        if (shape != remembered) FileTreeMemory.save(context, project, shape)
+    }
+
+    /**
+     * Phase 69.4 — the tree we are LEAVING keeps its own remembered shape:
+     * nothing is written here. What is cleared is only the in-memory view and
+     * the [treeStateTouched] flag, so the project being entered gets ITS OWN
+     * first-open default instead of inheriting "everything expanded" from the
+     * one being left.
+     */
+    private fun resetTreeShapeForNewContext() {
+        _collapsedDirs.value = emptySet()
+        treeStateTouched = false
     }
 
     /** Phase 69.4 — the user's own shape change is what gets remembered. */
     private fun rememberTreeState() {
+        // Counts even when there is nothing to write to yet: a change made
+        // before the project's first listing outranks the first-open default.
+        treeStateTouched = true
         val project = treeStateProject ?: return
         val context = appContext ?: return
         FileTreeMemory.save(context, project, _collapsedDirs.value)
@@ -2013,7 +2043,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         undoManagers.clear()
         _activeTabPath.value = null
         // Phase 16 — the drawer belongs to the folder we are leaving.
-        _collapsedDirs.value = emptySet()
+        resetTreeShapeForNewContext()
         _gitBranch.value = null
         _gitBadges.value = emptyMap()
         _gitChangeCount.value = 0

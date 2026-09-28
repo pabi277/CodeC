@@ -97,6 +97,40 @@ class FileTreeStateWiringTest {
     }
 
     @Test
+    fun `the first-open default never overwrites what the user already did`() {
+        // A new nested file reveals its parents the moment it is created, and
+        // in the same VM the drawer may not have listed anything yet. That
+        // reveal is the user's own change and outranks "everything closed" —
+        // without this the Files tree re-collapsed the folder a file had just
+        // been created in (CI round 2, run 36384352636).
+        val vm = code(viewModel)
+        assertTrue(
+            "a first open with nothing touched is the only 'close everything' case",
+            vm.contains("remembered == null && !treeStateTouched -> FileTreeCollapse.initialTree(dirs, null)")
+        )
+        assertTrue(
+            "a shape the user already chose must be kept, not re-initialised",
+            vm.contains("remembered == null -> FileTreeCollapse.prune(_collapsedDirs.value, dirs)")
+        )
+        assertTrue(
+            "any user-driven change must count as a touch, even before the first listing",
+            vm.contains("treeStateTouched = true")
+        )
+        // …and a PROJECT SWITCH must clear it, or the project being entered
+        // would inherit "everything expanded" from the one being left.
+        assertTrue(
+            "leaving a project must clear the touch flag",
+            vm.contains("treeStateTouched = false")
+        )
+        assertEquals(
+            "the three switches that drop the tree all clear the flag",
+            3,
+            Regex("^\\s+resetTreeShapeForNewContext\\(\\)$", RegexOption.MULTILINE)
+                .findAll(vm).count()
+        )
+    }
+
+    @Test
     fun `a deleted project takes its tree shape with it`() {
         assertTrue(
             "the hub's delete must forget the project's remembered tree",

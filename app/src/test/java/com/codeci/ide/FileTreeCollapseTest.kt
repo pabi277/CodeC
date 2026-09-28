@@ -103,8 +103,10 @@ class FileTreeCollapseTest {
 
     @Test
     fun `folders that no longer exist drop out of what is remembered`() {
+        // Only the folder that is GONE drops out: the two that still exist
+        // keep the shape the user chose, whether that is open or closed.
         assertEquals(
-            setOf("src"),
+            setOf("src", "src/img"),
             FileTreeCollapse.prune(setOf("src", "src/img", "src/gone"), setOf("src", "src/img"))
         )
         assertTrue(FileTreeCollapse.prune(setOf("src"), emptySet()).isEmpty())
