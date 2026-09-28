@@ -174,6 +174,34 @@
     <string name="default_run_page_failed">Could not set default run page: %1$s</string>
     <string name="default_run_page_missing">The default HTML run page is missing or invalid</string>
     <string name="output_panel">Output</string>
+    <string name="output_panel_tests">Tests</string>
+    <string name="output_state_building">Building</string>
+    <string name="output_state_installing">Installing</string>
+    <string name="output_state_running">Running</string>
+    <string name="output_state_waiting">Waiting for input</string>
+    <string name="output_state_done">Done</string>
+    <string name="output_state_failed">Failed</string>
+    <string name="output_state_stopped">Stopped</string>
+    <string name="output_state_serving">Serving</string>
+    <string name="output_exit_short">exit %1$d</string>
+    <string name="output_waiting_tap">Waiting for input — tap to answer</string>
+    <string name="output_strip_hint">Run ▶ to compile and execute here</string>
+    <string name="output_empty_hint">Nothing here yet — Run ▶, or type a command below.</string>
+    <string name="output_console_hint">$ Command — ls, python main.py…</string>
+    <string name="output_console_stdin_hint">Type here — Enter sends</string>
+    <string name="output_console_send">Send</string>
+    <string name="output_console_busy">A run is already in progress — stop it first</string>
+    <string name="output_console_running">Console</string>
+    <string name="output_console_exit">Command finished with exit code %1$d</string>
+    <string name="output_console_no_shell">Could not start a shell for this command</string>
+    <plurals name="output_error_count">
+        <item quantity="one">%1$d error</item>
+        <item quantity="other">%1$d errors</item>
+    </plurals>
+    <plurals name="output_warning_count">
+        <item quantity="one">%1$d warning</item>
+        <item quantity="other">%1$d warnings</item>
+    </plurals>
     <string name="output_stop">Stop</string>
     <string name="output_open_in_terminal">Open in Terminal</string>
     <string name="output_compiling">Compiling…</string>

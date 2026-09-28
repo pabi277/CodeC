@@ -44,13 +44,21 @@ class EditorRowsWiringTest {
         // 122157: with no keyboard the row sits at the bottom of the column
         // (above the app's own bottom bar). 124105: with the keyboard up the
         // same row is the last child of the imePadding()'d column.
+        // Phase 70.1 — Q3: the row is gated on `stripVisible` now
+        // (editor keys OR the run-keys row a waiting program needs), so a
+        // program waiting for stdin no longer takes the strip away with it.
         assertTrue(
             "the docked touch row (keyboard down) is gone",
-            editor.contains("if (keysVisible && !imeVisible) {"),
+            editor.contains("if (stripVisible && !imeVisible) {"),
         )
         assertTrue(
             "the keyboard-anchored touch row (IME up) is gone",
-            editor.contains("if (keysVisible && imeVisible) {"),
+            editor.contains("if (stripVisible && imeVisible) {"),
+        )
+        assertTrue(
+            "the run-keys row must survive the stdin yield (Q3)",
+            editor.contains("val runStripVisible = KeysStayPolicy.isRunStripVisible(") &&
+                editor.contains("val stripVisible = keysVisible || runStripVisible"),
         )
     }
 

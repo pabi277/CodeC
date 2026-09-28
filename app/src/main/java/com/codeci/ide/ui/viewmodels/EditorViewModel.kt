@@ -278,6 +278,12 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
          * 127.0.0.1 exactly as before; a LAN run sets it to `0.0.0.0`.
          */
         const val CODEC_SERVER_HOST_ENV = "CODEC_SERVER_HOST"
+        /**
+         * Phase 70.1 — one typed console line, bounded like every other
+         * command string the panel accepts (the preview's scripts and rows
+         * use the same 4096).
+         */
+        const val CONSOLE_COMMAND_LIMIT = 4096
         private const val SCRATCH_KEY = "\u0000scratch"
         private val INITIAL_CODE = """
             #include <stdio.h>
@@ -1154,11 +1160,130 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         _outputState.update { it.copy(inputBuffer = text) }
     }
 
-    /** Phase 23.1 — Enter / send icon: forward the typed line and clear it. */
-    fun submitInput() {
+    /**
+     * Phase 23.1 / 70.1 — Enter / send icon on the panel's one line.
+     *
+     * While a program is waiting for stdin the line goes to that program,
+     * exactly as Phase 23.1 built it. With nothing waiting, it is the panel's
+     * own command line — the owner's 2026-09-28 answer, verbatim: *“I type ls,
+     * python main.py or pkg install … into the output area at any time and it
+     * runs there, like a terminal.”* One field, two meanings, decided by the
+     * run's own state rather than by a mode switch the user has to find.
+     */
+    fun submitInput(context: Context) {
         val line = inputBuffer.submit() ?: return
         _outputState.update { it.copy(inputBuffer = "") }
-        sendInputToRun(line)
+        if (_outputState.value.waitingForInput) {
+            sendInputToRun(line)
+        } else {
+            runConsoleCommand(context, line)
+        }
+    }
+
+    /**
+     * Phase 70.1 — run one typed line in the same shell the runs use.
+     *
+     * The environment is the app's real one (`ShellBootstrap` + the PTY-first
+     * [InteractiveRunSession]), so `ls`, `python main.py`, `pkg install …` and
+     * anything else the Terminal could run works here too — this is not a
+     * second terminal, it is the same runner with the panel as its output.
+     *
+     * The brief's own rule holds: **no second job on an occupied runner.** A
+     * line typed while something is already running is refused with a line
+     * saying so, never queued behind the run or interleaved into its output.
+     */
+    fun runConsoleCommand(context: Context, command: String) {
+        val line = command.trim().take(CONSOLE_COMMAND_LIMIT)
+        if (line.isEmpty()) return
+        if (_outputState.value.busy) {
+            appendOutputLine(
+                OutputLine(context.getString(R.string.output_console_busy), OutputLineKind.SYSTEM)
+            )
+            _outputExpanded.value = true
+            return
+        }
+        val appContext = context.applicationContext
+        captureContext(appContext)
+        val workDir = consoleWorkDir(appContext)
+        _outputExpanded.value = true
+        _outputState.value = OutputRunState(
+            phase = OutputPhase.RUNNING,
+            busy = true,
+            lines = listOf(OutputLine("$ $line", OutputLineKind.COMMAND)),
+            summary = appContext.getString(R.string.output_console_running),
+            lastTerminalCommand = line
+        )
+        scheduleForegroundRun(appContext)
+        runJob = viewModelScope.launch {
+            val settings = compilerSettingsFrom(SettingsManager(appContext))
+            val prepared = withContext(Dispatchers.IO) {
+                ShellBootstrap(appContext).prepare(settings)
+            }
+            val runFinished = CompletableDeferred<Int>()
+            val started = System.currentTimeMillis()
+            try {
+                val interactive = InteractiveRunSession.start(
+                    command = line,
+                    workDir = workDir,
+                    env = prepared.env,
+                    shellFile = prepared.shell,
+                    onOutput = { text, partial ->
+                        appendOutputLine(OutputLine(text, OutputLineKind.OUTPUT, partial))
+                    },
+                    onExit = { exitCode -> runFinished.complete(exitCode) }
+                )
+                if (interactive == null) {
+                    failRun(appContext, appContext.getString(R.string.output_console_no_shell))
+                    return@launch
+                }
+                interactiveRun = interactive
+                // Same contract as an interactive run: the line is live while
+                // the command is.
+                _outputState.value = _outputState.value.copy(waitingForInput = true)
+                val exitCode = runFinished.await()
+                interactiveRun = null
+                finishConsole(appContext, exitCode, System.currentTimeMillis() - started)
+            } catch (e: CancellationException) {
+                interactiveRun?.stop()
+                interactiveRun = null
+                throw e
+            } catch (e: Exception) {
+                failRun(appContext, e.message ?: "Command failed")
+            }
+        }
+    }
+
+    /**
+     * Where a panel-typed command runs: the active project's root when one is
+     * open, otherwise the folder the editor keeps single files in — the same
+     * place RUN ▶ would have used, so `ls` shows the same files either way.
+     */
+    private fun consoleWorkDir(appContext: Context): File {
+        val project = _projectName.value
+        if (!project.isNullOrBlank()) {
+            ProjectManager(appContext).project(project)?.root?.let { return it }
+        }
+        return runCatching { FileManager(appContext).getProjectDir() }
+            .getOrElse { File(appContext.filesDir, "CodeC/projects").apply { mkdirs() } }
+    }
+
+    /** A console command's ending, worded like a run's but named as a command. */
+    private fun finishConsole(context: Context, exitCode: Int, durationMs: Long) {
+        stopForegroundRun(context)
+        val finished = context.getString(R.string.output_console_exit, exitCode)
+        _outputState.value = _outputState.value.copy(
+            phase = if (exitCode == 0) OutputPhase.DONE else OutputPhase.FAILED,
+            busy = false,
+            runExitCode = exitCode,
+            runDurationMs = durationMs,
+            summary = finished,
+            waitingForInput = false,
+            inputBuffer = "",
+            lines = _outputState.value.lines + OutputLine(
+                finished,
+                if (exitCode == 0) OutputLineKind.STATS else OutputLineKind.ERROR
+            )
+        )
     }
 
     /** Phase 23.2 — append a character (e.g. Tab) to the inline input line. */
