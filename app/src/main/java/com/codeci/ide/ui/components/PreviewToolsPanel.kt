@@ -13,6 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -370,7 +372,7 @@ private fun PreviewElementsTab(
             )
             IconButton(onClick = onRefresh) {
                 Icon(
-                    androidx.compose.material.icons.Icons.Default.Refresh,
+                    Icons.Default.Refresh,
                     contentDescription = stringResource(R.string.preview_elements_refresh),
                 )
             }
@@ -591,7 +593,7 @@ private fun PreviewResourcesTab(
             )
             IconButton(onClick = onRefresh) {
                 Icon(
-                    androidx.compose.material.icons.Icons.Default.Refresh,
+                    Icons.Default.Refresh,
                     contentDescription = stringResource(R.string.preview_resources_refresh),
                 )
             }
