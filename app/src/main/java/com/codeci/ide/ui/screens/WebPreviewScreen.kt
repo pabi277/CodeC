@@ -43,6 +43,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.codeci.ide.ui.services.PreviewConsolePolicy
+import com.codeci.ide.ui.services.PreviewDomNode
+import com.codeci.ide.ui.services.PreviewInspectorPolicy
+import com.codeci.ide.ui.services.PreviewNodeDetails
+import com.codeci.ide.ui.services.PreviewViewport
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -117,6 +123,18 @@ fun WebPreviewScreen(
     var resolutionDialog by remember { mutableStateOf(false) }
     var resolution by remember { mutableStateOf(PreviewResolution.DEVICE) }
     var currentUrl by remember { mutableStateOf<String?>(liveUrl) }
+
+    // Phase 72.1 — the shots' “Preview · 100 % Zoom” subtitle needs the number
+    // the WebView is actually at, so the screen owns it and hands it down.
+    // Readouts are screen state, not preferences: nothing here is persisted.
+    var zoomPercent by rememberSaveable { mutableStateOf(100) }
+    var fitToPhone by rememberSaveable { mutableStateOf(true) }
+    val resources by viewModel.resources.collectAsState()
+    val viewport by viewModel.viewport.collectAsState()
+    var domTree by remember { mutableStateOf(emptyList<PreviewDomNode>()) }
+    var domDetails by remember { mutableStateOf<PreviewNodeDetails?>(null) }
+    var selectedNode by remember { mutableStateOf(-1) }
+    var highlighted by remember { mutableStateOf(-1) }
 
     // Phase 68.1 (completed part) — the rendered Markdown page must match the
     // app's theme, so resolve dark exactly the way MainActivity does.
@@ -233,10 +251,67 @@ fun WebPreviewScreen(
         )
     }
 
+    // Phase 72.1 — everything the five tabs ask for, in one place. The panel
+    // stays presentation-only: these lambdas own the WebView calls and the
+    // clipboard, and every script comes from a pure policy.
+    val copyText: (String) -> Unit = { text ->
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("CodeC", text))
+    }
+    val refreshElements: () -> Unit = {
+        webView?.evaluate(PreviewInspectorPolicy.treeScript()) { raw ->
+            domTree = PreviewInspectorPolicy.parseTree(raw)
+            domDetails = null
+            selectedNode = -1
+            highlighted = -1
+        }
+    }
+    val selectNode: (Int) -> Unit = { index ->
+        selectedNode = index
+        webView?.evaluate(PreviewInspectorPolicy.detailScript(index)) { raw ->
+            domDetails = PreviewInspectorPolicy.parseDetails(raw)
+        }
+    }
+    val toggleHighlight: (Int) -> Unit = { index ->
+        val next = if (highlighted == index) -1 else index
+        highlighted = next
+        webView?.evaluate(PreviewInspectorPolicy.highlightScript(next)) { }
+    }
+    val copyHtml: (Int) -> Unit = { index ->
+        webView?.evaluate(PreviewInspectorPolicy.htmlScript(index)) { raw ->
+            val html = PreviewConsolePolicy.unquote(raw)
+            if (html.isNotBlank()) copyText(html)
+        }
+    }
+    val runCommand: (String) -> Unit = { text ->
+        val script = PreviewConsolePolicy.command(text)
+        if (script != null) {
+            viewModel.appendConsole(PreviewConsolePolicy.echo(text))
+            webView?.evaluate(script) { raw ->
+                viewModel.appendConsole(PreviewConsolePolicy.result(raw))
+            }
+        }
+    }
+    val clearCache: () -> Unit = {
+        webView?.clearCache()
+        viewModel.clearConsole()
+        viewModel.clearNetwork()
+        viewModel.requestReload()
+    }
+
     Column(modifier = Modifier.fillMaxSize().imePadding()) {
         TopAppBar(
             title = {
-                Text(htmlFile?.name ?: (fileName ?: if (isLive) "Live server" else "Preview"))
+                // Phase 72.1 — the shots' two-line bar: the page, then what the
+                // preview is doing with it (Preview · N % Zoom).
+                Column {
+                    Text(htmlFile?.name ?: (fileName ?: if (isLive) "Live server" else "Preview"))
+                    Text(
+                        text = stringResource(R.string.preview_bar_subtitle, zoomPercent),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             },
             navigationIcon = {
                 IconButton(
@@ -338,6 +413,18 @@ fun WebPreviewScreen(
                             }
                         }
                     }
+                }
+                // Phase 72.1 — the shots' own console button: one tap, and its
+                // glyph swaps to ⊘ while the panel is open, exactly as the
+                // shots swap theirs.
+                IconButton(onClick = { toolsVisible = !toolsVisible }) {
+                    Icon(
+                        if (toolsVisible) SpckIcons.ClearCircle else SpckIcons.Console,
+                        contentDescription = stringResource(
+                            if (toolsVisible) R.string.preview_console_hide
+                            else R.string.preview_console_show
+                        ),
+                    )
                 }
                 IconButton(
                     onClick = { viewModel.requestReload() },
@@ -452,16 +539,44 @@ fun WebPreviewScreen(
                 }
                 if (toolsVisible) {
                     PreviewToolsPanel(
-                        console = console, network = network, tab = toolTab, levels = levels,
-                        height = panelHeight, availableHeight = available,
+                        console = console,
+                        // The table the shots show: the WebView's own observed
+                        // requests joined, by address, with the page's timings.
+                        network = PreviewToolsPolicy.merge(network, resources),
+                        resources = resources,
+                        domTree = domTree,
+                        details = domDetails,
+                        selectedNode = selectedNode,
+                        highlighted = highlighted,
+                        viewport = viewport,
+                        fitToPhone = fitToPhone,
+                        zoomPercent = zoomPercent,
+                        resolution = resolution,
+                        tab = toolTab,
+                        levels = levels,
+                        height = panelHeight,
+                        availableHeight = available,
                         onTab = { toolTab = it },
-                        onLevel = { level -> levels = if (level in levels) levels - level else levels + level },
+                        onLevels = { levels = it },
                         onResize = { delta -> requestedHeight = PreviewToolsPolicy.panelHeight(
                             PreviewToolsPolicy.panelHeight(requestedHeight, available) + delta, available) },
                         onHeight = { requestedHeight = PreviewToolsPolicy.panelHeight(it, available) },
-                        onClear = { if (toolTab == PreviewToolTab.CONSOLE)
-                            viewModel.clearConsole() else viewModel.clearNetwork() },
+                        onClear = {
+                            if (toolTab == PreviewToolTab.CONSOLE) viewModel.clearConsole()
+                            else viewModel.clearNetwork()
+                        },
                         onClose = { toolsVisible = false },
+                        onCommand = runCommand,
+                        onCopyText = copyText,
+                        onSelectNode = selectNode,
+                        onToggleHighlight = toggleHighlight,
+                        onCopyHtml = copyHtml,
+                        onRefreshElements = refreshElements,
+                        onRefreshResources = { webView?.captureResources() },
+                        onZoom = { zoomDialog = true },
+                        onResolution = { resolutionDialog = true },
+                        onFitToPhone = { fitToPhone = it },
+                        onClearCache = clearCache,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -469,7 +584,11 @@ fun WebPreviewScreen(
         }
     }
     if (zoomDialog) PreviewZoomDialog(
-        onDismiss = { zoomDialog = false }, onZoom = { webView?.applyZoom(it) }
+        onDismiss = { zoomDialog = false },
+        onZoom = {
+            webView?.applyZoom(it)
+            zoomPercent = it
+        }
     )
     if (resolutionDialog) PreviewResolutionDialog(
         selected = resolution, onDismiss = { resolutionDialog = false },
@@ -536,6 +655,19 @@ fun WebPreviewScreen(
     DisposableEffect(viewModel) {
         onDispose { viewModel.watch(null) }
     }
+
+    // Phase 72.1 — opening the panel asks the page what it is made of: the
+    // Resource Timing entries behind Network's Type/Size/Time and the
+    // Resources tab, and the DOM tree when Elements is the tab on screen.
+    LaunchedEffect(toolsVisible, toolTab, reloadTick, webView) {
+        if (!toolsVisible) return@LaunchedEffect
+        webView?.captureResources()
+        if (toolTab == PreviewToolTab.ELEMENTS) refreshElements()
+    }
+
+    // Phase 72.1 — the Settings switch reaches the next load, never the current
+    // one: a page that already rendered must not be re-laid out under the user.
+    LaunchedEffect(webView, fitToPhone) { webView?.fitToPhone = fitToPhone }
 
     // Reload the WebView whenever the file changed on disk or Refresh was tapped.
     LaunchedEffect(reloadTick) {

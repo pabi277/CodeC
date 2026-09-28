@@ -49,11 +49,110 @@ class PreviewToolsPolicyTest {
         assertEquals("https://example.org/a%20b%2Fc", PreviewToolsPolicy.request("GET", "https://example.org/a%20b%2Fc?key=x", true)!!.address)
     }
     @Test fun `panel clamps to the actual available height leaving page space`() {
+        // Phase 72.1 — the floor is a strip plus an input line now, so it is
+        // 220 dp where the space exists and 65 % where it does not.
         assertEquals(260f, PreviewToolsPolicy.panelHeight(900f, 400f), .01f)
-        assertEquals(160f, PreviewToolsPolicy.panelHeight(1f, 400f), .01f)
+        assertEquals(220f, PreviewToolsPolicy.panelHeight(1f, 400f), .01f)
         assertEquals(65f, PreviewToolsPolicy.panelHeight(240f, 100f), .01f)
         assertEquals(0f, PreviewToolsPolicy.panelHeight(240f, 0f), .01f)
         assertEquals(240f, PreviewToolsPolicy.panelHeight(Float.NaN, 1000f), .01f)
+    }
+
+    // ---- Phase 72.1: the strip, the table columns and the viewport ask ----
+
+    @Test fun `the strip is the five tabs the shots show, in order`() {
+        assertEquals(
+            listOf(
+                PreviewToolTab.CONSOLE,
+                PreviewToolTab.ELEMENTS,
+                PreviewToolTab.NETWORK,
+                PreviewToolTab.RESOURCES,
+                PreviewToolTab.SETTINGS,
+            ),
+            PreviewToolTab.entries.toList(),
+        )
+    }
+
+    @Test fun `redaction is the one rule both lists share`() {
+        assertEquals(
+            "https://example.org:8443/a/b",
+            PreviewToolsPolicy.redact("https://user:password@example.org:8443/a/b?q=1#f"),
+        )
+        assertNull(PreviewToolsPolicy.redact("file:///secret"))
+        assertNull(PreviewToolsPolicy.redact("data:text/plain,secret"))
+        assertNull(PreviewToolsPolicy.redact("not a url"))
+    }
+
+    @Test fun `page timings join the observer's rows by address`() {
+        val requests = listOf(
+            PreviewToolsPolicy.request("GET", "http://127.0.0.1:1/a.css?x=1", false)!!,
+            PreviewToolsPolicy.request("GET", "http://127.0.0.1:1/b.png", false)!!,
+        )
+        val resources = listOf(
+            PreviewToolsPolicy.resource("http://127.0.0.1:1/a.css?secret=1", "link", 2048, 12)!!,
+            PreviewToolsPolicy.resource("https://cdn.example.org/x.js", "script", 10, 5)!!,
+        )
+        val merged = PreviewToolsPolicy.merge(requests, resources)
+        assertEquals("GET", merged[0].method)
+        assertEquals("link", merged[0].type)
+        assertEquals(2048L, merged[0].size)
+        assertEquals(12L, merged[0].time)
+        // Nobody reported the image: its cells stay “—” instead of inventing numbers.
+        assertNull(merged[1].type)
+        assertNull(merged[1].size)
+        assertEquals(merged, PreviewToolsPolicy.merge(requests, emptyList()))
+    }
+
+    @Test fun `resources parse back from the page's own answer`() {
+        val row = listOf("https://example.org/a.js?token=1", "script", "4096", "18").joinToString("\u0001")
+        val rows = PreviewToolsPolicy.parseResources(PreviewConsolePolicy.quote(row))
+        assertEquals(1, rows.size)
+        assertEquals("https://example.org/a.js", rows.single().address)
+        assertEquals("script", rows.single().type)
+        assertEquals(4096L, rows.single().size)
+        assertEquals(18L, rows.single().time)
+        assertTrue(PreviewToolsPolicy.parseResources(null).isEmpty())
+        assertTrue(
+            PreviewToolsPolicy.parseResources(
+                PreviewConsolePolicy.quote("file:///x\u0001img\u00010\u00010")
+            ).isEmpty()
+        )
+        // A row without its four fields is dropped, never half-read.
+        assertTrue(PreviewToolsPolicy.parseResources(PreviewConsolePolicy.quote("https://a/b")).isEmpty())
+    }
+
+    @Test fun `a resource type never leaves an empty cell`() {
+        assertEquals("img", PreviewToolsPolicy.resource("https://a/b", "img", 1, 1)!!.type)
+        assertEquals("other", PreviewToolsPolicy.resource("https://a/b", "", 1, 1)!!.type)
+        assertEquals(0L, PreviewToolsPolicy.resource("https://a/b", "img", -5, -5)!!.size)
+    }
+
+    @Test fun `the viewport ask only ever adds a missing default`() {
+        val script = PreviewToolsPolicy.viewportScript()
+        assertTrue(script.contains("meta[name=viewport]"))
+        assertTrue(script.contains("document.head"))
+        assertTrue(script.contains("width=device-width, initial-scale=1"))
+        assertTrue(script.contains("h.appendChild(t)"))
+        assertEquals(PreviewViewport.AUTHORED, PreviewToolsPolicy.viewportOutcome("\"authored\""))
+        assertEquals(PreviewViewport.ADDED, PreviewToolsPolicy.viewportOutcome("\"added\""))
+        assertEquals(PreviewViewport.UNKNOWN, PreviewToolsPolicy.viewportOutcome("\"none\""))
+        assertEquals(PreviewViewport.UNKNOWN, PreviewToolsPolicy.viewportOutcome(null))
+    }
+
+    @Test fun `columns are honest about the numbers WebView never reports`() {
+        assertEquals("—", PreviewToolsPolicy.statusLabel(null))
+        assertEquals("200", PreviewToolsPolicy.statusLabel(200))
+        assertEquals("—", PreviewToolsPolicy.typeLabel(null))
+        assertEquals("img", PreviewToolsPolicy.typeLabel("img"))
+        assertEquals("—", PreviewToolsPolicy.sizeLabel(null))
+        assertEquals("—", PreviewToolsPolicy.sizeLabel(0))
+        assertEquals("512 B", PreviewToolsPolicy.sizeLabel(512))
+        assertEquals("1.5 kB", PreviewToolsPolicy.sizeLabel(1536))
+        assertEquals("2.0 MB", PreviewToolsPolicy.sizeLabel(2L * 1024 * 1024))
+        assertEquals("—", PreviewToolsPolicy.timeLabel(null))
+        assertEquals("—", PreviewToolsPolicy.timeLabel(0))
+        assertEquals("18 ms", PreviewToolsPolicy.timeLabel(18))
+        assertEquals("1.2 s", PreviewToolsPolicy.timeLabel(1234))
     }
     @Test fun `viewport fit never upscales or overflows either bound`() {
         assertEquals(.25f, PreviewToolsPolicy.fitScale(320f, 400f, 1280f, 720f), .001f)

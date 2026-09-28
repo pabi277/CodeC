@@ -3,9 +3,22 @@ package com.codeci.ide
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Phase 61 built the diagnostics panel; Phase 72.1 (2026-09-28) grew it into
+ * the five tabs the owner's own shots show and gave the console a command line.
+ *
+ * The one deliberate reversal this file records: Phase 61 pinned that the
+ * native view could not contain `evaluateJavascript` — the Network tab observed
+ * requests and injected nothing. The owner's screenshots (SPCK's console with
+ * *Cancel · Execute*) and his report (*“i can't run any console command”*) asked
+ * for the opposite, so the native view now evaluates — but only scripts the
+ * pure policies build, and only from the panel's own actions. The interception
+ * path still returns null and still fetches nothing.
+ */
 class PreviewToolsWiringTest {
     private fun source(path: String) = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/$path").readText()
     private val screen = source("screens/WebPreviewScreen.kt")
+    private val panel = source("components/PreviewToolsPanel.kt")
     private val native = RepoFiles.codeOnly(source("components/PreviewWebView.kt"))
 
     @Test fun `empty diagnostics remain openable and panel height is bounded`() {
@@ -15,15 +28,37 @@ class PreviewToolsWiringTest {
         assertTrue(screen.contains("viewModel.clearNetwork()"))
         assertTrue(screen.contains("toolsVisible = false"))
     }
-    @Test fun `network observes without fetching or injecting and release owns disposal`() {
+    @Test fun `network observes without fetching or replacing the response`() {
         assertTrue(native.contains("override fun shouldInterceptRequest"))
         assertTrue(native.contains("model.addRequest(token, request.method, request.url.toString(), request.isForMainFrame)"))
         assertTrue(native.contains("return null"))
-        assertFalse(native.contains("evaluateJavascript"))
         assertFalse(native.contains("openConnection"))
         assertTrue(native.contains("model.endSession(token)"))
         assertTrue(screen.contains("onRelease = { released ->"))
         assertTrue(screen.contains("released.disposePreview()"))
+    }
+    @Test fun `the console runs only policy-built scripts and only on an action`() {
+        // Phase 72.1 — the scripts are the policies' (never a page's payload),
+        // and the evaluation happens on the view's own thread.
+        assertTrue(native.contains("fun evaluate(script: String, onResult: (String?) -> Unit)"))
+        assertTrue(native.contains("post {"))
+        assertTrue(native.contains("evaluateJavascript(script)"))
+        assertTrue(screen.contains("PreviewConsolePolicy.command(text)"))
+        assertTrue(screen.contains("viewModel.appendConsole(PreviewConsolePolicy.echo(text))"))
+        assertTrue(screen.contains("viewModel.appendConsole(PreviewConsolePolicy.result(raw))"))
+        assertTrue(panel.contains("R.string.preview_console_execute"))
+        assertTrue(panel.contains("R.string.preview_console_cancel"))
+        assertTrue(panel.contains("KeyboardActions(onSend = { execute() })"))
+    }
+    @Test fun `the five tabs, the elements tree and the resource read are wired`() {
+        assertTrue(panel.contains("PreviewToolTab.entries.forEach"))
+        assertTrue(screen.contains("PreviewInspectorPolicy.treeScript()"))
+        assertTrue(screen.contains("PreviewInspectorPolicy.detailScript(index)"))
+        assertTrue(screen.contains("PreviewInspectorPolicy.highlightScript(next)"))
+        assertTrue(screen.contains("PreviewInspectorPolicy.htmlScript(index)"))
+        assertTrue(native.contains("PreviewToolsPolicy.resourcesScript()"))
+        assertTrue(native.contains("PreviewToolsPolicy.viewportScript()"))
+        assertTrue(screen.contains("PreviewToolsPolicy.merge(network, resources)"))
     }
     @Test fun `native zoom preserves file access restrictions and does not reload`() {
         assertTrue(native.contains("settings.allowUniversalAccessFromFileURLs = false"))
@@ -42,5 +77,12 @@ class PreviewToolsWiringTest {
         assertTrue(screen.contains("wv.reload()"))
         assertTrue(screen.contains("loadMarkdownInto(wv, file, previewDark)"))
         assertTrue(screen.contains("OpenInBrowser.openOrCopy("))
+    }
+    @Test fun `the bar carries the shots' console toggle and zoom readout`() {
+        assertTrue(screen.contains("SpckIcons.Console"))
+        assertTrue(screen.contains("SpckIcons.ClearCircle"))
+        assertTrue(screen.contains("R.string.preview_bar_subtitle"))
+        assertTrue(screen.contains("R.string.preview_console_show"))
+        assertTrue(screen.contains("R.string.preview_console_hide"))
     }
 }

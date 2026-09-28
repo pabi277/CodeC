@@ -2,7 +2,9 @@ package com.codeci.ide.ui.viewmodels
 
 import com.codeci.ide.ui.services.PreviewConsoleEntry
 import com.codeci.ide.ui.services.PreviewRequest
+import com.codeci.ide.ui.services.PreviewResource
 import com.codeci.ide.ui.services.PreviewToolsPolicy
+import com.codeci.ide.ui.services.PreviewViewport
 import kotlinx.coroutines.Job
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -37,6 +39,23 @@ class WebPreviewViewModel : ViewModel() {
 
     private val _network = MutableStateFlow<List<PreviewRequest>>(emptyList())
     val network: StateFlow<List<PreviewRequest>> = _network.asStateFlow()
+
+    /**
+     * Phase 72.1 — the page's own Resource Timing entries, read once the page
+     * settles. Kept beside [network] rather than merged into it: the two have
+     * different owners (WebView sees requests, the page sees timings) and the
+     * panel joins them by address at render time, in a pure function.
+     */
+    private val _resources = MutableStateFlow<List<PreviewResource>>(emptyList())
+    val resources: StateFlow<List<PreviewResource>> = _resources.asStateFlow()
+
+    /**
+     * Phase 72.1 — what the page said about its own viewport meta when it
+     * finished loading, so Settings can state it honestly.
+     */
+    private val _viewport = MutableStateFlow(PreviewViewport.UNKNOWN)
+    val viewport: StateFlow<PreviewViewport> = _viewport.asStateFlow()
+
     private var session = 0L
     private var watcher: Job? = null
 
@@ -47,6 +66,8 @@ class WebPreviewViewModel : ViewModel() {
         session++
         _console.value = emptyList()
         _network.value = emptyList()
+        _resources.value = emptyList()
+        _viewport.value = PreviewViewport.UNKNOWN
         return session
     }
 
@@ -70,11 +91,40 @@ class WebPreviewViewModel : ViewModel() {
         _network.value = PreviewToolsPolicy.append(_network.value, entry)
     }
 
+    /**
+     * Phase 72.1 — a line this screen itself produced: the `› command` echo and
+     * the result of the command line. No session token, because the caller is
+     * the live screen, not a WebView callback that might belong to a dead view.
+     */
+    @Synchronized
+    fun appendConsole(entry: PreviewConsoleEntry) {
+        _console.value = PreviewToolsPolicy.append(_console.value, entry)
+    }
+
+    @Synchronized
+    fun addResources(token: Long, rows: List<PreviewResource>) {
+        if (token != session) return
+        // Newest first, one row per address: a refresh replaces the page's
+        // entries instead of stacking a second copy of every resource.
+        _resources.value = (rows + _resources.value)
+            .distinctBy { it.address }
+            .takeLast(PreviewToolsPolicy.CAPACITY)
+    }
+
+    @Synchronized
+    fun reportViewport(token: Long, outcome: PreviewViewport) {
+        if (token != session) return
+        _viewport.value = outcome
+    }
+
     @Synchronized
     fun clearConsole() { _console.value = emptyList() }
 
     @Synchronized
-    fun clearNetwork() { _network.value = emptyList() }
+    fun clearNetwork() {
+        _network.value = emptyList()
+        _resources.value = emptyList()
+    }
 
     fun requestReload() {
         _reloadTick.update { it + 1 }

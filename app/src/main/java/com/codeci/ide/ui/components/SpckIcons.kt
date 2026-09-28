@@ -479,4 +479,94 @@ object SpckIcons {
             width = 1.6f
         )
     }.build()
+
+    /**
+     * Phase 72.1 — the preview bar's console toggle: the shot's rounded
+     * rectangle with a `>` and an underscore inside it, the browser mark for
+     * “this opens a console”.
+     */
+    val Console: ImageVector = builder("spck.console").apply {
+        strokePath(
+            nodes = listOf(
+                PathNode.MoveTo(4f, 5.5f),
+                PathNode.HorizontalTo(20f),
+                PathNode.VerticalTo(18.5f),
+                PathNode.HorizontalTo(4f),
+                PathNode.Close
+            ),
+            width = 1.6f,
+            join = StrokeJoin.Round
+        )
+        strokePath(
+            nodes = listOf(
+                PathNode.MoveTo(7f, 9.5f),
+                PathNode.LineTo(10f, 12f),
+                PathNode.LineTo(7f, 14.5f)
+            ),
+            width = 1.6f,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round
+        )
+        strokePath(
+            nodes = listOf(PathNode.MoveTo(11.5f, 15f), PathNode.HorizontalTo(16f)),
+            width = 1.6f,
+            cap = StrokeCap.Round
+        )
+    }.build()
+
+    /** Phase 72.1 — the filter row's funnel (the shots' right-hand mark). */
+    val Filter: ImageVector = builder("spck.filter").apply {
+        strokePath(
+            nodes = listOf(
+                PathNode.MoveTo(4f, 6f),
+                PathNode.HorizontalTo(20f),
+                PathNode.LineTo(14f, 13f),
+                PathNode.VerticalTo(18.5f),
+                PathNode.LineTo(10f, 16.5f),
+                PathNode.VerticalTo(13f),
+                PathNode.Close
+            ),
+            width = 1.6f,
+            join = StrokeJoin.Round
+        )
+    }.build()
+
+    /** Phase 72.1 — copy (two offset sheets), used by the console's copy line. */
+    val Copy: ImageVector = builder("spck.copy").apply {
+        strokePath(
+            nodes = listOf(
+                PathNode.MoveTo(9f, 4.5f),
+                PathNode.HorizontalTo(19.5f),
+                PathNode.VerticalTo(15f),
+                PathNode.HorizontalTo(9f),
+                PathNode.Close
+            ),
+            width = 1.6f,
+            join = StrokeJoin.Round
+        )
+        strokePath(
+            nodes = listOf(
+                PathNode.MoveTo(15f, 18f),
+                PathNode.HorizontalTo(4.5f),
+                PathNode.VerticalTo(9f),
+                PathNode.HorizontalTo(6.5f)
+            ),
+            width = 1.6f,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round
+        )
+    }.build()
+
+    /**
+     * Phase 72.1 — the “console is open” mark the shots swap the [Console]
+     * glyph for: a circle with a slash through it (⊘), i.e. tap to put it away.
+     */
+    val ClearCircle: ImageVector = builder("spck.clearCircle").apply {
+        strokePath(circle(12f, 12f, 8f), width = 1.6f)
+        strokePath(
+            nodes = listOf(PathNode.MoveTo(6.6f, 6.6f), PathNode.LineTo(17.4f, 17.4f)),
+            width = 1.6f,
+            cap = StrokeCap.Round
+        )
+    }.build()
 }
