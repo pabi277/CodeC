@@ -277,6 +277,7 @@ private fun OutputStatusRow(
     onStop: () -> Unit,
     onToggleExpand: () -> Unit,
 ) {
+    val motion = rememberMotionSpecs()
     val tint = headTint(head)
     Row(
         modifier = Modifier
@@ -450,14 +451,17 @@ private fun OutputActionRow(
 /** `3 errors · 1 warning` — the count the owner had to do by eye. */
 @Composable
 private fun OutputErrorBanner(counts: OutputPanelStatus.Counts) {
-    val text = buildList {
-        if (counts.errors > 0) {
-            add(pluralStringResource(R.plurals.output_error_count, counts.errors, counts.errors))
-        }
-        if (counts.warnings > 0) {
-            add(pluralStringResource(R.plurals.output_warning_count, counts.warnings, counts.warnings))
-        }
-    }.joinToString(" · ")
+    val errors = if (counts.errors > 0) {
+        pluralStringResource(R.plurals.output_error_count, counts.errors, counts.errors)
+    } else {
+        null
+    }
+    val warnings = if (counts.warnings > 0) {
+        pluralStringResource(R.plurals.output_warning_count, counts.warnings, counts.warnings)
+    } else {
+        null
+    }
+    val text = listOfNotNull(errors, warnings).joinToString(" · ")
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -610,7 +614,7 @@ private fun headWord(head: OutputHead): String? = when (head) {
         }
     )
     OutputHead.Waiting -> stringResource(R.string.output_state_waiting)
-    OutputHead.Done -> stringResource(R.string.output_state_done)
+    is OutputHead.Done -> stringResource(R.string.output_state_done)
     is OutputHead.Failed -> stringResource(R.string.output_state_failed)
     OutputHead.Stopped -> stringResource(R.string.output_state_stopped)
     OutputHead.Serving -> stringResource(R.string.output_state_serving)
@@ -628,14 +632,14 @@ private fun headTint(head: OutputHead): Color = when (head) {
     OutputHead.Waiting -> Color(0xFF66B2FF)
     is OutputHead.Working -> Color(0xFF66B2FF)
     OutputHead.Serving -> Color(0xFF55FF55)
-    OutputHead.Done -> Color(0xFF55FF55)
+    is OutputHead.Done -> Color(0xFF55FF55)
     OutputHead.Idle -> Color(CodecPalette.MUTED_TEXT)
 }
 
 private fun headIcon(head: OutputHead): ImageVector = when (head) {
     is OutputHead.Working -> Icons.Default.PlayArrow
     OutputHead.Waiting -> Icons.Default.Send
-    OutputHead.Done -> Icons.Default.CheckCircle
+    is OutputHead.Done -> Icons.Default.CheckCircle
     is OutputHead.Failed -> Icons.Default.Warning
     OutputHead.Stopped -> Icons.Default.Close
     OutputHead.Serving -> Icons.Default.Visibility

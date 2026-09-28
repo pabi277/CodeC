@@ -106,7 +106,7 @@ class OutputPanelStatusTest {
                 "main.c:3:5: error: expected ';' before '}' token",
                 "main.c:9: error: use of undeclared identifier 'x'",
                 "util.c:2:1: warning: unused variable 'y' [-Wunused-variable]",
-                "cc: fatal error: no such file: missing.h",
+                "main.c:14:2: fatal error: missing.h: No such file or directory",
                 "Build failed with exit code 1",
                 "1 + 1",
                 "",

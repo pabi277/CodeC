@@ -100,7 +100,12 @@ class PreviewToolsPolicyTest {
         // Nobody reported the image: its cells stay “—” instead of inventing numbers.
         assertNull(merged[1].type)
         assertNull(merged[1].size)
-        assertEquals(merged, PreviewToolsPolicy.merge(requests, emptyList()))
+        // The page reported nothing: the observer's rows come back untouched,
+        // never re-shaped (empty page list in, same list out).
+        assertEquals(requests, PreviewToolsPolicy.merge(requests, emptyList()))
+        // …and a page row whose address nobody requested stays out of the
+        // table rather than inventing a Method for itself.
+        assertEquals(2, merged.size)
     }
 
     @Test fun `resources parse back from the page's own answer`() {
