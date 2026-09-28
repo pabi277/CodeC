@@ -192,6 +192,17 @@ One command per phase: **“Start Phase 54”**, then 55, then 56, then 57, then
 
 **⚠️ One recorded deviation (asked, not taken):** Material3's modal scrim owns the tap on the strip, so a Run while the panel is open costs one tap on the strip first (play stays one tap away). The shots show a live strip; making it truly interactive means hand-rolling the drawer's state machine (back precedence, the chrome lock, the tour's `drawerOpen` fact, the edge swipe) — a **one-line change** if the owner wants it, so it was put to him instead.
 
+> **Settled by Phase 69.3 (2026-09-28).** The deviation above assumed the
+> scrim's tap *closes* the panel; the owner's phone says it never did — his
+> report was *"it have a gap side of that make it if user clicks the empty
+> space it will close the 3 ber"*. The tap is now the app's own: a box the
+> width of `SidePanelPlan.STRIP_WIDTH_FRACTION` (`1 − PANEL_WIDTH_FRACTION`),
+> composed after the drawer so it sits above the scrim, closing through
+> `DrawerPolicy` with reason `SCRIM`. The strip is still undimmed (the shot's
+> live editor shows through) and the two-tap cost for Run is unchanged — it is
+> now a cost the code pays on purpose. See
+> [`PHASE_69_3_STRIP_AND_KEY_DRAG.md`](ui-polish-chats/PHASE_69_3_STRIP_AND_KEY_DRAG.md).
+
 ---
 
 ## 56 — Remove only the Projects option

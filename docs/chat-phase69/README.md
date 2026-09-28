@@ -6,6 +6,13 @@
 ([run 36350567066](https://github.com/pabi277/CodeC/actions/runs/36350567066))**.
 **No PR opened, nothing merged** — the owner's instruction is required for that.
 
+**Phase 69.3** (2026-09-28) followed in the next chat — two more owner reports:
+*"The 3 ber open the editor but it have a gap side of that make it if user clicks
+the empty space it will close the 3 ber"* and *"The quick keys are sensitive even
+i want to drag for other keys it's types which ever i am scrolling"*. Full
+section at the bottom of this file; the brief is
+[`PHASE_69_3_STRIP_AND_KEY_DRAG.md`](../ui-polish-chats/PHASE_69_3_STRIP_AND_KEY_DRAG.md).
+
 **Phase 69.2** (2026-09-28) arrived in the same chat, right after this delivery:
 the owner reported two problems — *"What language i am using don't matter it
 always give me same fixed quick keys"* and *"Sometimes the ghost suggestions
@@ -366,6 +373,87 @@ row, button or setting. The one coding row stays one row (68.1); nothing was
 removed from it; CodeC Keys stays language-independent by its own 28.2 decision;
 `keyStripJson` still controls only the general base; the system keyboard stays
 the default and CodeC Keys stays opt-in.
+
+**Stop point:** this part only. No PR, no merge, no `main` push without the
+owner's explicit instruction.
+
+---
+
+# Phase 69.3 — the strip beside the panel closes it, and a drag never types a key
+
+**Date:** 2026-09-28. **Status:** implemented on `arena/01a0e49f-codec`
+(tip `df6c654`), **CI ✅ GREEN** (run 36378830783). **No PR, nothing merged.**
+Owner reports, verbatim: *"The 3 ber open the editor but it have a gap side of
+that make it if user clicks the empty space it will close the 3 ber"* and *"The
+quick keys are sensitive even i want to drag for other keys it's types which ever
+i am scrolling"*.
+
+## Owner answers (verbatim)
+
+| # | Question | Answer |
+|---|---|---|
+| Q1 | What should the strip beside the ☰ panel be? | **A — Tap there closes it, strip stays undimmed (recommended)** — accepted cost: the green play in that strip takes two taps while the panel is open |
+| Q2 | How strictly must a cap tell a tap from a drag? | **A — The phone's own touch slop (~8dp) — a drag never types (recommended)** |
+
+## What was found (read on this checkout)
+
+- The ☰ panel is 85 % of the width and leaves a 15 % strip of live editor
+  beside it. Phase 55 had written that strip's tap off to Material3's modal
+  scrim, **read out of Material3's source and never off a phone** — its device
+  round was never run. The owner's report is the first device evidence, and it
+  says the tap closed nothing.
+- Three rows scroll (keys, run keys, suggestion chips) and all three carried
+  their own copy of a **20 dp** "this was a scroll" threshold, while the row
+  itself starts scrolling at the platform's **touch slop (8 dp)**. Every drag
+  between the two scrolled the row **and** typed the cap. The arrows'
+  hold-repeat (150 ms) fired into slow drags, and the loops threw the up change
+  away. `KeyGestureDetector.classify` — 26.1's advertised "pure state machine" —
+  turns out to have no production caller at all.
+
+## What changed
+
+1. **The strip closes the panel.** `SidePanelPlan.STRIP_WIDTH_FRACTION` =
+   `1 − PANEL_WIDTH_FRACTION` (the panel's complement by construction); a box
+   that wide, full height, aligned to the end (RTL-correct), composed **after**
+   the drawer so it sits above it and above the scrim, `indication = null` (the
+   shot's undimmed strip), `clickable` (it consumes the tap), closing through
+   `closeDrawer(DrawerCloseReason.SCRIM)` → `DrawerPolicy`. Present only while
+   the panel is open or opening (`targetValue`).
+2. **A drag never types.** One pure rule `KeyGestureDetector.isScrollDx`, one
+   slop (`LocalViewConfiguration.current.touchSlop`, pixels — the same value the
+   row's scroller uses) for all three rows; the up counts as part of the
+   gesture; the arrows' hold-repeat step is guarded by `!isScroll`.
+
+## Tests
+
+`KeyGestureDetectorTest` +3 (the slop rule) · `KeysScrollCancelWiringTest`
+(new, 4: no row keeps its own threshold, all three ask the one rule, the
+hold-repeat guard, the up is measured) · `SidePanelPlanTest` +1 (the strip is
+the panel's complement) · `DrawerWiringTest` +1 (the strip's width/side/
+lifetime/SCRIM reason/nothing drawn/composed after the drawer). **Nine new host
+cases.**
+
+## Validation
+
+| What | Where | Result |
+|---|---|---|
+| Source tests (host JVM) | CI `:app:testDebugUnitTest` on `df6c654` | ✅ run 36378830783, 9m29s |
+| Android tests (instrumented) | — | none for this part; nothing claimed |
+| Device evidence | — | **not claimed** — no round run, none asked for |
+
+CI round 1 was red with two compile errors of this part's own making
+(run 36378529137): `fillMaxHeight` had no import in `EditorScreen`, and
+`ViewConfiguration.touchSlop` is **pixels**, not `Dp`, so `.toPx()` did not
+apply. Both fixed in `df6c654` with no behaviour change; round 2 is green with
+both APKs (debug 26,025,252 B / release 6,798,268 B).
+
+## Boundaries
+
+No new dependency, permission, preference, telemetry, screen, row, button or
+setting; the panel's look, rail, slots and tree, the bottom bar, the drawer
+close law (47.1), back precedence (49.1) and the tour's `drawerOpen` fact are
+untouched; vertical swipe layers, popups, flicks and hold-repeat timings are
+unchanged.
 
 **Stop point:** this part only. No PR, no merge, no `main` push without the
 owner's explicit instruction.

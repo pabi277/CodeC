@@ -1,3 +1,47 @@
+**2026-09-28 — Phase 69.3 (the strip beside the ☰ panel closes it; a drag never
+types a key): implemented on `arena/01a0e49f-codec` (tip `df6c654`), owner
+answers taken BEFORE any code.** Two owner reports, verbatim: *"The 3 ber open
+the editor but it have a gap side of that make it if user clicks the empty space
+it will close the 3 ber"* and *"The quick keys are sensitive even i want to drag
+for other keys it's types which ever i am scrolling"*. What the reading found:
+(1) the ☰ panel is 85 % of the width and leaves a 15 % strip of live editor, and
+Phase 55 had written that strip's tap off to Material3's modal scrim **read out
+of Material3's source, never off a phone** — the Phase 55 device round was never
+run, and the owner's phone says the tap never closed anything; (2) three rows
+scroll (keys, run keys, suggestion chips) and all three carried their own copy
+of a **20 dp** "this was a scroll" threshold while the row itself starts
+scrolling at the platform's **touch slop (8 dp)**, so every drag between the two
+scrolled the row AND typed the cap it started on — with two accomplices, the
+arrows' 150 ms hold-repeat firing into slow drags and the loops discarding the
+up change. `KeyGestureDetector.classify` (26.1's advertised "pure gesture state
+machine") has no production caller at all, which is how three copies of one
+number survived. Owner answers: **A — tap in the strip closes the panel, strip
+stays undimmed** (he accepted that the green play there then takes two taps) and
+**A — the phone's own touch slop (~8 dp); a drag never types**. So: a strip-wide
+box (`SidePanelPlan.STRIP_WIDTH_FRACTION` = `1 − PANEL_WIDTH_FRACTION`) composed
+**after** the drawer so it sits above it and above the scrim, `clickable` (it
+consumes the tap), `indication = null` (undimmed), present only while the panel
+is open or opening, closing through `closeDrawer(DrawerCloseReason.SCRIM)` →
+`DrawerPolicy`; and one pure rule `KeyGestureDetector.isScrollDx` + one slop
+(`LocalViewConfiguration.current.touchSlop`, in pixels) shared by all three
+rows, with the up counted as part of the gesture and the arrows' hold-repeat
+step guarded by `!isScroll`. Nine new host cases (`KeyGestureDetectorTest` +3,
+`KeysScrollCancelWiringTest` new 4, `SidePanelPlanTest` +1, `DrawerWiringTest`
++1). **Android CI green on the tip — run 36378830783, 9m29s, both APKs (debug
+26,025,252 B / release 6,798,268 B)**; round 1 (36378529137) was red with two
+compile errors of this part's own making — a missing `fillMaxHeight` import and
+`touchSlop` being pixels rather than `Dp` — fixed in `df6c654` with no behaviour
+change. **No device evidence claimed** and no round asked for; the two things
+only his phone can confirm are that the strip's tap really closes the panel and
+that a drag across the row never types. No new dependency, permission,
+preference, telemetry, screen, row, button or setting. **No PR and nothing
+merged.** Brief with the verbatim answers:
+[PHASE_69_3_STRIP_AND_KEY_DRAG.md](ui-polish-chats/PHASE_69_3_STRIP_AND_KEY_DRAG.md)
+— Phase 55's recorded "the scrim owns the strip's tap" deviation is corrected in
+place in `PHASE54_58_PHONE_UI_ROADMAP.md` and `JOURNEY.md`.
+
+---
+
 **2026-09-28 — Phase 69.2 (the quick-key row's language + the ghost's suggestion
 look): implemented on `arena/01a0e49f-codec`, owner answers taken BEFORE any
 code.** The owner reported two problems right after the 69.1 delivery, verbatim:
