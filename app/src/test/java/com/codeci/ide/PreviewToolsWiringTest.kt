@@ -60,12 +60,26 @@ class PreviewToolsWiringTest {
         assertTrue(native.contains("PreviewToolsPolicy.viewportScript()"))
         assertTrue(screen.contains("PreviewToolsPolicy.merge(network, resources)"))
     }
-    @Test fun `native zoom preserves file access restrictions and does not reload`() {
+    @Test fun `native zoom preserves file access restrictions, and reloads only for the box`() {
         assertTrue(native.contains("settings.allowUniversalAccessFromFileURLs = false"))
         assertTrue(native.contains("settings.setSupportZoom(true)"))
         assertTrue(native.contains("setInitialScale("))
         assertTrue(native.contains("zoomBy("))
-        assertFalse(native.contains("reload()"))
+        // Phase 61 pinned `assertFalse(native.contains("reload()"))`: the view
+        // observed, it never drove the page. **Reversed 2026-09-28, with its
+        // reason**: the owner's console showed the same page laid out 411 CSS px
+        // in a 411 dp box three times and 457 the fourth — a page laid out for a
+        // box it does not have, because Chromium decides the scale before the
+        // page's `viewport` meta is in effect. The one reload that fixes it is
+        // the *only* reload here, it is bounded to one per load the app asked
+        // for, and `PreviewToolsPolicy.boxMismatch` (pure, tested) decides it.
+        // The only two ways this view ever drives the page: the app's own
+        // reload passing through (and re-arming the check), and the policy-gated
+        // correction. Nothing else — no timer, no observer, no page script.
+        assertEquals(2, Regex("super\\.reload\\(\\)").findAll(native).count())
+        assertTrue(native.contains("override fun reload()"))
+        assertTrue(native.contains("private fun reloadForBox()"))
+        assertTrue(native.contains("PreviewToolsPolicy.boxMismatch(known, viewWidthDp, zoomPercent)"))
     }
     @Test fun `closing the panel or leaving the console takes the keyboard with it`() {
         // The screen reserves the keyboard's inset only while the panel is open
