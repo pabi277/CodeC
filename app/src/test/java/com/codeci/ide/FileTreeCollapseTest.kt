@@ -3,6 +3,7 @@ package com.codeci.ide
 import com.codeci.ide.ui.editor.FileTreeCollapse
 import com.codeci.ide.ui.viewmodels.EditorFileEntry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -63,5 +64,51 @@ class FileTreeCollapseTest {
         assertTrue(FileTreeCollapse.search(tree, "not-found").isEmpty())
         assertEquals(listOf("src", "src/img", "src/img/a.png"),
             FileTreeCollapse.search(tree, "img/a").map { it.relativePath })
+    }
+
+    // ---- Phase 69.4 — the tree remembers its shape, per project -----------
+
+    @Test
+    fun `the remembered shape survives a round trip through storage`() {
+        // Owner: *"remember what open by the use … in the same position no all
+        // expend or collapse"*. Encode/decode is the whole storage format, so a
+        // set must come back identical — including the empty one, which means
+        // "the user opened every folder" and is NOT the same as never stored.
+        for (shape in listOf(emptySet(), setOf("src"), setOf("src", "src/img"))) {
+            assertEquals(shape, FileTreeCollapse.decode(FileTreeCollapse.encode(shape)))
+        }
+        // Sorted, so the same tree always writes the same bytes.
+        assertEquals(
+            FileTreeCollapse.encode(setOf("src", "src/img")),
+            FileTreeCollapse.encode(setOf("src/img", "src"))
+        )
+    }
+
+    @Test
+    fun `never stored means the first open, and is not the same as all expanded`() {
+        assertNull(FileTreeCollapse.decode(null))
+        assertEquals(emptySet<String>(), FileTreeCollapse.decode(""))
+    }
+
+    @Test
+    fun `a project opened for the first time starts with every folder closed`() {
+        // Owner: *"When i import a zip or repository and open in editor it will
+        // in collapse state"* — today a fresh project opens fully expanded.
+        val dirs = FileTreeCollapse.allDirs(tree)
+        assertEquals(dirs, FileTreeCollapse.initialTree(dirs, remembered = null))
+        // …and a remembered shape always wins, even when it is "all expanded".
+        assertEquals(emptySet<String>(), FileTreeCollapse.initialTree(dirs, remembered = emptySet()))
+        assertEquals(setOf("src"), FileTreeCollapse.initialTree(dirs, remembered = setOf("src")))
+    }
+
+    @Test
+    fun `folders that no longer exist drop out of what is remembered`() {
+        // Only the folder that is GONE drops out: the two that still exist
+        // keep the shape the user chose, whether that is open or closed.
+        assertEquals(
+            setOf("src", "src/img"),
+            FileTreeCollapse.prune(setOf("src", "src/img", "src/gone"), setOf("src", "src/img"))
+        )
+        assertTrue(FileTreeCollapse.prune(setOf("src"), emptySet()).isEmpty())
     }
 }

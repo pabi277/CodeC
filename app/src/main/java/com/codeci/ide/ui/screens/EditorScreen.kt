@@ -14,7 +14,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
@@ -179,6 +182,7 @@ import com.codeci.ide.ui.editor.EditorChromeState
 import com.codeci.ide.ui.editor.EditorDiagnostic
 import com.codeci.ide.ui.editor.EditorOpenMode
 import com.codeci.ide.ui.editor.EditorOpenModePolicy
+import com.codeci.ide.ui.editor.EditorRouteOpen
 import com.codeci.ide.ui.editor.KeysStayPolicy
 import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
@@ -302,7 +306,22 @@ fun EditorScreen(
         else -> FontFamily.Monospace
     }
 
-    LaunchedEffect(projectName, fileName, singleFile) {
+    // Phase 69.4 — the route's file is opened ONCE per editor session, not on
+    // every re-entry. Owner: *"If i run a file but it is not in 1st of the
+    // editor and back from preview it again opens the 1st file on the editor
+    // not the file i opened"*. Opening a file from the drawer does not
+    // navigate, so the route still names the file the editor was ENTERED with;
+    // returning from the Web Preview re-composes this screen and that effect
+    // used to re-activate the route's tab over the one the user was on (and
+    // reset the caret, and re-point "open where I left off" at it). The
+    // decision is pure (EditorRouteOpen) and the session marker lives in the
+    // ViewModel, so it survives a rotation and dies with the tabs.
+    val editorRouteKey = EditorRouteOpen.key(projectName, fileName, singleFile)
+    LaunchedEffect(editorRouteKey) {
+        if (!EditorRouteOpen.shouldOpen(editorRouteKey, viewModel.openedRoute())) {
+            return@LaunchedEffect
+        }
+        viewModel.markRouteOpened(editorRouteKey)
         if (projectName != null && fileName != null) {
             if (singleFile) {
                 // Phase 46.2 — the peek: no onProjectSelected (the hub tap
@@ -498,6 +517,16 @@ fun EditorScreen(
     // Phase 17 — Switch Branch, opened from the drawer footer.
     var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
     var keysRowVisible by remember { mutableStateOf(true) }
+    // Phase 69.1 — the coding row's horizontal position is owned HERE, not
+    // inside the row. The caps a phone thumb reaches for most (`;`, `/`, `=`,
+    // then the arrows) sit in the row's right half, so the row gets scrolled
+    // — and the row is composed at two call sites (keyboard down / keyboard
+    // up) plus three branches of the one strip (Keys | Suggestions | Run),
+    // each of which used to hand back a fresh `rememberScrollState()` and snap
+    // the row to its left edge. One state, one owner: the position now
+    // survives the keyboard, the chips and the run keys. The row's caps,
+    // order and height are unchanged (owner answer Q3 = A).
+    val keysRowScroll = rememberScrollState()
     // Phase 60 — the tab menu's *Hide tabs*: one flag that parks BOTH the
     // tab row (it becomes its reveal strip, below) and the app's bottom bar
     // (published to `EditorChromeState`, where MainActivity's NavBarPolicy
@@ -654,6 +683,11 @@ fun EditorScreen(
     val language = remember(activeTabPath, currentFileName) {
         LanguageType.fromFileName(activeTabPath ?: currentFileName)
     }
+    // Phase 69.2 — the row now LEADS with the language's own caps, so a
+    // language change (a different file) starts the row back at its head:
+    // the 69.1 remembered offset belonged to the previous file's caps. Within
+    // one file the position is still remembered exactly as the owner asked.
+    LaunchedEffect(language) { keysRowScroll.scrollTo(0) }
     // Phase 27.2 — ONE strip context: Keys | Suggestions | Run (| Hidden).
     // An interactive run waiting for stdin ALWAYS wins (S6 / 23.2 law);
     // multi-candidate completions become chips (S1); otherwise the editor's
@@ -2215,6 +2249,12 @@ fun EditorScreen(
                     ghostPanelEnabled = completionSettings.panel,
                     // G5 contrast law: comment color at exactly 38 % alpha.
                     ghostColorArgb = editorColors.comment.copy(alpha = 0.38f).toArgb(),
+                    // Phase 69.2 — the suggestion box: the same comment colour
+                    // at 18 % so the ghost reads as a suggestion at a glance
+                    // (owner: "the ghost suggestions text are way too real i
+                    // think as i wrote the wrong word"). Both alphas are pinned
+                    // by GhostContrastTest for all four editor themes.
+                    ghostChipArgb = editorColors.comment.copy(alpha = 0.18f).toArgb(),
                     onBrowseVisibilityChanged = { completionPanelBrowsing = it }
                 )
 
@@ -2296,6 +2336,8 @@ fun EditorScreen(
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
+                    // Phase 69.1 — one row position across both call sites.
+                    keysRowScroll = keysRowScroll,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) },
                     showMoreCap = completionSettings.panel,
@@ -2438,6 +2480,8 @@ fun EditorScreen(
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
+                    // Phase 69.1 — one row position across both call sites.
+                    keysRowScroll = keysRowScroll,
                     onRunKey = handleRunKey,
                     onCommentToggle = { viewModel.toggleLineComment(language) },
                     showMoreCap = completionSettings.panel,
@@ -2494,6 +2538,39 @@ fun EditorScreen(
                 )
             }
         }
+        }
+
+        // Phase 69.3 — the strip beside the panel closes it. Owner (2026-09-28,
+        // verbatim): *"it have a gap side of that make it if user clicks the
+        // empty space it will close the 3 ber"*.
+        //
+        // The strip keeps the Phase 55 look — undimmed, the editor still
+        // visible through it — and only the TAP is ours. It is composed AFTER
+        // the drawer in this wrapper Box, so it sits above the drawer and
+        // above Material3's scrim: the tap cannot be spent on the editor (or
+        // on a second close) before it closes the panel, which is the one
+        // thing the scrim was trusted with and did not deliver on the phone.
+        // Closing still goes through the one law — DrawerPolicy, reason SCRIM —
+        // so ✕ / back / strip / a file row cannot drift. It exists only while
+        // the panel is OPEN or OPENING (targetValue, the 49.1 rule): a closing
+        // panel must not leave a dead strip behind.
+        if (drawerState.targetValue == DrawerValue.Open) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(SidePanelPlan.STRIP_WIDTH_FRACTION)
+                    .align(Alignment.CenterEnd)
+                    // `clickable`, not a raw `pointerInput`: it CONSUMES the
+                    // tap, so nothing below this box (the editor, and
+                    // Material3's own scrim whose tap never reached this
+                    // strip on the phone) can spend it first — and with
+                    // `indication = null` it draws nothing at all, which is
+                    // what "undimmed strip" means.
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { closeDrawer(DrawerCloseReason.SCRIM) }
+            )
         }
 
         if (isRenaming) {
@@ -2830,6 +2907,8 @@ private fun BottomStrip(
     textFieldValue: TextFieldValue,
     onEditorValueChange: (TextFieldValue) -> Unit,
     tabSize: Int,
+    /** Phase 69.1 — the keys row's horizontal position, owned by the screen. */
+    keysRowScroll: ScrollState,
     onRunKey: (RunKey) -> Unit,
     onCommentToggle: (() -> Unit)? = null,
     showMoreCap: Boolean = true,
@@ -2866,6 +2945,9 @@ private fun BottomStrip(
                 onValueChange = onEditorValueChange,
                 tabSize = tabSize,
                 onCommentToggle = onCommentToggle,
+                // Phase 69.1 — the screen's one state: the same row, in the
+                // same place, when the keyboard or the strip's context changes.
+                scrollState = keysRowScroll,
                 onInterceptKey = { key ->
                     when (key) {
                         EditorKey.GhostAccept -> {

@@ -149,8 +149,14 @@ fun EditorSidePanel(
             .fillMaxWidth(Placement.FRACTION),
         color = MaterialTheme.colorScheme.surface,
         // The panel is a sheet over the editor, so it needs an edge, not a
-        // scrim: the shots show the strip beside it undimmed, and play has to
-        // stay tappable through it.
+        // scrim: the shots show the strip beside it undimmed.
+        // Phase 69.3 — the strip is undimmed still, but it is no longer
+        // TAPPABLE THROUGH: the owner asked for the empty space beside the
+        // panel to close it (*"make it if user clicks the empty space it will
+        // close the 3 ber"*), so the strip now owns the tap (EditorScreen,
+        // SidePanelPlan.STRIP_WIDTH_FRACTION) and closes the panel through
+        // DrawerPolicy with reason SCRIM. Run in that strip therefore costs
+        // one tap on the strip first — a recorded deviation of this phase.
         shadowElevation = CodecTokens.elevation(CodecTokens.Elevation.SHEET),
         tonalElevation = CodecTokens.elevation(CodecTokens.Elevation.FLAT)
     ) {

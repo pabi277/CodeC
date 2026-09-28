@@ -33,6 +33,20 @@ object SidePanelPlan {
     const val PANEL_WIDTH_FRACTION = 0.85f
 
     /**
+     * Phase 69.3 — what the panel leaves: the strip of live editor beside it,
+     * `1 − PANEL_WIDTH_FRACTION` of the width.
+     *
+     * The owner (2026-09-28, verbatim): *"it have a gap side of that make it
+     * if user clicks the empty space it will close the 3 ber"*. The strip is
+     * the panel's complement by construction, so the panel can never grow
+     * over its own close zone (or leave a gap no tap answers) — the two
+     * numbers are one decision. The strip keeps the shot's look (undimmed,
+     * the editor still visible through it) and only owns the TAP: a tap in it
+     * closes the panel.
+     */
+    const val STRIP_WIDTH_FRACTION = 1f - PANEL_WIDTH_FRACTION
+
+    /**
      * A left-edge drag this long (dp) opens the panel — the same gesture the
      * retired `ModalNavigationDrawer` gave us, kept because a phone user's
      * first instinct on a drawer is the edge. Phase 25.2's law is untouched:

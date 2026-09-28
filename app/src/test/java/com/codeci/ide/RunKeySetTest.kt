@@ -65,9 +65,15 @@ class RunKeySetTest {
     }
 
     @Test
-    fun `keysForContext keeps the per-language tail for C`() {
+    fun `keysForContext leads with the C quick keys and keeps the arrow`() {
+        // Phase 69.2 — the language's caps are the row's FIRST entries now.
+        // Before this part they were appended LAST: slot 15 of a row that shows
+        // about seven caps and opens at the left, which is why the owner saw
+        // "same fixed quick keys" in every language. The cap itself (`->`) is
+        // unchanged and still there.
         val resolved = keysForContext(KeysContext.Editor(LanguageType.C)) as KeysForContext.EditorKeys
-        assertEquals("->", resolved.defs.last().label)
+        assertEquals(listOf("#include", "printf", "int", "->"), resolved.defs.take(4).map { it.label })
+        assertTrue(resolved.defs.any { it.label == "->" })
     }
 
     @Test

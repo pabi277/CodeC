@@ -87,6 +87,13 @@ fun SoraEditorHost(
     ghostPanelEnabled: Boolean = true,
     /** Ghost text ARGB (comment color @ 38% — G5) from the active theme. */
     ghostColorArgb: Int = 0x5575715E,
+    /**
+     * Phase 69.2 — the suggestion BOX behind the ghost (comment color at 18 %
+     * over the editor background). The owner could read the dim text as their
+     * own typing ("the ghost suggestions text are way too real"); the box is
+     * the cue that says "a suggestion", the way sora's own inlay hints look.
+     */
+    ghostChipArgb: Int = 0x2E75715E,
     onBrowseVisibilityChanged: (Boolean) -> Unit = {},
     // ---- Phase 48 — the viewport rescroll (PART_48_1) ----
     // The chrome facts around the box. [CaretVisibilityPolicy] decides on
@@ -131,7 +138,7 @@ fun SoraEditorHost(
                 EditorAutoCompletion::class.java,
                 CodeCCompletionComponent(editor)
             )
-            registerInlayHintRenderer(GhostHintRenderer(ghostColorArgb))
+            registerInlayHintRenderer(GhostHintRenderer(ghostColorArgb, ghostChipArgb))
         }
         editor.getComponent(EditorAutoCompletion::class.java) as CodeCCompletionComponent to
             (editor.getInlayHintRendererForType(GhostInlayHint.TYPE_NAME) as GhostHintRenderer)
@@ -146,8 +153,9 @@ fun SoraEditorHost(
         completionComponent.setEnabled(completionMasterOn)
         if (!completionMasterOn) editor.setInlayHints(null)
     }
-    LaunchedEffect(ghostColorArgb) {
+    LaunchedEffect(ghostColorArgb, ghostChipArgb) {
         ghostHintRenderer.ghostColorArgb = ghostColorArgb
+        ghostHintRenderer.chipColorArgb = ghostChipArgb
         editor.invalidate()
     }
     // Compose-facing mirror of the real panel visibility (drives the policy
@@ -395,10 +403,28 @@ fun SoraEditorHost(
                 }
             }
         )
-        // Phase 27.1 G4 — the ghost clears on scroll (re-arms on next edit).
+        // Phase 27.1 G4 — the ghost clears when the USER scrolls (it re-arms on
+        // the next edit). Phase 69.2 narrows it to the user's own scrolls:
+        //   - CAUSE_USER_DRAG / CAUSE_USER_FLING — the thumb moved the view.
+        //     That is G4's "suppress while navigating" and it still hides it.
+        //   - CAUSE_MAKE_POSITION_VISIBLE — the editor keeping the caret on
+        //     screen (sora's own reveal while typing, and the 48/69 air rule's
+        //     rescroll after the keyboard or the chrome settles). The ghost
+        //     rides the caret, so the editor moving the viewport to follow the
+        //     caret must not take the suggestion away — that was the "about a
+        //     second it vanished" the owner reported (2026-09-28).
+        //   - CAUSE_TEXT_SELECTING / CAUSE_SCALE_TEXT — selection is its own
+        //     suppression upstream, and a pinch changes scale, not position.
+        // Causes verified against sora 0.24.6 `event/ScrollEvent.java`.
         val scrollReceipt = editor.subscribeEvent(
             ScrollEvent::class.java,
-            EventReceiver { _, _ -> viewModel.onCompletionScroll() }
+            EventReceiver { event, _ ->
+                if (event.cause == ScrollEvent.CAUSE_USER_DRAG ||
+                    event.cause == ScrollEvent.CAUSE_USER_FLING
+                ) {
+                    viewModel.onCompletionScroll()
+                }
+            }
         )
         onDispose {
             runCatching { selectionReceipt.unsubscribe() }
@@ -425,13 +451,30 @@ fun SoraEditorHost(
     // crash-proof (runCatching — the editor can be mid-release() when a
     // late size change lands; a cosmetic call must never kill the app, the
     // Phase 44 law applied to a layout callback).
+    //
+    // Phase 69.1 — WHAT it asks for is the caret one line lower
+    // (`CaretVisibilityPolicy.revealLine`): sora's own reveal only runs when
+    // the row is below the fold, so a caret flush on the last visible row kept
+    // its row and lost its drop handle (drawn below the row). The target is
+    // clamped against the live buffer here, because the buffer can be shorter
+    // than the position the schedule was made from; at EOF the clamp returns
+    // the caret's own line, i.e. the pre-69.1 call, and the caret is never
+    // MOVED — only the viewport is (no selection, no buffer write: the air
+    // comes from scrolling, never from editing).
     val lastViewport = remember(editor) { arrayOf<EditorViewport?>(null) }
     val pendingRescroll = remember(editor) { arrayOf<Runnable?>(null) }
     fun scheduleCaretRescroll(line: Int, column: Int, delayMs: Long) {
         pendingRescroll[0]?.let { editor.removeCallbacks(it) }
         val task = Runnable {
             pendingRescroll[0] = null
-            runCatching { editor.ensurePositionVisible(line, column, true) }
+            runCatching {
+                val targetLine = CaretVisibilityPolicy.revealLine(line, editor.text.lineCount)
+                val targetColumn = CaretVisibilityPolicy.revealColumn(
+                    column,
+                    editor.text.getColumnCount(targetLine)
+                )
+                editor.ensurePositionVisible(targetLine, targetColumn, true)
+            }
         }
         pendingRescroll[0] = task
         editor.postDelayed(task, if (delayMs < 0L) 0L else delayMs)

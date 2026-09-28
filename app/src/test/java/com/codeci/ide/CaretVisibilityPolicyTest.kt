@@ -171,4 +171,56 @@ class CaretVisibilityPolicyTest {
     fun `one line of air is the margin`() {
         assertEquals(1, CaretVisibilityPolicy.KEEP_LINES_BELOW)
     }
+
+    // ---- Phase 69.1 — the reveal target (the air rule, paid) ----
+
+    @Test
+    fun `the reveal target is the caret plus one line`() {
+        // The owner's Q2 = A: when a re-scroll is already owed, the caret must
+        // not sit on the last visible row. sora reveals only a row that is
+        // OFF screen, so the ask is the neighbour line — the pure half of the
+        // fix (the edge in SoraEditorHost performs the call).
+        assertEquals(4, CaretVisibilityPolicy.revealLine(caretLine = 3, lineCount = 100))
+        assertEquals(1, CaretVisibilityPolicy.revealLine(caretLine = 0, lineCount = 2))
+    }
+
+    @Test
+    fun `at the end of the buffer the reveal target is the caret's own line`() {
+        // No special case in the edge: on the LAST line the clamp hands back
+        // the caret itself, which is exactly the pre-69.1 call — the air rule
+        // adds no new scroll at EOF.
+        assertEquals(9, CaretVisibilityPolicy.revealLine(caretLine = 9, lineCount = 10))
+        assertEquals(0, CaretVisibilityPolicy.revealLine(caretLine = 0, lineCount = 1))
+    }
+
+    @Test
+    fun `the reveal target is total - a stale or empty buffer can never throw`() {
+        // The task is posted from a layout callback; a tab switch or an undo
+        // can land before it runs, so `lineCount` may be smaller than the line
+        // it was scheduled from. Total by construction — never an index error
+        // inside runCatching's cosmetic call.
+        // An empty buffer has exactly one (empty) line: line 0, never a negative.
+        assertEquals(0, CaretVisibilityPolicy.revealLine(caretLine = 5, lineCount = 0))
+        // A caret past the end of a shorter buffer reveals the LAST line, not 0.
+        assertEquals(2, CaretVisibilityPolicy.revealLine(caretLine = 5, lineCount = 3))
+        assertEquals(2, CaretVisibilityPolicy.revealLine(caretLine = 9, lineCount = 3))
+        assertEquals(0, CaretVisibilityPolicy.revealLine(caretLine = -2, lineCount = 0))
+    }
+
+    @Test
+    fun `the reveal column keeps the caret's own column`() {
+        // sora's x branch is identical for the caret's row and its neighbour,
+        // so passing the caret's column is what keeps a horizontally scrolled
+        // long line exactly where the user left it.
+        assertEquals(40, CaretVisibilityPolicy.revealColumn(caretColumn = 40, targetLineColumnCount = 120))
+    }
+
+    @Test
+    fun `the reveal column clamps against the neighbour line`() {
+        // The next line can be shorter than the caret's; a reveal position
+        // must be a real position.
+        assertEquals(7, CaretVisibilityPolicy.revealColumn(caretColumn = 40, targetLineColumnCount = 7))
+        assertEquals(0, CaretVisibilityPolicy.revealColumn(caretColumn = 4, targetLineColumnCount = 0))
+        assertEquals(0, CaretVisibilityPolicy.revealColumn(caretColumn = -3, targetLineColumnCount = 9))
+    }
 }

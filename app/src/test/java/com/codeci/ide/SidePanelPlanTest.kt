@@ -19,6 +19,27 @@ import org.junit.Test
  */
 class SidePanelPlanTest {
 
+    // ---- Phase 69.3 — the strip the panel leaves ---------------------------
+
+    @Test
+    fun `the strip beside the panel is the panel's own complement`() {
+        // Owner (2026-09-28, verbatim): *"it have a gap side of that make it
+        // if user clicks the empty space it will close the 3 ber"*. The strip
+        // is not a number anyone may tune: it is whatever the panel leaves,
+        // so the two can never overlap (a panel grown over its own close zone)
+        // and never leave a strip no tap answers.
+        assertEquals(
+            "the panel and its strip must add up to the whole width",
+            1f,
+            SidePanelPlan.PANEL_WIDTH_FRACTION + SidePanelPlan.STRIP_WIDTH_FRACTION,
+            0.0001f
+        )
+        assertTrue(
+            "the strip must be a real strip (the shot's live editor edge)",
+            SidePanelPlan.STRIP_WIDTH_FRACTION > 0f && SidePanelPlan.STRIP_WIDTH_FRACTION < 0.2f
+        )
+    }
+
     // ---- the rail ----------------------------------------------------------
 
     @Test

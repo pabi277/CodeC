@@ -8,6 +8,7 @@ import com.codeci.ide.ui.editor.EditorKey
 import com.codeci.ide.ui.editor.EditorKeySet
 import com.codeci.ide.ui.editor.EditorShellUi
 import com.codeci.ide.ui.editor.FontSizeZoom
+import com.codeci.ide.ui.editor.LanguageQuickKeys
 import com.codeci.ide.ui.utils.LanguageType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -161,25 +162,50 @@ class EditorKeySetTest {
     }
 
     @Test
-    fun `language tails extend the general set only`() {
-        val base = EditorKeySet.keysFor(null).size
+    fun `the row leads with the file language's caps`() {
+        // Phase 69.2 — owner report, verbatim: "What language i am using
+        // don't matter it always give me same fixed quick keys". The language
+        // caps were the row's LAST entries (invisible at offset 0); they are
+        // the FIRST ones now, and they are real caps per language, not the
+        // old one- or two-symbol tails.
         val c = EditorKeySet.keysFor(LanguageType.C)
-        val py = EditorKeySet.keysFor(LanguageType.PYTHON)
-        assertEquals(base + 1, c.size)
-        assertEquals("->", c.last().label)
-        assertEquals(base + 2, py.size)
-        assertEquals(":", py[base].label)
+        assertEquals(listOf("#include", "printf", "int", "->"), c.take(4).map { it.label })
+        // Everything that shipped before this part is still in the row.
+        assertTrue(c.any { it.label == "#include" })
+        assertTrue(c.any { it.label == "printf" })
+        assertTrue(c.any { it.label == "->" })
+        // …and the general set still follows, unchanged, in its own order.
+        val general = EditorKeySet.keysFor(null).map { it.label }
+        assertEquals(general, c.drop(LanguageQuickKeys.forLanguage(LanguageType.C).size).map { it.label })
     }
 
     @Test
-    fun `the JS template literal tail is a pair`() {
+    fun `the language caps differ per language and lead the row`() {
+        val labels = { lang: LanguageType -> EditorKeySet.keysFor(lang).take(4).map { it.label } }
+        assertEquals(listOf("def", "print", ":", "_(self)"), labels(LanguageType.PYTHON))
+        assertEquals(listOf("<tag>", "div", "class", "</>"), labels(LanguageType.HTML))
+        assertEquals(listOf("color:", "px", ":", ";"), labels(LanguageType.CSS))
+        assertEquals(listOf("log", "=>", "``", "function"), labels(LanguageType.JAVASCRIPT))
+    }
+
+    @Test
+    fun `a non-standard file keeps the default row`() {
+        // Owner: "if it is not a standard file than a default quick key option".
+        val unknown = EditorKeySet.keysFor(LanguageType.fromFileName("notes.zzz"))
+        assertTrue(unknown.first().label == "TAB")
+        assertEquals(EditorKeySet.keysFor(null).map { it.label }, unknown.map { it.label })
+        assertEquals(EditorKeySet.keysFor(LanguageType.TEXT).map { it.label }, unknown.map { it.label })
+    }
+
+    @Test
+    fun `the JS template literal cap is still a pair`() {
         val js = EditorKeySet.keysFor(LanguageType.JAVASCRIPT)
         val backtick = js.first { it.label == "``" }
         assertEquals(EditorKey.Pair("`", "`"), backtick.key)
     }
 
     @Test
-    fun `the JSON tail offers colon comma and the three literals`() {
+    fun `the JSON caps offer colon comma and the three literals`() {
         val base = EditorKeySet.keysFor(null).size
         val json = EditorKeySet.keysFor(LanguageType.JSON)
         assertEquals(base + 3, json.size)
@@ -202,10 +228,15 @@ class EditorKeySetTest {
     }
 
     @Test
-    fun `custom snippets append after the language set`() {
+    fun `custom snippets follow the language caps`() {
+        // 69.2 — the order is: the language's caps, the owner's own snippets,
+        // then the general set. The owner's caps sit on the first screenful
+        // too (they used to be the row's last entry, equally invisible).
         val keys = EditorKeySet.keysFor(LanguageType.C, "hi=hi\n")
-        assertEquals("hi", keys.last().label)
-        assertEquals("->", keys[keys.size - 2].label)
+        val langCount = LanguageQuickKeys.forLanguage(LanguageType.C).size
+        assertEquals("hi", keys[langCount].label)
+        assertEquals("TAB", keys[langCount + 1].label)
+        assertEquals("hi", keys.first { it.label == "hi" }.label)
     }
 
     // ---- FontSizeZoom -------------------------------------------------------

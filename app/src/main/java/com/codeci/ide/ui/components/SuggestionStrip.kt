@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
@@ -163,6 +164,9 @@ private fun SuggestionChipCap(
     val scope = rememberCoroutineScope()
     var tooltip by remember { mutableStateOf(false) }
     val density = LocalDensity.current
+    // Phase 69.3 — the row's own scroll slop, in pixels (see
+    // KeyGestureDetector.isScrollDx).
+    val scrollSlopPx = LocalViewConfiguration.current.touchSlop
     Box(
         modifier = Modifier
             .defaultMinSize(minWidth = 44.dp, minHeight = 40.dp)
@@ -179,6 +183,7 @@ private fun SuggestionChipCap(
                     var isScroll = false
                     var isLong = false
                     val startX = down.position.x
+                    val startY = down.position.y
                     val longJob = scope.launch {
                         delay(EditorKeySet.LONG_PRESS_MS)
                         if (!isScroll) {
@@ -190,11 +195,21 @@ private fun SuggestionChipCap(
                     while (!finished) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull()
-                        if (change == null || !change.pressed) {
+                        if (change == null) {
                             finished = true
                             break
                         }
-                        if (abs(change.position.x - startX) > with(density) { 20.dp.toPx() }) {
+                        // Phase 69.3 — the last change counts (a flick lifts
+                        // where no move was ever delivered), and the row's own
+                        // touch slop — not a number of our own — is the
+                        // distance past which this was a scroll, never a tap:
+                        // the chips row scrolls for the same reason the keys
+                        // row does (owner: *"even i want to drag for other
+                        // keys it's types which ever i am scrolling"*).
+                        val dx = change.position.x - startX
+                        val dy = change.position.y - startY
+                        if (!change.pressed) finished = true
+                        if (!isScroll && KeyGestureDetector.isScrollDx(dx, dy, scrollSlopPx)) {
                             isScroll = true
                             longJob.cancel()
                             tooltip = false

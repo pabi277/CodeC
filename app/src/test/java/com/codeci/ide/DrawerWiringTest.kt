@@ -78,6 +78,46 @@ class DrawerWiringTest {
     }
 
     @Test
+    fun `the strip beside the panel closes it, through the one close law`() {
+        // Phase 69.3 — owner (2026-09-28, verbatim): *"it have a gap side of
+        // that make it if user clicks the empty space it will close the 3
+        // ber"*. The panel leaves 15 % of the width showing the editor; that
+        // strip now owns the tap. Pinned: it is the panel's own complement
+        // (never a hand-tuned width), it is composed AFTER the drawer so no
+        // scrim can spend the tap first, it draws nothing (the Phase 55 shot
+        // keeps a live, undimmed strip), and it closes through DrawerPolicy
+        // with SCRIM — the same law the ✕ and Back use.
+        assertTrue(
+            "the strip's width is the panel's complement, by name",
+            editor.contains(".fillMaxWidth(SidePanelPlan.STRIP_WIDTH_FRACTION)")
+        )
+        assertTrue(
+            "the strip is the side the panel is not on (end flips with RTL)",
+            editor.contains(".align(Alignment.CenterEnd)")
+        )
+        assertTrue(
+            "it exists only while the panel is open or opening (targetValue)",
+            editor.contains("if (drawerState.targetValue == DrawerValue.Open) {")
+        )
+        assertTrue(
+            "the tap closes the panel through the policy, reason SCRIM",
+            editor.contains("closeDrawer(DrawerCloseReason.SCRIM)")
+        )
+        assertTrue(
+            "undimmed: no ripple, no scrim, nothing drawn (owner: strip stays live)",
+            editor.contains("indication = null")
+        )
+        val drawerAt = editor.indexOf("ModalNavigationDrawer(")
+        val stripAt = editor.indexOf("SidePanelPlan.STRIP_WIDTH_FRACTION")
+        assertTrue("the drawer is gone", drawerAt > 0)
+        assertTrue("the strip is gone", stripAt > 0)
+        assertTrue(
+            "the strip must be composed after the drawer, so it owns the tap",
+            drawerAt < stripAt
+        )
+    }
+
+    @Test
     fun `the PROJECTS section exists with its callbacks`() {
         assertTrue(
             "the drawer takes the built rows",

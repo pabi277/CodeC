@@ -1,3 +1,180 @@
+**2026-09-28 — Phase 69.4 (the Files tree remembers its shape; the route's file
+opens once per editor session): implemented on `arena/01a0e49f-codec` (tip
+`e7e420e`), owner answers taken BEFORE any code.** Two owner reports, verbatim:
+*"When i import a zip or repository and open in editor it will in collapse state
+and remember what open by the use when leaving and again open the editor and the
+project in the same position no all expend or collapse"* and *"If i run a file
+but it is not in 1st of the editor and back from preview it again opens the 1st
+file on the editor not the file i opened"*. What the reading found: (1)
+`EditorViewModel._collapsedDirs` is session-only — no storage anywhere — and
+three places reset it to `emptySet()` on leaving a project, which in this code
+means "expand everything", so a fresh import opened as a wall of folders and no
+shape survived leaving the editor; (2) `EditorScreen`'s open effect keyed on the
+route's three arguments and so re-ran on every re-composition, and the route
+names the file the editor was **entered** with (opening a file from the drawer
+does not navigate), so every return from the Web Preview re-activated that first
+tab — and reset its caret, and re-pointed "open where I left off" at it. Owner
+answers: **A — a project opened for the first time starts with every folder
+closed, only the top level listed** and **A — remembered per project, and it
+survives closing the app**. So: a new `FileTreeMemory` (one `SharedPreferences`
+file `codec_file_tree`, one key per project, deliberately mirroring the existing
+`EditorLaunchState` store) plus the pure half in `FileTreeCollapse`
+(`encode`/`decode`, `initialTree` = remembered-or-everything-closed, `prune`);
+`refreshFileEntries` applies it and the five user-driven mutators (chevron,
+Collapse all, Expand all, the reveal, a rename's remap) are the only writers —
+the project-switch resets are left alone, and deleting a project from the hub
+forgets its entry. One rule CI round 2 added for cause: a shape the user already
+chose (a nested file's reveal, which lands before the drawer's first listing)
+outranks the first-open default — `treeStateTouched`, cleared by
+`resetTreeShapeForNewContext` at the three switches. And the route: a new pure
+`EditorRouteOpen` — *a route is opened once per editor session* — with the
+marker in the ViewModel, so it survives a rotation and dies with the tabs.
+Sixteen new host cases (`FileTreeCollapseTest` +4, `EditorRouteOpenTest` new 4,
+`FileTreeStateWiringTest` new 5, `EditorRouteWiringTest` new 3). **Android CI
+green on the tip — run 36386089320, 10m12s, 2306 tests, both APKs (debug
+26,027,944 B / release 6,798,904 B)**; round 1 (36383822168) was a missing
+import, round 2 (36384352636) was the reveal/default conflict above plus one
+wrong expectation of mine, round 3 (36385643910) was one stale pin. **No device
+evidence claimed** and no round asked for; the two things only his phone can
+confirm are that the tree comes back in the same position after leaving the
+editor and after closing the app, and that returning from the Preview keeps the
+file he opened. No new dependency, permission, screen, row, button or setting —
+one small `SharedPreferences` file and no telemetry. **No PR and nothing
+merged.** Brief with the verbatim answers:
+[PHASE_69_4_TREE_AND_ROUTE.md](ui-polish-chats/PHASE_69_4_TREE_AND_ROUTE.md)
+
+---
+
+**2026-09-28 — Phase 69.3 (the strip beside the ☰ panel closes it; a drag never
+types a key): implemented on `arena/01a0e49f-codec` (tip `df6c654`), owner
+answers taken BEFORE any code.** Two owner reports, verbatim: *"The 3 ber open
+the editor but it have a gap side of that make it if user clicks the empty space
+it will close the 3 ber"* and *"The quick keys are sensitive even i want to drag
+for other keys it's types which ever i am scrolling"*. What the reading found:
+(1) the ☰ panel is 85 % of the width and leaves a 15 % strip of live editor, and
+Phase 55 had written that strip's tap off to Material3's modal scrim **read out
+of Material3's source, never off a phone** — the Phase 55 device round was never
+run, and the owner's phone says the tap never closed anything; (2) three rows
+scroll (keys, run keys, suggestion chips) and all three carried their own copy
+of a **20 dp** "this was a scroll" threshold while the row itself starts
+scrolling at the platform's **touch slop (8 dp)**, so every drag between the two
+scrolled the row AND typed the cap it started on — with two accomplices, the
+arrows' 150 ms hold-repeat firing into slow drags and the loops discarding the
+up change. `KeyGestureDetector.classify` (26.1's advertised "pure gesture state
+machine") has no production caller at all, which is how three copies of one
+number survived. Owner answers: **A — tap in the strip closes the panel, strip
+stays undimmed** (he accepted that the green play there then takes two taps) and
+**A — the phone's own touch slop (~8 dp); a drag never types**. So: a strip-wide
+box (`SidePanelPlan.STRIP_WIDTH_FRACTION` = `1 − PANEL_WIDTH_FRACTION`) composed
+**after** the drawer so it sits above it and above the scrim, `clickable` (it
+consumes the tap), `indication = null` (undimmed), present only while the panel
+is open or opening, closing through `closeDrawer(DrawerCloseReason.SCRIM)` →
+`DrawerPolicy`; and one pure rule `KeyGestureDetector.isScrollDx` + one slop
+(`LocalViewConfiguration.current.touchSlop`, in pixels) shared by all three
+rows, with the up counted as part of the gesture and the arrows' hold-repeat
+step guarded by `!isScroll`. Nine new host cases (`KeyGestureDetectorTest` +3,
+`KeysScrollCancelWiringTest` new 4, `SidePanelPlanTest` +1, `DrawerWiringTest`
++1). **Android CI green on the tip — run 36378830783, 9m29s, both APKs (debug
+26,025,252 B / release 6,798,268 B)**; round 1 (36378529137) was red with two
+compile errors of this part's own making — a missing `fillMaxHeight` import and
+`touchSlop` being pixels rather than `Dp` — fixed in `df6c654` with no behaviour
+change. **No device evidence claimed** and no round asked for; the two things
+only his phone can confirm are that the strip's tap really closes the panel and
+that a drag across the row never types. No new dependency, permission,
+preference, telemetry, screen, row, button or setting. **No PR and nothing
+merged.** Brief with the verbatim answers:
+[PHASE_69_3_STRIP_AND_KEY_DRAG.md](ui-polish-chats/PHASE_69_3_STRIP_AND_KEY_DRAG.md)
+— Phase 55's recorded "the scrim owns the strip's tap" deviation is corrected in
+place in `PHASE54_58_PHONE_UI_ROADMAP.md` and `JOURNEY.md`.
+
+---
+
+**2026-09-28 — Phase 69.2 (the quick-key row's language + the ghost's suggestion
+look): implemented on `arena/01a0e49f-codec`, owner answers taken BEFORE any
+code.** The owner reported two problems right after the 69.1 delivery, verbatim:
+*"What language i am using don't matter it always give me same fixed quick
+keys"* and *"Sometimes the ghost suggestions text are way too real i think as i
+wrote the wrong word then about a second it vanished the ghost suggestions fix
+it"*. Investigation on this checkout (not from memory) found both were real and
+why: the language caps were the row's **last** entries — slots 15+ of a row that
+shows ~7 caps and opens at the left, so every language looked identical (and Go,
+Rust, PHP, Ruby, Lua, XML, YAML, Markdown had no caps at all); the ghost was
+**plain code text with no box** at 38 % of the comment colour — measured
+1.82–1.98:1 against the editor background where real code is 11.25–13.94:1, so
+the missing cue was a container, not brightness — and two code paths could
+delete it: **any** scroll (the editor's own caret-follow scroll included) and any
+recompute whose fresh engine answer no longer carried the aligned item (~1 s
+after the keystroke). Owner answers: **auto-detect by file extension, the
+language's own caps lead the row, the default row for a non-standard file**
+(*"Can it be auto detection my file extension and set the the quick keys order as
+per requirement and if it is not a standard file than a default quick key
+option"*), **B — Give each language a few real caps (Spck parity)**, and **A —
+Both: unmistakable look + stop it vanishing**. So the part is exactly two
+changes: **(1)** new pure `LanguageQuickKeys` (real caps per language, one table
+shared with `languageMacroRow`), `keysFor` order = language caps → the owner's
+custom snippets → the general set, non-standard files keep the default row,
+nothing that shipped before was removed, and a language change returns the row
+to its head (`LaunchedEffect(language) { keysRowScroll.scrollTo(0) }`) while the
+69.1 remembered position still stands within one file; **(2)** the ghost is drawn
+inside a suggestion box (comment colour at 18 %, text unchanged at 38 % — both
+pinned by a new contrast law) and a still-correct ghost is held across background
+refreshes (`GhostCompletion.heldWhenStillValid`) while G4's clear-on-scroll is
+narrowed to the user's own drag/fling (causes verified against sora 0.24.6's
+`ScrollEvent`). Tests: `LanguageQuickKeysTest` (new, 7), `GhostWiringTest` (new,
+4), `GhostContrastTest` (new, 3), `GhostCompletionTest` +4, `EditorKeySetTest`
+(two "tail, last" pins rewritten with their reason), `EditorRowsWiringTest` +1,
+and one stale 22.x pin in `RunKeySetTest` found by CI round 1 (red for cause,
+run 36353374750 on `9c7a74d`; fixed in `f29fcfd` with no production change; the
+same run's test-only receiver typo at the tip — `GhostCompletion.Visible` for
+`GhostState.Visible` — was round 3's red, run 36353710831 on `d5420f0`, fixed in
+`b43432d`). **Android CI is green on the tip `b43432d`**: run 36354523369,
+11m26s, the full suite plus this part's 11 new cases and both APKs (debug
+26,024,564 B / release 6,796,488 B). **No device evidence claimed** and no round
+asked for. No new dependency, permission, preference, telemetry, screen, engine,
+row, button or setting. **No PR and nothing merged.** Brief with the verbatim
+answers:
+[PHASE_69_2_LANGUAGE_KEYS_AND_GHOST.md](ui-polish-chats/PHASE_69_2_LANGUAGE_KEYS_AND_GHOST.md).
+
+---
+
+**2026-09-27 — Phase 69.1 (typing, keyboard and selection): reviewed, asked,
+implemented on `arena/01a0e49f-codec` — owner answers taken BEFORE any code,
+all five = option A.** The owner chose **keep the system IME default and the one
+coding row exactly as it is** (no second toolbar, no forced CodeC Keys), **add
+the one-line-of-air rule**, **remember the coding row's horizontal position (and
+nothing else)**, **keep sora's own blue drop exactly as it is**, and **keep the
+keyboard-time behaviour of the bottom tabs (no bar, no handle while typing)**.
+So the bounded part is exactly two changes, both in the Phase-48 caret owner's
+world: **(1)** the air rule — reading sora **0.24.6's own**
+`CodeEditor.ensurePositionVisible` (fetched and quoted, not guessed) showed sora
+leaves a row of slack only when the caret's row is OFF screen and otherwise
+returns early, so a caret on the last visible row sits flush and its drop handle
+(below the row) is clipped; the pure `CaretVisibilityPolicy.revealLine` /
+`revealColumn` now ask the same single, posted, coalesced, `runCatching`d call
+for the position **one line below** the caret (clamped into the live buffer, so
+EOF = today's behaviour, and the air is a viewport effect — no `setSelection`, no
+buffer write); **(2)** the coding row's position — `rememberScrollState()` lived
+inside `EditorKeysRow`, which is composed at **two** strip call sites and in
+three strip branches, so every keyboard toggle and chip appearance snapped the
+caps row back to its left edge; one `ScrollState` is now owned by `EditorScreen`
+and threaded through both call sites. Caps, order, height and the bottom cluster
+are unchanged. Tests: `CaretVisibilityPolicyTest` +5, `CaretCallSiteTest` (one
+pin moved with its reason + a new "ask through the pure policy, never move the
+caret" pin), `EditorRowsWiringTest` +1. **No device evidence claimed** — the two
+behaviours are only provable on a handset, and no round was asked. No new
+dependency, permission, preference, telemetry, engine or screen. **No PR and
+nothing merged.** **CI: round 1 red for-cause on two self-inflicted pins (a KDoc
+carrying the literal `ensurePositionVisible(`, and one wrong expectation); fixed
+in `f98ae5c` (comment + test only) and round 2 ✅ GREEN —
+[run 36350567066](https://github.com/pabi277/CodeC/actions/runs/36350567066) on
+`f98ae5c`: host unit/screenshot tests (Phase 52), debug APK 26,021,972 B, release
+APK 6,797,484 B, manifest validation, artifacts uploaded.** Brief with the
+verbatim answers:
+[PHASE_69_1_TYPING.md](ui-polish-chats/PHASE_69_1_TYPING.md); full record:
+[chat-phase69/README.md](chat-phase69/README.md).
+
+---
+
 **2026-09-27 — Phase 68.1 completed part: the three owner-approved additions
 are built and CI GREEN.** After the close-out below, the owner asked what the
 phase still needed and approved all three findings: **(1)** the Markdown

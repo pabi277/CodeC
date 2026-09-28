@@ -436,6 +436,10 @@ class FileManagerViewModel : ViewModel() {
                 if (!withContext(Dispatchers.IO) { ProjectManager(context).deleteProject(name) }) {
                     error(context.getString(R.string.delete_project_failed))
                 }
+                // Phase 69.4 — a deleted project takes its remembered tree
+                // shape with it, so the store cannot grow by one entry per
+                // project the user ever opened.
+                com.codeci.ide.ui.editor.FileTreeMemory.forget(context, name)
                 if (_activeProject.value?.name == name) closeProject()
                 loadProjects(context)
             } catch (e: Exception) {

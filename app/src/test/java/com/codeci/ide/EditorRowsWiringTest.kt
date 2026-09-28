@@ -1,5 +1,6 @@
 package com.codeci.ide
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -15,6 +16,14 @@ import org.junit.Test
  * lifts it above the IME again when the keyboard is up (124105), really yields
  * the status line to the IME, and that the caret's drop is **sora's own handle,
  * styled**, never a second caret stacked on the editor.
+ *
+ * Phase 69.1 added the row's REACH: the caps row's horizontal position is owned
+ * by the screen, so it survives the keyboard and the strip's context swaps
+ * (owner Q3 = A: remember the position, change nothing about the caps).
+ *
+ * Phase 69.2 added the row's LANGUAGE: the file's own quick keys lead it and a
+ * language change returns it to its head (owner: *"What language i am using
+ * don't matter it always give me same fixed quick keys"*).
  */
 class EditorRowsWiringTest {
 
@@ -62,6 +71,71 @@ class EditorRowsWiringTest {
         assertTrue(
             "the screen must tell the strip resolver when a keyboard is up",
             editor.contains("typingSurfaceUp = imeVisible || codecKeysUp"),
+        )
+    }
+
+    @Test
+    fun `the coding row's horizontal position is owned above the row`() {
+        // Phase 69.1 (owner Q3 = A). The row is composed at TWO call sites
+        // (keyboard down / keyboard up) and in three branches of the one strip
+        // (Keys | Suggestions | Run); a `rememberScrollState()` inside the row
+        // therefore died on every keyboard toggle and every chip appearance,
+        // snapping the caps a thumb reaches for back out of reach. One state,
+        // owned by the screen, handed to the row.
+        assertTrue(
+            "the screen must own one scroll state for the coding row",
+            editor.contains("val keysRowScroll = rememberScrollState()"),
+        )
+        assertEquals(
+            "both strip call sites must pass the SAME row position",
+            2,
+            Regex("""keysRowScroll = keysRowScroll,""").findAll(editor).count(),
+        )
+        assertTrue(
+            "the strip must hand the state to the row",
+            editor.contains("scrollState = keysRowScroll,"),
+        )
+
+        val keysRow = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/components/EditorKeysRow.kt"
+        ).readText()
+        assertTrue(
+            "EditorKeysRow must take the caller's scroll state",
+            keysRow.contains("scrollState: ScrollState = rememberScrollState()"),
+        )
+        assertTrue(
+            "the caps row must scroll through the owned state",
+            keysRow.contains("horizontalScroll(scrollState)"),
+        )
+        val capsRowBody = keysRow.substringBefore("fun RunKeysRow(")
+        assertFalse(
+            "the caps row must not own a private scroll state again",
+            capsRowBody.contains("horizontalScroll(rememberScrollState())"),
+        )
+        // Deliberately NOT shared: the run keys and the suggestion chips are
+        // different content, and 57.2's row geometry stays theirs.
+        val runRowBody = keysRow.substringAfter("fun RunKeysRow(")
+        assertTrue(
+            "the run keys keep their own row position",
+            runRowBody.contains("horizontalScroll(rememberScrollState())"),
+        )
+    }
+
+    @Test
+    fun `the row starts at its head when the file language changes`() {
+        // Phase 69.2 — the row LEADS with the file language's caps now (owner:
+        // "What language i am using don't matter it always give me same fixed
+        // quick keys"), so a language change returns the row to offset 0: the
+        // remembered 69.1 offset belonged to the previous file's caps. Within
+        // one file the owner's Q3 = A ("remember the row's horizontal
+        // position") still stands.
+        assertTrue(
+            "the row must open at its head for a new language",
+            editor.contains("LaunchedEffect(language) { keysRowScroll.scrollTo(0) }"),
+        )
+        assertTrue(
+            "the row's language is the file's own extension, detected in one place",
+            editor.contains("LanguageType.fromFileName(activeTabPath ?: currentFileName)"),
         )
     }
 

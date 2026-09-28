@@ -293,4 +293,59 @@ class GhostCompletionTest {
             accepted.selection.start
         )
     }
+
+    // ---- 69.2 hold (a still-correct ghost survives a background refresh) ----
+
+    @Test
+    fun `a still-correct ghost is held when the fresh pass no longer proposes it`() {
+        // Owner, verbatim (2026-09-28): "Sometimes the ghost suggestions text
+        // are way too real i think as i wrote the wrong word then about a
+        // second it vanished the ghost suggestions fix it". The debounced
+        // engine pass lands ~a second after the keystroke; if its item set no
+        // longer carries what the instant leg painted, the visible ghost used
+        // to blink out although the typed text had not changed.
+        val text = "int main() {\n    print\n}\n"
+        val caret = text.indexOf("print") + 5
+        val painted = GhostCompletion.compute(text, caret, listOf(printf)) as GhostState.Visible
+        assertEquals(painted, GhostCompletion.heldWhenStillValid(painted, text, caret))
+    }
+
+    @Test
+    fun `the held ghost re-measures its suffix against the live text`() {
+        // The user keeps typing characters that still match: the held ghost
+        // must shrink, never paint a suffix that includes what they typed.
+        val painted = GhostState.Visible("f(\"\\n\");", printf, 5)
+        val held = GhostCompletion.heldWhenStillValid(painted, "printf", 6)
+        assertEquals(GhostState.Visible("(\"\\n\");", printf, 6), held)
+    }
+
+    @Test
+    fun `a mismatch or an empty remainder still clears the ghost`() {
+        val painted = GhostState.Visible("f(\"\\n\");", printf, 5)
+        // Typed a character the insert does not continue.
+        assertEquals(GhostState.Hidden, GhostCompletion.heldWhenStillValid(painted, "printx", 6))
+        // The whole insert is typed: no suffix left to paint (G1).
+        val short = item("name", "name")
+        assertEquals(
+            GhostState.Hidden,
+            GhostCompletion.heldWhenStillValid(GhostState.Visible("me", short, 2), "name", 4)
+        )
+        // The caret moved somewhere the text does not continue the item.
+        val main = item("main", "main(void) {\n    return 0;\n}")
+        assertEquals(
+            GhostState.Hidden,
+            GhostCompletion.heldWhenStillValid(GhostState.Visible("n(void) {", main, 4), "int mai", 3)
+        )
+        // Nothing painted: nothing to hold.
+        assertEquals(GhostState.Hidden, GhostCompletion.heldWhenStillValid(GhostState.Hidden, "prin", 4))
+    }
+
+    @Test
+    fun `the held ghost stays first-line only (G6)`() {
+        val multi = item("main", "main(void) {\n    return 0;\n}")
+        val held = GhostCompletion.heldWhenStillValid(
+            GhostState.Visible("", multi, 4), "main", 4
+        )
+        assertEquals(GhostState.Visible("(void) {", multi, 4), held)
+    }
 }
