@@ -325,3 +325,15 @@ Q1's behaviour (the panel opens on every run) is unchanged and already true. And
 **this is not device evidence**: nothing in 70.1 or 72.1 has been on a handset,
 and the five owed handset rows for 69.1–69.4 stay owed. No PR, no merge, no
 `main` push without the owner's explicit instruction.
+
+### Phone pass (2026-09-28, later) — the default height
+
+The owner asked for this phase's surfaces to be phone-friendly. Measured: the 220 dp default
+held the status row, the Stop row and the command line (144 dp) and left ~76 dp — three or four
+lines — or ~44 dp, two lines, once the error-count banner was there. Asked (keep 220 / ≈ 40 % /
+≈ 50 %): **"Your choice"**. This chat's choice: **40 % of the screen**
+(`OutputPanelHeight.DEFAULT_FRACTION`, `defaultFor(screen)`; about 320 dp, nine lines). Q2–Q6's
+rows and the 55 % / 38 % caps and the 160 floor the owner chose are untouched; only what the panel
+opens at changed. `OutputPanelStatusTest` and `OutputPanelWiringTest` pin it. Record:
+[`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5. **No device pass.**
+

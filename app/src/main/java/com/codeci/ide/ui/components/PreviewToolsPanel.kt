@@ -9,20 +9,29 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
@@ -42,8 +51,20 @@ import com.codeci.ide.ui.theme.CodecType
  * The preview's diagnostics panel — Phase 61's two-chip strip, grown on
  * 2026-09-28 into the five tabs the owner's own SPCK shots show
  * (**Console · Elements · Network · Resources · Settings**), with a console
- * that takes commands, a Network table, a Resources list, an Elements tree and
+ * that takes commands, a Network list, a Resources list, an Elements tree and
  * a Settings page.
+ *
+ * Phone pass, later the same day (owner: *"make everything from this phase
+ * phone friendly"*). Measured on a 411 × 656 dp page area at the old 240 dp
+ * default, the Console tab spent 209 dp on its own rows — a 48 dp drag handle,
+ * the 49 dp strip, the 48 dp filter row and a 64 dp outlined text field — and
+ * showed about one line of output; with the keyboard up the Cancel · Execute
+ * row pushed the output to nothing. Now: the strip itself is the drag handle
+ * (a 4 dp pill above it), the command line is one 48 dp row with Cancel ·
+ * Execute inside it, console lines are coloured by level and follow the newest
+ * entry, Network and Resources are two-line rows instead of a six-column table,
+ * and the long notes collapse to one line once there are rows. The panel's
+ * default height is half the page area ([PreviewToolsPolicy.DEFAULT_FRACTION]).
  *
  * Everything here is presentation. The scripts (console command, DOM walk,
  * resource read, viewport ask) are built by the pure policies and run by
@@ -98,36 +119,41 @@ fun PreviewToolsPanel(
             .height(height.dp)
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        // Short panels (the keyboard is up) give their rows to the list and the
-        // input line first: the drag handle is the first thing to go, never the
-        // line the user is typing into.
-        if (height >= 200f) {
-            Box(
-                Modifier.fillMaxWidth().height(48.dp)
-                    .semantics {
-                        contentDescription = resizeLabel
-                        progressBarRangeInfo = ProgressBarRangeInfo(height, minimum..maximum)
-                        setProgress { onHeight(it); true }
-                    }
-                    .draggable(
-                        orientation = Orientation.Vertical,
-                        state = rememberDraggableState { delta -> onResize(-delta / density) }
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                HorizontalDivider(Modifier.width(44.dp), thickness = 4.dp)
+        // The strip is the handle: dragging anywhere on it (or the pill above
+        // it) resizes the panel, a tap still switches tabs. A separate 48 dp
+        // handle row cost the console a fifth of its default height on a phone.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = resizeLabel
+                    progressBarRangeInfo = ProgressBarRangeInfo(height, minimum..maximum)
+                    setProgress { onHeight(it); true }
+                }
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state = rememberDraggableState { delta -> onResize(-delta / density) }
+                ),
+        ) {
+            Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .size(width = 32.dp, height = 4.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp))
+                )
             }
+            // Closing the panel, or leaving the console tab, disposes the
+            // command line — the only focusable field here. Releasing focus in
+            // the same tap is what takes the keyboard down with it: 2026-09-28,
+            // the screen reserves the keyboard's inset only while this panel is
+            // open, so a keyboard left up over a closed panel would draw the
+            // page underneath it.
+            PreviewTabStrip(
+                tab = tab,
+                onTab = { focusManager.clearFocus(force = true); onTab(it) },
+                onClose = { focusManager.clearFocus(force = true); onClose() },
+            )
         }
-        // Closing the panel, or leaving the console tab, disposes the command
-        // line — the only focusable field here. Releasing focus in the same tap
-        // is what takes the keyboard down with it: 2026-09-28, the screen now
-        // reserves the keyboard's inset only while this panel is open, so a
-        // keyboard left up over a closed panel would draw the page underneath it.
-        PreviewTabStrip(
-            tab = tab,
-            onTab = { focusManager.clearFocus(force = true); onTab(it) },
-            onClose = { focusManager.clearFocus(force = true); onClose() },
-        )
         when (tab) {
             PreviewToolTab.CONSOLE -> PreviewConsoleTab(
                 console = console,
@@ -176,7 +202,12 @@ fun PreviewToolsPanel(
     }
 }
 
-/** The strip the shots show: five equal tabs over one hairline, plus Close. */
+/**
+ * The strip the shots show: five tabs over one hairline, plus Close. Phone
+ * pass: labels at labelMedium with 10 dp padding so all five fit a 411 dp
+ * phone beside a 48 dp × (at the default font scale — larger scales scroll),
+ * and the underline spans its own tab instead of a fixed 56 dp.
+ */
 @Composable
 private fun PreviewTabStrip(tab: PreviewToolTab, onTab: (PreviewToolTab) -> Unit, onClose: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -185,22 +216,24 @@ private fun PreviewTabStrip(tab: PreviewToolTab, onTab: (PreviewToolTab) -> Unit
                 val selected = tab == choice
                 Column(
                     Modifier
+                        .width(IntrinsicSize.Max)
                         .heightIn(min = 48.dp)
                         .clickable { onTab(choice) }
-                        .padding(horizontal = 12.dp),
-                    verticalArrangement = Arrangement.Center,
+                        .padding(horizontal = 10.dp),
+                    verticalArrangement = Arrangement.Bottom,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = stringResource(tabLabel(choice)),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         color = if (selected) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
-                    Spacer(Modifier.height(4.dp))
                     Box(
                         Modifier
-                            .width(56.dp)
+                            .fillMaxWidth()
                             .height(2.dp)
                             .background(
                                 if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
@@ -209,7 +242,9 @@ private fun PreviewTabStrip(tab: PreviewToolTab, onTab: (PreviewToolTab) -> Unit
                 }
             }
         }
-        TextButton(onClick = onClose) { Text(stringResource(R.string.preview_close)) }
+        IconButton(onClick = onClose) {
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.preview_close))
+        }
     }
     HorizontalDivider()
 }
@@ -222,7 +257,11 @@ private fun tabLabel(tab: PreviewToolTab): Int = when (tab) {
     PreviewToolTab.SETTINGS -> R.string.preview_settings
 }
 
-/** The filter row (All · Log · Info · Warning · Error), copy and clear. */
+/**
+ * The filter row (All · Log · Info · Warning · Error), copy and clear. Chip
+ * labels at labelMedium with 2 dp gaps: five chips and two 48 dp icons then
+ * fit a 411 dp phone; larger font scales scroll the chips, the icons stay.
+ */
 @Composable
 private fun PreviewConsoleFilters(
     levels: Set<PreviewLevel>,
@@ -234,26 +273,21 @@ private fun PreviewConsoleFilters(
     val clearLabel = stringResource(R.string.preview_console_clear)
     val copyLabel = stringResource(R.string.preview_console_copy)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.weight(1f).horizontalScroll(rememberScrollState())) {
+        Row(
+            Modifier.weight(1f).horizontalScroll(rememberScrollState()).padding(start = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             val all = levels.size == PreviewLevel.entries.size
-            FilterChip(
+            PreviewLevelChip(
                 selected = all,
-                onClick = {
-                    onLevels(
-                        if (all) emptySet() else PreviewLevel.entries.toSet()
-                    )
-                },
-                label = { Text(stringResource(R.string.preview_level_all)) },
-                modifier = Modifier.padding(horizontal = 4.dp),
+                label = stringResource(R.string.preview_level_all),
+                onClick = { onLevels(if (all) emptySet() else PreviewLevel.entries.toSet()) },
             )
             PreviewLevel.entries.forEach { level ->
-                FilterChip(
+                PreviewLevelChip(
                     selected = level in levels,
-                    onClick = {
-                        onLevels(if (level in levels) levels - level else levels + level)
-                    },
-                    label = { Text(stringResource(levelLabel(level))) },
-                    modifier = Modifier.padding(horizontal = 4.dp),
+                    label = stringResource(levelLabel(level)),
+                    onClick = { onLevels(if (level in levels) levels - level else levels + level) },
                 )
             }
         }
@@ -264,6 +298,16 @@ private fun PreviewConsoleFilters(
             Icon(SpckIcons.Copy, contentDescription = copyLabel)
         }
     }
+}
+
+@Composable
+private fun PreviewLevelChip(selected: Boolean, label: String, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
+        modifier = Modifier.padding(horizontal = 2.dp),
+    )
 }
 
 private fun levelLabel(level: PreviewLevel): Int = when (level) {
@@ -287,12 +331,19 @@ private fun PreviewConsoleTab(
     var input by remember { mutableStateOf("") }
     var focused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
     val execute = {
         val line = input.trim()
         if (line.isNotEmpty()) {
             onCommand(line)
             input = ""
         }
+    }
+    // A console follows its newest line — on a phone the list shows a handful
+    // of lines, so a result that lands below the fold would look like no
+    // result at all.
+    LaunchedEffect(visible.size) {
+        if (visible.isNotEmpty()) listState.scrollToItem(visible.lastIndex)
     }
     Column(modifier) {
         PreviewConsoleFilters(
@@ -303,59 +354,191 @@ private fun PreviewConsoleTab(
             lines = visible.map { it.message },
         )
         if (visible.isEmpty()) {
-            Text(
-                stringResource(R.string.preview_console_empty),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(12.dp),
-            )
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                Text(
+                    stringResource(R.string.preview_console_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
         } else {
-            LazyColumn(Modifier.weight(1f)) {
-                items(visible) { entry ->
-                    Text(
-                        text = entry.message,
-                        fontFamily = CodecType.codeFamily,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
-                }
+            LazyColumn(state = listState, modifier = Modifier.weight(1f).testTag("preview_console_lines")) {
+                items(visible) { entry -> PreviewConsoleLine(entry) }
             }
         }
-        // The shots' Cancel · Execute bar: it appears with the keyboard, so the
-        // console never spends a permanent row on two buttons nobody can press
-        // while the caret is elsewhere.
-        if (focused) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(
-                    onClick = {
-                        input = ""
-                        focusManager.clearFocus()
-                    },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.preview_console_cancel)) }
-                TextButton(
-                    onClick = { execute() },
-                    enabled = input.isNotBlank(),
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.preview_console_execute)) }
-            }
-        }
-        OutlinedTextField(
+        PreviewCommandLine(
+            input = input,
+            focused = focused,
+            onInputChange = { input = it.take(PreviewConsolePolicy.COMMAND_LIMIT) },
+            onFocus = { focused = it },
+            onCancel = {
+                input = ""
+                focusManager.clearFocus()
+            },
+            execute = execute,
+        )
+    }
+}
+
+/**
+ * One console line, coloured by its level the way every browser console is:
+ * errors in the theme's error colour on a faint error tint, warnings on the
+ * tertiary tint, info in the primary colour, plain log in the surface's text.
+ * A hairline separates entries so wrapped lines still read as one entry each.
+ */
+@Composable
+private fun PreviewConsoleLine(entry: PreviewConsoleEntry) {
+    val scheme = MaterialTheme.colorScheme
+    val (color, tint) = when (entry.level) {
+        PreviewLevel.ERROR -> scheme.error to scheme.errorContainer.copy(alpha = .35f)
+        PreviewLevel.WARN -> scheme.tertiary to scheme.tertiaryContainer.copy(alpha = .35f)
+        PreviewLevel.INFO -> scheme.primary to Color.Transparent
+        PreviewLevel.LOG -> scheme.onSurface to Color.Transparent
+    }
+    Text(
+        text = entry.message,
+        fontFamily = CodecType.codeFamily,
+        style = MaterialTheme.typography.bodySmall,
+        color = color,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(tint)
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+    )
+    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = .4f))
+}
+
+/**
+ * The shots' command line as one 48 dp row: a prompt glyph, the field, and the
+ * shots' Cancel · Execute *inside* the row while the caret is there (or a line
+ * is pending) — never a second row, which on a phone was the row that pushed
+ * the output out of a short panel. Enter is the keyboard's Send action.
+ */
+@Composable
+private fun PreviewCommandLine(
+    input: String,
+    focused: Boolean,
+    onInputChange: (String) -> Unit,
+    onFocus: (Boolean) -> Unit,
+    onCancel: () -> Unit,
+    execute: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    HorizontalDivider()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .background(scheme.surfaceContainerHigh)
+            .padding(start = 12.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "›",
+            fontFamily = CodecType.codeFamily,
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.primary,
+        )
+        Spacer(Modifier.width(8.dp))
+        BasicTextField(
             value = input,
-            onValueChange = { input = it.take(PreviewConsolePolicy.COMMAND_LIMIT) },
+            onValueChange = onInputChange,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .onFocusChanged { focused = it.isFocused },
+                .weight(1f)
+                .onFocusChanged { onFocus(it.isFocused) },
             textStyle = TextStyle(
                 fontFamily = CodecType.codeFamily,
                 fontSize = 13.sp,
+                color = scheme.onSurface,
             ),
-            placeholder = { Text(stringResource(R.string.preview_console_hint)) },
+            cursorBrush = SolidColor(scheme.primary),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { execute() }),
+            decorationBox = { innerTextField ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (input.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.preview_console_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    innerTextField()
+                }
+            },
         )
+        if (focused || input.isNotBlank()) {
+            TextButton(onClick = onCancel, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Text(stringResource(R.string.preview_console_cancel), style = MaterialTheme.typography.labelMedium)
+            }
+            TextButton(
+                onClick = execute,
+                enabled = input.isNotBlank(),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) {
+                Text(stringResource(R.string.preview_console_execute), style = MaterialTheme.typography.labelMedium)
+            }
+        }
     }
+}
+
+/**
+ * A tab's note row: the whole note while the tab is empty (it is then the
+ * explanation of the empty state), one ellipsised line once there are rows —
+ * the Network note alone wrapped to some 90 dp on a phone, above a table that
+ * then had ~30 dp left. Tap the line to read it in full again.
+ */
+@Composable
+private fun PreviewNoteRow(note: String, hasRows: Boolean, trailing: @Composable () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val full = !hasRows || expanded
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = note,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = if (full) Int.MAX_VALUE else 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f)
+                .clickable(enabled = hasRows) { expanded = !expanded }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        )
+        trailing()
+    }
+}
+
+/** A phone row: the file on the first line, what is known about it on the second. */
+@Composable
+private fun PreviewTwoLineRow(name: String, summary: String, trailing: (@Composable () -> Unit)? = null) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 12.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+            Text(
+                text = name,
+                fontFamily = CodecType.codeFamily,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (summary.isNotEmpty()) {
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (trailing != null) trailing() else Spacer(Modifier.width(8.dp))
+    }
+    HorizontalDivider()
 }
 
 @Composable
@@ -372,13 +555,20 @@ private fun PreviewElementsTab(
     modifier: Modifier = Modifier,
 ) {
     val selectedNode = tree.firstOrNull { it.index == selected }
+    // A fresh selection opens its details (that is what the hint promises);
+    // a tap on the details header folds them to one line so the tree gets the
+    // panel back. While open, tree and details split the tab evenly.
+    var detailsOpen by remember { mutableStateOf(true) }
+    LaunchedEffect(selected) { detailsOpen = true }
     Column(modifier) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.preview_elements_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
             )
             IconButton(onClick = onRefresh) {
                 Icon(
@@ -388,11 +578,13 @@ private fun PreviewElementsTab(
             }
         }
         if (tree.isEmpty()) {
-            Text(
-                stringResource(R.string.preview_elements_empty),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(12.dp),
-            )
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                Text(
+                    stringResource(R.string.preview_elements_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
         } else {
             LazyColumn(Modifier.weight(1f)) {
                 items(tree) { node ->
@@ -406,7 +598,7 @@ private fun PreviewElementsTab(
                                 if (isSelected) MaterialTheme.colorScheme.surfaceVariant
                                 else Color.Transparent
                             )
-                            .padding(horizontal = 8.dp),
+                            .padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Spacer(Modifier.width((node.depth * 10).dp))
@@ -436,12 +628,52 @@ private fun PreviewElementsTab(
         }
         if (details != null && selected >= 0) {
             HorizontalDivider()
-            Column(Modifier.fillMaxWidth().heightIn(max = 168.dp).verticalScroll(rememberScrollState())) {
+            PreviewElementDetails(
+                details = details,
+                open = detailsOpen,
+                highlightedHere = highlighted == selected,
+                onToggleOpen = { detailsOpen = !detailsOpen },
+                onToggleHighlight = { onToggleHighlight(selected) },
+                onCopySelector = { selectedNode?.let { onCopyText(PreviewInspectorPolicy.selector(it)) } },
+                onCopyHtml = { onCopyHtml(selected) },
+                modifier = if (detailsOpen) Modifier.weight(1f) else Modifier,
+            )
+        }
+    }
+}
+
+/**
+ * The selected element on a phone: one 48 dp header row — tag and box, the
+ * highlight eye, a ⋮ with Copy selector / Copy HTML — and, while open, the
+ * attributes and text under it. The three text buttons this replaced took a
+ * whole scrolling row under a 168 dp block that swallowed the tree.
+ */
+@Composable
+private fun PreviewElementDetails(
+    details: PreviewNodeDetails,
+    open: Boolean,
+    highlightedHere: Boolean,
+    onToggleOpen: () -> Unit,
+    onToggleHighlight: () -> Unit,
+    onCopySelector: () -> Unit,
+    onCopyHtml: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Column(modifier.fillMaxWidth()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clickable(onClick = onToggleOpen)
+                .padding(start = 12.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.preview_elements_details),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 8.dp, top = 6.dp),
                 )
                 Text(
                     text = buildString {
@@ -450,41 +682,60 @@ private fun PreviewElementsTab(
                     },
                     fontFamily = CodecType.codeFamily,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+            }
+            IconButton(onClick = onToggleHighlight) {
+                Icon(
+                    if (highlightedHere) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    contentDescription = stringResource(
+                        if (highlightedHere) R.string.preview_elements_highlight_off
+                        else R.string.preview_elements_highlight
+                    ),
+                    tint = if (highlightedHere) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.preview_elements_copy_selector)) },
+                        onClick = { menuOpen = false; onCopySelector() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.preview_elements_copy_html)) },
+                        onClick = { menuOpen = false; onCopyHtml() },
+                    )
+                }
+            }
+        }
+        if (open) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 8.dp),
+            ) {
                 details.attributes.forEach { attribute ->
                     Text(
                         text = "${attribute.name}=\"${attribute.value}\"",
                         fontFamily = CodecType.codeFamily,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 1.dp),
                     )
                 }
                 if (details.text.isNotBlank()) {
                     Text(
                         text = details.text,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
                     )
-                }
-            }
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                TextButton(onClick = { onToggleHighlight(selected) }) {
-                    Text(
-                        stringResource(
-                            if (highlighted == selected) R.string.preview_elements_highlight_off
-                            else R.string.preview_elements_highlight
-                        )
-                    )
-                }
-                TextButton(onClick = {
-                    selectedNode?.let { onCopyText(PreviewInspectorPolicy.selector(it)) }
-                }) {
-                    Text(stringResource(R.string.preview_elements_copy_selector))
-                }
-                TextButton(onClick = { onCopyHtml(selected) }) {
-                    Text(stringResource(R.string.preview_elements_copy_html))
                 }
             }
         }
@@ -498,91 +749,36 @@ private fun PreviewNetworkTab(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.preview_network_limits),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-            )
+        PreviewNoteRow(
+            note = stringResource(R.string.preview_network_limits),
+            hasRows = requests.isNotEmpty(),
+        ) {
             IconButton(onClick = onClear) {
                 Icon(
                     SpckIcons.ClearCircle,
-                    contentDescription = stringResource(R.string.preview_console_clear),
+                    contentDescription = stringResource(R.string.preview_network_clear),
                 )
             }
         }
-        PreviewTableHeader()
         if (requests.isEmpty()) {
-            Text(
-                stringResource(R.string.preview_network_empty),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(12.dp),
-            )
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                Text(
+                    stringResource(R.string.preview_network_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
         } else {
             LazyColumn(Modifier.weight(1f)) {
                 items(requests) { request ->
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        PreviewCell(request.address, weight = 1f)
-                        PreviewCell(request.method, width = 56.dp)
-                        PreviewCell(PreviewToolsPolicy.statusLabel(null), width = 48.dp)
-                        PreviewCell(PreviewToolsPolicy.typeLabel(request.type), width = 56.dp)
-                        PreviewCell(PreviewToolsPolicy.sizeLabel(request.size), width = 64.dp)
-                        PreviewCell(PreviewToolsPolicy.timeLabel(request.time), width = 64.dp)
-                    }
-                    HorizontalDivider()
+                    PreviewTwoLineRow(
+                        name = PreviewToolsPolicy.nameLabel(request.address),
+                        summary = PreviewToolsPolicy.requestSummary(request),
+                    )
                 }
             }
         }
     }
-}
-
-@Composable
-private fun PreviewTableHeader() {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-        PreviewHeaderCell(stringResource(R.string.preview_network_name), weight = 1f)
-        PreviewHeaderCell(stringResource(R.string.preview_network_method), width = 56.dp)
-        PreviewHeaderCell(stringResource(R.string.preview_network_status), width = 48.dp)
-        PreviewHeaderCell(stringResource(R.string.preview_network_type), width = 56.dp)
-        PreviewHeaderCell(stringResource(R.string.preview_network_size), width = 64.dp)
-        PreviewHeaderCell(stringResource(R.string.preview_network_time), width = 64.dp)
-    }
-    HorizontalDivider()
-}
-
-@Composable
-private fun RowScope.PreviewHeaderCell(text: String, width: androidx.compose.ui.unit.Dp? = null, weight: Float? = null) {
-    val modifier = when {
-        weight != null -> Modifier.weight(weight)
-        width != null -> Modifier.width(width)
-        else -> Modifier
-    }
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun RowScope.PreviewCell(text: String, width: androidx.compose.ui.unit.Dp? = null, weight: Float? = null) {
-    val modifier = when {
-        weight != null -> Modifier.weight(weight)
-        width != null -> Modifier.width(width)
-        else -> Modifier
-    }
-    Text(
-        text = text,
-        fontFamily = CodecType.codeFamily,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier,
-    )
 }
 
 @Composable
@@ -594,13 +790,10 @@ private fun PreviewResourcesTab(
 ) {
     val copyLabel = stringResource(R.string.preview_resources_copy)
     Column(modifier) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.preview_resources_note),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-            )
+        PreviewNoteRow(
+            note = stringResource(R.string.preview_resources_note),
+            hasRows = resources.isNotEmpty(),
+        ) {
             IconButton(onClick = onRefresh) {
                 Icon(
                     Icons.Default.Refresh,
@@ -609,53 +802,24 @@ private fun PreviewResourcesTab(
             }
         }
         if (resources.isEmpty()) {
-            Text(
-                stringResource(R.string.preview_resources_empty),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(12.dp),
-            )
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                Text(
+                    stringResource(R.string.preview_resources_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
         } else {
             LazyColumn(Modifier.weight(1f)) {
                 items(resources) { resource ->
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    PreviewTwoLineRow(
+                        name = PreviewToolsPolicy.nameLabel(resource.address),
+                        summary = PreviewToolsPolicy.resourceSummary(resource),
                     ) {
-                        Text(
-                            text = resource.type,
-                            fontFamily = CodecType.codeFamily,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            modifier = Modifier.width(56.dp),
-                        )
-                        Text(
-                            text = resource.address,
-                            fontFamily = CodecType.codeFamily,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            text = PreviewToolsPolicy.sizeLabel(resource.size),
-                            fontFamily = CodecType.codeFamily,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            modifier = Modifier.width(64.dp),
-                        )
-                        Text(
-                            text = PreviewToolsPolicy.timeLabel(resource.time),
-                            fontFamily = CodecType.codeFamily,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            modifier = Modifier.width(56.dp),
-                        )
                         IconButton(onClick = { onCopyText(resource.address) }) {
                             Icon(SpckIcons.Copy, contentDescription = copyLabel)
                         }
                     }
-                    HorizontalDivider()
                 }
             }
         }
@@ -702,7 +866,7 @@ private fun PreviewSettingsTab(
             Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
                 Text(
                     stringResource(R.string.preview_settings_fit),
                     style = MaterialTheme.typography.bodyMedium,
@@ -716,9 +880,11 @@ private fun PreviewSettingsTab(
             Switch(checked = fitToPhone, onCheckedChange = onFitToPhone)
         }
         HorizontalDivider()
+        // The cache note sits under its label, not beside it: a two-line value
+        // at the trailing edge fought the label for a phone's width.
         PreviewSettingRow(
             label = stringResource(R.string.preview_settings_clear_cache),
-            value = stringResource(R.string.preview_settings_clear_cache_note),
+            note = stringResource(R.string.preview_settings_clear_cache_note),
             onClick = onClearCache,
         )
         HorizontalDivider()
@@ -726,19 +892,37 @@ private fun PreviewSettingsTab(
 }
 
 @Composable
-private fun PreviewSettingRow(label: String, value: String, onClick: () -> Unit) {
+private fun PreviewSettingRow(
+    label: String,
+    onClick: () -> Unit,
+    value: String? = null,
+    note: String? = null,
+) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = onClick)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Text(
-            value,
-            fontFamily = CodecType.codeFamily,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            if (note != null) {
+                Text(
+                    note,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (value != null) {
+            Text(
+                value,
+                fontFamily = CodecType.codeFamily,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
     }
 }
 

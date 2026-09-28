@@ -139,7 +139,14 @@ class OutputPanelStatusTest {
         assertEquals(OutputPanelHeight.MIN, OutputPanelHeight.resolve(1f, 800f, imeVisible = false), .01f)
         // A tiny screen keeps its own maximum (the IME cap can be the smaller one).
         assertEquals(79.8f, OutputPanelHeight.resolve(400f, 210f, imeVisible = true), .01f)
-        // Nonsense requests become the default.
-        assertEquals(OutputPanelHeight.DEFAULT, OutputPanelHeight.resolve(Float.NaN, 800f, false), .01f)
+        // Nonsense requests become the default: 40 % of the screen (the
+        // 2026-09-28 phone pass; a fixed 220 dp left two to four lines of output
+        // under the panel's three 48 dp rows).
+        assertEquals(320f, OutputPanelHeight.resolve(Float.NaN, 800f, false), .01f)
+        assertEquals(320f, OutputPanelHeight.defaultFor(800f), .01f)
+        // The default is a request like any other: clamped by the floor…
+        assertEquals(OutputPanelHeight.MIN, OutputPanelHeight.defaultFor(300f), .01f)
+        // …and never above the cap on a screen too small for the floor.
+        assertEquals(110f, OutputPanelHeight.defaultFor(200f), .01f)
     }
 }

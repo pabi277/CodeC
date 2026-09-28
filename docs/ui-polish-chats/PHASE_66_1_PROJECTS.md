@@ -58,7 +58,10 @@ verbatim as the option labels the owner selected):**
 3. *Which bundle should Part 66.1 implement first?* —
    **"(a) demo + (b) dialogs + (c) wording — all in one part"**.
 4. *After 'Create' with a typed template (e.g., C Program), where should the
-   user land?* — **"Keep today: hub file tree"**.
+   user land?* — **"Keep today: hub file tree"**. *Superseded 2026-09-28:* the
+   owner chose **"Same, and 'Create project' also lands in the editor"** when a
+   card's tap became the editor by default — see
+   [`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5.
 
 Not asked as options, therefore **not decided and not implemented** here: the
 clone dialog's non-functional QR glyph, the filter chips' ≈36 dp touch height,

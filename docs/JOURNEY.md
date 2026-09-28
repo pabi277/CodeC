@@ -1260,3 +1260,25 @@ rounds 1 and 2 had been treating symptoms of this same quirk — a clipped heade
 page's CSS actually gets for `100vh`, and warns when it is not the page's own height, so the
 next fault of this class is a sentence, not a screenshot. CI ✅ green (`36436647849` on
 `146986b`), **no device pass**.
+
+## 2026-09-28, round 5 — the phone the panel was never measured on
+
+The owner's two sentences were about the same thing seen from two sides: a project card that
+opened a file tree when he wanted the editor, and a preview console that *"is not looking good on
+phone"*. The second one was measured before it was believed: on the 411 × 656 dp page area his own
+console line had reported, the panel's default height was 240 dp and 209 dp of that was the panel
+talking about itself — a drag handle, a strip, a filter row, an outlined text field — leaving one
+line for the page to talk. With the keyboard up the arithmetic went negative. The Network table had
+been designed to look like the SPCK shot and could not survive a phone's width: six columns, 288 dp
+fixed, and a Name column that read `http://127.0.…` on every row. Four questions went to the owner
+first; two came back answered and two came back *"your choice"*, which is a decision too and is
+recorded as this chat's. What shipped is not a new panel — it is the same five tabs the shots asked
+for, with every row made to earn its height: the strip is the handle, the command line is one row
+with Cancel · Execute inside it, rows are two lines that name the file, notes collapse once there is
+something to read under them, and the panel opens at half the page instead of at a number that fit
+nowhere. The keyboard, the thing that had made the arithmetic negative, now slides *under* a panel
+and a page that keep their size — chosen over "fill the screen while typing" because Round 4 had
+just taught what a WebView does when it is laid out at a height it did not expect. The card tap and
+Create both land in the editor now; the tree moved one tap into the ⋮ and stayed in the drawer. CI
+green is recorded in the chat README; a device pass is still the owner's to run.
+

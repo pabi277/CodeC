@@ -1,3 +1,26 @@
+**2026-09-28 (round 5) — the phone pass for 70.1 + 72.1, and the project card that opens
+the editor.** Owner: *"when I click on a project it should open the editor by default and not
+the file structure"*; *"make everything from this and only this phase … phone friendly … the
+console input etc. is not looking good on phone"*. Measured on his 411 × 656 dp page area: the
+tools panel's Console tab spent **209 dp of its 240 dp default on its own rows** (one line of
+output; none with the keyboard up), the Network table gave Name ≈ 107 dp under a ≈ 90 dp note,
+Elements lost the tree after one tap, the run-output panel's 220 dp left 2–4 lines. Asked first
+(four questions): card tap → editor **and Create too** (supersedes 66.1's "Keep today: hub file
+tree"); **two-line rows**; the two height rules left to this chat (*"I don't know"*, *"Your
+choice"*). Shipped: `openInEditor` in the hub (tap = `OPEN_IN_EDITOR` + haptic, ⋮ → **Browse
+files** = the tree, `hub_open_in_editor` gone); the tools panel re-fitted (strip = drag handle,
+labelMedium tabs + 48 dp ×, one-row `›` command line with Cancel · Execute inside, level-coloured
+auto-following console lines, two-line Network/Resources rows via pure `nameLabel` /
+`requestSummary` / `resourceSummary`, collapsing notes, an Elements details header that splits the
+tab, no six-column header); heights: tools panel default **½ the page area** and, while typing,
+the keyboard slides *under* a panel and page that keep their size (`imeDp` added back,
+`pageReserve`, panel drawn over the page); run output opens at **40 % of the screen**
+(`OutputPanelHeight.defaultFor`). Tests: `PreviewToolsLayoutTest` +2, `PreviewToolsPolicyTest` +1,
+`PreviewToolsWiringTest` +1, `OutputPanelStatusTest`/`OutputPanelWiringTest`/`HubDialogWiringTest`
+amended. Record: `docs/chat-phase70/README.md` §Round 5. **CI: see the stamp there. No device
+pass** — the owner installs the debug APK of that run and looks at: the Projects card tap, the
+preview console with the keyboard up, Network with a real page, RUN ▶ output height.
+
 **2026-09-28 (round 4) — the modal that collapsed: the cause was ours, and it had been
 there since Phase 61.** The owner's Code-with-C page with a card open: a full card in
 Samsung Browser, a **42 px strip** in CodeC (the pill and the ×, nothing below) under a

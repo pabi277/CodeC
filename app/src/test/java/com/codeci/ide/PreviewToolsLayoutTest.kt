@@ -28,14 +28,17 @@ class PreviewToolsLayoutTest {
         height: Float,
         available: Float,
         zoomPercent: Int = 100,
+        console: List<PreviewConsoleEntry> = emptyList(),
+        network: List<PreviewRequest> = emptyList(),
+        resources: List<PreviewResource> = emptyList(),
         onResize: (Float) -> Unit = {},
         onHeight: (Float) -> Unit = {},
         onClose: () -> Unit = {},
     ) {
         PreviewToolsPanel(
-            console = emptyList(),
-            network = emptyList(),
-            resources = emptyList(),
+            console = console,
+            network = network,
+            resources = resources,
             domTree = emptyList(),
             details = null,
             selectedNode = -1,
@@ -95,8 +98,59 @@ class PreviewToolsLayoutTest {
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(900f) }
         compose.onNodeWithTag("panel").assertHeightIsEqualTo(260.dp)
         compose.onNodeWithTag("page").assertHeightIsEqualTo(140.dp)
-        compose.onNodeWithText("Close").performClick()
+        // Phone pass: Close is a 48 dp × on the strip, not a text button
+        // competing with five tabs for a phone's width.
+        compose.onNodeWithContentDescription("Close").performClick()
         compose.runOnIdle { assertTrue(closed) }
+    }
+
+    @Test fun `on a phone the default console shows lines, not just its own rows`() {
+        // 411 × 656 dp is the page area the owner's phone reported (Round 4's
+        // instrument line). At the old 240 dp default the Console tab kept
+        // ~31 dp for output under a 48 dp handle, the strip, the filter row
+        // and a 64 dp text field. The default is half the area now and the
+        // rows are slimmer: the list must get at least 160 dp (7+ lines).
+        val lines = (1..40).map { PreviewConsoleEntry(PreviewLevel.LOG, "line $it", 0) }
+        val height = PreviewToolsPolicy.panelHeight(Float.NaN, 656f)
+        compose.setContent {
+            MaterialTheme {
+                Column(Modifier.size(411.dp, 656.dp)) {
+                    Box(Modifier.fillMaxWidth().weight(1f).testTag("page"))
+                    Box(Modifier.fillMaxWidth().testTag("panel")) {
+                        Panel(tab = PreviewToolTab.CONSOLE, height = height, available = 656f, console = lines)
+                    }
+                }
+            }
+        }
+        compose.onNodeWithTag("panel").assertHeightIsEqualTo(328.dp)
+        compose.onNodeWithTag("page").assertHeightIsEqualTo(328.dp)
+        compose.onNodeWithTag("preview_console_lines").assertHeightIsAtLeast(160.dp)
+        // The command line and the shots' Execute are there without a second row.
+        compose.onNodeWithText("Type JavaScript, then Execute").assertExists()
+        compose.onNodeWithText("line 40").assertIsDisplayed()
+    }
+
+    @Test fun `network and resources are two-line rows that name the file`() {
+        val request = PreviewRequest("GET", "http://127.0.0.1:41897/js/app.js", false, type = "script", size = 12_595L, time = 45L)
+        val resource = PreviewResource("http://127.0.0.1:41897/css/style.css", "link", 2_048L, 12L)
+        var tab by mutableStateOf(PreviewToolTab.NETWORK)
+        compose.setContent {
+            MaterialTheme {
+                Column(Modifier.size(411.dp, 656.dp)) {
+                    Box(Modifier.fillMaxWidth().testTag("panel")) {
+                        Panel(tab = tab, height = 328f, available = 656f, network = listOf(request), resources = listOf(resource))
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText("app.js").assertIsDisplayed()
+        compose.onNodeWithText("GET · script · 12.3 kB · 45 ms · 127.0.0.1:41897/js").assertIsDisplayed()
+        // No six-column header any more.
+        compose.onNodeWithText("Method").assertDoesNotExist()
+        tab = PreviewToolTab.RESOURCES
+        compose.onNodeWithText("style.css").assertIsDisplayed()
+        compose.onNodeWithText("link · 2.0 kB · 12 ms · 127.0.0.1:41897/css").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Copy address").assertIsDisplayed()
     }
 
     @Test fun `the five tabs of the shots are all on the strip`() {

@@ -399,14 +399,80 @@ object PreviewToolsPolicy {
     fun typeLabel(type: String?): String = type?.takeIf { it.isNotBlank() } ?: "—"
 
     /**
+     * Phone rows (2026-09-28, owner: *"two-line rows, no header"*). The first
+     * line of a Network or Resources row is the file the address names — the
+     * last path segment — because on a 411 dp phone a full address ellipsised
+     * at ~107 dp read `http://127.0.…` on every row. A bare origin (`/` or no
+     * path) names itself by its host.
+     */
+    fun nameLabel(address: String): String {
+        val path = address.substringAfter("://", address)
+        val afterHost = path.substringAfter('/', "")
+        val last = afterHost.trimEnd('/').substringAfterLast('/')
+        return last.ifBlank { path.substringBefore('/') }.ifBlank { address }
+    }
+
+    /**
+     * The second line's tail: where the file lives (`host/parent/path`), so two
+     * `index.js` rows from different folders still tell apart. Empty when the
+     * address is only an origin — [nameLabel] already shows the host then.
+     */
+    fun locationLabel(address: String): String {
+        val path = address.substringAfter("://", address)
+        val afterHost = path.substringAfter('/', "")
+        if (afterHost.trimEnd('/').isEmpty()) return ""
+        val parent = afterHost.trimEnd('/').substringBeforeLast('/', "")
+        val host = path.substringBefore('/')
+        return if (parent.isEmpty()) host else "$host/$parent"
+    }
+
+    /**
+     * `GET · script · 12.3 kB · 45 ms · 127.0.0.1:41897/css` — the row's second
+     * line. Cells the page never reported are left out instead of printing a
+     * run of “—”: the tab's note already says why Type/Size/Time can be absent,
+     * and Status is always unknown to WebView, so it is not repeated per row.
+     */
+    fun requestSummary(request: PreviewRequest): String {
+        val parts = ArrayList<String>(5)
+        parts += request.method
+        request.type?.takeIf { it.isNotBlank() }?.let { parts += it }
+        if ((request.size ?: 0L) > 0L) parts += sizeLabel(request.size)
+        if ((request.time ?: 0L) > 0L) parts += timeLabel(request.time)
+        locationLabel(request.address).takeIf { it.isNotEmpty() }?.let { parts += it }
+        return parts.joinToString(" · ")
+    }
+
+    /** The Resources row's second line: `script · 12.3 kB · 45 ms · host/path`. */
+    fun resourceSummary(resource: PreviewResource): String {
+        val parts = ArrayList<String>(4)
+        resource.type.takeIf { it.isNotBlank() }?.let { parts += it }
+        if (resource.size > 0L) parts += sizeLabel(resource.size)
+        if (resource.time > 0L) parts += timeLabel(resource.time)
+        locationLabel(resource.address).takeIf { it.isNotEmpty() }?.let { parts += it }
+        return parts.joinToString(" · ")
+    }
+
+    /**
+     * The panel's default share of the area under the bar. 2026-09-28: the
+     * owner asked for the phase's surfaces to be phone-friendly and left the
+     * height rule to this chat. Measured on a 411 × 656 dp page area, the old
+     * fixed 240 dp default left the Console tab about one line of output under
+     * its own rows; half the area leaves the page half the screen and the
+     * console eight or nine lines. The 65 % cap and the drag are unchanged.
+     */
+    const val DEFAULT_FRACTION = .5f
+
+    /**
      * The panel keeps a strip and an input line now, so its floor is taller
      * than Phase 61's 160 dp; the 65 % cap is unchanged — the page is still
-     * the screen's primary content.
+     * the screen's primary content. A non-finite request (nothing dragged yet)
+     * resolves to [DEFAULT_FRACTION] of the available height.
      */
     fun panelHeight(requested: Float, available: Float): Float {
-        val max = (available.coerceAtLeast(0f) * .65f)
+        val room = available.coerceAtLeast(0f)
+        val max = room * .65f
         val min = minOf(220f, max)
-        return (if (requested.isFinite()) requested else 240f).coerceIn(min, max)
+        return (if (requested.isFinite()) requested else room * DEFAULT_FRACTION).coerceIn(min, max)
     }
 
     fun fitScale(width: Float, height: Float, viewportWidth: Float, viewportHeight: Float): Float {

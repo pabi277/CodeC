@@ -78,7 +78,7 @@ class OutputPanelWiringTest {
     fun `the screen asks the height law, caps it for the IME and collapses on a jump`() {
         assertTrue(editorCode.contains("OutputPanelHeight.resolve("))
         assertTrue(editorCode.contains("imeVisible = imeVisible"))
-        assertTrue(editorCode.contains("OutputPanelHeight.DEFAULT"))
+        assertTrue(editorCode.contains("OutputPanelHeight.defaultFor(panelScreen)"))
         assertTrue(editorCode.contains("viewModel.submitInput(context)"))
         // Q6 — the jump puts the panel away, twice (expanded panel and strip).
         assertTrue(editorCode.contains("if (outputExpanded) viewModel.toggleOutput()"))

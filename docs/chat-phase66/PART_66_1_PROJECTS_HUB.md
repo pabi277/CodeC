@@ -7,7 +7,9 @@
 **Owner answers this part implements (2026-09-27, verbatim option labels):**
 **"Keep the current cards"** · **"Yes — stay deleted"** ·
 **"(a) demo + (b) dialogs + (c) wording — all in one part"** ·
-**"Keep today: hub file tree"**.
+**"Keep today: hub file tree"** (*superseded 2026-09-28* — a card's tap and Create
+both land in the editor now; the tree is ⋮ → Browse files; see
+[`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5).
 
 Look unchanged: same cards, same ＋ and ⋮ sheets, same chips, same dialogs'
 shape. Everything below is behaviour and words.

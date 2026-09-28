@@ -55,7 +55,38 @@ class PreviewToolsPolicyTest {
         assertEquals(220f, PreviewToolsPolicy.panelHeight(1f, 400f), .01f)
         assertEquals(65f, PreviewToolsPolicy.panelHeight(240f, 100f), .01f)
         assertEquals(0f, PreviewToolsPolicy.panelHeight(240f, 0f), .01f)
-        assertEquals(240f, PreviewToolsPolicy.panelHeight(Float.NaN, 1000f), .01f)
+        // Nothing dragged yet (2026-09-28 phone pass): half the page area, not a
+        // fixed 240 dp — on a 411 × 656 dp phone that is 328 dp, and the page
+        // keeps the other half.
+        assertEquals(500f, PreviewToolsPolicy.panelHeight(Float.NaN, 1000f), .01f)
+        assertEquals(328f, PreviewToolsPolicy.panelHeight(Float.NaN, 656f), .01f)
+        // The default is still a request: the floor and the cap clamp it.
+        assertEquals(220f, PreviewToolsPolicy.panelHeight(Float.NaN, 400f), .01f)
+        assertEquals(65f, PreviewToolsPolicy.panelHeight(Float.NaN, 100f), .01f)
+        assertEquals(.5f, PreviewToolsPolicy.DEFAULT_FRACTION, .0001f)
+    }
+    @Test fun `phone rows name the file and summarise what the page reported`() {
+        // The first line is the file, not `http://127.0.…` on every row.
+        assertEquals("style.css", PreviewToolsPolicy.nameLabel("http://127.0.0.1:41897/css/style.css"))
+        assertEquals("index.html", PreviewToolsPolicy.nameLabel("http://127.0.0.1:41897/index.html"))
+        assertEquals("127.0.0.1:41897", PreviewToolsPolicy.nameLabel("http://127.0.0.1:41897/"))
+        assertEquals("example.org", PreviewToolsPolicy.nameLabel("https://example.org"))
+        assertEquals("api", PreviewToolsPolicy.nameLabel("https://example.org/v1/api/"))
+        // The second line's tail says where it lives; an origin has no tail.
+        assertEquals("127.0.0.1:41897/css", PreviewToolsPolicy.locationLabel("http://127.0.0.1:41897/css/style.css"))
+        assertEquals("127.0.0.1:41897", PreviewToolsPolicy.locationLabel("http://127.0.0.1:41897/index.html"))
+        assertEquals("", PreviewToolsPolicy.locationLabel("http://127.0.0.1:41897/"))
+        assertEquals("", PreviewToolsPolicy.locationLabel("https://example.org"))
+        // Cells the page never reported are left out; Status is never per row.
+        val bare = PreviewRequest("GET", "http://127.0.0.1:41897/", mainFrame = true)
+        assertEquals("GET", PreviewToolsPolicy.requestSummary(bare))
+        val full = PreviewRequest("GET", "http://127.0.0.1:41897/js/app.js", false, type = "script", size = 12_595L, time = 45L)
+        assertEquals("GET · script · 12.3 kB · 45 ms · 127.0.0.1:41897/js", PreviewToolsPolicy.requestSummary(full))
+        val partial = PreviewRequest("POST", "https://example.org/v1/api", false, type = "fetch", size = 0L, time = 1_500L)
+        assertEquals("POST · fetch · 1.5 s · example.org/v1", PreviewToolsPolicy.requestSummary(partial))
+        val resource = PreviewResource("http://127.0.0.1:41897/img/logo.png", "img", 900L, 0L)
+        assertEquals("img · 900 B · 127.0.0.1:41897/img", PreviewToolsPolicy.resourceSummary(resource))
+        assertEquals("", PreviewToolsPolicy.resourceSummary(PreviewResource("https://example.org", "", 0L, 0L)))
     }
 
     // ---- Phase 72.1: the strip, the table columns and the viewport ask ----

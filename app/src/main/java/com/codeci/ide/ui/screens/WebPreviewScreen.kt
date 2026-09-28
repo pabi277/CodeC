@@ -7,6 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
@@ -54,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -123,7 +128,15 @@ fun WebPreviewScreen(
     var toolsVisible by remember { mutableStateOf(false) }
     var toolTab by remember { mutableStateOf(PreviewToolTab.CONSOLE) }
     var levels by remember { mutableStateOf(PreviewLevel.entries.toSet()) }
-    var requestedHeight by remember { mutableStateOf(240f) }
+    // Nothing dragged yet: the policy's default share of the page area
+    // (PreviewToolsPolicy.DEFAULT_FRACTION), not a fixed dp that fit no phone.
+    var requestedHeight by remember { mutableStateOf(Float.NaN) }
+    // The keyboard's height in dp, read here — above the imePadding()'d column,
+    // which consumes the inset for everything under it. The tools panel is
+    // sized against the page area *without* the keyboard, so typing a console
+    // command neither shrinks the panel to the 65 % of what is left nor lays
+    // the page out again: the keyboard slides under the panel instead.
+    val imeDp = WindowInsets.ime.getBottom(LocalDensity.current) / LocalDensity.current.density
     var zoomDialog by remember { mutableStateOf(false) }
     var resolutionDialog by remember { mutableStateOf(false) }
     var resolution by remember { mutableStateOf(PreviewResolution.DEVICE) }
@@ -523,8 +536,15 @@ fun WebPreviewScreen(
         // Height comes from remaining content constraints, not screen metrics.
         // Diagnostics are unweighted but bounded; the page owns the remainder.
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-            val available = maxHeight.value
+            // 2026-09-28 phone pass: the keyboard is added back, so the panel
+            // keeps the height it had before the keyboard came. The page keeps
+            // its height too — it reserves (panel − keyboard) under itself and
+            // the panel is drawn over it, bottom-aligned above the keyboard —
+            // so a command being typed never relays the page out.
+            val available = maxHeight.value + imeDp
             val panelHeight = PreviewToolsPolicy.panelHeight(requestedHeight, available)
+            val panelShown = minOf(panelHeight, maxHeight.value)
+            val pageReserve = (panelHeight - imeDp).coerceIn(0f, maxHeight.value)
             Column(Modifier.fillMaxSize()) {
                 BoxWithConstraints(
                     Modifier.fillMaxWidth().weight(1f).clipToBounds(),
@@ -557,49 +577,50 @@ fun WebPreviewScreen(
                         }
                     }
                 }
-                if (toolsVisible) {
-                    PreviewToolsPanel(
-                        console = console,
-                        // The table the shots show: the WebView's own observed
-                        // requests joined, by address, with the page's timings.
-                        network = PreviewToolsPolicy.merge(network, resources),
-                        resources = resources,
-                        domTree = domTree,
-                        details = domDetails,
-                        selectedNode = selectedNode,
-                        highlighted = highlighted,
-                        viewport = viewport,
-                        fitToPhone = fitToPhone,
-                        zoomPercent = zoomPercent,
-                        resolution = resolution,
-                        tab = toolTab,
-                        levels = levels,
-                        height = panelHeight,
-                        availableHeight = available,
-                        onTab = { toolTab = it },
-                        onLevels = { levels = it },
-                        onResize = { delta -> requestedHeight = PreviewToolsPolicy.panelHeight(
-                            PreviewToolsPolicy.panelHeight(requestedHeight, available) + delta, available) },
-                        onHeight = { requestedHeight = PreviewToolsPolicy.panelHeight(it, available) },
-                        onClear = {
-                            if (toolTab == PreviewToolTab.CONSOLE) viewModel.clearConsole()
-                            else viewModel.clearNetwork()
-                        },
-                        onClose = { toolsVisible = false },
-                        onCommand = runCommand,
-                        onCopyText = copyText,
-                        onSelectNode = selectNode,
-                        onToggleHighlight = toggleHighlight,
-                        onCopyHtml = copyHtml,
-                        onRefreshElements = refreshElements,
-                        onRefreshResources = { webView?.captureResources() },
-                        onZoom = { zoomDialog = true },
-                        onResolution = { resolutionDialog = true },
-                        onFitToPhone = { fitToPhone = it },
-                        onClearCache = clearCache,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                if (toolsVisible) Spacer(Modifier.height(pageReserve.dp))
+            }
+            if (toolsVisible) {
+                PreviewToolsPanel(
+                    console = console,
+                    // The table the shots show: the WebView's own observed
+                    // requests joined, by address, with the page's timings.
+                    network = PreviewToolsPolicy.merge(network, resources),
+                    resources = resources,
+                    domTree = domTree,
+                    details = domDetails,
+                    selectedNode = selectedNode,
+                    highlighted = highlighted,
+                    viewport = viewport,
+                    fitToPhone = fitToPhone,
+                    zoomPercent = zoomPercent,
+                    resolution = resolution,
+                    tab = toolTab,
+                    levels = levels,
+                    height = panelShown,
+                    availableHeight = available,
+                    onTab = { toolTab = it },
+                    onLevels = { levels = it },
+                    onResize = { delta -> requestedHeight = PreviewToolsPolicy.panelHeight(
+                        PreviewToolsPolicy.panelHeight(requestedHeight, available) + delta, available) },
+                    onHeight = { requestedHeight = PreviewToolsPolicy.panelHeight(it, available) },
+                    onClear = {
+                        if (toolTab == PreviewToolTab.CONSOLE) viewModel.clearConsole()
+                        else viewModel.clearNetwork()
+                    },
+                    onClose = { toolsVisible = false },
+                    onCommand = runCommand,
+                    onCopyText = copyText,
+                    onSelectNode = selectNode,
+                    onToggleHighlight = toggleHighlight,
+                    onCopyHtml = copyHtml,
+                    onRefreshElements = refreshElements,
+                    onRefreshResources = { webView?.captureResources() },
+                    onZoom = { zoomDialog = true },
+                    onResolution = { resolutionDialog = true },
+                    onFitToPhone = { fitToPhone = it },
+                    onClearCache = clearCache,
+                    modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+                )
             }
         }
     }

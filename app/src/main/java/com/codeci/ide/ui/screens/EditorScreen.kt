@@ -2420,7 +2420,9 @@ fun EditorScreen(
             // Phase 70.1 — Q5: the same request, clamped by the shared law,
             // which caps the panel lower while the keyboard is up.
             val panelScreen = LocalConfiguration.current.screenHeightDp.toFloat()
-            var outputPanelHeight by remember { mutableStateOf(OutputPanelHeight.DEFAULT) }
+            // 2026-09-28 phone pass: the panel opens at OutputPanelHeight.DEFAULT_FRACTION
+            // of the screen (defaultFor), no longer at a fixed 220 dp.
+            var outputPanelHeight by remember { mutableStateOf(OutputPanelHeight.defaultFor(panelScreen)) }
             // Phase 50.4 — transition (2): the expanded panel grows
             // upward on the shared panel spec; the collapsed strip below
             // still swaps instantly, exactly as before.

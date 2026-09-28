@@ -350,6 +350,108 @@ four as round 3b (three 1:1, one 457-in-a-411 that the one bounded reload alread
 they carry nothing new, which is itself the finding — a page-box line could not show this
 fault, and now it can.
 
+## Round 5 (2026-09-28) — the phone pass, and the project card that opens the editor
+
+**The owner's request, verbatim:** *"in projects section when I click on a project it should
+open the editor by default and not the file structure"* — and — *"make everything from this
+and only this phase whatever is done, phone friendly … the console input etc. is not looking
+good on phone"*, with *"deep research"* and *"100 % sure"* before changing anything, and doubts
+to be cleared by asking.
+
+### Measured before anything changed (411 × 656 dp, the page area his phone reported in Round 4)
+
+| Surface | What the code drew | The arithmetic |
+| --- | --- | --- |
+| Tools panel, Console tab, at the fixed 240 dp default | a 48 dp drag handle, the 49 dp strip, the 48 dp filter row, a 64 dp `OutlinedTextField` | 209 dp of the panel's own rows → **~31 dp, one line of output** |
+| …with the keyboard up | the cap is 65 % of what is left (356 dp → 231) and a second row (Cancel · Execute, 40 dp) appears | 249 dp of rows in 231 → **no output visible while typing**; the page shrank to ~125 dp |
+| Tab strip | five `labelLarge` tabs at 12 dp padding + a text "Close" | ≈ 495 dp needed → Settings scrolled off; underline a fixed 56 dp under 64 dp labels |
+| Filter row | five `FilterChip`s + two 48 dp icons | ≈ 442 dp → the Error chip half off-screen |
+| Console lines | `bodySmall` mono, no level colour, no auto-scroll | a result under the fold looked like no result |
+| Network tab | a six-column table, 288 dp of fixed columns | **Name ≈ 107 dp → every row read `http://127.0.…`**; the note above it wrapped to ≈ 90 dp; Status is "—" on every row by construction |
+| Elements tab | 48 dp rows, then a 168 dp details block and a row of three text buttons | after one tap the tree had **negative** room at the default height |
+| Resources tab | four fixed cells + copy | address ≈ 180 dp at 11 sp |
+| Run-output panel (70.1), 220 dp default | status 48 + Stop row 48 + command line 48 | **~76 dp (3–4 lines), ~44 dp (2 lines) with the error-count banner** |
+| Projects hub card | `Card(onClick → HubCardAction.OPEN)` → the hub's tree; ⋮ had "Open" (tree) and "Open in editor" (Phase 46.2's entry-file rule) | — |
+
+### The owner's answers (asked before code, recorded verbatim)
+
+| Question | Answer |
+| --- | --- |
+| Card tap: editor, tree in ⋮ as "Browse files"; also Create? | **"Same, and 'Create project' also lands in the editor"** — supersedes Phase 66.1's *"Keep today: hub file tree"* |
+| Tools panel height rule (½ + fill while typing / ½ + keep cap / keep 240) | **"I don't know do which will be best"** — left to this chat |
+| Network / Resources rows | **"Two-line rows, no header; note collapses to one line"** |
+| Run-output default (220 / ≈ 40 % / ≈ 50 %) | **"Your choice"** — left to this chat |
+
+**The two decisions taken here, with the reason.** (1) Tools panel: the default is **half the
+page area** (`PreviewToolsPolicy.DEFAULT_FRACTION`, 328 dp on his phone — the page keeps the other
+half; floor 220 and the 65 % cap unchanged). While a command is typed the panel and the page
+**both keep their size**: the keyboard's height is added back into the height the panel is sized
+against, the page reserves `panel − keyboard` under itself, and the panel is drawn over the
+page, bottom-aligned above the keyboard. That is neither of the two options offered — filling
+the whole area above the keyboard would have laid the WebView out at 0 dp and back (Round 4's
+lesson: a page relaid at a strange height is a page that misbehaves), and keeping the 65 % cap
+left three lines. (2) Run output: **40 % of the screen** (`OutputPanelHeight.DEFAULT_FRACTION`,
+about 320 dp — nine lines) instead of a fixed 220 dp; the 55 % / 38 % caps and the 160 floor the
+owner chose this morning are untouched. Both are recorded as this chat's choices, not his.
+
+### What changed
+
+**Hub (`FileManagerScreen.kt`).** One local `openInEditor(project)` — Phase 46.2's rule via
+`viewModel.entryFileForEditor` (launch default → newest source → first source; a project with
+nothing to open falls back to the tree). The card's tap sends `HubCardAction.OPEN_IN_EDITOR`
+(with the `PROJECT_OPENED` haptic); the wizard's `onCreated` calls the same function; ⋮'s first
+item is **Browse files** (`hub_browse_files`, `HubCardAction.OPEN` → the hub tree). The redundant
+"Open in editor" menu item and its string are gone; both enum values stay (the `HubSurfaceTest`
+inventory). The tree is also still the editor drawer's Files slot.
+
+**Tools panel (`PreviewToolsPanel.kt`).** The strip is the drag handle (a 4 dp pill above it;
+the resize semantics moved with it) — the 48 dp handle row is gone. Tabs at `labelMedium`, 10 dp
+padding, a full-width underline, Close as a 48 dp ×: all five fit 411 dp at the default font
+scale. Chips at `labelMedium` with 2 dp gaps: the row fits beside its two icons. Console lines
+coloured by level (error / tertiary tints, info in primary), a hairline between entries, and the
+list follows its newest line. The command line is **one 48 dp row**: `›`, a flat
+`BasicTextField` (13 sp mono), and the shots' **Cancel · Execute inside the row** while the caret
+is there or a line is pending — never a second row. Network and Resources are **two-line rows**
+(`nameLabel` — the file; `requestSummary` / `resourceSummary` — `GET · script · 12.3 kB · 45 ms ·
+host/path`, absent cells left out, Status never repeated per row); the six-column header and its
+strings are gone; the long notes show in full only while a tab is empty and collapse to one
+tappable line once there are rows. Elements: the details block is a 48 dp header (tag + box, the
+highlight eye, ⋮ → Copy selector / Copy HTML) that opens on a fresh selection and splits the tab
+with the tree, and folds on tap. Settings: the clear-cache note sits under its label.
+
+**Screen (`WebPreviewScreen.kt`).** `requestedHeight` starts `NaN` (the policy's default share);
+`imeDp` is read above the `imePadding()`'d column; the geometry described above
+(`available = maxHeight + imeDp`, `pageReserve`, the panel `align(BottomCenter)` over the page).
+
+**Run output (`OutputPanelHeight.kt`, `EditorScreen.kt`).** `DEFAULT_FRACTION = 0.40`,
+`defaultFor(screen)`; the editor opens the panel at `defaultFor(panelScreen)`.
+
+**Coverage.** `PreviewToolsLayoutTest` +2 Robolectric cases (the 411 × 656 default: panel 328,
+page 328, the console list ≥ 160 dp with the newest line displayed and Execute reachable; Network
+and Resources render the file name and the summary, no "Method" header) and Close by content
+description; `PreviewToolsPolicyTest` +1 (the labels and summaries) and the default-share cases;
+`PreviewToolsWiringTest` +1 (the geometry, the handle-less strip, the one-row command line, the
+two-line rows); `OutputPanelStatusTest` (`defaultFor`, the NaN default) and `OutputPanelWiringTest`
+(`defaultFor(panelScreen)`); `HubDialogWiringTest`'s create-landing case rewritten for the
+superseding answer (and it pins the card tap, Browse files, and the removed string).
+
+**Research notes.** Measured from the checkout, not remembered: the row heights above are the
+modifiers in the files (`heightIn(min = 48.dp)`, M3's 48 dp minimum interactive size on chips and
+text buttons, `OutlinedTextField`'s 56 dp + 8 dp padding); the page area is the `view 411×656 dp`
+of the owner's own Round 4 console line. Compose: `Modifier.minimumInteractiveComponentSize`
+enlarges a chip's *layout* to 48 dp (why the filter row is 48 dp regardless), `imePadding()`
+consumes the IME inset for its children (why `imeDp` is read above it, the way `EditorScreen`
+already reads `imeVisible`), `TextOverflow.MiddleEllipsis` is not in this BOM (2024.12.01 → UI
+1.7), which is why the file name is a pure label instead of a start-ellipsised address. The
+reference for a phone console is the same as Phase 72.1's: the owner's SPCK shots (five tabs, a
+filter row, Cancel · Execute with the keyboard) — kept, re-fitted.
+
+**CI.** See the stamp below.
+
+**What this does not establish.** No device pass — nothing here was installed on a handset; the
+heights are arithmetic against his reported page area and the Robolectric layout. Whether 13 sp
+lines and `labelMedium` chips read well *to him* is a device question.
+
 ## Stop point
 
 This part only. No PR, no merge, no `main` push without the owner's explicit

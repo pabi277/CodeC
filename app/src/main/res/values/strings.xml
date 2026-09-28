@@ -455,8 +455,7 @@
     <string name="resume_subtitle">Your last file is still here.</string>
     <string name="resume_decline">✕</string>
     <string name="resume_continue">Continue</string>
-    <string name="hub_open_action">Open</string>
-    <string name="hub_open_in_editor">Open in editor</string>
+    <string name="hub_browse_files">Browse files</string>
     <string name="hub_copy_remote_url">Copy remote URL</string>
     <string name="hub_remote_url_copied">Remote URL copied</string>
     <string name="hub_no_remote_url">No remote URL configured</string>
@@ -627,12 +626,6 @@
     <string name="preview_elements_highlight_off">Clear highlight</string>
     <string name="preview_elements_copy_selector">Copy selector</string>
     <string name="preview_elements_copy_html">Copy HTML</string>
-    <string name="preview_network_name">Name</string>
-    <string name="preview_network_method">Method</string>
-    <string name="preview_network_status">Status</string>
-    <string name="preview_network_type">Type</string>
-    <string name="preview_network_size">Size</string>
-    <string name="preview_network_time">Time</string>
     <string name="preview_network_clear">Clear network</string>
     <string name="preview_resources_note">What the page itself reported through Resource Timing. Addresses are redacted exactly like Network’s.</string>
     <string name="preview_resources_empty">No page resources reported yet.</string>

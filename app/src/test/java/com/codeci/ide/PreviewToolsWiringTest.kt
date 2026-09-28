@@ -92,6 +92,37 @@ class PreviewToolsWiringTest {
         assertTrue(screen.contains("if (toolsVisible) Modifier.imePadding() else Modifier"))
     }
 
+    @Test fun `the phone pass keeps the panel and the page their size while a command is typed`() {
+        // 2026-09-28, owner: "make everything from this phase phone friendly".
+        // The keyboard is added back into the height the panel is sized
+        // against, the page reserves (panel − keyboard) under itself, and the
+        // panel is drawn over the page, bottom-aligned above the keyboard —
+        // so typing neither shrinks the panel to 65 % of what is left nor
+        // relays the page out at a new height.
+        assertTrue(screen.contains("val imeDp = WindowInsets.ime.getBottom(LocalDensity.current) / LocalDensity.current.density"))
+        assertTrue(screen.contains("val available = maxHeight.value + imeDp"))
+        assertTrue(screen.contains("val panelShown = minOf(panelHeight, maxHeight.value)"))
+        assertTrue(screen.contains("val pageReserve = (panelHeight - imeDp).coerceIn(0f, maxHeight.value)"))
+        assertTrue(screen.contains("if (toolsVisible) Spacer(Modifier.height(pageReserve.dp))"))
+        assertTrue(screen.contains("modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),"))
+        // Nothing dragged yet resolves through the policy's default share.
+        assertTrue(screen.contains("var requestedHeight by remember { mutableStateOf(Float.NaN) }"))
+        // The panel: the strip is the handle (no 48 dp handle row), the command
+        // line is one row with the shots' Cancel · Execute inside it, lines are
+        // coloured by level and the list follows its newest entry.
+        assertFalse(panel.contains("if (height >= 200f)"))
+        assertFalse(panel.contains("OutlinedTextField("))
+        assertTrue(panel.contains("BasicTextField("))
+        assertTrue(panel.contains("if (focused || input.isNotBlank()) {"))
+        assertTrue(panel.contains("listState.scrollToItem(visible.lastIndex)"))
+        assertTrue(panel.contains("PreviewLevel.ERROR -> scheme.error to scheme.errorContainer.copy(alpha = .35f)"))
+        // Two-line rows through the pure labels; no six-column header.
+        assertTrue(panel.contains("PreviewToolsPolicy.nameLabel(request.address)"))
+        assertTrue(panel.contains("PreviewToolsPolicy.requestSummary(request)"))
+        assertTrue(panel.contains("PreviewToolsPolicy.resourceSummary(resource)"))
+        assertFalse(panel.contains("PreviewTableHeader"))
+    }
+
     @Test fun `the keyboard is only reserved while the tools panel is open`() {
         // 2026-09-28, owner: *"browser have a good view and code is very smaller
         // view"*, with an unaccounted band under the page. The console line is

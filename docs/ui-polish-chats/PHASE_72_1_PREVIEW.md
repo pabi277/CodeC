@@ -242,3 +242,28 @@ re-read in the chat README: their symptoms were this same quirk acting on `heigh
 `calc(100vh − …)`. Full account: [`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 4.
 **CI ✅ `36436647849` on `146986b`; no device pass — the owner re-installs to confirm: the line
 should read `100vh 655 px` and the card should open whole.**
+
+### Round 5 (2026-09-28) — the phone pass
+
+The owner: *"make everything from this and only this phase whatever is done, phone friendly …
+the console input etc. is not looking good on phone"*. Measured first, on the 411 × 656 dp page
+area his own Round 4 line reported: at the fixed 240 dp default the Console tab spent 209 dp on its
+own rows (48 handle + 49 strip + 48 filters + 64 text field) and showed **about one line**; with
+the keyboard up, the 65 % cap plus a second Cancel · Execute row left **none**; the Network table's
+288 dp of fixed columns left Name ≈ 107 dp (`http://127.0.…` on every row) under a note that wrapped
+to ≈ 90 dp; one tap in Elements gave the tree negative room. Asked before code: two-line rows
+(**"Two-line rows, no header; note collapses to one line"**) and the height rule (**"I don't know do
+which will be best"** → this chat's choice). Delivered: the strip is the drag handle (no 48 dp
+handle row), labelMedium tabs with a 48 dp × Close so all five fit 411 dp, chips that fit beside
+their two icons, level-coloured console lines that follow the newest entry, a **one-row** command
+line (`›` + flat field + Cancel · Execute inside it), two-line Network/Resources rows through pure
+`nameLabel` / `requestSummary` / `resourceSummary` (no header, its six strings removed), notes that
+collapse to one tappable line once rows exist, an Elements details header that opens on selection
+and splits the tab with the tree, the cache note under its label. Height: the default is **half the
+page area** (`DEFAULT_FRACTION`), and while a command is typed the panel and the page keep their
+size — the keyboard's height is added back into what the panel is sized against, the page reserves
+`panel − keyboard`, the panel is drawn over the page above the keyboard (no 0 dp relayout of the
+WebView; Round 4's lesson). Tests: `PreviewToolsLayoutTest` +2, `PreviewToolsPolicyTest` +1 and the
+default cases, `PreviewToolsWiringTest` +1. Full account and the CI stamp:
+[`../chat-phase70/README.md`](../chat-phase70/README.md) §Round 5. **No device pass.**
+
