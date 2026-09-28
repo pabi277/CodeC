@@ -17,8 +17,9 @@ the keyboard slides *under* a panel and page that keep their size (`imeDp` added
 `pageReserve`, panel drawn over the page); run output opens at **40 % of the screen**
 (`OutputPanelHeight.defaultFor`). Tests: `PreviewToolsLayoutTest` +2, `PreviewToolsPolicyTest` +1,
 `PreviewToolsWiringTest` +1, `OutputPanelStatusTest`/`OutputPanelWiringTest`/`HubDialogWiringTest`
-amended. Record: `docs/chat-phase70/README.md` §Round 5. **CI: see the stamp there. No device
-pass** — the owner installs the debug APK of that run and looks at: the Projects card tap, the
+amended. Record: `docs/chat-phase70/README.md` §Round 5. **CI: first run red on one Robolectric
+case (the 320 × 470 dp default display, fixed with `w411dp-h820dp`), second killed by a corrupt NDK
+download on the runner; the green stamp is at the end of §Round 5. No device pass** — the owner installs the debug APK of that run and looks at: the Projects card tap, the
 preview console with the keyboard up, Network with a real page, RUN ▶ output height.
 
 **2026-09-28 (round 4) — the modal that collapsed: the cause was ours, and it had been

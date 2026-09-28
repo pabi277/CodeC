@@ -446,7 +446,20 @@ already reads `imeVisible`), `TextOverflow.MiddleEllipsis` is not in this BOM (2
 reference for a phone console is the same as Phase 72.1's: the owner's SPCK shots (five tabs, a
 filter row, Cancel · Execute with the keyboard) — kept, re-fitted.
 
-**CI.** See the stamp below.
+**CI, round by round (honest, because the first was red).** Run `36452192492` on `c840787`:
+**2 363 host tests, 1 failed** — `PreviewToolsLayoutTest › on a phone the default console shows
+lines, not just its own rows`. The cause was the test bed, not the panel: Robolectric's default
+display is **320 × 470 dp**, the case laid a 411 × 656 dp column out on it, `Modifier.size` yields
+to a smaller parent, so the page came out 142 dp instead of 328 (the other phone-sized case passed
+only because it asserted no heights). Fix `26cb316`: the two phone cases declare
+`@Config(qualifiers = "w411dp-h820dp")`. The same commit widens the workflow's annotation grep so a
+failing host test's `AssertionError at FooTest.kt:NN` line is surfaced too — this round had to be
+diagnosed by reasoning because the raw log is unreadable from here and the annotations carried only
+the test's name. Run `36453064452` on `26cb316` died in **1 m 27 s** before any test:
+`Install NDK (Side by side) 27.2.12479018 … ZipException: Archive is not a ZIP archive` — a
+corrupt download on the runner, nothing in the tree; the session's token cannot re-run a job
+(`rerun-failed-jobs` → 403), so this record's own push is the re-run. **Green stamp: see the end of
+this section.**
 
 **What this does not establish.** No device pass — nothing here was installed on a handset; the
 heights are arithmetic against his reported page area and the Robolectric layout. Whether 13 sp
