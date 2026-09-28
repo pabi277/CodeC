@@ -88,7 +88,7 @@ class FileTreeStateWiringTest {
         val vm = code(viewModel)
         assertTrue(
             "the first-open shape must come from the pure policy",
-            vm.contains("FileTreeCollapse.initialTree(dirs, remembered)")
+            vm.contains("FileTreeCollapse.initialTree(dirs, null)")
         )
         assertTrue(
             "folders that no longer exist must drop out of what is remembered",

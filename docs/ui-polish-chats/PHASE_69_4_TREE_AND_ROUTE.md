@@ -1,6 +1,6 @@
 # Phase 69.4 — the Files tree remembers its shape, and the route opens once
 
-**Date:** 2026-09-28. **Branch:** `arena/01a0e49f-codec` (tip `3bc55d8`).
+**Date:** 2026-09-28. **Branch:** `arena/01a0e49f-codec` (tip `dbbe884`).
 **Status:** implemented; Android CI result at the bottom of this file.
 **No PR opened, nothing merged** — that needs the owner's explicit word.
 
@@ -93,6 +93,16 @@ is a look problem, and neither is fixed by a setting.
 - **`FileManagerViewModel.kt:442`** — deleting a project from the hub calls
   `FileTreeMemory.forget`, so the store cannot grow by one entry per project the
   user ever opened.
+- **The default never overwrites a shape the user already chose** (CI round 2,
+  for cause). Creating a nested file reveals its new parent folders
+  (`expandAncestors`) *before* the drawer has ever listed that project, so the
+  listing that followed applied "everything closed" over the reveal and shut the
+  folder a file had just been created in. `treeStateTouched` is set by every
+  user-driven change — it counts even when there is nothing to write to yet — so
+  a first open closes every folder **only** when the tree is untouched. The three
+  project-switch resets share `resetTreeShapeForNewContext`, which clears the
+  flag: the project being entered gets its own first-open default instead of
+  inheriting "everything expanded" from the one being left.
 
 ### 2. A route is opened once per editor session
 
@@ -114,18 +124,19 @@ is a look problem, and neither is fixed by a setting.
 `FileTreeCollapseTest` +4 (round trip through storage, never-stored ≠
 all-expanded, first open closes everything, pruning) · `EditorRouteOpenTest`
 (new, 4: a fresh session opens, the same route does not open twice, a different
-route still does, nulls kept apart) · `FileTreeStateWiringTest` (new, 4: the
+route still does, nulls kept apart) · `FileTreeStateWiringTest` (new, 5: the
 shape is stored per project, exactly the five user-driven changes write it and
 the project-switch resets do not, the first-open shape comes from the pure
-policy, a deleted project forgets) · `EditorRouteWiringTest` (new, 3: both opens
-sit behind the guard, one guard in one place, the marker lives in the ViewModel
-with one writer). **Fifteen new host cases.**
+policy, **the default never overwrites what the user already did**, a deleted
+project forgets) · `EditorRouteWiringTest` (new, 3: both opens sit behind the
+guard, one guard in one place, the marker lives in the ViewModel with one
+writer). **Sixteen new host cases.**
 
 ## Validation
 
 | What | Where | Result |
 |---|---|---|
-| Source tests (host JVM) | CI `:app:testDebugUnitTest` | see the CI section below |
+| Source tests (host JVM) | CI `:app:testDebugUnitTest` on `dbbe884` | see the CI section below |
 | Android tests (instrumented) | — | none for this part; nothing claimed |
 | Device evidence | — | **not claimed** — no round run, none asked for |
 
@@ -137,9 +148,24 @@ device to make.
 
 ### CI
 
-- **Round 1** — run
+- **Round 1 — red, this part's own omission**, run
   [36383822168](https://github.com/pabi277/CodeC/actions/runs/36383822168) on
-  `3bc55d8`. *(Result recorded at the end of this section when the run ends.)*
+  `3bc55d8`: four `Unresolved reference 'FileTreeMemory'` in
+  `EditorViewModel` — the store lives in `ui.editor` and the viewmodels package
+  imports its siblings explicitly. Main code, one import line, no behaviour
+  change (`1c61f42`).
+- **Round 2 — red for cause**, run
+  [36384352636](https://github.com/pabi277/CodeC/actions/runs/36384352636) on
+  `1c61f42`: 2305 tests, 2 failed. (a) `DrawerFileActionsTest > nested create
+  opens exact path and expands its ancestors` — a real conflict, described
+  above: the first-open default was closing the folder a file had just been
+  created in. (b) `FileTreeCollapseTest > folders that no longer exist drop out
+  of what is remembered` — **my expectation was wrong**, not the code: `prune`
+  keeps the folders that still exist, so the answer is `{src, src/img}`. Fixed
+  in `dbbe884` (the `treeStateTouched` rule + the corrected expectation).
+- **Round 3** — run
+  [36385643910](https://github.com/pabi277/CodeC/actions/runs/36385643910) on
+  `dbbe884`. *(Result recorded here when the run ends.)*
 
 This sandbox has no JDK (`which java javac kotlinc` → empty, `JAVA_HOME` unset),
 so **CI is the executor of record**, as it was for 68.1, 69.1, 69.2 and 69.3.
