@@ -67,6 +67,17 @@ class PreviewToolsWiringTest {
         assertTrue(native.contains("zoomBy("))
         assertFalse(native.contains("reload()"))
     }
+    @Test fun `closing the panel or leaving the console takes the keyboard with it`() {
+        // The screen reserves the keyboard's inset only while the panel is open
+        // (2026-09-28), so the two taps that dispose the console's command line —
+        // Close, and a tab switch away from the console — must release focus in
+        // the same tap; otherwise the keyboard stays up over a page drawn
+        // underneath it.
+        assertTrue(panel.contains("onClose = { focusManager.clearFocus(force = true); onClose() }"))
+        assertTrue(panel.contains("onTab = { focusManager.clearFocus(force = true); onTab(it) }"))
+        assertTrue(screen.contains("if (toolsVisible) Modifier.imePadding() else Modifier"))
+    }
+
     @Test fun `the keyboard is only reserved while the tools panel is open`() {
         // 2026-09-28, owner: *"browser have a good view and code is very smaller
         // view"*, with an unaccounted band under the page. The console line is

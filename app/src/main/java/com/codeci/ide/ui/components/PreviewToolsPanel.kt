@@ -89,6 +89,7 @@ fun PreviewToolsPanel(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current.density
+    val focusManager = LocalFocusManager.current
     val resizeLabel = stringResource(R.string.preview_resize)
     val maximum = PreviewToolsPolicy.panelHeight(Float.MAX_VALUE, availableHeight)
     val minimum = PreviewToolsPolicy.panelHeight(0f, availableHeight)
@@ -117,7 +118,16 @@ fun PreviewToolsPanel(
                 HorizontalDivider(Modifier.width(44.dp), thickness = 4.dp)
             }
         }
-        PreviewTabStrip(tab = tab, onTab = onTab, onClose = onClose)
+        // Closing the panel, or leaving the console tab, disposes the command
+        // line — the only focusable field here. Releasing focus in the same tap
+        // is what takes the keyboard down with it: 2026-09-28, the screen now
+        // reserves the keyboard's inset only while this panel is open, so a
+        // keyboard left up over a closed panel would draw the page underneath it.
+        PreviewTabStrip(
+            tab = tab,
+            onTab = { focusManager.clearFocus(force = true); onTab(it) },
+            onClose = { focusManager.clearFocus(force = true); onClose() },
+        )
         when (tab) {
             PreviewToolTab.CONSOLE -> PreviewConsoleTab(
                 console = console,
