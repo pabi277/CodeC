@@ -60,6 +60,35 @@ class ReplayPathWiringTest {
         assertTrue(attemptBlock.contains(".getOrDefault(false)"))
     }
 
+    // Device round 2026-09-29 — the accepted `print(` that vanished on the
+    // next letter (ComposingReplayTest has the mechanism against real sora).
+    // The incremental replay is bracketed by sora's own discipline for an
+    // edit while the soft keyboard composes: restartInput() before the delta
+    // and after the selection, gated on a live composing text so the CodeC
+    // Keys / hardware path (never composing) pays nothing per keystroke.
+    @Test
+    fun `the incremental replay restarts the input method around the delta - only while the IME composes`() {
+        val gate = host.indexOf("runCatching { ed.hasComposingText() }.getOrDefault(false)")
+        val before = host.indexOf("if (composing) runCatching { ed.restartInput() }")
+        val delta = host.indexOf("ed.text.replace(plan.start, plan.end, plan.replacement)")
+        val after = host.lastIndexOf("if (composing) runCatching { ed.restartInput() }")
+        val synced = host.indexOf("syncedText = target.text")
+        assertTrue("the gate reads sora's composing state", gate > 0)
+        assertTrue("the gate is read before the first restart", gate < before)
+        assertTrue("the first restart precedes the delta", before < delta)
+        assertTrue("the second restart follows the delta", delta < after)
+        assertTrue("…and lands before the snapshot is marked synced", after < synced)
+        assertEquals(
+            "exactly two restart sites, both gated",
+            2,
+            Regex("ed\\.restartInput\\(\\)").findAll(host).count()
+        )
+        assertTrue(
+            "the gate only applies to the incremental path (setText restarts on its own)",
+            host.contains("val composing = plan != null &&")
+        )
+    }
+
     @Test
     fun `the atomic fallback still re-attaches the content listener`() {
         val atomicBlock = host.substring(

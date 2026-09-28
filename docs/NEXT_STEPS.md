@@ -1,3 +1,18 @@
+**2026-09-29 — the accepted suggestion that the next letter undid (outside the 70/72 phase;
+the owner spotted it after accepting round 5).** Owner: *"in a python code I write p, it shows
+print(, I click it and it is on the screen — then I write the next letter and print( is gone,
+only p and the letters I typed"*. Cause, read in sora 0.24.6 and reproduced against its real
+classes: the system keyboard was composing the word `p`; the accept's replay (`Content.replace`,
+the §44 delta path) inserted `rint(` at the end of sora's composing range, `shiftOnInsert` grew
+the range over it, and the IME's next `setComposingText("pr")` replaced the whole range. Fix in
+`SoraEditorHost`: sora's own bracket for an edit while composing — `restartInput()` before the
+delta and after the selection, gated on `hasComposingText()` so CodeC Keys / hardware typing pay
+nothing. Tests: `ComposingReplayTest` ×4 (Robolectric, real sora), `ReplayPathWiringTest` +1.
+Records: `TROUBLESHOOTING.md` §47, `chat-phase48/PART_48_1` follow-up. **CI: pending when this
+entry was written — the stamp follows here. No device pass** — the owner types `p`, taps `print(`, types `r` on the
+system keyboard: the line must read `print(r`; then the same with the ghost, and a keys-row `(`
+after a word.
+
 **2026-09-28 (round 5) — the phone pass for 70.1 + 72.1, and the project card that opens
 the editor.** Owner: *"when I click on a project it should open the editor by default and not
 the file structure"*; *"make everything from this and only this phase … phone friendly … the

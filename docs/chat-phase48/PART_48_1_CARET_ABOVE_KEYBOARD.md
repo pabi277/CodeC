@@ -240,3 +240,23 @@ the fallback (first replay, formatter-sized rewrites, any failure). Full
 record: [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §44.
 Tests: `IncrementalEditTest` ×13, `ReplayPathWiringTest` ×5. This also
 makes 48's exit check #8 (CodeC Keys round) usable on big files at all.
+
+### Follow-up (2026-09-29) — the delta met the soft keyboard's composing word
+
+The owner, on the system keyboard: *"I write p, it shows print(, I click it
+and it is on the screen — then I write the next letter and print( is gone,
+only p and the letters I typed."* The delta path above was the cause. A
+soft keyboard types a word as composing text and sora keeps it as a range
+(`ComposingText`); `Content.replace` inserted `rint(` at that range's end,
+sora's `shiftOnInsert` grew the range over it, and the IME's next
+`setComposingText("pr")` replaced the whole range — the accept was undone by
+the keystroke after it, and the listener pushed `pr` up as the truth.
+`setText` had hidden this all along because it restarts the input method;
+the delta path did not, and the CodeC Keys round that motivated it never
+composes. The host now brackets the delta with sora's own recipe
+(`EditorAutoCompletion.select()`): `restartInput()` before the delta and
+after the selection, only while `hasComposingText()` — CodeC Keys and
+hardware keyboards still pay nothing per keystroke. Mechanism and fix
+reproduced against the real sora classes in `ComposingReplayTest` ×4;
+`ReplayPathWiringTest` +1 pins the bracket. Owner-facing record:
+[`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) §47.

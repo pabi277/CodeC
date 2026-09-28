@@ -1282,3 +1282,21 @@ just taught what a WebView does when it is laid out at a height it did not expec
 Create both land in the editor now; the tree moved one tap into the ⋮ and stayed in the drawer. CI
 green is recorded in the chat README; a device pass is still the owner's to run.
 
+## 2026-09-29 — the letter that undid the suggestion
+
+Round 5 was accepted (*"Everything good"*) and the owner spotted something outside the phase: on a
+Python file he typed `p`, the strip offered `print(`, he tapped it, it appeared — and the next
+letter he typed took it away, leaving `p` plus the letters. The ghost did it too. Nothing in the
+completion code was wrong; the VM had `print(` and handed it to sora correctly. The failure was
+between sora and the system keyboard. A soft keyboard types a word as *composing* text and sora
+keeps that word as a range; the accept's replay — the one-`Content.replace` delta that had cured
+the CodeC Keys blink on 2026-09-13 — inserted `rint(` exactly at the end of that range, sora's
+`shiftOnInsert` stretched the range over it, and when Gboard sent its next composing update for
+the word it still thought it was typing (`pr`), sora replaced the whole stretched range with it.
+The old wholesale `setText` had been hiding this all along by restarting the input method; the
+delta path skipped that, and the keyboard it was built for never composes. The fix is sora's own
+recipe for editing while composing — `restartInput()` before and after, which its completion panel
+has always done — applied to the host's replay, only while a composing word exists, so the
+dedicated keyboard keeps its zero per-keystroke cost. The mechanism and the fix are both pinned
+against the real sora classes in Robolectric; the device pass is the owner's, one word long:
+`p`, tap, `r`, read `print(r`.
