@@ -67,6 +67,23 @@ class PreviewToolsWiringTest {
         assertTrue(native.contains("zoomBy("))
         assertFalse(native.contains("reload()"))
     }
+    @Test fun `the first load waits for a measured page box`() {
+        // 2026-09-28, owner report: the snake sample rendered clipped and
+        // squashed inside the preview while the same page was fine in a
+        // browser. A page that sizes itself from the viewport must not be
+        // loaded before the view has a size; the screen reports the box and
+        // waits for it before the first loadUrl.
+        assertTrue(screen.contains("var viewportSize by remember { mutableStateOf(IntSize.Zero) }"))
+        assertTrue(screen.contains(".onSizeChanged { viewportSize = it }"))
+        assertTrue(
+            screen.contains("snapshotFlow { viewportSize }.first { it.width > 0 && it.height > 0 }")
+        )
+        // Bounded: a preview that is never measured must still load its page.
+        assertTrue(screen.contains("withTimeoutOrNull(1_000) {"))
+        // …and the reload path stays immediate: only the FIRST load waits.
+        assertTrue(screen.contains("if (reloadTick > 0) {"))
+    }
+
     @Test fun `viewport is actually measured and fitted and existing reload remains`() {
         assertTrue(screen.contains("Modifier.requiredSize(width, height)"))
         assertTrue(screen.contains(".graphicsLayer { scaleX = fit; scaleY = fit }"))

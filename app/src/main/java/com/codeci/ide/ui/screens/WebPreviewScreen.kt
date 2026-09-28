@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.codeci.ide.ui.services.PreviewConsolePolicy
 import com.codeci.ide.ui.services.PreviewDomNode
@@ -56,6 +57,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -78,6 +81,8 @@ import com.codeci.ide.ui.services.ServerHost
 import com.codeci.ide.ui.services.ServerHosts
 import com.codeci.ide.ui.services.WebPreviewServer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -123,6 +128,12 @@ fun WebPreviewScreen(
     var resolutionDialog by remember { mutableStateOf(false) }
     var resolution by remember { mutableStateOf(PreviewResolution.DEVICE) }
     var currentUrl by remember { mutableStateOf<String?>(liveUrl) }
+    /**
+     * The measured size of the page box. Reported so the first load can wait
+     * for a real box: a page's own first layout must not be taken against 0×0
+     * (the snake sample sizes its board from `100vh`).
+     */
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
 
     // Phase 72.1 — the shots' “Preview · 100 % Zoom” subtitle needs the number
     // the WebView is actually at, so the screen owns it and hands it down.
@@ -520,6 +531,7 @@ fun WebPreviewScreen(
                     // the page visually without lying to responsive CSS about size.
                     AndroidView(
                         modifier = Modifier.requiredSize(width, height)
+                            .onSizeChanged { viewportSize = it }
                             .graphicsLayer { scaleX = fit; scaleY = fit },
                         factory = { ctx -> PreviewWebView(ctx, viewModel).also { webView = it } },
                         onRelease = { released ->
@@ -598,6 +610,14 @@ fun WebPreviewScreen(
     // Initial load once the WebView instance and the target URL are known.
     LaunchedEffect(webView, htmlFile, liveUrl, serverPort) {
         val wv = webView ?: return@LaunchedEffect
+        // A page that sizes itself from the viewport (the snake sample caps its
+        // board by `100vh`) must not be loaded into a box that has no size yet:
+        // the tools panel can hold every pixel of the preview area, and a page
+        // loaded at 0×0 lays itself out against a viewport that does not exist.
+        // Bounded, so a preview that is never measured still loads.
+        withTimeoutOrNull(1_000) {
+            snapshotFlow { viewportSize }.first { it.width > 0 && it.height > 0 }
+        }
         if (liveUrl != null) {
             // Phase 14: live server mode — the URL comes from the runner's
             // detected bind line; load it directly, no static server needed.
