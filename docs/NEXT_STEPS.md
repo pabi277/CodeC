@@ -1,5 +1,5 @@
 **2026-09-28 (later) — the snake sample came back clipped inside the preview, and
-is fixed (`ced2821`, CI `36404697868`).** After the report above, the owner sent
+is fixed (`ced2821`, **CI ✅ green `36404697868`**, and `36404764414` on the record commit).** After the report above, the owner sent
 two screenshots of the *same* page — Samsung Browser showed it whole, CodeC's Web
 Preview showed the arrow pad near the top, the hint under it and a long empty
 band, with the header, the score and *Tap to start / START* off-screen — and

@@ -107,7 +107,7 @@ state, the `onSizeChanged` report and the 1 s bound. Both are source-level pins.
 **What this does not establish.** The renders are headless Chrome on the machine that wrote
 the fix, **not** a phone and not the app; no device pass is claimed. A page a user writes that
 fixes its own height will still clip in a box shorter than it needs — exactly as it would in a
-short browser window. CI run `36404697868` on `ced2821`.
+short browser window. **CI ✅ green** — `Build APK` `36404697868` on `ced2821` (host unit/screenshot tests and both APK assembles succeeded) and `36404764414` on the record commit; a side-by-side of the two renders is [`render-fix/side-by-side-360x520.png`](render-fix/side-by-side-360x520.png).
 
 ## Stop point
 
