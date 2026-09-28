@@ -1,3 +1,23 @@
+**2026-09-28 (round 2) — "better than before but still i don't think it's good
+enough. Because browser have a good view and code is very smaller view."** The
+owner's second screenshot showed the same snake page, un-clipped but **small**: my
+round-1 page capped the board by the reported viewport height
+(`calc(100vh - 320px)`), and CodeC's preview box is shorter than a browser window
+once the app bar, the address row, the keys row and the nav bar have taken their
+height — so the board fell to **200 px** where the browser shows **380 px**.
+Reversed in `0ca08dc` (**CI ✅ green `36409241166`**): the board is width-driven again
+(`min(100%, 420px)`) and a short box scrolls like a browser (measured in headless
+Chrome: 360×520 → 328 px board; 412×915 → 380 px, nothing to scroll); the screen
+stops reserving the keyboard's inset unless the tools panel — the only text field
+on it — is open (the band under the page); and every load now logs the page's own
+box to the console (`page box W×H CSS px · view W×H dp · dpr N`,
+`PreviewToolsPolicy.pageBoxScript`/`parsePageBox`/`pageBoxLabel`), so this
+ambiguity is measurable next time. Renders:
+[`chat-phase70/render-fix/side-by-side-round2.png`](chat-phase70/render-fix/side-by-side-round2.png).
+Tests: `PreviewToolsPolicyTest` 17→19, `PreviewToolsWiringTest` 8→10,
+`FirstOpenSampleTest`'s viewport case rewritten (it now forbids `100vh`/`100dvh`
+in the page). **Headless Chrome evidence only — no device pass**; N1 still open.
+
 **2026-09-28 (later) — the snake sample came back clipped inside the preview, and
 is fixed (`ced2821`, **CI ✅ green `36404697868`**, and `36404764414` on the record commit).** After the report above, the owner sent
 two screenshots of the *same* page — Samsung Browser showed it whole, CodeC's Web

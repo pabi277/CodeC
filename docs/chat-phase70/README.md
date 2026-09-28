@@ -109,6 +109,53 @@ the fix, **not** a phone and not the app; no device pass is claimed. A page a us
 fixes its own height will still clip in a box shorter than it needs — exactly as it would in a
 short browser window. **CI ✅ green** — `Build APK` `36404697868` on `ced2821` (host unit/screenshot tests and both APK assembles succeeded) and `36404764414` on the record commit; a side-by-side of the two renders is [`render-fix/side-by-side-360x520.png`](render-fix/side-by-side-360x520.png).
 
+## Render fix, round 2 (2026-09-28, the owner's next screenshot)
+
+> *"It's better than before but still i don't think it's good enough. Because browser have a
+> good view and code is very smaller view."*
+
+The next install was no longer clipped — the header, the score and *Tap to start* were on
+screen — but the board had become **small**. The round-1 page capped the board by the
+viewport height (`calc(100vh - 320px)`), which is right in a browser window and wrong in
+CodeC's preview box: the box is shorter than a phone window (the app bar, the address row,
+the keys row and the nav bar all take height), so the board collapsed from the browser's
+380 px to **200 px**, with dead space where the page still had room. Trading “clipped” for
+“small” was my mistake, and it is reversed:
+
+**What changed (round 2)**
+
+1. **The board is width-driven again**, exactly like a browser: `.wrap { width:min(100%, 420px) }`.
+   A box shorter than the page scrolls (`min-height`, already in place) instead of shrinking
+   the board. Measured in headless Chrome: **360×520 → board 328 px** (was 200; the browser
+   shows 380 only because its window is taller), **412×915 → 380 px with nothing to scroll**.
+2. **The phantom band under the page is gone.** `WebPreviewScreen` reserved the keyboard's
+   inset on this screen unconditionally, but the console's command line is the only text
+   field here: the inset is now reserved **only while the tools panel is open**.
+3. **The console now measures the page.** After every load the WebView logs one line —
+   `page box 360×430 CSS px · view 360×430 dp · dpr 1.75` — the page's own `window.innerWidth`
+   × `innerHeight` and `devicePixelRatio` next to the box the view was given
+   (`PreviewToolsPolicy.pageBoxScript` / `parsePageBox` / `pageBoxLabel`). Two screenshots
+   have now been ambiguous about *which* box was short; this line ends that, from the page's
+   own numbers rather than a guess.
+
+**Evidence for round 2**
+
+- Renders (headless Chrome, this machine): [`render-fix/side-by-side-round2.png`](render-fix/side-by-side-round2.png)
+  (round-1 board vs round-2 board at the same 360×520 box), plus
+  [`render-fix/after2-board-like-the-browser-360x520.png`](render-fix/after2-board-like-the-browser-360x520.png)
+  and [`render-fix/browser-window-412x915.png`](render-fix/browser-window-412x915.png).
+- **CI ✅ green** — `Build APK` `36409241166` on `0ca08dc` (host unit and screenshot tests, both APK
+  assembles).
+- **No device pass.** Nothing here has been installed on a handset; the owner's own screenshot
+  is the only device evidence in this chat, and it is his.
+
+**What the next screenshot can settle.** The preview box is genuinely shorter than a browser
+window because CodeC draws more chrome above the page (bar + address row + keys row + nav
+bar). That is a layout fact, not a rendering bug; the console's page-box line now reports it
+with numbers. If the page still reads small against Samsung Browser at the same width, the
+remaining difference is the chrome, and the options are the panel/rows — a decision for the
+owner, not a silent change.
+
 ## Stop point
 
 This part only. No PR, no merge, no `main` push without the owner's explicit

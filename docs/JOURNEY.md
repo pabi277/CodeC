@@ -1210,3 +1210,19 @@ paragraph margins are gone and the swipe gesture belongs to the board alone, so 
 too-short viewport scrolls instead of clipping; the preview also waits, bounded at one
 second, for a measured page box before its first load. Two new source pins and before/after
 renders in `docs/chat-phase70/render-fix/`. **No device pass — headless Chrome only.**
+
+## 2026-09-28 (later still) — round 2: “better than before but … very smaller view”
+
+The owner's second install was no longer clipped — it was *small*. My round-1 fix had capped
+the sample's board by the reported viewport height (`calc(100vh - 320px)`), which is what a
+browser window wants and what CodeC's preview box punishes: that box is shorter than a phone
+window once the app bar, the address row, the keys row and the nav bar have taken their
+height, so the board collapsed to 200 px where the browser showed 380. Reversed: the board is
+width-driven again (`min(100%, 420px)`) and a short box scrolls, exactly as a browser does;
+the screen stops reserving the keyboard's inset unless the tools panel — the only text field
+on it — is open, which removes the band of dead space under the page; and the WebView now logs
+the page's own box (`page box 360×430 CSS px · view 360×430 dp · dpr 1.75`) to the console
+after every load, so the next report is measurable instead of ambiguous. Renders in
+`docs/chat-phase70/render-fix/` (`side-by-side-round2.png`), CI ✅ green, **still no device
+pass**.
+

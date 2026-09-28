@@ -183,3 +183,18 @@ capped by the viewport, no stray paragraph margins, the gesture only on the boar
 screen (the first load waits, bounded at 1 s, for a measured page box). Renders and numbers:
 [`../chat-phase70/README.md`](../chat-phase70/README.md); pins in `FirstOpenSampleTest` and
 `PreviewToolsWiringTest`. **Headless Chrome evidence only — no device pass.**
+
+### Render fix, round 2 (2026-09-28, the owner's next screenshot)
+
+*"It's better than before but still i don't think it's good enough. Because browser have a good
+view and code is very smaller view."* Round 1 had traded a **clip** for a **small board** — the
+page's board was capped by `calc(100vh - 320px)`, and this screen's box is shorter than a
+browser window (bar, address row, keys row, nav bar), so the board fell from 380 px to 200 px
+at 360×520. Round 2: the board is width-driven again (a short box scrolls, like a browser), the
+screen no longer reserves the IME inset unless the **tools panel** (the only text field on this
+screen) is open, and the WebView logs the page's own box — `page box 360×430 CSS px · view
+360×430 dp · dpr 1.75` — into the console after every load, so “the page renders small” and “the
+preview box is short” can never be confused again. Renders and numbers:
+[`../chat-phase70/README.md`](../chat-phase70/README.md). **CI ✅ green `36409241166` on `0ca08dc`;
+no device pass.**
+
