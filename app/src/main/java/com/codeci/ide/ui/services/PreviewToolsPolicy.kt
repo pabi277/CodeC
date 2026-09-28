@@ -283,6 +283,44 @@ object PreviewToolsPolicy {
             "$view$zoom \u00b7 dpr ${number(box.dpr)}"
     }
 
+    /**
+     * The page's own box against the view's, for the pages that must match it.
+     *
+     * 2026-09-28, the owner's third report. His console showed the same page, at
+     * the same 411 dp box, laid out **411 CSS px wide three times and 457 the
+     * fourth** — 1.112× the view, drawn at 0.9× (10% small). Only one thing
+     * produces that: Chromium picked the page's scale before the page's own
+     * `viewport` meta was in effect (a one-shot decision it does not revisit),
+     * so the layout it kept is not the layout of the box it now has.
+     *
+     * A page that declares `width=device-width` (or declared nothing, the case
+     * `fitToPhone` answers) must lay out at the view's width, adjusted for the
+     * user's zoom: at 150 % the page legitimately lays out at two thirds of the
+     * view's width. A page that declares its **own** width (`width=1024`) is not
+     * ours to correct, so it never counts as a mismatch.
+     *
+     * Returns true when the caller should lay the page out again — once, with
+     * the box and the meta both known.
+     */
+    fun boxMismatch(
+        box: PreviewPageBox?,
+        viewWidthDp: Int,
+        zoomPercent: Int,
+        tolerance: Int = 4,
+    ): Boolean {
+        val page = box ?: return false
+        if (viewWidthDp <= 0 || zoomPercent <= 0) return false
+        val meta = page.meta
+        if (meta != null && !meta.contains("device-width", ignoreCase = true)) return false
+        val expected = viewWidthDp * 100.0 / zoomPercent
+        return kotlin.math.abs(page.cssWidth - expected) > tolerance
+    }
+
+    /** The console's own sentence for [boxMismatch] — said before the reload. */
+    fun mismatchLabel(pageWidth: Int, viewWidthDp: Int): String =
+        "page laid out $pageWidth CSS px wide in a $viewWidthDp dp view — loading it again " +
+            "so it lays out for this box"
+
     private fun number(value: Double): String {
         val rounded = Math.round(value * 100.0) / 100.0
         return if (rounded == Math.floor(rounded)) rounded.toLong().toString()

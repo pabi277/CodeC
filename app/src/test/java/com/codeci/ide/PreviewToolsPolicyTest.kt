@@ -198,6 +198,36 @@ class PreviewToolsPolicyTest {
         val capped = PreviewToolsPolicy.parsePageBox("\"360|600|1|" + "x".repeat(200) + "\"")
         assertEquals(PreviewToolsPolicy.META_LIMIT, capped?.meta?.length)
     }
+    @Test fun `the mismatch rule fires on the owner's one bad load and nothing else`() {
+        // 2026-09-28: the owner's console, four loads of the same page in a
+        // 411×656 dp box — three laid out 411 CSS px wide, one 457. Only the
+        // 457 one is a page laid out for a box it does not have.
+        val deviceWidth = "width=device-width, initial-scale=1.0, viewport-fit=cover"
+        val right = PreviewPageBox(411, 655, 2.63, deviceWidth)
+        val wrong = PreviewPageBox(457, 728, 2.63, deviceWidth)
+        assertFalse(PreviewToolsPolicy.boxMismatch(right, 411, 100))
+        assertTrue(PreviewToolsPolicy.boxMismatch(wrong, 411, 100))
+        assertEquals(
+            "page laid out 457 CSS px wide in a 411 dp view — loading it again so it lays out for this box",
+            PreviewToolsPolicy.mismatchLabel(457, 411),
+        )
+        // The tolerance is a rounding guard, not a licence.
+        assertFalse(PreviewToolsPolicy.boxMismatch(PreviewPageBox(414, 655, 2.63, deviceWidth), 411, 100))
+        assertTrue(PreviewToolsPolicy.boxMismatch(PreviewPageBox(420, 655, 2.63, deviceWidth), 411, 100))
+    }
+    @Test fun `the mismatch rule respects zoom and other people's widths`() {
+        // At 150 % the page is *supposed* to lay out at two thirds of the view.
+        val zoomed = PreviewPageBox(274, 437, 2.63, "width=device-width, initial-scale=1.0")
+        assertFalse(PreviewToolsPolicy.boxMismatch(zoomed, 411, 150))
+        // A page that declares its own width is not ours to correct.
+        assertFalse(PreviewToolsPolicy.boxMismatch(PreviewPageBox(1024, 768, 2.63, "width=1024"), 411, 100))
+        // A page that declared nothing is exactly the one `fitToPhone` answers.
+        assertTrue(PreviewToolsPolicy.boxMismatch(PreviewPageBox(980, 1200, 2.63, null), 411, 100))
+        // Nothing to judge with.
+        assertFalse(PreviewToolsPolicy.boxMismatch(null, 411, 100))
+        assertFalse(PreviewToolsPolicy.boxMismatch(PreviewPageBox(411, 655, 2.63, null), 0, 100))
+    }
+
     @Test fun `a page that never answered still reports the view it was given`() {
         assertNull(PreviewToolsPolicy.parsePageBox(null))
         assertNull(PreviewToolsPolicy.parsePageBox("\"null\""))

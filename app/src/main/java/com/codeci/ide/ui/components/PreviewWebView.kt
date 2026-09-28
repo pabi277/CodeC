@@ -38,6 +38,15 @@ class PreviewWebView(context: Context, private val model: WebPreviewViewModel) :
      */
     var fitToPhone: Boolean = true
 
+    /**
+     * One correction per load. A page that laid itself out for a box it no
+     * longer has (Chromium decides the scale before the page's `viewport` meta
+     * is in effect — the 457-in-a-411 box the owner's console showed) is loaded
+     * again, once, with the box and the meta both known. The app's own loads arm
+     * the check again; the correction never arms itself, so this cannot loop.
+     */
+    private var boxCorrectionDone = false
+
     init {
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
@@ -140,14 +149,40 @@ class PreviewWebView(context: Context, private val model: WebPreviewViewModel) :
         val viewHeightDp = if (density > 0f) (height / density).roundToInt() else 0
         val applied = appliedScale()
         evaluate(PreviewToolsPolicy.pageBoxScript()) { raw ->
+            val box = PreviewToolsPolicy.parsePageBox(raw)
             model.addConsole(
                 token, "log",
-                PreviewToolsPolicy.pageBoxLabel(
-                    PreviewToolsPolicy.parsePageBox(raw), viewWidthDp, viewHeightDp, applied
-                ),
+                PreviewToolsPolicy.pageBoxLabel(box, viewWidthDp, viewHeightDp, applied),
                 0,
             )
+            val known = box ?: return@evaluate
+            if (disposed || boxCorrectionDone) return@evaluate
+            if (!PreviewToolsPolicy.boxMismatch(known, viewWidthDp, zoomPercent)) return@evaluate
+            boxCorrectionDone = true
+            model.addConsole(
+                token, "log",
+                PreviewToolsPolicy.mismatchLabel(known.cssWidth, viewWidthDp),
+                0,
+            )
+            reloadForBox()
         }
+    }
+
+    /** The app asked for a reload (a file changed, the refresh button): check again. */
+    override fun reload() {
+        boxCorrectionDone = false
+        super.reload()
+    }
+
+    /** A navigation the app asked for (a link, an address): check again too. */
+    override fun loadUrl(url: String) {
+        boxCorrectionDone = false
+        super.loadUrl(url)
+    }
+
+    /** The correction's own load: it must not re-arm the one-correction-per-load rule. */
+    private fun reloadForBox() {
+        super.reload()
     }
 
     /** `getScale()` is deprecated, and still the only way to read the applied scale back. */

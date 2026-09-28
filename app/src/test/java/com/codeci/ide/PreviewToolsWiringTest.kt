@@ -101,6 +101,15 @@ class PreviewToolsWiringTest {
         // the numbers that separate "laid out wider than the phone" from "drawn
         // smaller than the phone", which two screenshots could not tell apart.
         assertTrue(view.contains("private fun appliedScale(): Double = getScale().toDouble()"))
+        // …and it is acted on, once: a page that laid itself out for a box it no
+        // longer has is loaded again, and the app's own loads are what re-arm the
+        // check — the correction can never re-arm itself into a loop.
+        val plain = RepoFiles.codeOnly(view)
+        assertTrue(plain.contains("PreviewToolsPolicy.boxMismatch(known, viewWidthDp, zoomPercent)"))
+        assertTrue(plain.contains("PreviewToolsPolicy.mismatchLabel(known.cssWidth, viewWidthDp)"))
+        assertTrue(plain.contains("override fun reload()"))
+        assertTrue(plain.contains("override fun loadUrl(url: String)"))
+        assertTrue(plain.contains("private fun reloadForBox()"))
     }
 
     @Test fun `the first load waits for a measured page box`() {
