@@ -1,6 +1,6 @@
 # Proposed Phase 71.1 — Packages, installation and Terminal
 
-**Status: 🚧 IMPLEMENTED on the session branch `arena/01a0ead9-codec` (2026-09-29) — CI and device evidence below; not merged, no PR (the owner's command).** One part = one
+**Status: ✅ COMPLETE, owner device-tested and MERGED to `main` on the owner's command (2026-09-29); session branch `arena/01a0ead9-codec`. Record, CI and evidence below.** One part = one
 future chat. No deadline, dependency, new control or replacement engine promised.
 
 ## Copy into a new chat
@@ -167,3 +167,14 @@ explained:** the six consecutive prompts at the top of the screenshot (each coul
 prompt per SIGWINCH — not measured). **No device pass.**
 
 **CI for this follow-up:** `Build APK` `36513501892` on `12c4076` ✅ GREEN (10 m 10 s). Device pass still owed.
+
+## Owner device result and merge — 2026-09-29
+
+**Owner, verbatim:** *"Device test passed record everything and merge with main"*
+
+Exactly what that establishes: the owner tested a build of this branch on his device and reports it
+passed. He did **not** name the device, the OS version, the theme, the build (run id) or which of the
+rows in the "Device pass required" list above he ran; the record does not claim more than "passed"
+for the last build he had (which contained the pinch-zoom follow-up, CI `36513501892`). The agent
+itself has no device evidence of its own. The unexplained six stacked prompts in the zoom screenshot
+were not separately re-measured. The merge was the owner's explicit command in chat (rule.md §3).
