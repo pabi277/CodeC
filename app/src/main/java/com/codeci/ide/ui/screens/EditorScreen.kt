@@ -152,6 +152,7 @@ import com.codeci.ide.ui.editor.RailPanel
 import com.codeci.ide.ui.editor.RecentProjects
 import com.codeci.ide.ui.editor.SidePanelPlan
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.codeci.ide.ui.components.HapticMoment
 import com.codeci.ide.ui.components.RunHapticRule
@@ -218,6 +219,9 @@ import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.ProjectRunTarget
 import com.codeci.ide.ui.services.LanguageRegistry
+import com.codeci.ide.ui.terminal.SetupAction
+import com.codeci.ide.ui.terminal.SetupGatePolicy
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
