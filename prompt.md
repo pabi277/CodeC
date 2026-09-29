@@ -13,7 +13,7 @@
 > is now a button)** — and implemented it too (CI ✅ GREEN `36544645579`); a device report on
 > that same build then surfaced a real bug — **73.4: `refresh()`'s catch-all mis-reported
 > "installed" after any error, letting "Initialize repository" show on a project git was never
-> installed on** — fixed this session too; see the
+> installed on** — fixed this session too, CI ✅ GREEN `36551505966`; see the
 > **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all four states.
 > The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
 > names the next one; nothing starts on the agent's own. The operative handoff is the
@@ -167,8 +167,8 @@ style; every assertion hand-verified against the real file with a Python mirror 
 substring semantics — this session's own 73.3 CI-round lesson applied before trusting it, not
 after). This does **not** claim to know why the underlying exception fired on the owner's
 device — if git still will not install after this fix, the next diagnostic step is a
-`pkg install -y git` run captured directly from Terminal (exit code + output). **CI: not yet run
-this session.** Not merged — owner device pass and merge command still owed for
+`pkg install -y git` run captured directly from Terminal (exit code + output). **CI ✅ GREEN
+`36551505966`** on tip `b49e726`, first try. Not merged — owner device pass and merge command still owed for
 73.1/73.2/73.3/73.4 together (rule.md §3). Full record:
 `docs/ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md`.
 

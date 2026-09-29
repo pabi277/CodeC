@@ -1,5 +1,5 @@
 **2026-09-29 — Phase 73.4 (device fix: git-refresh mis-reported "installed" after any error) 🚧
-IMPLEMENTED, CI pending this session's push.** Owner device report, verbatim: "Auto install not
+IMPLEMENTED, CI ✅ GREEN `36551505966` on `b49e726`.** Owner device report, verbatim: "Auto install not
 working"; follow-up, after asking where: tapped Install Git in the Git panel, then "I click the
 initialize in the repo no installed git" — the Source Control sheet was offering 73.3's
 "Initialize repository" button on a project where git was never actually installed, so the
@@ -17,7 +17,7 @@ hand-verified against the real file with a Python mirror of Kotlin's substring s
 being trusted). Record: `docs/ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md`. **This does not
 claim to know why the underlying exception fired on the owner's device** — if git still will not
 install after this fix, the next step is a `pkg install -y git` run captured directly from
-Terminal (exit code + output) to read the real failure. **CI: not yet run this session.** No
+Terminal (exit code + output) to read the real failure. **CI ✅ GREEN `36551505966`.** No
 device pass; none claimed. **Not merged** — owner device pass and merge command owed for
 73.1/73.2/73.3/73.4 together (rule.md §3).
 

@@ -1,7 +1,7 @@
 # Phase 73.4 — device fix: git-refresh mis-reported "installed" after any error
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI pending this session's push; session branch
-`arena/01a0eb2d-codec`. Owner device pass owed, not merged (rule.md §3). A real bug fix on
+**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36551505966` on tip `b49e726`; session
+branch `arena/01a0eb2d-codec`. Owner device pass owed, not merged (rule.md §3). A real bug fix on
 top of 73.1/73.2/73.3, found from the owner's own device report — not a new discussion draft.**
 
 ## The owner's report (verbatim, 2026-09-29)
@@ -96,5 +96,9 @@ failure (network, a broken dependency, storage) can be read instead of guessed a
 
 ## Evidence
 
-- **CI:** not yet run this session — push + poll is the immediate next step.
+- **CI: ✅ GREEN.** `Build APK` run `36551505966` on tip `b49e726` — both APKs assembled
+  (`CodeC-IDE-1.3.17-universal.apk` / `-debug.apk`), all host unit tests passed, including the
+  new `GitRefreshStateWiringTest.kt`'s 5 cases whose exact assertions were hand-verified against
+  the real file (a Python mirror of Kotlin's substring semantics) before this push — this is the
+  first CI round for this fix, and it went green on the first try.
 - **Device:** not run this session; none claimed.
