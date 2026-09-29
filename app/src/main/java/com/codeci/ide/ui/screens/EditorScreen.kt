@@ -1479,7 +1479,7 @@ fun EditorScreen(
                                 text = stringResource(R.string.panel_repository_no_project),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp)
+                                modifier = Modifier.padding(CodecTokens.space(Space.L))
                             )
                         }
                     },
