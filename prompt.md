@@ -21,7 +21,7 @@
 > **73.6, the drawer's full-GUI Initialize + the shared ask-first install prompt** — implemented
 > this session on `arena/01a0eca9-codec`, CI ✅ GREEN `36566495685`. A further owner follow-up
 > with 8 Spck screenshots then became **73.7, git moves into the editor panel (Spck-ditto
-> dialogs, no sheets)** — implemented this session on `arena/01a0eca9-codec`, CI PENDING; see the
+> dialogs, no sheets)** — implemented this session on `arena/01a0eca9-codec`, CI ✅ GREEN `36583980074`; see the
 > **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all seven states.
 > The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
 > names the next one; nothing starts on the agent's own. The operative handoff is the
@@ -63,7 +63,7 @@
 **CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 CI ✅ GREEN, not
 merged; 73.2 CI ✅ GREEN `36523739665`, not merged; 73.3 CI ✅ GREEN `36544645579`, not merged;
 73.4 CI ✅ GREEN `36551505966`, not merged; 73.5 CI ✅ GREEN `36560766234`, not merged; 73.6
-CI ✅ GREEN `36566495685`, not merged; 73.7 CI PENDING, not merged, on `arena/01a0eca9-codec`).**
+CI ✅ GREEN `36566495685`, not merged; 73.7 CI ✅ GREEN `36583980074`, not merged, on `arena/01a0eca9-codec`).**
 Read `rule.md`,
 `docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md`,
 `docs/ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md`,

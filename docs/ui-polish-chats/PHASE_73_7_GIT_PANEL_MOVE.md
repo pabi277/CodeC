@@ -1,7 +1,8 @@
 # Phase 73.7 — Git moves into the editor panel (Spck-ditto dialogs, no sheets)
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI PENDING; session branch
-`arena/01a0eca9-codec`. Owner device pass owed, not merged (rule.md §3).
+**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36583980074` on
+`0b57c0a`; session branch `arena/01a0eca9-codec`. Owner device pass owed,
+not merged (rule.md §3).
 Not one of the numbered UI-polish discussion drafts (65.1/74.1 remain
 untouched) — this is a rule.md §4 lifecycle item from the owner's own
 follow-up on the 73.5/73.6 builds, superseding the 73.6 drawer slot it
@@ -94,5 +95,4 @@ whole-suite stale-pin sweep (only the new test's own intentional
 re-checked against the real dialog signatures (caught and fixed a
 `onCommit`/`onPush`/loading-params mismatch before commit), every new
 `R.string` cross-checked against `strings.xml`, and the full import
-surface re-audited after the deletions. CI result to be stamped here
-on green.
+surface re-audited after the deletions. CI ✅ GREEN `36583980074` on `0b57c0a` (two fixup rounds: an unescaped `$` in a test string, one raw `16.dp` in a core file).

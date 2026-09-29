@@ -1,5 +1,5 @@
 **2026-09-29 — Phase 73.7 (git moves into the editor panel: Spck-ditto dialogs, no sheets) 🚧
-IMPLEMENTED, CI PENDING.** Owner follow-up on the 73.5/73.6 builds with 8 Spck screenshots attached
+IMPLEMENTED, CI ✅ GREEN `36583980074` on `0b57c0a`.** Owner follow-up on the 73.5/73.6 builds with 8 Spck screenshots attached
 (branch menu, Git Credentials, Remotes, New Remote, detach-HEAD confirm, Commit All, empty Remotes,
 Push): git must live inside the editor's side panel (the REPOSITORY tab) Spck-ditto — no bottom
 sheet anywhere — with Spck's Commit All and Push dialogs, centered Remotes/Log dialogs, a count
