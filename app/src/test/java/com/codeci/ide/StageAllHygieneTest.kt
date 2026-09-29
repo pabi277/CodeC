@@ -105,7 +105,7 @@ class StageAllHygieneTest {
         val src = RepoFiles.mainSource(
             "app/src/main/java/com/codeci/ide/ui/viewmodels/GitControlViewModel.kt"
         ).readText()
-        assertTrue("commitAndPush must capture stageAll's HygieneResult", "val hygiene = git.stageAll" in src)
+        assertTrue("commitOnly must capture stageAll's HygieneResult", "val hygiene = git.stageAll" in src)
         assertTrue("hygiene note must be surfaced", "hygiene.userMessage()" in src)
         // refresh must NOT call untrackTracked any more (moved to stageAll)
         assertFalse(

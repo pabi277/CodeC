@@ -34,14 +34,14 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material3.Button
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -111,13 +111,6 @@ data class SearchPanelState(
     val capped: Boolean = false
 )
 
-/** The Repository slot's live state. The empty state is the shot's. */
-data class RepositoryPanelState(
-    val hasRepository: Boolean = false,
-    val branch: String? = null,
-    val changeCount: Int = 0
-)
-
 /**
  * The panel. Every callback is supplied by the editor screen: this file draws
  * and reports, it never navigates or touches the disk on its own.
@@ -139,9 +132,19 @@ fun EditorSidePanel(
     onSearchOptions: (ProjectSearch.Options) -> Unit = {},
     onSearchHit: (ProjectSearch.Hit) -> Unit = {},
     onClearSearch: () -> Unit = {},
-    repository: RepositoryPanelState = RepositoryPanelState(),
-    onInitializeRepository: () -> Unit = {},
-    onOpenSourceControl: () -> Unit = {}
+    /**
+     * Phase 73.7 — the Repository slot's content: the full Source Control
+     * panel (install / init / changes / dialogs), owned by the editor
+     * screen, slotted in like [files]. The slot draws no git UI of its
+     * own anymore — the owner's screenshots show the real panel here.
+     */
+    repositoryContent: @Composable () -> Unit = {},
+    /**
+     * Phase 73.7 — the rail's count badge on the Repository glyph
+     * (Spck screenshot 8: the little number on the branch icon). Zero
+     * draws no badge.
+     */
+    repositoryBadgeCount: Int = 0
 ) {
     Surface(
         modifier = modifier
@@ -161,7 +164,11 @@ fun EditorSidePanel(
         tonalElevation = CodecTokens.elevation(CodecTokens.Elevation.FLAT)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Rail(panel = panel, onSelect = onSelectPanel)
+            Rail(
+                panel = panel,
+                onSelect = onSelectPanel,
+                repositoryBadgeCount = repositoryBadgeCount
+            )
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
             )
@@ -192,11 +199,7 @@ fun EditorSidePanel(
                     onClear = onClearSearch
                 )
 
-                RailPanel.REPOSITORY -> RepositorySlot(
-                    state = repository,
-                    onInitializeRepository = onInitializeRepository,
-                    onOpenSourceControl = onOpenSourceControl
-                )
+                RailPanel.REPOSITORY -> repositoryContent()
 
                 // The reserved slot has no panel: [Rail] never lets a tap reach it.
                 RailPanel.RESERVED -> Unit
@@ -209,7 +212,11 @@ fun EditorSidePanel(
 // ---- the rail --------------------------------------------------------------
 
 @Composable
-private fun Rail(panel: RailPanel, onSelect: (RailPanel) -> Unit) {
+private fun Rail(
+    panel: RailPanel,
+    onSelect: (RailPanel) -> Unit,
+    repositoryBadgeCount: Int = 0
+) {
     val active = MaterialTheme.colorScheme.onSurface
     val idle = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
@@ -230,17 +237,30 @@ private fun Rail(panel: RailPanel, onSelect: (RailPanel) -> Unit) {
                     .padding(top = CodecTokens.space(Space.S)),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = railIcon(slot),
-                    contentDescription = if (wired) slot.label else stringResource(R.string.panel_reserved),
-                    tint = when {
-                        selected -> active
-                        // The reserved slot is visibly not a room yet.
-                        !wired -> idle.copy(alpha = 0.35f)
-                        else -> idle
-                    },
-                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
-                )
+                // Phase 73.7 — Spck's count badge on the Repository glyph
+                // only (screenshot 8); zero draws no badge.
+                val glyphTint = when {
+                    selected -> active
+                    // The reserved slot is visibly not a room yet.
+                    !wired -> idle.copy(alpha = 0.35f)
+                    else -> idle
+                }
+                @Composable
+                fun Glyph() {
+                    Icon(
+                        imageVector = railIcon(slot),
+                        contentDescription = if (wired) slot.label else stringResource(R.string.panel_reserved),
+                        tint = glyphTint,
+                        modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
+                    )
+                }
+                if (slot == RailPanel.REPOSITORY && repositoryBadgeCount > 0) {
+                    BadgedBox(
+                        badge = { Badge { Text("$repositoryBadgeCount") } }
+                    ) { Glyph() }
+                } else {
+                    Glyph()
+                }
                 Spacer(Modifier.height(CodecTokens.space(Space.S)))
                 // The selected slot is underlined — the shot's one selection mark.
                 Box(
@@ -597,54 +617,6 @@ private fun SearchHitRow(hit: ProjectSearch.Hit, onClick: () -> Unit) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-    }
-}
-
-// ---- repository ------------------------------------------------------------
-
-@Composable
-private fun RepositorySlot(
-    state: RepositoryPanelState,
-    onInitializeRepository: () -> Unit,
-    onOpenSourceControl: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = CodecTokens.space(Space.L))
-    ) {
-        SlotLabel(text = RailPanel.REPOSITORY.label)
-        if (!state.hasRepository) {
-            // The shot's empty state: one left-aligned sentence, then a centred
-            // button. The sentence is the shot's; the button runs CodeC's own
-            // git (never SPCK's engine, and never a screen the shots do not show).
-            Text(
-                text = stringResource(R.string.panel_repository_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(CodecTokens.space(Space.XL)))
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Button(onClick = onInitializeRepository) {
-                    Text(stringResource(R.string.panel_repository_init))
-                }
-            }
-        } else {
-            Text(
-                text = state.branch ?: stringResource(R.string.panel_repository_no_branch),
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Spacer(Modifier.height(CodecTokens.space(Space.XS)))
-            Text(
-                text = stringResource(R.string.panel_repository_changes, state.changeCount),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(CodecTokens.space(Space.L)))
-            TextButton(onClick = onOpenSourceControl) {
-                Text(stringResource(R.string.panel_repository_open))
-            }
-        }
     }
 }
 

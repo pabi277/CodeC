@@ -152,7 +152,7 @@ class FileManagerViewModel : ViewModel() {
                 // the user's .gitignore.
                 runCatching { RepoHygiene.ensure(project.root) }
                 // Hub cards stay local-only (no ls-remote per project — that
-                // would stall the grid offline). The Source Control sheet
+                // would stall the grid offline). The Source Control panel
                 // runs resolvePublishState and repairs upstream tracking, so
                 // the next hub refresh after opening SC sees the truth.
                 runCatching { git.status(project.root) }.getOrNull()
@@ -549,7 +549,7 @@ class FileManagerViewModel : ViewModel() {
      * named folder inside the projects root, then register it as a project
      * (same flow as the Phase 8 ZIP import) and open it. Partial clones are
      * cleaned up on failure. Public repositories clone without credentials;
-     * a stored token (Settings → GitHub Account) is used automatically.
+     * a stored token (Git Credentials) is used automatically.
      *
      * Phase 15 — the Projects Hub clone dialog adds the optional [branch]
      * (`--branch`) and [shallow] (`--depth 1`) arguments; with the defaults

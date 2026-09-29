@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.projects.DiffEngine
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitBranchList
+import com.codeci.ide.ui.projects.GitCommitEntry
 import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitCredentialsStore
+import com.codeci.ide.ui.projects.GitRemoteEntry
 import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.GitErrorKind
 import com.codeci.ide.ui.projects.GitFriendlyError
@@ -37,7 +39,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Phase 13 — state for the Source Control pane ([GitControlSheet]): branch
+ * Phase 13 — state for the Source Control panel ([GitControlPanel]): branch
  * + change list, pull, and the one-tap commit-and-push flow, plus the inline
  * diff viewer contents.
  *
@@ -116,6 +118,19 @@ class GitControlViewModel : ViewModel() {
         val publishNote: String? = null,
         /** GitHub's own `X-Accepted-GitHub-Permissions` value, when it sent one. */
         val publishNeedsPermission: String? = null,
+        /**
+         * Phase 73.3 — Spck parity: Log History / Checkout Commit. Loaded on
+         * demand when the panel opens, not on every [refresh] (a repo can
+         * have thousands of commits; nothing else in this pane needs them).
+         */
+        val commits: List<GitCommitEntry> = emptyList(),
+        val commitsLoading: Boolean = false,
+        val commitsError: String? = null,
+        /** Phase 73.3 — the general Remotes screen. Same on-demand loading. */
+        val remotes: List<GitRemoteEntry> = emptyList(),
+        val remotesLoading: Boolean = false,
+        val remotesBusy: Boolean = false,
+        val remotesError: String? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -326,25 +341,53 @@ class GitControlViewModel : ViewModel() {
     fun refresh(context: Context, projectRoot: File, finalMessage: String? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true)
-            try {
-                val git = gitContext(context).manager()
-                if (git == null) {
-                    _state.value = _state.value.copy(
-                        loading = false,
+            // Phase 73.4 device fix — acquiring the manager is its own try:
+            // [GitContext.manager] only reaches shell/credential setup AFTER
+            // it has already confirmed a `git` binary is on disk, so a
+            // failure here (e.g. ShellBootstrap.prepare() failing to write a
+            // profile script or extract the TCC bundle — nothing to do with
+            // git) must NOT be reported as "git is installed, something else
+            // broke". The old single try/catch below did exactly that (a
+            // hardcoded `gitInstalled = true` in the catch), which could
+            // leave a brand-new panel showing "Initialize repository" for a
+            // project where git was never actually usable — a beginner never
+            // saw the Install Git button at all. Treat any failure to obtain
+            // a working manager the same as "not installed".
+            val git = try {
+                gitContext(context).manager()
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    loading = false,
+                    gitInstalled = false,
+                    isRepo = false,
+                    status = null,
+                    message = friendly(e, hasToken = false).display(),
+                    readiness = GitReadiness.forProject(
                         gitInstalled = false,
-                        isRepo = false,
-                        status = null,
-                        message = finalMessage,
-                        // Phase 40.1 — git itself is the blocker; every
-                        // operation is answered before it is attempted.
-                        readiness = GitReadiness.forProject(
-                            gitInstalled = false,
-                            hasToken = false,
-                            isRepository = false
-                        )
+                        hasToken = false,
+                        isRepository = false
                     )
-                    return@launch
-                }
+                )
+                return@launch
+            }
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    loading = false,
+                    gitInstalled = false,
+                    isRepo = false,
+                    status = null,
+                    message = finalMessage,
+                    // Phase 40.1 — git itself is the blocker; every
+                    // operation is answered before it is attempted.
+                    readiness = GitReadiness.forProject(
+                        gitInstalled = false,
+                        hasToken = false,
+                        isRepository = false
+                    )
+                )
+                return@launch
+            }
+            try {
                 val isRepo = withContext(Dispatchers.IO) { git.isRepository(projectRoot) }
                 val status = if (isRepo) {
                     withContext(Dispatchers.IO) {
@@ -388,7 +431,7 @@ class GitControlViewModel : ViewModel() {
                     // never block an operation that would have worked.
                     online = null
                 )
-                // "What will be committed" — every pending path the sheet
+                // "What will be committed" — every pending path the panel
                 // shows, projected the same way stage+commit would take them.
                 val preview = status?.let { s ->
                     // Treat every listed change as "would be staged by add -A".
@@ -426,9 +469,19 @@ class GitControlViewModel : ViewModel() {
             } catch (e: Exception) {
                 // `git status` never authenticates, so a token check is moot;
                 // classify to turn "not a git repository" etc. into guidance.
+                // `git` (above) is confirmed present, so `gitInstalled = true`
+                // is right here — but `isRepo` must NOT be left at its stale
+                // previous value (the `isRepo` this same call already
+                // computed a few lines up never reached `_state.value`
+                // because the exception happened first). Re-derive it with
+                // the same plain filesystem check `isRepository` itself uses
+                // (no git invocation, so it cannot fail the same way twice).
+                val stillRepo = runCatching { git.isRepository(projectRoot) }
+                    .getOrDefault(_state.value.isRepo)
                 _state.value = _state.value.copy(
                     loading = false,
                     gitInstalled = true,
+                    isRepo = stillRepo,
                     message = friendly(e, hasToken = false).display()
                 )
             }
@@ -443,19 +496,189 @@ class GitControlViewModel : ViewModel() {
     }
 
     /**
-     * One-tap COMMIT & PUSH: stage everything, commit with the stored
-     * identity, then push. A push failure (offline, no token, rejected) is
-     * reported without losing the fact that the commit succeeded.
+     * Phase 73.3 — "Initialize repository": the one action that used to be
+     * CLI-only ("Run `git init` in the terminal"). [runGitOperation] already
+     * works before a repository exists ([GitContext.manager] never checks
+     * for one), so this is the same busy/message/refresh shape as every
+     * other button here.
      */
-    fun commitAndPush(context: Context, projectRoot: File, message: String) {
+    fun initRepo(context: Context, projectRoot: File) {
+        runGitOperation(context, projectRoot, "Initializing repository…") { git ->
+            git.init(projectRoot)
+            "Repository initialized"
+        }
+    }
+
+    /**
+     * Phase 73.3 — an explicit Fetch, standalone (until now [GitManager.fetch]
+     * only ran implicitly inside the Switch Branch dialog's remote-branch
+     * discovery). Updates remote-tracking refs without touching the working
+     * tree — unlike Pull, nothing local changes.
+     */
+    fun fetch(context: Context, projectRoot: File) {
+        runGitOperation(context, projectRoot, "Fetching…") { git ->
+            git.fetch(projectRoot)
+            "Fetch completed"
+        }
+    }
+
+    /**
+     * Phase 73.3 — "Revert All": the UI confirms before calling this (see
+     * [GitManager.revertAllChanges] — untracked files are never touched).
+     */
+    fun revertAll(context: Context, projectRoot: File) {
+        runGitOperation(context, projectRoot, "Reverting all changes…") { git ->
+            git.revertAllChanges(projectRoot)
+            "All changes reverted"
+        }
+    }
+
+    /**
+     * Phase 73.3 — "Checkout Commit": lands on a specific commit (detached
+     * HEAD). The result message says so in plain words — a beginner who has
+     * never heard "detached HEAD" still needs to know they are not on a
+     * branch and how normal work resumes (switch branches again).
+     */
+    fun checkoutCommit(context: Context, projectRoot: File, entry: GitCommitEntry) {
+        runGitOperation(context, projectRoot, "Checking out ${entry.shortSha}…") { git ->
+            git.checkoutCommit(projectRoot, entry.sha)
+            "Now viewing commit ${entry.shortSha} — not on a branch. Switch branches anytime to return to your work."
+        }
+    }
+
+    /**
+     * Phase 73.3 — Log History / Checkout Commit share one list load. Loaded
+     * on demand (opening the panel), not on every [refresh].
+     */
+    fun loadCommits(context: Context, projectRoot: File, limit: Int = 50) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(commitsLoading = true, commitsError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    commitsLoading = false,
+                    commitsError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
+            try {
+                val list = withContext(Dispatchers.IO) { git.log(projectRoot, limit) }
+                _state.value = _state.value.copy(commitsLoading = false, commits = list)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    commitsLoading = false,
+                    commitsError = friendly(e, git.hasCredentials).display()
+                )
+            }
+        }
+    }
+
+    fun clearCommits() {
+        _state.value = _state.value.copy(commits = emptyList(), commitsError = null)
+    }
+
+    /** Phase 73.3 — the general Remotes screen (view/add/remove). */
+    fun loadRemotes(context: Context, projectRoot: File) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(remotesLoading = true, remotesError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    remotesLoading = false,
+                    remotesError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
+            try {
+                val list = withContext(Dispatchers.IO) { git.remotesDetailed(projectRoot) }
+                _state.value = _state.value.copy(remotesLoading = false, remotes = list)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    remotesLoading = false,
+                    remotesError = friendly(e, git.hasCredentials).display()
+                )
+            }
+        }
+    }
+
+    fun addRemote(context: Context, projectRoot: File, name: String, url: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(remotesBusy = true, remotesError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    remotesBusy = false,
+                    remotesError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
+            try {
+                withContext(Dispatchers.IO) { git.addRemote(projectRoot, name, url) }
+                val list = withContext(Dispatchers.IO) { git.remotesDetailed(projectRoot) }
+                _state.value = _state.value.copy(remotesBusy = false, remotes = list)
+                // A new remote can change PUSH readiness (NO_REMOTE clears).
+                refresh(context, projectRoot)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    remotesBusy = false,
+                    remotesError = friendly(e, git.hasCredentials).display()
+                )
+            }
+        }
+    }
+
+    fun removeRemote(context: Context, projectRoot: File, name: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(remotesBusy = true, remotesError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    remotesBusy = false,
+                    remotesError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
+            try {
+                withContext(Dispatchers.IO) { git.removeRemote(projectRoot, name) }
+                val list = withContext(Dispatchers.IO) { git.remotesDetailed(projectRoot) }
+                _state.value = _state.value.copy(remotesBusy = false, remotes = list)
+                refresh(context, projectRoot)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    remotesBusy = false,
+                    remotesError = friendly(e, git.hasCredentials).display()
+                )
+            }
+        }
+    }
+
+    fun clearRemotes() {
+        _state.value = _state.value.copy(remotes = emptyList(), remotesError = null)
+    }
+
+    /**
+     * Phase 73.5 — Spck's "Commit All": stage everything and commit locally,
+     * WITHOUT pushing. Same guards the old combined commit-and-push had (a
+     * message is required, conflicts block the commit), same
+     * [GitManager.stageAll] choke point, but the push step is skipped — the
+     * panel's existing "N commit(s) not pushed yet" section then offers the
+     * retry/push, so Commit All → PUSH reads as one honest two-step flow.
+     *
+     * Phase 73.7 — the Commit dialog's Stage All toggle reaches [stageAll]:
+     * on (the default, Spck's own default) stages everything first, off
+     * commits only what is already staged. Off with an empty index fails
+     * in git's own plain words ("nothing to commit"), shown like any
+     * other commit error — no new error case invented. The dialog's
+     * author fields never reach this function: the dialog saves them to
+     * the credentials store itself (when changed), and the manager this
+     * op builds reads the stored identity — one writer, one reader.
+     */
+    fun commitOnly(context: Context, projectRoot: File, message: String, stageAll: Boolean = true) {
         val trimmed = message.trim()
         if (trimmed.isEmpty()) {
             _state.value = _state.value.copy(message = "Enter a commit message")
             return
         }
-        // Phase 17 §2.5 — Spck's rule: no commit while a merge conflict is
-        // open. The UI disables the button too; this guard keeps the path
-        // honest if it is ever reached from elsewhere.
         val conflicts = conflictsOf()
         if (conflicts.isNotEmpty()) {
             _state.value = _state.value.copy(
@@ -468,74 +691,44 @@ class GitControlViewModel : ViewModel() {
             return
         }
         runGitOperation(context, projectRoot, "Committing…") { git ->
-            // Phase 39.2 — stageAll is the choke point: ensure exclude +
-            // untrack previously-committed artifacts + git add -A. The
-            // hygiene note is surfaced on the sheet so an unexplained
-            // `git rm --cached` never appears in the user's history.
-            val hygiene = git.stageAll(projectRoot)
-            val note = hygiene.userMessage()
-            if (note != null) {
-                _state.value = _state.value.copy(hygieneNote = note)
+            val note = if (stageAll) {
+                val hygiene = git.stageAll(projectRoot)
+                hygiene.userMessage()?.also { userMessage ->
+                    _state.value = _state.value.copy(hygieneNote = userMessage)
+                }
+            } else {
+                null
             }
             git.commit(projectRoot, trimmed)
-            // Phase 40.2 — ONE push, and its real bytes decide what we say.
-            // A push that stays local used to be indistinguishable from one
-            // that reached GitHub; now the outcome is parsed and kept as
-            // state ([UiState.lastResult]).
             val branchLabel = runCatching { git.currentBranch(projectRoot) }
                 .getOrNull()
                 ?.takeIf { it.isNotBlank() }
-            val attempt = git.pushCapturing(projectRoot, branchName = branchLabel)
+            val prefix = if (note != null) "$note · " else ""
+            val where = if (branchLabel != null) " to $branchLabel" else ""
+            "${prefix}Committed locally$where ✓ — not pushed yet"
+        }
+    }
+
+    /**
+     * Phase 17 device fix — retry a push on its own (the Source Control panel
+     * offers this whenever the branch is ahead of its remote).
+     */
+    // Phase 73.7 — the Push dialog names the remote and the branch
+    // (Spck's two dropdowns). Both default to today's behaviour: the
+    // current branch, the first configured remote.
+    fun push(context: Context, projectRoot: File, remote: String? = null, branch: String? = null) {
+        runGitOperation(context, projectRoot, "Pushing…") { git ->
+            val branchLabel = branch?.takeIf { it.isNotBlank() }
+                ?: runCatching { git.currentBranch(projectRoot) }
+                    .getOrNull()
+                    ?.takeIf { it.isNotBlank() }
+            val attempt = git.pushCapturing(projectRoot, branchName = branchLabel, remoteName = remote)
             val outcome = GitPushParser.parse(
                 stdout = attempt.stdout,
                 stderr = attempt.stderr,
                 exitCode = attempt.exitCode,
                 branch = branchLabel,
-                remoteUrl = runCatching { git.remoteUrl(projectRoot) }.getOrNull()
-            )
-            val failure = failureFor(outcome, attempt, git.hasCredentials)
-            _state.value = _state.value.copy(
-                lastResult = outcome,
-                pushError = failure?.message,
-                pushHelpUrl = failure?.helpUrl
-            )
-            if (failure == null) {
-                // Phase 39 device follow-up — name the branch so success never
-                // reads like a silent push to main.
-                val pushed = when {
-                    outcome is PushOutcome.UpToDate && branchLabel != null ->
-                        "Already up to date on $branchLabel ✓"
-                    outcome is PushOutcome.UpToDate -> "Already up to date ✓"
-                    branchLabel != null -> "Committed & pushed to $branchLabel ✓"
-                    else -> "Committed & pushed ✓"
-                }
-                if (note != null) "$note · $pushed" else pushed
-            } else {
-                // Phase 17 follow-up: a friendly, actionable reason + token
-                // link instead of raw git output.
-                val prefix = if (note != null) "$note · " else ""
-                val where = if (branchLabel != null) " on $branchLabel" else ""
-                "${prefix}Committed locally$where ✓ — NOT pushed: ${failure.message}"
-            }
-        }
-    }
-
-    /**
-     * Phase 17 device fix — retry a push on its own (the Source Control sheet
-     * offers this whenever the branch is ahead of its remote).
-     */
-    fun push(context: Context, projectRoot: File) {
-        runGitOperation(context, projectRoot, "Pushing…") { git ->
-            val branch = runCatching { git.currentBranch(projectRoot) }
-                .getOrNull()
-                ?.takeIf { it.isNotBlank() }
-            val attempt = git.pushCapturing(projectRoot, branchName = branch)
-            val outcome = GitPushParser.parse(
-                stdout = attempt.stdout,
-                stderr = attempt.stderr,
-                exitCode = attempt.exitCode,
-                branch = branch,
-                remoteUrl = runCatching { git.remoteUrl(projectRoot) }.getOrNull()
+                remoteUrl = runCatching { git.remoteUrl(projectRoot, remote) }.getOrNull()
             )
             val failure = failureFor(outcome, attempt, git.hasCredentials)
             _state.value = _state.value.copy(
@@ -545,7 +738,7 @@ class GitControlViewModel : ViewModel() {
             )
             when {
                 failure != null -> "NOT pushed: ${failure.message}"
-                branch != null -> "Pushed to $branch ✓"
+                branchLabel != null -> "Pushed to $branchLabel ✓"
                 else -> "Pushed ✓"
             }
         }
@@ -753,29 +946,14 @@ class GitControlViewModel : ViewModel() {
         )
     }
 
-    /**
-     * Phase 15/16 — per-file stage/unstage (the mockup's +/− row button):
-     * staged rows unstage (`git reset -- <path>`), unstaged rows stage
-     * (`git add -- <path>`). The porcelain `x` column tells us the side the
-     * file is currently on.
-     */
-    fun toggleStage(context: Context, projectRoot: File, change: GitFileChange) {
-        val staged = change.isStaged
-        val name = change.path.substringAfterLast('/')
-        runGitOperation(
-            context,
-            projectRoot,
-            if (staged) "Unstaging $name…" else "Staging $name…"
-        ) { git ->
-            if (staged) {
-                git.unstageFile(projectRoot, change.path)
-                "Unstaged $name"
-            } else {
-                git.stageFile(projectRoot, change.path)
-                "Staged $name"
-            }
-        }
-    }
+    // Phase 15/16 added a per-file stage/unstage toggle (the mockup's +/− row
+    // button: staged rows unstage via `git reset -- <path>`, unstaged rows
+    // stage via `git add -- <path>`). Phase 73.1 removed it: the one commit
+    // action in this panel, [commitOnly], stages everything first (unless
+    // the Commit dialog's Stage All toggle is off), so a per-file toggle
+    // would change the git index without ever changing what got committed.
+    // [GitManager.stageFile]/[GitManager.unstageFile] remain —
+    // [markResolved] below still uses `stageFile` to clear a conflict mark.
 
     /** Called only after a named-file confirmation; no optimistic row removal. */
     fun discardUnstaged(context: Context, projectRoot: File, change: GitFileChange) {

@@ -76,6 +76,41 @@ class GitManagerTest {
                 if [ -n "${'$'}FAKE_LSREMOTE_ERR" ]; then printf '%b\n' "${'$'}FAKE_LSREMOTE_ERR" >&2; fi
                 exit "${'$'}{FAKE_LSREMOTE_EXIT:-0}"
                 ;;
+              init)
+                # Phase 73.3 — `git init -b main` (git 2.28+) can fail on an
+                # old git; GitManager then falls back to plain `init` +
+                # `symbolic-ref`. FAKE_INIT_B_EXIT controls only the `-b`
+                # attempt so both paths can be exercised independently.
+                case "${'$'}2" in
+                  -b)
+                    exit "${'$'}{FAKE_INIT_B_EXIT:-0}"
+                    ;;
+                esac
+                exit "${'$'}{FAKE_INIT_EXIT:-0}"
+                ;;
+              symbolic-ref)
+                exit "${'$'}{FAKE_SYMBOLIC_REF_EXIT:-0}"
+                ;;
+              remote)
+                case "${'$'}2" in
+                  get-url)
+                    if [ -n "${'$'}FAKE_REMOTE_URL_OUT" ]; then printf '%b\n' "${'$'}FAKE_REMOTE_URL_OUT"; fi
+                    exit "${'$'}{FAKE_REMOTE_URL_EXIT:-0}"
+                    ;;
+                  add|remove)
+                    exit "${'$'}{FAKE_REMOTE_EXIT:-0}"
+                    ;;
+                esac
+                if [ -n "${'$'}FAKE_REMOTE_OUT" ]; then printf '%b\n' "${'$'}FAKE_REMOTE_OUT"; fi
+                exit "${'$'}{FAKE_REMOTE_EXIT:-0}"
+                ;;
+              log)
+                # Deliberately FAKE_GITLOG_* (not FAKE_LOG_*): FAKE_LOG is the
+                # calls-log FILE PATH used by every case above, not git-log
+                # output.
+                if [ -n "${'$'}FAKE_GITLOG_OUT" ]; then printf '%b' "${'$'}FAKE_GITLOG_OUT"; fi
+                exit "${'$'}{FAKE_GITLOG_EXIT:-0}"
+                ;;
             esac
             exit "${'$'}{FAKE_EXIT:-0}"
             """.trimIndent()
@@ -452,6 +487,231 @@ class GitManagerTest {
                 assertEquals(124, e.exitCode)
                 assertTrue(e.message!!.contains("timed out"))
             }
+        }
+    }
+
+    // --- Phase 73.3: init / checkout commit / revert all / remotes / log ---
+
+    @Test
+    fun `init uses git init -b main and does not fall back when it succeeds`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            manager(dir, env).init(workDir)
+            val log = loggedCommands(File(env["FAKE_LOG"]!!))
+            assertEquals(listOf("CMD [init] [-b] [main]"), log)
+        }
+    }
+
+    @Test
+    fun `init falls back to plain init plus symbolic-ref when -b is unsupported`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir, extra = mapOf("FAKE_INIT_B_EXIT" to "1"))
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            manager(dir, env).init(workDir)
+            val log = loggedCommands(File(env["FAKE_LOG"]!!))
+            assertEquals(
+                listOf(
+                    "CMD [init] [-b] [main]",
+                    "CMD [init]",
+                    "CMD [symbolic-ref] [HEAD] [refs/heads/main]"
+                ),
+                log
+            )
+        }
+    }
+
+    @Test
+    fun `init refuses to run against a folder that is already a repository`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            File(workDir, ".git").mkdirs()
+            try {
+                manager(dir, env).init(workDir)
+                fail("expected IllegalArgumentException")
+            } catch (_: IllegalArgumentException) {
+            }
+            assertFalse(File(env["FAKE_LOG"]!!).exists())
+        }
+    }
+
+    @Test
+    fun `checkoutCommit checks out a full commit id`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            val sha = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+            manager(dir, env).checkoutCommit(workDir, sha)
+            val last = loggedCommands(File(env["FAKE_LOG"]!!)).last()
+            assertEquals("CMD [checkout] [$sha]", last)
+        }
+    }
+
+    @Test
+    fun `checkoutCommit rejects anything that is not a full 40-char hex id`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            val git = manager(dir, env)
+            for (bad in listOf("abc1234", "-x", "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1bz", "")) {
+                try {
+                    git.checkoutCommit(workDir, bad)
+                    fail("expected invalid commit id: $bad")
+                } catch (_: IllegalArgumentException) {
+                }
+            }
+            assertFalse(File(env["FAKE_LOG"]!!).exists())
+        }
+    }
+
+    @Test
+    fun `revertAllChanges runs git reset --hard HEAD`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            manager(dir, env).revertAllChanges(workDir)
+            val last = loggedCommands(File(env["FAKE_LOG"]!!)).last()
+            assertEquals("CMD [reset] [--hard] [HEAD]", last)
+        }
+    }
+
+    @Test
+    fun `addRemote runs git remote add with the name and url`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            manager(dir, env).addRemote(workDir, "upstream", "https://github.com/u/r.git")
+            val log = loggedCommands(File(env["FAKE_LOG"]!!))
+            assertEquals(
+                listOf(
+                    "CMD [remote]",
+                    "CMD [remote] [add] [upstream] [https://github.com/u/r.git]"
+                ),
+                log
+            )
+        }
+    }
+
+    @Test
+    fun `removeRemote runs git remote remove for a remote that exists`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir, extra = mapOf("FAKE_REMOTE_OUT" to "origin"))
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            manager(dir, env).removeRemote(workDir, "origin")
+            val log = loggedCommands(File(env["FAKE_LOG"]!!))
+            assertEquals(listOf("CMD [remote]", "CMD [remote] [remove] [origin]"), log)
+        }
+    }
+
+    @Test
+    fun `removeRemote refuses a name that is not currently configured`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            try {
+                manager(dir, env).removeRemote(workDir, "origin")
+                fail("expected IllegalArgumentException")
+            } catch (_: IllegalArgumentException) {
+            }
+            // hasRemote() still ran (git remote, empty list); remove never did.
+            assertEquals(listOf("CMD [remote]"), loggedCommands(File(env["FAKE_LOG"]!!)))
+        }
+    }
+
+    @Test
+    fun `removeRemote rejects an invalid name before running git`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir)
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            try {
+                manager(dir, env).removeRemote(workDir, "bad name!")
+                fail("expected IllegalArgumentException")
+            } catch (_: IllegalArgumentException) {
+            }
+            assertFalse(File(env["FAKE_LOG"]!!).exists())
+        }
+    }
+
+    @Test
+    fun `remotesDetailed lists every remote with its url`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(
+                dir,
+                extra = mapOf(
+                    "FAKE_REMOTE_OUT" to "origin\\nupstream",
+                    "FAKE_REMOTE_URL_OUT" to "https://github.com/u/r.git"
+                )
+            )
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            val remotes = manager(dir, env).remotesDetailed(workDir)
+            assertEquals(2, remotes.size)
+            assertEquals("origin", remotes[0].name)
+            assertEquals("https://github.com/u/r.git", remotes[0].url)
+            assertEquals("upstream", remotes[1].name)
+            assertEquals("https://github.com/u/r.git", remotes[1].url)
+        }
+    }
+
+    @Test
+    fun `remotesDetailed shows a null url when the lookup fails`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(
+                dir,
+                extra = mapOf("FAKE_REMOTE_OUT" to "origin", "FAKE_REMOTE_URL_EXIT" to "1")
+            )
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            val remotes = manager(dir, env).remotesDetailed(workDir)
+            assertEquals(listOf(null), remotes.map { it.url })
+        }
+    }
+
+    @Test
+    fun `log parses newest-first commits and passes the limit through`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val sep = "\u001F"
+            val out =
+                "1111111111111111111111111111111111111111${sep}1111111${sep}Owner${sep}" +
+                    "2026-09-29T12:00:00+05:30${sep}Second commit\n" +
+                    "2222222222222222222222222222222222222222${sep}2222222${sep}Owner${sep}" +
+                    "2026-09-28T09:30:00+05:30${sep}First commit\n"
+            val env = baseEnv(dir, extra = mapOf("FAKE_GITLOG_OUT" to out))
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            val commits = manager(dir, env).log(workDir, limit = 10)
+
+            assertEquals(2, commits.size)
+            assertEquals("1111111111111111111111111111111111111111", commits[0].sha)
+            assertEquals("1111111", commits[0].shortSha)
+            assertEquals("Second commit", commits[0].subject)
+            assertEquals("2222222", commits[1].shortSha)
+            assertEquals("First commit", commits[1].subject)
+
+            val last = loggedCommands(File(env["FAKE_LOG"]!!)).last()
+            assertTrue(last.contains("[log]"))
+            assertTrue(last.contains("[-n] [10]"))
+        }
+    }
+
+    @Test
+    fun `log returns an empty list instead of throwing when git fails`() = runBlocking {
+        withTimeout(20_000) {
+            val dir = tempDir()
+            val env = baseEnv(dir, extra = mapOf("FAKE_GITLOG_EXIT" to "128"))
+            val workDir = File(dir, "repo").apply { mkdirs() }
+            assertTrue(manager(dir, env).log(workDir).isEmpty())
         }
     }
 

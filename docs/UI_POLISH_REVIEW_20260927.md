@@ -162,14 +162,54 @@ and record your answer before implementing the part.
 | [70.1](ui-polish-chats/PHASE_70_1_RUN_OUTPUT.md) | Run, output and error recovery | Clear run states; no navigation lock. **Delivered 2026-09-28** (state row, labelled Stop, error rows + fix, waiting strip, the panel's console; phone pass 2026-09-28) — owner-tested 2026-09-29, [PR #93](https://github.com/pabi277/CodeC/pull/93); [record](chat-phase70/README.md). |
 | [71.1](ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md) | Packages, installation and Terminal | Visible progress, safe transactions. |
 | [72.1](ui-polish-chats/PHASE_72_1_PREVIEW.md) | Web preview, console and viewport tools | Polish existing tools. **Delivered 2026-09-28** (five-tab console, four render rounds incl. the `WRAP_CONTENT` → zero-layout-height cause, the phone pass; the project card opens the editor) — owner-tested 2026-09-29, [PR #93](https://github.com/pabi277/CodeC/pull/93); [record](chat-phase70/README.md). |
-| [73.1](ui-polish-chats/PHASE_73_1_GIT.md) | Source control and GitHub | Simplify hierarchy; keep discard safeguards. |
+| [73.1](ui-polish-chats/PHASE_73_1_GIT.md) | Source control and GitHub | Simplify hierarchy; keep discard safeguards. **Implemented 2026-09-29** (the per-file stage toggle removed — it never changed what COMMIT & PUSH committed; discard/Mark Resolved/push-readiness untouched) — CI ✅ GREEN `36519004263`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_1_GIT.md). |
+| [73.2](ui-polish-chats/PHASE_73_2_GIT_INSTALL.md) | Git connection: auto-install, clear errors, new-user guidance | Owner-reported (not a discussion draft): auto-install git, readable errors, beginner guidance. **Implemented 2026-09-29** (one-tap Install Git reusing the Packages-tab mechanism; not-a-repo message rewritten in plain words; error classification reviewed, already good) — CI ✅ GREEN `36523739665`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_2_GIT_INSTALL.md). |
+| [73.3](ui-polish-chats/PHASE_73_3_GIT_GUI.md) | Git menu: full GUI parity with Spck | Owner-reported (not a discussion draft), 4 Spck screenshots attached: everything but git install should be a button, not the terminal. **Implemented 2026-09-29** (Fetch, Log History, Checkout Commit, Revert All with confirm, a general Remotes screen, a real `git init` button, Git Credentials shortcut) — CI ✅ GREEN `36544645579`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_3_GIT_GUI.md). |
+| [73.4](ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md) | Device fix: git-refresh mis-reported "installed" after any error | Owner device report: "Auto install not working" / tapped Install Git, then saw and tapped "Initialize repository" on a project git was never installed on. Root cause: `refresh()`'s one catch-all hardcoded `gitInstalled = true` and left `isRepo` stale. **Implemented 2026-09-29** (manager acquisition is its own try/catch; git-status catch re-derives `isRepo`) — CI ✅ GREEN `36551505966`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md). |
+| [73.5](ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md) | Git panel: Spck-exact layout, install status bar, inline credentials | Owner-reported (not a discussion draft), same 4 Spck screenshots: fully terminal-independent Git GUI. **Implemented 2026-09-29** (REPOSITORY header + branch/push menus item-for-item; UNSTAGED collapsible + search; install status bar, no Terminal redirect; inline Git Credentials dialog on the shared store; Commit All = commit without push) — CI ✅ GREEN `36560766234`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md). |
+| [73.6](ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md) | Editor-drawer git: full-GUI Initialize + ask-first install prompt | Owner device report on the 73.5 build: drawer Initialize opened Terminal and init'd the wrong folder. **Implemented 2026-09-29** (Initialize = the engine's `init` in place; shared "Do you want to install it now?" prompt in drawer + sheet; drawer install/progress/retry states; auto-continue into the pending init) — CI ✅ GREEN `36566495685`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md). |
+| [73.7](ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md) | Git moves into the editor panel: Spck-ditto dialogs, no sheets | Owner follow-up with 8 Spck screenshots, scope locked by four answers (full-panel, ditto-dialogs, all-dialogs, provider-row). **Implemented 2026-09-29** (panel hosted in the drawer slot, sheet + 73.6 slot deleted; Commit All + Push dialogs; centered Remotes/Log dialogs; rail badge; hub ⋮ routes to the panel) — CI ✅ GREEN `36583980074`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md). |
+| [73.8](ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md) | Git page owns credentials, the install card, and beginner hints | Owner punch-list on the 73.7 build, scope locked by five answers. **Implemented 2026-09-29** (⋮ push-menu trigger; package-style install card — userland live state, git elapsed + live transcript line + in-box fail tail, no fake %; token/install texts repointed at the git page; clone dialog opens credentials inline; three one-line hints) — CI ✅ GREEN `36593360018`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md). |
+| [73.9](ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md) | Manual-first no-remote flow, origin by default | Owner premise fix: most tokens lack the repo-create permission, so Publish fails. **Implemented 2026-09-29** (readiness row links github.com/new + ADD REMOTE opens the Remotes dialog; New Remote name starts at `origin`; PUBLISH off the row, Publish dialog kept for permissioned tokens) — CI ✅ GREEN `36597542971`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md). |
 | [74.1](ui-polish-chats/PHASE_74_1_SETTINGS_SUPPORT.md) | Settings, support and final consistency | Truthful controls and cross-screen consistency. |
 **Owner-selected starting area (2026-09-27): Projects and files.** Start the
 next discussion with 66.1 (hub/creation), then 67.1 (files/search), unless the
 owner names a particular file detail first. *State on 2026-09-29:* 64, 66.1,
-67.1, 69.1–69.4, 70.1, 71.1 and 72.1 are delivered and merged; **65.1, 73.1 and 74.1 remain discussion drafts** (68.1 merged in PR #90) — the owner picks the next one. The part numbers are stable IDs,
-not a requirement to execute 65 first. My original suggestion was editor/typing;
-the owner's priority overrides that. Polish one agreed part per chat.
+67.1, 69.1–69.4, 70.1, 71.1 and 72.1 are delivered and merged; **73.1 is
+implemented this session (CI ✅ GREEN `36519004263`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.2 (owner-reported Git connection fixes — auto-install,
+clear errors, new-user guidance — not a discussion draft) is also
+implemented this session (CI ✅ GREEN `36523739665`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.3 (owner-reported, not a discussion draft: the whole git
+menu ported to buttons, Spck-parity, per 4 attached screenshots) is also
+implemented this session (CI ✅ GREEN `36544645579`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.4 (device fix: a git-refresh catch-all mis-reported
+"installed" after any error, letting "Initialize repository" show on a
+project git was never installed on — found from the owner's own "Auto
+install not working" report) is also implemented this session (CI ✅ GREEN
+`36551505966`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.5 (owner-reported,
+not a discussion draft: Spck-exact Git panel layout, install status bar,
+inline credentials, Commit All without push — same 4 screenshots) is
+implemented this session on `arena/01a0eca9-codec` (CI ✅ GREEN
+`36560766234`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.6 (owner-reported
+device follow-up, not a discussion draft: the editor drawer's Initialize
+typed into the visible shell and init'd the projects folder — now the
+engine's `init` in place, with an ask-first install prompt shared by the
+drawer and the sheet) is implemented this session on
+`arena/01a0eca9-codec` (CI ✅ GREEN `36566495685`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.7 (owner follow-up with 8 Spck screenshots, scope locked
+by four answers: git lives in the editor's Repository slot, sheets
+deleted, Spck's Commit All + Push + Remotes/Log dialogs, rail badge, hub
+⋮ routes to the panel) is implemented this session on
+`arena/01a0eca9-codec` (CI ✅ GREEN `36583980074`, owner device pass ✅ 2026-09-29, merged via PR #95);
+73.8 (owner punch-list, scope locked by five answers: ⋮ trigger, package-style install card with
+the live installer line + in-box fail tail, credentials and install texts on the git page, inline
+clone credentials, three beginner hints) is implemented this session on `arena/01a0eca9-codec`
+(CI ✅ GREEN `36593360018`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.9 (owner premise
+fix: most tokens lack the create permission, so the no-remote flow is create-on-GitHub then
+paste-the-link with `origin` default) is implemented this session on `arena/01a0eca9-codec`
+(CI ✅ GREEN `36597542971`, owner device pass ✅ 2026-09-29, merged via PR #95);
+65.1 and 74.1 remain discussion drafts**
+(68.1 merged in PR #90) — the owner picks the
+next discussion draft. The part numbers are stable IDs, not a requirement
+to execute 65 first. My original suggestion was editor/typing; the owner's
+priority overrides that. Polish one agreed part per chat.
 
 ## 6. Gate for every chat
 

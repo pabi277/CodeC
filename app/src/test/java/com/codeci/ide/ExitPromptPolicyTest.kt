@@ -18,7 +18,7 @@ class ExitPromptPolicyTest {
 
     private val tabPatterns = listOf(
         "file_manager?openSheet={openSheet}",
-        "editor?projectName={projectName}&fileName={fileName}&single={single}",
+        "editor?projectName={projectName}&fileName={fileName}&single={single}&panel={panel}",
         "terminal?cmd={cmd}&nonce={nonce}",
         "modules",
         "settings"

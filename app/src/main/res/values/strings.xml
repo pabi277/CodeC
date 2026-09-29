@@ -360,16 +360,27 @@
     <string name="clone_success">Cloned %1$s</string>
     <string name="source_control_title">Source Control</string>
     <string name="git_refresh">Refresh status</string>
-    <string name="git_not_installed_message">git is not installed. Install it from the Modules tab (Git) or run “pkg install -y git” in the terminal, then come back.</string>
-    <string name="git_not_a_repo_message">This project is not a Git repository. Clone one from Files → ⋮ → Clone from GitHub, or run “git init” in the terminal.</string>
+    <string name="git_not_installed_message">git is not installed. Open the editor’s Repository panel and tap INSTALL GIT, then come back.</string>
+    <!-- Phase 73.2 — shown only when the Linux tools ARE ready, so an
+         Install Git button can actually work; explains git in plain words
+         instead of assuming the reader knows what it is. -->
+    <string name="git_install_explainer">Git isn’t installed on this device yet. Git keeps a history of every change you make and can back your project up to GitHub.</string>
+    <string name="git_install_action">INSTALL GIT</string>
+    <string name="git_installing">Installing git…</string>
+    <string name="git_install_failed_message">The install didn’t finish — the last lines are below. Read them, then try again.</string>
+    <!-- Phase 73.2 — plain-words rewrite: says what Git IS for before it says
+         what to do, for a reader who has never used Git. -->
+    <!-- Phase 73.3 — the terminal instruction is gone: the button right
+         below this text now does exactly that. Cloning is still named as
+         the other path, for a folder that should match an existing
+         repository instead of starting a brand new history. -->
+    <string name="git_not_a_repo_message">Git keeps a history of your code and can back it up to GitHub. This folder isn’t tracked by Git yet. If it should match an existing repository, clone it instead from Files → ⋮ → Clone from GitHub. Otherwise, start tracking it here:</string>
     <string name="git_detached_head">detached HEAD</string>
     <string name="git_pull">PULL</string>
     <string name="git_working_tree_clean">Working tree clean ✓</string>
     <string name="git_commit_hint">Commit message</string>
-    <string name="git_commit_push">COMMIT &amp; PUSH</string>
     <!-- Phase 39 device follow-up: always name the checked-out branch so a
          push from test-1 cannot look like (or silently target) main. -->
-    <string name="git_commit_push_to">COMMIT &amp; PUSH TO %1$s</string>
     <string name="git_push_to">PUSH TO %1$s</string>
     <string name="git_renamed_from">renamed from %1$s</string>
     <string name="git_diff_title">Changes</string>
@@ -550,7 +561,6 @@
     <string name="editor_show_keys_row">Show keys row</string>
     <string name="editor_hide_keys_row">Hide keys row</string>
     <!-- Phase 15/16 mockup-exact: source-control sheet -->
-    <string name="git_commit_message_placeholder">Message (Ctrl+Enter to commit)</string>
     <string name="git_changes_header">Changes</string>
     <string name="git_stage">Stage file</string>
     <string name="git_unstage">Unstage file</string>
@@ -564,7 +574,6 @@
     <!-- Phase 17: merge conflicts -->
     <string name="git_conflicts_header">Conflicts</string>
     <string name="git_conflict_hint">Edit the file to resolve the conflict, then tap ✓ to mark it resolved.</string>
-    <string name="git_commit_blocked">Resolve the conflicts below before committing.</string>
     <string name="git_mark_resolved">Mark resolved</string>
 
     <!-- Phase 17: Switch Branch -->
@@ -597,11 +606,6 @@
     <string name="panel_search_placeholder">Find Text</string>
     <string name="panel_search_results">Results</string>
     <string name="panel_search_no_matches">No matches</string>
-    <string name="panel_repository_empty">No Git Repository initialized. Initialize one to version your work.</string>
-    <string name="panel_repository_init">Initialize Repository</string>
-    <string name="panel_repository_no_branch">No branch yet</string>
-    <string name="panel_repository_changes">Changes: %1$d</string>
-    <string name="panel_repository_open">Source Control</string>
     <!-- Phase 61: preview diagnostics and viewport controls -->
     <string name="preview_console">Console</string>
     <string name="preview_network">Network</string>
@@ -657,5 +661,104 @@
     <string name="git_discard_title">Discard unstaged changes?</string>
     <string name="git_discard_confirm">Restore %1$s from the staged version? Unstaged changes to this file will be lost. Staged changes and other files stay unchanged. This cannot be undone here. If the file has unsaved editor changes, save and review its diff first.</string>
     <string name="git_discard_progress">Discarding unstaged changes…</string>
+
+    <!-- Phase 73.3 — full GUI parity for the git menu (no terminal needed
+         except to install git itself). -->
+    <string name="git_init_action">START TRACKING THIS FOLDER WITH GIT</string>
+    <string name="git_init_busy">Setting up Git…</string>
+    <string name="git_more_actions">More Git actions</string>
+    <string name="git_fetch_action">Fetch</string>
+    <string name="git_log_history_action">Log History</string>
+    <string name="git_checkout_commit_action">Checkout Commit</string>
+    <string name="git_checkout_commit_row_action">Checkout</string>
+    <string name="git_checkout_commit_explainer">Tap a commit to view your project as it was at that point. This does not change your history — you can switch back to a branch anytime.</string>
+    <string name="git_checkout_commit_title">Checkout this commit?</string>
+    <string name="git_checkout_commit_confirm">This opens commit %1$s. You will not be on a branch until you switch back to one — nothing about your history changes.</string>
+    <string name="git_log_empty">No commits yet.</string>
+    <string name="git_credentials_action">Git Credentials</string>
+    <string name="git_remotes_action">Remotes</string>
+    <string name="git_remotes_empty">No remotes configured yet.</string>
+    <string name="git_remotes_no_url">(no URL)</string>
+    <string name="git_remotes_remove">Remove %1$s</string>
+    <string name="git_remotes_add_title">Add a remote</string>
+    <string name="git_remotes_name_label">Name (e.g. origin)</string>
+    <string name="git_remotes_url_label">URL (https://…)</string>
+    <string name="git_remotes_add_action">ADD REMOTE</string>
+    <string name="git_remotes_remove_title">Remove this remote?</string>
+    <string name="git_remotes_remove_confirm">This only forgets the address named “%1$s” on this device. Nothing on GitHub is deleted. If other actions (like Push) rely on this name, set it up again before using them.</string>
+    <string name="git_remotes_remove_action">REMOVE</string>
+    <string name="git_revert_all_action">Revert All</string>
+    <string name="git_revert_all_title">Discard all changes?</string>
+    <string name="git_revert_all_confirm">This restores every tracked file to its last commit, discarding all staged and unstaged edits at once. Files git doesn’t know about yet (untracked/new files) are left alone. This cannot be undone.</string>
+
+    <!-- Phase 73.5 — Spck-exact panel: REPOSITORY header with search /
+         branch / push menus, an install status bar, and an inline
+         Git Credentials dialog (Settings keeps its own editor; both
+         read and write the same GitCredentialsStore). -->
+    <string name="git_repository_title">REPOSITORY</string>
+    <string name="git_search_changes">Search changes</string>
+    <string name="git_branch_menu_description">Branch options</string>
+    <string name="git_push_menu_description">Commit and sync options</string>
+    <string name="git_branches_action">Branches</string>
+    <string name="git_refresh_files_action">Refresh Files</string>
+    <string name="git_commit_all_action">Commit All</string>
+    <string name="git_provider_action">Provider</string>
+    <string name="git_branch_menu_header">BRANCH: %1$s</string>
+    <string name="git_unstaged_header">UNSTAGED</string>
+    <string name="git_collapse_section">Collapse</string>
+    <string name="git_expand_section">Expand</string>
+    <string name="git_no_matching_changes">No changes match this search.</string>
+    <string name="git_install_progress">Installing git… · %1$ds</string>
+    <string name="git_install_background_note">Running in the background — stay here. This bar finishes when git is ready.</string>
+    <string name="git_credentials_title">Git Credentials</string>
+    <string name="git_credentials_provider_label">PROVIDER</string>
+    <string name="git_credentials_provider_name">GitHub</string>
+    <string name="git_credentials_manage">Manage</string>
+    <string name="git_credentials_username">Username</string>
+    <string name="git_credentials_commit_name">Commit name</string>
+    <string name="git_credentials_email">Email</string>
+    <string name="git_credentials_token">Token</string>
+    <string name="git_credentials_show">SHOW</string>
+    <string name="git_credentials_hide">HIDE</string>
+    <string name="git_credentials_create_prefix">Create a </string>
+    <string name="git_credentials_create_link">GitHub Token</string>
+    <string name="git_credentials_ok">Ok</string>
+    <string name="git_credentials_saved">GitHub credentials saved ✓</string>
+
+    <!-- Phase 73.6 — the editor drawer's Repository panel went full GUI:
+         its Initialize button used to open Terminal and type `git init`
+         there (wrong folder, no git check). It now runs the engine
+         in-place; when git is missing, this dialog asks first, then the
+         same background install + status bar the sheet uses takes over. -->
+    <string name="git_install_prompt_title">Git is not installed</string>
+    <string name="git_install_prompt_message">Git keeps a history of every change you make and can back your project up to GitHub. Do you want to install it now?</string>
+    <string name="git_install_prompt_action">INSTALL</string>
+    <!-- Phase 73.7 — the Spck ditto: git moved from the bottom sheet into
+         the drawer's Repository panel, and Commit All / Push / Remotes /
+         Log History are centered dialogs (the owner's screenshots). -->
+    <string name="panel_repository_no_project">Open a project to use Source Control.</string>
+    <string name="git_dialog_ok">Ok</string>
+    <string name="git_commit_dialog_message_label">Message</string>
+    <string name="git_commit_stage_all">Stage All</string>
+    <string name="git_push_dialog_title">Push</string>
+    <string name="git_push_dialog_remotes">Remotes</string>
+    <string name="git_push_dialog_branches">Branches</string>
+    <string name="git_push_no_remote">Add a remote first — there is nowhere to push to yet.</string>
+    <string name="git_remotes_search_hint">Search Remote</string>
+    <string name="git_remotes_new_title">New Remote</string>
+    <string name="git_remotes_copy_url">Remote URL</string>
+    <string name="git_remotes_delete">Delete Remote</string>
+    <string name="git_remotes_no_match">No remote matches that search.</string>
+    <!-- Phase 73.8 — the install card (userland state + honest git progress),
+         the beginner hints, and the credential rewordings. -->
+    <string name="git_userland_title">Linux tools</string>
+    <string name="git_userland_checking">Checking the Linux tools…</string>
+    <string name="git_userland_failed">Linux tools setup incomplete</string>
+    <string name="git_userland_git_wait">Git installs after the Linux tools finish.</string>
+    <string name="git_install_live_label">Last installer line:</string>
+    <string name="git_install_failed_tail_label">Last lines:</string>
+    <string name="git_hint_unstaged">Edited files appear here. Commit All stages and commits everything at once.</string>
+    <string name="git_hint_commit_local">Commits stay on this device until you Push.</string>
+    <string name="git_hint_push">Sends your commits to the chosen remote.</string>
 </resources>
 

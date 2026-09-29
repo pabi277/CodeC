@@ -1168,7 +1168,8 @@ fun MainApp(
                 arguments = listOf(
                     navArgument("projectName") { nullable = true },
                     navArgument("fileName") { nullable = true },
-                    navArgument("single") { nullable = true }
+                    navArgument("single") { nullable = true },
+                    navArgument("panel") { nullable = true }
                 )
             ) { backStackEntry ->
                 val projectName = backStackEntry.arguments?.getString("projectName")
@@ -1177,10 +1178,15 @@ fun MainApp(
                 // on every pre-46 route shape, so launch state, "Open with
                 // CodeC", templates and renames all stay PROJECT mode.
                 val singleFile = backStackEntry.arguments?.getString("single") == "1"
+                // Phase 73.7 — `panel=repository` is the hub ⋮'s "Source
+                // Control" hand-off: the editor enters with the Repository
+                // slot selected and the drawer open.
+                val panelArg = backStackEntry.arguments?.getString("panel")
                 EditorScreen(
                     projectName = projectName,
                     fileName = fileName,
                     singleFile = singleFile,
+                    panel = panelArg,
                     onNavigateBack = { navController.popBackStack() },
                     onFileRenamed = { newName ->
                         navController.navigate(
@@ -1333,6 +1339,18 @@ fun MainApp(
                             restoreState = false
                         }
                     },
+                    onProjectGitPanel = { projectName, path ->
+                        // Phase 73.7 — the hub ⋮'s "Source Control": the
+                        // same whole-project open as onProjectFileSelected
+                        // (fresh entry, fresh VM), plus the panel hand-off
+                        // that selects the Repository slot on entry.
+                        navController.navigate(
+                            Screen.Editor.createRoute(path, projectName, panel = "repository")
+                        ) {
+                            launchSingleTop = true
+                            restoreState = false
+                        }
+                    },
                     onProjectPreviewFile = { projectName, path ->
                         navController.navigate(Screen.Preview.createRoute(path, projectName)) {
                             launchSingleTop = true
@@ -1356,8 +1374,9 @@ fun MainApp(
                             launchSingleTop = true
                         }
                     },
-                    // Phase 15 — the clone dialog's token hint jumps to
-                    // Settings → GitHub Account (the Phase 13 card).
+                    // Phase 15 — the hub's Settings jump (the clone dialog's
+                    // token hint used it until 73.8 gave the dialog its own
+                    // inline Git Credentials editor).
                     onOpenSettings = {
                         navController.navigate(Screen.Settings.route) {
                             launchSingleTop = true

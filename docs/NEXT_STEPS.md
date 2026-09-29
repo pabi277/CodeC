@@ -1,3 +1,245 @@
+**2026-09-29 — Phase 73.9 (manual-first no-remote flow, origin by default) ✅
+IMPLEMENTED, CI ✅ GREEN `36597542971` on `e4f8d6a`.** Owner premise fix on the 73.8 build: most users
+will not give their token the repo-create permission, so Publish fails for them — "focus no remote
+user have to 1st create a repository and paste its link in remote and set the name at origin default.
+Other things are ok." No scope questions (the flow was prescribed exactly). Shipped: NO_REMOTE message
+rewritten (create first, paste the link, origin default); readiness row guides step 1 via a
+github.com/new link and step 2 via an ADD REMOTE button opening the Remotes dialog (PUBLISH gone from
+the row); New Remote name starts at `origin` unless taken; `GitHelpLink` gains a label param;
+`actionId` → new `ACTION_ADD_REMOTE`, dead `ACTION_PUBLISH_REPO` const deleted. Publish dialog/engine
+untouched for permissioned tokens (after-push card door). Tests: Phase40 remedy pin + new Panel
+manual-first case. Python mirror of every assertion + CI as the compiler (green first round). Record:
+`docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95) (the stray `projects/.git` cleanup retired with the pass).
+
+**2026-09-29 — Phase 73.8 (git page owns credentials, the install card, and beginner hints) ✅
+IMPLEMENTED, CI ✅ GREEN `36593360018` on `aa8912d`.** Owner punch-list on the 73.7 build, verbatim gist:
+push-menu trigger should be ⋮ (the share glyph reads as "share this file"); the install "is just a
+status bar" — want "a card saying installing git like in package part, will show live % … and will
+show live line. If failed then failed and retry. But not redirected to terminal"; the token flow must
+live "in the git page"; and the git UI is "hard but ok" for newcomers. Asked five scope questions
+before coding; owner locked all five: package-style install card, ⋮ trigger, repoint every stale
+Settings/Modules/Terminal text, three inline hints, clone dialog opens credentials inline. Shipped:
+`GitInstallGuidance` → `GitInstallCard` (userland live state while the gate refuses — Terminal tab's
+own stage words, real download % only, gate's refusal sentence; git's install once allowed — elapsed,
+live transcript line, in-box fail tail; no fake %, no Terminal redirect); MoreVert trigger; readiness
+NO_TOKEN row grew a GIT CREDENTIALS button; clone hint stacks `GitCredentialsDialog` above its draft;
+`GitReadiness`/`GitErrors`/publish/push-outcome texts all repointed; one grey hint line on UNSTAGED,
+in Commit, in Push. Tests: install-wiring rewrite + guidance/clone/hint/trigger pins; `GitErrorsTest`
+pins follow the rewords. No JDK/SDK in the sandbox — verified with a Python mirror of every
+new/changed assertion (all pass) + CI as the compiler (3 rounds: TerminalStatusLabel import +
+duplicate @Composable, then one missed pin, then green). Record:
+`docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95) (the stray `projects/.git` cleanup retired with the pass).
+
+**2026-09-29 — Phase 73.7 (git moves into the editor panel: Spck-ditto dialogs, no sheets) ✅
+IMPLEMENTED, CI ✅ GREEN `36583980074` on `0b57c0a`.** Owner follow-up on the 73.5/73.6 builds with 8 Spck screenshots attached
+(branch menu, Git Credentials, Remotes, New Remote, detach-HEAD confirm, Commit All, empty Remotes,
+Push): git must live inside the editor's side panel (the REPOSITORY tab) Spck-ditto — no bottom
+sheet anywhere — with Spck's Commit All and Push dialogs, centered Remotes/Log dialogs, a count
+badge on the rail's branch icon, and the push menu's Provider row opening Git Credentials. Asked
+four scope questions before coding; owner locked all four: full-panel, ditto-dialogs, all-dialogs,
+provider-row (Publish stays the permission-asked direct-create path; manual paste-a-URL stays
+primary). Shipped: `GitControlSheet` → `GitControlPanel` hosted in the drawer slot (73.6 slot UI
++ engine + sheet doors deleted); new `GitCommitDialog` (credentials row, message, store-owned
+author name/email, Stage All default ON) and `GitPushDialog` (remote/branch dropdowns; engine
+`pushCapturing` gained `remoteName?`); Remotes/Log/BranchSwitch converted to centered dialogs;
+rail badge; hub ⋮ → editor via a new optional `panel=repository` route arg; 11 dead strings
+deleted, 13 added. Tests: new `GitPanelWiringTest.kt` (8 cases) replaces
+`GitDrawerInstallWiringTest.kt`; Parity/Spck/discard/hygiene/route pins migrated; Install and
+Refresh suites untouched. No JVM/kotlinc in the sandbox — verified with the brace/paren scan +
+a Python mirror of every new/changed assertion (all pass) + a stale-pin sweep. Record:
+`docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md`. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
+
+**2026-09-29 — Phase 73.6 (editor-drawer git: full-GUI Initialize + ask-first install prompt) ✅
+IMPLEMENTED, CI ✅ GREEN `36566495685` on `65d34a2`.** Owner device report on the 73.5 build, verbatim: "if git is not
+installed it will install automatically in the background with status bar but it's not happened
+… when i click on initialize it opens terminal … So where is gui?" — followed by: install must
+show an option "git is not installed do you want to install it than start install". Reading the
+code first: there are TWO initialize doors and 73.1–73.5 only converted one — the sheet's button
+runs the background engine, but the drawer's Repository Initialize still closed the drawer and
+typed `git init` into the visible shell, which runs in the projects folder (Terminal's default
+cwd), never checked git was installed, and landed the repo at `projects/.git` on `master` (the
+owner's transcript: "no git command" first, then a repo in the wrong folder with default-branch
+hints — the engine's `-b main` shows neither; the REPOSITORY header was never seen because the
+drawer path never opens the sheet). Shipped: drawer Initialize now runs the engine's `init` in
+place (`EditorScreen.runDrawerInit`: scratch-mode toast / no-manager → install prompt with the
+root kept / already-a-repo → refresh + open the sheet / init → refresh + open the sheet /
+failure → classified toast); a shared `GitInstallPromptDialog` ("Git is not installed — …
+Do you want to install it now?", INSTALL/Cancel) shown from the drawer flow AND the sheet's
+INSTALL GIT button (supersedes 73.2's "no confirmation dialog" decision by the owner's explicit
+ask-first instruction); the drawer's Repository slot gained the install/progress/retry/init-busy
+states reusing the exact Packages-tab mechanism (gate + `sendCommand` + `PkgResult`/
+`InstallOutcomes` polling), with a gate-refused plain message (73.2 kept); installs started from
+Initialize auto-continue the pending init on success. Not touched: Run-in-Terminal hand-offs (a
+legitimate terminal use) and the Modules/Packages rows. The stray `projects/.git` is owned by
+one Terminal command from the default prompt (`rm -rf .git`) — nothing in the app auto-deletes
+it. Tests: new `GitDrawerInstallWiringTest.kt` (6 cases) + `GitInstallWiringTest.kt` rewritten to
+pin the ask-first sheet button. No JVM/kotlinc in the sandbox — verified with the Kotlin
+state-machine brace/paren scan (all six touched files balanced) + a Python mirror of every test
+assertion (caught two edit-tool tail-garbage glitches and four silently un-applied edits
+pre-commit). One CI fixup round (four missing `EditorScreen.kt` imports — `65d34a2`).
+Record: `docs/ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md`. No device pass; none
+claimed. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
+
+**2026-09-29 — Phase 73.5 (Git panel: Spck-exact layout, install status bar, inline credentials) ✅
+IMPLEMENTED, CI ✅ GREEN `36560766234` on `d469d52`.** Owner-reported directly (not a discussion draft), same 4 Spck
+screenshots 73.3 ported the menu *items* from — this phase ports the *layout*: fully
+terminal-independent Git GUI. Asked four scope questions before coding; owner answered: (1)
+**full Spck-style restyle** (REPOSITORY header + 3 icons, two menus exactly like the
+screenshots, UNSTAGED section with count badge; commit box + changes + pull/refresh stay
+below); (2) **Commit All = commit only, no push** (new path; big button unchanged); (3)
+**Provider opens the same credentials dialog** as Git Credentials; (4) **all 4 credential
+fields** (nothing lost). Shipped: Spck-exact header (branch menu = Branches/Remotes/Log
+History/Refresh Files; push menu = BRANCH header + Commit All/Revert All/Checkout
+Commit/Fetch/Pull/Push/Git Credentials/Provider), branch chip on its own row below;
+UNSTAGED collapsible + count badge + header search filter (display-only); install status
+bar (elapsed seconds + indeterminate track — `pkg` reports no percentage — success
+refreshes in place, `ENDED_WITHOUT_INSTALL` now shows failed + RETRY instead of silently
+reverting); new `GitCredentialsDialog.kt` (screenshot 2's shape: provider row with GitHub
+as the honest single entry, Manage link to Settings, 4 fields, "Create a GitHub Token."
+link, Cancel/Ok — same `GitCredentialsStore` Settings uses, save refreshes readiness);
+new `commitOnly` (same guards + `stageAll` choke point as commit-and-push, no push —
+existing unpushed section offers the follow-up PUSH). Deliberately NOT ported: screenshot
+4's `+` stage-all (73.1 proved a stage control here is a no-op dressed as an action) and
+screenshot 3's shortcut hint (no `Ctrl+Enter` handler exists in this sheet). Supersedes
+two 73.3 decisions: the single overflow menu (split into the two screenshot menus, every
+action kept) and credentials-as-Settings-jump (inline dialog now; only Manage still
+jumps). Session branch `arena/01a0eca9-codec` was fast-forwarded to `arena/01a0eb2d-codec`
+tip `5e242f9` first (identical content), then this phase on top. Tests: new
+`GitSpckPanelWiringTest.kt` (8 cases), parity/install/discard wiring tests updated (see
+record). No JVM/kotlinc in sandbox — verified with a Kotlin state-machine brace/paren
+scan + a Python mirror of every test assertion before pushing (caught two edit-tool
+glitches pre-commit). One CI fixup round (backtick test name with an illegal `:` —
+`d469d52`). Record: `docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`. No
+device pass; none claimed. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
+
+**2026-09-29 — Phase 73.4 (device fix: git-refresh mis-reported "installed" after any error) ✅
+IMPLEMENTED, CI ✅ GREEN `36551505966` on `b49e726`.** Owner device report, verbatim: "Auto install not
+working"; follow-up, after asking where: tapped Install Git in the Git panel, then "I click the
+initialize in the repo no installed git" — the Source Control sheet was offering 73.3's
+"Initialize repository" button on a project where git was never actually installed, so the
+owner never even saw the Install Git button. Root cause: `GitControlViewModel.refresh()` wrapped
+manager-acquisition and git-status in ONE try/catch whose catch unconditionally set
+`gitInstalled = true` and never touched `isRepo` (left stale at the `UiState` default, `false`,
+for a fresh sheet) — so ANY exception (including one from `ShellBootstrap.prepare()` writing
+profile scripts, nothing to do with git) was reported as "git is installed, something else
+broke", landing exactly on `gitInstalled = true, isRepo = false` — the "Initialize repository"
+state. Fixed: manager acquisition is now its own try/catch reporting `gitInstalled = false,
+isRepo = false` on failure (routes to Install Git instead of a dead-end Initialize button); the
+git-status catch now re-derives `isRepo` with a fresh, plain filesystem check instead of leaving
+it stale. New test: `GitRefreshStateWiringTest.kt` (5 cases, source-scan style, every assertion
+hand-verified against the real file with a Python mirror of Kotlin's substring semantics before
+being trusted). Record: `docs/ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md`. **This does not
+claim to know why the underlying exception fired on the owner's device** — if git still will not
+install after this fix, the next step is a `pkg install -y git` run captured directly from
+Terminal (exit code + output) to read the real failure. **CI ✅ GREEN `36551505966`.** No
+device pass; none claimed. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
+
+**2026-09-29 — Phase 73.3 (Git menu: full GUI parity with Spck) ✅ IMPLEMENTED, CI ✅ GREEN
+`36544645579` on `84b8d79`.** Owner-reported directly, attached 4 Spck Editor screenshots, verbatim:
+"Now git is fully depend on terminal but want it to be gui not a cli. Mean everything will be
+from buttons no need terminal for that (expect git install). Like spck i also attache some
+screenshot for help. Analysis all the screenshot carefully every small details must be note."
+Screenshots analysed in full: a branch-icon dropdown (Branches/Remotes/Log History/Refresh
+Files — Branches already had full parity via `BranchSwitchSheet`) and a push-icon dropdown
+(Commit All/Revert All/Checkout Commit/Fetch/Pull/Push/Git Credentials/Provider — Commit/
+Push/Pull already existed). Missing: standalone Fetch, Log History, Checkout Commit, Revert
+All, a general multi-remote Remotes screen, a Git Credentials shortcut, and `git init` (the one
+remaining CLI-only escape hatch for a folder that isn't a repo yet). Asked three scope
+questions before coding; owner answered: (1) **full parity** — port the whole menu, not just
+git-init; (2) **Revert All needs a confirm dialog** (bulk discard of staged+unstaged tracked
+changes, untracked files untouched — "this cannot be undone"); (3) **one shot**, this session,
+not staged across chats. This supersedes 73.2 decision #3 for the not-a-repo case specifically:
+`git init` is now a real button, not wording-only (the plain-words rewrite itself stays, minus
+the now-redundant "type git init in the Terminal" sentence). Shipped:
+`GitManager.init/checkoutCommit/revertAllChanges/removeRemote/remotesDetailed/log` (+ new pure
+`GitLog.kt`: `GitCommitEntry`/`GitLogParser`/`GitRemoteEntry`); 10 new `GitControlViewModel`
+functions, all through the existing `runGitOperation`/hand-rolled-`launch` shapes already used
+by every other button in the sheet; a new header overflow menu (Fetch/Log History/Checkout
+Commit/Remotes/Git Credentials/Revert All) visible once git+repo are both ready; the branch
+chip is now a `when` (a detached `HEAD` from Checkout Commit used to make it vanish silently —
+now shows a distinct amber chip using Phase 17's previously-unwired `git_detached_head`
+string); a new `GitInitGuidance` composable (real init button, matching 73.2's
+`GitInstallGuidance` shape) replacing the not-a-repo's old text-only guidance; two new sheets
+(`GitLogSheet.kt`: shared Log History/Checkout Commit list, checkout confirms first in plain
+words; `GitRemotesSheet.kt`: list + add + remove, remove confirms first); Revert All's own
+confirm `AlertDialog` (non-dismissable, matches the per-file discard dialog's shape); "Git
+Credentials" as a menu shortcut into the existing `SettingsScreen` credentials editor (reuses
+both call sites' existing `onOpenSettings` — no second editor built). Out of scope, flagged not
+silently skipped: Spck's Provider item (GitHub-only app, nothing suggests another provider),
+the tree's search-files box (unrelated to git), a dedicated Log History diff view (the existing
+per-file diff view already covers inspecting changes). New tests: `GitManagerTest.kt` extended
+(fake-git-script `init`/`remote`/`log` cases; happy paths + input-validation rejections for
+every new engine method), `GitLogParserTest.kt` (new, pure parser tests), `GitGuiParityWiringTest.kt`
+(new, source-scan wiring pins — no Robolectric render exists for this sheet), and
+`GitInstallWiringTest.kt` updated for the superseded not-a-repo test. No JVM (`java`) or
+coroutines/JUnit jars were available in this fresh sandbox this session (confirmed via `find /`
+and blocked apt/curl network checks) — unlike 73.1/73.2, no local kotlinc syntax check was
+possible; verified instead by line-by-line manual review, production-file brace/paren-count
+sanity checks (balanced), and a direct `grep -cF` confirmation of every source-scan test's
+literal anchor against the real file before trusting it. Without that local check, the first
+push surfaced two real mistakes: `AlertDialog`'s `dismissOnBackPress`/`dismissOnClickOutside`
+needed `properties = DialogProperties(...)`, not direct named args (compile failure, run
+`36538343931`, fixed `5b38694`), and a `strings.xml` wiring-test substring check needed a
+`substringBefore` to stop it capturing unrelated later strings that also said "Terminal" (test
+failure, run `36538858396`, fixed `84b8d79`). **CI: ✅ GREEN `36544645579`** on tip `84b8d79`.
+Record: `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`. No device pass; none claimed.
+Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
+
+**2026-09-29 — Phase 73.2 (Git connection: auto-install, clear errors, new-user guidance) ✅
+IMPLEMENTED, CI ✅ GREEN `36523739665` on `2f6bf55`.** Owner-reported directly (not a discussion draft), verbatim: "The git
+connection in the editor part make it properly working: 1. If git is not installed auto install
+1st. 2. Clear error massage that can be read by normal users. 3. What to do add for new users."
+Reading the code first: the not-installed state was one static sentence with no action; error
+classification (`GitErrors.classify`) already maps ~12 raw git failures to plain-English messages
+with a next step each (found already good, left unchanged); the not-a-repo message named a fix
+without ever saying what Git/Source Control is for. Asked three scope questions before writing
+code; owner answered each: (1) auto-install = a one-tap **Install Git** button, not silent — no
+install happens without a tap, background progress, auto-continues on success; (2) if the Linux
+userland itself isn't ready yet (rare), keep today's "go to Terminal" message unchanged — do not
+chain into the big userland bootstrap from the Git sheet; (3) new-user guidance = better wording
+only, no new buttons. Shipped: the Source Control sheet gets a `TerminalViewModel` handle via the
+existing `activityTerminalViewModel()` helper and reuses the exact Packages-tab install mechanism
+(`sendCommand("pkg install -y git")` + polling the pure, already host-tested
+`PkgResult`/`InstallOutcomes`) gated by the same `SetupGatePolicy.can(INSTALL_PACKAGE, ...)` the
+Packages tab uses — allowed → new `GitInstallGuidance` (explainer + INSTALL GIT button +
+installing/failed states, stays in the sheet and refreshes in place on success, unlike a Packages
+row); refused → today's message unchanged. `git_not_a_repo_message` rewritten in plain words
+(states what Git does before naming the same two existing recovery paths); no new action added
+there. New tests: `GitInstallWiringTest.kt` (source-scan style, matching `GitDiscardWiringTest`'s
+precedent — no Robolectric Compose render exists for this sheet). Pre-validated with a local
+kotlinc 2.4.20 + JRE 25 syntax check (no parse errors; unresolved-reference cascades only,
+expected without the Android/Compose classpath). Record: `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`.
+**CI: ✅ GREEN `36523739665`** on tip `2f6bf55` (the first real Gradle compile/run of the changed
+files). No device pass; none claimed. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
+
+**2026-09-29 — Phase 73.1 (Source control and GitHub) ✅ IMPLEMENTED, CI pending.** Verified state
+first: `main` @ `69c4b5316b3f2072bed05f96e22698b4d26da9d0` (PR #94, Phase 71.1 + the pinch-zoom
+follow-up), CI green, PRs #83/#42 untouched. Owner picked **73.1** from the offered drafts (65.1,
+73.1, 74.1). Reading `GitControlView.kt`/`GitControlViewModel.kt` end to end found: no
+staged/unstaged grouping (one flat "Changes N" list); and, more materially, the per-file +/−
+stage toggle drew the identical icon whether a file was staged or not and had **zero effect** on
+what got committed — `commitAndPush` always `git.stageAll()`s before `git.commit()` (confirmed one
+call site), matching the existing "what will be committed" preview, which already assumes
+add-everything. Asked three questions (focus, the stage-toggle fix, whether to check the
+COMMIT & PUSH button's hardcoded lavender colour for contrast); **owner answer verbatim: "Your
+choice"** for all three — every decision below is recorded as the chat's, not the owner's. Chat's
+choices: beginner-focused (matches the brief's own starting recommendation); keep "stage
+everything" as the one-tap model and remove the now-misleading per-file toggle from ordinary
+change rows (Mark Resolved on conflict rows is untouched — it calls `git.stageFile` directly and
+is a real action); measured the button's contrast (7.58:1 enabled, passes AA/AAA; its disabled
+state is WCAG §1.4.3-exempt) and left it unchanged per the Phase 40.5 colour law ("values that
+already pass are not restyled"). Discard safety, push readiness/help-link, conflicts and the push
+result card were reviewed and are untouched — they already do what the brief asked for. Shipped:
+`GitChangeRow`'s trailing control now renders only for a conflict row (Mark Resolved);
+`GitControlViewModel.toggleStage()` removed (its only caller was gone). Tests:
+`GitDiscardWiringTest` amended (`existing git affordances still delegate to the one engine` drops
+the removed pin) + new case `the ordinary change row has no stage toggle, only Mark Resolved does`.
+Pre-validated with a local kotlinc 2.4.20 + JRE 25 syntax check (no parse errors; unresolved-
+reference cascades only, expected without the Android/Compose classpath) — a syntax reading, not
+CI. Record: `docs/ui-polish-chats/PHASE_73_1_GIT.md`. **CI: ✅ GREEN `36519004263` on `9acfa34`**
+(12 m 17 s) — the first real Gradle compile/run of the changed files. No device pass; none
+claimed. Remaining discussion drafts: 65.1, 74.1. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
+
 **2026-09-29 — Phase 71.1 (Packages, installation and Terminal) ✅ COMPLETE — owner device-tested and MERGED on
 his command** (*"Device test passed record everything and merge with main"*; no device/OS/build named). Owner said "71.1 start"; asked four questions
 (`detect_exit`, ⬇ `confirm`, `name_in_toast`, `review_more`), then reported three device problems

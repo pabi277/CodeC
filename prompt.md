@@ -1,13 +1,20 @@
-> **Latest owner instruction — 2026-09-29 (after Phases 70.1 + 72.1):** *"Yes all test
-> passed complete docs and merge to main"* → the 70.1 + 72.1 branch (`arena/01a0e84c-codec`:
-> the five-tab preview console, the run Output Panel, preview render rounds 1–4, the phone
-> pass, the project card that opens the editor, and the `SoraEditorHost` composing-replay
-> fix — TROUBLESHOOTING §47) is **owner-tested and merged via
-> [PR #93](https://github.com/pabi277/CodeC/pull/93)**; last code commit `308441e`, CI ✅
-> `36467347590`. The PR records the merge commit. The polish series' remaining discussion
-> drafts are **65.1, 73.1, 74.1** (2026-09-29 addendum: 68.1 was merged in PR #90, and **71.1 is owner-device-tested and merged** — see `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`) — the owner names the next one; nothing starts
-> on the agent's own. The operative handoff is the **CURRENT HANDOFF — 2026-09-29** block
-> below; every block after it is history.
+> **Latest owner instruction — 2026-09-29 (the 73.x git series):** after PR #94
+> (Phase 71.1 + pinch-zoom, `main` @ `69c4b53`, CI `36515609337`), the owner picked **73.1
+> Source control and GitHub** from the offered drafts (CI ✅ `36519004263`, branch
+> `arena/01a0eb2d-codec`), then reported a run of direct follow-ups on the same builds —
+> **73.2 Git connection** (CI ✅ `36523739665`), **73.3 full GUI parity** (CI ✅ `36544645579`),
+> **73.4 refresh mis-reported "installed"** (CI ✅ `36551505966`) — then the branch moved to
+> `arena/01a0eca9-codec` for **73.5 Spck-exact panel** (CI ✅ `36560766234`), **73.6 drawer
+> full-GUI Initialize + ask-first prompt** (CI ✅ `36566495685`), **73.7 git moves into the
+> editor panel** (CI ✅ `36583980074`), **73.8 git page owns credentials + install card +
+> hints** (CI ✅ `36593360018`), **73.9 manual-first no-remote + origin default**
+> (CI ✅ `36597542971`) — then *"Everything looks good update docs and merge it to main"* →
+> **merged 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95)**
+> (device pass ✅ 2026-09-29). Records: `docs/ui-polish-chats/PHASE_73_*.md`,
+> `docs/NEXT_STEPS.md` head entries.
+> The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
+> names the next one; nothing starts on the agent's own. The operative handoff is the
+> **CURRENT HANDOFF — 2026-09-29 (after PR #95)** block below; every block after it is history.
 
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
@@ -42,40 +49,167 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-29, after PR #93 (Phases 70.1 + 72.1, owner-tested and
-merged).** Read `rule.md`, `docs/NEXT_STEPS.md` (head entry), `docs/chat-phase70/README.md`
-and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the historical entries below.
+**CURRENT HANDOFF — 2026-09-29 (after PR #95, 73.1–73.9 merged; device pass ✅).**
+Read `rule.md`,
+`docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`,
+`docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`,
+`docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5
+before the historical entries below (73.1–73.6 records stand as history behind them).
 
 *State to verify first, never assume:* `main` should be at the merge commit of
-[PR #93](https://github.com/pabi277/CodeC/pull/93) (`gh pr view 93 --json mergeCommit,state`);
-your session is a fresh `arena/*` branch off that `main` — confirm with `git status`,
-`git log -1`, `git ls-remote origin main`, `gh pr list`, `gh run list --limit 3`. The Arena
-sandbox can silently reset local HEAD to the base commit between turns while the files stay
-newer (rule.md §2.4): before every commit run `git fetch origin <session-branch> && git
+[PR #95](https://github.com/pabi277/CodeC/pull/95) (73.1–73.9, the terminal-independent git
+series — the PR records the merge commit); your session is a fresh `arena/*` branch off that
+`main` — confirm with `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`,
+`gh run list --limit 3`.
+The Arena sandbox can silently reset local HEAD to the base commit between turns while the files
+stay newer (rule.md §2.4): before every commit run `git fetch origin <session-branch> && git
 reset --mixed FETCH_HEAD` and check `git status --short` shows only your own edits. Never
-`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were open when
-#93 merged (#83, #42) — leave them to the owner.
+`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were still open at
+#95's merge (#83, #42) — leave them to the owner.
 
 *What is done and must not be redone:* the UI polish series (`docs/UI_POLISH_REVIEW_20260927.md`
-§5) has 64, 66.1, 67.1, 69.1–69.4, 70.1 and 72.1 delivered, owner-tested and merged. The
+§5) has 64, 66.1, 67.1, 69.1–69.4, 70.1, 71.1, 72.1 and 73.1–73.9 delivered, owner-tested and
+merged (73 = terminal-independent git: Spck-parity Repository panel, ditto dialogs, install
+card, credentials on the git page, manual-first remote). The
 editor's replay path (`SoraEditorHost`: one `Content.replace` delta, `restartInput()` before and
 after it only while `hasComposingText()`), the preview WebView's `MATCH_PARENT` birth and its
 page-box instrument line, the tools panel's phone geometry (half the page area; the keyboard
-slides under a panel and page that keep their size), the run panel's 40 % default, and the hub's
-tap-opens-editor / ⋮ → Browse files are all device-passed — do not re-debug them without a new
-symptom (rule.md §6, last bullet).
+slides under a panel and page that keep their size), the run panel's 40 % default, the hub's
+tap-opens-editor / ⋮ → Browse files, and 71.1's install-result/pin/session-name/confirm/resize
+behaviour are all device-passed — do not re-debug them without a new symptom (rule.md §6, last
+bullet).
 
-*What is next — the owner decides, you ask:* the remaining discussion drafts are **65.1 Shell and
-navigation**, **68.1 Editor chrome, tabs and file actions**, **71.1 Packages, installation and
-Terminal**, **73.1 Source control and GitHub**, **74.1 Settings, support and final consistency**
-(briefs in `docs/ui-polish-chats/`). Your first message reports the verified state, then asks the
-owner which part (or which bug) comes next — offer the five, with one line each on what the brief
-proposes; do not recommend a redesign (owner, 2026-09-27: keep the current look). If the owner
-reports a bug instead, run the rule.md §4 lifecycle: evidence first (his words, screenshots,
-console lines), measure in the checkout, ask when a decision is his, fix host-testably with pins,
-CI, docs in the same commit, report — and stop at the merge gate (§3) unless he commands the merge
-in the same chat. Record his answers verbatim; never claim device evidence he did not give;
-when he delegates a choice ("your choice"), say in the record that the choice was the chat's.
+*73.1 (this session, not yet on `main`):* the owner picked **73.1 Source control and GitHub**
+from the offered drafts (65.1/73.1/74.1) and answered "your choice" to all three questions asked
+(focus, a stage-toggle finding, a colour check) — every design decision is recorded as the chat's,
+not the owner's. Found by reading the code (not a reported bug): the per-file +/− stage toggle in
+the "Changes" list drew the same icon whether a file was staged or not, AND had no effect on what
+got committed (`commitAndPush` always `git.stageAll()`s first). Fix: removed that toggle from
+ordinary change rows (Mark Resolved on conflict rows, which does a real `git.stageFile`, is
+untouched); `GitControlViewModel.toggleStage()` deleted as orphaned. Discard safety, push
+readiness/help-links and the push result card were reviewed and left untouched — they already
+match the brief. **CI ✅ GREEN** (`36519004263` on `9acfa34`) — the first real Gradle
+compile/run of the changed files. **Not merged** — the owner has not yet run a device pass or
+given the merge command (rule.md §3); do that before starting anything new. Full record,
+evidence split (source tests / Android tests / device) and CI state:
+`docs/ui-polish-chats/PHASE_73_1_GIT.md`.
+
+*73.2 (this session, not yet on `main`, not a discussion draft — a direct owner bug/improvement
+report):* owner verbatim: "The git connection in the editor part make it properly working: 1. If
+git is not installed auto install 1st. 2. Clear error massage that can be read by normal users.
+3. What to do add for new users." Asked three scope questions first; owner answers: (1) a one-tap
+**Install Git** button, not silent (background progress, auto-continues on success); (2) if the
+Linux userland itself isn't ready yet (rare), keep today's "go to Terminal" message unchanged —
+do not chain into the big userland bootstrap from the Git sheet; (3) better wording only for
+new-user guidance, no new buttons. Shipped: the Source Control sheet reuses the exact Packages-tab
+install mechanism (`TerminalViewModel.sendCommand` + polling the pure `PkgResult`/
+`InstallOutcomes`), gated by the same `SetupGatePolicy` the Packages tab uses; on success it
+refreshes in place instead of navigating to Terminal (a deliberate deviation from the Packages
+convention, per the owner's "stay in place" answer). `git_not_a_repo_message` rewritten in plain
+words; `GitErrors.classify()` reviewed and found already good (no change). New test:
+`GitInstallWiringTest.kt`. **CI ✅ GREEN `36523739665`** (tip `2f6bf55`). Not merged — owner
+device pass and merge command still owed (rule.md §3). Full record:
+`docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`.
+
+*73.3 (this session, not yet on `main`, not a discussion draft — a direct owner bug/improvement
+report, 4 Spck Editor screenshots attached):* owner verbatim: "Now git is fully depend on
+terminal but want it to be gui not a cli. Mean everything will be from buttons no need terminal
+for that (expect git install). Like spck i also attache some screenshot for help. Analysis all
+the screenshot carefully every small details must be note." Screenshots showed Spck's branch-icon
+dropdown (Branches/Remotes/Log History/Refresh Files) and push-icon dropdown (Commit All/Revert
+All/Checkout Commit/Fetch/Pull/Push/Git Credentials/Provider). Asked three scope questions first;
+owner answers: (1) **full parity** — port the whole menu; (2) **Revert All needs a confirm
+dialog** (bulk discard of staged+unstaged tracked changes, untracked files untouched); (3) **one
+shot**, this session. This supersedes 73.2 decision #3 for the not-a-repo case only: `git init`
+is now a real button (the wording rewrite stays, minus the now-redundant terminal instruction).
+Shipped: new `GitManager` engine methods (`init`/`checkoutCommit`/`revertAllChanges`/
+`removeRemote`/`remotesDetailed`/`log`, + new pure `GitLog.kt`); 10 new `GitControlViewModel`
+functions, all through the sheet's existing operation shapes; a header overflow menu (Fetch/Log
+History/Checkout Commit/Remotes/Git Credentials/Revert All); a detached-HEAD chip (Checkout
+Commit's `git checkout <sha>` used to make the branch chip vanish silently — now shown, using
+Phase 17's previously-unwired `git_detached_head` string); a real init button replacing the old
+not-a-repo text; two new sheets (`GitLogSheet.kt`, `GitRemotesSheet.kt`); Revert All's confirm
+dialog; "Git Credentials" as a Settings shortcut (no second editor built). New tests:
+`GitManagerTest.kt` extended (fake-git-script `init`/`remote`/`log` cases), `GitLogParserTest.kt`
+(new), `GitGuiParityWiringTest.kt` (new, source-scan), `GitInstallWiringTest.kt` updated for the
+superseded not-a-repo test. No JVM/coroutines/JUnit jars were available in this fresh sandbox
+this session (confirmed, network-checked) — verified instead by manual review, brace/paren
+sanity checks, and a `grep -cF` confirmation of every wiring-test anchor against the real file.
+That manual review missed two real bugs the first two CI rounds caught: run `36538343931`
+failed `compileDebugKotlin` (the three new confirm dialogs passed `dismissOnBackPress`/
+`dismissOnClickOutside` as bare `AlertDialog` args instead of via `properties =
+DialogProperties(...)`, unlike the file's own pre-existing dialogs — fixed in `5b38694`); run
+`36538858396` then failed one host test (`GitInstallWiringTest`'s not-a-repo string check used
+an unscoped `substringAfter` that read to end-of-file and got polluted by unrelated later
+strings containing "Terminal" — fixed, plus the same latent shape in
+`GitGuiParityWiringTest`, in `84b8d79`). **CI ✅ GREEN `36544645579`** on tip `84b8d79`. Not
+merged — owner device pass and merge command still owed for 73.1/73.2/73.3/73.4 together
+(rule.md §3). Full record: `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`.
+
+*73.4 (this session, device fix, not a discussion draft):* owner device report, verbatim: "Auto
+install not working"; follow-up, after asking exactly where: tapped Install Git in the Git panel,
+then "I click the initialize in the repo no installed git" — meaning the sheet showed 73.3's
+"Initialize repository" button on a project where git was never installed, instead of the Install
+Git button. Root cause, found by reading `GitControlViewModel.refresh()`: it wrapped acquiring
+the `GitManager` AND running `git status` in one try/catch, and the catch unconditionally set
+`gitInstalled = true` while never touching `isRepo` (left stale at the `UiState` default,
+`false`). `GitContext.manager()` only reaches shell/credential setup — `ShellBootstrap.prepare()`
+writing profile scripts, extracting TCC, reading stored credentials, none of it git-specific —
+AFTER already confirming a `git` binary exists on disk; any exception there (or anywhere else in
+the block) got misreported as "git is installed, something else broke", landing on exactly
+`gitInstalled = true, isRepo = false` — the "Initialize repository" state — on a device where git
+was never confirmed working. Fixed: manager acquisition is now its own try/catch reporting
+`gitInstalled = false, isRepo = false` on failure (routes to Install Git, not a dead-end
+Initialize button); the git-status catch re-derives `isRepo` with a fresh plain filesystem check
+instead of leaving it stale. New test: `GitRefreshStateWiringTest.kt` (5 cases, source-scan
+style; every assertion hand-verified against the real file with a Python mirror of Kotlin's
+substring semantics — this session's own 73.3 CI-round lesson applied before trusting it, not
+after). This does **not** claim to know why the underlying exception fired on the owner's
+device — if git still will not install after this fix, the next diagnostic step is a
+`pkg install -y git` run captured directly from Terminal (exit code + output). **CI ✅ GREEN
+`36551505966`** on tip `b49e726`, first try. Not merged — owner device pass and merge command still owed for
+73.1/73.2/73.3/73.4 together (rule.md §3). Full record:
+`docs/ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md`.
+
+*73.5 (this session, on `arena/01a0eca9-codec`, not a discussion draft — a direct owner
+improvement report, same 4 Spck screenshots):* owner verbatim: "Ok i want to convert the git
+part of the editor fully terminal independent gui … the 1st git install will be in terminal
+but not be redirected to terminal instead a status ber for the installation completion …
+Settings have a git config place merge that also here so here also i can set like the
+provide screenshot". The session branch was fast-forwarded to `arena/01a0eb2d-codec` tip
+`5e242f9` first (identical content), then this phase on top. Asked four scope questions
+first; owner answers: (1) **full Spck-style restyle** (REPOSITORY header + 3 icons, two
+menus exactly like the screenshots, UNSTAGED section with count badge; commit box + changes
++ pull/refresh stay below); (2) **Commit All = commit only, no push**; (3) **Provider
+opens the same credentials dialog** as Git Credentials; (4) **all 4 credential fields**.
+Shipped: Spck-exact header (branch menu + push menu item-for-item, same ViewModel calls
+73.3 used; branch chip on its own row below); UNSTAGED collapsible + count badge +
+display-only search filter (screenshot 4's `+` stage-all deliberately NOT ported — 73.1
+proved a stage control here is a no-op dressed as an action; no shortcut hint shown —
+no `Ctrl+Enter` handler exists); install status bar (elapsed seconds + indeterminate
+track, finishes in-panel; `ENDED_WITHOUT_INSTALL` now failed + RETRY); new inline
+`GitCredentialsDialog.kt` (screenshot 2's shape on the shared `GitCredentialsStore`;
+only its Manage link still jumps to Settings); new `commitOnly` (same guards +
+`stageAll` choke point, no push). Supersedes two 73.3 decisions: the single overflow
+menu (split in two, every action kept) and credentials-as-Settings-jump. Tests: new
+`GitSpckPanelWiringTest.kt` (8 cases); parity/install/discard wiring tests updated. No
+JVM/kotlinc in sandbox — verified with a Kotlin state-machine brace/paren scan + a
+Python mirror of every test assertion pre-push (caught two edit-tool glitches before
+commit). One CI fixup round (backtick test name with an illegal `:` — `d469d52`).
+**CI ✅ GREEN `36560766234`** on tip `d469d52`; not merged — owner device pass and merge
+command owed for 73.1/73.2/73.3/73.4/73.5 together (rule.md §3). Full record:
+`docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`.
+
+*What is next — the owner decides, you ask:* once 73.1, 73.2, 73.3, 73.4 and 73.5 are settled, the remaining discussion drafts
+are **65.1 Shell and navigation** and **74.1 Settings, support and final consistency** (briefs in
+`docs/ui-polish-chats/`). Ask which part (or which bug) comes next — offer both, with one line
+each on what the brief proposes; do not recommend a redesign (owner, 2026-09-27: keep the current
+look). If the owner reports a bug instead, run the rule.md §4 lifecycle: evidence first (his
+words, screenshots, console lines), measure in the checkout, ask when a decision is his, fix
+host-testably with pins, CI, docs in the same commit, report — and stop at the merge gate (§3)
+unless he commands the merge in the same chat. Record his answers verbatim; never claim device
+evidence he did not give; when he delegates a choice ("your choice"), say in the record that the
+choice was the chat's.
 
 *Working habits this series proved:* read sora/Compose/Chromium sources before touching their
 behaviour (the tag is sora 0.24.6; `git clone --depth 1 --branch 0.24.6 --sparse` works in the
