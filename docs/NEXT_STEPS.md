@@ -1,3 +1,24 @@
+**2026-09-29 — Phase 73.8 (git page owns credentials, the install card, and beginner hints) 🚧
+IMPLEMENTED, CI ✅ GREEN `36593360018` on `aa8912d`.** Owner punch-list on the 73.7 build, verbatim gist:
+push-menu trigger should be ⋮ (the share glyph reads as "share this file"); the install "is just a
+status bar" — want "a card saying installing git like in package part, will show live % … and will
+show live line. If failed then failed and retry. But not redirected to terminal"; the token flow must
+live "in the git page"; and the git UI is "hard but ok" for newcomers. Asked five scope questions
+before coding; owner locked all five: package-style install card, ⋮ trigger, repoint every stale
+Settings/Modules/Terminal text, three inline hints, clone dialog opens credentials inline. Shipped:
+`GitInstallGuidance` → `GitInstallCard` (userland live state while the gate refuses — Terminal tab's
+own stage words, real download % only, gate's refusal sentence; git's install once allowed — elapsed,
+live transcript line, in-box fail tail; no fake %, no Terminal redirect); MoreVert trigger; readiness
+NO_TOKEN row grew a GIT CREDENTIALS button; clone hint stacks `GitCredentialsDialog` above its draft;
+`GitReadiness`/`GitErrors`/publish/push-outcome texts all repointed; one grey hint line on UNSTAGED,
+in Commit, in Push. Tests: install-wiring rewrite + guidance/clone/hint/trigger pins; `GitErrorsTest`
+pins follow the rewords. No JDK/SDK in the sandbox — verified with a Python mirror of every
+new/changed assertion (all pass) + CI as the compiler (3 rounds: TerminalStatusLabel import +
+duplicate @Composable, then one missed pin, then green). Record:
+`docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`. No device pass; none claimed. **Not
+merged** — owner device pass and merge command owed for 73.1–73.8 together (rule.md §3). Device
+`rm -rf` of the stray `projects/.git` still owed.
+
 **2026-09-29 — Phase 73.7 (git moves into the editor panel: Spck-ditto dialogs, no sheets) 🚧
 IMPLEMENTED, CI ✅ GREEN `36583980074` on `0b57c0a`.** Owner follow-up on the 73.5/73.6 builds with 8 Spck screenshots attached
 (branch menu, Git Credentials, Remotes, New Remote, detach-HEAD confirm, Commit All, empty Remotes,
