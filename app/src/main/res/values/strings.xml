@@ -699,5 +699,39 @@
     <string name="git_revert_all_action">Revert All</string>
     <string name="git_revert_all_title">Discard all changes?</string>
     <string name="git_revert_all_confirm">This restores every tracked file to its last commit, discarding all staged and unstaged edits at once. Files git doesn’t know about yet (untracked/new files) are left alone. This cannot be undone.</string>
+
+    <!-- Phase 73.5 — Spck-exact panel: REPOSITORY header with search /
+         branch / push menus, an install status bar, and an inline
+         Git Credentials dialog (Settings keeps its own editor; both
+         read and write the same GitCredentialsStore). -->
+    <string name="git_repository_title">REPOSITORY</string>
+    <string name="git_search_changes">Search changes</string>
+    <string name="git_branch_menu_description">Branch options</string>
+    <string name="git_push_menu_description">Commit and sync options</string>
+    <string name="git_branches_action">Branches</string>
+    <string name="git_refresh_files_action">Refresh Files</string>
+    <string name="git_commit_all_action">Commit All</string>
+    <string name="git_provider_action">Provider</string>
+    <string name="git_branch_menu_header">BRANCH: %1$s</string>
+    <string name="git_unstaged_header">UNSTAGED</string>
+    <string name="git_collapse_section">Collapse</string>
+    <string name="git_expand_section">Expand</string>
+    <string name="git_no_matching_changes">No changes match this search.</string>
+    <string name="git_install_progress">Installing git… · %1$ds</string>
+    <string name="git_install_background_note">Running in the background — stay here. This bar finishes when git is ready.</string>
+    <string name="git_credentials_title">Git Credentials</string>
+    <string name="git_credentials_provider_label">PROVIDER</string>
+    <string name="git_credentials_provider_name">GitHub</string>
+    <string name="git_credentials_manage">Manage</string>
+    <string name="git_credentials_username">Username</string>
+    <string name="git_credentials_commit_name">Commit name</string>
+    <string name="git_credentials_email">Email</string>
+    <string name="git_credentials_token">Token</string>
+    <string name="git_credentials_show">SHOW</string>
+    <string name="git_credentials_hide">HIDE</string>
+    <string name="git_credentials_create_prefix">Create a </string>
+    <string name="git_credentials_create_link">GitHub Token</string>
+    <string name="git_credentials_ok">Ok</string>
+    <string name="git_credentials_saved">GitHub credentials saved ✓</string>
 </resources>
 

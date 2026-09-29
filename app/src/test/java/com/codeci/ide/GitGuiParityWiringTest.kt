@@ -23,24 +23,47 @@ class GitGuiParityWiringTest {
     private val remotesSheet = source("screens/GitRemotesSheet.kt")
     private val strings = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
 
-    @Test fun `the overflow menu only appears once git and a repository are both ready`() {
+    @Test fun `the two header menus only appear once git and a repository are both ready`() {
+        // Phase 73.5 superseded the 73.3 overflow menu with Spck's two
+        // screenshot menus (branch menu + push menu); the readiness gate
+        // is unchanged.
         assertTrue(sheet.contains("if (state.gitInstalled && state.isRepo) {"))
-        assertTrue(sheet.contains("IconButton(onClick = { showGitMoreMenu = true })"))
+        assertTrue(sheet.contains("IconButton(onClick = { showBranchMenu = true })"))
+        assertTrue(sheet.contains("IconButton(onClick = { showPushMenu = true })"))
         assertTrue(sheet.contains("DropdownMenu("))
-        assertTrue(sheet.contains("expanded = showGitMoreMenu,"))
+        assertTrue(sheet.contains("expanded = showBranchMenu,"))
+        assertTrue(sheet.contains("expanded = showPushMenu,"))
+        assertFalse(sheet.contains("showGitMoreMenu"))
     }
 
-    @Test fun `the overflow menu offers Fetch, Log History, Checkout Commit, Remotes, Credentials and Revert All`() {
-        assertTrue(sheet.contains("viewModel.fetch(context, projectRoot)"))
-        assertTrue(sheet.contains("logSheetMode = GitLogSheetMode.VIEW"))
-        assertTrue(sheet.contains("logSheetMode = GitLogSheetMode.CHECKOUT"))
-        assertTrue(sheet.contains("viewModel.loadRemotes(context, projectRoot)"))
-        assertTrue(sheet.contains("showRemotesSheet = true"))
-        assertTrue(sheet.contains("pendingRevertAll = true"))
-        // Git Credentials is a shortcut into the existing Settings screen —
-        // no second credentials editor was built.
-        assertTrue(sheet.contains("stringResource(R.string.git_credentials_action)"))
-        assertTrue(sheet.contains("onOpenSettings()"))
+    @Test fun `the branch menu offers Branches, Remotes, Log History and Refresh Files`() {
+        val menu = sheet.substringAfter("expanded = showBranchMenu,").substringBefore("expanded = showPushMenu,")
+        assertTrue(menu.contains("showBranchSheet = true"))
+        assertTrue(menu.contains("viewModel.loadRemotes(context, projectRoot)"))
+        assertTrue(menu.contains("showRemotesSheet = true"))
+        assertTrue(menu.contains("logSheetMode = GitLogSheetMode.VIEW"))
+        assertTrue(menu.contains("viewModel.refresh(context, projectRoot)"))
+        assertTrue(menu.contains("stringResource(R.string.git_branches_action)"))
+        assertTrue(menu.contains("stringResource(R.string.git_refresh_files_action)"))
+    }
+
+    @Test fun `the push menu offers Commit All, Revert All, Checkout Commit, Fetch, Pull, Push, Credentials and Provider`() {
+        // Bounded by the branch-chip row that follows the header, so the
+        // bottom PULL button below cannot satisfy these assertions.
+        val menu = sheet.substringAfter("expanded = showPushMenu,").substringBefore("// ---- branch chip")
+        assertTrue(menu.contains("stringResource(R.string.git_branch_menu_header, pushMenuBranch)"))
+        assertTrue(menu.contains("viewModel.commitOnly(context, projectRoot, commitMessage)"))
+        assertTrue(menu.contains("pendingRevertAll = true"))
+        assertTrue(menu.contains("logSheetMode = GitLogSheetMode.CHECKOUT"))
+        assertTrue(menu.contains("viewModel.fetch(context, projectRoot)"))
+        assertTrue(menu.contains("viewModel.pull(context, projectRoot)"))
+        assertTrue(menu.contains("viewModel.push(context, projectRoot)"))
+        // Phase 73.5 — Git Credentials AND Provider both open the new
+        // inline dialog (screenshot 2); only the dialog's own Manage link
+        // still jumps to Settings.
+        assertTrue(menu.contains("stringResource(R.string.git_credentials_action)"))
+        assertTrue(menu.contains("stringResource(R.string.git_provider_action)"))
+        assertTrue(menu.contains("showCredentialsDialog = true"))
     }
 
     @Test fun `Revert All is disabled with nothing to discard or before the first commit`() {

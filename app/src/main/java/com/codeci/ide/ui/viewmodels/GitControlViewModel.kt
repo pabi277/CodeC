@@ -735,6 +735,47 @@ class GitControlViewModel : ViewModel() {
     }
 
     /**
+     * Phase 73.5 — Spck's "Commit All": stage everything and commit locally,
+     * WITHOUT pushing. Same guards as [commitAndPush] (a message is required,
+     * conflicts block the commit), same [GitManager.stageAll] choke point, but
+     * the push step is skipped — the sheet's existing "N commit(s) not pushed
+     * yet" section then offers the retry/push, so Commit All → PUSH reads as
+     * one honest two-step flow.
+     */
+    fun commitOnly(context: Context, projectRoot: File, message: String) {
+        val trimmed = message.trim()
+        if (trimmed.isEmpty()) {
+            _state.value = _state.value.copy(message = "Enter a commit message")
+            return
+        }
+        val conflicts = conflictsOf()
+        if (conflicts.isNotEmpty()) {
+            _state.value = _state.value.copy(
+                message = if (conflicts.size == 1) {
+                    "Resolve the conflict in ${conflicts.first().path.substringAfterLast('/')} before committing"
+                } else {
+                    "Resolve the ${conflicts.size} conflicted files before committing"
+                }
+            )
+            return
+        }
+        runGitOperation(context, projectRoot, "Committing…") { git ->
+            val hygiene = git.stageAll(projectRoot)
+            val note = hygiene.userMessage()
+            if (note != null) {
+                _state.value = _state.value.copy(hygieneNote = note)
+            }
+            git.commit(projectRoot, trimmed)
+            val branchLabel = runCatching { git.currentBranch(projectRoot) }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
+            val prefix = if (note != null) "$note · " else ""
+            val where = if (branchLabel != null) " to $branchLabel" else ""
+            "${prefix}Committed locally$where ✓ — not pushed yet"
+        }
+    }
+
+    /**
      * Phase 17 device fix — retry a push on its own (the Source Control sheet
      * offers this whenever the branch is ahead of its remote).
      */

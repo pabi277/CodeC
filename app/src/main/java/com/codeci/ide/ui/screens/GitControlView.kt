@@ -23,12 +23,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,6 +49,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -106,6 +117,13 @@ import java.io.File
  * carries a typed file icon, its folder path, the porcelain letter and a
  * per-file +/− stage toggle, and the PULL / REFRESH outlined button pair.
  * Engine and diff viewer are the unchanged Phase 13 `GitManager`/`DiffEngine`.
+ *
+ * Phase 73.5 re-skinned the chrome Spck-exact (screenshots 1–4): a
+ * REPOSITORY header with search / branch-menu / push-menu icons, an
+ * UNSTAGED collapsible section with a count badge, an install status bar,
+ * and an inline Git Credentials dialog. The commit box, commit preview,
+ * conflicts, PULL / REFRESH and the unpushed section below the header are
+ * unchanged behaviour.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,9 +136,10 @@ fun GitControlSheet(
     /** Phase 39 device follow-up — see [BranchSwitchSheet.onAfterSwitch]. */
     onAfterBranchSwitch: (() -> Unit)? = null,
     /**
-     * Phase 73.3 — the overflow menu's "Git Credentials" item (Spck parity)
-     * reuses the drawer footer's existing Settings jump; there is no second
-     * credentials screen to build, [SettingsScreen] already owns that UI.
+     * Phase 73.5 — the Git Credentials dialog's "Manage" link reuses the
+     * drawer footer's existing Settings jump (Settings keeps its own
+     * editor; both write the same store). The dialog itself lives in this
+     * sheet now — credentials no longer require leaving the panel.
      */
     onOpenSettings: () -> Unit = {},
 ) {
@@ -132,13 +151,20 @@ fun GitControlSheet(
     var showBranchSheet by remember { mutableStateOf(false) }
     // Phase 40.3 — the Publish-to-GitHub dialog (create the remote there isn't one).
     var showPublishSheet by remember { mutableStateOf(false) }
-    // Phase 73.3 — Spck-parity actions: Fetch/Log History/Checkout
-    // Commit/Remotes/Revert All, reached from one overflow menu next to the
-    // branch chip instead of redesigning the header.
-    var showGitMoreMenu by remember { mutableStateOf(false) }
+    // Phase 73.5 — Spck-exact header: the 73.3 overflow menu is split into
+    // the two screenshot menus (branch menu + push menu). Every action the
+    // overflow had is still here, reached from the same ViewModel calls.
+    var showBranchMenu by remember { mutableStateOf(false) }
+    var showPushMenu by remember { mutableStateOf(false) }
+    var showCredentialsDialog by remember { mutableStateOf(false) }
     var logSheetMode by remember(projectRoot) { mutableStateOf<GitLogSheetMode?>(null) }
     var showRemotesSheet by remember { mutableStateOf(false) }
     var pendingRevertAll by remember { mutableStateOf(false) }
+    // Phase 73.5 — the header search icon filters the UNSTAGED list by
+    // path; the section itself collapses like Spck's.
+    var searchingGit by remember { mutableStateOf(false) }
+    var gitSearchQuery by remember { mutableStateOf("") }
+    var unstagedExpanded by remember { mutableStateOf(true) }
 
     // Phase 73.2 — install git in place instead of sending the user to
     // Packages/Terminal and back. Reuses the exact mechanism Phase 71.1 built
@@ -166,6 +192,8 @@ fun GitControlSheet(
     var installingGit by remember(projectRoot) { mutableStateOf(false) }
     var gitInstallStartedAtSec by remember(projectRoot) { mutableStateOf(0L) }
     var gitInstallFailed by remember(projectRoot) { mutableStateOf(false) }
+    // Phase 73.5 — elapsed seconds for the install status bar below.
+    var gitInstallElapsedSec by remember(projectRoot) { mutableStateOf(0) }
 
     LaunchedEffect(installingGit) {
         if (!installingGit) return@LaunchedEffect
@@ -185,14 +213,35 @@ fun GitControlSheet(
                     installingGit = false
                     gitInstallFailed = true
                 }
-                InstallOutcome.ENDED_WITHOUT_INSTALL -> installingGit = false
+                // Phase 73.5 — `pkg` ended but git still is not on disk
+                // (declined halfway, a partial write). Until now this
+                // silently reverted to the INSTALL button with no
+                // explanation; it now shows the same failed + RETRY state
+                // as a non-zero exit, since the user-visible truth ("git
+                // is still missing after an install ran") is identical.
+                InstallOutcome.ENDED_WITHOUT_INSTALL -> {
+                    installingGit = false
+                    gitInstallFailed = true
+                }
                 InstallOutcome.WAITING -> Unit
             }
+        }
+    }
+    // Phase 73.5 — ticks the "Installing git… · Ns" label on the status
+    // bar. `pkg` reports no percentage, so elapsed time is the honest
+    // progress signal (see GitInstallGuidance).
+    LaunchedEffect(installingGit) {
+        while (installingGit) {
+            delay(1_000)
+            gitInstallElapsedSec =
+                ((System.currentTimeMillis() / 1000) - gitInstallStartedAtSec)
+                    .coerceAtLeast(0).coerceAtMost(5999).toInt()
         }
     }
     val onInstallGit: () -> Unit = {
         gitInstallFailed = false
         gitInstallStartedAtSec = System.currentTimeMillis() / 1000
+        gitInstallElapsedSec = 0
         installingGit = true
         Toast.makeText(context, context.getString(R.string.git_installing), Toast.LENGTH_SHORT).show()
         terminalViewModel.sendCommand(gitPackage.installCommand)
@@ -204,17 +253,222 @@ fun GitControlSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-            // ---- header: title + branch chip -----------------------------
+            // ---- header: REPOSITORY + search / branch / push -------------
+            // Phase 73.5 — Spck screenshot 4: the title with three icon
+            // buttons on the right (search filters the UNSTAGED list; the
+            // branch button opens screenshot 1's menu; the push button
+            // opens screenshot 3's). The branch chip keeps its own row
+            // below so the current branch (or a detached HEAD) stays
+            // visible without opening a menu.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.source_control_title),
+                    text = stringResource(R.string.git_repository_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
+                if (state.gitInstalled && state.isRepo) {
+                    IconButton(onClick = { searchingGit = !searchingGit }) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = stringResource(R.string.git_search_changes)
+                        )
+                    }
+                    Box {
+                        IconButton(onClick = { showBranchMenu = true }) {
+                            Icon(
+                                SpckIcons.GitBranch,
+                                contentDescription = stringResource(R.string.git_branch_menu_description)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showBranchMenu,
+                            onDismissRequest = { showBranchMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_branches_action)) },
+                                leadingIcon = {
+                                    Icon(SpckIcons.GitBranch, contentDescription = null)
+                                },
+                                onClick = {
+                                    showBranchMenu = false
+                                    showBranchSheet = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_remotes_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Share, contentDescription = null)
+                                },
+                                onClick = {
+                                    showBranchMenu = false
+                                    viewModel.loadRemotes(context, projectRoot)
+                                    showRemotesSheet = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_log_history_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.History, contentDescription = null)
+                                },
+                                onClick = {
+                                    showBranchMenu = false
+                                    viewModel.loadCommits(context, projectRoot)
+                                    logSheetMode = GitLogSheetMode.VIEW
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_refresh_files_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Refresh, contentDescription = null)
+                                },
+                                onClick = {
+                                    showBranchMenu = false
+                                    viewModel.refresh(context, projectRoot)
+                                }
+                            )
+                        }
+                    }
+                    Box {
+                        IconButton(onClick = { showPushMenu = true }) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = stringResource(R.string.git_push_menu_description)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showPushMenu,
+                            onDismissRequest = { showPushMenu = false }
+                        ) {
+                            val pushMenuBranch = state.status?.branch
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = if (!pushMenuBranch.isNullOrBlank()) {
+                                            stringResource(R.string.git_branch_menu_header, pushMenuBranch)
+                                        } else {
+                                            stringResource(
+                                                R.string.git_branch_menu_header,
+                                                stringResource(R.string.git_detached_head)
+                                            )
+                                        },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                enabled = false,
+                                onClick = {}
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_commit_all_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.DoneAll, contentDescription = null)
+                                },
+                                // Mirrors the COMMIT & PUSH button's enabled
+                                // state, minus the message check — a blank
+                                // message shows the "Enter a commit message"
+                                // hint instead of silently doing nothing.
+                                enabled = !state.busy && !state.loading &&
+                                    state.isRepo && !state.status?.files.isNullOrEmpty() &&
+                                    state.status?.files.orEmpty().none { it.isConflict },
+                                onClick = {
+                                    showPushMenu = false
+                                    viewModel.commitOnly(context, projectRoot, commitMessage)
+                                    commitMessage = ""
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(R.string.git_revert_all_action),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null)
+                                },
+                                enabled = state.status?.files?.isNotEmpty() == true &&
+                                    state.status?.noCommits != true,
+                                onClick = {
+                                    showPushMenu = false
+                                    pendingRevertAll = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_checkout_commit_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Restore, contentDescription = null)
+                                },
+                                onClick = {
+                                    showPushMenu = false
+                                    viewModel.loadCommits(context, projectRoot)
+                                    logSheetMode = GitLogSheetMode.CHECKOUT
+                                }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_fetch_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Download, contentDescription = null)
+                                },
+                                onClick = {
+                                    showPushMenu = false
+                                    viewModel.fetch(context, projectRoot)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_pull)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.CloudDownload, contentDescription = null)
+                                },
+                                onClick = {
+                                    showPushMenu = false
+                                    viewModel.pull(context, projectRoot)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_push_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                                },
+                                onClick = {
+                                    showPushMenu = false
+                                    viewModel.push(context, projectRoot)
+                                }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_credentials_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.VpnKey, contentDescription = null)
+                                },
+                                onClick = {
+                                    showPushMenu = false
+                                    showCredentialsDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_provider_action)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Hub, contentDescription = null)
+                                },
+                                onClick = {
+                                    showPushMenu = false
+                                    showCredentialsDialog = true
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            // ---- branch chip (its own row since 73.5) ----------------------
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 // Phase 73.3 — a checked-out COMMIT (not a branch) used to
                 // make this chip vanish silently; a beginner who tapped
                 // Checkout Commit would see no branch name anywhere. Show a
@@ -284,75 +538,33 @@ fun GitControlSheet(
                         }
                     }
                 }
-                if (state.gitInstalled && state.isRepo) {
-                    Box {
-                        IconButton(onClick = { showGitMoreMenu = true }) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = stringResource(R.string.git_more_actions)
-                            )
+            }
+
+            // Phase 73.5 — the header search field filters the UNSTAGED
+            // list by path (Spck screenshot 4's search icon). The query
+            // only narrows what is shown; commit/discard still act on the
+            // real change set, never on the filtered view.
+            if (searchingGit && state.gitInstalled && state.isRepo) {
+                OutlinedTextField(
+                    value = gitSearchQuery,
+                    onValueChange = { gitSearchQuery = it },
+                    placeholder = { Text(stringResource(R.string.git_search_changes)) },
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        if (gitSearchQuery.isNotEmpty()) {
+                            IconButton(onClick = { gitSearchQuery = "" }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.clear)
+                                )
+                            }
                         }
-                        DropdownMenu(
-                            expanded = showGitMoreMenu,
-                            onDismissRequest = { showGitMoreMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_fetch_action)) },
-                                onClick = {
-                                    showGitMoreMenu = false
-                                    viewModel.fetch(context, projectRoot)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_log_history_action)) },
-                                onClick = {
-                                    showGitMoreMenu = false
-                                    viewModel.loadCommits(context, projectRoot)
-                                    logSheetMode = GitLogSheetMode.VIEW
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_checkout_commit_action)) },
-                                onClick = {
-                                    showGitMoreMenu = false
-                                    viewModel.loadCommits(context, projectRoot)
-                                    logSheetMode = GitLogSheetMode.CHECKOUT
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_remotes_action)) },
-                                onClick = {
-                                    showGitMoreMenu = false
-                                    viewModel.loadRemotes(context, projectRoot)
-                                    showRemotesSheet = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_credentials_action)) },
-                                onClick = {
-                                    showGitMoreMenu = false
-                                    onDismiss()
-                                    onOpenSettings()
-                                }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(R.string.git_revert_all_action),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                enabled = state.status?.files?.isNotEmpty() == true &&
-                                    state.status?.noCommits != true,
-                                onClick = {
-                                    showGitMoreMenu = false
-                                    pendingRevertAll = true
-                                }
-                            )
-                        }
-                    }
-                }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                )
             }
 
             state.message?.let { message ->
@@ -383,6 +595,7 @@ fun GitControlSheet(
                         GitInstallGuidance(
                             installing = installingGit,
                             failed = gitInstallFailed,
+                            elapsedSec = gitInstallElapsedSec,
                             onInstall = onInstallGit
                         )
                     } else {
@@ -617,13 +830,45 @@ fun GitControlSheet(
                         HorizontalDivider()
                     }
 
-                    // ---- changes list --------------------------------------
+                    // ---- UNSTAGED (Spck screenshot 4) ------------------------
+                    // Phase 73.5 — the changes list is the UNSTAGED section:
+                    // collapsible, with the count badge Spck shows. The one
+                    // deliberate omission is Spck's "+" stage-all button:
+                    // Phase 73.1 removed staging controls because COMMIT &
+                    // PUSH always runs `add -A` first, so a stage button here
+                    // would change the index without ever changing what gets
+                    // committed — a no-op dressed as an action. The header
+                    // search only narrows this list by path; commit/discard
+                    // still act on the real change set, never the filtered view.
+                    val visibleOthers = if (gitSearchQuery.isBlank()) {
+                        others
+                    } else {
+                        others.filter {
+                            it.path.contains(gitSearchQuery.trim(), ignoreCase = true)
+                        }
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { unstagedExpanded = !unstagedExpanded }
+                            .padding(vertical = 10.dp)
                     ) {
+                        Icon(
+                            if (unstagedExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                            contentDescription = stringResource(
+                                if (unstagedExpanded) {
+                                    R.string.git_collapse_section
+                                } else {
+                                    R.string.git_expand_section
+                                }
+                            ),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
                         Text(
-                            text = stringResource(R.string.git_changes_header),
+                            text = stringResource(R.string.git_unstaged_header),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -638,28 +883,36 @@ fun GitControlSheet(
                         }
                     }
 
-                    if (files.isEmpty()) {
+                    if (unstagedExpanded && files.isEmpty()) {
                         Text(
                             text = stringResource(R.string.git_working_tree_clean),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
                         )
-                    } else if (others.isEmpty()) {
+                    } else if (unstagedExpanded && others.isEmpty()) {
                         Text(
                             text = stringResource(R.string.git_no_other_changes),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
                         )
-                    } else {
+                    } else if (unstagedExpanded) {
+                        if (visibleOthers.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.git_no_matching_changes),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
+                            )
+                        } else {
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 320.dp)
                                 .padding(vertical = 2.dp)
                         ) {
-                            itemsIndexed(others, key = { _, change -> change.path }) { index, change ->
+                            itemsIndexed(visibleOthers, key = { _, change -> change.path }) { index, change ->
                                 GitChangeRow(
                                     change = change,
                                     projectFolderName = projectRoot.name,
@@ -671,12 +924,13 @@ fun GitControlSheet(
                                     } else null
                                 )
                                 // Mockup: a hairline between every change row.
-                                if (index < others.lastIndex) {
+                                if (index < visibleOthers.lastIndex) {
                                     HorizontalDivider(
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                                     )
                                 }
                             }
+                        }
                         }
                     }
 
@@ -909,6 +1163,22 @@ fun GitControlSheet(
             },
             onAdd = { name, url -> viewModel.addRemote(context, projectRoot, name, url) },
             onRemove = { name -> viewModel.removeRemote(context, projectRoot, name) }
+        )
+    }
+
+    // Phase 73.5 — the inline Git Credentials dialog (Spck screenshot
+    // 2). "Manage" leaves the panel for Settings' own editor (the sheet
+    // would otherwise cover it); saving re-reads readiness so a fresh
+    // token can clear the NO_TOKEN blocker without a manual refresh.
+    if (showCredentialsDialog) {
+        GitCredentialsDialog(
+            onDismiss = { showCredentialsDialog = false },
+            onManage = {
+                showCredentialsDialog = false
+                onDismiss()
+                onOpenSettings()
+            },
+            onSaved = { viewModel.refresh(context, projectRoot) }
         )
     }
 
@@ -1242,11 +1512,18 @@ private fun SheetGuidance(text: String) {
  * Phase 73.2 — shown instead of [SheetGuidance] when git is missing but the
  * Linux tools it needs are already ready, so a real one-tap install is
  * actually possible from here.
+ *
+ * Phase 73.5 — the installing state is a status bar, not a spinner row:
+ * the command still runs in the shared terminal session underneath, but
+ * the user is never redirected there — this bar (elapsed seconds + an
+ * indeterminate track, since `pkg` reports no percentage) is the whole
+ * progress surface, and it finishes right here in the panel.
  */
 @Composable
 private fun GitInstallGuidance(
     installing: Boolean,
     failed: Boolean,
+    elapsedSec: Int,
     onInstall: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
@@ -1256,15 +1533,18 @@ private fun GitInstallGuidance(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         when {
-            installing -> Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(top = 14.dp)
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
+            installing -> Column(modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) {
                 Text(
-                    text = stringResource(R.string.git_installing),
+                    text = stringResource(R.string.git_install_progress, elapsedSec),
                     style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.git_install_background_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             failed -> Column(modifier = Modifier.padding(top = 10.dp)) {

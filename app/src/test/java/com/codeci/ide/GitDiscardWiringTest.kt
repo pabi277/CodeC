@@ -57,7 +57,9 @@ class GitDiscardWiringTest {
         assertTrue(row.contains("if (markResolvedMode && onToggleStage != null)"))
         assertFalse(row.contains("SpckIcons.PlusMinus"))
         // The "others" (non-conflict) call site passes no onToggleStage.
-        val othersCall = sheet.substringAfter("itemsIndexed(others, key = { _, change -> change.path }) { index, change ->")
+        // Phase 73.5 — the list is search-filtered (`visibleOthers`), but it
+        // is still the same call site with the same row contract.
+        val othersCall = sheet.substringAfter("itemsIndexed(visibleOthers, key = { _, change -> change.path }) { index, change ->")
             .substringBefore("// Mockup: a hairline between every change row.")
         assertFalse(othersCall.contains("onToggleStage"))
         // The conflicts call site still wires Mark Resolved.

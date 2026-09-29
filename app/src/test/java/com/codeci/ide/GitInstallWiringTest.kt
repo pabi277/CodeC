@@ -52,6 +52,30 @@ class GitInstallWiringTest {
         assertTrue(loop.contains("gitInstallFailed = true"))
     }
 
+    @Test fun `the installing state is a status bar with elapsed time, not a spinner row`() {
+        // Phase 73.5 — the command still runs in the shared terminal
+        // session underneath, but the user is never redirected there; this
+        // bar (elapsed seconds on an indeterminate track — `pkg` reports
+        // no percentage) is the whole progress surface, finishing in-panel.
+        val guidance = sheet.substringAfter("private fun GitInstallGuidance(").substringBefore("private fun GitInitGuidance(")
+        assertTrue(guidance.contains("LinearProgressIndicator(modifier = Modifier.fillMaxWidth())"))
+        assertTrue(guidance.contains("stringResource(R.string.git_install_progress, elapsedSec)"))
+        assertTrue(guidance.contains("stringResource(R.string.git_install_background_note)"))
+        assertFalse(guidance.contains("CircularProgressIndicator"))
+        assertTrue(sheet.contains("var gitInstallElapsedSec by remember(projectRoot) { mutableStateOf(0) }"))
+    }
+
+    @Test fun `an install that ends without git on disk shows failed plus retry`() {
+        // Phase 73.5 — ENDED_WITHOUT_INSTALL used to revert silently to the
+        // INSTALL button; it now shows the same failed + RETRY state as a
+        // non-zero exit (the user-visible truth is identical: git is still
+        // missing after an install ran).
+        val loop = sheet.substringAfter("LaunchedEffect(installingGit) {").substringBefore("val onInstallGit")
+        val ended = loop.substringAfter("InstallOutcome.ENDED_WITHOUT_INSTALL -> {").substringBefore("InstallOutcome.WAITING -> Unit")
+        assertTrue(ended.contains("installingGit = false"))
+        assertTrue(ended.contains("gitInstallFailed = true"))
+    }
+
     @Test fun `not-a-repo guidance grew a real init button in Phase 73_3`() {
         // Superseded by the owner's Phase 73.3 follow-up: `git init` was the
         // last normal Source Control action still requiring the terminal, so
